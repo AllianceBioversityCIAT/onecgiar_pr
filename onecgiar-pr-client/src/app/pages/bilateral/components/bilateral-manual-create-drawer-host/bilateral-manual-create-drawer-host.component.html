@@ -96,7 +96,7 @@
         </div>
       } @else if (flow.selectedReportingWay() === 'ai') {
         <div class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-ai-upload">
-          <app-bilateral-ai-upload />
+          <app-bilateral-ai-upload (openedAiProcesses)="flow.closeDrawer()" />
         </div>
       } @else {
         <app-bilateral-manual-create-form

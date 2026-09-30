@@ -361,6 +361,21 @@ describe('BilateralAiUploadComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-testid="aiu-confirmation-card"]')).toBeNull();
     });
 
+    // P2-3853: a host that is itself a drawer (bilateral-manual-create-drawer-host) needs to close
+    // before the AI processes dialog opens on top of it. `onOpenAiProcesses` is the one place both
+    // the confirmation card's button and the toast's View action route through.
+    it('P2-3853: onOpenAiProcesses emits openedAiProcesses once and calls openDrawer once', () => {
+      const openedSpy = jest.fn();
+      component.openedAiProcesses.subscribe(openedSpy);
+      const aiService = TestBed.inject(BilateralAiService);
+      const openDrawerSpy = jest.spyOn(aiService, 'openDrawer');
+
+      component.onOpenAiProcesses();
+
+      expect(openedSpy).toHaveBeenCalledTimes(1);
+      expect(openDrawerSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('"Choose another project" dismisses the confirmation and emits chooseAnotherProject', () => {
       selectProjectAndSp();
       const emitted = jest.fn();

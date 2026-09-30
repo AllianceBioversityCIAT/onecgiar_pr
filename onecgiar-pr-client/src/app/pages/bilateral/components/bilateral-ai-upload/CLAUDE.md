@@ -1,6 +1,6 @@
 # bilateral-ai-upload
 
-**Verified:** 2026-09-29 · branch JuanGuzman-io/p2-3853-jira-understanding · `AIQ-T-7`
+**Verified:** 2026-09-29 · branch JuanGuzman-io/p2-3853-jira-understanding · P2-3853 (post-execution fix)
 
 ## Qué es
 Paso "AI" del creador de resultados bilaterales: el usuario sube documentos,
@@ -10,9 +10,19 @@ sustituye.** El job pasa a vivir en la lista de `BilateralAiService`
 (`jobs()`/`summary()`), no en este componente.
 
 ## Contrato
-- **Un output:** `(chooseAnotherProject)`, emitido cuando el usuario descarta la
-  tarjeta de confirmación con ese botón. El host decide qué hacer (el creador
-  reinicia el wizard: proyecto/SP/vía).
+- **Dos outputs:**
+  - `(chooseAnotherProject)`, emitido cuando el usuario descarta la
+    tarjeta de confirmación con ese botón. El host decide qué hacer (el creador
+    reinicia el wizard: proyecto/SP/vía).
+  - `(openedAiProcesses)` (P2-3853), emitido desde `onOpenAiProcesses()` —
+    o sea, tanto el botón **Open AI processes** de la tarjeta de confirmación
+    COMO la acción **View** del toast, que ahora llama a `onOpenAiProcesses()`
+    en vez de a `bilateralAiService.openDrawer()` directamente. Un host que es
+    a su vez un drawer (`bilateral-manual-create-drawer-host`) lo escucha para
+    cerrarse ANTES de que el diálogo "AI processes" se abra encima — nunca dos
+    paneles apilados. El host del wizard (`bilateral-result-creator`) no
+    escucha este output: no tiene nada que cerrar, así que su comportamiento
+    (abrir el drawer y quedarse en el wizard) no cambia.
 - Todo el estado compartido vive en `BilateralAiService`
   (`../../services/bilateral-ai.service.ts`), inyectado como singleton root.
   - `uploadState()` ya **NO** es la fuente de verdad del job — sólo de ESTE
@@ -60,7 +70,10 @@ sustituye.** El job pasa a vivir en la lista de `BilateralAiService`
   drawer de creación manual, a su vez usado por el creador y por
   `bilateral-projects-panel.component.html:448` (home). Aquí
   `chooseAnotherProject` no tiene listener: descartar la tarjeta sólo cierra
-  la confirmación, el proyecto del drawer es fijo.
+  la confirmación, el proyecto del drawer es fijo. **P2-3853:** sí escucha
+  `(openedAiProcesses)="flow.closeDrawer()"` — `closeDrawer()` es el método de
+  cierre ya existente de `BilateralManualCreateFlowService` (el mismo que usa
+  `onDrawerClosed()`); no se inventó un mecanismo nuevo.
 - `…/bilateral-result-creator.component.ts` — al elegir la vía "ai" llama
   `clearUploadState()`. **Ese es el único reset explícito del estado del envío.**
 

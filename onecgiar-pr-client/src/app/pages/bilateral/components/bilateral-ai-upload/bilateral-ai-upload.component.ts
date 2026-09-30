@@ -54,6 +54,14 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
    */
   @Output() readonly chooseAnotherProject = new EventEmitter<void>();
 
+  /**
+   * P2-3853 fix: emitted from `onOpenAiProcesses()` so a host that stacks a drawer/dialog on top
+   * of its own drawer (`bilateral-manual-create-drawer-host`) can close itself first. A host that
+   * has nothing on top of (the wizard page) simply doesn't bind it — today's behavior there is
+   * unchanged.
+   */
+  @Output() readonly openedAiProcesses = new EventEmitter<void>();
+
   readonly copy = BILATERAL_AI_PROCESSES_COPY;
 
   files = signal<UploadFileEntry[]>([]);
@@ -145,10 +153,16 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     this.recordingError.set(null);
   }
 
-  /** `AIQ-R-7` B: "Open AI processes" — dismiss the confirmation and open the drawer. */
+  /**
+   * `AIQ-R-7` B: "Open AI processes" — dismiss the confirmation and open the drawer.
+   * P2-3853 fix: also tell the host we just opened the AI processes drawer, so a host that is
+   * itself a drawer (`bilateral-manual-create-drawer-host`) can close before the dialog opens on
+   * top of it, instead of stacking two panels.
+   */
   onOpenAiProcesses(): void {
     this.justSubmittedProjectName.set(null);
     this.bilateralAiService.openDrawer();
+    this.openedAiProcesses.emit();
   }
 
   /** `AIQ-R-7` B: "Choose another project" — dismiss the confirmation; the host (wizard/drawer)
@@ -574,7 +588,10 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
           severity: 'success',
           summary: this.copy.toast.summary(projectLabel),
           detail: this.copy.toast.detail,
-          action: { label: this.copy.toast.viewAction, run: () => this.bilateralAiService.openDrawer() },
+          // P2-3853 fix: route the toast's View action through the same handler as the
+          // confirmation card's "Open AI processes" button, so it also emits `openedAiProcesses`
+          // and a host that is itself a drawer closes instead of stacking on top of itself.
+          action: { label: this.copy.toast.viewAction, run: () => this.onOpenAiProcesses() },
         });
       },
       error: (err: HttpErrorResponse) => {

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
@@ -79,6 +80,25 @@ describe('BilateralManualCreateDrawerHostComponent', () => {
     const fileInput: HTMLInputElement | null = uploadComponent.querySelector('input[type="file"]');
     expect(fileInput).toBeTruthy();
     expect(fileInput!.disabled).toBe(false);
+  });
+
+  // P2-3853: clicking "Open AI processes" from inside this drawer must close the drawer itself
+  // instead of stacking the AI processes dialog on top of it. The upload component emits
+  // `openedAiProcesses`; this host wires it straight to `flow.closeDrawer()` (html:99).
+  it('P2-3853: closes the drawer when the upload component emits openedAiProcesses', () => {
+    flow.beginFromProject(multiSpProject);
+    flow.selectReportingWay('ai');
+    fixture.detectChanges();
+
+    expect(flow.drawerOpen()).toBe(true);
+
+    const uploadDebugEl = fixture.debugElement.query(By.css('app-bilateral-ai-upload'));
+    expect(uploadDebugEl).toBeTruthy();
+
+    uploadDebugEl.componentInstance.openedAiProcesses.emit();
+    fixture.detectChanges();
+
+    expect(flow.drawerOpen()).toBe(false);
   });
 
   /**

@@ -772,3 +772,22 @@
   - Merge of `performance-refactor`: `4f740ffc2`.
 - **T-11 is pending.** It needs P-24 answered, PR 1 and PR 2 merged and deployed to prtest, the forwardRef server-boot smoke, the CT suite, the T6 visual review, the HITL, and product-owner sign-off.
 - **Review rounds:** 18 across 10 tasks, against a budget of 11. The tripwire was crossed and the user chose to continue. There was one HALT (T-8), resolved by a user-authorized attempt 4.
+
+## Post-execution fix: drawer-on-drawer (user report during local testing, 2026-09-29)
+
+- **Report:** in the manual-create drawer (Center home → Create result → AI way), clicking **Open AI processes** after a 202 opened the AI processes dialog on top of the create drawer. Closing the dialog then returned to a reset form.
+- **User decision:** opening the AI processes drawer from inside the create drawer closes the create drawer. The wizard page is unchanged.
+- **Fix:**
+  - New `@Output() openedAiProcesses` on `bilateral-ai-upload`, emitted from `onOpenAiProcesses()`, which still calls `openDrawer()` exactly once. The toast's **View** action now goes through the same handler.
+  - `bilateral-manual-create-drawer-host.component.html:99` binds `(openedAiProcesses)="flow.closeDrawer()"` (`bilateral-manual-create-flow.service.ts:144-145`).
+  - `bilateral-result-creator` does not bind the output, so the wizard behaves as before.
+- **Tests:** upload spec (emits once, calls `openDrawer` once) and drawer-host spec (the emit closes `flow.drawerOpen()`).
+  - **Mutation check:** without the binding, the host test fails (`Expected: false, Received: true`).
+- **Verification:**
+  - Implementer: `pages/bilateral` 2141 passed, build and lint clean.
+  - Leader re-run: `npx jest src/app/pages/bilateral` 2141 passed. **VERIFIED**.
+- **Review:** no independent Reviewer. This is a small user-directed fix outside the approved `tasks.md`, verified by the Leader re-run and the mutation. It must be covered by the PR 2 review.
+- **Open from the same session:**
+  - The per-user cap looked breached in the user's screenshot (P-1502 and P-1440 both Running). The source is unconfirmed: another user or server, or the old deployed consumer sharing `dev_bilateral_ai_processing`.
+  - The local-server timezone shows times 5 h ahead (mysql2 running in America/Bogota).
+  - At 375 px the wizard trigger overlaps the title.
