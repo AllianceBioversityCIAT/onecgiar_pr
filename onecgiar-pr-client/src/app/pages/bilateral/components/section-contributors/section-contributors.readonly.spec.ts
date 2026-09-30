@@ -494,30 +494,137 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       expect(link?.getAttribute('href')).toBe('https://clarisa.cgiar.org/landing-page/glossary');
       expect(link?.getAttribute('target')).toBe('_blank');
     });
+
+    const follows = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    it('sits after the ToC block and right before "Contributing science programs" (QA, Santiago)', () => {
+      build();
+      const root = fixture.nativeElement as HTMLElement;
+      const notes = root.querySelectorAll('[data-testid="contributor-definition-note"]');
+      expect(notes.length).toBe(1);
+      const note = notes[0];
+      const toc = root.querySelector('.sc-block--toc') as Element;
+      const programs = root.querySelector('.sc-block--programs') as Element;
+      expect(toc).toBeTruthy();
+      expect(follows(toc, note)).toBe(true);
+      expect(follows(note, programs)).toBe(true);
+      expect(note.nextElementSibling).toBe(programs);
+      // Not at the very top any more: the MDS alert comes first, then the ToC block.
+      expect(follows(note, toc)).toBe(false);
+    });
+
+    it('still renders, before "Lead center", when there is no primary SP block', () => {
+      creation.selectedPrimarySp.set(null);
+      build();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('.sc-block--toc')).toBeNull();
+      const notes = root.querySelectorAll('[data-testid="contributor-definition-note"]');
+      expect(notes.length).toBe(1);
+      const firstField = root.querySelector('app-pr-field-header[label="Lead center"]')?.closest('.sc-block') as Element;
+      expect(firstField).toBeTruthy();
+      expect(notes[0].nextElementSibling).toBe(firstField);
+    });
   });
 
-  // P2-3859 — the Center filter above the projects picker, in the REAL template.
-  describe('P2-3859 · projects Center filter', () => {
-    it('renders the filter with its label and count on an editable result', () => {
-      editable.set(true);
-      build();
+  // P2-3859 — the Center pills inside the projects picker's panel, in the REAL template (real
+  // pr-multi-select, so the `[util]` projection and the event wiring are what ships).
+  describe('P2-3859 · projects Center pills', () => {
+    const seed = () => {
       // `ngOnInit` reloads the (stubbed, empty) catalogue over what `build()` seeded; seed it again.
       component.availableProjects.set([
         { id: 501, fullName: 'Project 501', ownerCenterInstitutionId: 11 },
         { id: 502, fullName: 'Project 502', ownerCenterInstitutionId: 12 }
       ] as any);
       fixture.detectChanges();
-      const filter = fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]') as HTMLElement;
-      expect(filter).toBeTruthy();
-      expect(filter.textContent).toContain('Filter projects by Center');
-      expect(filter.querySelector('app-pr-select')).toBeTruthy();
-      expect(filter.querySelector('[data-testid="projects-center-filter-count"]')?.textContent?.trim()).toBe('1 of 2 projects');
+    };
+    const pill = (mode: 'center' | 'all') =>
+      fixture.nativeElement.querySelector(`[data-testid="projects-center-pill-${mode}"]`) as HTMLButtonElement;
+    // The spans are laid out with `gap` (Angular strips the whitespace between them).
+    const pillText = (mode: 'center' | 'all') =>
+      Array.from(pill(mode).querySelectorAll('span'))
+        .map(sp => sp.textContent?.trim())
+        .filter(Boolean)
+        .join(' ');
+
+    it('renders two pills under the search box of the projects panel, the page Center pressed', () => {
+      editable.set(true);
+      build();
+      seed();
+      const host = pickerFor('Contributing W3/bilateral projects');
+      const group = host.querySelector('.options .util_container [data-testid="projects-center-pills"]') as HTMLElement;
+      expect(group).toBeTruthy();
+      expect(group.getAttribute('role')).toBe('group');
+      expect(group.getAttribute('aria-label')).toBe('Filter projects by Center');
+      // Right under the search input, inside the same panel.
+      expect(host.querySelector('.options .search_input_container')?.nextElementSibling?.classList.contains('util_container')).toBe(true);
+      expect(pillText('center')).toBe('A11 (1)');
+      expect(pillText('all')).toBe('All centers (2)');
+      expect(pill('center').getAttribute('aria-pressed')).toBe('true');
+      expect(pill('all').getAttribute('aria-pressed')).toBe('false');
+      expect(pill('center').type).toBe('button');
+      // The old strip is gone.
+      expect(fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]')).toBeNull();
+      // The slot is filled for the projects picker only.
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="projects-center-pills"]').length).toBe(1);
+    });
+
+    it('a pill click keeps the panel open, toggles no option and saves nothing', () => {
+      editable.set(true);
+      build();
+      seed();
+      component.contributorsHydrated.set(true);
+      const autoSave = TestBed.inject(BilateralAutoSaveService) as any;
+      autoSave.saveContributors.mockClear();
+      const host = pickerFor('Contributing W3/bilateral projects');
+      const trigger = host.querySelector('a.field') as HTMLElement;
+      const search = host.querySelector('.options .search_input_container input') as HTMLInputElement;
+      search.focus();
+      expect(document.activeElement).toBe(search);
+
+      const triggerClicks = jest.fn();
+      trigger.addEventListener('click', triggerClicks);
+
+      // Focus: the mousedown is cancelled, so the browser never moves focus off the search box and
+      // `a.field:focus-within` (what keeps the panel open) holds — Safari included.
+      const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+      pill('all').dispatchEvent(down);
+      expect(down.defaultPrevented).toBe(true);
+      pill('all').click();
+      fixture.detectChanges();
+
+      expect(document.activeElement).toBe(search);
+      expect(trigger.contains(document.activeElement)).toBe(true);
+      expect(triggerClicks).not.toHaveBeenCalled();
+      expect(pill('all').getAttribute('aria-pressed')).toBe('true');
+      expect(pill('center').getAttribute('aria-pressed')).toBe('false');
+      expect(component.filteredProjectOptions().map(p => p.id)).toEqual([501, 502]);
+      expect(component.selectedProjectIds()).toEqual([]);
+      expect(Array.from(host.querySelectorAll('.options input[type="checkbox"]')).some(c => (c as HTMLInputElement).checked)).toBe(false);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+
+      pill('center').click();
+      fixture.detectChanges();
+      expect(component.filteredProjectOptions().map(p => p.id)).toEqual([501]);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+    });
+
+    it('keeps a saved project from another Center selected while the page Center pill is on', () => {
+      editable.set(true);
+      build();
+      seed();
+      component.contributorsHydrated.set(true);
+      component.selectedProjectIds.set([502]);
+      fixture.detectChanges();
+      expect(pill('center').getAttribute('aria-pressed')).toBe('true');
+      expect(component.filteredProjectOptions().map(p => p.id)).toEqual([501, 502]);
+      expect(component.selectedProjectIds()).toEqual([502]);
     });
 
     it('is not rendered on a read-only result (the picker cannot open)', () => {
       editable.set(false);
       build();
-      expect(fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]')).toBeNull();
+      seed();
+      expect(fixture.nativeElement.querySelector('[data-testid="projects-center-pills"]')).toBeNull();
     });
   });
 });
