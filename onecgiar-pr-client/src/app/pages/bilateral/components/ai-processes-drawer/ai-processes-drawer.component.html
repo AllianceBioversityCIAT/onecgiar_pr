@@ -1,21 +1,17 @@
 <!-- @akili-spec bilateral/ai-processing-queue (AIQ-R-9, AIQ-R-12) -->
-<div class="flex items-center justify-between gap-[10px] border-b border-[var(--pr-border-divider)] px-[20px] pt-[18px] pb-[14px]">
-  <span class="flex h-[32px] w-[32px] flex-none items-center justify-center rounded-[10px] bg-[var(--pr-color-primary-300)] text-white">
-    <i class="material-icons-round text-[18px]" aria-hidden="true">auto_awesome</i>
-  </span>
-  <h4 id="ai-processes-drawer-title" class="m-0 flex-1 text-[15px] font-bold text-[var(--pr-text-heading)]">{{ copy.title }}</h4>
-  <button
-    type="button"
-    class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-400)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-    [attr.aria-label]="copy.closeLabel"
-    data-testid="ai-processes-drawer-close"
-    (click)="onClose()">
-    <i class="material-icons-round text-[18px]" aria-hidden="true">close</i>
-  </button>
-</div>
-
-<div class="border-b border-[var(--pr-border-divider)] px-[20px] pb-[14px]">
-  <p class="m-0 text-[12px] leading-[1.5] text-[var(--pr-text-secondary)]">{{ copy.subtitle }}</p>
+<div class="border-b border-[var(--pr-border-divider)] px-[20px] pt-[20px] pb-[18px]">
+  <div class="flex items-center gap-[10px]">
+    <h4 id="ai-processes-drawer-title" class="m-0 flex-1 text-[15px] font-bold text-[var(--pr-text-heading)]">{{ copy.title }}</h4>
+    <button
+      type="button"
+      class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-400)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+      [attr.aria-label]="copy.closeLabel"
+      data-testid="ai-processes-drawer-close"
+      (click)="onClose()">
+      <i class="material-icons-round text-[18px]" aria-hidden="true">close</i>
+    </button>
+  </div>
+  <p class="m-0 mt-[6px] text-[13px] leading-[1.6] text-[var(--pr-text-secondary)]">{{ copy.subtitle }}</p>
   <div
     class="mt-[14px] flex items-center gap-[10px] rounded-[12px] border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-25)] px-[12px] py-[10px]"
     data-testid="ai-processes-drawer-lanes">
