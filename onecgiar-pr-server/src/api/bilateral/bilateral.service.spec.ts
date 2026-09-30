@@ -346,6 +346,11 @@ describe('BilateralService (unit)', () => {
     jest.spyOn(svc, 'resolveSubmitterPayload').mockReturnValue({});
     svc._versioningService = {
       $_findActivePhase: jest.fn().mockResolvedValue({ id: 9 }),
+      // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-2 reviewer advisory: a real
+      // stub (not absent) so a version target that wrongly called `versionProcessV2` (the
+      // rejected `DD-2` alternative) would fail a deliberate `not.toHaveBeenCalled()` assertion
+      // instead of a bare `TypeError`.
+      versionProcessV2: jest.fn(),
     };
     jest.spyOn(svc, 'ensureUniqueTitle').mockResolvedValue(undefined);
     jest
@@ -2702,33 +2707,151 @@ describe('BilateralService (unit)', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('rejects an eligible version-with-data target (approved, earlier phase) with the T-2 placeholder, writing nothing', async () => {
-      const { service } = arrangeCreateHarness();
-      const approvedSource = {
-        id: 31921,
+    // Superseded by `create() — versioning with data (UBC-T-2)` below: an eligible
+    // version-with-data target no longer rejects — it flows into the real create path
+    // (`DD-2`). The eligibility check itself (ownership) still runs first, which that describe
+    // block's falsifier confirms alongside the write.
+  });
+
+  // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-2. An eligible `versioned`
+  // target flows into the SAME `arrangeCreateHarness()` full create() path used by UBC-T-1 above
+  // (not a bare service), so "the source row was never written" is a real claim about calls
+  // into `_resultRepository`, not an assumption about a path this harness never exercises
+  // (tasks.md UBC-T-2 Disqualifier).
+  describe('create() — versioning with data (UBC-T-2)', () => {
+    const STAR = { id: 12, acronym: 'STAR' };
+
+    // Falsifier fixture: source row in phase 35 (Approved), open phase 36 (the harness default
+    // for `getActiveReportingPhase`).
+    const approvedSource = {
+      id: 31921,
+      result_code: 28565,
+      version_id: 35,
+      status_id: ResultStatusData.Approved.value,
+    };
+
+    const buildVersionDto = (overrides: Record<string, unknown> = {}) => {
+      const dto = buildDto();
+      Object.assign(dto.result.data as any, {
         result_code: '28565',
-        version_id: 6,
-        status_id: ResultStatusData.Approved.value,
-      };
+        ...overrides,
+      });
+      return dto;
+    };
+
+    const arrangeVersionTarget = (
+      headerOverrides: Record<string, unknown> = {},
+    ) => {
+      const { service } = arrangeCreateHarness();
       service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
         undefined,
       );
       service._bilateralVersioningRulesService.resolveVersionableResult.mockResolvedValue(
         approvedSource,
       );
-
-      await expect(
-        service.create(buildDtoWithCode('28565'), STAR as any),
-      ).rejects.toMatchObject({
-        status: 409,
-        message:
-          'Versioning an existing result through create is not available yet.',
+      // The new row's header, as the auto-increment trigger would leave it right after the
+      // insert (`P-9`): some other code, definitely not 28565, which is exactly what the
+      // restore step must correct.
+      (service.initializeResultHeader as jest.Mock).mockResolvedValue({
+        id: 777,
+        result_code: 999999,
+        status_id: ResultStatusData.PendingReview.value,
+        ...headerOverrides,
       });
+      return { service };
+    };
+
+    it('falsifier: the new row gets the source code back and the source row is never saved or updated (R-3)', async () => {
+      const { service } = arrangeVersionTarget();
+
+      const result = await service.create(buildVersionDto(), STAR as any);
+
+      // Eligibility still runs against the SOURCE row before any write (T-1's guarantee holds).
+      expect(
+        service._bilateralVersioningRulesService.resolveVersionableResult,
+      ).toHaveBeenCalledWith('28565', 36);
       expect(
         service._bilateralVersioningRulesService.assertCallerMayVersion,
       ).toHaveBeenCalledWith(approvedSource, '28565', STAR);
-      expect(service._resultRepository.save).not.toHaveBeenCalled();
-      expect(service.findOrCreateUser).not.toHaveBeenCalled();
+
+      // DD-2: restore runs against the NEW row's id (777), with the SOURCE's own result_code.
+      expect(service._resultRepository.update).toHaveBeenCalledWith(777, {
+        result_code: 28565,
+      });
+
+      expect(result.response.outcomes).toEqual([
+        expect.objectContaining({
+          result_code: 28565,
+          operation: 'versioned',
+        }),
+      ]);
+
+      // Disqualifier guard: the source row (31921) must never be a `save`/`update` target.
+      const updateTargets = (
+        service._resultRepository.update as jest.Mock
+      ).mock.calls.map((call) => call[0]);
+      const saveTargets = (
+        service._resultRepository.save as jest.Mock
+      ).mock.calls.map((call) => call[0]?.id);
+      expect(updateTargets).not.toContain(approvedSource.id);
+      expect(saveTargets).not.toContain(approvedSource.id);
+
+      // Mutation (b) guard: the rejected DD-2 alternative (`versionProcessV2` + update) never
+      // runs. A deliberate assertion, not a `TypeError` from an absent stub.
+      expect(
+        service._versioningService.versionProcessV2,
+      ).not.toHaveBeenCalled();
     });
+
+    // R-7, mutation (c) — reworked after Reviewer FAIL (attempt 1 stubbed the OUTCOME, which
+    // `keep_editing` never touches; the real read is `status_id: resolveInitialStatusId(bilateralDto)`
+    // at `bilateral.service.ts:4370`, inside `initializeResultHeader`). `initializeResultHeader`
+    // is RESTORED to its real implementation here — not stubbed — so `keep_editing` is the only
+    // input that can move the result. `_resultRepository.save`/`findOne` are wired to echo the
+    // real header back (id 777, matching the DD-2 falsifier above), the way an actual insert +
+    // read-back would.
+    it.each([
+      [true, ResultStatusData.Editing],
+      [false, ResultStatusData.PendingReview],
+    ])(
+      'status follows keep_editing=%s -> %s (R-7)',
+      async (keepEditing, expectedStatus) => {
+        const { service } = arrangeVersionTarget();
+        (service.initializeResultHeader as jest.Mock).mockRestore();
+
+        let savedHeader: any;
+        (service._resultRepository.save as jest.Mock).mockImplementation(
+          async (row: any) => {
+            savedHeader = { id: 777, ...row };
+            return savedHeader;
+          },
+        );
+        (service._resultRepository.findOne as jest.Mock).mockImplementation(
+          async (query: any) =>
+            query?.where?.id === 777
+              ? { ...savedHeader, source: SourceEnum.Bilateral }
+              : { id: 10, source: SourceEnum.Bilateral },
+        );
+
+        const result = await service.create(
+          buildVersionDto({ keep_editing: keepEditing }),
+          STAR as any,
+        );
+
+        // The real header-insert call is the only source of truth here: `keep_editing` is the
+        // only input that can move it between the two cases (mutation (c) at `:4370` — hardcode
+        // `resolveInitialStatusId`'s result — turns this red).
+        expect(service._resultRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({ status_id: expectedStatus.value }),
+        );
+        expect(result.response.outcomes[0]).toEqual(
+          expect.objectContaining({
+            operation: 'versioned',
+            status_id: expectedStatus.value,
+            status: expectedStatus.name,
+          }),
+        );
+      },
+    );
   });
 });

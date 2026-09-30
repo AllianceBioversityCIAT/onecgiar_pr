@@ -91,7 +91,7 @@ Current behavior. Every claim below is cited as run at `35e58fd87` unless marked
   - ⚠️ *This is a default pending the user's confirmation (`OQ-3`).*
 - **`UBC-R-8` — Never silently create.** A `result_code` that is not found, belongs to another platform, is a KP, is not Approved (version), or is in a non-editable status (update) MUST be rejected with a 4xx, and no row may be written.
   - The codes and messages MUST follow `/version`'s vocabulary: 400, 403, 404, 409.
-  - A rejected request MUST leave the database unchanged.
+  - A rejected result MUST leave the database unchanged for that result. The guarantee is **per result**: in a multi-result request, results processed before the rejected one stay written (decided by the user at the T-1 gate, 2026-09-30).
 - **`UBC-R-9` — Duplicate title excludes itself.** The duplicate-title rule MUST ignore the result being updated or versioned. A payload whose title equals *another* open-phase result's title MUST still be rejected.
 - **`UBC-R-10` — Response states the operation.** The response for each result MUST carry `result_code`, `operation`, the resulting `status`, and `external_reference` when one was sent.
   - `operation` is one of `created`, `updated` or `versioned`.

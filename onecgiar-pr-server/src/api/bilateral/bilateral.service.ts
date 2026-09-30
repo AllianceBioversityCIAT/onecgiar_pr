@@ -216,6 +216,15 @@ const DAC_PILLAR_CONFIG = [
   },
 ] as const;
 
+// @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-2. What `resolveResultCodeTarget`
+// hands back to `create()` for an eligible target so the header-insert step can restore the
+// source's code (`DD-2`) and the outcome can say `versioned` instead of `created`. `T-3` will
+// add an `'updated'` member here for its own (non-insert) path.
+interface ResolvedResultCodeTarget {
+  operation: 'versioned';
+  resultCode: number;
+}
+
 @Injectable()
 export class BilateralService {
   constructor(
@@ -324,9 +333,15 @@ export class BilateralService {
         // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-1: resolve `result_code`
         // before any write (users, contacts and the header are all still ahead of this). A miss
         // of any kind (not found, foreign platform, KP, non-editable status) rejects with a 4xx
-        // here and nothing below runs for this result (R-8). T-2/T-3 wire the two eligible
-        // outcomes into real writes; until then both are the same 409 placeholder.
-        await this.resolveResultCodeTarget(bilateralDto, platform);
+        // here and nothing below runs for this result (R-8). An eligible `versioned` target
+        // (T-2) flows into the normal create path below; `resultCodeTarget` is what tells the
+        // header-insert step to restore the source's code (DD-2) and the outcome to say
+        // `versioned` instead of `created`. T-3 still wires the `updated` branch as a 409
+        // placeholder.
+        const resultCodeTarget = await this.resolveResultCodeTarget(
+          bilateralDto,
+          platform,
+        );
 
         await this.runResultTypePreflight(bilateralDto);
 
@@ -439,6 +454,19 @@ export class BilateralService {
             const resultId = resultHeader.id;
             createdResultId = resultId;
             submitterUserId = submittedUserId ?? userId;
+
+            // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-2/DD-2: right after
+            // the header insert, the same place `versionProcessV2` restores it (`vs:300-306`).
+            // `result_auto_code` (the trigger, `P-9`) stamps every insert with the next
+            // auto-increment value, so a version target's row is born with the wrong code and
+            // has to be corrected here, before anything else reads or writes it. The source row
+            // is never touched (`R-3`): only this brand-new row's code changes.
+            if (resultCodeTarget?.operation === 'versioned') {
+              await this._resultRepository.update(resultId, {
+                result_code: resultCodeTarget.resultCode,
+              });
+              newResultHeader.result_code = resultCodeTarget.resultCode;
+            }
 
             await this.handleLeadCenter(
               resultId,
@@ -560,11 +588,12 @@ export class BilateralService {
               // response without holding on to request order.
               external_reference: externalIdentity.external_reference,
               is_duplicate_kp: false,
-              // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-5/R-10: every
-              // result on this (unchanged) path is a fresh create, regardless of whether it
-              // carried a `result_code` that resolved to nothing (T-1 does not wire an
-              // ineligible code into a write — it always rejects before this point).
-              operation: 'created',
+              // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-5/R-10: this is
+              // always a fresh insert (DD-2 restores the code afterwards for a version target),
+              // so `operation` is 'created' unless the resolve step matched an eligible
+              // prior-phase source, in which case it is 'versioned' (T-2). T-3's `updated`
+              // outcome is a different path (header in place, no insert here).
+              operation: resultCodeTarget?.operation ?? 'created',
               status_id: newResultHeader.status_id,
               status:
                 ResultStatusData.getFromValue(Number(newResultHeader.status_id))
@@ -4425,20 +4454,22 @@ export class BilateralService {
    *    `updated` target only, since `resolveVersionableResult` already ran it — the KP guard
    *    (`UBC-R-6`), then the `R-5` editable-status guard.
    *
-   * T-2 and T-3 are what turn `updated`/`versioned` into real writes. Until they land, both
-   * eligible outcomes are rejected here with the same 409 placeholder, so a `result_code` can
-   * never fall through to an unconditional create (`R-8`): every path through this method
-   * either throws or resolves to one of the two placeholders below — there is no return.
+   * An eligible `versioned` target (`UBC-T-2`, `DD-2`) resolves to `{ operation: 'versioned',
+   * resultCode }` — `create()` uses it to restore the source's code after the header insert and
+   * to stamp the outcome. `T-3` still wires the `updated` branch as a 409 placeholder, so a
+   * `result_code` can never fall through to an unconditional create (`R-8`): every path through
+   * this method either throws, returns the versioned target, or (no code at all) returns
+   * `undefined`.
    */
   private async resolveResultCodeTarget(
     bilateralDto: CreateBilateralDto,
     platform?: ClarisaApiKeyValidationMis,
-  ): Promise<void> {
+  ): Promise<ResolvedResultCodeTarget | undefined> {
     const resultCode =
       typeof bilateralDto?.result_code === 'string'
         ? bilateralDto.result_code.trim()
         : '';
-    if (!resultCode) return;
+    if (!resultCode) return undefined;
 
     const activePhase =
       await this._bilateralVersioningRulesService.getActiveReportingPhase();
@@ -4498,16 +4529,20 @@ export class BilateralService {
       throw error;
     }
 
-    this.logResultCodeResolution(
-      resultCode,
-      'versioned',
-      platform,
-      'not_wired',
+    // R-8 observability (advisory), mirroring the block above: one line, never the payload.
+    // Unlike the `updated` branch, this candidate is not rejected — `create()` carries it into
+    // a real write (`UBC-T-2`), so the outcome logged is the operation itself, not a guard
+    // status or the `not_wired` placeholder.
+    this.logger.log(
+      `result_code=${resultCode} operation=versioned platform=${
+        platform?.acronym ?? platform?.id ?? 'unknown'
+      } outcome=resolved`,
     );
-    // T-2 wires the actual version-with-data path here.
-    throw new ConflictException(
-      'Versioning an existing result through create is not available yet.',
-    );
+
+    // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-2/DD-2: the source's own
+    // `result_code` (not the trimmed request string) is what gets restored onto the new row,
+    // since `Result.result_code` is numeric.
+    return { operation: 'versioned', resultCode: source.result_code };
   }
 
   /**

@@ -1,6 +1,6 @@
 # Tasks — `changes/bilateral-create-upsert-by-code`
 
-- **Status:** `in-progress` (T-1 done)
+- **Status:** `in-progress` (T-1, T-2 done)
 - **Budget (`design.md` §9):** 6 tasks · ~1,000 LOC · 1–2 review rounds per task
 - **Branch:** `feat/bilateral-create-upsert-by-code` from `performance-refactor` @ `35e58fd87`
 - **PR strategy:**
@@ -62,7 +62,7 @@
 
 ---
 
-### `UBC-T-2` — Version with data: a fresh create in the open phase that keeps the prior `result_code`
+### [x] `UBC-T-2` — Version with data: a fresh create in the open phase that keeps the prior `result_code`
 
 - **Type:** `server` · **Size:** `M` · **Depends on:** `UBC-T-1`
 - **Implements:** `UBC-R-3`, `R-7`, `R-20`; the version half of `R-10`
@@ -88,10 +88,10 @@
   - **Disqualifier:** a test that does not assert the source row stayed untouched does not cover `R-3` (D3).
   - **Consumers:** `bilateral.service.spec.ts` · `vs:300-306` (the pattern, not modified)
 - **Definition of done:**
-  - [ ] `R-3`: new row in the open phase with the same code, source untouched
-  - [ ] `R-7`: status follows `keep_editing`
-  - [ ] Mutations run and observed **red**
-  - [ ] Scoped jest, eslint and tsc are green
+  - [x] `R-3`: new row in the open phase with the same code, source untouched
+  - [x] `R-7`: status follows `keep_editing`
+  - [x] Mutations run and observed **red**
+  - [x] Scoped jest, eslint and tsc are green
 
 ---
 
