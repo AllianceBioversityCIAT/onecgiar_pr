@@ -8,7 +8,9 @@ import type { TNotificationResult } from './model/update-notification.model';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
 import {
   getNotificationActionVerb,
+  getAiJobNotificationParts,
   getResultNotificationTextParts,
+  type AiJobNotificationParts,
   isBilateralReviewNotification,
   isBilateralSubmittedNotification,
   type NotificationTextParts
@@ -34,6 +36,17 @@ export class UpdateNotificationComponent {
    */
   get textParts(): NotificationTextParts {
     return getResultNotificationTextParts(this.notification);
+  }
+
+  /** A finished AI job has no result: render its own sentence and link, never "<code> - <title>". */
+  get aiJobParts(): AiJobNotificationParts | null {
+    return getAiJobNotificationParts(this.notification);
+  }
+
+  onAiJobLinkClick(event: MouseEvent, path: string): void {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    this.router.navigateByUrl(path);
   }
 
   /**

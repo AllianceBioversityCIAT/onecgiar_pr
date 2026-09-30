@@ -1,6 +1,7 @@
 import {
   NotificationType,
   buildResultNotificationText,
+  getAiJobNotificationParts,
   getNotificationActionVerb,
   getResultNotificationTextParts,
   isBilateralReviewNotification,
@@ -24,6 +25,45 @@ const notificationOf = (type: NotificationType | null, overrides: any = {}) => (
 });
 
 describe('notification-type constants', () => {
+  describe('Bilateral AI Job Finished (no result behind the row)', () => {
+    const aiJob = (text: string | null) => ({
+      notification_id: 7,
+      result_id: null,
+      obj_result: null,
+      text,
+      obj_notification_type: { notifications_type_id: 13, type: NotificationType.BILATERAL_AI_JOB_FINISHED }
+    });
+    const SENTENCE = 'AI-assisted processing finished — 2 drafts ready for CIP · 1 PDF · 3 min';
+
+    it('splits the server sentence from its deep link and keeps the path app-relative', () => {
+      expect(getAiJobNotificationParts(aiJob(`${SENTENCE} https://reporting.cgiar.org/bilateral/CIP/drafts`))).toEqual({
+        message: SENTENCE,
+        path: '/bilateral/CIP/drafts'
+      });
+    });
+
+    it('keeps the query of a failed-job link', () => {
+      expect(getAiJobNotificationParts(aiJob('failed for CIP · 2 min https://x.org/bilateral/CIP/create?job=abc'))?.path).toBe(
+        '/bilateral/CIP/create?job=abc'
+      );
+    });
+
+    it('has no path when the text carries no link, and a generic line when it carries no text', () => {
+      expect(getAiJobNotificationParts(aiJob(SENTENCE))).toEqual({ message: SENTENCE, path: null });
+      expect(getAiJobNotificationParts(aiJob(null))?.message).toBe('Your AI-assisted processing job finished.');
+    });
+
+    it('never renders the "The result -" lead-in or the empty result identity', () => {
+      const n = aiJob(`${SENTENCE} https://reporting.cgiar.org/bilateral/CIP/drafts`);
+      expect(getResultNotificationTextParts(n)).toEqual({ prefix: SENTENCE, suffix: null, emphasizePrefix: false });
+      expect(buildResultNotificationText(n)).toBe(SENTENCE);
+    });
+
+    it('returns null for any other type', () => {
+      expect(getAiJobNotificationParts(notificationOf(NotificationType.RESULT_SUBMITTED))).toBeNull();
+    });
+  });
+
   describe('resolveNotificationType', () => {
     it('resolves by name from obj_notification_type', () => {
       expect(resolveNotificationType(notificationOf(NotificationType.RESULT_SUBMITTED))).toBe(
