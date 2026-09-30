@@ -299,7 +299,12 @@ export function buildOverviewKpis(
 // Reporting status card (COV-R-7)
 // ---------------------------------------------------------------------------
 
-export type StatusTileKey = 'editing' | 'pending' | 'submittedQa' | 'approved' | 'rejected';
+/**
+ * P2-3863 — `Submitted / QA` is not a W3/bilateral reporting status (Nicoleta, 29-Sep-2026), so it
+ * has no tile, no meter segment and no deep link. Status ids 2 (QA) and 3 (Submitted) are still
+ * counted, and still listed row by row in the a11y table, like Discontinued.
+ */
+export type StatusTileKey = 'editing' | 'pending' | 'approved' | 'rejected';
 
 export interface OverviewStatusTile {
   key: StatusTileKey;
@@ -317,15 +322,15 @@ export interface OverviewStatusModel {
   /** One row per status id 1..7 (plus any unexpected id actually present), so a zero-count status
    *  still renders in the a11y table (`COV-R-7`). */
   tableRows: OverviewStatusTableRow[];
-  /** Sum of tile counts — total minus Discontinued (`COV-R-7`: "tile counts sum to 47 minus
-   *  discontinued"). */
+  /** Sum of the four tile counts — total minus Discontinued, QA and Submitted (`COV-R-7`, narrowed by
+   *  P2-3863). It is the meter's full width and the base of its tooltip shares, so the drawn
+   *  segments always fill the bar and their percentages add up to 100. */
   tileTotal: number;
 }
 
 const STATUS_TILE_DEFS: { key: StatusTileKey; statusIds: readonly number[] }[] = [
   { key: 'editing', statusIds: [STATUS.EDITING] },
   { key: 'pending', statusIds: [STATUS.PENDING] },
-  { key: 'submittedQa', statusIds: [STATUS.QA, STATUS.SUBMITTED] },
   { key: 'approved', statusIds: [STATUS.APPROVED] },
   { key: 'rejected', statusIds: [STATUS.REJECTED] },
 ];

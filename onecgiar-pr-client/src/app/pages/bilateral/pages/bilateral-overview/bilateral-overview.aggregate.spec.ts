@@ -155,15 +155,26 @@ describe('bilateral-overview.aggregate', () => {
   describe('Reporting status card (COV-R-7)', () => {
     const status = buildStatusModel(FIXTURE_D1_ROWS);
 
-    it('tile counts sum to total minus discontinued', () => {
-      expect(status.tileTotal).toBe(9); // 10 rows - 1 discontinued (id 8)
+    it('tile counts sum to total minus discontinued, QA and submitted (P2-3863)', () => {
+      expect(status.tileTotal).toBe(7); // 10 rows - 1 discontinued (id 8) - row 6 (submitted) - row 7 (qa)
       const sumOfTiles = status.tiles.reduce((sum, tile) => sum + tile.count, 0);
       expect(sumOfTiles).toBe(status.tileTotal);
     });
 
-    it('Submitted/QA tile merges status ids 2 and 3', () => {
-      const submittedQa = status.tiles.find(t => t.key === 'submittedQa');
-      expect(submittedQa?.count).toBe(2); // row 6 (submitted) + row 7 (qa)
+    it('P2-3863: exactly four tiles, in order, and no Submitted / QA tile', () => {
+      expect(status.tiles.map(t => t.key)).toEqual(['editing', 'pending', 'approved', 'rejected']);
+      expect(status.tiles.some(t => t.statusIds.includes(2) || t.statusIds.includes(3))).toBe(false);
+    });
+
+    it('P2-3863: QA and Submitted rows are still counted in the a11y table rows', () => {
+      expect(status.tableRows.find(r => r.statusId === 2)).toEqual({ statusId: 2, count: 1 });
+      expect(status.tableRows.find(r => r.statusId === 3)).toEqual({ statusId: 3, count: 1 });
+    });
+
+    it('P2-3863: a phase with only QA/Submitted rows yields a zero tileTotal, not NaN shares', () => {
+      const onlyQa = buildStatusModel([{ ...FIXTURE_D1_ROWS[0], status_id: 2 }, { ...FIXTURE_D1_ROWS[0], status_id: '3' }] as never);
+      expect(onlyQa.tileTotal).toBe(0);
+      expect(onlyQa.tiles.every(t => t.count === 0)).toBe(true);
     });
 
     it('compares status ids numerically after Number() normalization (string "5")', () => {
@@ -334,7 +345,7 @@ describe('bilateral-overview.aggregate', () => {
     it('produces every card model from one call', () => {
       const model = buildOverviewModel(FIXTURE_D1_ROWS, FIXTURE_PROJECTS, FIXTURE_DRAFTS, FIXTURE_PHASE, FIXTURE_TODAY);
       expect(model.kpis.totalResults.count).toBe(10);
-      expect(model.status.tileTotal).toBe(9);
+      expect(model.status.tileTotal).toBe(7);
       expect(model.attention.rows).toHaveLength(4);
       expect(model.byProject.bars).toHaveLength(2);
       expect(model.bySp.rows.length).toBeGreaterThan(0);

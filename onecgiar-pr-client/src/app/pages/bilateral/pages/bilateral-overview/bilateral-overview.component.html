@@ -303,7 +303,7 @@
             chartTitle="Reporting status"
             height="48px" />
 
-          <div class="grid grid-cols-2 min-[640px]:grid-cols-3 min-[1280px]:grid-cols-5 gap-[8px]">
+          <div class="grid grid-cols-2 min-[1280px]:grid-cols-4 gap-[8px]">
             @for (tile of model().status.tiles; track tile.key) {
               <a
                 [attr.data-testid]="'status-tile-' + tile.key"
