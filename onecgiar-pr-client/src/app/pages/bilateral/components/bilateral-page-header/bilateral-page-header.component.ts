@@ -14,12 +14,6 @@ import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenan
 import { AiProcessesTriggerComponent } from '../ai-processes-trigger/ai-processes-trigger.component';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
 import { resultStatusLabel, resultStatusToken } from '../../../../shared/constants/result-status-tokens';
-import { HlmDialogService } from '@spartan/dialog';
-import { take } from 'rxjs';
-import {
-  BulkUploaderAccessDialogComponent,
-  BulkUploaderAccessResult,
-} from '../bulk-uploader-access-dialog/bulk-uploader-access-dialog.component';
 
 @Component({
   selector: 'app-bilateral-page-header',
@@ -69,7 +63,6 @@ export class BilateralPageHeaderComponent {
   private skipNextDocumentClick = false;
   private readonly authService = inject(AuthService);
   private readonly customAlertService = inject(CustomizedAlertsFeService);
-  private readonly hlmDialogService = inject(HlmDialogService);
 
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
   readonly activeTab = input<'overview' | 'reporting' | 'results' | 'drafts' | null>(null);
@@ -236,40 +229,32 @@ export class BilateralPageHeaderComponent {
   /**
    * @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-7)
    *
-   * The uploader admits only a closed list of users, so the CTA first shows a warning
-   * (`BulkUploaderAccessDialogComponent`) and redirects only on "Continue Anyway". Cancel, Escape
-   * and a backdrop click do nothing: no tab, no HTTP call.
+   * Order of operations per `design.md` §6.2 / R-12 "order of operations": the tab MUST open
+   * before the HTTP request is issued, so a popup blocker (which only allows `window.open` from
+   * inside the click handler, not from inside a `subscribe` callback) does not get a stale HTTP
+   * call with nowhere to send its result.
    *
-   * Order of operations per `design.md` §6.2 / R-12: the tab MUST open before the HTTP request
-   * is issued, because a popup blocker only allows `window.open` from inside a user gesture.
-   * That gesture is now the Continue click, so the dialog opens the tab and severs its opener
-   * (see that component) and hands the handle back here — `window.open('', target, 'noopener')`
-   * would return `null` by spec, and steps (4)/(5) need the handle to navigate or close it.
+   * `noopener` vs a navigable handle: `window.open(url, target, 'noopener')` returns `null` by
+   * spec, but steps (4)/(5) below need a handle to navigate or close the tab on success/failure.
+   * Resolved by opening plain (`window.open('', '_blank')`) and immediately severing the reverse
+   * link with `tab.opener = null` — the same security property `rel="noopener"` gives an anchor
+   * (the partner tab never gets a `window.opener` back to PRMS), without losing the handle.
    */
   openBulkUploader(): void {
     const centerCode = this.handoffCenterCode();
     if (!centerCode || this.isMinting()) return;
 
-    // (1) Warn first; the dialog opens the tab synchronously inside the Continue click.
-    this.hlmDialogService
-      .open<BulkUploaderAccessResult | undefined>(BulkUploaderAccessDialogComponent, {
-        showCloseButton: false,
-        role: 'alertdialog',
-        // `hlm-dialog-content` defaults to `sm:max-w-md`; Helm classes concatenate, hence `!`.
-        contentClass: 'sm:max-w-lg!'
-      })
-      .closed$.pipe(take(1))
-      .subscribe(result => {
-        if (result) this.mintAndNavigate(result.tab, centerCode);
-      });
-  }
+    // (1) Open synchronously, before any HTTP call.
+    const tab = window.open('', '_blank');
 
-  private mintAndNavigate(tab: Window | null, centerCode: string): void {
     // (2) Blocked popup: no handle, no HTTP call.
     if (!tab) {
       this.showBulkHandoffError();
       return;
     }
+
+    // Sever the reverse link — the partner tab gets no handle back to this window.
+    tab.opener = null;
 
     // (3) Mint the code.
     this.isMinting.set(true);

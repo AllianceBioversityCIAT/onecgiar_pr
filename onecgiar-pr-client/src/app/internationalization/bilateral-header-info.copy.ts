@@ -33,18 +33,3 @@ export const BILATERAL_HEADER_INFO_COPY = {
     }
   }
 } as const;
-
-/**
- * Warning shown before the Bulk Results Uploader CTA redirects. The uploader only admits a closed
- * list of users (the Coordinator role granted on the partner side), so a user outside that list
- * lands on the partner refusal — this sets the expectation before PRMS gets the blame for it.
- */
-export const BULK_UPLOADER_ACCESS_COPY = {
-  title: 'Access to the Bulk Results Uploader is limited',
-  body:
-    'Only users authorized for bulk upload can sign in to the Bulk Results Uploader. ' +
-    'If your account is not on that list, the uploader will not let you in — this is not an error in PRMS.',
-  contact: 'To request access, contact the PPT administration.',
-  continueLabel: 'Continue Anyway',
-  cancelLabel: 'Cancel'
-} as const;
