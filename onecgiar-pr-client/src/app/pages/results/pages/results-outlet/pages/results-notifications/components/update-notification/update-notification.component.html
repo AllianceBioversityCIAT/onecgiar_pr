@@ -47,7 +47,14 @@
     <div class="update_notification_content_body">
       <p class="update_notification_content_body_text">
         @let parts = textParts;
+        @let aiJob = aiJobParts;
 
+        @if (aiJob) {
+          {{ aiJob.message }}
+          @if (aiJob.path) {
+            <a [href]="aiJob.path" (click)="onAiJobLinkClick($event, aiJob.path)" style="text-decoration: underline; color: var(--pr-color-black)">View</a>
+          }
+        } @else {
         @if (parts.prefix) {
           @if (parts.emphasizePrefix) {
             <b> {{ parts.prefix }} </b>
@@ -62,6 +69,7 @@
 
         @if (parts.suffix) {
           <b> {{ parts.suffix }} </b>
+        }
         }
       </p>
     </div>

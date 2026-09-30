@@ -8,7 +8,9 @@ import { ResultsApiService } from '../../../../services/api/results-api.service'
 import {
   buildResultNotificationText,
   getNotificationActionVerb,
+  getAiJobNotificationParts,
   getResultNotificationTextParts,
+  isAiJobFinishedNotification,
   isBilateralReviewNotification,
   isBilateralSubmittedNotification,
   isContributionDecisionNotification,
@@ -36,6 +38,11 @@ export class PopUpNotificationItemComponent {
   /** Text parts for the template, resolved by type NAME (P2-3157). */
   textPartsOf(notification) {
     return getResultNotificationTextParts(notification);
+  }
+
+  /** A finished AI job: no result behind it, so the row shows only the server sentence. */
+  isAiJob(notification): boolean {
+    return isAiJobFinishedNotification(notification);
   }
 
   /** True for the bilateral Approved / Rejected types, which route to the centre dashboard. */
@@ -66,6 +73,9 @@ export class PopUpNotificationItemComponent {
    * `NOTIF-OQ-3`/`NOTIF-DD-5`.
    */
   generateUrlLink(notification) {
+    const aiJobPath = getAiJobNotificationParts(notification)?.path;
+    if (aiJobPath) return aiJobPath;
+
     const baseUrl = 'result/results-outlet/results-notifications';
     const versionId = notification?.obj_result?.obj_version?.id;
 
@@ -85,6 +95,17 @@ export class PopUpNotificationItemComponent {
    */
   onNotificationClick(event: MouseEvent): void {
     const notification = this.notification;
+
+    // A finished AI job goes to its drafts (or the failed job) inside the app.
+    if (isAiJobFinishedNotification(notification)) {
+      const path = getAiJobNotificationParts(notification)?.path;
+      this.itemSelected.emit();
+      if (!path) return;
+      event.preventDefault();
+      this.markAsRead(notification);
+      this.router.navigateByUrl(path);
+      return;
+    }
 
     // 2026-09-05 — "submitted for your review" takes the SP member straight to their review queue,
     // where the pending result waits. The SP code is the role-1 initiative the payload carries.

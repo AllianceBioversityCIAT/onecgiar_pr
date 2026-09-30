@@ -8,8 +8,10 @@ import { Router } from '@angular/router';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
 import {
+  getAiJobNotificationParts,
   getResultNotificationTextParts,
   resolveNotificationType,
+  type AiJobNotificationParts,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
 import type { ContributionRequestDrawerMode, ContributionRequestDrawerViewFields } from '../contribution-request-drawer/contribution-request-drawer.component';
@@ -144,6 +146,8 @@ export class NotificationItemComponent {
 
   /** NOTIF-AC-2: row accessible name, phrased per the mode the click actually opens. */
   get rowAriaLabel(): string {
+    const aiJob = this.aiJobParts;
+    if (aiJob) return aiJob.message;
     const resultCode = this.notification?.obj_result?.result_code;
     return this.rowMode === 'decide' ? this.copy.rowAriaLabel(resultCode) : this.copy.notificationItem.rowAriaLabelView(resultCode);
   }
@@ -190,6 +194,11 @@ export class NotificationItemComponent {
   /** NOTIF-T-5: `getResultNotificationTextParts()` for an update-source row — never reimplemented. */
   get updateTextParts(): NotificationTextParts {
     return getResultNotificationTextParts(this.notification);
+  }
+
+  /** A finished AI job has no result behind it: no result link, no drawer, just its sentence. */
+  get aiJobParts(): AiJobNotificationParts | null {
+    return getAiJobNotificationParts(this.notification);
   }
 
   /**
@@ -252,6 +261,12 @@ export class NotificationItemComponent {
    * before (CRD-DD-10) — this only adds a toggle on the already-open case, for every row kind.
    */
   onRowActivate(): void {
+    const aiJob = this.aiJobParts;
+    if (aiJob) {
+      // The contribution drawer needs a result; an AI job row goes to its drafts instead.
+      if (aiJob.path) this.router.navigateByUrl(aiJob.path);
+      return;
+    }
     if (this.drawerOpen()) {
       this.closeDrawer();
       return;
@@ -329,8 +344,8 @@ export class NotificationItemComponent {
       this.api.rolesSE.platformIsClosed ||
       this.isQAed ||
       (!this.api.rolesSE.isAdmin &&
-        this.notification.obj_result.obj_version.id != currentPhaseId &&
-        this.notification.obj_result.status_id != 3)
+        this.notification?.obj_result?.obj_version?.id != currentPhaseId &&
+        this.notification?.obj_result?.status_id != 3)
     );
   }
 
