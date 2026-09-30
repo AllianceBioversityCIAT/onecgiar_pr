@@ -17,6 +17,7 @@ import {
   IsInt,
   Min,
   MaxLength,
+  Matches,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -1156,6 +1157,26 @@ export class CreateBilateralDto {
   @IsOptional()
   @IsBoolean()
   keep_editing?: boolean;
+
+  /**
+   * @akili-spec changes/bilateral-create-upsert-by-code — UBC-R-1/R-2/R-3.
+   *
+   * The PRMS result code of a result that already exists. When present, `create` resolves it
+   * instead of unconditionally creating a new row: a hit in the open phase is updated in
+   * place, a hit only in an earlier (approved) phase is carried forward with this payload's
+   * data, and anything else (not found, another platform's code, a Knowledge Product, or a
+   * non-editable status) is rejected with a 4xx before any row is written. Absent, `create`
+   * behaves exactly as before this change (`UBC-R-1`).
+   */
+  @ApiPropertyOptional({
+    description:
+      'The PRMS result code of an existing result to update or version with this payload. Digits only. Absent creates a new result, exactly as before (UBC-R-1).',
+    example: '28565',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+$/, { message: 'result_code must contain digits only.' })
+  result_code?: string;
 
   @ApiProperty({
     description: 'Result type identifier for the bilateral',

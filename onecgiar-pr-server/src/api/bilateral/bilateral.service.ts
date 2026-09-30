@@ -2,6 +2,7 @@ import {
   Injectable,
   HttpStatus,
   BadRequestException,
+  ConflictException,
   NotFoundException,
   Logger,
   Optional,
@@ -119,6 +120,7 @@ import { ResultType } from '../results/result_types/entities/result_type.entity'
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { AssessedDuringExpertWorkshop } from '../ipsr/assessed-during-expert-workshop/entities/assessed-during-expert-workshop.entity';
 import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validation.interface';
+import { BilateralVersioningRulesService } from './versioning-rules/bilateral-versioning-rules.service';
 import { ExternalPlatformIdentity } from './interfaces/external-platform-identity.interface';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
@@ -263,6 +265,10 @@ export class BilateralService {
     private readonly _otherOutcomeHandler: NoopBilateralHandler,
     private readonly _adUserService: AdUserService,
     private readonly _roleByUserRepository: RoleByUserRepository,
+    // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-1/DD-6: the shared
+    // ownership/KP/phase rules `create`'s resolve step reuses, so a `result_code` reuses the
+    // exact same eligibility checks `/version` already enforces.
+    private readonly _bilateralVersioningRulesService: BilateralVersioningRulesService,
     @Optional()
     private readonly _notificationService?: NotificationService,
     // BCT-T-5 / design §5.5 — trailing @Optional() like `_notificationService` above, so a
@@ -314,6 +320,13 @@ export class BilateralService {
         }
 
         const bilateralDto = result.data;
+
+        // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-1: resolve `result_code`
+        // before any write (users, contacts and the header are all still ahead of this). A miss
+        // of any kind (not found, foreign platform, KP, non-editable status) rejects with a 4xx
+        // here and nothing below runs for this result (R-8). T-2/T-3 wire the two eligible
+        // outcomes into real writes; until then both are the same 409 placeholder.
+        await this.resolveResultCodeTarget(bilateralDto, platform);
 
         await this.runResultTypePreflight(bilateralDto);
 
@@ -547,6 +560,15 @@ export class BilateralService {
               // response without holding on to request order.
               external_reference: externalIdentity.external_reference,
               is_duplicate_kp: false,
+              // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-5/R-10: every
+              // result on this (unchanged) path is a fresh create, regardless of whether it
+              // carried a `result_code` that resolved to nothing (T-1 does not wire an
+              // ineligible code into a write — it always rejects before this point).
+              operation: 'created',
+              status_id: newResultHeader.status_id,
+              status:
+                ResultStatusData.getFromValue(Number(newResultHeader.status_id))
+                  ?.name ?? null,
               ...kpExtra,
             });
 
@@ -584,6 +606,21 @@ export class BilateralService {
         );
         throw error;
       }
+    }
+
+    // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-5/R-10: additive, on
+    // `response` itself (not a new top-level key), so the Fetcher's own count
+    // (`external-api.mjs:139-157`, which only special-cases `response` being an array or
+    // carrying `response.results[]`) is unaffected. One row per result in the request, named
+    // `outcomes` rather than `results` for the same reason.
+    if (resultInfo) {
+      (resultInfo as any).outcomes = createdResults.map((created) => ({
+        result_code: created.result_code,
+        operation: created.operation,
+        status_id: created.status_id,
+        status: created.status,
+        external_reference: created.external_reference,
+      }));
     }
 
     return {
@@ -4372,6 +4409,147 @@ export class BilateralService {
       bilateralDto: context.bilateralDto,
       isDuplicateResult: context.isDuplicateResult,
     });
+  }
+
+  /**
+   * @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-1.
+   *
+   * No-op when the payload carries no `result_code` (`UBC-R-1`): callers that never mention
+   * an existing result see no change at all. Otherwise, in the order `design.md` `DD-1`
+   * fixes:
+   *
+   * 1. `findInPhase(open)` — a hit is the `updated` target.
+   * 2. On a miss, `resolveVersionableResult` — a hit is the `versioned` target (this call
+   *    already enforces bilateral-only, not-a-KP and Approved internally).
+   * 3. The shared ownership rule (`rules.assertCallerMayVersion`, `UBC-R-4`), then — for the
+   *    `updated` target only, since `resolveVersionableResult` already ran it — the KP guard
+   *    (`UBC-R-6`), then the `R-5` editable-status guard.
+   *
+   * T-2 and T-3 are what turn `updated`/`versioned` into real writes. Until they land, both
+   * eligible outcomes are rejected here with the same 409 placeholder, so a `result_code` can
+   * never fall through to an unconditional create (`R-8`): every path through this method
+   * either throws or resolves to one of the two placeholders below — there is no return.
+   */
+  private async resolveResultCodeTarget(
+    bilateralDto: CreateBilateralDto,
+    platform?: ClarisaApiKeyValidationMis,
+  ): Promise<void> {
+    const resultCode =
+      typeof bilateralDto?.result_code === 'string'
+        ? bilateralDto.result_code.trim()
+        : '';
+    if (!resultCode) return;
+
+    const activePhase =
+      await this._bilateralVersioningRulesService.getActiveReportingPhase();
+
+    const openPhaseResult =
+      await this._bilateralVersioningRulesService.findInPhase(
+        resultCode,
+        activePhase.id,
+      );
+
+    if (openPhaseResult) {
+      // R-8 observability (advisory): one line for this candidate, whatever the outcome —
+      // never the payload body, never a key. A guard rejection logs the real status; reaching
+      // past every guard logs the T-3 placeholder instead — either way, exactly one line.
+      try {
+        await this._bilateralVersioningRulesService.assertCallerMayVersion(
+          openPhaseResult,
+          resultCode,
+          platform,
+        );
+        this._bilateralVersioningRulesService.assertNotKnowledgeProduct(
+          openPhaseResult,
+          resultCode,
+        );
+        this.assertResultCodeStatusIsEditable(openPhaseResult, resultCode);
+      } catch (error) {
+        this.logResultCodeResolution(resultCode, 'updated', platform, error);
+        throw error;
+      }
+
+      this.logResultCodeResolution(
+        resultCode,
+        'updated',
+        platform,
+        'not_wired',
+      );
+      // T-3 wires the actual update path here.
+      throw new ConflictException(
+        'Updating an existing result through create is not available yet.',
+      );
+    }
+
+    let source: Result;
+    try {
+      source =
+        await this._bilateralVersioningRulesService.resolveVersionableResult(
+          resultCode,
+          activePhase.id,
+        );
+      await this._bilateralVersioningRulesService.assertCallerMayVersion(
+        source,
+        resultCode,
+        platform,
+      );
+    } catch (error) {
+      this.logResultCodeResolution(resultCode, 'versioned', platform, error);
+      throw error;
+    }
+
+    this.logResultCodeResolution(
+      resultCode,
+      'versioned',
+      platform,
+      'not_wired',
+    );
+    // T-2 wires the actual version-with-data path here.
+    throw new ConflictException(
+      'Versioning an existing result through create is not available yet.',
+    );
+  }
+
+  /**
+   * R-8 observability (advisory): `result_code`, the candidate `operation`, the calling
+   * `platform`, and the `outcome` — never a payload body, never a key. `outcome` is either the
+   * HTTP status a guard rejected with, or the literal `not_wired` for a candidate that cleared
+   * every guard but has no real write yet (T-2/T-3).
+   */
+  private logResultCodeResolution(
+    resultCode: string,
+    operation: 'updated' | 'versioned',
+    platform: ClarisaApiKeyValidationMis | undefined,
+    outcome: 'not_wired' | unknown,
+  ): void {
+    const outcomeLabel =
+      outcome === 'not_wired'
+        ? 'rejected(not_wired)'
+        : `rejected(${(outcome as any)?.getStatus?.() ?? 'error'})`;
+    this.logger.log(
+      `result_code=${resultCode} operation=${operation} platform=${platform?.acronym ?? platform?.id ?? 'unknown'} outcome=${outcomeLabel}`,
+    );
+  }
+
+  /** `UBC-R-5`: an open-phase result may be updated only from one of these statuses. */
+  private assertResultCodeStatusIsEditable(
+    target: Result,
+    resultCode: string,
+  ): void {
+    const editableStatuses = [
+      ResultStatusData.Editing.value,
+      ResultStatusData.Draft.value,
+      ResultStatusData.PendingReview.value,
+      ResultStatusData.Rejected.value,
+    ];
+    if (!editableStatuses.includes(Number(target.status_id))) {
+      const statusName =
+        ResultStatusData.getFromValue(Number(target.status_id))?.name ??
+        String(target.status_id);
+      throw new ConflictException(
+        `Result ${resultCode} is ${statusName} and cannot be updated through create.`,
+      );
+    }
   }
 
   private async runResultTypePreflight(

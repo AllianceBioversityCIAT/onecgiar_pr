@@ -1,6 +1,6 @@
 # Tasks — `changes/bilateral-create-upsert-by-code`
 
-- **Status:** `not-started`
+- **Status:** `in-progress` (T-1 done)
 - **Budget (`design.md` §9):** 6 tasks · ~1,000 LOC · 1–2 review rounds per task
 - **Branch:** `feat/bilateral-create-upsert-by-code` from `performance-refactor` @ `35e58fd87`
 - **PR strategy:**
@@ -14,7 +14,7 @@
 
 ---
 
-### `UBC-T-1` — Accept `result_code`, resolve it before any write, reject what is ineligible, and return per-result outcomes
+### [x] `UBC-T-1` — Accept `result_code`, resolve it before any write, reject what is ineligible, and return per-result outcomes
 
 - **Type:** `server` · **Size:** `M` · **Depends on:** `—`
 - **Implements:** `UBC-R-1`, `R-4`, `R-5`, `R-6`, `R-8`, `R-10`; the resolution half of `R-2` / `R-3`
@@ -53,12 +53,12 @@
     - `versioning-rules/bilateral-versioning-rules.service.spec.ts` (the extraction must keep `/version` green)
     - Fetcher `external-api.mjs:139-157` (reads `response`; `outcomes` must not be named `results`)
 - **Definition of done:**
-  - [ ] `R-1`: a no-code create is unchanged, and an explicit case asserts it
-  - [ ] `R-8`: each ineligible code returns its 4xx and triggers zero writes
-  - [ ] `R-4`: ownership is enforced through the extracted shared rule, and the `/version` specs stay green
-  - [ ] `R-10`: `outcomes[]` is present and additive, and `response` is unchanged
-  - [ ] All four mutations were run and observed **red**
-  - [ ] Scoped jest, eslint and tsc are green
+  - [x] `R-1`: a no-code create is unchanged, and an explicit case asserts it
+  - [x] `R-8`: each ineligible code returns its 4xx and triggers zero writes
+  - [x] `R-4`: ownership is enforced through the extracted shared rule, and the `/version` specs stay green
+  - [x] `R-10`: `outcomes[]` is present and additive, and `response` is unchanged
+  - [x] All four mutations were run and observed **red**
+  - [x] Scoped jest, eslint and tsc are green
 
 ---
 
