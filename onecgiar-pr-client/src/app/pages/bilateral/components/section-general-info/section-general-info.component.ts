@@ -442,6 +442,12 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
 
   onDescriptionChange(value: string): void {
     this.description.set(value);
+    // BIL-QTS-T-6: mirrors onTitleChange above — the quality-assessment drawer's `currentDescription`
+    // input reads `creationService.resultDescription()`, which otherwise only changes when
+    // `loadResult` runs. Without this the drawer kept showing whatever description was loaded at
+    // check time (empty on a brand-new draft) even after the reporter typed one into the form.
+    // Writing the same value back is a no-op for the hydration effect above.
+    this.creationService.resultDescription.set(value);
     this.autoSaveService.updateField('description', value, 'text');
   }
 

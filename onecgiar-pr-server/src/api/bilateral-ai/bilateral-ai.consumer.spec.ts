@@ -1,10 +1,12 @@
 import { Logger } from '@nestjs/common';
 import { BilateralAiConsumer } from './bilateral-ai.consumer';
 import { BilateralAiService } from './services/bilateral-ai.service';
+import { BilateralAiDispatchService } from './services/bilateral-ai-dispatch.service';
 
 describe('BilateralAiConsumer', () => {
   let consumer: BilateralAiConsumer;
   let bilateralAiService: jest.Mocked<BilateralAiService>;
+  let dispatchService: jest.Mocked<BilateralAiDispatchService>;
   let mockChannelRef: { ack: jest.Mock; nack: jest.Mock };
 
   const mockMessage = { content: Buffer.from('') };
@@ -15,9 +17,13 @@ describe('BilateralAiConsumer', () => {
       getJobRaw: jest.fn().mockResolvedValue(null),
     } as any;
 
+    dispatchService = {
+      decide: jest.fn(),
+    } as any;
+
     mockChannelRef = { ack: jest.fn(), nack: jest.fn() };
 
-    consumer = new BilateralAiConsumer(bilateralAiService);
+    consumer = new BilateralAiConsumer(bilateralAiService, dispatchService);
 
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   });
@@ -36,8 +42,79 @@ describe('BilateralAiConsumer', () => {
     expect(consumer).toBeDefined();
   });
 
-  describe('process', () => {
-    it('should call bilateralAiService.processJob and ack the message on success', async () => {
+  describe('process — dispatch decision routing (AIQ-T-2, design.md §2.3)', () => {
+    it('acks and never calls processJob when the decision is noop', async () => {
+      dispatchService.decide.mockResolvedValue({ kind: 'noop' });
+      const context = makeContext();
+
+      await consumer.process({ jobId: 'j1' }, context);
+
+      expect(dispatchService.decide).toHaveBeenCalledWith('j1');
+      expect(bilateralAiService.processJob).not.toHaveBeenCalled();
+      expect(mockChannelRef.ack).toHaveBeenCalledWith(mockMessage);
+      expect(mockChannelRef.nack).not.toHaveBeenCalled();
+    });
+
+    it('acks and never calls processJob when the decision is park', async () => {
+      dispatchService.decide.mockResolvedValue({ kind: 'park' });
+      const context = makeContext();
+
+      await consumer.process({ jobId: 'j1' }, context);
+
+      expect(bilateralAiService.processJob).not.toHaveBeenCalled();
+      expect(mockChannelRef.ack).toHaveBeenCalledWith(mockMessage);
+      expect(mockChannelRef.nack).not.toHaveBeenCalled();
+    });
+
+    it('acks X and never calls processJob when the decision redirects to E (AIQ-DD-3)', async () => {
+      dispatchService.decide.mockResolvedValue({
+        kind: 'redirect',
+        jobId: 'E',
+      });
+      const context = makeContext();
+
+      await consumer.process({ jobId: 'X' }, context);
+
+      expect(bilateralAiService.processJob).not.toHaveBeenCalled();
+      expect(mockChannelRef.ack).toHaveBeenCalledWith(mockMessage);
+      expect(mockChannelRef.nack).not.toHaveBeenCalled();
+    });
+
+    it('nack-requeues without touching processJob when the decision is lock-timeout', async () => {
+      dispatchService.decide.mockResolvedValue({ kind: 'lock-timeout' });
+      const context = makeContext();
+
+      await consumer.process({ jobId: 'j1' }, context);
+
+      expect(bilateralAiService.processJob).not.toHaveBeenCalled();
+      expect(mockChannelRef.nack).toHaveBeenCalledWith(
+        mockMessage,
+        false,
+        true,
+      );
+      expect(mockChannelRef.ack).not.toHaveBeenCalled();
+    });
+
+    // `AIQ-T-2` attempt 2, Reviewer B item 1: `decide` previously sat outside any try block.
+    // Nest's `ServerRMQ` neither acks nor nacks when the handler throws, so a DB blip left the
+    // message stuck holding a prefetch slot forever.
+    it('nack-requeues without touching processJob when decide() itself rejects', async () => {
+      dispatchService.decide.mockRejectedValue(new Error('DB connection lost'));
+      const context = makeContext();
+
+      await consumer.process({ jobId: 'j1' }, context);
+
+      expect(bilateralAiService.processJob).not.toHaveBeenCalled();
+      expect(mockChannelRef.nack).toHaveBeenCalledWith(
+        mockMessage,
+        false,
+        true,
+      );
+      expect(mockChannelRef.ack).not.toHaveBeenCalled();
+    });
+
+    it('calls processJob with skipClaim:true and acks on success when the decision is run', async () => {
+      dispatchService.decide.mockResolvedValue({ kind: 'run' });
       bilateralAiService.processJob.mockResolvedValue(undefined);
       const context = makeContext();
 
@@ -45,24 +122,35 @@ describe('BilateralAiConsumer', () => {
 
       expect(bilateralAiService.processJob).toHaveBeenCalledWith(
         'test-job-id-123',
+        { skipClaim: true },
       );
       expect(mockChannelRef.ack).toHaveBeenCalledWith(mockMessage);
       expect(mockChannelRef.nack).not.toHaveBeenCalled();
     });
 
-    it('should nack the message on failure when retries remain', async () => {
+    it("calls processJob with skipClaim:false (today's path) when the decision is resume-retry", async () => {
+      dispatchService.decide.mockResolvedValue({ kind: 'resume-retry' });
+      bilateralAiService.processJob.mockResolvedValue(undefined);
+      const context = makeContext();
+
+      await consumer.process({ jobId: 'retrying-job' }, context);
+
+      expect(bilateralAiService.processJob).toHaveBeenCalledWith(
+        'retrying-job',
+        { skipClaim: false },
+      );
+      expect(mockChannelRef.ack).toHaveBeenCalledWith(mockMessage);
+    });
+
+    it('nacks on failure when retries remain (run outcome)', async () => {
+      dispatchService.decide.mockResolvedValue({ kind: 'run' });
       const error = new Error('Processing failed');
       bilateralAiService.processJob.mockRejectedValue(error);
-      bilateralAiService.getJobRaw.mockResolvedValue({
-        attempts: 0,
-      } as any);
+      bilateralAiService.getJobRaw.mockResolvedValue({ attempts: 0 } as any);
       const context = makeContext();
 
       await consumer.process({ jobId: 'failing-job-id' }, context);
 
-      expect(bilateralAiService.processJob).toHaveBeenCalledWith(
-        'failing-job-id',
-      );
       expect(bilateralAiService.getJobRaw).toHaveBeenCalledWith(
         'failing-job-id',
       );
@@ -74,12 +162,11 @@ describe('BilateralAiConsumer', () => {
       expect(mockChannelRef.ack).not.toHaveBeenCalled();
     });
 
-    it('should log an error message when processing fails', async () => {
+    it('logs an error message when processing fails', async () => {
+      dispatchService.decide.mockResolvedValue({ kind: 'run' });
       const error = new Error('AI service error');
       bilateralAiService.processJob.mockRejectedValue(error);
-      bilateralAiService.getJobRaw.mockResolvedValue({
-        attempts: 0,
-      } as any);
+      bilateralAiService.getJobRaw.mockResolvedValue({ attempts: 0 } as any);
       const context = makeContext();
       const errorSpy = jest.spyOn(Logger.prototype, 'error');
 
@@ -104,6 +191,7 @@ describe('BilateralAiConsumer', () => {
 
       it('acks (stops requeueing) once attempts reach a lowered ceiling of 2', async () => {
         process.env.BILATERAL_AI_MAX_ATTEMPTS = '2';
+        dispatchService.decide.mockResolvedValue({ kind: 'run' });
         const error = new Error('Processing failed');
         bilateralAiService.processJob.mockRejectedValue(error);
         bilateralAiService.getJobRaw.mockResolvedValue({ attempts: 2 } as any);
@@ -117,6 +205,7 @@ describe('BilateralAiConsumer', () => {
 
       it('still nacks (requeues) below a lowered ceiling of 2', async () => {
         process.env.BILATERAL_AI_MAX_ATTEMPTS = '2';
+        dispatchService.decide.mockResolvedValue({ kind: 'run' });
         const error = new Error('Processing failed');
         bilateralAiService.processJob.mockRejectedValue(error);
         bilateralAiService.getJobRaw.mockResolvedValue({ attempts: 1 } as any);

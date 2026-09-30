@@ -1,7 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { Subject } from 'rxjs';
-import { HlmDialogService } from '@spartan/dialog';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { RouterModule } from '@angular/router';
 import { By } from '@angular/platform-browser';
@@ -9,14 +7,10 @@ import { environment } from '../../../../../environments/environment';
 import { BilateralPageHeaderComponent } from './bilateral-page-header.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
-import { normalizeJob } from '../../bilateral-ai-job.model';
-import { rawJob } from '../../bilateral-ai-job.fixtures';
+import { normalizeListJob } from '../../bilateral-ai-job.model';
+import { rawListJob } from '../../bilateral-ai-job.fixtures';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
-import {
-  BulkUploaderAccessDialogComponent,
-  BulkUploaderAccessResult,
-} from '../bulk-uploader-access-dialog/bulk-uploader-access-dialog.component';
 
 describe('BilateralPageHeaderComponent', () => {
   let component: BilateralPageHeaderComponent;
@@ -508,30 +502,22 @@ describe('BilateralPageHeaderComponent', () => {
   /**
    * @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-7)
    *
-   * The CTA first shows the access warning; only "Continue Anyway" mints a one-time handoff code
-   * and navigates the tab the dialog opened inside that click (R-12 "order of operations"). The
-   * dialog is stubbed here: what it resolves with is the seam — `{ tab }` on Continue (`tab: null`
-   * when the popup was blocked), `undefined` on Cancel/Escape. That the tab opens inside the
-   * Continue click is pinned by `bulk-uploader-access-dialog.component.spec.ts`; the real popup
-   * blocker is the T-9 manual/browser check.
+   * The CTA is a <button> that mints a one-time handoff code, then navigates a tab it opened
+   * *before* the mint (R-12 "order of operations"). jsdom cannot observe a real popup blocker, so
+   * (a) is a call-order proxy — the real blocker behaviour is the T-9 manual/browser check.
    */
-  describe('Bulk Results Uploader CTA — warn, then mint and navigate (BIL-HO-T-7)', () => {
+  describe('Bulk Results Uploader CTA — mint-then-navigate (BIL-HO-T-7)', () => {
     const HANDOFF_URL = `${environment.apiBaseUrl}api/bilateral/center/handoff`;
-    const DEFAULT_ERROR_COPY = 'The Bulk Results Uploader could not be opened. Please try again.';
 
     let httpMock: HttpTestingController;
     let alertService: CustomizedAlertsFeService;
-    let dialogOpenSpy: jest.Mock;
-    let dialogResult: Subject<BulkUploaderAccessResult | undefined>;
-    let tabStub: { location: { href: string }; close: jest.Mock };
+    let openSpy: jest.SpyInstance;
+    let tabStub: { location: { href: string }; close: jest.Mock; opener: unknown };
 
     beforeEach(() => {
       httpMock = TestBed.inject(HttpTestingController);
       alertService = TestBed.inject(CustomizedAlertsFeService);
-      tabStub = { location: { href: '' }, close: jest.fn() };
-      dialogResult = new Subject();
-      dialogOpenSpy = jest.fn(() => ({ closed$: dialogResult.asObservable() }));
-      jest.spyOn(TestBed.inject(HlmDialogService), 'open').mockImplementation(dialogOpenSpy as never);
+      tabStub = { location: { href: '' }, close: jest.fn(), opener: {} };
 
       ctx.setCenter('SMO', 'CGIAR System Organization', 'CENTER-05');
       fixture.componentRef.setInput('activeTab', 'overview');
@@ -543,6 +529,7 @@ describe('BilateralPageHeaderComponent', () => {
       // construction; drain it so `verify()` only judges the handoff traffic this block is about.
       httpMock.match(req => req.url.includes('api/versioning')).forEach(req => req.flush({ response: [] }));
       httpMock.verify();
+      openSpy?.mockRestore();
     });
 
     function clickCta(): void {
@@ -550,36 +537,42 @@ describe('BilateralPageHeaderComponent', () => {
       cta.nativeElement.click();
     }
 
-    function continueAnyway(tab: typeof tabStub | null = tabStub): void {
-      dialogResult.next({ tab: tab as unknown as Window | null });
-      dialogResult.complete();
-    }
+    it('(a) opens the tab before the HTTP request to `start` is issued', () => {
+      const httpClient = TestBed.inject(HttpClient) as unknown as { post: HttpClient['post'] };
+      const postSpy = jest.spyOn(httpClient, 'post');
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
 
-    it('(a) opens the access warning and issues no HTTP request until it is answered', () => {
       clickCta();
 
-      expect(dialogOpenSpy).toHaveBeenCalledWith(
-        BulkUploaderAccessDialogComponent,
-        expect.objectContaining({ role: 'alertdialog', showCloseButton: false }),
-      );
-      httpMock.expectNone(HANDOFF_URL);
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(postSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy.mock.invocationCallOrder[0]).toBeLessThan(postSpy.mock.invocationCallOrder[0]);
+
+      httpMock
+        .expectOne(HANDOFF_URL)
+        .flush({ response: { code: 'c', expires_in: 120, redirect_url: 'https://partner.test/entry/?code=c' } });
     });
 
-    it('(b) on Cancel (or Escape) mints nothing and shows no alert', () => {
-      const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
+    it('(b) opens with no destination URL and severs the opener link before minting', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
 
       clickCta();
-      dialogResult.next(undefined);
-      dialogResult.complete();
 
-      httpMock.expectNone(HANDOFF_URL);
-      expect(showSpy).not.toHaveBeenCalled();
-      expect(component.isMinting()).toBe(false);
+      // No URL/features string is ever passed to `open` — `rel="noopener"` on an <a> would make
+      // `open` return null by spec, so the handle is obtained plain and the opener link severed
+      // by hand (see the docstring on `openBulkUploader`).
+      expect(openSpy).toHaveBeenCalledWith('', '_blank');
+      expect(tabStub.opener).toBeNull();
+
+      httpMock
+        .expectOne(HANDOFF_URL)
+        .flush({ response: { code: 'c', expires_in: 120, redirect_url: 'https://partner.test/entry/?code=c' } });
     });
 
-    it('(c) on Continue navigates the already-open tab to `redirect_url`', () => {
+    it('(c) navigates the already-open tab to `redirect_url` on success', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+
       clickCta();
-      continueAnyway();
       expect(component.isMinting()).toBe(true);
 
       httpMock
@@ -592,27 +585,27 @@ describe('BilateralPageHeaderComponent', () => {
     });
 
     it('(d) on a 403 closes the tab, shows the error alert, re-enables the CTA, and never navigates', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
       // `.show()` touches the real DOM (`<app-root>`, absent in this component's test host) —
       // stub it the way it's actually intended to be exercised: recorded, not executed.
       const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
 
       clickCta();
-      continueAnyway();
       httpMock
         .expectOne(HANDOFF_URL)
         .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
       expect(tabStub.close).toHaveBeenCalledTimes(1);
-      expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error', description: 'Forbidden' }));
+      expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
       expect(component.isMinting()).toBe(false);
       expect(tabStub.location.href).toBe('');
     });
 
-    it('(e) when the popup was blocked, shows the error alert and issues no HTTP request', () => {
+    it('(e) when the popup is blocked, shows the error alert and issues no HTTP request', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(null);
       const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
 
       clickCta();
-      continueAnyway(null);
 
       httpMock.expectNone(HANDOFF_URL);
       expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
@@ -620,8 +613,9 @@ describe('BilateralPageHeaderComponent', () => {
     });
 
     it('(f) mints for the resolved CLARISA centre code, never the acronym', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+
       clickCta();
-      continueAnyway();
 
       const req = httpMock.expectOne(HANDOFF_URL);
       expect(req.request.body).toEqual({ center_code: 'CENTER-05' });
@@ -632,6 +626,7 @@ describe('BilateralPageHeaderComponent', () => {
       ['not resolved yet', undefined],
       ['not a CLARISA centre code', 'SMO'],
     ])('(g) disables the CTA and opens nothing while the centre code is %s', (_label, code) => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
       ctx.setCenter('SMO', 'CGIAR System Organization', code);
       fixture.detectChanges();
 
@@ -640,15 +635,15 @@ describe('BilateralPageHeaderComponent', () => {
 
       component.openBulkUploader();
 
-      expect(dialogOpenSpy).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
       httpMock.expectNone(HANDOFF_URL);
     });
 
     it('(h) shows the default copy when a 400 carries a list of validation messages', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
       const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
 
       clickCta();
-      continueAnyway();
       httpMock
         .expectOne(HANDOFF_URL)
         .flush(
@@ -656,7 +651,9 @@ describe('BilateralPageHeaderComponent', () => {
           { status: 400, statusText: 'Bad Request' },
         );
 
-      expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ description: DEFAULT_ERROR_COPY }));
+      expect(showSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ description: 'The Bulk Results Uploader could not be opened. Please try again.' }),
+      );
     });
   });
 
@@ -829,137 +826,108 @@ describe('BilateralPageHeaderComponent', () => {
     });
   });
 
-  describe('"AI job running" chip (APF-R-10)', () => {
-    const chip = () => fixture.debugElement.query(By.css('[data-testid="bilateral-ai-job-chip"]'));
+  // `AIQ-T-9` / `AIQ-DD-9`: the retired per-Center "AI job running" chip (`APF-R-10`) is replaced by
+  // `app-ai-processes-trigger` in all three header slots. This block replaces the old chip describe
+  // (rewrite, not addition — `tasks.md` `AIQ-T-9` Tests). `AiProcessesTriggerComponent` reads
+  // `BilateralAiService` directly, so these tests drive the REAL service instance the header itself
+  // injects (`aiService`, from the outer `beforeEach`) rather than passing inputs.
+  describe('AI processes trigger (AIQ-T-9, AIQ-R-10, AIQ-DD-9)', () => {
+    const trigger = () => fixture.debugElement.query(By.css('[data-testid="ai-processes-trigger"]'));
+    const badge = () => fixture.debugElement.query(By.css('[data-testid="ai-processes-trigger-badge"]'));
 
-    it('renders with the elapsed time in the accessible name when the service reports an alive job for the current center', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
-      fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-1',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now() - (4 * 60_000 + 12_000),
-      };
-      fixture.detectChanges();
-
-      const el = chip();
-      expect(el).not.toBeNull();
-      expect(el.nativeElement.textContent).toContain('AI job running');
-      expect(el.nativeElement.textContent).toContain('04:12');
-      expect(el.nativeElement.getAttribute('aria-label')).toContain('4 minutes');
-      expect(el.nativeElement.getAttribute('aria-label')).toContain('12 seconds');
+    beforeEach(() => {
+      // The header's whole template is gated on `ctx.centerAcronym()` — a default Center here
+      // keeps every test below focused on the trigger, not on re-deriving that precondition.
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
     });
 
-    it('is absent when the tracked job belongs to a different center (CIMMYT)', () => {
-      ctx.setCenter('CIMMYT', 'International Maize and Wheat Improvement Center');
-      fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-1',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now(),
-      };
-      fixture.detectChanges();
-
-      expect(chip()).toBeNull();
+    afterEach(() => {
+      aiService.stopPolling();
     });
 
-    it('is absent once the job reaches a terminal state', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    it('renders for a Center that never started the job — `AIQ-R-10` A must NOT gate on Center', () => {
+      ctx.setCenter('ZZZ-Other', 'A Center That Never Started Any Job');
       fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-1', status: 'completed', uploadProgress: 100 });
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-1',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now(),
-      };
+      aiService.jobs.set([normalizeListJob(rawListJob({ job_id: 'job-1', status: 'PROCESSING', center_id: '999' }))]);
       fixture.detectChanges();
 
-      expect(chip()).toBeNull();
+      expect(trigger()).toBeTruthy();
     });
 
-    it('is absent while idle (no tracked job)', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    it('renders on the create wizard (`pageTitle` set, no `activeTab`) — the chip never did (P-16)', () => {
+      fixture.componentRef.setInput('pageTitle', 'Create a result');
+      fixture.componentRef.setInput('activeTab', null);
+      fixture.detectChanges();
+
+      expect(trigger()).toBeTruthy();
+    });
+
+    it('badge equals the active (running + waiting) job count while working', () => {
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.jobs.set([
+        normalizeListJob(rawListJob({ job_id: 'job-1', status: 'PROCESSING' })),
+        normalizeListJob(rawListJob({ job_id: 'job-2', status: 'PENDING' })),
+      ]);
+      fixture.detectChanges();
+
+      expect(badge()?.nativeElement.textContent.trim()).toBe('2');
+    });
+
+    it('done state shows the unseen count and it is cleared once the drawer opens', () => {
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.unseenFinishedIds.set(new Set(['job-1', 'job-2']));
+      fixture.detectChanges();
+
+      expect(badge()?.nativeElement.textContent.trim()).toBe('2');
+
+      trigger().nativeElement.click();
+      fixture.detectChanges();
+
+      expect(aiService.unseenFinishedIds().size).toBe(0);
+      expect(badge()).toBeFalsy();
+    });
+
+    it('accessible name contains the running/waiting counts', () => {
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.jobs.set([
+        normalizeListJob(rawListJob({ job_id: 'job-1', status: 'PROCESSING' })),
+        normalizeListJob(rawListJob({ job_id: 'job-2', status: 'PENDING' })),
+        normalizeListJob(rawListJob({ job_id: 'job-3', status: 'PENDING' })),
+      ]);
+      fixture.detectChanges();
+
+      expect(trigger().nativeElement.getAttribute('aria-label')).toBe('AI processes: 1 running, 2 waiting');
+    });
+
+    it('idle accessible name has no counts when there are no active or unseen jobs', () => {
       fixture.componentRef.setInput('activeTab', 'reporting');
       fixture.detectChanges();
 
-      expect(chip()).toBeNull();
+      expect(trigger().nativeElement.getAttribute('aria-label')).toBe('AI processes');
     });
 
-    it('links to the upload step with the job id as a query param', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    it('aria-expanded reflects BilateralAiService.drawerOpen()', () => {
       fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-9', status: 'pending', uploadProgress: 100 });
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-9',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now(),
-      };
       fixture.detectChanges();
+      expect(trigger().nativeElement.getAttribute('aria-expanded')).toBe('false');
 
-      expect(chip().nativeElement.getAttribute('href')).toBe('/bilateral/AfricaRice/create?job=job-9');
+      aiService.drawerOpen.set(true);
+      fixture.detectChanges();
+      expect(trigger().nativeElement.getAttribute('aria-expanded')).toBe('true');
     });
 
-    it('uses the elapsed value from the queue-entry clock once a poll has landed, not the resume record', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
-      fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-1', status: 'still_running', uploadProgress: 100 });
-      // The resume record's startedAt is stale (would read as ~10 min) — the freshly-polled job's
-      // queueEntryDate (~90 s ago) must win.
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-1',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now() - 600_000,
-      };
-      aiService.currentJob.set(
-        normalizeJob(rawJob({ job_id: 'job-1', created_date: new Date(Date.now() - 90_500).toISOString(), retried_date: null })),
-      );
-      fixture.detectChanges();
+    it('schedules no 1s timer on mount — the elapsed clock lives only in the open drawer (AIQ-DD-9)', () => {
+      jest.useFakeTimers();
+      try {
+        const before = jest.getTimerCount();
+        ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+        fixture.componentRef.setInput('activeTab', 'reporting');
+        fixture.detectChanges();
 
-      expect(chip().nativeElement.textContent).toContain('01:30');
-    });
-
-    describe('tick gating (rework addendum, Reviewer-advisory)', () => {
-      afterEach(() => {
+        expect(jest.getTimerCount()).toBe(before);
+      } finally {
         jest.useRealTimers();
-      });
-
-      it('does not schedule the 1 s tick while there is no alive job for this center', () => {
-        jest.useFakeTimers();
-        const setIntervalSpy = jest.spyOn(globalThis, 'setInterval');
-
-        ctx.setCenter('AfricaRice', 'Africa Rice Center');
-        fixture.componentRef.setInput('activeTab', 'reporting');
-        fixture.detectChanges();
-
-        setIntervalSpy.mockClear();
-        jest.advanceTimersByTime(5000);
-
-        expect(setIntervalSpy).not.toHaveBeenCalled();
-        expect(chip()).toBeNull();
-      });
-
-      it('advances the chip elapsed label once a second while the job stays alive for this center', () => {
-        jest.useFakeTimers();
-
-        ctx.setCenter('AfricaRice', 'Africa Rice Center');
-        fixture.componentRef.setInput('activeTab', 'reporting');
-        aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
-        (aiService as unknown as { activeJob: unknown }).activeJob = {
-          jobId: 'job-1',
-          centerAcronym: 'AfricaRice',
-          startedAt: Date.now(),
-        };
-        fixture.detectChanges();
-
-        expect(chip().nativeElement.textContent).toContain('00:00');
-
-        jest.advanceTimersByTime(1000);
-        fixture.detectChanges();
-
-        expect(chip().nativeElement.textContent).toContain('00:01');
-      });
+      }
     });
   });
 

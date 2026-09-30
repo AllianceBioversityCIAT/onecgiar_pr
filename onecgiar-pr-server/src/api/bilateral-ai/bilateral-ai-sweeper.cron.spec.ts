@@ -36,23 +36,56 @@ describe('BilateralAiSweeperCron (unit)', () => {
    * are thunks so a case can also make a branch throw (the resilience cases below).
    *
    * Builder order within one `sweep()`: [0] stale-attempt scan, [1] oldest-PENDING scan,
-   * [2] liveness count — [2] only when [1] returned a row.
+   * [2] liveness count, [3] `AIQ-T-3` owner-running count — [2] only when [1] returned a row,
+   * [3] only when [2] found nothing.
+   *
+   * `getMany`/`getOne` each have exactly one caller in the whole method, so they stay
+   * single-purpose thunks. `getCount` now has TWO callers (table-wide liveness, and the
+   * `AIQ-DD-5` owner-exemption count) that must never answer for each other's query — a builder
+   * classifies ITSELF from the SQL fragment its own `where`/`andWhere` received, so a mutation
+   * that removes or reorders a query changes which builders exist, never which one a leftover
+   * mock answers. (Leader finding: a positional `builders[N]` going `undefined` after a mutation
+   * is a mock-sequencing crash, not a behavioural red — this keeps every `getCount()` red an
+   * assertion on behaviour instead.)
    */
   const makeCron = () => {
     const builders: any[] = [];
     const results = {
       getMany: async (): Promise<any[]> => [],
       getOne: async (): Promise<any> => null,
-      getCount: async (): Promise<number> => 0,
+      livenessCount: async (): Promise<number> => 0,
+      ownerCount: async (): Promise<number> => 0,
     };
     const makeBuilder = () => {
+      let countKind: 'liveness' | 'owner' | null = null;
+      const classify = (sql: unknown) => {
+        if (typeof sql !== 'string') return;
+        if (sql.includes('user_id = :userId')) countKind = 'owner';
+        else if (
+          sql.includes('started_date >') ||
+          sql.includes('stage_updated_date >')
+        )
+          countKind = 'liveness';
+      };
       const qb: any = {
-        where: jest.fn(() => qb),
-        andWhere: jest.fn(() => qb),
+        where: jest.fn((sql: unknown) => {
+          classify(sql);
+          return qb;
+        }),
+        andWhere: jest.fn((sql: unknown) => {
+          classify(sql);
+          return qb;
+        }),
         orderBy: jest.fn(() => qb),
         getMany: jest.fn(() => results.getMany()),
         getOne: jest.fn(() => results.getOne()),
-        getCount: jest.fn(() => results.getCount()),
+        getCount: jest.fn(() => {
+          if (countKind === 'owner') return results.ownerCount();
+          if (countKind === 'liveness') return results.livenessCount();
+          throw new Error(
+            'Unclassified getCount() query in the sweeper test mock — teach classify() its SQL fragment.',
+          );
+        }),
       };
       builders.push(qb);
       return qb;
@@ -64,13 +97,27 @@ describe('BilateralAiSweeperCron (unit)', () => {
     const notificationsService = {
       notifyTerminal: jest.fn().mockResolvedValue(undefined),
     };
+    // `AIQ-T-3`: the sweeper wakes the dispatch service after each flip and once, always, per
+    // tick. `wake` is documented as never-throwing on the real class; the default here mirrors
+    // that so every pre-`AIQ-T-3` test keeps behaving exactly as before this pivot.
+    const dispatchService = {
+      wake: jest.fn().mockResolvedValue(undefined),
+    };
     const cron = new BilateralAiSweeperCron(
       jobRepository as any,
       notificationsService as any,
+      dispatchService as any,
     );
     return {
       cron,
-      stubs: { cron, jobRepository, notificationsService, builders, results },
+      stubs: {
+        cron,
+        jobRepository,
+        notificationsService,
+        dispatchService,
+        builders,
+        results,
+      },
     };
   };
 
@@ -79,6 +126,14 @@ describe('BilateralAiSweeperCron (unit)', () => {
     ...qb.where.mock.calls.map((call: any[]) => call[0]),
     ...qb.andWhere.mock.calls.map((call: any[]) => call[0]),
   ];
+
+  /**
+   * Finds a builder by content instead of position — so an assertion about a specific query's
+   * shape survives a mutation that changes how many builders exist or in what order (the same
+   * concern `makeBuilder`'s `classify` addresses for `getCount()` routing).
+   */
+  const findBuilderBySql = (builders: any[], fragment: string) =>
+    builders.find((qb) => sqlOf(qb).some((sql) => sql.includes(fragment)));
 
   describe('guard', () => {
     it('is inert (touches nothing) when the queue env is not configured', async () => {
@@ -91,6 +146,7 @@ describe('BilateralAiSweeperCron (unit)', () => {
       expect(stubs.jobRepository.createQueryBuilder).not.toHaveBeenCalled();
       expect(stubs.jobRepository.update).not.toHaveBeenCalled();
       expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
+      expect(stubs.dispatchService.wake).not.toHaveBeenCalled();
     });
   });
 
@@ -121,6 +177,35 @@ describe('BilateralAiSweeperCron (unit)', () => {
       // windows must still come from different getters, which this keeps pinned.
       expect(attemptTimeoutSeconds()).not.toBe(queueStallSeconds());
       expect(stubs.jobRepository.update).not.toHaveBeenCalled();
+      expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
+    });
+
+    // `AIQ-R-3` Scenario A / `AIQ-AC-11`: "a job waited 20 minutes parked and then started; the
+    // sweeper evaluates it 5 minutes after it started" must NOT be `TIMED_OUT` — the attempt
+    // timeout counts from `started_date`, never from how long it sat `PENDING` first. Because the
+    // cutoff itself is built in SQL (`DATE_SUB(NOW(), INTERVAL <n> SECOND)` compared to
+    // `started_date`, proven above), a real 5-minute-old `started_date` can never be inside a
+    // 15-minute-old cutoff — a unit test with a mocked query builder cannot re-run that SQL, so
+    // this fixture models the DB's answer directly: a job that started only 5 min ago is simply
+    // never IN the stale-attempts result set, regardless of its 20-minute wait beforehand.
+    it('AIQ-AC-11: a job parked 20 min then started 5 min ago is not in the stale-attempts result, so it is not TIMED_OUT', async () => {
+      const { cron, stubs } = makeCron();
+      // The 20-minute parked wait never reaches this query at all (it filters only on
+      // `status = PROCESSING` and `started_date`, never `queue_entry_date`) — modeled here by the
+      // DB simply returning no rows for a job whose `started_date` (5 min ago) sits inside the
+      // window.
+      stubs.results.getMany = async () => [];
+
+      await cron.sweep();
+
+      const [timeoutQb] = stubs.builders;
+      expect(timeoutQb.andWhere).toHaveBeenCalledWith(
+        `job.started_date < DATE_SUB(NOW(), INTERVAL ${attemptTimeoutSeconds()} SECOND)`,
+      );
+      expect(stubs.jobRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ error_code: 'TIMED_OUT' }),
+      );
       expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
     });
 
@@ -201,6 +286,61 @@ describe('BilateralAiSweeperCron (unit)', () => {
         2,
       );
     });
+
+    // Reviewer (attempt 2, Discovered Issue): the only prior `wake` assertions were the tick-end
+    // ones, so deleting the per-flip `wake` at `bilateral-ai-sweeper.cron.ts:135` left the whole
+    // suite green — the tick-end `wake('sweep')` alone satisfies every `toHaveBeenCalledWith
+    // ('sweep')`. This discriminates the two: with two affected flips, `wake` must fire 3 times
+    // (once per flip + the tick-end safety net), and at least one call must land strictly BETWEEN
+    // the two `update` calls — a position only the in-loop call can occupy, since the tick-end call
+    // runs once, after both `sweep()` branches finish.
+    // Falsifier: deleting line 135 must turn this red.
+    it('AIQ-T-3: wakes once after EACH TIMED_OUT flip, in addition to the tick-end wake (two stale attempts, both affected)', async () => {
+      const { cron, stubs } = makeCron();
+      stubs.results.getMany = async () => [
+        {
+          job_id: 'a',
+          status: BilateralAiJobStatus.PROCESSING,
+          started_date: new Date(NOW - 20 * 60_000),
+        },
+        {
+          job_id: 'b',
+          status: BilateralAiJobStatus.PROCESSING,
+          started_date: new Date(NOW - 20 * 60_000),
+        },
+      ];
+
+      await cron.sweep();
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledTimes(2);
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(3);
+      const [firstUpdateOrder, secondUpdateOrder] =
+        stubs.jobRepository.update.mock.invocationCallOrder;
+      const wakeOrders = stubs.dispatchService.wake.mock.invocationCallOrder;
+      expect(
+        wakeOrders.some(
+          (order) => order > firstUpdateOrder && order < secondUpdateOrder,
+        ),
+      ).toBe(true);
+    });
+
+    it('AIQ-T-3: does NOT wake per-flip when the conditional update affects 0 rows — only the tick-end wake fires', async () => {
+      const { cron, stubs } = makeCron();
+      stubs.results.getMany = async () => [
+        {
+          job_id: 'job-2',
+          status: BilateralAiJobStatus.PROCESSING,
+          started_date: new Date(NOW - 20 * 60_000),
+          user_id: 1,
+          center_id: 1,
+        },
+      ];
+      stubs.jobRepository.update.mockResolvedValue({ affected: 0 });
+
+      await cron.sweep();
+
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('queue stall (APF-R-2 B / APF-AC-4)', () => {
@@ -250,7 +390,7 @@ describe('BilateralAiSweeperCron (unit)', () => {
         queue_entry_date: new Date(NOW - 31 * 60_000), // 31 min old
       };
       stubs.results.getOne = async () => stalePending;
-      stubs.results.getCount = async () => 1; // another job advanced inside the window
+      stubs.results.livenessCount = async () => 1; // another job advanced inside the window
 
       await cron.sweep();
 
@@ -277,7 +417,8 @@ describe('BilateralAiSweeperCron (unit)', () => {
         audio_keys: [],
       };
       stubs.results.getOne = async () => stalePending;
-      stubs.results.getCount = async () => 0; // no activity anywhere
+      stubs.results.livenessCount = async () => 0; // no activity anywhere
+      stubs.results.ownerCount = async () => 0; // and no owner-processing job either
 
       await cron.sweep();
 
@@ -311,12 +452,133 @@ describe('BilateralAiSweeperCron (unit)', () => {
         status: BilateralAiJobStatus.PENDING,
         queue_entry_date: new Date(NOW - 31 * 60_000),
       });
-      stubs.results.getCount = async () => 0;
+      stubs.results.livenessCount = async () => 0;
+      stubs.results.ownerCount = async () => 0;
       stubs.jobRepository.update.mockResolvedValue({ affected: 0 });
 
       await cron.sweep();
 
       expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
+    });
+
+    // Leader addition (task conformance): `tasks.md` AIQ-T-3's Description says "after each
+    // sweeper TIMED_OUT and QUEUE_STALLED flip" — today only the pre-flip `wake` (§5.4, "tries
+    // dispatch first") followed a QUEUE_STALLED flip; this proves the DISTINCT post-flip `wake`
+    // the Description also requires. With one successful flip in the tick, `wake` must fire 3
+    // times (pre-flip + post-flip + the tick-end safety net), with at least one call strictly
+    // BEFORE the `update` and at least one strictly AFTER it — a position only the post-flip call
+    // can occupy, since the tick-end call is the last thing `sweep()` does.
+    // Falsifier: deleting the post-flip wake must turn this red.
+    it('AIQ-T-3: wakes both before AND after a successful QUEUE_STALLED flip, in addition to the tick-end wake', async () => {
+      const { cron, stubs } = makeCron();
+      const stalePending = {
+        job_id: 'stale-pending',
+        status: BilateralAiJobStatus.PENDING,
+        queue_entry_date: new Date(NOW - 31 * 60_000),
+        user_id: 7,
+        center_id: 3,
+        document_keys: ['doc1'],
+        audio_keys: [],
+      };
+      stubs.results.getOne = async () => stalePending;
+      stubs.results.livenessCount = async () => 0;
+      stubs.results.ownerCount = async () => 0;
+
+      await cron.sweep();
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledTimes(1);
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(3);
+      const [updateOrder] = stubs.jobRepository.update.mock.invocationCallOrder;
+      const wakeOrders = stubs.dispatchService.wake.mock.invocationCallOrder;
+      expect(wakeOrders.some((order) => order < updateOrder)).toBe(true);
+      expect(wakeOrders.some((order) => order > updateOrder)).toBe(true);
+    });
+
+    it('AIQ-T-3: does NOT wake post-flip when the conditional update affects 0 rows — only pre-flip + tick-end wake fire', async () => {
+      const { cron, stubs } = makeCron();
+      stubs.results.getOne = async () => ({
+        job_id: 'stale-pending',
+        status: BilateralAiJobStatus.PENDING,
+        queue_entry_date: new Date(NOW - 31 * 60_000),
+      });
+      stubs.results.livenessCount = async () => 0;
+      stubs.results.ownerCount = async () => 0;
+      stubs.jobRepository.update.mockResolvedValue({ affected: 0 });
+
+      await cron.sweep();
+
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(2);
+    });
+
+    // `AIQ-R-4` Scenario A / `AIQ-DD-5` — the task's own Disqualifier: a fixture that gives the
+    // running job fresh activity AND an owner match is inert on its own, because the table-wide
+    // liveness check (`activeElsewhere`) would already explain "no flip" without any new code. To
+    // discriminate the owner-exemption from that pre-existing liveness check, this fixture sets
+    // `livenessCount` to 0 — liveness ALONE would allow the flip — while the SEPARATE `ownerCount`
+    // reports the pending job's own owner as currently `PROCESSING`. Only the new exemption can
+    // explain "no flip" here. The two are keyed by the SQL fragment each query actually sends (see
+    // `makeBuilder`'s `classify`), not by call order or position, so deleting the exemption (which
+    // removes that query entirely) cannot crash this test on a stale positional index — it can
+    // only change the behavioural outcome asserted below.
+    // Falsifier: deleting the owner-exemption code must turn the behavioural assertions red.
+    it("Stall A: does NOT flip when liveness shows nothing table-wide, but the job's own owner has a PROCESSING job", async () => {
+      const { cron, stubs } = makeCron();
+      const stalePending = {
+        job_id: 'a2',
+        status: BilateralAiJobStatus.PENDING,
+        queue_entry_date: new Date(NOW - 31 * 60_000), // 31 min old
+        user_id: 1, // same owner as the PROCESSING job below
+      };
+      stubs.results.getOne = async () => stalePending;
+      stubs.results.livenessCount = async () => 0;
+      stubs.results.ownerCount = async () => 1;
+
+      await cron.sweep();
+
+      // Behavioural assertions (the falsifier's actual target): with the exemption removed, the
+      // sweeper proceeds straight to wake + the conditional UPDATE, so these go red on their own
+      // terms — never on a builder index that stopped existing.
+      expect(stubs.jobRepository.update).not.toHaveBeenCalled();
+      expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
+      // Content-addressed (not positional) proof that the owner query itself ran with the right
+      // shape, when it exists.
+      const ownerQb = findBuilderBySql(stubs.builders, 'user_id = :userId');
+      expect(ownerQb).toBeDefined();
+      expect(ownerQb.where).toHaveBeenCalledWith('job.status = :status', {
+        status: BilateralAiJobStatus.PROCESSING,
+      });
+      expect(ownerQb.andWhere).toHaveBeenCalledWith('job.user_id = :userId', {
+        userId: 1,
+      });
+    });
+
+    // `AIQ-DD-5` (`design.md` §5.4) — "the stall rule tries dispatch first": before flipping a
+    // genuinely stalled job, the sweeper wakes the dispatch service. The conditional `UPDATE`
+    // (already scoped to `status = PENDING`, unchanged by this task) is what actually re-checks
+    // "only if still PENDING" — this test pins that `wake` runs strictly BEFORE that write.
+    it('Stall B: calls wake before flipping, then flips because the write is still scoped to PENDING', async () => {
+      const { cron, stubs } = makeCron();
+      const stalePending = {
+        job_id: 'stale-pending',
+        status: BilateralAiJobStatus.PENDING,
+        queue_entry_date: new Date(NOW - 31 * 60_000),
+        user_id: 9,
+      };
+      stubs.results.getOne = async () => stalePending;
+      stubs.results.livenessCount = async () => 0; // no liveness anywhere
+      stubs.results.ownerCount = async () => 0; // and no owner-processing job either
+
+      await cron.sweep();
+
+      expect(stubs.dispatchService.wake).toHaveBeenCalledWith('sweep');
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'stale-pending', status: BilateralAiJobStatus.PENDING },
+        expect.objectContaining({ error_code: 'QUEUE_STALLED' }),
+      );
+      const wakeOrder = stubs.dispatchService.wake.mock.invocationCallOrder[0];
+      const updateOrder =
+        stubs.jobRepository.update.mock.invocationCallOrder[0];
+      expect(wakeOrder).toBeLessThan(updateOrder);
     });
   });
 
@@ -332,7 +594,7 @@ describe('BilateralAiSweeperCron (unit)', () => {
         job_id: 'stale-pending',
         status: BilateralAiJobStatus.PENDING,
       });
-      stubs.results.getCount = async () => 1; // stop before the flip; only the SQL matters here
+      stubs.results.livenessCount = async () => 1; // stop before the flip; only the SQL matters here
 
       await cron.sweep();
 
@@ -379,7 +641,8 @@ describe('BilateralAiSweeperCron (unit)', () => {
         job_id: 'stalled',
         status: BilateralAiJobStatus.PENDING,
       });
-      stubs.results.getCount = async () => 0;
+      stubs.results.livenessCount = async () => 0;
+      stubs.results.ownerCount = async () => 0;
 
       await cron.sweep();
 
@@ -425,7 +688,8 @@ describe('BilateralAiSweeperCron (unit)', () => {
         status: BilateralAiJobStatus.PENDING,
         queue_entry_date: new Date(NOW - 40 * 60_000),
       });
-      stubs.results.getCount = async () => 0;
+      stubs.results.livenessCount = async () => 0;
+      stubs.results.ownerCount = async () => 0;
 
       await cron.sweep();
 
@@ -466,6 +730,30 @@ describe('BilateralAiSweeperCron (unit)', () => {
       await expect(cron.sweep()).resolves.toBeUndefined();
 
       expect(stubs.builders[0].getMany).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // `AIQ-R-2` Scenario B (safety net) / `AIQ-T-3`: the tick must recover a lost re-dispatch even
+  // when neither branch above found anything to flip — this is what a lost wake after a crash
+  // looks like from the sweeper's side.
+  describe('always wakes the dispatch service once per tick (AIQ-R-2 B safety net)', () => {
+    beforeEach(configureQueueEnv);
+
+    it('calls wake even when nothing flips', async () => {
+      const { cron, stubs } = makeCron();
+      // Defaults: getMany() -> [], getOne() -> null — neither branch finds anything to flip.
+
+      await cron.sweep();
+
+      expect(stubs.dispatchService.wake).toHaveBeenCalledWith('sweep');
+      expect(stubs.jobRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('still runs (and does not throw) when wake itself rejects', async () => {
+      const { cron, stubs } = makeCron();
+      stubs.dispatchService.wake.mockRejectedValue(new Error('DB down'));
+
+      await expect(cron.sweep()).resolves.toBeUndefined();
     });
   });
 });

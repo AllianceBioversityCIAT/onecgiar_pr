@@ -3,9 +3,12 @@ import {
   ForbiddenException,
   HttpException,
   Injectable,
+  InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
-import { EntityManager, In } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { BilateralService } from '../bilateral.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -51,8 +54,17 @@ import { InnovationUseMdsValidator } from './innovation-use-mds-validator.servic
 import { BilateralQualityAssessmentService } from './quality-assessment/bilateral-quality-assessment.service';
 import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-quality-assessment.repository';
 import { BilateralQualityAssessment } from '../entities/bilateral-quality-assessment.entity';
-import { hasOutstandingFlags } from './quality-assessment/bilateral-quality-rules';
+import {
+  hasOutstandingFlags,
+  normalizeSuggestions,
+} from './quality-assessment/bilateral-quality-rules';
 import { SubmitForReviewDto } from '../dto/submit-for-review.dto';
+import { CreateBilateralFieldRevisionDto } from '../dto/create-bilateral-field-revision.dto';
+import {
+  ResultFieldRevision,
+  ResultFieldRevisionFieldName,
+  ResultFieldRevisionProvenance,
+} from '../../ai/entities/result-field-revision.entity';
 import { ChangeCenterResultTypeDto } from '../dto/change-center-result-type.dto';
 import { UpdateBilateralPrimaryAssignmentDto } from '../dto/update-bilateral-primary-assignment.dto';
 import { ResultsByProjects } from '../../results/results_by_projects/entities/results_by_projects.entity';
@@ -109,6 +121,11 @@ export class BilateralCenterService {
     // P2-3368 AC10-AC14 — the NARROW linked_result writer (P2-3424). Already a provider of
     // `bilateral.module.ts` (it backs the Innovation Use summary), so no new module import.
     private readonly resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    // `BIL-QTS-T-7` — the audit row for a drawer field save. Registered in
+    // `bilateral.module.ts`'s `TypeOrmModule.forFeature`; the entity itself belongs to
+    // `api/ai` (`BIL-QTS-T-7` brief: do not change it) and is only imported here.
+    @InjectRepository(ResultFieldRevision)
+    private readonly resultFieldRevisionRepository: Repository<ResultFieldRevision>,
   ) {}
 
   /**
@@ -2448,6 +2465,96 @@ export class BilateralCenterService {
       response: dto,
       message: 'Latest quality assessment retrieved successfully',
       status: 200,
+    };
+  }
+
+  /**
+   * `POST /api/bilateral/center/quality-assessment/:resultId/field-revisions` — records the
+   * provenance of one drawer field save, decided **server-side** (`BIL-QTS-DD-9`,
+   * `BIL-QTS-R-13`): `AI_SUGGESTED` when the field's current value, trimmed, equals the
+   * assessment's kept suggestion for that field (re-derived through the read-side
+   * normalizer, so a suggestion the normalizer would drop — e.g. an over-limit stored
+   * title — can never be claimed), `USER_EDIT` otherwise. The DTO carries no
+   * `provenance` property, so nothing the client sends can force `AI_SUGGESTED` for text
+   * the AI never suggested.
+   *
+   * Gated by the exact same guard `assess` uses (design.md §4 API Surface "Same auth/edit
+   * guard as `POST quality-assessment/:resultId`"): `assertSubmittable` throws before any
+   * row is read or written, so a refused caller leaves no trace.
+   *
+   * @akili-spec bilateral/qa-ai-text-suggestions (BIL-QTS-T-7)
+   */
+  async recordFieldRevision(
+    user: TokenDto,
+    resultId: number,
+    dto: CreateBilateralFieldRevisionDto,
+  ): Promise<{
+    response: { provenance: ResultFieldRevisionProvenance };
+    message: string;
+    status: number;
+  }> {
+    const result = await this.assertSubmittable(user, resultId);
+    const parsedResultId = result.id;
+
+    const assessment = await this.qualityAssessmentRepository.findOne({
+      where: { id: Number(dto.assessment_id), result_id: parsedResultId },
+    });
+    if (!assessment) {
+      throw new NotFoundException(
+        'The selected quality assessment does not belong to this result.',
+      );
+    }
+
+    const newValue =
+      dto.field === ResultFieldRevisionFieldName.TITLE
+        ? result.title
+        : result.description;
+
+    // Read-side normalizer (design.md §5; same call `serveSections` makes) — a stored
+    // suggestion this normalizer would drop on serve can never be claimed as AI_SUGGESTED
+    // here either, whatever wrote it.
+    const gi = assessment.sections?.general_information;
+    const suggestions = gi
+      ? normalizeSuggestions(gi.suggestions, gi.verdict)
+      : undefined;
+    const keptSuggestion = suggestions?.[dto.field as 'title' | 'description'];
+
+    const provenance =
+      keptSuggestion !== undefined &&
+      typeof newValue === 'string' &&
+      newValue.trim() === keptSuggestion
+        ? ResultFieldRevisionProvenance.AI_SUGGESTED
+        : ResultFieldRevisionProvenance.USER_EDIT;
+
+    try {
+      await this.resultFieldRevisionRepository.save({
+        result_id: parsedResultId,
+        user_id: user.id,
+        field_name: dto.field,
+        old_value: dto.old_value ?? null,
+        new_value: newValue ?? null,
+        change_reason: `bilateral_qa_drawer:assessment=${assessment.id}`,
+        provenance,
+        proposal_id: null,
+      });
+    } catch {
+      // Never let a TypeORM QueryFailedError reach the exception filter/logs — its `parameters`
+      // carry the field text this method otherwise never logs (.cursorrules), e.g. a utf8mb3
+      // "Incorrect string value" error on an emoji.
+      throw new InternalServerErrorException(
+        'Could not record the field revision',
+      );
+    }
+
+    // No field text in this line, or anywhere else in this method (.cursorrules).
+    this.logger.log(
+      `Recorded field revision: result_id=${parsedResultId} field=${dto.field} assessment_id=${assessment.id} provenance=${provenance}`,
+    );
+
+    return {
+      response: { provenance },
+      message: 'Field revision recorded successfully',
+      status: 201,
     };
   }
 

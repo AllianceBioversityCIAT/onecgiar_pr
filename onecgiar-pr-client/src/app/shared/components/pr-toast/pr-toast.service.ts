@@ -2,14 +2,24 @@ import { Injectable, signal } from '@angular/core';
 
 export type PrToastSeverity = 'success' | 'info' | 'warn' | 'error';
 
+/** Optional action button rendered on a toast; running it dismisses the toast. */
+export interface PrToastAction {
+  label: string;
+  run: () => void;
+}
+
 /** Mirrors the shape PrimeNG's MessageService.add() accepted in this app. */
 export interface PrToastMessage {
   key?: string;
   severity?: PrToastSeverity;
   summary?: string;
   detail?: string;
-  /** Auto-dismiss delay in ms (default 4000). */
+  /** Auto-dismiss delay in ms (default 4000). Ignored when `sticky` is true. */
   life?: number;
+  /** Optional focusable action button; running it dismisses the toast. */
+  action?: PrToastAction;
+  /** When true, the toast is not auto-removed — it stays until closed or acted on. */
+  sticky?: boolean;
 }
 
 interface ActiveToast extends PrToastMessage {
@@ -31,7 +41,9 @@ export class PrToastService {
     const id = ++this.seq;
     const toast: ActiveToast = { ...message, id, life: message.life ?? 4000 };
     this.toasts.update(list => [...list, toast]);
-    setTimeout(() => this.remove(id), toast.life);
+    if (!message.sticky) {
+      setTimeout(() => this.remove(id), toast.life);
+    }
   }
 
   remove(id: number): void {

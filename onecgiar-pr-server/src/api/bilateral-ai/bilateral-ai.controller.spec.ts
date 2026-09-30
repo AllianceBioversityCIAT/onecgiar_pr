@@ -32,6 +32,14 @@ describe('BilateralAiController', () => {
               job_id: 'job-123',
               status: 'COMPLETED',
             }),
+            listJobs: jest.fn().mockResolvedValue({
+              response: {
+                jobs: [],
+                summary: { lanes_total: 2, lanes_busy: 0, others_waiting: 0 },
+              },
+              message: 'AI jobs found',
+              status: 200,
+            }),
             listDrafts: jest.fn().mockResolvedValue([]),
             getDraft: jest.fn().mockResolvedValue({ id: 1, evidence: [] }),
             setFormalEvidence: jest.fn().mockResolvedValue({
@@ -142,6 +150,22 @@ describe('BilateralAiController', () => {
     });
   });
 
+  describe('listJobs', () => {
+    it('should delegate to service.listJobs with the decoded user', async () => {
+      const result = await controller.listJobs(user);
+
+      expect(service.listJobs).toHaveBeenCalledWith(user);
+      expect(result).toEqual({
+        response: {
+          jobs: [],
+          summary: { lanes_total: 2, lanes_busy: 0, others_waiting: 0 },
+        },
+        message: 'AI jobs found',
+        status: 200,
+      });
+    });
+  });
+
   describe('retryJob', () => {
     it('should delegate to service.retryJob with jobId and the decoded user', async () => {
       const result = await controller.retryJob('job-123', user);
@@ -248,6 +272,7 @@ describe('BilateralAiController — route ordering (supertest)', () => {
   let app: INestApplication;
   let getJob: jest.Mock;
   let getExpectations: jest.Mock;
+  let listJobs: jest.Mock;
 
   beforeAll(async () => {
     getJob = jest
@@ -263,13 +288,21 @@ describe('BilateralAiController — route ordering (supertest)', () => {
       message: 'AI job expectations found',
       status: 200,
     });
+    listJobs = jest.fn().mockResolvedValue({
+      response: {
+        jobs: [],
+        summary: { lanes_total: 2, lanes_busy: 0, others_waiting: 0 },
+      },
+      message: 'AI jobs found',
+      status: 200,
+    });
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [BilateralAiController],
       providers: [
         {
           provide: BilateralAiService,
-          useValue: { getJob, getExpectations },
+          useValue: { getJob, getExpectations, listJobs },
         },
       ],
     }).compile();
@@ -285,6 +318,15 @@ describe('BilateralAiController — route ordering (supertest)', () => {
   afterEach(() => {
     getJob.mockClear();
     getExpectations.mockClear();
+    listJobs.mockClear();
+  });
+
+  it('GET /center/ai/jobs reaches listJobs, not getJob', async () => {
+    const res = await request(app.getHttpServer()).get('/center/ai/jobs');
+
+    expect(listJobs).toHaveBeenCalled();
+    expect(getJob).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
   });
 
   it('GET /center/ai/expectations resolves to the expectations handler', async () => {

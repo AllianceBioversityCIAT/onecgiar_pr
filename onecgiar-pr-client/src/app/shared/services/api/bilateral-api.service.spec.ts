@@ -234,6 +234,31 @@ describe('BilateralApiService', () => {
     req.flush(mockResponse);
   });
 
+  // BIL-QTS-T-9 (design.md §4): the field-revisions endpoint added alongside the existing
+  // quality-assessment calls above.
+  it('POST_bilateralQualityFieldRevision should POST to the field-revisions endpoint with the given body', done => {
+    const body = { field: 'title' as const, assessment_id: 9, old_value: 'Old title' };
+    service.POST_bilateralQualityFieldRevision(42, body).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/42/field-revisions`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(body);
+    req.flush(mockResponse);
+  });
+
+  it('POST_bilateralQualityFieldRevision should send a null old_value as-is', done => {
+    const body = { field: 'description' as const, assessment_id: 9, old_value: null };
+    service.POST_bilateralQualityFieldRevision(42, body).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/42/field-revisions`);
+    expect(req.request.body).toEqual(body);
+    req.flush(mockResponse);
+  });
+
   it('GET_bilateralAiJobExpectations should GET the expectations route under center/ai/, not center/ai/jobs/', done => {
     service.GET_bilateralAiJobExpectations('documents').subscribe(response => {
       expect(response).toEqual(mockResponse);

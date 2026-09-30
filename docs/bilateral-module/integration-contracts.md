@@ -733,7 +733,7 @@ Every `type_specific.fields` key documented above is **frozen** and validated st
   "degraded_reason": null,
   "overall": { "verdict": "amber", "score": 68, "summary": "…" },
   "sections": {
-    "general_information":       { "verdict": "green", "score": 91, "comments": "…", "strengths": ["…"], "issues": [] },
+    "general_information":       { "verdict": "amber", "score": 58, "comments": "…", "strengths": [], "issues": ["The title does not say what changed or for whom."], "suggestions": { "title": "Improved rice variety adopted by 12,000 smallholder farmers in Côte d'Ivoire", "description": null } },
     "contributors_and_partners": { "verdict": "amber", "score": 62, "comments": "…", "strengths": [],    "issues": ["…"] },
     "geographic_location":       { "verdict": "green", "comments": "…", "strengths": ["…"], "issues": [] },
     "evidence":                  { "verdict": "red",   "comments": "…", "strengths": [],    "issues": ["…"] },
@@ -751,6 +751,38 @@ Every `type_specific.fields` key documented above is **frozen** and validated st
 - `sections.<key>.verdict` ∈ `green` \| `amber` \| `red` \| **`grey`** — grey means "not evaluated", the same meaning it has on an evidence item. A grey section is **excluded from the overall**: PRMS never derives or alters a section colour from a grey verdict, and a grey section neither raises nor clears `had_outstanding_flags` (only `amber`/`red`, at section or overall level, do that).
 - `overall.verdict` stays `green` \| `amber` \| `red` — three colours only; the AI owns its derivation and PRMS does not replicate it.
 - `degraded_reason` is a plain-language sentence for the user. PRMS renders it **verbatim as text** (never HTML/markdown), stores it **truncated to 255 characters**, and **strips any URL or host** from it before persisting. It is **never logged**, whatever it contains (`.cursorrules`; `docs/trd/trd.md` W8, AC-9).
+
+### Suggestions (`sections.general_information.suggestions`) — new in v0.2 (additive, optional)
+
+`suggestions` is an **optional** object nested inside the response's `general_information` section only — no other section carries it, and it is not a sixth section key or a root key (`BIL-QTS-DD-1`):
+
+| Key | Type | Required | Rule |
+|---|---|---|---|
+| `suggestions` | object \| null | no | Omit, `null`, or `{}` all mean "no suggestion". PRMS only reads it when the section `verdict` is `amber` or `red`; it is ignored on `green`/`grey` |
+| `suggestions.title` | string \| null | no | Full replacement title, not a diff or a comment. Plain text, one line, **≤ 30 words**, English, no markdown/HTML, no surrounding quotes |
+| `suggestions.description` | string \| null | no | Full replacement description. Plain text, **≤ 300 words**, paragraphs separated by `\n`, no markdown/HTML |
+
+**PRMS-side handling (`BIL-QTS-R-7`, `BIL-QTS-R-8`):** before persisting, PRMS keeps a suggestion only if all of these hold — otherwise it drops that key only, never the section's verdict:
+
+| Rule | Drop the suggestion when |
+|---|---|
+| Section | the key sits in any section other than `general_information` |
+| Verdict | GI verdict is not `amber`/`red` |
+| Type | not a string |
+| Content | empty after trimming |
+| Limit | over 30 words (title) or 300 words (description), counted the way the form counts |
+| Novelty | equal, after trimming, to the value PRMS sent in the request |
+| Keys | any key other than `title`/`description` (silently ignored) |
+
+A kept suggestion is stored trimmed and otherwise verbatim, never truncated. Suggestion text is never logged; PRMS may log only the count dropped per assessment. The same stateless shape check also re-runs on every read, so a stored row can never serve an unsanitized suggestion regardless of who or what wrote it.
+
+**For the AI team:**
+
+- **Never fails the response because of them.** An absent key, a wrong type, an empty/whitespace string, text over the word limit, or text identical to the current value all drop **that suggestion only**. The verdict is kept — `suggestions` can never make a response `malformed` or the assessment `unavailable` (`BIL-QTS-R-6`).
+- Suggestions are expected to act on the section's `issues`. Suggesting a title while `issues` says nothing about the title is allowed but pointless.
+- Suggestions must be built only from content present in the request. No invented numbers, places or partners: the user may take the text verbatim.
+- Other keys inside `suggestions` (e.g. `short_title`) are ignored. More fields would need a new agreement.
+- This addition is **additive and optional both ways** — `contract_version` stays `"0.2"`.
 
 ### PRMS status mapping
 
@@ -793,6 +825,7 @@ No response body, API key, or host name is ever surfaced to the user or logged (
 - **2026-09-16** — copied contract v0.1 (request/response shapes, section keys, evidence rules, optional `score`, error/timeout semantics) from the frozen vault note into this section (`BIL-QAI-T-1`).
 - **2026-09-16** — amended to contract **v0.2** (`BIL-QAI-T-1b`): request now carries `contract_version: "0.2"` and an optional top-level `impact_areas` (sibling of `sections`, `{name, score, subcomponents[]}` — plural `subcomponents` — absent/empty ⇒ not applicable, not grey, no penalty); replaced the flat hand-written `type_specific.fields` example with a frozen per-type label table plus typed value objects (count/amount objects, single `Length of training`, `Innovation developers` never substituted) and one JSON example per type; corrected the evidence-tag vocabulary to the closed set Gender · Youth · Nutrition · Environment & biodiversity · Poverty and removed the wrong evidence-tag example that paired Gender with a non-existent Climate tag (GAP-6, no evidence tag for Climate); documented GAP-7 (Innovation use has no non-binary/unknown counts); response now requires `status` (`completed\|partial\|unavailable`) and `degraded_reason`, and `sections.<key>.verdict` widens to include `grey` (excluded from the overall); added the PRMS status-mapping table including `unavailable_reason = ai_unavailable`; dropped the ordering guarantee over the five section keys (never part of the frozen contract, was an advisory only); added the sub-component catalogue table (13 seeded values across the five pillars, from `impact_areas_scores_components`) and replaced the invented `"Women's empowerment"` example value with the real seeded values `["Gender equality", "Youth"]` in both JSON examples; corrected the Policy change example's invented `"USD amount".status` value `"Committed"` to the real `"Confirmed"` and enumerated the closed set `Confirmed`\|`Estimated`\|`Unknown` (`mapPolicyChangeAmountStatusLabel()`, `bilateral.service.ts:3481-3487`); corrected three further truncated/invented catalogue labels found on a second pass — Policy change's `"Policy type": "Regulation"` → `"Regulation / legal instrument"` and `"Policy stage": "Adopted"` → `"Enacted / adopted"` (both sourced to `fixtures/policy-change.fixture.json:116-117,167-168`), and Innovation development's `"Innovation typology": "Technological"` → `"Technological innovation"` in both JSON examples (`fixtures/innovation-development.fixture.json:153`, `handlers/innovation-development.handler.spec.ts:10`, `dto/create-bilateral.dto.ts:342`; the stale `"Technological"` value had already propagated into `bilateral-quality-assessment.client.spec.ts:92`, corrected alongside this doc) — and corrected the Innovation development readiness-level example, `"Level 6 — Proof of concept"` → `"Level 6 — Proven innovation ready for uptake"`, sourced to `fixtures/innovation-development.fixture.json:157-158` (the previous pairing did not appear in this or any other in-repo fixture) (`BIL-QAI-T-1b`).
 - **2026-09-17** — the outbound call now also carries root `user_id`, whose value is the authenticated Centre user's email address. This is an additive v0.2 transport field already accepted by the shared AI Review service, so `contract_version` remains `0.2`; it is excluded from persisted assessment content, hashes and logs.
+- **2026-09-29** — added an optional `sections.general_information.suggestions` object to the response (`title?`, `description?`, each `string | null`, ≤ 30 / 300 words), read only when the GI section's `verdict` is `amber`/`red` (`BIL-QTS-T-1`). Additive and optional on both sides — a response omitting it, or sending an invalid one, is processed exactly as before and never becomes `malformed`/`unavailable` — so `contract_version` stays `0.2`.
 
 ## Contract Stability Rules
 

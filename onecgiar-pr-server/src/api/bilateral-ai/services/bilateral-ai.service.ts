@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -10,7 +12,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { In, LessThan, Repository } from 'typeorm';
+import { EntityManager, In, LessThan, Not, Repository } from 'typeorm';
+import { selectManager } from '../../../shared/utils/orm.util';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
@@ -36,12 +39,16 @@ import {
 import { CreateBilateralAiJobDto } from '../dto/create-bilateral-ai-job.dto';
 import { BilateralService } from '../../bilateral/bilateral.service';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ClarisaProjectsRepository } from '../../../clarisa/clarisa-projects/clarisa-projects.repository';
 import {
   getBilateralAiMaxAttempts,
+  getBilateralAiMaxConcurrent,
+  getBilateralAiMaxPerUser,
   bilateralAiDbNow,
 } from '../bilateral-ai.config';
 import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
 import { BilateralAiEvidenceTransferService } from './bilateral-ai-evidence-transfer.service';
+import { BilateralAiDispatchService } from './bilateral-ai-dispatch.service';
 import {
   BilateralAiExpectationsMix,
   BilateralAiExpectationsResponseDto,
@@ -110,8 +117,19 @@ export class BilateralAiService {
     private readonly roleByUserRepository: RoleByUserRepository,
     private readonly clarisaCentersRepository: ClarisaCentersRepository,
     private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
+    // `AIQ-T-4`: `design.md` §4.1 list item `project_name` — already resolvable here via
+    // `ClarisaProjectsModule`, imported by `bilateral.module.ts` for `BilateralService`'s own use
+    // (`findProjectByGrantTitle`), so no new module import is needed.
+    private readonly clarisaProjectsRepository: ClarisaProjectsRepository,
     private readonly notificationsService: BilateralAiNotificationsService,
     private readonly evidenceTransferService: BilateralAiEvidenceTransferService,
+    // `AIQ-T-3`: `BilateralAiDispatchService` already depends on this service (`attemptStart`,
+    // `AIQ-T-2`), so the reverse edge needed to call `wake` from `processJob`'s terminal paths
+    // makes the two providers mutually dependent within `bilateral.module.ts`. `forwardRef` on
+    // this side (and the matching one in `bilateral-ai-dispatch.service.ts`) is the standard Nest
+    // resolution for two providers in the same module depending on each other.
+    @Inject(forwardRef(() => BilateralAiDispatchService))
+    private readonly dispatchService: BilateralAiDispatchService,
   ) {}
 
   async createJob(
@@ -177,11 +195,50 @@ export class BilateralAiService {
   }
 
   /**
-   * `APF-R-1` A: `queue_position` is computed at read time from `bilateral_ai_jobs` — never
-   * stored — and is meaningful only while this job itself is `PENDING` (`design.md` §4.1). It
-   * counts non-terminal jobs (`PENDING`/`PROCESSING`) whose queue-entry clock is older than this
-   * job's own `queue_entry_date = COALESCE(retried_date, created_date)`, so a retried job takes
-   * its place at the back of the queue instead of ranking by `created_date`.
+   * `AIQ-T-4` — `design.md` §5.5, `AIQ-DD-4`: `jobs_ahead` counts only `PENDING` jobs whose
+   * queue-entry clock is older than this one (a running job is never "ahead" in a lane model, so
+   * older `PROCESSING` rows no longer count — this narrows the pre-`AIQ` `queue_position`
+   * definition). `wait_reason` is `own_job_running` when the owner is already at the per-user
+   * cap, else `no_free_lane` when the global lane cap is full, else `starting`. One helper feeds
+   * both `getJob` and `listJobs` so the two reads cannot drift (`AIQ-R-6` B).
+   */
+  private async computeQueueWait(
+    ownerId: number,
+    queueEntryDate: Date,
+  ): Promise<{
+    jobs_ahead: number;
+    wait_reason: 'own_job_running' | 'no_free_lane' | 'starting';
+  }> {
+    const [jobs_ahead, ownerProcessingCount] = await Promise.all([
+      this.jobRepository.count({
+        where: {
+          status: BilateralAiJobStatus.PENDING,
+          queue_entry_date: LessThan(queueEntryDate),
+        },
+      }),
+      this.jobRepository.count({
+        where: { status: BilateralAiJobStatus.PROCESSING, user_id: ownerId },
+      }),
+    ]);
+
+    if (ownerProcessingCount >= getBilateralAiMaxPerUser()) {
+      return { jobs_ahead, wait_reason: 'own_job_running' };
+    }
+
+    const globalProcessingCount = await this.jobRepository.count({
+      where: { status: BilateralAiJobStatus.PROCESSING },
+    });
+    const wait_reason =
+      globalProcessingCount >= getBilateralAiMaxConcurrent()
+        ? 'no_free_lane'
+        : 'starting';
+    return { jobs_ahead, wait_reason };
+  }
+
+  /**
+   * `APF-R-1` A / `AIQ-DD-4`: `queue_position` (kept, `AIQ-R-6` B) is now defined as `jobs_ahead`
+   * — computed at read time, never stored, meaningful only while this job is `PENDING`
+   * (`design.md` §4.1, §4.2). `wait_reason` is additive, also `PENDING`-only.
    */
   async getJob(jobId: string, userId: number) {
     const job = await this.jobRepository.findOne({
@@ -189,26 +246,160 @@ export class BilateralAiService {
     });
     if (!job) throw new NotFoundException('AI job not found.');
 
-    let queue_position: number | null = null;
+    let jobs_ahead: number | null = null;
+    let wait_reason: string | null = null;
     if (job.status === BilateralAiJobStatus.PENDING) {
-      queue_position = await this.jobRepository.count({
-        where: {
-          status: In([
-            BilateralAiJobStatus.PENDING,
-            BilateralAiJobStatus.PROCESSING,
-          ]),
-          queue_entry_date: LessThan(job.queue_entry_date),
-        },
-      });
+      const wait = await this.computeQueueWait(
+        job.user_id,
+        job.queue_entry_date,
+      );
+      jobs_ahead = wait.jobs_ahead;
+      wait_reason = wait.wait_reason;
     }
 
     return {
       response: {
         ...job,
-        queue_position,
+        queue_position: jobs_ahead,
+        jobs_ahead,
+        wait_reason,
         max_attempts: getBilateralAiMaxAttempts(),
       },
       message: 'AI job found',
+      status: 200,
+    };
+  }
+
+  /**
+   * `AIQ-T-4` — `GET /api/bilateral/center/ai/jobs` (`design.md` §4.1): the caller's active jobs
+   * (`PENDING`/`PROCESSING`, unbounded) plus jobs finished in the last 24 h (max 10, newest
+   * first), each carrying exactly the §4.1 key set plus a `summary` of global lane usage.
+   *
+   * The 24 h cutoff and the finished-job ordering run in SQL (`DATE_SUB(NOW(), INTERVAL 24
+   * HOUR)`) — never a JS `Date` (`bilateral-ai.config.ts`'s timezone-skew note: `completed_date`
+   * is written in the DB's session time zone, `NOW()` is evaluated there too, but a JS `Date`
+   * instant is process-zone).
+   *
+   * `bucket_name`, `document_keys`, `audio_keys`, `text_context`, `response_snapshot`,
+   * `error_message` and `user_id` are deliberately excluded from every item (§4.1 "Excluded from
+   * the list on purpose") — the explicit key set below, never an entity spread, is what keeps
+   * them out.
+   */
+  async listJobs(user: TokenDto) {
+    const userId = user.id;
+
+    const activeJobs = await this.jobRepository.find({
+      where: {
+        user_id: userId,
+        status: In([
+          BilateralAiJobStatus.PENDING,
+          BilateralAiJobStatus.PROCESSING,
+        ]),
+      },
+      order: { queue_entry_date: 'DESC' },
+    });
+
+    const finishedJobs = await this.jobRepository
+      .createQueryBuilder('job')
+      .where('job.user_id = :userId', { userId })
+      .andWhere('job.status IN (:...statuses)', {
+        statuses: [BilateralAiJobStatus.COMPLETED, BilateralAiJobStatus.FAILED],
+      })
+      .andWhere('job.completed_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)')
+      .orderBy('job.completed_date', 'DESC')
+      .limit(10)
+      .getMany();
+
+    const jobs = [...activeJobs, ...finishedJobs].sort(
+      (a, b) =>
+        new Date(b.queue_entry_date).getTime() -
+        new Date(a.queue_entry_date).getTime(),
+    );
+
+    const lanesBusy = await this.jobRepository.count({
+      where: { status: BilateralAiJobStatus.PROCESSING },
+    });
+    const othersWaiting = await this.jobRepository.count({
+      where: { status: BilateralAiJobStatus.PENDING, user_id: Not(userId) },
+    });
+
+    const projectIds = [...new Set(jobs.map((job) => job.project_id))];
+    const centerIds = [...new Set(jobs.map((job) => job.center_id))];
+    const [projects, institutions] = await Promise.all([
+      projectIds.length
+        ? this.clarisaProjectsRepository.find({ where: { id: In(projectIds) } })
+        : Promise.resolve([]),
+      centerIds.length
+        ? this.clarisaInstitutionsRepository.find({
+            where: { id: In(centerIds) },
+          })
+        : Promise.resolve([]),
+    ]);
+    const projectNameById = new Map(
+      projects.map((project) => [
+        Number(project.id),
+        project.fullName?.trim() || project.shortName || null,
+      ]),
+    );
+    const centerAcronymById = new Map(
+      institutions.map((institution) => [
+        Number(institution.id),
+        institution.acronym ?? null,
+      ]),
+    );
+
+    const items = await Promise.all(
+      jobs.map(async (job) => {
+        let jobs_ahead: number | null = null;
+        let wait_reason: string | null = null;
+        if (job.status === BilateralAiJobStatus.PENDING) {
+          const wait = await this.computeQueueWait(
+            job.user_id,
+            job.queue_entry_date,
+          );
+          jobs_ahead = wait.jobs_ahead;
+          wait_reason = wait.wait_reason;
+        }
+
+        return {
+          job_id: job.job_id,
+          status: job.status,
+          stage: job.stage,
+          stage_updated_date: job.stage_updated_date,
+          project_id: job.project_id,
+          project_name: projectNameById.get(Number(job.project_id)) ?? null,
+          program_code: job.program_code,
+          center_id: job.center_id,
+          center_acronym: centerAcronymById.get(Number(job.center_id)) ?? null,
+          document_count: job.document_keys?.length ?? 0,
+          audio_count: job.audio_keys?.length ?? 0,
+          has_text: Boolean(
+            job.text_context && job.text_context.trim().length > 0,
+          ),
+          queue_entry_date: job.queue_entry_date,
+          started_date: job.started_date,
+          completed_date: job.completed_date,
+          result_count: job.result_count,
+          error_code: job.error_code,
+          attempts: job.attempts,
+          max_attempts: getBilateralAiMaxAttempts(),
+          retrying: job.retrying,
+          jobs_ahead,
+          wait_reason,
+        };
+      }),
+    );
+
+    return {
+      response: {
+        jobs: items,
+        summary: {
+          lanes_total: getBilateralAiMaxConcurrent(),
+          lanes_busy: lanesBusy,
+          others_waiting: othersWaiting,
+        },
+      },
+      message: 'AI jobs found',
       status: 200,
     };
   }
@@ -713,8 +904,23 @@ export class BilateralAiService {
    * skips the write entirely and reports "not started".
    *
    * @akili-spec bilateral/ai-processing-feedback
+   *
+   * `AIQ-T-2`: no longer `private` — `BilateralAiDispatchService.decide` calls this directly, as
+   * the claim, while holding the named lock (`design.md` §5.2, `AIQ-DD-1`). The WHERE clauses
+   * below are unchanged from the original private method (P-2 disqualifier).
+   *
+   * Attempt 2 (Reviewer A, concurrency lens): `manager` is optional, `selectManager` pattern
+   * (`src/CLAUDE.md` §11.2) — the dispatch service passes its lock-holding `queryRunner.manager`
+   * so the claim runs on the SAME connection as `GET_LOCK`/`RELEASE_LOCK` (`design.md` §5.2:
+   * "acquire, decide, claim and release must share that connection"), instead of borrowing a
+   * second pool connection while the lock is held. Omitted, this defaults to the service's own
+   * pooled `jobRepository` — today's unchanged path for every other caller.
    */
-  private async attemptStart(job: BilateralAiJob): Promise<boolean> {
+  async attemptStart(
+    job: BilateralAiJob,
+    manager?: EntityManager,
+  ): Promise<boolean> {
+    const repo = selectManager(manager, BilateralAiJob, this.jobRepository);
     // `stage_updated_date` and `started_date` share `bilateralAiDbNow` — one `CURRENT_TIMESTAMP`
     // evaluation per UPDATE statement keeps them identical, as a shared JS `now` did before.
     const set = {
@@ -727,12 +933,12 @@ export class BilateralAiService {
     };
     let result: { affected?: number } | undefined;
     if (job.status === BilateralAiJobStatus.PENDING) {
-      result = await this.jobRepository.update(
+      result = await repo.update(
         { job_id: job.job_id, status: BilateralAiJobStatus.PENDING },
         set,
       );
     } else if (job.status === BilateralAiJobStatus.PROCESSING && job.retrying) {
-      result = await this.jobRepository.update(
+      result = await repo.update(
         {
           job_id: job.job_id,
           status: BilateralAiJobStatus.PROCESSING,
@@ -784,11 +990,32 @@ export class BilateralAiService {
     this.logger.log(`Bilateral AI job ${jobId} stage -> ${stage}.`);
   }
 
-  async processJob(jobId: string): Promise<void> {
+  /**
+   * `options.skipClaim` (`AIQ-T-2`): set by `BilateralAiConsumer` when
+   * `BilateralAiDispatchService.decide` already claimed this job (the `run` outcome) under the
+   * named lock. `attemptStart`'s own conditional update would find the row already `PROCESSING`
+   * and not `retrying`, return 0 rows affected, and wrongly abort — so this path trusts the
+   * dispatch service's claim instead of re-running it. The `resume-retry` outcome (and any other
+   * caller) omits the option and gets today's unchanged path: this method performs the claim
+   * itself, exactly as before `AIQ-T-2`.
+   */
+  async processJob(
+    jobId: string,
+    options?: { skipClaim?: boolean },
+  ): Promise<void> {
     const job = await this.jobRepository.findOne({ where: { job_id: jobId } });
     if (!job || job.status === BilateralAiJobStatus.COMPLETED) return;
 
-    const started = await this.attemptStart(job);
+    let started: boolean;
+    let attemptNumber: number;
+    if (options?.skipClaim) {
+      started = job.status === BilateralAiJobStatus.PROCESSING;
+      // The dispatch service's `attemptStart` call already incremented `attempts`.
+      attemptNumber = job.attempts;
+    } else {
+      started = await this.attemptStart(job);
+      attemptNumber = job.attempts + 1;
+    }
     if (!started) {
       // The sweeper or another consumer already owns/terminated this job — calling mining for a
       // terminated job would burn a 10-minute request and could resurrect a FAILED row
@@ -798,7 +1025,6 @@ export class BilateralAiService {
       );
       return;
     }
-    const attemptNumber = job.attempts + 1;
 
     try {
       const user = await this.userRepository.findOne({
@@ -873,6 +1099,10 @@ export class BilateralAiService {
         },
       );
 
+      // `AIQ-T-3` (`design.md` §5.3 P-5): this write just freed a lane — wake the next eligible
+      // parked job under the lock instead of waiting for the sweeper's next tick.
+      await this.wakeDispatch('completed');
+
       // Processing can take minutes and the uploader has usually moved on; the client no longer
       // force-redirects on completion (2026-09-04), so this is what tells them the outcome. After
       // the status update and never blocking: a notification failure must not fail the job
@@ -923,8 +1153,32 @@ export class BilateralAiService {
           { ...job, error_code: errorCode },
           'failed',
         );
+        // `AIQ-T-3` (`design.md` §5.3 P-5): the final FAILED write just freed a lane too — same
+        // guard as the COMPLETED path, scoped to an actual affected write so a lost race (another
+        // actor already moved the row) never wakes on someone else's behalf.
+        await this.wakeDispatch('failed');
       }
       if (retryable) throw error;
+    }
+  }
+
+  /**
+   * `AIQ-T-3` (`design.md` §5.3, `AIQ-DD-2`): wakes the dispatch service after a `processJob`
+   * write that just freed a lane (`COMPLETED` or the final `FAILED`). `BilateralAiDispatchService
+   * .wake` documents itself as never-throwing (it catches and logs internally around its own
+   * `GET_LOCK`/publish work), but this call site adds its own try/catch as defense in depth —
+   * mirroring `promoteDraft`'s evidence-transfer step — so a fault at wake time (e.g. the DB being
+   * down when `wake` tries to `connect()`) can never rethrow from here and turn a job that just
+   * terminated successfully into a consumer retry. The sweeper's next tick recovers regardless.
+   */
+  private async wakeDispatch(reason: string): Promise<void> {
+    try {
+      await this.dispatchService.wake(reason);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Bilateral AI dispatch wake(${reason}) failed after processJob: ${message}`,
+      );
     }
   }
 

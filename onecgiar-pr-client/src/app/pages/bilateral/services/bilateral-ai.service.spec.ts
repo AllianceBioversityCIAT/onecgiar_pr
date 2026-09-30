@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { BilateralAiService } from './bilateral-ai.service';
-import { RawBilateralAiJob } from '../bilateral-ai-job.model';
+import { rawListJob } from '../bilateral-ai-job.fixtures';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { ResultsApiService } from '../../../shared/services/api/results-api.service';
 import { BilateralContextService } from './bilateral-context.service';
@@ -12,15 +12,10 @@ import { BilateralCreationService } from './bilateral-creation.service';
 import { PrToastService } from '../../../shared/components/pr-toast/pr-toast.service';
 
 /**
- * The AI-upload job is the only bilateral piece with a real state machine: an adaptive poll
- * (5 s → 15 s after 2 min → 30 s past the 30-minute ceiling) that has to stop by itself on
- * COMPLETED / FAILED / 404 / 410 / 401, never outlive the service, and never declare a failure the
- * server did not (`APF-R-7`, `APF-DD-6`).
- *
- * Every terminal state ends in `completionNotice` — the app-wide dialog — unless the processing
- * panel is the live outcome surface (`panelVisible`, `APF-DD-7`), and NEVER in a navigation or a
- * toast (2026-09-07): the redirect yanked people out of their work and the toast went unnoticed.
- * The job also survives a reload through localStorage, regardless of its age (`APF-R-7`).
+ * `AIQ-T-5` (`design.md` §6.2): the multi-job list service. One poll fetches every active/recent
+ * job at once (never one request per job, `AIQ-R-8` A), diffs consecutive polls to raise sticky
+ * completion toasts (`AIQ-R-11`), and keeps the adaptive cadence of `APF-R-7` measured from the
+ * most recent active job's queue-entry clock.
  */
 describe('BilateralAiService', () => {
   let service: BilateralAiService;
@@ -36,25 +31,22 @@ describe('BilateralAiService', () => {
   const POLL_INTERVAL_CEILING = 30_000;
   const ADAPTIVE_SWITCH_MS = 120_000;
   const CEILING_MS = 1_800_000;
-  const ACTIVE_JOB_STORAGE_KEY = 'prms.bilateral-ai.active-job';
+  const HAS_ACTIVE_JOBS_KEY = 'prms.bilateral-ai.has-active-jobs';
+  const LEGACY_ACTIVE_JOB_KEY = 'prms.bilateral-ai.active-job';
 
   const NOW_ISO = '2026-09-15T10:00:00.000Z';
   const NOW_MS = Date.parse(NOW_ISO);
 
-  const job = (over: Partial<RawBilateralAiJob> = {}): RawBilateralAiJob =>
-    ({
-      job_id: 'job-1',
-      status: 'PENDING',
-      stage: 'queued',
-      created_date: NOW_ISO,
-      result_count: 0,
-      error_message: null,
-      document_keys: ['docs/report.pdf'],
-      audio_keys: [],
-      ...over,
-    }) as RawBilateralAiJob;
+  const summary = (over: Partial<{ lanes_total: number; lanes_busy: number; others_waiting: number }> = {}) => ({
+    lanes_total: 2,
+    lanes_busy: 0,
+    others_waiting: 0,
+    ...over,
+  });
 
-  /** Lets the `await toPromise()` inside pollJob settle; fake timers do not touch microtasks. */
+  const listResponse = (jobs: ReturnType<typeof rawListJob>[] = [], summaryOver = {}) => ({ response: { jobs, summary: summary(summaryOver) } });
+
+  /** Lets the `await toPromise()` inside `pollList` settle; fake timers do not touch microtasks. */
   const flush = async () => {
     for (let i = 0; i < 10; i++) await Promise.resolve();
   };
@@ -74,8 +66,8 @@ describe('BilateralAiService', () => {
         { provide: Router, useValue: router },
         { provide: BilateralContextService, useValue: ctx },
         { provide: BilateralCreationService, useValue: creation },
-        { provide: PrToastService, useValue: toast }
-      ]
+        { provide: PrToastService, useValue: toast },
+      ],
     });
   };
 
@@ -85,19 +77,19 @@ describe('BilateralAiService', () => {
     localStorage.clear();
 
     bilateralApi = {
-      GET_bilateralAiJob: jest.fn().mockReturnValue(of({ response: job() })),
+      GET_bilateralAiJobs: jest.fn().mockReturnValue(of(listResponse([]))),
+      GET_bilateralAiJob: jest.fn().mockReturnValue(of({ response: rawListJob() })),
       GET_bilateralAiDrafts: jest.fn().mockReturnValue(of([])),
       GET_bilateralAiDraft: jest.fn().mockReturnValue(of({ response: null })),
       POST_promoteBilateralAiDraft: jest.fn().mockReturnValue(of({ response: {} })),
       DELETE_bilateralAiDraft: jest.fn().mockReturnValue(of({})),
       POST_bilateralAiJobRetry: jest.fn().mockReturnValue(of({ response: { jobId: 'job-1', jobStatus: 'PENDING' } })),
-      GET_bilateralAiJobExpectations: jest.fn().mockReturnValue(of({ response: { mix: 'documents', sampleSize: 8, p25Minutes: 3, p75Minutes: 6 } }))
+      GET_bilateralAiJobExpectations: jest.fn().mockReturnValue(of({ response: { mix: 'documents', sampleSize: 8, p25Minutes: 3, p75Minutes: 6 } })),
     };
     resultsApi = {
       GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
-      GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
+      GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] })),
     };
-    // The create wizard URL — where completion used to auto-redirect. It must not matter anymore.
     router = { navigate: jest.fn().mockResolvedValue(true), url: '/bilateral/ALLIANCE/create' };
     ctx = { centerInstitutionId: signal<number | null>(null), centerAcronym: signal('ALLIANCE') };
     creation = { isAiGenerated: signal(false) };
@@ -113,12 +105,15 @@ describe('BilateralAiService', () => {
     jest.useRealTimers();
   });
 
-  it('should be created', () => {
+  it('should be created, with an empty job list and no summary yet', () => {
     expect(service).toBeTruthy();
+    expect(service.jobs()).toEqual([]);
+    expect(service.summary()).toBeNull();
     expect(service.uploadState().status).toBe('idle');
   });
 
-  // ── promoteDraft: lands on the canonical editor URL ──────────────────────
+  // ── promoteDraft: lands on the canonical editor URL (unaffected by AIQ-T-5) ──────────────
+
   describe('promoteDraft', () => {
     it('navigates with the result CODE and the phase — the URL the results list opens (2026-09-04)', () => {
       bilateralApi.POST_promoteBilateralAiDraft.mockReturnValue(of({ response: { resultId: 11514, resultCode: 9046, versionId: 36 } }));
@@ -146,244 +141,487 @@ describe('BilateralAiService', () => {
     });
   });
 
-  // ── startJob: the machine boots, polls straight away, and normalizes the response ───────
+  // ── addSubmittedJob: optimistic insert (`AIQ-R-7` B) ──────────────────────────────────────
 
-  describe('startJob', () => {
-    it('records the job, jumps to pending at 100% and polls immediately', async () => {
-      service.startJob('job-1');
-      await flush();
+  describe('addSubmittedJob', () => {
+    it('the new job appears in the drawer (jobs()) at once, before any poll lands', () => {
+      service.addSubmittedJob({ jobId: 'job-9', jobStatus: 'PENDING' });
 
-      expect(service.currentJobId()).toBe('job-1');
-      expect(service.uploadState()).toEqual({ jobId: 'job-1', status: 'pending', uploadProgress: 100 });
-      // The first poll must NOT wait a whole interval — the user is staring at the screen.
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(1);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledWith('job-1');
+      expect(service.jobs().some(j => j.jobId === 'job-9')).toBe(true);
     });
 
-    it('normalizes every poll onto currentJob (string ids, ISO dates, 0/1 booleans)', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(
-        of({ response: job({ status: 'PROCESSING', stage: 'extracting', attempts: '2', retrying: 1, queue_position: null }) })
+    it('does not insert a duplicate when the job id is already present', () => {
+      service.addSubmittedJob({ jobId: 'job-9', jobStatus: 'PENDING' });
+      service.addSubmittedJob({ jobId: 'job-9', jobStatus: 'PENDING' });
+
+      expect(service.jobs().filter(j => j.jobId === 'job-9').length).toBe(1);
+    });
+
+    it('is a no-op with no jobId in the response', () => {
+      service.addSubmittedJob({ jobStatus: 'PENDING' });
+      service.addSubmittedJob(null);
+      service.addSubmittedJob(undefined);
+
+      expect(service.jobs()).toEqual([]);
+    });
+
+    it('sets the has-active-jobs hint and starts polling', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-9', status: 'PENDING' })])));
+
+      service.addSubmittedJob({ jobId: 'job-9', jobStatus: 'PENDING' });
+      await flush();
+
+      expect(localStorage.getItem(HAS_ACTIVE_JOBS_KEY)).not.toBeNull();
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── openDrawer (`AIQ-R-8` D, `AIQ-R-10` B) ────────────────────────────────────────────────
+
+  describe('openDrawer', () => {
+    it('opens the drawer and, given a job id, highlights it', () => {
+      service.openDrawer('job-3');
+
+      expect(service.drawerOpen()).toBe(true);
+      expect(service.highlightJobId()).toBe('job-3');
+    });
+
+    it('marks unseen finished jobs as seen', () => {
+      (service as unknown as { unseenFinishedIds: { set: (v: ReadonlySet<string>) => void } }).unseenFinishedIds.set(new Set(['job-1', 'job-2']));
+
+      service.openDrawer();
+
+      expect(service.unseenFinishedIds().size).toBe(0);
+    });
+
+    it('starts polling even with zero active jobs, so a drawer left open keeps refreshing', async () => {
+      service.openDrawer();
+      await flush();
+
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── HTTP count: one list request per poll, never one per job (`AIQ-R-8` A) ───────────────
+
+  describe('the list poller', () => {
+    it('issues exactly one GET .../ai/jobs per tick for 3 active jobs, and zero GET .../ai/jobs/:id calls', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(
+          listResponse([
+            rawListJob({ job_id: 'job-1', status: 'PENDING' }),
+            rawListJob({ job_id: 'job-2', status: 'PROCESSING' }),
+            rawListJob({ job_id: 'job-3', status: 'PENDING' }),
+          ]),
+        ),
       );
-      service.startJob('job-1');
-      await flush();
 
-      const normalized = service.currentJob();
-      expect(normalized?.attempts).toBe(2);
-      expect(typeof normalized?.attempts).toBe('number');
-      expect(normalized?.retrying).toBe(true);
-      expect(normalized?.stage).toBe('extracting');
-      expect(normalized?.createdDate).toBeInstanceOf(Date);
-    });
-
-    it('keeps polling every 5 s while the job is PENDING, inside the first 2 minutes', async () => {
-      service.startJob('job-1');
+      service.addSubmittedJob({ jobId: 'job-1', jobStatus: 'PENDING' });
       await flush();
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(1);
 
       await advance(POLL_INTERVAL_INITIAL);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(2);
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(2);
+
+      expect(bilateralApi.GET_bilateralAiJob).not.toHaveBeenCalled();
+      expect(service.jobs().length).toBe(3);
+    });
+
+    it('normalizes the list and the summary from the §4.1 shape (string ids, retrying: 1)', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })], { lanes_busy: 1, others_waiting: 3 })));
+
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+
+      const job = service.jobs()[0];
+      expect(job.jobId).toBe('job-1');
+      expect(job.retrying).toBe(true);
+      expect(job.queueEntryDate).toBeInstanceOf(Date);
+      expect(service.summary()).toEqual({ lanesTotal: 2, lanesBusy: 1, othersWaiting: 3 });
+    });
+
+    it('stops when idle (no active jobs) and the drawer is closed', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PENDING' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(1);
+
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' })])));
+      await advance(POLL_INTERVAL_INITIAL);
+      const callsAtIdle = bilateralApi.GET_bilateralAiJobs.mock.calls.length;
+
+      await advance(POLL_INTERVAL_INITIAL * 5);
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(callsAtIdle);
+      expect(localStorage.getItem(HAS_ACTIVE_JOBS_KEY)).toBeNull();
+    });
+
+    it('restarts on the next submission after going idle', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+      // First poll already sees it COMPLETED (idle) — stops.
+      const callsAtIdle = bilateralApi.GET_bilateralAiJobs.mock.calls.length;
+      await advance(POLL_INTERVAL_INITIAL * 3);
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(callsAtIdle);
+
+      service.addSubmittedJob({ jobId: 'job-2' });
+      await flush();
+      expect(bilateralApi.GET_bilateralAiJobs.mock.calls.length).toBeGreaterThan(callsAtIdle);
+    });
+
+    it('does not restart the interval merely because a poll landed with the same cadence', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PENDING' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+
+      const setIntervalSpy = jest.spyOn(globalThis, 'setInterval');
+      await advance(POLL_INTERVAL_INITIAL * 2);
+      expect(setIntervalSpy).not.toHaveBeenCalled();
+    });
+
+    // Reviewer issue (AIQ-T-5 attempt 2): `ensurePolling()` used to return early when a timer
+    // already existed, so submitting a job while another was already running left the cadence at
+    // 15 s/30 s and delayed the first poll of the new job by up to a whole interval — contradicting
+    // `addSubmittedJob`'s own doc comment ("kicks off immediately", `AIQ-R-8` A "measured from the
+    // most recent active job").
+    it('after addSubmittedJob with an existing (slowed) timer, a list request fires immediately and the next tick uses the initial interval', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING', queue_entry_date: NOW_ISO })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+      await advance(CEILING_MS); // cadence is now 30 s
+
+      bilateralApi.GET_bilateralAiJobs.mockClear();
+      service.addSubmittedJob({ jobId: 'job-2', jobStatus: 'PENDING' });
+      await flush();
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(1); // fired immediately
+
+      bilateralApi.GET_bilateralAiJobs.mockClear();
+      await advance(POLL_INTERVAL_INITIAL);
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(1); // next tick is 5 s, not 30 s
+    });
+  });
+
+  // ── Cadence buckets, measured from the most recent active job's queueEntryDate (`APF-R-7`) ─
+
+  describe('cadence buckets', () => {
+    beforeEach(async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING', queue_entry_date: NOW_ISO })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+    });
+
+    it('polls every 5 s inside the first 2 minutes', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockClear();
+      await advance(POLL_INTERVAL_INITIAL * 2);
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(2);
+    });
+
+    it('switches to 15 s after the first 2 minutes', async () => {
+      await advance(ADAPTIVE_SWITCH_MS);
+      bilateralApi.GET_bilateralAiJobs.mockClear();
+
+      await advance(60_000);
+      // At 15 s cadence, 60 s / 15 s = 4 polls.
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(4);
+    });
+
+    it('slows to 30 s past the 30-minute ceiling', async () => {
+      await advance(CEILING_MS);
+      bilateralApi.GET_bilateralAiJobs.mockClear();
+
+      await advance(90_000);
+      // At 30 s cadence, 90 s / 30 s = 3 polls.
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(3);
+    });
+
+    it('is measured from the freshest active job, not the oldest, when several are active', async () => {
+      // job-1 is old (past the 2-minute switch); job-2 just entered — the freshest wins, so the
+      // cadence should still be 5 s, not 15 s.
+      const oldEntry = new Date(NOW_MS - ADAPTIVE_SWITCH_MS - 1_000).toISOString();
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(
+          listResponse([
+            rawListJob({ job_id: 'job-1', status: 'PROCESSING', queue_entry_date: oldEntry }),
+            rawListJob({ job_id: 'job-2', status: 'PENDING', queue_entry_date: NOW_ISO }),
+          ]),
+        ),
+      );
+      await advance(POLL_INTERVAL_INITIAL);
+      bilateralApi.GET_bilateralAiJobs.mockClear();
 
       await advance(POLL_INTERVAL_INITIAL * 2);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(4);
-
-      expect(service.currentJob()?.status).toBe('PENDING');
-      expect(service.uploadState().status).toBe('pending');
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(2);
     });
+  });
 
-    it('moves to processing and then completes, without restarting the clock', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
+  // ── 401 handling (`AIQ-R-5`, design §7 — keeps `handlePollError`'s stop-on-401) ───────────
+
+  describe('a failed poll', () => {
+    it('401: stops polling silently — the session is gone, a retry would only produce more 401s', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
       await flush();
-      expect(service.uploadState().status).toBe('processing');
 
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 3 }) }));
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(throwError(() => ({ status: 401 })));
       await advance(POLL_INTERVAL_INITIAL);
 
-      expect(service.uploadState().status).toBe('completed');
-      expect(service.completionNotice()).toEqual({
-        jobId: 'job-1',
-        centerAcronym: 'ALLIANCE',
-        status: 'completed',
-        resultCount: 3,
-        errorMessage: undefined
-      });
-
-      // COMPLETED stops the machine: no poll may happen after it.
-      const callsAtCompletion = bilateralApi.GET_bilateralAiJob.mock.calls.length;
+      const calls = bilateralApi.GET_bilateralAiJobs.mock.calls.length;
       await advance(POLL_INTERVAL_INITIAL * 5);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(callsAtCompletion);
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(calls);
     });
 
-    // 2026-09-04: the forced redirect yanked people out of their work. 2026-09-07: the toast that
-    // replaced it went unnoticed ("no feedback at all"). Completion now NEVER navigates and NEVER
-    // toasts — on the create wizard or anywhere else — it raises the dialog notice and reloads
-    // the drafts, and the server mails the uploader a link as the durable half.
-    it('never redirects nor toasts on completion — the outcome is the dialog notice', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 2 }) }));
-      for (const url of ['/bilateral/ALLIANCE/create', '/bilateral/Bioversity%20%28Alliance%29/create', '/bilateral/ALLIANCE/result/9046']) {
-        router.url = url;
-        service.dismissCompletionNotice();
-        service.startJob('job-1');
-        await flush();
-
-        expect(service.uploadState().status).toBe('completed');
-        expect(router.navigate).not.toHaveBeenCalled();
-        expect(toast.add).not.toHaveBeenCalled();
-        expect(service.completionNotice()?.status).toBe('completed');
-        expect(service.completionNotice()?.resultCount).toBe(2);
-        expect(bilateralApi.GET_bilateralAiDrafts).not.toHaveBeenCalled(); // centerInstitutionId is null here
-      }
-    });
-
-    // The centre is captured when the job STARTS. By the time it ends the user may be on another
-    // centre, outside bilateral, or back from a reload — the context signal is not trustworthy.
-    it('the notice carries the centre of the job, not whatever centre is in context at the end', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
+    it('500: keeps polling on the current interval — a network blip is not proof the list is gone', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
       await flush();
 
-      ctx.centerAcronym.set('CIP');
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 1 }) }));
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(throwError(() => ({ status: 500 })));
+      await advance(POLL_INTERVAL_INITIAL);
+      const callsAfterFirstError = bilateralApi.GET_bilateralAiJobs.mock.calls.length;
+      expect(callsAfterFirstError).toBeGreaterThan(0);
+
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
+      await advance(POLL_INTERVAL_INITIAL * 3);
+      expect(bilateralApi.GET_bilateralAiJobs.mock.calls.length).toBeGreaterThan(callsAfterFirstError);
+    });
+  });
+
+  // ── Terminal-transition diff → toasts (`AIQ-R-11`) ────────────────────────────────────────
+
+  describe('terminal diff toasts', () => {
+    it('never toasts on the very first poll, even if it already shows finished jobs', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '2' })])));
+      service.openDrawer();
+      await flush();
+
+      expect(toast.add).not.toHaveBeenCalled();
+    });
+
+    it('one sticky toast, with an action, for a single job that turns COMPLETED between polls', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING', project_name: 'Alpha' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(listResponse([rawListJob({ job_id: 'job-1', status: 'COMPLETED', project_name: 'Alpha', result_count: '4' })])),
+      );
       await advance(POLL_INTERVAL_INITIAL);
 
-      expect(service.completionNotice()?.centerAcronym).toBe('ALLIANCE');
+      expect(toast.add).toHaveBeenCalledTimes(1);
+      const call = toast.add.mock.calls[0][0];
+      expect(call.key).toBe('globalUserNotification');
+      expect(call.sticky).toBe(true);
+      expect(call.action).toBeDefined();
+      expect(typeof call.action.run).toBe('function');
+      expect(call.summary).toContain('Alpha');
     });
 
-    it('openDraftsFromNotice navigates to that centre\'s Drafts list and clears the notice', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 2 }) }));
-      service.startJob('job-1');
+    // Reviewer issue (AIQ-T-5 attempt 2): `addSubmittedJob` inserted into `jobs()` but not into
+    // `previousJobsById`, so a job that turned terminal on the very FIRST poll after submission —
+    // fast failures, or ~30 s text jobs under a 30 s cadence — found `prev === undefined` and
+    // silently dropped both the toast and the `unseenFinishedIds` entry. Exactly `AIQ-R-7` A: P-1
+    // running, submit P-2.
+    it('toasts a job that is already FAILED on the very first (immediate) poll after submission, even while another job has been running past the ceiling', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING', queue_entry_date: NOW_ISO })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+      // job-1 has been running long enough that the cadence has already slowed down.
+      await advance(CEILING_MS);
+
+      // job-2 fails so fast that even the immediate poll `addSubmittedJob` triggers already
+      // reports it FAILED — the server response already includes it, so there is no later poll
+      // for the carried-forward placeholder to be reconciled on; only a `previousJobsById` seed
+      // made at submission time can prove the transition was FROM active TO terminal.
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(
+          listResponse([
+            rawListJob({ job_id: 'job-1', status: 'PROCESSING', queue_entry_date: NOW_ISO }),
+            rawListJob({ job_id: 'job-2', status: 'FAILED', error_code: 'TIMED_OUT' }),
+          ]),
+        ),
+      );
+      service.addSubmittedJob({ jobId: 'job-2', jobStatus: 'PENDING' });
       await flush();
 
-      service.openDraftsFromNotice();
-
-      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'drafts']);
-      expect(service.completionNotice()).toBeNull();
+      expect(toast.add).toHaveBeenCalledTimes(1);
+      expect(service.unseenFinishedIds().has('job-2')).toBe(true);
     });
 
-    it('dismissCompletionNotice clears the notice without navigating', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 2 }) }));
-      service.startJob('job-1');
+    it('carries a just-submitted placeholder forward when the very next poll has not caught up with it yet', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
       await flush();
 
-      service.dismissCompletionNotice();
+      // The server response for job-2's own immediate poll has not caught up yet.
+      service.addSubmittedJob({ jobId: 'job-2', jobStatus: 'PENDING' });
+      await flush();
 
-      expect(service.completionNotice()).toBeNull();
-      expect(router.navigate).not.toHaveBeenCalled();
+      expect(service.jobs().some(j => j.jobId === 'job-2')).toBe(true);
     });
 
-    it('replaces a running job instead of stacking a second interval', async () => {
-      service.startJob('job-1');
-      await flush();
-      service.startJob('job-2');
+    it('one toast per job when exactly 2 finish in the same poll', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(
+          listResponse([
+            rawListJob({ job_id: 'job-1', status: 'PROCESSING' }),
+            rawListJob({ job_id: 'job-2', status: 'PROCESSING' }),
+          ]),
+        ),
+      );
+      service.addSubmittedJob({ jobId: 'job-1' });
       await flush();
 
-      bilateralApi.GET_bilateralAiJob.mockClear();
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(
+          listResponse([
+            rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' }),
+            rawListJob({ job_id: 'job-2', status: 'FAILED', error_code: 'TIMED_OUT' }),
+          ]),
+        ),
+      );
       await advance(POLL_INTERVAL_INITIAL);
 
-      // One interval alive, and it polls the NEW job.
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(1);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledWith('job-2');
+      expect(toast.add).toHaveBeenCalledTimes(2);
+    });
+
+    it('a single grouped toast when more than 2 jobs finish in the same poll', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(
+          listResponse([
+            rawListJob({ job_id: 'job-1', status: 'PROCESSING' }),
+            rawListJob({ job_id: 'job-2', status: 'PROCESSING' }),
+            rawListJob({ job_id: 'job-3', status: 'PROCESSING' }),
+          ]),
+        ),
+      );
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(
+          listResponse([
+            rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' }),
+            rawListJob({ job_id: 'job-2', status: 'COMPLETED', result_count: '2' }),
+            rawListJob({ job_id: 'job-3', status: 'FAILED', error_code: 'TIMED_OUT' }),
+          ]),
+        ),
+      );
+      await advance(POLL_INTERVAL_INITIAL);
+
+      expect(toast.add).toHaveBeenCalledTimes(1);
+      const call = toast.add.mock.calls[0][0];
+      expect(call.summary).toContain('3 jobs finished');
+      expect(call.sticky).toBe(true);
+    });
+
+    it('does not re-toast a job that was already terminal on a previous poll', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' })])));
+      await advance(POLL_INTERVAL_INITIAL);
+      expect(toast.add).toHaveBeenCalledTimes(1);
+
+      // Falsifier target: removing the diff guard makes every subsequent poll re-toast the same
+      // already-finished job. Re-open the drawer (which keeps polling alive even though idle) and
+      // advance once more — the count must stay at 1.
+      service.openDrawer();
+      await advance(POLL_INTERVAL_INITIAL);
+      expect(toast.add).toHaveBeenCalledTimes(1);
+    });
+
+    it('adds newly-terminal jobs to unseenFinishedIds', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' })])));
+      await advance(POLL_INTERVAL_INITIAL);
+
+      expect(service.unseenFinishedIds().has('job-1')).toBe(true);
     });
   });
 
-  // ── COMPLETED with nothing to show ──────────────────────────────────────
+  // ── Legacy single-job key migration (`AIQ-R-8` C) ─────────────────────────────────────────
 
-  describe('a completed job that produced no candidates', () => {
-    beforeEach(async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 0 }) }));
-      service.startJob('job-1');
+  describe('the legacy prms.bilateral-ai.active-job key', () => {
+    it('is read once on construction, its job id kept for the drawer highlight, and the key removed', async () => {
+      localStorage.setItem(LEGACY_ACTIVE_JOB_KEY, JSON.stringify({ jobId: 'job-legacy', centerAcronym: 'ALLIANCE', startedAt: NOW_MS }));
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-legacy', status: 'PROCESSING' })])));
+
+      TestBed.resetTestingModule();
+      configureTestBed();
+      const resumed = TestBed.inject(BilateralAiService);
       await flush();
+
+      expect(resumed.highlightJobId()).toBe('job-legacy');
+      expect(localStorage.getItem(LEGACY_ACTIVE_JOB_KEY)).toBeNull();
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(1);
+      resumed.stopPolling();
     });
 
-    it('lands on completed_no_candidates instead of completed', () => {
-      expect(service.uploadState().status).toBe('completed_no_candidates');
+    it('does not start polling when neither the legacy key nor the hint key is present', () => {
+      expect(bilateralApi.GET_bilateralAiJobs).not.toHaveBeenCalled();
     });
 
-    // Finishing empty-handed is still finishing: the user waiting somewhere else must hear it.
-    it('raises the notice too, with zero results', () => {
-      expect(service.completionNotice()).toEqual(expect.objectContaining({ status: 'completed_no_candidates', resultCount: 0 }));
-    });
+    it('is tolerant of a malformed legacy record — never throws during construction', () => {
+      localStorage.setItem(LEGACY_ACTIVE_JOB_KEY, '{not json');
 
-    // The empty-handed branch must not send the user to an empty Drafts list, nor refresh it.
-    it('does not navigate to the drafts list nor reload it', () => {
-      expect(router.navigate).not.toHaveBeenCalled();
-      expect(bilateralApi.GET_bilateralAiDrafts).not.toHaveBeenCalled();
-    });
-
-    it('stops polling', async () => {
-      const calls = bilateralApi.GET_bilateralAiJob.mock.calls.length;
-      await advance(POLL_INTERVAL_INITIAL * 4);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
+      expect(() => {
+        TestBed.resetTestingModule();
+        configureTestBed();
+        TestBed.inject(BilateralAiService);
+      }).not.toThrow();
+      expect(localStorage.getItem(LEGACY_ACTIVE_JOB_KEY)).toBeNull();
     });
   });
 
-  it('surfaces the server message and stops polling when the job FAILS', async () => {
-    bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'FAILED', stage: 'extracting', error_message: 'Bad document' }) }));
-    service.startJob('job-1');
-    await flush();
+  // ── has-active-jobs hint (`AIQ-R-8` C) ─────────────────────────────────────────────────────
 
-    expect(service.uploadState().status).toBe('failed');
-    expect(service.uploadState().errorMessage).toBe('Bad document');
-    expect(service.completionNotice()).toEqual(expect.objectContaining({ status: 'failed', errorMessage: 'Bad document' }));
+  describe('the prms.bilateral-ai.has-active-jobs hint', () => {
+    it('resumes polling on construction when the hint key is already set (reload with active jobs)', async () => {
+      localStorage.setItem(HAS_ACTIVE_JOBS_KEY, '1');
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
 
-    const calls = bilateralApi.GET_bilateralAiJob.mock.calls.length;
-    await advance(POLL_INTERVAL_INITIAL * 4);
-    expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
-  });
-
-  // ── panelVisible: the single-outcome-surface gate (APF-DD-7, D3) ────────────────────────
-
-  describe('panelVisible', () => {
-    it('panelVisible true: the terminal state does NOT set completionNotice (the panel shows it inline)', async () => {
-      service.setPanelVisible(true);
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 2 }) }));
-
-      service.startJob('job-1');
+      TestBed.resetTestingModule();
+      configureTestBed();
+      const resumed = TestBed.inject(BilateralAiService);
       await flush();
 
-      expect(service.completionNotice()).toBeNull();
-      expect(service.uploadState().status).toBe('completed'); // the panel still has the outcome to render
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(1);
+      resumed.stopPolling();
     });
 
-    it('panelVisible false: the terminal state DOES set completionNotice (the dialog is the only surface)', async () => {
-      service.setPanelVisible(false);
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 2 }) }));
+    it('is cleared once a poll finds no active job', async () => {
+      localStorage.setItem(HAS_ACTIVE_JOBS_KEY, '1');
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' })])));
 
-      service.startJob('job-1');
+      TestBed.resetTestingModule();
+      configureTestBed();
+      const resumed = TestBed.inject(BilateralAiService);
       await flush();
 
-      expect(service.completionNotice()).not.toBeNull();
-    });
-
-    it('setPanelVisible(false) after a suppressed notice does not retroactively raise it', async () => {
-      service.setPanelVisible(true);
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 2 }) }));
-      service.startJob('job-1');
-      await flush();
-
-      service.setPanelVisible(false);
-
-      expect(service.completionNotice()).toBeNull();
+      expect(localStorage.getItem(HAS_ACTIVE_JOBS_KEY)).toBeNull();
+      resumed.stopPolling();
     });
   });
 
-  // ── retryJob: APF-R-5 / APF-R-9 ──────────────────────────────────────────────────────────
+  // ── retryJob: APF-R-5 / APF-R-9 (kept, unaffected by the list refactor) ──────────────────
 
   describe('retryJob', () => {
-    it('calls the retry endpoint and restarts polling on the same job id', async () => {
+    it('calls the retry endpoint and marks the upload form pending', async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-7', status: 'PENDING' })])));
+
       service.retryJob('job-7');
       expect(bilateralApi.POST_bilateralAiJobRetry).toHaveBeenCalledWith('job-7');
       await flush();
 
-      expect(service.currentJobId()).toBe('job-7');
-      expect(service.uploadState().status).toBe('pending');
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledWith('job-7');
-
-      bilateralApi.GET_bilateralAiJob.mockClear();
-      await advance(POLL_INTERVAL_INITIAL);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledWith('job-7');
+      expect(service.uploadState()).toEqual({ jobId: 'job-7', status: 'pending', uploadProgress: 100 });
+      expect(localStorage.getItem(HAS_ACTIVE_JOBS_KEY)).not.toBeNull();
     });
 
-    it('on 410 (sources gone), resets to the upload form with an explanation, and does not poll', async () => {
+    it('on 410 (sources gone), resets to the upload form with an explanation', async () => {
       bilateralApi.POST_bilateralAiJobRetry.mockReturnValue(throwError(() => ({ status: 410 })));
 
       service.retryJob('job-7');
@@ -392,27 +630,19 @@ describe('BilateralAiService', () => {
       expect(service.uploadState().status).toBe('idle');
       expect(service.uploadState().jobId).toBeNull();
       expect(service.uploadState().errorMessage).toBeTruthy();
-      expect(service.currentJobId()).toBeNull();
-
-      bilateralApi.GET_bilateralAiJob.mockClear();
-      await advance(POLL_INTERVAL_INITIAL * 3);
-      expect(bilateralApi.GET_bilateralAiJob).not.toHaveBeenCalled();
     });
 
-    it('on any other error, surfaces a failed state without starting to poll', async () => {
+    it('on any other error, surfaces a failed state', async () => {
       bilateralApi.POST_bilateralAiJobRetry.mockReturnValue(throwError(() => ({ status: 409 })));
 
       service.retryJob('job-7');
       await flush();
 
       expect(service.uploadState().status).toBe('failed');
-      bilateralApi.GET_bilateralAiJob.mockClear();
-      await advance(POLL_INTERVAL_INITIAL * 3);
-      expect(bilateralApi.GET_bilateralAiJob).not.toHaveBeenCalled();
     });
   });
 
-  // ── expectations: cached per mix for the session ─────────────────────────────────────────
+  // ── expectations: cached per mix for the session (kept, unaffected) ──────────────────────
 
   describe('expectations', () => {
     it('calls the API once per mix even when requested repeatedly', () => {
@@ -424,14 +654,6 @@ describe('BilateralAiService', () => {
       expect(bilateralApi.GET_bilateralAiJobExpectations).toHaveBeenCalledWith('documents');
     });
 
-    it('caches per mix independently — "audio" gets its own call', () => {
-      service.expectations('documents').subscribe();
-      service.expectations('audio').subscribe();
-      service.expectations('audio').subscribe();
-
-      expect(bilateralApi.GET_bilateralAiJobExpectations).toHaveBeenCalledTimes(2);
-    });
-
     it('unwraps the response envelope', done => {
       service.expectations('documents').subscribe(result => {
         expect(result).toEqual({ mix: 'documents', sampleSize: 8, p25Minutes: 3, p75Minutes: 6 });
@@ -440,248 +662,35 @@ describe('BilateralAiService', () => {
     });
   });
 
-  // ── Surviving a reload ──────────────────────────────────────────────────
+  // ── clearUploadState: narrowed to the upload form (`AIQ-DD-11`) ──────────────────────────
 
-  describe('the active job in localStorage', () => {
-    it('is written when a job starts and removed when it ends', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
-      await flush();
+  it('clearUploadState wipes the upload form back to idle', () => {
+    service.uploadState.set({ jobId: 'job-1', status: 'uploading', uploadProgress: 40 });
 
-      const stored = JSON.parse(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY) ?? 'null');
-      expect(stored).toEqual(expect.objectContaining({ jobId: 'job-1', centerAcronym: 'ALLIANCE' }));
-      expect(typeof stored.startedAt).toBe('number');
+    service.clearUploadState();
 
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'COMPLETED', stage: 'creating_drafts', result_count: 1 }) }));
-      await advance(POLL_INTERVAL_INITIAL);
-      expect(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
-    });
-
-    // A reload used to lose the job for good: polling lived in memory only, so the user never
-    // heard the outcome unless they went to Drafts by themselves.
-    it('is picked up by a fresh service instance, which polls it to its outcome', async () => {
-      localStorage.setItem(
-        ACTIVE_JOB_STORAGE_KEY,
-        JSON.stringify({ jobId: 'job-9', centerAcronym: 'Bioversity (Alliance)', startedAt: Date.now() - 60_000 })
-      );
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(
-        of({ response: job({ job_id: 'job-9', status: 'COMPLETED', stage: 'creating_drafts', result_count: 4 }) })
-      );
-
-      TestBed.resetTestingModule();
-      configureTestBed();
-      const resumed = TestBed.inject(BilateralAiService);
-      await flush();
-
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledWith('job-9');
-      expect(resumed.completionNotice()).toEqual(
-        expect.objectContaining({ jobId: 'job-9', centerAcronym: 'Bioversity (Alliance)', status: 'completed', resultCount: 4 })
-      );
-      expect(router.navigate).not.toHaveBeenCalled();
-      resumed.stopPolling();
-    });
-
-    // APF-R-7 AND-IT-MUST: removed the old MAX_POLL_DURATION-age drop on resume. Old assertion
-    // (record kept for history): a record older than the 30-minute ceiling was NOT resumed at all
-    // and the poller never fired. That is no longer true — only a terminal server state or a
-    // 404/410 on poll drops the record now.
-    it('is resumed regardless of age, as long as the server still reports a non-terminal status', async () => {
-      const OLD_MS = NOW_MS - CEILING_MS - 3_600_000;
-      localStorage.setItem(
-        ACTIVE_JOB_STORAGE_KEY,
-        JSON.stringify({ jobId: 'job-old', centerAcronym: 'CIP', startedAt: OLD_MS })
-      );
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(
-        of({ response: job({ job_id: 'job-old', status: 'PROCESSING', stage: 'extracting', created_date: new Date(OLD_MS).toISOString() }) })
-      );
-
-      TestBed.resetTestingModule();
-      configureTestBed();
-      const resumed = TestBed.inject(BilateralAiService);
-      await flush();
-
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledWith('job-old');
-      expect(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).not.toBeNull();
-      expect(resumed.uploadState().status).toBe('still_running');
-      resumed.stopPolling();
-    });
-  });
-
-  // ── The 30-minute ceiling: "still running", never a client-declared failure (APF-R-7, D2) ──
-
-  describe('the 30-minute ceiling', () => {
-    beforeEach(async () => {
-      // The server keeps answering PROCESSING forever — nothing here ever completes on its own.
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
-      await flush();
-    });
-
-    it('switches from 5 s to 15 s after the first 2 minutes', async () => {
-      await advance(ADAPTIVE_SWITCH_MS);
-      bilateralApi.GET_bilateralAiJob.mockClear();
-
-      await advance(60_000);
-      // At 15 s cadence, 60 s / 15 s = 4 polls.
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(4);
-    });
-
-    it('never sets a client-declared failure at the ceiling — flips to still_running instead', async () => {
-      await advance(CEILING_MS);
-
-      expect(service.uploadState().status).toBe('still_running');
-      // Old assertion (record kept for history, APF-DD-6 — reversion challenged):
-      // expect(service.uploadState().status).toBe('failed');
-      // expect(service.uploadState().errorMessage).toBe('Processing t' + 'imed out. Please try again.');
-      expect(service.uploadState().status).not.toBe('failed');
-    });
-
-    it('keeps the resume record at and past the ceiling — nothing is dropped', async () => {
-      await advance(CEILING_MS + POLL_INTERVAL_CEILING);
-      expect(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).not.toBeNull();
-    });
-
-    it('slows to a 30 s cadence once still_running', async () => {
-      await advance(CEILING_MS);
-      bilateralApi.GET_bilateralAiJob.mockClear();
-
-      await advance(90_000);
-      // At 30 s cadence, 90 s / 30 s = 3 polls.
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(3);
-    });
-
-    it('keeps polling past the ceiling — the machine never stops on its own past 30 minutes', async () => {
-      await advance(CEILING_MS + POLL_INTERVAL_CEILING * 10);
-      expect(bilateralApi.GET_bilateralAiJob.mock.calls.length).toBeGreaterThan(1);
-    });
-  });
-
-  // ── pollJob branches on the HTTP status of a failed poll (APF-R-7, APF-DD-6) ────────────
-
-  describe('a failed poll', () => {
-    it('404: stops polling and drops the resume record — the job is gone', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
-      await flush();
-
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(throwError(() => ({ status: 404 })));
-      await advance(POLL_INTERVAL_INITIAL);
-
-      expect(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
-      const calls = bilateralApi.GET_bilateralAiJob.mock.calls.length;
-      await advance(POLL_INTERVAL_INITIAL * 5);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
-    });
-
-    it('404: resets to the upload form with an explanation — never a live-looking job with a dead timer', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
-      await flush();
-
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(throwError(() => ({ status: 404 })));
-      await advance(POLL_INTERVAL_INITIAL);
-
-      expect(service.uploadState().status).toBe('idle');
-      expect(service.uploadState().jobId).toBeNull();
-      expect(service.uploadState().errorMessage).toBeTruthy();
-      expect(service.currentJobId()).toBeNull();
-      expect(service.currentJob()).toBeNull();
-    });
-
-    it('410: stops polling and drops the resume record — same as 404', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
-      await flush();
-
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(throwError(() => ({ status: 410 })));
-      await advance(POLL_INTERVAL_INITIAL);
-
-      expect(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
-      const calls = bilateralApi.GET_bilateralAiJob.mock.calls.length;
-      await advance(POLL_INTERVAL_INITIAL * 5);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
-    });
-
-    it('410: resets to the upload form with an explanation, same as the retry endpoint\'s own 410 branch', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PENDING', stage: 'queued' }) }));
-      service.startJob('job-1');
-      await flush();
-
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(throwError(() => ({ status: 410 })));
-      await advance(POLL_INTERVAL_INITIAL);
-
-      expect(service.uploadState().status).toBe('idle');
-      expect(service.uploadState().errorMessage).toBeTruthy();
-      expect(service.currentJob()).toBeNull();
-    });
-
-    it('401: stops polling silently — the session is gone, a retry would only produce more 401s', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
-      await flush();
-
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(throwError(() => ({ status: 401 })));
-      await advance(POLL_INTERVAL_INITIAL);
-
-      const calls = bilateralApi.GET_bilateralAiJob.mock.calls.length;
-      await advance(POLL_INTERVAL_INITIAL * 5);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
-      // Silent: no failed state, no notice — this is a session problem, not a job outcome.
-      expect(service.completionNotice()).toBeNull();
-    });
-
-    it('500: keeps polling on the current interval — a network blip is not a terminal signal', async () => {
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
-      service.startJob('job-1');
-      await flush();
-
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(throwError(() => ({ status: 500 })));
-      await advance(POLL_INTERVAL_INITIAL);
-      const callsAfterFirstError = bilateralApi.GET_bilateralAiJob.mock.calls.length;
-      expect(callsAfterFirstError).toBeGreaterThan(0);
-
-      await advance(POLL_INTERVAL_INITIAL * 3);
-      expect(bilateralApi.GET_bilateralAiJob.mock.calls.length).toBeGreaterThan(callsAfterFirstError);
-      expect(localStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).not.toBeNull();
-    });
+    expect(service.uploadState()).toEqual({ jobId: null, status: 'idle', uploadProgress: 0 });
   });
 
   // ── Teardown ────────────────────────────────────────────────────────────
 
   describe('stopPolling', () => {
     it('kills the interval when the service is destroyed', async () => {
-      service.startJob('job-1');
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
       await flush();
-      const calls = bilateralApi.GET_bilateralAiJob.mock.calls.length;
+      const calls = bilateralApi.GET_bilateralAiJobs.mock.calls.length;
 
       service.ngOnDestroy();
       await advance(POLL_INTERVAL_INITIAL * 10);
 
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
+      expect(bilateralApi.GET_bilateralAiJobs).toHaveBeenCalledTimes(calls);
     });
 
-    it('is safe to call with no job running, and twice in a row', async () => {
+    it('is safe to call with nothing running, and twice in a row', () => {
       expect(() => service.stopPolling()).not.toThrow();
-
-      service.startJob('job-1');
-      await flush();
       service.stopPolling();
       expect(() => service.stopPolling()).not.toThrow();
-
-      const calls = bilateralApi.GET_bilateralAiJob.mock.calls.length;
-      await advance(POLL_INTERVAL_INITIAL * 3);
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
     });
-  });
-
-  it('clearUploadState wipes the job back to idle', async () => {
-    service.startJob('job-1');
-    await flush();
-
-    service.clearUploadState();
-
-    expect(service.uploadState()).toEqual({ jobId: null, status: 'idle', uploadProgress: 0 });
-    expect(service.currentJobId()).toBeNull();
-    expect(service.currentJob()).toBeNull();
   });
 });

@@ -32,7 +32,7 @@
 
   @if (isCreating() && selectedReportingWay() === 'ai') {
     <div id="bcr-ai-upload" class="bcr-ai-section">
-      <app-bilateral-ai-upload></app-bilateral-ai-upload>
+      <app-bilateral-ai-upload (chooseAnotherProject)="onChooseAnotherProject()"></app-bilateral-ai-upload>
     </div>
   }
 
@@ -46,9 +46,18 @@
     [assessment]="qualityAssessment.assessment()"
     [submitting]="qualityAssessment.isSubmitting()"
     [running]="qualityAssessment.isRunning()"
+    [readOnly]="isFormReadOnly()"
+    [editable]="!isFormReadOnly()"
+    [currentTitle]="creationService.resultTitle()"
+    [currentDescription]="creationService.resultDescription()"
+    [savingField]="savingGiField()"
+    [resultTypeId]="creationService.resultTypeId()"
+    [lastSaveResult]="lastGiSaveResult()"
     (dismissed)="dismissQualityAssessment()"
     (sectionSelected)="goToQualitySection($event)"
-    (decisionChosen)="submitAfterQualityDecision($event)" />
+    (decisionChosen)="submitAfterQualityDecision($event)"
+    (giFieldSaveRequested)="handleGiFieldSaveRequested($event)"
+    (recheckRequested)="handleGiRecheckRequested()" />
   <div class="bcr-layout" data-testid="bilateral-editor-layout">
     <!-- Sections rail: 240px, white, own scroll, right rule to the floor. -->
     <aside class="bcr-rail pr-light-scroll" data-testid="bilateral-sections-rail">

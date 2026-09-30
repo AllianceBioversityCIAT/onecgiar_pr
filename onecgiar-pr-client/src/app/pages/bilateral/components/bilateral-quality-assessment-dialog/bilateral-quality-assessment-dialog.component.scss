@@ -127,6 +127,15 @@
 .bqa-dialog__feedback-block--strengths h5 { color: var(--pr-color-green-700); }
 .bqa-dialog__feedback-block ul { margin: 0; padding-left: 18px; }
 .bqa-dialog__feedback-block li + li { margin-top: 5px; }
+
+// ── GI edit block + unsaved-changes strip (BIL-QTS-T-4, design.md §6.2/§6.3) ─────────────────
+// Reviewer FAIL remediation (issue 5, rework attempt 2): all of this block's layout, spacing and
+// type moved to Tailwind utilities in the template (Hard UI rule 19; docs/ux-ui/design.md §7
+// "Brand design line" rule 1, Tailwind-first). No new colour tokens (DD-12): the suggestion
+// surface reuses the existing neutral `--pr-surface-app` token (same one `.bqa-dialog__tip` above
+// already uses) — content surfaces stay neutral (Hard UI rule 7); the violet accent lives only on
+// the Apply button's `brandSoft` variant. SCSS intentionally empty for this block.
+
 .bqa-dialog__evidence span { flex: none; text-transform: capitalize; font-weight: 700; }
 // Radius/padding moved to Tailwind on the element (BIL-QAD-T-2, DD-12).
 .bqa-dialog__evidence { display: flex; gap: 8px; border: 1px solid var(--pr-border); }
