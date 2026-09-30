@@ -262,8 +262,14 @@ export class ShellTopbarComponent {
     this.palette()?.toggle();
   }
 
+  /**
+   * NOTIF-T-6 rework: the routed `.../requests` destination this used to target was retired along
+   * with `notificationsRouting`'s `requests`/`updates` children (`NOTIF-DD-6`) — repointed at the
+   * merged `results-notifications` view, same base route `pop-up-notification-item.component.ts`'s
+   * `generateUrlLink()` now uses.
+   */
   goToNotifications(): void {
-    void this.router.navigate(['/result/results-outlet/results-notifications/requests']);
+    void this.router.navigate(['/result/results-outlet/results-notifications']);
   }
 
   handleClosePopUp(): void {

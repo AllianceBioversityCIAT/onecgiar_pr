@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of, throwError, Subject } from 'rxjs';
+import { of, throwError, Subject, firstValueFrom } from 'rxjs';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralResultCreatorComponent } from './bilateral-result-creator.component';
@@ -16,7 +17,9 @@ import { BilateralManualCreateFlowService } from '../../services/bilateral-manua
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
+import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { RESULT_STATUS_TOKENS } from '../../../../shared/constants/result-status-tokens';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Injectable()
 class MockBilateralAiService {
@@ -33,10 +36,16 @@ class MockBilateralAiService {
   promoteDraft = jest.fn();
   discardDraft = jest.fn();
   toggleEvidence = jest.fn();
+  openDrawer = jest.fn();
   activeJobId = signal<number | null>(null);
   pollIntervalRef = signal<any>(null);
   draftList = signal([]);
   isDraftListLoaded = signal(false);
+  // `AIQ-T-9`: `app-ai-processes-trigger`, mounted by `app-bilateral-page-header`, reads these
+  // three directly (never through an input) — see that component's `CLAUDE.md`.
+  jobs = signal<{ status: string; centerAcronym: string | null }[]>([]);
+  unseenFinishedIds = signal<ReadonlySet<string>>(new Set());
+  drawerOpen = signal(false);
 }
 
 function makeManualCreateFlowMock() {
@@ -48,6 +57,10 @@ function makeManualCreateFlowMock() {
     canShowCreateForm: computed(() => true),
     drawerProjectCode: computed(() => ''),
     drawerProjectTitle: computed(() => ''),
+    drawerProjectSummary: computed(() => ''),
+    drawerProjectDescription: computed(() => ''),
+    drawerLeadCenterAcronym: computed(() => ''),
+    showSpSelectionInDrawer: computed(() => false),
     selectedReportingWay: signal<'manual' | 'ai' | null>(null),
     canUseAi: computed(() => true),
     drawerProgramCode: computed(() => ''),
@@ -61,7 +74,8 @@ function makeManualCreateFlowMock() {
     canGoBack: computed(() => false),
     backLabel: computed(() => 'Back'),
     beginFromProject: jest.fn(),
-    submitCreate: jest.fn()
+    submitCreate: jest.fn(),
+    externalEntry: new Subject<void>()
   };
 }
 
@@ -94,6 +108,14 @@ describe('BilateralResultCreatorComponent', () => {
       isW3Bilateral: signal(false) as any,
       // P2-3352: status badge in the header.
       resultStatusId: signal(null) as any,
+      // BIL-RAU-T-7: replication flag driving the narrow admin escape.
+      isReplicated: signal(false) as any,
+      // Mirrors the real service's BILATERAL_STATUS rule (isEditableByCenterUser is a `computed` off
+      // resultStatusId there) so a component-level test can assert the read-only gate really flips.
+      setResultStatus: jest.fn((id: number) => {
+        creationService.resultStatusId.set(id);
+        creationService.isEditableByCenterUser.set(id == null || id === 1 || id === 8);
+      }),
       // P2-3520: the read-only gate the editor now consumes. Writable here so a test can flip the
       // result out of Editing and assert the lock.
       isEditableByCenterUser: signal(true) as any,
@@ -143,6 +165,7 @@ describe('BilateralResultCreatorComponent', () => {
       globalSaveState: signal('idle'),
       setResultId: jest.fn(),
       setReadOnly: jest.fn(),
+      setReadOnlyExemptions: jest.fn(),
       registerField: jest.fn(),
       updateField: jest.fn(),
       updateFieldsBatch: jest.fn(),
@@ -216,6 +239,7 @@ describe('BilateralResultCreatorComponent', () => {
       // The per-field flag component calls this from any section template that mounts.
       flagForField: jest.fn().mockReturnValue(null),
       flagForSection: jest.fn().mockReturnValue(null),
+      markStale: jest.fn(),
       reset: jest.fn(),
     };
 
@@ -264,6 +288,14 @@ describe('BilateralResultCreatorComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  // `ARM-T-2` (bilateral/ai-queue-report-manually): the create drawer host used to be mounted
+  // here (`bilateral-result-creator.component.html:39`) and is now mounted once in the bilateral
+  // shell (`bilateral.component.html`, `ARM-DD-1`), reachable from every bilateral route. This
+  // component only drives the flow's signals via `manualCreateFlow` (mocked above).
+  it('ARM-T-2: does not render the manual create drawer host directly (single shell mount)', () => {
+    expect(fixture.nativeElement.querySelectorAll('app-bilateral-manual-create-drawer-host').length).toBe(0);
   });
 
   it('does not flush autosave while the browser is refreshing or closing', () => {
@@ -408,28 +440,140 @@ describe('BilateralResultCreatorComponent', () => {
     expect(manualCreateFlow.drawerOpen()).toBe(true);
   });
 
+  it('ARM-DD-5: an external entry drops the wizard reporting way without closing the drawer', () => {
+    component.selectedReportingWay.set('ai');
+    manualCreateFlow.closeDrawer.mockClear();
+    autoSaveService.reset.mockClear();
+    mdsTracker.reset.mockClear();
+    manualCreateFlow.externalEntry.next();
+    expect(component.selectedReportingWay()).toBeNull();
+    expect(manualCreateFlow.closeDrawer).not.toHaveBeenCalled();
+    expect(autoSaveService.reset).toHaveBeenCalled();
+    expect(mdsTracker.reset).toHaveBeenCalled();
+  });
+
   it('should close the manual drawer when switching reporting ways', () => {
     manualCreateFlow.drawerOpen.set(true);
     component.onReportingWaySelected('ai');
     expect(manualCreateFlow.closeDrawer).toHaveBeenCalled();
   });
 
-  describe('isAiProcessing (APF-T-6 forward pointer 1)', () => {
-    it.each(['uploading', 'pending', 'processing', 'still_running'])(
-      'locks the AI step while the job is alive (%s)',
-      status => {
-        mockAiService.uploadState.set({ status });
-        expect(component.isAiProcessing()).toBe(true);
-      },
-    );
+  describe('isAiProcessing (AIQ-DD-11: only the upload itself locks the step)', () => {
+    it('locks the AI step while the upload\'s own submission is in flight', () => {
+      mockAiService.uploadState.set({ status: 'uploading' });
+      expect(component.isAiProcessing()).toBe(true);
+    });
 
-    it.each(['idle', 'completed', 'completed_no_candidates', 'failed'])(
-      'does not lock the AI step once the job is terminal or not started (%s)',
+    // `AIQ-T-7` falsifier: restoring the old `pending`/`processing`/`still_running` branches here
+    // must turn this red — those statuses now belong to jobs in the service's LIST, and a job
+    // (this project's or another's) staying alive must never lock the wizard again (`AIQ-R-7` A).
+    it.each(['idle', 'pending', 'processing', 'still_running', 'completed', 'completed_no_candidates', 'failed'])(
+      'does not lock the AI step once the upload itself is done, even while the service lists active jobs (%s)',
       status => {
         mockAiService.uploadState.set({ status });
         expect(component.isAiProcessing()).toBe(false);
       },
     );
+  });
+
+  describe('`?job=` deep link (AIQ-T-7, AIQ-R-8 D, P-23)', () => {
+    it('selects the AI way and opens the drawer highlighting that job', () => {
+      mockRoute.snapshot = { queryParams: { job: 'job-77' } };
+      mockRoute.queryParams = of({ job: 'job-77' });
+      component.ngOnInit();
+
+      expect(component.selectedReportingWay()).toBe('ai');
+      expect(mockAiService.openDrawer).toHaveBeenCalledWith('job-77');
+    });
+
+    it('does nothing extra without `?job=`', () => {
+      mockRoute.snapshot = { queryParams: {} };
+      mockRoute.queryParams = of({});
+      mockAiService.openDrawer.mockClear();
+      component.ngOnInit();
+
+      expect(mockAiService.openDrawer).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('AI queue deep link — `?project=`/`?way=` (AIQ-R-9 D, AIQ-T-8 attempt 3)', () => {
+    const project = { id: 501, shortName: 'P-501', fullName: 'Project 501' } as any;
+
+    beforeEach(() => {
+      creationService.projects.set([project]);
+      // The real `BilateralCreationService.selectProject` sets `selectedProject` — mirror that one
+      // effect here so the END STATE (not the call) is what the assertions below check.
+      creationService.selectProject = jest.fn((p: any) => creationService.selectedProject.set(p));
+    });
+
+    it("selects the project by id from the creator's own loaded list, then activates the ai way", () => {
+      mockRoute.snapshot = { queryParams: { project: '501', way: 'ai' } };
+      mockRoute.queryParams = of({ project: '501', way: 'ai' });
+      component.ngOnInit();
+      TestBed.flushEffects();
+
+      expect(creationService.selectedProject()).toBe(project);
+      expect(component.selectedReportingWay()).toBe('ai');
+    });
+
+    it("selects the project by id, then activates the manual way (the creator's real 'manual' value)", () => {
+      mockRoute.snapshot = { queryParams: { project: '501', way: 'manual' } };
+      mockRoute.queryParams = of({ project: '501', way: 'manual' });
+      component.ngOnInit();
+      TestBed.flushEffects();
+
+      expect(creationService.selectedProject()).toBe(project);
+      expect(component.selectedReportingWay()).toBe('manual');
+    });
+
+    it('ignores a project id that is not in the loaded list — no error, no selection, no way', () => {
+      mockRoute.snapshot = { queryParams: { project: '999', way: 'ai' } };
+      mockRoute.queryParams = of({ project: '999', way: 'ai' });
+
+      expect(() => component.ngOnInit()).not.toThrow();
+      TestBed.flushEffects();
+      expect(creationService.selectedProject()).toBeNull();
+      expect(component.selectedReportingWay()).toBeNull();
+    });
+
+    it('a job id still wins over `?project=` and keeps `?job=`\'s own behavior intact (AIQ-T-7)', () => {
+      mockRoute.snapshot = { queryParams: { job: 'job-77', project: '501', way: 'ai' } };
+      mockRoute.queryParams = of({ job: 'job-77', project: '501', way: 'ai' });
+      component.ngOnInit();
+      TestBed.flushEffects();
+
+      expect(component.selectedReportingWay()).toBe('ai');
+      expect(mockAiService.openDrawer).toHaveBeenCalledWith('job-77');
+      expect(creationService.selectedProject()).toBeNull(); // the `?project=` branch never ran
+    });
+
+    // AIQ-T-8 attempt 4: a cold creator load has `creationService.projects()` still `[]` at
+    // `ngOnInit` time — only the child `bilateral-project-selector`'s own constructor effect
+    // fetches it, asynchronously. Falsifier: applying the link only synchronously inside
+    // `ngOnInit` (attempt 3's mistake) never re-checks once `projects()` fills, so this must go
+    // red under that implementation and green under the pending-signal + effect one.
+    it('applies a cold `?project=`/`?way=` link once creationService.projects() loads it asynchronously', () => {
+      creationService.projects.set([]); // cold load: nothing loaded yet, unlike this describe's own beforeEach
+      mockRoute.snapshot = { queryParams: { project: '501', way: 'ai' } };
+      mockRoute.queryParams = of({ project: '501', way: 'ai' });
+
+      component.ngOnInit();
+      TestBed.flushEffects();
+
+      // Not yet: the id is not in the (still empty) list.
+      expect(creationService.selectedProject()).toBeNull();
+      expect(component.selectedReportingWay()).toBeNull();
+
+      // The catalogue arrives later, the way `BilateralCreationService.getProjects` really does.
+      creationService.isLoadingProjects.set(true);
+      TestBed.flushEffects();
+      creationService.projects.set([project]);
+      creationService.isLoadingProjects.set(false);
+      fixture.detectChanges();
+
+      expect(creationService.selectedProject()?.id).toBe(501);
+      expect(component.selectedReportingWay()).toBe('ai');
+    });
   });
 
   describe('header title (P2-3352)', () => {
@@ -525,6 +669,127 @@ describe('BilateralResultCreatorComponent', () => {
       component.submitResult();
 
       expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * BIL-RAU-T-7 (design.md §6.2, DD-5) — the narrow admin escape: an admin looking at a bilateral
+   * result stuck at Discontinued (4) must still be able to change and save the Annual updating
+   * answer, and nothing else. The exemption is scoped to exactly the three keys the block writes.
+   */
+  describe('read-only exemptions for the admin annual-updating escape (BIL-RAU-T-7, DD-5)', () => {
+    const THE_THREE_KEYS = ['is_discontinued', 'discontinued_options', 'merge_split_targets'];
+
+    beforeEach(() => {
+      autoSaveService.setReadOnlyExemptions.mockClear();
+    });
+
+    it('sets the three-key exemption for an admin on a replicated type-7 result at status 4', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(7);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith(THE_THREE_KEYS);
+    });
+
+    it('also grants the exemption for a replicated type-2 result (Innovation Use)', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(2);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith(THE_THREE_KEYS);
+    });
+
+    it('clears the exemption for a non-admin, even at status 4 replicated type 7', () => {
+      rolesService.isAdmin = false;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(7);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith([]);
+    });
+
+    it('clears the exemption for an admin on a non-replicated result at status 4', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(false);
+      creationService.resultTypeId.set(7);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith([]);
+    });
+
+    it('clears the exemption for an admin on a replicated result of a type other than 7/2', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(5);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith([]);
+    });
+
+    it('clears the exemption for an admin on a replicated type-7 result NOT at status 4', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(1);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(7);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith([]);
+    });
+
+    it('setResultStatus(1) from 4 flips the read-only gate to editable with no reload (D9/DD-9)', () => {
+      rolesService.isAdmin = false;
+      creationService.resultStatusId.set(4);
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+      expect(component.isFormReadOnly()).toBe(true);
+
+      creationService.setResultStatus(1);
+      fixture.detectChanges();
+
+      expect(component.isFormReadOnly()).toBe(false);
+      expect(autoSaveService.setReadOnly).toHaveBeenCalledWith(false);
+      });
+    });
+
+  /**
+   * QSG-T-2 (`QSG-R-5`) — the dialog does not derive its own read-only rule; it renders whatever
+   * the creator hands it. This pins the wiring at `bilateral-result-creator.component.html:44-51`:
+   * the SAME gate `isFormReadOnly()` already computes, not a second copy of the editability rule.
+   * The dialog's own read-only rendering (no footer, no stale line) is covered in its own spec.
+   */
+  describe('quality assessment dialog readOnly binding (QSG-T-2)', () => {
+    function dialogInstance(): BilateralQualityAssessmentDialogComponent {
+      return fixture.debugElement.query(By.directive(BilateralQualityAssessmentDialogComponent))
+        .componentInstance as BilateralQualityAssessmentDialogComponent;
+    }
+
+    it('binds the dialog readOnly input from isFormReadOnly()', () => {
+      component.isCreating.set(false);
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+
+      expect(component.isFormReadOnly()).toBe(true);
+      expect(dialogInstance().readOnly()).toBe(true);
+
+      creationService.isEditableByCenterUser.set(true);
+      fixture.detectChanges();
+
+      expect(component.isFormReadOnly()).toBe(false);
+      expect(dialogInstance().readOnly()).toBe(false);
     });
   });
 
@@ -1578,6 +1843,451 @@ describe('BilateralResultCreatorComponent', () => {
       expect(card).toBeTruthy();
       expect(card.getAttribute('aria-disabled')).toBe('true');
       expect(card.classList.contains('brws-card--disabled')).toBe(true);
+    });
+  });
+
+  // BIL-QTS-T-5: the GI drawer's `giFieldSaveRequested` / `recheckRequested` outputs, wired to the
+  // creator's autosave path and to the rail's Submit-for-review guards, per design.md §2.2 / DD-3/DD-4.
+  describe('BIL-QTS-T-5 — GI drawer wiring (save through autosave, stale on success, Check again)', () => {
+    beforeEach(() => {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      autoSaveService.hasErrorFor.mockReturnValue(false);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      mdsTracker.overallStatus.set('complete');
+      mdsTracker.invalidFields.set([]);
+    });
+
+    // Falsifier (a). The autosave service itself is not under test here (P-2/P-3, "called, not
+    // changed") — `staged`/`sent` is a small in-test model of exactly the two facts DD-3 depends
+    // on: `updateField` stages by key (overwriting whatever was staged for that key), and `flush`
+    // takes its batch and clears it from `staged` SYNCHRONOUSLY, AT CALL TIME — settling only
+    // later (mirrors `bilateral-auto-save.service.ts:214-218`). A direct-PATCH implementation that
+    // never calls `updateField` would leave the fixture's `Old` sitting in `staged` untouched at
+    // the moment `flush` snapshots it, and the assertions below would fail.
+    //
+    // Rework note (attempt 2): attempt 1's mock snapshotted `staged` when the deferred gate
+    // OPENED, not when `flush` was CALLED — so a wrong order (`const p = flush(keys);
+    // updateField(field, value); await p;`) still read as correct, because by the time the gate
+    // opened the update had already landed. The boundary that matters is "staged before flush is
+    // called", not "staged before flush settles" — snapshotting inside the mock's synchronous body
+    // (before the `firstValueFrom(gate)` wait) is what makes that boundary observable, and the
+    // explicit `invocationCallOrder` assertion below checks it directly rather than inferring it
+    // from timing.
+    it('(a) stages the drawer value through autosave before flush is CALLED, so a later Save draft never resends the older staged value', async () => {
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      const staged: Record<string, unknown> = { title: 'Old' }; // fixture: already staged before the drawer save
+      const sent: Record<string, unknown>[] = [];
+      autoSaveService.updateField.mockImplementation((field: string, value: unknown) => {
+        staged[field] = value;
+      });
+
+      const gate = new Subject<void>();
+      let flushCalls = 0;
+      autoSaveService.flush.mockImplementation(() => {
+        flushCalls += 1;
+        // Snapshot + clear HERE, synchronously, exactly like the real `flush()` — never inside the
+        // `.then()` below, or the snapshot would see whatever landed in `staged` while the gate
+        // was still closed, regardless of call order.
+        const snapshot = { ...staged };
+        for (const key of Object.keys(staged)) delete staged[key];
+        return firstValueFrom(gate).then(() => {
+          sent.push(snapshot);
+        });
+      });
+
+      const savePromise = component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      // The property (a) actually claims: `updateField` was CALLED before `flush` was CALLED.
+      expect(autoSaveService.updateField.mock.invocationCallOrder[0]).toBeLessThan(
+        autoSaveService.flush.mock.invocationCallOrder[0],
+      );
+      expect(sent).toHaveLength(0);
+
+      gate.next();
+      gate.complete();
+      await savePromise;
+
+      expect(flushCalls).toBe(1);
+      // The batch flush() snapshotted AT CALL TIME already carried the new value — proof the stage
+      // happened before the call. A wrong order (`flush(); updateField();`) would have snapshotted
+      // the fixture's stale 'Old' here instead, and this line would fail.
+      expect(sent[0]).toEqual({ title: 'New' });
+
+      // A later, separate Save draft on General information (no further edits) must not resend the
+      // fixture's 'Old' — it was overwritten and cleared by the first flush, not left staged
+      // alongside the new value.
+      autoSaveService.flush.mockImplementation(() => {
+        sent.push({ ...staged });
+        return Promise.resolve();
+      });
+      component.openSectionName.set('general-info');
+      await component.triggerManualSave();
+
+      expect(sent[1]).not.toEqual(expect.objectContaining({ title: 'Old' }));
+    });
+
+    // Advisory (Reviewer, attempt 2): a REJECTED flush — not merely one that settles with
+    // `hasErrorFor` — must still reach the reporter and the dialog's baseline, mirroring
+    // `triggerManualSave()`'s own `catch`. Without it a thrown flush left the Save button spinning
+    // forever and `lastGiSaveResult` never moved.
+    it('shows the error alert and records ok:false when flush REJECTS outright', async () => {
+      const show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      autoSaveService.flush.mockRejectedValue(new Error('network down'));
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'bilateralGiDrawerSave', title: 'Save failed', status: 'error' }),
+      );
+      expect(component.lastGiSaveResult()).toEqual({ field: 'title', ok: false, seq: expect.any(Number) });
+      expect(component.savingGiField()).toBeNull();
+    });
+
+    it('(b) a save whose flush ends in hasErrorFor does not mark the assessment stale', async () => {
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      autoSaveService.lastErrorMessageFor.mockReturnValue('Title cannot be empty');
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: '' });
+
+      expect(qualityAssessment.markStale).not.toHaveBeenCalled();
+      expect(component.lastGiSaveResult()).toEqual({ field: 'title', ok: false, seq: expect.any(Number) });
+      expect(component.savingGiField()).toBeNull();
+    });
+
+    it('marks the assessment stale and records the outcome once a save settles without error', async () => {
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+
+      await component.handleGiFieldSaveRequested({ field: 'description', value: 'A new description' });
+
+      expect(creationService.resultDescription()).toBe('A new description');
+      expect(autoSaveService.updateField).toHaveBeenCalledWith('description', 'A new description', 'text');
+      expect(qualityAssessment.markStale).toHaveBeenCalledTimes(1);
+      expect(component.lastGiSaveResult()).toEqual({ field: 'description', ok: true, seq: expect.any(Number) });
+    });
+
+    // design.md §6.1: `seq` increments per save so two saves that settle the same way in a row —
+    // an ok save, then an ok save on the OTHER field — still register as two distinct events for
+    // the dialog's baseline-move effect.
+    it('increments seq on every settled save, ok or not', async () => {
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'First' });
+      const first = component.lastGiSaveResult();
+      expect(first).toEqual({ field: 'title', ok: true, seq: expect.any(Number) });
+
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      await component.handleGiFieldSaveRequested({ field: 'description', value: 'Second' });
+      const second = component.lastGiSaveResult();
+      expect(second).toEqual({ field: 'description', ok: false, seq: expect.any(Number) });
+
+      expect(second!.seq).toBeGreaterThan(first!.seq);
+    });
+
+    it('(c) Check again runs the quality check once and never submits', () => {
+      const submitSpy = jest.spyOn(component, 'submitAfterQualityDecision');
+
+      component.handleGiRecheckRequested();
+
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+      expect(qualityAssessment.run).toHaveBeenCalledWith(42);
+      expect(submitSpy).not.toHaveBeenCalled();
+      expect(qualityAssessment.submit).not.toHaveBeenCalled();
+    });
+
+    it('(d) Check again with an unsaved section warns and does not run the check', () => {
+      const show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      autoSaveService.hasPendingFor.mockImplementation((section: string) => section === 'general-info');
+
+      component.handleGiRecheckRequested();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'bilateralSubmitUnsavedSections', status: 'warning' }));
+    });
+
+    it('(e) binds the dialog editable input to the inverse of the read-only gate', () => {
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+
+      const dialog = fixture.debugElement.query(By.directive(BilateralQualityAssessmentDialogComponent));
+      expect(dialog).not.toBeNull();
+      expect(dialog.componentInstance.editable()).toBe(false);
+
+      creationService.isEditableByCenterUser.set(true);
+      fixture.detectChanges();
+
+      expect(dialog.componentInstance.editable()).toBe(true);
+    });
+  });
+
+  // BIL-QTS-T-6 manual-verification follow-up, item 1 (owner-approved 2026-09-29): the drawer save
+  // must finish exactly like the section's own Save draft (`triggerManualSave`) — emitting
+  // `manualSave$('general-info')` (so `section-general-info`'s Innovation Developer prefill
+  // listener still fires) and bumping `SaveButtonService.savedTick` (the only thing that clears the
+  // form's `field-card` "Unsaved changes" pill — see `field-card.component.ts:112-131` and
+  // `save-button.service.ts:77,262`). Both only on the OK path; never on `hasErrorFor` or on a
+  // rejected flush.
+  describe('BIL-QTS-T-6 follow-up — drawer save finishes like Save draft (manualSave$ + savedTick)', () => {
+    let saveButtonSE: SaveButtonService;
+
+    beforeEach(() => {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      autoSaveService.hasErrorFor.mockReturnValue(false);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      mdsTracker.overallStatus.set('complete');
+      mdsTracker.invalidFields.set([]);
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      saveButtonSE = TestBed.inject(SaveButtonService);
+    });
+
+    it('an ok drawer save emits manualSave$ once with general-info and bumps savedTick', async () => {
+      const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+      const before = saveButtonSE.savedTick();
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+      expect(emit).toHaveBeenCalledTimes(1);
+      expect(emit).toHaveBeenCalledWith('general-info');
+      expect(saveButtonSE.savedTick()).toBe(before + 1);
+    });
+
+    it('a failed drawer save (hasErrorFor) emits neither manualSave$ nor bumps savedTick', async () => {
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+      const before = saveButtonSE.savedTick();
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: '' });
+
+      expect(emit).not.toHaveBeenCalled();
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    it('a rejected flush (thrown, not merely settled with an error) also emits neither manualSave$ nor bumps savedTick', async () => {
+      autoSaveService.flush.mockRejectedValueOnce(new Error('network down'));
+      const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+      const before = saveButtonSE.savedTick();
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      expect(emit).not.toHaveBeenCalled();
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    // Attempt 2 rework (reviewer FAIL, 2026-09-29): `savedTick` is page-wide — every section stays
+    // mounted under `[hidden]`, so bumping it unconditionally cleared the "Unsaved changes" pill on
+    // whatever OTHER section the reporter had open with real staged edits. `manualSave$` must still
+    // fire every time regardless (design.md DD-3's side effect) — only the `savedTick` bump is guarded.
+    describe('savedTick is scoped to the section actually reached by this save', () => {
+      it('open section evidence: savedTick unchanged even though `hasPendingFor` reads clean (its own draft-item state never surfaces there), manualSave$ still emitted', async () => {
+        component.openSectionName.set('evidence');
+        // Evidence's `showDraft()` open-draft state is local to `section-evidence.component.ts` and
+        // never reaches `BilateralAutoSaveService` — this mock mirrors that real gap, not a stub of
+        // convenience: the guard for Evidence must NOT depend on `hasPendingFor` reading dirty.
+        autoSaveService.hasPendingFor.mockReturnValue(false);
+        const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+        const before = saveButtonSE.savedTick();
+
+        await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+        expect(emit).toHaveBeenCalledWith('general-info');
+        expect(saveButtonSE.savedTick()).toBe(before);
+      });
+
+      it('open section general-info: savedTick bumped', async () => {
+        component.openSectionName.set('general-info');
+        // `hasPendingFor` is irrelevant here — the guard bumps on `openSection === 'general-info'`
+        // alone — but it must stay `false` or `waitForSectionSave('general-info')` (same key) spins.
+        autoSaveService.hasPendingFor.mockReturnValue(false);
+        const before = saveButtonSE.savedTick();
+
+        await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+        expect(saveButtonSE.savedTick()).toBe(before + 1);
+      });
+
+      it('open section other than general-info with nothing pending there: savedTick bumped', async () => {
+        component.openSectionName.set('contributors');
+        autoSaveService.hasPendingFor.mockReturnValue(false);
+        const before = saveButtonSE.savedTick();
+
+        await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+        expect(autoSaveService.hasPendingFor).toHaveBeenCalledWith('contributors');
+        expect(saveButtonSE.savedTick()).toBe(before + 1);
+      });
+
+      it('open section other than general-info WITH something genuinely pending there: savedTick unchanged', async () => {
+        component.openSectionName.set('geography');
+        autoSaveService.hasPendingFor.mockImplementation((section: string) => section === 'geography');
+        const before = saveButtonSE.savedTick();
+
+        await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+        expect(saveButtonSE.savedTick()).toBe(before);
+      });
+    });
+  });
+
+  // BIL-QTS-T-9 (design.md §2.2 "Close after save" / "Provenance", `BIL-QTS-DD-8`/`DD-9`): closing
+  // the drawer after a successful save re-runs the check once, and every ok save records its
+  // provenance through the new field-revisions endpoint.
+  describe('BIL-QTS-T-9 — re-run on close and provenance call', () => {
+    beforeEach(() => {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      autoSaveService.hasErrorFor.mockReturnValue(false);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      mdsTracker.overallStatus.set('complete');
+      mdsTracker.invalidFields.set([]);
+      qualityAssessment.run.mockClear();
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      // Assigned directly, not `jest.spyOn`, since the method is this task's own addition to
+      // `BilateralApiService` — `spyOn` would throw "does not exist" pre-implementation, which is
+      // a setup failure, not the assertion-level red falsifiers (a)/(f) call for.
+      (component as any).api.bilateralSE.POST_bilateralQualityFieldRevision = jest
+        .fn()
+        .mockReturnValue(of({ response: { provenance: 'USER_EDIT' } }));
+    });
+
+    it('(a) an ok save then dismiss reruns the check once; two ok saves before dismiss still rerun only once', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+      expect(qualityAssessment.run).toHaveBeenCalledWith(42);
+
+      qualityAssessment.run.mockClear();
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'First' });
+      await component.handleGiFieldSaveRequested({ field: 'description', value: 'Second' });
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('(b) dismiss with no drawer save runs nothing', () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    it('(c) a failed save only means dismiss runs nothing', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    it('(d) ok save, Check again, then dismiss runs the check once total', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+      component.handleGiRecheckRequested();
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+
+      component.dismissQualityAssessment();
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('(e) a read-only result runs nothing on dismiss even with an ok save recorded', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      creationService.isEditableByCenterUser.set(false);
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    it('(f) an ok save calls the revision endpoint once with the pre-save value, fire-and-forget (still pending when the save resolves); a failed save does not call it', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: true });
+      creationService.resultTitle.set('Old title');
+      // Deferred: proves the call is fire-and-forget, not something the save awaits. A synchronous
+      // `of(...)` settles inside `subscribe()` before `handleGiFieldSaveRequested` resolves and
+      // can't tell "fired and moved on" apart from "waited for it".
+      const revision$ = new Subject<{ response: { provenance: string } }>();
+      const spy = ((component as any).api.bilateralSE.POST_bilateralQualityFieldRevision = jest
+        .fn()
+        .mockReturnValue(revision$));
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+      // The save already resolved above; the revision call was made but is still unsettled.
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(42, { field: 'title', assessment_id: 9, old_value: 'Old title' });
+      expect(revision$.observed).toBe(true);
+
+      spy.mockClear();
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'Another' });
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('(g) a revision call error arriving after the save has resolved shows no alert and leaves lastGiSaveResult.ok true', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: true });
+      const show = (component as any).api.alertsFe.show as jest.Mock;
+      const revision$ = new Subject<{ response: { provenance: string } }>();
+      (component as any).api.bilateralSE.POST_bilateralQualityFieldRevision = jest.fn().mockReturnValue(revision$);
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+      // The save has already settled ok while the revision call is still in flight — only now do
+      // we make it error, which is the case a synchronous `throwError` could never exercise.
+      expect(component.lastGiSaveResult()).toEqual({ field: 'title', ok: true, seq: expect.any(Number) });
+      revision$.error(new Error('boom'));
+
+      expect(component.lastGiSaveResult()).toEqual({ field: 'title', ok: true, seq: expect.any(Number) });
+      expect(show).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
+    });
+
+    // DD-8: navigation happens before the re-run so the reporter sees the section land, then the
+    // drawer reopening in its running state on top of it.
+    it('goToQualitySection also reruns the check once, after navigating', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      component.goToQualitySection('geographic_location');
+
+      expect(component.openSectionName()).toBe('geography');
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('opening the drawer via "View AI assessment" clears the flag, so a later dismiss with no new save reruns nothing', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      component.openQualityAssessment({ currentTarget: document.createElement('button') } as unknown as MouseEvent);
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    // Advisory (reviewer, 2026-09-29): `giSavedSinceOpen` must mean "since this drawer opened" even
+    // on a close that skips the re-run — an assessment already current means Check again already
+    // ran since the last save, so the flag is stale information and dismiss must consume it, not
+    // leave it sitting `true` for a later window.
+    it('a close with the assessment already current runs nothing but still clears giSavedSinceOpen', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: true });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+      expect(component.giSavedSinceOpen()).toBe(true);
+
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+      expect(component.giSavedSinceOpen()).toBe(false);
     });
   });
 });

@@ -6,7 +6,7 @@ import { signal } from '@angular/core';
 import { EventEmitter } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
-import { SectionContributorsComponent } from './section-contributors.component';
+import { ALL_PROJECT_CENTERS, SectionContributorsComponent } from './section-contributors.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -15,6 +15,7 @@ import { InstitutionsService } from '../../../../shared/services/global/institut
 import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 
 const center = (institutionId: number, code = `C${institutionId}`, acronym: string | undefined = `A${institutionId}`) => ({
   institutionId,
@@ -1032,7 +1033,9 @@ describe('SectionContributorsComponent', () => {
       const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
       expect(section).toBe('contributors');
       expect(group).toBe('partners');
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project', 'external-partners']);
+      // P2-3821: External partners is no longer a tracked MDS item — it moved into Full metadata
+      // and became optional, so it can never block Submit or count toward completion.
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project']);
     });
 
     it('does not require a lead project when the loaded result has none', () => {
@@ -1044,7 +1047,8 @@ describe('SectionContributorsComponent', () => {
       component.updateContributorsMds();
 
       const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'external-partners']);
+      // P2-3821: no `external-partners` item, in any state.
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center']);
       expect(items.every((i: any) => i.filled === false)).toBe(true);
     });
 
@@ -1139,16 +1143,13 @@ describe('SectionContributorsComponent', () => {
       expect(component.externalPartnersSatisfied()).toBe(true);
     });
 
-    // P2-3443 reversed the earlier decision: the item was held out of the tracker ONLY because the
-    // answer was not persisted (a reload made it unfilled again and Submit stayed blocked with no
-    // way out). Now that it round-trips, the mandatory affordance on screen and the Submit gate
-    // agree again. If persistence ever breaks, take the item out again — do not loosen the UI.
-    it('publishes external-partners to the MDS tracker now that the answer is persisted (P2-3443)', () => {
+    // P2-3821 (supersedes P2-3368 AC5/AC7 — the Fetcher never required partners, so the form no
+    // longer does either): External partners never reaches the MDS tracker, hydrated or not, box
+    // ticked or not. It cannot block Submit or the section's completion.
+    it('never publishes external-partners to the MDS tracker, hydrated and satisfied (P2-3821)', () => {
       build();
       const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
 
-      // Hydrated: only then does `buildContributorsPayload()` carry the partner keys, and only
-      // then may the item be reported as filled — see the invariant in `updateContributorsMds`.
       component.partnersHydrated.set(true);
       component.noExternalPartners.set(true);
       component.onNoExternalPartnersChange();
@@ -1156,18 +1157,18 @@ describe('SectionContributorsComponent', () => {
       const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
       expect(section).toBe('contributors');
       expect(group).toBe('partners');
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'external-partners']);
-      expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(true);
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center']);
+      expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined();
     });
 
-    it('reports external-partners as unfilled while nothing is selected and the box is unticked', () => {
+    it('never publishes external-partners to the MDS tracker while nothing is selected and the box is unticked (P2-3821)', () => {
       build();
       const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
 
       component.updateContributorsMds();
 
       const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-      expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false);
+      expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined();
     });
   });
 
@@ -1301,9 +1302,9 @@ describe('SectionContributorsComponent', () => {
 
     // ── the failed read must be VISIBLE, never silent ──────────────────────────────────────
     // 🛑 THE INVARIANT: a field is never reported as satisfied while the payload is discarding its
-    // keys. Before this, a failed GET left the section reporting `external-partners` as filled off
-    // an in-memory selection that every PATCH threw away — green tick, Submit unlocked, nothing
-    // written. The hydrate effect never re-runs on its own, so there is no self-healing either.
+    // keys. P2-3821: External partners is no longer tracked at all, so there is no entry to lie —
+    // but the payload guard (`partnersHydrated`) still must not leak unhydrated keys, and the
+    // `partners-load-error` banner is what tells the user, not a tracker item.
     describe('when the stored partner block cannot be read', () => {
       const buildWithFailedRead = () => {
         creation.currentResultId.set(4242);
@@ -1311,7 +1312,7 @@ describe('SectionContributorsComponent', () => {
         buildWithCenters();
       };
 
-      it('drops no partner key into the payload AND leaves the MDS entry unfilled', () => {
+      it('drops no partner key into the payload AND publishes no external-partners tracker entry', () => {
         buildWithFailedRead();
         const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
 
@@ -1324,12 +1325,12 @@ describe('SectionContributorsComponent', () => {
         expect(payload.no_external_partners).toBeUndefined();
         expect(payload.is_lead_by_partner).toBeUndefined();
 
-        // ...and the very same selection must NOT satisfy the tracker entry.
+        // ...and the very same selection must not appear in the tracker at all.
         const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false);
+        expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined();
       });
 
-      it('keeps the entry unfilled even when the "no partners" box is ticked', () => {
+      it('publishes no external-partners tracker entry even when the "no partners" box is ticked', () => {
         buildWithFailedRead();
         const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
 
@@ -1338,16 +1339,16 @@ describe('SectionContributorsComponent', () => {
 
         expect(component.externalPartnersSatisfied()).toBe(true); // the answer is given...
         const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false); // ...but unsaveable
+        expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined(); // ...and untracked either way
       });
 
-      it('raises the error flag the block renders, and publishes the unfilled entry on failure', () => {
+      it('raises the error flag the block renders, and publishes no external-partners entry on failure', () => {
         buildWithFailedRead();
         const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
 
         expect(component.partnersLoadFailed()).toBe(true);
         const items = tracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false);
+        expect(items.find((i: any) => i.key === 'external-partners')).toBeUndefined();
       });
 
       it('retries on demand and clears the error once the read succeeds', () => {
@@ -1487,6 +1488,37 @@ describe('SectionContributorsComponent', () => {
       component.toggleShowAll();
       expect(component.showLinkedResultQuestion()).toBe(false);
       expect(component.fullMetadataButtonLabel()).toBe('Complete full metadata');
+    });
+
+    // BIL-DD-2 — the partner block gets its OWN gate, `showFullMetadata`, so it renders for every
+    // type (including 2/7) while the linked question keeps its separate, narrower gate.
+    describe('showFullMetadata (P2-3821 — the partner block gets its own gate)', () => {
+      it.each([
+        ['a type that also asks the linked question', 1],
+        ['Innovation Use', 2],
+        ['Innovation Development', 7]
+      ])('follows showAllFields for %s (type %d)', (_label, typeId) => {
+        creation.resultTypeId.set(typeId);
+        build();
+
+        expect(component.showFullMetadata()).toBe(false);
+        component.toggleShowAll();
+        expect(component.showFullMetadata()).toBe(true);
+        component.toggleShowAll();
+        expect(component.showFullMetadata()).toBe(false);
+      });
+
+      it.each([
+        ['Innovation Use', 2],
+        ['Innovation Development', 7]
+      ])('keeps showLinkedResultQuestion false for %s even though showFullMetadata is true', (_label, typeId) => {
+        creation.resultTypeId.set(typeId);
+        build();
+        component.toggleShowAll();
+
+        expect(component.showFullMetadata()).toBe(true);
+        expect(component.showLinkedResultQuestion()).toBe(false);
+      });
     });
 
     it('uses the single P2-3358 sentence for every typology', () => {
@@ -1774,6 +1806,56 @@ describe('SectionContributorsComponent', () => {
       });
     });
 
+    // BIL-R-4 / BIL-AC-7 (P2-3821) — the hidden-fields note now also counts the partner answer:
+    // linked count (unchanged) + 1 when `partnersHydrated() && externalPartnersSatisfied()`.
+    describe('hiddenFieldsWithValues · counts the partner answer too (P2-3821)', () => {
+      it('counts 1 when partners are hydrated and satisfied by a selection, with no linked answer', () => {
+        build();
+        component.partnersHydrated.set(true);
+        component.onPartnersModelChange([{ institutions_id: 100 }]);
+
+        expect(component.hiddenFieldsWithValues()).toBe(1);
+      });
+
+      it('counts 1 when partners are hydrated and satisfied by the "no partners" box', () => {
+        build();
+        component.partnersHydrated.set(true);
+        component.noExternalPartners.set(true);
+        component.onNoExternalPartnersChange();
+
+        expect(component.hiddenFieldsWithValues()).toBe(1);
+      });
+
+      it('counts 0 when a partner is selected but the stored block has not hydrated', () => {
+        build();
+        component.onPartnersModelChange([{ institutions_id: 100 }]);
+
+        expect(component.partnersHydrated()).toBe(false);
+        expect(component.hiddenFieldsWithValues()).toBe(0);
+      });
+
+      it('counts 1 for Innovation Use (type 2, linked question owned elsewhere) once partners are satisfied', () => {
+        creation.resultTypeId.set(2);
+        build();
+        component.partnersHydrated.set(true);
+        component.onPartnersModelChange([{ institutions_id: 100 }]);
+
+        expect(component.linkedQuestionOwnedElsewhere()).toBe(true);
+        expect(component.hiddenFieldsWithValues()).toBe(1);
+      });
+
+      it('counts 2 when both the partner answer and the linked answer hold a value (type 1)', () => {
+        build();
+        component.partnersHydrated.set(true);
+        component.onPartnersModelChange([{ institutions_id: 100 }]);
+        component.linkedHydrated.set(true);
+        component.contributorsHydrated.set(true);
+        component.onHasLinkedResultChange(true);
+
+        expect(component.hiddenFieldsWithValues()).toBe(2);
+      });
+    });
+
     // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: contributing programs are persisted now
     // (`contributing_programs[]` on the contributors PATCH), so picking one stages a save.
     it('stages the contributing science programs for Save draft', () => {
@@ -1879,6 +1961,282 @@ describe('SectionContributorsComponent', () => {
       expect(payload.contributing_center).toBeUndefined();
     });
   });
+  /**
+   * P2-3864 (Nicoleta Trifa): the lead Center is shown once, as "Lead center", and never again as a
+   * starred chip or an option under "Contributing CGIAR centers" — but it stays stored as the lead.
+   */
+  describe('P2-3864 · the lead Center is not repeated under Contributing CGIAR centers', () => {
+    const LEAD = 5;
+    const OTHER = 6;
+    const DERIVED = 7;
+
+    const hydrateWithLead = () => {
+      centersService.centersList = [center(LEAD), center(OTHER), center(DERIVED)];
+      creation.resultLeadCenterId.set(LEAD);
+      creation.resultContributingCenterIds.set([OTHER]);
+      build();
+      fixture.detectChanges();
+    };
+
+    it('AC1: the chip list leaves the lead out while the other Centers stay (AC4)', () => {
+      hydrateWithLead();
+
+      // The lead is still part of the stored selection (see AC3) …
+      expect(component.selectedCenterInstitutionIds()).toEqual(expect.arrayContaining([LEAD, OTHER]));
+      // … but the chips and the picker model do not show it.
+      expect(component.displayedContributingCenterIds()).toEqual([OTHER]);
+    });
+
+    it('AC2: the lead is not offered in the options, and nothing else disappears', () => {
+      hydrateWithLead();
+
+      const ids = component.contributingCenterOptions().map(c => c.institutionId);
+      expect(ids).toEqual([OTHER, DERIVED]);
+      expect(component.contributingCenterDisabledOptions()).toEqual([]);
+    });
+
+    it('AC3: the PATCH still carries the lead, before and after a change made through the picker', () => {
+      hydrateWithLead();
+
+      // The picker only knows the lead-free list and hands back a list without the lead.
+      component.onCentersModelChange([{ institutionId: OTHER }, { institutionId: DERIVED }]);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toEqual(
+        expect.arrayContaining([{ institution_id: LEAD }, { institution_id: OTHER }, { institution_id: DERIVED }])
+      );
+      expect(component.displayedContributingCenterIds()).toEqual([OTHER, DERIVED]);
+    });
+
+    it('removing the last visible Center keeps the lead in the payload', () => {
+      hydrateWithLead();
+
+      component.removeCenter(OTHER);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toEqual([{ institution_id: LEAD }]);
+      expect(component.displayedContributingCenterIds()).toEqual([]);
+    });
+
+    it('keeps a Center derived from a selected project visible and locked (BCT-T-6)', () => {
+      hydrateWithLead();
+      component.availableProjects.set([{ id: 10, shortName: 'P10', fullName: 'Project 10', ownerCenterInstitutionId: DERIVED }]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.displayedContributingCenterIds()).toEqual(expect.arrayContaining([OTHER, DERIVED]));
+      expect(component.contributingCenterDisabledOptions().map(c => c.institutionId)).toEqual([DERIVED]);
+    });
+
+    it('follows the lead project organisation when the project carries one', () => {
+      centersService.centersList = [center(LEAD), center(OTHER)];
+      creation.selectedProject.set({ id: 1, leadCenter: { id: OTHER } });
+      creation.resultLeadCenterId.set(LEAD);
+      build();
+      component.availableCenters.set([center(LEAD), center(OTHER)] as any);
+
+      expect(component.contributingCenterOptions().map(c => c.institutionId)).toEqual([LEAD]);
+    });
+
+    it('shows every Center when the result has no lead (null lead id)', () => {
+      centersService.centersList = [center(LEAD), center(OTHER)];
+      creation.resultLeadCenterId.set(null);
+      creation.resultContributingCenterIds.set([LEAD, OTHER]);
+      build();
+      fixture.detectChanges();
+
+      expect(component.displayedContributingCenterIds()).toEqual([LEAD, OTHER]);
+      expect(component.contributingCenterOptions().length).toBe(2);
+    });
+
+    it('binds the picker and the chips to the lead-free views (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const start = html.indexOf('label="Contributing CGIAR centers"');
+      const block = html.slice(start, html.indexOf('sc-block--projects', start));
+      expect(start).toBeGreaterThan(-1);
+      expect(block).toContain('[options]="contributingCenterOptions()"');
+      expect(block).toContain('[disableOptions]="contributingCenterDisabledOptions()"');
+      expect(block).toContain('[ngModel]="displayedContributingCenterIds()"');
+      expect(block).toContain('@for (id of displayedContributingCenterIds(); track id)');
+      // Control negative: the old starred-lead chip binding must be gone.
+      expect(block).not.toContain('isLeadCenter(id)');
+      expect(block).not.toContain('[options]="availableCentersComputed()"');
+    });
+  });
+
+  /** P2-3865 — the CLARISA definition of "contributor" and the "different entities" reminder. */
+  describe('P2-3865 · what a contributor is', () => {
+    const DEFINITION =
+      'Partners that made a significant contribution to the achievement of a result. This could take many forms and the ' +
+      'threshold for inclusion is that the result would not have been achieved or reported in its current form without their support.';
+
+    it('AC1/AC2: the note carries the CLARISA definition, the glossary link and the different-entities rule', () => {
+      build();
+      const html = component.contributorNoteHtml;
+      expect(html).toContain('What is a contributor?');
+      expect(html).toContain(DEFINITION);
+      expect(html).toContain('href="https://clarisa.cgiar.org/landing-page/glossary"');
+      expect(html).toContain('rel="noopener noreferrer"');
+      expect(html).toContain(
+        'Only select contributors that are different from the one reporting this result: a different Program/Accelerator, ' +
+          'a different W3/bilateral project and a different CGIAR Center.'
+      );
+      expect(component.contributorsCopy.contributorNote.definition).toBe(DEFINITION);
+    });
+
+    it('is rendered at the top of the section from the copy file, not typed into the template (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const note = html.indexOf('data-testid="contributor-definition-note"');
+      expect(note).toBeGreaterThan(-1);
+      // Top of the section: before the first field block.
+      expect(note).toBeLessThan(html.indexOf('class="sc-block'));
+      expect(html).toContain('[description]="contributorNoteHtml"');
+      expect(html).not.toContain('significant contribution to the achievement');
+    });
+
+    it('AC3: informative only — it adds nothing to the tracker and never blocks the payload', () => {
+      build();
+      component.contributorsHydrated.set(true);
+      component.onCentersChange([]);
+      expect(autoSave.saveContributors).toHaveBeenCalled();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+      const keys = tracker.setSectionFields.mock.calls.flatMap((c: any[]) => c[1].map((f: any) => f.key));
+      expect(keys.every((k: string) => ['lead-center', 'lead-project'].includes(k))).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3859 (Nicoleta Trifa): a Center filter on "Contributing W3/bilateral projects", starting on
+   * the page's Center, so an IFPRI reporter sees IFPRI's projects instead of all 911.
+   */
+  describe('P2-3859 · Center filter on the projects picker', () => {
+    const IFPRI = 20;
+    const CIP = 21;
+    const EMPTY = 22;
+    const catalogue = [
+      { id: 1, shortName: 'I1', fullName: 'IFPRI one', ownerCenterInstitutionId: IFPRI },
+      { id: 2, shortName: 'I2', fullName: 'IFPRI two', ownerCenterInstitutionId: IFPRI },
+      { id: 3, shortName: 'C3', fullName: 'CIP three', ownerCenterInstitutionId: CIP },
+      { id: 4, shortName: 'N4', fullName: 'No owner four', ownerCenterInstitutionId: null }
+    ];
+
+    const setup = (pageCenter: number | null = IFPRI) => {
+      creation.isEditableByCenterUser = () => true;
+      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', pageCenter);
+      build();
+      component.availableCenters.set([center(IFPRI, 'IFPRI', 'IFPRI'), center(CIP, 'CIP', 'CIP'), center(EMPTY, 'EM', 'EM')] as any);
+      component.availableProjects.set(catalogue);
+    };
+    const optionIds = () => component.filteredProjectOptions().map(p => p.id);
+
+    it("AC2: starts on the page's Center and lists only that Center's projects", () => {
+      setup();
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+      expect(optionIds()).toEqual([1, 2]);
+      expect(component.projectFilterCountLabel()).toBe('2 of 4 projects');
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes the projects of the selected Center');
+    });
+
+    it('AC1: offers "All centers" plus every Center that owns projects, with its count', () => {
+      setup();
+      expect(component.projectCenterFilterOptions()).toEqual([
+        { value: ALL_PROJECT_CENTERS, label: 'All centers', badge: '4' },
+        { value: CIP, label: 'CIP - Center 21', badge: '1' },
+        { value: IFPRI, label: 'IFPRI - Center 20', badge: '2' }
+      ]);
+    });
+
+    it('changing to "All centers" lists every project, including those with no owner Center', () => {
+      setup();
+      component.onProjectCenterFilterChange(ALL_PROJECT_CENTERS);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+      expect(optionIds()).toEqual([1, 2, 3, 4]);
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes all bilateral projects');
+    });
+
+    it('can switch to another Center, and a project with no owner is only reachable through "All centers"', () => {
+      setup();
+      component.onProjectCenterFilterChange(CIP);
+      expect(optionIds()).toEqual([3]);
+      expect(optionIds()).not.toContain(4);
+    });
+
+    it("AC4: a saved project from another Center stays in the options and in the PATCH", () => {
+      creation.resultContributingProjectIds.set([3]);
+      setup();
+      component.selectedProjectIds.set([3]);
+      component.contributorsHydrated.set(true);
+
+      // Still offered (so pr-multi-select.writeValue cannot drop it) while the filter is IFPRI.
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+      expect(optionIds()).toEqual([1, 2, 3]);
+
+      // The user adds an IFPRI project: the CIP one travels too.
+      component.onProjectsModelChange([{ id: 3 }, { id: 1 }]);
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_bilateral_projects.map((p: any) => p.project_id)).toEqual([3, 1]);
+    });
+
+    it("falls back to the result's lead Center while the page Center is unresolved", () => {
+      creation.resultLeadCenterId.set(CIP);
+      setup(null);
+      expect(component.projectCenterFilter()).toBe(CIP);
+    });
+
+    it('starts on "All centers" when the page Center owns no project (no empty dropdown)', () => {
+      setup(EMPTY);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+      expect(optionIds()).toEqual([1, 2, 3, 4]);
+    });
+
+    it('a user choice wins over a page Center that resolves later', () => {
+      setup(null);
+      component.onProjectCenterFilterChange(CIP);
+      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', IFPRI);
+      expect(component.projectCenterFilter()).toBe(CIP);
+    });
+
+    it('ignores an empty emission from the select', () => {
+      setup();
+      component.onProjectCenterFilterChange(null);
+      component.onProjectCenterFilterChange('');
+      expect(component.projectCenterFilterChoice()).toBeNull();
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+    });
+
+    it('changing the filter never saves anything', () => {
+      setup();
+      autoSave.saveContributors.mockClear();
+      component.onProjectCenterFilterChange(ALL_PROJECT_CENTERS);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+    });
+
+    it('is shown on an editable result with projects, hidden with an empty catalogue', () => {
+      setup();
+      expect(component.showProjectCenterFilter()).toBe(true);
+      component.availableProjects.set([]);
+      expect(component.showProjectCenterFilter()).toBe(false);
+    });
+
+    it('sits right above the projects picker and feeds it the filtered options (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const filter = html.indexOf('@if (showProjectCenterFilter()) {');
+      const picker = html.indexOf('label="Contributing W3/bilateral projects"');
+      expect(filter).toBeGreaterThan(html.indexOf('sc-block--projects'));
+      expect(filter).toBeLessThan(picker);
+      const pickerTag = html.slice(picker, html.indexOf('</app-pr-multi-select>', picker));
+      expect(pickerTag).toContain('[options]="filteredProjectOptions()"');
+      expect(pickerTag).toContain('[placeholder]="projectsPickerPlaceholder()"');
+      expect(pickerTag).not.toContain('[options]="availableProjectsComputed()"');
+      const filterBlock = html.slice(filter, picker);
+      expect(filterBlock).toContain('<app-pr-select');
+      expect(filterBlock).toContain('[options]="projectCenterFilterOptions()"');
+      expect(filterBlock).toContain('{{ contributorsCopy.projectFilter.label }}');
+      expect(filterBlock).toContain('<ng-icon name="lucideListFilter"');
+      expect(filterBlock).not.toContain('<select');
+    });
+  });
+
   /**
    * P2-3776. The `.sc-block` z-index ladder assumes every multi-select drops DOWNWARDS, so each
    * block outranks the one after it. Since P2-3737 a field close to the floor opens its panel

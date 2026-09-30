@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { ActivatedRoute } from '@angular/router';
 import { BilateralManualCreateDrawerHostComponent } from './bilateral-manual-create-drawer-host.component';
 import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -32,9 +34,18 @@ describe('BilateralManualCreateDrawerHostComponent', () => {
       // No `BilateralAutoSaveService` provider — deliberately the production DI shape. That
       // service is `@Injectable()` with no `providedIn: 'root'`; its only provider in the whole
       // app is component-local on `bilateral-result-creator.component.ts`. This host is mounted
-      // unconditionally from `bilateral-projects-panel` on the bilateral home page, outside that
-      // provider's scope (`APF-T-7` rework, Reviewer FAIL issue 1).
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      // unconditionally, once, in the bilateral shell (`bilateral.component.html`, `ARM-T-2`,
+      // `ARM-DD-1`), reachable from every bilateral route — outside that provider's scope
+      // (originally found via `bilateral-projects-panel`, `APF-T-7` rework, Reviewer FAIL issue 1;
+      // the panel and the creator no longer mount this component directly).
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // `AIQ-T-7`: this host's 'ai' branch mounts the real `BilateralAiUploadComponent`, which
+        // injects `ActivatedRoute` (`?job=` deep link) — no test in this file reached that branch
+        // before, so nothing had provided it yet.
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParams: {} } } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BilateralManualCreateDrawerHostComponent);
@@ -52,12 +63,72 @@ describe('BilateralManualCreateDrawerHostComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="manual-drawer-setup"]')).toBeNull();
   });
 
+  // `AIQ-T-7` Reviewer FAIL issue 1 (P-13, "Never-block change misses a host" — High): this host
+  // (`html:97-100`) is the SECOND mount site for `app-bilateral-ai-upload`, reached from the
+  // bilateral-home "+ Create result" catalog (`beginFromProject`), not just from the creator wizard.
+  // A never-blocking-form regression that only broke this host would pass the creator's own specs.
+  it('AIQ-T-7: hosts the real, submittable upload form once the AI way is selected', () => {
+    flow.beginFromProject(multiSpProject);
+    flow.selectReportingWay('ai');
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement.querySelector('[data-testid="manual-drawer-ai-upload"]');
+    expect(host).toBeTruthy();
+
+    const uploadComponent = host.querySelector('app-bilateral-ai-upload');
+    expect(uploadComponent).toBeTruthy();
+
+    // Disqualifier: the real file input, not a CSS class.
+    const fileInput: HTMLInputElement | null = uploadComponent.querySelector('input[type="file"]');
+    expect(fileInput).toBeTruthy();
+    expect(fileInput!.disabled).toBe(false);
+  });
+
+  // P2-3853: clicking "Open AI processes" from inside this drawer must close the drawer itself
+  // instead of stacking the AI processes dialog on top of it. The upload component emits
+  // `openedAiProcesses`; this host wires it straight to `flow.closeDrawer()` (html:99).
+  it('P2-3853: closes the drawer when the upload component emits openedAiProcesses', () => {
+    flow.beginFromProject(multiSpProject);
+    flow.selectReportingWay('ai');
+    fixture.detectChanges();
+
+    expect(flow.drawerOpen()).toBe(true);
+
+    const uploadDebugEl = fixture.debugElement.query(By.css('app-bilateral-ai-upload'));
+    expect(uploadDebugEl).toBeTruthy();
+
+    uploadDebugEl.componentInstance.openedAiProcesses.emit();
+    fixture.detectChanges();
+
+    expect(flow.drawerOpen()).toBe(false);
+  });
+
+  // P2-3853 post-execution fix: "Choose another project" on the post-submit confirmation card
+  // must close this drawer too — the drawer's project is fixed by the card that opened it, so
+  // picking another project means going back to the project catalog, i.e. closing the drawer.
+  it('P2-3853: closes the drawer when the upload component emits chooseAnotherProject', () => {
+    flow.beginFromProject(multiSpProject);
+    flow.selectReportingWay('ai');
+    fixture.detectChanges();
+
+    expect(flow.drawerOpen()).toBe(true);
+
+    const uploadDebugEl = fixture.debugElement.query(By.css('app-bilateral-ai-upload'));
+    expect(uploadDebugEl).toBeTruthy();
+
+    uploadDebugEl.componentInstance.chooseAnotherProject.emit();
+    fixture.detectChanges();
+
+    expect(flow.drawerOpen()).toBe(false);
+  });
+
   /**
-   * The regression itself: `app-bilateral-sp-selector` (mounted here with `primaryLayout="list"`)
-   * hosts the "Contributing Science Programs" disclosure (`APF-DD-11`) as `app-bilateral-accordion`.
-   * Before the fix, `app-bilateral-accordion` required `BilateralAutoSaveService` unconditionally —
-   * absent here, picking a primary SP that leaves secondary SPs behind threw `NullInjectorError`
-   * the moment the accordion instantiated, taking the drawer down mid-flow.
+   * DI shape of the drawer (`ARM-DD-1`): the host renders with no creator-scoped provider
+   * (`BilateralAutoSaveService`, `BilateralMdsTrackerService`). `app-bilateral-sp-selector` is
+   * mounted here with `primaryLayout="list"`, which renders the "Contributing Science Programs"
+   * block inline — no `app-bilateral-accordion` (asserted below). A required creator-scoped inject
+   * in the drawer's list-layout child tree turns this red. The accordion's own optional-inject
+   * guard lives in `bilateral-sp-selector.component.spec.ts` (dropdown mode).
    */
   it('lets a primary SP pick with secondary SPs render the inline contributing section without throwing', () => {
     flow.beginFromProject(multiSpProject);

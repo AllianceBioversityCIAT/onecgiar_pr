@@ -194,7 +194,7 @@ describe('BilateralResultsListComponent', () => {
       expect(component.isColumnVisible('type')).toBe(false);
       expect(component.visibleColumns().find(c => c.key === 'type')).toBeUndefined();
 
-      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v4') ?? '{}');
+      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v5') ?? '{}');
       expect(stored.type).toBe(false);
     });
 
@@ -257,6 +257,233 @@ describe('BilateralResultsListComponent', () => {
       expect(text('description')).toBe('Profiles co-developed with the county governments of Kenya.');
       expect((component as any).cellText(result({ project_name: null, description: null }), 'project_name')).toBe('');
     });
+  });
+
+  /**
+   * `BSC-T-2` (`bilateral/results-list-source-column-split`) — the `Source` column cell was split
+   * into two independently-toggleable columns by `BSC-T-1`: `Origin` (result-origin only, key
+   * `source`) and `Funding source` (the `W3`/`W1-W2` badge, key `fundingSource`). Both cells share
+   * `td.rc-td--source` (the two columns share `attr: 'source'` for skeleton-width parity per
+   * `BSC-DD-2`), so a row's Origin cell is always the FIRST `td.rc-td--source` in DOM order and its
+   * Funding source cell the SECOND — `cols`/`BILATERAL_COLUMNS` always place `source` immediately
+   * before `fundingSource`.
+   */
+  describe('BSC-T-2 — Origin / Funding source columns render independently (BSC-AC-1, BSC-AC-2)', () => {
+    const sourceCells = (): HTMLElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('td.rc-td--source')) as HTMLElement[];
+
+    it('renders the AI Result badge (Origin) and the W3 badge (Funding source) for an AI-originated W3 row, never swapped', () => {
+      component.results.set([result({ id: 1, source: 'API', is_ai_generated: true })]);
+      fixture.detectChanges();
+
+      const [originCell, fundingCell] = sourceCells();
+      expect(originCell.textContent?.replace(/\s+/g, ' ').trim()).toContain('AI Result');
+      expect(originCell.querySelector('.brl_source_badge')).toBeNull();
+      expect(fundingCell.textContent?.trim()).toBe('W3');
+      expect(fundingCell.querySelector('.brl_ai_badge')).toBeNull();
+    });
+
+    it('renders the plain "Manual" label (Origin) and the W1/W2 badge (Funding source) for a manually created W1/W2 row, never swapped', () => {
+      // The default Source chips only show W3 (API) rows (`showW3=true`, `showW1W2=false`) — a
+      // non-API row needs the W1/W2 chip on too, or `filterCenterResults` drops it before it ever
+      // reaches the table.
+      component.toggleW1W2();
+      component.results.set([result({ id: 1, source: 'Result', is_ai_generated: false })]);
+      fixture.detectChanges();
+
+      const [originCell, fundingCell] = sourceCells();
+      expect(originCell.textContent?.trim()).toBe('Manual');
+      expect(originCell.querySelector('.brl_ai_badge')).toBeNull();
+      expect(fundingCell.textContent?.trim()).toBe('W1/W2');
+      expect(fundingCell.querySelector('.brl_source_badge--w3')).toBeNull();
+    });
+  });
+
+  /**
+   * `BSC-T-2` / `BSC-AC-3` — the mechanism this test exercises: `BILATERAL_COLUMN_STORAGE_KEY` was
+   * bumped `v4` -> `v5` in the same `BSC-T-1` diff that added the `fundingSource` column. A real
+   * user's pre-existing preference (stored under the OLD `v4` key name, shaped like the OLD, 10-key
+   * `BILATERAL_COLUMNS`, with no `fundingSource` entry because that column didn't exist yet) must
+   * never suppress the new column. `readStoredColumnVisibility()` only ever reads the CURRENT
+   * (`v5`) key, so the stale `v4` blob is never consulted at all — the merge in `columnVisibility`
+   * (`{...defaultColumnVisibility(), ...readStoredColumnVisibility()}`) then falls through to
+   * `fundingSource`'s `defaultOn: true`.
+   *
+   * Falsifier honesty note (ties to `tasks.md`'s disqualifier clause): with THIS component's
+   * `visibleColumns` filter (`vis[c.key] !== false`), a key absent from whatever map is actually
+   * read always resolves to visible via `defaultColumnVisibility()`'s `defaultOn: true` — that is
+   * true whether the map came from the current key or (hypothetically) an unbumped one. Two cases
+   * below make the real, falsifiable claims explicit instead of resting on that alone:
+   * (1) a `v4`-shaped blob stored at the OLD key is never read at all post-bump (`type: false`
+   *     there has NO effect — proving the stale key is truly orphaned, not "mostly ignored"); and
+   * (2) the same shape read from the CURRENT key (simulating "no bump, but the column is new")
+   *     DOES suppress `type` (proving the map is genuinely honored when it applies) while STILL
+   *     leaving `fundingSource` visible (absent key -> `defaultOn`). What would regress without
+   *     `BSC-T-1` is `fundingSource` not existing in `BILATERAL_COLUMNS` at all — case (2)'s second
+   *     assertion is false before that fix and true after, which is the red/green this task's own
+   *     verification line requires.
+   */
+  describe('BSC-T-2 — stale pre-v5 stored preference does not hide Funding source (BSC-AC-3)', () => {
+    // The full v4 column set (code, source, title, project, description, type, role, status,
+    // createdBy, created) — a real snapshot `toggleColumn` would have written before this spec,
+    // with no `fundingSource` entry because that column didn't exist yet.
+    const v4ShapedPreference = {
+      code: true,
+      source: true,
+      title: true,
+      project: true,
+      description: true,
+      type: false,
+      role: true,
+      status: true,
+      createdBy: true,
+      created: true,
+    };
+
+    const recreateComponent = () => {
+      fixture.destroy();
+      fixture = TestBed.createComponent(BilateralResultsListComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+      fixture.detectChanges();
+    };
+
+    it('ignores a v4-shaped blob stored under the OLD key entirely — Funding source visible, and the stale "type: false" has no effect', () => {
+      localStorage.setItem('pr.bilateralResults.visibleColumns.v4', JSON.stringify(v4ShapedPreference));
+      recreateComponent();
+
+      expect(component.isColumnVisible('type')).toBe(true);
+      expect(component.visibleColumns().map(c => c.key)).toContain('fundingSource');
+      expect(component.isColumnVisible('fundingSource')).toBe(true);
+    });
+
+    it('still shows Funding source even if the very same v4-shaped blob were read from the CURRENT key, although it does honor a real hidden column', () => {
+      localStorage.setItem('pr.bilateralResults.visibleColumns.v5', JSON.stringify(v4ShapedPreference));
+      recreateComponent();
+
+      // The map IS honored for a key it actually carries — proving this isn't a "no map is ever
+      // read" tautology.
+      expect(component.isColumnVisible('type')).toBe(false);
+      // `fundingSource` is absent from the map (it didn't exist when it was saved) and still
+      // defaults to visible — the mechanism `BSC-AC-3` actually depends on.
+      expect(component.visibleColumns().map(c => c.key)).toContain('fundingSource');
+      expect(component.isColumnVisible('fundingSource')).toBe(true);
+    });
+  });
+
+  /** `BSC-T-2` / `BSC-AC-4` — the Columns picker lists `Origin` and `Funding source` as two
+   *  separate rows, each independently toggleable (toggling one never affects the other). */
+  describe('BSC-T-2 — Columns picker lists Origin and Funding source separately (BSC-AC-4)', () => {
+    const pickerItem = (label: string): HTMLElement | undefined => {
+      const panel = fixture.nativeElement.querySelector('.rc-cols-panel[role="dialog"][aria-label="Visible columns"]');
+      const items = Array.from(panel?.querySelectorAll('.rc-cols-item') ?? []) as HTMLElement[];
+      return items.find(el => el.querySelector('.rc-cols-item__label')?.textContent?.trim() === label);
+    };
+
+    it('lists both as separate entries and toggles each independently', () => {
+      component.toggleColumnsPanel();
+      fixture.detectChanges();
+
+      const originItem = pickerItem('Origin');
+      const fundingItem = pickerItem('Funding source');
+      expect(originItem).toBeTruthy();
+      expect(fundingItem).toBeTruthy();
+      expect(originItem).not.toBe(fundingItem);
+
+      fundingItem!.click();
+      fixture.detectChanges();
+      expect(component.isColumnVisible('fundingSource')).toBe(false);
+      expect(component.isColumnVisible('source')).toBe(true);
+
+      originItem!.click();
+      fixture.detectChanges();
+      expect(component.isColumnVisible('source')).toBe(false);
+      expect(component.isColumnVisible('fundingSource')).toBe(false);
+    });
+  });
+
+  /**
+   * Rework of `BSC-T-1` — bug found in the browser (Reviewer-flagged gap: "no live browser check
+   * was run"). `source` (Origin) and `fundingSource` (Funding source) share `attr: 'source'`
+   * (`BSC-DD-2`, unchanged), which fed the SAME `field` into `PrSortableColumnDirective`/
+   * `pr-sort-icon` for both `<th>`s — clicking either one's sort control showed BOTH columns as
+   * sorted. `BilateralColumnDef.sortKey` gives Origin its own sort identity
+   * (`is_ai_generated`) via the new `sortField(column)` helper, independent of Funding source's
+   * (`source`, unchanged). These tests assert both halves of the fix: clicking one column's
+   * header never marks the other as active (`aria-sort`/icon state), AND each actually reorders
+   * the rows by its own field.
+   */
+  describe('Origin / Funding source sort independence (rework of BSC-T-1)', () => {
+    const sortableHeader = (title: string): HTMLElement | undefined =>
+      (Array.from(fixture.nativeElement.querySelectorAll('th.rc-th--sortable')) as HTMLElement[]).find(th =>
+        th.textContent?.includes(title),
+      );
+
+    const resultCodesInOrder = (): string[] =>
+      (Array.from(fixture.nativeElement.querySelectorAll('span.rc-code')) as HTMLElement[]).map(el =>
+        el.textContent?.trim() ?? '',
+      );
+
+    it('clicking Origin sorts by is_ai_generated and leaves Funding source unsorted', () => {
+      component.results.set([
+        result({ id: 1, result_code: '3000', source: 'API', is_ai_generated: true }),
+        result({ id: 2, result_code: '1000', source: 'API', is_ai_generated: false }),
+      ]);
+      fixture.detectChanges();
+
+      // Default table sort (`sortField="result_code"`, descending): 3000 then 1000.
+      expect(resultCodesInOrder()).toEqual(['3000', '1000']);
+
+      const originHeader = sortableHeader('Origin')!;
+      const fundingHeader = sortableHeader('Funding source')!;
+      expect(originHeader).toBeTruthy();
+      expect(fundingHeader).toBeTruthy();
+
+      originHeader.click();
+      fixture.detectChanges();
+
+      // Clicking a fresh field sorts ascending: `is_ai_generated` false (1000) before true (3000).
+      expect(resultCodesInOrder()).toEqual(['1000', '3000']);
+      expect(originHeader.getAttribute('aria-sort')).toBe('ascending');
+      // The bug: Funding source shared the same `field`, so it also reported active. It must not.
+      expect(fundingHeader.getAttribute('aria-sort')).toBeNull();
+      expect(fundingHeader.querySelector('.pr-sort-icon')?.classList.contains('pr-sort-icon--active')).toBe(false);
+    });
+
+    it('clicking Funding source sorts by source and leaves Origin unsorted', fakeAsync(() => {
+      // Both W3 (API) and W1/W2 (Result) rows must be visible for a source-value spread.
+      component.toggleW1W2();
+      component.results.set([
+        result({ id: 1, result_code: '3000', source: 'Result', is_ai_generated: false }),
+        result({ id: 2, result_code: '1000', source: 'API', is_ai_generated: false }),
+      ]);
+      fixture.detectChanges();
+      // The constructor's `effect(() => { this.filteredResults(); untracked(() => this.table?.reset()) })`
+      // (resets the table's sort to default whenever the filtered set changes) is scheduled on a
+      // microtask, not flushed synchronously by `detectChanges()` alone — `tick()` (fakeAsync) drains
+      // it. Skipping this would let the reset fire AFTER our click below and silently wipe the sort
+      // we just triggered, exactly the failure mode this test caught while it was written.
+      tick();
+      fixture.detectChanges();
+
+      // Default table sort (`sortField="result_code"`, descending): 3000 then 1000.
+      expect(resultCodesInOrder()).toEqual(['3000', '1000']);
+
+      const originHeader = sortableHeader('Origin')!;
+      const fundingHeader = sortableHeader('Funding source')!;
+
+      fundingHeader.click();
+      tick();
+      fixture.detectChanges();
+
+      // Ascending on `source`: 'API' (1000) before 'Result' (3000) — the opposite of the default,
+      // proving an actual reorder by the real `source` field, not a no-op.
+      expect(resultCodesInOrder()).toEqual(['1000', '3000']);
+      expect(fundingHeader.getAttribute('aria-sort')).toBe('ascending');
+      // Origin must stay untouched by Funding source's click.
+      expect(originHeader.getAttribute('aria-sort')).toBeNull();
+      expect(originHeader.querySelector('.pr-sort-icon')?.classList.contains('pr-sort-icon--active')).toBe(false);
+    }));
   });
 
   describe('statusClass', () => {
@@ -691,6 +918,31 @@ describe('BilateralResultsListComponent', () => {
       const link = component.resultLink(mockResult);
       expect(link).toContain('/bilateral/');
       expect(link).toContain('/result/9901?phase=36');
+    });
+
+    it('P2-3855: opens a W1/W2 row on the normal result page, not the bilateral editor', () => {
+      navigateSpy.mockClear();
+      const w1w2 = { ...mockResult, source: 'Result' as const, result_code: '9058' };
+
+      component.openResult(w1w2);
+
+      expect(navigateSpy).toHaveBeenCalledWith(
+        ['/result', 'result-detail', '9058', 'general-information'],
+        { queryParams: { phase: 36 } },
+      );
+      expect(component.resultLink(w1w2)).toContain('/result/result-detail/9058/general-information?phase=36');
+      expect(component.resultLink(w1w2)).not.toContain('/bilateral/');
+    });
+
+    it('P2-3855: keeps opening a W3/Bilateral row in the centre editor', () => {
+      navigateSpy.mockClear();
+
+      component.openResult(mockResult);
+
+      expect(navigateSpy).toHaveBeenCalledWith(
+        ['/bilateral', component['ctx'].centerAcronym(), 'result', '9901'],
+        { queryParams: { phase: 36 } },
+      );
     });
 
     it('copies result link to clipboard and triggers success toast on copyLink', () => {
@@ -1359,9 +1611,9 @@ describe('BilateralResultsListComponent', () => {
       const tableCmp = component.table!;
       expect(tableCmp.paginator).toBe(true);
       expect(tableCmp.showPaginatorAlways).toBe(true);
-      expect(tableCmp.effectiveRows()).toBe(10);
+      expect(tableCmp.effectiveRows()).toBe(100);
       expect(tableCmp.rowsPerPageOptions).toEqual([10, 25, 50, 100]);
-      expect(tableCmp.pagedValue()).toHaveLength(10);
+      expect(tableCmp.pagedValue()).toHaveLength(12);
       expect(tableCmp.showPaginator()).toBe(true);
     });
 

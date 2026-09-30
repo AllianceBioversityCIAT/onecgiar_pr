@@ -892,4 +892,82 @@ describe('BilateralCreationService', () => {
       expect(service.resultContributingProjectIds()).toEqual([12, 30]);
     });
   });
+
+  describe('annual updating signals (BIL-RAU-T-7, T-5 payload)', () => {
+    function respondWith(response: any) {
+      mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
+        subscribe: ({ next }: any) => next({ response }),
+      } as any);
+    }
+
+    it('reads is_replicated / is_discontinued as booleans off the tinyint commonFields, and the annualUpdating catalogue', () => {
+      respondWith({
+        commonFields: { id: 11012, is_replicated: 1, is_discontinued: 0 },
+        annualUpdating: {
+          discontinued_options: [{ investment_discontinued_option_id: 3, description: 'Merged' }],
+          merge_split_targets: [{ target_result_id: 99, transition_type: 'merge' }],
+        },
+      });
+
+      service.loadResult(11012);
+
+      expect(service.isReplicated()).toBe(true);
+      expect(service.storedIsDiscontinued()).toBe(0);
+      expect(service.storedDiscontinuedOptions()).toEqual([
+        { investment_discontinued_option_id: 3, description: 'Merged' },
+      ]);
+      expect(service.storedMergeSplitTargets()).toEqual([{ target_result_id: 99, transition_type: 'merge' }]);
+    });
+
+    it('defaults to [] / null when annualUpdating is absent (non-replicated / non 7-2 types, per T-5)', () => {
+      respondWith({ commonFields: { id: 11013, is_replicated: 0 } });
+
+      service.loadResult(11013);
+
+      expect(service.isReplicated()).toBe(false);
+      expect(service.storedIsDiscontinued()).toBeNull();
+      expect(service.storedDiscontinuedOptions()).toEqual([]);
+      expect(service.storedMergeSplitTargets()).toEqual([]);
+    });
+
+    it('carries the raw tinyint 1 through storedIsDiscontinued untouched (normalization is the consumer\'s job)', () => {
+      respondWith({ commonFields: { id: 11014, is_replicated: 1, is_discontinued: 1 } });
+
+      service.loadResult(11014);
+
+      expect(service.storedIsDiscontinued()).toBe(1);
+    });
+
+    it('does not carry the previous result\'s annual-updating state into the next load', () => {
+      respondWith({
+        commonFields: { id: 11012, is_replicated: 1, is_discontinued: 1 },
+        annualUpdating: {
+          discontinued_options: [{ investment_discontinued_option_id: 3, description: 'Merged' }],
+          merge_split_targets: [{ target_result_id: 99, transition_type: 'merge' }],
+        },
+      });
+      service.loadResult(11012);
+      expect(service.isReplicated()).toBe(true);
+
+      respondWith({ commonFields: { id: 11013 } });
+      service.loadResult(11013);
+
+      expect(service.isReplicated()).toBe(false);
+      expect(service.storedIsDiscontinued()).toBeNull();
+      expect(service.storedDiscontinuedOptions()).toEqual([]);
+      expect(service.storedMergeSplitTargets()).toEqual([]);
+    });
+  });
+
+  describe('setResultStatus (BIL-RAU-T-7, DD-9)', () => {
+    it('updates resultStatusId, flipping isEditableByCenterUser without a reload', () => {
+      service.resultStatusId.set(4);
+      expect(service.isEditableByCenterUser()).toBe(false);
+
+      service.setResultStatus(1);
+
+      expect(service.resultStatusId()).toBe(1);
+      expect(service.isEditableByCenterUser()).toBe(true);
+    });
+  });
 });

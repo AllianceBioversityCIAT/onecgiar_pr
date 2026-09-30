@@ -29,6 +29,11 @@ service any more.
   when the palette is already open, so the shortcut can still toggle it closed from its own input.
 - Notifications, the user menu and **Support** are `cdkConnectedOverlay` popovers driven by local
   signals, all closed by the separate `document:keydown.escape` listener.
+- `goToNotifications()` — the "See all notifications" button inside the popover
+  (`shell-topbar.component.html` ~line 207) — targets the merged `results-notifications` route
+  (`/result/results-outlet/results-notifications`, no `/requests` suffix). `NOTIF-T-6` retired the
+  routed `requests`/`updates` children (`NOTIF-DD-6`); this repoint mirrors
+  `pop-up-notification-item.component.ts`'s own `generateUrlLink()` base route.
 - **Support is the single entry point for getting help** (P2-3683): `Start a support chat`,
   `Give feedback`, and `Contact us` (mailto:prmstechsupport@cgiar.org). It replaced the standalone bug button, and Tawk's floating bubble in the
   bottom-right corner went with it — `TawkComponent` now hides the launcher on `onLoad`,
@@ -77,4 +82,4 @@ service any more.
 | `app-global-search-palette` | the palette overlay | has its own `CLAUDE.md` — read it before touching the trigger |
 | `app-pop-up-notification-item` | one unread-notification row | lives under `header-panel/components/` |
 
-**Verified:** 2026-09-25 · qa-development-2026-ss · `NOTIF-T-8` (token cleanup only, bell sizing unchanged)
+**Verified:** 2026-09-29 · qa-development-2026-ss · `NOTIF-T-6` rework (goToNotifications repointed at the merged results-notifications route; no bell/popover sizing change)

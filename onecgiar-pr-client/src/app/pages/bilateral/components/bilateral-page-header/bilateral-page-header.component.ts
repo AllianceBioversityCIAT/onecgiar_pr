@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject, input, signal } from '@angular/core';
 import { Params, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideInfo, lucideX } from '@ng-icons/lucide';
@@ -11,19 +11,14 @@ import { CustomizedAlertsFeService } from '../../../../shared/services/customize
 import { environment } from '../../../../../environments/environment';
 import { BILATERAL_HEADER_INFO_COPY } from '../../../../internationalization/bilateral-header-info.copy';
 import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
+import { AiProcessesTriggerComponent } from '../ai-processes-trigger/ai-processes-trigger.component';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
 import { resultStatusLabel, resultStatusToken } from '../../../../shared/constants/result-status-tokens';
-import { HlmDialogService } from '@spartan/dialog';
-import { take } from 'rxjs';
-import {
-  BulkUploaderAccessDialogComponent,
-  BulkUploaderAccessResult,
-} from '../bulk-uploader-access-dialog/bulk-uploader-access-dialog.component';
 
 @Component({
   selector: 'app-bilateral-page-header',
   standalone: true,
-  imports: [RouterLink, AiProvenanceNoticeComponent, NgIcon],
+  imports: [RouterLink, AiProvenanceNoticeComponent, AiProcessesTriggerComponent, NgIcon],
   providers: [provideIcons({ lucideInfo, lucideX })],
   templateUrl: './bilateral-page-header.component.html',
   styleUrl: './bilateral-page-header.component.scss',
@@ -31,92 +26,11 @@ import {
 })
 export class BilateralPageHeaderComponent {
   private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
   readonly ctx = inject(BilateralContextService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly navSE = inject(SmartNavigationService);
   readonly dataControlSE = inject(DataControlService);
   readonly bilateralTourService = inject(BilateralTourService);
-
-  /** `APF-R-10`: statuses that make a tracked job "alive" for the header chip. */
-  private static readonly AI_JOB_ALIVE_STATUSES: ReadonlySet<string> = new Set(['pending', 'processing', 'still_running']);
-
-  /**
-   * 1 s tick driving the chip's elapsed clock. The chip reads `BilateralAiService` state only —
-   * this timer just forces `aiJobChip` to re-evaluate `Date.now()` each second; it starts no
-   * second poll (`design.md` §8).
-   */
-  private readonly nowMs = signal(Date.now());
-  private tickTimer: ReturnType<typeof setInterval> | null = null;
-
-  /**
-   * `APF-R-10`: the alive-and-matching-center job, computed once and shared by the tick gate
-   * (below) and `aiJobChip`. `null` unless `BilateralAiService` reports a job alive
-   * (`pending`/`processing`/`still_running`) AND the record's center matches this header's center
-   * — a job started for another center is not "here".
-   */
-  private readonly aliveJobForThisCenter = computed(() => {
-    const state = this.bilateralAiService.uploadState();
-    if (!state.jobId || !BilateralPageHeaderComponent.AI_JOB_ALIVE_STATUSES.has(state.status)) return null;
-
-    const snapshot = this.bilateralAiService.getActiveJobSnapshot();
-    if (!snapshot || snapshot.centerAcronym !== this.ctx.centerAcronym()) return null;
-
-    return { jobId: state.jobId, snapshot };
-  });
-
-  constructor() {
-    // Gate the 1 s tick on an alive job for this center — an unconditional interval schedules
-    // app-wide change detection every second on every bilateral page even with no job to show,
-    // which `APF-R-10` never asks for (rework addendum, Reviewer-advisory).
-    effect(() => {
-      if (this.aliveJobForThisCenter()) {
-        this.startTick();
-      } else {
-        this.stopTick();
-      }
-    });
-    this.destroyRef.onDestroy(() => this.stopTick());
-  }
-
-  private startTick(): void {
-    if (this.tickTimer) return;
-    this.tickTimer = setInterval(() => this.nowMs.set(Date.now()), 1000);
-  }
-
-  private stopTick(): void {
-    if (this.tickTimer) {
-      clearInterval(this.tickTimer);
-      this.tickTimer = null;
-    }
-  }
-
-  /**
-   * `APF-R-10`/`APF-DD-8`: the persistent "AI job running" chip. `null` (hidden) unless
-   * `aliveJobForThisCenter` is set. Elapsed time comes from the normalized job's queue-entry
-   * clock once a poll has landed, else the resume record's `startedAt`.
-   */
-  readonly aiJobChip = computed(() => {
-    this.nowMs();
-    const active = this.aliveJobForThisCenter();
-    if (!active) return null;
-
-    const job = this.bilateralAiService.currentJob();
-    const serverEntryMs = job && job.jobId === active.jobId ? job.queueEntryDate.getTime() : active.snapshot.startedAt;
-    const startMs = serverEntryMs > Date.now() ? active.snapshot.startedAt : serverEntryMs;
-    const elapsed = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-    const minutes = Math.floor(elapsed / 60);
-    const seconds = elapsed % 60;
-    const elapsedLabel = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    const minuteWord = minutes === 1 ? 'minute' : 'minutes';
-    const secondWord = seconds === 1 ? 'second' : 'seconds';
-
-    return {
-      jobId: active.jobId,
-      elapsedLabel,
-      ariaLabel: `AI job running, ${minutes} ${minuteWord} ${seconds} ${secondWord} — open the processing panel`,
-    };
-  });
 
   readonly cycleYear = computed(() => {
     this.dataControlSE.reportingPhaseVersion();
@@ -149,7 +63,6 @@ export class BilateralPageHeaderComponent {
   private skipNextDocumentClick = false;
   private readonly authService = inject(AuthService);
   private readonly customAlertService = inject(CustomizedAlertsFeService);
-  private readonly hlmDialogService = inject(HlmDialogService);
 
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
   readonly activeTab = input<'overview' | 'reporting' | 'results' | 'drafts' | null>(null);
@@ -316,40 +229,32 @@ export class BilateralPageHeaderComponent {
   /**
    * @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-7)
    *
-   * The uploader admits only a closed list of users, so the CTA first shows a warning
-   * (`BulkUploaderAccessDialogComponent`) and redirects only on "Continue Anyway". Cancel, Escape
-   * and a backdrop click do nothing: no tab, no HTTP call.
+   * Order of operations per `design.md` §6.2 / R-12 "order of operations": the tab MUST open
+   * before the HTTP request is issued, so a popup blocker (which only allows `window.open` from
+   * inside the click handler, not from inside a `subscribe` callback) does not get a stale HTTP
+   * call with nowhere to send its result.
    *
-   * Order of operations per `design.md` §6.2 / R-12: the tab MUST open before the HTTP request
-   * is issued, because a popup blocker only allows `window.open` from inside a user gesture.
-   * That gesture is now the Continue click, so the dialog opens the tab and severs its opener
-   * (see that component) and hands the handle back here — `window.open('', target, 'noopener')`
-   * would return `null` by spec, and steps (4)/(5) need the handle to navigate or close it.
+   * `noopener` vs a navigable handle: `window.open(url, target, 'noopener')` returns `null` by
+   * spec, but steps (4)/(5) below need a handle to navigate or close the tab on success/failure.
+   * Resolved by opening plain (`window.open('', '_blank')`) and immediately severing the reverse
+   * link with `tab.opener = null` — the same security property `rel="noopener"` gives an anchor
+   * (the partner tab never gets a `window.opener` back to PRMS), without losing the handle.
    */
   openBulkUploader(): void {
     const centerCode = this.handoffCenterCode();
     if (!centerCode || this.isMinting()) return;
 
-    // (1) Warn first; the dialog opens the tab synchronously inside the Continue click.
-    this.hlmDialogService
-      .open<BulkUploaderAccessResult | undefined>(BulkUploaderAccessDialogComponent, {
-        showCloseButton: false,
-        role: 'alertdialog',
-        // `hlm-dialog-content` defaults to `sm:max-w-md`; Helm classes concatenate, hence `!`.
-        contentClass: 'sm:max-w-lg!'
-      })
-      .closed$.pipe(take(1))
-      .subscribe(result => {
-        if (result) this.mintAndNavigate(result.tab, centerCode);
-      });
-  }
+    // (1) Open synchronously, before any HTTP call.
+    const tab = window.open('', '_blank');
 
-  private mintAndNavigate(tab: Window | null, centerCode: string): void {
     // (2) Blocked popup: no handle, no HTTP call.
     if (!tab) {
       this.showBulkHandoffError();
       return;
     }
+
+    // Sever the reverse link — the partner tab gets no handle back to this window.
+    tab.opener = null;
 
     // (3) Mint the code.
     this.isMinting.set(true);

@@ -457,15 +457,16 @@ export class ShareResultRequestService {
       const inits = await this.getUserInitiatives(user);
       const whereConditions = this.buildWhereReceivedConditions(inits, role);
 
-      const receivedContributionsPendingOwner = await this.getRequest(
-        whereConditions.pendingOwner,
-      );
-      const receivedContributionsPendingShared = await this.getRequest(
-        whereConditions.pendingShared,
-      );
-      const receivedContributionsDone = await this.getRequest(
-        whereConditions.done,
-      );
+      // @akili-spec bugfix/notifications-inbox-slow-load
+      // PERF-DD-1 / PERF-DD-2: the 3 buckets are independent reads — fetch them concurrently.
+      // For admins, `pendingOwner`/`pendingShared` are the identical `commonConditions` object
+      // (see buildWhereReceivedConditions), so fetch it once and reuse the same result for both
+      // positions instead of issuing the query twice.
+      const [
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+        receivedContributionsDone,
+      ] = await this.fetchThreeBucketsDeduped(whereConditions);
 
       return {
         response: {
@@ -510,10 +511,14 @@ export class ShareResultRequestService {
         extraConditions,
       );
 
-      const receivedContributionsPendingOwner = await this.getRequest(
+      // @akili-spec bugfix/notifications-inbox-slow-load
+      // PERF-DD-1 / PERF-DD-2 (2-bucket case, no `done`): same admin-dedupe + concurrency pattern
+      // as getReceivedResultRequest/getSentResultRequest, per premise PERF-P-5 consumer.
+      const [
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+      ] = await this.fetchTwoBucketsDeduped(
         whereConditions.pendingOwner,
-      );
-      const receivedContributionsPendingShared = await this.getRequest(
         whereConditions.pendingShared,
       );
 
@@ -581,25 +586,146 @@ export class ShareResultRequestService {
               is_map_to_toc: true,
             }
           : commonConditions,
-      done: [
-        {
-          ...commonConditions,
-          request_status_id: In([2, 3]),
-          is_active: true,
-          obj_result: { is_active: true },
-          shared_inititiative_id: In(sharedInitiativeIds),
-          is_map_to_toc: false,
-        },
-        {
-          ...commonConditions,
-          request_status_id: In([2, 3]),
-          is_active: true,
-          obj_result: { is_active: true },
-          owner_initiative_id: In(sharedInitiativeIds),
-          is_map_to_toc: true,
-        },
-      ],
+      // NOTIF-BUG-1 (2026-09-30, user-reported: accepted/declined requests invisible for an
+      // application-level admin without an initiative-level role row): `pendingOwner`/`pendingShared`
+      // above bypass the `sharedInitiativeIds` scoping entirely for role===1 (app admin) — the
+      // `done` bucket did NOT, so an admin whose `getUserInitiatives()` returns [] (no
+      // initiative-level role_by_user row, only an application-level one) got `In([])` on every
+      // resolved-request query, matching zero rows regardless of which requests actually exist.
+      // Mirror the same bypass here: admin sees every resolved request unfiltered, exactly like
+      // every pending one.
+      done:
+        role !== 1
+          ? [
+              {
+                ...commonConditions,
+                request_status_id: In([2, 3]),
+                is_active: true,
+                obj_result: { is_active: true },
+                shared_inititiative_id: In(sharedInitiativeIds),
+                is_map_to_toc: false,
+              },
+              {
+                ...commonConditions,
+                request_status_id: In([2, 3]),
+                is_active: true,
+                obj_result: { is_active: true },
+                owner_initiative_id: In(sharedInitiativeIds),
+                is_map_to_toc: true,
+              },
+            ]
+          : [
+              {
+                ...commonConditions,
+                request_status_id: In([2, 3]),
+                is_active: true,
+                obj_result: { is_active: true },
+              },
+            ],
     };
+  }
+
+  /**
+   * @akili-spec bugfix/notifications-inbox-slow-load
+   * PERF-DD-1 / PERF-DD-2: shared by `getReceivedResultRequest` and `getSentResultRequest`
+   * (identical 3-bucket shape: `pendingOwner`, `pendingShared`, `done`). When `role === 1`
+   * (admin), `whereConditions.pendingOwner` and `.pendingShared` are reference-equal (the same
+   * `commonConditions` object — see `buildWhereReceivedConditions`/`buildWhereSentConditions`),
+   * so fetch it once and reuse the result for both positions. Otherwise, run all 3 fetches
+   * concurrently — they are independent reads.
+   *
+   * PERF-DD-3: `getRequest` no longer enriches internally (fetch-and-map only) — this is the
+   * orchestration step for the 3-bucket callers (`getReceivedResultRequest`/`getSentResultRequest`):
+   * fetch all buckets, then run `enrichBucketsOnce` to enrich the union exactly once and re-split
+   * the enriched rows back into these 3 positions.
+   */
+  private async fetchThreeBucketsDeduped(whereConditions: {
+    pendingOwner: any;
+    pendingShared: any;
+    done: any;
+  }): Promise<[any[], any[], any[]]> {
+    let pendingOwner: any[];
+    let pendingShared: any[];
+    let done: any[];
+
+    if (whereConditions.pendingOwner === whereConditions.pendingShared) {
+      [pendingOwner, done] = await Promise.all([
+        this.getRequest(whereConditions.pendingOwner),
+        this.getRequest(whereConditions.done),
+      ]);
+      pendingShared = pendingOwner;
+    } else {
+      [pendingOwner, pendingShared, done] = await Promise.all([
+        this.getRequest(whereConditions.pendingOwner),
+        this.getRequest(whereConditions.pendingShared),
+        this.getRequest(whereConditions.done),
+      ]);
+    }
+
+    return this.enrichBucketsOnce([pendingOwner, pendingShared, done]) as any;
+  }
+
+  /**
+   * @akili-spec bugfix/notifications-inbox-slow-load
+   * PERF-DD-1 / PERF-DD-2 (2-bucket variant): `getReceivedResultRequestPopUp`'s case — same
+   * admin-dedupe/concurrency rule as `fetchThreeBucketsDeduped`, without a `done` bucket.
+   *
+   * PERF-DD-3: orchestration step for the popup call site (premise PERF-P-5's 3rd consumer) —
+   * enrich the union of its 2 buckets exactly once via `enrichBucketsOnce`, so it does not
+   * silently lose `toc_contribution_review` data now that `getRequest` stopped enriching.
+   */
+  private async fetchTwoBucketsDeduped(
+    pendingOwnerCondition: any,
+    pendingSharedCondition: any,
+  ): Promise<[any[], any[]]> {
+    let pendingOwner: any[];
+    let pendingShared: any[];
+
+    if (pendingOwnerCondition === pendingSharedCondition) {
+      pendingOwner = await this.getRequest(pendingOwnerCondition);
+      pendingShared = pendingOwner;
+    } else {
+      [pendingOwner, pendingShared] = await Promise.all([
+        this.getRequest(pendingOwnerCondition),
+        this.getRequest(pendingSharedCondition),
+      ]);
+    }
+
+    return this.enrichBucketsOnce([pendingOwner, pendingShared]) as any;
+  }
+
+  /**
+   * @akili-spec bugfix/notifications-inbox-slow-load
+   * PERF-DD-3 — the single shared orchestration step for all 3 call sites (premise PERF-P-5):
+   * dedupes buckets by ARRAY REFERENCE first (the admin case hands the same array in two
+   * positions — `fetchThreeBucketsDeduped`/`fetchTwoBucketsDeduped` above), concatenates only the
+   * unique buckets, enriches that union exactly once, then re-splits the enriched rows back into
+   * every caller-supplied bucket position by `share_result_request_id` (never by index/length —
+   * see the task's re-split note). Because the map below is keyed by the ORIGINAL bucket
+   * reference, an admin's two positions both come back pointing at the same enriched array — the
+   * pair is never double-counted and both positions still carry the enriched rows.
+   */
+  private async enrichBucketsOnce(buckets: any[][]): Promise<any[][]> {
+    const uniqueBuckets = Array.from(new Set(buckets));
+    const concatenated = uniqueBuckets.flat();
+    const enriched =
+      await this.enrichRequestsWithTocContributionReview(concatenated);
+
+    const enrichedByShareRequestId = new Map<any, any>(
+      enriched.map((row) => [row.share_result_request_id, row]),
+    );
+
+    const enrichedUniqueBuckets = new Map<any[], any[]>(
+      uniqueBuckets.map((bucket) => [
+        bucket,
+        bucket.map(
+          (row) =>
+            enrichedByShareRequestId.get(row.share_result_request_id) ?? row,
+        ),
+      ]),
+    );
+
+    return buckets.map((bucket) => enrichedUniqueBuckets.get(bucket));
   }
 
   private async getRequest(whereCondition: any) {
@@ -609,7 +735,7 @@ export class ShareResultRequestService {
       where: whereCondition,
     });
 
-    const mapped = results.map((result: any) => {
+    return results.map((result: any) => {
       if (result.obj_result && !Array.isArray(result.obj_result)) {
         result.obj_result = {
           ...result.obj_result,
@@ -626,8 +752,6 @@ export class ShareResultRequestService {
       }
       return result;
     });
-
-    return this.enrichRequestsWithTocContributionReview(mapped);
   }
 
   /**
@@ -842,13 +966,14 @@ export class ShareResultRequestService {
         extraContidions,
       );
 
-      const sentContributionsPendingOwner = await this.getRequest(
-        whereConditions.pendingOwner,
-      );
-      const sentContributionsPendingShared = await this.getRequest(
-        whereConditions.pendingShared,
-      );
-      const sentContributionsDone = await this.getRequest(whereConditions.done);
+      // @akili-spec bugfix/notifications-inbox-slow-load
+      // PERF-DD-1 / PERF-DD-2 — same admin-dedupe + concurrency pattern as
+      // getReceivedResultRequest.
+      const [
+        sentContributionsPendingOwner,
+        sentContributionsPendingShared,
+        sentContributionsDone,
+      ] = await this.fetchThreeBucketsDeduped(whereConditions);
 
       return {
         response: {
@@ -913,24 +1038,36 @@ export class ShareResultRequestService {
               is_map_to_toc: true,
             }
           : commonConditions,
-      done: [
-        {
-          ...commonConditions,
-          request_status_id: In([2, 3]),
-          is_active: true,
-          obj_result: { is_active: true },
-          owner_initiative_id: In(sharedInitiativeIds),
-          is_map_to_toc: false,
-        },
-        {
-          ...commonConditions,
-          request_status_id: In([2, 3]),
-          is_active: true,
-          obj_result: { is_active: true },
-          shared_inititiative_id: In(sharedInitiativeIds),
-          is_map_to_toc: true,
-        },
-      ],
+      // NOTIF-BUG-1 (2026-09-30): same admin bypass fix as `buildWhereReceivedConditions` — see
+      // that method's comment for the full rationale.
+      done:
+        role !== 1
+          ? [
+              {
+                ...commonConditions,
+                request_status_id: In([2, 3]),
+                is_active: true,
+                obj_result: { is_active: true },
+                owner_initiative_id: In(sharedInitiativeIds),
+                is_map_to_toc: false,
+              },
+              {
+                ...commonConditions,
+                request_status_id: In([2, 3]),
+                is_active: true,
+                obj_result: { is_active: true },
+                shared_inititiative_id: In(sharedInitiativeIds),
+                is_map_to_toc: true,
+              },
+            ]
+          : [
+              {
+                ...commonConditions,
+                request_status_id: In([2, 3]),
+                is_active: true,
+                obj_result: { is_active: true },
+              },
+            ],
     };
   }
 

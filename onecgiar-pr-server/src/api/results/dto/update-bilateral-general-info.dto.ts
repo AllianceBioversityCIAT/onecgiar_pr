@@ -1,6 +1,14 @@
-import { IsOptional, IsString, IsNumber, IsArray } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsArray,
+  IsBoolean,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ADUser } from '../../../auth/services/active-directory.service';
+import { ResultsInvestmentDiscontinuedOption } from '../results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
+import { InnovationTransitionDto } from './create-general-information-result.dto';
 
 export class UpdateBilateralGeneralInfoDto {
   @ApiPropertyOptional({ description: 'Updated title' })
@@ -105,4 +113,30 @@ export class UpdateBilateralGeneralInfoDto {
   @IsOptional()
   @IsArray()
   poverty_impact_area_ids?: number[];
+
+  @ApiPropertyOptional({
+    description:
+      'BIL-RAU-T-6: annual updating answer for a replicated innovation (type 7/2 only). Key presence, not truthiness, decides whether the answer is written — omit the key to leave the stored answer untouched.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_discontinued?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Ticked discontinuation reasons, with the "Other" description, when is_discontinued is true. Same shape W1/W2 sends: {investment_discontinued_option_id, is_active, description}.',
+    type: () => [ResultsInvestmentDiscontinuedOption],
+  })
+  @IsOptional()
+  @IsArray()
+  discontinued_options?: ResultsInvestmentDiscontinuedOption[];
+
+  @ApiPropertyOptional({
+    description:
+      'Where the discontinued innovation continued (merge/split targets). Empty when nothing was declared.',
+    type: () => [InnovationTransitionDto],
+  })
+  @IsOptional()
+  @IsArray()
+  merge_split_targets?: InnovationTransitionDto[];
 }

@@ -56,7 +56,8 @@ export class GeneralInterceptorService implements HttpInterceptor {
         tap((event: any) => {
           if (event && event.status >= 200 && event.status < 300) {
             const inResultsModule = this.router.url.includes('/result/result-detail/');
-            const inIPSRModule = req.url.includes('/api/ipsr/');
+            // P25 IPSR endpoints live under v2 `/api/ipsr-framework/`, which `/api/ipsr/` does not match (Step 4 save).
+            const inIPSRModule = req.url.includes('/api/ipsr/') || req.url.includes('/api/ipsr-framework/');
             const notValidateList = ['/api/ipsr/all-innovations'];
             if (!notValidateList.some(url => req.url.includes(url))) {
               if (inResultsModule) this.greenChecksSE.getGreenChecks();

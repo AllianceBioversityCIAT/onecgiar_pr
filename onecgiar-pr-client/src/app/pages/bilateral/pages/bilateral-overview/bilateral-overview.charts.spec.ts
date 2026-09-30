@@ -79,6 +79,7 @@ function collectColors(option: EChartsOption): string[] {
 
 interface SeriesShape {
   id?: string;
+  name?: string;
   type?: string;
   stack?: string;
   data?: unknown[];
@@ -142,9 +143,25 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
     it('builds one stacked series per status tile, all on the same stack key', () => {
       const series = seriesOf(statusMeterOption(model.status, TOKENS));
       expect(series).toHaveLength(model.status.tiles.length);
-      expect(series).toHaveLength(5);
-      expect(series.map(s => s.stack)).toEqual(['status', 'status', 'status', 'status', 'status']);
-      expect(series.map(s => s.type)).toEqual(['bar', 'bar', 'bar', 'bar', 'bar']);
+      expect(series).toHaveLength(4);
+      expect(series.map(s => s.stack)).toEqual(['status', 'status', 'status', 'status']);
+      expect(series.map(s => s.type)).toEqual(['bar', 'bar', 'bar', 'bar']);
+    });
+
+    it('P2-3863: offers no Submitted / QA segment and sizes the meter to the four tiles', () => {
+      const option = statusMeterOption(model.status, TOKENS) as { xAxis: { max: number } };
+      const series = seriesOf(option as EChartsOption);
+      expect(series.map(s => s.name)).toEqual(['Editing', 'Pending review', 'Approved', 'Rejected']);
+      expect(series.some(s => String(s.id).endsWith(':submittedQa'))).toBe(false);
+      expect(option.xAxis.max).toBe(model.status.tileTotal);
+      expect(Object.keys(STATUS_TILE_LABELS)).toEqual(['editing', 'pending', 'approved', 'rejected']);
+    });
+
+    it('P2-3863: an all-QA/Submitted phase keeps the meter axis at 1 and tooltip shares at 0%', () => {
+      const empty = { ...model.status, tiles: model.status.tiles.map(t => ({ ...t, count: 0 })), tileTotal: 0 };
+      const option = statusMeterOption(empty, TOKENS) as { xAxis: { max: number }; tooltip: { formatter: (p: unknown) => string } };
+      expect(option.xAxis.max).toBe(1);
+      expect(option.tooltip.formatter({ seriesName: 'Editing', value: 0 })).toContain('(0%)');
     });
 
     it('plots each tile count as the single datum of its series', () => {
@@ -350,10 +367,11 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       expect(STATUS_TILE_LABELS.pending).toBe('Pending review');
     });
 
-    it('expands the Submitted / QA tile to both status keys', () => {
+    it('P2-3863: every remaining segment links to its single status key; a stale Submitted / QA id resolves to nothing', () => {
       const option = statusMeterOption(model.status, TOKENS);
-      const index = model.status.tiles.findIndex(tile => tile.key === 'submittedQa');
-      expect(resolveChartClick({ seriesId: seriesIdAt(option, index), dataIndex: 0 }, model)).toEqual({ status: ['submitted', 'qa'] });
+      const links = model.status.tiles.map((_, index) => resolveChartClick({ seriesId: seriesIdAt(option, index), dataIndex: 0 }, model));
+      expect(links).toEqual([{ status: ['editing'] }, { status: ['pending'] }, { status: ['approved'] }, { status: ['rejected'] }]);
+      expect(resolveChartClick({ seriesId: 'overview-status:submittedQa', dataIndex: 0 }, model)).toBeNull();
     });
 
     it('maps a project bar to its project id', () => {

@@ -87,12 +87,14 @@ describe('HeaderPanelComponent', () => {
     expect(component.notificationBadgeLength()).toBe('2');
   });
 
-  it('should navigate to results-notifications/requests', () => {
+  // NOTIF-T-6 rework: the routed `.../requests` destination was retired along with
+  // `notificationsRouting`'s `requests`/`updates` children — this now targets the merged view.
+  it('should navigate to the merged results-notifications view', () => {
     const routerNavigateSpy = jest.spyOn(component.router, 'navigate').mockImplementation(() => null);
 
     component.goToNotifications();
 
-    expect(routerNavigateSpy).toHaveBeenCalledWith(['result/results-outlet/results-notifications/requests']);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['result/results-outlet/results-notifications']);
 
     routerNavigateSpy.mockRestore();
   });

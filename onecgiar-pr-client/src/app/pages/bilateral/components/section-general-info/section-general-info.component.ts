@@ -12,6 +12,7 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { BilateralChangeResultTypeDialogComponent } from '../bilateral-change-result-type-dialog/bilateral-change-result-type-dialog.component';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
+import { BilateralAnnualUpdatingComponent } from '../bilateral-annual-updating/bilateral-annual-updating.component';
 import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { User } from '../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { environment } from '../../../../../environments/environment';
@@ -90,7 +91,15 @@ const TAG_LEVELS = [
 
 @Component({
   selector: 'app-section-general-info',
-  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule, BilateralChangeResultTypeDialogComponent, BilateralFieldQualityFlagComponent],
+  imports: [
+    FormsModule,
+    FormSkeletonComponent,
+    CustomFieldsModule,
+    PrTooltipDirectiveModule,
+    BilateralChangeResultTypeDialogComponent,
+    BilateralFieldQualityFlagComponent,
+    BilateralAnnualUpdatingComponent
+  ],
   templateUrl: './section-general-info.component.html',
   styleUrl: './section-general-info.component.scss'
 })
@@ -200,6 +209,17 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
    */
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
 
+  /**
+   * BIL-RAU-T-8 (design.md §6.2, R-1): visibility gate for the Annual updating block — replicated
+   * Innovation Development (7) / Innovation Use (2) only. `isReplicated()` is already normalized by
+   * `BilateralCreationService.loadResult` (T-7); `resultTypeId` may arrive as a string, so it is
+   * compared with `Number()`.
+   */
+  readonly isReplicatedInnovation = computed(() => {
+    const typeId = Number(this.creationService.resultTypeId());
+    return this.creationService.isReplicated() && (typeId === 7 || typeId === 2);
+  });
+
   constructor() {
     this.autoSaveService.registerField('title', 'text');
     this.autoSaveService.registerField('description', 'text');
@@ -208,6 +228,16 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     for (const area of DAC_AREAS) {
       this.autoSaveService.registerField(area.dtoKey, 'select');
     }
+
+    // BIL-RAU-T-8 (S-1.2 "BUT must NOT add any MDS item ... "): the wrapper only exists in the DOM
+    // while `isReplicatedInnovation()` is true (it is behind an `@if` in the template), so it can
+    // never clear its own `'annual-updating'` MDS group once that flips off (a type change, or a
+    // different result loading). This is the one place that can.
+    effect(() => {
+      if (!this.isReplicatedInnovation()) {
+        this.mdsTracker.setSectionFields('general-info', [], 'annual-updating');
+      }
+    });
 
     // Reacts to title/description edits AND to leadContactBody being reassigned
     // on load (see makeLeadContactBody) — NOT to in-place mutation by the child,
@@ -309,11 +339,22 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     // with an MDS field its centre user cannot complete.
     const leadContactFilled = !!body.lead_contact_person;
 
-    this.mdsTracker.setSectionFields('general-info', [
-      { key: 'title', label: 'Title', filled: titleFilled },
-      { key: 'description', label: 'Description', filled: descriptionFilled },
-      { key: 'lead_contact_person', label: 'Lead Contact Person', filled: leadContactFilled },
-    ]);
+    // BIL-RAU-T-8 rework (Reviewer Issue 1): published under its own group, 'core', not
+    // ungrouped. `BilateralMdsTrackerService.setSectionFields` replaces the WHOLE section when
+    // `group` is omitted (`bilateral-mds-tracker.service.ts:98-108`) — an ungrouped call here wiped
+    // the wrapper's `'annual-updating'` items on every Title/Description/Lead contact edit (and on
+    // the hydration effects' first run), so a replicated-unanswered result could read as complete
+    // the moment any of these three fields changed. Same isolation pattern `section-contributors`
+    // already uses for its `'partners'` group against `section-toc`'s `'toc'` group.
+    this.mdsTracker.setSectionFields(
+      'general-info',
+      [
+        { key: 'title', label: 'Title', filled: titleFilled },
+        { key: 'description', label: 'Description', filled: descriptionFilled },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: leadContactFilled },
+      ],
+      'core'
+    );
 
     // ⚠️ MDS tracking above always runs; the autosave below must not.
     //
@@ -401,6 +442,12 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
 
   onDescriptionChange(value: string): void {
     this.description.set(value);
+    // BIL-QTS-T-6: mirrors onTitleChange above — the quality-assessment drawer's `currentDescription`
+    // input reads `creationService.resultDescription()`, which otherwise only changes when
+    // `loadResult` runs. Without this the drawer kept showing whatever description was loaded at
+    // check time (empty on a brand-new draft) even after the reporter typed one into the form.
+    // Writing the same value back is a no-op for the hydration effect above.
+    this.creationService.resultDescription.set(value);
     this.autoSaveService.updateField('description', value, 'text');
   }
 

@@ -1,97 +1,414 @@
 <div class="local_container" style="padding: 20px 50px 50px 50px">
-  <h1 class="notifications_title">
-    Notifications
-    <!-- Reviewer finding (NOTIF-T-18): reuse the shared ⓘ trigger pattern (P2-3262/P2-3339) instead
-         of a bespoke <i class="material-icons-round"> — same mechanism as result-detail.component.html's
-         section-guidance ⓘ (button.sgi-dac-info > app-pr-info-icon, prTooltipStyleClass="sgi-dac-tooltip").
-         Gated on non-empty content so it doesn't render as a dead, do-nothing trigger on Settings. -->
-    @if (notificationsInfoTooltip) {
+  <!-- NOTIF-T-6 (Pivot re-scope, NOTIF-DD-6): everything below except the trailing `<router-outlet>`
+       is the unified page's OWN content now (no more routed `requests`/`updates` children) — gated
+       on `!isSettingsRoute` so it never renders while `settings` (the one surviving child route) is
+       active. This closes the settings-route leak that FAILed attempt 1 (a full notification list,
+       with live Accept/Decline, used to render above the outlet unconditionally). -->
+  @if (!isSettingsRoute) {
+    <h1 class="notifications_title">
+      Notifications
+      @if (notificationsInfoTooltip) {
+        <button
+          type="button"
+          class="sgi-dac-info"
+          [prTooltip]="notificationsInfoTooltip"
+          prTooltipPosition="right"
+          prTooltipStyleClass="sgi-dac-tooltip"
+          aria-label="About this page">
+          <app-pr-info-icon />
+        </button>
+      }
+    </h1>
+
+    <!-- NOTIF-T-6 (Pivot re-scope): page header row — Received/Sent segmented toggle top-right,
+         mirroring the mockup's `ntSegR`/`ntSegS` pills (`NOTIF-R-8` amended). -->
+    <div class="flex flex-wrap items-center justify-between gap-[12px] mb-[16px]">
+      <div class="flex-1"></div>
+      <div
+        class="inline-flex w-fit items-center justify-center gap-[2px] rounded-[10px] bg-[var(--pr-color-accents-1)] p-[3px]"
+        role="tablist"
+        aria-label="Received or Sent">
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="activeSource() === 'received'"
+          [attr.data-active]="activeSource() === 'received' ? '' : null"
+          (click)="setActiveSource('received')"
+          class="relative inline-flex h-[30px] cursor-pointer items-center justify-center whitespace-nowrap rounded-[8px] px-[16px] text-[13px] font-semibold text-[var(--pr-color-accents-5)] transition-all duration-150 hover:text-[var(--pr-color-secondary-400)] focus-visible:shadow-[var(--pr-focus-ring)] data-active:bg-[var(--pr-color-white)] data-active:text-[var(--pr-color-secondary-400)] data-active:shadow-[0_1px_3px_rgba(25,21,36,0.08)]">
+          {{ copy.sourceToggle.received }}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="activeSource() === 'sent'"
+          [attr.data-active]="activeSource() === 'sent' ? '' : null"
+          (click)="setActiveSource('sent')"
+          class="relative inline-flex h-[30px] cursor-pointer items-center justify-center whitespace-nowrap rounded-[8px] px-[16px] text-[13px] font-semibold text-[var(--pr-color-accents-5)] transition-all duration-150 hover:text-[var(--pr-color-secondary-400)] focus-visible:shadow-[var(--pr-focus-ring)] data-active:bg-[var(--pr-color-white)] data-active:text-[var(--pr-color-secondary-400)] data-active:shadow-[0_1px_3px_rgba(25,21,36,0.08)]">
+          {{ copy.sourceToggle.sent }}
+        </button>
+      </div>
+    </div>
+
+    <!-- NOTIF-T-6 (Pivot re-scope): filter toolbar, migrated (in substance) from the retired
+         `requests.component.html` — Search + Filter popover (Phase / Program / Center / Bilateral
+         project) + "Notification settings" entry point. -->
+    <div class="flex flex-wrap items-center gap-[12px] mb-[8px]">
+      <div class="flex min-w-[220px] w-[320px] flex-col gap-[4px]">
+        <input
+          type="text"
+          hlmInput
+          [placeholder]="copy.filterToolbar.searchPlaceholder"
+          [(ngModel)]="this.resultsNotificationsSE.searchFilter"
+          class="w-full" />
+      </div>
+
+      <div class="relative">
+        <button
+          #filterTriggerBtn
+          type="button"
+          aria-haspopup="dialog"
+          [attr.aria-expanded]="filterPopoverOpen() ? 'true' : 'false'"
+          (click)="toggleFilterPopover()"
+          class="flex h-[36px] cursor-pointer items-center gap-[8px] rounded-[8px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)] px-[14px] text-[13px] font-semibold text-[var(--pr-color-secondary-400)] outline-none transition-colors duration-150 hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)]">
+          <i class="material-icons-round text-[18px]" aria-hidden="true">filter_list</i>
+          {{ copy.filterToolbar.filterButton }}
+          @if (activeFilterCount > 0) {
+            <span hlmBadge variant="default">{{ activeFilterCount }}</span>
+          }
+        </button>
+
+        @if (filterPopoverOpen()) {
+          <div
+            #filterPanel
+            role="dialog"
+            aria-label="Filter"
+            class="notifications-filter-popover-content flex-col gap-[16px] p-[16px]"
+            [class.filter-popover--align-end]="filterPopoverAlign() === 'end'">
+            <div>
+              <app-pr-select
+                [label]="copy.filterToolbar.phasesLabel"
+                [required]="false"
+                [options]="this.resultsNotificationsSE.phaseList"
+                optionLabel="phase_name_status"
+                optionValue="id"
+                [placeholder]="copy.filterToolbar.phasesPlaceholder"
+                [overlayToBody]="true"
+                [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
+                (ngModelChange)="this.resultsNotificationsSE.onPhaseChange($event)">
+              </app-pr-select>
+            </div>
+
+            <div
+              [prTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
+              prTooltipPosition="right">
+              <app-pr-select
+                [label]="this.resultsNotificationsSE.entityLabel"
+                [required]="false"
+                [options]="this.resultsNotificationsSE.filteredInitiatives"
+                optionLabel="full_name"
+                optionValue="initiative_id"
+                [placeholder]="!this.resultsNotificationsSE.phaseFilter ? 'Select a phase first' : 'Select ' + this.resultsNotificationsSE.entityLabel"
+                [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
+                [disabled]="!this.resultsNotificationsSE.phaseFilter">
+              </app-pr-select>
+            </div>
+
+            <div class="flex flex-col gap-[6px]">
+              <app-pr-field-header [label]="copy.filterToolbar.centerLabel"></app-pr-field-header>
+              <input
+                type="text"
+                hlmInput
+                [placeholder]="copy.filterToolbar.centerSearchPlaceholder"
+                [ngModel]="centerSearchQuery()"
+                (ngModelChange)="centerSearchQuery.set($event)"
+                class="w-full" />
+              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+                @for (center of filteredCenterFacetOptions; track center.id) {
+                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                    <hlm-checkbox
+                      [checked]="isCenterFilterChecked(center.id)"
+                      (checkedChange)="onCenterFilterChange(center.id, $event)"></hlm-checkbox>
+                    <span class="truncate">{{ center.label }}</span>
+                  </label>
+                } @empty {
+                  @if (centerFacetOptions.length > 0) {
+                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
+                  } @else {
+                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noCentersYet }}</p>
+                  }
+                }
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-[6px]">
+              <app-pr-field-header [label]="copy.filterToolbar.bilateralProjectLabel"></app-pr-field-header>
+              <input
+                type="text"
+                hlmInput
+                [placeholder]="copy.filterToolbar.bilateralProjectSearchPlaceholder"
+                [ngModel]="bilateralProjectSearchQuery()"
+                (ngModelChange)="bilateralProjectSearchQuery.set($event)"
+                class="w-full" />
+              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+                @for (project of filteredBilateralProjectFacetOptions; track project.code) {
+                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                    <hlm-checkbox
+                      [checked]="isBilateralProjectFilterChecked(project.code)"
+                      (checkedChange)="onBilateralProjectFilterChange(project.code, $event)"></hlm-checkbox>
+                    <span class="truncate" [title]="project.label">{{ project.label }}</span>
+                  </label>
+                } @empty {
+                  @if (bilateralProjectFacetOptions.length > 0) {
+                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
+                  } @else {
+                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noBilateralProjectsYet }}</p>
+                  }
+                }
+              </div>
+            </div>
+
+            <!-- NOTIF-T-11 (NOTIF-R-16): Type filter — bounded chip taxonomy, no search box (mirrors
+                 the small Funding facet below rather than the searchable Center/Bilateral ones). -->
+            <div class="flex flex-col gap-[6px]">
+              <app-pr-field-header [label]="copy.filterToolbar.typeLabel"></app-pr-field-header>
+              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+                @for (type of typeFacetOptions; track type) {
+                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                    <hlm-checkbox [checked]="isTypeFilterChecked(type)" (checkedChange)="onTypeFilterChange(type, $event)"></hlm-checkbox>
+                    <span class="truncate">{{ type }}</span>
+                  </label>
+                } @empty {
+                  <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noTypesYet }}</p>
+                }
+              </div>
+            </div>
+
+            <!-- NOTIF-T-11 (NOTIF-R-16): Funding filter — W1/W2 vs W3/Bilateral, derived from
+                 obj_result.source_name. -->
+            <div class="flex flex-col gap-[6px]">
+              <app-pr-field-header [label]="copy.filterToolbar.fundingLabel"></app-pr-field-header>
+              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+                @for (funding of fundingFacetOptions; track funding.value) {
+                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                    <hlm-checkbox
+                      [checked]="isFundingFilterChecked(funding.value)"
+                      (checkedChange)="onFundingFilterChange(funding.value, $event)"></hlm-checkbox>
+                    <span class="truncate">{{ funding.label }}</span>
+                  </label>
+                } @empty {
+                  <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noFundingOptionsYet }}</p>
+                }
+              </div>
+            </div>
+
+            <!-- NOTIF-T-11 (NOTIF-R-16): Result type filter — obj_result.obj_result_type.name,
+                 searchable like Center/Bilateral project (an open-ended, potentially longer list). -->
+            <div class="flex flex-col gap-[6px]">
+              <app-pr-field-header [label]="copy.filterToolbar.resultTypeLabel"></app-pr-field-header>
+              <input
+                type="text"
+                hlmInput
+                [placeholder]="copy.filterToolbar.resultTypeSearchPlaceholder"
+                [ngModel]="resultTypeSearchQuery()"
+                (ngModelChange)="resultTypeSearchQuery.set($event)"
+                class="w-full" />
+              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+                @for (resultType of filteredResultTypeFacetOptions; track resultType) {
+                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                    <hlm-checkbox
+                      [checked]="isResultTypeFilterChecked(resultType)"
+                      (checkedChange)="onResultTypeFilterChange(resultType, $event)"></hlm-checkbox>
+                    <span class="truncate">{{ resultType }}</span>
+                  </label>
+                } @empty {
+                  @if (resultTypeFacetOptions.length > 0) {
+                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
+                  } @else {
+                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noResultTypesYet }}</p>
+                  }
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="flex-1 min-w-[16px]"></div>
+
+      @if (this.resultsNotificationsSE?.updatesData?.notificationsPending?.length > 0) {
+        <button
+          type="button"
+          (click)="this.resultsNotificationsSE.markAllUpdatesNotificationsAsRead()"
+          class="flex h-[36px] flex-none cursor-pointer items-center gap-[7px] rounded-[8px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)] px-[12px] text-[14px] font-medium text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]">
+          <i class="material-icons-outlined" style="font-size: 16px">drafts</i>
+          {{ copy.filterToolbar.markAllAsRead }}
+        </button>
+      }
+
       <button
         type="button"
-        class="sgi-dac-info"
-        [prTooltip]="notificationsInfoTooltip"
-        prTooltipPosition="right"
-        prTooltipStyleClass="sgi-dac-tooltip"
-        aria-label="About this page">
-        <app-pr-info-icon />
+        routerLink="settings"
+        [queryParams]="{ init: this.api.dataControlSE?.myInitiativesList[0]?.id }"
+        class="flex h-[36px] flex-none cursor-pointer items-center gap-[7px] rounded-[8px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)] px-[12px] text-[14px] font-medium text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]">
+        <i class="pi pi-cog" style="font-size: 16px"></i>
+        {{ copy.filterToolbar.notificationSettings }}
       </button>
+    </div>
+
+    @if (activeFilterChips.length > 0) {
+      <div class="flex flex-wrap items-center gap-[8px] mb-[16px]">
+        @for (chip of activeFilterChips; track chip.type + chip.id) {
+          <span hlmBadge variant="secondary" class="flex items-center gap-[6px] py-[4px] pl-[10px] pr-[6px]">
+            {{ chip.label }}
+            <button
+              type="button"
+              aria-label="Remove filter"
+              (click)="removeFilterChip(chip)"
+              class="flex h-[16px] w-[16px] cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-inherit">
+              <i class="material-icons-round text-[14px]" aria-hidden="true">close</i>
+            </button>
+          </span>
+        }
+
+        <button
+          type="button"
+          (click)="clearAllFilters()"
+          class="cursor-pointer border-0 bg-transparent text-[12.5px] font-semibold text-[var(--pr-color-primary-300)] hover:underline">
+          {{ copy.filterToolbar.clearAll }}
+        </button>
+      </div>
     }
-  </h1>
 
-  <div class="options">
-    <div class="tabs">
-      <a class="tab" routerLinkActive="active" routerLink="requests" (click)="this.clearFilters()">
-        <i class="material-icons-round" style="font-size: 20px"> mark_unread_chat_alt </i>
-        Requests
-      </a>
+    <div class="line"></div>
 
-      <a class="tab" routerLinkActive="active" routerLink="updates" (click)="this.clearFilters()">
-        <i class="material-icons-round" style="font-size: 20px"> pending_actions </i>
-        Updates
-      </a>
-    </div>
-
-    <!-- Removed 2026-09-25 per user request: this icon-only Settings tab became redundant once
-         `NOTIF-T-11` added a labeled "Notification settings" button in the Requests tab's own
-         combined filter row (`requests.component.html`), which reuses this exact same
-         routerLink="settings" + queryParams destination. -->
-  </div>
-
-  <div class="line"></div>
-
-  <!-- NOTIF-T-11: the Requests-only Filter popover + Center/Bilateral-project facets + chips +
-       "Clear all" (formerly the `@if` branch here) relocated to `RequestsComponent`, alongside the
-       Received/Sent segmented tabs, per the mockup's single-row layout. This container now renders
-       ONLY for Updates — the `@if (router.url.includes('/results-notifications/requests'))` /
-       `@else` split no longer makes sense with the Requests branch gone, so it was removed in favor
-       of gating the whole container on the Updates URL directly. Settings still renders nothing
-       here (it never matched `/updates` either). -->
-  <div class="notifications_filters" *ngIf="router.url.includes('/results-notifications/updates')">
-    <div class="notifications_filters_field">
-      <app-pr-select
-        label="Phases"
-        [required]="false"
-        [options]="this.resultsNotificationsSE.phaseList"
-        optionLabel="phase_name_status"
-        optionValue="id"
-        placeholder="Select phase"
-        [overlayToBody]="true"
-        [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
-        (ngModelChange)="this.resultsNotificationsSE.onPhaseChange($event)">
-      </app-pr-select>
-    </div>
-
+    <!-- NOTIF-T-6: the three decision-state tabs over the source-scoped, filtered, grouped list. -->
     <div
-      class="notifications_filters_field"
-      [prTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
-      prTooltipPosition="right">
-      <app-pr-select
-        [label]="this.resultsNotificationsSE.entityLabel"
-        [required]="false"
-        [options]="this.resultsNotificationsSE.filteredInitiatives"
-        optionLabel="full_name"
-        optionValue="initiative_id"
-        [placeholder]="!this.resultsNotificationsSE.phaseFilter ? 'Select a phase first' : 'Select ' + this.resultsNotificationsSE.entityLabel"
-        [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
-        [disabled]="!this.resultsNotificationsSE.phaseFilter">
-      </app-pr-select>
+      class="unified_notifications_tabs inline-flex w-fit items-center justify-center gap-[2px] rounded-[10px] bg-[var(--pr-color-accents-1)] p-[3px] my-[16px]"
+      role="tablist"
+      aria-label="Notification decision filter">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'all'"
+        [attr.data-active]="activeTab() === 'all' ? '' : null"
+        (click)="setActiveTab('all')"
+        class="unified_notifications_tab relative inline-flex h-[30px] cursor-pointer items-center justify-center gap-[6px] whitespace-nowrap rounded-[8px] px-[16px] text-[13px] font-semibold text-[var(--pr-color-accents-5)] transition-all duration-150 hover:text-[var(--pr-color-secondary-400)] focus-visible:shadow-[var(--pr-focus-ring)] data-active:bg-[var(--pr-color-white)] data-active:text-[var(--pr-color-secondary-400)] data-active:shadow-[0_1px_3px_rgba(25,21,36,0.08)]">
+        {{ copy.tabs.all }}
+        <span class="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-[5px] font-mono text-[11px] font-semibold bg-[var(--pr-color-accents-2)] text-[var(--pr-color-accents-6)]">{{ allTabCount }}</span>
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'decision'"
+        [attr.data-active]="activeTab() === 'decision' ? '' : null"
+        (click)="setActiveTab('decision')"
+        class="unified_notifications_tab relative inline-flex h-[30px] cursor-pointer items-center justify-center gap-[6px] whitespace-nowrap rounded-[8px] px-[16px] text-[13px] font-semibold text-[var(--pr-color-accents-5)] transition-all duration-150 hover:text-[var(--pr-color-secondary-400)] focus-visible:shadow-[var(--pr-focus-ring)] data-active:bg-[var(--pr-color-white)] data-active:text-[var(--pr-color-secondary-400)] data-active:shadow-[0_1px_3px_rgba(25,21,36,0.08)]">
+        {{ copy.tabs.needsDecision }}
+        <span class="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-[5px] font-mono text-[11px] font-semibold bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]">{{ decisionTabCount }}</span>
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'info'"
+        [attr.data-active]="activeTab() === 'info' ? '' : null"
+        (click)="setActiveTab('info')"
+        class="unified_notifications_tab relative inline-flex h-[30px] cursor-pointer items-center justify-center gap-[6px] whitespace-nowrap rounded-[8px] px-[16px] text-[13px] font-semibold text-[var(--pr-color-accents-5)] transition-all duration-150 hover:text-[var(--pr-color-secondary-400)] focus-visible:shadow-[var(--pr-focus-ring)] data-active:bg-[var(--pr-color-white)] data-active:text-[var(--pr-color-secondary-400)] data-active:shadow-[0_1px_3px_rgba(25,21,36,0.08)]">
+        {{ copy.tabs.forYourInformation }}
+        <span class="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-[5px] font-mono text-[11px] font-semibold bg-[var(--pr-color-accents-2)] text-[var(--pr-color-accents-6)]">{{ infoTabCount }}</span>
+      </button>
     </div>
 
-    <div class="notifications_filters_field">
-      <app-pr-field-header label="Search"></app-pr-field-header>
-      <input type="text" hlmInput placeholder="Search" [(ngModel)]="this.resultsNotificationsSE.searchFilter" style="width: 100%" />
-    </div>
+    <!-- NOTIF-T-6 (Pivot re-scope): Announcements, ported from the retired `updates.component.html`
+         so real capability (not just test coverage) doesn't silently disappear with that file — see
+         the DoD/report note. Rendered above the tab list, always (not scoped by tab/source), since an
+         announcement is neither a decision-state row nor tied to a Received/Sent side. -->
+    @if (this.resultsNotificationsSE?.updatesData?.notificationAnnouncements?.length > 0) {
+      <div class="flex flex-col gap-[10px] mb-[20px]">
+        <h2 class="text-[16px] font-semibold text-[var(--pr-color-secondary-400)]">{{ copy.filterToolbar.announcements }}</h2>
+        <div class="flex flex-col w-full overflow-hidden rounded-[12px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)]">
+          @for (item of this.resultsNotificationsSE.updatesData.notificationAnnouncements; track $index) {
+            <app-update-notification [notification]="item" />
+          }
+        </div>
+      </div>
+    }
 
-    <div class="clear_filters_container">
-      <app-pr-button
-        [text]="'Clear filters'"
-        [verticalMargin]="0.5"
-        icon="filter_list_off"
-        [colorType]="'primary'"
-        [reverse]="true"
-        (click)="clearAllFilters()"></app-pr-button>
-    </div>
-  </div>
+    <div class="unified_notifications_list flex flex-col gap-[20px] w-full mb-[20px]">
+      @if (groupedTabList.today.length > 0) {
+        <div class="unified_notifications_list_group flex flex-col gap-[10px]">
+          <h2 class="flex items-center gap-[8px] text-[18px] font-semibold text-[var(--pr-color-secondary-400)]">
+            Today
+            <span hlmBadge variant="secondary">{{ groupedTabList.today.length }}</span>
+          </h2>
+          <div class="flex flex-col w-full overflow-hidden rounded-[12px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)]">
+            @for (item of groupedTabList.today; track trackNotificationKey(item)) {
+              @switch (activeSource()) {
+                @case ('received') {
+                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                }
+                @case ('sent') {
+                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                }
+              }
+            }
+          </div>
+        </div>
+      }
 
+      @if (groupedTabList.thisWeek.length > 0) {
+        <div class="unified_notifications_list_group flex flex-col gap-[10px]">
+          <h2 class="flex items-center gap-[8px] text-[18px] font-semibold text-[var(--pr-color-secondary-400)]">
+            This week
+            <span hlmBadge variant="secondary">{{ groupedTabList.thisWeek.length }}</span>
+          </h2>
+          <div class="flex flex-col w-full overflow-hidden rounded-[12px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)]">
+            @for (item of groupedTabList.thisWeek; track trackNotificationKey(item)) {
+              @switch (activeSource()) {
+                @case ('received') {
+                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                }
+                @case ('sent') {
+                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                }
+              }
+            }
+          </div>
+        </div>
+      }
+
+      @if (groupedTabList.earlier.length > 0) {
+        <div class="unified_notifications_list_group flex flex-col gap-[10px]">
+          <h2 class="flex items-center gap-[8px] text-[18px] font-semibold text-[var(--pr-color-secondary-400)]">
+            Earlier
+            <span hlmBadge variant="secondary">{{ groupedTabList.earlier.length }}</span>
+          </h2>
+          <div class="flex flex-col w-full overflow-hidden rounded-[12px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)]">
+            @for (item of groupedTabList.earlier; track trackNotificationKey(item)) {
+              @switch (activeSource()) {
+                @case ('received') {
+                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                }
+                @case ('sent') {
+                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                }
+              }
+            }
+          </div>
+        </div>
+      }
+
+      @if (allTabCount === 0) {
+        <div
+          class="unified_notifications_list_empty flex items-center justify-center h-[100px] max-h-[160px] font-semibold bg-[var(--pr-color-primary-25)] border-b border-[var(--pr-color-accents-4)] rounded-[12px]">
+          You have no notifications related with the search.
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Only `settings` (SettingsComponent) is ever routed here now (NOTIF-T-6 Pivot re-scope). Always
+       rendered — unconditional — so it works regardless of the `@if` above. -->
   <router-outlet></router-outlet>
 </div>

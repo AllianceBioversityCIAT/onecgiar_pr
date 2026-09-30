@@ -29,7 +29,9 @@ describe('navigateTool', () => {
       'my-admin': '/init-admin-module',
       'admin-module': '/admin-module',
       'whats-new': '/whats-new',
-      notifications: '/result/results-outlet/results-notifications/requests'
+      // NOTIF-T-6 rework: the routed `.../requests` destination was retired along with
+      // `notificationsRouting`'s `requests`/`updates` children — repointed at the merged view.
+      notifications: '/result/results-outlet/results-notifications'
     };
 
     for (const section of NAVIGATE_SECTIONS) {

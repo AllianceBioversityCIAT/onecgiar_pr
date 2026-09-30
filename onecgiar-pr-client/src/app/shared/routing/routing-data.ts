@@ -262,7 +262,6 @@ export const initadminModuleRouting: PrRoute[] = [
 ];
 
 export const resultsOutletRouting: PrRoute[] = [
-  { prName: 'Notifications', path: 'results-notifications', redirectTo: 'results-notifications/requests', pathMatch: 'full' },
   {
     prName: 'Notifications',
     path: 'results-notifications',
@@ -279,45 +278,27 @@ export const resultsOutletRouting: PrRoute[] = [
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-list' }
 ];
 
+// NOTIF-T-6 (Pivot re-scope, NOTIF-DD-6): the routed `updates` and `requests` children (and, with
+// them, `requestsNotificationsRouting`'s own `received`/`sent` split) are retired — the merged
+// All/Needs-decision/For-info view with an in-list Received/Sent toggle now IS
+// `ResultsNotificationsComponent`'s own content, not a route among several. `settings` is the only
+// surviving child route.
 export const notificationsRouting: PrRoute[] = [
-  {
-    prName: 'Updates',
-    path: 'updates',
-    loadChildren: () =>
-      import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/updates/updates.module').then(m => m.UpdatesModule)
-  },
-  {
-    prName: 'Requests',
-    path: 'requests',
-    loadChildren: () =>
-      import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/requests.module').then(m => m.RequestsModule)
-  },
   {
     prName: 'Settings',
     path: 'settings',
     loadChildren: () =>
       import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/settings/settings.module').then(m => m.SettingsModule)
-  }
-];
-
-export const requestsNotificationsRouting: PrRoute[] = [
-  {
-    prName: 'Received requests',
-    path: 'received',
-    loadChildren: () =>
-      import(
-        '../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/pages/received-requests/received-requests.module'
-      ).then(m => m.ReceivedRequestsModule)
   },
-  {
-    prName: 'Sent requests',
-    path: 'sent',
-    loadChildren: () =>
-      import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/pages/sent-requests/sent-requests.module').then(
-        m => m.SentRequestsModule
-      )
-  },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'received' }
+  // NOTIF-T-6 rework — Reviewer's belt-and-suspenders remediation: `requests`/`requests/:side`/
+  // `updates` no longer have their own components (deleted along with the routed pages this
+  // Pivot re-scope retired), so a bookmark or a caller this review missed would otherwise fall
+  // through to `resultsOutletRouting`'s wildcard and silently land on the Results list instead of
+  // Notifications. These redirect straight to the merged view (`''`, relative to this component's
+  // own `results-notifications` path) rather than 404-ing or falling through.
+  { prName: '', path: 'requests', pathMatch: 'full', redirectTo: '' },
+  { prName: '', path: 'requests/:side', pathMatch: 'full', redirectTo: '' },
+  { prName: '', path: 'updates', pathMatch: 'full', redirectTo: '' }
 ];
 
 export const rdResultTypesPages: PrRoute[] = [

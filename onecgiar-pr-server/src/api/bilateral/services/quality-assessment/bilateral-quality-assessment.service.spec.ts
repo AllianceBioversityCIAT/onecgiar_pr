@@ -600,6 +600,88 @@ describe('BilateralQualityAssessmentService', () => {
       expect(result.status).toBe('running');
       expect(result.is_current).toBe(true);
     });
+
+    /**
+     * BIL-QTS-T-2 falsifier (g): the read-side normalizer re-validates a stored suggestion —
+     * a row written before this task shipped (or by any other path) can never serve one that
+     * fails the same shape check applied on write (design.md `BIL-QTS-DD-2`).
+     */
+    it('(g) never serves a stored GI suggestion whose title is over the 30-word limit', async () => {
+      const words = (count: number) =>
+        Array.from({ length: count }, (_, i) => `w${i}`).join(' ');
+      const payload = buildPayload();
+      (payloadBuilder.build as jest.Mock).mockResolvedValueOnce(payload);
+      (repository.findLatestByResultId as jest.Mock).mockResolvedValueOnce({
+        id: '11',
+        result_id: '77',
+        status: 'completed',
+        content_hash: contentHash(payload),
+        ai_status: 'completed',
+        degraded_reason: null,
+        contract_version: '0.2',
+        overall_verdict: 'amber',
+        overall_score: null,
+        overall_summary: null,
+        sections: {
+          general_information: {
+            verdict: 'amber',
+            comments: 'Needs work',
+            strengths: [],
+            issues: ['The title is unclear'],
+            suggestions: { title: words(40) },
+          },
+        },
+        evidence: [],
+        criteria_version: null,
+        elapsed_ms: null,
+        unavailable_reason: null,
+        created_at: new Date('2026-01-01T00:00:00Z'),
+      });
+
+      const result: any = await service.getLatest(77);
+
+      expect(result.sections.general_information).not.toHaveProperty(
+        'suggestions',
+      );
+      expect(result.sections.general_information.verdict).toBe('amber');
+    });
+
+    it('serves a stored GI suggestion that still passes the shape check', async () => {
+      const payload = buildPayload();
+      (payloadBuilder.build as jest.Mock).mockResolvedValueOnce(payload);
+      (repository.findLatestByResultId as jest.Mock).mockResolvedValueOnce({
+        id: '12',
+        result_id: '77',
+        status: 'completed',
+        content_hash: contentHash(payload),
+        ai_status: 'completed',
+        degraded_reason: null,
+        contract_version: '0.2',
+        overall_verdict: 'amber',
+        overall_score: null,
+        overall_summary: null,
+        sections: {
+          general_information: {
+            verdict: 'amber',
+            comments: 'Needs work',
+            strengths: [],
+            issues: ['The title is unclear'],
+            suggestions: { title: 'A perfectly usable title' },
+          },
+        },
+        evidence: [],
+        criteria_version: null,
+        elapsed_ms: null,
+        unavailable_reason: null,
+        created_at: new Date('2026-01-01T00:00:00Z'),
+      });
+
+      const result: any = await service.getLatest(77);
+
+      expect(result.sections.general_information.suggestions).toEqual({
+        title: 'A perfectly usable title',
+      });
+    });
   });
 });
 

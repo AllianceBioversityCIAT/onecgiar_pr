@@ -11,10 +11,12 @@ p {
      `.notification` itself is ALSO gone — that look now belongs to the GROUP container in
      `received-requests`/`sent-requests` (`.received_container_content_item` /
      `.sent_container_content_item`), matching the reference's single continuous bordered list.
-   - `.notification_content` is now the reference's flat row: avatar/icon → text column
-     (`.notification_content_body`, main sentence + decided-state caption below it) → timestamp
-     (`.notification_date`) → actions (buttons) / decision chip, in that order, `align-items:center`,
-     no wrap. Token mapping: reference `--surface:#FFFFFF` → `--pr-color-white`; reference
+   - `.notification_content` was originally the reference's flat row: avatar/icon → text column
+     (`.notification_content_body`) → timestamp (`.notification_date`) → actions (buttons) /
+     decision chip, all as flex-row siblings, `align-items:center`, no wrap. **Superseded by
+     NOTIF-T-15** (see that rule below) — the reference actually wants those elements stacked
+     BELOW the message inside `.notification_content_body`, not laid out inline with the avatar.
+     Token mapping (still current): reference `--surface:#FFFFFF` → `--pr-color-white`; reference
      `--text-4`/`--text-3` (muted captions/timestamp) → `--pr-color-accents-5` (`#666`), already
      this file's own muted-caption convention — not chasing the mockup's exact hex per the project's
      token-tracing rule, not pixel-matching. */
@@ -48,26 +50,27 @@ p {
   border-bottom: none;
 }
 
+/* NOTIF-T-15 (layout-structure fix, third round of visual feedback): `.notification_content` now
+   has just TWO direct children — the avatar and `.notification_content_body` — instead of the
+   avatar plus a run of row-siblings (`.notification_date`, `.notification_badges`,
+   `.notification_content_actions_buttons` / decision chip) that used to sit inline with the avatar
+   at this level. Those moved INSIDE `.notification_content_body` as extra stacked lines (see that
+   rule below) so a row now renders as 3 stacked lines next to the avatar: message → badges+date →
+   buttons/decision. `align-items` switches from `center` to `flex-start` so the avatar aligns with
+   the TOP line (the message) instead of the vertical center of a now-taller, 3-line column. */
 .notification_content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px 16px;
   min-height: 64px;
   background: var(--pr-color-white);
-
-  .notification_content_actions_buttons {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: none;
-  }
 }
 
 .notification_content_body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
 
@@ -85,14 +88,51 @@ p {
     overflow: hidden;
   }
 
-  /* NOTIF-T-10: decided-state caption ("Accepted/Declined by X · date"), moved here from the old
-     right-side actions column — directly below the main sentence, per the reference's second line
-     (`r.showRes`/`r.resPrefix`/`r.resBy`/`r.resDate`). Single muted tone (--pr-color-accents-5) for
-     the whole line, per this file's own existing muted-caption convention — not chasing the
-     reference's two-tone text-4/text-3 split. */
+  /* NOTIF-T-15: line 2 — the type chip, funding badge, level/type text and timestamp all sit
+     INLINE WITH EACH OTHER on this one row (its own horizontal flex wrapper), but the row as a
+     whole is now stacked BELOW the message (line 1) instead of being flex-row siblings of the
+     message at the `.notification_content` level. Reuses the parent `.notification_content_body`'s
+     own 6px `gap` for the message→row spacing (not set here); `row-gap: 4px` only matters if the
+     chips wrap onto a second visual line within this row. */
+  /* NOTIF-T-16: gap widened 6px → 8px to match the user's reference markup (single flex row,
+     `gap: 8px`, every chip/badge/text segment evenly spaced) — see the `.notification_badges` gap
+     below for the same change applied to the chip-to-chip spacing inside this row. */
+  .notification_meta_row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  /* NOTIF-T-15: line 3 — action buttons, stacked BELOW the badges+date row (line 2). `margin-top:
+     2px` on top of the parent's 6px `gap` gives ~8px total, slightly more than the message→badges
+     spacing above, so this row visually reads as its own block rather than crowding line 2. */
+  .notification_content_actions_buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    margin-top: 2px;
+  }
+
+  .notification_content_footer_row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+
+  /* NOTIF-T-10: decided-state caption ("Accepted/Declined by X · date") — now line 3, alongside the
+     decision chip inside `.notification_content_footer_row` (NOTIF-T-15), instead of directly below
+     the main sentence with no badges/date row between them. Single muted tone
+     (--pr-color-accents-5) for the whole line, per this file's own existing muted-caption
+     convention — not chasing the reference's two-tone text-4/text-3 split. */
   .notification_content_caption {
     @include fonts.pr-typography('body-3');
     color: var(--pr-color-accents-5);
+    margin: 0;
 
     .notification_content_caption_by {
       font-weight: 500;
@@ -141,7 +181,9 @@ p {
 }
 
 /* NOTIF-T-7 / NOTIF-DD-4: decision chip — reuses the existing status tokens, no new hex/tokens.
-   Last in the row per the reference (`r.showChip`), so `flex: none` keeps it from stretching. */
+   Last in its row per the reference (`r.showChip`), so `flex: none` keeps it from stretching.
+   NOTIF-T-15: that row is now `.notification_content_footer_row` (line 3, stacked below the
+   badges+date row), not `.notification_content` directly — the chip's own rule is unaffected. */
 .notification_decision_chip {
   flex: none;
   white-space: nowrap;
@@ -157,6 +199,34 @@ p {
     color: var(--pr-color-red-300);
     background-color: color-mix(in srgb, var(--pr-color-red-300) 12%, transparent);
   }
+}
+
+/* NOTIF-T-5: the type chip ("Contribution request" / a `NotificationType` label, NOTIF-DD-3) and
+   the decision/info status indicator (NOTIF-R-5) — a small badge group, `flex: none` like the
+   pre-existing decision chip so it never stretches the row. */
+.notification_badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  white-space: nowrap;
+}
+
+/* NOTIF-T-16: `hlmBadge`'s own base classes size chip text via a rem-based Tailwind utility
+   (`text-xs` = 9px at this project's 12px root, per the "root font-size trap" hard rule in
+   ../../../../../../../../../../CLAUDE.md §5) and weight it `font-medium` (500) — both smaller/
+   lighter than the user's reference markup (`font-size: var(--fs-11)`, `font-weight: 600`). Pin
+   both chips to explicit px, matching the reference and the project's own "no rem type utilities
+   on redesign surfaces" rule. */
+.notification_type_chip,
+.notification_funding_chip {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.notification_type_chip,
+.notification_status_chip {
+  white-space: nowrap;
 }
 
 /* P2-3085: read-only ToC metadata block in the Contribution Request review. CRD-T-7 (pivot):
@@ -302,15 +372,23 @@ p {
   }
 }
 
+/* NOTIF-T-13: Accept restyled to a subtle brand-tinted outline (reference: border+text brand-colored,
+   background a soft brand tint, not pure white) — reuses --pr-color-primary-50 (the same token the
+   type chip below is filled with), no new hex/tokens. */
 ::ng-deep .notification_accept_btn .pr_button {
   border: 1px solid var(--pr-color-primary-300) !important;
   border-radius: 8px !important;
-  background-color: var(--pr-color-white) !important;
+  background-color: var(--pr-color-primary-50) !important;
 }
 
-/* Decline: no background, no border, muted-gray text — reuses --pr-color-accents-5, already the
-   muted-caption token in this same file (.notification_content_caption / .notification_date). */
+/* NOTIF-T-13: Decline gains a neutral outline (border + white background) to match the reference's
+   "outlined, neutral/slate colored" button — was text-only before (no border/background). Text stays
+   muted-gray via --pr-color-accents-5, already this file's own muted-caption convention. */
 ::ng-deep .notification_decline_btn .pr_button {
+  border: 1px solid var(--pr-border-strong) !important;
+  border-radius: 8px !important;
+  background-color: var(--pr-color-white) !important;
+
   .text,
   i {
     color: var(--pr-color-accents-5) !important;

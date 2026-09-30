@@ -248,11 +248,32 @@ export class BilateralApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/${resultId}/latest`);
   }
 
+  /**
+   * `BIL-QTS-T-9` (design.md §4 API Surface, `BIL-QTS-R-13`): records the provenance of one drawer
+   * field save. The server — never the client — decides `AI_SUGGESTED` vs `USER_EDIT` by comparing
+   * the result's current (just-saved) value against the kept suggestion.
+   */
+  POST_bilateralQualityFieldRevision(
+    resultId: number,
+    body: { field: 'title' | 'description'; assessment_id: number; old_value: string | null },
+  ) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/${resultId}/field-revisions`, body);
+  }
+
   PATCH_bilateralSubmitForReview(
     resultId: number,
     body: { assessment_id: number; decision: 'submitted_anyway' | 'submitted_without_check' },
   ) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/submit-for-review/${resultId}`, body);
+  }
+
+  /**
+   * `AIQ-T-5` (`design.md` §4.1): the caller's active jobs plus jobs finished in the last 24h
+   * (max 10), with a lane-usage summary. Declared before `jobs/:jobId` in the server controller —
+   * the two never actually collide, but the literal-before-parameter convention is kept explicit.
+   */
+  GET_bilateralAiJobs() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs`);
   }
 
   GET_bilateralAiJob(jobId: string) {

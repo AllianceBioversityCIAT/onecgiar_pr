@@ -164,6 +164,10 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     beforeEach(() => {
       editable.set(true);
       build();
+      // P2-3821: "External partners" moved into Full metadata (BIL-R-1) — expand it so this
+      // describe's shared `it.each` over all four pickers can still find the picker by label.
+      component.showAllFields.set(true);
+      fixture.detectChanges();
     });
 
     it('exposes readOnly() === false', () => {
@@ -183,6 +187,10 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     beforeEach(() => {
       editable.set(false);
       build();
+      // P2-3821: "External partners" moved into Full metadata (BIL-R-1) — expand it so this
+      // describe's shared `it.each` over all four pickers can still find the picker by label.
+      component.showAllFields.set(true);
+      fixture.detectChanges();
     });
 
     it('exposes readOnly() === true', () => {
@@ -262,6 +270,81 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       const retryButton = fixture.nativeElement.querySelector('[data-testid="centers-load-retry"]');
       expect(banner).toBeNull();
       expect(retryButton).toBeNull();
+    });
+
+    // BIL-AC-8 / BIL-R-5 / BIL-DD-3 — the centres banner reports a Block 1 failure and must stay
+    // visible while Full metadata is collapsed. `build()` leaves `showAllFields` at its default
+    // (false); asserting that here on purpose is what BIL-AC-8 requires.
+    it('renders the centers-load-error banner while Full metadata is collapsed', () => {
+      expect(component.showFullMetadata()).toBe(false);
+      component.centersLoadFailed.set(true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="centers-load-error"]')).toBeTruthy();
+    });
+  });
+
+  // ── P2-3821: External partners moved into Full metadata (BIL-R-1, BIL-AC-3, BIL-AC-4, BIL-AC-9) ──
+  //
+  // These specs render the REAL template — `overrideTemplate` is not evidence for a placement gate
+  // (only a static read of the shipped `.html`, or a rendered measurement like this one, can prove
+  // it). Every case here must expand/collapse `showAllFields` through the component's own signal
+  // and re-render; `pickerFor` throws "is not rendered at all" only when that IS the assertion.
+  describe('External partners lives in Full metadata (P2-3821)', () => {
+    const EXTERNAL_PARTNERS_LABEL = 'External partners';
+
+    it('is absent for type 1 (Policy) while Full metadata is collapsed', () => {
+      editable.set(true);
+      creation.resultTypeId.set(1);
+      build();
+      component.showAllFields.set(false);
+      fixture.detectChanges();
+
+      expect(() => pickerFor(EXTERNAL_PARTNERS_LABEL)).toThrow();
+    });
+
+    it('is absent for type 2 (Innovation Use) while Full metadata is collapsed', () => {
+      editable.set(true);
+      creation.resultTypeId.set(2);
+      build();
+      component.showAllFields.set(false);
+      fixture.detectChanges();
+
+      expect(() => pickerFor(EXTERNAL_PARTNERS_LABEL)).toThrow();
+    });
+
+    it('is present for type 1 (Policy) once Full metadata is expanded', () => {
+      editable.set(true);
+      creation.resultTypeId.set(1);
+      build();
+      component.showAllFields.set(true);
+      fixture.detectChanges();
+
+      expect(pickerFor(EXTERNAL_PARTNERS_LABEL)).toBeTruthy();
+    });
+
+    it('is present for type 2 (Innovation Use) once Full metadata is expanded, but the linked question is absent (BIL-AC-4, BIL-R-6)', () => {
+      editable.set(true);
+      creation.resultTypeId.set(2);
+      build();
+      component.showAllFields.set(true);
+      fixture.detectChanges();
+
+      expect(pickerFor(EXTERNAL_PARTNERS_LABEL)).toBeTruthy();
+      expect(fixture.nativeElement.textContent).not.toContain('Is this result linked or bundled');
+    });
+
+    it('carries no required marker on the multi-select and shows no red hint (BIL-AC-9, BIL-R-2)', () => {
+      editable.set(true);
+      build();
+      component.showAllFields.set(true);
+      component.noExternalPartners.set(false);
+      component.selectedPartnerInstitutionIds.set([]);
+      fixture.detectChanges();
+
+      const host = pickerFor(EXTERNAL_PARTNERS_LABEL);
+      expect(host.querySelector('.fch_required')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Add at least one external partner');
     });
   });
 
@@ -378,6 +461,63 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       buildWithLinkedResults();
 
       expect(fixture.nativeElement.textContent).not.toContain('Is this result linked or bundled');
+    });
+  });
+
+  // P2-3864 — rendered against the REAL template: the lead Center (11, "A11") is shown once, in
+  // "Lead center", and never again as a chip under "Contributing CGIAR centers".
+  describe('P2-3864 · lead Center chip', () => {
+    it('renders the other Centers as chips but not the lead', () => {
+      editable.set(true);
+      build();
+      component.selectedCenterInstitutionIds.set([11, 12]);
+      fixture.detectChanges();
+
+      const chips = Array.from(fixture.nativeElement.querySelectorAll('.sc-block--centers .sc-chip')) as HTMLElement[];
+      const labels = chips.map(c => (c.textContent ?? '').replace('×', '').trim());
+      expect(labels).toEqual(['A12']);
+      expect(fixture.nativeElement.querySelector('.sc-block--centers .sc-chip-readonly')).toBeNull();
+    });
+  });
+
+  // P2-3865 — the definition note renders in the REAL template, editable and read-only alike.
+  describe('P2-3865 · contributor definition note', () => {
+    it.each([true, false])('shows the CLARISA definition (editable=%s)', isEditable => {
+      editable.set(isEditable);
+      build();
+      const note = fixture.nativeElement.querySelector('[data-testid="contributor-definition-note"]') as HTMLElement;
+      expect(note).toBeTruthy();
+      expect(note.textContent).toContain('What is a contributor?');
+      expect(note.textContent).toContain('would not have been achieved or reported in its current form without their support');
+      expect(note.textContent).toContain('a different CGIAR Center');
+      const link = note.querySelector('a') as HTMLAnchorElement;
+      expect(link?.getAttribute('href')).toBe('https://clarisa.cgiar.org/landing-page/glossary');
+      expect(link?.getAttribute('target')).toBe('_blank');
+    });
+  });
+
+  // P2-3859 — the Center filter above the projects picker, in the REAL template.
+  describe('P2-3859 · projects Center filter', () => {
+    it('renders the filter with its label and count on an editable result', () => {
+      editable.set(true);
+      build();
+      // `ngOnInit` reloads the (stubbed, empty) catalogue over what `build()` seeded; seed it again.
+      component.availableProjects.set([
+        { id: 501, fullName: 'Project 501', ownerCenterInstitutionId: 11 },
+        { id: 502, fullName: 'Project 502', ownerCenterInstitutionId: 12 }
+      ] as any);
+      fixture.detectChanges();
+      const filter = fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]') as HTMLElement;
+      expect(filter).toBeTruthy();
+      expect(filter.textContent).toContain('Filter projects by Center');
+      expect(filter.querySelector('app-pr-select')).toBeTruthy();
+      expect(filter.querySelector('[data-testid="projects-center-filter-count"]')?.textContent?.trim()).toBe('1 of 2 projects');
+    });
+
+    it('is not rendered on a read-only result (the picker cannot open)', () => {
+      editable.set(false);
+      build();
+      expect(fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]')).toBeNull();
     });
   });
 });

@@ -7,6 +7,14 @@ import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
+import {
+  getAiJobNotificationParts,
+  getResultNotificationTextParts,
+  resolveNotificationType,
+  type AiJobNotificationParts,
+  type NotificationTextParts
+} from '../../../../../../../../shared/constants/notification-type.constants';
+import type { ContributionRequestDrawerMode, ContributionRequestDrawerViewFields } from '../contribution-request-drawer/contribution-request-drawer.component';
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
 export interface TocContributionReview {
@@ -97,7 +105,7 @@ export class NotificationItemComponent {
    * bilateral request, CRD-R-10).
    */
   drawerOpen = signal(false);
-  drawerMode = signal<'decide' | 'confirm-decline'>('decide');
+  drawerMode = signal<ContributionRequestDrawerMode>('decide');
   drawerFocusAlign = signal(false);
   /** CRD-DD-3: the global ToC hydration is deferred from "open" to "first answer". */
   private tocHydrated = false;
@@ -115,24 +123,170 @@ export class NotificationItemComponent {
     return this.notification?.obj_result?.source_name === 'W3/Bilaterals';
   }
 
-  /** CRD-T-3: gates row interactivity for the drawer (CRD-R-1, wired in CRD-T-4). */
+  /** CRD-T-3: gates row interactivity for the drawer (CRD-R-1, wired in CRD-T-4). Unchanged by NOTIF-T-5 (CRD-DD-10). */
   get isPending(): boolean {
     return this.notification?.request_status_id === 1 && !this.isSent;
   }
 
+  /** NOTIF-T-5: true for a row tagged by `buildUnifiedList()` (NOTIF-T-1) as coming from the Updates stream. */
+  get isUpdateSource(): boolean {
+    return this.notification?.source === 'update';
+  }
+
+  /**
+   * NOTIF-T-5 (design.md §2.2's sequence table): which drawer mode a click on THIS row opens.
+   *   - source:'request', pending Received (`isPending`) → 'decide' — UNCHANGED, CRD-DD-10.
+   *   - source:'request', resolved Received or any Sent row → 'view' — NEW.
+   *   - source:'update' → 'view' — NEW (Updates rows had no drawer entry point at all before).
+   */
+  get rowMode(): 'decide' | 'view' {
+    if (this.isUpdateSource) return 'view';
+    return this.isPending ? 'decide' : 'view';
+  }
+
+  /** NOTIF-AC-2: row accessible name, phrased per the mode the click actually opens. */
+  get rowAriaLabel(): string {
+    const aiJob = this.aiJobParts;
+    if (aiJob) return aiJob.message;
+    const resultCode = this.notification?.obj_result?.result_code;
+    return this.rowMode === 'decide' ? this.copy.rowAriaLabel(resultCode) : this.copy.notificationItem.rowAriaLabelView(resultCode);
+  }
+
+  /**
+   * NOTIF-R-3 / NOTIF-DD-3: a single "Contribution request" chip for every `source:'request'` row
+   * (no sub-typing), the resolved `NotificationType` label for every `source:'update'` row. Reuses
+   * `resolveNotificationType()` — never invents a label; an unresolved type omits the chip entirely
+   * (same "never fabricate" guarantee as `NOTIF-AC-7`).
+   */
+  get rowTypeChipLabel(): string | null {
+    if (this.isUpdateSource) {
+      return resolveNotificationType(this.notification);
+    }
+    return this.copy.notificationItem.contributionRequestChip;
+  }
+
+  /**
+   * NOTIF-R-5 (gap between `requirements.md` and `design.md`, closed by the user's 2026-09-29
+   * decision): the notification's decision/info status, derived from `needsDecision`/`source`
+   * (NOTIF-T-1's `buildUnifiedList()`) or, absent that tag, from the same fields `isPending` already
+   * reads.
+   *
+   * NOTIF-T-12 (rework attempt 1) removed the row-level status badge that used to consume this
+   * getter directly (it didn't match the reference image) — the template no longer renders a
+   * `.notification_status_chip` anywhere; `rowStatusLabel` is no longer read from `notification-item.component.html`
+   * at all. It now feeds the drawer's `view`-mode metadata grid instead, via `drawerViewFields()`'s
+   * `status` field (`NOTIF-T-14`, closing the `NOTIF-R-5` gap this removal reopened — see the copy
+   * file's docstring for the same history).
+   *
+   * NOTIF-T-5 (rework, attempt 2): a resolved (status 2/3) row never actually reaches this getter
+   * from the template — the resolved-row branches (`@case (2)`/`@case (3)`) render the existing
+   * Accepted/Declined decision chip instead. There is accordingly no `statusResolved` copy key any
+   * more (removed as dead); a resolved row falls through to the same "For your information" default
+   * every other non-pending, non-update row gets.
+   */
+  get rowStatusLabel(): string {
+    const labels = this.copy.notificationItem;
+    if (this.isUpdateSource) return labels.statusInfo;
+    if (this.isPending) return labels.statusNeedsDecision;
+    return labels.statusInfo;
+  }
+
+  /** NOTIF-T-5: `getResultNotificationTextParts()` for an update-source row — never reimplemented. */
+  get updateTextParts(): NotificationTextParts {
+    return getResultNotificationTextParts(this.notification);
+  }
+
+  /** A finished AI job has no result behind it: no result link, no drawer, just its sentence. */
+  get aiJobParts(): AiJobNotificationParts | null {
+    return getAiJobNotificationParts(this.notification);
+  }
+
+  /**
+   * NOTIF-T-9 (`NOTIF-R-12`): funding-window tag badge — `W1/W2` or `W3/Bilateral`, derived only
+   * from the already-returned `obj_result.source_name` (`'W1/W2'` | `'W3/Bilaterals'`, widened onto
+   * Updates-tab rows by `NOTIF-T-8`). Any other/absent value omits the badge entirely rather than
+   * fabricating one (`NOTIF-R-5`/`NOTIF-AC-7`'s "omit, don't fake" rule).
+   */
+  get fundingWindowBadge(): string | null {
+    const sourceName = this.notification?.obj_result?.source_name;
+    if (sourceName === 'W1/W2') return this.copy.notificationItem.fundingWindowW1W2;
+    if (sourceName === 'W3/Bilaterals') return this.copy.notificationItem.fundingWindowBilateral;
+    return null;
+  }
+
+  /**
+   * NOTIF-T-9 (`NOTIF-R-12`): "<level> · <type>" badge (e.g. "Output · Innovation Development"),
+   * built only from whichever of `obj_result.obj_result_level.name` / `obj_result.obj_result_type.name`
+   * the row actually carries — a row missing one still shows the other rather than a blank
+   * placeholder; a row missing both omits the badge entirely.
+   */
+  get resultLevelTypeBadge(): string | null {
+    const level = this.notification?.obj_result?.obj_result_level?.name;
+    const type = this.notification?.obj_result?.obj_result_type?.name;
+    const parts = [level, type].filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
+    return parts.length ? parts.join(' · ') : null;
+  }
+
+  /**
+   * NOTIF-T-5 (design.md §6.2 field-adapter table): raw per-source fields for the drawer's `view`
+   * metadata grid. Always supplies whatever the row has — the drawer's own `viewMetadataRows`
+   * (NOTIF-T-4, closed scope) already omits `resultType`/`reportingCenter` for `source:'update'`
+   * rows per `NOTIF-P-2`, and omits any field that is empty/absent (`NOTIF-R-5`/`NOTIF-AC-7`).
+   *
+   * NOTIF-T-14: also supplies `status` from the existing `rowStatusLabel` getter, so the drawer's
+   * metadata grid renders the decision/info status `NOTIF-R-5` requires (the row-level badge that
+   * used to satisfy this was removed by `NOTIF-T-12` for not matching the reference image).
+   */
+  drawerViewFields(): ContributionRequestDrawerViewFields {
+    const n = this.notification;
+    const actor = this.isUpdateSource ? n?.obj_emitter_user : n?.obj_requested_by;
+    const submittedBy = actor ? `${actor?.first_name ?? ''} ${actor?.last_name ?? ''}`.trim() : '';
+
+    return {
+      source: this.isUpdateSource ? 'update' : 'request',
+      // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
+      // badge): reuse the row's own status getter, never recompute it here.
+      status: this.rowStatusLabel,
+      resultType: n?.obj_result?.obj_result_type?.name ?? null,
+      phase: n?.obj_result?.obj_version?.phase_name ?? null,
+      primaryProgram: n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? null,
+      reportingCenter: n?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym ?? null,
+      submittedBy: submittedBy || null
+    };
+  }
+
+  /**
+   * NOTIF-R-11: clicking the same open row again closes the panel, in addition to the drawer's
+   * existing ✕/scrim/Escape close. A pending row's FIRST click still opens 'decide' mode exactly as
+   * before (CRD-DD-10) — this only adds a toggle on the already-open case, for every row kind.
+   */
+  onRowActivate(): void {
+    const aiJob = this.aiJobParts;
+    if (aiJob) {
+      // The contribution drawer needs a result; an AI job row goes to its drafts instead.
+      if (aiJob.path) this.router.navigateByUrl(aiJob.path);
+      return;
+    }
+    if (this.drawerOpen()) {
+      this.closeDrawer();
+      return;
+    }
+    this.openDrawer('details');
+  }
+
   /**
    * CRD-R-1 "Keyboard open": Space on a `role="button"` row scrolls the page by default — the
-   * template can't `preventDefault()` inline on `(keydown.space)` and also read `isPending`, so this
-   * is the one row-interactivity handler that needs its own method. Also guards against Space on a
-   * focused nested control (result link, bilateral link, Accept/Decline) bubbling up to the row and
-   * opening the drawer a second time (CRD-R-1 "no click on those controls also opens the drawer",
-   * which a keyboard activation counts as) — only the row itself being the event target counts.
+   * template can't `preventDefault()` inline on `(keydown.space)`, so this is the one row-
+   * interactivity handler that needs its own method. Also guards against Space on a focused nested
+   * control (result link, bilateral link, Accept/Decline) bubbling up to the row and opening the
+   * drawer a second time (CRD-R-1 "no click on those controls also opens the drawer", which a
+   * keyboard activation counts as) — only the row itself being the event target counts.
+   * NOTIF-T-5: no longer gated on `isPending` — every row is now interactive (`rowMode`).
    */
   onRowSpaceKeydown(event: Event): void {
-    if (!this.isPending) return;
     if (event.target !== event.currentTarget) return;
     event.preventDefault();
-    this.openDrawer('details');
+    this.onRowActivate();
   }
 
   /**
@@ -190,8 +344,8 @@ export class NotificationItemComponent {
       this.api.rolesSE.platformIsClosed ||
       this.isQAed ||
       (!this.api.rolesSE.isAdmin &&
-        this.notification.obj_result.obj_version.id != currentPhaseId &&
-        this.notification.obj_result.status_id != 3)
+        this.notification?.obj_result?.obj_version?.id != currentPhaseId &&
+        this.notification?.obj_result?.status_id != 3)
     );
   }
 
@@ -286,16 +440,22 @@ export class NotificationItemComponent {
    * (design.md CRD-P-4/CRD-DD-3; `hydrateGlobalTocState` only runs from `onTocPlannedResultChange()`,
    * on the first answer). CRD-DD-10 (pivot): also resets the row's three popup signals to false —
    * nothing reachable from the drawer may reopen a popup over it (CRD-R-11 amended).
+   *
+   * NOTIF-T-5: `rowMode` (not `entry` alone) decides the real mode — a resolved Received row, any
+   * Sent row, or an Updates row always opens in `view` regardless of what `entry` a caller passes,
+   * so `view` mode never gets an Align seed or a `confirm-decline`/`decide` footer (design.md §6.2's
+   * "no footer" row). A pending row (`rowMode() === 'decide'`) is completely unchanged (CRD-DD-10).
    */
   openDrawer(entry: 'details' | 'align' | 'confirm-decline') {
-    this.drawerMode.set(entry === 'confirm-decline' ? 'confirm-decline' : 'decide');
-    this.drawerFocusAlign.set(entry === 'align');
+    const mode = this.rowMode;
+    this.drawerMode.set(mode === 'view' ? 'view' : entry === 'confirm-decline' ? 'confirm-decline' : 'decide');
+    this.drawerFocusAlign.set(mode === 'decide' && entry === 'align');
     this.tocHydrated = false;
     this.showConfirmRejectDialog.set(false);
     this.showTocPromptDialog.set(false);
     this.showTocMappingDialog.set(false);
 
-    if (this.isBilateralResult) {
+    if (mode === 'decide' && this.isBilateralResult) {
       this.seedTocInitiative();
     }
 
@@ -441,6 +601,27 @@ export class NotificationItemComponent {
     }
 
     return entries.map(entry => this.buildDrawerReviewRow(entry));
+  }
+
+  /**
+   * NOTIF-T-5 (rework, attempt 2): the `[reviewRows]` value actually bound to the drawer. In
+   * `view` mode, with no real `toc_contribution_review` data, this returns `[]` instead of
+   * `drawerReviewTables()`'s all-dash fallback table — that fallback exists for `decide`/
+   * `confirm-decline` (`CRD-R-4`) so the footer's "Where it contributes" section always has
+   * something to show while a decision is pending, but a `view`-mode panel has no footer at all
+   * and nothing to fall back FOR; the dash table there just fabricates the look of ToC data that
+   * doesn't exist (`NOTIF-R-5`/`NOTIF-AC-7`). The drawer template's own
+   * `@if (mode() !== 'view' || reviewRows().length)` guard (`NOTIF-T-4`) then hides the whole
+   * "Where it contributes" section for that empty array. `drawerReviewTables()` itself, and every
+   * pre-existing test against it, are untouched — `decide`/`confirm-decline` keep the dash
+   * fallback exactly as before.
+   */
+  drawerReviewRowsForMode(): DrawerReviewField[][] {
+    if (this.drawerMode() === 'view' && !this.tocReview.length) {
+      return [];
+    }
+
+    return this.drawerReviewTables();
   }
 
   private buildDrawerReviewRow(entry: TocContributionReview | null): DrawerReviewField[] {

@@ -15,7 +15,7 @@ import { ShareRequestModalModule } from './pages/results/pages/result-detail/com
 import { YmzListStructureItemModule } from './shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { ChangePhaseModalModule } from './shared/components/change-phase-modal/change-phase-modal.module';
 import { PrDialogComponent } from './shared/components/pr-dialog/pr-dialog.component';
-import { BilateralAiCompletionDialogComponent } from './pages/bilateral/components/bilateral-ai-completion-dialog/bilateral-ai-completion-dialog.component';
+import { BilateralAiJobWatcherComponent } from './pages/bilateral/components/bilateral-ai-job-watcher/bilateral-ai-job-watcher.component';
 import { PrToastComponent } from './shared/components/pr-toast';
 // import { SocketIoModule } from 'ngx-socket-io';
 // import { WebsocketService } from './sockets/websocket.service';
@@ -57,7 +57,7 @@ function initializeClarityService(clarityService: ClarityService) {
     ...HlmSidebarImports,
     ReportingNavSidebarComponent,
     ShellTopbarComponent,
-    BilateralAiCompletionDialogComponent
+    BilateralAiJobWatcherComponent
     // SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],
   providers: [

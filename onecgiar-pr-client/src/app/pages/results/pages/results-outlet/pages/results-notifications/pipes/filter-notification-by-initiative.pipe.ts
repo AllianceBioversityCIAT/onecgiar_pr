@@ -27,7 +27,7 @@ export class FilterNotificationByInitiativePipe implements PipeTransform {
       (item: TNotificationItem) =>
         item?.obj_shared_inititiative?.id == initiativeId ||
         item?.obj_owner_initiative?.id == initiativeId ||
-        item?.obj_result?.obj_result_by_initiatives?.[0].initiative_id == initiativeId
+        item?.obj_result?.obj_result_by_initiatives?.[0]?.initiative_id == initiativeId
     );
   }
 }

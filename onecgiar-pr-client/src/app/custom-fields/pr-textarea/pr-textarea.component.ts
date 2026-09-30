@@ -51,7 +51,9 @@ export class PrTextareaComponent implements ControlValueAccessor {
 
   /** Presentation values: FieldsManager overrides the inputs, with input fallback. */
   readonly effectiveLabel = computed(() => this.fieldConfig()?.label ?? this.label());
-  readonly effectivePlaceholder = computed(() => this.fieldConfig()?.placeholder ?? this.placeholder());
+  // Fall back to '' — never let an unset placeholder reach the DOM as the literal "undefined"
+  // (BIL-QTS-T-6: `pr-input.component.ts` already carries this exact fallback; this one was missed).
+  readonly effectivePlaceholder = computed(() => this.fieldConfig()?.placeholder ?? this.placeholder() ?? '');
   readonly effectiveDescription = computed(() => this.fieldConfig()?.description ?? this.description());
   readonly effectiveRequired = computed(() => this.fieldConfig()?.required ?? this.required());
 

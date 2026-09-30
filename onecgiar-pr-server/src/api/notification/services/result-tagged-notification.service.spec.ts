@@ -145,9 +145,11 @@ describe('ResultTaggedNotificationService', () => {
       expect(roleByUserRepo.getUserIdsByCenter).toHaveBeenCalledWith(
         'CENTER-06',
       );
-      const [, type, , , , suffix] = lastEmitCall();
+      const [, type, , , , text] = lastEmitCall();
       expect(type).toBe(NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED);
-      expect(suffix).toContain('has tagged the P-1568-WBS0.');
+      // NOTIF-T-12: the composed sentence moved to the client — the default lead-in flow now
+      // stores just the project label in `notification.text`.
+      expect(text).toBe('P-1568-WBS0');
     });
 
     // CLARISA leaves the Alliance-descended institutions with organization_code = NULL; those

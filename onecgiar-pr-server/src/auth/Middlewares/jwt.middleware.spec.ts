@@ -365,6 +365,109 @@ describe('JwtMiddleware', () => {
     });
   });
 
+  // Regression guard for P2-3854: the `/api/bilateral/center/*` surface is
+  // session-authenticated and MUST go through normal JWT verification, while the
+  // headless handoff exchange (CLARISA-key authenticated) stays public. Before the
+  // fix, `publicRoutes` matched the bare `/api/bilateral` prefix, so every
+  // `center/*` route was treated as public: an invalid token was silently ignored
+  // and the request continued with the unverified `@UserToken()` identity.
+  describe('Bilateral center routes are authenticated (P2-3854)', () => {
+    const centerPath = '/api/bilateral/center/projects';
+
+    const withPath = (path: string) => {
+      mockRequest = {
+        ...mockRequest,
+        get path() {
+          return path;
+        },
+      };
+    };
+
+    it('rejects a center route with no token (401, redirect to login)', async () => {
+      withPath(centerPath);
+
+      await expect(
+        middleware.use(
+          mockRequest as Request,
+          mockResponse as Response,
+          mockNext,
+        ),
+      ).rejects.toThrow(
+        new HttpException(
+          {
+            message: 'Authorization token is required',
+            response: {
+              valid: false,
+              shouldRedirectToLogin: true,
+            },
+          },
+          HttpStatus.UNAUTHORIZED,
+        ),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('rejects a center route with an invalid token instead of ignoring it', async () => {
+      withPath(centerPath);
+      mockRequest.headers['auth'] = mockToken;
+      jest
+        .spyOn(jwtService, 'verifyAsync')
+        .mockRejectedValue(new Error('invalid signature'));
+
+      await expect(
+        middleware.use(
+          mockRequest as Request,
+          mockResponse as Response,
+          mockNext,
+        ),
+      ).rejects.toThrow(
+        new HttpException(
+          {
+            message: 'Invalid token',
+            response: {
+              valid: false,
+              shouldRedirectToLogin: true,
+            },
+          },
+          HttpStatus.UNAUTHORIZED,
+        ),
+      );
+      expect(jwtService.verifyAsync).toHaveBeenCalledWith(mockToken, {
+        secret: 'test-secret',
+      });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('accepts a center route with a valid token and rolls the session', async () => {
+      withPath(centerPath);
+      mockRequest.headers['auth'] = mockToken;
+      jest.spyOn(jwtService, 'verifyAsync').mockResolvedValue(mockJwtPayload);
+
+      await middleware.use(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      );
+
+      expect(mockRequest['user']).toEqual(mockJwtPayload);
+      expect(mockResponse.setHeader).toHaveBeenCalledWith('auth', mockNewToken);
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('keeps the handoff exchange public: no token still calls next()', async () => {
+      withPath('/api/bilateral/handoff/exchange');
+
+      await middleware.use(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      );
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(jwtService.verifyAsync).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Route mounting (OTP-T-4)', () => {
     // /auth/login/otp/config must be reachable without a token. AuthModule (mounted at
     // path 'auth' by main.routes.ts) is the module that owns this route, and its own

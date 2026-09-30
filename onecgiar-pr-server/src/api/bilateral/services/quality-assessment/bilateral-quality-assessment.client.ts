@@ -7,10 +7,12 @@ import { firstValueFrom } from 'rxjs';
 import { BilateralQualityAssessmentAiStatus } from '../../entities/bilateral-quality-assessment.entity';
 import {
   AiAssessmentResponse,
+  normalizeSuggestions,
   QualityEvidenceItem,
   QualityPayload,
   QualitySectionKey,
   QualitySectionResult,
+  QualitySuggestions,
   QualityVerdict,
 } from './bilateral-quality-rules';
 
@@ -408,12 +410,85 @@ function sanitizeScore(value: unknown): number | null {
     : null;
 }
 
+/** Drop/keep counts for the `general_information` suggestion, for one structured log line
+ * (design.md §9 Observability) — never the suggestion text itself. */
+interface SuggestionDropCount {
+  dropped: number;
+  kept: number;
+}
+
+const NO_SUGGESTION_DROPS: SuggestionDropCount = { dropped: 0, kept: 0 };
+
 /**
- * Returns a new `AiAssessmentResponse` with `overall.score` and every
- * `sections[k].score` passed through {@link sanitizeScore}. Applied after
- * `isValidAiResponse` succeeds, before `assess()` returns `outcome: 'ok'`
- * (design.md §5 "AI client"; Reviewer B, BIL-QAI-T-5 attempt 2). Never mutates
- * the Axios response body — every level that changes is rebuilt.
+ * Counts what {@link normalizeSuggestions} dropped, from the raw (pre-normalization) value and
+ * the kept result, without ever reading — let alone logging — the text itself (`BIL-QTS-R-8`
+ * "BUT it must NOT log suggestion text"). `null` for a key means "the AI sent no suggestion for
+ * it" (contract copy) and is not counted as an attempt; any other non-`undefined` value (right
+ * type or not) counts as one, since it is something the caller offered that did not survive.
+ */
+function countSuggestionDrops(
+  raw: unknown,
+  kept: QualitySuggestions | undefined,
+): SuggestionDropCount {
+  if (!isRecord(raw)) {
+    return NO_SUGGESTION_DROPS;
+  }
+  const attempted = (['title', 'description'] as const).filter(
+    (key) => raw[key] !== undefined && raw[key] !== null,
+  ).length;
+  const keptCount = kept ? Object.keys(kept).length : 0;
+  return { dropped: Math.max(attempted - keptCount, 0), kept: keptCount };
+}
+
+/**
+ * Rebuilds one section from the closed key allow-list (`BIL-QTS-DD-2`, `BIL-QTS-R-9`):
+ * `verdict`, `score`, `comments`, `strengths`, `issues`, `fields` — plus `suggestions`, and
+ * only on `general_information`. Any other key the AI sent (e.g. a stray `debug`) is dropped by
+ * construction, never carried through a `...rest` spread.
+ *
+ * `sentGI` is the outbound payload's own `general_information.title`/`.description` — passed
+ * through to {@link normalizeSuggestions} as `sent` so a suggestion identical to what PRMS just
+ * asked about is dropped (`BIL-QTS-R-8` "Novelty").
+ */
+function pickSectionResult(
+  key: QualitySectionKey,
+  section: QualitySectionResult,
+  sentGI: { title?: string | null; description?: string | null },
+): { result: QualitySectionResult; suggestionsDrop: SuggestionDropCount } {
+  const { fields: rawFields } = section;
+  const verdict = section.verdict;
+  const result: QualitySectionResult = {
+    verdict,
+    score: sanitizeScore(section.score),
+    comments: section.comments,
+    strengths: section.strengths,
+    issues: section.issues,
+    ...normalizeFields(rawFields),
+  };
+
+  if (key !== 'general_information') {
+    return { result, suggestionsDrop: NO_SUGGESTION_DROPS };
+  }
+
+  const rawSuggestions = section.suggestions;
+  const suggestions = normalizeSuggestions(rawSuggestions, verdict, sentGI);
+  if (suggestions) {
+    result.suggestions = suggestions;
+  }
+  return {
+    result,
+    suggestionsDrop: countSuggestionDrops(rawSuggestions, suggestions),
+  };
+}
+
+/**
+ * Returns a new `AiAssessmentResponse` with `overall.score` and every `sections[k].score`
+ * passed through {@link sanitizeScore}, each section rebuilt from the allow-list
+ * (`BIL-QTS-DD-2`), and `general_information.suggestions` normalized against the outbound
+ * `payload`'s own title/description (`BIL-QTS-T-2`). Applied after `isValidAiResponse`
+ * succeeds, before `assess()` returns `outcome: 'ok'` (design.md §5 "AI client"; Reviewer B,
+ * BIL-QAI-T-5 attempt 2). Never mutates the Axios response body — every level that changes is
+ * rebuilt.
  *
  * **Deliberate side effect (carried from an earlier Reviewer, kept and documented):**
  * `sections` is rebuilt from the known keys — required plus optional — rather than from
@@ -422,26 +497,39 @@ function sanitizeScore(value: unknown): number | null {
  * compatibility rule the AI client already applies everywhere else (`BIL-QAI-T-9`'s scope
  * assumes the same rule downstream) — it is not an oversight.
  */
-function sanitizeScores(body: AiAssessmentResponse): AiAssessmentResponse {
+function sanitizeScores(
+  body: AiAssessmentResponse,
+  payload: QualityPayload,
+): { response: AiAssessmentResponse; suggestionsDrop: SuggestionDropCount } {
   const sections: Partial<Record<QualitySectionKey, QualitySectionResult>> = {};
+  let suggestionsDrop: SuggestionDropCount = NO_SUGGESTION_DROPS;
+
+  const giSent = payload.sections.general_information as
+    | { title?: unknown; description?: unknown }
+    | undefined;
+  const sentGI = {
+    title: typeof giSent?.title === 'string' ? giSent.title : null,
+    description:
+      typeof giSent?.description === 'string' ? giSent.description : null,
+  };
+
   for (const key of [...REQUIRED_SECTION_KEYS, ...OPTIONAL_SECTION_KEYS]) {
     const section = body.sections[key];
     if (!section) continue;
-    // `fields` is destructured OUT before the spread: re-adding it conditionally cannot remove a
-    // malformed one that the spread already copied in, and `fields: undefined` would still leave
-    // the key on the row.
-    const { fields: rawFields, ...rest } = section;
-    sections[key] = {
-      ...rest,
-      score: sanitizeScore(section.score),
-      ...normalizeFields(rawFields),
-    };
+    const picked = pickSectionResult(key, section, sentGI);
+    sections[key] = picked.result;
+    if (key === 'general_information') {
+      suggestionsDrop = picked.suggestionsDrop;
+    }
   }
 
   return {
-    ...body,
-    overall: { ...body.overall, score: sanitizeScore(body.overall.score) },
-    sections,
+    response: {
+      ...body,
+      overall: { ...body.overall, score: sanitizeScore(body.overall.score) },
+      sections,
+    },
+    suggestionsDrop,
   };
 }
 
@@ -551,13 +639,24 @@ export class BilateralQualityAssessmentClient {
         };
       }
 
-      const scoresSanitized = sanitizeScores(toAiAssessmentResponse(body));
+      const { response: scoresSanitized, suggestionsDrop } = sanitizeScores(
+        toAiAssessmentResponse(body),
+        payload,
+      );
       // `status === 'partial'` reaches this same path (only `'unavailable'` returned earlier),
       // so it gets the identical evidence-reason treatment (`QEL-R-2`/`QEL-R-3`) as `'completed'`.
       const sanitized: AiAssessmentResponse = {
         ...scoresSanitized,
         evidence: sanitizeEvidenceReasons(scoresSanitized.evidence),
       };
+
+      // One line naming only the counts, never the text (design.md §9 Observability;
+      // BIL-QTS-R-8 "BUT it must NOT log suggestion text") — only when something was dropped.
+      if (suggestionsDrop.dropped > 0) {
+        this.logger.log(
+          `event=bilateral_quality_assessment_suggestions result_id=${ctx.resultId} request_id=${requestId} dropped=${suggestionsDrop.dropped} kept=${suggestionsDrop.kept}`,
+        );
+      }
 
       this.logger.log(
         `event=bilateral_quality_assessment_client result_id=${ctx.resultId} request_id=${requestId} outcome=ok http_status=${response.status} elapsed_ms=${elapsedMs}`,

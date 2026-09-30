@@ -294,7 +294,19 @@ export class ResultTaggedNotificationService {
       if (!userIds.length) continue;
 
       // AC3, minus the identity the readers prepend themselves.
-      const suffix = `${resolvedLeadIn} has tagged the ${target.label}. Click to see the result.`;
+      //
+      // NOTIF-T-12: the composed sentence for RESULT_BILATERAL_PROJECT_TAGGED moved to the client
+      // (`getResultNotificationTextParts()`, `notification-type.constants.ts`) — through the
+      // default lead-in path (AC1/AC2's direct-tag flow, `leadIn` absent) this now stores just the
+      // project label, not the whole sentence. RESULT_CENTER_TAGGED keeps the composed sentence
+      // unchanged (out of this fix's scope), and so does the BCT-T-4 submission flow, which always
+      // passes an explicit `leadIn` and whose own label shape ("<project> of your center (<code>)")
+      // is a different, unrelated spec's decision — not touched here.
+      const text =
+        target.type === NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED &&
+        !leadIn
+          ? target.label
+          : `${resolvedLeadIn} has tagged the ${target.label}. Click to see the result.`;
 
       await this._notificationService.emitResultNotification(
         NotificationLevelEnum.RESULT,
@@ -302,7 +314,7 @@ export class ResultTaggedNotificationService {
         userIds,
         emitterUserId,
         resultId,
-        suffix,
+        text,
       );
 
       // Within one call, a centre that appears twice (lead + project owner) must not notify the

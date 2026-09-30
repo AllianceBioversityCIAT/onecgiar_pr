@@ -99,6 +99,27 @@ export interface OverviewTotalResultsKpi {
   w1w2Count: number;
   leadCount: number;
   contributingCount: number;
+  /** `BOV-R-1` — center-wide count of results where `Number(row.is_replicated) === 1`. */
+  replicatedCount: number;
+  /**
+   * `BOV-R-2`/`BOV-R-2.1` — center-wide count of results NOT replicated, unconditional (no status
+   * gate, unlike the Reporting tab's per-project "new for review"). `replicatedCount + newCount`
+   * always equals `count` (`BOV-DD-1`).
+   */
+  newCount: number;
+  /**
+   * `BOV2-R-1` — center-wide count of rows that are BOTH W1/W2 (`row.source !== 'API'`) AND
+   * contributing (`Number(row.is_leading_result) !== 1`), computed in the same single loop as the
+   * fields above (`BOV2-DD-1`, reusing `BOV-DD-2`'s single-loop extension pattern).
+   */
+  w1w2ContributorCount: number;
+  /**
+   * `w1w2Count - w1w2ContributorCount` — the complement within W1/W2 (W1/W2 AND lead). Shown
+   * inline next to `w1w2Count` so the split reads without a separate badge or tooltip (see this
+   * folder's `CLAUDE.md` — the standalone "N of M W1/W2" badge confused users; the breakdown now
+   * lives on the number it explains).
+   */
+  w1w2LeadCount: number;
 }
 
 export interface OverviewPendingReviewKpi {
@@ -139,9 +160,15 @@ export interface OverviewKpisModel {
 export function buildTotalResultsKpi(rows: readonly BilateralCenterResult[]): OverviewTotalResultsKpi {
   let w3Count = 0;
   let leadCount = 0;
+  let replicatedCount = 0;
+  let w1w2ContributorCount = 0;
   for (const row of rows) {
-    if (row.source === 'API') w3Count++;
-    if (Number(row.is_leading_result) === 1) leadCount++;
+    const isW3 = row.source === 'API';
+    const isLead = Number(row.is_leading_result) === 1;
+    if (isW3) w3Count++;
+    if (isLead) leadCount++;
+    if (Number(row.is_replicated) === 1) replicatedCount++;
+    if (!isW3 && !isLead) w1w2ContributorCount++;
   }
   return {
     count: rows.length,
@@ -149,6 +176,10 @@ export function buildTotalResultsKpi(rows: readonly BilateralCenterResult[]): Ov
     w1w2Count: rows.length - w3Count,
     leadCount,
     contributingCount: rows.length - leadCount,
+    replicatedCount,
+    newCount: rows.length - replicatedCount,
+    w1w2ContributorCount,
+    w1w2LeadCount: rows.length - w3Count - w1w2ContributorCount,
   };
 }
 
@@ -268,7 +299,12 @@ export function buildOverviewKpis(
 // Reporting status card (COV-R-7)
 // ---------------------------------------------------------------------------
 
-export type StatusTileKey = 'editing' | 'pending' | 'submittedQa' | 'approved' | 'rejected';
+/**
+ * P2-3863 — `Submitted / QA` is not a W3/bilateral reporting status (Nicoleta, 29-Sep-2026), so it
+ * has no tile, no meter segment and no deep link. Status ids 2 (QA) and 3 (Submitted) are still
+ * counted, and still listed row by row in the a11y table, like Discontinued.
+ */
+export type StatusTileKey = 'editing' | 'pending' | 'approved' | 'rejected';
 
 export interface OverviewStatusTile {
   key: StatusTileKey;
@@ -286,15 +322,15 @@ export interface OverviewStatusModel {
   /** One row per status id 1..7 (plus any unexpected id actually present), so a zero-count status
    *  still renders in the a11y table (`COV-R-7`). */
   tableRows: OverviewStatusTableRow[];
-  /** Sum of tile counts — total minus Discontinued (`COV-R-7`: "tile counts sum to 47 minus
-   *  discontinued"). */
+  /** Sum of the four tile counts — total minus Discontinued, QA and Submitted (`COV-R-7`, narrowed by
+   *  P2-3863). It is the meter's full width and the base of its tooltip shares, so the drawn
+   *  segments always fill the bar and their percentages add up to 100. */
   tileTotal: number;
 }
 
 const STATUS_TILE_DEFS: { key: StatusTileKey; statusIds: readonly number[] }[] = [
   { key: 'editing', statusIds: [STATUS.EDITING] },
   { key: 'pending', statusIds: [STATUS.PENDING] },
-  { key: 'submittedQa', statusIds: [STATUS.QA, STATUS.SUBMITTED] },
   { key: 'approved', statusIds: [STATUS.APPROVED] },
   { key: 'rejected', statusIds: [STATUS.REJECTED] },
 ];

@@ -9,13 +9,14 @@ import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
-import { RawBilateralAiJob, normalizeJob } from '../../bilateral-ai-job.model';
+import { RawBilateralAiJob } from '../../bilateral-ai-job.model';
 
 describe('BilateralAiUploadComponent', () => {
   let component: BilateralAiUploadComponent;
   let fixture: ComponentFixture<BilateralAiUploadComponent>;
   let activatedRouteStub: { snapshot: { queryParams: Record<string, string> } };
   let bilateralApi: {
+    GET_bilateralAiJobs: jest.Mock;
     GET_bilateralAiJob: jest.Mock;
     GET_bilateralAiDrafts: jest.Mock;
     GET_bilateralAiDraft: jest.Mock;
@@ -78,6 +79,7 @@ describe('BilateralAiUploadComponent', () => {
     activatedRouteStub = { snapshot: { queryParams: {} } };
     router = { navigate: jest.fn().mockResolvedValue(true) };
     bilateralApi = {
+      GET_bilateralAiJobs: jest.fn().mockReturnValue(of({ response: { jobs: [], summary: { lanes_total: 2, lanes_busy: 0, others_waiting: 0 } } })),
       GET_bilateralAiJob: jest.fn().mockReturnValue(of({ response: job() })),
       GET_bilateralAiDrafts: jest.fn().mockReturnValue(of([])),
       GET_bilateralAiDraft: jest.fn().mockReturnValue(of({ response: null })),
@@ -241,120 +243,186 @@ describe('BilateralAiUploadComponent', () => {
     expect(text).toContain('FLAC');
   });
 
-  // ── APF-T-6: processing panel integration ──────────────────────────────
+  // ── AIQ-T-7: never-blocking upload — the form always stays mounted ─────
 
-  describe('processing panel integration', () => {
-    it('APF-DD-7: registers as the live outcome surface on mount and clears it on destroy', () => {
+  describe('AIQ-T-7: never-blocking upload (AIQ-R-7)', () => {
+    const selectProjectAndSp = () => {
+      const creationService = TestBed.inject(BilateralCreationService);
+      creationService.selectProject({
+        id: 1,
+        shortName: 'P2',
+        fullName: 'Project Two',
+        summary: null,
+        description: null,
+        leadCenter: { id: 66, name: 'ILRI', acronym: 'ILRI' },
+        sciencePrograms: [],
+      } as never);
+      creationService.selectPrimarySp({ programId: 1, programCode: 'SP-01', allocation: '100' });
+    };
+
+    it(
+      'after a 202: resets the form to empty, keeps the real file input enabled and submittable, ' +
+        'shows the confirmation, fires a View-action toast, and never mounts the processing panel',
+      () => {
+        selectProjectAndSp();
+        const aiService = TestBed.inject(BilateralAiService);
+        const addSubmittedJobSpy = jest.spyOn(aiService, 'addSubmittedJob');
+        const openDrawerSpy = jest.spyOn(aiService, 'openDrawer');
+        const toastService = TestBed.inject(PrToastService);
+        const toastSpy = jest.spyOn(toastService, 'add');
+
+        addFile('doc.pdf', 1000, 'document');
+        fixture.detectChanges();
+        expect(component.canSubmit()).toBe(true);
+
+        component.onSubmit();
+        fixture.detectChanges();
+
+        expect(addSubmittedJobSpy).toHaveBeenCalledWith({ jobId: 'job-1' });
+        expect(component.fileList().length).toBe(0);
+        expect(component.contextText()).toBe('');
+
+        // Disqualifier: assert the REAL file input, not a CSS class.
+        const fileInput: HTMLInputElement | null = fixture.nativeElement.querySelector('input[type="file"]');
+        expect(fileInput).toBeTruthy();
+        expect(fileInput!.disabled).toBe(false);
+
+        const confirmation = fixture.nativeElement.querySelector('[data-testid="aiu-confirmation-card"]');
+        expect(confirmation).toBeTruthy();
+        expect(confirmation.textContent).toContain('P2 was added to the AI queue');
+
+        expect(fixture.nativeElement.querySelector('app-ai-processing-panel')).toBeNull();
+
+        expect(toastSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            key: 'globalUserNotification',
+            severity: 'success',
+            summary: 'P2 was added to the AI queue',
+            action: expect.objectContaining({ label: 'View' }),
+          }),
+        );
+
+        const runAction = toastSpy.mock.calls[0][0].action?.run;
+        runAction?.();
+        expect(openDrawerSpy).toHaveBeenCalledWith();
+
+        // Reviewer FAIL issue 2 (attempt 2): `AIQ-R-7` A says "the upload form is available and
+        // submittable" — proven by actually submitting a SECOND time, not merely by the file
+        // input's `disabled` attribute (which this component never sets on the input anyway).
+        // `canSubmit()` was only asserted BEFORE the first submit in attempt 1; assert it again
+        // here, after the 202 reset, and drive a real second submission through it.
+        addFile('doc2.pdf', 1000, 'document');
+        fixture.detectChanges();
+        expect(component.canSubmit()).toBe(true);
+
+        const submitButton: HTMLButtonElement | null = fixture.nativeElement.querySelector('.aiu-submit-btn');
+        expect(submitButton).toBeTruthy();
+        expect(submitButton!.disabled).toBe(false);
+
+        component.onSubmit();
+        fixture.detectChanges();
+
+        expect(bilateralApi.POST_bilateralAiJob).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it('a failed submit keeps the files and text — no job is added (AIQ-R-7 C)', () => {
+      selectProjectAndSp();
       const aiService = TestBed.inject(BilateralAiService);
-      expect(aiService.panelVisible()).toBe(true);
+      const addSubmittedJobSpy = jest.spyOn(aiService, 'addSubmittedJob');
+      bilateralApi.POST_bilateralAiJob.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500, error: {} })));
 
-      fixture.destroy();
-      expect(aiService.panelVisible()).toBe(false);
-    });
-
-    it('APF-R-8 A / APF-AC-12: a terminal state reached while mounted renders inline and never raises the completion dialog notice', async () => {
-      const aiService = TestBed.inject(BilateralAiService);
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(
-        of({ response: job({ status: 'COMPLETED', result_count: '2', completed_date: '2026-09-15T10:05:00.000Z' }) }),
-      );
-
-      aiService.startJob('job-1');
-      await flush();
+      addFile('doc.pdf', 1000, 'document');
+      component.contextText.set('some context');
       fixture.detectChanges();
 
-      expect(aiService.completionNotice()).toBeNull();
-      const panel = fixture.nativeElement.querySelector('app-ai-processing-panel');
-      expect(panel).toBeTruthy();
-      expect(panel.textContent).toContain('result drafts are ready');
-      // The old inline blocks are gone entirely, not just hidden.
-      expect(fixture.nativeElement.querySelector('.aiu-error')).toBeNull();
-      expect(fixture.nativeElement.querySelector('.aiu-processing')).toBeNull();
+      component.onSubmit();
+      fixture.detectChanges();
+
+      expect(addSubmittedJobSpy).not.toHaveBeenCalled();
+      expect(component.fileList().length).toBe(1);
+      expect(component.contextText()).toBe('some context');
+      expect(component.justSubmittedProjectName()).toBeNull();
     });
 
-    it('APF-R-9: "Try again" on the panel calls the retry endpoint through the real service', () => {
+    it('"Open AI processes" dismisses the confirmation and opens the drawer', () => {
+      selectProjectAndSp();
       const aiService = TestBed.inject(BilateralAiService);
-      aiService.uploadState.set({ jobId: 'job-1', status: 'failed', uploadProgress: 0, errorMessage: 'boom' });
+      const openDrawerSpy = jest.spyOn(aiService, 'openDrawer');
+      addFile('doc.pdf', 1000, 'document');
+      component.onSubmit();
       fixture.detectChanges();
 
-      component.onPanelRetry();
+      fixture.nativeElement.querySelector('[data-testid="aiu-confirmation-open-drawer"]').click();
+      fixture.detectChanges();
 
-      expect(bilateralApi.POST_bilateralAiJobRetry).toHaveBeenCalledWith('job-1');
+      expect(openDrawerSpy).toHaveBeenCalledWith();
+      expect(component.justSubmittedProjectName()).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="aiu-confirmation-card"]')).toBeNull();
     });
 
-    it('APF-R-9 AND-IT-MUST: 410 on retry resets to the upload form with the explanation', async () => {
+    // P2-3853: a host that is itself a drawer (bilateral-manual-create-drawer-host) needs to close
+    // before the AI processes dialog opens on top of it. `onOpenAiProcesses` is the one place both
+    // the confirmation card's button and the toast's View action route through.
+    it('P2-3853: onOpenAiProcesses emits openedAiProcesses once and calls openDrawer once', () => {
+      const openedSpy = jest.fn();
+      component.openedAiProcesses.subscribe(openedSpy);
       const aiService = TestBed.inject(BilateralAiService);
-      bilateralApi.POST_bilateralAiJobRetry.mockReturnValue(throwError(() => ({ status: 410 })));
-      aiService.uploadState.set({ jobId: 'job-1', status: 'failed', uploadProgress: 0, errorMessage: 'boom' });
-      fixture.detectChanges();
+      const openDrawerSpy = jest.spyOn(aiService, 'openDrawer');
 
-      component.onPanelRetry();
-      fixture.detectChanges();
+      component.onOpenAiProcesses();
 
-      expect(fixture.nativeElement.querySelector('.aiu-card')).toBeTruthy();
-      const notice = fixture.nativeElement.querySelector('[data-testid="aiu-gone-notice"]');
-      expect(notice).toBeTruthy();
-      expect(notice.textContent).toContain('no longer available');
-      expect(fixture.nativeElement.querySelector('app-ai-processing-panel')).toBeNull();
+      expect(openedSpy).toHaveBeenCalledTimes(1);
+      expect(openDrawerSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('Leader addendum (APF-T-6 attempt 2): a failed expectations lookup does not permanently block a retry for the same mix', () => {
+    it('"Choose another project" dismisses the confirmation and emits chooseAnotherProject', () => {
+      selectProjectAndSp();
+      const emitted = jest.fn();
+      component.chooseAnotherProject.subscribe(emitted);
+      addFile('doc.pdf', 1000, 'document');
+      component.onSubmit();
+      fixture.detectChanges();
+
+      fixture.nativeElement.querySelector('[data-testid="aiu-confirmation-choose-another"]').click();
+      fixture.detectChanges();
+
+      expect(emitted).toHaveBeenCalled();
+      expect(component.justSubmittedProjectName()).toBeNull();
+    });
+
+    // Falsifier 1: restoring `@if (uploadState().status === 'idle' || uploadState().status ===
+    // 'uploading')` around the form must turn this red — every non-idle/uploading status used to
+    // hide the whole card.
+    it.each(['pending', 'processing', 'still_running', 'failed', 'completed', 'completed_no_candidates'])(
+      'FALSIFIER GUARD: the form stays mounted for a status the old wrapper used to hide it for (%s)',
+      status => {
+        const aiService = TestBed.inject(BilateralAiService);
+        aiService.setUploadStatus(status as never);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('input[type="file"]')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('app-ai-processing-panel')).toBeNull();
+      },
+    );
+
+    it('`?job=` on init opens the drawer highlighting that job', () => {
       const aiService = TestBed.inject(BilateralAiService);
-      const expectationsSpy = jest
-        .spyOn(aiService, 'expectations')
-        .mockReturnValueOnce(throwError(() => new Error('network')))
-        .mockReturnValueOnce(of({ mix: 'documents', sampleSize: 12, p25Minutes: 3, p75Minutes: 8 }));
+      const openDrawerSpy = jest.spyOn(aiService, 'openDrawer');
+      activatedRouteStub.snapshot.queryParams = { job: 'job-42' };
 
-      // First poll for a 'documents' mix: the call fails — no toast, no job-failure path, just no range.
-      aiService.currentJob.set(normalizeJob(job({ document_keys: ['a.pdf'] })));
-      fixture.detectChanges();
+      component.ngOnInit();
 
-      expect(expectationsSpy).toHaveBeenCalledTimes(1);
-      expect(expectationsSpy).toHaveBeenCalledWith('documents');
-      expect(component.expectation()).toBeNull();
-
-      // A later poll for the SAME mix must retry — lastExpectationMix was reset on error, not left
-      // pinned at 'documents' forever (which would silently skip every future call.expectations()).
-      aiService.currentJob.set(normalizeJob(job({ document_keys: ['a.pdf'], stage: 'validating' })));
-      fixture.detectChanges();
-
-      expect(expectationsSpy).toHaveBeenCalledTimes(2);
-      expect(component.expectation()).toEqual({ mix: 'documents', sampleSize: 12, p25Minutes: 3, p75Minutes: 8 });
+      expect(openDrawerSpy).toHaveBeenCalledWith('job-42');
     });
 
-    it('"Review drafts" navigates to this center\'s Drafts tab', () => {
-      const ctx = TestBed.inject(BilateralContextService);
-      ctx.setCenter('AllianceX', 'Alliance X');
-
-      component.onPanelOpenDrafts();
-
-      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'AllianceX', 'drafts']);
-    });
-
-    it('?job=<id>: opens the panel for the job named in the query param', async () => {
-      activatedRouteStub.snapshot.queryParams = { job: 'deep-linked-job' };
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ job_id: 'deep-linked-job', status: 'FAILED', error_code: 'TIMED_OUT' }) }));
-
-      const deepLinkedFixture = TestBed.createComponent(BilateralAiUploadComponent);
-      deepLinkedFixture.detectChanges();
-      await flush();
-      deepLinkedFixture.detectChanges();
-
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledWith('deep-linked-job');
-      const panel = deepLinkedFixture.nativeElement.querySelector('app-ai-processing-panel');
-      expect(panel).toBeTruthy();
-      expect(panel.textContent).toContain('Processing did not finish');
-    });
-
-    it('?job=<id> is a no-op when that job is already the active one — no redundant restart', () => {
+    it('does nothing on init without `?job=`', () => {
       const aiService = TestBed.inject(BilateralAiService);
-      aiService.currentJobId.set('already-active');
-      activatedRouteStub.snapshot.queryParams = { job: 'already-active' };
-      jest.spyOn(aiService, 'startJob');
+      const openDrawerSpy = jest.spyOn(aiService, 'openDrawer');
 
-      const deepLinkedFixture = TestBed.createComponent(BilateralAiUploadComponent);
-      deepLinkedFixture.detectChanges();
+      component.ngOnInit();
 
-      expect(aiService.startJob).not.toHaveBeenCalled();
+      expect(openDrawerSpy).not.toHaveBeenCalled();
     });
   });
 

@@ -3429,6 +3429,11 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.nutrition_tag_level_id,
         r.environmental_biodiversity_tag_level_id,
         r.poverty_tag_level_id,
+        -- BIL-RAU-T-5: raw tinyint, additive. The Annual updating block (types 7/2 only) needs to
+        -- know whether this result was replicated into the phase and its stored answer, straight
+        -- from the DB — no boolean coercion here, the client normalizes it (design §4.1).
+        r.is_replicated,
+        r.is_discontinued,
         -- P2-3443: the External partners block of the bilateral Contributors section is stored as
         -- results_by_institution rows (returned by the detail GET as contributingInstitutions)
         -- plus these two flags on result. Without them the client cannot tell "no partners
@@ -4027,7 +4032,36 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
               WHEN tr.category = 'EOI' THEN '2030 Outcome'
               ELSE tr.category
             END,
-            'title', tr.result_title
+            'title', tr.result_title,
+            'indicators', (
+              -- BTC-R-1 / BTC-DD-1: correlated sub-select (never an outer JOIN) so a mapping
+              -- with N indicators still yields exactly one toc_mappings[] entry — P-4 (QA
+              -- mapper reads toc_mappings[0]) depends on the row count staying untouched.
+              -- Join and activity conditions reused verbatim from P-6
+              -- (results-toc-results.repository.ts:580-589).
+              SELECT JSON_ARRAYAGG(
+                JSON_OBJECT(
+                  'toc_results_indicator_id', rtri.toc_results_indicator_id,
+                  'indicator_description', tri.indicator_description,
+                  'indicator_type', tri.type_value,
+                  'number_target', rit.number_target,
+                  'target_date', rit.target_date,
+                  -- CAST to DOUBLE: JSON_OBJECT() on a raw DECIMAL column can serialize as a
+                  -- JSON string depending on MySQL version; forcing DOUBLE keeps it a JSON number.
+                  'target_contribution', CAST(rit.contributing_indicator AS DOUBLE)
+                )
+              )
+              FROM results_toc_result_indicators rtri
+              LEFT JOIN Integration_information.toc_results_indicators tri
+                ON CONVERT(tri.related_node_id USING utf8mb4) = CONVERT(rtri.toc_results_indicator_id USING utf8mb4)
+                AND tri.is_active = 1
+              LEFT JOIN result_indicators_targets rit
+                ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+                AND rit.is_active = 1
+              WHERE rtri.results_toc_results_id = rtr.result_toc_result_id
+                AND rtri.is_active = 1
+                AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
+            )
           )
         ) AS toc_mappings
       FROM results_by_inititiative rbi
@@ -4043,15 +4077,24 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     `;
     try {
       const rows = await this.query(query, [resultId]);
-      return (rows ?? []).map((row: any) => ({
-        official_code: row.official_code ?? null,
-        name: row.name ?? null,
-        initiative_role: row.initiative_role ?? null,
-        toc_mappings:
+      return (rows ?? []).map((row: any) => {
+        const tocMappings: any[] =
           typeof row.toc_mappings === 'string'
             ? JSON.parse(row.toc_mappings)
-            : (row.toc_mappings ?? []),
-      }));
+            : (row.toc_mappings ?? []);
+        return {
+          official_code: row.official_code ?? null,
+          name: row.name ?? null,
+          initiative_role: row.initiative_role ?? null,
+          toc_mappings: tocMappings.map((mapping: any) => ({
+            ...mapping,
+            indicators:
+              typeof mapping?.indicators === 'string'
+                ? JSON.parse(mapping.indicators)
+                : (mapping?.indicators ?? []),
+          })),
+        };
+      });
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

@@ -26,6 +26,12 @@ export interface BilateralQualityAssessmentView {
     /** AI-side field names the issues point at. Stored and carried; nothing renders them yet. */
     fields?: string[];
     issues?: string[];
+    /**
+     * AI-suggested full-replacement title/description for `general_information` only
+     * (contract v0.2, additive; `BIL-QTS-R-7`). Both keys optional and independently droppable —
+     * the server's normalizer may keep only one of them.
+     */
+    suggestions?: { title?: string; description?: string };
   }>;
   evidence: Array<{ index: number; verdict: QualityVerdict; reason: string }>;
 }
@@ -36,13 +42,16 @@ export class BilateralQualityAssessmentUiService {
   private readonly api = inject(BilateralApiService);
 
   readonly assessment = signal<BilateralQualityAssessmentView | null>(null);
-  readonly state = signal<'idle' | 'assessing' | 'deciding' | 'submitting'>('idle');
+  // @akili-spec changes/qa-submit-stale-guard (QSG-T-1, QSG-DD-1) — `refreshing` is the re-read
+  // `openStored()` runs before it reopens the drawer: busy (rail stays disabled), but not itself
+  // "the dialog is open" — see `isBusy` / `isDialogOpen` below.
+  readonly state = signal<'idle' | 'assessing' | 'deciding' | 'submitting' | 'refreshing'>('idle');
   readonly error = signal<string | null>(null);
   /** True only while the AI check itself is in flight — never while the submit PATCH is. */
   readonly isRunning = computed(() => this.state() === 'assessing');
   readonly isSubmitting = computed(() => this.state() === 'submitting');
   /** Any request in flight: what the rail's Submit button disables on. */
-  readonly isBusy = computed(() => this.isRunning() || this.isSubmitting());
+  readonly isBusy = computed(() => this.isRunning() || this.isSubmitting() || this.state() === 'refreshing');
   /**
    * One surface for the whole flow: it opens the moment the check starts and stays open through the
    * verdict and the submit. Two separate overlays would swap mid-flight, and the rail button alone
@@ -164,8 +173,39 @@ export class BilateralQualityAssessmentUiService {
     return { verdict: section.verdict, issues: section.issues ?? [] };
   }
 
+  /**
+   * @akili-spec changes/qa-submit-stale-guard (QSG-T-1, QSG-DD-1)
+   * Reopening a stored assessment used to trust the `is_current` captured when it was fetched —
+   * nothing refreshed it, so an edit made since the check stayed invisible and Submit kept
+   * showing (QSG-R-1). Now it re-reads the latest row first and replaces `assessment` with it
+   * before opening. `state` goes through `refreshing` while that read is in flight: it counts in
+   * `isBusy()` (rail stays disabled) but not in `isDialogOpen()` — the drawer does not open until
+   * the corrected row lands. On a re-read error, or `latest: null`, fail closed: keep the held row
+   * as a copy with `is_current: false` rather than re-offering a Submit whose currency is unknown
+   * (QSG-R-3).
+   */
   openStored(): void {
-    if (this.assessment() && !this.isBusy()) this.state.set('deciding');
+    const held = this.assessment();
+    if (!held || this.isBusy()) return;
+    this.state.set('refreshing');
+    this.readLatest(held.result_id).pipe(
+      map((latest) => latest ?? { ...held, is_current: false }),
+      catchError(() => of({ ...held, is_current: false })),
+    ).subscribe((next) => {
+      this.assessment.set(next);
+      this.state.set('deciding');
+    });
+  }
+
+  /**
+   * Marks the held assessment stale optimistically after a successful drawer save
+   * (`BIL-QTS-DD-5`): the server only reports `is_current` on read, so without this the submit
+   * button would stay visible until the next reload. No-op with nothing held.
+   */
+  markStale(): void {
+    const assessment = this.assessment();
+    if (!assessment) return;
+    this.assessment.set({ ...assessment, is_current: false });
   }
 
   reset(): void {
@@ -182,16 +222,35 @@ export class BilateralQualityAssessmentUiService {
       assessment_id: assessment.id,
       decision,
     }).pipe(
-      tap({
+      tap(() => {
         // Submitted: the window has done its job and the result is now read-only. Closing here
         // rather than from the component is what makes it stick — `close()` is gated on
         // `isBusy()`, so a caller closing on `next` ran while the state was still `submitting`
         // and was silently a no-op, and then the window came back.
-        next: () => this.state.set('idle'),
-        // A failed submit returns to the verdict, not to a blank editor: the user still has to
-        // decide, and re-running the check would only produce the same row.
-        error: () => this.state.set('deciding'),
+        this.state.set('idle');
       }),
+      /**
+       * @akili-spec changes/qa-submit-stale-guard (QSG-T-1, QSG-DD-2, QSG-DD-3)
+       * A failed submit used to return straight to the verdict with the SAME row, so Submit was
+       * offered again on the very `assessment_id` the server just refused (QSG-R-2) — every retry
+       * hit the same 400. Now the rejection re-reads the latest row and replaces `assessment`
+       * before returning to `deciding`; on its own error, or `latest: null`, fail closed with a
+       * local copy marked `is_current: false` (QSG-R-3). This is folded into the pipe — rather
+       * than a detached subscribe fired from a `tap` error hook — so `state` stays `submitting`
+       * (dialog open, Submit disabled) for the whole re-read: a detached subscribe would let the
+       * `finalize` below fire the instant this hook returns, flipping to `deciding` on the STALE
+       * held row before the correction lands. The original error is re-thrown once the correction
+       * is applied, so the caller's error handler (the "Submit failed" toast) is unaffected.
+       */
+      catchError((err) => this.readLatest(resultId).pipe(
+        map((latest) => latest ?? { ...assessment, is_current: false }),
+        catchError(() => of({ ...assessment, is_current: false })),
+        tap((next) => {
+          this.assessment.set(next);
+          this.state.set('deciding');
+        }),
+        switchMap(() => throwError(() => err)),
+      )),
       // Only for an early unsubscribe, which neither handler above sees.
       finalize(() => {
         if (this.state() === 'submitting') this.state.set('deciding');

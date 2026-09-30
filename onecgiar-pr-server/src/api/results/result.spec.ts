@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, HttpStatus } from '@nestjs/common';
-import { ResultsService } from './results.service';
+import {
+  ResultsService,
+  resolveDiscontinuationStatus,
+} from './results.service';
 import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 import { W1_W2_RESULT_SOURCE_FILTER } from '../../shared/constants/w1-w2-result-source-filter.constant';
 import { ResultRepository } from './result.repository';
@@ -368,6 +371,14 @@ describe('ResultsService (unit, pure mocks)', () => {
   const mockInvestmentDiscontinuedRepo = {
     inactiveData: jest.fn().mockResolvedValue(undefined),
     find: jest.fn().mockResolvedValue([]),
+    // BIL-RAU-T-2: manager-aware wrappers `applyInnovationDiscontinuation` calls instead of the
+    // inherited `findOne`/`update`/`save` (T-1). Default: no stored row, so the positive-branch
+    // tests exercise the `save` (insert) arm unless a test overrides this per-case.
+    findOneDiscontinuedOption: jest.fn().mockResolvedValue(null),
+    updateDiscontinuedOption: jest.fn().mockResolvedValue({ affected: 1 }),
+    saveDiscontinuedOption: jest.fn().mockResolvedValue({
+      results_investment_discontinued_option_id: 1,
+    }),
   } as any;
 
   const mockInitiativeEntityMapRepository = {
@@ -1186,6 +1197,236 @@ describe('ResultsService (unit, pure mocks)', () => {
     );
   });
 
+  /**
+   * BIL-RAU-T-2 — first positive tests of the discontinuation branch (P-14: previously only the
+   * P2-3597 negative/ordering test existed). These exercise `applyInnovationDiscontinuation`
+   * through `createResultGeneralInformation`, asserting the exact repository calls the design's
+   * falsifier names: the discontinued branch calls `inactiveData` with the ticked ids and
+   * `replaceForResult` with the targets; the active branch calls both with an empty array.
+   */
+  describe('BIL-RAU-T-2: applyInnovationDiscontinuation / resolveDiscontinuationStatus', () => {
+    const buildGeneralInfoDto = (
+      overrides: Partial<CreateGeneralInformationResultDto>,
+    ): CreateGeneralInformationResultDto =>
+      ({
+        result_id: overrides.result_id,
+        initiative_id: 1,
+        result_type_id: overrides.result_type_id,
+        result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
+        result_name: `Annual updating test: ${v4()}`,
+        result_description: 'Description',
+        gender_tag_id: 3,
+        gender_impact_area_id: 201,
+        climate_change_tag_id: 3,
+        climate_impact_area_id: 202,
+        nutrition_tag_level_id: 3,
+        nutrition_impact_area_id: 203,
+        environmental_biodiversity_tag_level_id: 3,
+        environmental_biodiversity_impact_area_id: 204,
+        poverty_tag_level_id: 3,
+        poverty_impact_area_id: 205,
+        institutions: [],
+        institutions_type: [],
+        krs_url: null,
+        is_krs: false,
+        lead_contact_person: 'John Doe',
+        is_discontinued: overrides.is_discontinued,
+        discontinued_options: overrides.discontinued_options ?? [],
+        merge_split_targets: overrides.merge_split_targets,
+      }) as CreateGeneralInformationResultDto;
+
+    beforeEach(() => {
+      (mockInvestmentDiscontinuedRepo.inactiveData as jest.Mock).mockClear();
+      (
+        mockInvestmentDiscontinuedRepo.findOneDiscontinuedOption as jest.Mock
+      ).mockClear();
+      (
+        mockInvestmentDiscontinuedRepo.updateDiscontinuedOption as jest.Mock
+      ).mockClear();
+      (
+        mockInvestmentDiscontinuedRepo.saveDiscontinuedOption as jest.Mock
+      ).mockClear();
+      (mockInnovationMergeSplitRepo.replaceForResult as jest.Mock).mockClear();
+    });
+
+    it('discontinued branch (No): inactiveData is called with the ticked ids, replaceForResult with the targets, status -> 4', async () => {
+      const resultId = 5001;
+      (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT, // 7
+        status_id: 1,
+        version_id: 1,
+      });
+      // One option already stored (update arm), one new (save/insert arm).
+      (
+        mockInvestmentDiscontinuedRepo.findOneDiscontinuedOption as jest.Mock
+      ).mockImplementationOnce(async (where: any) =>
+        where.investment_discontinued_option_id === 21
+          ? { results_investment_discontinued_option_id: 777 }
+          : null,
+      );
+
+      const targets = [{ target_result_id: 999, transition_type: 'merge' }];
+      const dto = buildGeneralInfoDto({
+        result_id: resultId,
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+        is_discontinued: true,
+        discontinued_options: [
+          { investment_discontinued_option_id: 21, is_active: true } as any,
+          {
+            investment_discontinued_option_id: 22,
+            is_active: true,
+            description: 'Other',
+          } as any,
+        ],
+        merge_split_targets: targets as any,
+      });
+
+      const results: returnFormatService =
+        await resultService.createResultGeneralInformation(dto, userTest);
+
+      expect(mockInvestmentDiscontinuedRepo.inactiveData).toHaveBeenCalledWith(
+        [21, 22],
+        resultId,
+        userTest.id,
+        undefined,
+      );
+      expect(
+        mockInvestmentDiscontinuedRepo.updateDiscontinuedOption,
+      ).toHaveBeenCalledWith(
+        777,
+        expect.objectContaining({ is_active: true }),
+        undefined,
+      );
+      expect(
+        mockInvestmentDiscontinuedRepo.saveDiscontinuedOption,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: resultId,
+          investment_discontinued_option_id: 22,
+          description: 'Other',
+        }),
+        undefined,
+      );
+      expect(
+        mockInnovationMergeSplitRepo.replaceForResult,
+      ).toHaveBeenCalledWith(resultId, targets, userTest.id, undefined);
+
+      const updated = results.response.updateResult || results.response;
+      expect(updated.status_id).toBe(4);
+      expect(
+        resolveDiscontinuationStatus(
+          ResultTypeEnum.INNOVATION_DEVELOPMENT,
+          true,
+          1,
+        ),
+      ).toBe(4);
+    });
+
+    it('active branch (Yes): inactiveData([]) and replaceForResult([]), status on a stored-4 result -> 1', async () => {
+      const resultId = 5002;
+      (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        result_type_id: ResultTypeEnum.INNOVATION_USE, // 2
+        status_id: 4,
+        version_id: 1,
+      });
+
+      const dto = buildGeneralInfoDto({
+        result_id: resultId,
+        result_type_id: ResultTypeEnum.INNOVATION_USE,
+        is_discontinued: false,
+        discontinued_options: [],
+      });
+
+      const results: returnFormatService =
+        await resultService.createResultGeneralInformation(dto, userTest);
+
+      expect(mockInvestmentDiscontinuedRepo.inactiveData).toHaveBeenCalledWith(
+        [],
+        resultId,
+        userTest.id,
+        undefined,
+      );
+      expect(
+        mockInvestmentDiscontinuedRepo.findOneDiscontinuedOption,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockInnovationMergeSplitRepo.replaceForResult,
+      ).toHaveBeenCalledWith(resultId, [], userTest.id, undefined);
+
+      const updated = results.response.updateResult || results.response;
+      expect(updated.status_id).toBe(1);
+      expect(
+        resolveDiscontinuationStatus(ResultTypeEnum.INNOVATION_USE, false, 4),
+      ).toBe(1);
+    });
+
+    // Falsifier table (design.md §5, requirements R-4): notation is (answer, currentStatus) ->
+    // expected status, for types 7/2. Type 5 (not an innovation type) never changes.
+    it.each([
+      [true, 1, 4], // No, Editing -> Discontinued
+      [false, 4, 1], // Yes, Discontinued -> Editing
+      [false, 6, 6], // Yes, Approved -> unchanged
+      [false, 5, 5], // Yes, Pending Review -> unchanged
+      [false, 7, 7], // Yes, Rejected -> unchanged
+    ])(
+      'resolveDiscontinuationStatus(7|2, isDiscontinued=%s, current=%s) -> %s',
+      (isDiscontinued, current, expected) => {
+        expect(resolveDiscontinuationStatus(7, isDiscontinued, current)).toBe(
+          expected,
+        );
+        expect(resolveDiscontinuationStatus(2, isDiscontinued, current)).toBe(
+          expected,
+        );
+      },
+    );
+
+    it('type 5 (not an innovation type): any input leaves the status unchanged', () => {
+      expect(resolveDiscontinuationStatus(5, true, 1)).toBe(1);
+      expect(resolveDiscontinuationStatus(5, false, 4)).toBe(4);
+      expect(resolveDiscontinuationStatus(5, true, 6)).toBe(6);
+    });
+
+    // Reviewer advisory (attempt 2): type 5 covered end-to-end through
+    // `createResultGeneralInformation`, not only through the pure function — T-6 (d) relies on
+    // the same "not an innovation type" guard inside `applyInnovationDiscontinuation`.
+    it('type 5 through createResultGeneralInformation: never touches the discontinuation repos, status unchanged', async () => {
+      const resultId = 5003;
+      (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT, // 5
+        status_id: 1,
+        version_id: 1,
+      });
+
+      const dto = buildGeneralInfoDto({
+        result_id: resultId,
+        result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        is_discontinued: true,
+        discontinued_options: [
+          { investment_discontinued_option_id: 21, is_active: true } as any,
+        ],
+      });
+
+      const results: returnFormatService =
+        await resultService.createResultGeneralInformation(dto, userTest);
+
+      expect(
+        mockInvestmentDiscontinuedRepo.inactiveData,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockInvestmentDiscontinuedRepo.findOneDiscontinuedOption,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockInnovationMergeSplitRepo.replaceForResult,
+      ).not.toHaveBeenCalled();
+
+      const updated = results.response.updateResult || results.response;
+      expect(updated.status_id).toBe(1);
+    });
+  });
+
   it('should delete a result', async () => {
     const results: returnFormatService = await resultService.deleteResult(
       currentResultId,
@@ -1759,6 +2000,139 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(res.response.commonFields).toBeDefined();
     expect(res.response.tocMetadata).toBeDefined();
     expect(res.response.linkedResults).toEqual([11164, 9600]);
+  });
+
+  // BIL-RAU-T-5 (DD-8) — falsifier: a type-7 fixture with 2 active + 1 inactive reason rows
+  // returns exactly the 2 active ones, and merge_split_targets comes from `findActiveByResult`.
+  it('getBilateralResultById adds annualUpdating for a type-7 result with only the active reason rows', async () => {
+    const mockResult = {
+      id: 200,
+      result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+      source: SourceEnum.Bilateral,
+    };
+
+    (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(
+      mockResult,
+    );
+    (
+      mockResultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+    ).mockResolvedValueOnce({ id: 1 });
+    (
+      mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+    ).mockResolvedValueOnce({ result_code: 2001 });
+    (
+      mockResultsTocResultsService.getTocByResultV2 as jest.Mock
+    ).mockResolvedValueOnce({ status: HttpStatus.OK, response: {} });
+    (
+      mockResultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockResultsByProjectsRepository.findResultsByProjectsByResultId as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (mockResultByIntitutionsRepository.find as jest.Mock).mockResolvedValueOnce(
+      [],
+    );
+    (
+      mockResultRepository.getContributingInitiativesBilateralResult as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockGeographicLocationService.getGeoScopeV2 as jest.Mock
+    ).mockResolvedValueOnce({ status: HttpStatus.OK, response: {} });
+    (
+      mockResultsByInstitutionsService.getInstitutionsPartnersByResultIdV2 as jest.Mock
+    ).mockResolvedValueOnce({ status: HttpStatus.OK, response: {} });
+    (
+      mockResultByInitiativesRepository.getContributorInitiativeByResult as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockResultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockResultRepository.getActiveLinkedResultIdsByOrigin as jest.Mock
+    ).mockResolvedValueOnce([]);
+
+    (mockInvestmentDiscontinuedRepo.find as jest.Mock).mockResolvedValueOnce([
+      { investment_discontinued_option_id: 1, description: null },
+      { investment_discontinued_option_id: 2, description: 'Other reason' },
+    ]);
+    (
+      mockInnovationMergeSplitRepo.findActiveByResult as jest.Mock
+    ).mockResolvedValueOnce([
+      { target_result_id: 55, transition_type: 'merge' },
+    ]);
+
+    const res = await resultService.getBilateralResultById(200);
+
+    expect(res).toMatchObject({ status: HttpStatus.OK });
+    expect(mockInvestmentDiscontinuedRepo.find).toHaveBeenCalledWith({
+      where: { result_id: 200, is_active: true },
+    });
+    expect(res.response.annualUpdating).toEqual({
+      discontinued_options: [
+        { investment_discontinued_option_id: 1, description: null },
+        { investment_discontinued_option_id: 2, description: 'Other reason' },
+      ],
+      merge_split_targets: [{ target_result_id: 55, transition_type: 'merge' }],
+    });
+  });
+
+  // BIL-RAU-T-5 (DD-8) — falsifier: a type-5 fixture has no `annualUpdating` key, and neither
+  // the reasons query nor the targets query is called.
+  it('getBilateralResultById has no annualUpdating key for a non-innovation type, and does not query reasons/targets', async () => {
+    const mockResult = {
+      id: 201,
+      result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+      source: SourceEnum.Bilateral,
+    };
+
+    (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(
+      mockResult,
+    );
+    (
+      mockResultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+    ).mockResolvedValueOnce({ id: 1 });
+    (
+      mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+    ).mockResolvedValueOnce({ result_code: 2002 });
+    (
+      mockResultsTocResultsService.getTocByResultV2 as jest.Mock
+    ).mockResolvedValueOnce({ status: HttpStatus.OK, response: {} });
+    (
+      mockResultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockResultsByProjectsRepository.findResultsByProjectsByResultId as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (mockResultByIntitutionsRepository.find as jest.Mock).mockResolvedValueOnce(
+      [],
+    );
+    (
+      mockResultRepository.getContributingInitiativesBilateralResult as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockGeographicLocationService.getGeoScopeV2 as jest.Mock
+    ).mockResolvedValueOnce({ status: HttpStatus.OK, response: {} });
+    (
+      mockResultsByInstitutionsService.getInstitutionsPartnersByResultIdV2 as jest.Mock
+    ).mockResolvedValueOnce({ status: HttpStatus.OK, response: {} });
+    (
+      mockResultByInitiativesRepository.getContributorInitiativeByResult as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockResultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockResultRepository.getActiveLinkedResultIdsByOrigin as jest.Mock
+    ).mockResolvedValueOnce([]);
+
+    const res = await resultService.getBilateralResultById(201);
+
+    expect(res).toMatchObject({ status: HttpStatus.OK });
+    expect(res.response).not.toHaveProperty('annualUpdating');
+    expect(mockInvestmentDiscontinuedRepo.find).not.toHaveBeenCalled();
+    expect(
+      mockInnovationMergeSplitRepo.findActiveByResult,
+    ).not.toHaveBeenCalled();
   });
 
   it('getBilateralResultById returns error when result not found', async () => {
@@ -2481,6 +2855,348 @@ describe('ResultsService (unit, pure mocks)', () => {
         mockBilateralAccessService.assertCenterWrite,
       ).not.toHaveBeenCalled();
       expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateBilateralGeneralInfo — BIL-RAU-T-6 (discontinuation answer)', () => {
+    const resultId = 5010;
+
+    beforeEach(() => {
+      (mockInvestmentDiscontinuedRepo.inactiveData as jest.Mock).mockClear();
+      (
+        mockInvestmentDiscontinuedRepo.findOneDiscontinuedOption as jest.Mock
+      ).mockClear();
+      (
+        mockInvestmentDiscontinuedRepo.updateDiscontinuedOption as jest.Mock
+      ).mockClear();
+      (
+        mockInvestmentDiscontinuedRepo.saveDiscontinuedOption as jest.Mock
+      ).mockClear();
+      (mockInnovationMergeSplitRepo.replaceForResult as jest.Mock).mockClear();
+      mockDataSource.transaction.mockClear();
+      mockBilateralAccessService.assertCenterWrite.mockClear();
+      mockBilateralAccessService.assertCenterWrite.mockResolvedValue(undefined);
+    });
+
+    it('falsifier (a): a title-only payload on a stored-4 result never touches discontinuation and carries no status_id/is_discontinued in updates', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Discontinued.value, // 4
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT, // 7
+      });
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        { title: 'A brand new title' } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(
+        mockInvestmentDiscontinuedRepo.inactiveData,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockInnovationMergeSplitRepo.replaceForResult,
+      ).not.toHaveBeenCalled();
+      expect(manager.update).toHaveBeenCalledWith(
+        Result,
+        resultId,
+        expect.not.objectContaining({
+          status_id: expect.anything(),
+          is_discontinued: expect.anything(),
+        }),
+      );
+      const updatesArg = (manager.update as jest.Mock).mock.calls[0][2];
+      expect(updatesArg).not.toHaveProperty('status_id');
+      expect(updatesArg).not.toHaveProperty('is_discontinued');
+    });
+
+    it('falsifier (b): { is_discontinued: true, discontinued_options: [1 ticked] } only is accepted (200, not 400), status becomes 4, and the helper runs with the transaction manager', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Editing.value, // 1
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT, // 7
+      });
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        {
+          is_discontinued: true,
+          discontinued_options: [
+            { investment_discontinued_option_id: 21, is_active: true },
+          ],
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).message).not.toContain(
+        'Nothing was saved',
+      );
+      expect(manager.update).toHaveBeenCalledWith(
+        Result,
+        resultId,
+        expect.objectContaining({
+          is_discontinued: true,
+          status_id: ResultStatusData.Discontinued.value, // 4
+        }),
+      );
+      expect(mockInvestmentDiscontinuedRepo.inactiveData).toHaveBeenCalledWith(
+        [21],
+        resultId,
+        userTest.id,
+        manager,
+      );
+      expect(
+        mockInnovationMergeSplitRepo.replaceForResult,
+      ).toHaveBeenCalledWith(resultId, [], userTest.id, manager);
+      const response = (res as returnFormatService).response;
+      expect(response.status_id).toBe(ResultStatusData.Discontinued.value);
+      expect(response.is_discontinued).toBe(true);
+    });
+
+    it('falsifier (c): { is_discontinued: false } on a result stored at status 6 leaves status_id at 6', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Approved.value, // 6
+        result_type_id: ResultTypeEnum.INNOVATION_USE, // 2
+      });
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        { is_discontinued: false } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(manager.update).toHaveBeenCalledWith(
+        Result,
+        resultId,
+        expect.objectContaining({
+          is_discontinued: false,
+          status_id: ResultStatusData.Approved.value, // unchanged: 6
+        }),
+      );
+    });
+
+    it('falsifier (d): a type-5 result with is_discontinued: true never calls the helper and leaves status untouched', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Editing.value, // 1
+        result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT, // 5
+      });
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        { is_discontinued: true } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).message).toBe('No changes to apply.');
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+      expect(
+        mockInvestmentDiscontinuedRepo.inactiveData,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockInnovationMergeSplitRepo.replaceForResult,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('falsifier (e): a non-admin denial at status 5 returns 403 and never writes the answer', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.PendingReview.value, // 5
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT, // 7
+      });
+      mockBilateralAccessService.assertCenterWrite.mockRejectedValueOnce(
+        new ForbiddenException(
+          `Result ${resultId} is under Science Program review (rule: center).`,
+        ),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        {
+          is_discontinued: true,
+          discontinued_options: [
+            { investment_discontinued_option_id: 21, is_active: true },
+          ],
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+      expect(
+        mockInvestmentDiscontinuedRepo.inactiveData,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('falsifier (f): the helper throwing inside the transaction rejects the transaction, and the response is an error, not a 200', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Editing.value, // 1
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT, // 7
+      });
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+      (
+        mockInvestmentDiscontinuedRepo.inactiveData as jest.Mock
+      ).mockRejectedValueOnce(new Error('boom'));
+      const warnSpy = jest.spyOn((resultService as any)._logger, 'warn');
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        {
+          is_discontinued: true,
+          discontinued_options: [
+            { investment_discontinued_option_id: 21, is_active: true },
+          ],
+        } as any,
+        userTest,
+      );
+
+      // The mocked manager.update() "succeeding" before the throw is not evidence of a partial
+      // commit — TypeORM's real transaction rolls both statements back together because they
+      // share the same `manager`. What this test proves at this seam: the helper's failure
+      // propagates out of the transaction callback as a rejection, so the overall call reports
+      // an error rather than "General info updated successfully."
+      expect((res as returnFormatService).status).not.toBe(HttpStatus.OK);
+      expect((res as returnFormatService).message).not.toContain(
+        'General info updated successfully',
+      );
+      expect(manager.update).toHaveBeenCalledWith(
+        Result,
+        resultId,
+        expect.objectContaining({ is_discontinued: true }),
+      );
+      // Direct rejection check on the transaction's own returned promise — by the time `res`
+      // resolves, the service has already caught it (that's how `res` got its error status), but
+      // the promise itself settled as a rejection, which is the atomicity guarantee this test is
+      // about: both writes lived inside a callback that failed as a whole.
+      await expect(
+        mockDataSource.transaction.mock.results[0].value,
+      ).rejects.toThrow('boom');
+      // design.md §9 Observability: warn, no payload bodies or reasons in the message.
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      const warnMessage = warnSpy.mock.calls[0][0] as string;
+      expect(warnMessage).toContain(`result ${resultId}`);
+      expect(warnMessage).not.toMatch(
+        /discontinued_options|investment_discontinued_option_id/,
+      );
+    });
+
+    it('falsifier (g): is_discontinued true with discontinued_options missing returns 400 "Please provide a reason.", no repo write, no transaction', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Editing.value, // 1
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT, // 7
+      });
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        { is_discontinued: true } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect((res as returnFormatService).message).toBe(
+        'Please provide a reason.',
+      );
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+      expect(
+        mockInvestmentDiscontinuedRepo.inactiveData,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('falsifier (g): is_discontinued true with discontinued_options: [] returns the same 400, no repo write, no transaction', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Editing.value, // 1
+        result_type_id: ResultTypeEnum.INNOVATION_USE, // 2
+      });
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        { is_discontinued: true, discontinued_options: [] } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect((res as returnFormatService).message).toBe(
+        'Please provide a reason.',
+      );
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+      expect(
+        mockInvestmentDiscontinuedRepo.inactiveData,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('falsifier (g): is_discontinued false with no reasons is still accepted (200)', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Approved.value, // 6
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT, // 7
+      });
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        { is_discontinued: false } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(manager.update).toHaveBeenCalledWith(
+        Result,
+        resultId,
+        expect.objectContaining({ is_discontinued: false }),
+      );
     });
   });
 
