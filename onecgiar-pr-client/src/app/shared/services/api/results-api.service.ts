@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { catchError, map, of, throwError, Observable, firstValueFrom } from 'rxjs';
+import { catchError, map, of, tap, throwError, Observable, firstValueFrom } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
@@ -19,12 +19,14 @@ import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
 import { BilateralApiService } from './bilateral-api.service';
+import { BilateralOverviewService } from '../../../pages/bilateral/services/bilateral-overview.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
   private readonly bilateralApiSE = inject(BilateralApiService);
+  private readonly bilateralOverviewSE = inject(BilateralOverviewService);
 
   constructor(
     public http: HttpClient,
@@ -80,8 +82,15 @@ export class ResultsApiService {
     );
   }
 
+  /**
+   * P2-3856 — every delete path (the shared `ResultDeletionService` and the legacy Results list)
+   * goes through this request, so the Center Overview's cached counts are dropped here, once, on
+   * success only. A failed delete leaves the cache untouched.
+   */
   PATCH_DeleteResult(resultIdToDelete: string | number) {
-    return this.http.delete<any>(`${this.baseApiBaseUrl}manage-data/result/${resultIdToDelete}/delete`);
+    return this.http
+      .delete<any>(`${this.baseApiBaseUrl}manage-data/result/${resultIdToDelete}/delete`)
+      .pipe(tap(() => this.bilateralOverviewSE.invalidateAll()));
   }
 
   GET_checkTitleUniqueness(title: string, excludeResultId?: number) {

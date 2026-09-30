@@ -131,7 +131,7 @@ const ATTENTION_ROW_COPY: Record<OverviewAttentionRow['key'], { title: string; h
   },
 };
 
-/** The five status tiles' sub-copy and pill token pair (`COV-R-7`; pills only — `COV-DD-5`). */
+/** The four status tiles' sub-copy and pill token pair (`COV-R-7`; pills only — `COV-DD-5`). */
 const STATUS_TILE_META: Record<OverviewStatusTile['key'], { hint: string; pillClass: string }> = {
   editing: {
     hint: 'not yet submitted',
@@ -140,10 +140,6 @@ const STATUS_TILE_META: Record<OverviewStatusTile['key'], { hint: string; pillCl
   pending: {
     hint: 'waiting on the SP',
     pillClass: 'bg-[var(--pr-status-in-progress-bg)] text-[var(--pr-status-in-progress-fg)]',
-  },
-  submittedQa: {
-    hint: 'W1/W2 workflow',
-    pillClass: 'bg-[var(--pr-status-submitted-bg)] text-[var(--pr-status-submitted-fg)]',
   },
   approved: {
     hint: 'by the Science Program',
@@ -424,9 +420,9 @@ export class BilateralOverviewComponent implements OnInit {
     );
   }
 
-  /** `COV-R-7` — `Submitted / QA` is one tile over two contract status keys. */
+  /** `COV-R-7` — every tile is one contract status key (P2-3863 removed the two-key `Submitted / QA`). */
   statusTileLinkParams(tile: OverviewStatusTile): Params {
-    const status: StatusKey[] = tile.key === 'submittedQa' ? ['submitted', 'qa'] : [tile.key];
+    const status: StatusKey[] = [tile.key];
     return this.deepLinkParams({ status });
   }
 
