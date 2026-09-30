@@ -494,6 +494,36 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       expect(link?.getAttribute('href')).toBe('https://clarisa.cgiar.org/landing-page/glossary');
       expect(link?.getAttribute('target')).toBe('_blank');
     });
+
+    const follows = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    it('sits after the ToC block and right before "Contributing science programs" (QA, Santiago)', () => {
+      build();
+      const root = fixture.nativeElement as HTMLElement;
+      const notes = root.querySelectorAll('[data-testid="contributor-definition-note"]');
+      expect(notes.length).toBe(1);
+      const note = notes[0];
+      const toc = root.querySelector('.sc-block--toc') as Element;
+      const programs = root.querySelector('.sc-block--programs') as Element;
+      expect(toc).toBeTruthy();
+      expect(follows(toc, note)).toBe(true);
+      expect(follows(note, programs)).toBe(true);
+      expect(note.nextElementSibling).toBe(programs);
+      // Not at the very top any more: the MDS alert comes first, then the ToC block.
+      expect(follows(note, toc)).toBe(false);
+    });
+
+    it('still renders, before "Lead center", when there is no primary SP block', () => {
+      creation.selectedPrimarySp.set(null);
+      build();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('.sc-block--toc')).toBeNull();
+      const notes = root.querySelectorAll('[data-testid="contributor-definition-note"]');
+      expect(notes.length).toBe(1);
+      const firstField = root.querySelector('app-pr-field-header[label="Lead center"]')?.closest('.sc-block') as Element;
+      expect(firstField).toBeTruthy();
+      expect(notes[0].nextElementSibling).toBe(firstField);
+    });
   });
 
   // P2-3859 — the Center filter above the projects picker, in the REAL template.

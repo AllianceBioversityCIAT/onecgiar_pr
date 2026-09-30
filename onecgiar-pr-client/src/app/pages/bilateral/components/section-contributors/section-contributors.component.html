@@ -7,13 +7,19 @@
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
   <!-- P2-3865: CLARISA's definition of "contributor" + "pick entities other than the reporting one".
-       Informative only (AC3): nothing reads it and it never gates saving; shown in read-only too. -->
-  <app-alert-status
-    status="info"
-    [collapsible]="false"
-    data-testid="contributor-definition-note"
-    [description]="contributorNoteHtml">
-  </app-alert-status>
+       Informative only (AC3): nothing reads it and it never gates saving; shown in read-only too.
+       Placed right before the first contributor field (QA, Santiago Sánchez): after the ToC block
+       and above "Contributing science programs" when the primary SP block renders, otherwise at the
+       same spot the fields start (above "Lead center"). One template, stamped in exactly one of the
+       two places, so the copy never drifts between them. -->
+  <ng-template #contributorNote>
+    <app-alert-status
+      status="info"
+      [collapsible]="false"
+      data-testid="contributor-definition-note"
+      [description]="contributorNoteHtml">
+    </app-alert-status>
+  </ng-template>
 
   @if (primarySpData(); as sp) {
     <!-- Same shape as the W1/W2 "Submitter" block: a read-only field with the standard header and a
@@ -32,6 +38,8 @@
 
       <app-section-toc [resultLevelId]="creationService.resultLevelId()" [readOnly]="readOnly()"></app-section-toc>
     </div>
+
+    <ng-container [ngTemplateOutlet]="contributorNote" />
 
     <div class="sc-block sc-block--programs">
       <!--
@@ -76,6 +84,8 @@
         </div>
       }
     </div>
+  } @else {
+    <ng-container [ngTemplateOutlet]="contributorNote" />
   }
 
   <!-- Read-only like the W1/W2 "Submitter": standard header + a disabled-looking value, no badge. -->

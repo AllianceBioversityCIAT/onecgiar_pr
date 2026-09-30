@@ -2084,14 +2084,35 @@ describe('SectionContributorsComponent', () => {
       expect(component.contributorsCopy.contributorNote.definition).toBe(DEFINITION);
     });
 
-    it('is rendered at the top of the section from the copy file, not typed into the template (markup contract)', () => {
+    it('is written once, from the copy file, not typed into the template (markup contract)', () => {
       const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
-      const note = html.indexOf('data-testid="contributor-definition-note"');
-      expect(note).toBeGreaterThan(-1);
-      // Top of the section: before the first field block.
-      expect(note).toBeLessThan(html.indexOf('class="sc-block'));
+      expect(html.split('data-testid="contributor-definition-note"').length - 1).toBe(1);
       expect(html).toContain('[description]="contributorNoteHtml"');
       expect(html).not.toContain('significant contribution to the achievement');
+    });
+
+    it('QA (Santiago): stamped after the ToC block and right before "Contributing science programs" (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const outlet = '<ng-container [ngTemplateOutlet]="contributorNote" />';
+      const first = html.indexOf(outlet);
+      const toc = html.indexOf('<app-section-toc');
+      const programs = html.indexOf('sc-block sc-block--programs');
+      expect(first).toBeGreaterThan(toc);
+      expect(first).toBeLessThan(programs);
+      // Nothing between the note and the programs block but whitespace: it sits right before it.
+      expect(html.slice(first + outlet.length, programs).replace(/\s/g, '')).toBe('<divclass="');
+      // The note no longer opens the section: the MDS alert is followed by the template definition only.
+      expect(html.indexOf('data-testid="contributor-definition-note"')).toBeGreaterThan(html.indexOf('<ng-template #contributorNote>'));
+    });
+
+    it('still renders before the first contributor field when there is no primary SP block (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const outlet = '<ng-container [ngTemplateOutlet]="contributorNote" />';
+      const elseBranch = html.indexOf('} @else {', html.indexOf('@if (primarySpData(); as sp) {'));
+      const second = html.indexOf(outlet, html.indexOf(outlet) + 1);
+      expect(elseBranch).toBeGreaterThan(-1);
+      expect(second).toBeGreaterThan(elseBranch);
+      expect(second).toBeLessThan(html.indexOf('label="Lead center"'));
     });
 
     it('AC3: informative only — it adds nothing to the tracker and never blocks the payload', () => {
