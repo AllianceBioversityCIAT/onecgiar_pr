@@ -133,26 +133,37 @@ describe('AiProcessesDrawerHostComponent', () => {
     expect(serviceStub.retryJob).toHaveBeenCalledWith('job-1');
   });
 
-  it("AIQ-R-9 D: uploadDifferentFiles navigates to the JOB's own center create page with the project AND way: 'ai'", () => {
+  it("AIQ-R-9 D: uploadDifferentFiles navigates to the JOB's own center create page with the project AND way: 'ai', and closes the drawer", () => {
     mount();
     const job = normalizeListJob(rawListJob({ status: 'FAILED', center_acronym: 'ALLIANCE', project_id: '77' }));
     fixture.componentInstance.onUploadDifferentFiles(job);
     expect(navigateSpy).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'create'], { queryParams: { project: 77, way: 'ai' } });
+    expect(serviceStub.drawerOpen()).toBe(false);
   });
 
-  it("AIQ-R-9 D: reportManually navigates with the project AND way: 'manual'", () => {
+  it("AIQ-R-9 D: reportManually navigates with the project AND way: 'manual', and closes the drawer", () => {
     mount();
     const job = normalizeListJob(rawListJob({ status: 'COMPLETED', result_count: '0', center_acronym: 'ALLIANCE', project_id: '88' }));
     fixture.componentInstance.onReportManually(job);
     expect(navigateSpy).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'create'], { queryParams: { project: 88, way: 'manual' } });
+    expect(serviceStub.drawerOpen()).toBe(false);
   });
 
-  it('viewDrafts navigates to the drafts tab with ?job= and refreshes the draft list', () => {
+  it('viewDrafts navigates to the drafts tab with ?job=, refreshes the draft list, and closes the drawer', () => {
     mount();
     const job = normalizeListJob(rawListJob({ status: 'COMPLETED', result_count: '2', center_acronym: 'ALLIANCE', job_id: 'j9' }));
     fixture.componentInstance.onViewDrafts(job);
     expect(serviceStub.loadAllDrafts).toHaveBeenCalledTimes(1);
     expect(navigateSpy).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'drafts'], { queryParams: { job: 'j9' } });
+    expect(serviceStub.drawerOpen()).toBe(false);
+  });
+
+  it('startWithEvidence navigates to the CURRENT center create page and closes the drawer', () => {
+    mount();
+    TestBed.inject(BilateralContextService).centerAcronym.set('ALLIANCE');
+    fixture.componentInstance.onStartWithEvidence();
+    expect(navigateSpy).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'create']);
+    expect(serviceStub.drawerOpen()).toBe(false);
   });
 
   it('closed → sets drawerOpen(false) on the service', () => {

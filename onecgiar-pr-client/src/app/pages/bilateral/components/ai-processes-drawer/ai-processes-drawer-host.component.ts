@@ -85,9 +85,15 @@ export class AiProcessesDrawerHostComponent implements OnDestroy {
 
   /** `AIQ-R-9` D: "opens the creator's AI way for that project" — `way: 'ai'` so the creator (which
    * reads `?project=`/`?way=` in the same branch as `?job=`) both preselects the project AND
-   * activates the AI way, not just the project (attempt 2's gap). */
+   * activates the AI way, not just the project (attempt 2's gap).
+   *
+   * Every action here that navigates ALSO closes the drawer (`drawerOpen.set(false)`) — otherwise
+   * the CDK dialog is left open over the page it just routed to (post-execution bug fix,
+   * P2-3853). The launcher (`ai-processes-drawer-launcher.service.ts`) reacts to `drawerOpen()`
+   * and closes the dialog ref; this component never calls `openDrawer`/the launcher directly. */
   onUploadDifferentFiles(job: NormalizedBilateralAiListJob): void {
     if (!job.centerAcronym) return;
+    this.service.drawerOpen.set(false);
     void this.router.navigate(['/bilateral', job.centerAcronym, 'create'], {
       queryParams: { [AI_QUEUE_PROJECT_QUERY_PARAM]: job.projectId, [AI_QUEUE_WAY_QUERY_PARAM]: 'ai' },
     });
@@ -96,11 +102,13 @@ export class AiProcessesDrawerHostComponent implements OnDestroy {
   onViewDrafts(job: NormalizedBilateralAiListJob): void {
     if (!job.centerAcronym) return;
     this.service.loadAllDrafts();
+    this.service.drawerOpen.set(false);
     void this.router.navigate(['/bilateral', job.centerAcronym, 'drafts'], { queryParams: { job: job.jobId } });
   }
 
   onReportManually(job: NormalizedBilateralAiListJob): void {
     if (!job.centerAcronym) return;
+    this.service.drawerOpen.set(false);
     void this.router.navigate(['/bilateral', job.centerAcronym, 'create'], {
       queryParams: { [AI_QUEUE_PROJECT_QUERY_PARAM]: job.projectId, [AI_QUEUE_WAY_QUERY_PARAM]: 'manual' },
     });
@@ -112,6 +120,7 @@ export class AiProcessesDrawerHostComponent implements OnDestroy {
   onStartWithEvidence(): void {
     const acronym = this.ctx.centerAcronym();
     if (!acronym) return;
+    this.service.drawerOpen.set(false);
     void this.router.navigate(['/bilateral', acronym, 'create']);
   }
 

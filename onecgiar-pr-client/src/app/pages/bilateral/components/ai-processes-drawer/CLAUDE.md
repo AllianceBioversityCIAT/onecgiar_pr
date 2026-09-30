@@ -46,6 +46,11 @@ injectable that opens/closes the dialog by reacting to `BilateralAiService.drawe
   job.centerAcronym, …])` using the JOB's OWN center (a job can belong to a different center than
   the page the drawer was opened from); `startWithEvidence` → the CURRENT `BilateralContextService`
   center (there is no job to read a center from); `closed` → `service.drawerOpen.set(false)`.
+- ⚠️ **Every host action that navigates ALSO calls `service.drawerOpen.set(false)`** (post-execution
+  bug fix, P2-3853, 2026-09-29) — `viewDrafts`, `uploadDifferentFiles`, `reportManually`,
+  `startWithEvidence` all closed the router but left the CDK dialog open over the destination page.
+  The host never calls `openDrawer()`/the launcher directly; it only flips the same flag `closed`
+  already used, which the launcher's `effect()` reacts to.
 - The host owns the 1s elapsed-time tick (`now`, `AIQ-DD-9`: "elapsed times live only in the open
   drawer") via a plain `setInterval` cleared in `ngOnDestroy` — never a service-level timer.
 - `BilateralAiService.hasPolledOnce`/`lastPollFailed` (added for this wrapper) drive
@@ -104,4 +109,5 @@ injectable that opens/closes the dialog by reacting to `BilateralAiService.drawe
   `bilateral-query-params.ts` (`AI_QUEUE_PROJECT_QUERY_PARAM`/`AI_QUEUE_WAY_QUERY_PARAM`), not
   duplicated here.
 
-**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · widened drawer to 520px
+**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · widened drawer to 520px; closed
+the drawer on every navigating host action
