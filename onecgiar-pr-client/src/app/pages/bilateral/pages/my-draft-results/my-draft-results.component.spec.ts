@@ -1,7 +1,9 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { convertToParamMap, RouterModule } from '@angular/router';
+import { convertToParamMap, RouterModule, provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { PrTooltipDirective } from '../../../../shared/directives/pr-tooltip.directive';
@@ -833,7 +835,10 @@ describe('MyDraftResultsComponent', () => {
       // `ngOnInit` already ran once in the outer `beforeEach` against the default (query-param-less)
       // `ActivatedRoute` from `RouterModule.forRoot([])`; re-point it at a `?project=` URL and
       // re-run init, the same way the rest of this file re-applies state after the initial render.
-      (component as any).activatedRoute = { snapshot: { queryParamMap: convertToParamMap({ project: '7' }) } };
+      // `queryParamMap` (top-level, observable) mirrors `snapshot.queryParamMap` here — `ngOnInit`
+      // reads `job` from the former (AIQ-T-7 route-reuse fix, P2-3853) and `project` from the latter.
+      const projectParamMap = convertToParamMap({ project: '7' });
+      (component as any).activatedRoute = { snapshot: { queryParamMap: projectParamMap }, queryParamMap: of(projectParamMap) };
       component.ngOnInit();
       fixture.detectChanges();
 
@@ -858,50 +863,291 @@ describe('MyDraftResultsComponent', () => {
   // `AIQ-R-9` D / P-19: the drafts deep link from the drawer's "View N drafts" / the completion
   // toast. `?job=` names a session, never a filter — it is read separately from
   // `parseBilateralQueryParams` (COV-T-7's contract has no `job` key).
+  // Post-execution bug fix (P2-3853): `scrollIntoView` scrolls EVERY scrollable ancestor,
+  // including the `pr-viewport-page` host (`overflow: hidden` at ≥900px) — measured in Chrome,
+  // its `scrollTop` became 57, hiding the Center header/tabs with no way to scroll back. The fix
+  // scrolls ONLY the nearest `overflow-y: auto` ancestor (`#workArea`) via `container.scrollTo`.
   describe('AIQ-T-7: `?job=` highlights and scrolls to the matching session group (P-19)', () => {
     let originalScrollIntoView: unknown;
+    let scrollIntoViewSpy: jest.Mock;
+    let originalGetBoundingClientRect: (this: Element) => DOMRect;
+    let originalClientHeight: PropertyDescriptor | undefined;
+    /** Keyed by element id — `afterNextRender` (P2-3853) can settle against a LATER element
+     * instance than the one a test captured earlier via `querySelector`, so stubbing an instance's
+     * own `getBoundingClientRect` is unreliable here. Patching the prototype and dispatching on
+     * `this.id` is correct regardless of which instance Angular ends up rendering. */
+    let rectsById: Record<string, Partial<DOMRect>>;
 
     beforeEach(() => {
       originalScrollIntoView = (Element.prototype as any).scrollIntoView;
-      (Element.prototype as any).scrollIntoView = jest.fn();
+      scrollIntoViewSpy = jest.fn();
+      (Element.prototype as any).scrollIntoView = scrollIntoViewSpy;
+
+      rectsById = {};
+      originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+      Element.prototype.getBoundingClientRect = function (this: Element) {
+        return (rectsById[this.id] ?? originalGetBoundingClientRect.call(this)) as DOMRect;
+      };
+      // `clientHeight` is an own accessor of `Element.prototype` in jsdom (NOT `HTMLElement.prototype`
+      // — verified: `Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')` is
+      // `undefined` there). Patching the wrong prototype would silently no-op the restore in
+      // `afterEach` and leak the stub into every later test in this file.
+      originalClientHeight = Object.getOwnPropertyDescriptor(Element.prototype, 'clientHeight');
+      Object.defineProperty(Element.prototype, 'clientHeight', {
+        configurable: true,
+        get(this: Element) {
+          return this.id === 'workArea' ? 400 : (originalClientHeight?.get?.call(this) ?? 0);
+        },
+      });
     });
 
     afterEach(() => {
       (Element.prototype as any).scrollIntoView = originalScrollIntoView;
+      Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+      if (originalClientHeight) Object.defineProperty(Element.prototype, 'clientHeight', originalClientHeight);
     });
 
-    it('gives the matching session group an id and scrolls it into view once drafts load', async () => {
+    /** jsdom lays nothing out (`getBoundingClientRect`/`clientHeight` all default to 0), so the
+     * container and target rects — and the `overflow-y: auto` that marks the real scroll
+     * container, which Tailwind only applies via a compiled media query jsdom never runs — are
+     * stubbed explicitly here, keyed by id (see `rectsById` above). */
+    function stubScrollContainer(): { container: HTMLElement; containerScrollToSpy: jest.Mock } {
+      const container = fixture.nativeElement.querySelector('#workArea') as HTMLElement;
+      container.style.overflowY = 'auto';
+      const containerScrollToSpy = jest.fn();
+      container.scrollTo = containerScrollToSpy;
+      rectsById['workArea'] = { top: 60, bottom: 460, height: 400, left: 0, right: 0, width: 0, x: 0, y: 60 };
+      return { container, containerScrollToSpy };
+    }
+
+    it('gives the matching session group an id and scrolls ONLY the `#workArea` container into view, never the page host', async () => {
+      const { container, containerScrollToSpy } = stubScrollContainer();
+
       // Drafts load asynchronously (`bilateralAiService.loadAllDrafts()`), so `ngOnInit` runs with
       // no session groups on screen yet — the highlight has to apply once the matching group
       // appears, not only at init.
-      (component as any).activatedRoute = { snapshot: { queryParamMap: convertToParamMap({ job: draftStub.job_id }) } };
+      const jobParamMap = convertToParamMap({ job: draftStub.job_id });
+      (component as any).activatedRoute = { snapshot: { queryParamMap: jobParamMap }, queryParamMap: of(jobParamMap) };
       component.ngOnInit();
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector(`#mdr-session-${draftStub.job_id}`)).toBeNull();
 
+      // `afterNextRender` (P2-3853) can settle the scroll computation as early as THIS render — so
+      // the target's rect is registered by its KNOWN id up front, never captured off a queried
+      // element after the fact (which can already be too late).
+      rectsById[`mdr-session-${draftStub.job_id}`] = { top: 500, bottom: 540, height: 40, left: 0, right: 0, width: 0, x: 0, y: 500 };
+
       bilateralAiService.draftList.set([draftStub]);
       bilateralAiService.isDraftListLoaded.set(true);
       fixture.detectChanges();
       TestBed.flushEffects();
-      await Promise.resolve();
       fixture.detectChanges();
 
-      const group = fixture.nativeElement.querySelector(`#mdr-session-${draftStub.job_id}`);
+      const group = fixture.nativeElement.querySelector(`#mdr-session-${draftStub.job_id}`) as HTMLElement;
       expect(group).toBeTruthy();
-      expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+
+      // The container's own offset (`500 - 60 + 0`) centered against its `clientHeight` (`400`)
+      // and the target's height (`40`): `440 - (200 - 20) = 260`.
+      expect(containerScrollToSpy).toHaveBeenCalledWith({ top: 260, behavior: 'smooth' });
+      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
       expect(component.highlightedSessionId()).toBe(draftStub.job_id);
+      // The `pr-viewport-page` host must never be the thing that scrolls.
+      expect(fixture.nativeElement.scrollTop).toBe(0);
+      expect(container.scrollTop).toBe(0);
+    });
+
+    it('respects prefers-reduced-motion with an immediate jump instead of a smooth scroll', async () => {
+      const { containerScrollToSpy } = stubScrollContainer();
+      const matchMediaSpy = jest.fn().mockReturnValue({ matches: true });
+      (window as any).matchMedia = matchMediaSpy;
+
+      const jobParamMap = convertToParamMap({ job: draftStub.job_id });
+      (component as any).activatedRoute = { snapshot: { queryParamMap: jobParamMap }, queryParamMap: of(jobParamMap) };
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      rectsById[`mdr-session-${draftStub.job_id}`] = { top: 500, bottom: 540, height: 40, left: 0, right: 0, width: 0, x: 0, y: 500 };
+
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+      TestBed.flushEffects();
+      fixture.detectChanges();
+      await Promise.resolve();
+
+      expect(containerScrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
     });
 
     it('does nothing when `job` is absent from the URL', async () => {
+      const { containerScrollToSpy } = stubScrollContainer();
+
       bilateralAiService.draftList.set([draftStub]);
       bilateralAiService.isDraftListLoaded.set(true);
       fixture.detectChanges();
       TestBed.flushEffects();
       await Promise.resolve();
 
-      expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+      expect(containerScrollToSpy).not.toHaveBeenCalled();
+      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
       expect(component.highlightedSessionId()).toBeNull();
+    });
+
+    // Second post-execution bug (P2-3853, found live in Chrome AFTER the route-reuse fix above):
+    // the group element genuinely does NOT exist in the DOM until Angular renders the `@for` for
+    // this very `sessionGroups()` change — no `getElementById` stub here, real render only. With
+    // `queueMicrotask` the deferred callback ran BEFORE that render committed, so `document
+    // .getElementById` returned null and the `if (el)` guard silently ate the scroll — reproduced
+    // live on every load, hard reload included, and the ring auto-cleared 4 s later with the target
+    // still off-screen. `afterNextRender` (see `ngOnInit`'s constructor effect) waits for the actual
+    // render instead.
+    it('scrolls once the target group actually exists in the DOM, even though it does not exist yet when the job id arrives', () => {
+      const container = fixture.nativeElement.querySelector('#workArea') as HTMLElement;
+      container.style.overflowY = 'auto';
+      const containerScrollToSpy = jest.fn();
+      container.scrollTo = containerScrollToSpy;
+
+      const jobParamMap = convertToParamMap({ job: draftStub.job_id });
+      (component as any).activatedRoute = { snapshot: { queryParamMap: jobParamMap }, queryParamMap: of(jobParamMap) };
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      // No group in the DOM yet — drafts have not arrived, `sessionGroups()` is still empty.
+      expect(fixture.nativeElement.querySelector(`#mdr-session-${draftStub.job_id}`)).toBeNull();
+
+      // Drafts arrive. The SAME render that inserts the `@for` group into the DOM is what the
+      // highlight effect's `afterNextRender` callback is waiting for.
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+      TestBed.flushEffects();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector(`#mdr-session-${draftStub.job_id}`)).toBeTruthy();
+      expect(containerScrollToSpy).toHaveBeenCalled();
+    });
+  });
+
+  // `AIQ-T-7` post-execution bug (P2-3853): a real Chrome session showed the target session group
+  // ON SCREEN (16 groups rendered, the matching `#mdr-session-<job>` present) with NO highlight
+  // ring and NO scroll — even though the earlier unit tests above passed. Those tests hand-seed the
+  // scenario by swapping `(component as any).activatedRoute` AFTER the fixture's real `ngOnInit` has
+  // already run once, then calling `ngOnInit()` a SECOND time by hand — a sequence a real routed
+  // component never goes through. This block drives the SAME navigation the "AI processes" drawer's
+  // "View N drafts" performs, through the REAL `Router`/`RouteReuseStrategy`, with no `ngOnInit`
+  // called by hand and no `ActivatedRoute` swapped in after the fact.
+  describe('AIQ-T-7 route-reuse regression: `?job=` arrives via a same-route navigation (P2-3853)', () => {
+    async function setupHarness(): Promise<{
+      harness: RouterTestingHarness;
+      bilateralAiSvc: BilateralAiService;
+    }> {
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [MyDraftResultsComponent],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          PrToastService,
+          provideRouter([
+            { path: ':acronym/drafts', component: MyDraftResultsComponent },
+            { path: '**', children: [] },
+          ]),
+        ],
+      }).compileComponents();
+
+      TestBed.inject(BilateralContextService).setCenter('CIAT', 'CIAT');
+      TestBed.inject(RolesService).roles = { center: [CIAT_MEMBER] };
+      const bilateralAiSvc = TestBed.inject(BilateralAiService);
+      // Drafts already loaded for this centre — the ordinary steady state of a Drafts tab the
+      // user is already looking at when they open the drawer and click "View 1 draft".
+      bilateralAiSvc.draftList.set([draftStub]);
+      bilateralAiSvc.isDraftListLoaded.set(true);
+
+      const harness = await RouterTestingHarness.create();
+      return { harness, bilateralAiSvc };
+    }
+
+    function stubScrollContainer(harness: RouterTestingHarness): { containerScrollToSpy: jest.Mock } {
+      const container = harness.routeNativeElement!.querySelector('#workArea') as HTMLElement;
+      container.style.overflowY = 'auto';
+      const containerScrollToSpy = jest.fn();
+      container.scrollTo = containerScrollToSpy;
+      Object.defineProperty(container, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ top: 60, bottom: 460, height: 400, left: 0, right: 0, width: 0, x: 0, y: 60 }),
+      });
+      Object.defineProperty(container, 'clientHeight', { configurable: true, value: 400 });
+      return { containerScrollToSpy };
+    }
+
+    it('highlights and scrolls when the drawer navigates FROM this same Drafts tab (query-param-only navigation Angular reuses the component for)', async () => {
+      const { harness } = await setupHarness();
+
+      // First visit: no `?job=` — same route the drawer will navigate to next.
+      await harness.navigateByUrl('/CIAT/drafts', MyDraftResultsComponent);
+      harness.detectChanges();
+      const componentBefore = harness.routeDebugElement!.componentInstance as MyDraftResultsComponent;
+
+      const { containerScrollToSpy } = stubScrollContainer(harness);
+
+      // The exact navigation `onViewDrafts` performs (`ai-processes-drawer-host.component.ts`):
+      // SAME route, only `?job=` added. Angular's default `RouteReuseStrategy` keeps this component
+      // instance alive across it (no `ngOnDestroy`/`ngOnInit`) — a snapshot-only read would miss it.
+      await harness.navigateByUrl(`/CIAT/drafts?job=${draftStub.job_id}`, MyDraftResultsComponent);
+      harness.detectChanges();
+
+      const componentAfter = harness.routeDebugElement!.componentInstance as MyDraftResultsComponent;
+      expect(componentAfter).toBe(componentBefore); // proves route reuse actually happened
+
+      const group = harness.routeNativeElement!.querySelector(`#mdr-session-${draftStub.job_id}`) as HTMLElement;
+      expect(group).toBeTruthy();
+      Object.defineProperty(group, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ top: 1392, bottom: 1432, height: 40, left: 0, right: 0, width: 0, x: 0, y: 1392 }),
+      });
+
+      await harness.fixture.whenStable();
+      await Promise.resolve();
+      harness.detectChanges();
+
+      expect(componentAfter.highlightedSessionId()).toBe(draftStub.job_id);
+      expect(containerScrollToSpy).toHaveBeenCalled();
+    });
+
+    it('still highlights and scrolls on a fresh navigation with `?job=` present from the start (hard-reload-equivalent)', async () => {
+      const { harness } = await setupHarness();
+
+      // With `?job=` present and the drafts already cached, the match can be found (and the
+      // scroll computed) DURING `navigateByUrl`'s own internal stabilization — before the test gets
+      // a chance to grab `#workArea` and stub it. So the scroll surface is stubbed globally, ahead
+      // of navigation, rather than on the specific element (`stubScrollContainer` above, which
+      // relies on stubbing a container found only AFTER a first, job-less navigation already
+      // settled — see the route-reuse test above).
+      const originalGetComputedStyle = window.getComputedStyle;
+      const originalScrollTo = (Element.prototype as any).scrollTo;
+      const scrollToSpy = jest.fn();
+      (window as any).getComputedStyle = () => ({ overflowY: 'auto' }) as CSSStyleDeclaration;
+      (Element.prototype as any).scrollTo = scrollToSpy;
+
+      try {
+        await harness.navigateByUrl(`/CIAT/drafts?job=${draftStub.job_id}`, MyDraftResultsComponent);
+        harness.detectChanges();
+        TestBed.flushEffects();
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+        await Promise.resolve();
+        harness.detectChanges();
+
+        const group = harness.routeNativeElement!.querySelector(`#mdr-session-${draftStub.job_id}`);
+        expect(group).toBeTruthy();
+
+        const component = harness.routeDebugElement!.componentInstance as MyDraftResultsComponent;
+        expect(component.highlightedSessionId()).toBe(draftStub.job_id);
+        expect(scrollToSpy).toHaveBeenCalled();
+      } finally {
+        (window as any).getComputedStyle = originalGetComputedStyle;
+        (Element.prototype as any).scrollTo = originalScrollTo;
+      }
     });
   });
 

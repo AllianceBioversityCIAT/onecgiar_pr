@@ -1,14 +1,18 @@
 import {
+  afterNextRender,
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
+  Injector,
   OnDestroy,
   OnInit,
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -148,6 +152,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly ctx = inject(BilateralContextService);
   readonly filter = inject(MyDraftResultsFilterService);
   private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   /**
    * P2-3316: plain-language notes for the three card actions. End users could not tell
@@ -204,12 +210,23 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
    * dependencies and Angular never schedules it to run again once a job id and a matching group
    * both show up later. `highlightApplied` stays a plain flag — it only gates behaviour inside the
    * effect, it is never itself a reason to re-run one.
+   *
+   * ⚠️ Post-execution bug fix (P2-3853): `ngOnInit` used to read `?job=` from
+   * `activatedRoute.snapshot.queryParamMap` ONCE. Angular's default `RouteReuseStrategy` (the app's
+   * own `PrmsRouteReuseStrategy` only special-cases `result-detail/:id`, not this route) reuses the
+   * SAME `MyDraftResultsComponent` instance across a navigation to the SAME route that only changes
+   * query params — e.g. the "AI processes" drawer's "View N drafts" clicked while the user is
+   * ALREADY on this Center's Drafts tab. `ngOnInit` never runs again for that navigation, so a
+   * one-time snapshot read never sees the new `?job=`; live in Chrome this reproduced as "no
+   * highlight, no scroll" even though the target session group was on screen. Fixed by subscribing
+   * to the LIVE `activatedRoute.queryParamMap` (see `ngOnInit`) instead of reading the snapshot once.
    */
   private readonly pendingHighlightJobId = signal<string | null>(null);
   private highlightApplied = false;
   readonly highlightedSessionId = signal<string | null>(null);
   private highlightClearTimer: ReturnType<typeof setTimeout> | null = null;
-  private static readonly HIGHLIGHT_MS = 4000;
+  /** Delay of the corrective second scroll pass (see the highlight effect). */
+  private static readonly SCROLL_SETTLE_MS = 600;
 
   constructor() {
     effect(() => {
@@ -224,13 +241,32 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
       if (!match) return;
       this.highlightApplied = true;
       this.highlightedSessionId.set(match.sessionId);
-      // Deferred: the group's element mounts from this very `sessionGroups()` change, so it is not
-      // yet in the DOM on this synchronous pass.
-      queueMicrotask(() => {
-        document.getElementById(`mdr-session-${match.sessionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
+      // `afterNextRender`, not `queueMicrotask` (post-execution bug fix, P2-3853): a microtask
+      // queued from inside this effect runs BEFORE Angular renders the `@for` groups triggered by
+      // this very `sessionGroups()` change — `document.getElementById` returned null and the `if
+      // (el)` guard silently skipped the scroll, live in Chrome, on every load (hard reload
+      // included). `afterNextRender` runs after the browser has actually painted the new DOM, so
+      // the target element and its layout are real.
+      //
+      // The highlight no longer auto-clears (user decision, 2026-09-29): the card stays active for
+      // as long as `?job=` is in the URL, so a reload or a shared link lands on the same state. It
+      // is cleared when `?job=` goes away (see the `queryParamMap` subscription in `ngOnInit`).
+      //
+      // A second, instant pass corrects the first one: rows below the target keep rendering after
+      // this first paint, and live in Chrome the first scroll stopped at 322 px with the card still
+      // below the fold.
       if (this.highlightClearTimer) clearTimeout(this.highlightClearTimer);
-      this.highlightClearTimer = setTimeout(() => this.highlightedSessionId.set(null), MyDraftResultsComponent.HIGHLIGHT_MS);
+      afterNextRender(
+        () => {
+          const scrollToTarget = (instant: boolean) => {
+            const el = document.getElementById(`mdr-session-${match.sessionId}`);
+            if (el) this.scrollWithinNearestScrollContainer(el, instant);
+          };
+          scrollToTarget(false);
+          this.highlightClearTimer = setTimeout(() => scrollToTarget(true), MyDraftResultsComponent.SCROLL_SETTLE_MS);
+        },
+        { injector: this.injector },
+      );
     });
 
     effect(() => {
@@ -265,6 +301,58 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * `AIQ-R-9` D / P-19 (post-execution bug fix, P2-3853) — `Element.scrollIntoView()` walks and
+   * scrolls EVERY scrollable ancestor, not just the intended one. The page host carries
+   * `pr-viewport-page` (`host: { class: 'pr-viewport-page' }` above), which is `overflow: hidden`
+   * at ≥900px (`_viewport-page.scss`) — `scrollIntoView` still scrolled it (measured: `scrollTop`
+   * became 57 in Chrome), hiding the Center header/tabs above this page with no way back short of a
+   * reload. The REAL scroll container is `#workArea`
+   * (`class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto"` in the template) —
+   * this walks up from the target to the nearest `overflow-y: auto|scroll` ancestor and scrolls
+   * ONLY that element via `scrollTo`, never touching the `pr-viewport-page` host.
+   */
+  private findNearestScrollContainer(el: HTMLElement): HTMLElement | null {
+    // An `overflow-y: auto` ancestor is not necessarily the one that scrolls: `div.mdr` is
+    // `overflow-y: auto` but never overflows, so scrolling it moved nothing while `#workArea`
+    // (the real scroller) stayed at 0 (measured in Chrome, 2026-09-29). Prefer the first ancestor
+    // that actually overflows; fall back to the first `auto|scroll` one (jsdom has no layout, so
+    // every height is 0 there).
+    let firstCandidate: HTMLElement | null = null;
+    let node: HTMLElement | null = el.parentElement;
+    while (node) {
+      const overflowY = window.getComputedStyle(node).overflowY;
+      if (overflowY === 'auto' || overflowY === 'scroll') {
+        if (node.scrollHeight > node.clientHeight) return node;
+        firstCandidate ??= node;
+      }
+      node = node.parentElement;
+    }
+    return firstCandidate;
+  }
+
+  /** Centers `el` within its nearest scrollable ancestor (the `scrollIntoView({block:'center'})`
+   * this replaces), respecting `prefers-reduced-motion` (`AIQ-R-9` D kept `behavior:'smooth'`; a
+   * reduced-motion user gets the jump instead, same convention as `bilateral-overview`'s
+   * `scrollToAttention()`). No-ops when no scrollable ancestor is found — never falls back to
+   * `scrollIntoView`, which is exactly the bug this exists to avoid. */
+  private scrollWithinNearestScrollContainer(el: HTMLElement, instant = false): void {
+    const container = this.findNearestScrollContainer(el);
+    if (!container) return;
+
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const topWithinContainer = elRect.top - containerRect.top + container.scrollTop;
+    const centeredTop = topWithinContainer - (container.clientHeight / 2 - elRect.height / 2);
+
+    container.scrollTo({ top: Math.max(0, centeredTop), behavior: reduceMotion || instant ? 'auto' : 'smooth' });
+  }
+
   ngOnInit(): void {
     this.bilateralAiService.loadAllDrafts();
 
@@ -278,11 +366,22 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     // `AIQ-R-9` D / P-19: `?job=<id>` (not part of the shared contract above — it is the AI queue's
     // own deep link, not a filter) — the matching session group is highlighted and scrolled into
     // view once it appears (see the constructor's effect).
-    const jobId = this.activatedRoute.snapshot.queryParamMap.get('job');
-    if (jobId) {
+    //
+    // ⚠️ Post-execution bug fix (P2-3853): subscribes to the LIVE `queryParamMap`, not a one-time
+    // `snapshot` read — Angular's default route reuse keeps this component alive across a
+    // navigation that only changes query params (e.g. the "AI processes" drawer's "View N drafts"
+    // clicked while already on this Center's Drafts tab), so `ngOnInit` never runs a second time and
+    // a snapshot read would never see the new `?job=`. The Observable emits the current value
+    // immediately on subscribe, so this still covers the first load (hard reload / fresh
+    // navigation) exactly like the old snapshot read did.
+    this.activatedRoute.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(map => {
+      const jobId = map.get('job');
+      if (jobId === this.pendingHighlightJobId()) return;
       this.highlightApplied = false;
       this.pendingHighlightJobId.set(jobId);
-    }
+      // The highlight lives exactly as long as `?job=` does.
+      if (!jobId) this.highlightedSessionId.set(null);
+    });
   }
 
   // ── P2-3319 · Filter by project ───────────────────────────────────────
