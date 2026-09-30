@@ -138,7 +138,7 @@ Every eligibility check runs before the first write, because the create's transa
 
 | # | Item | Owner |
 |---|---|---|
-| `OQ-1` | Does STAR send the **full** result (all MDS), or only changed fields? Full → replace semantics (recommended). Partial → a much larger merge design | **Manuel (STAR)**, asked 2026-09-30 |
+| `OQ-1` | Does STAR send the **full** result (all MDS), or only changed fields? Full → replace semantics (recommended). Partial → a much larger merge design | **Closed 2026-09-30:** Manuel confirmed full data, so replace semantics |
 | `OQ-2` | Which statuses may be **updated** in the open phase: Editing, Draft, Pending Review? Approved → reject, or reopen? | User / PO (Ángel) |
 | `OQ-3` | After **version with data**: Pending Review (like `create`) or Editing (like `/version`)? Proposal: honour `keep_editing`, the same rule `create` uses | User |
 | `OQ-4` | Should Knowledge Products be excluded from update too, or only from versioning? | User |

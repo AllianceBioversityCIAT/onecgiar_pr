@@ -35,7 +35,7 @@ It is not safe to reuse the create writers on an existing result, because severa
 
 ## 3. Premise Ledger
 
-**Count:** 16 rows. 14 verified, 2 `UNVERIFIED` (both `Low`).
+**Count:** 16 rows. 14 verified, 1 settled by the stakeholder (`P-16`), 1 `UNVERIFIED` (`Low`).
 
 **Blast-radius triggers:** all three fire.
 - `live-path`: the design names the create call. See `P-1`.
@@ -59,7 +59,7 @@ It is not safe to reuse the create writers on an existing result, because severa
 | `P-13` | `create()` returns only the **last** result's enriched entity; the per-result `createdResults` is built and never returned | `existence` | `svc:553-560`, `:589-593`; `createdResults` only at `:304`, `:543` | `35e58fd87` | `R-10` would need no new field — **Low** | verified |
 | `P-14` | The Fetcher counts results from `data.response`: an array → its length; `response.results[]` → that array's length; otherwise 1 | `consumer` | Fetcher `external-api.mjs:139-157` | Fetcher `origin/main` | The response extension could change the Fetcher's count — **Low** | verified |
 | `P-15` | The producers that read `create` responses and errors are STAR, MEL, TIP and the bulk uploader. Beyond the Fetcher, what each one reads is not in these repositories | `consumer` | `UNVERIFIED — confirm at source before relying on it` | `—` | A producer parses a field we change — **Low** (the change is additive) | the contract-doc change log (T-5); STAR confirms on `OQ-1` |
-| `P-16` | STAR sends the full result, all MDS, on update and version (`A-1`) | `other` | `UNVERIFIED — confirm at source before relying on it`; user-stated 2026-09-30 | `—` | Replace semantics are wrong; the spec is re-sized — **Low** now, **High** if refuted | Manuel (STAR), `OQ-1`, before T-3 |
+| `P-16` | STAR sends the full result, all MDS, on update and version (`A-1`) | `other` | **Settled 2026-09-30:** Manuel (STAR) confirmed that STAR sends the complete data, relayed by the user in session. A stakeholder decision, not a code fact | `—` | Replace semantics are wrong; the spec is re-sized — **High** if refuted | settled (`OQ-1` closed) |
 
 ## 4. Architecture Overview
 

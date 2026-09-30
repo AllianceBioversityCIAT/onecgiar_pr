@@ -98,7 +98,7 @@
 ### `UBC-T-3` — Update in place: header, immutable type, title rule, and a preflight of the post-header checks
 
 - **Type:** `server` · **Size:** `M` · **Depends on:** `UBC-T-1`
-- **First step:** settle `P-16` (`OQ-1`). Confirm with the user that STAR sends the full result. If STAR does not, stop and raise a **Pivot** (partial semantics).
+- **Precondition (settled 2026-09-30):** `P-16` / `OQ-1`: Manuel confirmed that STAR sends the full result. Replace semantics stand. If a producer later sends partial data, that is a new change, not this task.
 - **Implements:** `UBC-R-2`, `R-7`, `R-9`, `R-20`; the update half of `R-10`
 - **Design:** `DD-1` (preflight hoist), `DD-3` (header part), `DD-4`, `DD-7`; `P-5`, `P-12`
 - **Files (expected):** `bilateral/bilateral.service.ts` + spec; handler files only if a check is hoisted
@@ -130,7 +130,7 @@
     - `bilateral.service.spec.ts`
     - the handler specs of any hoisted check
 - **Definition of done:**
-  - [ ] `P-16` settled and recorded in `execution.md`
+  - [x] `P-16` settled (Manuel, 2026-09-30); record it in `execution.md` when T-3 runs
   - [ ] `R-2` (header): same `id` and code, new data
   - [ ] `R-9`: own title allowed, another result's title rejected
   - [ ] `DD-4`: a type change returns 409

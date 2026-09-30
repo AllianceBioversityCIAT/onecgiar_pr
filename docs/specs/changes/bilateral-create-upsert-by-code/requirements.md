@@ -106,7 +106,7 @@ Current behavior. Every claim below is cited as run at `35e58fd87` unless marked
 ### Assumption carried from the proposal
 
 - **`A-1` — Full payload.** Producers send the **full** result on update and on version, including all MDS. Replace semantics follow from this.
-  - Source: the user's proposal to STAR, 2026-09-30. `user-stated`, pending Manuel's answer (`OQ-1`).
+  - Source: **confirmed by Manuel (STAR) on 2026-09-30**, relayed by the user. `OQ-1` is closed.
   - If STAR needs partial updates, `UBC-R-2` and `UBC-R-3` change and this spec is re-sized.
 
 ## 7. Scenarios
