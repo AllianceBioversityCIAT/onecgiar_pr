@@ -1,8 +1,9 @@
 // @akili-spec bilateral/ai-processing-queue (AIQ-T-8 First step, P-18; attempt 2 a11y review)
 //
 // P-18 measurement — settles `AIQ-DD-7`: can `HlmDialogService.open(..., AI_PROCESSES_DRAWER_
-// DIALOG_OPTIONS)` alone produce a right-anchored, full-height panel (440px at >= 640px,
-// full-screen below it) with a real focus trap (Tab/Shift+Tab wrap), Escape-to-close, scrim-click-
+// DIALOG_OPTIONS)` alone produce a right-anchored, full-height panel (520px at >= 640px, widened
+// from 440px post-execution per user decision, testing pass — knowingly overrides `AIQ-R-12` B's
+// 440px; full-screen below 640px) with a real focus trap (Tab/Shift+Tab wrap), Escape-to-close, scrim-click-
 // to-close, focus restore, and a named dialog — WITHOUT a hand-rolled shell? `@spartan-ng/brain`
 // (and so CDK Dialog) is globally mocked to an inert stub under Jest
 // (`tests/mocks/spartanBrainMock.ts`), so this can only be answered here, in a real
@@ -32,7 +33,7 @@
 // measuring.
 //
 // Discovery worth recording (attempt 3): with the animation settled, `right`/`top`/`width` all
-// measured correctly (`fixed`/`inset-y-0`/`right-0`/`sm:w-[440px]` DO win via `tailwind-merge`), but
+// measured correctly (`fixed`/`inset-y-0`/`right-0`/`sm:w-[520px]` DO win via `tailwind-merge`), but
 // `bottom` measured ~511px instead of 800 — the panel was NOT full height. Cause: `h-dvh` on
 // `hlm-dialog-content` is a real length, but Angular custom elements default to `display: inline`
 // with no CSS of their own, so `ProbeDrawerHostComponent`'s own host element (the wrapper this file's
@@ -106,7 +107,7 @@ function openAndSettle(): void {
 }
 
 describe('P-18 probe — AiProcessesDrawerComponent via HlmDialogService (AIQ-T-8 First step)', () => {
-  it('at 1280x800: right-anchored, full height, 440px wide', () => {
+  it('at 1280x800: right-anchored, full height, 520px wide', () => {
     cy.viewport(1280, 800);
     mountProbe();
     openAndSettle();
@@ -117,7 +118,7 @@ describe('P-18 probe — AiProcessesDrawerComponent via HlmDialogService (AIQ-T-
       expect(rect.right, 'panel right edge at viewport width').to.be.closeTo(1280, 2);
       expect(rect.top, 'panel top at 0 (full height)').to.be.closeTo(0, 2);
       expect(rect.bottom, 'panel bottom at viewport height (full height)').to.be.closeTo(800, 2);
-      expect(rect.width, 'panel width 440px').to.be.closeTo(440, 2);
+      expect(rect.width, 'panel width 520px').to.be.closeTo(520, 2);
     });
   });
 

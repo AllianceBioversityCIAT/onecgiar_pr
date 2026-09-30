@@ -810,3 +810,9 @@
 - `cff899dcf`: removed the running-card accent rail ("too AI"). Running cards now use the neutral `--pr-border`. The card spec asserts that no rail is rendered. 46 tests passed (Leader re-run).
 - Toast width changed from 320 px to 400 px (`pr-toast.component.scss:11`), and `max-width: calc(100vw - 40px)` is kept. This applies to **every** toast in the app because the host is shared. pr-toast has 7 tests passing, and no spec asserted a width of 320.
 - Neither tweak went through an independent Reviewer. Both are user-directed style changes and are covered by the PR 2 review.
+- **Drawer width changed from 440 px to 520 px at ≥ 640 px (user decision; deviation from `AIQ-R-12` B / design §6.5, which specify 440 px).**
+  - Where: `AI_PROCESSES_DRAWER_SHEET_CLASS` (`ai-processes-drawer.component.ts:181`). The CT geometry test now asserts 520, and `ai-processes-drawer/CLAUDE.md` records the deviation.
+  - Verification: Jest 28 passed, lint clean.
+  - CT: 5/6 on the first run, then 6/6 on an immediate rerun. The failure was a 375 px full-screen assertion off by about 9 px, and it happened once. **Forward pointer → `AIQ-T-11`:** treat that 375 px sheet assertion as flaky and investigate before trusting CT as a gate.
+  - **Spec text still says 440 px.** Amend `requirements.md` `AIQ-R-12` B and design §6.5 at `/akili-archive`.
+- **Drawer header** (`e4c755a00`): single header block, icon tile removed, subtitle at full width, lanes strip inside the header.

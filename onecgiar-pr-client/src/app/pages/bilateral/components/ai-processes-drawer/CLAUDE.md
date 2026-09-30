@@ -69,9 +69,11 @@ injectable that opens/closes the dialog by reacting to `BilateralAiService.drawe
   `ariaLabelledBy: 'ai-processes-drawer-title'` option is what names the REAL dialog now.
 - **P-18 CONFIRMED** (2026-09-29, real Chromium/Electron CT, `ai-processes-drawer.cy.ts`):
   `HlmDialogService.open(WrapperComponent, AI_PROCESSES_DRAWER_DIALOG_OPTIONS)` produces the
-  right-anchored/full-height/440px/full-screen-below-640px geometry, a real CDK focus trap with
+  right-anchored/full-height/520px/full-screen-below-640px geometry, a real CDK focus trap with
   Tab/Shift+Tab wrap, `Esc` close, scrim-click close, focus restore, and a named dialog. No
-  quality-assessment shell fallback needed.
+  quality-assessment shell fallback needed. Widened 440px → 520px post-execution (user decision,
+  testing pass, 2026-09-29) — knowingly overrides `AIQ-R-12` B's 440px; `requirements.md`/`design.md`
+  intentionally not edited, the deviation is the Leader's to record.
 - `HlmDialogService.open()` cannot pass `@Input()`s to the opened component (`NgComponentOutlet`
   binds no `ngComponentOutletInputs`) and cannot open a raw `TemplateRef` either (its TYPE signature
   allows one, but the implementation routes it through the SAME `NgComponentOutlet` branch, which
@@ -102,4 +104,4 @@ injectable that opens/closes the dialog by reacting to `BilateralAiService.drawe
   `bilateral-query-params.ts` (`AI_QUEUE_PROJECT_QUERY_PARAM`/`AI_QUEUE_WAY_QUERY_PARAM`), not
   duplicated here.
 
-**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · 0771414d6
+**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · widened drawer to 520px

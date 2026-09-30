@@ -28,7 +28,7 @@ import { BILATERAL_AI_PROCESSES_COPY as COPY } from '../../../../internationaliz
  *
  * **P-18 CONFIRMED** (`ai-processes-drawer.cy.ts`, real Chromium/Electron + CDK, 2026-09-29):
  * `HlmDialogService.open` with `AI_PROCESSES_DRAWER_SHEET_CLASS` produces a right-anchored,
- * full-height, 440px panel at 1280px and a full-screen sheet at 375px, with CDK's real focus trap
+ * full-height, 520px panel at 1280px and a full-screen sheet at 375px, with CDK's real focus trap
  * (Tab/Shift+Tab wrap), `Esc`-to-close, scrim-click-to-close and focus-restore-to-trigger all
  * working — no quality-assessment shell fallback needed for `AIQ-DD-7`, and no second, hand-rolled
  * trap in this component (attempt 1 shipped one; a11y review correctly called it out as the exact
@@ -173,8 +173,10 @@ export class AiProcessesDrawerComponent {
  * `@spartan/utils`, later source wins per conflicting utility group), so `fixed`/`inset-y-0`/
  * `right-0` replace `relative`'s positioning entirely (a `position: fixed` element establishes its
  * own containing block against the viewport, ignoring the overlay's centering flex wrapper) and
- * `sm:w-[440px]` replaces `sm:max-w-md`. Measured in `ai-processes-drawer.cy.ts` (P-18 probe) —
+ * `sm:w-[520px]` replaces `sm:max-w-md`. Measured in `ai-processes-drawer.cy.ts` (P-18 probe) —
  * see that file and the task report for the recorded outcome and the DD-7 decision it produced.
+ * Widened from 440px to 520px post-execution (user decision, testing pass) — knowingly overrides
+ * `AIQ-R-12` B's 440px; `max-w-[520px]` keeps the same viewport guard.
  */
 export const AI_PROCESSES_DRAWER_SHEET_CLASS =
-  'fixed! inset-y-0! right-0! left-auto! top-0! bottom-0! m-0! h-dvh! w-full! sm:w-[440px]! max-w-full! sm:max-w-[440px]! rounded-none! p-0! flex! flex-col! gap-0!';
+  'fixed! inset-y-0! right-0! left-auto! top-0! bottom-0! m-0! h-dvh! w-full! sm:w-[520px]! max-w-full! sm:max-w-[520px]! rounded-none! p-0! flex! flex-col! gap-0!';
