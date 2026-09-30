@@ -804,3 +804,9 @@
   - Implementer: 41 passed, lint clean.
   - Leader re-run: 41 passed. **VERIFIED**.
 - **Review:** no independent Reviewer (a user-directed one-line fix). It is covered by the PR 2 review.
+
+## Post-execution design tweaks from local testing (user decisions, 2026-09-29)
+
+- `cff899dcf`: removed the running-card accent rail ("too AI"). Running cards now use the neutral `--pr-border`. The card spec asserts that no rail is rendered. 46 tests passed (Leader re-run).
+- Toast width changed from 320 px to 400 px (`pr-toast.component.scss:11`), and `max-width: calc(100vw - 40px)` is kept. This applies to **every** toast in the app because the host is shared. pr-toast has 7 tests passing, and no spec asserted a width of 320.
+- Neither tweak went through an independent Reviewer. Both are user-directed style changes and are covered by the PR 2 review.
