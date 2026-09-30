@@ -20,7 +20,6 @@ import { SectionZeroDashboardComponent } from '../../components/section-zero-das
 import { BilateralProjectSelectorComponent } from '../../components/bilateral-project-selector/bilateral-project-selector.component';
 import { BilateralSpSelectorComponent } from '../../components/bilateral-sp-selector/bilateral-sp-selector.component';
 import { BilateralReportingWaySelectorComponent } from '../../components/bilateral-reporting-way-selector/bilateral-reporting-way-selector.component';
-import { BilateralManualCreateDrawerHostComponent } from '../../components/bilateral-manual-create-drawer-host/bilateral-manual-create-drawer-host.component';
 import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { SectionGeneralInfoComponent } from '../../components/section-general-info/section-general-info.component';
 import { SectionContributorsComponent } from '../../components/section-contributors/section-contributors.component';
@@ -49,7 +48,6 @@ import { SaveButtonService } from '../../../../custom-fields/save-button/save-bu
     BilateralProjectSelectorComponent,
     BilateralSpSelectorComponent,
     BilateralReportingWaySelectorComponent,
-    BilateralManualCreateDrawerHostComponent,
     BilateralAiUploadComponent,
     SectionGeneralInfoComponent,
     SectionContributorsComponent,

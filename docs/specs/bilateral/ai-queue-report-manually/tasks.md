@@ -6,7 +6,7 @@
 - **Linked spec:** `requirements.md` + `design.md` (same folder)
 - **Ticket:** P2-3853 · commits `<emoji> <type>(<scope>) [P2-3853] [SPEC:bilateral/ai-queue-report-manually]: …`
 - **Owner / driver:** Juan David Delgado
-- **Status:** in-progress (T-1 done)
+- **Status:** in-progress (T-1, T-2 done)
 - **Budget (design §10):** 4 tasks · ~220 LOC · 1–2 review rounds per code task. Exceeding it → the Leader stops and escalates.
 
 ## 2. Pre-flight checklist
@@ -57,13 +57,13 @@
 - **Done:** all of the above green; falsifiers executed against the post-change code and observed red; no `new Date(`, hex or hard-coded copy added.
 - **Skills:** `angular-developer`, `tdd`
 
-### [ ] `ARM-T-2` — Mount the create drawer once in the bilateral shell
+### [x] `ARM-T-2` — Mount the create drawer once in the bilateral shell
 
 - **Type:** client
 - **Description:**
   - Import `BilateralManualCreateDrawerHostComponent` (standalone) into `BilateralModule`, and render `<app-bilateral-manual-create-drawer-host />` in `bilateral.component.html` next to the `router-outlet`.
   - Remove the mount and its import from `bilateral-result-creator` and from `bilateral-projects-panel` (template and `imports`).
-  - Move the panel's DI-regression test (`bilateral-projects-panel.component.spec.ts:240-250`, which opens the drawer via `beginFromProject` and picks a primary Program with secondary Programs) to a spec that renders the host **without** `BilateralAutoSaveService`, so it still renders the accordion.
+  - Move the panel's DI-regression test (`bilateral-projects-panel.component.spec.ts:240-250`, which opens the drawer via `beginFromProject` and picks a primary Program with secondary Programs) to a spec that renders the host **without** `BilateralAutoSaveService`, so it renders the drawer's list-layout child tree with no creator-scoped provider (amended 2026-09-30: the accordion is not rendered in `list` layout; its optional-inject guard is `bilateral-sp-selector.component.spec.ts:377`).
   - Update the folder `CLAUDE.md` files of the creator, the projects panel and the drawer host to the single-mount model.
 - **Implements:** `ARM-R-3` A ("the create drawer opens on `drafts`"), B ("exactly one create drawer is rendered", "AND IT MUST keep the current behavior of both existing entries"); design DD-1 (with its reversion-challenge items 1 and 2).
 - **Files:** `pages/bilateral/bilateral.component.html`, `bilateral.module.ts`, `bilateral.component.spec.ts`; `pages/bilateral-result-creator/bilateral-result-creator.component.{ts,html}` (+spec if it asserts the host); `pages/bilateral-home/components/bilateral-projects-panel/bilateral-projects-panel.component.{ts,html,spec.ts}`; host spec; the three `CLAUDE.md` files
@@ -75,7 +75,7 @@
   - The moved DI test is green without an autosave provider.
   - Static gate: `grep -rn "<app-bilateral-manual-create-drawer-host" onecgiar-pr-client/src/app --include='*.html'` → exactly 1 hit, in `bilateral.component.html`. Baseline before the change: 2 hits (creator `:39`, panel `:448`).
 - **Verification:** `npx jest src/app/pages/bilateral/bilateral.component src/app/pages/bilateral/pages/bilateral-home src/app/pages/bilateral/pages/bilateral-result-creator src/app/pages/bilateral/components/bilateral-manual-create-drawer-host --silent --reporters=summary --no-coverage` · `npx tsc --noEmit -p tsconfig.app.json` · `npx ng lint --quiet` · the static grep above
-- **Falsifier:** leave the creator mount in place → the grep returns 2 and the creator "0 instances" spec is red. Make `BilateralAutoSaveService` a required inject in the accordion → the moved DI test is red, which proves it really renders the accordion.
+- **Falsifier:** leave the creator mount in place → the grep returns 2 and the creator "0 instances" spec is red. Add a required `inject(BilateralAutoSaveService)` to `BilateralSpSelectorComponent` → the host DI test is red (amended 2026-09-30; the original accordion mutation cannot go red because the drawer never renders the accordion).
 - **Red run:** the shell "exactly 1" spec before adding the mount: 0 found, red on the count assertion.
 - **Disqualifier:** a DI test that supplies a `BilateralAutoSaveService` mock proves nothing (the `bilateral-sp-selector.component.spec.ts:368-378` lesson).
 - **Consumers:** `bilateral-projects-panel.component.spec.ts`, `bilateral-result-creator.component.spec.ts`, `bilateral-manual-create-drawer-host.component.spec.ts`, `bilateral.component.spec.ts`; comment-only references in `bilateral-accordion.component.ts:32`, `bilateral-ai-upload.component.ts:59,159`, `bilateral-ai-upload.component.spec.ts:364`, `bilateral-sp-selector.component.spec.ts:372` (update the text when it names the panel as the mount).

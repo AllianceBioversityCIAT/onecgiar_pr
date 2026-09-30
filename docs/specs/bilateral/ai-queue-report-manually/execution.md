@@ -90,3 +90,64 @@
   - LOC: +406 for T-1 alone, against the spec-wide ~220 estimate. Specs account for ≈276 of these lines. **Budget tripwire fired; escalated at the T-1 gate.**
 - **Final verification:** `VERIFIED` + Reviewer `PASS`.
 
+## Budget Escalation: after ARM-T-1
+
+- **Delta:** T-1 alone is +406 LOC against the spec-wide ~220 estimate (≈276 of it spec code). Review rounds: 2, within budget.
+- **Cause:** the race, token, path-change and replay cases need a deferred-emission harness and a table of router states. The design estimated ≈130 spec LOC for the whole spec.
+- **User decision (2026-09-30):** "Sigue". Continue with T-2 and accept the LOC overrun.
+- **Gate:** T-1 continue gate passed by the user (gated mode).
+
+### ARM-T-2 — Mount the create drawer once in the bilateral shell — PASS (attempt 1)
+
+- **Skills:** `angular-developer` · **Effort:** `medium`
+- **runtime events:** user stop ×1, falsifier 2 mutation left applied in `bilateral-accordion.component.ts`. Rung 3 (resume by message) was not possible because the harness marked the worker cancelled. Recovered at rung 4: a fresh worker audited the partial diff and finished it. The user said "Continua".
+- **Files changed:**
+  - `bilateral.component.{html,spec.ts}` and `bilateral.module.ts`: shell mount and import; the shell spec asserts exactly 1 host.
+  - Creator `.{ts,html,spec.ts}`: mount removed; the spec asserts 0 instances.
+  - Projects panel `.{ts,html,spec.ts}`: mount removed; spec asserts 0 instances. The duplicate DI test was removed and deduplicated onto the existing host test (`bilateral-manual-create-drawer-host.component.spec.ts:132`). This is a dedup, not a move.
+  - Drawer-host spec: comment only.
+  - `bilateral-accordion.component.ts`: comment only.
+  - Creator `CLAUDE.md`: re-stamped.
+  - The panel and host folders have no `CLAUDE.md`. None was created.
+- **Implementer verification:**
+  - Red run: with the shell mount removed, the spec fails `Expected: 1, Received: 0`.
+  - Falsifier 1: with the creator mount left in place, the grep finds 2 and the spec fails `Expected: 0, Received: 1`.
+  - **Falsifier 2 did not go red.** The drawer mounts the sp-selector with `primaryLayout="list"`, and the accordion only renders in the `dropdown` branch (`bilateral-sp-selector.component.html:66` vs `:100`).
+  - Jest 196/196. App `tsc` clean. No new spec-`tsc` errors. Lint passes. Grep finds 1.
+- **Evidence re-run (Leader, inline):** `VERIFIED`.
+  - Same Jest scope: 196/196.
+  - App `tsc` exits 0.
+  - Spec `tsc`: only pre-existing errors (drawer-host :18; panel :64, :75, :86).
+  - Lint passes.
+  - Grep finds 1 hit, at `bilateral.component.html:2`.
+  - The accordion `inject` line is unchanged against HEAD.
+- **Reviewer:** `PASS`.
+  - No issues.
+  - Falsifier-2 finding confirmed. The DD-1 conclusion "no breakage" holds more strongly than stated: no child of the drawer host injects `BilateralAutoSaveService` or `BilateralMdsTrackerService`, and the drawer never renders the accordion.
+- **ADVISORY (final verdict), all resolved post-review (see below):**
+  - Three comments claimed the drawer renders the accordion.
+  - `bilateral-ai-upload/CLAUDE.md:69-71` still named the panel mount.
+  - The panel DI test is a dedup, not a move.
+- **Execute-time spec edits** (no approved requirement changes meaning; user instruction 2026-09-30: "Implementa eso tu asap"):
+  - `tasks.md` ARM-T-2, Description bullet 3: the DI test now proves the list-layout child tree has no creator-scoped provider.
+  - `tasks.md` ARM-T-2, Falsifier sentence 2: the mutation is now a required `inject(BilateralAutoSaveService)` in `BilateralSpSelectorComponent`.
+  - `design.md` `ARM-DD-1`, reversion item 1: the real reason there is no breakage is the list layout.
+  - The next Reviewer brief (ARM-T-3) carries these as named conformance checks.
+- **Leader-inline post-review edits (user-authorized fallback; Leader-authored, so no independent review):**
+  - Amended falsifier 2 executed: a required `inject(BilateralAutoSaveService)` in `BilateralSpSelectorComponent` turned 5 host-spec tests red with `NullInjectorError`, among them the DI test "lets a primary SP pick with secondary SPs render the inline contributing section without throwing". Restored; `git diff` shows no residue in the sp-selector.
+  - The three false comments were rewritten: the accordion (`:28-37`), the drawer-host spec (`:126-131`), and the panel spec (dedup wording).
+  - `bilateral-ai-upload/CLAUDE.md` mount line updated.
+  - Re-verification: Jest over the shell, bilateral-home, creator, drawer host and sp-selector, 226/226. Lint passes.
+- **Requirements covered:** `ARM-R-3` A and B; `ARM-DD-1` (items 1–4).
+- **Final verification:** `VERIFIED` + Reviewer `PASS`, plus the Leader-inline comment and spec-text edits recorded above.
+
+## REVIEW_WAIVED: ARM-T-2 (post-review edits only)
+
+| Field | Content |
+|---|---|
+| flag | `inline` |
+| cause | After the Reviewer's `PASS`, the user asked the Leader to apply the advisory fixes and the spec amendment directly for speed. The edits are comment text, one `CLAUDE.md` line and spec wording; no executable code changed. |
+| approved by | user, 2026-09-30 ("Mano, estas muy demorado. Implementa eso tu asap") |
+| verification that stood in | amended falsifier 2 observed red (`NullInjectorError`) then restored; scoped Jest 226/226; `ng lint --quiet` passes; run by the Leader |
+| models | Implementer Sonnet (T2) / Reviewer Opus (T3) for the code diff; Leader Opus 5.5 for the post-review edits |
+

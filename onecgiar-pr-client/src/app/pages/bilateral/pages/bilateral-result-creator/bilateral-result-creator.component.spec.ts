@@ -280,6 +280,14 @@ describe('BilateralResultCreatorComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  // `ARM-T-2` (bilateral/ai-queue-report-manually): the create drawer host used to be mounted
+  // here (`bilateral-result-creator.component.html:39`) and is now mounted once in the bilateral
+  // shell (`bilateral.component.html`, `ARM-DD-1`), reachable from every bilateral route. This
+  // component only drives the flow's signals via `manualCreateFlow` (mocked above).
+  it('ARM-T-2: does not render the manual create drawer host directly (single shell mount)', () => {
+    expect(fixture.nativeElement.querySelectorAll('app-bilateral-manual-create-drawer-host').length).toBe(0);
+  });
+
   it('does not flush autosave while the browser is refreshing or closing', () => {
     creationService.currentResultId.set(42);
     component.resultId.set(42);
