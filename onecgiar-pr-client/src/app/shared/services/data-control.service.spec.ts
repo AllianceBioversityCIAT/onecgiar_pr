@@ -1,5 +1,6 @@
 import { DataControlService } from './data-control.service';
 import { of } from 'rxjs';
+import { computed } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -16,6 +17,19 @@ describe('DataControlService', () => {
       GET_versioning: jest.fn()
     };
     service = new DataControlService(titleServiceMock, resultsSE);
+  });
+
+  describe('myInitiativesList reactivity', () => {
+    // A non-admin who opens a Science Program before updateUserData() resolves must still get the
+    // "Report emerging result" CTA once the list arrives (EntityAowService.canReportResults).
+    it('recomputes a computed() that read the list before it was loaded', () => {
+      const hasSp10 = computed(() => service.myInitiativesList.some(i => i.official_code === 'SP10'));
+      expect(hasSp10()).toBe(false);
+
+      service.myInitiativesList = [{ official_code: 'SP10' }];
+
+      expect(hasSp10()).toBe(true);
+    });
   });
 
   describe('getCurrentPhases', () => {

@@ -79,8 +79,11 @@
                 </app-pr-input>
             </div>
             <div class="right_content">
+                <!-- P2-3844: required only once the row is real (saved, or an actor type picked), like the
+                     other fields of the row. The blank row the step adds when there are no actors made the alert
+                     ask for an "Evidence link" the reporter could not place, while the server's check was green. -->
                 <app-pr-input placeholder="Enter text" label="Evidence link" type="link"
-                    [required]="true" [(ngModel)]="actorItem.evidence_link">
+                    [required]="!!actorItem?.result_ip_actors_id || !!actorItem?.actor_type_id" [(ngModel)]="actorItem.evidence_link">
                 </app-pr-input>
             </div>
         </div>
@@ -134,8 +137,10 @@
                     [(ngModel)]="organizationItem.graduate_students">
                 </app-pr-input>
 
+                <!-- P2-3844: same rule as the Actors row above — the blank row the step adds when there are no
+                     organizations must not demand an evidence link. -->
                 <app-pr-input placeholder="Enter text" label="Evidence link" type="link"
-                    [(ngModel)]="organizationItem.evidence_link" [required]="true">
+                    [(ngModel)]="organizationItem.evidence_link" [required]="!!organizationItem?.id || !!organizationItem?.institution_types_id">
                 </app-pr-input>
             </div>
         </div>

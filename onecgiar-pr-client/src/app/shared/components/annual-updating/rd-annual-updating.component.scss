@@ -1,0 +1,116 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
+.local_container {
+  padding: 20px 80px;
+  padding-top: 50px;
+
+  .annual_updating {
+    box-shadow: 0px 0px 5px 5px rgba(var(--pr-color-black-rgb), 0.071);
+    border-radius: 10px;
+    padding: 30px;
+
+    .title {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 20px;
+
+      strong {
+        @include fonts.pr-typography('h1');
+        font-weight: 600;
+      }
+
+      .header {
+        margin-top: -12px;
+      }
+    }
+
+    .discontinued_options {
+      padding-left: 50px;
+      padding-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      // P2-3292 Step 2: prompt above the checklist, so it does not sit flush against the first box.
+      .discontinued_options__header {
+        margin-bottom: 8px;
+      }
+
+      .discontinued_option {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        height: 40px;
+      }
+    }
+  }
+}
+
+.message {
+  background-color: var(--pr-color-primary-25);
+  border: none;
+  border-width: 0px;
+  color: var(--pr-color-blue-600);
+  width: 100%;
+  margin-bottom: 20px;
+  margin-top: 20px;
+  align-items: flex-start;
+  padding: 0.75rem 0.75rem;
+  border-radius: 0.375rem;
+  display: flex;
+  justify-content: flex-start;
+  gap: 1rem;
+}
+
+// P2-3292 Step 4 — the administrator's way out of the auto-lock.
+.reopen {
+  margin-top: 16px;
+
+  &--button {
+    background-color: var(--pr-color-primary-25);
+    color: var(--pr-color-blue-600);
+    border: 1px solid var(--pr-color-blue-600);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 13px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--pr-color-blue-600);
+      color: #fff;
+    }
+  }
+
+  &--hint {
+    font-size: 12px;
+    color: var(--pr-color-gray-500, #6b7280);
+    margin-top: 6px;
+  }
+}
+
+// P2-3292 Steps 3A/3B — the "where did it continue" dropdowns. Indented to read as derived from the
+// reason that revealed them, matching the sub-option grouping P2-3291 established for pr-radio-button.
+.merge_split_targets {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+  margin-left: 28px;
+  padding-left: 16px;
+  border-left: 1px solid var(--pr-border-strong);
+
+  // Fix (2026-09-17): `--text-color-secondary` is not a real token in this codebase (leftover from
+  // removed PrimeNG) — it resolved to nothing, so the hint rendered in default black/bold text right
+  // behind the `pr-multi-select` dropdown panel (which sits `position: absolute` above it) and read
+  // as broken/unstyled debris rather than a loading hint. `--pr-text-secondary` is the real token
+  // (src/styles/colors.scss:207). Also added a touch of vertical rhythm so the hint doesn't sit flush
+  // under an open dropdown.
+  &--hint {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--pr-text-secondary);
+    margin-top: 2px;
+  }
+}

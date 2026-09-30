@@ -1,8 +1,39 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ResultsNotificationsService } from './results-notifications.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { buildUnifiedList, UnifiedNotification } from './utils/build-unified-list';
+import { FilterNotificationByInitiativePipe } from './pipes/filter-notification-by-initiative.pipe';
+import { FilterNotificationBySearchPipe } from './pipes/filter-notification-by-search.pipe';
+import { FilterNotificationByCenterPipe } from './pipes/filter-notification-by-center.pipe';
+import { FilterNotificationByBilateralProjectPipe } from './pipes/filter-notification-by-bilateral-project.pipe';
+// NOTIF-T-11 (`NOTIF-R-16`): Type / Funding / Result-type filter pipes, added alongside the five
+// pre-existing filters above.
+import { FilterNotificationByTypePipe } from './pipes/filter-notification-by-type.pipe';
+import { FilterNotificationByFundingPipe } from './pipes/filter-notification-by-funding.pipe';
+import { FilterNotificationByResultTypePipe } from './pipes/filter-notification-by-result-type.pipe';
+import { resolveNotificationType } from '../../../../../../shared/constants/notification-type.constants';
+import { GroupNotificationsByRecencyPipe, TGroupedNotificationsByRecency } from './pipes/group-notifications-by-recency.pipe';
+import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../internationalization/contribution-request-drawer.copy';
+
+/** NOTIF-T-6: the three decision-state tabs (`NOTIF-R-1`/`NOTIF-US-1`). */
+export type NotifDecisionTab = 'all' | 'decision' | 'info';
+
+/**
+ * NOTIF-T-6 (Pivot re-scope, `NOTIF-DD-6`): `NOTIF-R-8`'s Received/Sent independence, re-expressed
+ * as an in-list toggle. `origin: 'update'` rows are neither Received nor Sent — they show under
+ * BOTH sides (a judgment call, see this component's own doc comment on `sourceScopedList` below).
+ */
+export type NotifSourceView = 'received' | 'sent';
+
+/** NOTIF-T-6 (relocated from the retired `requests.component.ts`): one removable chip in the
+ * Filter popover's active-filter row. */
+interface ActiveFilterChip {
+  type: 'program' | 'center' | 'bilateral' | 'type' | 'funding' | 'resultType';
+  id: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-results-notifications',
@@ -11,14 +42,51 @@ import { ActivatedRoute, Router } from '@angular/router';
   standalone: false
 })
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
-  // NOTIF-T-11 (rework attempt 2): `phaseList`/`filteredInitiatives`/`entityLabel` and
-  // `getAllPhases()`/`onPhaseChange()`/`filterInitiativesByPhase()` moved to `ResultsNotificationsService`
-  // — this component and `RequestsComponent` used to each hold their OWN copy, which meant switching
-  // phase on Requests then clicking over to Updates left this tab's Program dropdown showing the OLD
-  // phase's initiatives under the OLD portfolio label (a real `NOTIF-AC-5` violation). Both components
-  // now bind `this.resultsNotificationsSE.phaseList`/`.filteredInitiatives`/`.entityLabel` directly —
-  // single source of truth, no prop-drilling, same reasoning `phaseFilter`/`initiativeIdFilter` already
-  // had for living on the service.
+  // ---------------------------------------------------------------------
+  // NOTIF-T-6 — Tabs UI: All / Needs your decision / For your information
+  // ---------------------------------------------------------------------
+  //
+  // Per `design.md` §6.2/§6.3: the unified list is built here (joining the already-fetched
+  // Received/Sent/Updates arrays via `buildUnifiedList()`, NOTIF-T-1), filtered with the same five
+  // `filter-notification-by-*` pipes (NOTIF-T-3, NOTIF-R-10 — now migrated into THIS component's own
+  // toolbar per the Pivot, `NOTIF-DD-6`), then grouped by recency (NOTIF-T-2, `dateKey: 'activityDate'`).
+  activeTab = signal<NotifDecisionTab>('all');
+
+  /** NOTIF-T-6 (Pivot re-scope): the in-list Received/Sent toggle (`NOTIF-R-8` amended). Defaults to
+   * 'received', matching the pre-Pivot default landing (`resultsOutletRouting` used to redirect
+   * `results-notifications` -> `.../requests` -> `.../requests/received`). */
+  activeSource = signal<NotifSourceView>('received');
+
+  /** NOTIF-T-6 i18n: tab labels come from the same centralized copy `notificationItem.status*`
+   * already uses, so the row's own status text and this tab row never say two different things. */
+  readonly copy = CONTRIBUTION_REQUEST_DRAWER_COPY;
+
+  // -----------------------------------------------------------------------
+  // NOTIF-T-6 (Pivot re-scope) — Filter toolbar, relocated verbatim (in substance) from the retired
+  // `requests.component.ts`. See that file's git history for the original NOTIF-T-6/T-9/T-11/T-12/
+  // T-13/T-15/T-16/DD-7 rationale — nothing about the mechanics changes here, only the owner.
+  // -----------------------------------------------------------------------
+  filterPopoverOpen = signal(false);
+  filterTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('filterTriggerBtn');
+  filterPanelRef = viewChild<ElementRef<HTMLDivElement>>('filterPanel');
+  filterPopoverAlign = signal<'start' | 'end'>('start');
+  centerSearchQuery = signal('');
+  bilateralProjectSearchQuery = signal('');
+  // NOTIF-T-11 (`NOTIF-R-16`): search-within-checklist state for the three new facets, following the
+  // same pattern as centerSearchQuery/bilateralProjectSearchQuery above.
+  resultTypeSearchQuery = signal('');
+
+  private static readonly FILTER_POPOVER_WIDTH = 280;
+  private static readonly FILTER_POPOVER_VIEWPORT_MARGIN = 32;
+
+  private readonly filterByInitiativePipe = new FilterNotificationByInitiativePipe();
+  private readonly filterBySearchPipe = new FilterNotificationBySearchPipe();
+  private readonly filterByCenterPipe = new FilterNotificationByCenterPipe();
+  private readonly filterByBilateralProjectPipe = new FilterNotificationByBilateralProjectPipe();
+  private readonly filterByTypePipe = new FilterNotificationByTypePipe();
+  private readonly filterByFundingPipe = new FilterNotificationByFundingPipe();
+  private readonly filterByResultTypePipe = new FilterNotificationByResultTypePipe();
+  private readonly groupByRecencyPipe = new GroupNotificationsByRecencyPipe();
 
   constructor(
     public api: ApiService,
@@ -28,8 +96,161 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     private readonly activatedRoute: ActivatedRoute
   ) {}
 
+  setActiveTab(tab: NotifDecisionTab): void {
+    this.activeTab.set(tab);
+  }
+
+  /**
+   * NOTIF-T-6 (Pivot re-scope, item 4): switching Received<->Sent closes any open detail panel
+   * (`NOTIF-AC-6`, unchanged in intent — just no longer tied to a route change). `notification-item`
+   * is closed scope for this task (may not gain a new `@Input()`/method to force-close its drawer),
+   * so this relies on the template's `@switch (activeSource())` wrapper around every
+   * `<app-notification-item>` (see the `.html`): a `@switch` case change is a genuine structural
+   * teardown/recreate of the embedded view, unconditionally, regardless of the `@for` track key — so
+   * every row instance (including an Updates row, visible on both sides — see `sourceScopedList`
+   * below, which would otherwise survive a toggle flip under a `@for`-track-key-only approach) is
+   * destroyed and a fresh one created, discarding that instance's internal `drawerOpen` signal.
+   * (Measured: folding `activeSource()` into the `@for` track key alone does NOT force this — a
+   * `@for`'s reconciliation can still reuse an existing DOM/view for an unrelated key change when the
+   * list shape doesn't otherwise require a move; `@switch`'s case-level teardown does not have that
+   * ambiguity.)
+   */
+  setActiveSource(source: NotifSourceView): void {
+    this.activeSource.set(source);
+  }
+
+  /** NOTIF-T-1: every currently-loaded Received (Pending+Done) + Sent (Pending+Done) +
+   * Updates (Pending+Viewed) row, merged and classified — no separate fetch. */
+  get unifiedList(): UnifiedNotification[] {
+    const received = this.resultsNotificationsSE?.receivedData;
+    const sent = this.resultsNotificationsSE?.sentData;
+    const updates = this.resultsNotificationsSE?.updatesData;
+
+    const receivedRows = [...(received?.receivedContributionsPending ?? []), ...(received?.receivedContributionsDone ?? [])];
+    const sentRows = [...(sent?.sentContributionsPending ?? []), ...(sent?.sentContributionsDone ?? [])];
+    const updateRows = [...(updates?.notificationsPending ?? []), ...(updates?.notificationsViewed ?? [])];
+
+    return buildUnifiedList(receivedRows, sentRows, updateRows);
+  }
+
+  /** NOTIF-T-3/NOTIF-R-10: the unified list narrowed by the filter toolbar's state (now this
+   * component's own — NOTIF-T-6 Pivot re-scope). Each pipe's `transform()` is called against `any[]`
+   * — see the identical note already on `filter-notification-by-center.pipe.ts`'s own signature. */
+  get filteredUnifiedList(): UnifiedNotification[] {
+    let list: any[] = this.unifiedList;
+    list = this.filterByInitiativePipe.transform(list, this.resultsNotificationsSE?.initiativeIdFilter);
+    list = this.filterBySearchPipe.transform(list, this.resultsNotificationsSE?.searchFilter);
+    list = this.filterByCenterPipe.transform(list, this.resultsNotificationsSE?.centerIdsFilter);
+    list = this.filterByBilateralProjectPipe.transform(list, this.resultsNotificationsSE?.bilateralProjectIdsFilter);
+    list = this.filterByTypePipe.transform(list, this.resultsNotificationsSE?.typeFilter);
+    list = this.filterByFundingPipe.transform(list, this.resultsNotificationsSE?.fundingFilter);
+    list = this.filterByResultTypePipe.transform(list, this.resultsNotificationsSE?.resultTypeFilter);
+    return list;
+  }
+
+  /**
+   * NOTIF-T-6 (Pivot re-scope, `NOTIF-DD-6`/`NOTIF-R-8`): `filteredUnifiedList` narrowed to the
+   * active Received/Sent side. `origin:'update'` rows are neither Received nor Sent — a judgment
+   * call (not spelled out by `design.md` §6.1's amended text, which only names the toggle, not what
+   * happens to Updates rows under it): they render under BOTH sides rather than becoming unreachable
+   * under either one. The alternative (Updates strictly excluded from both) would make Updates rows
+   * vanish from the page entirely, which is a worse outcome than the toggle being slightly less
+   * "pure" for that one row kind.
+   */
+  get sourceScopedList(): UnifiedNotification[] {
+    const excludedOrigin = this.activeSource() === 'received' ? 'sent' : 'received';
+    return this.filteredUnifiedList.filter(item => (item as any).origin !== excludedOrigin);
+  }
+
+  /** NOTIF-R-1: the source-scoped list narrowed to the active tab. 'all' is a no-op narrowing. */
+  get tabFilteredList(): UnifiedNotification[] {
+    const list = this.sourceScopedList;
+    if (this.activeTab() === 'decision') return list.filter(item => item.needsDecision);
+    if (this.activeTab() === 'info') return list.filter(item => !item.needsDecision);
+    return list;
+  }
+
+  /** NOTIF-T-2: the active tab's rows, grouped Today/This week/Earlier by `activityDate`. */
+  get groupedTabList(): TGroupedNotificationsByRecency<UnifiedNotification> {
+    return this.groupByRecencyPipe.transform(this.tabFilteredList, 'activityDate');
+  }
+
+  /**
+   * NOTIF-AC-1 (Pivot re-scope): live counts, scoped to the active Received/Sent side so the badge
+   * next to each tab always matches what that tab actually renders (the task's own Disqualifier:
+   * "if the tab counts don't match the rendered row count in any fixture, stop" — a badge that
+   * ignored the source toggle would lie about the rendered count the moment a Sent-only or
+   * Received-only row exists). Computed off the FILTERED-and-source-scoped (not tab-narrowed) list,
+   * so switching tabs never changes what "All" itself reports.
+   */
+  get allTabCount(): number {
+    return this.sourceScopedList.length;
+  }
+
+  get decisionTabCount(): number {
+    return this.sourceScopedList.filter(item => item.needsDecision).length;
+  }
+
+  get infoTabCount(): number {
+    return this.sourceScopedList.filter(item => !item.needsDecision).length;
+  }
+
+  /** NOTIF-T-5 wiring note: `notification-item`'s own `isPending` getter is
+   * `request_status_id === 1 && !isSent` — it does not read `needsDecision`/`origin`. A Sent row can
+   * carry `request_status_id === 1` while `needsDecision` is false (NOTIF-P-1); without
+   * `[isSent]="true"` such a row would be misread as pending by the row component. NOTIF-T-6 (Pivot
+   * re-scope): now derived from the real `origin` tag (`NOTIF-T-1`'s minimal addition) instead of
+   * the `needsDecision`-based proxy this used before — `origin` is a true discriminator, the old
+   * proxy only happened to be safe because a resolved Received row's `request_status_id !== 1`
+   * already made `isPending` false regardless of the `isSent` value passed in. */
+  isSentRow(item: UnifiedNotification): boolean {
+    return (item as any).origin === 'sent';
+  }
+
+  /**
+   * NOTIF-T-6 (Pivot re-scope): the `@for` track key for every rendered row. `origin` keeps a
+   * Received row's id and an Updates row's id from colliding when both happen to be the same number
+   * (they come from independent id spaces — `share_result_request_id` vs `notification_id`) —
+   * without it, NG0955 (duplicated `@for` track keys) is a real risk. Kept as a component method
+   * (not an inline template expression) so the concatenation happens over known TS types, not
+   * `unknown` — a plain `item['share_result_request_id'] + '-' + item['origin']` inline in the
+   * template would type-check against `Record<string, unknown>` and fail `ng build`'s stricter
+   * Angular template type-checking (`tsc --noEmit` alone would miss it — see
+   * `onecgiar-pr-client/src/CLAUDE.md` §21.7). Deliberately does NOT fold in `activeSource()` — see
+   * the `.html`'s `@switch (activeSource())` wrapper for how the toggle actually forces a remount
+   * (a `@for` track key is a hint for reuse ACROSS one render's list, not a reliable way to force a
+   * *directive-level* full teardown on an unrelated signal flip — measured: it does not).
+   */
+  trackNotificationKey(item: UnifiedNotification): string {
+    const id = (item as any)?.share_result_request_id ?? (item as any)?.notification_id;
+    return `${(item as any)?.origin}-${id}`;
+  }
+
+  /** `app-notification-item`'s `(requestEvent)` fires after an Accept/Decline PATCH resolves
+   * (`notification-item.component.ts::acceptOrReject()`'s `finalize`). A row rendered from the
+   * unified list can be a Received row, so refresh the same three feeds the page already fetches,
+   * scoped to the current phase filter. */
+  refreshAllNotifications(): void {
+    const phaseId = this.resultsNotificationsSE.phaseFilter;
+    this.resultsNotificationsSE.get_section_information(phaseId);
+    this.resultsNotificationsSE.get_sent_notifications(phaseId);
+    this.resultsNotificationsSE.get_updates_notifications(phaseId);
+  }
+
   ngOnInit(): void {
-    this.resultsNotificationsSE.getAllPhases();
+    // NOTIF-T-6 rework (double-fetch fix): the retired `received-requests`/`sent-requests`/`updates`
+    // routed components each triggered their own fetch from `ngOnInit()`. This component used to
+    // ALSO fetch Received/Sent/Updates directly here, unconditionally — but `getAllPhases()`'s own
+    // `onPhaseChange()` already fetches the same three feeds whenever a phase resolves (from query
+    // params via `setQueryParams()`, or the active reporting phase), so a normal page load issued
+    // every feed twice (up to 6 requests, last-response-wins on shared state). `getAllPhases()` is
+    // now the single source of the fetch: the callback below only fires as a fallback for the rarer
+    // case where NO phase resolves at all, so the page still has data instead of staying empty.
+    this.resultsNotificationsSE.getAllPhases(() => {
+      this.resultsNotificationsSE.get_section_information();
+      this.resultsNotificationsSE.get_sent_notifications();
+      this.resultsNotificationsSE.get_updates_notifications();
+    });
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
     this.api.dataControlSE.getCurrentPhases().subscribe();
@@ -79,25 +300,323 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Per-user-request (2026-09-25): the page-level explainer that used to render as a permanently
-   * visible `<p class="request_description">` under the tabs is now surfaced via the ⓘ icon's
-   * tooltip next to the "Notifications" title instead, matching the mockup convention. Content
-   * switches with the active tab, same as the paragraph it replaces did (Requests vs Updates); no
-   * copy for Settings, mirroring the paragraph's prior behavior of rendering nothing there either. */
+  /**
+   * NOTIF-T-6 (Pivot re-scope): the routed Requests-vs-Updates split this tooltip used to branch on
+   * (`router.url.includes('/requests' | '/updates')`) no longer exists — the merged page has one
+   * explainer now, covering both request decisions and informational updates. Hidden on the
+   * surviving `settings` child route, matching the paragraph/tooltip's prior behavior of rendering
+   * nothing there either.
+   */
   get notificationsInfoTooltip(): string {
-    if (this.router.url.includes('/results-notifications/requests')) {
-      return (
-        'This tab displays collaboration requests received from other Programs/Accelerators or W3/Bilateral projects. ' +
-        'You can accept or decline each invitation — if you accept, you will be able to link the collaborative result to ' +
-        'your own ToC indicators and targets, provided the result was also planned in your ToC. Note that requests can be ' +
-        'accepted or declined even after the result has been submitted.'
+    if (this.isSettingsRoute) return '';
+
+    return (
+      'This page lists collaboration requests (received and sent) and updates on results your entity contributes to. ' +
+      'Received requests you have not yet decided on need your action — you can accept or decline each one, and if you accept ' +
+      'a bilateral request you can also link it to your ToC indicators and targets. Sent requests and Updates are informational.'
+    );
+  }
+
+  /**
+   * NOTIF-T-6 (Pivot re-scope, item 1 — the settings-route-isolation Falsifier): the unified list
+   * (tabs, toggle, toolbar, rows) must render ONLY inside this component's own view, never on the
+   * `settings` sibling route. `settings` is the one surviving child of `notificationsRouting`
+   * (`shared/routing/routing-data.ts`) — everything else in this template is gated on this being
+   * false, and `<router-outlet>` (rendering only `SettingsComponent` now) is left unconditional.
+   */
+  get isSettingsRoute(): boolean {
+    return this.router.url.includes('/results-notifications/settings');
+  }
+
+  // -----------------------------------------------------------------------
+  // NOTIF-T-6 (Pivot re-scope) — Filter toolbar (relocated from the retired `requests.component.ts`)
+  // -----------------------------------------------------------------------
+
+  private computeFilterPopoverAlign(): 'start' | 'end' {
+    const rect = this.filterTriggerRef()?.nativeElement.getBoundingClientRect();
+    if (!rect) return 'start';
+
+    const fitsToTheRight =
+      rect.left + ResultsNotificationsComponent.FILTER_POPOVER_WIDTH + ResultsNotificationsComponent.FILTER_POPOVER_VIEWPORT_MARGIN <=
+      window.innerWidth;
+
+    return fitsToTheRight ? 'start' : 'end';
+  }
+
+  toggleFilterPopover() {
+    const opening = !this.filterPopoverOpen();
+    if (opening) {
+      this.filterPopoverAlign.set(this.computeFilterPopoverAlign());
+    }
+    this.filterPopoverOpen.set(opening);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!this.filterPopoverOpen()) return;
+
+    const path = event.composedPath();
+    const trigger = this.filterTriggerRef()?.nativeElement;
+    const panel = this.filterPanelRef()?.nativeElement;
+
+    if (trigger && path.includes(trigger)) return;
+    if (panel && path.includes(panel)) return;
+
+    this.filterPopoverOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onDocumentEscape() {
+    if (this.filterPopoverOpen()) {
+      this.filterPopoverOpen.set(false);
+    }
+  }
+
+  /** Mirrors `notification-item.component.ts`'s own `isBilateralResult` getter. */
+  private isBilateralRow(item: any): boolean {
+    return item?.obj_result?.source_name === 'W3/Bilaterals';
+  }
+
+  /** NOTIF-T-6 (Pivot re-scope): the facet options are derived from EVERY currently-loaded row
+   * (Received + Sent), not scoped by the active Received/Sent toggle — a facet that changed its own
+   * options depending on the toggle would be confusing (a Center chip could silently stop matching
+   * anything the moment the user flips the toggle). Mirrors the retired `requests.component.ts`'s own
+   * `allNotificationRows()`. */
+  private allNotificationRows(): any[] {
+    const received = this.resultsNotificationsSE.receivedData;
+    const sent = this.resultsNotificationsSE.sentData;
+    return [
+      ...(received?.receivedContributionsPending ?? []),
+      ...(received?.receivedContributionsDone ?? []),
+      ...(sent?.sentContributionsPending ?? []),
+      ...(sent?.sentContributionsDone ?? [])
+    ];
+  }
+
+  get centerFacetOptions(): { id: string | number; label: string }[] {
+    const seen = new Map<string, { id: string | number; label: string }>();
+
+    this.allNotificationRows()
+      .filter(item => this.isBilateralRow(item))
+      .forEach(item => {
+        const institution = item?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution;
+        if (institution?.id === undefined || institution?.id === null) return;
+        seen.set(String(institution.id), { id: institution.id, label: institution.acronym || String(institution.id) });
+      });
+
+    return Array.from(seen.values());
+  }
+
+  get bilateralProjectFacetOptions(): { code: string; label: string }[] {
+    const seen = new Map<string, { code: string; label: string }>();
+
+    this.allNotificationRows()
+      .filter(item => this.isBilateralRow(item))
+      .forEach(item => {
+        const projectLinks = item?.obj_result?.obj_result_by_project ?? [];
+        projectLinks.forEach((link: any) => {
+          const project = link?.obj_clarisa_project;
+          const code = project?.shortName;
+          if (!code) return;
+          seen.set(code, { code, label: project?.fullName ? `${code} - ${project.fullName}` : code });
+        });
+      });
+
+    return Array.from(seen.values());
+  }
+
+  get filteredCenterFacetOptions(): { id: string | number; label: string }[] {
+    const query = this.centerSearchQuery().trim().toLowerCase();
+    if (!query) return this.centerFacetOptions;
+    return this.centerFacetOptions.filter(option => option.label.toLowerCase().includes(query));
+  }
+
+  get filteredBilateralProjectFacetOptions(): { code: string; label: string }[] {
+    const query = this.bilateralProjectSearchQuery().trim().toLowerCase();
+    if (!query) return this.bilateralProjectFacetOptions;
+    return this.bilateralProjectFacetOptions.filter(option => option.label.toLowerCase().includes(query));
+  }
+
+  /**
+   * NOTIF-T-11 (`NOTIF-R-16`): the row's rendered Type chip/label — mirrors
+   * `notification-item.component.ts`'s own `rowTypeChipLabel` getter exactly (never
+   * reimplemented independently — same "Contribution request" constant, same
+   * `resolveNotificationType()` call), so the facet options and the filter always agree with what
+   * the row actually shows.
+   */
+  private rowTypeLabel(item: any): string | null {
+    if (item?.source === 'update') return resolveNotificationType(item);
+    if (item?.source === 'request') return this.copy.notificationItem.contributionRequestChip;
+    return null;
+  }
+
+  /**
+   * NOTIF-T-11 (`NOTIF-R-16`): unlike the Center/Bilateral-project facets above, Type/Funding/
+   * Result-type must filter the WHOLE unified list (Requests AND Updates, `NOTIF-T-8` widened
+   * `source_name`/`obj_result_type` onto Updates rows) — so their facet options are derived from
+   * `unifiedList` (every currently-loaded row), not `allNotificationRows()` (Received+Sent only).
+   */
+  get typeFacetOptions(): string[] {
+    const seen = new Set<string>();
+    this.unifiedList.forEach(item => {
+      const label = this.rowTypeLabel(item);
+      if (label) seen.add(label);
+    });
+    return Array.from(seen.values());
+  }
+
+  get fundingFacetOptions(): { value: string; label: string }[] {
+    const seen = new Map<string, string>();
+    this.unifiedList.forEach((item: any) => {
+      const sourceName = item?.obj_result?.source_name;
+      if (sourceName === 'W1/W2') seen.set(sourceName, this.copy.notificationItem.fundingWindowW1W2);
+      if (sourceName === 'W3/Bilaterals') seen.set(sourceName, this.copy.notificationItem.fundingWindowBilateral);
+    });
+    return Array.from(seen.entries()).map(([value, label]) => ({ value, label }));
+  }
+
+  get resultTypeFacetOptions(): string[] {
+    const seen = new Set<string>();
+    this.unifiedList.forEach((item: any) => {
+      const name = item?.obj_result?.obj_result_type?.name;
+      if (name) seen.add(name);
+    });
+    return Array.from(seen.values());
+  }
+
+  get filteredResultTypeFacetOptions(): string[] {
+    const query = this.resultTypeSearchQuery().trim().toLowerCase();
+    if (!query) return this.resultTypeFacetOptions;
+    return this.resultTypeFacetOptions.filter(option => option.toLowerCase().includes(query));
+  }
+
+  isTypeFilterChecked(label: string): boolean {
+    return (this.resultsNotificationsSE.typeFilter ?? []).includes(label);
+  }
+
+  isFundingFilterChecked(value: string): boolean {
+    return (this.resultsNotificationsSE.fundingFilter ?? []).includes(value);
+  }
+
+  isResultTypeFilterChecked(name: string): boolean {
+    return (this.resultsNotificationsSE.resultTypeFilter ?? []).includes(name);
+  }
+
+  onTypeFilterChange(label: string, checked: boolean) {
+    const current = this.resultsNotificationsSE.typeFilter ?? [];
+    this.resultsNotificationsSE.typeFilter = checked ? [...current, label] : current.filter(value => value !== label);
+  }
+
+  onFundingFilterChange(value: string, checked: boolean) {
+    const current = this.resultsNotificationsSE.fundingFilter ?? [];
+    this.resultsNotificationsSE.fundingFilter = checked ? [...current, value] : current.filter(item => item !== value);
+  }
+
+  onResultTypeFilterChange(name: string, checked: boolean) {
+    const current = this.resultsNotificationsSE.resultTypeFilter ?? [];
+    this.resultsNotificationsSE.resultTypeFilter = checked ? [...current, name] : current.filter(value => value !== name);
+  }
+
+  isCenterFilterChecked(id: string | number): boolean {
+    return (this.resultsNotificationsSE.centerIdsFilter ?? []).some(centerId => centerId == id);
+  }
+
+  isBilateralProjectFilterChecked(code: string): boolean {
+    return (this.resultsNotificationsSE.bilateralProjectIdsFilter ?? []).includes(code);
+  }
+
+  onCenterFilterChange(id: string | number, checked: boolean) {
+    const current = this.resultsNotificationsSE.centerIdsFilter ?? [];
+    this.resultsNotificationsSE.centerIdsFilter = checked ? [...current, id] : current.filter(centerId => centerId != id);
+  }
+
+  onBilateralProjectFilterChange(code: string, checked: boolean) {
+    const current = this.resultsNotificationsSE.bilateralProjectIdsFilter ?? [];
+    this.resultsNotificationsSE.bilateralProjectIdsFilter = checked ? [...current, code] : current.filter(projectCode => projectCode !== code);
+  }
+
+  get activeFilterCount(): number {
+    const programCount = this.resultsNotificationsSE.initiativeIdFilter ? 1 : 0;
+    const centerCount = this.resultsNotificationsSE.centerIdsFilter?.length ?? 0;
+    const bilateralCount = this.resultsNotificationsSE.bilateralProjectIdsFilter?.length ?? 0;
+    const typeCount = this.resultsNotificationsSE.typeFilter?.length ?? 0;
+    const fundingCount = this.resultsNotificationsSE.fundingFilter?.length ?? 0;
+    const resultTypeCount = this.resultsNotificationsSE.resultTypeFilter?.length ?? 0;
+    return programCount + centerCount + bilateralCount + typeCount + fundingCount + resultTypeCount;
+  }
+
+  get activeFilterChips(): ActiveFilterChip[] {
+    const chips: ActiveFilterChip[] = [];
+
+    if (this.resultsNotificationsSE.initiativeIdFilter) {
+      const initiative: any = this.resultsNotificationsSE.filteredInitiatives.find(
+        (init: any) => init.initiative_id == this.resultsNotificationsSE.initiativeIdFilter
       );
+      chips.push({
+        type: 'program',
+        id: String(this.resultsNotificationsSE.initiativeIdFilter),
+        label: initiative?.full_name ?? this.resultsNotificationsSE.entityLabel
+      });
     }
 
-    if (this.router.url.includes('/results-notifications/updates')) {
-      return 'In this section, there are updates on any results to which your entity(ies) are contributing.';
+    (this.resultsNotificationsSE.centerIdsFilter ?? []).forEach((id: string | number) => {
+      const center = this.centerFacetOptions.find(option => option.id == id);
+      chips.push({ type: 'center', id: String(id), label: center?.label ?? String(id) });
+    });
+
+    (this.resultsNotificationsSE.bilateralProjectIdsFilter ?? []).forEach((code: string) => {
+      const project = this.bilateralProjectFacetOptions.find(option => option.code === code);
+      chips.push({ type: 'bilateral', id: code, label: project?.label ?? code });
+    });
+
+    (this.resultsNotificationsSE.typeFilter ?? []).forEach((label: string) => {
+      chips.push({ type: 'type', id: label, label });
+    });
+
+    (this.resultsNotificationsSE.fundingFilter ?? []).forEach((value: string) => {
+      const option = this.fundingFacetOptions.find(item => item.value === value);
+      chips.push({ type: 'funding', id: value, label: option?.label ?? value });
+    });
+
+    (this.resultsNotificationsSE.resultTypeFilter ?? []).forEach((name: string) => {
+      chips.push({ type: 'resultType', id: name, label: name });
+    });
+
+    return chips;
+  }
+
+  removeFilterChip(chip: ActiveFilterChip) {
+    if (chip.type === 'program') {
+      this.resultsNotificationsSE.initiativeIdFilter = null;
+      return;
     }
 
-    return '';
+    if (chip.type === 'center') {
+      this.resultsNotificationsSE.centerIdsFilter = (this.resultsNotificationsSE.centerIdsFilter ?? []).filter(
+        centerId => String(centerId) !== chip.id
+      );
+      return;
+    }
+
+    if (chip.type === 'bilateral') {
+      this.resultsNotificationsSE.bilateralProjectIdsFilter = (this.resultsNotificationsSE.bilateralProjectIdsFilter ?? []).filter(
+        projectCode => projectCode !== chip.id
+      );
+      return;
+    }
+
+    if (chip.type === 'type') {
+      this.resultsNotificationsSE.typeFilter = (this.resultsNotificationsSE.typeFilter ?? []).filter(label => label !== chip.id);
+      return;
+    }
+
+    if (chip.type === 'funding') {
+      this.resultsNotificationsSE.fundingFilter = (this.resultsNotificationsSE.fundingFilter ?? []).filter(value => value !== chip.id);
+      return;
+    }
+
+    this.resultsNotificationsSE.resultTypeFilter = (this.resultsNotificationsSE.resultTypeFilter ?? []).filter(
+      name => name !== chip.id
+    );
   }
 }

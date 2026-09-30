@@ -25,6 +25,7 @@ import {
   contentHash,
   evaluateKpRule,
   KpMetadataRow,
+  normalizeSuggestions,
   QualityEvidenceItem,
   QualityPayload,
   QualitySectionKey,
@@ -431,12 +432,44 @@ export class BilateralQualityAssessmentService {
         score: row.overall_score,
         summary: row.overall_summary,
       },
-      sections: row.sections,
+      sections: this.serveSections(row.sections),
       evidence: row.evidence,
       criteria_version: row.criteria_version,
       elapsed_ms: row.elapsed_ms,
       unavailable_reason: row.unavailable_reason,
       created_at: row.created_at,
+    };
+  }
+
+  /**
+   * Re-runs the stateless `general_information.suggestions` shape check on every serve
+   * (design.md `BIL-QTS-DD-2`, §2.2 "Read"; `BIL-QTS-R-10`), so a stored row can never serve an
+   * unsanitized suggestion — whatever wrote it, including a pre-`BIL-QTS-T-2` row or one written
+   * by a future path this normalizer has not seen. No novelty check on read: `normalizeSuggestions`
+   * is called without `sent`, since there is no outbound payload to compare a stored value
+   * against on a read (design.md §5 step 5 is write-only). Every other section, and every other
+   * key on `general_information`, passes through untouched.
+   */
+  private serveSections(
+    sections: Partial<Record<QualitySectionKey, QualitySectionResult>>,
+  ): Partial<Record<QualitySectionKey, QualitySectionResult>> {
+    const gi = sections?.general_information;
+    if (!gi) {
+      return sections;
+    }
+
+    const suggestions = normalizeSuggestions(gi.suggestions, gi.verdict);
+    // The stored (pre-re-validation) `suggestions` must not survive into `rest` via the
+    // spread below — re-adding it conditionally afterwards cannot remove a value the spread
+    // already copied in (same reasoning as `fields` in `sanitizeScores`).
+    const rest: QualitySectionResult = { ...gi };
+    delete rest.suggestions;
+    return {
+      ...sections,
+      general_information: {
+        ...rest,
+        ...(suggestions ? { suggestions } : {}),
+      },
     };
   }
 }

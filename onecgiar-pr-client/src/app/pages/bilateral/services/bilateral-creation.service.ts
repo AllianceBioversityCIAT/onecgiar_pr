@@ -90,6 +90,20 @@ export class BilateralCreationService {
   resultContributingProjectIds = signal<number[]>([]);
   resultContributingProjects = signal<{ id: number; shortName: string; fullName: string }[]>([]);
 
+  /**
+   * BIL-RAU-T-7 (design.md §6.2, T-5 payload) — `result.is_replicated`, raw. Types 7/2 only get the
+   * `annualUpdating` catalogue; every other type keeps the defaults below.
+   */
+  isReplicated = signal(false);
+  /**
+   * Raw MySQL tinyint (1/0/null), NOT normalized here — consumers apply `toNullableBoolean`
+   * (design.md §6.2 keeps normalization at the consumer, since W1/W2's own component already does
+   * it and this mirrors that contract instead of introducing a second one).
+   */
+  storedIsDiscontinued = signal<number | boolean | null>(null);
+  storedDiscontinuedOptions = signal<{ investment_discontinued_option_id: number; description: string }[]>([]);
+  storedMergeSplitTargets = signal<Record<string, unknown>[]>([]);
+
   getProjects(centerId: string | number): void {
     this.isLoadingProjects.set(true);
     this.bilateralApi.GET_bilateralProjects(centerId).subscribe({
@@ -134,6 +148,10 @@ export class BilateralCreationService {
     this.resultProjectId.set(null);
     this.resultContributingProjectIds.set([]);
     this.resultContributingProjects.set([]);
+    this.isReplicated.set(false);
+    this.storedIsDiscontinued.set(null);
+    this.storedDiscontinuedOptions.set([]);
+    this.storedMergeSplitTargets.set([]);
     // P2-3760 — this service is a root singleton, so a percentage left over from the previously
     // opened result would show on the next one and get saved onto it. Reset with the rest.
     this.resultContributionPercentage.set(null);
@@ -202,6 +220,17 @@ export class BilateralCreationService {
           if (cf.environmental_biodiversity_tag_level_id != null) dacLevels['environmental_biodiversity'] = Number(cf.environmental_biodiversity_tag_level_id);
           if (cf.poverty_tag_level_id != null) dacLevels['poverty'] = Number(cf.poverty_tag_level_id);
           this.resultDacLevels.set(dacLevels);
+          // BIL-RAU-T-7 (T-5 payload): `is_replicated` / `is_discontinued` arrive as MySQL tinyint,
+          // not booleans. `is_replicated` gates visibility, so it is normalized here; the stored
+          // answer itself stays raw for the wrapper's own `toNullableBoolean` (design.md §6.2).
+          this.isReplicated.set(Number(cf.is_replicated) === 1);
+          this.storedIsDiscontinued.set(cf.is_discontinued ?? null);
+        }
+        // Present only for types 7/2 (BIL-RAU-DD-8) — absent for every other type, where the
+        // defaults `clearEditorState()` already set stand.
+        if (response?.annualUpdating) {
+          this.storedDiscontinuedOptions.set(response.annualUpdating.discontinued_options ?? []);
+          this.storedMergeSplitTargets.set(response.annualUpdating.merge_split_targets ?? []);
         }
         if (response?.impactAreaScores && Array.isArray(response.impactAreaScores)) {
           const areaMap: Record<string, string> = {
@@ -470,6 +499,15 @@ export class BilateralCreationService {
       body['title'] = title.trim();
     }
     return this.bilateralApi.POST_createBilateralHeader(body);
+  }
+
+  /**
+   * BIL-RAU-T-7 (design.md §6.2, DD-9) — updates the status signal from a save response (Yes on a
+   * stored-4 result, or an admin Reopen), so `isEditableByCenterUser()` and the creator's read-only
+   * effect react without a manual reload.
+   */
+  setResultStatus(id: number): void {
+    this.resultStatusId.set(id);
   }
 
   /**

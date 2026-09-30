@@ -12,6 +12,8 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralMarkDiscontinuedDialogService } from '../bilateral-annual-updating/bilateral-mark-discontinued-dialog.service';
 
 describe('SectionGeneralInfoComponent', () => {
   let fixture: ComponentFixture<SectionGeneralInfoComponent>;
@@ -55,7 +57,11 @@ describe('SectionGeneralInfoComponent', () => {
       resultLeadContactData: signal<any>(null),
       resultDacLevels: signal<Record<string, number>>({}),
       resultDacSubScores: signal<Record<string, number[]>>({}),
-      setDacSubScores: jest.fn()
+      setDacSubScores: jest.fn(),
+      // BIL-RAU-T-8: read by `isReplicatedInnovation()`. Default to "not replicated" so the
+      // existing suite (which never sets these) keeps exercising the same paths as before.
+      isReplicated: signal(false),
+      resultTypeId: signal<number | null>(null)
     };
     userSearch = {
       selectedUser: null,
@@ -103,6 +109,170 @@ describe('SectionGeneralInfoComponent', () => {
     expect(autoSave.registerField).toHaveBeenCalledWith('gender_tag_level_id', 'select');
   });
 
+  // ── BIL-RAU-T-8 · Annual updating visibility gate ─────────────────────
+  describe('Annual updating visibility gate (BIL-RAU-T-8)', () => {
+    it('is false when the result is not replicated', () => {
+      build();
+      expect(component.isReplicatedInnovation()).toBe(false);
+    });
+
+    it('is true for a replicated Innovation Development (7)', () => {
+      creation.isReplicated.set(true);
+      creation.resultTypeId.set(7);
+      build();
+      expect(component.isReplicatedInnovation()).toBe(true);
+    });
+
+    it('is true for a replicated Innovation Use (2)', () => {
+      creation.isReplicated.set(true);
+      creation.resultTypeId.set(2);
+      build();
+      expect(component.isReplicatedInnovation()).toBe(true);
+    });
+
+    it('is false for a replicated result of another type (5), and MDS/% stay untouched (S-1.2)', () => {
+      creation.isReplicated.set(true);
+      creation.resultTypeId.set(5);
+      build();
+      expect(component.isReplicatedInnovation()).toBe(false);
+    });
+
+    it('clears the annual-updating MDS group when not replicated', () => {
+      build();
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('general-info', [], 'annual-updating');
+    });
+
+    it('does not clear the group while replicated (the wrapper owns it while it renders)', () => {
+      creation.isReplicated.set(true);
+      creation.resultTypeId.set(7);
+      build();
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).not.toHaveBeenCalledWith('general-info', [], 'annual-updating');
+    });
+  });
+
+  /**
+   * Reviewer Issue 1 (attempt 2) + Issue 6 (a)/(e) — proved against the REAL
+   * `BilateralMdsTrackerService`, never a mock. Both mocked, the group-collision bug (an ungrouped
+   * `setSectionFields` call replacing the whole section, wiping `'annual-updating'`) is invisible:
+   * a mock records every call but enforces no merge semantics between them. Mounts the real
+   * `app-bilateral-annual-updating` too (real template), since the bug is in the INTERACTION
+   * between this component's own MDS write and the wrapper's.
+   */
+  describe('Annual updating + core MDS integration (real tracker, Reviewer Issue 1/6)', () => {
+    let realTracker: BilateralMdsTrackerService;
+    let wrapperApi: any;
+    let wrapperAutoSave: any;
+
+    const buildWithRealTracker = async (opts: { replicated: boolean; typeId: number }) => {
+      const localCreation = {
+        resultTitle: signal(''),
+        resultDescription: signal(''),
+        resultLeadContact: signal(''),
+        resultLeadContactData: signal<any>(null),
+        resultDacLevels: signal<Record<string, number>>({}),
+        resultDacSubScores: signal<Record<string, number[]>>({}),
+        setDacSubScores: jest.fn(),
+        isReplicated: signal(opts.replicated),
+        resultTypeId: signal<number | null>(opts.typeId),
+        currentResultId: signal<number | null>(11),
+        reportingYear: signal<number | null>(2026),
+        resultStatusId: signal<number | null>(1),
+        storedIsDiscontinued: signal<number | boolean | null>(null),
+        storedDiscontinuedOptions: signal<any[]>([]),
+        storedMergeSplitTargets: signal<any[]>([]),
+        isEditableByCenterUser: signal(true),
+        setResultStatus: jest.fn(),
+        isAiGenerated: signal(false),
+        resultLevelId: signal<number | null>(1),
+        resultCode: signal<string | number | null>(null)
+      };
+      wrapperAutoSave = {
+        registerField: jest.fn(),
+        updateField: jest.fn(),
+        updateFieldsBatch: jest.fn(),
+        notifyBlur: jest.fn(),
+        flush: jest.fn().mockResolvedValue(undefined),
+        hasErrorFor: jest.fn().mockReturnValue(false),
+        hasPendingFor: jest.fn().mockReturnValue(false),
+        lastErrorMessageFor: jest.fn().mockReturnValue(null),
+        fieldStatus: signal<Record<string, string>>({}),
+        manualSave$: new Subject<string>(),
+        lastGeneralInfoResponse: signal<Record<string, unknown> | null>(null)
+      };
+      wrapperApi = {
+        rolesSE: { isAdmin: false, access: { canDdit: false } },
+        resultsSE: {
+          GET_investmentDiscontinuedOptions: jest.fn(() =>
+            of({ response: [{ investment_discontinued_option_id: 1, option: 'Reason A', order: 1 }] })
+          ),
+          // The shared component's own `ngOnInit` fetches this for its info banner — unrelated to
+          // the MDS bug this block proves, but required for the real component to mount at all.
+          GET_globalNarratives: jest.fn(() => of({ response: { value: '' } }))
+        },
+        // The shared `app-rd-annual-updating` component's field initializers run BEFORE `context`
+        // lands (inputs apply after the constructor), so its construction-time fallback reads
+        // `dataControlSE.currentResult` even though this wrapper always binds `context`.
+        dataControlSE: { currentResult: null, reportingCurrentPhase: null }
+      };
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [SectionGeneralInfoComponent],
+        providers: [
+          { provide: BilateralAutoSaveService, useValue: wrapperAutoSave },
+          BilateralMdsTrackerService, // REAL — the point of this block.
+          { provide: BilateralCreationService, useValue: localCreation },
+          { provide: UserSearchService, useValue: userSearch },
+          { provide: HttpClient, useValue: http },
+          { provide: ActivatedRoute, useValue: route },
+          { provide: ApiService, useValue: wrapperApi },
+          { provide: BilateralMarkDiscontinuedDialogService, useValue: { open: jest.fn() } }
+        ]
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(SectionGeneralInfoComponent);
+      component = fixture.componentInstance;
+      realTracker = TestBed.inject(BilateralMdsTrackerService);
+      return { creation: localCreation };
+    };
+
+    it('(a)/(e) non-replicated: overallPercentage() is the core-only baseline, and no catalogue call happens', async () => {
+      const { creation: localCreation } = await buildWithRealTracker({ replicated: false, typeId: 5 });
+      localCreation.resultTitle.set('Real title');
+      localCreation.resultDescription.set('Some description');
+      fixture.detectChanges();
+
+      expect(component.isReplicatedInnovation()).toBe(false);
+      expect(wrapperApi.resultsSE.GET_investmentDiscontinuedOptions).not.toHaveBeenCalled();
+      expect(realTracker.getSectionFields('general-info').some(i => i.key.startsWith('annual-update'))).toBe(false);
+      // 2 of 3 core fields filled (title, description), lead contact empty — the same arithmetic
+      // as if the wrapper had never existed.
+      expect(realTracker.overallPercentage()).toBe(67);
+    });
+
+    it('(1)/(e) replicated + unanswered: a Title update does not wipe `annual-update`, and overallStatus() stays incomplete', async () => {
+      await buildWithRealTracker({ replicated: true, typeId: 7 });
+      fixture.detectChanges();
+
+      expect(component.isReplicatedInnovation()).toBe(true);
+      expect(realTracker.getSectionFields('general-info').some(i => i.key === 'annual-update')).toBe(true);
+
+      // The regression this reviewer round exists for: editing Title used to call
+      // `setSectionFields('general-info', [...core...])` with NO group, which replaced the whole
+      // section and deleted `annual-update` / `annual-update-reasons` / `annual-update-targets`.
+      component.onTitleChange('A real title');
+      fixture.detectChanges();
+
+      const fields = realTracker.getSectionFields('general-info');
+      const annualUpdate = fields.find(f => f.key === 'annual-update');
+      expect(annualUpdate).toBeTruthy();
+      expect(annualUpdate?.filled).toBe(false); // still unanswered
+      expect(realTracker.overallStatus()).not.toBe('complete');
+    });
+  });
+
   // ── mds tracking effect ──────────────────────────────────────────────
   describe('completeness effect', () => {
     it('counts nothing while the fields are empty', () => {
@@ -112,7 +282,7 @@ describe('SectionGeneralInfoComponent', () => {
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: false },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
-      ]);
+      ], 'core');
     });
 
     it('ignores a placeholder draft title', () => {
@@ -124,7 +294,7 @@ describe('SectionGeneralInfoComponent', () => {
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: true },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
-      ]);
+      ], 'core');
     });
 
     it('counts a real title and a description', () => {
@@ -136,7 +306,7 @@ describe('SectionGeneralInfoComponent', () => {
         { key: 'title', label: 'Title', filled: true },
         { key: 'description', label: 'Description', filled: true },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
-      ]);
+      ], 'core');
     });
 
     /**
@@ -152,7 +322,7 @@ describe('SectionGeneralInfoComponent', () => {
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: false },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true }
-      ]);
+      ], 'core');
 
       creation.resultLeadContactData.set({ display_name: 'Arouna Dissa', mail: 'a.dissa@ier.ml', title: '' });
       fixture.detectChanges();
@@ -160,7 +330,7 @@ describe('SectionGeneralInfoComponent', () => {
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: false },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true }
-      ]);
+      ], 'core');
     });
 
     // Decision (Cami, P2-3765 18-Sep and P2-3340 cancelled 14-Sep): the word limit is a hint that
@@ -175,7 +345,7 @@ describe('SectionGeneralInfoComponent', () => {
         { key: 'title', label: 'Title', filled: true },
         { key: 'description', label: 'Description', filled: true },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
-      ]);
+      ], 'core');
     });
 
     it('does not count an absent lead contact', () => {
@@ -185,7 +355,7 @@ describe('SectionGeneralInfoComponent', () => {
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: false },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
-      ]);
+      ], 'core');
     });
   });
 
@@ -269,7 +439,7 @@ describe('SectionGeneralInfoComponent', () => {
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: false },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true }
-      ]);
+      ], 'core');
     });
 
     /**
@@ -547,6 +717,18 @@ describe('SectionGeneralInfoComponent', () => {
       expect(autoSave.updateField).toHaveBeenCalledWith('description', 'New desc', 'text');
       component.onDescriptionBlur();
       expect(autoSave.notifyBlur).toHaveBeenCalledWith('description', 'New desc');
+    });
+
+    // BIL-QTS-T-6 regression: `onTitleChange` already mirrors its edit into
+    // `creationService.resultTitle` (test above) so the quality-assessment drawer's
+    // `currentTitle` input follows the form; `onDescriptionChange` never did the same for
+    // `resultDescription`, so the drawer kept showing whatever description was loaded at check
+    // time — empty on a brand-new draft — even after the reporter typed one into the form.
+    it('publishes the description to the creation service so the quality-assessment drawer follows the edit', () => {
+      build();
+      creation.resultDescription.set('');
+      component.onDescriptionChange('Test');
+      expect(creation.resultDescription()).toBe('Test');
     });
 
     it('exposes the field statuses, defaulting to idle', () => {

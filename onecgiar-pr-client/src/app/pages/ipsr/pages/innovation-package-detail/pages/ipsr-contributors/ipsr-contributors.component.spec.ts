@@ -131,6 +131,8 @@ describe('IpsrContributorsComponent', () => {
       loadClarisaProjects: jest.fn(),
       // P2-3838 — project → owner Center API read by the template and the load flow.
       syncProjectDerivedCenters: jest.fn(),
+      // Live production bugfix (external-partners-duplication follow-up) — IPSR's P25 load path now calls this.
+      reclassifyPartnersFromToc: jest.fn(),
       isProjectDerivedCenter: jest.fn(() => false),
       isDerivedCenterEntering: jest.fn(() => false),
       isDerivedCenterLeaving: jest.fn(() => false),
@@ -826,7 +828,7 @@ describe('IpsrContributorsComponent', () => {
       mockRdPartnersSE.partnersBody.result_toc_result = {
         initiative_id: 1,
         planned_result: false,
-        result_toc_results: [{ planned_result: true }]
+        result_toc_results: [{ result_toc_result_id: 55, planned_result: true }]
       };
       mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
       mockRdPartnersSE.partnersBody.institutions = [];
@@ -844,7 +846,7 @@ describe('IpsrContributorsComponent', () => {
       component.onSaveSection();
 
       const sentData = patchSpy.mock.calls[0][0];
-      expect(sentData.result_toc_result.result_toc_results).toEqual([{ planned_result: true }]);
+      expect(sentData.result_toc_result.result_toc_results).toEqual([{ result_toc_result_id: 55, planned_result: true }]);
     });
 
     it('should call updateGreenChecks after save', () => {
@@ -1017,7 +1019,15 @@ describe('IpsrContributorsComponent', () => {
         providers: [
           RdContributorsAndPartnersService, // real service — no useValue mock (LC-T-3 disqualifying-mock clause)
           { provide: ApiService, useValue: mockApiForRealService },
-          { provide: FieldsManagerService, useValue: { isP25: jest.fn().mockReturnValue(true), isP22: jest.fn().mockReturnValue(false), fields: jest.fn().mockReturnValue({}) } },
+          {
+            provide: FieldsManagerService,
+            useValue: {
+              isP25: jest.fn().mockReturnValue(true),
+              isP22: jest.fn().mockReturnValue(false),
+              isContributorsPartners2026: jest.fn().mockReturnValue(false),
+              fields: jest.fn().mockReturnValue({})
+            }
+          },
           { provide: InstitutionsService, useValue: mockInstitutionsSE },
           { provide: CentersService, useValue: mockCentersSE },
           { provide: IpsrCompletenessStatusService, useValue: { updateGreenChecks: jest.fn() } }
@@ -1064,6 +1074,80 @@ describe('IpsrContributorsComponent', () => {
       // full mapped CLARISA catalog, not a subset filtered by (empty) Contributing Centers.
       expect(realRdPartnersSE.possibleLeadCenters.length).toBeGreaterThan(0);
       expect(realRdPartnersSE.possibleLeadCenters.map(c => c.code).sort()).toEqual(mockCentersSE.centersList.map(c => c.code).sort());
+    });
+
+    /**
+     * Live production bugfix (docs/specs/bugfix/external-partners-duplication follow-up, confirmed live on
+     * prtest result 12125 / IPSR 9657): IPSR's own P25 load path (`getTocLogicp25`) never reclassified
+     * `partnersBody.institutions` by `from_toc`, nor reset `otherPartnersSelected` from the fresh GET — the
+     * same institution could render in BOTH buckets at once after a save+reload (a stale, never-cleared
+     * `otherPartnersSelected` from in-session "Other(s)" picks, PLUS the raw unclassified GET response in
+     * `institutions`). Falsifier: without `reclassifyPartnersFromToc()` wired in, `otherPartnersSelected`
+     * would stay at its STALE pre-load value (asserted below to be exactly the fresh response's "Other"
+     * partners, not the stale ones seeded before the call) and/or an institution would appear in both
+     * buckets. Uses the REAL shared service (LC-T-3's disqualifying-mock clause) — the bug is entirely in
+     * what the two buckets end up holding, not in a mocked call being made.
+     */
+    it('reclassifies partnersBody.institutions by from_toc and resets the STALE otherPartnersSelected on load — no overlap, count matches distinct institutions', () => {
+      // reclassifyPartnersFromToc() (and applyTocMappingOnLoad()) are gated on the 2026 phase — this
+      // describe's default mock leaves it false (irrelevant to the Lead Center tests above).
+      (TestBed.inject(FieldsManagerService).isContributorsPartners2026 as jest.Mock).mockReturnValue(true);
+
+      const response: any = {
+        linked_results: [],
+        result_toc_result: { initiative_id: 1, result_toc_results: null },
+        contributors_result_toc_result: null,
+        contributing_and_primary_initiative: [],
+        impactsTarge: null,
+        sdgTargets: null,
+        contributing_initiatives: { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] },
+        bilateral_projects: [],
+        mqap_institutions: [],
+        is_lead_by_partner: false,
+        // Mixed from_toc, same shape as the live repro: 2 ToC partners, 2 "Other" partners.
+        institutions: [
+          { institutions_id: 10, from_toc: true, full_name: 'ToC Partner 10' },
+          { institutions_id: 20, from_toc: true, full_name: 'ToC Partner 20' },
+          { institutions_id: 30, from_toc: false, full_name: 'Other Partner 30' },
+          { institutions_id: 40, from_toc: false, full_name: 'Other Partner 40' }
+        ]
+      };
+
+      realRdPartnersSE.partnersBody.contributing_and_primary_initiative = [];
+      realRdPartnersSE.partnersBody.impactsTarge = [];
+      realRdPartnersSE.partnersBody.sdgTargets = [];
+      realRdPartnersSE.partnersBody.contributing_initiatives = { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] };
+      realRdPartnersSE.partnersBody.result_toc_result = { initiative_id: 1, result_toc_results: null };
+      realRdPartnersSE.partnersBody.contributors_result_toc_result = null;
+      realRdPartnersSE.partnersBody.institutions = response.institutions;
+      realRdPartnersSE.partnersBody.mqap_institutions = [];
+      realRdPartnersSE.partnersBody.is_lead_by_partner = false;
+      ipsrComponent.contributorsBody.bilateral_projects = [];
+
+      // Stale, pre-existing value from a prior in-session "Other(s)" pick — one id (30) also present in
+      // the fresh GET's "Other" bucket, one id (99) that no longer exists in the fresh response at all.
+      realRdPartnersSE.otherPartnersSelected = [
+        { institutions_id: 30, full_name: 'STALE Other Partner 30' },
+        { institutions_id: 99, full_name: 'STALE Other Partner 99 (gone from the fresh GET)' }
+      ];
+
+      ipsrComponent.getTocLogicp25(response);
+
+      const tocIds = realRdPartnersSE.partnersBody.institutions
+        .filter((i: any) => i.institutions_id !== realRdPartnersSE.OTHER_PARTNERS_CODE)
+        .map((i: any) => i.institutions_id);
+      const otherIds = realRdPartnersSE.otherPartnersSelected.map((i: any) => i.institutions_id);
+
+      // otherPartnersSelected is RECONCILED from the fresh GET, not left stale.
+      expect(otherIds.sort()).toEqual([30, 40]);
+      expect(otherIds).not.toContain(99);
+      // ToC bucket holds exactly the ToC-flagged partners.
+      expect(tocIds.sort()).toEqual([10, 20]);
+      // No institution renders in both buckets at once.
+      const intersection = tocIds.filter((id: number) => otherIds.includes(id));
+      expect(intersection).toEqual([]);
+      // Combined count matches the number of DISTINCT institutions in the response (4), not a doubled count.
+      expect(tocIds.length + otherIds.length).toBe(4);
     });
   });
   /**
@@ -1247,6 +1331,50 @@ describe('IpsrContributorsComponent', () => {
       component.contributorsBody = { ...mockResponse, bilateral_projects: [] } as any;
       component.getTocLogicp25({ ...mockResponse, linked_results: [] });
       expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results).toHaveLength(1);
+    });
+  });
+
+  describe('P2-3843 — a "No" on a package whose only ToC row is the blank default survives the save', () => {
+    const saveWith = (tocResult: any) => {
+      component.loaded.set(true);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockRdPartnersSE.partnersBody.result_toc_result = tocResult;
+      mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
+      mockRdPartnersSE.partnersBody.institutions = [];
+      mockRdPartnersSE.partnersBody.mqap_institutions = [];
+      mockRdPartnersSE.contributingInitiativeNew = [];
+      component.contributorsBody.contributing_initiatives = { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] };
+      component.contributorsBody.contributingInitiativeNew = [];
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      component.onSaveSection();
+      return patchSpy.mock.calls[0][0].result_toc_result;
+    };
+
+    it('drops the blank row so the server records the bare answer, and lifts the financial answer to the block', () => {
+      const item: any = { initiative_id: 7, planned_result: false, toc_progressive_narrative: 'Outside the 2026 ToC', result_toc_results: [] };
+      component.ensureTocRow(item);
+      item.result_toc_results[0].program_invested_financial_resources = false;
+
+      const sent = saveWith(item);
+
+      expect(sent.planned_result).toBe(false);
+      expect(sent.initiative_id).toBe(7);
+      expect(sent.result_toc_results).toEqual([]);
+      expect(sent.program_invested_financial_resources).toBe(false);
+      expect(sent.toc_progressive_narrative).toBe('Outside the 2026 ToC');
+      // the on-screen body keeps its row: only the payload copy changes
+      expect(item.result_toc_results).toHaveLength(1);
+    });
+
+    it('keeps rows that point at a saved record or a ToC node', () => {
+      const rows = [{ result_toc_result_id: 55 }, { toc_result_id: 9 }, { toc_result_id: null }];
+      const sent = saveWith({ initiative_id: 7, planned_result: false, result_toc_results: rows });
+      expect(sent.result_toc_results).toEqual([{ result_toc_result_id: 55 }, { toc_result_id: 9 }]);
+    });
+
+    it('leaves a "Yes" payload exactly as it was', () => {
+      const tocResult = { initiative_id: 7, planned_result: true, result_toc_results: [{ toc_result_id: null }] };
+      expect(saveWith(tocResult)).toBe(tocResult);
     });
   });
 

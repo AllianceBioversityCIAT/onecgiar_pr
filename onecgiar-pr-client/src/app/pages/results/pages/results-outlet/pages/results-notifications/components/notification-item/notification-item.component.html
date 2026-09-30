@@ -2,19 +2,106 @@
      was removed entirely — the user's updated reference file (`PRMS Reporting.dc.html`, search
      `showNotifications`, the row block ~L1842-1868) has no equivalent: it renders ONE flat row per
      notification, no header chips above it. See ./CLAUDE.md for the full account. -->
-<!-- CRD-R-1 / CRD-T-4: the row is an interactive control ONLY for a pending, non-Sent request
-     (`isPending`). Decided rows (status 2/3) and every Sent row get no role/tabindex/handler at
-     all — they render through the very same `.notification` wrapper below, so the bindings are
-     conditional on `isPending`, not structural per-case markup. -->
+<!-- CRD-R-1 / CRD-T-4 / NOTIF-T-5: the row is an interactive control for EVERY notification now —
+     `rowMode` (component) decides whether a click opens the drawer in `decide` mode (unchanged,
+     pending Received only — CRD-DD-10) or `view` mode (NEW: resolved Received, any Sent, any
+     Updates row). Decided/Sent/Updates rows render through the very same `.notification` wrapper
+     below, so the bindings are unconditional now instead of gated on `isPending`. -->
 <div
-  class="notification"
-  [class.notification_interactive]="isPending"
-  [attr.role]="isPending ? 'button' : null"
-  [attr.tabindex]="isPending ? '0' : null"
-  [attr.aria-label]="isPending ? copy.rowAriaLabel(notification?.obj_result?.result_code) : null"
-  (click)="isPending && openDrawer('details')"
-  (keydown.enter)="isPending && $event.target === $event.currentTarget && openDrawer('details')"
+  class="notification notification_interactive"
+  role="button"
+  tabindex="0"
+  [attr.aria-label]="rowAriaLabel"
+  (click)="onRowActivate()"
+  (keydown.enter)="$event.target === $event.currentTarget && onRowActivate()"
   (keydown.space)="onRowSpaceKeydown($event)">
+  @if (isUpdateSource) {
+    <!-- NOTIF-T-5: Updates-shaped rows have no `request_status_id` to switch on — a distinct
+         branch, reusing `getResultNotificationTextParts()`/`resolveNotificationType()` (no new
+         labels invented, NOTIF-DD-3) instead of the Requests-tab `@switch` below. -->
+    <div class="notification_content">
+      @let aiJob = aiJobParts;
+      <div class="notification_avatar">
+        @if (aiJob) {
+          <span class="material-icons-round" style="font-size: 16px" aria-hidden="true">auto_awesome</span>
+        } @else {
+        <span class="notification_avatar_initials">{{
+          ((notification?.obj_emitter_user?.first_name?.charAt(0) ?? '') + (notification?.obj_emitter_user?.last_name?.charAt(0) ?? ''))
+            | uppercase
+        }}</span>
+        }
+      </div>
+
+      <div class="notification_content_body">
+        <p class="notification_content_body_text notification_content_body_text_compact">
+          @let parts = updateTextParts;
+
+          @if (aiJob) {
+            {{ aiJob.message }}
+          } @else {
+          @if (parts.prefix) {
+            @if (parts.emphasizePrefix) {
+              <b> {{ parts.prefix }} </b>
+            } @else {
+              {{ parts.prefix }}
+            }
+          }
+
+          <a
+            [href]="resultUrl(notification)"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-mono"
+            style="text-decoration: underline; color: var(--pr-color-black)"
+            (click)="$event.stopPropagation()"
+            >{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</a
+          >{{ parts.linkTrailer }}
+
+          @if (parts.suffix) {
+            <b> {{ parts.suffix }} </b>
+          }
+          }
+        </p>
+
+        <!-- NOTIF-T-15: line 2 — badges + timestamp, stacked BELOW the message (previously siblings
+             of `.notification_content_body` at the `.notification_content` row level, laid out
+             inline with the avatar instead of below the message). -->
+        <div class="notification_meta_row">
+          <!-- NOTIF-R-3/NOTIF-DD-3 (type chip) + NOTIF-T-9 (`NOTIF-R-12`, funding-window badge).
+               NOTIF-T-12: the per-row status chip was removed — it never appeared in the user's
+               reference image; `NOTIF-R-5`'s status requirement is re-scoped to the detail panel's
+               `view`-mode metadata grid instead (`NOTIF-T-14`, a parallel task this same rework round —
+               see `docs/specs/notifications/inbox-revamp/execution.md`'s `NOTIF-T-12` entry for the
+               full history). NOTIF-T-13: the result level/type badge moved into `.notification_date`
+               above — the reference shows no third chip. -->
+          <div class="notification_badges">
+            @if (rowTypeChipLabel) {
+              <span
+                hlmBadge
+                variant="secondary"
+                data-notif-type-chip
+                class="notification_type_chip !bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]"
+                >{{ rowTypeChipLabel }}</span
+              >
+            }
+            @if (fundingWindowBadge) {
+              <span hlmBadge variant="outline" data-notif-funding-chip class="notification_funding_chip">{{ fundingWindowBadge }}</span>
+            }
+          </div>
+
+          <!-- NOTIF-T-13: `resultLevelTypeBadge` is no longer a separate chip (the reference has no
+               third badge) — it's plain muted text sharing this line with the time-ago, joined by
+               " · " only when a level/type label is actually known (never a dangling separator). -->
+          <div class="notification_date">
+            @if (resultLevelTypeBadge) {
+              {{ resultLevelTypeBadge }} ·
+            }
+            {{ notification?.created_date | appFormatTimeAgo }}
+          </div>
+        </div>
+      </div>
+    </div>
+  } @else {
   @switch (notification?.request_status_id) {
     @case (1) {
       <div class="notification_content">
@@ -54,7 +141,7 @@
               <b>
                 {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
                 {{ requesterCode }}
-                has requested {{ notification?.is_map_to_toc ? 'contribution' : 'inclusion of' }}
+                has requested {{ notification?.is_map_to_toc ? 'contribution' : 'the inclusion of' }}
               </b>
 
               @if (!notification?.is_map_to_toc) {
@@ -80,16 +167,46 @@
               }
             </p>
           }
+
+        <!-- NOTIF-T-15: line 2 — badges + "Requested …" timestamp, stacked BELOW the message
+             (previously siblings of `.notification_content_body` at the `.notification_content` row
+             level). -->
+        <div class="notification_meta_row">
+          <!-- NOTIF-R-3/NOTIF-DD-3 (type chip) + NOTIF-T-9 (`NOTIF-R-12`): funding-window + result
+               level/type badges. NOTIF-T-12: the per-row status chip was removed — see the rationale
+               above the Updates-row badges block. -->
+          <div class="notification_badges">
+            @if (rowTypeChipLabel) {
+              <span
+                hlmBadge
+                variant="secondary"
+                data-notif-type-chip
+                class="notification_type_chip !bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]"
+                >{{ rowTypeChipLabel }}</span
+              >
+            }
+            @if (fundingWindowBadge) {
+              <span hlmBadge variant="outline" data-notif-funding-chip class="notification_funding_chip">{{ fundingWindowBadge }}</span>
+            }
+          </div>
+
+          <!-- NOTIF-T-13: `resultLevelTypeBadge` joined into this same plain-text line, " · "-separated,
+               instead of a separate chip — see the Updates-row branch above for the same treatment. -->
+          <div class="notification_date">
+            @if (resultLevelTypeBadge) {
+              {{ resultLevelTypeBadge }} ·
+            }
+            Requested {{ notification.requested_date | appFormatTimeAgo }}
+          </div>
         </div>
 
-        <div class="notification_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
-
         @if (!isSent) {
-          <!-- NOTIF-T-10 (amends P2-3106's "Accept contribution" / "Decline contribution" unify):
-               the user's updated reference file's row buttons read plain "Accept" / "Decline"
-               (mockup `showNotifications` row, `r.accept`/`r.decline` buttons) — shortened here on
-               purpose, not an accidental revert of P2-3106. Click handlers/bindings unchanged. -->
-          @let buttonTextConfirm = 'Accept';
+          <!-- NOTIF-T-12 (corrected 2026-09-30): the user's CURRENT reference image clearly shows
+               "Accept contribution" / "Decline" (asymmetric on purpose) — this reverses NOTIF-T-10's
+               "shortened here on purpose" comment, which was based on a stale/superseded reference.
+               Click handlers/bindings unchanged. NOTIF-T-15: this is now line 3, stacked below the
+               badges+date row (line 2) — previously a sibling of `.notification_content_body`. -->
+          @let buttonTextConfirm = 'Accept contribution';
 
           <div class="notification_content_actions_buttons">
             <app-pr-button
@@ -119,6 +236,7 @@
               [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
           </div>
         }
+      </div>
       </div>
 
       <!-- P2-3085: read-only ToC metadata the submitter configured (from backend toc_contribution_review[]).
@@ -180,7 +298,8 @@
               target="_blank"
               rel="noopener noreferrer"
               class="font-mono"
-              style="text-decoration: underline; color: var(--pr-color-black)">
+              style="text-decoration: underline; color: var(--pr-color-black)"
+              (click)="$event.stopPropagation()">
               {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
             </a>
 
@@ -189,20 +308,55 @@
             }
           </p>
 
-          <p class="notification_content_caption">
-            Accepted by <span class="notification_content_caption_by">{{ notification?.obj_approved_by?.first_name }}
-            {{ notification?.obj_approved_by?.last_name }}</span> ·
-            <span class="notification_content_caption_date font-mono">{{ notification?.aprovaed_date | date }}</span>
-          </p>
+          <!-- NOTIF-T-15: line 2 — badges + "Requested …" timestamp, stacked BELOW the message
+               (previously siblings of `.notification_content_body` at the `.notification_content` row
+               level). -->
+          <div class="notification_meta_row">
+            <!-- NOTIF-R-3/NOTIF-DD-3: type chip, next to the pre-existing decision chip. NOTIF-T-9
+                 (`NOTIF-R-12`): funding-window + result level/type badges. -->
+            <div class="notification_badges">
+              @if (rowTypeChipLabel) {
+                <span
+                  hlmBadge
+                  variant="secondary"
+                  data-notif-type-chip
+                  class="notification_type_chip !bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]"
+                  >{{ rowTypeChipLabel }}</span
+                >
+              }
+              @if (fundingWindowBadge) {
+                <span hlmBadge variant="outline" data-notif-funding-chip class="notification_funding_chip">{{ fundingWindowBadge }}</span>
+              }
+            </div>
+
+            <!-- NOTIF-T-13: `resultLevelTypeBadge` joined into this same plain-text line, " · "-separated,
+                 instead of a separate chip — see the Updates-row branch above for the same treatment. -->
+            <div class="notification_date">
+              @if (resultLevelTypeBadge) {
+                {{ resultLevelTypeBadge }} ·
+              }
+              Requested {{ notification.requested_date | appFormatTimeAgo }}
+            </div>
+          </div>
+
+          <!-- NOTIF-T-15: line 3 — the "Accepted by X" caption + the decision chip, stacked BELOW
+               the badges+date row (line 2). The caption used to sit directly under the message
+               (right after it, no meta row between them); the decision chip used to be a sibling of
+               `.notification_content_body` at the very end of the row, outside the text column
+               entirely. Both now live together as this row's third line. -->
+          <div class="notification_content_footer_row">
+            <p class="notification_content_caption">
+              Accepted by <span class="notification_content_caption_by">{{ notification?.obj_approved_by?.first_name }}
+              {{ notification?.obj_approved_by?.last_name }}</span> ·
+              <span class="notification_content_caption_date font-mono">{{ notification?.aprovaed_date | date }}</span>
+            </p>
+
+            <!-- NOTIF-DD-4: decision chip; reuses --pr-color-green-500 (no new tokens). -->
+            <span hlmBadge variant="outline" data-notif-decision-chip="accepted" class="notification_decision_chip notification_decision_chip_accepted">
+              Accepted
+            </span>
+          </div>
         </div>
-
-        <div class="notification_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
-
-        <!-- NOTIF-DD-4: decision chip, last in the row (mockup `r.showChip`); reuses
-             --pr-color-green-500 (no new tokens). -->
-        <span hlmBadge variant="outline" data-notif-decision-chip="accepted" class="notification_decision_chip notification_decision_chip_accepted">
-          Accepted
-        </span>
       </div>
     }
 
@@ -242,7 +396,8 @@
               target="_blank"
               rel="noopener noreferrer"
               class="font-mono"
-              style="text-decoration: underline; color: var(--pr-color-black)">
+              style="text-decoration: underline; color: var(--pr-color-black)"
+              (click)="$event.stopPropagation()">
               {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
             </a>
 
@@ -251,22 +406,59 @@
             }
           </p>
 
-          <p class="notification_content_caption">
-            Rejected by <span class="notification_content_caption_by">{{ notification?.obj_approved_by?.first_name }}
-            {{ notification?.obj_approved_by?.last_name }}</span> ·
-            <span class="notification_content_caption_date font-mono">{{ notification?.aprovaed_date | date }}</span>
-          </p>
+          <!-- NOTIF-T-15: line 2 — badges + "Requested …" timestamp, stacked BELOW the message
+               (previously siblings of `.notification_content_body` at the `.notification_content` row
+               level). -->
+          <div class="notification_meta_row">
+            <!-- NOTIF-R-3/NOTIF-DD-3: type chip, next to the pre-existing decision chip. NOTIF-T-9
+                 (`NOTIF-R-12`): funding-window + result level/type badges. -->
+            <div class="notification_badges">
+              @if (rowTypeChipLabel) {
+                <span
+                  hlmBadge
+                  variant="secondary"
+                  data-notif-type-chip
+                  class="notification_type_chip !bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]"
+                  >{{ rowTypeChipLabel }}</span
+                >
+              }
+              @if (fundingWindowBadge) {
+                <span hlmBadge variant="outline" data-notif-funding-chip class="notification_funding_chip">{{ fundingWindowBadge }}</span>
+              }
+            </div>
+
+            <!-- NOTIF-T-13: `resultLevelTypeBadge` joined into this same plain-text line, " · "-separated,
+                 instead of a separate chip — see the Updates-row branch above for the same treatment. -->
+            <div class="notification_date">
+              @if (resultLevelTypeBadge) {
+                {{ resultLevelTypeBadge }} ·
+              }
+              Requested {{ notification.requested_date | appFormatTimeAgo }}
+            </div>
+          </div>
+
+          <!-- NOTIF-T-16: line 3 — the "Declined by X" caption + the decision chip, stacked BELOW
+               the badges+date row (line 2). See case (2) above for the same rationale. Wording
+               changed from "Rejected by" to "Declined by" (user feedback, 2026-09-30) to match the
+               "Decline"/"Declined" terminology already used by the row's action button and the
+               decision chip right next to this caption — "Rejected" was the only place on this row
+               still using the older word. -->
+          <div class="notification_content_footer_row">
+            <p class="notification_content_caption">
+              Declined by <span class="notification_content_caption_by">{{ notification?.obj_approved_by?.first_name }}
+              {{ notification?.obj_approved_by?.last_name }}</span> ·
+              <span class="notification_content_caption_date font-mono">{{ notification?.aprovaed_date | date }}</span>
+            </p>
+
+            <!-- NOTIF-DD-4: decision chip; reuses --pr-color-red-300 (no new tokens). -->
+            <span hlmBadge variant="outline" data-notif-decision-chip="declined" class="notification_decision_chip notification_decision_chip_declined">
+              Declined
+            </span>
+          </div>
         </div>
-
-        <div class="notification_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
-
-        <!-- NOTIF-DD-4: decision chip, last in the row (mockup `r.showChip`); reuses
-             --pr-color-red-300 (no new tokens). -->
-        <span hlmBadge variant="outline" data-notif-decision-chip="declined" class="notification_decision_chip notification_decision_chip_declined">
-          Declined
-        </span>
       </div>
     }
+  }
   }
 </div>
 
@@ -455,7 +647,7 @@
   [headerParts]="drawerHeader()"
   [resultCode]="notification?.obj_result?.result_code"
   [resultTitle]="notification?.obj_result?.title"
-  [reviewRows]="drawerReviewTables()"
+  [reviewRows]="drawerReviewRowsForMode()"
   [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
   [declineDisabled]="requestingAccept || requestingReject"
   [acceptBusy]="requestingAccept"
@@ -463,13 +655,19 @@
   [blockedReason]="drawerBlockedReason()"
   [acceptHelper]="drawerAcceptHelper()"
   [focusAlign]="drawerFocusAlign()"
+  [viewFields]="drawerViewFields()"
   (closed)="onDrawerClosedSignal()"
   (resultActivated)="onDrawerResult()"
   (acceptClicked)="onDrawerAccept()"
   (declineClicked)="drawerMode.set('confirm-decline')"
   (declineConfirmed)="acceptOrReject(false)"
   (declineCancelled)="drawerMode.set('decide')">
-  @if (isBilateralResult && tocInitiative) {
+  <!-- NOTIF-T-5 item 1: `[crdAlign]` is the Align/ToC-mapping block (CRD-DD-3) — per design.md
+       §6.2's `view`-mode table ("no footer — result card + metadata grid only"), it must never
+       project in `view` mode, only `decide`/`confirm-decline` (CRD-DD-10, unchanged). `tocInitiative`
+       is already only ever seeded for `mode==='decide'` (see `openDrawer()`), so this condition is
+       defense in depth, not the only guard. -->
+  @if (isBilateralResult && tocInitiative && (drawerMode() === 'decide' || drawerMode() === 'confirm-decline')) {
     <!-- CRD-R-5: today's mapping controls, moved inline (bilateral only). CRD-P-5: relative + a
          z-index so the ToC widget's dropdowns are not clipped by the sheet body's own scroll. -->
     <div crdAlign style="position: relative; z-index: 1" class="flex flex-col gap-3">

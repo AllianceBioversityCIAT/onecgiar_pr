@@ -6,6 +6,7 @@ import { env } from 'node:process';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { isReportingMetadataExportQueueConfigured } from './shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.constants';
 import { isBilateralAiProcessingQueueConfigured } from './shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.constants';
+import { getBilateralAiMaxConcurrent } from './api/bilateral-ai/bilateral-ai.config';
 
 import { json, urlencoded } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -89,7 +90,9 @@ async function bootstrap() {
         queueOptions: {
           durable: true,
         },
-        prefetchCount: 1,
+        // `AIQ-R-21`/design.md §5.6: one container runs both lanes, so prefetch must match the
+        // global cap (not a literal `1`, unlike the reporting-export block above).
+        prefetchCount: getBilateralAiMaxConcurrent(),
       },
     });
   }

@@ -71,8 +71,11 @@ export const NAVIGATE_SECTIONS: readonly SectionDef[] = [
     aliases: { en: ["what's new", 'whats new', 'news', 'release notes'], es: ['novedades', 'qué hay de nuevo', 'notas de versión'] }
   },
   {
+    // NOTIF-T-6 rework: the routed `.../requests` destination was retired along with
+    // `notificationsRouting`'s `requests`/`updates` children (`NOTIF-DD-6`) — repointed at the
+    // merged `results-notifications` view.
     slug: 'notifications',
-    path: '/result/results-outlet/results-notifications/requests',
+    path: '/result/results-outlet/results-notifications',
     label: { en: 'Notifications', es: 'Notificaciones' },
     aliases: { en: ['notifications', 'requests', 'my requests'], es: ['notificaciones', 'solicitudes', 'mis solicitudes'] }
   }

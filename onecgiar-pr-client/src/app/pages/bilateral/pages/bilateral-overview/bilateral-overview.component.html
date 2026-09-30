@@ -90,18 +90,68 @@
           data-testid="kpi-total"
           [routerLink]="resultsLink()"
           [queryParams]="deepLinkParams()"
-          [attr.aria-label]="'Total results, ' + overview.kpis.totalResults.count + ' results — open in Results'"
-          class="flex min-h-[120px] flex-col gap-[8px] rounded-[14px] border border-transparent bg-[linear-gradient(135deg,var(--pr-color-primary-300),var(--pr-color-primary-400))] p-[16px] text-white no-underline cursor-pointer transition-opacity duration-200 motion-reduce:transition-none hover:opacity-95 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-          <span class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
+          [attr.aria-label]="
+            'Total results, ' +
+            overview.kpis.totalResults.count +
+            ' results, ' +
+            overview.kpis.totalResults.replicatedCount +
+            ' replicated, ' +
+            overview.kpis.totalResults.newCount +
+            ' new, of ' +
+            overview.kpis.totalResults.w1w2Count +
+            ' W1/W2 results ' +
+            overview.kpis.totalResults.w1w2ContributorCount +
+            ' are contributing and ' +
+            overview.kpis.totalResults.w1w2LeadCount +
+            ' are leading — open in Results'
+          "
+          class="flex min-h-[120px] flex-col rounded-[14px] border border-transparent bg-[linear-gradient(135deg,var(--pr-color-primary-300),var(--pr-color-primary-400))] p-[16px] text-white no-underline cursor-pointer transition-opacity duration-200 motion-reduce:transition-none hover:opacity-95 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+          <span class="mb-[8px] flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
             Total results
             <span class="rounded-[9px] bg-white/20 px-[8px] py-[2px] text-[10.5px] font-semibold normal-case tracking-normal text-white">Center</span>
           </span>
-          <span class="font-mono text-[28px] font-bold leading-none tabular-nums">
+          <span class="mb-[12px] font-mono text-[28px] font-bold leading-none tabular-nums">
             {{ overview.kpis.totalResults.count }}<span class="ml-[6px] font-sans text-[13px] font-medium text-white/85">results</span>
           </span>
-          <span class="flex flex-wrap gap-[10px] text-[12px] text-white/85">
-            <span>{{ overview.kpis.totalResults.w3Count }} W3/Bilateral · {{ overview.kpis.totalResults.w1w2Count }} W1/W2</span>
-            <span>{{ overview.kpis.totalResults.leadCount }} lead · {{ overview.kpis.totalResults.contributingCount }} contributing</span>
+          <span class="mb-[20px] flex flex-col gap-[6px] text-[12px] text-white/85">
+            <span>
+              <span [title]="'Results created via the bilateral ingestion API (W3/Bilateral funding): ' + overview.kpis.totalResults.w3Count">{{ overview.kpis.totalResults.w3Count }} W3/Bilateral</span>
+              ·
+              <span [title]="'Results authored directly in PRMS as pooled-funding W1/W2 work: ' + overview.kpis.totalResults.w1w2Count">{{ overview.kpis.totalResults.w1w2Count }} W1/W2</span>
+              <span
+                class="text-white/70"
+                [title]="overview.kpis.totalResults.w1w2ContributorCount + ' of the ' + overview.kpis.totalResults.w1w2Count + ' W1/W2 results are contributing, not leading'"
+              >
+                ({{ overview.kpis.totalResults.w1w2ContributorCount }} contributing · {{ overview.kpis.totalResults.w1w2LeadCount }} lead)</span
+              >
+            </span>
+            <span>
+              <span [title]="'Results where this center is the lead center: ' + overview.kpis.totalResults.leadCount">{{ overview.kpis.totalResults.leadCount }} lead</span>
+              ·
+              <span [title]="'Results where this center participates as a contributor, not the lead: ' + overview.kpis.totalResults.contributingCount">{{ overview.kpis.totalResults.contributingCount }} contributing</span>
+            </span>
+          </span>
+          <!-- BOV-R-3: pill markup/tokens copied from bilateral-projects-panel.component.html:265-299.
+               BOV-DD-4: rendered as non-interactive <span>s (the whole card is already one <a>). -->
+          <span class="flex flex-wrap items-center gap-1.5 mt-[4px]" data-testid="kpi-total-replication-badges">
+            <span
+              data-testid="kpi-total-replicated-badge"
+              class="inline-flex items-center gap-1 rounded-full border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] px-2.5 py-1 text-[12px] font-semibold"
+              [class]="overview.kpis.totalResults.replicatedCount > 0
+                ? 'text-[var(--pr-color-secondary-400)]'
+                : 'text-[var(--pr-color-accents-4)]'">
+              <i class="pi pi-sync text-[12px] text-amber-600" aria-hidden="true"></i>
+              <span>{{ overview.kpis.totalResults.replicatedCount }} replicated</span>
+            </span>
+            <span
+              data-testid="kpi-total-new-badge"
+              class="inline-flex items-center gap-1 rounded-full border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] px-2.5 py-1 text-[12px] font-semibold"
+              [class]="overview.kpis.totalResults.newCount > 0
+                ? 'text-[var(--pr-color-secondary-400)]'
+                : 'text-[var(--pr-color-accents-4)]'">
+              <i class="pi pi-plus-circle text-[12px] text-emerald-600" aria-hidden="true"></i>
+              <span>{{ overview.kpis.totalResults.newCount }} new</span>
+            </span>
           </span>
         </a>
 
@@ -253,7 +303,7 @@
             chartTitle="Reporting status"
             height="48px" />
 
-          <div class="grid grid-cols-2 min-[640px]:grid-cols-3 min-[1280px]:grid-cols-5 gap-[8px]">
+          <div class="grid grid-cols-2 min-[1280px]:grid-cols-4 gap-[8px]">
             @for (tile of model().status.tiles; track tile.key) {
               <a
                 [attr.data-testid]="'status-tile-' + tile.key"

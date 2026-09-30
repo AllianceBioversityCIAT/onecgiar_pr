@@ -329,6 +329,15 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
       project.fullName = project.obj_clarisa_project.fullName;
     });
 
+    // Live production bugfix (docs/specs/bugfix/external-partners-duplication follow-up): unlike W1/W2's
+    // own load flow (`RdContributorsAndPartnersService.getSectionInformation()` → `applyTocMappingOnLoad()`),
+    // this P25 load path never reclassified `partnersBody.institutions` by `from_toc` nor reset
+    // `otherPartnersSelected` from the fresh GET — after a save+reload the same institution could render in
+    // BOTH buckets at once (a stale, never-cleared `otherPartnersSelected` from in-session "Other(s)" picks
+    // PLUS the raw unclassified GET response in `institutions`). MUST run BEFORE the lead-partner/lead-center
+    // calls below: they read the (now correctly split) partner/center buckets to decide lead eligibility.
+    this.rdPartnersSE.reclassifyPartnersFromToc();
+
     // Lead center/partner mapping on load — same order as W1/W2 (`rd-contributors-and-partners.service.ts:436-438`):
     // the saved lead is read FIRST and the auto-assign runs LAST. P2-3427: the previous order ran the auto-assign
     // inside `setPossibleLeadCenters(true)` and then `setLeadCenterOnLoad` overwrote it with `undefined`, so a
@@ -368,6 +377,29 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
       toc_progressive_narrative: null,
       indicators: [{ related_node_id: null, targets: [{ contributing_indicator: null }] }]
     });
+  }
+
+  /**
+   * P2-3843 — "Can this result be mapped to a ToC KPI? No" was lost on save. `ensureTocRow` (P2-3427) gives a
+   * never-saved package a blank row so the form can render; on a "No" the server's `createTocMappingV2`
+   * deactivates every active row and then re-writes only the rows that carry a `result_toc_result_id` or a
+   * `toc_result_id` (`results-toc-results.service.ts` ~1889). A blank row is skipped, and because the array is
+   * not empty the "no rows" branch that records the bare answer never runs — nothing is written, and the
+   * reload comes back unanswered. Sending the "No" without the blank rows sends it down that branch, which
+   * reads the financial-resources answer from the block, so it is lifted there from the row the radio wrote.
+   * The on-screen body is left untouched: only the payload copy changes.
+   */
+  buildUnplannedSafeTocPayload(tocResult: any) {
+    if (tocResult?.planned_result !== false || !Array.isArray(tocResult.result_toc_results)) return tocResult;
+    const anchoredRows = tocResult.result_toc_results.filter((row: any) => row?.result_toc_result_id || row?.toc_result_id);
+    if (anchoredRows.length === tocResult.result_toc_results.length) return tocResult;
+
+    const payload: any = { ...tocResult, result_toc_results: anchoredRows };
+    const financialResources = tocResult.result_toc_results[0]?.program_invested_financial_resources;
+    if (financialResources !== undefined && payload.program_invested_financial_resources === undefined) {
+      payload.program_invested_financial_resources = financialResources;
+    }
+    return payload;
   }
 
   onPlannedResultChange(item: any) {
@@ -601,7 +633,7 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
         ...this.rdPartnersSE.contributingInitiativeNew,
         ...this.contributorsBody.contributing_initiatives.pending_contributing_initiatives
       ];
-      sendedData.result_toc_result = this.rdPartnersSE.partnersBody.result_toc_result;
+      sendedData.result_toc_result = this.buildUnplannedSafeTocPayload(this.rdPartnersSE.partnersBody.result_toc_result);
       sendedData.is_lead_by_partner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
       // P2-3427 (Ángel, 28-Sep-2026 review, prtest) — the shared External Partners selector (`normal-selector`,
       // P2-3066) keeps the "Other(s)" SENTINEL (`institutions_id = OTHER_PARTNERS_CODE`, -999999) inside

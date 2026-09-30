@@ -40,6 +40,24 @@ export interface QualitySectionResult {
    * needs the naming agreed with the AI side first: an unmapped name is a silent no-op.
    */
   fields?: string[];
+  /**
+   * Optional AI-suggested full-replacement title/description for `general_information` only
+   * (contract v0.2, additive; `BIL-QTS-R-7`, `BIL-QTS-DD-1`). Present only after
+   * {@link normalizeSuggestions} keeps at least one of `title`/`description` — never stored or
+   * served as `{}` (`BIL-QTS-DD-2`, design.md §5 step 7).
+   */
+  suggestions?: QualitySuggestions;
+}
+
+/**
+ * `sections.general_information.suggestions` (contract v0.2, additive, optional;
+ * `docs/bilateral-module/integration-contracts.md` → "Suggestions" table; `BIL-QTS-R-7`).
+ * Both keys optional and independently droppable — a normalizer keeping only `title` (or only
+ * `description`) is expected, not an error.
+ */
+export interface QualitySuggestions {
+  title?: string;
+  description?: string;
 }
 
 export interface QualityEvidenceItem {
@@ -248,6 +266,136 @@ function cloneSections(
     };
   }
   return cloned;
+}
+
+/** GI verdicts eligible for a suggestion (design.md §5 step 2; `BIL-QTS-R-8` row "Verdict"). */
+const SUGGESTION_VERDICTS: ReadonlyArray<QualityVerdict> = ['amber', 'red'];
+
+/** Word limits per suggested key (`BIL-QTS-R-7`/`R-8`: 30 for `title`, 300 for `description`). */
+const SUGGESTION_WORD_LIMITS = {
+  title: 30,
+  description: 300,
+} as const;
+
+type SuggestionField = keyof typeof SUGGESTION_WORD_LIMITS;
+
+function isPlainSuggestionsObject(
+  value: unknown,
+): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Bit-for-bit reimplementation of the client's word counter (P-10;
+ * `onecgiar-pr-client/src/app/shared/services/word-counter.service.ts:9-20`, used by
+ * `pr-input`/`pr-textarea`), so the server's 30/300 suggestion limits (`BIL-QTS-R-8` "Limit")
+ * never disagree with the form's own counter on a borderline text. Splits on a **literal
+ * single space**, never a whitespace regex — that is what makes `"a\nb c"` count as 2 tokens
+ * (`"a\nb"`, `"c"`) instead of the 3 a naive `/\s+/` split would produce.
+ */
+export function countWordsLikeClient(text: string): number {
+  if (!text) {
+    return 0;
+  }
+  const textReplaced = text
+    .replace(/(<(\/?p)>)|(&nbsp;)/gi, ' ')
+    .replace(/(<([^>]+)>)/gi, '');
+  const splitWords = textReplaced.split(' ');
+  if (!splitWords.length) {
+    return 0;
+  }
+  let wordCount = 0;
+  for (const item of splitWords) {
+    if (item === '' || item === '\n' || item === '\t') {
+      continue;
+    }
+    wordCount++;
+  }
+  return wordCount;
+}
+
+/**
+ * Eligibility check for one suggested key (`title` or `description`): a string, non-empty
+ * after trimming, within its word limit, and — only when `sentValue` is given (the write path,
+ * `sent` passed by `sanitizeScores`) — not identical to the value PRMS sent in the outbound
+ * payload after trimming both sides (`BIL-QTS-R-8` rows "Type", "Content", "Limit", "Novelty").
+ * The read path (`BilateralQualityAssessmentService.toDto`) omits `sentValue`, so a stored
+ * suggestion is never dropped for novelty against a value nobody sent this time (design.md
+ * §2.2 "Read").
+ */
+function normalizeSuggestionField(
+  field: SuggestionField,
+  raw: unknown,
+  sentValue?: string | null,
+): string | undefined {
+  if (typeof raw !== 'string') {
+    return undefined;
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (countWordsLikeClient(trimmed) > SUGGESTION_WORD_LIMITS[field]) {
+    return undefined;
+  }
+  if (
+    sentValue !== undefined &&
+    sentValue !== null &&
+    trimmed === sentValue.trim()
+  ) {
+    return undefined;
+  }
+  return trimmed;
+}
+
+/**
+ * Pure normalizer for `sections.general_information.suggestions` (design.md §5 steps 1-7;
+ * `BIL-QTS-R-6`, `R-8`, `R-9`). Runs on both write (`BilateralQualityAssessmentClient
+ * .sanitizeScores`, with `sent`) and read (`BilateralQualityAssessmentService.toDto`, without
+ * `sent`), so a stored row can never serve an unsanitized suggestion regardless of who or what
+ * wrote it (`BIL-QTS-DD-2`).
+ *
+ * Called only for the `general_information` slot — the "any other section" drop rule
+ * (`BIL-QTS-R-8` "Section") is enforced by the caller, which never invokes this function for
+ * any other section key: the allow-list rebuild in `sanitizeScores` only adds `suggestions` to
+ * GI's own rebuilt object, and the read-side pass in `toDto` only touches
+ * `sections.general_information`.
+ *
+ * Never throws, never truncates a kept string (`BIL-QTS-R-8` "IT MUST store the kept text
+ * trimmed and otherwise verbatim, and never truncate it"), and never logs suggestion text —
+ * counting what this function drops, for the caller's log line, is the caller's job.
+ */
+export function normalizeSuggestions(
+  raw: unknown,
+  verdict: QualityVerdict,
+  sent?: { title?: string | null; description?: string | null },
+): QualitySuggestions | undefined {
+  if (!SUGGESTION_VERDICTS.includes(verdict)) {
+    return undefined;
+  }
+  if (!isPlainSuggestionsObject(raw)) {
+    return undefined;
+  }
+
+  const title = normalizeSuggestionField('title', raw.title, sent?.title);
+  const description = normalizeSuggestionField(
+    'description',
+    raw.description,
+    sent?.description,
+  );
+
+  if (title === undefined && description === undefined) {
+    return undefined;
+  }
+
+  const suggestions: QualitySuggestions = {};
+  if (title !== undefined) {
+    suggestions.title = title;
+  }
+  if (description !== undefined) {
+    suggestions.description = description;
+  }
+  return suggestions;
 }
 
 /** One KP metadata row, named after `ResultsKnowledgeProductMetadata` (`source`, `is_isi`, `accesibility` [sic], `year`, `is_peer_reviewed`). */

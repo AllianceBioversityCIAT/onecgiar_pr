@@ -74,6 +74,67 @@ describe('BilateralAutoSaveService explicit section persistence', () => {
     expect(bilateralApi.PATCH_generalInfo).not.toHaveBeenCalled();
   });
 
+  describe('setReadOnlyExemptions (BIL-RAU-T-7)', () => {
+    it('lets an exempt key through updateField while read-only, and still drops a non-exempt key', async () => {
+      service.setReadOnly(true);
+      service.setReadOnlyExemptions(['is_discontinued']);
+
+      service.updateField('title', 'Blocked');
+      service.updateField('is_discontinued', false);
+      await service.flush(service.getEndpointKeys('general-info'));
+
+      expect(bilateralApi.PATCH_generalInfo).toHaveBeenCalledTimes(1);
+      expect(bilateralApi.PATCH_generalInfo).toHaveBeenCalledWith(42, { is_discontinued: false });
+    });
+
+    it('lets an exempt key through updateFieldsBatch while read-only, dropping the rest of the batch', async () => {
+      service.setReadOnly(true);
+      service.setReadOnlyExemptions(['is_discontinued', 'discontinued_options', 'merge_split_targets']);
+
+      service.updateFieldsBatch({
+        title: 'Blocked',
+        is_discontinued: true,
+        discontinued_options: [{ investment_discontinued_option_id: 1, is_active: true }],
+      });
+      await service.flush(service.getEndpointKeys('general-info'));
+
+      expect(bilateralApi.PATCH_generalInfo).toHaveBeenCalledTimes(1);
+      expect(bilateralApi.PATCH_generalInfo).toHaveBeenCalledWith(42, {
+        is_discontinued: true,
+        discontinued_options: [{ investment_discontinued_option_id: 1, is_active: true }],
+      });
+    });
+
+    it('with no exemption set, read-only drops both an exempt-shaped key and a regular one (today\'s behavior)', async () => {
+      service.setReadOnly(true);
+
+      service.updateField('title', 'Blocked');
+      service.updateField('is_discontinued', false);
+      await service.flush(service.getEndpointKeys('general-info'));
+
+      expect(bilateralApi.PATCH_generalInfo).not.toHaveBeenCalled();
+    });
+
+    it('exemptions have no effect while the form is editable — everything saves as before', async () => {
+      service.setReadOnlyExemptions(['is_discontinued']);
+      service.updateField('title', 'Normal edit');
+      await service.flush(service.getEndpointKeys('general-info'));
+
+      expect(bilateralApi.PATCH_generalInfo).toHaveBeenCalledWith(42, { title: 'Normal edit' });
+    });
+
+    it('clearing exemptions (empty array) restores the full read-only drop', async () => {
+      service.setReadOnly(true);
+      service.setReadOnlyExemptions(['is_discontinued']);
+      service.setReadOnlyExemptions([]);
+
+      service.updateField('is_discontinued', false);
+      await service.flush(service.getEndpointKeys('general-info'));
+
+      expect(bilateralApi.PATCH_generalInfo).not.toHaveBeenCalled();
+    });
+  });
+
   describe('loadTocState and saveTocMapping contracts (BIL-TOC-T-5)', () => {
     it('loadTocState round-trips server response containing toc_linkage_mode and project_default', async () => {
       const mockProjectDefault: ProjectDefault = {

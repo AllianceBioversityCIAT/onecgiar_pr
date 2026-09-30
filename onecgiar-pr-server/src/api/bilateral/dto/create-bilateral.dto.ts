@@ -142,6 +142,16 @@ export class TocMappingDto {
   @IsOptional()
   @IsBoolean()
   is_determined?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      "Contribution to the matched ToC indicator target's number_target (non-negative, at most 2 decimals). Persisted as the target row's contributing_indicator when the ToC match resolves an indicator with a target; ignored (with a warning logged) otherwise. Defaults to 1 when not sent.",
+    example: 12.5,
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  target_contribution?: number;
 }
 
 export class ContributingProgramDto {

@@ -63,6 +63,11 @@ const FIELD_ENDPOINT_KEYS: Record<string, EndpointKey> = {
   nutrition_impact_area_ids: 'generalInfo',
   environmental_biodiversity_impact_area_ids: 'generalInfo',
   poverty_impact_area_ids: 'generalInfo',
+  // BIL-RAU-T-7 (design.md §6.2): the Annual updating answer, reasons and merge/split targets save
+  // through the same bilateral General info writer as Title/Description.
+  is_discontinued: 'generalInfo',
+  discontinued_options: 'generalInfo',
+  merge_split_targets: 'generalInfo',
   planned_result: 'plannedResult',
   programCode: 'plannedResult',
   toc_mapping: 'tocMapping',
@@ -137,6 +142,31 @@ export class BilateralAutoSaveService {
     this.isReadOnly.set(readOnly);
   }
 
+  /**
+   * BIL-RAU-T-7 (design.md §6.2, DD-5) — the narrow admin escape for the Annual updating block on
+   * a bilateral result stuck at Discontinued (4). While `isReadOnly()`, `updateField` and
+   * `updateFieldsBatch` normally drop every key; a key listed here is let through instead, and
+   * everything else in the same call is still dropped. An empty array (the default) restores
+   * today's all-or-nothing lock.
+   */
+  private readonly _readOnlyExemptions = signal<ReadonlySet<string>>(new Set());
+
+  setReadOnlyExemptions(keys: string[]): void {
+    this._readOnlyExemptions.set(new Set(keys));
+  }
+
+  private isExempt(fieldPath: string): boolean {
+    return this._readOnlyExemptions().has(fieldPath);
+  }
+
+  /**
+   * BIL-RAU-T-8 (design.md §6.2) — the last successful `generalInfo` PATCH response's `response`
+   * body. Set only inside `sendEndpointRequest`'s `next` handler for `endpointKey === 'generalInfo'`.
+   * The bilateral Annual updating wrapper reacts to `status_id` on it; every other consumer ignores
+   * this signal.
+   */
+  readonly lastGeneralInfoResponse = signal<Record<string, unknown> | null>(null);
+
   globalSaveState = computed<GlobalSaveState>(() => {
     const statuses = Object.values(this.fieldStatus());
     if (statuses.includes('saving')) return 'saving';
@@ -151,7 +181,7 @@ export class BilateralAutoSaveService {
   }
 
   updateField(fieldPath: string, value: unknown, fieldType: FieldType = 'text'): void {
-    if (this.isReadOnly()) return;
+    if (this.isReadOnly() && !this.isExempt(fieldPath)) return;
     this.stageField(fieldPath, value, fieldType);
   }
 
@@ -204,16 +234,23 @@ export class BilateralAutoSaveService {
     });
   }
 
+  /**
+   * BIL-RAU-T-7 (DD-5): while read-only, a wholesale early return would also block the one flow the
+   * exemption exists for — `updateField`/`updateFieldsBatch` already keep only exempt keys in
+   * `_pendingFields` in that state, so `flush()` only needs to stop dispatching the (never-staged
+   * while read-only) structured payloads, not fields already known to be exempt.
+   */
   async flush(endpointKeys?: readonly EndpointKey[]): Promise<void> {
-    if (this.isReadOnly()) return;
-
+    const readOnly = this.isReadOnly();
     const resultId = this._currentResultId();
     if (!resultId) return;
+    if (readOnly && this._pendingFields.size === 0) return;
 
     const selected = endpointKeys ? new Set(endpointKeys) : null;
     const pendingFields = Array.from(this._pendingFields.entries()).filter(([, entry]) => {
       const endpoint = FIELD_ENDPOINT_KEYS[entry.fieldPath];
-      return !!endpoint && (!selected || selected.has(endpoint));
+      if (!endpoint || (selected && !selected.has(endpoint))) return false;
+      return !readOnly || this.isExempt(entry.fieldPath);
     });
     for (const [key] of pendingFields) this._pendingFields.delete(key);
 
@@ -234,18 +271,24 @@ export class BilateralAutoSaveService {
       this.enqueueEndpointRequest(endpointKey, batch.body, batch.fields);
     }
 
-    for (const endpointKey of Array.from(this._pendingPayloads.keys())) {
-      if (selected && !selected.has(endpointKey)) continue;
-      this.dispatchPendingPayload(endpointKey);
+    if (!readOnly) {
+      for (const endpointKey of Array.from(this._pendingPayloads.keys())) {
+        if (selected && !selected.has(endpointKey)) continue;
+        this.dispatchPendingPayload(endpointKey);
+      }
     }
 
     this.refreshPendingFlag();
   }
 
   updateFieldsBatch(updates: Record<string, unknown>): void {
-    if (this.isReadOnly()) return;
+    const readOnly = this.isReadOnly();
+    const entries = readOnly
+      ? Object.entries(updates).filter(([fieldPath]) => this.isExempt(fieldPath))
+      : Object.entries(updates);
+    if (!entries.length) return;
 
-    for (const [fieldPath, value] of Object.entries(updates)) {
+    for (const [fieldPath, value] of entries) {
       this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'dirty' }));
       this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'select' });
     }
@@ -325,6 +368,12 @@ export class BilateralAutoSaveService {
     // reset() also runs between results in the same visit: a locked result must not leave the next
     // one locked.
     this.isReadOnly.set(false);
+    this._readOnlyExemptions.set(new Set());
+    // BIL-RAU-T-8 rework (Reviewer Issue 3): a stale response from the PREVIOUS result must not
+    // reach a consumer of the NEW one. `reset()` runs on every route-param change / retry /
+    // result-type reload, before the next `setResultId()`, so clearing this here — plus the
+    // consumer-side `response.id === currentResultId()` guard — closes both ends of the race.
+    this.lastGeneralInfoResponse.set(null);
   }
 
   private readonly _currentResultId = signal<number | null>(null);
@@ -408,13 +457,25 @@ export class BilateralAutoSaveService {
         : this.patchByEndpoint(endpointKey, resultId, body);
 
       request$.subscribe({
-        next: () => {
+        next: (body: unknown) => {
           if (generation !== this._generation) {
             this._inFlight.set(endpointKey, false);
             return;
           }
           this._inFlight.set(endpointKey, false);
           this._lastErrorMessages.delete(endpointKey);
+          // BIL-RAU-T-8 (design.md §6.2) — minimal save-response hook. The bilateral wrapper needs
+          // the `status_id` a discontinuation save returns (`updateBilateralGeneralInfo`'s response
+          // carries it only when the answer was actually written) to call
+          // `BilateralCreationService.setResultStatus` without a reload. No other `generalInfo`
+          // field (Title, DAC tags, …) ever sets `status_id` in `updates`, so this is a no-op for
+          // every other save on this endpoint.
+          if (endpointKey === 'generalInfo') {
+            const responseData = (body as { response?: Record<string, unknown> } | null)?.response;
+            if (responseData && typeof responseData === 'object') {
+              this.lastGeneralInfoResponse.set(responseData);
+            }
+          }
           this.markFieldsSavedThenIdle(statusKeys);
           this.drainQueuedPayload(endpointKey);
           this.refreshPendingFlag();

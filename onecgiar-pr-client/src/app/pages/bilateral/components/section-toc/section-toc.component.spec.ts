@@ -1464,3 +1464,26 @@ describe('SectionTocComponent template gating with real template (BIL-TOC-T-7)',
     expect(plannedQuestion).toBeNull();
   });
 });
+
+// P2-3800: in Pending Review / Rejected the ToC explanation box accepted typing that could never be
+// saved. The lock comes from section-contributors (`readOnly()` = not editable by the centre user).
+describe('SectionTocComponent template — read-only lock reaches the ToC explanation box (P2-3800)', () => {
+  const { readFileSync } = require('fs');
+  const { join } = require('path');
+  const tocHtml: string = readFileSync(join(__dirname, 'section-toc.component.html'), 'utf8');
+  const contributorsHtml: string = readFileSync(
+    join(__dirname, '../section-contributors/section-contributors.component.html'),
+    'utf8'
+  );
+
+  it('binds readOnly() on the ToC pathway explanation textarea', () => {
+    const textarea = tocHtml.match(/<app-pr-textarea[\s\S]*?<\/app-pr-textarea>/)?.[0] ?? '';
+    expect(textarea).toContain('aligns with the ToC pathway');
+    expect(textarea).toContain('[readOnly]="readOnly()"');
+  });
+
+  it('receives the read-only state from section-contributors', () => {
+    const host = contributorsHtml.match(/<app-section-toc\b[^>]*>/)?.[0] ?? '';
+    expect(host).toContain('[readOnly]="readOnly()"');
+  });
+});

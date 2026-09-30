@@ -1,0 +1,80 @@
+<title>Total Results Preview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', 'Segoe UI', 'sans-serif'],
+        },
+        colors: {
+          brand: { 50: '#f5f3ff', 500: '#7c3aed', 600: '#6d28d9', 700: '#5b21b6', 800: '#4c1d95' }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #f1f5f9;
+  }
+  .glass-specular {
+    background: radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 100%);
+  }
+</style>
+<main class="w-full max-w-lg mx-auto p-4 sm:p-6" data-purpose="mobile-card-wrapper">
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6f48f6] via-[#5b32e8] to-[#4920c8] p-7 text-white shadow-2xl shadow-indigo-950/40 ring-1 ring-white/20 flex flex-col gap-5">
+    <div class="glass-specular pointer-events-none absolute inset-0"></div>
+    <div class="pointer-events-none absolute -top-24 -right-24 h-56 w-56 rounded-full bg-white/10 blur-3xl"></div>
+    <div class="pointer-events-none absolute -bottom-20 -left-20 h-52 w-52 rounded-full bg-violet-400/15 blur-2xl"></div>
+    <header class="relative flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-[11px] font-bold uppercase tracking-wider text-violet-200/90">TOTAL RESULTS</span>
+      </div>
+      <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white shadow-sm ring-1 ring-white/25 backdrop-blur-md">Center</span>
+    </header>
+    <section class="relative flex items-baseline gap-2.5">
+      <h1 class="text-5xl font-black tracking-tight text-white font-sans">213</h1>
+      <span class="text-lg font-medium text-violet-200/90">results</span>
+    </section>
+    <div class="relative flex flex-col gap-3.5 text-xs">
+      <div class="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 backdrop-blur-sm space-y-2.5">
+        <div class="flex items-center justify-between text-xs font-semibold">
+          <div class="flex items-center gap-1.5 text-white"><span>135</span><span class="text-violet-200/80 font-normal">W3/Bilateral</span></div>
+          <div class="flex items-center gap-1.5 text-white"><span>78</span><span class="text-violet-200/80 font-normal">W1/W2</span></div>
+        </div>
+        <div class="h-2 w-full overflow-hidden rounded-full bg-black/20 p-0.5 flex gap-1">
+          <div class="h-full rounded-full bg-white shadow-sm" style="width: 63.4%"></div>
+          <div class="h-full rounded-full bg-violet-300" style="width: 36.6%"></div>
+        </div>
+        <div class="flex items-center justify-between pt-0.5 text-[11px] text-violet-200/90">
+          <span class="text-violet-300/70 font-medium">Breakdown (W1/W2)</span>
+          <span class="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-0.5 font-medium text-violet-100"><span class="text-white font-semibold">60</span> contributing <span class="text-violet-400">·</span> <span class="text-white font-semibold">18</span> lead</span>
+        </div>
+      </div>
+      <div class="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 backdrop-blur-sm space-y-2.5">
+        <div class="flex items-center justify-between text-xs font-semibold">
+          <div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-amber-400"></span><span class="text-white font-bold">131</span><span class="text-violet-200/80 font-normal">Lead</span></div>
+          <div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-sky-300"></span><span class="text-white font-bold">82</span><span class="text-violet-200/80 font-normal">Contributing</span></div>
+        </div>
+        <div class="h-2 w-full overflow-hidden rounded-full bg-black/20 p-0.5 flex gap-1">
+          <div class="h-full rounded-full bg-amber-400 shadow-sm" style="width: 61.5%"></div>
+          <div class="h-full rounded-full bg-sky-300 shadow-sm" style="width: 38.5%"></div>
+        </div>
+      </div>
+    </div>
+    <footer class="relative flex items-center gap-2.5 pt-1">
+      <div class="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-800 shadow-md ring-1 ring-black/5 transition-transform active:scale-95">
+        <svg class="h-4 w-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span class="font-bold text-slate-900">21</span><span class="text-slate-600 font-normal">replicated</span>
+      </div>
+      <div class="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-800 shadow-md ring-1 ring-black/5 transition-transform active:scale-95">
+        <svg class="h-4 w-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span class="font-bold text-slate-900">192</span><span class="text-slate-600 font-normal">new</span>
+      </div>
+    </footer>
+  </div>
+</main>

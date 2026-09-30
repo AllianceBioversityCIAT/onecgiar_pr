@@ -19,6 +19,8 @@ describe('BilateralAiService (unit)', () => {
       select: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       getMany: jest.fn().mockResolvedValue([]),
     };
     const jobRepository = {
@@ -102,12 +104,22 @@ describe('BilateralAiService (unit)', () => {
     };
     const clarisaInstitutionsRepository = {
       findOne: jest.fn().mockResolvedValue({ id: 7, acronym: 'AfricaRice' }),
+      find: jest.fn().mockResolvedValue([]),
+    };
+    // `AIQ-T-4`: batched lookup for the list item's `project_name` (design.md §4.1, P-21).
+    const clarisaProjectsRepository = {
+      find: jest.fn().mockResolvedValue([]),
     };
     const notificationsService = {
       notifyTerminal: jest.fn().mockResolvedValue(undefined),
     };
     const evidenceTransferService = {
       transferForDraft: jest.fn().mockResolvedValue([]),
+    };
+    // `AIQ-T-3`: `wake` is documented as never-throwing on the real class; the default here mirrors
+    // that so every existing test keeps behaving exactly as before this pivot.
+    const dispatchService = {
+      wake: jest.fn().mockResolvedValue(undefined),
     };
 
     const service = new BilateralAiService(
@@ -126,8 +138,10 @@ describe('BilateralAiService (unit)', () => {
       roleByUserRepository as any,
       clarisaCentersRepository as any,
       clarisaInstitutionsRepository as any,
+      clarisaProjectsRepository as any,
       notificationsService as any,
       evidenceTransferService as any,
+      dispatchService as any,
     );
 
     Object.assign(service, overrides);
@@ -151,8 +165,10 @@ describe('BilateralAiService (unit)', () => {
         roleByUserRepository,
         clarisaCentersRepository,
         clarisaInstitutionsRepository,
+        clarisaProjectsRepository,
         notificationsService,
         evidenceTransferService,
+        dispatchService,
       },
     };
   };
@@ -305,7 +321,13 @@ describe('BilateralAiService (unit)', () => {
       const result = await service.getJob('j1', 42);
 
       expect(result).toEqual({
-        response: { ...mockJob, queue_position: null, max_attempts: 3 },
+        response: {
+          ...mockJob,
+          queue_position: null,
+          jobs_ahead: null,
+          wait_reason: null,
+          max_attempts: 3,
+        },
         message: 'AI job found',
         status: 200,
       });
@@ -333,9 +355,10 @@ describe('BilateralAiService (unit)', () => {
       });
     });
 
-    // `APF-AC-1`, `APF-R-1` A: position is a mocked count over `queue_entry_date`, never a stored
-    // column — computed fresh on every read.
-    it('computes queue_position for a PENDING job from a count keyed on queue_entry_date', async () => {
+    // `AIQ-T-4`, `AIQ-DD-4`: `jobs_ahead` (and `queue_position`, redefined as `jobs_ahead`) is a
+    // mocked count keyed on `queue_entry_date`, never a stored column — computed fresh on every
+    // read, and scoped to `PENDING` only (older `PROCESSING` rows no longer count).
+    it('computes jobs_ahead/queue_position for a PENDING job from a PENDING-only count keyed on queue_entry_date, and wait_reason from the caps', async () => {
       const { service, stubs } = makeService();
       const myQueueEntryDate = new Date('2026-09-10T00:00:00.000Z');
       stubs.jobRepository.findOne.mockResolvedValue({
@@ -344,22 +367,75 @@ describe('BilateralAiService (unit)', () => {
         status: BilateralAiJobStatus.PENDING,
         queue_entry_date: myQueueEntryDate,
       });
-      stubs.jobRepository.count.mockResolvedValue(2);
+      stubs.jobRepository.count
+        .mockResolvedValueOnce(2) // jobs_ahead
+        .mockResolvedValueOnce(0) // owner's PROCESSING count — below the per-user cap (default 1)
+        .mockResolvedValueOnce(1); // global PROCESSING count — below the global cap (default 2)
 
       const result = await service.getJob('j1', 42);
 
+      expect(result.response.jobs_ahead).toBe(2);
       expect(result.response.queue_position).toBe(2);
-      expect(stubs.jobRepository.count).toHaveBeenCalledTimes(1);
-      const { where } = stubs.jobRepository.count.mock.calls[0][0];
+      expect(result.response.wait_reason).toBe('starting');
+      expect(stubs.jobRepository.count).toHaveBeenCalledTimes(3);
+
+      const jobsAheadArgs = stubs.jobRepository.count.mock.calls[0][0];
       // The count is scoped to this job's own queue-entry clock (never `created_date`) and to
-      // non-terminal jobs only.
-      expect(where.queue_entry_date.type).toBe('lessThan');
-      expect(where.queue_entry_date.value).toEqual(myQueueEntryDate);
-      expect(where.status.type).toBe('in');
-      expect(where.status.value).toEqual([
-        BilateralAiJobStatus.PENDING,
-        BilateralAiJobStatus.PROCESSING,
-      ]);
+      // PENDING jobs only — a running job is never "ahead" in a lane model.
+      expect(jobsAheadArgs.where.queue_entry_date.type).toBe('lessThan');
+      expect(jobsAheadArgs.where.queue_entry_date.value).toEqual(
+        myQueueEntryDate,
+      );
+      expect(jobsAheadArgs.where.status).toBe(BilateralAiJobStatus.PENDING);
+
+      const ownerArgs = stubs.jobRepository.count.mock.calls[1][0];
+      expect(ownerArgs.where).toEqual({
+        status: BilateralAiJobStatus.PROCESSING,
+        user_id: 42,
+      });
+
+      const globalArgs = stubs.jobRepository.count.mock.calls[2][0];
+      expect(globalArgs.where).toEqual({
+        status: BilateralAiJobStatus.PROCESSING,
+      });
+    });
+
+    // `AIQ-R-6` A: the three `wait_reason` outcomes (`design.md` §5.5).
+    it('wait_reason is own_job_running when the owner is at the per-user cap', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        user_id: 42,
+        status: BilateralAiJobStatus.PENDING,
+        queue_entry_date: new Date('2026-09-10T00:00:00.000Z'),
+      });
+      stubs.jobRepository.count
+        .mockResolvedValueOnce(0) // jobs_ahead
+        .mockResolvedValueOnce(1); // owner's PROCESSING count === default per-user cap (1)
+
+      const result = await service.getJob('j1', 42);
+
+      expect(result.response.wait_reason).toBe('own_job_running');
+      // Short-circuits before the third (global) count.
+      expect(stubs.jobRepository.count).toHaveBeenCalledTimes(2);
+    });
+
+    it('wait_reason is no_free_lane when the owner is free but the global cap is full', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        user_id: 42,
+        status: BilateralAiJobStatus.PENDING,
+        queue_entry_date: new Date('2026-09-10T00:00:00.000Z'),
+      });
+      stubs.jobRepository.count
+        .mockResolvedValueOnce(0) // jobs_ahead
+        .mockResolvedValueOnce(0) // owner's PROCESSING count — below the per-user cap
+        .mockResolvedValueOnce(2); // global PROCESSING count === default global cap (2)
+
+      const result = await service.getJob('j1', 42);
+
+      expect(result.response.wait_reason).toBe('no_free_lane');
     });
 
     it('reads max_attempts from BILATERAL_AI_MAX_ATTEMPTS', async () => {
@@ -381,6 +457,324 @@ describe('BilateralAiService (unit)', () => {
           delete process.env.BILATERAL_AI_MAX_ATTEMPTS;
         else process.env.BILATERAL_AI_MAX_ATTEMPTS = original;
       }
+    });
+  });
+
+  describe('listJobs', () => {
+    // A `FindOperator`-aware fake matcher for `jobRepository.find`/`count`'s `where` clauses
+    // (`In`, `Not`, `LessThan`) plus plain equality — lets these tests exercise the real
+    // filtering/counting shape the service builds, against a fixture the test controls.
+    function findMatches(job: any, where: Record<string, any>): boolean {
+      return Object.entries(where).every(([key, condition]) => {
+        if (condition && typeof condition === 'object' && 'type' in condition) {
+          switch (condition.type) {
+            case 'in':
+              return condition.value.includes(job[key]);
+            case 'not':
+              return job[key] !== condition.value;
+            case 'lessThan':
+              return (
+                new Date(job[key]).getTime() <
+                new Date(condition.value).getTime()
+              );
+            default:
+              throw new Error(
+                `Unhandled FindOperator in test fake: ${condition.type}`,
+              );
+          }
+        }
+        return job[key] === condition;
+      });
+    }
+
+    // A fake `createQueryBuilder()` for the finished-jobs branch, which builds its WHERE with
+    // raw SQL fragments (`design.md` §5.5's timezone-skew rule: the 24h cutoff is SQL, not JS
+    // `Date` math) instead of `FindOperator`s. Recognizes exactly the fragments `listJobs` emits.
+    function buildQueryBuilderFake(rows: any[]) {
+      const conditions: Array<{ sql: string; params?: any }> = [];
+      const qb: any = {
+        where: jest.fn((sql: string, params?: any) => {
+          conditions.push({ sql, params });
+          return qb;
+        }),
+        andWhere: jest.fn((sql: string, params?: any) => {
+          conditions.push({ sql, params });
+          return qb;
+        }),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getMany: jest.fn(async () =>
+          rows.filter((job) =>
+            conditions.every(({ sql, params }) => {
+              if (sql === 'job.user_id = :userId')
+                return job.user_id === params.userId;
+              if (sql === 'job.status IN (:...statuses)')
+                return params.statuses.includes(job.status);
+              if (
+                sql ===
+                'job.completed_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)'
+              ) {
+                return (
+                  job.completed_date != null &&
+                  Date.now() - new Date(job.completed_date).getTime() <=
+                    24 * 60 * 60 * 1000
+                );
+              }
+              throw new Error(`Unhandled test condition: ${sql}`);
+            }),
+          ),
+        ),
+      };
+      return qb;
+    }
+
+    function wireFixture(stubs: any, allJobs: any[]) {
+      stubs.jobRepository.find.mockImplementation(async ({ where }: any) =>
+        allJobs.filter((job) => findMatches(job, where)),
+      );
+      stubs.jobRepository.createQueryBuilder.mockImplementation(() =>
+        buildQueryBuilderFake(allJobs),
+      );
+      stubs.jobRepository.count.mockImplementation(
+        async ({ where }: any) =>
+          allJobs.filter((job) => findMatches(job, where)).length,
+      );
+    }
+
+    function baseJob(overrides: Partial<any>): any {
+      return {
+        job_id: 'job',
+        user_id: 1,
+        status: BilateralAiJobStatus.PENDING,
+        stage: 'queued',
+        stage_updated_date: null,
+        project_id: 1,
+        program_code: 'WLE',
+        center_id: 1,
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        queue_entry_date: new Date(),
+        started_date: null,
+        completed_date: null,
+        result_count: 0,
+        error_code: null,
+        attempts: 0,
+        retrying: false,
+        ...overrides,
+      };
+    }
+
+    // Falsifier 1 (`AIQ-T-4`): if the implementation spreads `{...job}` instead of the explicit
+    // §4.1 key set, `bucket_name`/`user_id` leak and this goes red.
+    // Falsifier 2: if the `user_id = caller` filter is dropped, `other-pending`/`other-processing`
+    // appear in the result and the "no other job_id" assertion goes red.
+    // Disqualifier: the fixture below mixes the caller's rows with other users' rows on purpose.
+    it("returns exactly the §4.1 key set and never another user's job_id, with matching summary counts", async () => {
+      const { service, stubs } = makeService();
+      const now = Date.now();
+
+      const callerPending = baseJob({
+        job_id: 'caller-pending',
+        user_id: 42,
+        project_id: 10,
+        center_id: 7,
+        document_keys: ['d1'],
+        audio_keys: [],
+        text_context: 'hello',
+        queue_entry_date: new Date(now - 1000),
+        bucket_name: 'secret-bucket',
+        document_keys_raw: undefined,
+      });
+      const otherPending = baseJob({
+        job_id: 'other-pending',
+        user_id: 99,
+        project_id: 11,
+        center_id: 8,
+        queue_entry_date: new Date(now - 5000),
+      });
+      const otherProcessing = baseJob({
+        job_id: 'other-processing',
+        user_id: 99,
+        status: BilateralAiJobStatus.PROCESSING,
+        project_id: 11,
+        center_id: 8,
+        queue_entry_date: new Date(now - 8000),
+        started_date: new Date(now - 4000),
+      });
+
+      wireFixture(stubs, [callerPending, otherPending, otherProcessing]);
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([
+        { id: 10, shortName: 'Short', fullName: 'Full Project Name' },
+      ]);
+      stubs.clarisaInstitutionsRepository.find.mockResolvedValue([
+        { id: 7, acronym: 'AfricaRice' },
+      ]);
+
+      const result = await service.listJobs({ id: 42 } as any);
+
+      expect(result.response.jobs).toHaveLength(1);
+      const [item] = result.response.jobs;
+
+      expect(Object.keys(item).sort()).toEqual(
+        [
+          'job_id',
+          'status',
+          'stage',
+          'stage_updated_date',
+          'project_id',
+          'project_name',
+          'program_code',
+          'center_id',
+          'center_acronym',
+          'document_count',
+          'audio_count',
+          'has_text',
+          'queue_entry_date',
+          'started_date',
+          'completed_date',
+          'result_count',
+          'error_code',
+          'attempts',
+          'max_attempts',
+          'retrying',
+          'jobs_ahead',
+          'wait_reason',
+        ].sort(),
+      );
+      // §4.1 "Excluded from the list on purpose".
+      expect(item).not.toHaveProperty('bucket_name');
+      expect(item).not.toHaveProperty('user_id');
+      expect(item).not.toHaveProperty('document_keys');
+      expect(item).not.toHaveProperty('audio_keys');
+      expect(item).not.toHaveProperty('text_context');
+      expect(item).not.toHaveProperty('response_snapshot');
+      expect(item).not.toHaveProperty('error_message');
+
+      const jobIds = result.response.jobs.map((j: any) => j.job_id);
+      expect(jobIds).not.toContain('other-pending');
+      expect(jobIds).not.toContain('other-processing');
+
+      expect(item.project_name).toBe('Full Project Name');
+      expect(item.center_acronym).toBe('AfricaRice');
+      expect(item.document_count).toBe(1);
+      expect(item.audio_count).toBe(0);
+      expect(item.has_text).toBe(true);
+      expect(item.max_attempts).toBe(3);
+      // Global fair order: `other-pending` is an older PENDING row (any owner counts, §5.5).
+      expect(item.jobs_ahead).toBe(1);
+      // Owner not at cap (0 PROCESSING), global PROCESSING count is 1 < default cap 2.
+      expect(item.wait_reason).toBe('starting');
+
+      expect(result.response.summary).toEqual({
+        lanes_total: 2,
+        lanes_busy: 1,
+        others_waiting: 1,
+      });
+    });
+
+    it('returns an empty list (but a real summary) when the caller resolves to id: 0', async () => {
+      const { service, stubs } = makeService();
+      const allJobs = [
+        baseJob({
+          job_id: 'someone-elses',
+          user_id: 7,
+          project_id: 1,
+          center_id: 1,
+        }),
+      ];
+      wireFixture(stubs, allJobs);
+
+      const result = await service.listJobs({ id: 0 } as any);
+
+      expect(result.response.jobs).toEqual([]);
+      expect(result.response.summary).toEqual({
+        lanes_total: 2,
+        lanes_busy: 0,
+        others_waiting: 1,
+      });
+    });
+
+    it('is monotonic: a newer PENDING row leaves jobs_ahead unchanged, finishing an older one decreases it', async () => {
+      const { service, stubs } = makeService();
+      const t0 = new Date('2026-09-10T00:00:00.000Z');
+
+      const olderPending = baseJob({
+        job_id: 'older',
+        user_id: 99,
+        project_id: 1,
+        center_id: 1,
+        queue_entry_date: new Date(t0.getTime() - 2000),
+      });
+      const myJob = baseJob({
+        job_id: 'mine',
+        user_id: 42,
+        project_id: 1,
+        center_id: 1,
+        queue_entry_date: t0,
+      });
+
+      wireFixture(stubs, [olderPending, myJob]);
+      const first = await service.listJobs({ id: 42 } as any);
+      expect(
+        first.response.jobs.find((j: any) => j.job_id === 'mine').jobs_ahead,
+      ).toBe(1);
+
+      const newerPending = baseJob({
+        ...olderPending,
+        job_id: 'newer',
+        queue_entry_date: new Date(t0.getTime() + 2000),
+      });
+      wireFixture(stubs, [olderPending, myJob, newerPending]);
+      const second = await service.listJobs({ id: 42 } as any);
+      expect(
+        second.response.jobs.find((j: any) => j.job_id === 'mine').jobs_ahead,
+      ).toBe(1);
+
+      const finishedOlder = {
+        ...olderPending,
+        status: BilateralAiJobStatus.COMPLETED,
+        completed_date: new Date(),
+      };
+      wireFixture(stubs, [finishedOlder, myJob, newerPending]);
+      const third = await service.listJobs({ id: 42 } as any);
+      expect(
+        third.response.jobs.find((j: any) => j.job_id === 'mine').jobs_ahead,
+      ).toBe(0);
+    });
+
+    it('agrees with getJob on jobs_ahead, wait_reason and queue_position for the same PENDING job', async () => {
+      const { service, stubs } = makeService();
+      const queueEntryDate = new Date('2026-09-10T00:00:00.000Z');
+
+      const olderPending = baseJob({
+        job_id: 'older',
+        user_id: 7,
+        project_id: 1,
+        center_id: 1,
+        queue_entry_date: new Date(queueEntryDate.getTime() - 1000),
+      });
+      const myJob = baseJob({
+        job_id: 'mine',
+        user_id: 42,
+        project_id: 1,
+        center_id: 1,
+        queue_entry_date: queueEntryDate,
+      });
+
+      wireFixture(stubs, [olderPending, myJob]);
+      stubs.jobRepository.findOne.mockResolvedValue(myJob);
+
+      const listResult = await service.listJobs({ id: 42 } as any);
+      const listItem = listResult.response.jobs.find(
+        (j: any) => j.job_id === 'mine',
+      );
+
+      const jobResult = await service.getJob('mine', 42);
+
+      expect(jobResult.response.jobs_ahead).toBe(listItem.jobs_ahead);
+      expect(jobResult.response.wait_reason).toBe(listItem.wait_reason);
+      expect(jobResult.response.queue_position).toBe(listItem.jobs_ahead);
     });
   });
 
@@ -520,6 +914,32 @@ describe('BilateralAiService (unit)', () => {
       );
       const [, setPayload] = stubs.jobRepository.update.mock.calls[0];
       expect(setPayload).not.toHaveProperty('created_date');
+    });
+
+    // `AIQ-R-2` D / `AIQ-AC-10` (`tasks.md` AIQ-T-3 Tests: "Retry re-entry: retryJob → decide sees
+    // it as the newest"; `design.md` §5.3's row for this is "no code change there, only a test").
+    // This is the "fresh queue_entry_date" half of that scenario: `queue_entry_date` is a STORED
+    // generated column `COALESCE(retried_date, created_date)` (`design.md` P-7), never written
+    // directly, so proving `retried_date` is set to the DB-time escape hatch (never a JS `Date`,
+    // per the timezone-skew fix `bilateral-ai.config.ts`'s `bilateralAiDbNow`) is what makes the
+    // generated column pick up "now" as this job's new fair-order position. The complementary
+    // "ordering behind an older PENDING job" half is proven at `decide`'s seam in
+    // `bilateral-ai-dispatch.service.spec.ts` ("retry re-entry — a retried job goes to the back of
+    // fair order").
+    it('AIQ-R-2 D / AIQ-AC-10: retryJob sets a fresh retried_date via CURRENT_TIMESTAMP (never a JS Date), which the generated queue_entry_date column picks up as the new fair-order position', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(failedJob());
+
+      await service.retryJob('job-1', user);
+
+      const [, setPayload] = stubs.jobRepository.update.mock.calls[0];
+      expect(setPayload.retried_date).toBeInstanceOf(Function);
+      expect(setPayload.retried_date()).toBe('CURRENT_TIMESTAMP');
+      expect(setPayload.retried_date).not.toBeInstanceOf(Date);
+      // `design.md` §5.2/P-7: `queue_entry_date` itself is never in this write's SET clause — it
+      // is a STORED generated column derived from `retried_date`, not a column this write ever
+      // touches directly.
+      expect(setPayload).not.toHaveProperty('queue_entry_date');
     });
 
     it('should throw 409 JOB_ALIVE when the conditional reset affects 0 rows (lost the race)', async () => {
@@ -1792,6 +2212,59 @@ describe('BilateralAiService (unit)', () => {
       expect(options).toMatchObject({ resultCount: 0, late: false });
     });
 
+    // `AIQ-T-3` (`design.md` §5.3 P-5): the COMPLETED write just freed a lane — `processJob` must
+    // wake the dispatch service so a parked job doesn't wait for the sweeper's next tick.
+    it('wakes the dispatch service exactly once after the COMPLETED write (AIQ-T-3)', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: 'int-123',
+      });
+
+      await service.processJob('j1');
+
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(1);
+      expect(stubs.dispatchService.wake).toHaveBeenCalledWith('completed');
+    });
+
+    // `AIQ-T-3` forward pointer (from `AIQ-T-2`): a wake-time fault must never turn a job that just
+    // completed successfully into a consumer retry — `processJob` must still resolve and still
+    // have notified the uploader.
+    it('does not rethrow when dispatch.wake rejects after the COMPLETED write', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: 'int-123',
+      });
+      stubs.dispatchService.wake.mockRejectedValue(new Error('DB down'));
+
+      await expect(service.processJob('j1')).resolves.toBeUndefined();
+
+      expect(stubs.notificationsService.notifyTerminal).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
     // `APF-R-2` A "AND IT MUST accept a late mining response... idempotently": a re-run for the
     // same (job_id, candidate_index) — the mining response arriving after the sweeper already
     // flipped the row, or a redelivered message — must reuse the existing draft/result instead of
@@ -2033,6 +2506,8 @@ describe('BilateralAiService (unit)', () => {
       // Not terminal yet — the retry keeps `PROCESSING`, so `APF-R-4`'s "exactly once per terminal
       // state" must not fire here.
       expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
+      // `AIQ-T-3` negative case: a mid-attempt retry never frees a lane, so it must not wake.
+      expect(stubs.dispatchService.wake).not.toHaveBeenCalled();
     });
 
     // `APF-R-3` "AND IT MUST set FAILED with the last error_code after attempt max_attempts".
@@ -2072,6 +2547,9 @@ describe('BilateralAiService (unit)', () => {
         stubs.notificationsService.notifyTerminal.mock.calls[0];
       expect(notifiedJob.error_code).toBe('HTTP_503');
       expect(outcome).toBe('failed');
+      // `AIQ-T-3`: the final FAILED write just freed a lane, exactly like COMPLETED.
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(1);
+      expect(stubs.dispatchService.wake).toHaveBeenCalledWith('failed');
     });
 
     it('should mark job as FAILED without throwing on 4xx errors', async () => {
@@ -2101,8 +2579,161 @@ describe('BilateralAiService (unit)', () => {
           completed_date: expect.any(Function), // was: expect.any(Date)
         },
       );
+      // `AIQ-T-3`: a 4xx final failure is still "the final FAILED write" (design.md §5.3 P-5
+      // explicitly includes "incl. 4xx").
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(1);
+      expect(stubs.dispatchService.wake).toHaveBeenCalledWith('failed');
+    });
+
+    // `AIQ-T-3` (`design.md` §5.3 P-5): the write is scoped to `status = PROCESSING`, so a lost
+    // race (the sweeper or another consumer already moved the row) must not wake on someone else's
+    // behalf — the same guard that already gates `notifyTerminal` on this path.
+    it('does not wake when the final FAILED write affects 0 rows (lost the race)', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      const error = new Error('Bad request');
+      (error as any).status = 400;
+      stubs.textMining.extract.mockRejectedValue(error);
+      // Update call order for this fixture (no docs/audio, so no intermediate stage write):
+      // [1] attemptStart's claim, [2] setStage(EXTRACTING), [3] the final FAILED write — only the
+      // third is the one this test targets.
+      stubs.jobRepository.update.mockResolvedValueOnce({ affected: 1 });
+      stubs.jobRepository.update.mockResolvedValueOnce({ affected: 1 });
+      stubs.jobRepository.update.mockResolvedValueOnce({ affected: 0 });
+
+      await service.processJob('j1');
+
+      expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
+      expect(stubs.dispatchService.wake).not.toHaveBeenCalled();
     });
   });
+
+  // `AIQ-T-2` attempt 2, Reviewer B (error-path lens) item 2: the `skipClaim` branch had no
+  // coverage — `attemptNumber = job.attempts` (no +1, since `BilateralAiDispatchService.decide`
+  // already incremented it via `attemptStart`) drives retry-vs-final, and an off-by-one here
+  // would silently add or drop an attempt while every other test stayed green.
+  describe('processJob — skipClaim:true (dispatch already claimed the job)', () => {
+    it('does not call attemptStart', async () => {
+      const { service, stubs } = makeService();
+      const attemptStartSpy = jest.spyOn(service, 'attemptStart');
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PROCESSING,
+        attempts: 1,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: null,
+      });
+
+      await service.processJob('j1', { skipClaim: true });
+
+      expect(attemptStartSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns before calling text mining when the row is not PROCESSING (claim did not actually land)', async () => {
+      const { service, stubs } = makeService();
+      const attemptStartSpy = jest.spyOn(service, 'attemptStart');
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+
+      await service.processJob('j1', { skipClaim: true });
+
+      expect(attemptStartSpy).not.toHaveBeenCalled();
+      expect(stubs.textMining.extract).not.toHaveBeenCalled();
+      expect(stubs.jobRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('at attempts = max_attempts - 1 (already incremented by the claim), a retryable error rethrows with retrying=true', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PROCESSING,
+        attempts: 2, // default max_attempts = 3 → this IS attempt 2 of 3, not a fresh 0
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      const error = new Error('Service down');
+      (error as any).status = undefined;
+      stubs.textMining.extract.mockRejectedValue(error);
+
+      await expect(
+        service.processJob('j1', { skipClaim: true }),
+      ).rejects.toThrow('Service down');
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1', status: BilateralAiJobStatus.PROCESSING },
+        {
+          retrying: true,
+          stage: 'queued',
+          stage_updated_date: expect.any(Function),
+          error_code: 'PROCESSING_ERROR',
+          error_message: 'Service down',
+        },
+      );
+      expect(stubs.jobRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: BilateralAiJobStatus.FAILED }),
+      );
+    });
+
+    it('at attempts = max_attempts (already incremented by the claim), a retryable error writes FAILED', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PROCESSING,
+        attempts: 3, // default max_attempts = 3 → this IS the final attempt, not one past it
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      const error = new Error('Service down again');
+      (error as any).status = 503;
+      stubs.textMining.extract.mockRejectedValue(error);
+
+      await expect(
+        service.processJob('j1', { skipClaim: true }),
+      ).rejects.toThrow('Service down again');
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1', status: BilateralAiJobStatus.PROCESSING },
+        {
+          status: BilateralAiJobStatus.FAILED,
+          error_code: 'HTTP_503',
+          error_message: 'Service down again',
+          completed_date: expect.any(Function),
+        },
+      );
+    });
+  });
+
   describe('timezone skew regression: lifecycle timestamps are written in DB time, never from the process clock', () => {
     /**
      * Post-archive bug on `bilateral/ai-processing-feedback`. `created_date` and the STORED

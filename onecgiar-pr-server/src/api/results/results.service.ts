@@ -9,7 +9,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { DataSource, In, IsNull } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
 import {
   BasicReportFiltersDto,
@@ -91,7 +91,11 @@ import { AppModuleIdEnum, RoleEnum } from 'src/shared/constants/role-type.enum';
 import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
 import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
-import { ResultInnovationMergeSplitRepository } from './result-innovation-merge-split/result-innovation-merge-split.repository';
+import { ResultsInvestmentDiscontinuedOption } from './results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
+import {
+  InnovationTransitionInput,
+  ResultInnovationMergeSplitRepository,
+} from './result-innovation-merge-split/result-innovation-merge-split.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 import { GeneralInformationDto } from './dto/general-information.dto';
@@ -154,6 +158,32 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
 import { ResultDeletionAuditSource } from './result-deletion-audit/result-deletion-audit-source.enum';
+
+/**
+ * BIL-RAU-T-2 (design.md §5, DD-4): the W1/W2 status rule (originally inline at
+ * `results.service.ts:949-956`), extracted as a pure function so `updateBilateralGeneralInfo`
+ * (T-6) can reuse it without re-deriving it. **No** (`isDiscontinued = true`) on a type 7/2 result
+ * always sets status 4. **Yes** on a type 7/2 result at status 4 sets 1; any other status is left
+ * untouched. Any other result type never changes status here.
+ */
+export function resolveDiscontinuationStatus(
+  typeId: number,
+  isDiscontinued: boolean,
+  currentStatus: number,
+): number {
+  if (typeId == 7 || typeId == 2) {
+    return isDiscontinued ? 4 : currentStatus == 4 ? 1 : currentStatus;
+  }
+  return currentStatus;
+}
+
+/** Shape `applyInnovationDiscontinuation` needs out of the caller's answer (design.md §5). */
+export interface InnovationDiscontinuationAnswer {
+  resultTypeId: number;
+  isDiscontinued: boolean;
+  discontinuedOptions: ResultsInvestmentDiscontinuedOption[];
+  mergeSplitTargets?: InnovationTransitionInput[];
+}
 
 @Injectable()
 export class ResultsService {
@@ -274,6 +304,97 @@ export class ResultsService {
       select: ['id', 'result_code', 'title', 'version_id'],
     });
     return existing ?? null;
+  }
+
+  /**
+   * BIL-RAU-T-2 (design.md §5, DD-4): the discontinuation write, extracted from
+   * `createResultGeneralInformation` (originally inline at `results.service.ts:832-896`) so
+   * `updateBilateralGeneralInfo` (T-6) can call the same code inside its own transaction. Both
+   * branches moved as-is — only the repository calls now go through the manager-aware wrappers
+   * T-1 added (`findOneDiscontinuedOption` / `updateDiscontinuedOption` / `saveDiscontinuedOption`,
+   * plus a trailing `manager` on `inactiveData` / `replaceForResult`), so an absent `manager`
+   * behaves exactly like the inherited `findOne` / `update` / `save` did before.
+   */
+  private async applyInnovationDiscontinuation(
+    resultId: number,
+    answer: InnovationDiscontinuationAnswer,
+    userId: number,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const isInnovationType =
+      answer.resultTypeId == 7 || answer.resultTypeId == 2;
+
+    if (answer.isDiscontinued && isInnovationType) {
+      await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+        answer.discontinuedOptions.map(
+          (el) => el.investment_discontinued_option_id,
+        ),
+        resultId,
+        userId,
+        manager,
+      );
+      for (const i of answer.discontinuedOptions) {
+        const res =
+          await this._resultsInvestmentDiscontinuedOptionRepository.findOneDiscontinuedOption(
+            {
+              result_id: resultId,
+              investment_discontinued_option_id:
+                i.investment_discontinued_option_id,
+            },
+            manager,
+          );
+
+        if (res) {
+          await this._resultsInvestmentDiscontinuedOptionRepository.updateDiscontinuedOption(
+            res.results_investment_discontinued_option_id,
+            {
+              is_active: i.is_active,
+              description: i?.description,
+              last_updated_by: userId,
+            },
+            manager,
+          );
+        } else {
+          await this._resultsInvestmentDiscontinuedOptionRepository.saveDiscontinuedOption(
+            {
+              result_id: resultId,
+              investment_discontinued_option_id:
+                i.investment_discontinued_option_id,
+              description: i?.description,
+              created_by: userId,
+              last_updated_by: userId,
+            },
+            manager,
+          );
+        }
+      }
+
+      // P2-3292 Step 3: where this innovation continued. It rides the discontinuation save on
+      // purpose — the statement only exists while the result is discontinued, so the same
+      // answer that creates it is the one that must retire it.
+      await this._resultInnovationMergeSplitRepository.replaceForResult(
+        resultId,
+        answer.mergeSplitTargets ?? [],
+        userId,
+        manager,
+      );
+    } else if (isInnovationType) {
+      await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+        [],
+        resultId,
+        userId,
+        manager,
+      );
+
+      // No longer discontinued: the merge/split statement goes with it. Passing an empty set
+      // deactivates the rows, it does not delete them, so re-answering "yes" brings them back.
+      await this._resultInnovationMergeSplitRepository.replaceForResult(
+        resultId,
+        [],
+        userId,
+        manager,
+      );
+    }
   }
 
   /**
@@ -829,71 +950,19 @@ export class ResultsService {
         result.id,
       );
 
-      if (
-        resultGeneralInformation?.is_discontinued &&
-        (result.result_type_id == 7 || result.result_type_id == 2)
-      ) {
-        await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
-          resultGeneralInformation.discontinued_options.map(
-            (el) => el.investment_discontinued_option_id,
-          ),
-          result.id,
-          user.id,
-        );
-        for (const i of resultGeneralInformation.discontinued_options) {
-          const res =
-            await this._resultsInvestmentDiscontinuedOptionRepository.findOne({
-              where: {
-                result_id: result.id,
-                investment_discontinued_option_id:
-                  i.investment_discontinued_option_id,
-              },
-            });
-
-          if (res) {
-            await this._resultsInvestmentDiscontinuedOptionRepository.update(
-              res.results_investment_discontinued_option_id,
-              {
-                is_active: i.is_active,
-                description: i?.description,
-                last_updated_by: user.id,
-              },
-            );
-          } else {
-            await this._resultsInvestmentDiscontinuedOptionRepository.save({
-              result_id: result.id,
-              investment_discontinued_option_id:
-                i.investment_discontinued_option_id,
-              description: i?.description,
-              created_by: user.id,
-              last_updated_by: user.id,
-            });
-          }
-        }
-
-        // P2-3292 Step 3: where this innovation continued. It rides the discontinuation save on
-        // purpose — the statement only exists while the result is discontinued, so the same
-        // answer that creates it is the one that must retire it.
-        await this._resultInnovationMergeSplitRepository.replaceForResult(
-          result.id,
-          resultGeneralInformation.merge_split_targets ?? [],
-          user.id,
-        );
-      } else if (result.result_type_id == 7 || result.result_type_id == 2) {
-        await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
-          [],
-          result.id,
-          user.id,
-        );
-
-        // No longer discontinued: the merge/split statement goes with it. Passing an empty set
-        // deactivates the rows, it does not delete them, so re-answering "yes" brings them back.
-        await this._resultInnovationMergeSplitRepository.replaceForResult(
-          result.id,
-          [],
-          user.id,
-        );
-      }
+      // BIL-RAU-T-2 (design.md §5, DD-4): moved into `applyInnovationDiscontinuation`, called
+      // here at the same point (after the P2-3597 title check, before any other write), with no
+      // `manager` — the same non-transactional behavior as before.
+      await this.applyInnovationDiscontinuation(
+        result.id,
+        {
+          resultTypeId: result.result_type_id,
+          isDiscontinued: resultGeneralInformation?.is_discontinued,
+          discontinuedOptions: resultGeneralInformation.discontinued_options,
+          mergeSplitTargets: resultGeneralInformation.merge_split_targets,
+        },
+        user.id,
+      );
 
       let leadContactPersonId: number = null;
 
@@ -946,14 +1015,11 @@ export class ResultsService {
         last_updated_by: user.id,
         lead_contact_person: resultGeneralInformation.lead_contact_person,
         lead_contact_person_id: leadContactPersonId,
-        status_id:
-          result.result_type_id == 7 || result.result_type_id == 2
-            ? resultGeneralInformation?.is_discontinued
-              ? 4
-              : result.status_id == 4
-                ? 1
-                : result.status_id
-            : result.status_id,
+        status_id: resolveDiscontinuationStatus(
+          result.result_type_id,
+          resultGeneralInformation?.is_discontinued,
+          result.status_id,
+        ),
       });
 
       await this._resultImpactAreaScoresService.create(
@@ -3871,6 +3937,15 @@ export class ResultsService {
         },
       );
 
+      // BIL-RAU-T-5 (DD-8): the stored Annual updating answer, additive and types 7/2 only — for
+      // any other type the key is absent, not `undefined`-valued, so a client that spreads the
+      // response never sees an `annualUpdating` field to begin with.
+      const annualUpdating =
+        result.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT ||
+        result.result_type_id === ResultTypeEnum.INNOVATION_USE
+          ? await this._loadBilateralAnnualUpdatingData(internalId)
+          : undefined;
+
       const mappedResult = {
         commonFields: commonFields ?? null,
         tocMetadata: tocResponse.result_toc_result ?? null,
@@ -3890,6 +3965,7 @@ export class ResultsService {
           impact_area: r.impact_area_score?.impact_area ?? null,
           name: r.impact_area_score?.name ?? null,
         })),
+        ...(annualUpdating ? { annualUpdating } : {}),
       };
 
       return {
@@ -3900,6 +3976,29 @@ export class ResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * BIL-RAU-T-5 (DD-8) — the stored Annual updating answer for a replicated bilateral type 7/2
+   * result: the active reason rows and the active merge/split targets. Called only for those two
+   * types (the caller guards it), so a type-5 result never issues either query.
+   */
+  private async _loadBilateralAnnualUpdatingData(resultId: number) {
+    const [discontinuedOptionRows, mergeSplitTargets] = await Promise.all([
+      this._resultsInvestmentDiscontinuedOptionRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this._resultInnovationMergeSplitRepository.findActiveByResult(resultId),
+    ]);
+
+    return {
+      discontinued_options: (discontinuedOptionRows ?? []).map((row) => ({
+        investment_discontinued_option_id:
+          row.investment_discontinued_option_id,
+        description: row.description,
+      })),
+      merge_split_targets: mergeSplitTargets ?? [],
+    };
   }
 
   private async _loadBilateralBaseData(resultId: number) {
@@ -5540,7 +5639,10 @@ export class ResultsService {
         dto.climate_impact_area_ids === undefined &&
         dto.nutrition_impact_area_ids === undefined &&
         dto.environmental_biodiversity_impact_area_ids === undefined &&
-        dto.poverty_impact_area_ids === undefined
+        dto.poverty_impact_area_ids === undefined &&
+        // BIL-RAU-T-6 (design.md §5, DD-7): key presence, not truthiness, is content — a payload
+        // carrying only `is_discontinued: false` is a real answer, not "nothing to save".
+        dto.is_discontinued === undefined
       ) {
         return {
           response: {},
@@ -5555,7 +5657,15 @@ export class ResultsService {
 
       const bilateralResult = await this._resultRepository.findOne({
         where: { id: parsedResultId, is_active: true },
-        select: ['id', 'version_id', 'source', 'title', 'status_id'],
+        select: [
+          'id',
+          'version_id',
+          'source',
+          'title',
+          'status_id',
+          // BIL-RAU-T-6: needed to decide whether the discontinuation answer applies (type 7/2 only).
+          'result_type_id',
+        ],
       });
       if (!bilateralResult) {
         return {
@@ -5592,7 +5702,48 @@ export class ResultsService {
         user,
       );
 
+      // BIL-RAU-T-6 (requirements.md S-11.3, owner decision 2026-09-29): a discontinued bilateral
+      // result must carry a reason. Runs after authorization, before any write. `is_discontinued:
+      // false` needs no reasons — only the Yes/discontinue answer requires one.
+      if (
+        'is_discontinued' in dto &&
+        dto.is_discontinued === true &&
+        (bilateralResult.result_type_id ===
+          ResultTypeEnum.INNOVATION_DEVELOPMENT ||
+          bilateralResult.result_type_id === ResultTypeEnum.INNOVATION_USE) &&
+        (!Array.isArray(dto.discontinued_options) ||
+          dto.discontinued_options.length === 0)
+      ) {
+        throw new BadRequestException('Please provide a reason.');
+      }
+
       const updates: Partial<Result> = {};
+
+      // BIL-RAU-T-6 (design.md §5, point 2): the key must be present (DD-7), the type must be an
+      // innovation type (same rule `resolveDiscontinuationStatus` encodes), and the value must
+      // actually be a boolean. Any other type ignores the key entirely (point 4) — no status
+      // recompute, no helper call.
+      let discontinuationAnswer: InnovationDiscontinuationAnswer | undefined;
+      if (
+        'is_discontinued' in dto &&
+        (bilateralResult.result_type_id ===
+          ResultTypeEnum.INNOVATION_DEVELOPMENT ||
+          bilateralResult.result_type_id === ResultTypeEnum.INNOVATION_USE) &&
+        typeof dto.is_discontinued === 'boolean'
+      ) {
+        (updates as any).is_discontinued = dto.is_discontinued;
+        (updates as any).status_id = resolveDiscontinuationStatus(
+          bilateralResult.result_type_id,
+          dto.is_discontinued,
+          bilateralResult.status_id,
+        );
+        discontinuationAnswer = {
+          resultTypeId: bilateralResult.result_type_id,
+          isDiscontinued: dto.is_discontinued,
+          discontinuedOptions: dto.discontinued_options,
+          mergeSplitTargets: dto.merge_split_targets,
+        };
+      }
 
       if (dto.title?.trim()) {
         if (dto.title.trim() !== bilateralResult.title) {
@@ -5673,6 +5824,26 @@ export class ResultsService {
       await this._dataSource.transaction(async (manager) => {
         if (Object.keys(updates).length > 0) {
           await manager.update(Result, parsedResultId, updates);
+        }
+
+        // BIL-RAU-T-6 (design.md §5, point 2 / DD-6): runs inside this same transaction, with the
+        // manager, so a failure here rolls back the `Result` update above together with it.
+        if (discontinuationAnswer) {
+          try {
+            await this.applyInnovationDiscontinuation(
+              parsedResultId,
+              discontinuationAnswer,
+              user.id,
+              manager,
+            );
+          } catch (discontinuationError) {
+            // design.md §9 Observability: warn (no payload bodies), then rethrow so the
+            // transaction still rolls back the `Result` update above.
+            this._logger.warn(
+              `Discontinuation write failed for result ${parsedResultId}: ${discontinuationError?.message}`,
+            );
+            throw discontinuationError;
+          }
         }
 
         const hasAnyImpactUpdate = DAC_IMPACT_FIELDS.some(

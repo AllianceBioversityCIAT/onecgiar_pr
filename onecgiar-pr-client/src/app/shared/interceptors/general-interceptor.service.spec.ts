@@ -96,4 +96,13 @@ describe('GeneralInterceptorService', () => {
 
     expect(ipsrCompletenessStatusServiceMock.updateGreenChecks).toHaveBeenCalled();
   });
+
+  it('should call updateGreenChecks for P25 ipsr-framework endpoints', () => {
+    const url = '/v2/api/ipsr-framework/ipsr-pathway/save/step-four/123';
+    httpClient.patch(url, {}).subscribe();
+    const httpRequest = httpMock.expectOne(url);
+    httpRequest.flush({ status: 200 });
+
+    expect(ipsrCompletenessStatusServiceMock.updateGreenChecks).toHaveBeenCalled();
+  });
 });

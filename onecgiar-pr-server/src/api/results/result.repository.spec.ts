@@ -315,6 +315,23 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual([8731]);
   });
 
+  // BIL-RAU-T-5 (DD-8) — the Annual updating block needs the raw replication flag and stored
+  // answer straight from the row, not a constant, so the client can gate the block (types 7/2)
+  // and pre-select "No" on reload.
+  it('includes is_replicated and is_discontinued in the bilateral common-fields query', async () => {
+    queryMock.mockResolvedValueOnce([
+      { id: 8731, is_replicated: 1, is_discontinued: 0 },
+    ]);
+
+    const row = await repo.getCommonFieldsBilateralResultById(8731);
+
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.is_replicated');
+    expect(sql).toContain('r.is_discontinued');
+    expect(row.is_replicated).toBe(1);
+    expect(row.is_discontinued).toBe(0);
+  });
+
   // BIL-RTE-T-5 / DD-6 — the drawer's P25-onward rule reads portfolio_start_year, which must
   // come from the result's own version -> clarisa_portfolios, never a constant or a portfolio id.
   it('includes portfolio_start_year in the bilateral common-fields query, joined via the version', async () => {
@@ -1267,5 +1284,234 @@ describe('ResultRepository — getResultsByProgramAndCenters source/reporter col
 
     expect(placeholderCount).toBe(params.length);
     expect(params).toEqual(['SP01']);
+  });
+});
+
+/**
+ * BTC-T-1 (docs/specs/bilateral/toc-indicator-target-contribution): `getTocMappingsByResultId`
+ * gains an `indicators[]` key per ToC mapping, filled by a correlated sub-select over
+ * `results_toc_result_indicators` → ToC catalogue → `result_indicators_targets` (BTC-DD-1,
+ * join/activity conditions reused verbatim from `results-toc-results.repository.ts:580-589`,
+ * P-6). The row/mapping count contract is unchanged — this is a correlated sub-select, never an
+ * outer JOIN, so `toc_mappings[]` keeps exactly the same number of entries (P-4: the QA mapper
+ * reads `toc_mappings[0]`).
+ */
+describe('ResultRepository — getTocMappingsByResultId indicators[] (BTC-T-1)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const mockDataSource = {
+    createEntityManager: jest.fn(() => ({}) as any),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(({ error }: any) => ({
+      response: { error: true },
+      message: `${error}`,
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+    })),
+  } as any;
+
+  beforeEach(() => {
+    repo = new ResultRepository(mockDataSource, mockHandlersError);
+    queryMock = jest.fn();
+    (repo as any).query = queryMock;
+  });
+
+  const sqlOf = () =>
+    (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+
+  it("builds the indicators[] sub-select reusing P-6's join and activity conditions verbatim", async () => {
+    queryMock.mockResolvedValue([]);
+
+    await repo.getTocMappingsByResultId(42);
+
+    const sql = sqlOf();
+    // Correlated sub-select, not an outer JOIN — count the mapping's active indicators without
+    // multiplying the outer toc_mappings[] row.
+    expect(sql).toContain("'indicators', ( ");
+    expect(sql).toContain('FROM results_toc_result_indicators rtri');
+    expect(sql).toContain(
+      'WHERE rtri.results_toc_results_id = rtr.result_toc_result_id',
+    );
+    // P-6 join/activity conditions, verbatim.
+    expect(sql).toContain(
+      'ON CONVERT(tri.related_node_id USING utf8mb4) = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) AND tri.is_active = 1',
+    );
+    expect(sql).toContain(
+      'AND rtri.is_active = 1 AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)',
+    );
+    expect(sql).toContain(
+      'ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id AND rit.is_active = 1',
+    );
+    // Design §4.1 key names, in order.
+    expect(sql).toContain(
+      "'toc_results_indicator_id', rtri.toc_results_indicator_id",
+    );
+    expect(sql).toContain("'indicator_description', tri.indicator_description");
+    expect(sql).toContain("'indicator_type', tri.type_value");
+    expect(sql).toContain("'number_target', rit.number_target");
+    expect(sql).toContain("'target_date', rit.target_date");
+    // decimal → JSON number, not string (design §4.1 note).
+    expect(sql).toContain(
+      "'target_contribution', CAST(rit.contributing_indicator AS DOUBLE)",
+    );
+  });
+
+  it('does not change the outer GROUP BY / row shape — same params, same official_code/name/initiative_role select list', async () => {
+    queryMock.mockResolvedValue([]);
+
+    await repo.getTocMappingsByResultId(42);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(params).toEqual([42]);
+    expect(sql).toContain('GROUP BY ci.official_code, ci.name, ir.name');
+    expect(sql).toContain('ir.name AS initiative_role');
+  });
+
+  it('normalises a null indicators aggregate to [] (mapped indicator without any active row)', async () => {
+    queryMock.mockResolvedValue([
+      {
+        official_code: 'SP01',
+        name: 'Sustainable Farming',
+        initiative_role: 'Owner',
+        toc_mappings: JSON.stringify([
+          {
+            toc_result_id: 10,
+            official_code: 'SP01',
+            name: 'Sustainable Farming',
+            aow: 'AOW1',
+            planned_result: 'Yes',
+            level: 'High Level Output',
+            title: 'Some ToC result',
+            indicators: null,
+          },
+        ]),
+      },
+    ]);
+
+    const result = await repo.getTocMappingsByResultId(42);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].toc_mappings).toHaveLength(1);
+    expect(result[0].toc_mappings[0].indicators).toEqual([]);
+    // Every pre-existing key is still present with the same value (requirements.md BTC-R-1).
+    expect(result[0].toc_mappings[0]).toMatchObject({
+      toc_result_id: 10,
+      title: 'Some ToC result',
+    });
+  });
+
+  it('parses a JSON-string indicators aggregate into an array with two elements', async () => {
+    queryMock.mockResolvedValue([
+      {
+        official_code: 'SP01',
+        name: 'Sustainable Farming',
+        initiative_role: 'Owner',
+        toc_mappings: JSON.stringify([
+          {
+            toc_result_id: 10,
+            title: 'Some ToC result',
+            // Simulates a MySQL/driver combination that returns the nested aggregate as a
+            // JSON-encoded string rather than an already-parsed array.
+            indicators: JSON.stringify([
+              {
+                toc_results_indicator_id: '1',
+                indicator_description: 'Indicator A',
+                indicator_type: 'Percentage',
+                number_target: 50,
+                target_date: 2026,
+                target_contribution: 12.5,
+              },
+              {
+                toc_results_indicator_id: '2',
+                indicator_description: 'Indicator B',
+                indicator_type: 'Number',
+                number_target: 100,
+                target_date: 2027,
+                target_contribution: null,
+              },
+            ]),
+          },
+        ]),
+      },
+    ]);
+
+    const result = await repo.getTocMappingsByResultId(42);
+
+    expect(result[0].toc_mappings).toHaveLength(1);
+    expect(result[0].toc_mappings[0].indicators).toHaveLength(2);
+    expect(result[0].toc_mappings[0].indicators[0]).toEqual({
+      toc_results_indicator_id: '1',
+      indicator_description: 'Indicator A',
+      indicator_type: 'Percentage',
+      number_target: 50,
+      target_date: 2026,
+      target_contribution: 12.5,
+    });
+    expect(
+      result[0].toc_mappings[0].indicators[1].target_contribution,
+    ).toBeNull();
+  });
+
+  it('normalises indicators to [] on the all-null LEFT JOIN mapping (initiative with no active ToC row)', async () => {
+    queryMock.mockResolvedValue([
+      {
+        official_code: 'SP01',
+        name: 'Sustainable Farming',
+        initiative_role: 'Contributor',
+        toc_mappings: JSON.stringify([
+          {
+            toc_result_id: null,
+            official_code: null,
+            name: null,
+            aow: null,
+            planned_result: 'No',
+            level: null,
+            title: null,
+            indicators: null,
+          },
+        ]),
+      },
+    ]);
+
+    const result = await repo.getTocMappingsByResultId(42);
+
+    expect(result[0].toc_mappings).toHaveLength(1);
+    expect(result[0].toc_mappings[0].indicators).toEqual([]);
+    expect(result[0].toc_mappings[0].toc_result_id).toBeNull();
+  });
+
+  it('keeps an already-parsed array of indicators untouched (does not double-encode)', async () => {
+    queryMock.mockResolvedValue([
+      {
+        official_code: 'SP01',
+        name: 'Sustainable Farming',
+        initiative_role: 'Owner',
+        toc_mappings: [
+          {
+            toc_result_id: 10,
+            title: 'Some ToC result',
+            indicators: [
+              {
+                toc_results_indicator_id: '1',
+                indicator_description: 'Indicator A',
+                indicator_type: 'Percentage',
+                number_target: 50,
+                target_date: 2026,
+                target_contribution: 12.5,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await repo.getTocMappingsByResultId(42);
+
+    expect(result[0].toc_mappings[0].indicators).toHaveLength(1);
+    expect(result[0].toc_mappings[0].indicators[0].target_contribution).toBe(
+      12.5,
+    );
   });
 });

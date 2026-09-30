@@ -1,7 +1,15 @@
 import { Component, effect, HostListener, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import {
+  AI_QUEUE_PROJECT_QUERY_PARAM,
+  AI_QUEUE_WAY_QUERY_PARAM,
+  AiQueueWay,
+  parseAiQueueProjectIdParam,
+  parseAiQueueWayParam,
+} from '../../bilateral-query-params';
 import { BILATERAL_STATUS, BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService, BilateralEditorSection } from '../../services/bilateral-auto-save.service';
@@ -13,7 +21,6 @@ import { SectionZeroDashboardComponent } from '../../components/section-zero-das
 import { BilateralProjectSelectorComponent } from '../../components/bilateral-project-selector/bilateral-project-selector.component';
 import { BilateralSpSelectorComponent } from '../../components/bilateral-sp-selector/bilateral-sp-selector.component';
 import { BilateralReportingWaySelectorComponent } from '../../components/bilateral-reporting-way-selector/bilateral-reporting-way-selector.component';
-import { BilateralManualCreateDrawerHostComponent } from '../../components/bilateral-manual-create-drawer-host/bilateral-manual-create-drawer-host.component';
 import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { SectionGeneralInfoComponent } from '../../components/section-general-info/section-general-info.component';
 import { SectionContributorsComponent } from '../../components/section-contributors/section-contributors.component';
@@ -30,6 +37,7 @@ import { BilateralQualityAssessmentUiService } from '../../services/bilateral-qu
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { resultStatusBg, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -41,7 +49,6 @@ import { resultStatusBg, resultStatusFg, resultStatusLabel } from '../../../../s
     BilateralProjectSelectorComponent,
     BilateralSpSelectorComponent,
     BilateralReportingWaySelectorComponent,
-    BilateralManualCreateDrawerHostComponent,
     BilateralAiUploadComponent,
     SectionGeneralInfoComponent,
     SectionContributorsComponent,
@@ -71,9 +78,19 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   readonly autoSaveService = inject(BilateralAutoSaveService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
+  /** `ARM-DD-5`: "Report manually" opened the drawer for another project; drop the wizard's own
+   * reporting way (and its AI upload) so it never mixes two selections. The drawer stays open. */
+  private readonly externalEntrySub = this.manualCreateFlow.externalEntry
+    .pipe(takeUntilDestroyed())
+    .subscribe(() => {
+      this.autoSaveService.reset();
+      this.mdsTracker.reset();
+      this.selectedReportingWay.set(null);
+    });
   private readonly ctx = inject(BilateralContextService);
   private readonly smartNav = inject(SmartNavigationService);
   readonly qualityAssessment = inject(BilateralQualityAssessmentUiService);
+  private readonly saveButtonSE = inject(SaveButtonService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
@@ -98,6 +115,22 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private isPageUnloading = false;
   private qualityAssessmentResultId: number | null = null;
   private qualityAssessmentTrigger: HTMLElement | null = null;
+
+  /**
+   * `AIQ-R-9` D (AIQ-T-8 attempt 4) — one-shot pending value for the `?project=`/`?way=` deep
+   * link, parsed in `ngOnInit` but applied by the constructor effect below once
+   * `creationService.projects()` actually contains the id. Kept as a signal (not a plain field) so
+   * the effect can react when it changes AND so its own read counts as a tracked dependency.
+   */
+  private readonly pendingAiQueueDeepLink = signal<{ projectId: number; way: AiQueueWay | null } | null>(null);
+
+  /**
+   * Plain field, not a signal: only used to tell "the fetch never started" apart from "the fetch
+   * finished and the id was not in the list" inside the effect above. It does not need to be
+   * tracked — it is only ever read from inside that same effect, right after `isLoadingProjects()`
+   * already made the effect re-run.
+   */
+  private aiQueueDeepLinkSawLoadingStart = false;
 
   /**
    * P2-3387: Other Output (8) and Other Outcome (4) have no type-specific fields, and the story is
@@ -379,12 +412,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       this.isCenterUserOfLeadCenter()
   );
 
-  isAiProcessing = computed(() => {
-    const status = this.bilateralAiService.uploadState().status;
-    // `still_running` (`APF-R-7`) is still an alive job past the client's old polling ceiling —
-    // the host step must stay locked exactly as it does for `pending`/`processing`.
-    return status === 'uploading' || status === 'pending' || status === 'processing' || status === 'still_running';
-  });
+  /**
+   * `AIQ-DD-11` (reversion, challenged — see design.md §12A): reads ONLY the upload's own
+   * `uploading` status, never a job's. The service is now a job LIST — other jobs (this project's
+   * or another's) stay running well past this component's lifetime, so gating the wizard steps on
+   * any of them would lock the form for a reason the reporter can no longer see (`AIQ-R-7` A: the
+   * form must stay available and submittable for a different project while another job runs).
+   */
+  isAiProcessing = computed(() => this.bilateralAiService.uploadState().status === 'uploading');
 
   overallPct = this.mdsTracker.overallPercentage;
   sectionStatuses = this.mdsTracker.sectionStatus;
@@ -432,6 +467,26 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     });
 
     /**
+     * BIL-RAU-T-7 (design.md §6.2, DD-5) — the narrow admin escape. Status 4 (Discontinued) locks
+     * `isEditableByCenterUser()` for everyone, admins included (P-9), so an admin who needs to
+     * change the Annual updating answer on a replicated type-7/2 innovation gets an exemption
+     * scoped to exactly the three keys the block writes — never the whole editor (S-6.3). Cleared
+     * the moment any of the four conditions stops holding, including the moment the status itself
+     * moves off 4 (Reopen, or a fresh Yes) — this effect re-runs on the same `resultStatusId`
+     * dependency the read-only gate above reacts to, so both flip together without a reload.
+     */
+    effect(() => {
+      const isAdmin = this.api.rolesSE.isAdmin;
+      const status = this.creationService.resultStatusId();
+      const isReplicated = this.creationService.isReplicated();
+      const typeId = this.creationService.resultTypeId();
+      const grantExemption = isAdmin && status === 4 && isReplicated && (typeId === 7 || typeId === 2);
+      this.autoSaveService.setReadOnlyExemptions(
+        grantExemption ? ['is_discontinued', 'discontinued_options', 'merge_split_targets'] : []
+      );
+    });
+
+    /**
      * The custom-fields (`app-pr-input`, `app-pr-select`, `app-pr-multi-select`, …) hide their
      * control when the GLOBAL `RolesService.readOnly` is up — see
      * `pr-multi-select.component.html:16`. That flag is a W1/W2 mechanism: it starts TRUE for
@@ -471,6 +526,46 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         // sessionStorage unavailable — treat as not dismissed.
       }
       this.provenanceBannerDismissed.set(dismissed);
+    });
+
+    /**
+     * `AIQ-R-9` D (AIQ-T-8 attempt 4) — applies the `?project=`/`?way=` deep link once
+     * `creationService.projects()` actually contains the id, instead of the attempt-3 synchronous
+     * read that silently dropped the link on a cold load (`projects()` is still `[]` at that point;
+     * only the child `bilateral-project-selector`'s own constructor effect fetches it).
+     *
+     * ⚠️ Reads `pendingAiQueueDeepLink()`, `projects()` AND `isLoadingProjects()` UNCONDITIONALLY,
+     * before any early return — the exact trap already fixed once in
+     * `my-draft-results.component.ts`'s `pendingHighlightJobId` effect (see that file's `CLAUDE.md`).
+     * On the very first run there is usually no pending value yet, so an early `if (!pending) return`
+     * placed before reading the other two signals would register zero tracked dependencies on that
+     * run and never re-run once a value and a matching project show up later.
+     *
+     * Never calls `openDrawer` — T-7's `?job=` branch is the only one that does.
+     */
+    effect(() => {
+      const pending = this.pendingAiQueueDeepLink();
+      const projects = this.creationService.projects();
+      const isLoading = this.creationService.isLoadingProjects();
+      if (isLoading) this.aiQueueDeepLinkSawLoadingStart = true;
+      if (!pending) return;
+
+      const match = projects.find(p => Number(p.id) === pending.projectId);
+      if (match) {
+        this.creationService.selectProject(match);
+        this.onProjectSelected(match);
+        if (pending.way) this.onReportingWaySelected(pending.way);
+        this.pendingAiQueueDeepLink.set(null);
+        return;
+      }
+
+      // Loading genuinely finished (it was seen `true` and is now `false`) without a match: give
+      // up silently, same as attempt 3's "ignored, never an error" contract. Until loading is
+      // observed to have started, `projects()` being `[]` is ambiguous (not started yet vs. a
+      // center with no projects) and the pending value is kept for the next run.
+      if (this.aiQueueDeepLinkSawLoadingStart && !isLoading) {
+        this.pendingAiQueueDeepLink.set(null);
+      }
     });
   }
 
@@ -617,6 +712,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.creationService.loadResult(resultCode, versionId);
       } else {
         const jobId = this.route.snapshot?.queryParams?.['job'];
+        const aiQueueProjectIdRaw = this.route.snapshot?.queryParams?.[AI_QUEUE_PROJECT_QUERY_PARAM];
         if (jobId) {
           this.isCreating.set(true);
           this.resultId.set(null);
@@ -624,6 +720,28 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
           this.qualityAssessment.reset();
           this.selectedReportingWay.set('ai');
           this.manualCreateFlow.closeDrawer();
+          // `AIQ-R-8` D / P-23 (failure-email link): opening the drawer itself is left to the
+          // `route.queryParams` subscription below — it fires once for this very same `?job=` too,
+          // and calling `openDrawer` from two places would fire two immediate list polls for one
+          // page load (forward pointer 1, design.md).
+        } else if (aiQueueProjectIdRaw) {
+          // `AIQ-R-9` D (AIQ-T-8 attempt 4): "Upload different files"/"Report manually" deep link
+          // from the AI processes drawer — `?project=<id>&way=ai|manual`, read in this SAME branch
+          // as `?job=` (never together: a job id always wins, matching T-7's own path above). Only
+          // PARSES here and stores it as a one-shot pending value; the constructor effect above
+          // applies it once `creationService.projects()` actually contains the id, which on a cold
+          // load is still `[]` at this exact point in `ngOnInit`.
+          this.isCreating.set(true);
+          this.resultId.set(null);
+          this.qualityAssessmentResultId = null;
+          this.qualityAssessment.reset();
+          const aiQueueProjectId = parseAiQueueProjectIdParam(aiQueueProjectIdRaw);
+          if (aiQueueProjectId !== null) {
+            this.pendingAiQueueDeepLink.set({
+              projectId: aiQueueProjectId,
+              way: parseAiQueueWayParam(this.route.snapshot?.queryParams?.[AI_QUEUE_WAY_QUERY_PARAM]),
+            });
+          }
         } else {
           // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
           const preselected = this.creationService.selectedProject();
@@ -647,6 +765,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       const jobId = queryParams?.['job'];
       if (jobId && this.isCreating()) {
         this.selectedReportingWay.set('ai');
+        this.bilateralAiService.openDrawer(jobId);
       }
     });
   }
@@ -661,6 +780,18 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   onPrimarySelected(): void {
     this.scrollToSection('bcr-reporting-way');
+  }
+
+  /**
+   * `AIQ-R-7` B: "Choose another project" on the post-submit confirmation — restarts the 3-step
+   * picker (project → Science Program → reporting way) from the top, the same reset shape
+   * `onProjectSelected` already applies to the two later steps.
+   */
+  onChooseAnotherProject(): void {
+    this.creationService.selectedProject.set(null);
+    this.creationService.selectedPrimarySp.set(null);
+    this.selectedReportingWay.set(null);
+    this.manualCreateFlow.closeDrawer();
   }
 
   onReportingWaySelected(way: 'manual' | 'ai' | 'bulk'): void {
@@ -851,6 +982,157 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Which GI field a drawer-initiated save (`BIL-QTS-T-5`) is currently persisting, if any. Feeds
+   * the dialog's `savingField` input — its Save button busy state and its aria-live announcement
+   * key off this, never a local flag inside the dialog itself (design.md §6.1).
+   */
+  savingGiField = signal<'title' | 'description' | null>(null);
+
+  /**
+   * How the most recent drawer-initiated GI save settled (design.md §6.1, `BIL-QTS-DD-3`/`DD-5`).
+   * `seq` increments on every save so two saves that settle the same way in a row still count as a
+   * fresh event for the dialog — it moves its saved baseline only when this object changes, never
+   * merely because `currentTitle`/`currentDescription` changed.
+   */
+  lastGiSaveResult = signal<{ field: 'title' | 'description'; ok: boolean; seq: number } | null>(null);
+  private giSaveSeq = 0;
+
+  /**
+   * `BIL-QTS-T-9` (design.md §2.2 "Close after save", `BIL-QTS-DD-8`, `BIL-QTS-R-12`): true once at
+   * least one drawer save has settled ok since the drawer last opened. Consumed by
+   * {@link dismissQualityAssessment} / {@link goToQualitySection} to re-run the check once on
+   * close, and cleared the moment either a fresh drawer open ({@link openQualityAssessment}) or
+   * Check again ({@link handleGiRecheckRequested}) makes it stale information.
+   */
+  giSavedSinceOpen = signal(false);
+
+  /**
+   * `BIL-QTS-T-5` (design.md §2.2 "Save from the drawer", `BIL-QTS-DD-3`): persists a GI drawer
+   * edit through the SAME general-info save the form uses — never a direct PATCH. A direct PATCH
+   * would leave whatever was already staged in the autosave map (P-2) untouched, and the next Save
+   * draft on General information would write that older value back over the one just saved
+   * (`BIL-QTS-R-2`'s `BUT`). Order matters: `creationService` is written first so the header and
+   * the General information section reflect the new value immediately (P-1), the field is then
+   * staged — which overwrites any older staged value for the same key — and only then flushed,
+   * scoped to `general-info` (P-4's settle sequence, reused rather than duplicated).
+   */
+  async handleGiFieldSaveRequested({ field, value }: { field: 'title' | 'description'; value: string }): Promise<void> {
+    // `BIL-QTS-T-9`/`BIL-QTS-R-13`: the pre-save value is what the revision row needs as
+    // `old_value` — captured before `creationService` is overwritten below, or it would already
+    // read the new value by the time the save settles.
+    const oldValue = field === 'title' ? this.creationService.resultTitle() : this.creationService.resultDescription();
+
+    if (field === 'title') this.creationService.resultTitle.set(value);
+    else this.creationService.resultDescription.set(value);
+
+    this.autoSaveService.updateField(field, value, 'text');
+    this.savingGiField.set(field);
+
+    try {
+      await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys('general-info'));
+      await this.waitForSectionSave('general-info');
+
+      if (this.autoSaveService.hasErrorFor('general-info')) {
+        const detail = this.autoSaveService.lastErrorMessageFor('general-info');
+        this.api.alertsFe.show({
+          id: 'bilateralGiDrawerSave',
+          title: 'Save failed',
+          description: detail ?? 'This field could not be saved. Please try again.',
+          status: 'error',
+          closeIn: 8000,
+        });
+        this.lastGiSaveResult.set({ field, ok: false, seq: ++this.giSaveSeq });
+        return;
+      }
+
+      // BIL-QTS-T-6 (owner-approved 2026-09-29): finishes like an ordinary Save draft —
+      // `manualSave$('general-info')` is what `section-general-info.component.ts:265` listens for
+      // (Innovation Developer prefill), never skipped. Never reached on the error/catch paths above.
+      this.autoSaveService.manualSave$.next('general-info');
+
+      // Rework, item 1 (attempt 2, owner-approved 2026-09-29): `savedTick` clears EVERY field-card's
+      // "Unsaved changes" pill (`field-card.component.ts:112-131`), not just general-info's — every
+      // section stays mounted under `[hidden]` (`bilateral-result-creator.component.html:269-293`).
+      // Bumping it unconditionally therefore cleared the pill in whichever section the reporter had
+      // open, even with real unsaved edits sitting there untouched by this save.
+      //
+      // Navigating away always flushes the section being left first (BIL-T-2's `selectSection()`),
+      // so a genuinely staged edit can only exist in the section still open. Safe to bump when that
+      // section is general-info (the one this save actually reaches) or it provably has nothing
+      // staged. Evidence is excluded outright: its own draft-item state (`showDraft()` in
+      // `section-evidence.component.ts`) never surfaces through `hasPendingFor('evidence')` — a
+      // reporter can have an evidence draft open, with that field-card already marked "edited" from
+      // the click that opened it, while `hasPendingFor` reads clean.
+      const openSection = this.openSectionName();
+      const safeToBumpSavedTick =
+        openSection === 'general-info' ||
+        (openSection !== 'evidence' && !this.autoSaveService.hasPendingFor(openSection));
+      if (safeToBumpSavedTick) this.saveButtonSE.savedTick.update(count => count + 1);
+
+      // P-6/DD-5: the server is the authority on `is_current`, but it only answers on the NEXT
+      // read — without this the submit button would stay visible until a reload, and pressing it
+      // would earn the server's own stale 400 (P-7).
+      this.qualityAssessment.markStale();
+      this.api.alertsFe.show({
+        id: 'bilateralGiDrawerSave',
+        title: 'Saved',
+        description: 'General information saved successfully.',
+        status: 'success',
+        closeIn: 2000,
+      });
+      this.lastGiSaveResult.set({ field, ok: true, seq: ++this.giSaveSeq });
+      this.giSavedSinceOpen.set(true);
+      this.recordGiFieldRevision(field, oldValue);
+    } catch {
+      // Mirrors `triggerManualSave()`'s catch: a REJECTED flush (thrown, not merely settled with
+      // `hasErrorFor`) still has to reach the reporter and the dialog's `lastGiSaveResult` baseline
+      // — otherwise the Save button spins forever and the drawer never learns the save failed.
+      this.api.alertsFe.show({
+        id: 'bilateralGiDrawerSave',
+        title: 'Save failed',
+        description: 'This field could not be saved. Please try again.',
+        status: 'error',
+        closeIn: 8000,
+      });
+      this.lastGiSaveResult.set({ field, ok: false, seq: ++this.giSaveSeq });
+    } finally {
+      this.savingGiField.set(null);
+    }
+  }
+
+  /**
+   * `BIL-QTS-T-9` (design.md §4 API Surface, `BIL-QTS-R-13`, `BIL-QTS-DD-9`): fire-and-forget after
+   * a successful drawer save. The server decides `AI_SUGGESTED` vs `USER_EDIT` by comparing the
+   * saved value to the assessment's kept suggestion — the client sends only what it already knows
+   * (the field, the held assessment id, and the pre-save value) and never a provenance flag.
+   * Swallowed on error (R-13 "Recording fails"): this is an audit trail, never something that may
+   * alter the save outcome, and no field text is ever logged for it.
+   */
+  private recordGiFieldRevision(field: 'title' | 'description', oldValue: string | null): void {
+    const rid = this.resultId();
+    const assessmentId = this.qualityAssessment.assessment()?.id;
+    if (!rid || !assessmentId) return;
+    this.api.bilateralSE.POST_bilateralQualityFieldRevision(rid, {
+      field,
+      assessment_id: assessmentId,
+      old_value: oldValue,
+    }).subscribe({ next: () => undefined, error: () => undefined });
+  }
+
+  /**
+   * `BIL-QTS-DD-4`: Check again reuses the rail's Submit-for-review guard chain (read-only,
+   * unsaved sections, invalid fields) and the AI check itself — never the actual submit PATCH,
+   * which only ever leaves from `submitAfterQualityDecision()`. Named for what the dialog output
+   * means (`recheckRequested`), not for what it happens to call.
+   */
+  handleGiRecheckRequested(): void {
+    // `BIL-QTS-T-9`: Check again is the OTHER place `giSavedSinceOpen` is cleared (design.md
+    // §2.2) — a fresh, explicit re-check makes any earlier save moot for the close-time re-run.
+    this.giSavedSinceOpen.set(false);
+    this.submitResult();
+  }
+
+  /**
    * The five AI section keys onto the editor's own section names. Closed set — these are the five
    * of P2-3150 AC2 and the AI does not invent others; an unknown key is ignored rather than
    * navigating somewhere arbitrary.
@@ -883,9 +1165,16 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       const column = document.querySelector('.bcr-scroll');
       column?.scrollTo({ top: 0, behavior: 'smooth' });
     }, 50);
+    // `BIL-QTS-DD-8`: the navigation above happens BEFORE this — the reporter lands on the section
+    // first, and only then (if a save is owed a re-run) does `run()` put the drawer back in its
+    // running state on top of it.
+    this.rerunOnCloseIfNeeded();
   }
 
   openQualityAssessment(event: MouseEvent): void {
+    // `BIL-QTS-T-9`: a fresh open starts a fresh "since the drawer opened" window — nothing saved
+    // here yet.
+    this.giSavedSinceOpen.set(false);
     this.qualityAssessmentTrigger = event.currentTarget as HTMLElement;
     this.qualityAssessment.openStored();
   }
@@ -895,6 +1184,30 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     const trigger = this.qualityAssessmentTrigger;
     this.qualityAssessmentTrigger = null;
     queueMicrotask(() => trigger?.focus());
+    this.rerunOnCloseIfNeeded();
+  }
+
+  /**
+   * `BIL-QTS-R-12` / `BIL-QTS-DD-8`: closing the drawer (✕, Escape, scrim, Make adjustments, Go
+   * to…) after at least one drawer save re-runs the check once, through `submitResult()` — the same
+   * guarded path as Check again, so a section with unsaved changes still gets the existing "Save
+   * your changes before submitting" alert instead of a silent re-run. Never when the result is no
+   * longer editable, and never when the held assessment is already current (Check again already
+   * ran since the last save, which is also where the flag was cleared).
+   *
+   * The flag is cleared unconditionally, before either check, on every close — a close always
+   * consumes "since this drawer opened", whether or not it actually re-ran the check. Clearing it
+   * only on the re-run branch left it stuck `true` across a close that skipped the run (read-only,
+   * or the assessment already current), so the NEXT open's close could re-run on a save that
+   * belonged to a window that already closed.
+   */
+  private rerunOnCloseIfNeeded(): void {
+    const shouldRerun = this.giSavedSinceOpen();
+    this.giSavedSinceOpen.set(false);
+    if (!shouldRerun) return;
+    const isStale = this.qualityAssessment.assessment()?.is_current === false;
+    if (!isStale || this.isFormReadOnly()) return;
+    this.submitResult();
   }
 
   /** Upper bound for the manual-save wait so a stuck request can never freeze the button. */

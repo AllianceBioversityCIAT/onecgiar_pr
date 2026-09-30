@@ -1,0 +1,45 @@
+<div class="flex flex-col gap-2 mb-2">
+  @if (loaded() === false) {
+    <app-alert-status
+      status="error"
+      [collapsible]="false"
+      description="Could not load the discontinuation reasons. Please reload the page to try again.">
+    </app-alert-status>
+  }
+  @if (loaded() === true) {
+    <app-rd-annual-updating
+      [generalInfoBody]="generalInfoBody"
+      [context]="context()"
+      [isPhaseOpen]="true"
+      (answerChange)="onAnswerChange()">
+    </app-rd-annual-updating>
+  }
+  <!-- A separate, TOP-LEVEL `@if` on purpose (not nested inside the block above): nesting this
+       group inside the `loaded() === true` block's `@else if` chain measurably left it one
+       change-detection tick behind `generalInfoBody.is_discontinued` in this Angular version —
+       every mutation rendered on the next detectChanges() call, never the current one, no matter
+       how many extra ticks were forced. Flattening to a sibling `@if` (with `loaded()` folded into
+       its own condition) removed the gap entirely. -->
+  @if (loaded() === true && generalInfoBody.is_discontinued === true) {
+    @if (showsNoReasonWarning()) {
+      <p data-testid="annual-update-warning" class="text-[12px] text-[var(--pr-color-red-300)] m-0" role="alert">Please provide a reason.</p>
+    }
+    @if (saveError()) {
+      <p data-testid="annual-update-error" class="text-[12px] text-[var(--pr-color-red-300)] m-0" role="alert">{{ saveError() }}</p>
+    }
+    <!-- Reviewer Issue 5: only rendered while the block is actually writable — a locked,
+         read-only screen must never show a button whose click would silently do nothing. -->
+    @if (context().editable) {
+      <button
+        hlmBtn
+        variant="outline"
+        type="button"
+        data-testid="mark-discontinued-button"
+        class="self-start text-[12px]! h-8! px-3!"
+        [disabled]="!canConfirmDiscontinuation() || confirming()"
+        (click)="openMarkDiscontinuedDialog()">
+        {{ confirming() ? 'Saving…' : 'Mark as discontinued' }}
+      </button>
+    }
+  }
+</div>

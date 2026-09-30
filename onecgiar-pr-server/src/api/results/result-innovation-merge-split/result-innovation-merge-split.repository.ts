@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import {
   InnovationTransitionType,
   ResultInnovationMergeSplit,
 } from './entities/result-innovation-merge-split.entity';
+import { selectManager } from '../../../shared/utils/orm.util';
 
 export interface InnovationTransitionInput {
   target_result_id: number;
@@ -36,13 +37,19 @@ export class ResultInnovationMergeSplitRepository extends Repository<ResultInnov
     originResultId: number,
     transitions: InnovationTransitionInput[],
     userId: number,
+    manager?: EntityManager,
   ): Promise<void> {
+    // BIL-RAU-T-1 (DD-6): `manager` optional and trailing. Absent, `repo` is `this` and every
+    // find/update/save below runs exactly as before. Present, the same calls run on
+    // `manager.getRepository(...)` so the bilateral writer can wrap this inside its transaction.
+    const repo = selectManager(manager, ResultInnovationMergeSplit, this);
+
     const incoming = (transitions ?? []).filter(
       (t) =>
         Number.isInteger(Number(t?.target_result_id)) && !!t?.transition_type,
     );
 
-    const existing = await this.find({
+    const existing = await repo.find({
       where: { origin_result_id: originResultId },
     });
 
@@ -62,7 +69,7 @@ export class ResultInnovationMergeSplitRepository extends Repository<ResultInnov
       .map((row) => row.result_innovation_merge_split_id);
 
     if (toDeactivate.length) {
-      await this.update(
+      await repo.update(
         { result_innovation_merge_split_id: In(toDeactivate) },
         { is_active: false, last_updated_by: userId },
       );
@@ -85,7 +92,7 @@ export class ResultInnovationMergeSplitRepository extends Repository<ResultInnov
       if (row) {
         // Reactivate rather than insert: the unique index would reject a duplicate pair.
         if (!row.is_active) {
-          await this.update(row.result_innovation_merge_split_id, {
+          await repo.update(row.result_innovation_merge_split_id, {
             is_active: true,
             last_updated_by: userId,
           });
@@ -93,7 +100,7 @@ export class ResultInnovationMergeSplitRepository extends Repository<ResultInnov
         continue;
       }
 
-      await this.save({
+      await repo.save({
         origin_result_id: originResultId,
         target_result_id: Number(transition.target_result_id),
         transition_type: transition.transition_type,

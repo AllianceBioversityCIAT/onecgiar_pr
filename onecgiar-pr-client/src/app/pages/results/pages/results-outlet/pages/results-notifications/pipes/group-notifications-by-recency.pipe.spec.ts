@@ -147,4 +147,50 @@ describe('GroupNotificationsByRecencyPipe', () => {
 
     expect(result.today).toEqual([doneNewer, pendingOlder]);
   });
+
+  // NOTIF-T-2: confirms NOTIF-P-6 (the pipe's parametrized dateKey already supports the
+  // unified-list shape produced by buildUnifiedList — a Requests-tab row's `requested_date` and
+  // an Updates-tab row's `created_date`, both normalized under `activityDate`) without requiring
+  // any change to the pipe itself.
+  it('groups a mixed Requests/Updates fixture by the shared "activityDate" key (NOTIF-P-6)', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-09-25T10:00:00Z').getTime());
+
+    // Shape mirrors buildUnifiedList's output: both rows normalized under `activityDate`,
+    // sourced from each tab's own native date field.
+    const requestsTabRowToday = {
+      source: 'request',
+      requested_date: '2026-09-25T09:00:00Z',
+      activityDate: '2026-09-25T09:00:00Z'
+    };
+    const updatesTabRowToday = {
+      source: 'update',
+      created_date: '2026-09-25T08:00:00Z',
+      activityDate: '2026-09-25T08:00:00Z'
+    };
+    const updatesTabRowEarlier = {
+      source: 'update',
+      created_date: '2026-08-01T10:00:00Z',
+      activityDate: '2026-08-01T10:00:00Z'
+    };
+
+    const result = pipe.transform(
+      [requestsTabRowToday, updatesTabRowToday, updatesTabRowEarlier],
+      'activityDate'
+    );
+
+    expect(result.today).toEqual([requestsTabRowToday, updatesTabRowToday]);
+    expect(result.thisWeek).toEqual([]);
+    expect(result.earlier).toEqual([updatesTabRowEarlier]);
+  });
+
+  it('a row with no activityDate (missing/unparseable) lands last in "earlier" (unchanged fallback, now also true for the unified-list dateKey)', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-09-25T10:00:00Z').getTime());
+
+    const olderRow = { activityDate: '2026-08-01T10:00:00Z' };
+    const badDateRow = { activityDate: undefined } as { activityDate?: string };
+
+    const result = pipe.transform([badDateRow, olderRow], 'activityDate');
+
+    expect(result.earlier).toEqual([olderRow, badDateRow]);
+  });
 });

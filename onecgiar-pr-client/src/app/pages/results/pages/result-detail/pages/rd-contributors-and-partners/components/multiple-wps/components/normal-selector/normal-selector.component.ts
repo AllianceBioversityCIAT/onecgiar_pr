@@ -122,6 +122,17 @@ export class CPNormalSelectorComponent {
     this.userTouchedPartners = true;
     // When "Other" is deselected, clear whatever was picked in the second dropdown.
     if (!this.otherSentinelSelected) this.rdPartnersSE.otherPartnersSelected = [];
+    // EPD-R-2/EPD-AC-2 (docs/specs/bugfix/external-partners-duplication): `pr-multi-select` already
+    // applied the pick to `partnersBody.institutions` before this handler runs (`onSelectOption` mutates
+    // its bound ngModel, then emits). If that institution is already selected in the sibling "Other(s)"
+    // bucket, undo the add here so picking it from either dropdown is a no-op, never a second entry.
+    const selectedId = event?.option?.institutions_id;
+    if (selectedId != null && (this.rdPartnersSE.otherPartnersSelected || []).some((p: any) => p?.institutions_id === selectedId)) {
+      this.rdPartnersSE.partnersBody.institutions = this.rdPartnersSE.excludeInstitutionsIn(
+        this.rdPartnersSE.partnersBody.institutions,
+        new Set([selectedId])
+      );
+    }
     this.getOnlyPartnerTypes();
     this.emitPartnerEvent(event);
   }
@@ -135,6 +146,16 @@ export class CPNormalSelectorComponent {
 
   // "Other(s)" dropdown changed: refresh the partner-type summary and lead-partner eligibility (an "Other" partner can be lead).
   onOtherPartnerSelect(event: any) {
+    // EPD-R-2/EPD-AC-2 (docs/specs/bugfix/external-partners-duplication): mirror of `onPartnerSelect`'s
+    // guard — if the picked institution is already selected in the ToC bucket, undo the just-applied add
+    // here so it stays a no-op instead of a second entry.
+    const selectedId = event?.option?.institutions_id;
+    if (selectedId != null && this.institutionsNoSentinel.some((p: any) => p?.institutions_id === selectedId)) {
+      this.rdPartnersSE.otherPartnersSelected = this.rdPartnersSE.excludeInstitutionsIn(
+        this.rdPartnersSE.otherPartnersSelected,
+        new Set([selectedId])
+      );
+    }
     this.getOnlyPartnerTypes();
     this.emitPartnerEvent(event);
   }

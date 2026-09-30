@@ -209,6 +209,41 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('status-chart')).toBeTruthy();
     });
 
+    // @akili-spec bilateral/overview-replicated-new-badges (BOV-R-3, BOV-R-4, BOV-AC-2, BOV-AC-3)
+    it('renders the replicated/new badges on the Total results card with counts matching the aria-label (BOV-T-1)', async () => {
+      await setup();
+      flushData();
+
+      // FIXTURE_D1_ROWS: all 10 rows default `is_replicated: false` → 0 replicated, 10 new.
+      expect(text('kpi-total-replicated-badge')).toBe('0 replicated');
+      expect(text('kpi-total-new-badge')).toBe('10 new');
+
+      // BOV-T-1 rework: at 0 count the replicated badge mutes to the reference's zero-count token
+      // (bilateral-projects-panel.component.html:270-272), never the "has a count" token.
+      const replicatedBadgeClass = (el('kpi-total-replicated-badge')?.nativeElement as HTMLElement).className;
+      expect(replicatedBadgeClass).toContain('text-[var(--pr-color-accents-4)]');
+      expect(replicatedBadgeClass).not.toContain('text-[var(--pr-color-secondary-400)]');
+
+      const ariaLabel = el('kpi-total').attributes['aria-label'];
+      expect(ariaLabel).toContain('10 results');
+      expect(ariaLabel).toContain('0 replicated');
+      expect(ariaLabel).toContain('10 new');
+    });
+
+    // @akili-spec bilateral/overview-w1w2-contributor-badge (BOV2-R-2, BOV2-R-3)
+    it('renders the W1/W2 contributing/lead breakdown inline next to the W1/W2 figure, with the counts in the aria-label (BOV2-T-1, UX follow-up)', async () => {
+      await setup();
+      flushData();
+
+      // FIXTURE_D1_ROWS: only row id 6 is W1/W2 (`source: 'Result'`, w1w2Count=1), and it is lead,
+      // so 0 contributing · 1 lead. The breakdown now lives inline next to "1 W1/W2" instead of a
+      // standalone badge — a standalone "N of M W1/W2" pill confused users (see CLAUDE.md).
+      expect(text('kpi-total')).toContain('1 W1/W2 (0 contributing · 1 lead)');
+
+      const ariaLabel = el('kpi-total').attributes['aria-label'];
+      expect(ariaLabel).toContain('of 1 W1/W2 results 0 are contributing and 1 are leading');
+    });
+
     it('renders a ≤160px one-line empty state when the phase has no results', async () => {
       await setup();
       flushData(OPEN_PHASE_ID, []);
@@ -560,7 +595,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         'kpi-projects-covered',
         'status-tile-editing',
         'status-tile-pending',
-        'status-tile-submittedQa',
         'status-tile-approved',
         'status-tile-rejected',
         'attention-row-editing',
@@ -577,6 +611,20 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         expect(['A', 'BUTTON']).toContain(tag);
         expect(node.attributes['aria-label']).toMatch(/\d/);
       }
+    });
+
+    it('P2-3863: renders exactly four status tiles and no Submitted / QA tile', async () => {
+      await setup();
+      flushData();
+
+      const tiles = harness.routeDebugElement!.queryAll(By.css('[data-testid^="status-tile-"]'));
+      expect(tiles.map(tile => tile.attributes['data-testid'])).toEqual([
+        'status-tile-editing',
+        'status-tile-pending',
+        'status-tile-approved',
+        'status-tile-rejected',
+      ]);
+      expect(harness.routeDebugElement!.nativeElement.textContent).not.toContain('Submitted / QA');
     });
 
     it('hands every chart host a tableModel', async () => {
@@ -626,9 +674,9 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
           params: serializeBilateralQueryParams({ ...base, status: ['pending'] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
-          testId: 'status-tile-submittedQa',
+          testId: 'status-tile-approved',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams({ ...base, status: ['submitted', 'qa'] }, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams({ ...base, status: ['approved'] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'by-project-link-100',

@@ -75,6 +75,7 @@ import { DraftEvidence } from '../bilateral-ai/entities/draft-evidence.entity';
 import { BilateralAiController } from '../bilateral-ai/bilateral-ai.controller';
 import { BilateralAiConsumer } from '../bilateral-ai/bilateral-ai.consumer';
 import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.service';
+import { BilateralAiDispatchService } from '../bilateral-ai/services/bilateral-ai-dispatch.service';
 import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
 import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
 import { BilateralAiNotificationsService } from '../bilateral-ai/services/bilateral-ai-notifications.service';
@@ -95,6 +96,10 @@ import { InnovationUseMdsValidator } from './services/innovation-use-mds-validat
 import { BilateralHandoffService } from './services/bilateral-handoff.service';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
+// @akili-spec bilateral/qa-ai-text-suggestions (BIL-QTS-T-7) — the audit row a drawer field
+// save writes. Entity owned by `api/ai` (do not edit it here); only registered for this
+// module's own `TypeOrmModule.forFeature` so `BilateralCenterService` can inject its repository.
+import { ResultFieldRevision } from '../ai/entities/result-field-revision.entity';
 
 @Module({
   imports: [
@@ -109,6 +114,7 @@ import { AoWBilateralRepository } from '../results/results-toc-results/repositor
       DraftEvidence,
       BilateralHandoffCode,
       BilateralQualityAssessment,
+      ResultFieldRevision,
     ]),
     ResultsModule,
     VersioningModule,
@@ -202,6 +208,11 @@ import { AoWBilateralRepository } from '../results/results-toc-results/repositor
     TemplateRepository,
     BilateralVersioningService,
     BilateralAiService,
+    // `AIQ-T-2`: claim-or-redirect under `GET_LOCK('prms_bilateral_ai_dispatch')`. Consumed by
+    // `BilateralAiConsumer` (`decide`) and `BilateralAiSweeperCron`/terminal paths (`wake`,
+    // `AIQ-T-3`). Needs `@InjectDataSource()`, already resolvable via `TypeOrmModule.forRoot` in
+    // `app.module.ts` — no new module import.
+    BilateralAiDispatchService,
     BilateralAiFileStorageService,
     BilateralAiTextMiningService,
     // `APF-T-3`: the terminal-notification writer (in-app row + mail) shared by `processJob`'s

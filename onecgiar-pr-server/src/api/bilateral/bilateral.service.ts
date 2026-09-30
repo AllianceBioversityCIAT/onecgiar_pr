@@ -1433,6 +1433,7 @@ export class BilateralService {
         result_title?: string;
         result_indicator_description?: string;
         result_indicator_type_name?: string;
+        target_contribution?: number;
       } & { roleId: number }
     > = [];
 
@@ -1454,6 +1455,7 @@ export class BilateralService {
         result_title,
         result_indicator_description,
         result_indicator_type_name,
+        target_contribution,
         roleId,
       } = mapping;
 
@@ -1752,6 +1754,13 @@ export class BilateralService {
           }
         }
 
+        // BTC-R-2: a sent target_contribution with nothing to attach it to (no indicator
+        // match, or an indicator with no target) is dropped, not rejected — the ToC match is
+        // fuzzy, and rejecting would fail pushes that succeed today (BTC-DD-2). Never log the
+        // payload, only the result id and the reason.
+        const contributionWasSent =
+          target_contribution !== undefined && target_contribution !== null;
+
         // If we have full mapping (with indicator), create/update indicators
         if (!isInitiativeOnlyMapping && firstMap.toc_results_indicator_id) {
           const existingIndicator =
@@ -1789,14 +1798,22 @@ export class BilateralService {
                 number_target: firstMap.number_target,
                 result_toc_result_indicator_id:
                   indicatorRecord.result_toc_result_indicator_id,
-                contributing_indicator: 1,
+                contributing_indicator: target_contribution ?? 1,
                 target_date: targetDate,
                 created_by: userId,
                 last_updated_by: userId,
                 is_active: true,
               });
             }
+          } else if (contributionWasSent) {
+            this.logger.warn(
+              `TOC mapping target_contribution was sent for result ${resultId} but the matched indicator has no target; contribution was not stored.`,
+            );
           }
+        } else if (contributionWasSent) {
+          this.logger.warn(
+            `TOC mapping target_contribution was sent for result ${resultId} but the ToC match resolved no indicator (initiative-only or title-only match); contribution was not stored.`,
+          );
         }
 
         const mappingType = isInitiativeOnlyMapping

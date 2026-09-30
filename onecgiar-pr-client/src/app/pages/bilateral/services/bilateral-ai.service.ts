@@ -7,46 +7,50 @@ import { BilateralApiService } from '../../../shared/services/api/bilateral-api.
 import { ResultsApiService } from '../../../shared/services/api/results-api.service';
 import { BilateralContextService } from './bilateral-context.service';
 import { BilateralCreationService } from './bilateral-creation.service';
-import {
-  BilateralAiCompletionNotice,
-  BilateralAiDraft,
-  BilateralAiUploadState,
-} from './bilateral-ai.interfaces';
+import { BilateralAiDraft, BilateralAiJobStatus, BilateralAiUploadState } from './bilateral-ai.interfaces';
 import {
   BilateralAiExpectations,
   BilateralAiMixClass,
-  NormalizedBilateralAiJob,
-  RawBilateralAiJob,
-  normalizeJob,
+  NormalizedBilateralAiListJob,
+  RawBilateralAiListJob,
+  errorCopy,
+  normalizeListJob,
 } from '../bilateral-ai-job.model';
 import { ReportingApiResponse } from '../../../shared/interfaces/reporting-api.response';
 
-/** First 2 minutes: poll every 5 s — the user is staring at the screen (`APF-R-20`). */
+/** First 2 minutes: poll every 5 s — the user is staring at the screen (`APF-R-7`). */
 const POLL_INTERVAL_INITIAL = 5_000;
-/** From 2 minutes until the ceiling: poll every 15 s (`APF-R-20`). */
+/** From 2 minutes until the ceiling: poll every 15 s (`APF-R-7`). */
 const POLL_INTERVAL_MID = 15_000;
-/** In "still running", past the ceiling: poll every 30 s (`APF-R-20`). */
+/** Past the ceiling: poll every 30 s (`APF-R-7`). */
 const POLL_INTERVAL_CEILING = 30_000;
 const ADAPTIVE_SWITCH_MS = 120_000;
-/**
- * 30 minutes. The client no longer declares a failure at this mark (`APF-DD-6` — the old 5-minute,
- * then 30-minute, ceiling produced a client-invented timeout message with no server truth behind
- * it). Past
- * this point the panel switches to "still running": polling slows to 30 s and the resume record is
- * kept — the server (its own per-attempt timeout + stale-job sweeper) is now the only party that
- * can declare the job over.
- */
+/** 30 minutes — the second cadence breakpoint (`APF-R-7`: 5 s → 15 s → 30 s). */
 const CEILING_MS = 1_800_000;
-/** The job being polled, so a reload (or a new tab) resumes it instead of losing the outcome. */
-const ACTIVE_JOB_STORAGE_KEY = 'prms.bilateral-ai.active-job';
 
-interface ActiveJobRecord {
-  jobId: string;
-  /** Optional at runtime only — older stored records predate this field; tolerated on read. */
-  centerAcronym: string;
-  startedAt: number;
-}
+/**
+ * `AIQ-R-8` C: set on submit, cleared once a poll finds no active job. Its mere presence is what
+ * lets a fresh tab (reload, second tab) know to start polling before the first list response has
+ * landed.
+ */
+const HAS_ACTIVE_JOBS_KEY = 'prms.bilateral-ai.has-active-jobs';
+/**
+ * The single-job record this service used to keep (`APF-T-5`). Read once on construction, its job
+ * id kept only for the drawer highlight, then removed (`AIQ-R-8` C) — the list endpoint is now the
+ * only source of truth for whether that job is still alive.
+ */
+const LEGACY_ACTIVE_JOB_KEY = 'prms.bilateral-ai.active-job';
 
+const ACTIVE_STATUSES: ReadonlySet<BilateralAiJobStatus> = new Set(['PENDING', 'PROCESSING']);
+const TERMINAL_STATUSES: ReadonlySet<BilateralAiJobStatus> = new Set(['COMPLETED', 'FAILED']);
+
+/**
+ * `AIQ-T-5` (`design.md` §6.2): the multi-job list service. One poll fetches every one of the
+ * caller's jobs at once (`GET_bilateralAiJobs`, never one request per job) and diffs consecutive
+ * polls to raise sticky completion toasts. Single-job members (`currentJob`, `startJob`,
+ * `panelVisible`, `completionNotice`, …) are retired — the drawer/card/trigger (`AIQ-T-7..T-9`)
+ * read `jobs()`/`summary()` instead.
+ */
 @Injectable({ providedIn: 'root' })
 export class BilateralAiService implements OnDestroy {
   private readonly bilateralApi = inject(BilateralApiService);
@@ -56,8 +60,26 @@ export class BilateralAiService implements OnDestroy {
   private readonly ctx = inject(BilateralContextService);
   private readonly creationService = inject(BilateralCreationService);
 
-  currentJobId = signal<string | null>(null);
-  currentJob = signal<NormalizedBilateralAiJob | null>(null);
+  // ── Job list state (`AIQ-R-8`, `AIQ-R-9`, `AIQ-R-11`) ────────────────────
+
+  jobs = signal<NormalizedBilateralAiListJob[]>([]);
+  summary = signal<{ lanesTotal: number; lanesBusy: number; othersWaiting: number } | null>(null);
+  drawerOpen = signal(false);
+  /** The job the drawer should scroll to and highlight once open (`AIQ-R-8` D, deep link/legacy). */
+  highlightJobId = signal<string | null>(null);
+  /** `AIQ-R-9` G: flips `true` once the first `pollList()` attempt has settled (success OR
+   * failure) — the drawer host reads this to know when to stop showing the skeleton. */
+  hasPolledOnce = signal(false);
+  /** `AIQ-R-9` G: `true` while the MOST RECENT poll failed, cleared on the next success. The
+   * drawer host derives its "Couldn't refresh. Retrying…" notice from this AND `jobs().length > 0`
+   * — a failure on the very first poll ever (no "last known list" to keep) reads as the empty
+   * state instead, not the refresh-error notice; that distinction is the host's, not this flag's. */
+  lastPollFailed = signal(false);
+  /** Session memory of finished jobs the trigger badge has not been shown yet (`AIQ-R-10` B). */
+  unseenFinishedIds = signal<ReadonlySet<string>>(new Set());
+
+  // ── Upload-form-local state (kept; narrowed to the upload's own submission, `AIQ-DD-11`) ────
+
   draftList = signal<BilateralAiDraft[]>([]);
   currentDraft = signal<BilateralAiDraft | null>(null);
   isDraftListLoaded = signal(false);
@@ -72,26 +94,9 @@ export class BilateralAiService implements OnDestroy {
     uploadProgress: 0,
   });
 
-  /**
-   * `APF-DD-7`: which of the two outcome surfaces is live. Set by the host that renders
-   * `<app-ai-processing-panel>` (mount/destroy) — `announce()` reads it to decide whether the
-   * app-wide completion dialog should speak at all. Never both: the panel renders the terminal
-   * outcome inline while this is true; the dialog is the only surface while it is false.
-   */
-  readonly panelVisible = signal(false);
-
-  /**
-   * The terminal outcome of the last AI job, for the app-wide `app-bilateral-ai-completion-dialog`.
-   * Set once per job, from wherever the user is; cleared when they act on it. Replaces the toast
-   * (2026-09-04 → 2026-09-07) that nobody noticed and the forced redirect before it. Suppressed
-   * entirely while `panelVisible()` is true (`APF-R-8` A/B).
-   */
-  completionNotice = signal<BilateralAiCompletionNotice | null>(null);
-
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private currentIntervalMs = POLL_INTERVAL_INITIAL;
-  /** Centre captured when the job started — the context signals are stale by the time it ends. */
-  private activeJob: ActiveJobRecord | null = null;
+  private previousJobsById = new Map<string, NormalizedBilateralAiListJob>();
   private readonly expectationsCache = new Map<BilateralAiMixClass, Observable<BilateralAiExpectations>>();
 
   draftCount = computed(() => this.draftList().length);
@@ -113,7 +118,9 @@ export class BilateralAiService implements OnDestroy {
       }
     });
 
-    this.resumeActiveJob();
+    const legacyJobId = this.migrateLegacyActiveJob();
+    if (legacyJobId) this.highlightJobId.set(legacyJobId);
+    if (legacyJobId || this.hasActiveHint()) this.ensurePolling();
   }
 
   ngOnDestroy(): void {
@@ -128,60 +135,65 @@ export class BilateralAiService implements OnDestroy {
     this.uploadState.update(s => ({ ...s, status, errorMessage }));
   }
 
-  /** Whether the processing panel is currently the outcome surface (`APF-DD-7`). */
-  setPanelVisible(visible: boolean): void {
-    this.panelVisible.set(visible);
+  clearUploadState(): void {
+    this.uploadState.set({
+      jobId: null,
+      status: 'idle',
+      uploadProgress: 0,
+    });
+  }
+
+  // ── Drawer / submission entry points ─────────────────────────────────
+
+  /** `AIQ-R-8` D: opens the drawer, optionally highlighting one job, and marks unseen ones seen. */
+  openDrawer(jobId?: string): void {
+    this.drawerOpen.set(true);
+    if (jobId) this.highlightJobId.set(jobId);
+    this.unseenFinishedIds.set(new Set());
+    this.ensurePolling();
   }
 
   /**
-   * `APF-T-7`/`APF-R-10`: read-only snapshot of the in-memory active-job record, for the header
-   * chip's per-center gate and its elapsed-time fallback before the first poll response lands.
-   * `null` when this tab is not tracking a job. Kept separate from the private `activeJob` field
-   * so callers cannot mutate it.
+   * `AIQ-R-7` B: the new job appears in the drawer at once. `response` is
+   * `POST_bilateralAiJob`'s own body (`{ jobId, jobStatus }`) — everything else about the job
+   * (project, program, source counts…) is filled in by the very next poll, which this call also
+   * kicks off immediately.
    */
-  getActiveJobSnapshot(): { centerAcronym: string; startedAt: number } | null {
-    return this.activeJob ? { centerAcronym: this.activeJob.centerAcronym, startedAt: this.activeJob.startedAt } : null;
-  }
-
-  // ── Job lifecycle ───────────────────────────────────────────────────
-
-  startJob(jobId: string): void {
-    this.activeJob = { jobId, centerAcronym: this.ctx.centerAcronym(), startedAt: Date.now() };
-    this.persistActiveJob();
-    this.currentJobId.set(jobId);
-    this.currentJob.set(null);
-    this.uploadState.set({
-      jobId,
-      status: 'pending',
-      uploadProgress: 100,
-    });
-    this.startPolling(jobId, this.activeJob.startedAt);
+  addSubmittedJob(response: { jobId?: string; jobStatus?: string } | null | undefined): void {
+    const jobId = response?.jobId;
+    if (!jobId) return;
+    if (this.jobs().some(j => j.jobId === jobId)) return;
+    const placeholder = normalizeListJob({
+      job_id: jobId,
+      status: response?.jobStatus ?? 'PENDING',
+      queue_entry_date: new Date().toISOString(),
+    } as RawBilateralAiListJob);
+    this.jobs.update(list => [placeholder, ...list]);
+    // Reviewer fix (AIQ-T-5 attempt 2): the placeholder must also seed `previousJobsById`, or the
+    // FIRST real poll that already sees this job terminal (fast failures, ~30 s text jobs under a
+    // 30 s cadence) finds `prev === undefined` in `detectTerminalTransitions` and silently drops
+    // the toast/unseen-id — exactly the multi-job case `AIQ-R-7` A describes.
+    this.previousJobsById.set(jobId, placeholder);
+    this.setHasActiveHint();
+    this.ensurePolling();
   }
 
   /**
    * `APF-R-5`/`APF-R-9`: re-enqueues the same stored sources under the same job id — no re-upload,
-   * no new job. Disabled while the job is alive is a UI concern (the panel), not this method's.
+   * no new job. Disabled while the job is alive is a UI concern (the card), not this method's.
    */
   retryJob(jobId: string): void {
     this.bilateralApi.POST_bilateralAiJobRetry(jobId).subscribe({
       next: () => {
-        this.activeJob = {
-          jobId,
-          centerAcronym: this.activeJob?.centerAcronym || this.ctx.centerAcronym(),
-          startedAt: Date.now(),
-        };
-        this.persistActiveJob();
-        this.currentJobId.set(jobId);
-        this.currentJob.set(null);
         this.uploadState.set({ jobId, status: 'pending', uploadProgress: 100 });
-        this.startPolling(jobId, this.activeJob.startedAt);
+        this.setHasActiveHint();
+        this.ensurePolling();
       },
       error: (err: { status?: number } | null) => {
         if (err?.status === 410) {
-          // The stored sources are gone (bucket expiry) — nothing left to retry against.
-          this.clearActiveJob();
-          this.currentJobId.set(null);
-          this.currentJob.set(null);
+          // The stored sources are gone (bucket expiry) — nothing left to retry against; reset the
+          // upload form the same way a poll's own 410 used to (`AIQ-R-9` D "Try again … a 410 on
+          // retry shows that the files are gone").
           this.uploadState.set({
             jobId: null,
             status: 'idle',
@@ -197,7 +209,8 @@ export class BilateralAiService implements OnDestroy {
 
   /**
    * `APF-R-6` D / `APF-R-21`: the expected-duration range for a source mix, cached per mix for the
-   * session so the panel and any other caller share one HTTP call.
+   * session so the "AI processes" drawer's running cards (`ai-processes-drawer-host`, `AIQ-T-8`)
+   * and any other caller share one HTTP call.
    */
   expectations(mix: BilateralAiMixClass): Observable<BilateralAiExpectations> {
     let cached = this.expectationsCache.get(mix);
@@ -211,78 +224,59 @@ export class BilateralAiService implements OnDestroy {
     return cached;
   }
 
-  /** The user acknowledged the outcome and stays where they are. */
-  dismissCompletionNotice(): void {
-    this.completionNotice.set(null);
-  }
+  // ── Legacy migration + hint storage (`AIQ-R-8` C) ────────────────────
 
-  /** The user chose to review the drafts: the centre's Drafts list, from anywhere in the app. */
-  openDraftsFromNotice(): void {
-    const notice = this.completionNotice();
-    this.completionNotice.set(null);
-    if (!notice?.centerAcronym) return;
-    void this.router.navigate(['/bilateral', notice.centerAcronym, 'drafts']);
-  }
-
-  /**
-   * Picks the polling back up after a reload. `APF-R-7` AND-IT-MUST: resumed **regardless of the
-   * record's age** — the record is dropped only by a terminal server state or a 404/410 on poll,
-   * never by client-side elapsed time. (Removed: the previous `MAX_POLL_DURATION`-age drop, which
-   * silently lost jobs older than 30 minutes on reload even while the server was still working.)
-   */
-  private resumeActiveJob(): void {
-    const record = this.readActiveJob();
-    if (!record) return;
-    this.activeJob = record;
-    this.currentJobId.set(record.jobId);
-    this.uploadState.set({ jobId: record.jobId, status: 'pending', uploadProgress: 100 });
-    this.startPolling(record.jobId, record.startedAt);
-  }
-
-  private persistActiveJob(): void {
+  private migrateLegacyActiveJob(): string | null {
     try {
-      if (this.activeJob) localStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JSON.stringify(this.activeJob));
-    } catch {
-      // storage unavailable — polling still works for this tab's lifetime
-    }
-  }
-
-  private readActiveJob(): ActiveJobRecord | null {
-    try {
-      const raw = localStorage.getItem(ACTIVE_JOB_STORAGE_KEY);
+      const raw = localStorage.getItem(LEGACY_ACTIVE_JOB_KEY);
+      localStorage.removeItem(LEGACY_ACTIVE_JOB_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      return parsed?.jobId && typeof parsed.startedAt === 'number' ? (parsed as ActiveJobRecord) : null;
+      return typeof parsed?.jobId === 'string' ? parsed.jobId : null;
     } catch {
       return null;
     }
   }
 
-  private clearActiveJob(): void {
-    this.activeJob = null;
+  private setHasActiveHint(): void {
     try {
-      localStorage.removeItem(ACTIVE_JOB_STORAGE_KEY);
+      localStorage.setItem(HAS_ACTIVE_JOBS_KEY, '1');
+    } catch {
+      // storage unavailable — polling still works for this tab's lifetime
+    }
+  }
+
+  private clearHasActiveHint(): void {
+    try {
+      localStorage.removeItem(HAS_ACTIVE_JOBS_KEY);
     } catch {
       // nothing to clear
     }
   }
 
-  /** Terminal state reached: record the outcome for the dialog and forget the job. */
-  private announce(status: BilateralAiCompletionNotice['status'], resultCount: number, errorMessage?: string): void {
-    const jobId = this.activeJob?.jobId ?? this.currentJobId() ?? '';
-    const centerAcronym = this.activeJob?.centerAcronym || this.ctx.centerAcronym();
-    this.clearActiveJob();
-    // APF-DD-7: the panel renders the terminal outcome inline — the dialog must stay silent so
-    // the two surfaces never both speak (APF-R-8 A/B).
-    if (this.panelVisible()) return;
-    this.completionNotice.set({ jobId, centerAcronym, status, resultCount, errorMessage });
+  private hasActiveHint(): boolean {
+    try {
+      return localStorage.getItem(HAS_ACTIVE_JOBS_KEY) != null;
+    } catch {
+      return false;
+    }
   }
 
-  private startPolling(jobId: string, startedAt: number = Date.now()): void {
-    this.stopPolling();
+  // ── Poller (`AIQ-R-8` A/B, `APF-R-7` cadence) ────────────────────────
+
+  /**
+   * Reviewer fix (AIQ-T-5 attempt 2): this used to return early when a timer already existed,
+   * which left a job just submitted while another one is running waiting up to a whole 15 s/30 s
+   * interval for its first poll — contradicting `addSubmittedJob`'s own doc comment ("kicks off
+   * immediately") and delaying the cadence drop back to `POLL_INTERVAL_INITIAL` (`AIQ-R-8` A
+   * "measured from the most recent active job"). Now it always resets to the initial cadence and
+   * polls right away, whether or not a timer was already running.
+   */
+  private ensurePolling(): void {
+    if (this.pollingTimer) clearInterval(this.pollingTimer);
     this.currentIntervalMs = POLL_INTERVAL_INITIAL;
-    this.pollingTimer = setInterval(() => this.pollJob(jobId), this.currentIntervalMs);
-    void this.pollJob(jobId);
+    this.pollingTimer = setInterval(() => this.pollList(), this.currentIntervalMs);
+    void this.pollList();
   }
 
   stopPolling(): void {
@@ -292,104 +286,164 @@ export class BilateralAiService implements OnDestroy {
     }
   }
 
+  private async pollList(): Promise<void> {
+    try {
+      const { response } = (await this.bilateralApi.GET_bilateralAiJobs().toPromise()) as {
+        response: {
+          jobs: RawBilateralAiListJob[];
+          summary: { lanes_total: number; lanes_busy: number; others_waiting: number };
+        };
+      };
+      const fromServer = (response?.jobs ?? []).map(normalizeListJob);
+      // Reviewer fix (AIQ-T-5 attempt 2): carry forward a placeholder (`addSubmittedJob`) the
+      // server has not listed yet — an immediate poll can race the DB write it is reading, and
+      // silently overwriting `jobs()` with a server response that drops the just-submitted job
+      // would erase the seed `detectTerminalTransitions` needs on the poll after this one.
+      const serverIds = new Set(fromServer.map(j => j.jobId));
+      const carried = this.jobs().filter(j => ACTIVE_STATUSES.has(j.status) && !serverIds.has(j.jobId));
+      const normalized = [...carried, ...fromServer];
+      this.detectTerminalTransitions(normalized);
+      this.jobs.set(normalized);
+      this.summary.set({
+        lanesTotal: response?.summary?.lanes_total ?? 0,
+        lanesBusy: response?.summary?.lanes_busy ?? 0,
+        othersWaiting: response?.summary?.others_waiting ?? 0,
+      });
+      this.adjustPollInterval(normalized);
+      this.reconcileHintKey(normalized);
+      this.lastPollFailed.set(false);
+      this.hasPolledOnce.set(true);
+    } catch (err: unknown) {
+      this.handlePollError(err);
+      this.lastPollFailed.set(true);
+      this.hasPolledOnce.set(true);
+    }
+  }
+
   /**
-   * The reference instant every age-based client rule (interval bucket, "still running" ceiling)
-   * measures from: the normalized job's queue-entry clock once we have one, or the record's
-   * `startedAt` before the first poll response lands (Leader decision — there is no job yet to
-   * read a `queueEntryDate` off of).
+   * `AIQ-DD-5`-adjacent: only a **401** stops the list poll (design §7 — the client poller already
+   * stopped on 401 and this task keeps that behaviour). Every other failure — network blip, 5xx —
+   * keeps polling on the current interval; the last known list stays on screen (`AIQ-R-9` G).
    */
-  private pollReferenceMs(job: NormalizedBilateralAiJob | null): number {
-    if (job) return job.queueEntryDate.getTime();
-    return this.activeJob?.startedAt ?? Date.now();
+  private handlePollError(err: unknown): void {
+    const status = (err as { status?: number } | null | undefined)?.status;
+    if (status === 401) {
+      this.stopPolling();
+    }
   }
 
-  private isAtCeiling(job: NormalizedBilateralAiJob | null): boolean {
-    return Date.now() - this.pollReferenceMs(job) >= CEILING_MS;
+  private referenceMsFor(jobs: NormalizedBilateralAiListJob[]): number | null {
+    const activeJobs = jobs.filter(j => ACTIVE_STATUSES.has(j.status));
+    if (activeJobs.length === 0) return null;
+    return Math.max(...activeJobs.map(j => j.queueEntryDate.getTime()));
   }
 
-  private desiredIntervalMs(job: NormalizedBilateralAiJob | null): number {
-    const elapsed = Date.now() - this.pollReferenceMs(job);
+  private desiredIntervalMs(referenceMs: number | null): number {
+    if (referenceMs === null) return POLL_INTERVAL_INITIAL;
+    const elapsed = Date.now() - referenceMs;
     if (elapsed >= CEILING_MS) return POLL_INTERVAL_CEILING;
     if (elapsed >= ADAPTIVE_SWITCH_MS) return POLL_INTERVAL_MID;
     return POLL_INTERVAL_INITIAL;
   }
 
   /** Recreates the interval timer only when the desired cadence actually changes. */
-  private adjustPollInterval(jobId: string, job: NormalizedBilateralAiJob | null): void {
+  private adjustPollInterval(jobs: NormalizedBilateralAiListJob[]): void {
     if (!this.pollingTimer) return;
-    const desired = this.desiredIntervalMs(job);
+    const desired = this.desiredIntervalMs(this.referenceMsFor(jobs));
     if (desired === this.currentIntervalMs) return;
     this.currentIntervalMs = desired;
     clearInterval(this.pollingTimer);
-    this.pollingTimer = setInterval(() => this.pollJob(jobId), desired);
+    this.pollingTimer = setInterval(() => this.pollList(), desired);
   }
 
-  private async pollJob(jobId: string): Promise<void> {
-    try {
-      const { response } = (await this.bilateralApi.GET_bilateralAiJob(jobId).toPromise()) as { response: RawBilateralAiJob };
-      const job = normalizeJob(response);
-      this.currentJob.set(job);
-      this.adjustPollInterval(jobId, job);
-
-      if (job.status === 'PENDING') {
-        this.uploadState.update(s => ({ ...s, status: this.isAtCeiling(job) ? 'still_running' : 'pending' }));
-      } else if (job.status === 'PROCESSING') {
-        this.uploadState.update(s => ({ ...s, status: this.isAtCeiling(job) ? 'still_running' : 'processing' }));
-      } else if (job.status === 'COMPLETED') {
-        this.stopPolling();
-        // No navigation, ever. The service is root-provided and polling survives navigation, so
-        // completing used to yank the user out of whatever they had moved on to (2026-09-04);
-        // the toast that replaced it went unnoticed (2026-09-07). The outcome is announced
-        // through `completionNotice` — a dialog the user closes or follows to the Drafts list —
-        // and the server mails the uploader a link as the durable half.
-        if (job.resultCount === 0) {
-          this.uploadState.update(s => ({ ...s, status: 'completed_no_candidates' }));
-          this.announce('completed_no_candidates', 0);
-        } else {
-          this.uploadState.update(s => ({ ...s, status: 'completed' }));
-          this.loadAllDrafts();
-          this.announce('completed', job.resultCount);
-        }
-      } else if (job.status === 'FAILED') {
-        this.stopPolling();
-        const errorMessage = job.errorMessage ?? 'AI processing failed. Please try again.';
-        this.uploadState.update(s => ({ ...s, status: 'failed', errorMessage }));
-        this.announce('failed', 0, errorMessage);
-      }
-    } catch (err: unknown) {
-      this.handlePollError(err);
-    }
+  /** `AIQ-R-8` B: stop once idle, unless the drawer is still open. Clear the hint key either way. */
+  private reconcileHintKey(jobs: NormalizedBilateralAiListJob[]): void {
+    const hasActive = jobs.some(j => ACTIVE_STATUSES.has(j.status));
+    if (hasActive) return;
+    this.clearHasActiveHint();
+    if (!this.drawerOpen()) this.stopPolling();
   }
+
+  // ── Terminal-transition detection → toasts (`AIQ-R-11`) ──────────────
 
   /**
-   * `APF-R-7` AND-IT-MUST / `APF-DD-6`: the ceiling used to be the only thing that stopped an
-   * eternal poll; removing it means this branch on the HTTP status of a failed poll is now the
-   * terminating condition, and had to be written rather than inherited from "every error keeps
-   * polling" (today's — yesterday's — behaviour, kept as the `else` arm below).
+   * A job counts as "newly terminal" only when `previousJobsById` already had it active — on the
+   * very first poll ever `previousJobsById` is empty, so `prev` is `undefined` for every job and
+   * nothing toasts (otherwise every already-finished job in the last-24h window would re-announce
+   * itself on every reload). This per-job check is the whole guard — no separate "have we ever
+   * polled" flag is needed, and a flag caused the AIQ-T-5 attempt-2 review bug: `addSubmittedJob`
+   * seeds `previousJobsById` with the placeholder precisely so a job that turns terminal on the
+   * very first poll after submission (fast failures, ~30 s jobs under a 30 s cadence) still gets
+   * its toast even when nothing has polled before.
    */
-  private handlePollError(err: unknown): void {
-    const status = (err as { status?: number } | null | undefined)?.status;
-    if (status === 404 || status === 410) {
-      // The job row is gone server-side — nothing left to resume. `stopPolling` alone leaves
-      // `uploadState`/`currentJob` pointing at the last-known (now dead) job: the panel would keep
-      // rendering a live-looking stepper with a timer that ticks against a `queueEntryDate` no
-      // poll will ever refresh again. Reset to the upload form with an explanation, the same
-      // outcome `retryJob`'s own 410 branch produces (`APF-R-9` AND-IT-MUST).
-      this.stopPolling();
-      this.clearActiveJob();
-      this.currentJobId.set(null);
-      this.currentJob.set(null);
-      this.uploadState.set({
-        jobId: null,
-        status: 'idle',
-        uploadProgress: 0,
-        errorMessage: 'This job is no longer available. Please upload your sources again.',
+  private detectTerminalTransitions(newJobs: NormalizedBilateralAiListJob[]): void {
+    const newlyTerminal = newJobs.filter(job => {
+      const prev = this.previousJobsById.get(job.jobId);
+      return TERMINAL_STATUSES.has(job.status) && prev !== undefined && ACTIVE_STATUSES.has(prev.status);
+    });
+    if (newlyTerminal.length > 0) {
+      this.unseenFinishedIds.update(set => {
+        const next = new Set(set);
+        for (const job of newlyTerminal) next.add(job.jobId);
+        return next;
       });
-    } else if (status === 401) {
-      // The session is gone; retrying the request would only produce more 401s.
-      this.stopPolling();
+      this.announceTerminalJobs(newlyTerminal);
     }
-    // Network blip / 500 / 503 / anything else: keep polling on the current interval.
+    this.previousJobsById = new Map(newJobs.map(job => [job.jobId, job]));
+  }
+
+  /** `AIQ-R-11` B: more than 2 in one poll collapse into a single grouped toast. */
+  private announceTerminalJobs(jobs: NormalizedBilateralAiListJob[]): void {
+    if (jobs.length > 2) {
+      this.messageService.add({
+        key: 'globalUserNotification',
+        severity: 'info',
+        summary: `${jobs.length} jobs finished`,
+        detail: 'Open AI processes to see the results.',
+        sticky: true,
+        action: { label: 'View', run: () => this.openDrawer() },
+      });
+      return;
+    }
+    for (const job of jobs) this.announceTerminalJob(job);
+  }
+
+  private announceTerminalJob(job: NormalizedBilateralAiListJob): void {
+    const label = job.projectName || job.programCode || job.jobId;
+    if (job.status === 'COMPLETED' && job.resultCount > 0) {
+      this.messageService.add({
+        key: 'globalUserNotification',
+        severity: 'success',
+        summary: `${label} is ready`,
+        detail: `${job.resultCount} draft${job.resultCount === 1 ? '' : 's'} ready.`,
+        sticky: true,
+        action: { label: 'Open drafts', run: () => this.openDraftsForJob(job) },
+      });
+    } else if (job.status === 'COMPLETED') {
+      this.messageService.add({
+        key: 'globalUserNotification',
+        severity: 'info',
+        summary: `${label} finished`,
+        detail: 'No results were found in this evidence.',
+        sticky: true,
+        action: { label: 'View', run: () => this.openDrawer(job.jobId) },
+      });
+    } else {
+      const copy = errorCopy(job.errorCode);
+      this.messageService.add({
+        key: 'globalUserNotification',
+        severity: 'error',
+        summary: `${label} failed`,
+        detail: copy.message,
+        sticky: true,
+        action: { label: 'View', run: () => this.openDrawer(job.jobId) },
+      });
+    }
+  }
+
+  private openDraftsForJob(job: NormalizedBilateralAiListJob): void {
+    this.loadAllDrafts();
+    if (job.centerAcronym) void this.router.navigate(['/bilateral', job.centerAcronym, 'drafts']);
   }
 
   // ── Draft CRUD ──────────────────────────────────────────────────────
@@ -500,15 +554,5 @@ export class BilateralAiService implements OnDestroy {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to discard draft' });
       },
     });
-  }
-
-  clearUploadState(): void {
-    this.uploadState.set({
-      jobId: null,
-      status: 'idle',
-      uploadProgress: 0,
-    });
-    this.currentJobId.set(null);
-    this.currentJob.set(null);
   }
 }

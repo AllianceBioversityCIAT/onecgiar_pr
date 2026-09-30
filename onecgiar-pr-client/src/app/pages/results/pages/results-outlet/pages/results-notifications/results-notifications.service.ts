@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
-import { Router } from '@angular/router';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 
 @Injectable({
@@ -38,6 +37,12 @@ export class ResultsNotificationsService {
   // the same reason initiativeIdFilter/searchFilter already live here.
   centerIdsFilter: (string | number)[] = [];
   bilateralProjectIdsFilter: string[] = [];
+  // NOTIF-T-11 (`NOTIF-R-16`): Type / Funding / Result-type filter popover facets, multi-select —
+  // same reasoning (single owner, read by the toolbar) as centerIdsFilter/bilateralProjectIdsFilter
+  // above.
+  typeFilter: string[] = [];
+  fundingFilter: string[] = [];
+  resultTypeFilter: string[] = [];
 
   // NOTIF-T-11 (rework attempt 2): Phase/Program state moved here from `ResultsNotificationsComponent`
   // AND `RequestsComponent` — those two components each had their OWN copy, which meant switching
@@ -49,10 +54,7 @@ export class ResultsNotificationsService {
   filteredInitiatives = [];
   entityLabel = 'Entity';
 
-  constructor(
-    private readonly api: ApiService,
-    private readonly router: Router
-  ) {}
+  constructor(private readonly api: ApiService) {}
 
   get_sent_notifications(versionId?, callback?) {
     this.loadingSent = true;
@@ -201,9 +203,11 @@ export class ResultsNotificationsService {
       this.updatesData.notificationsViewed = this.updatesData.notificationsViewed.filter(noti => noti !== notification);
     }
 
-    this.router.navigateByUrl('result/results-outlet/results-notifications/settings', { skipLocationChange: true }).then(() => {
-      this.router.navigate(['result/results-outlet/results-notifications/updates']);
-    });
+    // NOTIF-T-6 rework (Reviewer's remediation item 1): the round-trip through the now-deleted
+    // `.../requests`/`.../updates` routes was dead weight even before those routes existed to
+    // navigate to — `ResultsNotificationsComponent`'s own getters (`unifiedList` etc.) already
+    // recompute reactively off `updatesData` on the next change-detection pass, so mutating the
+    // arrays above is the whole update. No navigation needed.
 
     this.updatesData.notificationsViewed.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
     this.updatesData.notificationsPending.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
@@ -229,9 +233,9 @@ export class ResultsNotificationsService {
       this.updatesData.notificationsViewed.push(notification);
     });
 
-    this.router.navigateByUrl('result/results-outlet/results-notifications/settings', { skipLocationChange: true }).then(() => {
-      this.router.navigate(['result/results-outlet/results-notifications/updates']);
-    });
+    // NOTIF-T-6 rework (Reviewer's remediation item 1 — "Mark all as read" was itself broken by
+    // the deleted `.../updates` route this used to navigate through). Same reasoning as
+    // `readUpdatesNotifications()` above: the mutation is the update, no navigation needed.
 
     this.updatesData.notificationsViewed.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
     this.updatesData.notificationsPending = [];
@@ -282,7 +286,15 @@ export class ResultsNotificationsService {
     }
   }
 
-  getAllPhases() {
+  /**
+   * @param onPhaseUnresolved NOTIF-T-6 rework (double-fetch advisory): invoked only when NO phase
+   * resolves (neither an already-set `phaseFilter` nor the active reporting phase). When a phase
+   * DOES resolve, `onPhaseChange()` below is the single source of the Received/Sent/Updates fetch —
+   * the caller must NOT also fetch those three directly, or every normal page load issues them
+   * twice. The callback exists so `ResultsNotificationsComponent.ngOnInit()` still has a fallback
+   * fetch for the (rarer) case where no phase resolves at all.
+   */
+  getAllPhases(onPhaseUnresolved?: () => void) {
     // NOTIF-T-11 (rework attempt 3): NO re-fetch guard here — restored to the original,
     // pre-NOTIF-T-11 behavior. `RequestsComponent` has no `ngOnInit` at all (see its class-level
     // doc comment) and never calls this; only `ResultsNotificationsComponent.ngOnInit()` calls it, exactly once per
@@ -303,6 +315,8 @@ export class ResultsNotificationsService {
       }
       if (this.phaseFilter) {
         this.onPhaseChange(this.phaseFilter);
+      } else {
+        onPhaseUnresolved?.();
       }
     });
   }
@@ -326,5 +340,9 @@ export class ResultsNotificationsService {
     // NOTIF-T-6 (NOTIF-AC-4): "Clear all" resets every facet, including these two.
     this.centerIdsFilter = [];
     this.bilateralProjectIdsFilter = [];
+    // NOTIF-T-11: "Clear all" resets these three facets too.
+    this.typeFilter = [];
+    this.fundingFilter = [];
+    this.resultTypeFilter = [];
   }
 }

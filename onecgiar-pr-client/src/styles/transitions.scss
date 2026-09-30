@@ -196,3 +196,18 @@
 .shakeX {
   animation-name: shakeX;
 }
+
+// `AIQ-T-8` (bilateral/ai-processing-queue) — the indeterminate sliding fill on a RUNNING job
+// card's active progress segment and on a busy lane bar in `ai-processes-drawer`'s lanes strip
+// (mockup `ai-processes-drawer.html` `.seg.now::after` / `.lane.busy::after`). Referenced from
+// those components' templates as an arbitrary Tailwind value
+// (`animate-[pr-ai-indeterminate_1.6s_linear_infinite]`) — defined once here, globally loaded via
+// `styles.scss`, per the "SCSS only for @keyframes" rule (client `CLAUDE.md` §5 Styling).
+@keyframes pr-ai-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}

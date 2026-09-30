@@ -363,6 +363,15 @@ export class NotificationService {
             null
           : null;
 
+        // NOTIF-T-12 (rework attempt 2, issue 2): this was `undefined` — the only caller of
+        // `buildResultNotificationDescription` that never resolved a program code, which
+        // `RESULT_BILATERAL_PROJECT_TAGGED`'s bare-label branch needs. The owning initiative's
+        // `official_code` is already computed a few lines below for `initiativeOfficialCode`
+        // (from the same `initiative_role_id === 1` relation, with the same repository fallback);
+        // reuse it here instead of resolving it a second way.
+        const ownerProgramCode =
+          initiative?.official_code ?? fallback?.official_code ?? null;
+
         return {
           id: Number(notification.notification_id),
           resultId: resultIdNumber,
@@ -371,15 +380,14 @@ export class NotificationService {
           phase: notification.obj_result?.version_id ?? null,
           initiativeId: ownerInitiative?.initiative_id ?? fallback?.id ?? null,
           initiativeName: initiative?.name ?? fallback?.initiative_name ?? null,
-          initiativeOfficialCode:
-            initiative?.official_code ?? fallback?.official_code ?? null,
+          initiativeOfficialCode: ownerProgramCode,
           eventType: notificationType ?? null,
           message: this.buildResultNotificationDescription(
             notificationType,
             notification.obj_result?.result_code,
             emitterName,
             notification.obj_result?.title,
-            undefined,
+            ownerProgramCode ?? undefined,
             notification.text,
           ),
           emitterId: notification.emitter_user ?? null,
@@ -658,8 +666,14 @@ export class NotificationService {
       ]);
 
       const notifications = {
-        notificationsViewed: [...notificationsViewed, ...jobFinishedViewed],
-        notificationsPending: [...notificationsPending, ...jobFinishedPending],
+        notificationsViewed: [
+          ...this.mapNotificationResultFields(notificationsViewed),
+          ...jobFinishedViewed,
+        ],
+        notificationsPending: [
+          ...this.mapNotificationResultFields(notificationsPending),
+          ...jobFinishedPending,
+        ],
         notificationAnnouncement,
       };
 
@@ -699,11 +713,13 @@ export class NotificationService {
         );
       }
 
-      const notificationsUpdates = await this._notificationRepository.find({
-        select: this.getNotificattionSelect(),
-        relations: this.getNotificationRelations(),
-        where: whereConditions,
-      });
+      const notificationsUpdates = this.mapNotificationResultFields(
+        await this._notificationRepository.find({
+          select: this.getNotificattionSelect(),
+          relations: this.getNotificationRelations(),
+          where: whereConditions,
+        }),
+      );
 
       // `design.md` §6.4 read-path branch — same reasoning as `getAllNotifications`: a job
       // notification has no result, so `whereConditions.obj_result` above can never match it.
@@ -744,6 +760,34 @@ export class NotificationService {
     }
   }
 
+  /**
+   * NOTIF-T-8 rework: the widened `obj_result` select/relations (`source`,
+   * `obj_result_by_project.obj_clarisa_project`) is copied from the Requests-side query shape, but
+   * `share-result-request.service.ts::getRequest()`'s POST-PROCESSING mapper was not — this mirrors
+   * that mapper for the Updates-tab (`getAllNotifications`/`getPopUpNotifications`) result-scoped
+   * rows. No-op when `obj_result` is null (bilateral-AI-job notifications always have
+   * `result_id: null`, so `obj_result` is never populated for them).
+   */
+  private mapNotificationResultFields<T extends { obj_result?: any }>(
+    notifications: T[],
+  ): T[] {
+    return (notifications ?? []).map((notification: any) => {
+      if (notification?.obj_result && !Array.isArray(notification.obj_result)) {
+        notification.obj_result = {
+          ...notification.obj_result,
+          source_name:
+            notification.obj_result.source === 'Result'
+              ? 'W1/W2'
+              : 'W3/Bilaterals',
+          obj_result_by_project: (
+            notification.obj_result.obj_result_by_project ?? []
+          ).filter((link: any) => link.is_active),
+        };
+      }
+      return notification;
+    });
+  }
+
   private getNotificattionSelect() {
     return {
       obj_notification_level: {
@@ -770,6 +814,7 @@ export class NotificationService {
         result_code: true,
         title: true,
         status_id: true,
+        source: true,
         obj_result_by_initiatives: {
           initiative_id: true,
           obj_initiative: {
@@ -780,6 +825,25 @@ export class NotificationService {
         obj_version: {
           id: true,
           phase_name: true,
+        },
+        obj_result_type: {
+          id: true,
+          name: true,
+        },
+        obj_result_level: {
+          id: true,
+          name: true,
+        },
+        obj_result_by_project: {
+          id: true,
+          project_id: true,
+          is_lead: true,
+          is_active: true,
+          obj_clarisa_project: {
+            id: true,
+            shortName: true,
+            fullName: true,
+          },
         },
       },
     };
@@ -796,6 +860,11 @@ export class NotificationService {
           obj_initiative: true,
         },
         obj_version: true,
+        obj_result_type: true,
+        obj_result_level: true,
+        obj_result_by_project: {
+          obj_clarisa_project: true,
+        },
       },
     };
   }
@@ -836,8 +905,31 @@ export class NotificationService {
           programCode,
           storedText,
         );
+      // NOTIF-T-12 (rework attempt 2): `RESULT_BILATERAL_PROJECT_TAGGED`'s `notification.text` is
+      // NOT always the same shape as `RESULT_CENTER_TAGGED`'s. The AC1/AC2 direct-tag flow now
+      // stores a bare project label (see `result-tagged-notification.service.ts`'s `emitFor()`,
+      // no `leadIn`) — composing `"The result <code> - <title> <label>"` for that shape reads as
+      // garbled, missing framing entirely. Only the BCT-T-4 submission flow (`leadIn` passed) and
+      // any pre-fix/legacy row still carry a whole composed sentence, which the shared fallback
+      // below (identical to `RESULT_CENTER_TAGGED`'s) handles correctly. Detect the shape with the
+      // same telltale substrings the client uses (`isComposedProjectTaggedText` — keep them in
+      // sync with `notification-type.constants.ts`'s twin).
+      case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
+        const suffix = storedText?.trim();
+        if (suffix && !this.isComposedProjectTaggedText(suffix)) {
+          const identity = [resultCode, resultTitle]
+            .filter(Boolean)
+            .join(' - ');
+          return `${userName ?? 'A user'} from ${programCode ?? 'a Science Program'} has tagged project ${suffix} as contributor to result${identity ? ` ${identity}` : ''}`;
+        }
+        return this.buildTaggedSuffixDescription(
+          codeText,
+          resultCode,
+          resultTitle,
+          suffix,
+        );
+      }
       case NotificationTypeEnum.RESULT_CENTER_TAGGED:
-      case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED:
       // P2-3188 joins the same shape: the varying half is which Science Program decided, which
       // cannot be derived when the notification is read.
       case NotificationTypeEnum.RESULT_CONTRIBUTION_ACCEPTED:
@@ -847,12 +939,12 @@ export class NotificationService {
         // (`buildResultNotificationText`) and storing the whole sentence would repeat the
         // code and title. Rows with no text (written by hand, or before this shipped) fall
         // through to the generic line rather than rendering half a sentence.
-        const suffix = storedText?.trim();
-        if (!suffix) return `There is a new update on ${codeText}`;
-        const identity = [resultCode, resultTitle].filter(Boolean).join(' - ');
-        return identity
-          ? `The result ${identity} ${suffix}`
-          : `The result ${suffix}`;
+        return this.buildTaggedSuffixDescription(
+          codeText,
+          resultCode,
+          resultTitle,
+          storedText?.trim(),
+        );
       }
       case NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED:
         // No result to build an identity from (`result_id` is always `NULL` for this type,
@@ -864,6 +956,39 @@ export class NotificationService {
       default:
         return `There is a new update on ${codeText}`;
     }
+  }
+
+  /**
+   * Shared fallback for `RESULT_CENTER_TAGGED`, `RESULT_CONTRIBUTION_ACCEPTED/DECLINED`, and
+   * `RESULT_BILATERAL_PROJECT_TAGGED` rows whose `text` is a legacy/BCT-T-4 composed sentence
+   * (or empty): `notification.text` holds only the part that varies, the client composes
+   * `[prefix, identity, suffix]` itself. Extracted so `RESULT_BILATERAL_PROJECT_TAGGED` can reuse
+   * it for its non-bare-label branch without duplicating the identity/empty logic.
+   */
+  private buildTaggedSuffixDescription(
+    codeText: string,
+    resultCode?: number,
+    resultTitle?: string,
+    suffix?: string,
+  ): string {
+    if (!suffix) return `There is a new update on ${codeText}`;
+    const identity = [resultCode, resultTitle].filter(Boolean).join(' - ');
+    return identity
+      ? `The result ${identity} ${suffix}`
+      : `The result ${suffix}`;
+  }
+
+  /**
+   * Server-side twin of `notification-type.constants.ts`'s `isComposedProjectTaggedText` — both
+   * detect the same literal server template from `result-tagged-notification.service.ts`'s
+   * `emitFor()`: `"${leadIn} has tagged the ${label}. Click to see the result."`. Keep the two in
+   * sync if that template ever changes.
+   */
+  private isComposedProjectTaggedText(text: string): boolean {
+    return (
+      text.includes(' has tagged the ') ||
+      text.trim().endsWith('Click to see the result.')
+    );
   }
 
   /**

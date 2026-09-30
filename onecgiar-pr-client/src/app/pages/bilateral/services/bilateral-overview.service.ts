@@ -43,6 +43,12 @@ export class BilateralOverviewService {
   private readonly resultsDataSignals = new Map<OverviewCacheKey, WritableSignal<BilateralCenterResult[] | null>>();
   private readonly resultsLoadingSignals = new Map<OverviewCacheKey, WritableSignal<boolean>>();
   private readonly resultsErrorSignals = new Map<OverviewCacheKey, WritableSignal<string | null>>();
+  /**
+   * Latest request token per key. A response whose token is no longer the latest (its key was
+   * invalidated while it was in flight) is dropped, so a pre-invalidation payload can never land
+   * after — or overwrite — the refetch that replaced it.
+   */
+  private readonly resultsRequestSeq = new Map<OverviewCacheKey, number>();
 
   private readonly projectsCache = new Map<string, BilateralProject[]>();
   private readonly projectsInFlight = new Set<string>();
@@ -130,9 +136,35 @@ export class BilateralOverviewService {
     this.loadProjects(centerId);
   }
 
+  /**
+   * P2-3856 — a result was deleted somewhere in the platform (called from
+   * `ResultsApiService.PATCH_DeleteResult`, the one request every delete path goes through). The
+   * deleting screen knows neither center nor phase, so EVERY results key is dropped; keys that
+   * were loaded or in flight are refetched at once, so a consumer that is mounted right now (the
+   * Overview, the Reporting projects panel) never sits on a `null` with no request behind it, and
+   * one that mounts later misses the cache and fetches on its own `load()`. Projects are left
+   * alone: deleting a result does not change a center's project list.
+   */
+  invalidateAll(): void {
+    const keysToRefetch = new Set<OverviewCacheKey>([...this.resultsCache.keys(), ...this.resultsInFlight]);
+    this.resultsCache.clear();
+    this.resultsInFlight.clear();
+
+    for (const key of keysToRefetch) {
+      this.resultsDataSignal(key).set(null);
+      this.resultsErrorSignal(key).set(null);
+      const separator = key.lastIndexOf('::');
+      this.loadResults(key.slice(0, separator), Number(key.slice(separator + 2)));
+    }
+  }
+
   private loadResults(centerId: string, versionId: number): void {
     const key = overviewCacheKey(centerId, versionId);
     if (this.resultsCache.has(key) || this.resultsInFlight.has(key)) return;
+
+    const seq = (this.resultsRequestSeq.get(key) ?? 0) + 1;
+    this.resultsRequestSeq.set(key, seq);
+    const isLatest = () => this.resultsRequestSeq.get(key) === seq;
 
     this.resultsInFlight.add(key);
     this.resultsLoadingSignal(key).set(true);
@@ -143,12 +175,14 @@ export class BilateralOverviewService {
       .pipe(map((envelope: any) => (envelope?.response ?? []) as BilateralCenterResult[]))
       .subscribe({
         next: results => {
+          if (!isLatest()) return;
           this.resultsCache.set(key, results);
           this.resultsDataSignal(key).set(results);
           this.resultsLoadingSignal(key).set(false);
           this.resultsInFlight.delete(key);
         },
         error: () => {
+          if (!isLatest()) return;
           this.resultsErrorSignal(key).set('The results could not be loaded.');
           this.resultsLoadingSignal(key).set(false);
           this.resultsInFlight.delete(key);

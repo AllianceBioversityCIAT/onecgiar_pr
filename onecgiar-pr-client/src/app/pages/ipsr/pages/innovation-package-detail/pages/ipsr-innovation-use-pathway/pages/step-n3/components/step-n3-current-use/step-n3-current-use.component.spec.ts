@@ -389,3 +389,25 @@ describe('StepN3CurrentUseComponent — empty state vs rows on screen', () => {
     expect(html).toContain("!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_result_measures_id')");
   });
 });
+
+// P2-3844 — the blank Actors/Organizations row the step adds on load must not demand an evidence link.
+describe('StepN3CurrentUseComponent — evidence link on a blank placeholder row (P2-3844)', () => {
+  const { readFileSync } = require('fs');
+  const { join } = require('path');
+  const html: string = readFileSync(join(__dirname, 'step-n3-current-use.component.html'), 'utf8');
+  const evidenceInputs = html.match(/<app-pr-input[^>]*label="Evidence link"[\s\S]*?>/g) || [];
+
+  it('finds the three evidence link inputs (actors, organizations, measures)', () => {
+    expect(evidenceInputs).toHaveLength(3);
+  });
+
+  it('requires the actor and organization evidence link only once the row is real', () => {
+    expect(evidenceInputs[0]).toContain('[required]="!!actorItem?.result_ip_actors_id || !!actorItem?.actor_type_id"');
+    expect(evidenceInputs[1]).toContain('[required]="!!organizationItem?.id || !!organizationItem?.institution_types_id"');
+    expect(evidenceInputs.slice(0, 2).join('')).not.toContain('[required]="true"');
+  });
+
+  it('keeps the measures evidence link mandatory (that row only exists after "Add other")', () => {
+    expect(evidenceInputs[2]).toContain('[required]="true"');
+  });
+});

@@ -58,4 +58,31 @@ describe('FilterNotificationByCenterPipe', () => {
 
     expect(result).toEqual([]);
   });
+
+  // NOTIF-T-3 regression: pre-existing Requests-only filtering behavior is unchanged by this task.
+  it('regression: still matches a Requests-tab row whose result_center_array[0] matches the active center filter', () => {
+    const matching = bilateralRow('10');
+    const nonMatching = bilateralRow('20');
+
+    const result = pipe.transform([matching, nonMatching], ['10']);
+
+    expect(result).toEqual([matching]);
+  });
+
+  // NOTIF-DD-4: an Updates-tab row has `obj_result` (result_code/title/etc.) but never
+  // `result_center_array` — the center filter has no field to match on, so the row is EXCLUDED,
+  // not passed through, when the filter is active.
+  it('NOTIF-DD-4: excludes a field-less Updates-tab row (obj_result present, no result_center_array) when the center filter is active', () => {
+    const updatesRow = {
+      notification_id: 1,
+      obj_result: { result_code: 'R-1', title: 'Some update', obj_version: { id: 'v1' } }
+    };
+    const matchingRequestsRow = bilateralRow('10');
+    const list = [updatesRow, matchingRequestsRow];
+
+    const result = pipe.transform(list, ['10']);
+
+    expect(result).toEqual([matchingRequestsRow]);
+    expect(result).not.toContain(updatesRow);
+  });
 });

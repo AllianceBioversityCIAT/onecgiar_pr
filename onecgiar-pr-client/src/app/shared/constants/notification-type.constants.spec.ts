@@ -1,6 +1,7 @@
 import {
   NotificationType,
   buildResultNotificationText,
+  getAiJobNotificationParts,
   getNotificationActionVerb,
   getResultNotificationTextParts,
   isBilateralReviewNotification,
@@ -24,6 +25,45 @@ const notificationOf = (type: NotificationType | null, overrides: any = {}) => (
 });
 
 describe('notification-type constants', () => {
+  describe('Bilateral AI Job Finished (no result behind the row)', () => {
+    const aiJob = (text: string | null) => ({
+      notification_id: 7,
+      result_id: null,
+      obj_result: null,
+      text,
+      obj_notification_type: { notifications_type_id: 13, type: NotificationType.BILATERAL_AI_JOB_FINISHED }
+    });
+    const SENTENCE = 'AI-assisted processing finished — 2 drafts ready for CIP · 1 PDF · 3 min';
+
+    it('splits the server sentence from its deep link and keeps the path app-relative', () => {
+      expect(getAiJobNotificationParts(aiJob(`${SENTENCE} https://reporting.cgiar.org/bilateral/CIP/drafts`))).toEqual({
+        message: SENTENCE,
+        path: '/bilateral/CIP/drafts'
+      });
+    });
+
+    it('keeps the query of a failed-job link', () => {
+      expect(getAiJobNotificationParts(aiJob('failed for CIP · 2 min https://x.org/bilateral/CIP/create?job=abc'))?.path).toBe(
+        '/bilateral/CIP/create?job=abc'
+      );
+    });
+
+    it('has no path when the text carries no link, and a generic line when it carries no text', () => {
+      expect(getAiJobNotificationParts(aiJob(SENTENCE))).toEqual({ message: SENTENCE, path: null });
+      expect(getAiJobNotificationParts(aiJob(null))?.message).toBe('Your AI-assisted processing job finished.');
+    });
+
+    it('never renders the "The result -" lead-in or the empty result identity', () => {
+      const n = aiJob(`${SENTENCE} https://reporting.cgiar.org/bilateral/CIP/drafts`);
+      expect(getResultNotificationTextParts(n)).toEqual({ prefix: SENTENCE, suffix: null, emphasizePrefix: false });
+      expect(buildResultNotificationText(n)).toBe(SENTENCE);
+    });
+
+    it('returns null for any other type', () => {
+      expect(getAiJobNotificationParts(notificationOf(NotificationType.RESULT_SUBMITTED))).toBeNull();
+    });
+  });
+
   describe('resolveNotificationType', () => {
     it('resolves by name from obj_notification_type', () => {
       expect(resolveNotificationType(notificationOf(NotificationType.RESULT_SUBMITTED))).toBe(
@@ -219,14 +259,6 @@ describe('notification-type constants', () => {
       );
     });
 
-    it('uses the same shape for the tagged-project type', () => {
-      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
-        text: 'created by SP04 has tagged the P-1568-WBS0. Click to see the result.'
-      });
-
-      expect(buildResultNotificationText(notification)).toContain('has tagged the P-1568-WBS0.');
-    });
-
     it('trims the stored suffix and does not emphasize the lead-in', () => {
       const parts = getResultNotificationTextParts(
         notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: `  ${TAGGED_SUFFIX}  ` })
@@ -243,6 +275,83 @@ describe('notification-type constants', () => {
 
       expect(parts.suffix).toBeNull();
       expect(buildResultNotificationText(notification)).toBe('The result 4321 - A bilateral result title');
+    });
+  });
+
+  // NOTIF-T-12 (`NOTIF-R-14`, corrected 2026-09-30): the server now stores just the tagged
+  // project's NAME on `notification.text` (not a whole composed sentence) — the client builds the
+  // full sentence, naming the emitter and Science Program itself, unlike `RESULT_CENTER_TAGGED`
+  // above (which keeps the server-composed suffix).
+  describe('tagged bilateral project text (NOTIF-T-12)', () => {
+    it('builds the full sentence from the emitter, program code and stored project name', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'P-1568-WBS0'
+      });
+
+      expect(buildResultNotificationText(notification)).toBe(
+        'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 4321 - A bilateral result title'
+      );
+    });
+
+    it('falls back to "a Science Program" when no program code is available', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'P-1568-WBS0',
+        obj_result: resultOf({ obj_result_by_initiatives: [] })
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.prefix).toContain('from a Science Program has tagged project P-1568-WBS0 as contributor to result');
+      expect(parts.suffix).toBeNull();
+      expect(parts.emphasizePrefix).toBe(false);
+    });
+
+    // Rework attempt 2 (Reviewer FAIL issue 1): `notification.text` isn't always a bare project
+    // label — it can also be a BCT-T-4 submission-flow sentence, a pre-fix legacy sentence, or
+    // empty. All four shapes must render correctly, never garbled and never "undefined".
+    it('falls back to the old rendering for a BCT-T-4 submission-flow composed sentence', () => {
+      const bctText = 'reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.';
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, { text: bctText });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.prefix).toBe('The result');
+      expect(parts.suffix).toBe(bctText);
+      expect(parts.emphasizePrefix).toBe(false);
+      expect(buildResultNotificationText(notification)).toBe(`The result 4321 - A bilateral result title ${bctText}`);
+    });
+
+    it('falls back to the old rendering for a legacy (pre-fix) composed sentence', () => {
+      const legacyText = 'created by SP04 has tagged the P-1568-WBS0. Click to see the result.';
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, { text: legacyText });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.prefix).toBe('The result');
+      expect(parts.suffix).toBe(legacyText);
+      expect(parts.emphasizePrefix).toBe(false);
+    });
+
+    it('falls back to the old rendering (no "undefined") when text is empty or null', () => {
+      const emptyNotification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, { text: '' });
+      const nullNotification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, { text: null });
+      const whitespaceNotification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: '   '
+      });
+
+      for (const notification of [emptyNotification, nullNotification, whitespaceNotification]) {
+        const parts = getResultNotificationTextParts(notification);
+        expect(parts.prefix).toBe('The result');
+        expect(parts.suffix).toBeNull();
+        const rendered = buildResultNotificationText(notification);
+        expect(rendered).not.toContain('undefined');
+        expect(rendered).toBe('The result 4321 - A bilateral result title');
+      }
+    });
+
+    it('still builds the full sentence for a genuine bare project label', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, { text: 'P-1568-WBS0' });
+
+      expect(buildResultNotificationText(notification)).toBe(
+        'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 4321 - A bilateral result title'
+      );
     });
   });
 

@@ -14,7 +14,20 @@ import { tap } from 'rxjs/operators';
 export class DataControlService {
   showPartnersRequest: boolean = false;
   showRetrieveRequest: boolean = false;
-  myInitiativesList = [];
+  /**
+   * Signal-backed so a `computed()` that reads it (e.g. `EntityAowService.canReportResults`)
+   * recomputes when `updateUserData()` resolves. As a plain array, a non-admin who opened a
+   * Science Program before the list arrived had `false` cached for good and never saw
+   * "Report emerging result" — admins were unaffected because `isAdmin` is already a signal.
+   * Same getter/setter shape as `RolesService.isAdmin`; the public API stays a plain array.
+   */
+  private readonly myInitiativesListState = signal<any[]>([]);
+  get myInitiativesList(): any[] {
+    return this.myInitiativesListState();
+  }
+  set myInitiativesList(value: any[]) {
+    this.myInitiativesListState.set(value);
+  }
   myInitiativesListReportingByPortfolio = [];
   myInitiativesListIPSRByPortfolio = [];
   myInitiativesLoaded = false;
