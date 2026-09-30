@@ -20,17 +20,25 @@
          branch, reusing `getResultNotificationTextParts()`/`resolveNotificationType()` (no new
          labels invented, NOTIF-DD-3) instead of the Requests-tab `@switch` below. -->
     <div class="notification_content">
+      @let aiJob = aiJobParts;
       <div class="notification_avatar">
+        @if (aiJob) {
+          <span class="material-icons-round" style="font-size: 16px" aria-hidden="true">auto_awesome</span>
+        } @else {
         <span class="notification_avatar_initials">{{
           ((notification?.obj_emitter_user?.first_name?.charAt(0) ?? '') + (notification?.obj_emitter_user?.last_name?.charAt(0) ?? ''))
             | uppercase
         }}</span>
+        }
       </div>
 
       <div class="notification_content_body">
         <p class="notification_content_body_text notification_content_body_text_compact">
           @let parts = updateTextParts;
 
+          @if (aiJob) {
+            {{ aiJob.message }}
+          } @else {
           @if (parts.prefix) {
             @if (parts.emphasizePrefix) {
               <b> {{ parts.prefix }} </b>
@@ -51,6 +59,7 @@
 
           @if (parts.suffix) {
             <b> {{ parts.suffix }} </b>
+          }
           }
         </p>
 
