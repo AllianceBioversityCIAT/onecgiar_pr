@@ -7,6 +7,7 @@ import { ResultToResultInterfaceToc } from '../../../../app/pages/results/pages/
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
 import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 import { UserLastLoginRow } from '../../interfaces/user.interface';
+import { BilateralOverviewService } from '../../../pages/bilateral/services/bilateral-overview.service';
 
 describe('ResultsApiService', () => {
   let service: ResultsApiService;
@@ -140,6 +141,28 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${service.baseApiBaseUrl}manage-data/result/${resultIdToDelete}/delete`);
       expect(req.request.method).toBe('DELETE');
       req.flush(mockResponse);
+    });
+
+    // P2-3856 — the one request every delete path shares is where the Overview cache is dropped.
+    it('invalidates the Center Overview cache once, after a successful delete', () => {
+      const invalidateAll = jest.spyOn(TestBed.inject(BilateralOverviewService), 'invalidateAll').mockImplementation(() => {});
+
+      service.PATCH_DeleteResult('123').subscribe();
+      expect(invalidateAll).not.toHaveBeenCalled(); // not before the server answers
+
+      httpMock.expectOne(`${service.baseApiBaseUrl}manage-data/result/123/delete`).flush({ response: { status: 200 } });
+      expect(invalidateAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the Center Overview cache untouched when the delete fails (e.g. 409)', () => {
+      const invalidateAll = jest.spyOn(TestBed.inject(BilateralOverviewService), 'invalidateAll').mockImplementation(() => {});
+
+      service.PATCH_DeleteResult('123').subscribe({ error: () => {} });
+      httpMock
+        .expectOne(`${service.baseApiBaseUrl}manage-data/result/123/delete`)
+        .flush({ message: 'has links' }, { status: 409, statusText: 'Conflict' });
+
+      expect(invalidateAll).not.toHaveBeenCalled();
     });
   });
 

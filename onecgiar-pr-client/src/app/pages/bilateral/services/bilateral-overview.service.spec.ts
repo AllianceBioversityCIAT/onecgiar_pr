@@ -173,4 +173,60 @@ describe('BilateralOverviewService', () => {
     respondProjects(1, FIXTURE_PROJECTS);
     expect(service.projectsData('AfricaRice')()).toEqual(FIXTURE_PROJECTS);
   });
+
+  describe('invalidateAll() — P2-3856: a result deleted anywhere refreshes the Center Overview', () => {
+    const TRIMMED_ROWS = FIXTURE_D1_ROWS.slice(1);
+
+    it('drops every cached results key and refetches each one, leaving projects cached', () => {
+      service.load('AfricaRice', 36);
+      respondResults(0, FIXTURE_D1_ROWS);
+      respondProjects(0, FIXTURE_PROJECTS);
+      service.load('AfricaRice', 37);
+      respondResults(1, FIXTURE_D1_ROWS);
+
+      service.invalidateAll();
+
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledTimes(4);
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(3, 'AfricaRice', 36);
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(4, 'AfricaRice', 37);
+      expect(mockApi.GET_bilateralProjects).toHaveBeenCalledTimes(1);
+      expect(service.resultsData('AfricaRice', 36)()).toBeNull();
+      expect(service.resultsLoading('AfricaRice', 36)()).toBe(true);
+      expect(service.projectsData('AfricaRice')()).toEqual(FIXTURE_PROJECTS);
+
+      respondResults(2, TRIMMED_ROWS);
+      respondResults(3, TRIMMED_ROWS);
+      expect(service.resultsData('AfricaRice', 36)()).toEqual(TRIMMED_ROWS);
+      expect(service.resultsData('AfricaRice', 37)()).toEqual(TRIMMED_ROWS);
+      expect(service.resultsLoading('AfricaRice', 36)()).toBe(false);
+    });
+
+    it('a later load() for the same key (navigating back to the tab) is a cache hit on the NEW rows', () => {
+      service.load('AfricaRice', 36);
+      respondResults(0, FIXTURE_D1_ROWS);
+      service.invalidateAll();
+      respondResults(1, TRIMMED_ROWS);
+
+      service.load('AfricaRice', 36);
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledTimes(2);
+      expect(service.resultsData('AfricaRice', 36)()).toEqual(TRIMMED_ROWS);
+    });
+
+    it('a request in flight before the delete is superseded: its pre-delete payload never lands', () => {
+      service.load('AfricaRice', 36);
+      service.invalidateAll();
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledTimes(2);
+
+      respondResults(1, TRIMMED_ROWS);
+      respondResults(0, FIXTURE_D1_ROWS); // stale response arrives last
+      expect(service.resultsData('AfricaRice', 36)()).toEqual(TRIMMED_ROWS);
+      expect(service.resultsLoading('AfricaRice', 36)()).toBe(false);
+    });
+
+    it('is a no-op when nothing was ever loaded (no request fired)', () => {
+      service.invalidateAll();
+      expect(mockApi.GET_bilateralCenterResults).not.toHaveBeenCalled();
+      expect(mockApi.GET_bilateralProjects).not.toHaveBeenCalled();
+    });
+  });
 });
