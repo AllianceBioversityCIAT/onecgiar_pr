@@ -9,6 +9,8 @@ import { environment } from '../../../../../environments/environment';
 import { BilateralPageHeaderComponent } from './bilateral-page-header.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
+import { normalizeListJob } from '../../bilateral-ai-job.model';
+import { rawListJob } from '../../bilateral-ai-job.fixtures';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
 import {
@@ -827,21 +829,108 @@ describe('BilateralPageHeaderComponent', () => {
     });
   });
 
-  // `AIQ-T-5`: `BilateralAiService.currentJob`/`getActiveJobSnapshot` are removed (design §6.2),
-  // so `aliveJobForThisCenter` is now an inert stub that always returns `null` (see the component)
-  // — this whole per-center chip is retired for real by `AIQ-DD-9`/`AIQ-T-9`, which replaces it
-  // with the trigger in all three slots and owns this describe block's full rewrite/removal. Kept
-  // here only as a compile-safe proof that the (now dead) chip never renders.
-  describe('"AI job running" chip (APF-R-10) — retired by AIQ-T-9, compile-level stub only', () => {
-    const chip = () => fixture.debugElement.query(By.css('[data-testid="bilateral-ai-job-chip"]'));
+  // `AIQ-T-9` / `AIQ-DD-9`: the retired per-Center "AI job running" chip (`APF-R-10`) is replaced by
+  // `app-ai-processes-trigger` in all three header slots. This block replaces the old chip describe
+  // (rewrite, not addition — `tasks.md` `AIQ-T-9` Tests). `AiProcessesTriggerComponent` reads
+  // `BilateralAiService` directly, so these tests drive the REAL service instance the header itself
+  // injects (`aiService`, from the outer `beforeEach`) rather than passing inputs.
+  describe('AI processes trigger (AIQ-T-9, AIQ-R-10, AIQ-DD-9)', () => {
+    const trigger = () => fixture.debugElement.query(By.css('[data-testid="ai-processes-trigger"]'));
+    const badge = () => fixture.debugElement.query(By.css('[data-testid="ai-processes-trigger-badge"]'));
 
-    it('never renders — the per-center chip is inert pending AIQ-T-9', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    beforeEach(() => {
+      // The header's whole template is gated on `ctx.centerAcronym()` — a default Center here
+      // keeps every test below focused on the trigger, not on re-deriving that precondition.
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+    });
+
+    afterEach(() => {
+      aiService.stopPolling();
+    });
+
+    it('renders for a Center that never started the job — `AIQ-R-10` A must NOT gate on Center', () => {
+      ctx.setCenter('ZZZ-Other', 'A Center That Never Started Any Job');
       fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
+      aiService.jobs.set([normalizeListJob(rawListJob({ job_id: 'job-1', status: 'PROCESSING', center_id: '999' }))]);
       fixture.detectChanges();
 
-      expect(chip()).toBeNull();
+      expect(trigger()).toBeTruthy();
+    });
+
+    it('renders on the create wizard (`pageTitle` set, no `activeTab`) — the chip never did (P-16)', () => {
+      fixture.componentRef.setInput('pageTitle', 'Create a result');
+      fixture.componentRef.setInput('activeTab', null);
+      fixture.detectChanges();
+
+      expect(trigger()).toBeTruthy();
+    });
+
+    it('badge equals the active (running + waiting) job count while working', () => {
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.jobs.set([
+        normalizeListJob(rawListJob({ job_id: 'job-1', status: 'PROCESSING' })),
+        normalizeListJob(rawListJob({ job_id: 'job-2', status: 'PENDING' })),
+      ]);
+      fixture.detectChanges();
+
+      expect(badge()?.nativeElement.textContent.trim()).toBe('2');
+    });
+
+    it('done state shows the unseen count and it is cleared once the drawer opens', () => {
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.unseenFinishedIds.set(new Set(['job-1', 'job-2']));
+      fixture.detectChanges();
+
+      expect(badge()?.nativeElement.textContent.trim()).toBe('2');
+
+      trigger().nativeElement.click();
+      fixture.detectChanges();
+
+      expect(aiService.unseenFinishedIds().size).toBe(0);
+      expect(badge()).toBeFalsy();
+    });
+
+    it('accessible name contains the running/waiting counts', () => {
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.jobs.set([
+        normalizeListJob(rawListJob({ job_id: 'job-1', status: 'PROCESSING' })),
+        normalizeListJob(rawListJob({ job_id: 'job-2', status: 'PENDING' })),
+        normalizeListJob(rawListJob({ job_id: 'job-3', status: 'PENDING' })),
+      ]);
+      fixture.detectChanges();
+
+      expect(trigger().nativeElement.getAttribute('aria-label')).toBe('AI processes: 1 running, 2 waiting');
+    });
+
+    it('idle accessible name has no counts when there are no active or unseen jobs', () => {
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+
+      expect(trigger().nativeElement.getAttribute('aria-label')).toBe('AI processes');
+    });
+
+    it('aria-expanded reflects BilateralAiService.drawerOpen()', () => {
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+      expect(trigger().nativeElement.getAttribute('aria-expanded')).toBe('false');
+
+      aiService.drawerOpen.set(true);
+      fixture.detectChanges();
+      expect(trigger().nativeElement.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('schedules no 1s timer on mount — the elapsed clock lives only in the open drawer (AIQ-DD-9)', () => {
+      jest.useFakeTimers();
+      try {
+        const before = jest.getTimerCount();
+        ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+        fixture.componentRef.setInput('activeTab', 'reporting');
+        fixture.detectChanges();
+
+        expect(jest.getTimerCount()).toBe(before);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

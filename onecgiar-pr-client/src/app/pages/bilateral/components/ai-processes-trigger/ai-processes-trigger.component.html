@@ -1,0 +1,46 @@
+<button
+  type="button"
+  class="inline-flex h-[32px] shrink-0 cursor-pointer items-center gap-[6px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[6px] pr-[12px] text-[12px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-200)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+  [class.border-[var(--pr-color-primary-300)]]="isExpanded()"
+  [class.bg-[var(--pr-color-primary-50)]]="isExpanded()"
+  data-testid="ai-processes-trigger"
+  aria-haspopup="dialog"
+  [attr.aria-expanded]="isExpanded()"
+  [attr.aria-label]="ariaLabel()"
+  (click)="open()">
+  <span class="relative flex h-[22px] w-[22px] shrink-0 items-center justify-center" aria-hidden="true">
+    @switch (state()) {
+      @case ('working') {
+        <svg class="absolute inset-0 animate-spin motion-reduce:animate-none" width="22" height="22" viewBox="0 0 22 22">
+          <circle class="stroke-[var(--pr-color-primary-100)]" cx="11" cy="11" r="9" fill="none" stroke-width="2.5" />
+          <circle
+            class="stroke-[var(--pr-color-primary-300)]"
+            cx="11"
+            cy="11"
+            r="9"
+            fill="none"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-dasharray="18 60" />
+        </svg>
+        <span class="material-icons-round relative text-[13px] leading-none text-[var(--pr-color-primary-300)]">auto_awesome</span>
+      }
+      @case ('done') {
+        <span class="material-icons-round relative text-[15px] leading-none text-[var(--pr-status-approved-fg)]">task_alt</span>
+      }
+      @default {
+        <span class="material-icons-round relative text-[15px] leading-none text-[var(--pr-text-subtle)]">auto_awesome</span>
+      }
+    }
+  </span>
+  <span>{{ copy.label }}</span>
+  @if (badgeCount() > 0) {
+    <span
+      class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-[5px] text-[10.5px] font-bold tabular-nums text-white"
+      [class.bg-[var(--pr-color-primary-600)]]="state() === 'working'"
+      [class.bg-[var(--pr-status-approved-fg)]]="state() === 'done'"
+      data-testid="ai-processes-trigger-badge">
+      {{ badgeCount() }}
+    </span>
+  }
+</button>

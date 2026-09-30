@@ -679,3 +679,96 @@
     - Record the brand-button-per-card deviation.
 - **Final verification:** 2142/2142 Jest; build and lint clean; CT 6/6 (Implementer-run).
 - **Budget:** 16 rounds / 8 tasks.
+
+**Wave 2 (parallel):** `AIQ-T-9` and `AIQ-T-10` ran at the same time on disjoint files. Neither ran `ng build`; the Leader ran it after both reported.
+
+### `AIQ-T-10` — Retire the panel and the completion dialog; mount the watcher
+
+- **Final status:** PASS · **Date:** 2026-09-29 · **Attempts:** 1
+- **Skills:** `angular-developer` (listed) · **Effort:** medium
+- **Forward pointer carried:** mount `AiProcessesDrawerLauncherService` app-wide next to the watcher (from T-8).
+
+**Attempt 1**
+- **Files changed:**
+  - `app.component.html`: `<app-bilateral-ai-completion-dialog />` → `<app-bilateral-ai-job-watcher />`.
+  - `app.module.ts`: import and declaration swapped.
+  - New `bilateral-ai-job-watcher/*` (component, spec, `CLAUDE.md`). Headless; it injects `BilateralAiService` and `AiProcessesDrawerLauncherService`.
+  - Deleted with `git rm` `bilateral-ai-completion-dialog/` and `ai-processing-panel/` (incl. its `CLAUDE.md`).
+  - Surface list in `ai-provenance-notice.component.ts` updated.
+  - Stale comments updated in `bilateral-ai-job.model.ts` and `bilateral-ai.service.ts`.
+  - One line in `bilateral-ai-upload/CLAUDE.md` (courtesy fix, outside the Files list).
+- **Falsifiers:**
+  1. Dialog re-added → `grep -rn app-bilateral-ai-completion-dialog src/` finds 1 hit.
+  2. Unconditional poll → "no hint → zero requests" red.
+- **Disqualifier:** real `BilateralAiService` with `HttpClientTesting`; only `HlmDialogService` is mocked.
+- **Consumers grep:** 5 hits, all docs or absence assertions.
+- **Green:** watcher 4/4, app.component 4/4, services 211, others 99 and 30. Lint clean.
+- **Evidence re-run (Leader-inline, combined with T-9):**
+  - `npx jest src/app` (whole client): **622 suites / 12206 passed**.
+  - `ng build --configuration development`: 0 errors.
+  - `ng lint --quiet`: clean.
+  - Result: **VERIFIED**.
+- **Reviewer: PASS.**
+  - The deletions are complete.
+  - The watcher sits outside both `@if` branches and both `router-outlet`s (`app.component.html:67`), so it is created once per app.
+  - The hint-key semantics match T-5.
+  - A launcher test sets `drawerOpen` and asserts `HlmDialogService.open` was called once. It is a true behavioural proof: it goes red if the injection is removed.
+  - The provenance surfaces still number 5.
+  - No ETA residue remains.
+- **ADVISORY:**
+  - The launcher docstring (`ai-processes-drawer-launcher.service.ts:30-35`) and the "For AIQ-T-9 / AIQ-T-10" section of `ai-processes-drawer/CLAUDE.md` still describe the mounting as future work.
+  - `BilateralAiCompletionNotice` in `bilateral-ai.interfaces.ts:66-77` is now dead.
+  - The watcher is also live on `/login` (pre-existing behaviour).
+  - Sonar S1068 may flag the never-read injected fields.
+- **runtime events:** none
+- **Requirements covered:** `AIQ-R-11` A (BUT: no blocking dialog; AND: any route, app-level half) · DD-6 · DD-8.
+- **Final verification:** the whole client is green (12206), build and lint are clean, and both falsifiers go red.
+
+### `AIQ-T-9` — Header trigger replaces the chip in all three slots
+
+- **Final status:** PASS · **Date:** 2026-09-29 · **Attempts:** 1
+- **Skills:** `angular-developer`, `tailwind-design-system` (listed) · **Effort:** high
+
+**Attempt 1**
+- **Files changed:**
+  - New: `ai-processes-trigger/*` (component, html, spec, `CLAUDE.md`).
+  - `bilateral-page-header/*` (ts, html, spec, cy): the chip, `aliveJobForThisCenter`, `aiJobChip` and the 1 s tick are gone. The trigger is placed in the identity row (below 640 px), the nav end (640 px and up), and the `pageTitle` branch.
+  - `bilateral-ai-processes.copy.ts`: a `trigger` block.
+  - `bilateral-result-creator.component.spec.ts`: the mock gains `jobs`, `unseenFinishedIds` and `drawerOpen`.
+- **Unseen:** `openDrawer()` already clears `unseenFinishedIds` (`bilateral-ai.service.ts:150-152`), so no service edit was needed.
+- **Falsifiers:**
+  1. Adding a Center gate turns "other Center" red (Received null).
+  2. Removing the `pageTitle` mount turns the wizard case red.
+- **Other checks:** `getTimerCount` is unchanged after mount. The chip grep returns 0. Tests: 87 in the target folders, 482 in the host pages. Lint is clean.
+- **Evidence re-run (Leader-inline, combined with T-10):** whole-client jest gives 622 suites / 12206 passed. `ng build` has 0 errors, lint is clean, and the chip grep returns 0. **VERIFIED**.
+- **Reviewer: PASS.**
+  - No Center gate: counts come from `jobs()` by status.
+  - All three slots render, and the idle, working and done states work. The accessible name starts with the visible label. `aria-expanded` follows `drawerOpen()`.
+  - The KZ L2 base classes are present. Only one trigger shows at any given width. The spinner has `motion-reduce`.
+  - Tokens are correct, and the chip grep returns 0.
+- **ADVISORY:**
+  - **Risk:** at 375 px, the wizard's top-right group (trigger plus Back button, about 290 px) likely overlaps the title, because only `pr-[140px]` is reserved there. **T-11 must measure it.**
+  - The `[class.bg-…]` expanded style competes with the base utility through CSS order, so the expanded look is not guaranteed. Prefer `aria-expanded:` variants.
+  - The CT file has not been run since the rewrite (T-11).
+  - Latent: a host with neither `activeTab` nor `pageTitle` would render two triggers.
+  - The "same instance" wording in the component doc comment is inaccurate. The gap is 6 px where the mockup has 8 px.
+  - The done-state aria text "N finished" is an addition beyond R-10 C.
+  - The `variant="detail"` header has no trigger, per DD-9's three slots. This is in tension with R-10 A's "every bilateral page".
+- **runtime events:** none
+- **Requirements covered:** `AIQ-R-10` A (BUT no Center dependency; AND create wizard), B, C.
+- **Forward pointers → `AIQ-T-11`:**
+  - Measure the wizard header overlap at 375 and 900 px.
+  - Run `bilateral-page-header.cy.ts`.
+  - Assert the expanded style.
+- **Budget:** 18 review rounds across 10 tasks.
+
+---
+
+## Summary (T-1..T-10 complete; T-11 pending)
+
+- All implementation tasks are `[x]`. Commits on `JuanGuzman-io/p2-3853-jira-understanding`, none pushed:
+  - Server: `e1e8bf815` (T-1), `3b28d3ea2` (T-2), `9b9b1720c` (T-3), `fe541801c` (T-4).
+  - Client: `4eaf5b0b6` (T-6), `c534e7028` (T-5), `0771414d6` (T-7), `3d62eb87b` (T-8), `5a85d6bc5` (T-10), plus the T-9 commit.
+  - Merge of `performance-refactor`: `4f740ffc2`.
+- **T-11 is pending.** It needs P-24 answered, PR 1 and PR 2 merged and deployed to prtest, the forwardRef server-boot smoke, the CT suite, the T6 visual review, the HITL, and product-owner sign-off.
+- **Review rounds:** 18 across 10 tasks, against a budget of 11. The tripwire was crossed and the user chose to continue. There was one HALT (T-8), resolved by a user-authorized attempt 4.

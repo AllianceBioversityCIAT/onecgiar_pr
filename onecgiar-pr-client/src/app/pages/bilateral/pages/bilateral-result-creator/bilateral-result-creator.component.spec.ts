@@ -41,6 +41,11 @@ class MockBilateralAiService {
   pollIntervalRef = signal<any>(null);
   draftList = signal([]);
   isDraftListLoaded = signal(false);
+  // `AIQ-T-9`: `app-ai-processes-trigger`, mounted by `app-bilateral-page-header`, reads these
+  // three directly (never through an input) — see that component's `CLAUDE.md`.
+  jobs = signal<{ status: string; centerAcronym: string | null }[]>([]);
+  unseenFinishedIds = signal<ReadonlySet<string>>(new Set());
+  drawerOpen = signal(false);
 }
 
 function makeManualCreateFlowMock() {

@@ -260,7 +260,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** specs green; `ng build` green; falsifiers red when mutated; P-18 outcome recorded; token-existence grep: every `var(--pr-[a-z0-9-]+)` in the new templates exists in `onecgiar-pr-client/src/styles/colors.scss`; no hex / `rgba(` / `pi-` in the new templates.
 - **Skills:** `angular-developer`, `tailwind-design-system`, `spartan`, `frontend-design`.
 
-### `AIQ-T-9` — Header trigger replaces the chip in all three slots
+### [x] `AIQ-T-9` — Header trigger replaces the chip in all three slots
 
 - **Type:** client · **Estimate:** M · **Depends on:** `AIQ-T-8` · **Blocks:** `AIQ-T-11`
 - **Description:**
@@ -286,7 +286,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** specs green; `ng build` green; falsifiers red when mutated; chip selector grep = 0.
 - **Skills:** `angular-developer`, `tailwind-design-system`.
 
-### `AIQ-T-10` — Retire the panel and the completion dialog; mount the watcher
+### [x] `AIQ-T-10` — Retire the panel and the completion dialog; mount the watcher
 
 - **Type:** client · **Estimate:** S · **Depends on:** `AIQ-T-7`, `AIQ-T-8` · **Blocks:** `AIQ-T-11`
 - **Description:**

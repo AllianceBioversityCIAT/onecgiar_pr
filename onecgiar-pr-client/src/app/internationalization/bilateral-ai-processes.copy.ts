@@ -14,6 +14,20 @@
  */
 
 export const BILATERAL_AI_PROCESSES_COPY = {
+  /** `ai-processes-trigger` (`AIQ-T-9`, `AIQ-R-10`). Visible label stays "AI processes" in every
+   * state (idle / working / done) — only the icon and badge change; the accessible name is what
+   * carries the counts (`AIQ-R-10` C). */
+  trigger: {
+    label: 'AI processes',
+    ariaIdle: 'AI processes',
+    ariaWorking: (running: number, waiting: number): string => {
+      const parts: string[] = [];
+      if (running > 0) parts.push(`${running} running`);
+      if (waiting > 0) parts.push(`${waiting} waiting`);
+      return `AI processes: ${parts.join(', ')}`;
+    },
+    ariaDone: (unseen: number): string => `AI processes: ${unseen} finished`,
+  },
   /** `bilateral-ai-upload`'s post-submit confirmation card (`AIQ-R-7` B). */
   confirmation: {
     title: (project: string): string => `${project} was added to the AI queue`,
