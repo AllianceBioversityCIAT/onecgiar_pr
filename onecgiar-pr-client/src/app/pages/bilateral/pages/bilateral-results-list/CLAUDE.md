@@ -153,6 +153,10 @@ found.
 - ⚠️ **Never widen the project lookup into a `LEFT JOIN` on `results_by_projects`.** A result can
   carry several active project links; the server resolves `project_name` with a correlated
   subquery precisely so the row is not multiplied. `result.repository.spec.ts` pins this.
+- ⚠️ **W1/W2 rows (`source: 'Result'`) never open the centre editor** (P2-3855). The editor only loads
+  `source: Bilateral`, so a W1/W2 row there is a 404 ("We couldn't load this result"). `openResult` and
+  `resultLink` both go through `resultRoute()`, which sends W1/W2 rows to `/result/result-detail/:code`
+  (read-only for a centre user outside the result's initiative). New row actions must reuse it.
 - The row `(click)` opens the result, so every in-row control needs `$event.stopPropagation()`.
 - `canManageW3()` is `true` for admins regardless of centre; do not treat it as a centre check.
 

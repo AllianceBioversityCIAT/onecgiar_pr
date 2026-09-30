@@ -920,6 +920,31 @@ describe('BilateralResultsListComponent', () => {
       expect(link).toContain('/result/9901?phase=36');
     });
 
+    it('P2-3855: opens a W1/W2 row on the normal result page, not the bilateral editor', () => {
+      navigateSpy.mockClear();
+      const w1w2 = { ...mockResult, source: 'Result' as const, result_code: '9058' };
+
+      component.openResult(w1w2);
+
+      expect(navigateSpy).toHaveBeenCalledWith(
+        ['/result', 'result-detail', '9058', 'general-information'],
+        { queryParams: { phase: 36 } },
+      );
+      expect(component.resultLink(w1w2)).toContain('/result/result-detail/9058/general-information?phase=36');
+      expect(component.resultLink(w1w2)).not.toContain('/bilateral/');
+    });
+
+    it('P2-3855: keeps opening a W3/Bilateral row in the centre editor', () => {
+      navigateSpy.mockClear();
+
+      component.openResult(mockResult);
+
+      expect(navigateSpy).toHaveBeenCalledWith(
+        ['/bilateral', component['ctx'].centerAcronym(), 'result', '9901'],
+        { queryParams: { phase: 36 } },
+      );
+    });
+
     it('copies result link to clipboard and triggers success toast on copyLink', () => {
       const clipboard = TestBed.inject(Clipboard);
       const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
