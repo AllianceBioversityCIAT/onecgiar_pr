@@ -24,7 +24,36 @@ export interface ContributionRequestDrawerReviewField {
   mono?: boolean;
 }
 
-export type ContributionRequestDrawerMode = 'decide' | 'confirm-decline';
+export type ContributionRequestDrawerMode = 'decide' | 'confirm-decline' | 'view';
+
+/**
+ * NOTIF-T-4: which stream the row being viewed came from. Drives the per-source field adapter
+ * (design.md §6.2's table) — `resultType` and `reportingCenter` are only ever considered for a
+ * `'request'`-source row, because `notification/updates` rows don't return either (`NOTIF-P-2`).
+ */
+export type ContributionRequestDrawerViewSource = 'request' | 'update';
+
+/**
+ * NOTIF-T-4 `view` mode: the raw-ish fields `notification-item` resolves for the row being viewed.
+ * Every field is optional; the drawer's per-source field adapter (`viewMetadataRows`) omits a field
+ * from the grid whenever it is missing/empty OR not applicable to `source` — it never renders a
+ * blank placeholder (NOTIF-R-5, NOTIF-AC-7).
+ */
+export interface ContributionRequestDrawerViewFields {
+  source: ContributionRequestDrawerViewSource;
+  /**
+   * NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
+   * badge): the row's decision/info status ("Needs your decision" / "For your information"),
+   * sourced from `notification-item`'s existing `rowStatusLabel` getter. Rendered first in
+   * `viewMetadataRows` — the most important thing to know at a glance.
+   */
+  status?: string | null;
+  resultType?: string | null;
+  phase?: string | null;
+  primaryProgram?: string | null;
+  reportingCenter?: string | null;
+  submittedBy?: string | null;
+}
 
 /** A cell's long value is clamped past this length (design.md §6.3 `line-clamp-3`, hard rule #16). */
 const CLAMP_THRESHOLD_CHARS = 180;
@@ -37,6 +66,12 @@ const CLAMP_THRESHOLD_CHARS = 180;
  * T-2 scope: header sentence (`headerParts`), RESULT card, "Where it contributes" tables (with
  * dash fallback and per-cell clamp/Show more), the `decide` / `confirm-decline` footer, busy/blocked
  * states, and scrolling the projected Align slot into view on `focusAlign`.
+ *
+ * NOTIF-T-4 added a third, additive `mode: 'view'` (design.md §6.2, `NOTIF-DD-2`): the header and
+ * RESULT card are reused unchanged, "Where it contributes" renders only when `reviewRows` is
+ * non-empty (no dash-fallback placeholder in `view` mode), a new metadata grid renders from
+ * `viewFields`/`viewMetadataRows`, and the footer is omitted entirely — no Accept/Decline, no
+ * confirm-decline. Nothing about the `decide`/`confirm-decline` branches changed.
  */
 @Component({
   selector: 'app-contribution-request-drawer',
@@ -88,6 +123,47 @@ export class ContributionRequestDrawerComponent {
 
   /** CRD-R-10 "Bilateral row accept": scroll the projected `[crdAlign]` slot into view after open. */
   readonly focusAlign = input(false);
+
+  /** NOTIF-T-4 `view` mode: the row's per-source fields for the metadata grid (design.md §6.2). */
+  readonly viewFields = input<ContributionRequestDrawerViewFields | null>(null);
+
+  /**
+   * NOTIF-T-4: per-source field adapter (design.md §6.2 table). Builds the `view`-mode metadata
+   * grid rows from `viewFields()`, in a fixed order — `status` (NOTIF-T-14) → Result type → Phase →
+   * Primary program → Reporting center → Submitted by — skipping any field that is absent/empty on
+   * the given row, and skipping `resultType`/`reportingCenter` entirely for an `'update'`-source
+   * row regardless of what `notification-item` passes in (NOTIF-P-2: `notification/updates` never
+   * returns either). Never renders a label next to a blank/dash value (NOTIF-R-5, NOTIF-AC-7).
+   */
+  readonly viewMetadataRows = computed<ContributionRequestDrawerReviewField[]>(() => {
+    const fields = this.viewFields();
+    if (!fields) return [];
+
+    const labels = this.copy.viewFieldLabels;
+    const rows: ContributionRequestDrawerReviewField[] = [];
+    const push = (label: string, value?: string | null) => {
+      // NOTIF-AC-7 "no blank placeholder": trim before the emptiness check (mirrors `needsMore()`'s
+      // `value.trim()` above) so a whitespace-only value (e.g. `' '`) is treated as absent instead
+      // of rendering a visually-blank row.
+      if (value !== undefined && value !== null && value.trim() !== '') {
+        rows.push({ label, value });
+      }
+    };
+
+    // NOTIF-T-14: status is first — the most important thing to know at a glance (NOTIF-R-5).
+    push(labels.status, fields.status);
+    if (fields.source === 'request') {
+      push(labels.resultType, fields.resultType);
+    }
+    push(labels.phase, fields.phase);
+    push(labels.primaryProgram, fields.primaryProgram);
+    if (fields.source === 'request') {
+      push(labels.reportingCenter, fields.reportingCenter);
+    }
+    push(labels.submittedBy, fields.submittedBy);
+
+    return rows;
+  });
 
   /**
    * Fires on close by the built-in ✕, the scrim, or Escape (CRD-R-9). The parent is responsible

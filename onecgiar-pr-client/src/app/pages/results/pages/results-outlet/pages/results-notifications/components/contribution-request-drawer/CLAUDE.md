@@ -7,12 +7,37 @@ same decision (CRD-DD-10): the row body opens this drawer, the row's Accept/Decl
 use the older popups. The two never show together.
 
 ## Inputs / outputs
-- Inputs: `open`, `mode` (`'decide' | 'confirm-decline'`), `headerParts`, `resultCode`,
+- Inputs: `open`, `mode` (`'decide' | 'confirm-decline' | 'view'`), `headerParts`, `resultCode`,
   `resultTitle`, `reviewRows`, `acceptDisabled`, `declineDisabled`, `acceptBusy`, `declineBusy`,
-  `blockedReason`, `acceptHelper`, `focusAlign`.
+  `blockedReason`, `acceptHelper`, `focusAlign`, `viewFields` (NOTIF-T-4, `view` mode only).
 - Outputs: `closed` (✕ / scrim / Escape **and** the late programmatic-close emission — see the
   parent's `onDrawerClosedSignal()` guard, this component never guards it itself), `resultActivated`,
   `acceptClicked`, `declineClicked`, `declineConfirmed`, `declineCancelled`.
+
+## `view` mode (NOTIF-T-4)
+A third, additive `mode` used for any resolved Received row, Sent row, or Updates row — no
+Accept/Decline/confirm-decline footer at all (the `hlm-sheet-close` button in the header is
+unaffected by `mode` and renders/works identically in all three modes). Header sentence and RESULT
+card are reused unchanged. `viewFields` (`ContributionRequestDrawerViewFields`) feeds the
+`viewMetadataRows` computed — the per-source field adapter from design.md §6.2: fixed order
+(**Status** (`NOTIF-T-14`, from `notification-item`'s `rowStatusLabel` — "Needs your decision" /
+"For your information", never source-gated) → Result type → Phase → Primary program → Reporting
+center → Submitted by), `resultType` and `reportingCenter` are skipped outright for `source: 'update'`
+rows regardless of what the caller passes in (`NOTIF-P-2`: `notification/updates` never returns
+either), and any field whose trimmed value is empty/undefined/null is omitted from the grid — never
+rendered as a blank row (`NOTIF-R-5`/`NOTIF-AC-7`). **Known gap (`NOTIF-T-14`, 2026-09-30):** since
+this grid only renders in `view` mode, and a pending Received row always opens in `decide` mode
+(never `view`), `status` in practice only ever shows "For your information" — a `decide`/
+`confirm-decline` panel shows no explicit status row at all (the Accept/Decline footer itself is the
+only signal there). Closing this fully would require touching `decide` mode's template, which this
+component's zero-touch history forbids without explicit sign-off — see `execution.md`'s `NOTIF-T-14`
+entry for the Leader/user decision on record.
+
+**Deliberate departure from `CRD-R-4`:** in `view` mode only, "Where it contributes" is hidden
+entirely when `reviewRows()` is empty — no all-dash fallback table. `decide`/`confirm-decline`
+still always show it (`displayReviewRows()`'s dash fallback), per `CRD-R-4`'s "never hide" rule.
+Do not "fix" this back to always-show for `view` — an info-only panel with no review data has
+nothing to show a dash table for.
 - `[crdAlign]` projection: `<ng-content select="[crdAlign]" />` inside the scrolling body. The
   parent projects the bilateral Align section (today's mapping controls) into it — see design.md
   CRD-DD-3. Nothing in this component knows what's inside; `focusAlign` just scrolls whatever
@@ -73,4 +98,4 @@ re-check `isAcceptDisabled()`/`isDeclineDisabled()`/`declineDisabled()` before e
 "disabled" click is provably inert in both the real app and under Jest. Assert through these
 handlers or through `BrnButton`, never `nativeElement.disabled`.
 
-**Verified:** 2026-09-25 · qa-development-2026-ss · 485847996
+**Verified:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-14 (added `status` to the `view`-mode grid; documented the `decide`-mode gap above)

@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ResultsNotificationsService } from './results-notifications.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
 import { of, throwError, Subject } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { StatusPhaseEnum, ModuleTypeEnum } from '../../../../../../shared/enum/api.enum';
@@ -372,6 +373,24 @@ describe('ResultsNotificationsService', () => {
       expect(service.updatesData.notificationsPending).toEqual([{ ...notification, read: false }]);
       expect(service.updatesData.notificationsViewed).toEqual([]);
     });
+
+    // NOTIF-T-6 rework (Reviewer's remediation item 1/4): this used to round-trip through the
+    // now-deleted `.../requests`/`.../updates` routes via `navigateByUrl`/`navigate` — a dead route
+    // today, and the round-trip was already unnecessary (the component's own getters recompute off
+    // `updatesData` reactively). Proves the navigation is gone, not merely broken silently.
+    it('does not navigate away — the mutation above is the whole update', () => {
+      const notification = { notification_id: 1, read: false, created_date: '2023-01-01' };
+      service.updatesData.notificationsPending = [notification];
+      service.updatesData.notificationsViewed = [];
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_readNotification').mockReturnValue(of({}));
+      const navigateByUrlSpy = jest.spyOn(Router.prototype, 'navigateByUrl');
+      const navigateSpy = jest.spyOn(Router.prototype, 'navigate');
+
+      service.readUpdatesNotifications(notification);
+
+      expect(navigateByUrlSpy).not.toHaveBeenCalled();
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('markAllUpdatesNotificationsAsRead', () => {
@@ -416,6 +435,22 @@ describe('ResultsNotificationsService', () => {
       expect(consoleSpy).toHaveBeenCalledWith('error');
       expect(service.updatesData.notificationsPending).toEqual([{ ...notification, read: false }]);
       expect(service.updatesData.notificationsViewed).toEqual([]);
+    });
+
+    // NOTIF-T-6 rework (Reviewer's remediation item 1): this button backs "Mark all as read" — the
+    // navigate-away through the deleted `.../updates` route was throwing the user off the page.
+    it('does not navigate away — the mutation above is the whole update', () => {
+      const notification = { notification_id: 1, read: false, created_date: '2023-01-01' };
+      service.updatesData.notificationsPending = [notification];
+      service.updatesData.notificationsViewed = [];
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_readAllNotifications').mockReturnValue(of({}));
+      const navigateByUrlSpy = jest.spyOn(Router.prototype, 'navigateByUrl');
+      const navigateSpy = jest.spyOn(Router.prototype, 'navigate');
+
+      service.markAllUpdatesNotificationsAsRead();
+
+      expect(navigateByUrlSpy).not.toHaveBeenCalled();
+      expect(navigateSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -547,6 +582,30 @@ describe('ResultsNotificationsService', () => {
         // still re-fetch (this is exactly what the removed guard used to block).
         service.getAllPhases();
         expect(spy).toHaveBeenCalledTimes(3);
+      });
+
+      // NOTIF-T-6 rework (double-fetch fix): `onPhaseUnresolved` is the fallback ONLY for the case
+      // where no phase resolves — `onPhaseChange()` (which already fetches Received/Sent/Updates)
+      // must be the single source whenever a phase DOES resolve, or a normal page load double-fetches.
+      it('invokes the onPhaseUnresolved callback when no phase resolves', () => {
+        jest.spyOn(mockApiService.resultsSE, 'GET_versioning').mockReturnValue(of({ response: [] }));
+        const onPhaseUnresolved = jest.fn();
+
+        service.getAllPhases(onPhaseUnresolved);
+
+        expect(onPhaseUnresolved).toHaveBeenCalled();
+      });
+
+      it('does NOT invoke the onPhaseUnresolved callback once a phase resolves', () => {
+        mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 7 };
+        jest.spyOn(mockApiService.resultsSE, 'GET_versioning').mockReturnValue(of({ response: [{ id: 7, obj_portfolio: { id: 1 } }] }));
+        jest.spyOn(service, 'onPhaseChange').mockImplementation();
+        const onPhaseUnresolved = jest.fn();
+
+        service.getAllPhases(onPhaseUnresolved);
+
+        expect(service.onPhaseChange).toHaveBeenCalledWith(7);
+        expect(onPhaseUnresolved).not.toHaveBeenCalled();
       });
     });
 

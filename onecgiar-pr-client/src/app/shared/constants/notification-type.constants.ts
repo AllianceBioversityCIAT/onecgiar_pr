@@ -110,6 +110,22 @@ export function getProgramCode(notification: any): string | null {
   return null;
 }
 
+/**
+ * NOTIF-T-12 (rework, 2026-09-30): `RESULT_BILATERAL_PROJECT_TAGGED`'s `notification.text` carries
+ * one of two shapes, never distinguishable by type alone:
+ *  - a bare project label (the AC1/AC2 direct-tag flow's current shape, `target.label` with no
+ *    `leadIn` — see `result-tagged-notification.service.ts`'s `emitFor()`);
+ *  - a whole server-composed sentence, `"${leadIn} has tagged the ${label}. Click to see the
+ *    result."` — emitted whenever `leadIn` IS passed (the already-shipped `BCT-T-4` submission
+ *    flow, `notifyBilateralContributorsOnSubmission()`), and also the shape every row written
+ *    before this fix landed still has on disk.
+ * Both composed-sentence sources share this exact literal template, so detecting either telltale
+ * substring is sufficient — no need to special-case BCT vs. legacy separately.
+ */
+function isComposedProjectTaggedText(text: string): boolean {
+  return text.includes(' has tagged the ') || text.trim().endsWith('Click to see the result.');
+}
+
 function buildBilateralReviewSuffix(decisionLabel: string, notification: any): string {
   const programCode = getProgramCode(notification);
   const programText = programCode ? `the Science Program ${programCode}` : 'the Science Program';
@@ -164,12 +180,30 @@ export function getResultNotificationTextParts(notification: any): NotificationT
         }
       );
 
+    // NOTIF-T-12 (`NOTIF-R-14`, corrected 2026-09-30, rework attempt 2): the server stores just the
+    // tagged project's NAME on `notification.text` for the AC1/AC2 direct-tag flow (no `leadIn`) —
+    // this case builds the full sentence client-side for THAT shape only. `BCT-T-4`'s submission
+    // flow (`leadIn` present) and any pre-fix/legacy row still carry a whole composed sentence on
+    // `text`, indistinguishable from the bare shape by type alone — `isComposedProjectTaggedText`
+    // detects that shape (and the empty/null case) and falls back to `RESULT_CENTER_TAGGED`'s
+    // rendering, which trusts `text` as an already-complete suffix.
+    case NotificationType.RESULT_BILATERAL_PROJECT_TAGGED: {
+      const text = notification?.text?.trim();
+      if (!text || isComposedProjectTaggedText(text)) {
+        return { prefix: 'The result', suffix: text || null, emphasizePrefix: false };
+      }
+      return {
+        prefix: `${getEmitterName(notification)} from ${getProgramCode(notification) ?? 'a Science Program'} has tagged project ${text} as contributor to result`,
+        suffix: null,
+        emphasizePrefix: false
+      };
+    }
+
     // P2-3214 AC3. Unlike every other type, the variable half of this sentence names the tagged
-    // centre or project — which cannot be derived from the result (a result carries several
-    // centres, and a recipient may belong to more than one). The server composes it at emit time
-    // and ships it on `notification.text`; we only supply the lead-in.
+    // centre — which cannot be derived from the result (a result carries several centres, and a
+    // recipient may belong to more than one). The server composes it at emit time and ships it on
+    // `notification.text`; we only supply the lead-in.
     case NotificationType.RESULT_CENTER_TAGGED:
-    case NotificationType.RESULT_BILATERAL_PROJECT_TAGGED:
     // P2-3188 shares the split: the server stores which Science Program decided, we supply the lead-in.
     case NotificationType.RESULT_CONTRIBUTION_ACCEPTED:
     case NotificationType.RESULT_CONTRIBUTION_DECLINED:

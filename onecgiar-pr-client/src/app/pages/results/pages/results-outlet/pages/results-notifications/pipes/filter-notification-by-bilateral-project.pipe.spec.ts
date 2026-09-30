@@ -63,4 +63,31 @@ describe('FilterNotificationByBilateralProjectPipe', () => {
 
     expect(result).toEqual([multiProjectRow]);
   });
+
+  // NOTIF-T-3 regression: pre-existing Requests-only filtering behavior is unchanged by this task.
+  it('regression: still matches a Requests-tab row whose linked project shortName matches the active bilateral-project filter', () => {
+    const matching = bilateralRow('B-A1080');
+    const nonMatching = bilateralRow('B-A9999');
+
+    const result = pipe.transform([matching, nonMatching], ['B-A1080']);
+
+    expect(result).toEqual([matching]);
+  });
+
+  // NOTIF-DD-4: an Updates-tab row has `obj_result` but never `obj_result_by_project` — the
+  // bilateral-project filter has no field to match on, so the row is EXCLUDED, not passed through,
+  // when the filter is active.
+  it('NOTIF-DD-4: excludes a field-less Updates-tab row (obj_result present, no obj_result_by_project) when the bilateral-project filter is active', () => {
+    const updatesRow = {
+      notification_id: 1,
+      obj_result: { result_code: 'R-1', title: 'Some update', obj_version: { id: 'v1' } }
+    };
+    const matchingRequestsRow = bilateralRow('B-A1080');
+    const list = [updatesRow, matchingRequestsRow];
+
+    const result = pipe.transform(list, ['B-A1080']);
+
+    expect(result).toEqual([matchingRequestsRow]);
+    expect(result).not.toContain(updatesRow);
+  });
 });

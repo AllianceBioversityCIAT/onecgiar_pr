@@ -56,16 +56,25 @@ export class PopUpNotificationItemComponent {
     return isContributionDecisionNotification(notification);
   }
 
+  /**
+   * NOTIF-T-6 (Pivot re-scope, `NOTIF-DD-6`): the routed `.../updates` and `.../requests/received`
+   * destinations this used to build were retired along with their routes (the merged
+   * `results-notifications` view is the ONE thing left) — both branches now repoint at the same
+   * merged base route, preserving the same `phase`/`init`/`search` query params
+   * `ResultsNotificationsComponent.setQueryParams()` already reads. This is a mechanical consequence
+   * of the Pivot (`requirements.md`'s amended Downstream consumers section), not a reopening of
+   * `NOTIF-OQ-3`/`NOTIF-DD-5`.
+   */
   generateUrlLink(notification) {
     const baseUrl = 'result/results-outlet/results-notifications';
     const versionId = notification?.obj_result?.obj_version?.id;
 
     if (notification?.notification_id) {
       const updateInitId = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.id;
-      return `${baseUrl}/updates?phase=${versionId}&init=${updateInitId}&search=${this.generateNotificationTextUpdates(notification)}`;
+      return `${baseUrl}?phase=${versionId}&init=${updateInitId}&search=${this.generateNotificationTextUpdates(notification)}`;
     } else {
       const requestInitId = notification?.is_map_to_toc ? notification?.obj_owner_initiative?.id : notification?.obj_shared_inititiative?.id;
-      return `${baseUrl}/requests/received?phase=${versionId}&init=${requestInitId}&search=${this.generateNotificationTextRequest(notification)}`;
+      return `${baseUrl}?phase=${versionId}&init=${requestInitId}&search=${this.generateNotificationTextRequest(notification)}`;
     }
   }
 

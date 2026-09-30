@@ -387,6 +387,72 @@ describe('NotificationService', () => {
       expect(result.response).toHaveLength(2);
       expect(result.status).toBe(200);
     });
+
+    // NOTIF-T-12 (rework attempt 2, issue 2): this call site used to pass `undefined` for the
+    // program code — the only caller that never resolved one — which garbled a bare-label
+    // `RESULT_BILATERAL_PROJECT_TAGGED` row's `message`. It must now reuse the same owner
+    // initiative's `official_code` already resolved for `initiativeOfficialCode`.
+    it('resolves the owner program code into a bare-label tagged-project message', async () => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 1,
+      });
+      mockUserRepository.InitiativeByUser.mockResolvedValue([{ id: 1 }]);
+
+      const queryBuilder: any = {
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            notification_id: '1',
+            result_id: 200,
+            text: 'P-1568-WBS0',
+            obj_result: {
+              result_code: 1234,
+              title: 'Tagged bilateral result',
+              obj_result_by_initiatives: [
+                {
+                  initiative_role_id: 1,
+                  is_active: true,
+                  initiative_id: 55,
+                  obj_initiative: {
+                    name: 'Primary Initiative',
+                    official_code: 'SP5',
+                  },
+                },
+              ],
+            },
+            obj_notification_type: {
+              type: NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+            },
+            obj_emitter_user: {
+              first_name: 'Jane',
+              last_name: 'Doe',
+            },
+            emitter_user: 3,
+            created_date: new Date('2024-01-01'),
+          },
+        ]),
+      };
+
+      mockNotificationRepository.createQueryBuilder.mockReturnValue(
+        queryBuilder,
+      );
+
+      const result = await service.getRecentResultActivity(user, 5);
+
+      expect(result.response).toEqual([
+        expect.objectContaining({
+          initiativeOfficialCode: 'SP5',
+          message:
+            'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 1234 - Tagged bilateral result',
+        }),
+      ]);
+    });
   });
 
   // P2-3157 AC2 — the standardized copy for a bilateral review decision.
@@ -509,6 +575,97 @@ describe('NotificationService', () => {
     });
   });
 
+  // NOTIF-T-12 (rework attempt 2, issue 2): `buildResultNotificationDescription`'s
+  // `RESULT_BILATERAL_PROJECT_TAGGED` branch didn't disambiguate a bare project label from a
+  // legacy/BCT-T-4 composed sentence, so the socket push (this describe, via
+  // `emitResultNotification`) and `getRecentResultActivity`'s `message` field both garbled bare
+  // rows. All 4 text shapes must render correctly here too, mirroring the client fix.
+  describe('RESULT_BILATERAL_PROJECT_TAGGED notification copy', () => {
+    const emitAndReadDescription = async (
+      renderedText?: string,
+      resultOverrides: Record<string, any> = {},
+    ): Promise<string> => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 2,
+      });
+      mockNotificationTypeRepository.findOne.mockResolvedValue({
+        notifications_type_id: 7,
+      });
+      mockNotificationRepository.save.mockResolvedValue(null);
+      mockNotificationRepository.findOne.mockResolvedValue({
+        obj_emitter_user: {
+          id: 9,
+          first_name: 'Jane',
+          last_name: 'Doe',
+          email: 'jane@example.com',
+        },
+        obj_result: {
+          result_code: 4321,
+          title: 'A bilateral result title',
+          obj_result_by_initiatives: [
+            { obj_initiative: { id: 5, official_code: 'SP5' } },
+          ],
+          ...resultOverrides,
+        },
+      });
+      mockSocketManagementService.getActiveUsers.mockResolvedValue({
+        response: [{ userId: 2 }],
+        status: 200,
+      });
+      mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+        status: 200,
+      });
+
+      await service.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+        [2],
+        9,
+        4321,
+        renderedText,
+      );
+
+      const [, payload] =
+        mockSocketManagementService.sendNotificationToUsers.mock.calls.at(-1);
+      return payload.desc;
+    };
+
+    it('builds the full sentence for a genuine bare project label', async () => {
+      const desc = await emitAndReadDescription('P-1568-WBS0');
+
+      expect(desc).toBe(
+        'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 4321 - A bilateral result title',
+      );
+    });
+
+    it('falls back to the old rendering for a BCT-T-4 submission-flow composed sentence', async () => {
+      const bctText =
+        'reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.';
+      const desc = await emitAndReadDescription(bctText);
+
+      expect(desc).toBe(
+        `The result 4321 - A bilateral result title ${bctText}`,
+      );
+    });
+
+    it('falls back to the old rendering for a legacy (pre-fix) composed sentence', async () => {
+      const legacyText =
+        'created by SP04 has tagged the P-1568-WBS0. Click to see the result.';
+      const desc = await emitAndReadDescription(legacyText);
+
+      expect(desc).toBe(
+        `The result 4321 - A bilateral result title ${legacyText}`,
+      );
+    });
+
+    it('falls back to the generic update line (no "undefined") when text is empty', async () => {
+      const desc = await emitAndReadDescription('   ');
+
+      expect(desc).not.toContain('undefined');
+      expect(desc).toBe('There is a new update on result 4321');
+    });
+  });
+
   // `APF-T-3` / `design.md` §6.4 "Write path".
   describe('emitBilateralAiJobNotification', () => {
     it('writes a direct row: result_id NULL, target_user = the job owner, RESULT level', async () => {
@@ -621,6 +778,179 @@ describe('NotificationService', () => {
           }),
         );
       });
+
+      // NOTIF-T-8 / NOTIF-R-13: the Updates-tab query must select/relate the same
+      // row-badge fields `share-result-request.service.ts::getRequestRelations()`
+      // already returns on the Requests tab, so `results-notifications.component`
+      // can render funding/type/level badges and the bilateral project name for
+      // Updates rows too (`NOTIF-T-9`).
+      it('widens the obj_result select/relations with source, type, level and bilateral-project fields', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed
+          .mockResolvedValueOnce([]) // notificationsPending
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([]); // job-finished, pending
+
+        await service.getAllNotifications(user);
+
+        const resultSelectShape = expect.objectContaining({
+          source: true,
+          obj_result_type: { id: true, name: true },
+          obj_result_level: { id: true, name: true },
+          obj_result_by_project: expect.objectContaining({
+            id: true,
+            project_id: true,
+            is_lead: true,
+            is_active: true,
+            obj_clarisa_project: { id: true, shortName: true, fullName: true },
+          }),
+        });
+        const resultRelationsShape = expect.objectContaining({
+          obj_result_type: true,
+          obj_result_level: true,
+          obj_result_by_project: { obj_clarisa_project: true },
+        });
+
+        // First two calls are the result-scoped notificationsViewed/notificationsPending
+        // queries — both go through `getNotificattionSelect()`/`getNotificationRelations()`.
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            select: expect.objectContaining({ obj_result: resultSelectShape }),
+            relations: expect.objectContaining({
+              obj_result: resultRelationsShape,
+            }),
+          }),
+        );
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({
+            select: expect.objectContaining({ obj_result: resultSelectShape }),
+            relations: expect.objectContaining({
+              obj_result: resultRelationsShape,
+            }),
+          }),
+        );
+      });
+
+      // NOTIF-T-8 rework: the widened select was copied from the Requests-side query
+      // shape, but `share-result-request.service.ts::getRequest()`'s POST-PROCESSING
+      // mapper (`source_name` derivation + inactive `obj_result_by_project` filtering)
+      // was not. These assert the actual RETURNED payload, not just the query shape.
+      it('computes obj_result.source_name on the returned payload (non-Result source -> W3/Bilaterals)', async () => {
+        const pendingRow = {
+          notification_id: '1',
+          target_user: 42,
+          result_id: 10,
+          read: false,
+          obj_result: {
+            result_code: 10,
+            title: 'A bilateral result',
+            source: 'API',
+            obj_result_by_project: [],
+          },
+        };
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed
+          .mockResolvedValueOnce([pendingRow]) // notificationsPending
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([]); // job-finished, pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(result.response.notificationsPending[0].obj_result).toEqual(
+          expect.objectContaining({
+            source: 'API',
+            source_name: 'W3/Bilaterals',
+          }),
+        );
+      });
+
+      it('computes obj_result.source_name as W1/W2 when source is Result', async () => {
+        const viewedRow = {
+          notification_id: '2',
+          target_user: 42,
+          result_id: 11,
+          read: true,
+          obj_result: {
+            result_code: 11,
+            title: 'A W1/W2 result',
+            source: 'Result',
+            obj_result_by_project: [],
+          },
+        };
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([viewedRow]) // notificationsViewed
+          .mockResolvedValueOnce([]) // notificationsPending
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([]); // job-finished, pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(result.response.notificationsViewed[0].obj_result).toEqual(
+          expect.objectContaining({ source: 'Result', source_name: 'W1/W2' }),
+        );
+      });
+
+      it('filters obj_result_by_project down to only is_active links on the returned payload', async () => {
+        const pendingRow = {
+          notification_id: '3',
+          target_user: 42,
+          result_id: 12,
+          read: false,
+          obj_result: {
+            result_code: 12,
+            title: 'A result tagged to two projects',
+            source: 'Result',
+            obj_result_by_project: [
+              {
+                id: 1,
+                project_id: 100,
+                is_active: true,
+                obj_clarisa_project: { id: 100, shortName: 'Active Project' },
+              },
+              {
+                id: 2,
+                project_id: 200,
+                is_active: false,
+                obj_clarisa_project: { id: 200, shortName: 'Removed Project' },
+              },
+            ],
+          },
+        };
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed
+          .mockResolvedValueOnce([pendingRow]) // notificationsPending
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([]); // job-finished, pending
+
+        const result = await service.getAllNotifications(user);
+
+        const returnedLinks =
+          result.response.notificationsPending[0].obj_result
+            .obj_result_by_project;
+        expect(returnedLinks).toHaveLength(1);
+        expect(returnedLinks[0]).toEqual(
+          expect.objectContaining({ project_id: 100, is_active: true }),
+        );
+      });
+
+      it('leaves obj_result untouched (no-op) for a bilateral-AI-job row with obj_result null', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed
+          .mockResolvedValueOnce([]) // notificationsPending
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([jobRow()]); // job-finished, pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(result.response.notificationsPending).toEqual([jobRow()]);
+      });
     });
 
     describe('getPopUpNotifications', () => {
@@ -641,6 +971,54 @@ describe('NotificationService', () => {
           expect.arrayContaining([
             expect.objectContaining({ notification_id: '900' }),
           ]),
+        );
+      });
+
+      it('computes source_name and filters inactive obj_result_by_project links on the returned payload', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        const updateRow = {
+          notification_id: '4',
+          target_user: 42,
+          result_id: 13,
+          read: false,
+          obj_result: {
+            result_code: 13,
+            title: 'A tagged result',
+            source: 'API',
+            obj_result_by_project: [
+              {
+                id: 1,
+                project_id: 100,
+                is_active: true,
+                obj_clarisa_project: { id: 100, shortName: 'Active Project' },
+              },
+              {
+                id: 2,
+                project_id: 200,
+                is_active: false,
+                obj_clarisa_project: { id: 200, shortName: 'Removed Project' },
+              },
+            ],
+          },
+        };
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([updateRow]) // result-based pop-ups
+          .mockResolvedValueOnce([]); // job-finished pop-ups
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+
+        const result = await service.getPopUpNotifications(user);
+
+        const returnedRow = (result.response as any[]).find(
+          (n) => n.notification_id === '4',
+        );
+        expect(returnedRow.obj_result.source_name).toBe('W3/Bilaterals');
+        expect(returnedRow.obj_result.obj_result_by_project).toHaveLength(1);
+        expect(returnedRow.obj_result.obj_result_by_project[0]).toEqual(
+          expect.objectContaining({ project_id: 100 }),
         );
       });
 

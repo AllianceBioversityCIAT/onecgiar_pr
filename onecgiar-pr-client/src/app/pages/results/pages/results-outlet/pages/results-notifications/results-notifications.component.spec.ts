@@ -2,12 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterOutlet, RouterModule } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { ResultsNotificationsComponent } from './results-notifications.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ResultsNotificationsService } from './results-notifications.service';
-import { RequestsComponent } from './pages/requests/requests.component';
 
 describe('ResultsNotificationsComponent', () => {
   let component: ResultsNotificationsComponent;
@@ -17,6 +16,7 @@ describe('ResultsNotificationsComponent', () => {
   let resultsNotificationsServiceMock: any;
   let routerMock: any;
   let activatedRouteMock: any;
+  let routerEvents$: Subject<any>;
 
   beforeEach(async () => {
     apiServiceMock = {
@@ -36,11 +36,10 @@ describe('ResultsNotificationsComponent', () => {
     resultsNotificationsServiceMock = {
       get_section_information: jest.fn(),
       get_sent_notifications: jest.fn(),
+      get_updates_notifications: jest.fn(),
+      markAllUpdatesNotificationsAsRead: jest.fn(),
       resetNotificationInformation: jest.fn(),
       resetFilters: jest.fn(),
-      // NOTIF-T-11 (rework attempt 2): phaseList/filteredInitiatives/entityLabel and
-      // getAllPhases/onPhaseChange are now owned by the (real) ResultsNotificationsService — this
-      // spec mocks the service, so it mocks these too, the same way it already mocked phaseFilter.
       getAllPhases: jest.fn(),
       onPhaseChange: jest.fn(),
       phaseList: [],
@@ -52,12 +51,16 @@ describe('ResultsNotificationsComponent', () => {
       centerIdsFilter: [],
       bilateralProjectIdsFilter: [],
       receivedData: { receivedContributionsPending: [], receivedContributionsDone: [] },
-      sentData: { sentContributionsPending: [], sentContributionsDone: [] }
+      sentData: { sentContributionsPending: [], sentContributionsDone: [] },
+      updatesData: { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] }
     };
+
+    routerEvents$ = new Subject<any>();
 
     routerMock = {
       navigate: jest.fn(),
-      url: '/result/results-outlet/results-notifications/requests'
+      url: '/result/results-outlet/results-notifications',
+      events: routerEvents$.asObservable()
     };
 
     activatedRouteMock = {
@@ -68,10 +71,9 @@ describe('ResultsNotificationsComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ResultsNotificationsComponent],
-      // CommonModule: the template's `*ngIf` (settings/requests/updates description gating, and
-      // the `.notifications_filters` container itself) is the real `NgIf` structural directive —
-      // it must be present for the new branch-scoping specs below to render anything at all.
-      imports: [RouterOutlet, CommonModule],
+      // CommonModule: the template's `@if` (settings gating) is real; RouterOutlet is needed for the
+      // trailing `<router-outlet>`; RouterModule for `routerLink`.
+      imports: [RouterOutlet, RouterModule, CommonModule],
       providers: [
         { provide: ApiService, useValue: apiServiceMock },
         { provide: ShareRequestModalService, useValue: shareRequestModalServiceMock },
@@ -79,12 +81,10 @@ describe('ResultsNotificationsComponent', () => {
         { provide: Router, useValue: routerMock },
         { provide: ActivatedRoute, useValue: activatedRouteMock }
       ],
-      // NOTIF-T-6 rework attempt 2: the new branch-scoping specs below are the first in this file
-      // to render the template (fixture.detectChanges()) — NO_ERRORS_SCHEMA lets the template's
-      // real custom elements (hlm-popover, app-pr-select, hlm-checkbox, app-pr-button, ...), which
-      // this spec never declares/imports, render as opaque tags instead of failing on unknown
-      // element/property errors. Every prior test in this file only calls component methods
-      // directly and never triggers change detection, so this schema does not affect them.
+      // The template renders real Spartan/custom-fields elements (app-pr-select, hlm-checkbox,
+      // app-pr-button, app-pr-info-icon, ...) this lean unit-test module doesn't declare/import —
+      // NO_ERRORS_SCHEMA lets them render as opaque tags instead of failing on unknown element/
+      // property errors.
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
@@ -103,12 +103,37 @@ describe('ResultsNotificationsComponent', () => {
 
     component.ngOnInit();
 
-    // NOTIF-T-11 (rework attempt 2): getAllPhases now lives on the service — ngOnInit delegates.
     expect(resultsNotificationsServiceMock.getAllPhases).toHaveBeenCalled();
     expect(shareRequestModalServiceMock.inNotifications).toBe(true);
     expect(resultsNotificationsServiceMock.phaseFilter).toBe('somePhase');
     expect(resultsNotificationsServiceMock.initiativeIdFilter).toBe('someInit');
     expect(resultsNotificationsServiceMock.searchFilter).toBe('someSearch');
+  });
+
+  // NOTIF-T-6 rework (double-fetch fix): `getAllPhases()`'s own `onPhaseChange()` is now the single
+  // source of the Received/Sent/Updates fetch whenever a phase resolves — ngOnInit must NOT also
+  // fetch them directly, or a normal page load issues every feed twice (up to 6 requests).
+  it('ngOnInit delegates the fetch to getAllPhases() and does NOT fetch directly', () => {
+    component.ngOnInit();
+
+    expect(resultsNotificationsServiceMock.getAllPhases).toHaveBeenCalledWith(expect.any(Function));
+    expect(resultsNotificationsServiceMock.get_section_information).not.toHaveBeenCalled();
+    expect(resultsNotificationsServiceMock.get_sent_notifications).not.toHaveBeenCalled();
+    expect(resultsNotificationsServiceMock.get_updates_notifications).not.toHaveBeenCalled();
+  });
+
+  // The fallback: when getAllPhases() resolves NO phase at all (rare — e.g. before the active
+  // reporting phase is known), the callback passed by ngOnInit is the only remaining way the page
+  // gets any data, so it must still fetch the three feeds itself.
+  it('falls back to fetching Received, Sent and Updates directly when getAllPhases() resolves no phase', () => {
+    component.ngOnInit();
+    const onPhaseUnresolved = resultsNotificationsServiceMock.getAllPhases.mock.calls[0][0];
+
+    onPhaseUnresolved();
+
+    expect(resultsNotificationsServiceMock.get_section_information).toHaveBeenCalled();
+    expect(resultsNotificationsServiceMock.get_sent_notifications).toHaveBeenCalled();
+    expect(resultsNotificationsServiceMock.get_updates_notifications).toHaveBeenCalled();
   });
 
   it('should update query params', () => {
@@ -122,35 +147,6 @@ describe('ResultsNotificationsComponent', () => {
         search: resultsNotificationsServiceMock.searchFilter
       },
       queryParamsHandling: 'merge'
-    });
-  });
-
-  describe('notificationsInfoTooltip — ⓘ tooltip content, replacing the old always-visible paragraph', () => {
-    it('returns the Requests-tab copy when on the requests route', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/requests';
-      expect(component.notificationsInfoTooltip).toContain('collaboration requests received from other Programs/Accelerators');
-    });
-
-    it('returns the Updates-tab copy when on the updates route', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/updates';
-      expect(component.notificationsInfoTooltip).toBe('In this section, there are updates on any results to which your entity(ies) are contributing.');
-    });
-
-    it('returns empty on any other route (e.g. Settings), matching the paragraph it replaced', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/settings';
-      expect(component.notificationsInfoTooltip).toBe('');
-    });
-
-    it('does not render the ⓘ trigger button on Settings (Reviewer finding: the getter alone is not enough — the button is @if-gated on it)', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/settings';
-      fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('.sgi-dac-info')).toBeNull();
-    });
-
-    it('renders the ⓘ trigger button on Requests', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/requests';
-      fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('.sgi-dac-info')).not.toBeNull();
     });
   });
 
@@ -173,240 +169,445 @@ describe('ResultsNotificationsComponent', () => {
     expect(resultsNotificationsServiceMock.resetFilters).not.toHaveBeenCalled();
   });
 
-  // NOTIF-T-11 (rework attempt 2): phaseList/filteredInitiatives/entityLabel and
-  // getAllPhases/onPhaseChange/filterInitiativesByPhase moved to ResultsNotificationsService — the
-  // real fetch/derivation logic they used to test here is now tested against the real service in
-  // results-notifications.service.spec.ts. These tests assert the relocation itself: this component
-  // no longer owns any of that state or those methods, and ngOnInit delegates instead of doing the
-  // fetch itself.
-  describe('Phase/Program state — relocated to ResultsNotificationsService (NOTIF-T-11 attempt 2)', () => {
-    it('no longer owns its own Phase/Program state or methods', () => {
-      expect((component as any).phaseList).toBeUndefined();
-      expect((component as any).filteredInitiatives).toBeUndefined();
-      expect((component as any).entityLabel).toBeUndefined();
-      expect((component as any).getAllPhases).toBeUndefined();
-      expect((component as any).onPhaseChange).toBeUndefined();
-      expect((component as any).filterInitiativesByPhase).toBeUndefined();
-    });
-
-    it('ngOnInit delegates the phase fetch to resultsNotificationsSE.getAllPhases()', () => {
-      component.ngOnInit();
-      expect(resultsNotificationsServiceMock.getAllPhases).toHaveBeenCalled();
-    });
-  });
-
-  // NOTIF-T-11: the Filter popover cluster (state, methods, and markup) that NOTIF-T-6/NOTIF-T-9
-  // built here was relocated wholesale to `RequestsComponent` — see
-  // `pages/requests/requests.component.spec.ts` for the relocated "Filter popover" /
-  // "Filter popover — width + attachTo" coverage (now expanded there, unchanged in substance).
-  // These two tests assert the relocation is COMPLETE and honest: the component no longer exposes
-  // any of that state/those methods, and its own template (Updates-only, `router.url` gated) never
-  // renders the popover — both would have caught a "left half-moved" defect.
-  describe('Filter popover — relocated to RequestsComponent (NOTIF-T-11)', () => {
-    it('no longer exposes the Filter popover state/methods that used to live here', () => {
-      expect((component as any).filterPopoverOpen).toBeUndefined();
-      expect((component as any).filterTriggerRef).toBeUndefined();
-      expect((component as any).toggleFilterPopover).toBeUndefined();
-      expect((component as any).onFilterPopoverStateChanged).toBeUndefined();
-      expect((component as any).centerFacetOptions).toBeUndefined();
-      expect((component as any).bilateralProjectFacetOptions).toBeUndefined();
-      expect((component as any).activeFilterCount).toBeUndefined();
-      expect((component as any).activeFilterChips).toBeUndefined();
-      expect((component as any).removeFilterChip).toBeUndefined();
-    });
-
-    it('never renders the Filter popover on the Requests tab — its row now lives in RequestsComponent', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/requests';
-      fixture.detectChanges();
-      expect((fixture.nativeElement as HTMLElement).querySelector('hlm-popover')).toBeFalsy();
-    });
-
-    it('never renders the Filter popover on the Updates tab either', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/updates';
-      fixture.detectChanges();
-      expect((fixture.nativeElement as HTMLElement).querySelector('hlm-popover')).toBeFalsy();
-    });
-  });
-
-  // NOTIF-AC-5: Updates' own Phase/Program/Search/Clear-filters row must render unaffected by the
-  // relocation. NOTIF-T-11 simplified the parent template's gating — the old
-  // `@if (requests) {...} @else {...}` split no longer makes sense with the Requests branch gone,
-  // so the container now renders ONLY when `router.url` is the Updates tab (unconditional single
-  // branch, no `@if`/`@else`).
-  describe('Updates filter row — unaffected by the relocation (NOTIF-AC-5)', () => {
-    it('renders Phase/Program/Search/Clear-filters on the Updates tab', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/updates';
+  // NOTIF-T-6 (Pivot re-scope, item 1) — the NEW Falsifier: navigating to
+  // `results-notifications/settings` renders ONLY the Settings page, no notification list above it.
+  // `isSettingsRoute` reads `router.url` live (same established pattern this file's own
+  // `notificationsInfoTooltip` getter already used pre-Pivot), so mutating `routerMock.url` and
+  // re-running change detection is enough to drive it, matching how the rest of this spec file
+  // already exercises router-derived getters.
+  describe('Settings-route isolation (NOTIF-T-6 Pivot re-scope — the new Falsifier)', () => {
+    it('renders the unified list (tabs) when NOT on the settings route', () => {
+      routerMock.url = '/result/results-outlet/results-notifications';
       fixture.detectChanges();
 
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.clear_filters_container')).toBeTruthy();
-      expect(compiled.querySelector('input[hlmInput]')).toBeTruthy();
+      expect(component.isSettingsRoute).toBe(false);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[role="tablist"][aria-label="Notification decision filter"]')).toBeTruthy();
     });
 
-    // Restored (NOTIF-T-11 rework attempt 2), FIXED (attempt 3, Reviewer finding #3): NOTIF-T-6
-    // attempt 3 added a compareDocumentPosition assertion to catch a silent element-reordering
-    // regression on the Updates row; attempt 2's version destructured `.children` in INDEX order,
-    // which is a tautology (`.children` is document order by definition — those assertions can never
-    // fail regardless of actual element identity/order). Fixed here by selecting each node by
-    // IDENTITY, then asserting compareDocumentPosition BETWEEN the identified nodes, so swapping any
-    // pair actually fails the test:
-    // - Phase select: `app-pr-select[label="Phases"]` — a plain (non-bound) HTML attribute in the
-    //   template, so it survives as a real DOM attribute under NO_ERRORS_SCHEMA and a CSS attribute
-    //   selector can find it directly.
-    // - Program select: its `[label]` binding is a property binding, so Angular sets it as a JS
-    //   property (not a DOM attribute) on the opaque element — found by reading `.label` and matching
-    //   it against the current `entityLabel` (same technique the pre-existing `attachTo` assertion in
-    //   `requests.component.spec.ts` already relies on for property bindings on opaque elements).
-    // - Search input's wrapper: `input[hlmInput]`'s parent element.
-    // - Clear filters: `.clear_filters_container`.
-    it('keeps Phase → Program → Search → Clear filters in that DOM order (regression guard)', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/updates';
-      fixture.detectChanges();
-
-      const filterRow = (fixture.nativeElement as HTMLElement).querySelector('.notifications_filters');
-      expect(filterRow).toBeTruthy();
-
-      const phaseEl = filterRow.querySelector('app-pr-select[label="Phases"]') as Element;
-      const selects = Array.from(filterRow.querySelectorAll('app-pr-select')) as any[];
-      const programEl = selects.find(el => el !== phaseEl && el.label === resultsNotificationsServiceMock.entityLabel) as Element;
-      const searchInput = filterRow.querySelector('input[hlmInput]');
-      const searchEl = searchInput?.parentElement as Element;
-      const clearEl = filterRow.querySelector('.clear_filters_container') as Element;
-
-      expect(phaseEl).toBeTruthy();
-      expect(programEl).toBeTruthy();
-      expect(searchEl).toBeTruthy();
-      expect(clearEl).toBeTruthy();
-
-      // Node.DOCUMENT_POSITION_FOLLOWING === 4 — asserted for each identified pair. Swapping ANY two
-      // of these elements' positions in the template now fails one of these three assertions.
-      expect(phaseEl.compareDocumentPosition(programEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(programEl.compareDocumentPosition(searchEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(searchEl.compareDocumentPosition(clearEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    });
-
-    it('does not render the Updates filter row on the Requests tab (its own row now lives in RequestsComponent)', () => {
-      routerMock.url = '/result/results-outlet/results-notifications/requests';
-      fixture.detectChanges();
-
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.clear_filters_container')).toBeFalsy();
-    });
-
-    it('does not render the Updates filter row on the Settings tab', () => {
+    it('renders NOTHING of the unified list (no tabs, no toolbar, no rows) once on the settings route', () => {
+      // A single `detectChanges()` at the final URL — mutating `routerMock.url` and re-rendering
+      // TWICE in one test tripped Angular's own `checkNoChanges()` dev-mode verification pass
+      // (NG0100) on an unrelated internal timing detail, not on anything this test needs to prove;
+      // "renders the unified list when NOT on settings" (above) already covers the non-settings case.
       routerMock.url = '/result/results-outlet/results-notifications/settings';
       fixture.detectChanges();
 
+      expect(component.isSettingsRoute).toBe(true);
       const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.clear_filters_container')).toBeFalsy();
+      expect(compiled.querySelector('[role="tablist"][aria-label="Notification decision filter"]')).toBeNull();
+      expect(compiled.querySelector('app-notification-item')).toBeNull();
+      expect(compiled.querySelector('h1.notifications_title')).toBeNull();
     });
   });
-});
 
-// NOTIF-T-11 (rework attempt 2) — the test the Reviewer asked for. Attempt 1's Reviewer FAIL turned
-// on a reproducible bug: RequestsComponent and ResultsNotificationsComponent each held their OWN
-// phaseList/filteredInitiatives/entityLabel, so a phase change on Requests left Updates' Program
-// dropdown showing the OLD phase's initiatives under the OLD label. This suite mounts BOTH
-// components against the SAME TestBed module — deliberately NOT mocking ResultsNotificationsService
-// (unlike every other describe block in this file/requests.component.spec.ts) — so both components
-// resolve the identical singleton instance, the way they really do in the app (`providedIn: 'root'`).
-// Proving that reference identity, then that a phase change through one component's delegated
-// service call is visible on the other's bindings, is what proves the state genuinely lives in ONE
-// shared place now, not two independent copies.
-describe('Cross-component Phase/Program state sharing (NOTIF-T-11 attempt 2)', () => {
-  let requestsFixture: any;
-  let requestsComponent: RequestsComponent;
-  let notifFixture: any;
-  let notifComponent: ResultsNotificationsComponent;
-  let sharedApiServiceMock: any;
-  let sharedRouterMock: any;
+  describe('notificationsInfoTooltip — ⓘ tooltip content, replacing the old always-visible paragraph', () => {
+    it('returns non-empty combined copy when not on the settings route', () => {
+      routerMock.url = '/result/results-outlet/results-notifications';
+      expect(component.notificationsInfoTooltip.length).toBeGreaterThan(0);
+    });
 
-  beforeEach(async () => {
-    sharedApiServiceMock = {
-      rolesSE: { isAdmin: true },
-      dataControlSE: {
-        myInitiativesList: [],
-        reportingCurrentPhase: null,
-        getCurrentPhases: jest.fn(() => of({})),
-        getCurrentIPSRPhase: jest.fn(() => of({}))
-      },
-      resultsSE: {
-        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [{ initiative_id: '9', full_name: 'Shared Initiative' }] })),
-        GET_versioning: jest.fn().mockReturnValue(of({ response: [{ id: 42, obj_portfolio: { id: 2, acronym: 'INIT' } }] })),
-        // onPhaseChange() (now on the real service) also fans out to these three — real
-        // ResultsNotificationsService methods, not mocked, so they need real-shaped responses.
-        GET_requestUpdates: jest.fn().mockReturnValue(of({ response: { notificationsPending: [], notificationsViewed: [], notificationAnnouncement: [] } })),
-        GET_allRequest: jest.fn().mockReturnValue(of({ response: { receivedContributionsDone: [], receivedContributionsPending: [] } })),
-        GET_sentRequest: jest.fn().mockReturnValue(of({ response: { sentContributionsDone: [], sentContributionsPending: [] } }))
+    it('returns empty on the settings route', () => {
+      routerMock.url = '/result/results-outlet/results-notifications/settings';
+      expect(component.notificationsInfoTooltip).toBe('');
+    });
+
+    it('does not render the ⓘ trigger button on Settings', () => {
+      routerMock.url = '/result/results-outlet/results-notifications/settings';
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.sgi-dac-info')).toBeNull();
+    });
+
+    it('renders the ⓘ trigger button off the settings route', () => {
+      routerMock.url = '/result/results-outlet/results-notifications';
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.sgi-dac-info')).not.toBeNull();
+    });
+  });
+
+  // NOTIF-T-6 (Pivot re-scope, item 3): the Filter toolbar (Search/Phase/Program/Center/Bilateral
+  // project + chips + "Clear all"), migrated (in substance) from the retired `requests.component.ts`.
+  // Ported from `requests.component.spec.ts`'s own "Filter popover"/"Filter dropdown" suites.
+  describe('Filter toolbar — migrated from the retired requests.component.ts (NOTIF-T-6 Pivot re-scope)', () => {
+    const bilateralRow = (overrides: Record<string, unknown> = {}) => ({
+      obj_result: {
+        source_name: 'W3/Bilaterals',
+        obj_result_by_project: [{ obj_clarisa_project: { shortName: 'BIL-1', fullName: 'Bilateral result one' } }],
+        result_center_array: [{ clarisa_center_object: { clarisa_institution: { id: 10, acronym: 'CTR' } } }],
+        ...overrides
       }
-    };
+    });
 
-    // RequestsComponent's template uses `routerLinkActive`/`routerLink` (real directives, via the
-    // RouterModule import below) — RouterLinkActive's constructor subscribes to `router.events`, so
-    // the mock needs the same shape requests.component.spec.ts's own suite already uses for this.
-    // Kept in a named variable (not inlined) so tests below can mutate `.url` and re-render.
-    sharedRouterMock = {
-      navigate: jest.fn(),
-      url: '/result/results-outlet/results-notifications/requests',
-      events: of(),
-      createUrlTree: jest.fn().mockReturnValue({}),
-      serializeUrl: jest.fn().mockReturnValue('')
-    };
+    const getTriggerButton = () => (fixture.nativeElement as HTMLElement).querySelector('button[aria-haspopup="dialog"]') as HTMLButtonElement;
+    const getPanel = () => (fixture.nativeElement as HTMLElement).querySelector('[role="dialog"][aria-label="Filter"]') as HTMLElement | null;
 
-    await TestBed.configureTestingModule({
-      declarations: [RequestsComponent, ResultsNotificationsComponent],
-      // RouterModule (not just RouterOutlet): RequestsComponent's own template uses
-      // `routerLinkActive`/`routerLink` template-reference-variable directives, which need the
-      // NgModule's directive exports resolved — same reason requests.component.spec.ts's own suite
-      // imports it.
-      imports: [RouterOutlet, RouterModule, CommonModule],
-      providers: [
-        { provide: ApiService, useValue: sharedApiServiceMock },
-        { provide: ShareRequestModalService, useValue: { inNotifications: false } },
-        { provide: Router, useValue: sharedRouterMock },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParams: {} } } }
-        // ResultsNotificationsService is intentionally left as the REAL, real `providedIn: 'root'`
-        // singleton here — not overridden with a mock — so both components below share one instance.
-      ],
-      schemas: [NO_ERRORS_SCHEMA]
-    }).compileComponents();
+    it('toggles the popover open state', () => {
+      expect(component.filterPopoverOpen()).toBe(false);
+      component.toggleFilterPopover();
+      expect(component.filterPopoverOpen()).toBe(true);
+      component.toggleFilterPopover();
+      expect(component.filterPopoverOpen()).toBe(false);
+    });
 
-    requestsFixture = TestBed.createComponent(RequestsComponent);
-    requestsComponent = requestsFixture.componentInstance;
+    it('derives Center facet options from bilateral rows only, keyed on clarisa_institution.id', () => {
+      resultsNotificationsServiceMock.receivedData = {
+        receivedContributionsPending: [bilateralRow(), { obj_result: { source_name: 'W1/W2', result_code: 'W1-1' } }],
+        receivedContributionsDone: []
+      };
 
-    notifFixture = TestBed.createComponent(ResultsNotificationsComponent);
-    notifComponent = notifFixture.componentInstance;
+      expect(component.centerFacetOptions).toEqual([{ id: 10, label: 'CTR' }]);
+    });
+
+    it('derives Bilateral-project facet options from bilateral rows only, keyed on clarisa_projects.short_name/full_name', () => {
+      resultsNotificationsServiceMock.sentData = {
+        sentContributionsPending: [
+          bilateralRow(),
+          {
+            obj_result: {
+              source_name: 'W1/W2',
+              obj_result_by_project: [{ obj_clarisa_project: { shortName: 'BIL-1', fullName: 'Bilateral result one' } }]
+            }
+          }
+        ],
+        sentContributionsDone: []
+      };
+
+      expect(component.bilateralProjectFacetOptions).toEqual([{ code: 'BIL-1', label: 'BIL-1 - Bilateral result one' }]);
+    });
+
+    it('checking one Center facet adds exactly one chip and increments the active-filter count to 1', () => {
+      resultsNotificationsServiceMock.receivedData = { receivedContributionsPending: [bilateralRow()], receivedContributionsDone: [] };
+
+      expect(component.activeFilterCount).toBe(0);
+
+      component.onCenterFilterChange(10, true);
+
+      expect(resultsNotificationsServiceMock.centerIdsFilter).toEqual([10]);
+      expect(component.isCenterFilterChecked(10)).toBe(true);
+      expect(component.activeFilterCount).toBe(1);
+      expect(component.activeFilterChips).toEqual([{ type: 'center', id: '10', label: 'CTR' }]);
+    });
+
+    it('removing a Center chip clears the filter and decrements the active-filter count back to 0', () => {
+      resultsNotificationsServiceMock.receivedData = { receivedContributionsPending: [bilateralRow()], receivedContributionsDone: [] };
+      resultsNotificationsServiceMock.centerIdsFilter = [10];
+
+      component.removeFilterChip({ type: 'center', id: '10', label: 'CTR' });
+
+      expect(resultsNotificationsServiceMock.centerIdsFilter).toEqual([]);
+      expect(component.activeFilterCount).toBe(0);
+      expect(component.activeFilterChips).toEqual([]);
+    });
+
+    it('includes the Program facet in the active-filter count and chips, and "Clear all" resets every facet', () => {
+      resultsNotificationsServiceMock.initiativeIdFilter = '5';
+      resultsNotificationsServiceMock.filteredInitiatives = [{ initiative_id: '5', full_name: 'My Initiative' }];
+      resultsNotificationsServiceMock.centerIdsFilter = [10];
+      resultsNotificationsServiceMock.bilateralProjectIdsFilter = ['BIL-1'];
+
+      expect(component.activeFilterCount).toBe(3);
+      expect(component.activeFilterChips).toEqual(expect.arrayContaining([{ type: 'program', id: '5', label: 'My Initiative' }]));
+
+      component.clearAllFilters();
+
+      expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalled();
+      expect(resultsNotificationsServiceMock.phaseFilter).toBeNull();
+      expect(resultsNotificationsServiceMock.entityLabel).toBe('Entity');
+      expect(resultsNotificationsServiceMock.filteredInitiatives).toEqual([]);
+    });
+
+    it('renders the Filter trigger button and toggles a real @if-rendered panel into the DOM', () => {
+      routerMock.url = '/result/results-outlet/results-notifications';
+      fixture.detectChanges();
+
+      expect(getPanel()).toBeNull();
+      getTriggerButton().click();
+      fixture.detectChanges();
+
+      expect(getPanel()).toBeTruthy();
+      expect(getTriggerButton().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('clicking outside the panel closes it; clicking inside it (a checkbox) does not', () => {
+      resultsNotificationsServiceMock.receivedData = { receivedContributionsPending: [bilateralRow()], receivedContributionsDone: [] };
+      routerMock.url = '/result/results-outlet/results-notifications';
+      fixture.detectChanges();
+      getTriggerButton().click();
+      fixture.detectChanges();
+      expect(getPanel()).toBeTruthy();
+
+      const checkbox = getPanel()!.querySelector('hlm-checkbox') as HTMLElement;
+      checkbox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      fixture.detectChanges();
+      expect(getPanel()).toBeTruthy();
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      fixture.detectChanges();
+      expect(component.filterPopoverOpen()).toBe(false);
+      expect(getPanel()).toBeNull();
+    });
+
+    it('pressing Escape closes the panel', () => {
+      routerMock.url = '/result/results-outlet/results-notifications';
+      fixture.detectChanges();
+      getTriggerButton().click();
+      fixture.detectChanges();
+      expect(getPanel()).toBeTruthy();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+
+      expect(component.filterPopoverOpen()).toBe(false);
+      expect(getPanel()).toBeNull();
+    });
+
+    it('never renders the Filter popover trigger on the settings route', () => {
+      routerMock.url = '/result/results-outlet/results-notifications/settings';
+      fixture.detectChanges();
+      expect(getTriggerButton()).toBeFalsy();
+    });
   });
 
-  it('both components resolve the identical ResultsNotificationsService instance', () => {
-    expect((requestsComponent as any).resultsNotificationsSE).toBe((notifComponent as any).resultsNotificationsSE);
+  // NOTIF-T-6: Tabs UI (All / Needs your decision / For your information) over the unified list.
+  // Fixture matches NOTIF-T-1's own Falsifier fixture exactly (2 pending Received, 1 resolved
+  // Received, 1 Sent, 2 Updates = 2 decision + 4 info = 6 total across the WHOLE account).
+  describe('NOTIF-T-6 — Tabs UI: All / Needs your decision / For your information', () => {
+    const pendingReceived1 = { share_result_request_id: 1, request_status_id: 1, requested_date: '2026-09-29T09:00:00Z' };
+    const pendingReceived2 = { share_result_request_id: 2, request_status_id: 1, requested_date: '2026-09-28T09:00:00Z' };
+    const resolvedReceived = { share_result_request_id: 3, request_status_id: 2, requested_date: '2026-09-27T09:00:00Z' };
+    const sentRow = { share_result_request_id: 4, request_status_id: 1, requested_date: '2026-09-26T09:00:00Z' };
+    const updateRow1 = { notification_id: 1, created_date: '2026-09-25T09:00:00Z' };
+    const updateRow2 = { notification_id: 2, created_date: '2026-09-24T09:00:00Z' };
+
+    beforeEach(() => {
+      resultsNotificationsServiceMock.receivedData = {
+        receivedContributionsPending: [pendingReceived1, pendingReceived2],
+        receivedContributionsDone: [resolvedReceived]
+      };
+      resultsNotificationsServiceMock.sentData = {
+        sentContributionsPending: [sentRow],
+        sentContributionsDone: []
+      };
+      resultsNotificationsServiceMock.updatesData = {
+        notificationAnnouncements: [],
+        notificationsPending: [updateRow1],
+        notificationsViewed: [updateRow2]
+      };
+    });
+
+    it('unifiedList (the RAW merge, unscoped by the Received/Sent toggle) still returns all 6 rows — NOTIF-T-1 Falsifier, unchanged', () => {
+      expect(component.unifiedList).toHaveLength(6);
+    });
+
+    // NOTIF-T-6 (Pivot re-scope): allTabCount/decisionTabCount/infoTabCount are now scoped to the
+    // active Received/Sent side (default 'received'), so the badge next to each tab never lies about
+    // what actually renders — the ORIGINAL Disqualifier ("if the tab counts don't match the rendered
+    // row count in any fixture, stop") still holds; it is verified below against this new, correct
+    // baseline instead of the pre-toggle, unscoped total.
+    it('under the default "received" side, classifies 2 decision rows and 3 info rows (2 Received/1 Sent excluded + 2 Updates)', () => {
+      expect(component.activeSource()).toBe('received');
+      expect(component.allTabCount).toBe(5);
+      expect(component.decisionTabCount).toBe(2);
+      expect(component.infoTabCount).toBe(3);
+    });
+
+    it('switching to "sent" shows 0 decision rows and 3 info rows (the 1 Sent row + 2 Updates — Received rows excluded)', () => {
+      component.setActiveSource('sent');
+
+      expect(component.allTabCount).toBe(3);
+      expect(component.decisionTabCount).toBe(0);
+      expect(component.infoTabCount).toBe(3);
+    });
+
+    it('"All" tab renders exactly allTabCount rows for the active side', () => {
+      component.setActiveTab('all');
+      fixture.detectChanges();
+
+      const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('app-notification-item');
+      expect(rows.length).toBe(component.allTabCount);
+    });
+
+    it('"Needs your decision" tab shows a count of 2 and renders exactly those 2 rows (decision rows are always Received-origin, unaffected by the toggle)', () => {
+      component.setActiveTab('decision');
+      fixture.detectChanges();
+
+      expect(component.decisionTabCount).toBe(2);
+      const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('app-notification-item');
+      expect(rows.length).toBe(2);
+    });
+
+    it('"For your information" tab renders exactly infoTabCount rows', () => {
+      component.setActiveTab('info');
+      fixture.detectChanges();
+
+      const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('app-notification-item');
+      expect(rows.length).toBe(component.infoTabCount);
+    });
+
+    it('tab counts always match the rendered row count for every tab, on both sides of the toggle (disqualifier guard: no lying badge)', () => {
+      (['received', 'sent'] as const).forEach(source => {
+        component.setActiveSource(source);
+        (['all', 'decision', 'info'] as const).forEach(tab => {
+          component.setActiveTab(tab);
+          fixture.detectChanges();
+
+          const rendered = (fixture.nativeElement as HTMLElement).querySelectorAll('app-notification-item').length;
+          const badgeCount = tab === 'all' ? component.allTabCount : tab === 'decision' ? component.decisionTabCount : component.infoTabCount;
+          expect(rendered).toBe(badgeCount);
+        });
+      });
+    });
+
+    it('setActiveTab updates the active tab signal and marks the matching tab button data-active', () => {
+      component.setActiveTab('decision');
+      fixture.detectChanges();
+
+      expect(component.activeTab()).toBe('decision');
+      // Scoped to the decision-tab row specifically — the page ALSO has a Received/Sent segmented
+      // control using the same `role="tab"`/`data-active` pattern (NOTIF-T-6 Pivot re-scope item 4),
+      // so an unscoped selector would grab whichever renders first in DOM order instead.
+      const activeButton = (fixture.nativeElement as HTMLElement).querySelector(
+        '[role="tablist"][aria-label="Notification decision filter"] [role="tab"][data-active]'
+      );
+      expect(activeButton?.textContent).toContain('Needs your decision');
+    });
+
+    it('an empty unified list renders zero rows on every tab and no count lies about it', () => {
+      resultsNotificationsServiceMock.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [] };
+      resultsNotificationsServiceMock.sentData = { sentContributionsPending: [], sentContributionsDone: [] };
+      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+
+      fixture.detectChanges();
+
+      expect(component.allTabCount).toBe(0);
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('app-notification-item').length).toBe(0);
+    });
+
+    it('the search filter (existing toolbar state) narrows the unified list before the tab split', () => {
+      resultsNotificationsServiceMock.searchFilter = 'nonexistent-search-term-xyz';
+      fixture.detectChanges();
+
+      expect(component.allTabCount).toBe(0);
+    });
   });
 
-  it('changing phase via one component is RENDERED on the OTHER component template, not just proven as shared-object-reference identity', () => {
-    // NOTIF-T-11 (rework attempt 3): RequestsComponent no longer calls getAllPhases() at all — ONLY
-    // ResultsNotificationsComponent.ngOnInit() does (see its ngOnInit / the service's getAllPhases
-    // doc). Trigger the fetch through the PARENT, the way the real app actually does it.
-    notifComponent.ngOnInit(); // -> resultsNotificationsSE.getAllPhases() -> populates phaseList
+  // NOTIF-T-6 (Pivot re-scope, item 4): the Received/Sent in-list toggle (`NOTIF-R-8` amended).
+  describe('Received/Sent in-list toggle (NOTIF-T-6 Pivot re-scope, NOTIF-R-8 amended)', () => {
+    const receivedRow = { share_result_request_id: 1, request_status_id: 2, requested_date: '2026-09-27T09:00:00Z' };
+    const sentRow = { share_result_request_id: 2, request_status_id: 2, requested_date: '2026-09-26T09:00:00Z' };
+    const updateRow = { notification_id: 1, created_date: '2026-09-25T09:00:00Z' };
 
-    expect(notifComponent.resultsNotificationsSE.phaseList).toEqual([{ id: 42, obj_portfolio: { id: 2, acronym: 'INIT' } }]);
+    beforeEach(() => {
+      resultsNotificationsServiceMock.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [receivedRow] };
+      resultsNotificationsServiceMock.sentData = { sentContributionsPending: [], sentContributionsDone: [sentRow] };
+      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [updateRow] };
+    });
 
-    // Drive the phase change through RequestsComponent's OWN service reference.
-    requestsComponent.resultsNotificationsSE.onPhaseChange(42);
+    it('defaults to "received"', () => {
+      expect(component.activeSource()).toBe('received');
+    });
 
-    // Corrected per NOTIF-T-11 attempt 2's Reviewer FAIL #4: reading `notifComponent.resultsNotificationsSE.*`
-    // fields back (as attempt 2 did) only proves both components hold the SAME object reference — it
-    // would pass even if neither component's TEMPLATE actually binds to/re-renders from that state.
-    // This assertion instead mounts ResultsNotificationsComponent at the Updates route, runs real
-    // change detection, and reads the RENDERED Program `app-pr-select` element's bound `label`/
-    // `options` properties — proving the template genuinely reflects the shared state.
-    sharedRouterMock.url = '/result/results-outlet/results-notifications/updates';
-    notifFixture.detectChanges();
+    it('under "received", the sourceScopedList excludes the Sent row but keeps the Received and Updates rows', () => {
+      const origins = component.sourceScopedList.map((item: any) => item.origin);
+      expect(origins.sort()).toEqual(['received', 'update']);
+    });
 
-    const selects = Array.from((notifFixture.nativeElement as HTMLElement).querySelectorAll('app-pr-select')) as any[];
-    const programSelect = selects.find(el => el.label === 'Initiative');
+    it('under "sent", the sourceScopedList excludes the Received row but keeps the Sent and Updates rows', () => {
+      component.setActiveSource('sent');
+      const origins = component.sourceScopedList.map((item: any) => item.origin);
+      expect(origins.sort()).toEqual(['sent', 'update']);
+    });
 
-    expect(programSelect).toBeTruthy();
-    expect(programSelect.label).toBe('Initiative');
-    expect(programSelect.options).toEqual([{ initiative_id: '9', full_name: 'Shared Initiative' }]);
+    it('setActiveSource updates the segmented control\'s data-active attribute', () => {
+      fixture.detectChanges();
+      const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('[role="tablist"][aria-label="Received or Sent"] [role="tab"]');
+      expect(buttons[0].getAttribute('data-active')).toBe('');
+      expect(buttons[1].hasAttribute('data-active')).toBe(false);
+
+      component.setActiveSource('sent');
+      fixture.detectChanges();
+
+      expect(buttons[0].hasAttribute('data-active')).toBe(false);
+      expect(buttons[1].getAttribute('data-active')).toBe('');
+    });
+
+    // NOTIF-T-6 (Pivot re-scope, item 4): "switching the toggle closes any open detail panel"
+    // (`notification-item.component.ts` is closed scope — it may not gain a new Input/method to be
+    // told to close). Achieved via the template's `@switch (activeSource())` wrapper around every
+    // `<app-notification-item>` — a `@switch` case change is a genuine structural teardown/recreate,
+    // unconditionally, so every row instance (received/sent/update alike) is destroyed and a fresh
+    // one created on a toggle flip, discarding that instance's own `drawerOpen` signal along with it.
+    // Proven at the DOM-instance-identity level (the only level reachable without touching the
+    // closed-scope component). (A `@for`-track-key-only approach was tried first and measured to NOT
+    // reliably force this — see `trackNotificationKey()`'s doc comment.)
+    it('every rendered row is a NEW DOM instance after a source switch, including an Updates row visible on both sides', () => {
+      fixture.detectChanges();
+      const before = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('app-notification-item'));
+      expect(before.length).toBeGreaterThan(0);
+
+      component.setActiveSource('sent');
+      fixture.detectChanges();
+      const after = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('app-notification-item'));
+
+      // No DOM node from `before` survives into `after` — every element reference is distinct.
+      const beforeSet = new Set(before);
+      after.forEach(node => expect(beforeSet.has(node)).toBe(false));
+    });
+
+    it('isSentRow uses the real origin tag, not the old needsDecision-based proxy — a resolved Received row is never mistaken for Sent', () => {
+      const resolvedReceivedTagged = { ...receivedRow, source: 'request', needsDecision: false, origin: 'received' } as any;
+      const sentTagged = { ...sentRow, source: 'request', needsDecision: false, origin: 'sent' } as any;
+
+      expect(component.isSentRow(resolvedReceivedTagged)).toBe(false);
+      expect(component.isSentRow(sentTagged)).toBe(true);
+    });
+  });
+
+  // NOTIF-T-6 (Pivot re-scope): Announcements + "Mark all as read", ported from the retired
+  // `updates.component.html`/`.ts` so real capability doesn't silently disappear with those files.
+  describe('Announcements + Mark all as read — ported from the retired updates.component.* (NOTIF-T-6 Pivot re-scope)', () => {
+    it('renders an Announcements section when notificationAnnouncements is non-empty', () => {
+      resultsNotificationsServiceMock.updatesData = {
+        notificationAnnouncements: [{ notification_id: 99 }],
+        notificationsPending: [],
+        notificationsViewed: []
+      };
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Announcements');
+    });
+
+    it('does not render the Announcements section when there are none', () => {
+      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Announcements');
+    });
+
+    it('renders "Mark all as read" only when there is at least one unread Update, and it delegates to the service', () => {
+      resultsNotificationsServiceMock.updatesData = {
+        notificationAnnouncements: [],
+        notificationsPending: [{ notification_id: 1 }],
+        notificationsViewed: []
+      };
+      fixture.detectChanges();
+
+      const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
+        b.textContent?.includes('Mark all as read')
+      ) as HTMLButtonElement;
+      expect(button).toBeTruthy();
+
+      button.click();
+      expect(resultsNotificationsServiceMock.markAllUpdatesNotificationsAsRead).toHaveBeenCalled();
+    });
+
+    it('does not render "Mark all as read" when there is nothing pending', () => {
+      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+      fixture.detectChanges();
+
+      const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
+        b.textContent?.includes('Mark all as read')
+      );
+      expect(button).toBeFalsy();
+    });
   });
 });

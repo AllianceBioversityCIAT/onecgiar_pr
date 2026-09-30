@@ -49,6 +49,27 @@
         </button>
       </section>
 
+      @if (mode() === 'view' && viewMetadataRows().length) {
+        <section class="flex flex-col gap-3" data-testid="crd-view-metadata-section">
+          <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.details }}</h3>
+          <div class="grid grid-cols-1 min-[640px]:grid-cols-[200px_minmax(0,1fr)] rounded-lg border border-[var(--pr-border)]" data-testid="crd-view-metadata-grid">
+            @for (field of viewMetadataRows(); track field.label; let rowIndex = $index) {
+              <span
+                class="px-[18px] py-3 text-[13px] font-medium text-ink-secondary"
+                [class.border-t]="rowIndex > 0"
+                [class.border-[var(--pr-border)]]="rowIndex > 0"
+                data-testid="crd-view-metadata-label"
+                >{{ field.label }}</span
+              >
+              <div class="px-[18px] py-3 flex flex-col items-start gap-1" [class.border-t]="rowIndex > 0" [class.border-[var(--pr-border)]]="rowIndex > 0">
+                <span class="text-[14px] leading-[1.5] text-ink-body" data-testid="crd-view-metadata-value">{{ field.value }}</span>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      @if (mode() !== 'view' || reviewRows().length) {
       <section class="flex flex-col gap-3" data-testid="crd-review-section">
         <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.whereItContributes }}</h3>
         @for (table of displayReviewRows(); track $index; let tableIndex = $index) {
@@ -86,10 +107,12 @@
           </div>
         }
       </section>
+      }
 
       <ng-content select="[crdAlign]" />
     </div>
 
+    @if (mode() !== 'view') {
     <hlm-sheet-footer class="border-t border-[var(--pr-border-divider)] px-6 py-4" data-testid="crd-footer">
       @if (mode() === 'decide') {
         <div class="flex w-full flex-col gap-2">
@@ -159,5 +182,6 @@
         </div>
       }
     </hlm-sheet-footer>
+    }
   </hlm-sheet-content>
 </hlm-sheet>

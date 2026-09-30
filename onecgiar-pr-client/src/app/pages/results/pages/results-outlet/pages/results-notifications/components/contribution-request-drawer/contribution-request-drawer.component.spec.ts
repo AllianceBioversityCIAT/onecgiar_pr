@@ -5,7 +5,8 @@ import {
   ContributionRequestDrawerComponent,
   ContributionRequestDrawerHeaderParts,
   ContributionRequestDrawerMode,
-  ContributionRequestDrawerReviewField
+  ContributionRequestDrawerReviewField,
+  ContributionRequestDrawerViewFields
 } from './contribution-request-drawer.component';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
 
@@ -41,6 +42,7 @@ import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../intern
       [blockedReason]="blockedReason()"
       [acceptHelper]="acceptHelper()"
       [focusAlign]="focusAlign()"
+      [viewFields]="viewFields()"
       (closed)="onClosed()"
       (resultActivated)="onResultActivated()"
       (acceptClicked)="onAcceptClicked()"
@@ -66,6 +68,7 @@ class HostComponent {
   readonly blockedReason = signal<string | null>(null);
   readonly acceptHelper = signal<string | null>(null);
   readonly focusAlign = signal(false);
+  readonly viewFields = signal<ContributionRequestDrawerViewFields | null>(null);
 
   closedCount = 0;
   resultActivatedCount = 0;
@@ -546,6 +549,234 @@ describe('ContributionRequestDrawerComponent', () => {
       } finally {
         Element.prototype.scrollIntoView = original;
       }
+    });
+  });
+
+  describe('NOTIF-T-4: `view` mode', () => {
+    it('DISQUALIFIER falsifier: `view` mode renders no footer at all — no Accept/Decline, no confirm-decline', async () => {
+      host.mode.set('view');
+      await openDrawer();
+
+      expect(query('[data-testid="crd-footer"]')).toBeNull();
+      expect(query('[data-testid="crd-accept-btn"]')).toBeNull();
+      expect(query('[data-testid="crd-decline-btn"]')).toBeNull();
+      expect(query('[data-testid="crd-confirm-decline-btn"]')).toBeNull();
+      expect(query('[data-testid="crd-cancel-btn"]')).toBeNull();
+    });
+
+    it('regression: `decide` mode is unaffected by the new mode — still shows the Accept/Decline footer exactly as before', async () => {
+      host.mode.set('decide');
+      await openDrawer();
+
+      expect(query('[data-testid="crd-footer"]')).toBeTruthy();
+      expect(query('[data-testid="crd-accept-btn"]')).toBeTruthy();
+      expect(query('[data-testid="crd-decline-btn"]')).toBeTruthy();
+    });
+
+    it('Falsifier: an Updates-source row (no result_center_array) renders a metadata grid with NO "Reporting center" row at all — not a blank placeholder', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'update',
+        phase: 'Phase 2026',
+        primaryProgram: 'SP03',
+        submittedBy: 'John Doe'
+        // resultType / reportingCenter intentionally absent — NOTIF-P-2.
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels).not.toContain(copy.viewFieldLabels.reportingCenter);
+      expect(labels).not.toContain(copy.viewFieldLabels.resultType);
+      expect(labels).toEqual([copy.viewFieldLabels.phase, copy.viewFieldLabels.primaryProgram, copy.viewFieldLabels.submittedBy]);
+
+      const values = queryAll('[data-testid="crd-view-metadata-value"]').map(el => el.textContent?.trim());
+      expect(values).toEqual(['Phase 2026', 'SP03', 'John Doe']);
+    });
+
+    it('an Updates-source row still omits Result type / Reporting center even if the caller mistakenly passes them', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'update',
+        resultType: 'Should not render',
+        reportingCenter: 'Should not render either',
+        phase: 'Phase 2026'
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels).toEqual([copy.viewFieldLabels.phase]);
+    });
+
+    it('a Requests-source row with every field (incl. status) renders all six metadata rows in order, status first', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'request',
+        status: 'Needs your decision',
+        resultType: 'Innovation development',
+        phase: 'Phase 2026',
+        primaryProgram: 'SP06',
+        reportingCenter: 'CIAT',
+        submittedBy: 'Priya Raghavan'
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels).toEqual([
+        copy.viewFieldLabels.status,
+        copy.viewFieldLabels.resultType,
+        copy.viewFieldLabels.phase,
+        copy.viewFieldLabels.primaryProgram,
+        copy.viewFieldLabels.reportingCenter,
+        copy.viewFieldLabels.submittedBy
+      ]);
+
+      const values = queryAll('[data-testid="crd-view-metadata-value"]').map(el => el.textContent?.trim());
+      expect(values[0]).toBe('Needs your decision');
+    });
+
+    it('NOTIF-T-14: renders the "Status" row first when `viewFields.status` is populated (NOTIF-R-5)', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'update',
+        status: 'For your information',
+        phase: 'Phase 2026'
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels[0]).toBe(copy.viewFieldLabels.status);
+      const values = queryAll('[data-testid="crd-view-metadata-value"]').map(el => el.textContent?.trim());
+      expect(values[0]).toBe('For your information');
+    });
+
+    it('NOTIF-T-14: omits the "Status" row entirely when `viewFields.status` is null/absent — never a blank row', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'update',
+        phase: 'Phase 2026'
+        // status intentionally absent.
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels).not.toContain(copy.viewFieldLabels.status);
+      expect(labels).toEqual([copy.viewFieldLabels.phase]);
+    });
+
+    it('a Requests-source row missing one field (e.g. no primaryProgram) omits just that row, not a blank one', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'request',
+        resultType: 'Innovation development',
+        phase: 'Phase 2026',
+        reportingCenter: 'CIAT',
+        submittedBy: 'Priya Raghavan'
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels).not.toContain(copy.viewFieldLabels.primaryProgram);
+      expect(labels.length).toBe(4);
+    });
+
+    it('renders no metadata section at all when `viewFields` is null', async () => {
+      host.mode.set('view');
+      host.viewFields.set(null);
+      await openDrawer();
+
+      expect(query('[data-testid="crd-view-metadata-section"]')).toBeNull();
+    });
+
+    it('reuses the header sentence and RESULT card unchanged in `view` mode', async () => {
+      host.mode.set('view');
+      host.resultCode.set('9377');
+      host.resultTitle.set('Some result title');
+      host.headerParts.set({
+        lead: 'Priya Raghavan',
+        requesterCode: 'SP06',
+        verb: copy.header.verb,
+        responderCode: 'SP01',
+        tail: copy.header.tail,
+        resultCode: '9377',
+        resultTitle: 'Some result title'
+      });
+      await openDrawer();
+
+      const card = query('[data-testid="crd-result-card"]');
+      expect(card?.textContent).toContain('9377');
+      expect(card?.textContent).toContain('Some result title');
+
+      const sentence = query('[data-testid="crd-header-sentence"]');
+      expect((sentence?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+        'Priya Raghavan from SP06 has asked SP01 to contribute to result 9377 – Some result title'
+      );
+    });
+
+    it('omits the "Where it contributes" section entirely in `view` mode when there is no review data (no dash-fallback placeholder)', async () => {
+      host.mode.set('view');
+      host.reviewRows.set([]);
+      await openDrawer();
+
+      expect(query('[data-testid="crd-review-section"]')).toBeNull();
+    });
+
+    it('still renders "Where it contributes" in `view` mode when real review data is present', async () => {
+      host.mode.set('view');
+      host.reviewRows.set([buildReviewRow({ level: 'Output' })]);
+      await openDrawer();
+
+      expect(query('[data-testid="crd-review-section"]')).toBeTruthy();
+      const tables = queryAll('[data-testid="crd-review-table"]');
+      expect(tables.length).toBe(1);
+    });
+
+    it('a whitespace-only field value is omitted, not rendered as a blank row', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'update',
+        phase: 'Phase 2026',
+        primaryProgram: '   ',
+        submittedBy: 'John Doe'
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels).not.toContain(copy.viewFieldLabels.primaryProgram);
+      expect(labels).toEqual([copy.viewFieldLabels.phase, copy.viewFieldLabels.submittedBy]);
+    });
+
+    it('renders the labelled close control (hlmSheetClose / crd-close-btn) in `view` mode, same as `decide` mode', async () => {
+      host.mode.set('view');
+      await openDrawer();
+
+      const closeBtn = query('[data-testid="crd-close-btn"]') as HTMLButtonElement | null;
+      expect(closeBtn).toBeTruthy();
+      expect(closeBtn?.getAttribute('aria-label')).toBe(copy.closeAriaLabel);
+    });
+
+    it('emits closed exactly once when the close button is clicked in `view` mode (no footer to intercept it)', async () => {
+      host.mode.set('view');
+      await openDrawer();
+
+      const closeBtn = query('[data-testid="crd-close-btn"]') as HTMLButtonElement | null;
+      closeBtn?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(host.closedCount).toBe(1);
+      expect(panel()).toBeNull();
+    });
+
+    it('emits closed exactly once on Escape in `view` mode', async () => {
+      host.mode.set('view');
+      await openDrawer();
+
+      panel()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(host.closedCount).toBe(1);
+      expect(panel()).toBeNull();
     });
   });
 });

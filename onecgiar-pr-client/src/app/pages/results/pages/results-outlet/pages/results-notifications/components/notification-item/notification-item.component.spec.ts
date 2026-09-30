@@ -28,6 +28,9 @@ import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../intern
 // tests/mocks/spartanBrainMock.ts, same as every other Brain-based overlay in this repo) so the
 // decline confirm/cancel wiring tests below can drive its actual footer buttons.
 import { ContributionRequestDrawerComponent } from '../contribution-request-drawer/contribution-request-drawer.component';
+// NOTIF-T-5: property-based chip check — every rendered type chip must be a member of this set
+// (or the fixed "Contribution request" string), never a fabricated label (NOTIF-R-3/NOTIF-AC-7).
+import { NotificationType } from '../../../../../../../../shared/constants/notification-type.constants';
 
 describe('NotificationItemComponent', () => {
   let component: NotificationItemComponent;
@@ -806,12 +809,12 @@ describe('NotificationItemComponent', () => {
       expect(chip?.className).toContain('notification_decision_chip_accepted');
     });
 
-    it('renders both the existing "Rejected by …" text and the new decision chip for request_status_id 3', () => {
+    it('renders both the "Declined by …" text and the decision chip for request_status_id 3', () => {
       component.notification = buildRenderableNotification({ request_status_id: 3 });
       fixture.detectChanges();
 
       const root: HTMLElement = fixture.nativeElement;
-      expect(root.textContent).toContain('Rejected');
+      expect(root.textContent).toContain('Declined by');
       expect(root.textContent).toContain('by Jane Approver');
 
       const chip = root.querySelector('[data-notif-decision-chip="declined"]');
@@ -890,6 +893,68 @@ describe('NotificationItemComponent', () => {
 
       expect(component.showTocPromptDialog()).toBe(true);
       expect(component.drawerOpen()).toBe(false);
+    });
+  });
+
+  // NOTIF-T-12 (rework attempt 2, issue 3): the wording/button Falsifier items from the FAIL had
+  // no test coverage. Assert the exact copy on a pending (request_status_id 1), non-Sent, non-ToC
+  // Received row — case (1) of the template's @switch, the only branch these strings apply to.
+  describe('NOTIF-T-12 rework — pending row wording + button labels', () => {
+    const buildRenderableNotification = (overrides: any = {}) => ({
+      share_result_request_id: 4001,
+      result_id: '9001',
+      requested_date: '2026-09-20T10:00:00.000Z',
+      is_map_to_toc: false,
+      obj_requested_by: { id: 1, first_name: 'Jane', last_name: 'Doe' },
+      obj_owner_initiative: { id: 31, official_code: 'INIT-31', name: 'Owner program' },
+      obj_shared_inititiative: { id: 77, official_code: 'INIT-77', name: 'Contributor program' },
+      ...overrides,
+      obj_result: {
+        result_code: 'RC-9001',
+        title: 'A reported result',
+        status_id: '1',
+        source_name: 'W1/W2',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        obj_results_toc_result: [],
+        ...(overrides.obj_result ?? {})
+      }
+    });
+
+    beforeEach(() => {
+      mockApiService.rolesSE.platformIsClosed = false;
+      mockApiService.rolesSE.isAdmin = false;
+      component.requestingAccept = false;
+      component.requestingReject = false;
+      component.isSent = false;
+    });
+
+    it('renders "has requested the inclusion of" (not "inclusion of") for a pending Received row', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 1 });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const bodyText = root.querySelector('.notification_content_body_text')?.textContent?.replace(/\s+/g, ' ').trim();
+
+      expect(bodyText).toContain('has requested the inclusion of');
+    });
+
+    it('renders "Accept contribution" and "Decline" as the two action button labels', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 1 });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const acceptBtn: any = root.querySelector('[data-testid="accept-contribution-btn"]');
+      const declineBtn: any = root.querySelector('[data-testid="decline-contribution-btn"]');
+
+      expect(acceptBtn).toBeTruthy();
+      expect(declineBtn).toBeTruthy();
+      // `app-pr-button` isn't declared/imported in this suite's TestBed (NO_ERRORS_SCHEMA, see the
+      // module config above) so it never renders its own label as textContent — assert the bound
+      // `[text]` property Angular still sets directly on the (unknown) custom element instead.
+      expect(acceptBtn.text).toBe('Accept contribution');
+      expect(declineBtn.text).toBe('Decline');
     });
   });
 
@@ -1119,6 +1184,38 @@ describe('NotificationItemComponent', () => {
         expect(component.drawerFocusAlign()).toBe(false);
         expect(component.tocInitiative).toBeNull();
         expect(patchSpy).not.toHaveBeenCalled();
+      });
+
+      // NOTIF-T-7 — NOTIF-AC-5 Falsifier: "the panel updates to B's content; any of A's transient
+      // in-progress state (e.g. an unsubmitted Align selection) is discarded, not silently merged
+      // into B." Each `<app-notification-item>` in the unified list is its own component instance
+      // bound to its own row (results-notifications.component.html's `@for … track
+      // trackNotificationKey(item)`), so there is no shared state ACROSS two simultaneously-rendered
+      // rows to leak by construction — the one place a leak IS structurally possible is `openDrawer()`
+      // being invoked a second time on the SAME instance for a DIFFERENT `notification` (a row
+      // reactivated after its bound `@Input()` changed underneath it — the exact shape of the CRD-DD-6
+      // "instance reuse" trap this file's own CLAUDE.md documents), without an intervening
+      // `closeDrawer()`. This proves `openDrawer()`'s reseed (`seedTocInitiative()`) always wins over
+      // whatever was left in progress for the previous notification, never merges the two.
+      it('re-opening for a DIFFERENT notification discards the previous unsubmitted Align selection instead of merging it (NOTIF-AC-5)', () => {
+        component.notification = buildBilateral({ share_result_request_id: 5001, obj_shared_inititiative: { id: 77, official_code: 'INIT-77', name: 'A' } });
+        component.openDrawer('details');
+        // An in-progress, NEVER submitted/closed Align answer for notification A.
+        component.tocInitiative.planned_result = true;
+        expect(component.isTocMappingTouched()).toBe(true);
+
+        // The row is reactivated for a different notification (B) — same instance, no closeDrawer()
+        // in between, mirroring what a re-bound `@Input()` + a second `onRowActivate()` would do.
+        component.notification = buildBilateral({
+          share_result_request_id: 5099,
+          obj_shared_inititiative: { id: 88, official_code: 'INIT-88', name: 'B' }
+        });
+        component.openDrawer('details');
+
+        expect(component.tocInitiative.initiative_id).toBe(88);
+        expect(component.tocInitiative.official_code).toBe('INIT-88');
+        expect(component.tocInitiative.planned_result).toBeNull();
+        expect(component.isTocMappingTouched()).toBe(false);
       });
     });
 
@@ -1554,30 +1651,39 @@ describe('NotificationItemComponent', () => {
       expect(row.getAttribute('aria-label')).toContain('RC-8001');
     });
 
-    it('a decided (status 2) row has no role/tabindex and does not open the drawer', () => {
+    // NOTIF-T-5 (design.md §2.2): superseded by the unified click-to-open surface — a decided row
+    // is now interactive too, opening the drawer in `view` mode (no footer, no Align) instead of
+    // staying inert. The pending-row case right above this one is UNCHANGED (CRD-DD-10).
+    it('a decided (status 2) row is interactive and opens the drawer in view mode (NOTIF-T-5)', () => {
       component.notification = buildFixture({ request_status_id: 2 });
       component.isSent = false;
       fixture.detectChanges();
 
       const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
-      expect(row.getAttribute('role')).toBeNull();
-      expect(row.getAttribute('tabindex')).toBeNull();
+      expect(row.getAttribute('role')).toBe('button');
+      expect(row.getAttribute('tabindex')).toBe('0');
 
       row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(component.drawerOpen()).toBe(false);
+      expect(component.drawerOpen()).toBe(true);
+      expect(component.drawerMode()).toBe('view');
     });
 
-    it('a Sent row is not focusable and does not open the drawer, even though request_status_id is 1', () => {
+    // NOTIF-T-5: superseded — a Sent row is now interactive too (Sent rows are always
+    // `needsDecision:false` per NOTIF-P-1), opening the drawer in `view` mode, never `decide`
+    // (CRD-DD-10's pending gate — `isPending` — still returns false for a Sent row).
+    it('a Sent row is focusable and opens the drawer in view mode, never decide, even though request_status_id is 1 (NOTIF-T-5)', () => {
       component.notification = buildFixture({ request_status_id: 1 });
       component.isSent = true;
       fixture.detectChanges();
 
       const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
-      expect(row.getAttribute('role')).toBeNull();
-      expect(row.getAttribute('tabindex')).toBeNull();
+      expect(row.getAttribute('role')).toBe('button');
+      expect(row.getAttribute('tabindex')).toBe('0');
 
       row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(component.drawerOpen()).toBe(false);
+      expect(component.drawerOpen()).toBe(true);
+      expect(component.drawerMode()).toBe('view');
+      expect(component.isPending).toBe(false);
     });
 
     it('clicking the row body opens the drawer on details', () => {
@@ -1806,6 +1912,559 @@ describe('NotificationItemComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('.toc_review')).toBeTruthy();
+    });
+  });
+
+  // NOTIF-T-5: extends the row click-to-open surface to resolved Received rows, Sent rows and
+  // Updates rows (design.md §2.2); real chip taxonomy (NOTIF-R-3/NOTIF-DD-3); the close-panel
+  // toggle (NOTIF-R-11); the `[crdAlign]` gate (item 1); the row status indicator (item 2).
+  describe('NOTIF-T-5 — resolved/Sent/Updates click-to-open, chip taxonomy, status indicator', () => {
+    const buildRequestFixture = (overrides: any = {}) => ({
+      share_result_request_id: 8001,
+      result_id: '9501',
+      request_status_id: 2,
+      requested_date: '2026-09-25T10:00:00.000Z',
+      aprovaed_date: '2026-09-26T10:00:00.000Z',
+      is_map_to_toc: true,
+      obj_requested_by: { id: 1, first_name: 'Jane', last_name: 'Doe' },
+      obj_approved_by: { id: 2, first_name: 'Ann', last_name: 'Approver' },
+      obj_owner_initiative: { id: 31, official_code: 'INIT-31', name: 'Owner program' },
+      obj_shared_inititiative: { id: 77, official_code: 'INIT-77', name: 'Contributor program' },
+      ...overrides,
+      obj_result: {
+        result_code: 'RC-9501',
+        title: 'A NOTIF-T-5 fixture result',
+        status_id: '1',
+        source_name: 'W1/W2',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP07' } }],
+        obj_results_toc_result: [],
+        ...(overrides.obj_result ?? {})
+      }
+    });
+
+    const buildUpdateFixture = (overrides: any = {}) => ({
+      source: 'update',
+      notification_level: 2,
+      notification_type: 1,
+      obj_notification_type: { type: NotificationType.RESULT_SUBMITTED },
+      created_date: '2026-09-20T10:00:00.000Z',
+      obj_emitter_user: { id: 4, first_name: 'Amy', last_name: 'Lopez' },
+      ...overrides,
+      obj_result: {
+        result_code: 'RC-5500',
+        title: 'An updates-tab result',
+        obj_version: { id: '30', phase_name: 'Reporting 2026' },
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP09' } }],
+        ...(overrides.obj_result ?? {})
+      }
+    });
+
+    beforeEach(() => {
+      mockApiService.rolesSE.platformIsClosed = false;
+      mockApiService.rolesSE.isAdmin = false;
+      component.requestingAccept = false;
+      component.requestingReject = false;
+      component.isSent = false;
+    });
+
+    describe('resolved Received row (NOTIF-AC-2/AC-3)', () => {
+      it('clicking the result-title link does NOT open the drawer', () => {
+        component.notification = buildRequestFixture({ request_status_id: 2 });
+        fixture.detectChanges();
+        const openDrawerSpy = jest.spyOn(component, 'openDrawer');
+
+        const link: HTMLElement = fixture.nativeElement.querySelector('.notification_content_body a');
+        link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(openDrawerSpy).not.toHaveBeenCalled();
+        expect(component.drawerOpen()).toBe(false);
+      });
+
+      it('clicking anywhere else opens the drawer in view mode', () => {
+        component.notification = buildRequestFixture({ request_status_id: 2 });
+        fixture.detectChanges();
+
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(component.drawerOpen()).toBe(true);
+        expect(component.drawerMode()).toBe('view');
+      });
+    });
+
+    describe('Sent row (NOTIF-AC-2/AC-3)', () => {
+      it('clicking the result-title link does NOT open the drawer', () => {
+        component.notification = buildRequestFixture({ request_status_id: 3 });
+        component.isSent = true;
+        fixture.detectChanges();
+        const openDrawerSpy = jest.spyOn(component, 'openDrawer');
+
+        const link: HTMLElement = fixture.nativeElement.querySelector('.notification_content_body a');
+        link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(openDrawerSpy).not.toHaveBeenCalled();
+        expect(component.drawerOpen()).toBe(false);
+      });
+
+      it('clicking anywhere else opens the drawer in view mode', () => {
+        component.notification = buildRequestFixture({ request_status_id: 3 });
+        component.isSent = true;
+        fixture.detectChanges();
+
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(component.drawerOpen()).toBe(true);
+        expect(component.drawerMode()).toBe('view');
+      });
+    });
+
+    describe('Updates row (no role/tabindex/openDrawer entry point before this task)', () => {
+      it('is exposed as an interactive control with the generic view aria-label', () => {
+        component.notification = buildUpdateFixture();
+        fixture.detectChanges();
+
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+        expect(row.getAttribute('role')).toBe('button');
+        expect(row.getAttribute('tabindex')).toBe('0');
+        expect(row.getAttribute('aria-label')).toContain('RC-5500');
+      });
+
+      it('clicking the result-title link does NOT open the drawer', () => {
+        component.notification = buildUpdateFixture();
+        fixture.detectChanges();
+        const openDrawerSpy = jest.spyOn(component, 'openDrawer');
+
+        const link: HTMLElement = fixture.nativeElement.querySelector('.notification_content_body a');
+        link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(openDrawerSpy).not.toHaveBeenCalled();
+        expect(component.drawerOpen()).toBe(false);
+      });
+
+      it('clicking anywhere else opens the drawer in view mode, never decide', () => {
+        component.notification = buildUpdateFixture();
+        fixture.detectChanges();
+
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(component.drawerOpen()).toBe(true);
+        expect(component.drawerMode()).toBe('view');
+      });
+
+      it('renders the resolved NotificationType label as the type chip, and body text via getResultNotificationTextParts()', () => {
+        component.notification = buildUpdateFixture();
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        const chip = root.querySelector('[data-notif-type-chip]');
+        expect(chip?.textContent?.trim()).toBe(NotificationType.RESULT_SUBMITTED);
+        expect(root.textContent).toContain('Amy Lopez');
+        expect(root.textContent).toContain('has submitted the result');
+      });
+
+      it('omits the type chip entirely for an unresolvable notification type (never fabricates a label)', () => {
+        component.notification = buildUpdateFixture({ obj_notification_type: null, notification_type: 999 });
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('[data-notif-type-chip]')).toBeNull();
+      });
+
+      it('drawerViewFields() supplies the emitter as submittedBy, source "update", and the phase', () => {
+        component.notification = buildUpdateFixture();
+
+        const fields = component.drawerViewFields();
+
+        expect(fields.source).toBe('update');
+        expect(fields.submittedBy).toBe('Amy Lopez');
+        expect(fields.phase).toBe('Reporting 2026');
+      });
+    });
+
+    // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
+    // badge): `drawerViewFields()` must supply `status` from the same `rowStatusLabel` getter the
+    // row itself used to render, for all three row-status cases.
+    describe('drawerViewFields() status (NOTIF-T-14)', () => {
+      it('a pending Received row (needs your decision)', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1 });
+        component.isSent = false;
+
+        const fields = component.drawerViewFields();
+
+        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusNeedsDecision);
+      });
+
+      it('a resolved Received row (for your information)', () => {
+        component.notification = buildRequestFixture({ request_status_id: 2 });
+        component.isSent = false;
+
+        const fields = component.drawerViewFields();
+
+        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
+      });
+
+      it('an Updates row (for your information)', () => {
+        component.notification = buildUpdateFixture();
+
+        const fields = component.drawerViewFields();
+
+        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
+      });
+    });
+
+    describe('type chip taxonomy (property-based, NOTIF-R-3/NOTIF-DD-3)', () => {
+      const knownLabels = new Set<string>([CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.contributionRequestChip, ...Object.values(NotificationType)]);
+
+      // Unrolled (not looped, and reusing the outer `component`/`fixture` exactly like every other
+      // test in this file) — one notification assignment, one `detectChanges()` call, per case.
+      it('a pending (1) request row renders exactly the "Contribution request" chip', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1 });
+        fixture.detectChanges();
+        const chip = fixture.nativeElement.querySelector('[data-notif-type-chip]');
+        expect(chip).toBeTruthy();
+        expect(knownLabels.has(chip.textContent.trim())).toBe(true);
+        expect(chip.textContent.trim()).toBe('Contribution request');
+      });
+
+      it('an accepted (2) request row renders exactly the "Contribution request" chip', () => {
+        component.notification = buildRequestFixture({ request_status_id: 2 });
+        fixture.detectChanges();
+        const chip = fixture.nativeElement.querySelector('[data-notif-type-chip]');
+        expect(chip).toBeTruthy();
+        expect(knownLabels.has(chip.textContent.trim())).toBe(true);
+        expect(chip.textContent.trim()).toBe('Contribution request');
+      });
+
+      it('a declined (3) request row renders exactly the "Contribution request" chip', () => {
+        component.notification = buildRequestFixture({ request_status_id: 3 });
+        fixture.detectChanges();
+        const chip = fixture.nativeElement.querySelector('[data-notif-type-chip]');
+        expect(chip).toBeTruthy();
+        expect(knownLabels.has(chip.textContent.trim())).toBe(true);
+        expect(chip.textContent.trim()).toBe('Contribution request');
+      });
+
+      it('an update row of type Result Submitted renders that type as the chip, a member of the known set', () => {
+        component.notification = buildUpdateFixture({ obj_notification_type: { type: NotificationType.RESULT_SUBMITTED } });
+        fixture.detectChanges();
+        const chip = fixture.nativeElement.querySelector('[data-notif-type-chip]');
+        expect(chip).toBeTruthy();
+        expect(knownLabels.has(chip.textContent.trim())).toBe(true);
+      });
+
+      it('an update row of type Result QAed renders that type as the chip, a member of the known set', () => {
+        component.notification = buildUpdateFixture({ obj_notification_type: { type: NotificationType.RESULT_QUALITY_ASSESSED } });
+        fixture.detectChanges();
+        const chip = fixture.nativeElement.querySelector('[data-notif-type-chip]');
+        expect(chip).toBeTruthy();
+        expect(knownLabels.has(chip.textContent.trim())).toBe(true);
+      });
+
+      it('an update row of type Announcement renders that type as the chip, a member of the known set', () => {
+        component.notification = buildUpdateFixture({ obj_notification_type: { type: NotificationType.ANNOUNCEMENT } });
+        fixture.detectChanges();
+        const chip = fixture.nativeElement.querySelector('[data-notif-type-chip]');
+        expect(chip).toBeTruthy();
+        expect(knownLabels.has(chip.textContent.trim())).toBe(true);
+      });
+    });
+
+    describe('status chip removed from the row (NOTIF-T-12, item 5)', () => {
+      // NOTIF-T-12: the per-row status chip never appeared in the user's reference image and was
+      // removed from all 4 template branches. `rowStatusLabel` itself is kept (harmless, unused) —
+      // these assertions prove the RENDER is gone, not that the getter disappeared.
+      it('never renders [data-notif-status-chip] for a pending Received row', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1 });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[data-notif-status-chip]')).toBeNull();
+        expect(component.rowStatusLabel).toBe('Needs your decision');
+      });
+
+      it('never renders [data-notif-status-chip] for a pending Sent row', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1 });
+        component.isSent = true;
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[data-notif-status-chip]')).toBeNull();
+      });
+
+      it('never renders [data-notif-status-chip] for a resolved (accepted) row', () => {
+        component.notification = buildRequestFixture({ request_status_id: 2 });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[data-notif-status-chip]')).toBeNull();
+      });
+
+      it('never renders [data-notif-status-chip] for a resolved (declined) row', () => {
+        component.notification = buildRequestFixture({ request_status_id: 3 });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[data-notif-status-chip]')).toBeNull();
+      });
+
+      it('never renders [data-notif-status-chip] for an Updates row', () => {
+        component.notification = buildUpdateFixture();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[data-notif-status-chip]')).toBeNull();
+        expect(component.rowStatusLabel).toBe('For your information');
+      });
+    });
+
+    describe('NOTIF-T-9 — funding/type/level badges (NOTIF-R-12)', () => {
+      it('renders the funding-window and result level/type badges for a fully-populated Requests-tab row', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 1,
+          obj_result: {
+            source_name: 'W3/Bilaterals',
+            obj_result_type: { id: 7, name: 'Innovation development' },
+            obj_result_level: { id: 4, name: 'Output' }
+          }
+        });
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('[data-notif-funding-chip]')?.textContent?.trim()).toBe('W3/Bilateral');
+        // NOTIF-T-13: the level/type badge is no longer its own chip — it's plain text sharing the
+        // `.notification_date` line with the time-ago, joined by " · ".
+        expect(root.querySelector('.notification_date')?.textContent).toContain('Output · Innovation development');
+      });
+
+      it('renders "W1/W2" for a W1/W2 row', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1, obj_result: { source_name: 'W1/W2' } });
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('[data-notif-funding-chip]')?.textContent?.trim()).toBe('W1/W2');
+      });
+
+      it('omits both badges (no placeholder) when neither field is present', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 1,
+          obj_result: { source_name: undefined, obj_result_type: undefined, obj_result_level: undefined }
+        });
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('[data-notif-funding-chip]')).toBeNull();
+        // NOTIF-T-13: no separate level/type chip exists anymore; assert the plain-text line never
+        // shows a dangling " · " when there's no real label to join it with.
+        expect(root.querySelector('.notification_date')?.textContent).not.toContain('·');
+      });
+
+      it('renders the level/type badge from whichever of the two fields is present, never a blank placeholder', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 1,
+          obj_result: { obj_result_type: { id: 7, name: 'Innovation development' }, obj_result_level: undefined }
+        });
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.notification_date')?.textContent).toContain('Innovation development');
+      });
+
+      it('extends to Updates-tab rows once the fields are present (NOTIF-T-8 widening)', () => {
+        component.notification = buildUpdateFixture({
+          obj_result: {
+            source_name: 'W3/Bilaterals',
+            obj_result_type: { id: 7, name: 'Innovation development' },
+            obj_result_level: { id: 4, name: 'Output' }
+          }
+        });
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('[data-notif-funding-chip]')?.textContent?.trim()).toBe('W3/Bilateral');
+        expect(root.querySelector('.notification_date')?.textContent).toContain('Output · Innovation development');
+      });
+
+      it('omits the badges for an Updates-tab row that lacks the fields entirely (pre-NOTIF-T-8 shape)', () => {
+        component.notification = buildUpdateFixture();
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('[data-notif-funding-chip]')).toBeNull();
+        expect(root.querySelector('.notification_date')?.textContent).not.toContain('·');
+      });
+
+      it('resultLevelTypeBadge/fundingWindowBadge getters return null defensively for a missing obj_result', () => {
+        component.notification = { request_status_id: 1 };
+
+        expect(component.fundingWindowBadge).toBeNull();
+        expect(component.resultLevelTypeBadge).toBeNull();
+      });
+    });
+
+    describe('generic bilateral project caption removed (NOTIF-T-12, item 2)', () => {
+      // NOTIF-T-12 (`NOTIF-R-14` corrected): `obj_result.obj_result_by_project` is per-RESULT, not
+      // per-notification-event — rendering it as a caption on every row kind was the defect. The
+      // real per-notification project name now flows only through `RESULT_BILATERAL_PROJECT_TAGGED`'s
+      // own message text (`notification-type.constants.spec.ts`), never as a row caption here.
+      it('never renders [data-notif-bilateral-project] on a pending Received row, even with obj_result_by_project populated', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 1,
+          obj_result: { obj_result_by_project: [{ obj_clarisa_project: { shortName: 'ProjectX' } }] }
+        });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[data-notif-bilateral-project]')).toBeNull();
+        expect((component as any).bilateralProjectName).toBeUndefined();
+      });
+
+      it('never renders [data-notif-bilateral-project] on a resolved row', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 2,
+          obj_result: { obj_result_by_project: [{ obj_clarisa_project: { shortName: 'ProjectX' } }] }
+        });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[data-notif-bilateral-project]')).toBeNull();
+      });
+
+      it('never renders [data-notif-bilateral-project] on an Updates row', () => {
+        component.notification = buildUpdateFixture({
+          obj_result: { obj_result_by_project: [{ obj_clarisa_project: { shortName: 'UpdatesProject' } }] }
+        });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[data-notif-bilateral-project]')).toBeNull();
+      });
+    });
+
+    describe('close-panel toggle (NOTIF-R-11)', () => {
+      it('clicking the same open row again closes the panel', () => {
+        component.notification = buildRequestFixture({ request_status_id: 2 });
+        fixture.detectChanges();
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(component.drawerOpen()).toBe(true);
+
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(component.drawerOpen()).toBe(false);
+      });
+
+      it('a pending row still opens on the first click, unchanged (CRD-DD-10), and the toggle still closes it', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1, is_map_to_toc: true });
+        fixture.detectChanges();
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(component.drawerOpen()).toBe(true);
+        expect(component.drawerMode()).toBe('decide');
+
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(component.drawerOpen()).toBe(false);
+      });
+    });
+
+    describe('[crdAlign] gating (item 1) — never present in view mode', () => {
+      // Rework (attempt 2): `openDrawer()` never seeds `tocInitiative` in `view` mode anyway, so the
+      // original version of this test passed regardless of whether the `drawerMode()` gate itself
+      // did anything — it never isolated the gate. Planting a non-null `tocInitiative` BEFORE
+      // triggering `view` mode proves the `(drawerMode() === 'decide' || ... === 'confirm-decline')`
+      // clause is what's actually suppressing the block, not `tocInitiative` happening to be null.
+      it('does not render [crdAlign] when a bilateral result is opened in view mode (resolved row), even with a non-null tocInitiative planted', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 2,
+          is_map_to_toc: false,
+          obj_result: { source_name: 'W3/Bilaterals' }
+        });
+        component.tocInitiative = { planned_result: null, initiative_id: 77, official_code: 'INIT-77', result_toc_results: [] };
+        component.openDrawer('details');
+        fixture.detectChanges();
+
+        expect(component.drawerMode()).toBe('view');
+        expect(component.tocInitiative).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('[crdAlign]')).toBeNull();
+      });
+
+      it('still renders [crdAlign] for a bilateral result opened in decide mode (unchanged, CRD-DD-10)', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 1,
+          is_map_to_toc: false,
+          obj_result: { source_name: 'W3/Bilaterals' }
+        });
+        component.openDrawer('align');
+        fixture.detectChanges();
+
+        expect(component.drawerMode()).toBe('decide');
+        expect(fixture.nativeElement.querySelector('[crdAlign]')).toBeTruthy();
+      });
+    });
+
+    // NOTIF-T-5 (rework, attempt 2): the blocking fix. `drawerReviewRowsForMode()` — not
+    // `drawerReviewTables()` directly — feeds the drawer's `[reviewRows]` input, so a `view`-mode
+    // panel with no real `toc_contribution_review` data gets an EMPTY array, and the drawer's own
+    // `@if (mode() !== 'view' || reviewRows().length)` guard (NOTIF-T-4) then hides the whole
+    // "Where it contributes" section instead of rendering a fabricated-looking dash table.
+    describe('drawerReviewRowsForMode() — view mode never shows the dash-fallback table (rework fix)', () => {
+      it('hides [data-testid="crd-review-section"] for an Updates row in view mode with no real ToC data', () => {
+        component.notification = buildUpdateFixture();
+        fixture.detectChanges();
+
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        fixture.detectChanges();
+
+        expect(component.drawerMode()).toBe('view');
+        expect(component.drawerReviewRowsForMode()).toEqual([]);
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-review-section"]')).toBeNull();
+      });
+
+      it('hides [data-testid="crd-review-section"] for a resolved (no-ToC-mapping) request row in view mode', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 2,
+          is_map_to_toc: false,
+          obj_result: { source_name: 'W1/W2' },
+          toc_contribution_review: []
+        });
+        fixture.detectChanges();
+
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        fixture.detectChanges();
+
+        expect(component.drawerMode()).toBe('view');
+        expect(component.drawerReviewRowsForMode()).toEqual([]);
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-review-section"]')).toBeNull();
+      });
+
+      it('shows [data-testid="crd-review-section"] with the real data for a resolved request row in view mode that DOES carry toc_contribution_review', () => {
+        const entry = { level: 'Output', outcome_label: 'HLO1.AOW1.IO1', outcome_statement: 'Statement text', target: 6, contribution_target: 2 };
+        component.notification = buildRequestFixture({
+          request_status_id: 2,
+          is_map_to_toc: true,
+          toc_contribution_review: [entry]
+        });
+        fixture.detectChanges();
+
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        fixture.detectChanges();
+
+        expect(component.drawerMode()).toBe('view');
+        const rows = component.drawerReviewRowsForMode();
+        expect(rows).toHaveLength(1);
+        expect(rows[0].find(f => f.label === 'Level')?.value).toBe('Output');
+
+        const section = fixture.nativeElement.querySelector('[data-testid="crd-review-section"]');
+        expect(section).toBeTruthy();
+        expect(section.textContent).toContain('Output');
+      });
+
+      it('regression: a pending row in decide mode with no real ToC data still shows the dash-fallback table (decide/confirm-decline untouched)', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1, is_map_to_toc: true, toc_contribution_review: [] });
+        fixture.detectChanges();
+
+        const row: HTMLElement = fixture.nativeElement.querySelector('.notification');
+        row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        fixture.detectChanges();
+
+        expect(component.drawerMode()).toBe('decide');
+        const rows = component.drawerReviewRowsForMode();
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toHaveLength(7);
+        expect(rows[0].every(field => field.value === CONTRIBUTION_REQUEST_DRAWER_COPY.dashValue)).toBe(true);
+
+        const section = fixture.nativeElement.querySelector('[data-testid="crd-review-section"]');
+        expect(section).toBeTruthy();
+      });
     });
   });
 });

@@ -243,8 +243,11 @@ export class HeaderPanelComponent implements OnInit {
     return `${this.resultsNotificationsSE?.updatesPopUpData?.length}`;
   }
 
+  /** NOTIF-T-6 rework: same repoint as `shell-topbar.component.ts`'s `goToNotifications()` — the
+   * routed `.../requests` destination was retired along with `notificationsRouting`'s `requests`/
+   * `updates` children (`NOTIF-DD-6`). */
   goToNotifications() {
-    this.router.navigate(['result/results-outlet/results-notifications/requests']);
+    this.router.navigate(['result/results-outlet/results-notifications']);
   }
 
   handleClosePopUp() {

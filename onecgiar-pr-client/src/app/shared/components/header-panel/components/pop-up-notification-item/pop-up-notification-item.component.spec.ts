@@ -110,8 +110,10 @@ describe('PopUpNotificationItemComponent', () => {
         obj_emitter_user: { first_name: 'John', last_name: 'Doe' }
       };
       const result = component.generateUrlLink(notification);
+      // NOTIF-T-6 (Pivot re-scope, NOTIF-DD-6): the routed `/updates` destination was retired along
+      // with its route — repoints at the merged `results-notifications` base route.
       expect(result).toBe(
-        'result/results-outlet/results-notifications/updates?phase=v1&init=init1&search=John Doe has submitted the result R001 - Result Title'
+        'result/results-outlet/results-notifications?phase=v1&init=init1&search=John Doe has submitted the result R001 - Result Title'
       );
     });
 
@@ -130,8 +132,10 @@ describe('PopUpNotificationItemComponent', () => {
         obj_owner_initiative: { official_code: 'OI003', id: 'owner1' }
       };
       const result = component.generateUrlLink(notification);
+      // NOTIF-T-6 (Pivot re-scope, NOTIF-DD-6): the routed `/requests/received` destination was
+      // retired along with its route — repoints at the merged `results-notifications` base route.
       expect(result).toBe(
-        'result/results-outlet/results-notifications/requests/received?phase=v2&init=owner1&search=Alice Johnson from SI003 has requested contribution to result R005 - Map Result submitted by OI003'
+        'result/results-outlet/results-notifications?phase=v2&init=owner1&search=Alice Johnson from SI003 has requested contribution to result R005 - Map Result submitted by OI003'
       );
     });
 
@@ -150,8 +154,10 @@ describe('PopUpNotificationItemComponent', () => {
         obj_owner_initiative: { official_code: 'OI004' }
       };
       const result = component.generateUrlLink(notification);
+      // NOTIF-T-6 (Pivot re-scope, NOTIF-DD-6): the routed `/requests/received` destination was
+      // retired along with its route — repoints at the merged `results-notifications` base route.
       expect(result).toBe(
-        'result/results-outlet/results-notifications/requests/received?phase=v3&init=shared1&search=Bob Williams from OI004 has requested inclusion of SI004 as a contributor to result R006 - Non-Map Result'
+        'result/results-outlet/results-notifications?phase=v3&init=shared1&search=Bob Williams from OI004 has requested inclusion of SI004 as a contributor to result R006 - Non-Map Result'
       );
     });
   });
@@ -341,7 +347,9 @@ describe('PopUpNotificationItemComponent', () => {
 
       component.onNotificationClick(clickEvent());
 
-      expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('results-notifications/updates'));
+      // NOTIF-T-6 (Pivot re-scope, NOTIF-DD-6): the routed `/updates` destination was retired along
+      // with its route — the fallback now points at the merged `results-notifications` base route.
+      expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('results-notifications'));
     });
 
     // P2-3214 AC4 + AC5. Before this, these types fell through to `generateUrlLink`, which points

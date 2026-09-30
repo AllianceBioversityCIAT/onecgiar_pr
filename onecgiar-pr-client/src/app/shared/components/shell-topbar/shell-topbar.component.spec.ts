@@ -261,10 +261,12 @@ describe('ShellTopbarComponent', () => {
     });
   });
 
-  it('goToNotifications navigates to the requests tab', async () => {
+  // NOTIF-T-6 rework: the routed `.../requests` destination was retired along with
+  // `notificationsRouting`'s `requests`/`updates` children — this now targets the merged view.
+  it('goToNotifications navigates to the merged results-notifications view', async () => {
     await build();
     component.goToNotifications();
-    expect(routerMock.navigate).toHaveBeenCalledWith(['/result/results-outlet/results-notifications/requests']);
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/result/results-outlet/results-notifications']);
   });
 
   it('handleClosePopUp clears the pending updates once', async () => {

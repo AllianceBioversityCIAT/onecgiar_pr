@@ -11,6 +11,11 @@ import { GroupNotificationsByRecencyPipe } from '../../pipes/group-notifications
 // NotificationItemModule for its pipes) can chain them into their pipe pipelines.
 import { FilterNotificationByCenterPipe } from '../../pipes/filter-notification-by-center.pipe';
 import { FilterNotificationByBilateralProjectPipe } from '../../pipes/filter-notification-by-bilateral-project.pipe';
+// NOTIF-T-11 (`NOTIF-R-16`): Type / Funding / Result-type filter pipes, registered the same way the
+// five pre-existing filter pipes above already are.
+import { FilterNotificationByTypePipe } from '../../pipes/filter-notification-by-type.pipe';
+import { FilterNotificationByFundingPipe } from '../../pipes/filter-notification-by-funding.pipe';
+import { FilterNotificationByResultTypePipe } from '../../pipes/filter-notification-by-result-type.pipe';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
 // CRD-T-7 (pivot, CRD-DD-10): restored from HEAD — the row's three popups (reject confirm, ToC
 // prompt, mapping step) coexist with the drawer again.
@@ -33,7 +38,10 @@ const modules = [
   FilterNotificationBySearchPipe,
   GroupNotificationsByRecencyPipe,
   FilterNotificationByCenterPipe,
-  FilterNotificationByBilateralProjectPipe
+  FilterNotificationByBilateralProjectPipe,
+  FilterNotificationByTypePipe,
+  FilterNotificationByFundingPipe,
+  FilterNotificationByResultTypePipe
 ];
 
 @NgModule({
