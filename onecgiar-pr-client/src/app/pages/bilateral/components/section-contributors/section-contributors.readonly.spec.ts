@@ -463,4 +463,20 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       expect(fixture.nativeElement.textContent).not.toContain('Is this result linked or bundled');
     });
   });
+
+  // P2-3864 — rendered against the REAL template: the lead Center (11, "A11") is shown once, in
+  // "Lead center", and never again as a chip under "Contributing CGIAR centers".
+  describe('P2-3864 · lead Center chip', () => {
+    it('renders the other Centers as chips but not the lead', () => {
+      editable.set(true);
+      build();
+      component.selectedCenterInstitutionIds.set([11, 12]);
+      fixture.detectChanges();
+
+      const chips = Array.from(fixture.nativeElement.querySelectorAll('.sc-block--centers .sc-chip')) as HTMLElement[];
+      const labels = chips.map(c => (c.textContent ?? '').replace('×', '').trim());
+      expect(labels).toEqual(['A12']);
+      expect(fixture.nativeElement.querySelector('.sc-block--centers .sc-chip-readonly')).toBeNull();
+    });
+  });
 });

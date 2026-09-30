@@ -137,6 +137,41 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly disabledCenterOptions = computed(() => this.availableCentersComputed().filter(c => c.disabled));
   readonly disabledProjectOptions = computed(() => this.availableProjectsComputed().filter(p => p.disabled));
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // P2-3864 · the lead Center is not repeated under "Contributing CGIAR centers"
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Nicoleta Trifa (P2-3864): "do not include the lead Center again under Contributing Centers
+   * (with a star)… retain this information in the system… but do not display it".
+   *
+   * 🛑 DISPLAY ONLY. `selectedCenterInstitutionIds()` keeps the lead exactly as before — it is what
+   * `buildContributorsPayload()` sends and what `onCentersChange` re-adds — so the PATCH is byte
+   * for byte the one it was (AC3). The server keeps the lead row regardless
+   * (`bilateral-center.service.ts → syncContributingCenters` unions `is_leading_result` rows back in).
+   * Only the picker's options, its model and the chip strip read the views below.
+   *
+   * Signal-derived (same resolution as `availableCentersComputed`), not `readonlyLeadCenterInstitutionId`:
+   * that one is a plain field and a `computed()` would never see it change.
+   */
+  private readonly leadCenterInstitutionIdSig = computed<number | null>(() => {
+    const leadCenterId = this.creationService.selectedProject()?.leadCenter?.id ?? this.creationService.resultLeadCenterId();
+    return leadCenterId ? Number(leadCenterId) : null;
+  });
+
+  /** AC2 — the lead is not offered in the Contributing CGIAR centers list. Locked (derived) Centers stay, disabled. */
+  readonly contributingCenterOptions = computed(() => {
+    const lead = this.leadCenterInstitutionIdSig();
+    return this.availableCentersComputed().filter(c => Number(c.institutionId) !== lead);
+  });
+
+  readonly contributingCenterDisabledOptions = computed(() => this.contributingCenterOptions().filter(c => c.disabled));
+
+  /** AC1/AC4 — the chips and the picker model: every selected Center except the lead, order kept. */
+  readonly displayedContributingCenterIds = computed(() => {
+    const lead = this.leadCenterInstitutionIdSig();
+    return this.selectedCenterInstitutionIds().filter(id => Number(id) !== lead);
+  });
+
   /**
    * BCT-R-1 / BCT-R-3 / BCT-R-4 — Centers owned by a currently-selected, non-lead project.
    *

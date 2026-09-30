@@ -105,12 +105,17 @@
       </div>
     }
 
+    <!--
+      P2-3864: the lead Center is shown ONCE, in "Lead center" above — never again here as a starred
+      chip nor as a (disabled) option. Display only: `selectedCenterInstitutionIds()` still carries it
+      and the PATCH still sends it; the picker and the chips read the lead-free views.
+    -->
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing CGIAR centers"
-      [options]="availableCentersComputed()"
-      [disableOptions]="disabledCenterOptions()"
-      [ngModel]="selectedCenterInstitutionIds()"
+      [options]="contributingCenterOptions()"
+      [disableOptions]="contributingCenterDisabledOptions()"
+      [ngModel]="displayedContributingCenterIds()"
       (ngModelChange)="onCentersModelChange($event)"
       optionLabel="full_name"
       optionValue="institutionId"
@@ -118,12 +123,12 @@
       [required]="false"
       [isStatic]="!readOnly()">
     </app-pr-multi-select>
-    @if (selectedCenterInstitutionIds().length) {
+    @if (displayedContributingCenterIds().length) {
       <div class="sc-selected-chips">
-        @for (id of selectedCenterInstitutionIds(); track id) {
-          <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id) || lockedCenterInstitutionIds().has(id)">
+        @for (id of displayedContributingCenterIds(); track id) {
+          <span class="sc-chip" [class.sc-chip-readonly]="lockedCenterInstitutionIds().has(id)">
             {{ getCenterDisplayName(id) }}
-            @if (!isLeadCenter(id) && !lockedCenterInstitutionIds().has(id)) {
+            @if (!lockedCenterInstitutionIds().has(id)) {
               <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removeCenter(id)">×</button>
             }
           </span>

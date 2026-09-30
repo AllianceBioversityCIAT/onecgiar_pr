@@ -1961,6 +1961,109 @@ describe('SectionContributorsComponent', () => {
     });
   });
   /**
+   * P2-3864 (Nicoleta Trifa): the lead Center is shown once, as "Lead center", and never again as a
+   * starred chip or an option under "Contributing CGIAR centers" — but it stays stored as the lead.
+   */
+  describe('P2-3864 · the lead Center is not repeated under Contributing CGIAR centers', () => {
+    const LEAD = 5;
+    const OTHER = 6;
+    const DERIVED = 7;
+
+    const hydrateWithLead = () => {
+      centersService.centersList = [center(LEAD), center(OTHER), center(DERIVED)];
+      creation.resultLeadCenterId.set(LEAD);
+      creation.resultContributingCenterIds.set([OTHER]);
+      build();
+      fixture.detectChanges();
+    };
+
+    it('AC1: the chip list leaves the lead out while the other Centers stay (AC4)', () => {
+      hydrateWithLead();
+
+      // The lead is still part of the stored selection (see AC3) …
+      expect(component.selectedCenterInstitutionIds()).toEqual(expect.arrayContaining([LEAD, OTHER]));
+      // … but the chips and the picker model do not show it.
+      expect(component.displayedContributingCenterIds()).toEqual([OTHER]);
+    });
+
+    it('AC2: the lead is not offered in the options, and nothing else disappears', () => {
+      hydrateWithLead();
+
+      const ids = component.contributingCenterOptions().map(c => c.institutionId);
+      expect(ids).toEqual([OTHER, DERIVED]);
+      expect(component.contributingCenterDisabledOptions()).toEqual([]);
+    });
+
+    it('AC3: the PATCH still carries the lead, before and after a change made through the picker', () => {
+      hydrateWithLead();
+
+      // The picker only knows the lead-free list and hands back a list without the lead.
+      component.onCentersModelChange([{ institutionId: OTHER }, { institutionId: DERIVED }]);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toEqual(
+        expect.arrayContaining([{ institution_id: LEAD }, { institution_id: OTHER }, { institution_id: DERIVED }])
+      );
+      expect(component.displayedContributingCenterIds()).toEqual([OTHER, DERIVED]);
+    });
+
+    it('removing the last visible Center keeps the lead in the payload', () => {
+      hydrateWithLead();
+
+      component.removeCenter(OTHER);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toEqual([{ institution_id: LEAD }]);
+      expect(component.displayedContributingCenterIds()).toEqual([]);
+    });
+
+    it('keeps a Center derived from a selected project visible and locked (BCT-T-6)', () => {
+      hydrateWithLead();
+      component.availableProjects.set([{ id: 10, shortName: 'P10', fullName: 'Project 10', ownerCenterInstitutionId: DERIVED }]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.displayedContributingCenterIds()).toEqual(expect.arrayContaining([OTHER, DERIVED]));
+      expect(component.contributingCenterDisabledOptions().map(c => c.institutionId)).toEqual([DERIVED]);
+    });
+
+    it('follows the lead project organisation when the project carries one', () => {
+      centersService.centersList = [center(LEAD), center(OTHER)];
+      creation.selectedProject.set({ id: 1, leadCenter: { id: OTHER } });
+      creation.resultLeadCenterId.set(LEAD);
+      build();
+      component.availableCenters.set([center(LEAD), center(OTHER)] as any);
+
+      expect(component.contributingCenterOptions().map(c => c.institutionId)).toEqual([LEAD]);
+    });
+
+    it('shows every Center when the result has no lead (null lead id)', () => {
+      centersService.centersList = [center(LEAD), center(OTHER)];
+      creation.resultLeadCenterId.set(null);
+      creation.resultContributingCenterIds.set([LEAD, OTHER]);
+      build();
+      fixture.detectChanges();
+
+      expect(component.displayedContributingCenterIds()).toEqual([LEAD, OTHER]);
+      expect(component.contributingCenterOptions().length).toBe(2);
+    });
+
+    it('binds the picker and the chips to the lead-free views (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const start = html.indexOf('label="Contributing CGIAR centers"');
+      const block = html.slice(start, html.indexOf('sc-block--projects', start));
+      expect(start).toBeGreaterThan(-1);
+      expect(block).toContain('[options]="contributingCenterOptions()"');
+      expect(block).toContain('[disableOptions]="contributingCenterDisabledOptions()"');
+      expect(block).toContain('[ngModel]="displayedContributingCenterIds()"');
+      expect(block).toContain('@for (id of displayedContributingCenterIds(); track id)');
+      // Control negative: the old starred-lead chip binding must be gone.
+      expect(block).not.toContain('isLeadCenter(id)');
+      expect(block).not.toContain('[options]="availableCentersComputed()"');
+    });
+  });
+
+  /**
    * P2-3776. The `.sc-block` z-index ladder assumes every multi-select drops DOWNWARDS, so each
    * block outranks the one after it. Since P2-3737 a field close to the floor opens its panel
    * UPWARDS, and the ladder then hides that panel behind the block above: on prtest #9432 the
