@@ -6,7 +6,7 @@ import { signal } from '@angular/core';
 import { EventEmitter } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
-import { SectionContributorsComponent } from './section-contributors.component';
+import { ALL_PROJECT_CENTERS, SectionContributorsComponent } from './section-contributors.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -15,6 +15,7 @@ import { InstitutionsService } from '../../../../shared/services/global/institut
 import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 
 const center = (institutionId: number, code = `C${institutionId}`, acronym: string | undefined = `A${institutionId}`) => ({
   institutionId,
@@ -1960,6 +1961,282 @@ describe('SectionContributorsComponent', () => {
       expect(payload.contributing_center).toBeUndefined();
     });
   });
+  /**
+   * P2-3864 (Nicoleta Trifa): the lead Center is shown once, as "Lead center", and never again as a
+   * starred chip or an option under "Contributing CGIAR centers" — but it stays stored as the lead.
+   */
+  describe('P2-3864 · the lead Center is not repeated under Contributing CGIAR centers', () => {
+    const LEAD = 5;
+    const OTHER = 6;
+    const DERIVED = 7;
+
+    const hydrateWithLead = () => {
+      centersService.centersList = [center(LEAD), center(OTHER), center(DERIVED)];
+      creation.resultLeadCenterId.set(LEAD);
+      creation.resultContributingCenterIds.set([OTHER]);
+      build();
+      fixture.detectChanges();
+    };
+
+    it('AC1: the chip list leaves the lead out while the other Centers stay (AC4)', () => {
+      hydrateWithLead();
+
+      // The lead is still part of the stored selection (see AC3) …
+      expect(component.selectedCenterInstitutionIds()).toEqual(expect.arrayContaining([LEAD, OTHER]));
+      // … but the chips and the picker model do not show it.
+      expect(component.displayedContributingCenterIds()).toEqual([OTHER]);
+    });
+
+    it('AC2: the lead is not offered in the options, and nothing else disappears', () => {
+      hydrateWithLead();
+
+      const ids = component.contributingCenterOptions().map(c => c.institutionId);
+      expect(ids).toEqual([OTHER, DERIVED]);
+      expect(component.contributingCenterDisabledOptions()).toEqual([]);
+    });
+
+    it('AC3: the PATCH still carries the lead, before and after a change made through the picker', () => {
+      hydrateWithLead();
+
+      // The picker only knows the lead-free list and hands back a list without the lead.
+      component.onCentersModelChange([{ institutionId: OTHER }, { institutionId: DERIVED }]);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toEqual(
+        expect.arrayContaining([{ institution_id: LEAD }, { institution_id: OTHER }, { institution_id: DERIVED }])
+      );
+      expect(component.displayedContributingCenterIds()).toEqual([OTHER, DERIVED]);
+    });
+
+    it('removing the last visible Center keeps the lead in the payload', () => {
+      hydrateWithLead();
+
+      component.removeCenter(OTHER);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toEqual([{ institution_id: LEAD }]);
+      expect(component.displayedContributingCenterIds()).toEqual([]);
+    });
+
+    it('keeps a Center derived from a selected project visible and locked (BCT-T-6)', () => {
+      hydrateWithLead();
+      component.availableProjects.set([{ id: 10, shortName: 'P10', fullName: 'Project 10', ownerCenterInstitutionId: DERIVED }]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.displayedContributingCenterIds()).toEqual(expect.arrayContaining([OTHER, DERIVED]));
+      expect(component.contributingCenterDisabledOptions().map(c => c.institutionId)).toEqual([DERIVED]);
+    });
+
+    it('follows the lead project organisation when the project carries one', () => {
+      centersService.centersList = [center(LEAD), center(OTHER)];
+      creation.selectedProject.set({ id: 1, leadCenter: { id: OTHER } });
+      creation.resultLeadCenterId.set(LEAD);
+      build();
+      component.availableCenters.set([center(LEAD), center(OTHER)] as any);
+
+      expect(component.contributingCenterOptions().map(c => c.institutionId)).toEqual([LEAD]);
+    });
+
+    it('shows every Center when the result has no lead (null lead id)', () => {
+      centersService.centersList = [center(LEAD), center(OTHER)];
+      creation.resultLeadCenterId.set(null);
+      creation.resultContributingCenterIds.set([LEAD, OTHER]);
+      build();
+      fixture.detectChanges();
+
+      expect(component.displayedContributingCenterIds()).toEqual([LEAD, OTHER]);
+      expect(component.contributingCenterOptions().length).toBe(2);
+    });
+
+    it('binds the picker and the chips to the lead-free views (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const start = html.indexOf('label="Contributing CGIAR centers"');
+      const block = html.slice(start, html.indexOf('sc-block--projects', start));
+      expect(start).toBeGreaterThan(-1);
+      expect(block).toContain('[options]="contributingCenterOptions()"');
+      expect(block).toContain('[disableOptions]="contributingCenterDisabledOptions()"');
+      expect(block).toContain('[ngModel]="displayedContributingCenterIds()"');
+      expect(block).toContain('@for (id of displayedContributingCenterIds(); track id)');
+      // Control negative: the old starred-lead chip binding must be gone.
+      expect(block).not.toContain('isLeadCenter(id)');
+      expect(block).not.toContain('[options]="availableCentersComputed()"');
+    });
+  });
+
+  /** P2-3865 — the CLARISA definition of "contributor" and the "different entities" reminder. */
+  describe('P2-3865 · what a contributor is', () => {
+    const DEFINITION =
+      'Partners that made a significant contribution to the achievement of a result. This could take many forms and the ' +
+      'threshold for inclusion is that the result would not have been achieved or reported in its current form without their support.';
+
+    it('AC1/AC2: the note carries the CLARISA definition, the glossary link and the different-entities rule', () => {
+      build();
+      const html = component.contributorNoteHtml;
+      expect(html).toContain('What is a contributor?');
+      expect(html).toContain(DEFINITION);
+      expect(html).toContain('href="https://clarisa.cgiar.org/landing-page/glossary"');
+      expect(html).toContain('rel="noopener noreferrer"');
+      expect(html).toContain(
+        'Only select contributors that are different from the one reporting this result: a different Program/Accelerator, ' +
+          'a different W3/bilateral project and a different CGIAR Center.'
+      );
+      expect(component.contributorsCopy.contributorNote.definition).toBe(DEFINITION);
+    });
+
+    it('is rendered at the top of the section from the copy file, not typed into the template (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const note = html.indexOf('data-testid="contributor-definition-note"');
+      expect(note).toBeGreaterThan(-1);
+      // Top of the section: before the first field block.
+      expect(note).toBeLessThan(html.indexOf('class="sc-block'));
+      expect(html).toContain('[description]="contributorNoteHtml"');
+      expect(html).not.toContain('significant contribution to the achievement');
+    });
+
+    it('AC3: informative only — it adds nothing to the tracker and never blocks the payload', () => {
+      build();
+      component.contributorsHydrated.set(true);
+      component.onCentersChange([]);
+      expect(autoSave.saveContributors).toHaveBeenCalled();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+      const keys = tracker.setSectionFields.mock.calls.flatMap((c: any[]) => c[1].map((f: any) => f.key));
+      expect(keys.every((k: string) => ['lead-center', 'lead-project'].includes(k))).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3859 (Nicoleta Trifa): a Center filter on "Contributing W3/bilateral projects", starting on
+   * the page's Center, so an IFPRI reporter sees IFPRI's projects instead of all 911.
+   */
+  describe('P2-3859 · Center filter on the projects picker', () => {
+    const IFPRI = 20;
+    const CIP = 21;
+    const EMPTY = 22;
+    const catalogue = [
+      { id: 1, shortName: 'I1', fullName: 'IFPRI one', ownerCenterInstitutionId: IFPRI },
+      { id: 2, shortName: 'I2', fullName: 'IFPRI two', ownerCenterInstitutionId: IFPRI },
+      { id: 3, shortName: 'C3', fullName: 'CIP three', ownerCenterInstitutionId: CIP },
+      { id: 4, shortName: 'N4', fullName: 'No owner four', ownerCenterInstitutionId: null }
+    ];
+
+    const setup = (pageCenter: number | null = IFPRI) => {
+      creation.isEditableByCenterUser = () => true;
+      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', pageCenter);
+      build();
+      component.availableCenters.set([center(IFPRI, 'IFPRI', 'IFPRI'), center(CIP, 'CIP', 'CIP'), center(EMPTY, 'EM', 'EM')] as any);
+      component.availableProjects.set(catalogue);
+    };
+    const optionIds = () => component.filteredProjectOptions().map(p => p.id);
+
+    it("AC2: starts on the page's Center and lists only that Center's projects", () => {
+      setup();
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+      expect(optionIds()).toEqual([1, 2]);
+      expect(component.projectFilterCountLabel()).toBe('2 of 4 projects');
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes the projects of the selected Center');
+    });
+
+    it('AC1: offers "All centers" plus every Center that owns projects, with its count', () => {
+      setup();
+      expect(component.projectCenterFilterOptions()).toEqual([
+        { value: ALL_PROJECT_CENTERS, label: 'All centers', badge: '4' },
+        { value: CIP, label: 'CIP - Center 21', badge: '1' },
+        { value: IFPRI, label: 'IFPRI - Center 20', badge: '2' }
+      ]);
+    });
+
+    it('changing to "All centers" lists every project, including those with no owner Center', () => {
+      setup();
+      component.onProjectCenterFilterChange(ALL_PROJECT_CENTERS);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+      expect(optionIds()).toEqual([1, 2, 3, 4]);
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes all bilateral projects');
+    });
+
+    it('can switch to another Center, and a project with no owner is only reachable through "All centers"', () => {
+      setup();
+      component.onProjectCenterFilterChange(CIP);
+      expect(optionIds()).toEqual([3]);
+      expect(optionIds()).not.toContain(4);
+    });
+
+    it("AC4: a saved project from another Center stays in the options and in the PATCH", () => {
+      creation.resultContributingProjectIds.set([3]);
+      setup();
+      component.selectedProjectIds.set([3]);
+      component.contributorsHydrated.set(true);
+
+      // Still offered (so pr-multi-select.writeValue cannot drop it) while the filter is IFPRI.
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+      expect(optionIds()).toEqual([1, 2, 3]);
+
+      // The user adds an IFPRI project: the CIP one travels too.
+      component.onProjectsModelChange([{ id: 3 }, { id: 1 }]);
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_bilateral_projects.map((p: any) => p.project_id)).toEqual([3, 1]);
+    });
+
+    it("falls back to the result's lead Center while the page Center is unresolved", () => {
+      creation.resultLeadCenterId.set(CIP);
+      setup(null);
+      expect(component.projectCenterFilter()).toBe(CIP);
+    });
+
+    it('starts on "All centers" when the page Center owns no project (no empty dropdown)', () => {
+      setup(EMPTY);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+      expect(optionIds()).toEqual([1, 2, 3, 4]);
+    });
+
+    it('a user choice wins over a page Center that resolves later', () => {
+      setup(null);
+      component.onProjectCenterFilterChange(CIP);
+      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', IFPRI);
+      expect(component.projectCenterFilter()).toBe(CIP);
+    });
+
+    it('ignores an empty emission from the select', () => {
+      setup();
+      component.onProjectCenterFilterChange(null);
+      component.onProjectCenterFilterChange('');
+      expect(component.projectCenterFilterChoice()).toBeNull();
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+    });
+
+    it('changing the filter never saves anything', () => {
+      setup();
+      autoSave.saveContributors.mockClear();
+      component.onProjectCenterFilterChange(ALL_PROJECT_CENTERS);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+    });
+
+    it('is shown on an editable result with projects, hidden with an empty catalogue', () => {
+      setup();
+      expect(component.showProjectCenterFilter()).toBe(true);
+      component.availableProjects.set([]);
+      expect(component.showProjectCenterFilter()).toBe(false);
+    });
+
+    it('sits right above the projects picker and feeds it the filtered options (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const filter = html.indexOf('@if (showProjectCenterFilter()) {');
+      const picker = html.indexOf('label="Contributing W3/bilateral projects"');
+      expect(filter).toBeGreaterThan(html.indexOf('sc-block--projects'));
+      expect(filter).toBeLessThan(picker);
+      const pickerTag = html.slice(picker, html.indexOf('</app-pr-multi-select>', picker));
+      expect(pickerTag).toContain('[options]="filteredProjectOptions()"');
+      expect(pickerTag).toContain('[placeholder]="projectsPickerPlaceholder()"');
+      expect(pickerTag).not.toContain('[options]="availableProjectsComputed()"');
+      const filterBlock = html.slice(filter, picker);
+      expect(filterBlock).toContain('<app-pr-select');
+      expect(filterBlock).toContain('[options]="projectCenterFilterOptions()"');
+      expect(filterBlock).toContain('{{ contributorsCopy.projectFilter.label }}');
+      expect(filterBlock).toContain('<ng-icon name="lucideListFilter"');
+      expect(filterBlock).not.toContain('<select');
+    });
+  });
+
   /**
    * P2-3776. The `.sc-block` z-index ladder assumes every multi-select drops DOWNWARDS, so each
    * block outranks the one after it. Since P2-3737 a field close to the floor opens its panel

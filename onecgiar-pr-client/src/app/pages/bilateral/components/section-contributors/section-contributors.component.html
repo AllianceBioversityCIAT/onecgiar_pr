@@ -6,6 +6,14 @@
     [collapsible]="false"
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
+  <!-- P2-3865: CLARISA's definition of "contributor" + "pick entities other than the reporting one".
+       Informative only (AC3): nothing reads it and it never gates saving; shown in read-only too. -->
+  <app-alert-status
+    status="info"
+    [collapsible]="false"
+    data-testid="contributor-definition-note"
+    [description]="contributorNoteHtml">
+  </app-alert-status>
 
   @if (primarySpData(); as sp) {
     <!-- Same shape as the W1/W2 "Submitter" block: a read-only field with the standard header and a
@@ -105,12 +113,17 @@
       </div>
     }
 
+    <!--
+      P2-3864: the lead Center is shown ONCE, in "Lead center" above — never again here as a starred
+      chip nor as a (disabled) option. Display only: `selectedCenterInstitutionIds()` still carries it
+      and the PATCH still sends it; the picker and the chips read the lead-free views.
+    -->
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing CGIAR centers"
-      [options]="availableCentersComputed()"
-      [disableOptions]="disabledCenterOptions()"
-      [ngModel]="selectedCenterInstitutionIds()"
+      [options]="contributingCenterOptions()"
+      [disableOptions]="contributingCenterDisabledOptions()"
+      [ngModel]="displayedContributingCenterIds()"
       (ngModelChange)="onCentersModelChange($event)"
       optionLabel="full_name"
       optionValue="institutionId"
@@ -118,12 +131,12 @@
       [required]="false"
       [isStatic]="!readOnly()">
     </app-pr-multi-select>
-    @if (selectedCenterInstitutionIds().length) {
+    @if (displayedContributingCenterIds().length) {
       <div class="sc-selected-chips">
-        @for (id of selectedCenterInstitutionIds(); track id) {
-          <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id) || lockedCenterInstitutionIds().has(id)">
+        @for (id of displayedContributingCenterIds(); track id) {
+          <span class="sc-chip" [class.sc-chip-readonly]="lockedCenterInstitutionIds().has(id)">
             {{ getCenterDisplayName(id) }}
-            @if (!isLeadCenter(id) && !lockedCenterInstitutionIds().has(id)) {
+            @if (!lockedCenterInstitutionIds().has(id)) {
               <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removeCenter(id)">×</button>
             }
           </span>
@@ -152,16 +165,51 @@
       </div>
     }
 
+    <!--
+      P2-3859: Center filter for the projects picker, starting on the page's Center (911 projects
+      otherwise). View-only: it narrows the OPTIONS, never the selection — `filteredProjectOptions()`
+      keeps every already-selected project in the list so `pr-multi-select.writeValue` cannot drop
+      it (AC4). Hidden when read-only (the picker cannot open) or when the catalogue is empty.
+      Label-less `app-pr-select` = bare control, so it does not grow its own field card.
+    -->
+    @if (showProjectCenterFilter()) {
+      <div
+        class="flex flex-wrap items-center gap-x-[12px] gap-y-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] px-[12px] py-[8px]"
+        data-testid="projects-center-filter">
+        <span class="inline-flex shrink-0 items-center gap-[6px] text-[13px] font-semibold text-[var(--pr-color-primary-600)]">
+          <ng-icon name="lucideListFilter" class="text-[15px]" aria-hidden="true" />
+          {{ contributorsCopy.projectFilter.label }}
+        </span>
+        <div class="min-w-[220px] flex-1 sm:max-w-[380px]">
+          <app-pr-select
+            [options]="projectCenterFilterOptions()"
+            optionLabel="label"
+            optionValue="value"
+            optionBadgeLabel="badge"
+            [ngModel]="projectCenterFilter()"
+            (ngModelChange)="onProjectCenterFilterChange($event)"
+            [placeholder]="contributorsCopy.projectFilter.placeholder"
+            [required]="false"
+            [editable]="true"
+            idKey="sc-projects-center-filter">
+          </app-pr-select>
+        </div>
+        <span class="ml-auto text-[12px] font-medium text-[var(--pr-text-secondary)]" data-testid="projects-center-filter-count">
+          {{ projectFilterCountLabel() }}
+        </span>
+      </div>
+    }
+
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing W3/bilateral projects"
-      [options]="availableProjectsComputed()"
+      [options]="filteredProjectOptions()"
       [disableOptions]="disabledProjectOptions()"
       [ngModel]="selectedProjectIds()"
       (ngModelChange)="onProjectsModelChange($event)"
       optionLabel="fullName"
       optionValue="id"
-      placeholder="The drop-down list includes all bilateral projects"
+      [placeholder]="projectsPickerPlaceholder()"
       [required]="false"
       [isStatic]="!readOnly()">
     </app-pr-multi-select>

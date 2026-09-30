@@ -463,4 +463,61 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       expect(fixture.nativeElement.textContent).not.toContain('Is this result linked or bundled');
     });
   });
+
+  // P2-3864 — rendered against the REAL template: the lead Center (11, "A11") is shown once, in
+  // "Lead center", and never again as a chip under "Contributing CGIAR centers".
+  describe('P2-3864 · lead Center chip', () => {
+    it('renders the other Centers as chips but not the lead', () => {
+      editable.set(true);
+      build();
+      component.selectedCenterInstitutionIds.set([11, 12]);
+      fixture.detectChanges();
+
+      const chips = Array.from(fixture.nativeElement.querySelectorAll('.sc-block--centers .sc-chip')) as HTMLElement[];
+      const labels = chips.map(c => (c.textContent ?? '').replace('×', '').trim());
+      expect(labels).toEqual(['A12']);
+      expect(fixture.nativeElement.querySelector('.sc-block--centers .sc-chip-readonly')).toBeNull();
+    });
+  });
+
+  // P2-3865 — the definition note renders in the REAL template, editable and read-only alike.
+  describe('P2-3865 · contributor definition note', () => {
+    it.each([true, false])('shows the CLARISA definition (editable=%s)', isEditable => {
+      editable.set(isEditable);
+      build();
+      const note = fixture.nativeElement.querySelector('[data-testid="contributor-definition-note"]') as HTMLElement;
+      expect(note).toBeTruthy();
+      expect(note.textContent).toContain('What is a contributor?');
+      expect(note.textContent).toContain('would not have been achieved or reported in its current form without their support');
+      expect(note.textContent).toContain('a different CGIAR Center');
+      const link = note.querySelector('a') as HTMLAnchorElement;
+      expect(link?.getAttribute('href')).toBe('https://clarisa.cgiar.org/landing-page/glossary');
+      expect(link?.getAttribute('target')).toBe('_blank');
+    });
+  });
+
+  // P2-3859 — the Center filter above the projects picker, in the REAL template.
+  describe('P2-3859 · projects Center filter', () => {
+    it('renders the filter with its label and count on an editable result', () => {
+      editable.set(true);
+      build();
+      // `ngOnInit` reloads the (stubbed, empty) catalogue over what `build()` seeded; seed it again.
+      component.availableProjects.set([
+        { id: 501, fullName: 'Project 501', ownerCenterInstitutionId: 11 },
+        { id: 502, fullName: 'Project 502', ownerCenterInstitutionId: 12 }
+      ] as any);
+      fixture.detectChanges();
+      const filter = fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]') as HTMLElement;
+      expect(filter).toBeTruthy();
+      expect(filter.textContent).toContain('Filter projects by Center');
+      expect(filter.querySelector('app-pr-select')).toBeTruthy();
+      expect(filter.querySelector('[data-testid="projects-center-filter-count"]')?.textContent?.trim()).toBe('1 of 2 projects');
+    });
+
+    it('is not rendered on a read-only result (the picker cannot open)', () => {
+      editable.set(false);
+      build();
+      expect(fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]')).toBeNull();
+    });
+  });
 });
