@@ -107,6 +107,63 @@ has `[crdAlign]` content projected into it. Do not move decision logic into the 
   (`onTocPlannedResultChange()`); `openDrawer()` never hydrates. Viewing the drawer has no global
   side effects.
 
+## PSR-T-8: primary / bilateral contributor rows + Center notices (`bilateral-primary-sp-request`)
+Two new `source:'request'` row variants, on top of the pre-existing "Contribution request"
+(W1/W2 + everything else, unchanged, `PSR-DD-10`) and the 3 new Center-facing notices (plain
+`Notification` rows, rendered through the existing `isUpdateSource` branch — no new template
+branch needed there):
+- **`isPrimaryRequest`** (`notification.request_type === 'primary'`): chip "Primary program
+  request" (blue, reuses `--pr-status-submitted-bg/-fg` — no new tokens), flag icon (`pi-flag`),
+  sentence "`{creatingCenterLabel}` has tagged `{responderCode}` as the primary Science Program of
+  result …", row buttons "Accept as primary" / "Decline". **Bypasses ToC entirely**: `onAcceptContribution()`/
+  `onDrawerAccept()` both short-circuit to `acceptOrReject(true)` before the `acceptsWithoutToc`
+  check, `openDrawer()` never seeds `tocInitiative` for it, and the drawer's `[showAlignSlot]` is
+  `false` — never the "Map to your Theory of Change?" prompt, even though a primary request is
+  itself a bilateral result.
+- **`isBilateralContributorRequest`** (`isBilateralResult && !isPrimaryRequest` — this REPLACES the
+  old pre-spec generic "any bilateral row" branch outright, there is no third un-kinded bilateral
+  row any more): chip "Contributor request" (violet, same `--pr-color-primary-50/-400` pair as
+  before), people icon (`pi-users`), sentence "`{ownerProgramCode}`, as primary Science Program,
+  has tagged `{responderCode}` as a contributing Science Program to result … on behalf of
+  `{creatingCenterLabel}`", plain "Accept" / "Decline" buttons. Still goes through the ordinary
+  `acceptsWithoutToc` (prompt → optional mapping) flow, unchanged.
+- **`creatingCenterLabel`** — `notification.creating_center.acronym ?? .name`, falling back to
+  `copy.notificationItem.unknownCenterFallback` ("the Center") when both are missing. Never an
+  empty string or "()".
+- **`requestKindLabel`** — single source for the row chip AND the drawer's `view`-mode
+  `requestKind` field (`drawerViewFields()`), so the two can't drift (`PSR-R-11`).
+- **`drawerHeader()`** branches on `isPrimaryRequest`/`isBilateralContributorRequest` FIRST (both
+  return before the old W1/W2 branch); the bilateral-contributor branch uses `leadCode`/`suffix`
+  (added by the drawer's own `PSR-T-9` rework) instead of `lead`, and `requesterCode` stays `''` for
+  both new kinds (never a "from X" clause). A missing `owner_program_code` falls back to
+  `leadCode: undefined` + `lead: copy.notificationItem.unknownProgramFallback` ("The primary Science
+  Program") — never an empty bold span and never a sentence starting with the verb's leading comma.
+- **Single source, row and drawer (rework attempt 2):** the row's primary/contributor sentences
+  (cases 1/2/3 in the template) are built from `@let h = drawerHeader();`, reading `h.lead/leadCode/
+  verb/responderCode/tail/suffix` — the exact same object and the exact same `copy.header.*`
+  strings the drawer itself renders. There is no parallel hard-coded English in the row template any
+  more; changing a `copy.header.*` string changes both surfaces at once.
+- **Result-link routing per kind (rework attempt 2):** a bilateral CONTRIBUTOR row's result
+  identity — both the row's inline span and the drawer's `onDrawerResult()` — navigates **in-app**
+  via `navigateToResult()` (unchanged pre-spec behavior, `CRD-R-3`/`CRD-DD-6`). A PRIMARY row's
+  result identity — both the row's `<a>` and `onDrawerResult()` — opens `resultUrl()` in a new tab
+  instead, on both surfaces: `navigateToResult()` routes through `requesterCode`, which on a primary
+  row resolves to the REQUESTED SP (`is_map_to_toc:false` ⇒ `requesterCode = obj_owner_initiative`,
+  which the server sets equal to the requested SP for a primary row), and that SP's bilateral-review
+  queue is exactly where the result must **not** appear before it accepts (requirements.md L94).
+  `onDrawerResult()`'s guard is `isBilateralResult && !isPrimaryRequest`.
+- **Center notices** (`Primary Program Request Accepted/Declined/Moved`, in
+  `notification-type.constants.ts`): render as ONE composed sentence via the existing
+  `isUpdateSource` branch/`updateTextParts` — never "The result" + suffix (that produced the
+  garbled, two-subject sentence `PSR-T-7`'s review failed attempt 1 for). No buttons; count under
+  "For your information" (plain `needsDecision:false` from `buildUnifiedList()`, unchanged).
+- **Counting/classification:** no change needed to `build-unified-list.ts` — a primary row's
+  `request_status_id`/`origin` already drive `needsDecision`/Received-Sent exactly like a
+  contribution row, so the existing generic logic covers it.
+- **Carried, T-9's 409 → information-toast branch**: `acceptOrReject()`'s error handler still shows
+  `copy.notificationItem.staleRequestMessage` ("This request was already answered") on a 409,
+  unconditionally for every row kind including these two new ones — nothing here special-cases it.
+
 ## Wording + chip sizing (NOTIF-T-16, 2026-09-30 — user-driven correction)
 Two small style fixes from the user's reference markup:
 - **Case (3) footer caption is now "Declined by X"**, not "Rejected by X" — matches the "Decline"
@@ -207,4 +264,15 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
   browser pass, not this doc.
 
-**Verified:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-16 ("Declined by" wording + chip font-size/weight/gap fixes, ad-hoc user style feedback; supersedes NOTIF-T-15's stamp above which still stands, just re-stamped here)
+**Verified:** 2026-09-30 · qa-development-2026-ss · PSR-T-8 rework attempt 2
+(`bilateral-primary-sp-request`): row sentence now single-sourced from `drawerHeader()`/
+`copy.header.*` (no hard-coded English left in the row template), result-link routing fixed so the
+row and the drawer agree per kind (contributor → in-app `navigateToResult()`, primary →
+`resultUrl()` in a new tab, both never land a pending primary row in the requested SP's review
+queue), and a missing `owner_program_code` now falls back to `unknownProgramFallback` instead of an
+empty bold/leading-comma sentence — see the section above; supersedes attempt 1's stamp (which
+added the primary-request / bilateral-contributor row variants and the carried PSR-T-9 drawer
+contract: `acceptLabel`, `showAlignSlot`, `requestKind`, `leadCode`/`suffix`), and NOTIF-T-16's stamp
+below, which still stands for the wording/chip-sizing fixes.
+
+**Prior verification:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-16 ("Declined by" wording + chip font-size/weight/gap fixes, ad-hoc user style feedback; supersedes NOTIF-T-15's stamp above which still stands, just re-stamped here)

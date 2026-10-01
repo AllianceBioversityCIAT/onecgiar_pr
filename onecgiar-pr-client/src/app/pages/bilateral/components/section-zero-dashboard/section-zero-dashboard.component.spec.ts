@@ -9,6 +9,20 @@ import { BilateralApiService } from '../../../../shared/services/api/bilateral-a
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { of } from 'rxjs';
 
+const primaryRequestResponse = (
+  state: 'none' | 'pending' | 'sent_back' | 'accepted',
+  programCode: string | null = null,
+  declinedByCodes: string[] = [],
+) =>
+  of({
+    response: {
+      initiativeId: null,
+      officialCode: null,
+      initiativeName: null,
+      primary_request: { state, program_code: programCode, declined_by_codes: declinedByCodes },
+    },
+  });
+
 const project = (id: number, shortName: string): BilateralProject => ({
   id,
   shortName,
@@ -67,7 +81,13 @@ describe('SectionZeroDashboardComponent', () => {
         { provide: BilateralCreationService, useValue: creationService },
         { provide: BilateralMdsTrackerService, useValue: mdsTracker },
         { provide: BilateralAutoSaveService, useValue: autoSave },
-        { provide: BilateralApiService, useValue: { PATCH_primaryAssignment: jest.fn().mockReturnValue(of({})) } },
+        {
+          provide: BilateralApiService,
+          useValue: {
+            PATCH_primaryAssignment: jest.fn().mockReturnValue(of({})),
+            GET_resultInitiativeId: jest.fn().mockReturnValue(primaryRequestResponse('none')),
+          },
+        },
         { provide: BilateralContextService, useValue: { centerInstitutionId: signal(null) } },
       ],
     }).compileComponents();
@@ -299,6 +319,148 @@ describe('SectionZeroDashboardComponent', () => {
       });
 
       expect(component.requiresPrimarySelection()).toBe(true);
+    });
+  });
+
+  // PSR-T-10 (notifications/bilateral-primary-sp-request) — on-hold / sent-back banner, picker
+  // gating, declined-SP marking, and the submit-blocked reason, all driven by `primary_request`
+  // from `GET_resultInitiativeId` (replaces the old `tocCleared` boolean on the PATCH response).
+  describe('PSR-T-10 — primary request state (on hold / sent back)', () => {
+    const setPrimaryRequest = (
+      state: 'none' | 'pending' | 'sent_back' | 'accepted',
+      programCode: string | null = null,
+      declinedByCodes: string[] = [],
+    ) => {
+      const api = TestBed.inject(BilateralApiService) as any;
+      api.GET_resultInitiativeId.mockReturnValue(
+        primaryRequestResponse(state, programCode, declinedByCodes),
+      );
+    };
+
+    const openResultWithProgramOptions = (resultId: number) => {
+      const current = project(12, 'OLDPROJ');
+      current.sciencePrograms = [
+        { programId: 1, programCode: 'SP09', allocation: '70', spName: 'Program nine', spShortName: 'SP09' },
+        { programId: 2, programCode: 'SP12', allocation: '30', spName: 'Program twelve', spShortName: 'SP12' },
+      ];
+      (creationService.selectedProject as any).set(current);
+      (creationService.selectedPrimarySp as any).set({ programId: 1, programCode: 'SP09', allocation: '70' });
+      (creationService.currentResultId as any).set(resultId);
+      fixture.detectChanges();
+    };
+
+    it('Falsifier: state "pending" keeps the primary-program picker disabled', () => {
+      setPrimaryRequest('pending', 'SP09');
+      openResultWithProgramOptions(21);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const toggle = el.querySelector('.bp-primary-selector') as HTMLButtonElement;
+      expect(toggle.disabled).toBe(true);
+
+      toggle.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.bp-primary-options')).toBeNull();
+      expect(component.showPrimaryOptions()).toBe(false);
+    });
+
+    it('shows the "Awaiting acceptance" banner while pending', () => {
+      setPrimaryRequest('pending', 'SP09');
+      openResultWithProgramOptions(21);
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('Awaiting SP09 acceptance as primary Science Program');
+      expect(el.textContent).toContain(
+        'Submit for review is unavailable until a primary Science Program accepts.',
+      );
+    });
+
+    it('Falsifier: state "sent_back" keeps the picker enabled and marks the declined SP', () => {
+      // Server shape (primary-program-request.service.ts L346-350): sent_back never carries
+      // program_code — only declined_by_codes.
+      setPrimaryRequest('sent_back', null, ['SP09']);
+      openResultWithProgramOptions(22);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const toggle = el.querySelector('.bp-primary-selector') as HTMLButtonElement;
+      expect(toggle.disabled).toBe(false);
+
+      toggle.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.bp-primary-options')).not.toBeNull();
+
+      const options = Array.from(el.querySelectorAll('.bp-primary-options button'));
+      const declinedOption = options.find((btn) => btn.textContent?.includes('SP09'));
+      expect(declinedOption?.textContent).toContain('(declined)');
+      const otherOption = options.find((btn) => btn.textContent?.includes('SP12'));
+      expect(otherOption?.textContent).not.toContain('(declined)');
+
+      // DD-8: a declined SP stays selectable — re-picking it starts a new round.
+      expect(declinedOption?.hasAttribute('disabled')).toBe(false);
+    });
+
+    it('shows the "Declined by" banner while sent back, built from declined_by_codes (not program_code)', () => {
+      setPrimaryRequest('sent_back', null, ['SP09']);
+      openResultWithProgramOptions(22);
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('Declined by SP09. Pick another primary Science Program');
+    });
+
+    it('joins both codes when a two-alignment project has had both SPs decline', () => {
+      setPrimaryRequest('sent_back', null, ['SP09', 'SP12']);
+      openResultWithProgramOptions(22);
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain(
+        'Declined by SP09, SP12. Pick another primary Science Program',
+      );
+    });
+
+    it('Falsifier: state "none" with no owner is pickable — a warning banner with no codes, enabled picker, submit-blocked reason', () => {
+      setPrimaryRequest('none');
+      openResultWithProgramOptions(23);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const toggle = el.querySelector('.bp-primary-selector') as HTMLButtonElement;
+      expect(toggle.disabled).toBe(false);
+      expect(el.textContent).toContain('Pick a primary Science Program');
+      expect(el.textContent).not.toContain('Awaiting');
+      expect(el.textContent).not.toContain('Declined by');
+      expect(el.textContent).toContain(
+        'Submit for review is unavailable until a primary Science Program accepts.',
+      );
+    });
+
+    it('renders no banner once accepted', () => {
+      setPrimaryRequest('accepted', 'SP09');
+      openResultWithProgramOptions(24);
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).not.toContain('Awaiting');
+      expect(el.textContent).not.toContain('Declined by');
+      expect(el.textContent).not.toContain('Submit for review is unavailable');
+    });
+
+    it('updates the banner from the primary-assignment PATCH response, without waiting on a GET', () => {
+      setPrimaryRequest('none');
+      openResultWithProgramOptions(25);
+
+      const api = TestBed.inject(BilateralApiService) as any;
+      api.PATCH_primaryAssignment.mockReturnValue(
+        of({ response: { primary_request: { state: 'pending', program_code: 'SP12', declined_by_codes: [] } } }),
+      );
+
+      component.onProjectCandidate({
+        ...project(12, 'OLDPROJ'),
+        sciencePrograms: [{ programId: 2, programCode: 'SP12', allocation: '100', spName: 'Program twelve', spShortName: 'SP12' }],
+      });
+      component.saveAssignment();
+      fixture.detectChanges();
+
+      expect(component.primaryRequest()?.state).toBe('pending');
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        'Awaiting SP12 acceptance as primary Science Program',
+      );
     });
   });
 });

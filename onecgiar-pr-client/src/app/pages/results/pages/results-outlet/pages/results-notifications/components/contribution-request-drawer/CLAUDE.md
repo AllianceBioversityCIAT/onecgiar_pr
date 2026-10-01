@@ -9,10 +9,55 @@ use the older popups. The two never show together.
 ## Inputs / outputs
 - Inputs: `open`, `mode` (`'decide' | 'confirm-decline' | 'view'`), `headerParts`, `resultCode`,
   `resultTitle`, `reviewRows`, `acceptDisabled`, `declineDisabled`, `acceptBusy`, `declineBusy`,
-  `blockedReason`, `acceptHelper`, `focusAlign`, `viewFields` (NOTIF-T-4, `view` mode only).
+  `blockedReason`, `acceptHelper`, `focusAlign`, `viewFields` (NOTIF-T-4, `view` mode only),
+  `acceptLabel` (PSR-T-9, below), `showAlignSlot` (PSR-T-9, below).
 - Outputs: `closed` (✕ / scrim / Escape **and** the late programmatic-close emission — see the
   parent's `onDrawerClosedSignal()` guard, this component never guards it itself), `resultActivated`,
   `acceptClicked`, `declineClicked`, `declineConfirmed`, `declineCancelled`.
+
+## Kind-aware decide footer (PSR-T-9, `bilateral-primary-sp-request`)
+Two additive inputs make the `decide`-footer capable of showing a primary-program-request's kind
+without touching a single pre-existing test — both default to today's exact behaviour:
+- **`acceptLabel: string | null` (default `null`).** When set, overrides the Accept button text;
+  `null` falls back to `copy.footer.acceptContribution`, unchanged. This component never decides
+  which label a given request kind gets (primary → `copy.footer.acceptAsPrimary`, bilateral
+  contributor → plain "Accept", existing contribution → `acceptContribution`) — that judgment call
+  belongs to whoever builds the row (`notification-item`, wired by `PSR-T-8`), matching `PSR-R-11`
+  ("the drawer shows the same accept action as the row"). Stays presentational, per this file's own
+  opening line.
+- **`showAlignSlot: boolean` (default `true`).** Gates `<ng-content select="[crdAlign]" />` — `false`
+  hides the projected Align section entirely, even if the caller still projects something into it
+  (defense in depth; design.md §6.2 "No ToC 'Align' projection for primary requests"). The caller
+  sets it `false` for a primary request; every existing caller that never touches it keeps seeing
+  the Align block exactly as before.
+- **`ContributionRequestDrawerViewFields.requestKind?: string | null`** — a new optional `view`-mode
+  field (see below), same "omit, never fabricate" contract as every other field in that interface.
+
+None of these three require decide/confirm-decline behavior changes for a caller that doesn't pass
+them — the CRD zero-touch history (footer/header markup untouched, only new optional bindings).
+
+## Header sentence: `leadCode` / `suffix` (PSR-T-9 rework attempt 2)
+Attempt 1's `ContributionRequestDrawerHeaderParts` couldn't express the bilateral-contributor
+sentence (design.md §6.1): a bold leading `{owner sp}` before any "from"/verb text, and an
+"on behalf of {center}" tail with nowhere to go after `resultTitle`. Two more optional fields close
+both gaps, each additive and `@if`-guarded:
+- **`leadCode?: string`.** When set, renders `<span class="font-mono font-semibold">{{ leadCode }}</span>`
+  immediately abutting `{{ h.verb }}` — **no space between them**, because the contributor verb
+  carries its own leading comma (`copy.header.bilateralContributorVerb`,
+  `", as primary Science Program, has tagged"`). This is why `leadCode` branches the template into
+  its own `@if (h.leadCode) { … } @else { … }` rather than reusing the `requesterCode`/"from" path:
+  the existing multi-line template formatting collapses to a single space between elements, which is
+  exactly wrong here (measured: `"SP09 , as primary…"` before the `@else` split). The `@else` branch
+  is the pre-existing `requesterCode`/`verb` markup, byte-for-byte unchanged, so every caller that
+  never sets `leadCode` (all of them, pre-`PSR-T-9`) renders exactly as before.
+- **`suffix?: string`.** Rendered after `resultTitle`, only when truthy — the "on behalf of {center}"
+  tail (`copy.header.onBehalfOf`). `notification-item` (wired by `PSR-T-8`) builds it as
+  `` `${copy.header.onBehalfOf} ${centerAcronym}` `` — this component never composes the string
+  itself, it only renders what it's given (same contract as `acceptLabel` above).
+
+Both fields are `undefined` for every kind except the bilateral-contributor row; `leadCode` and
+`requesterCode` are never both set on the same `headerParts` object (the caller picks one shape per
+kind), and this component doesn't enforce that — it's a caller invariant, not a drawer one.
 
 ## `view` mode (NOTIF-T-4)
 A third, additive `mode` used for any resolved Received row, Sent row, or Updates row — no
@@ -21,7 +66,9 @@ unaffected by `mode` and renders/works identically in all three modes). Header s
 card are reused unchanged. `viewFields` (`ContributionRequestDrawerViewFields`) feeds the
 `viewMetadataRows` computed — the per-source field adapter from design.md §6.2: fixed order
 (**Status** (`NOTIF-T-14`, from `notification-item`'s `rowStatusLabel` — "Needs your decision" /
-"For your information", never source-gated) → Result type → Phase → Primary program → Reporting
+"For your information", never source-gated) → **Request type** (`PSR-T-9`/`PSR-R-11`, the request's
+kind — "Primary program request" / "Contributor request" / "Contribution request", resolved by the
+caller, never by this component) → Result type → Phase → Primary program → Reporting
 center → Submitted by), `resultType` and `reportingCenter` are skipped outright for `source: 'update'`
 rows regardless of what the caller passes in (`NOTIF-P-2`: `notification/updates` never returns
 either), and any field whose trimmed value is empty/undefined/null is omitted from the grid — never
@@ -98,4 +145,8 @@ re-check `isAcceptDisabled()`/`isDeclineDisabled()`/`declineDisabled()` before e
 "disabled" click is provably inert in both the real app and under Jest. Assert through these
 handlers or through `BrnButton`, never `nativeElement.disabled`.
 
-**Verified:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-14 (added `status` to the `view`-mode grid; documented the `decide`-mode gap above)
+**Verified:** 2026-09-30 · qa-development-2026-ss · PSR-T-9 rework attempt 2 (`bilateral-primary-sp-request`):
+added `leadCode`/`suffix` to `ContributionRequestDrawerHeaderParts` (closes the Reviewer's FAIL —
+the bilateral-contributor sentence couldn't be expressed before), on top of attempt 1's `acceptLabel`,
+`showAlignSlot`, and the `view`-mode `requestKind` field — all additive, defaulting to today's exact
+rendering; supersedes NOTIF-T-14's stamp above which still stands for everything else.

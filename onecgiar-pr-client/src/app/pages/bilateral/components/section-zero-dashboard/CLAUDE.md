@@ -1,6 +1,6 @@
 # section-zero-dashboard (bilateral)
 
-**Verified:** 2026-09-22 · branch yzuniga/p2-3760-contribution (P2-3760 Contribution percentage)
+**Verified:** 2026-09-30 · spec `notifications/bilateral-primary-sp-request` PSR-T-10 (attempt 2)
 
 ## What it is
 Section 0 of the bilateral form: the read-mostly card that identifies the result (code, type,
@@ -16,6 +16,20 @@ card; bring it back only when one of those actions actually ships.
   lead project and primary program together; reviewed results remain static.
 - State: `BilateralCreationService` owns display state. The assignment is persisted only through
   `PATCH /api/bilateral/center/primary-assignment/:resultId`, never through Contributors.
+- **PSR-T-10 (2026-09-30):** the chosen primary SP is a *request*, not a fact, until it accepts.
+  `primary_request` (`{ state: 'none'|'pending'|'sent_back'|'accepted', program_code,
+  declined_by_codes[] }`) is read from `BilateralApiService.GET_resultInitiativeId` on every
+  `currentResultId()` change (a `constructor()` effect — this component has no `ngOnInit`), and is
+  refreshed immediately from the `PATCH primary-assignment` response on save (replaces the old
+  boolean `tocCleared` field, 2026-09-30 change log) so the banner/picker don't blink stale state
+  while `loadResult` re-fetches in the background. `pending` disables the picker
+  (`primaryPickerDisabled()`); `sent_back` leaves it enabled, builds its banner code(s) from
+  `declined_by_codes` (the server sends `program_code: null` for that state), and marks those
+  entries `(declined)` in the options list — they stay selectable (DD-8: re-picking a decliner
+  starts a new round). `none` (no owner — T-5 forward pointer) shows the `noneUnpicked` warning
+  banner ("Pick a primary Science Program", no codes), adds `submitBlockedReason`, and keeps the
+  picker enabled. Copy lives in
+  `internationalization/bilateral-primary-assignment.copy.ts`.
 
 ## Where it is used
 - `pages/bilateral-result-creator/bilateral-result-creator.component.html:210` — the only host.

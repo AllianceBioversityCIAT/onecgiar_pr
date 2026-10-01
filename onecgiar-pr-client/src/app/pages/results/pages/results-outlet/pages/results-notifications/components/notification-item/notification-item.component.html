@@ -71,7 +71,8 @@
                 hlmBadge
                 variant="secondary"
                 data-notif-type-chip
-                class="notification_type_chip !bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]"
+                class="notification_type_chip"
+                [ngClass]="rowTypeChipColorClass"
                 >{{ rowTypeChipLabel }}</span
               >
             }
@@ -100,9 +101,16 @@
              `r.initials`, e.g. "SO"); bilateral/entity row → icon in a ROUNDED SQUARE (8px radius),
              visually distinct shape on purpose (mockup `showNotifications`, row avatar vs. row
              entity icon). `.ts` untouched — initials computed inline in the template. -->
+        <!-- PSR-T-8 (design.md §6.1): the flag/people icon for the two new bilateral row kinds
+             replaces the old generic `pi-building` bilateral icon outright — every bilateral
+             request is now either a primary request or a bilateral contributor request
+             (`PSR-DD-10`). Glyphs are `pi-flag` / `pi-users`, from the same PrimeIcons set this
+             avatar already uses (`pi-building`, `pi-times`, …) — confirmed present in the set. -->
         <div class="notification_avatar" [ngClass]="{ notification_avatar_bilateral: isBilateralResult }">
-          @if (isBilateralResult) {
-            <i class="pi pi-building" aria-hidden="true"></i>
+          @if (isPrimaryRequest) {
+            <i class="pi pi-flag" aria-hidden="true"></i>
+          } @else if (isBilateralContributorRequest) {
+            <i class="pi pi-users" aria-hidden="true"></i>
           } @else {
             <span class="notification_avatar_initials">{{
               ((notification?.obj_requested_by?.first_name?.charAt(0) ?? '') + (notification?.obj_requested_by?.last_name?.charAt(0) ?? ''))
@@ -113,19 +121,46 @@
 
         <!-- NOTIF-T-10: text column — main sentence only for pending rows (no caption below it). -->
         <div class="notification_content_body">
-          @if (isBilateralResult) {
-            @let centerName = notification?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym;
-
+          <!-- PSR-T-8 (design.md §6.1, PSR-R-9/PSR-R-10): the primary-request and bilateral-
+               contributor sentences replace the old generic bilateral sentence outright — see the
+               avatar comment above for why there is no third "plain bilateral" case any more. -->
+          <!-- PSR-T-8 rework attempt 2 (Reviewer findings 1+2): the sentence is now built entirely
+               from `drawerHeader()` — the SAME single source the drawer itself reads (`copy.header.*`
+               strings, never re-typed here) — so the row and the drawer can never drift apart. The
+               result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
+               the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
+               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
+               a primary request is never in the requested SP's review queue). -->
+          @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
-              Center <b>{{ centerName }}</b> has reported a <b>w3/bilateral result</b> under project
+              @let h = drawerHeader();
+              <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
+              <a
+                [href]="resultUrl(notification)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-mono"
+                style="text-decoration: underline; color: var(--pr-color-black)"
+                (click)="$event.stopPropagation()">
+                {{ h.resultCode }} - {{ h.resultTitle }}
+              </a>
+            </p>
+          } @else if (isBilateralContributorRequest) {
+            <p class="notification_content_body_text notification_content_body_text_compact">
+              @let h = drawerHeader();
+              @if (h.leadCode) {
+                <b>{{ h.leadCode }}</b>{{ h.verb }}
+              } @else {
+                {{ h.lead }} {{ h.verb }}
+              }
+              <b>{{ h.responderCode }}</b> {{ h.tail }}
               <span
                 class="font-mono"
                 style="text-decoration: underline; color: var(--pr-color-black); cursor: pointer"
                 (click)="$event.stopPropagation(); navigateToResult(notification)">
-                {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+                {{ h.resultCode }} - {{ h.resultTitle }}
               </span>
-              and the result <b> has been approved by Science Program {{ requesterCode }} </b>. You have been tagged as contributor to this result. Do
-              you confirm program's <b>{{ responderCode }}</b> contribution to the result?
+              {{ h.suffix }}
             </p>
           } @else {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -172,7 +207,8 @@
                 hlmBadge
                 variant="secondary"
                 data-notif-type-chip
-                class="notification_type_chip !bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]"
+                class="notification_type_chip"
+                [ngClass]="rowTypeChipColorClass"
                 >{{ rowTypeChipLabel }}</span
               >
             }
@@ -197,7 +233,11 @@
                "shortened here on purpose" comment, which was based on a stale/superseded reference.
                Click handlers/bindings unchanged. NOTIF-T-15: this is now line 3, stacked below the
                badges+date row (line 2) — previously a sibling of `.notification_content_body`. -->
-          @let buttonTextConfirm = 'Accept contribution';
+          <!-- PSR-T-8 (design.md §6.1, PSR-R-11 "same actions as the row"): the row's own Accept
+               button text now matches the drawer's `acceptLabel` exactly, per kind — single source
+               (`drawerAcceptLabel()`), falling back to the pre-existing "Accept contribution" for
+               everything else (W1/W2 unchanged, `PSR-DD-10`). -->
+          @let buttonTextConfirm = drawerAcceptLabel() ?? 'Accept contribution';
 
           <div class="notification_content_actions_buttons">
             <app-pr-button
@@ -253,9 +293,12 @@
     @case (2) {
       <div class="notification_content">
         <!-- NOTIF-T-9 (defect fix): see the case (1) block above for the rationale. -->
+        <!-- PSR-T-8: resolved-state rows get the same flag/people icon as the pending row above. -->
         <div class="notification_avatar" [ngClass]="{ notification_avatar_bilateral: isBilateralResult }">
-          @if (isBilateralResult) {
-            <i class="pi pi-building" aria-hidden="true"></i>
+          @if (isPrimaryRequest) {
+            <i class="pi pi-flag" aria-hidden="true"></i>
+          } @else if (isBilateralContributorRequest) {
+            <i class="pi pi-users" aria-hidden="true"></i>
           } @else {
             <span class="notification_avatar_initials">{{
               ((notification?.obj_requested_by?.first_name?.charAt(0) ?? '') + (notification?.obj_requested_by?.last_name?.charAt(0) ?? ''))
@@ -269,6 +312,47 @@
              `r.resDate`, a second line under the main text) — it used to live in a separate right-side
              actions column, alongside the "Status:" label (dropped, redundant with the decision chip). -->
         <div class="notification_content_body">
+          <!-- PSR-T-8: resolved-state rows keep the same primary/contributor sentence as the
+               pending row; only the caption + decision chip below (unchanged markup) differ. -->
+          <!-- PSR-T-8 rework attempt 2 (Reviewer findings 1+2): the sentence is now built entirely
+               from `drawerHeader()` — the SAME single source the drawer itself reads (`copy.header.*`
+               strings, never re-typed here) — so the row and the drawer can never drift apart. The
+               result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
+               the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
+               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
+               a primary request is never in the requested SP's review queue). -->
+          @if (isPrimaryRequest) {
+            <p class="notification_content_body_text notification_content_body_text_compact">
+              @let h = drawerHeader();
+              <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
+              <a
+                [href]="resultUrl(notification)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-mono"
+                style="text-decoration: underline; color: var(--pr-color-black)"
+                (click)="$event.stopPropagation()">
+                {{ h.resultCode }} - {{ h.resultTitle }}
+              </a>
+            </p>
+          } @else if (isBilateralContributorRequest) {
+            <p class="notification_content_body_text notification_content_body_text_compact">
+              @let h = drawerHeader();
+              @if (h.leadCode) {
+                <b>{{ h.leadCode }}</b>{{ h.verb }}
+              } @else {
+                {{ h.lead }} {{ h.verb }}
+              }
+              <b>{{ h.responderCode }}</b> {{ h.tail }}
+              <span
+                class="font-mono"
+                style="text-decoration: underline; color: var(--pr-color-black); cursor: pointer"
+                (click)="$event.stopPropagation(); navigateToResult(notification)">
+                {{ h.resultCode }} - {{ h.resultTitle }}
+              </span>
+              {{ h.suffix }}
+            </p>
+          } @else {
           <p class="notification_content_body_text notification_content_body_text_compact">
             <b>
               {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
@@ -298,6 +382,7 @@
               <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
             }
           </p>
+          }
 
           <!-- NOTIF-T-15: line 2 — badges + "Requested …" timestamp, stacked BELOW the message
                (previously siblings of `.notification_content_body` at the `.notification_content` row
@@ -311,7 +396,8 @@
                   hlmBadge
                   variant="secondary"
                   data-notif-type-chip
-                  class="notification_type_chip !bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]"
+                  class="notification_type_chip"
+                [ngClass]="rowTypeChipColorClass"
                   >{{ rowTypeChipLabel }}</span
                 >
               }
@@ -354,9 +440,12 @@
     @case (3) {
       <div class="notification_content">
         <!-- NOTIF-T-9 (defect fix): see the case (1) block above for the rationale. -->
+        <!-- PSR-T-8: resolved-state rows get the same flag/people icon as the pending row above. -->
         <div class="notification_avatar" [ngClass]="{ notification_avatar_bilateral: isBilateralResult }">
-          @if (isBilateralResult) {
-            <i class="pi pi-building" aria-hidden="true"></i>
+          @if (isPrimaryRequest) {
+            <i class="pi pi-flag" aria-hidden="true"></i>
+          } @else if (isBilateralContributorRequest) {
+            <i class="pi pi-users" aria-hidden="true"></i>
           } @else {
             <span class="notification_avatar_initials">{{
               ((notification?.obj_requested_by?.first_name?.charAt(0) ?? '') + (notification?.obj_requested_by?.last_name?.charAt(0) ?? ''))
@@ -367,6 +456,47 @@
 
         <!-- NOTIF-T-10: decided-state row — see case (2) above for the rationale (caption moved here). -->
         <div class="notification_content_body">
+          <!-- PSR-T-8: resolved-state rows keep the same primary/contributor sentence as the
+               pending row; only the caption + decision chip below (unchanged markup) differ. -->
+          <!-- PSR-T-8 rework attempt 2 (Reviewer findings 1+2): the sentence is now built entirely
+               from `drawerHeader()` — the SAME single source the drawer itself reads (`copy.header.*`
+               strings, never re-typed here) — so the row and the drawer can never drift apart. The
+               result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
+               the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
+               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
+               a primary request is never in the requested SP's review queue). -->
+          @if (isPrimaryRequest) {
+            <p class="notification_content_body_text notification_content_body_text_compact">
+              @let h = drawerHeader();
+              <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
+              <a
+                [href]="resultUrl(notification)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-mono"
+                style="text-decoration: underline; color: var(--pr-color-black)"
+                (click)="$event.stopPropagation()">
+                {{ h.resultCode }} - {{ h.resultTitle }}
+              </a>
+            </p>
+          } @else if (isBilateralContributorRequest) {
+            <p class="notification_content_body_text notification_content_body_text_compact">
+              @let h = drawerHeader();
+              @if (h.leadCode) {
+                <b>{{ h.leadCode }}</b>{{ h.verb }}
+              } @else {
+                {{ h.lead }} {{ h.verb }}
+              }
+              <b>{{ h.responderCode }}</b> {{ h.tail }}
+              <span
+                class="font-mono"
+                style="text-decoration: underline; color: var(--pr-color-black); cursor: pointer"
+                (click)="$event.stopPropagation(); navigateToResult(notification)">
+                {{ h.resultCode }} - {{ h.resultTitle }}
+              </span>
+              {{ h.suffix }}
+            </p>
+          } @else {
           <p class="notification_content_body_text notification_content_body_text_compact">
             <b>
               {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
@@ -396,6 +526,7 @@
               <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
             }
           </p>
+          }
 
           <!-- NOTIF-T-15: line 2 — badges + "Requested …" timestamp, stacked BELOW the message
                (previously siblings of `.notification_content_body` at the `.notification_content` row
@@ -409,7 +540,8 @@
                   hlmBadge
                   variant="secondary"
                   data-notif-type-chip
-                  class="notification_type_chip !bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]"
+                  class="notification_type_chip"
+                [ngClass]="rowTypeChipColorClass"
                   >{{ rowTypeChipLabel }}</span
                 >
               }
@@ -645,6 +777,8 @@
   [declineBusy]="requestingReject"
   [blockedReason]="drawerBlockedReason()"
   [acceptHelper]="drawerAcceptHelper()"
+  [acceptLabel]="drawerAcceptLabel()"
+  [showAlignSlot]="!isPrimaryRequest"
   [focusAlign]="drawerFocusAlign()"
   [viewFields]="drawerViewFields()"
   (closed)="onDrawerClosedSignal()"
@@ -661,7 +795,9 @@
   @if (isBilateralResult && tocInitiative && (drawerMode() === 'decide' || drawerMode() === 'confirm-decline')) {
     <!-- CRD-R-5: today's mapping controls, moved inline (bilateral only). CRD-P-5: relative + a
          z-index so the ToC widget's dropdowns are not clipped by the sheet body's own scroll. -->
-    <div crdAlign style="position: relative; z-index: 1" class="flex flex-col gap-3">
+    <!-- PSR-T-8: `data-testid="align-slot"` lets a rendered-DOM assertion confirm the slot never
+         projects for a primary request (belt-and-suspenders with `showAlignSlot`/the guards above). -->
+    <div crdAlign data-testid="align-slot" style="position: relative; z-index: 1" class="flex flex-col gap-3">
       <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.align }}</h3>
       <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.align.hint }}</p>
 

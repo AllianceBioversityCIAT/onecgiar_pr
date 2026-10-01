@@ -875,6 +875,48 @@ describe('SectionTocComponent', () => {
       expect(api.tocApiSE.GET_tocLevelsByconfig).not.toHaveBeenCalled();
     });
   });
+
+  // PSR-T-10 (notifications/bilateral-primary-sp-request) — design.md §6.3: while the result has
+  // no owner (state pending / sent_back / none-without-owner), the ToC form must not be editable;
+  // the host shows a notice instead. `resultInitiativeId` is the service's owner signal (only set
+  // from a role-1 row), so it stays null in every one of those states — this is the existing
+  // gate the task's Falsifier ("state pending with the ToC form editable → FAIL") rests on.
+  describe('PSR-T-10 — ownerless notice (no primary Science Program owner yet)', () => {
+    it('Falsifier: the detail form (Level/ToC/Indicator chain) never renders while there is no owner', () => {
+      creationService.resultInitiativeId.set(null);
+      fixture.detectChanges();
+      component.onPlannedChange(true);
+      fixture.detectChanges();
+
+      // showDetailForm() is true (the reporter answered "Yes"), but initiativeId() stays null
+      // because there is no role-1 owner — the template's `!initiativeId()` branch renders the
+      // notice in place of the Level/ToC/Indicator selects, and no list fetch backs the (absent) form.
+      expect(component.showDetailForm()).toBe(true);
+      expect(component.initiativeId()).toBeNull();
+      expect(api.tocApiSE.GET_tocLevelsByconfig).not.toHaveBeenCalled();
+    });
+
+    it('exposes the exact PSR-R-15/§6.3 notice copy', () => {
+      expect(component.tocNoticeCopy).toBe('Available once the primary Science Program accepts.');
+    });
+
+    it('becomes editable again once an owner (resultInitiativeId) is published', () => {
+      creationService.resultInitiativeId.set(null);
+      fixture.detectChanges();
+      component.onPlannedChange(true);
+      fixture.detectChanges();
+      expect(component.initiativeId()).toBeNull();
+
+      autoSave.loadTocState.mockClear();
+      creationService.resultInitiativeId.set(99);
+      fixture.detectChanges();
+
+      // The ToC-state/levels reload that only fires once `initiativeId()` is set — this is what
+      // the notice is gating in the template's `!initiativeId()` branch.
+      expect(component.initiativeId()).toBe(99);
+      expect(autoSave.loadTocState).toHaveBeenCalled();
+    });
+  });
 });
 
 // quick/toc-question-w3-bilateral: W3 bilateral uses its own wording, intentionally diverging from

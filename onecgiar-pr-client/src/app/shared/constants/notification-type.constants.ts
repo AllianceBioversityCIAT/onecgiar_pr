@@ -22,7 +22,18 @@ export enum NotificationType {
   RESULT_CONTRIBUTION_ACCEPTED = 'Result Contribution Accepted',
   RESULT_CONTRIBUTION_DECLINED = 'Result Contribution Declined',
   /** 2026-09-05 — a bilateral result reached Pending Review; sent to the primary SP's members. */
-  BILATERAL_RESULT_SUBMITTED = 'Bilateral Result Submitted'
+  BILATERAL_RESULT_SUBMITTED = 'Bilateral Result Submitted',
+  /**
+   * PSR-T-8 (`bilateral-primary-sp-request`, forward pointer from PSR-T-7): the 3 Center-facing
+   * informative notices (PSR-R-14). Server-composed sentences on `notification.text`, always with
+   * the SP as subject and the literal substring "of this result" — see
+   * `getResultNotificationTextParts()`'s case below for the splice that turns it into a single
+   * sentence with the result link in place of that substring. These strings are exactly what
+   * `notification.service.ts` seeds (design.md §3.1) — do not reword either side independently.
+   */
+  PRIMARY_PROGRAM_REQUEST_ACCEPTED = 'Primary Program Request Accepted',
+  PRIMARY_PROGRAM_REQUEST_DECLINED = 'Primary Program Request Declined',
+  PRIMARY_PROGRAM_REQUEST_MOVED = 'Primary Program Request Moved'
 }
 
 /**
@@ -215,6 +226,40 @@ export function getResultNotificationTextParts(notification: any): NotificationT
         suffix: notification?.text?.trim() || null,
         emphasizePrefix: false
       };
+
+    // PSR-T-8 (forward pointer from PSR-T-7's review): T-7's stored sentence has the SP as
+    // subject ("SP09 accepted to be the primary Science Program of this result. Click to see the
+    // result."). Rendering it as prefix "The result" + suffix (the `BILATERAL_RESULT_SUBMITTED`
+    // pattern above) produces the exact garbled, two-subject sentence the Reviewer failed T-7's
+    // attempt 1 for — never do that here. Instead splice the result identity in for the literal
+    // substring "this result", the same splice `notification.service.ts` does server-side for the
+    // socket push: the text before "this result" (which already ends "... of ") plus the literal
+    // word "result" becomes `prefix` (rendered before the code–title link the template always
+    // renders), and whatever follows — starting with the stored punctuation, e.g. ".  Click to see
+    // the result." — is split into `linkTrailer` (leading punctuation, glued to the link with no
+    // space) and `suffix` (the rest, trimmed). A stored sentence without the marker (or missing
+    // entirely) renders standalone with no fabricated result reference.
+    case NotificationType.PRIMARY_PROGRAM_REQUEST_ACCEPTED:
+    case NotificationType.PRIMARY_PROGRAM_REQUEST_DECLINED:
+    case NotificationType.PRIMARY_PROGRAM_REQUEST_MOVED: {
+      const text = notification?.text?.trim();
+      if (!text) return { prefix: 'The result', suffix: null, emphasizePrefix: false };
+
+      const marker = 'this result';
+      const idx = text.indexOf(marker);
+      if (idx === -1) {
+        // No splice point found — render the stored sentence standalone rather than inventing one.
+        return { prefix: text, suffix: null, emphasizePrefix: false };
+      }
+
+      const prefix = `${text.slice(0, idx)}result`;
+      const remainder = text.slice(idx + marker.length);
+      const trailerMatch = remainder.match(/^([.,;:!?]*)\s*(.*)$/s);
+      const linkTrailer = trailerMatch?.[1] || undefined;
+      const suffix = trailerMatch?.[2]?.trim() || null;
+
+      return { prefix, linkTrailer, suffix, emphasizePrefix: false };
+    }
 
     default:
       // Deliberately neutral. The previous default claimed every unknown type had been "successfully
