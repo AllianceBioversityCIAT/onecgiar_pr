@@ -20,7 +20,7 @@
 | PAGE-P-5 | `updatesData`/`receivedData`/`sentData` are rendered only by `results-notifications.component.*` | grep across `onecgiar-pr-client/src/app` (excluding the service and specs) | Only `results-notifications.component.ts` (5) and `.html` (3) reference them | verified | Another screen would see truncated history — must be paged-aware too |
 | PAGE-P-6 | Out-of-inbox callers that trigger full reloads: `app.component.ts:129`, `header-panel.component.ts:172` (updates at boot), `websocket.service.ts:109,111` (received / updates on socket), `share-request-modal.component.ts:239` (received after accept) | grep `get_section_information\|get_updates_notifications\|get_sent_notifications` | All 4 call without `version_id` and replace the whole source today | verified | A missed caller would overwrite phase-scoped, paged state with an all-phases first page |
 | PAGE-P-7 | Phase-less updates are exactly the bilateral AI-job-finished type (no `result_id`); Center notices do have a result | `notification.service.ts:230-280` doc comments + `findBilateralAiJobFinishedNotifications` (no `obj_result` condition) vs `findCenterNoticeNotifications` (filters `obj_result.is_active`) | Read both finders | verified | Some other type also lacks a result → it would vanish under phase scoping; add it to the phase-less branch |
-| PAGE-P-8 | TypeORM `find` with `take` + one-to-many `relations` paginates by root entity (distinct ids first), not by joined rows | TypeORM docs / behavior of `find` with `skip/take` + joins | Not verified in this repo — assumed from library behavior | assumed | Page could hold < 200 roots; switch to `QueryBuilder` with explicit id sub-select (listed in §13) |
+| PAGE-P-8 | TypeORM `find` with `take` + one-to-many `relations` paginates by root entity (distinct ids first), not by joined rows | TypeORM docs / behavior of `find` with `skip/take` + joins | Verified in PAGE-T-2 from TypeORM source: `entity-manager/EntityManager.js:531-536` + `query-builder/SelectQueryBuilder.js:1960-2014` (DISTINCT root ids first when take + joins) | verified (2026-09-30) | Page could hold < 200 roots; switch to `QueryBuilder` with explicit id sub-select (listed in §13) |
 
 ## 2. Architecture Overview
 
@@ -213,7 +213,7 @@ PAGE-R-11 is a SHOULD; a full signal migration of the service would touch every 
 
 ## 13. Open Gaps & Follow-ups
 
-- **PAGE-P-8 (assumed):** TypeORM `find` + `take` + one-to-many relations — verify in PAGE-T-2 with a test or a logged query; if pages come back short, switch the history query to a QueryBuilder id sub-select.
+- **PAGE-P-8 (verified 2026-09-30 in PAGE-T-2):** TypeORM `find` + `take` + joins selects DISTINCT root ids first — pages hold distinct roots; no QueryBuilder rewrite needed.
 - **PAGE-OQ-5 (assumption):** phase-less updates always shown — confirm at the requirements review.
 - Merge order with `notifications/w1w2-center-tagged` (same service/component).
 - Server-side filters (Option B) remain a follow-up if R-1 hint proves insufficient.
