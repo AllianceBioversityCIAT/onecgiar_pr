@@ -16,6 +16,7 @@ import {
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
 import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../../../../../../../internationalization/notification-center-tagged.copy';
+import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../../../../../../../internationalization/notification-project-tagged.copy';
 import type { ContributionRequestDrawerMode, ContributionRequestDrawerViewFields } from '../contribution-request-drawer/contribution-request-drawer.component';
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
@@ -231,6 +232,11 @@ export class NotificationItemComponent {
       // unaffected — still the raw resolved name.
       if (resolveNotificationType(this.notification) === NotificationType.RESULT_CENTER_TAGGED) {
         return NOTIFICATION_CENTER_TAGGED_COPY.chipLabel;
+      }
+      // WPT-T-4 (`w1w2-project-tagged`, WPT-R-6): same treatment for the bilateral-project-tagged
+      // update type — its chip reads the copy's friendlier label instead of the raw type name.
+      if (resolveNotificationType(this.notification) === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED) {
+        return NOTIFICATION_PROJECT_TAGGED_COPY.chipLabel;
       }
       return resolveNotificationType(this.notification);
     }
@@ -992,9 +998,16 @@ export class NotificationItemComponent {
     // the existing green "approved" status token pair. Request-row chips and every other update
     // type are unchanged.
     if (this.isUpdateSource) {
-      return resolveNotificationType(this.notification) === NotificationType.RESULT_CENTER_TAGGED
-        ? '!bg-[var(--pr-status-approved-bg)] !text-[var(--pr-status-approved-fg)]'
-        : '!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]';
+      const notificationType = resolveNotificationType(this.notification);
+      if (notificationType === NotificationType.RESULT_CENTER_TAGGED) {
+        return '!bg-[var(--pr-status-approved-bg)] !text-[var(--pr-status-approved-fg)]';
+      }
+      // WPT-T-4 (`w1w2-project-tagged`, WPT-R-6/WPT-NFR-4): the bilateral-project-tagged row's chip
+      // gets the existing amber "in progress" status token pair. Every other update type is unchanged.
+      if (notificationType === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED) {
+        return '!bg-[var(--pr-status-in-progress-bg)] !text-[var(--pr-status-in-progress-fg)]';
+      }
+      return '!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]';
     }
 
     return this.isPrimaryRequest

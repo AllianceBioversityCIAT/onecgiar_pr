@@ -96,6 +96,11 @@ export class ResultTaggedNotificationService {
   /**
    * AC2 — bilateral projects newly associated with the result. The notification goes to the
    * centre that owns the project, so the project id has to be resolved to a centre code first.
+   *
+   * WPT-R-1 / DD-1 — the stored label also carries the owner Center's label, resolved from the
+   * same `centerIndex` this method already loads (no extra read-time join, WPT-NFR-5): `"<code>
+   * (<acronym||code>)"`. Same acronym-falls-back-to-code rule BCT already uses (NTC-R-1) — never
+   * an empty `()`.
    */
   async notifyTaggedBilateralProjects(
     resultId: number,
@@ -124,9 +129,14 @@ export class ResultTaggedNotificationService {
         );
         continue;
       }
+      const projectCode =
+        project.shortName ?? project.fullName ?? `project ${project.id}`;
+      const ownerCenterLabel =
+        centerIndex.byCode.get(centerCode)?.clarisa_institution?.acronym ||
+        centerCode;
       targets.push({
         centerCode,
-        label: project.shortName ?? project.fullName ?? `project ${project.id}`,
+        label: `${projectCode} (${ownerCenterLabel})`,
         type: NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
       });
     }
@@ -258,6 +268,17 @@ export class ResultTaggedNotificationService {
    * recipient rather than on the centre because that is the unit that actually matters for the
    * bell, and because it also covers the case of a second tag arriving in a later request.
    *
+   * WPT-R-5 / DD-4 (D-6) — dedup is gated on `leadIn`: when it is **absent** (the direct-tag
+   * flow, AC1/AC2), a target is checked against, and recorded into, **its own type's** set only —
+   * a user can hold one `RESULT_CENTER_TAGGED` row and one `RESULT_BILATERAL_PROJECT_TAGGED` row
+   * for the same result. When `leadIn` **is** passed (BCT submission, BCT-T-4), every target is
+   * checked against, and recorded into, one shared cross-type set — today's behaviour byte for
+   * byte, so BCT-R-9/DD-5 (the owner Center gets the project text, never both) and AC32 (a prior
+   * row of *either* type blocks a re-notify) still hold. So "a centre that is both the lead and
+   * the owner of a tagged project hears once" now holds **per call, per type** in the direct flow
+   * (two different-type rows for the same result are both allowed), and unchanged (once overall)
+   * in the BCT flow.
+   *
    * BCT-R-12 / design §5.4 — `leadIn` is an optional last parameter. When it is absent, the text
    * is exactly what it always was: `created by ${programCode ?? 'a Science Program'}`, with
    * `programCode` computed only in that branch. When a caller passes one (bilateral submissions,
@@ -286,12 +307,20 @@ export class ResultTaggedNotificationService {
     const resolvedLeadIn =
       leadIn ??
       `created by ${this.resolveOwnerProgramCode(result) ?? 'a Science Program'}`;
-    const alreadyNotified = await this.getAlreadyNotifiedUserIds(resultId);
+    const notifiedByType = await this.getAlreadyNotifiedUserIds(resultId);
+    // BCT (leadIn passed) keeps one cross-type set shared by every target in this call — today's
+    // behaviour byte for byte (BCT-R-9, AC32). The direct flow (no leadIn) never builds this; each
+    // target reads and writes its own type's set from `notifiedByType` instead (WPT-R-5/D-6).
+    const unionNotified = leadIn
+      ? new Set<number>([...notifiedByType.values()].flatMap((set) => [...set]))
+      : null;
 
     for (const target of targets) {
+      const notifiedSet = unionNotified ?? notifiedByType.get(target.type);
+
       const userIds = (
         await this._roleByUserRepository.getUserIdsByCenter(target.centerCode)
-      ).filter((id) => !alreadyNotified.has(id));
+      ).filter((id) => !notifiedSet.has(id));
 
       if (!userIds.length) continue;
 
@@ -324,16 +353,23 @@ export class ResultTaggedNotificationService {
       );
 
       // Within one call, a centre that appears twice (lead + project owner) must not notify the
-      // same people again.
-      userIds.forEach((id) => alreadyNotified.add(id));
+      // same people again — scoped to the same set the check above read from (own-type in the
+      // direct flow, the shared cross-type set in BCT).
+      userIds.forEach((id) => notifiedSet.add(id));
     }
   }
 
+  /**
+   * Groups every existing `RESULT_CENTER_TAGGED` / `RESULT_BILATERAL_PROJECT_TAGGED` row for this
+   * result by its type (WPT-R-5/D-6) — `emitFor` reads each target's own type's set in the direct
+   * flow, and the union of both in BCT. One query for both types, same `where` as before this
+   * change (the dedup contract moved into how the result is grouped, not what is queried).
+   */
   private async getAlreadyNotifiedUserIds(
     resultId: number,
-  ): Promise<Set<number>> {
+  ): Promise<Map<NotificationTypeEnum, Set<number>>> {
     const existing = await this._notificationRepository.find({
-      select: { target_user: true },
+      select: { target_user: true, obj_notification_type: { type: true } },
       where: {
         result_id: resultId,
         obj_notification_type: {
@@ -343,11 +379,22 @@ export class ResultTaggedNotificationService {
       relations: { obj_notification_type: true },
     });
 
-    return new Set(
-      existing
-        .map((row) => Number(row.target_user))
-        .filter((id) => Number.isFinite(id)),
+    const grouped = new Map<NotificationTypeEnum, Set<number>>(
+      ResultTaggedNotificationService.TAGGED_TYPES.map((type) => [
+        type,
+        new Set<number>(),
+      ]),
     );
+
+    for (const row of existing) {
+      const userId = Number(row.target_user);
+      const type = row.obj_notification_type?.type as NotificationTypeEnum;
+      if (!Number.isFinite(userId) || !type) continue;
+      if (!grouped.has(type)) grouped.set(type, new Set());
+      grouped.get(type).add(userId);
+    }
+
+    return grouped;
   }
 
   private resolveOwnerProgramCode(result: Result): string | undefined {

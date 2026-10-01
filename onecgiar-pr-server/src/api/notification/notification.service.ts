@@ -1125,13 +1125,24 @@ export class NotificationService {
       // correctly. Detect the shape with the same telltale substrings the client uses
       // (`isComposedTaggedText` — keep them in sync with `notification-type.constants.ts`'s twin;
       // `RESULT_CENTER_TAGGED` below joins this same detection, WCT-T-1).
+      //
+      // WPT-T-2 (`w1w2-project-tagged`, design §7.3/§9, DD-2): a bare row is no longer always a
+      // legacy label — WPT-T-1 now stores an enriched `"<project code> (<Center label>)"` shape
+      // (WPT-R-1). `parseTaggedProjectLabel` splits the two apart; a legacy bare row (no trailing
+      // `(…)`) still yields a null `centerLabel`, in which case the `from your center (...)`
+      // clause is omitted entirely (WPT-R-3). The composed/empty check above still runs FIRST, so
+      // a BCT row's own trailing `(ABC).` is never misparsed as this shape (WPT-R-4).
       case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
         const suffix = storedText?.trim();
         if (suffix && !this.isComposedTaggedText(suffix)) {
+          const { code, centerLabel } = this.parseTaggedProjectLabel(suffix);
           const identity = [resultCode, resultTitle]
             .filter(Boolean)
             .join(' - ');
-          return `${userName ?? 'A user'} from ${programCode ?? 'a Science Program'} has tagged project ${suffix} as contributor to result${identity ? ` ${identity}` : ''}`;
+          const centerClause = centerLabel
+            ? ` from your center (${centerLabel})`
+            : ' from your center';
+          return `${userName ?? 'A user'} from ${programCode ?? 'a Science Program'} has tagged the bilateral project ${code}${centerClause} to result${identity ? ` ${identity}` : ''}`;
         }
         return this.buildTaggedSuffixDescription(
           codeText,
@@ -1242,6 +1253,40 @@ export class NotificationService {
       text.includes(' has tagged the ') ||
       text.trim().endsWith('Click to see the result.')
     );
+  }
+
+  /**
+   * WPT-T-2 (`w1w2-project-tagged`, design §7.3/§9, DD-2): splits an enriched bare
+   * `RESULT_BILATERAL_PROJECT_TAGGED` row's stored text (`"<project code> (<Center label>)"`,
+   * WPT-R-1) into its project code and Center label, anchored on the **last trailing** `(…)`
+   * with non-empty contents. A legacy bare row (no trailing parenthetical, WPT-R-3) yields a null
+   * `centerLabel`. Only called once the caller has already ruled out a composed or empty text
+   * (`isComposedTaggedText`) — never apply this to a BCT/legacy composed sentence (its own
+   * trailing `(ABC).` must NOT be parsed, WPT-R-4).
+   *
+   * `[^()]+` (not `.+`) inside the parens is what makes "last trailing" correct for a project
+   * name that itself contains parentheses, e.g. `"Seeds (Phase 2) project (ABC)"` → code
+   * `"Seeds (Phase 2) project"`, label `"ABC"`.
+   *
+   * DR-1 (accepted risk): a legacy bare row whose code came from the `fullName` fallback and
+   * itself ends in `"(…)"` is misparsed as code+label — `short_name` is NOT NULL server-side, so
+   * this only happens when `short_name` is empty.
+   *
+   * Keep in sync with the client twin:
+   * `onecgiar-pr-client/src/app/shared/constants/notification-type.constants.ts`
+   * `parseTaggedProjectLabel`. Both pin the same five-shape table (design §9).
+   */
+  private parseTaggedProjectLabel(text: string): {
+    code: string;
+    centerLabel: string | null;
+  } {
+    const match = text.match(/^(.*)\(([^()]+)\)\s*$/);
+    if (!match) return { code: text, centerLabel: null };
+
+    const centerLabel = match[2].trim();
+    if (!centerLabel) return { code: text, centerLabel: null };
+
+    return { code: match[1].trim(), centerLabel };
   }
 
   /**

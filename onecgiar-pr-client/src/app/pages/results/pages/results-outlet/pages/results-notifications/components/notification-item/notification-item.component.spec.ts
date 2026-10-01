@@ -3039,6 +3039,141 @@ describe('NotificationItemComponent', () => {
     });
   });
 
+  // WPT-T-4 (`w1w2-project-tagged`, design.md §8.2-§8.4, WPT-R-2/R-6/R-8): the inbox Updates row
+  // loops `segments` (SP09/B-A1080/ABC each in their own <b>, emitter plain), carries the amber
+  // "Bilateral project tagged" chip, and stays view-only.
+  describe('WPT-T-4: Bilateral-project-tagged row (segments, amber chip, view-only)', () => {
+    const enrichedProjectTaggedFixture = () => ({
+      notification_id: 11,
+      source: 'update',
+      created_date: new Date().toISOString(),
+      text: 'B-A1080 (ABC)',
+      obj_emitter_user: { first_name: 'Lucia', last_name: 'Ferrari' },
+      obj_notification_type: { type: NotificationType.RESULT_BILATERAL_PROJECT_TAGGED },
+      obj_result: {
+        result_code: 9341,
+        title: '<title>',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP09' } }],
+        obj_version: { id: 1 }
+      }
+    });
+
+    it('renders the SP09/B-A1080/ABC sentence, with those tokens (not the emitter) in <b>', () => {
+      component.notification = enrichedProjectTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const p = root.querySelector('.notification_content_body_text')!;
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe('Lucia Ferrari from SP09 has tagged the bilateral project B-A1080 from your center (ABC) to result 9341 - <title>');
+      const boldTexts = Array.from(p.querySelectorAll('b')).map(b => b.textContent?.trim());
+      expect(boldTexts).toEqual(['SP09', 'B-A1080', 'ABC']);
+      expect(boldTexts).not.toContain('Lucia Ferrari');
+    });
+
+    it('the result link still renders "9341 - <title>"', () => {
+      component.notification = enrichedProjectTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const link = root.querySelector('.notification_content_body a')!;
+      expect(link.textContent?.trim()).toBe('9341 - <title>');
+    });
+
+    it('carries the "Bilateral project tagged" chip with the in-progress status token class', () => {
+      component.notification = enrichedProjectTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+
+      expect(chip.textContent?.trim()).toBe('Bilateral project tagged');
+      expect(chip.className).toContain('!bg-[var(--pr-status-in-progress-bg)]');
+      expect(chip.className).toContain('!text-[var(--pr-status-in-progress-fg)]');
+    });
+
+    it('rowTypeChipLabel / rowTypeChipColorClass resolve the same way directly', () => {
+      component.notification = enrichedProjectTaggedFixture();
+
+      expect(component.rowTypeChipLabel).toBe('Bilateral project tagged');
+      expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-status-in-progress-bg)] !text-[var(--pr-status-in-progress-fg)]');
+    });
+
+    it('a RESULT_CENTER_TAGGED fixture is unaffected: still "CG Center tagged" / approved tokens', () => {
+      component.notification = {
+        notification_id: 12,
+        source: 'update',
+        created_date: new Date().toISOString(),
+        text: 'ABC',
+        obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+        obj_result: {
+          result_code: 9398,
+          title: 'A pooled funding result',
+          obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }],
+          obj_version: { id: 1 }
+        }
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+      expect(chip.textContent?.trim()).toBe('CG Center tagged');
+      expect(chip.className).toContain('!bg-[var(--pr-status-approved-bg)]');
+    });
+
+    it('another Updates type (Result Submitted) keeps the violet class', () => {
+      component.notification = {
+        source: 'update',
+        notification_id: 13,
+        created_date: new Date().toISOString(),
+        obj_notification_type: { type: NotificationType.RESULT_SUBMITTED },
+        obj_emitter_user: { first_name: 'Jane', last_name: 'Doe' },
+        obj_result: { result_code: 100, title: 'T', obj_result_by_initiatives: [], obj_version: { id: 1 } }
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+      expect(chip.className).toContain('!bg-[var(--pr-color-primary-50)]');
+    });
+
+    it('is view-only: rowMode is "view" and no decision buttons render', () => {
+      component.notification = enrichedProjectTaggedFixture();
+      fixture.detectChanges();
+
+      expect(component.rowMode).toBe('view');
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="accept-contribution-btn"]')).toBeNull();
+      expect(root.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+    });
+
+    it('regression: a BCT composed fixture renders unchanged, with no duplicated text', () => {
+      component.notification = {
+        notification_id: 14,
+        source: 'update',
+        created_date: new Date().toISOString(),
+        text: 'created by SP01 has tagged the B-A1080 of your center (ABC). Click to see the result.',
+        obj_notification_type: { type: NotificationType.RESULT_BILATERAL_PROJECT_TAGGED },
+        obj_result: {
+          result_code: 9398,
+          title: 'A pooled funding result',
+          obj_result_by_initiatives: [],
+          obj_version: { id: 1 }
+        }
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const p = root.querySelector('.notification_content_body_text')!;
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe(
+        'The result 9398 - A pooled funding result created by SP01 has tagged the B-A1080 of your center (ABC). Click to see the result.'
+      );
+    });
+  });
+
   describe('Bilateral AI Job Finished row (no result behind it)', () => {
     const aiJobRow = () => ({
       source: 'update',

@@ -32,12 +32,31 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   (`w1w2-center-tagged`, WCT-R-6/DD-5) exception:** an update-source row whose resolved type is
   `RESULT_CENTER_TAGGED` shows `NOTIFICATION_CENTER_TAGGED_COPY.chipLabel` ("CG Center tagged")
   instead of the raw type name, and `rowTypeChipColorClass` pairs it with the green
-  `--pr-status-approved-bg/-fg` tokens (not the violet `--pr-color-primary-50/-400` pair every
-  other update type still gets). Request-row chips are untouched — the `isUpdateSource` branch is
-  checked first in both getters, before the `isPrimaryRequest` ternary. Same WCT-T-5: these rows'
-  sentence also renders `lead` (the owner Science Program code) in its own `<b>`, immediately
+  `--pr-status-approved-bg/-fg` tokens. **WPT-T-4 (`w1w2-project-tagged`, WPT-R-6/DD-5) exception,
+  same mechanism:** an update-source row whose resolved type is `RESULT_BILATERAL_PROJECT_TAGGED`
+  shows `NOTIFICATION_PROJECT_TAGGED_COPY.chipLabel` ("Bilateral project tagged") paired with the
+  amber `--pr-status-in-progress-bg/-fg` tokens. Every OTHER update type (not CG Center tagged, not
+  Bilateral project tagged) still gets the raw type name and the violet
+  `--pr-color-primary-50/-400` pair. Request-row chips are untouched — the `isUpdateSource` branch
+  is checked first in both getters, before the `isPrimaryRequest` ternary. Same WCT-T-5: these
+  rows' sentence also renders `lead` (the owner Science Program code) in its own `<b>`, immediately
   before `parts.prefix` — see `getResultNotificationTextParts()`'s `RESULT_CENTER_TAGGED` case in
   `notification-type.constants.ts` for where `lead` comes from.
+- **WPT-T-4 (`w1w2-project-tagged`, design.md §8.2-§8.4, WPT-R-2/DD-3/DD-5): `segments` replace
+  `lead`/`prefix` for the enriched/legacy-bare `RESULT_BILATERAL_PROJECT_TAGGED` shape.** The
+  template checks `parts.segments` FIRST, before the `lead`/`prefix` blocks — when present, it loops
+  the array instead (`<b>` only for each `emphasize: true` piece, plain text otherwise), never
+  rendering `lead`/`prefix` for that row. This is the one shape that needs more than one bolded
+  mid-sentence token (the owner SP code, the project code, and the Center label are each their own
+  segment) — `lead` alone can only bold a single leading token. The loop is written as a single
+  tight line with **no whitespace between segments or control-flow blocks**, plus an explicit
+  trailing `{{ ' ' }}` right before the result-link `<a>` — Angular's default whitespace handling
+  collapses a blank-line gap between block-closing `}` and the next element to nothing (verified by
+  diffing rendered `innerHTML`), so without that explicit space token the sentence runs straight
+  into the link (`"...to result9341"`). A composed/legacy sentence (BCT or pre-fix) or empty text
+  never sets `segments` — those rows fall through to the pre-existing `lead`/`prefix` rendering,
+  unchanged. See `getResultNotificationTextParts()`'s `RESULT_BILATERAL_PROJECT_TAGGED` case in
+  `notification-type.constants.ts` for where `segments` comes from.
 - **Status indicator (`NOTIF-R-5`, item 2 of the task):** `rowStatusLabel` — "Needs your decision" /
   "For your information" (a `statusResolved` label was removed as dead code, rework attempt 2 —
   resolved rows never reach this getter's rendering path, they show the pre-existing
@@ -273,7 +292,16 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
   browser pass, not this doc.
 
-**Verified:** 2026-09-30 · qa-development-2026-ss · WCT-T-5 (`w1w2-center-tagged`, attempt 2):
+**Verified:** 2026-10-01 · qa-development-2026-ss · WPT-T-4 (`w1w2-project-tagged`): the inbox
+Updates row for `RESULT_BILATERAL_PROJECT_TAGGED` now loops `parts.segments` (SP09/project
+code/Center label each in their own `<b>`, emitter plain) instead of `lead`/`prefix`, and carries
+the `NOTIFICATION_PROJECT_TAGGED_COPY.chipLabel` ("Bilateral project tagged") chip in amber
+(`--pr-status-in-progress-bg/-fg`) — see the amended "Chip taxonomy" and new "WPT-T-4" bullets
+above. CG Center tagged stays green, every other Updates type stays violet, request-row chips are
+unaffected. Supersedes nothing below — it only adds to the "Chip taxonomy" bullet and documents the
+new sentence-rendering bullet; every prior stamp still stands for what it describes.
+
+**Prior verification:** 2026-09-30 · qa-development-2026-ss · WCT-T-5 (`w1w2-center-tagged`, attempt 2):
 an update-source `RESULT_CENTER_TAGGED` row's chip now reads `NOTIFICATION_CENTER_TAGGED_COPY.chipLabel`
 ("CG Center tagged") with the green `--pr-status-approved-bg/-fg` pair, instead of the raw type
 name/violet pair every other update row still gets — see the "Chip taxonomy" bullet above, amended

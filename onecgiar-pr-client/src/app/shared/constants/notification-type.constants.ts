@@ -1,4 +1,5 @@
 import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../internationalization/notification-center-tagged.copy';
+import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../internationalization/notification-project-tagged.copy';
 
 /**
  * Notification types, keyed by NAME rather than by database id.
@@ -70,6 +71,15 @@ export interface NotificationTextParts {
    * to the owner Science Program's code.
    */
   lead?: string;
+  /**
+   * Mid-sentence emphasized/plain text parts, rendered in place of `lead` and `prefix` when
+   * present, before the result link (WPT-R-2, DD-3). Optional — existing types never set it, so
+   * their rendering is unchanged. Today only the enriched/legacy-bare
+   * `RESULT_BILATERAL_PROJECT_TAGGED` branch sets it, to let the Science Program code, the project
+   * code and the Center label each be bolded individually mid-sentence (which `lead` and `prefix`
+   * alone can't do).
+   */
+  segments?: { text: string; emphasize: boolean }[];
   /** Rendered before the "<code> - <title>" link. */
   prefix: string | null;
   /** Rendered immediately after the link, with no whitespace between (e.g. an attached comma). */
@@ -146,6 +156,37 @@ export function getProgramCode(notification: any): string | null {
  */
 function isComposedTaggedText(text: string): boolean {
   return text.includes(' has tagged the ') || text.trim().endsWith('Click to see the result.');
+}
+
+/**
+ * WPT-T-3 (`w1w2-project-tagged`, design §7.3/§8.1/§9, DD-2): splits an enriched bare
+ * `RESULT_BILATERAL_PROJECT_TAGGED` row's stored text (`"<project code> (<Center label>)"`, WPT-R-1)
+ * into its project code and Center label, anchored on the **last trailing** `(…)` with non-empty
+ * contents. A legacy bare row (no trailing parenthetical, WPT-R-3) yields a null `centerLabel`. Only
+ * called once the caller has already ruled out a composed or empty text (`isComposedTaggedText`) —
+ * never apply this to a BCT/legacy composed sentence (its own trailing `(ABC).` must NOT be parsed,
+ * WPT-R-4).
+ *
+ * `[^()]+` (not `.+`) inside the parens is what makes "last trailing" correct for a project name
+ * that itself contains parentheses, e.g. `"Seeds (Phase 2) project (ABC)"` → code
+ * `"Seeds (Phase 2) project"`, label `"ABC"` — greedy backtracking can't cross into the inner pair
+ * because it contains no parens to exclude.
+ *
+ * DR-1 (accepted risk): a legacy bare row whose code came from the `fullName` fallback and itself
+ * ends in `"(…)"` is misparsed as code+label — `short_name` is NOT NULL server-side, so this only
+ * happens when `short_name` is empty.
+ *
+ * Keep in sync with the server twin: `onecgiar-pr-server/src/api/notification/notification.service.ts`
+ * `parseTaggedProjectLabel`. Both pin the same five-shape table (design §9).
+ */
+function parseTaggedProjectLabel(text: string): { code: string; centerLabel: string | null } {
+  const match = text.match(/^(.*)\(([^()]+)\)\s*$/);
+  if (!match) return { code: text, centerLabel: null };
+
+  const centerLabel = match[2].trim();
+  if (!centerLabel) return { code: text, centerLabel: null };
+
+  return { code: match[1].trim(), centerLabel };
 }
 
 function buildBilateralReviewSuffix(decisionLabel: string, notification: any): string {
@@ -244,23 +285,48 @@ export function getResultNotificationTextParts(notification: any): NotificationT
         }
       );
 
-    // NOTIF-T-12 (`NOTIF-R-14`, corrected 2026-09-30, rework attempt 2): the server stores just the
-    // tagged project's NAME on `notification.text` for the AC1/AC2 direct-tag flow (no `leadIn`) —
-    // this case builds the full sentence client-side for THAT shape only. `BCT-T-4`'s submission
-    // flow (`leadIn` present) and any pre-fix/legacy row still carry a whole composed sentence on
-    // `text`, indistinguishable from the bare shape by type alone — `isComposedTaggedText`
-    // (shared with `RESULT_CENTER_TAGGED`, WCT-T-4/DD-2) detects that shape (and the empty/null
-    // case) and falls back to the same prefix/suffix rendering, trusting `text` as an
-    // already-complete suffix.
+    // WPT-T-3 (`w1w2-project-tagged`, design §7.3/§8.1/§9, DD-2/DD-3, amends NOTIF-T-12): the
+    // server now stores `"<project code> (<Center label>)"` on `notification.text` for the
+    // direct-tag flow's AC1/AC2 (an enriched bare row, WPT-R-1) — this case builds the full
+    // sentence client-side for THAT shape AND for a legacy bare row (no trailing `(…)`, WPT-R-3),
+    // via `parseTaggedProjectLabel`. The emitter, the Science Program code, the project code and
+    // (when present) the Center label are each their own emphasized `segments` entry (DD-3), since
+    // `lead`/`prefix` alone can't bold three separate mid-sentence tokens. `BCT-T-4`'s submission
+    // flow (`leadIn` present) and any pre-fix/legacy composed row still carry a whole composed
+    // sentence on `text`, indistinguishable from the bare shape by type alone —
+    // `isComposedTaggedText` (shared with `RESULT_CENTER_TAGGED`, WCT-T-4/DD-2) detects that shape
+    // (and the empty/null case) FIRST (WPT-R-4: a BCT `(ABC).` must never be parsed) and falls back
+    // to the pre-existing prefix/suffix rendering, trusting `text` as an already-complete suffix. No
+    // `segments` are set on that fallback path.
     case NotificationType.RESULT_BILATERAL_PROJECT_TAGGED: {
       const text = notification?.text?.trim();
       if (!text || isComposedTaggedText(text)) {
         return { prefix: 'The result', suffix: text || null, emphasizePrefix: false };
       }
+
+      const emitter = getEmitterName(notification);
+      const programCode = getProgramCode(notification) ?? 'a Science Program';
+      const { code, centerLabel } = parseTaggedProjectLabel(text);
+
+      const segments: { text: string; emphasize: boolean }[] = [
+        { text: `${emitter} from `, emphasize: false },
+        { text: programCode, emphasize: true },
+        { text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.verb} `, emphasize: false },
+        { text: code, emphasize: true }
+      ];
+      if (centerLabel) {
+        segments.push({ text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseWithLabel.before}`, emphasize: false });
+        segments.push({ text: centerLabel, emphasize: true });
+        segments.push({ text: NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseWithLabel.after, emphasize: false });
+      } else {
+        segments.push({ text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseNoLabel}`, emphasize: false });
+      }
+
       return {
-        prefix: `${getEmitterName(notification)} from ${getProgramCode(notification) ?? 'a Science Program'} has tagged project ${text} as contributor to result`,
+        prefix: segments.map(segment => segment.text).join(''),
         suffix: null,
-        emphasizePrefix: false
+        emphasizePrefix: false,
+        segments
       };
     }
 

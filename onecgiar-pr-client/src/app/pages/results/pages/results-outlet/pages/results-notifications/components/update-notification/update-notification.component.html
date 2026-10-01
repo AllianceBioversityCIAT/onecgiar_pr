@@ -55,6 +55,11 @@
             <a [href]="aiJob.path" (click)="onAiJobLinkClick($event, aiJob.path)" style="text-decoration: underline; color: var(--pr-color-black)">View</a>
           }
         } @else {
+        <!-- WPT-T-4 (`w1w2-project-tagged`, WPT-R-2, DD-5): `segments`, when present, replace the
+             `lead`/`prefix` blocks below. -->
+        @if (parts.segments) {
+          @for (segment of parts.segments; track $index) {@if (segment.emphasize) {<b>{{ segment.text }}</b>} @else {{{ segment.text }}}}{{ ' ' }}
+        } @else {
         @if (parts.lead) {
           <b> {{ parts.lead }} </b>
         }
@@ -65,6 +70,7 @@
           } @else {
             {{ parts.prefix }}
           }
+        }
         }
 
         <!-- Attached comma (NDCW-R-2): no whitespace inside the link's tail nor between </a> and the trailer. -->

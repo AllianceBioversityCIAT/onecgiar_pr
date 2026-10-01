@@ -374,19 +374,23 @@ describe('notification-type constants', () => {
     });
   });
 
-  // NOTIF-T-12 (`NOTIF-R-14`, corrected 2026-09-30): the server now stores just the tagged
-  // project's NAME on `notification.text` (not a whole composed sentence) — the client builds the
-  // full sentence, naming the emitter and Science Program itself, unlike `RESULT_CENTER_TAGGED`
-  // above (which keeps the server-composed suffix).
-  describe('tagged bilateral project text (NOTIF-T-12)', () => {
-    it('builds the full sentence from the emitter, program code and stored project name', () => {
+  // WPT-T-3 (`w1w2-project-tagged`, amends NOTIF-T-12): the server now stores
+  // `"<project code> (<Center label>)"` on `notification.text` for an enriched bare row (WPT-R-1),
+  // or just the bare project code for a legacy bare row (WPT-R-3, no trailing `(…)`) — the client
+  // builds the full sentence either way, naming the emitter and Science Program itself, unlike
+  // `RESULT_CENTER_TAGGED` above (which keeps the server-composed suffix).
+  describe('tagged bilateral project text (WPT-T-3)', () => {
+    it('builds the full sentence for a legacy bare row (no Center label)', () => {
       const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
         text: 'P-1568-WBS0'
       });
 
       expect(buildResultNotificationText(notification)).toBe(
-        'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 4321 - A bilateral result title'
+        'Jane Doe from SP5 has tagged the bilateral project P-1568-WBS0 from your center to result 4321 - A bilateral result title'
       );
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['SP5', 'P-1568-WBS0']);
     });
 
     it('falls back to "a Science Program" when no program code is available', () => {
@@ -396,9 +400,50 @@ describe('notification-type constants', () => {
       });
 
       const parts = getResultNotificationTextParts(notification);
-      expect(parts.prefix).toContain('from a Science Program has tagged project P-1568-WBS0 as contributor to result');
+      expect(parts.prefix).toContain('from a Science Program has tagged the bilateral project P-1568-WBS0 from your center to result');
       expect(parts.suffix).toBeNull();
       expect(parts.emphasizePrefix).toBe(false);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['a Science Program', 'P-1568-WBS0']);
+    });
+
+    it('falls back to "A user" when no emitter name is available', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'P-1568-WBS0',
+        obj_emitter_user: null
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.prefix).toContain('A user from SP5 has tagged the bilateral project P-1568-WBS0');
+    });
+
+    it('builds the enriched mockup sentence, with SP code, project code and Center label each emphasized', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'B-A1080 (ABC)',
+        obj_emitter_user: { first_name: 'Lucia', last_name: 'Ferrari' },
+        obj_result: resultOf({
+          result_code: 9341,
+          title: '<title>',
+          obj_result_by_initiatives: [{ obj_initiative: { id: 9, official_code: 'SP09' } }]
+        })
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['SP09', 'B-A1080', 'ABC']);
+      expect(buildResultNotificationText(notification)).toBe(
+        'Lucia Ferrari from SP09 has tagged the bilateral project B-A1080 from your center (ABC) to result 9341 - <title>'
+      );
+      expect(parts.suffix).toBeNull();
+      expect(parts.emphasizePrefix).toBe(false);
+    });
+
+    it('treats only the last trailing "(...)" as the Center label, when the project code itself contains parentheses', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'Seeds (Phase 2) project (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['SP5', 'Seeds (Phase 2) project', 'ABC']);
+      expect(parts.prefix).toContain('has tagged the bilateral project Seeds (Phase 2) project from your center (ABC) to result');
     });
 
     // Rework attempt 2 (Reviewer FAIL issue 1): `notification.text` isn't always a bare project
@@ -446,8 +491,21 @@ describe('notification-type constants', () => {
       const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, { text: 'P-1568-WBS0' });
 
       expect(buildResultNotificationText(notification)).toBe(
-        'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 4321 - A bilateral result title'
+        'Jane Doe from SP5 has tagged the bilateral project P-1568-WBS0 from your center to result 4321 - A bilateral result title'
       );
+    });
+
+    it('falsifier: a BCT-composed row never sets segments', () => {
+      const bctText = 'reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.';
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, { text: bctText });
+
+      expect(getResultNotificationTextParts(notification).segments).toBeUndefined();
+    });
+
+    it('falsifier: another tagged type (RESULT_CENTER_TAGGED) never sets segments', () => {
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: 'ABC' });
+
+      expect(getResultNotificationTextParts(notification).segments).toBeUndefined();
     });
   });
 

@@ -39,6 +39,12 @@
           @if (aiJob) {
             {{ aiJob.message }}
           } @else {
+          <!-- WPT-T-4 (`w1w2-project-tagged`, WPT-R-2, DD-5): when the parts carry `segments`, loop
+               over them (`<b>` per emphasized piece) INSTEAD of the `lead`/`prefix` blocks below —
+               that's the only shape that needs more than one bolded mid-sentence token. -->
+          @if (parts.segments) {
+            @for (segment of parts.segments; track $index) {@if (segment.emphasize) {<b>{{ segment.text }}</b>} @else {{{ segment.text }}}}{{ ' ' }}
+          } @else {
           @if (parts.lead) {
             <b> {{ parts.lead }} </b>
           }
@@ -49,6 +55,7 @@
             } @else {
               {{ parts.prefix }}
             }
+          }
           }
 
           <a

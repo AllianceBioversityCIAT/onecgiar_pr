@@ -450,7 +450,7 @@ describe('NotificationService', () => {
         expect.objectContaining({
           initiativeOfficialCode: 'SP5',
           message:
-            'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 1234 - Tagged bilateral result',
+            'Jane Doe from SP5 has tagged the bilateral project P-1568-WBS0 from your center to result 1234 - Tagged bilateral result',
         }),
       ]);
     });
@@ -585,6 +585,7 @@ describe('NotificationService', () => {
     const emitAndReadDescription = async (
       renderedText?: string,
       resultOverrides: Record<string, any> = {},
+      emitterOverride?: Record<string, any> | null,
     ): Promise<string> => {
       mockNotificationLevelRepository.findOne.mockResolvedValue({
         notifications_level_id: 2,
@@ -594,12 +595,15 @@ describe('NotificationService', () => {
       });
       mockNotificationRepository.save.mockResolvedValue(null);
       mockNotificationRepository.findOne.mockResolvedValue({
-        obj_emitter_user: {
-          id: 9,
-          first_name: 'Jane',
-          last_name: 'Doe',
-          email: 'jane@example.com',
-        },
+        obj_emitter_user:
+          emitterOverride === undefined
+            ? {
+                id: 9,
+                first_name: 'Jane',
+                last_name: 'Doe',
+                email: 'jane@example.com',
+              }
+            : emitterOverride,
         obj_result: {
           result_code: 4321,
           title: 'A bilateral result title',
@@ -631,11 +635,54 @@ describe('NotificationService', () => {
       return payload.desc;
     };
 
-    it('builds the full sentence for a genuine bare project label', async () => {
+    // WPT-T-2 (`w1w2-project-tagged`, design §7.3/§9) — the five-shape table (shared with the
+    // client's `notification-type.constants.spec.ts`, DR-2).
+    it('builds the full sentence for a legacy bare project label (no Center label)', async () => {
       const desc = await emitAndReadDescription('P-1568-WBS0');
 
       expect(desc).toBe(
-        'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 4321 - A bilateral result title',
+        'Jane Doe from SP5 has tagged the bilateral project P-1568-WBS0 from your center to result 4321 - A bilateral result title',
+      );
+      expect(desc).not.toContain('as contributor');
+      expect(desc).not.toContain('The result');
+      expect(desc).not.toContain('created by');
+      expect(desc).not.toContain('Click to see the result.');
+      expect(desc).not.toContain('()');
+    });
+
+    it('builds the full sentence for an enriched bare row, with the Center label in parentheses', async () => {
+      const desc = await emitAndReadDescription('B-A1080 (ABC)');
+
+      expect(desc).toBe(
+        'Jane Doe from SP5 has tagged the bilateral project B-A1080 from your center (ABC) to result 4321 - A bilateral result title',
+      );
+    });
+
+    it('treats only the LAST trailing (...) as the Center label, so a project name with its own parentheses keeps them in the code', async () => {
+      const desc = await emitAndReadDescription(
+        'Seeds (Phase 2) project (ABC)',
+      );
+
+      expect(desc).toBe(
+        'Jane Doe from SP5 has tagged the bilateral project Seeds (Phase 2) project from your center (ABC) to result 4321 - A bilateral result title',
+      );
+    });
+
+    it('falls back to "a Science Program" when the owner SP code is missing', async () => {
+      const desc = await emitAndReadDescription('B-A1080 (ABC)', {
+        obj_result_by_initiatives: [],
+      });
+
+      expect(desc).toBe(
+        'Jane Doe from a Science Program has tagged the bilateral project B-A1080 from your center (ABC) to result 4321 - A bilateral result title',
+      );
+    });
+
+    it('falls back to "A user" when the emitter is missing', async () => {
+      const desc = await emitAndReadDescription('B-A1080 (ABC)', {}, null);
+
+      expect(desc).toBe(
+        'A user from SP5 has tagged the bilateral project B-A1080 from your center (ABC) to result 4321 - A bilateral result title',
       );
     });
 
