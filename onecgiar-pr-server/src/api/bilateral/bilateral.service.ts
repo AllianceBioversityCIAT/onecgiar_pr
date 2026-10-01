@@ -1574,7 +1574,10 @@ export class BilateralService {
           mapToToc =
             await this._resultsTocResultsRepository.findTocResultsForBilateral({
               ...mapping,
-              initiative_id: init.id,
+              // toc_work_packages.initiativeId stores the program CODE ('SP13'), not the PRMS
+              // id (62): passing init.id made the indicator query never match, so only the
+              // title-only fallback answered and the indicator + target_contribution were lost.
+              initiative_id: init.official_code,
             });
 
           const foundWithTocResultId =
