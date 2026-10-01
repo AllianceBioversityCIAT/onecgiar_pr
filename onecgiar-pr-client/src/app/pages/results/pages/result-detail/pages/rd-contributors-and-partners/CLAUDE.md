@@ -147,6 +147,29 @@ catch a future accidental carve-out.
 - Ruta `result/result-detail/:id/contributor-partners?phase=<id>`. La URL con
   `/contributors-and-partners` **no** existe: redirige a `general-information`.
 
+## Center pills on "Contributing W3 and/or bilateral projects" (P2-3860, 2026-10-01)
+
+Same filter as the W3/Bilateral form (P2-3859, `pages/bilateral/components/section-contributors`): pills
+INSIDE the `app-pr-multi-select` panel, under its search box, projected through its `[util]` slot.
+- **Default = "All centers"** (Yeck: in W1/W2 the reporter belongs to a Program, not a Center). Order:
+  "All centers (total)" pressed, then every Center owning ≥1 listed project, by acronym, `ACRONYM (n)`,
+  full name in `title`/`aria-label`. Single select. Projects with no owner only under "All centers".
+- Owner Center = `organization_id` / `organization_acronym` / `organization_name` on each row of
+  `clarisaProjectsList` — both endpoints return them (`aow-bilateral.repository.ts`
+  `findBilateralProjectsByProgramOfficialCode`, `findBilateralProjectById`).
+- Logic = pure helpers in `shared/utils/project-center-filter.util.ts` (+ copy
+  `internationalization/project-center-filter.copy.ts`, also spread into `BILATERAL_CONTRIBUTORS_COPY.projectFilter`).
+  The bilateral component itself still has its own copy of the logic (page Center first, catalogue acronyms).
+- Component: `projectOwnerCenters()` / `projectCenterFilter()` / `filteredBilateralProjectOptions()` /
+  `projectCenterPills()` / `showProjectCenterPills()` / `setProjectCenterFilter()`. `clarisaProjectsList` is
+  a plain field, so they are **memoized by reference** — `[options]` must stay the same array between CD passes.
+- 🛑 View-only: swaps `[options]`, never `clarisaProjectsList` (the P2-3838 `projectOwnerCenter()` lock reads
+  the full list) nor `partnersBody` → nothing saved, dirty tracker unaffected. Already-selected projects stay in
+  the options (union) whatever the pill. `mousedown.preventDefault` + `click.stopPropagation` keep the panel open.
+  Hidden when `api.rolesSE.readOnly` or no listed project has an owner.
+- Tests: `rd-contributors-and-partners.center-pills.spec.ts` renders the REAL field markup (cut from the
+  template) inside the real `app-pr-multi-select`; `shared/utils/project-center-filter.util.spec.ts`.
+
 ## El piso "N fields missing" ahora ve las pestañas ToC que no están en pantalla (P2-3542, `docs/specs/bugfix/p2-3542-section-bar-toc-tabs`)
 
 `CPMultipleWPsComponent` (`components/multiple-wps/multiple-wps.component.ts`) es el **publisher**

@@ -1,3 +1,5 @@
+import { PROJECT_CENTER_FILTER_COPY } from './project-center-filter.copy';
+
 /**
  * W3/Bilateral "Contributors & partners" section — centralized user-facing copy (R37).
  * A later multilingual pass edits this file instead of hunting templates.
@@ -35,12 +37,8 @@ export const BILATERAL_CONTRIBUTORS_COPY = {
   },
   /** P2-3859 — one Center pill per Center that owns projects, inside the "Contributing W3/bilateral projects" panel, under its search box. */
   projectFilter: {
-    /** Accessible name of the pill group (the pills themselves only show the acronym and a count). */
-    groupLabel: 'Filter projects by Center',
-    allCenters: 'All centers',
-    count: (n: number): string => `(${n})`,
-    /** Tooltip + accessible name of a pill: the pill itself only shows the acronym, so the full name lives here. */
-    pillTitle: (centerName: string, n: number): string => `${centerName} (${n} ${n === 1 ? 'project' : 'projects'})`,
+    /** Group label, "All centers", count and pill title are shared with the W1/W2 form (P2-3860). */
+    ...PROJECT_CENTER_FILTER_COPY,
     /** The projects picker placeholder, which used to promise "all" projects even when filtered. */
     pickerPlaceholderAll: 'The drop-down list includes all bilateral projects',
     pickerPlaceholderFiltered: (centerAcronym: string): string => `The drop-down list includes the projects of ${centerAcronym}`
