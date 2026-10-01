@@ -201,9 +201,9 @@
 
 | # | Check | Result |
 |---|---|---|
-| 1 | Inbox row matches `mockup/center-tagged-row.png`; bell and real-time toast sentence | not-run |
-| 2 | prtest: W1/W2 partners save newly linking a contributor and/or the lead notifies that Center's users | not-run (prtest not yet deployed with this branch) |
-| 3 | prtest: IPSR step adding a Center notifies, primary included | not-run (prtest not yet deployed with this branch); also closes the T3 DI-boot gap |
+| 1 | Inbox row matches `mockup/center-tagged-row.png`; bell and real-time toast sentence | **pass (inbox row)**, 2026-10-01, prtest, user 575, result 9730: "**SP05** has tagged your CG Center as a contributor (Bioversity (Alliance)) to result 9730 - scrambled", with the green `CG Center tagged` chip, the `W1/W2` chip and the meta line, and no decision buttons. Bell and real-time toast: not-run |
+| 2 | prtest: W1/W2 partners save newly linking a contributor and/or the lead notifies that Center's users | **pass**, 2026-10-01, prtest. Result 11864 (code 9396): CIMMYT (`CENTER-05`), newly linked as **lead**, notified user 1131 with `text = 'CIMMYT'` (notification 48935, emitter 575, saver not notified). Bioversity (`CENTER-02`), newly linked as contributor on result 9730, notified user 575. Re-save path confirmed: on 11864, `CENTER-02` had been linked since 2026-09-16 and was not re-notified |
+| 3 | prtest: IPSR step adding a Center notifies, primary included | **pass**, 2026-10-01, prtest. IPSR 9732 (`result_id` 12200, cycle IPSR 2026, phase 37): `CENTER-02` was newly saved as the **lead** (`is_leading_result = 1`) by user 606. This created 10 `Result Center Tagged` rows with `text = 'Bioversity (Alliance)'`, one per active `CENTER-02` Center User; user 575 got notification 48954. The inbox, filtered to Phases = IPSR 2026, shows "**SP01** has tagged your CG Center as a contributor (Bioversity (Alliance)) to result 9732 - …" with the green chip; IPSR 9733 (SP05) shows the same. Saving through the new IPSR endpoint confirms the Nest DI boot works (closes the T3 gap) |
 | 4 | prtest: SP review of a bilateral result adding a Center notifies with the new sentence (DD-6) | not-run (prtest not yet deployed with this branch); also closes the T2 DD-6 seam gap |
 | 5 | An old row still renders the old sentence | not-run |
 
@@ -214,3 +214,9 @@
 - Server spec: the T2 rejection test spies on `console.error` instead of `_logger.error` and does not assert the log (T2).
 - Client: the Type filter facet still shows "Result Center Tagged" while the chip shows "CG Center tagged" (T5).
 - Client: `notification-item/CLAUDE.md` is over the 120-line folder-doc cap. This debt predates the spec (T5).
+
+**T6 note, 2026-10-01: a center acronym that already carries parentheses renders doubled.** Example: CLARISA acronym `Bioversity (Alliance)` gives `…as a contributor (Bioversity (Alliance)) to result…`. This literally conforms to WCT-R-5 `({Center acronym})`. Offered options: drop the extra parentheses, or use brackets or a dash. **User decision: "Dejarlo así"** (accepted as is).
+
+**T6 diagnostic note:** the first report of "no notification" on result 9396 came from a query filtered by `result_id = 9396`. That value is the `result_code`; the real `result_id` is 11864. Re-querying by 11864 showed the cases above.
+
+**User confirmation, 2026-10-01:** the per-user notification model (one row per Center/SP member, each with its own read state) stays as is. The user consulted two team members and dropped the shared-notification idea. No proposal was opened. The inbox phase filter already lists IPSR phases (`GET_versioning(ALL, ALL)`), so no change was needed.
