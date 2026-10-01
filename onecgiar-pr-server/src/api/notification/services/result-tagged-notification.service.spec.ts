@@ -60,49 +60,50 @@ describe('ResultTaggedNotificationService', () => {
   const lastEmitCall = () =>
     notificationService.emitResultNotification.mock.calls.at(-1);
 
-  describe('notifyTaggedCenters (AC1)', () => {
-    it('emits to the users of the tagged centre with the AC3 copy', async () => {
+  describe('notifyTaggedCenters (AC1, amended by WCT-R-8)', () => {
+    // WCT-R-8 falsifier: Center ABC (acronym ABC) tagged with no leadIn stores exactly 'ABC'.
+    it('stores the bare acronym as the notification text', async () => {
       centerRepo.find.mockResolvedValueOnce([
         {
-          code: 'CENTER-01',
-          clarisa_institution: { name: 'Africa Rice Center' },
+          code: 'ABC',
+          clarisa_institution: { acronym: 'ABC', name: 'A Long Center Name' },
         },
       ]);
       roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([11, 12]);
 
-      await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['CENTER-01']);
+      await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['ABC']);
 
-      const [level, type, userIds, emitter, resultId, suffix] = lastEmitCall();
+      const [level, type, userIds, emitter, resultId, text] = lastEmitCall();
       expect(level).toBe(NotificationLevelEnum.RESULT);
       expect(type).toBe(NotificationTypeEnum.RESULT_CENTER_TAGGED);
       expect(userIds).toEqual([11, 12]);
       expect(emitter).toBe(EMITTER);
       expect(resultId).toBe(RESULT_ID);
-      expect(suffix).toBe(
-        'created by SP04 has tagged the Africa Rice Center. Click to see the result.',
-      );
+      expect(text).toBe('ABC');
     });
 
-    it('names the owning Science Program from the initiative_role_id = 1 row', async () => {
+    // WCT-R-8 falsifier: a center with a null acronym is stored as something other than its code.
+    it('falls back to the centre code when the institution acronym is null', async () => {
       centerRepo.find.mockResolvedValueOnce([
-        { code: 'C1', clarisa_institution: { name: 'Centre One' } },
+        {
+          code: 'C1',
+          clarisa_institution: { acronym: null, name: 'Centre One' },
+        },
       ]);
       roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([11]);
 
       await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['C1']);
 
-      // SP99 sits first in the array but is not the owner.
-      expect(lastEmitCall()[5]).toContain('SP04');
-      expect(lastEmitCall()[5]).not.toContain('SP99');
+      expect(lastEmitCall()[5]).toBe('C1');
     });
 
-    it('falls back to the centre code when the institution name is missing', async () => {
+    it('falls back to the centre code when there is no clarisa_institution at all', async () => {
       centerRepo.find.mockResolvedValueOnce([{ code: 'C1' }]);
       roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([11]);
 
       await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['C1']);
 
-      expect(lastEmitCall()[5]).toContain('has tagged the C1.');
+      expect(lastEmitCall()[5]).toBe('C1');
     });
 
     it('does nothing when no centre codes are given', async () => {

@@ -36,6 +36,7 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
 import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
+import { NotificationModule } from '../../notification/notification.module';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -44,6 +45,7 @@ import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/
     ResultsTocResultsModule,
     EmailNotificationManagementModule,
     SocketManagementModule,
+    NotificationModule,
   ],
   providers: [
     ResultsPackageTocResultService,

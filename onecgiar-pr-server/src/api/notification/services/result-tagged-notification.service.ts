@@ -81,9 +81,11 @@ export class ResultTaggedNotificationService {
 
     const targets: TaggedTarget[] = codes.map((code) => {
       const center = centers.find((c) => c.code === code);
+      // WCT-R-8: the direct-tag label is the CLARISA institution acronym, falling back to the
+      // Center's own code when the acronym is empty or missing — never the long institution name.
       return {
         centerCode: code,
-        label: center?.clarisa_institution?.name ?? code,
+        label: center?.clarisa_institution?.acronym || code,
         type: NotificationTypeEnum.RESULT_CENTER_TAGGED,
       };
     });
@@ -298,13 +300,17 @@ export class ResultTaggedNotificationService {
       // NOTIF-T-12: the composed sentence for RESULT_BILATERAL_PROJECT_TAGGED moved to the client
       // (`getResultNotificationTextParts()`, `notification-type.constants.ts`) — through the
       // default lead-in path (AC1/AC2's direct-tag flow, `leadIn` absent) this now stores just the
-      // project label, not the whole sentence. RESULT_CENTER_TAGGED keeps the composed sentence
-      // unchanged (out of this fix's scope), and so does the BCT-T-4 submission flow, which always
-      // passes an explicit `leadIn` and whose own label shape ("<project> of your center (<code>)")
-      // is a different, unrelated spec's decision — not touched here.
+      // project label, not the whole sentence.
+      //
+      // WCT-R-8: RESULT_CENTER_TAGGED joins the same bare-label shape through the same default
+      // lead-in path (W1/W2 partners save, IPSR contributors save, SP review of a bilateral
+      // result — none of which pass `leadIn`). The BCT-T-4 submission flow always passes an
+      // explicit `leadIn` and keeps the composed sentence unchanged (WCT-R-7), and so does its own
+      // project label shape ("<project> of your center (<code>)") — not touched here.
       const text =
-        target.type === NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED &&
-        !leadIn
+        !leadIn &&
+        (target.type === NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED ||
+          target.type === NotificationTypeEnum.RESULT_CENTER_TAGGED)
           ? target.label
           : `${resolvedLeadIn} has tagged the ${target.label}. Click to see the result.`;
 
