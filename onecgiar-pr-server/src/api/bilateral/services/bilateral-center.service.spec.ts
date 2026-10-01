@@ -362,6 +362,8 @@ describe('BilateralCenterService', () => {
             // `PSR-T-6` — no pending round / nothing to release by default; individual tests
             // override these.
             findPendingPrimaryInitiativeId: jest.fn().mockResolvedValue(null),
+            // `PNS-T-1` — no saved-but-not-sent draft round by default; individual tests override.
+            findDraftPrimaryInitiativeId: jest.fn().mockResolvedValue(null),
             releaseContributors: jest.fn().mockResolvedValue({ released: 0 }),
           },
         },
@@ -721,10 +723,13 @@ describe('BilateralCenterService', () => {
           program_code: 'SP09',
         });
 
+        // `PNS-T-1`: a brand-new result has no owner — the choice is saved as a DRAFT, not sent.
         expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
           99,
           10,
           user,
+          undefined,
+          { asDraft: true },
         );
         const resultByInitiativesRepository =
           module.get<ResultByInitiativesRepository>(
@@ -1363,6 +1368,41 @@ describe('BilateralCenterService', () => {
           ) as any;
         // SP02 (id 2) has a pending primary request — the very SP the Center is waiting on.
         primaryProgramRequestService.findPendingPrimaryInitiativeId = jest
+          .fn()
+          .mockResolvedValue(2);
+
+        const response = await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(shareRepo.save).not.toHaveBeenCalled();
+        expect(shareRepo.update).not.toHaveBeenCalled();
+        expect(response.response).toEqual(
+          expect.objectContaining({ savedPrograms: [], failedPrograms: [] }),
+        );
+      });
+
+      // `PNS-T-1` (design.md §5 item 5) — same exclusion, but for a saved-but-not-sent DRAFT
+      // primary choice (no pending round yet). Must be seen red: today's `syncContributingPrograms`
+      // only calls `findPendingPrimaryInitiativeId`, never a draft-aware lookup, so SP02 would be
+      // saved as a contributor here on unchanged code.
+      it('excludes the draft (not-yet-sent) primary SP from the contributor list (PNS-R-1)', async () => {
+        const { shareRepo } = arrange();
+        const rbi = module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        ) as any;
+        rbi.getOwnerInitiativeByResult = jest.fn().mockResolvedValue(null);
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          ) as any;
+        primaryProgramRequestService.findPendingPrimaryInitiativeId = jest
+          .fn()
+          .mockResolvedValue(null);
+        // SP02 (id 2) has a saved-but-not-sent DRAFT primary choice.
+        primaryProgramRequestService.findDraftPrimaryInitiativeId = jest
           .fn()
           .mockResolvedValue(2);
 
@@ -2240,6 +2280,10 @@ describe('BilateralCenterService', () => {
           404,
           user,
           fakeManager,
+          // `PNS-T-1`: `configureTransaction()`'s default active role-1 row (initiative_id 100)
+          // makes this a swap (an owner already exists) — out of this spec's scope, so the choice
+          // is sent immediately (`asDraft: false`), unchanged from today's behavior.
+          { asDraft: false },
         );
         expect(initiativeRepository.save).not.toHaveBeenCalled();
         expect(initiativeRepository.update).not.toHaveBeenCalled();
@@ -2263,6 +2307,64 @@ describe('BilateralCenterService', () => {
         expect(initiativeRepository.update).not.toHaveBeenCalledWith(
           2,
           expect.objectContaining({ is_active: false }),
+        );
+      });
+
+      // `PNS-T-1` (requirements.md PNS-R-1, scope guard): the first pick on an ownerless result
+      // (no active role-1 row) is saved as a DRAFT, not sent — distinct from the swap test above,
+      // where `configureTransaction()`'s default active role-1 row makes `asDraft: false`. Must
+      // be seen red against today's `request()` call, which passes no `opts` at all.
+      it('passes asDraft: true for a first pick on an ownerless result (no active role-1 row)', async () => {
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          );
+        const { initiativeRepository, fakeManager } = configureTransaction();
+        initiativeRepository.find.mockResolvedValue([]);
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
+          11513,
+          404,
+          user,
+          fakeManager,
+          { asDraft: true },
+        );
+      });
+
+      // `PSR-T-5` rework attempt 2 — Reviewer FAIL remediation (b): a result created before this
+      // feature existed can be ownerless (no active role-1 row) while ALREADY carrying a sent
+      // PENDING primary request (`findPendingPrimaryInitiativeId` resolves it). requirements.md §7
+      // Compatibility — such a result "stays pending" and keeps using the old send-immediately
+      // path; it must NOT be treated as a first pick / draft just because there is no owner yet.
+      // Must be seen red against attempt-1 code, whose `asDraft` only checked
+      // `currentPrimaryId === 0`.
+      it('passes asDraft: false for an ownerless result that already has a pending primary request', async () => {
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          );
+        const { initiativeRepository, fakeManager } = configureTransaction();
+        initiativeRepository.find.mockResolvedValue([]);
+        (
+          primaryProgramRequestService.findPendingPrimaryInitiativeId as jest.Mock
+        ).mockResolvedValueOnce(9);
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
+          11513,
+          404,
+          user,
+          fakeManager,
+          { asDraft: false },
         );
       });
 

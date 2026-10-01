@@ -338,12 +338,32 @@ export class BilateralCenterService {
       // primary SP until SP12 accepts" (`PSR-R-2`, DD-4) — so `activePrimaryRows` above is read
       // only to detect a change, never mutated here.
       if (changed) {
+        // `PNS-R-1` (design.md §5 item 3): a first pick (no owner yet) is saved as a DRAFT, not
+        // sent — the whole method already requires Editing/Draft status (guard above), so "no
+        // owner" is normally the only remaining condition. A swap (an owner already exists) is
+        // unchanged: it sends the request immediately, out of this spec's scope.
+        //
+        // `PSR-T-5` rework attempt 2 — Reviewer FAIL remediation (b): an ownerless result can
+        // ALSO already carry an active PENDING primary request — a legacy result created before
+        // this feature existed, or any result whose round was already sent by an earlier save.
+        // requirements.md §7 Compatibility: such a result "stay[s] pending" and keeps working the
+        // OLD send-immediately way; it must not be treated as a first pick just because there is
+        // no owner yet (that would wrongly draft-demote a live pending request, see `request()`'s
+        // own idempotency guard for the other half of this fix).
+        // @akili-spec notifications/primary-notify-on-submit
+        const hasPendingRound =
+          currentPrimaryId === 0 &&
+          (await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
+            parsedResultId,
+            manager,
+          )) != null;
         const outcome: PrimaryRequestOutcome =
           await this.primaryProgramRequestService.request(
             parsedResultId,
             nextPrimaryId,
             user,
             manager,
+            { asDraft: currentPrimaryId === 0 && !hasPendingRound },
           );
         if (outcome.ok === false) {
           if (outcome.reason === 'not_aligned') {
@@ -522,11 +542,16 @@ export class BilateralCenterService {
         // `request()` never throws (requirements.md §7 Reliability / PSR-R-1 "request step
         // fails") — a failure is logged and swallowed so result creation still succeeds, leaving
         // the result ownerless and retryable (`PSR-R-1`, "sent-back state").
+        // `PNS-R-1` (design.md §5 item 2): a brand-new result has no owner — the choice is saved
+        // as a DRAFT, not sent.
+        // @akili-spec notifications/primary-notify-on-submit
         const outcome: PrimaryRequestOutcome =
           await this.primaryProgramRequestService.request(
             result.id,
             initiative.id,
             user,
+            undefined,
+            { asDraft: true },
           );
         if (outcome.ok === false) {
           this.logger.warn(
@@ -1809,6 +1834,14 @@ export class BilateralCenterService {
       await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
         resultId,
       );
+    // `PNS-R-1` (design.md §5 item 5) — same reasoning as `pendingPrimaryId`, but for a
+    // saved-not-yet-sent primary choice (DRAFT): a result can't ask the same SP to be both the
+    // (not-yet-sent) primary and a contributor.
+    // @akili-spec notifications/primary-notify-on-submit
+    const draftPrimaryId =
+      await this.primaryProgramRequestService.findDraftPrimaryInitiativeId(
+        resultId,
+      );
 
     const wanted = new Map<number, string>();
     for (const program of programs ?? []) {
@@ -1825,6 +1858,8 @@ export class BilateralCenterService {
       }
       if (ownerId != null && Number(init.id) === ownerId) continue;
       if (pendingPrimaryId != null && Number(init.id) === pendingPrimaryId)
+        continue;
+      if (draftPrimaryId != null && Number(init.id) === draftPrimaryId)
         continue;
       wanted.set(Number(init.id), code);
     }

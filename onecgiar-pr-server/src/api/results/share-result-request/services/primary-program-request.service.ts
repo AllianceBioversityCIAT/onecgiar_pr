@@ -55,6 +55,11 @@ export enum PrimaryRequestStateEnum {
   PENDING = 'pending',
   SENT_BACK = 'sent_back',
   ACCEPTED = 'accepted',
+  /**
+   * `PNS-R-1`/`PNS-DD-1` — a saved-but-not-sent primary choice (a `primary` row at status
+   * DRAFT). Priority order (design.md §4): accepted > pending > draft > sent_back > none.
+   */
+  DRAFT = 'draft',
 }
 
 export interface PrimaryRequestState {
@@ -179,15 +184,29 @@ export class PrimaryProgramRequestService {
    * the `share_result_request` reads/writes participate in the caller's transaction (the CLARISA
    * alignment reads are read-only lookups and stay off it, matching how other services here treat
    * catalogue reads).
+   *
+   * `opts.asDraft` (`PNS-R-1`/`PNS-DD-1`, design.md §5 item 1) — when `true`, inserts status
+   * DRAFT (4) instead of PENDING (1): the Center's choice is saved but not sent (no actionable
+   * inbox row for the SP, `PNS-R-1`). The idempotency check below matches an active round row of
+   * the SAME status being requested (DRAFT when `asDraft`, PENDING otherwise), so re-saving the
+   * same SP while still a draft creates no second row, exactly like re-saving a pending SP today.
+   * The DD-8 round-cancel set (on an actual Center re-pick) also deactivates an active DRAFT row —
+   * changing the saved choice from SP09 to SP12 must leave no active SP09 draft — never a
+   * CONTRIBUTOR draft (`activeRows` is already scoped to `request_type = primary`).
    */
   async request(
     resultId: number,
     spInitiativeId: number,
     user: TokenDto,
     manager?: EntityManager,
-    opts?: { cancelRound?: boolean },
+    opts?: { cancelRound?: boolean; asDraft?: boolean },
   ): Promise<PrimaryRequestOutcome> {
     const cancelRound = opts?.cancelRound ?? true;
+    // @akili-spec notifications/primary-notify-on-submit
+    const asDraft = opts?.asDraft ?? false;
+    const targetStatus = asDraft
+      ? RequestStatusId.DRAFT
+      : RequestStatusId.PENDING;
     try {
       // T-5 review finding: when `manager` is given, EVERY read below must go through it, not
       // through the plain injected repositories — otherwise a caller in the same transaction
@@ -220,12 +239,12 @@ export class PrimaryProgramRequestService {
       });
 
       const pendingRow = activeRows.find(
-        (row) => row.request_status_id === RequestStatusId.PENDING,
+        (row) => row.request_status_id === targetStatus,
       );
 
-      // Idempotent: re-saving the SP that is already the pending round's target creates no
-      // second row (requirements.md PSR-R-2, "re-saving the same SP MUST NOT create a second
-      // request").
+      // Idempotent: re-saving the SP that is already the target round's row (PENDING, or DRAFT
+      // when `asDraft`) creates no second row (requirements.md PSR-R-2 / PNS-R-1 "re-saving the
+      // same SP MUST NOT create a second request/duplicate").
       if (pendingRow && pendingRow.shared_inititiative_id === spInitiativeId) {
         return {
           ok: true,
@@ -233,16 +252,42 @@ export class PrimaryProgramRequestService {
         };
       }
 
+      // `PSR-T-5` rework attempt 2 — Reviewer FAIL remediation (a): a result that already has an
+      // active PENDING round for this SAME SP (e.g. a legacy-PENDING result created before this
+      // feature, or any result whose round was already sent) must keep that PENDING row untouched
+      // when `asDraft` is requested — never turn it into a DRAFT (requirements.md §7
+      // Compatibility "stay pending"; PNS-R-1 "re-saving the same SP MUST NOT create a second
+      // saved choice"). Only reachable when `asDraft` is true and the SP differs from
+      // `targetStatus`'s own match above (DRAFT never equals PENDING, so this never double-fires
+      // with the check above).
+      if (asDraft) {
+        const activePendingRow = activeRows.find(
+          (row) => row.request_status_id === RequestStatusId.PENDING,
+        );
+        if (
+          activePendingRow &&
+          activePendingRow.shared_inititiative_id === spInitiativeId
+        ) {
+          return {
+            ok: true,
+            shareResultRequestId: activePendingRow.share_result_request_id,
+          };
+        }
+      }
+
       // DD-8 — cancel the current round ONLY on an actual Center pick: every active
-      // PENDING/DECLINED row (not an ACCEPTED owner row — that one is only replaced at
-      // accept-time, by T-4, per DD-4's swap rule). Skipped when `cancelRound` is false (T-3's
-      // decline auto-move) — see the `request()` doc comment for why.
+      // PENDING/DECLINED/DRAFT row (not an ACCEPTED owner row — that one is only replaced at
+      // accept-time, by T-4, per DD-4's swap rule). `PNS-DD-1`: a DRAFT round row is cancelled the
+      // same way a PENDING one is — changing the saved choice (SP09 → SP12) must leave no active
+      // SP09 draft. Skipped when `cancelRound` is false (T-3's decline auto-move) — see the
+      // `request()` doc comment for why.
       if (cancelRound) {
         const roundRowIds = activeRows
           .filter(
             (row) =>
               row.request_status_id === RequestStatusId.PENDING ||
-              row.request_status_id === RequestStatusId.DECLINED,
+              row.request_status_id === RequestStatusId.DECLINED ||
+              row.request_status_id === RequestStatusId.DRAFT,
           )
           .map((row) => row.share_result_request_id);
 
@@ -267,7 +312,7 @@ export class PrimaryProgramRequestService {
         requester_initiative_id: null,
         // The requested SP is the one that decides this request's outcome by accepting/declining.
         approving_inititiative_id: spInitiativeId,
-        request_status_id: RequestStatusId.PENDING,
+        request_status_id: targetStatus,
         is_active: true,
         is_map_to_toc: false,
         from_toc: false,
@@ -334,6 +379,22 @@ export class PrimaryProgramRequestService {
       };
     }
 
+    // `PNS-R-1`/design.md §4 — priority accepted > pending > draft > sent_back > none: a saved,
+    // not-yet-sent choice outranks a stale sent_back round from a previous cycle.
+    // @akili-spec notifications/primary-notify-on-submit
+    const draft = rows.find(
+      (row) => row.request_status_id === RequestStatusId.DRAFT,
+    );
+    if (draft) {
+      return {
+        state: PrimaryRequestStateEnum.DRAFT,
+        program_code: await this.resolveOfficialCode(
+          draft.shared_inititiative_id,
+        ),
+        declined_by_codes: [],
+      };
+    }
+
     const declined = rows.filter(
       (row) => row.request_status_id === RequestStatusId.DECLINED,
     );
@@ -376,6 +437,31 @@ export class PrimaryProgramRequestService {
       },
     });
     return pending?.shared_inititiative_id ?? null;
+  }
+
+  /**
+   * `PNS-T-1` (design.md §5 item 4) — mirror of {@link findPendingPrimaryInitiativeId} for the
+   * saved-but-not-sent DRAFT round: `assertSubmittable` (T-2) needs it to allow an ownerless
+   * submit, and the contributor exclusion (`bilateral-center.service.ts` `syncContributingPrograms`)
+   * needs the SAME SP excluded from the contributor list while its primary choice is only a draft
+   * — a result can't ask an SP to be both the (not-yet-sent) primary AND a contributor at once.
+   *
+   * @akili-spec notifications/primary-notify-on-submit
+   */
+  async findDraftPrimaryInitiativeId(
+    resultId: number,
+    manager?: EntityManager,
+  ): Promise<number | null> {
+    const repo = this.repoFor(manager);
+    const draft = await repo.findOne({
+      where: {
+        result_id: resultId,
+        request_type: RequestTypeEnum.PRIMARY,
+        request_status_id: RequestStatusId.DRAFT,
+        is_active: true,
+      },
+    });
+    return draft?.shared_inititiative_id ?? null;
   }
 
   /**

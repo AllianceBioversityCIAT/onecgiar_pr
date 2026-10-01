@@ -5006,11 +5006,16 @@ export class BilateralService {
     // `request()` never throws (requirements.md §7 Reliability / PSR-R-1 "request step fails") —
     // a failure is logged and swallowed so `promoteDraft` still succeeds, leaving the result
     // ownerless and retryable.
+    // `PNS-R-1` (design.md §5 item 2): no owner exists yet at promote time, so the choice is
+    // saved as a DRAFT, not sent.
+    // @akili-spec notifications/primary-notify-on-submit
     const outcome: PrimaryRequestOutcome =
       await this._primaryProgramRequestService.request(
         resultId,
         initiative.id,
         { id: userId } as TokenDto,
+        undefined,
+        { asDraft: true },
       );
     if (outcome.ok === false) {
       this.logger.warn(

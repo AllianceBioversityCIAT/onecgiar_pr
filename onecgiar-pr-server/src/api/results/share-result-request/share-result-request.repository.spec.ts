@@ -62,6 +62,20 @@ describe('ShareResultRequestRepository (PSR-T-4 — owner/shared lookup scoped t
       ]);
     });
 
+    // `PNS-T-1` (design.md §5 item 6): status 4 is now ALSO used by a saved-but-not-sent `primary`
+    // row (`PNS-DD-1`) — without a `request_type` filter, the draft-count probe would be tripped
+    // by a draft `primary` row that has nothing to do with contribution drafts. Must be seen red:
+    // today's draft-count query has no `request_type` column at all.
+    it('scopes the draft-status probe to contribution rows (PNS-R-1)', async () => {
+      mockQuery.mockResolvedValueOnce([{ count: 0 }]).mockResolvedValueOnce([]);
+
+      await repository.shareResultRequestExists(100, 55, 56);
+
+      const [draftSql, draftParams] = mockQuery.mock.calls[0];
+      expect(draftSql).toMatch(/srr\.request_type\s*=\s*\?/);
+      expect(draftParams).toEqual([100, RequestTypeEnum.CONTRIBUTION]);
+    });
+
     it('still resolves an existing contribution row (regression: filter does not over-scope)', async () => {
       const existingRow = {
         share_result_request_id: 42,
@@ -76,6 +90,23 @@ describe('ShareResultRequestRepository (PSR-T-4 — owner/shared lookup scoped t
       const result = await repository.shareResultRequestExists(10, 1, 2);
 
       expect(result).toEqual(existingRow);
+    });
+  });
+
+  // `PNS-T-1` (design.md §1A P-5) — verified gap: `getRequestByUser` had no `request_status_id`
+  // filter at all, so a DRAFT (4) `primary` row (`approving_inititiative_id` = the requested SP,
+  // same as a sent request) would have rendered as an actionable inbox row for that SP's members.
+  // Must be seen red: today's query has no such exclusion.
+  describe('getRequestByUser — PNS-R-1 (P-5: a draft primary row must not reach the inbox)', () => {
+    it('excludes an active DRAFT (status 4) primary row from the inbox query', async () => {
+      mockQuery.mockResolvedValueOnce([]);
+
+      await repository.getRequestByUser(7, 3);
+
+      const [sql] = mockQuery.mock.calls[0];
+      expect(sql).toMatch(
+        /not\s*\(\s*srr\.request_type\s*=\s*'primary'\s*and\s*srr\.request_status_id\s*=\s*4\s*\)/i,
+      );
     });
   });
 });

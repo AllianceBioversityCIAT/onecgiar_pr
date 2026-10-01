@@ -648,6 +648,133 @@ describe('PrimaryProgramRequestService', () => {
     });
   });
 
+  // `PNS-T-1` (requirements.md PNS-R-1) — `opts.asDraft` inserts status DRAFT (4), never PENDING
+  // (1), and the idempotency/round-cancel logic matches on the DRAFT row instead of the PENDING
+  // one. Each test here must be seen red against today's `request()`, which always inserts
+  // PENDING regardless of `opts.asDraft` — see the execution report for the red run.
+  describe('request() — asDraft (PNS-R-1, saved-but-not-sent primary choice)', () => {
+    beforeEach(() => {
+      mockLeadProject(leadProjectId);
+      mockMappings([
+        { programCode: 'SP09', allocation: '70', status: 'Confirmed' } as any,
+        { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
+      ]);
+      mockInitiatives([
+        { id: 9, official_code: 'SP09' },
+        { id: 12, official_code: 'SP12' },
+      ]);
+    });
+
+    it('creates a DRAFT row (status 4), never a PENDING one (status 1), on create', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+      mockShareResultRequestRepository.insert.mockResolvedValue({
+        identifiers: [{ share_result_request_id: 100 }],
+      });
+
+      const outcome = await service.request(1, 9, user, undefined, {
+        asDraft: true,
+      });
+
+      expect(outcome).toEqual({ ok: true, shareResultRequestId: 100 });
+      expect(mockShareResultRequestRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          request_status_id: 4,
+          shared_inititiative_id: 9,
+        }),
+      );
+      // Falsifier: the insert must never carry PENDING (1) on this path.
+      expect(mockShareResultRequestRepository.insert).not.toHaveBeenCalledWith(
+        expect.objectContaining({ request_status_id: 1 }),
+      );
+    });
+
+    it("still rejects a not-aligned SP with today's message on the asDraft path", async () => {
+      const outcome = await service.request(1, 999, user, undefined, {
+        asDraft: true,
+      });
+
+      expect(outcome).toEqual({
+        ok: false,
+        reason: 'not_aligned',
+        message: PrimaryProgramRequestService.NOT_ALIGNED_MESSAGE,
+      });
+      expect(mockShareResultRequestRepository.insert).not.toHaveBeenCalled();
+    });
+
+    it('changing the saved choice (SP09 → SP12) deactivates the SP09 draft and inserts a SP12 draft', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([
+        {
+          share_result_request_id: 10,
+          request_status_id: 4,
+          shared_inititiative_id: 9,
+        } as ShareResultRequest,
+      ]);
+      mockShareResultRequestRepository.insert.mockResolvedValue({
+        identifiers: [{ share_result_request_id: 20 }],
+      });
+
+      const outcome = await service.request(1, 12, user, undefined, {
+        asDraft: true,
+      });
+
+      expect(outcome).toEqual({ ok: true, shareResultRequestId: 20 });
+      expect(mockShareResultRequestRepository.update).toHaveBeenCalledWith(
+        { share_result_request_id: expect.anything() },
+        { is_active: false },
+      );
+      const [criteria] = mockShareResultRequestRepository.update.mock.calls[0];
+      expect(JSON.stringify(criteria)).toContain('10');
+      expect(mockShareResultRequestRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          shared_inititiative_id: 12,
+          request_status_id: 4,
+        }),
+      );
+    });
+
+    it('re-saving the same draft SP (SP12) is idempotent: no second insert', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([
+        {
+          share_result_request_id: 20,
+          request_status_id: 4,
+          shared_inititiative_id: 12,
+        } as ShareResultRequest,
+      ]);
+
+      const outcome = await service.request(1, 12, user, undefined, {
+        asDraft: true,
+      });
+
+      expect(outcome).toEqual({ ok: true, shareResultRequestId: 20 });
+      expect(mockShareResultRequestRepository.update).not.toHaveBeenCalled();
+      expect(mockShareResultRequestRepository.insert).not.toHaveBeenCalled();
+    });
+
+    // `PSR-T-5` rework attempt 2 — Reviewer FAIL remediation (a): a Project Information save on an
+    // existing ownerless result that already has a sent PENDING primary request (seeded before
+    // this feature existed, or from a prior send) must leave that PENDING row untouched when
+    // `asDraft: true` is requested for the SAME SP — not turn it into a DRAFT. Must be seen red
+    // against attempt-1 code, whose idempotency lookup only matches `targetStatus` (DRAFT) and so
+    // never recognises this PENDING row.
+    it('with asDraft: true, returns the existing active PENDING row unchanged for the same SP (no update, no insert)', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([
+        {
+          share_result_request_id: 10,
+          request_status_id: 1,
+          shared_inititiative_id: 9,
+        } as ShareResultRequest,
+      ]);
+
+      const outcome = await service.request(1, 9, user, undefined, {
+        asDraft: true,
+      });
+
+      expect(outcome).toEqual({ ok: true, shareResultRequestId: 10 });
+      expect(mockShareResultRequestRepository.update).not.toHaveBeenCalled();
+      expect(mockShareResultRequestRepository.insert).not.toHaveBeenCalled();
+    });
+  });
+
   describe('stateFor() — PSR-R-7 state derivation', () => {
     it('returns none when there are no active primary rows', async () => {
       mockShareResultRequestRepository.find.mockResolvedValue([]);
@@ -707,6 +834,25 @@ describe('PrimaryProgramRequestService', () => {
         declined_by_codes: [],
       });
     });
+
+    // `PNS-T-1` (design.md §4): priority accepted > pending > draft > sent_back > none. Must be
+    // seen red against today's `stateFor()`, which has no DRAFT branch at all and would fall
+    // through to `sent_back`/`none` for a status-4 row.
+    it('returns draft with the saved-but-not-sent SP code (PNS-R-1)', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([
+        { request_status_id: 4, shared_inititiative_id: 9 },
+      ]);
+      mockClarisaInitiativesRepository.findOne.mockResolvedValue({
+        id: 9,
+        official_code: 'SP09',
+      });
+
+      await expect(service.stateFor(1)).resolves.toEqual({
+        state: PrimaryRequestStateEnum.DRAFT,
+        program_code: 'SP09',
+        declined_by_codes: [],
+      });
+    });
   });
 
   describe('findPendingPrimaryInitiativeId() — PSR-T-6 (assertSubmittable swap guard / syncContributingPrograms exclusion)', () => {
@@ -733,6 +879,33 @@ describe('PrimaryProgramRequestService', () => {
       await expect(
         service.findPendingPrimaryInitiativeId(1),
       ).resolves.toBeNull();
+    });
+  });
+
+  // `PNS-T-1` — mirror of the suite above for the DRAFT round. Must be seen red: today's service
+  // has no `findDraftPrimaryInitiativeId` method at all.
+  describe('findDraftPrimaryInitiativeId() — PNS-T-1 (syncContributingPrograms exclusion / assertSubmittable)', () => {
+    it('returns the draft SP id when one exists', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue({
+        shared_inititiative_id: 9,
+      });
+
+      await expect(service.findDraftPrimaryInitiativeId(1)).resolves.toBe(9);
+
+      expect(mockShareResultRequestRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          result_id: 1,
+          request_type: RequestTypeEnum.PRIMARY,
+          request_status_id: 4,
+          is_active: true,
+        },
+      });
+    });
+
+    it('returns null when there is no draft round', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findDraftPrimaryInitiativeId(1)).resolves.toBeNull();
     });
   });
 
