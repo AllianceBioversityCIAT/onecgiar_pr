@@ -72,6 +72,7 @@ import {
 } from '../../bilateral-query-params';
 import { filterCenterResults } from '../../bilateral-result-filter';
 import { filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
+import { resolveBilateralResultOpenRoute } from '../../../../shared/routing/bilateral-result-open-route.util';
 
 export type { BilateralCenterResult };
 
@@ -1406,12 +1407,8 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
   }
 
   resultLink(result: BilateralCenterResult): string {
-    const path = this.router.serializeUrl(
-      this.router.createUrlTree(
-        ['/bilateral', this.ctx.centerAcronym(), 'result', result.result_code],
-        { queryParams: { phase: result.version_id } },
-      ),
-    );
+    const { commands, queryParams } = this.resultRoute(result);
+    const path = this.router.serializeUrl(this.router.createUrlTree(commands, { queryParams }));
     return `${window.location.origin}${path}`;
   }
 
@@ -1486,10 +1483,29 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
    * id: only the detail response can publish that. See `BilateralCreationService.loadResult`.
    */
   openResult(result: BilateralCenterResult): void {
-    this.router.navigate(
-      ['/bilateral', this.ctx.centerAcronym(), 'result', result.result_code],
-      { queryParams: { phase: result.version_id } },
-    );
+    const { commands, queryParams } = this.resultRoute(result);
+    this.router.navigate(commands, { queryParams });
+  }
+
+  /**
+   * P2-3855: the list also carries the W1/W2 (pooled) results where this centre is tagged
+   * (`source: 'Result'`), and the bilateral editor only loads `source: Bilateral` — every W1/W2 row
+   * opened "We couldn't load this result" (404). Those rows go to the normal result page, which is
+   * read-only for a centre user who is not a member of the result's initiative
+   * (`RolesService.validateReadOnly`). Bilateral rows keep the centre editor route unchanged.
+   */
+  private resultRoute(result: BilateralCenterResult): { commands: unknown[]; queryParams: Record<string, unknown> } {
+    if (result.source === 'Result') {
+      return resolveBilateralResultOpenRoute({
+        sourceOrOrigin: 'W1/W2',
+        resultCode: result.result_code,
+        versionId: result.version_id,
+      });
+    }
+    return {
+      commands: ['/bilateral', this.ctx.centerAcronym(), 'result', result.result_code],
+      queryParams: { phase: result.version_id },
+    };
   }
 
   onSearch(event: Event): void {

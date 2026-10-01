@@ -595,7 +595,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         'kpi-projects-covered',
         'status-tile-editing',
         'status-tile-pending',
-        'status-tile-submittedQa',
         'status-tile-approved',
         'status-tile-rejected',
         'attention-row-editing',
@@ -612,6 +611,20 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         expect(['A', 'BUTTON']).toContain(tag);
         expect(node.attributes['aria-label']).toMatch(/\d/);
       }
+    });
+
+    it('P2-3863: renders exactly four status tiles and no Submitted / QA tile', async () => {
+      await setup();
+      flushData();
+
+      const tiles = harness.routeDebugElement!.queryAll(By.css('[data-testid^="status-tile-"]'));
+      expect(tiles.map(tile => tile.attributes['data-testid'])).toEqual([
+        'status-tile-editing',
+        'status-tile-pending',
+        'status-tile-approved',
+        'status-tile-rejected',
+      ]);
+      expect(harness.routeDebugElement!.nativeElement.textContent).not.toContain('Submitted / QA');
     });
 
     it('hands every chart host a tableModel', async () => {
@@ -661,9 +674,9 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
           params: serializeBilateralQueryParams({ ...base, status: ['pending'] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
-          testId: 'status-tile-submittedQa',
+          testId: 'status-tile-approved',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams({ ...base, status: ['submitted', 'qa'] }, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams({ ...base, status: ['approved'] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'by-project-link-100',

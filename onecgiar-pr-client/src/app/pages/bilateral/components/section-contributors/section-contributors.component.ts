@@ -12,10 +12,13 @@ import { InnovationUseResultsService } from '../../../../shared/services/global/
 import { SectionTocComponent } from '../section-toc/section-toc.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideRefreshCw } from '@ng-icons/lucide';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
+import { BILATERAL_CONTRIBUTORS_COPY } from '../../../../internationalization/bilateral-contributors.copy';
+import { CLARISA_GLOSSARY_URL } from '../../../../shared/constants/clarisa-links.constants';
 
 interface CenterOption {
   institutionId: number;
@@ -38,6 +41,10 @@ interface ProjectOption {
 }
 
 const PARTNERS_MDS_GROUP = 'partners';
+
+/** P2-3859 — the "All centers" value of the projects' Center filter. */
+export const ALL_PROJECT_CENTERS = 'all';
+type ProjectCenterFilter = number | typeof ALL_PROJECT_CENTERS;
 
 /**
  * Result types whose linked/bundled answer is owned by another surface — see
@@ -65,6 +72,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly innovationUseResultsSE = inject(InnovationUseResultsService);
   readonly api = inject(ApiService);
   readonly bilateralApi = inject(BilateralApiService);
+  readonly bilateralContext = inject(BilateralContextService);
 
   /**
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
@@ -136,6 +144,135 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   readonly disabledCenterOptions = computed(() => this.availableCentersComputed().filter(c => c.disabled));
   readonly disabledProjectOptions = computed(() => this.availableProjectsComputed().filter(p => p.disabled));
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // P2-3859 · Center filter on "Contributing W3/bilateral projects"
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Nicoleta Trifa (P2-3859): "users navigate a list of 911 projects… a user from IFPRI would see
+   * IFPRI selected by default as the Center and only projects mapped to IFPRI". Client-side only,
+   * over `owner_center_institution_id` (the same catalogue field BCT-T-6 locks Centers with).
+   *
+   * QA (Santiago Sánchez, 30-sep-2026) found the first version — a separate strip with a Center
+   * select above the picker — too invasive. Now it is two pills INSIDE the picker's panel, under its
+   * search box (`[util]` slot of `pr-multi-select`): the page's Center, or "All centers".
+   *
+   * `false` = the user has not asked for every Center, so the list follows the page's Center (which
+   * arrives asynchronously from `BilateralContextService`). Once the user picks a pill, that wins.
+   */
+  readonly showAllProjectCenters = signal(false);
+
+  /** How many catalogue projects each owner Center has. Projects with no resolved owner count nowhere. */
+  private readonly projectCountByOwnerCenter = computed(() => {
+    const counts = new Map<number, number>();
+    for (const p of this.availableProjects()) {
+      if (p.ownerCenterInstitutionId == null) continue;
+      const owner = Number(p.ownerCenterInstitutionId);
+      counts.set(owner, (counts.get(owner) ?? 0) + 1);
+    }
+    return counts;
+  });
+
+  /**
+   * AC2 — the page's Center (`/bilateral/:acronym/...`), falling back to the result's lead Center
+   * while the context has not resolved its institution id, with its acronym and project count.
+   * `null` when there is no such Center or it owns no project in the catalogue: then there are no
+   * pills and the picker lists every project (starting on an empty dropdown would read as "no
+   * projects exist"). Projects with no resolved owner are only listed under "All centers".
+   */
+  readonly projectFilterCenter = computed<{ id: number; acronym: string; count: number } | null>(() => {
+    const pageCenter = this.bilateralContext.centerInstitutionId() ?? this.leadCenterInstitutionIdSig();
+    if (pageCenter == null) return null;
+    const id = Number(pageCenter);
+    const count = this.projectCountByOwnerCenter().get(id) ?? 0;
+    if (!count) return null;
+    const center = this.availableCenters().find(c => Number(c.institutionId) === id);
+    return { id, acronym: center?.acronym || center?.code || String(id), count };
+  });
+
+  readonly projectCenterFilter = computed<ProjectCenterFilter>(() => {
+    const center = this.projectFilterCenter();
+    return center && !this.showAllProjectCenters() ? center.id : ALL_PROJECT_CENTERS;
+  });
+
+  /**
+   * The projects picker's options: the Center's own projects PLUS every project already selected,
+   * whatever its Center (AC4).
+   *
+   * 🛑 The union is load-bearing, not cosmetic: `app-pr-multi-select.writeValue` maps the id model
+   * against `[options]` and DROPS the misses (`pr-multi-select.component.ts` `writeValue`), and the
+   * next tick then emits the shortened list — a saved IFPRI result's CIP project would be removed
+   * from the PATCH just by opening the dropdown. Keeping every selected id in the options means the
+   * picker always finds them. Catalogue order is kept so the list does not jump.
+   */
+  readonly filteredProjectOptions = computed(() => {
+    const filter = this.projectCenterFilter();
+    const all = this.availableProjectsComputed();
+    if (filter === ALL_PROJECT_CENTERS) return all;
+    const selected = new Set(this.selectedProjectIds().map(Number));
+    return all.filter(p => Number(p.ownerCenterInstitutionId) === filter || selected.has(Number(p.id)));
+  });
+
+  readonly projectsPickerPlaceholder = computed(() => {
+    const center = this.projectFilterCenter();
+    return this.projectCenterFilter() === ALL_PROJECT_CENTERS || !center
+      ? BILATERAL_CONTRIBUTORS_COPY.projectFilter.pickerPlaceholderAll
+      : BILATERAL_CONTRIBUTORS_COPY.projectFilter.pickerPlaceholderFiltered(center.acronym);
+  });
+
+  /** Gate as a computed (the spec overrides the template). No pills when read-only or with no Center to filter by. */
+  readonly showProjectCenterPills = computed(() => !this.readOnly() && this.projectFilterCenter() !== null);
+
+  /** The two pills: `[● IFPRI (176)] [All centers (1211)]`. Empty when there is no Center to filter by. */
+  readonly projectCenterPills = computed<{ mode: 'center' | 'all'; label: string; count: number; active: boolean }[]>(() => {
+    const center = this.projectFilterCenter();
+    if (!center) return [];
+    const all = this.showAllProjectCenters();
+    return [
+      { mode: 'center', label: center.acronym, count: center.count, active: !all },
+      { mode: 'all', label: BILATERAL_CONTRIBUTORS_COPY.projectFilter.allCenters, count: this.availableProjects().length, active: all }
+    ];
+  });
+
+  /** View-only: swaps the picker's options, never the selection, and never saves. */
+  setProjectCenterFilter(mode: 'center' | 'all'): void {
+    this.showAllProjectCenters.set(mode === 'all');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // P2-3864 · the lead Center is not repeated under "Contributing CGIAR centers"
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Nicoleta Trifa (P2-3864): "do not include the lead Center again under Contributing Centers
+   * (with a star)… retain this information in the system… but do not display it".
+   *
+   * 🛑 DISPLAY ONLY. `selectedCenterInstitutionIds()` keeps the lead exactly as before — it is what
+   * `buildContributorsPayload()` sends and what `onCentersChange` re-adds — so the PATCH is byte
+   * for byte the one it was (AC3). The server keeps the lead row regardless
+   * (`bilateral-center.service.ts → syncContributingCenters` unions `is_leading_result` rows back in).
+   * Only the picker's options, its model and the chip strip read the views below.
+   *
+   * Signal-derived (same resolution as `availableCentersComputed`), not `readonlyLeadCenterInstitutionId`:
+   * that one is a plain field and a `computed()` would never see it change.
+   */
+  private readonly leadCenterInstitutionIdSig = computed<number | null>(() => {
+    const leadCenterId = this.creationService.selectedProject()?.leadCenter?.id ?? this.creationService.resultLeadCenterId();
+    return leadCenterId ? Number(leadCenterId) : null;
+  });
+
+  /** AC2 — the lead is not offered in the Contributing CGIAR centers list. Locked (derived) Centers stay, disabled. */
+  readonly contributingCenterOptions = computed(() => {
+    const lead = this.leadCenterInstitutionIdSig();
+    return this.availableCentersComputed().filter(c => Number(c.institutionId) !== lead);
+  });
+
+  readonly contributingCenterDisabledOptions = computed(() => this.contributingCenterOptions().filter(c => c.disabled));
+
+  /** AC1/AC4 — the chips and the picker model: every selected Center except the lead, order kept. */
+  readonly displayedContributingCenterIds = computed(() => {
+    const lead = this.leadCenterInstitutionIdSig();
+    return this.selectedCenterInstitutionIds().filter(id => Number(id) !== lead);
+  });
 
   /**
    * BCT-R-1 / BCT-R-3 / BCT-R-4 — Centers owned by a currently-selected, non-lead project.
@@ -293,6 +430,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    */
   readonly projectsLoadFailed = signal(false);
   readonly loadCopy = RESULT_DETAIL_SECTION_LOAD_COPY;
+
+  /**
+   * P2-3865 — what a contributor is (CLARISA glossary definition) and the reminder to pick entities
+   * other than the reporting one. Informative only: nothing reads it, so it can never block a save.
+   */
+  readonly contributorsCopy = BILATERAL_CONTRIBUTORS_COPY;
+  readonly contributorNoteHtml = BILATERAL_CONTRIBUTORS_COPY.contributorNote.html(CLARISA_GLOSSARY_URL);
 
   /**
    * BIL-AC-5/BIL-AC-7 (P2-3821, supersedes P2-3368 AC5/AC7) — the field is satisfied by EITHER at

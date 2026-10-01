@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
+**Verified:** 2026-09-30 · feat/bilateral-contributors-nicoleta-sep29 · P2-3859 filtro por Center dentro del desplegable de proyectos W3/bilaterales, dos píldoras (arranca en el Center de la página); P2-3865 nota "What is a contributor?" (definición CLARISA + "elige entidades distintas a la que reporta") justo antes de los campos de contribuyentes (tras el bloque ToC); P2-3864 el centro líder ya no se repite como chip ★ ni como opción en Contributing CGIAR centers (solo vista; el payload lo sigue mandando); prior: 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
 del tracker MDS y se muda a Full metadata, opcional para todo tipo (se retiran el marcador
 `required` y el hint rojo; el banner de centros se muda a Block 1, junto al selector de centros);
 prior: 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3823 blindaje (claves solo al tocar la pregunta, selector sin pérdida, entrada normalizada) + P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
@@ -58,6 +58,39 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 
 ## Trampas
 
+- 🛑 **P2-3859 (30-sep-2026): filtro por Center DENTRO del panel de proyectos, como dos píldoras.**
+  El primer diseño (franja "Filter projects by Center" + `app-pr-select` + "N of M projects" encima
+  del picker) QA (Santiago) lo vio invasivo y se retiró. Ahora, bajo el buscador del panel de
+  "Contributing W3/bilateral projects" (slot `[util]` de `pr-multi-select`): `[● IFPRI (176)]
+  [All centers (1211)]`. Solo cliente, sobre `ownerCenterInstitutionId`. La píldora del Center es
+  `BilateralContextService.centerInstitutionId()` (mientras no resuelve, el líder del resultado); si
+  ese Center no tiene proyectos (`projectFilterCenter()` `null`) **no hay píldoras** y salen todos.
+  `showAllProjectCenters` `false` = sigue al Center de la página; la elección del usuario gana.
+  Proyectos sin dueño resuelto **solo salen en All centers**. Ocultas en solo-lectura
+  (`showProjectCenterPills()`). 🛑 **El panel vive de `a.field:focus-within`** (`custom-fields.scss`):
+  las píldoras llevan `(mousedown)="$event.preventDefault()"` para que el clic no mueva el foco (Safari
+  no enfoca un `<button>` clicado y cerraría el panel) y `(click)="$event.stopPropagation()"`. Candado
+  con `pr-multi-select` real en `section-contributors.readonly.spec.ts`. 🛑 **`filteredProjectOptions()`
+  = proyectos del Center ∪ TODO lo ya seleccionado** — no es cosmético: `pr-multi-select.writeValue`
+  descarta los ids que no están en `[options]` y el siguiente pick emitiría la lista recortada (el
+  PATCH perdería el proyecto de otro Center). Candado: el test AC4 del spec. Las píldoras nunca guardan.
+- ✅ **P2-3865 (30-sep-2026): nota informativa justo antes de los campos de contribuyentes** — desde
+  el feedback de QA (Santiago) va **después del bloque ToC y justo antes de "Contributing science
+  programs"**; si no hay bloque de SP primario (`@if (primarySpData())` falso) sale en el `@else`,
+  antes de "Lead center". Un solo `<ng-template #contributorNote>` estampado con `ngTemplateOutlet`
+  en uno de los dos sitios, así el copy no se duplica. `app-alert-status` info no
+  colapsable con la definición de *contributor* del glosario CLARISA (verbatim) + link
+  (`CLARISA_GLOSSARY_URL`) + "select only contributors different from the reporting one". Copy en
+  `internationalization/bilateral-contributors.copy.ts` (`BILATERAL_CONTRIBUTORS_COPY`); nada la lee,
+  así que nunca bloquea el guardado. Visible también en solo-lectura.
+- 🛑 **P2-3864 (30-sep-2026): el centro líder NO se pinta en "Contributing CGIAR centers"** — ni chip
+  ★ ni opción (Nicoleta Trifa). **Es solo vista**: `selectedCenterInstitutionIds()` lo sigue llevando,
+  `onCentersChange` lo re-añade y `buildContributorsPayload()` lo sigue mandando (AC3; y el server lo
+  une igual en `syncContributingCenters`). El picker y los chips leen `contributingCenterOptions()`,
+  `contributingCenterDisabledOptions()` y `displayedContributingCenterIds()`, que filtran por un id
+  líder derivado de signals (`readonlyLeadCenterInstitutionId` es campo plano: un `computed` no lo
+  ve). No lo quites del estado para "limpiar": un `contributing_center` sin líder dejaría de ser el
+  contrato que el server espera. Los centros derivados (BCT-T-6) siguen con chip ★ bloqueado.
 - ⚠️ **La escalera de `z-index` de `.sc-block` solo vale si el panel cae hacia ABAJO.** Los bloques
   se apilan en orden descendente (`--toc:200 … --partners:20`) para que un multi-select abierto
   tape al bloque siguiente (QA 2026-08-28). Desde `P2-3737` un campo pegado al suelo abre su panel

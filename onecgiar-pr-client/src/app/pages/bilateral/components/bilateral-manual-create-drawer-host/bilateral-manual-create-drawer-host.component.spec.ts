@@ -34,8 +34,10 @@ describe('BilateralManualCreateDrawerHostComponent', () => {
       // No `BilateralAutoSaveService` provider — deliberately the production DI shape. That
       // service is `@Injectable()` with no `providedIn: 'root'`; its only provider in the whole
       // app is component-local on `bilateral-result-creator.component.ts`. This host is mounted
-      // unconditionally from `bilateral-projects-panel` on the bilateral home page, outside that
-      // provider's scope (`APF-T-7` rework, Reviewer FAIL issue 1).
+      // unconditionally, once, in the bilateral shell (`bilateral.component.html`, `ARM-T-2`,
+      // `ARM-DD-1`), reachable from every bilateral route — outside that provider's scope
+      // (originally found via `bilateral-projects-panel`, `APF-T-7` rework, Reviewer FAIL issue 1;
+      // the panel and the creator no longer mount this component directly).
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -121,11 +123,12 @@ describe('BilateralManualCreateDrawerHostComponent', () => {
   });
 
   /**
-   * The regression itself: `app-bilateral-sp-selector` (mounted here with `primaryLayout="list"`)
-   * hosts the "Contributing Science Programs" disclosure (`APF-DD-11`) as `app-bilateral-accordion`.
-   * Before the fix, `app-bilateral-accordion` required `BilateralAutoSaveService` unconditionally —
-   * absent here, picking a primary SP that leaves secondary SPs behind threw `NullInjectorError`
-   * the moment the accordion instantiated, taking the drawer down mid-flow.
+   * DI shape of the drawer (`ARM-DD-1`): the host renders with no creator-scoped provider
+   * (`BilateralAutoSaveService`, `BilateralMdsTrackerService`). `app-bilateral-sp-selector` is
+   * mounted here with `primaryLayout="list"`, which renders the "Contributing Science Programs"
+   * block inline — no `app-bilateral-accordion` (asserted below). A required creator-scoped inject
+   * in the drawer's list-layout child tree turns this red. The accordion's own optional-inject
+   * guard lives in `bilateral-sp-selector.component.spec.ts` (dropdown mode).
    */
   it('lets a primary SP pick with secondary SPs render the inline contributing section without throwing', () => {
     flow.beginFromProject(multiSpProject);

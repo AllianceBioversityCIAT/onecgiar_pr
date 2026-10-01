@@ -6,6 +6,20 @@
     [collapsible]="false"
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
+  <!-- P2-3865: CLARISA's definition of "contributor" + "pick entities other than the reporting one".
+       Informative only (AC3): nothing reads it and it never gates saving; shown in read-only too.
+       Placed right before the first contributor field (QA, Santiago Sánchez): after the ToC block
+       and above "Contributing science programs" when the primary SP block renders, otherwise at the
+       same spot the fields start (above "Lead center"). One template, stamped in exactly one of the
+       two places, so the copy never drifts between them. -->
+  <ng-template #contributorNote>
+    <app-alert-status
+      status="info"
+      [collapsible]="false"
+      data-testid="contributor-definition-note"
+      [description]="contributorNoteHtml">
+    </app-alert-status>
+  </ng-template>
 
   @if (primarySpData(); as sp) {
     <!-- Same shape as the W1/W2 "Submitter" block: a read-only field with the standard header and a
@@ -24,6 +38,8 @@
 
       <app-section-toc [resultLevelId]="creationService.resultLevelId()" [readOnly]="readOnly()"></app-section-toc>
     </div>
+
+    <ng-container [ngTemplateOutlet]="contributorNote" />
 
     <div class="sc-block sc-block--programs">
       <!--
@@ -68,6 +84,8 @@
         </div>
       }
     </div>
+  } @else {
+    <ng-container [ngTemplateOutlet]="contributorNote" />
   }
 
   <!-- Read-only like the W1/W2 "Submitter": standard header + a disabled-looking value, no badge. -->
@@ -105,12 +123,17 @@
       </div>
     }
 
+    <!--
+      P2-3864: the lead Center is shown ONCE, in "Lead center" above — never again here as a starred
+      chip nor as a (disabled) option. Display only: `selectedCenterInstitutionIds()` still carries it
+      and the PATCH still sends it; the picker and the chips read the lead-free views.
+    -->
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing CGIAR centers"
-      [options]="availableCentersComputed()"
-      [disableOptions]="disabledCenterOptions()"
-      [ngModel]="selectedCenterInstitutionIds()"
+      [options]="contributingCenterOptions()"
+      [disableOptions]="contributingCenterDisabledOptions()"
+      [ngModel]="displayedContributingCenterIds()"
       (ngModelChange)="onCentersModelChange($event)"
       optionLabel="full_name"
       optionValue="institutionId"
@@ -118,12 +141,12 @@
       [required]="false"
       [isStatic]="!readOnly()">
     </app-pr-multi-select>
-    @if (selectedCenterInstitutionIds().length) {
+    @if (displayedContributingCenterIds().length) {
       <div class="sc-selected-chips">
-        @for (id of selectedCenterInstitutionIds(); track id) {
-          <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id) || lockedCenterInstitutionIds().has(id)">
+        @for (id of displayedContributingCenterIds(); track id) {
+          <span class="sc-chip" [class.sc-chip-readonly]="lockedCenterInstitutionIds().has(id)">
             {{ getCenterDisplayName(id) }}
-            @if (!isLeadCenter(id) && !lockedCenterInstitutionIds().has(id)) {
+            @if (!lockedCenterInstitutionIds().has(id)) {
               <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removeCenter(id)">×</button>
             }
           </span>
@@ -155,15 +178,57 @@
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing W3/bilateral projects"
-      [options]="availableProjectsComputed()"
+      [options]="filteredProjectOptions()"
       [disableOptions]="disabledProjectOptions()"
       [ngModel]="selectedProjectIds()"
       (ngModelChange)="onProjectsModelChange($event)"
       optionLabel="fullName"
       optionValue="id"
-      placeholder="The drop-down list includes all bilateral projects"
+      [placeholder]="projectsPickerPlaceholder()"
       [required]="false"
       [isStatic]="!readOnly()">
+      <!--
+        P2-3859: Center pills inside the panel, right under its search box (`[util]` slot of
+        pr-multi-select). QA found the old strip above the picker too invasive. View-only: they swap
+        the OPTIONS, never the selection — `filteredProjectOptions()` keeps every already-selected
+        project in the list so `pr-multi-select.writeValue` cannot drop it (AC4).
+        🛑 The panel is open only while focus is inside `a.field` (`:focus-within`,
+        custom-fields.scss). `mousedown.preventDefault` keeps focus where it was (the search box), so
+        a pill click can never close the panel — Safari does not focus a clicked button, which would
+        otherwise drop focus-within. `click.stopPropagation` keeps the click out of the trigger.
+        Keyboard: Tab reaches the pills inside the panel, so focus-within holds too.
+      -->
+      <div util>
+        @if (showProjectCenterPills()) {
+          <div
+            role="group"
+            class="flex flex-wrap items-center gap-[6px]"
+            data-testid="projects-center-pills"
+            [attr.aria-label]="contributorsCopy.projectFilter.groupLabel"
+            (mousedown)="$event.preventDefault()"
+            (click)="$event.stopPropagation()">
+            @for (pill of projectCenterPills(); track pill.mode) {
+              <button
+                type="button"
+                class="inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[12px] font-semibold leading-[18px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--pr-color-primary-300)]"
+                [class]="
+                  pill.active
+                    ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-600)] text-[var(--pr-color-white)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]'
+                    : 'border-[var(--pr-border)] bg-[var(--pr-color-white)] text-[var(--pr-color-primary-600)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)]'
+                "
+                [attr.aria-pressed]="pill.active"
+                [attr.data-testid]="'projects-center-pill-' + pill.mode"
+                (click)="setProjectCenterFilter(pill.mode)">
+                @if (pill.active) {
+                  <span class="h-[6px] w-[6px] rounded-full bg-current" aria-hidden="true"></span>
+                }
+                <span>{{ pill.label }}</span>
+                <span class="font-medium opacity-80">{{ contributorsCopy.projectFilter.count(pill.count) }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
     </app-pr-multi-select>
     @if (selectedProjectIds().length) {
       <div class="sc-selected-chips">

@@ -71,5 +71,11 @@ export const BILATERAL_MANUAL_CREATE_COPY = {
     titleTooLong: 'Result title exceeds 30 words',
     titleCheckFailed: 'Title check failed — retry',
     titleExists: 'Result title already exists'
+  },
+  // `ARM-T-1` (P2-3853): the AI drawer's "Report manually" entry point (`ARM-R-4` B) — shown when
+  // the job's project is not found in its Center's catalogue (e.g. deactivated since the job ran).
+  externalEntry: {
+    projectUnavailableTitle: 'Project not available',
+    projectUnavailableDescription: 'This project is not available for new results.'
   }
 } as const;

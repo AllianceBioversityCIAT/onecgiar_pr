@@ -180,6 +180,28 @@ describe('PopUpNotificationItemComponent', () => {
 
     const clickEvent = () => ({ preventDefault: jest.fn() }) as unknown as MouseEvent;
 
+    it('AI job finished: navigates to its drafts in-app and marks it read', () => {
+      const emitted = jest.fn();
+      component.itemSelected.subscribe(emitted);
+      component.notification = {
+        notification_id: 9,
+        read: false,
+        result_id: null,
+        obj_result: null,
+        text: 'AI-assisted processing finished — 1 draft ready for CIP · 2 min https://reporting.cgiar.org/bilateral/CIP/drafts',
+        obj_notification_type: { type: NotificationType.BILATERAL_AI_JOB_FINISHED }
+      };
+
+      expect(component.generateUrlLink(component.notification)).toBe('/bilateral/CIP/drafts');
+      const event = clickEvent();
+      component.onNotificationClick(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/bilateral/CIP/drafts');
+      expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(9);
+      expect(emitted).toHaveBeenCalled();
+    });
+
     it('leaves a non-bilateral notification on its plain anchor navigation', () => {
       const emitted = jest.fn();
       component.itemSelected.subscribe(emitted);

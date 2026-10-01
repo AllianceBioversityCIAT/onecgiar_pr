@@ -23,6 +23,8 @@ export enum NotificationType {
   RESULT_CONTRIBUTION_DECLINED = 'Result Contribution Declined',
   /** 2026-09-05 — a bilateral result reached Pending Review; sent to the primary SP's members. */
   BILATERAL_RESULT_SUBMITTED = 'Bilateral Result Submitted',
+  /** An AI-assisted processing job finished. No result behind it (`result_id` is NULL). */
+  BILATERAL_AI_JOB_FINISHED = 'Bilateral AI Job Finished',
   /**
    * PSR-T-8 (`bilateral-primary-sp-request`, forward pointer from PSR-T-7): the 3 Center-facing
    * informative notices (PSR-R-14). Server-composed sentences on `notification.text`, always with
@@ -155,11 +157,53 @@ function buildCenterDecisionParts(notification: any): NotificationTextParts | nu
   return { prefix: 'The result', linkTrailer: ',', suffix: text, emphasizePrefix: false };
 }
 
+/** A finished AI job notification, split into its sentence and its in-app destination. */
+export interface AiJobNotificationParts {
+  /** The server-composed sentence, without the trailing link. */
+  message: string;
+  /** App-relative path of the deep link (drafts or the failed job), or null when absent. */
+  path: string | null;
+}
+
+export function isAiJobFinishedNotification(notification: any): boolean {
+  return resolveNotificationType(notification) === NotificationType.BILATERAL_AI_JOB_FINISHED;
+}
+
+/**
+ * The server stores the whole sentence on `text` followed by an absolute deep link
+ * ("AI-assisted processing finished — 2 drafts ready for CIP · PDF · 3 min https://…/drafts").
+ * There is no result, so the row must never render the "<code> - <title>" link.
+ */
+export function getAiJobNotificationParts(notification: any): AiJobNotificationParts | null {
+  if (!isAiJobFinishedNotification(notification)) return null;
+
+  const text: string = notification?.text?.trim() ?? '';
+  const lastSpace = text.lastIndexOf(' ');
+  const lastToken = lastSpace >= 0 ? text.slice(lastSpace + 1) : text;
+
+  let path: string | null = null;
+  let message = text;
+  if (/^https?:\/\//.test(lastToken)) {
+    message = text.slice(0, Math.max(lastSpace, 0)).trim();
+    try {
+      const url = new URL(lastToken);
+      path = `${url.pathname}${url.search}` || null;
+    } catch {
+      path = null;
+    }
+  }
+
+  return { message: message || 'Your AI-assisted processing job finished.', path };
+}
+
 /** The text of a result-level notification, split around the result link. */
 export function getResultNotificationTextParts(notification: any): NotificationTextParts {
   const type = resolveNotificationType(notification);
 
   switch (type) {
+    case NotificationType.BILATERAL_AI_JOB_FINISHED:
+      return { prefix: getAiJobNotificationParts(notification)?.message ?? null, suffix: null, emphasizePrefix: false };
+
     case NotificationType.RESULT_SUBMITTED:
     case NotificationType.RESULT_UNSUBMITTED:
     case NotificationType.RESULT_CREATED:
@@ -270,6 +314,9 @@ export function getResultNotificationTextParts(notification: any): NotificationT
 
 /** Flattened single-string form — for search indexes and plain-text contexts. */
 export function buildResultNotificationText(notification: any): string {
+  const aiJob = getAiJobNotificationParts(notification);
+  if (aiJob) return aiJob.message;
+
   const { prefix, suffix, linkTrailer } = getResultNotificationTextParts(notification);
   const identity = `${notification?.obj_result?.result_code} - ${notification?.obj_result?.title}${linkTrailer ?? ''}`;
 

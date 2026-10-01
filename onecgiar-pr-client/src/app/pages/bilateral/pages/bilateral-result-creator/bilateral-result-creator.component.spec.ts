@@ -74,7 +74,8 @@ function makeManualCreateFlowMock() {
     canGoBack: computed(() => false),
     backLabel: computed(() => 'Back'),
     beginFromProject: jest.fn(),
-    submitCreate: jest.fn()
+    submitCreate: jest.fn(),
+    externalEntry: new Subject<void>()
   };
 }
 
@@ -289,6 +290,14 @@ describe('BilateralResultCreatorComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  // `ARM-T-2` (bilateral/ai-queue-report-manually): the create drawer host used to be mounted
+  // here (`bilateral-result-creator.component.html:39`) and is now mounted once in the bilateral
+  // shell (`bilateral.component.html`, `ARM-DD-1`), reachable from every bilateral route. This
+  // component only drives the flow's signals via `manualCreateFlow` (mocked above).
+  it('ARM-T-2: does not render the manual create drawer host directly (single shell mount)', () => {
+    expect(fixture.nativeElement.querySelectorAll('app-bilateral-manual-create-drawer-host').length).toBe(0);
+  });
+
   it('does not flush autosave while the browser is refreshing or closing', () => {
     creationService.currentResultId.set(42);
     component.resultId.set(42);
@@ -429,6 +438,18 @@ describe('BilateralResultCreatorComponent', () => {
     component.onReportingWaySelected('manual');
     expect(manualCreateFlow.openDrawerForManual).toHaveBeenCalled();
     expect(manualCreateFlow.drawerOpen()).toBe(true);
+  });
+
+  it('ARM-DD-5: an external entry drops the wizard reporting way without closing the drawer', () => {
+    component.selectedReportingWay.set('ai');
+    manualCreateFlow.closeDrawer.mockClear();
+    autoSaveService.reset.mockClear();
+    mdsTracker.reset.mockClear();
+    manualCreateFlow.externalEntry.next();
+    expect(component.selectedReportingWay()).toBeNull();
+    expect(manualCreateFlow.closeDrawer).not.toHaveBeenCalled();
+    expect(autoSaveService.reset).toHaveBeenCalled();
+    expect(mdsTracker.reset).toHaveBeenCalled();
   });
 
   it('should close the manual drawer when switching reporting ways', () => {

@@ -2929,5 +2929,37 @@ describe('NotificationItemComponent', () => {
       });
     });
   });
+
+  describe('Bilateral AI Job Finished row (no result behind it)', () => {
+    const aiJobRow = () => ({
+      source: 'update',
+      notification_id: 5,
+      result_id: null,
+      obj_result: null,
+      obj_emitter_user: null,
+      created_date: new Date().toISOString(),
+      text: 'AI-assisted processing finished — 1 draft ready for CIP · 1 document · 1 min https://reporting.cgiar.org/bilateral/CIP/drafts',
+      obj_notification_type: { notifications_type_id: 13, type: 'Bilateral AI Job Finished' }
+    });
+
+    it('renders the sentence with a sparkles avatar and no empty result link', () => {
+      component.notification = aiJobRow();
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const text = el.querySelector('.notification_content_body_text')!.textContent!.trim();
+      expect(text).toBe('AI-assisted processing finished — 1 draft ready for CIP · 1 document · 1 min');
+      expect(el.querySelector('.notification_content_body_text a')).toBeNull();
+      expect(el.querySelector('.notification_avatar .material-icons-round')?.textContent?.trim()).toBe('auto_awesome');
+    });
+
+    it('a click goes to the drafts instead of opening the empty contribution drawer', () => {
+      component.notification = aiJobRow();
+      const navigate = jest.spyOn((component as any).router, 'navigateByUrl').mockResolvedValue(true);
+      const openDrawer = jest.spyOn(component as any, 'openDrawer');
+      component.onRowActivate();
+      expect(navigate).toHaveBeenCalledWith('/bilateral/CIP/drafts');
+      expect(openDrawer).not.toHaveBeenCalled();
+    });
+  });
 });
 

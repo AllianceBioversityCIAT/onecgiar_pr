@@ -35,11 +35,10 @@ import type {
 /** `COV-R-9` — the card shows the top 7 projects with a "Show n more" expander. */
 export const OVERVIEW_PROJECT_BAR_LIMIT = 7;
 
-/** Display labels for the five status tiles (`COV-R-7`). */
+/** Display labels for the four status tiles (`COV-R-7`; `Submitted / QA` removed by P2-3863). */
 export const STATUS_TILE_LABELS: Record<StatusTileKey, string> = {
   editing: 'Editing',
   pending: 'Pending review',
-  submittedQa: 'Submitted / QA',
   approved: 'Approved',
   rejected: 'Rejected',
 };
@@ -55,11 +54,10 @@ export const STATUS_KEY_LABELS: Record<StatusKey, string> = {
   rejected: 'Rejected',
 };
 
-/** A tile maps to one or more contract status keys (`Submitted / QA` covers both). */
+/** The contract status key(s) a tile (and its meter segment) deep-links to. */
 const STATUS_TILE_QUERY_KEYS: Record<StatusTileKey, StatusKey[]> = {
   editing: ['editing'],
   pending: ['pending'],
-  submittedQa: ['submitted', 'qa'],
   approved: ['approved'],
   rejected: ['rejected'],
 };
@@ -142,7 +140,6 @@ function statusTileColors(tokens: ResolvedChartTokens): Record<StatusTileKey, st
   return {
     editing: tokens.ramp[3],
     pending: tokens.ramp[2],
-    submittedQa: tokens.ramp[1],
     approved: tokens.ramp[0],
     rejected: tokens.bilateralMuted,
   };
@@ -182,7 +179,7 @@ export function statusMeterTable(model: OverviewStatusModel): VizChartTableModel
     caption: 'Results by reporting status',
     headers: ['Status', 'Results'],
     rows: model.tableRows.map(row => [STATUS_KEY_LABELS[STATUS_ID_TO_KEY[row.statusId]] ?? `Status ${row.statusId}`, row.count]),
-    summary: `${model.tileTotal} results across the five reporting statuses; Discontinued results are listed here only.`,
+    summary: `${model.tileTotal} results across the four reporting statuses; In QA, Submitted and Discontinued results are listed here only.`,
   };
 }
 

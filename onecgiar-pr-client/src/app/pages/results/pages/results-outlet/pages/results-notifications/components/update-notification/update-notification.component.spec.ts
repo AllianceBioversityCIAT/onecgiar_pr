@@ -107,6 +107,22 @@ describe('UpdateNotificationComponent', () => {
 
     afterEach(() => openSpy.mockRestore());
 
+    it('AI job finished: shows the server sentence and a View link, never "The result -"', () => {
+      const { f } = build(NotificationType.BILATERAL_AI_JOB_FINISHED, {
+        result_id: null,
+        obj_result: null,
+        text: 'AI-assisted processing finished — 1 draft ready for CIP · 1 PDF · 2 min https://reporting.cgiar.org/bilateral/CIP/drafts'
+      });
+      const body: HTMLElement = f.nativeElement.querySelector('.update_notification_content_body_text');
+      expect(body.textContent).toContain('AI-assisted processing finished — 1 draft ready for CIP');
+      expect(body.textContent).not.toContain('The result');
+      expect(body.textContent).not.toMatch(/\s-\s*$/);
+      const link: HTMLAnchorElement = body.querySelector('a')!;
+      expect(link.getAttribute('href')).toBe('/bilateral/CIP/drafts');
+      click(link);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/bilateral/CIP/drafts');
+    });
+
     it('review request: href is the full drawer URL and the click is not intercepted', () => {
       const { a } = build(NotificationType.BILATERAL_RESULT_SUBMITTED);
       expect(a.getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP03/bilateral-review?reviewResult=9544&reviewResultId=91');
