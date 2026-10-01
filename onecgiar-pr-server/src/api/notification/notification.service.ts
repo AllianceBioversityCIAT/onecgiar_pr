@@ -16,6 +16,12 @@ import { UserRepository } from '../../auth/modules/user/repositories/user.reposi
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { Notification } from './entities/notification.entity';
+import {
+  applyKeysetCursor,
+  KeysetFields,
+  KEYSET_PAGE_SIZE,
+  mergeKeysetLists,
+} from '../../shared/utils/keyset-cursor.util';
 
 /**
  * `PSR-T-7`/`PSR-DD-7` — the 3 Center-notice types (`emitCenterNotice` in
@@ -29,6 +35,27 @@ const CENTER_NOTICE_TYPES = [
   NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
   NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
 ];
+
+/**
+ * @akili-spec notifications/inbox-paginated-load
+ * PAGE-T-3 — keyset ordering for `notification` rows: `(created_date DESC, notification_id
+ * DESC)`. Shared by every history (viewed) query in `getAllNotifications` so cursors stay
+ * consistent across the 3 merged sources.
+ */
+const NOTIFICATION_KEYSET_FIELDS: KeysetFields = {
+  dateField: 'created_date',
+  idField: 'notification_id',
+};
+
+/** `getAllNotifications` scope/cursor options (PAGE-R-1, R-2, R-3, R-6, R-7). */
+export interface GetAllNotificationsOptions {
+  /** Phase (`result.version_id`) to scope result-linked rows to; absent -> all phases. */
+  versionId?: number;
+  /** `pending` -> pending set only; `history` -> history (viewed) page only; absent -> legacy (both). */
+  scope?: 'pending' | 'history';
+  /** Opaque keyset cursor for the next history page (PAGE-DD-2). */
+  cursor?: string;
+}
 
 @Injectable()
 export class NotificationService {
@@ -240,19 +267,40 @@ export class NotificationService {
    */
   private async findBilateralAiJobFinishedNotifications(
     userId: number,
-    options: { read?: boolean; after?: Date } = {},
+    options: {
+      read?: boolean;
+      after?: Date;
+      /** PAGE-T-3: opaque keyset cursor — only meaningful when `paged` is true. */
+      cursor?: string;
+      /**
+       * PAGE-T-3: when true, fetches `KEYSET_PAGE_SIZE + 1` rows ordered
+       * `(created_date DESC, notification_id DESC)` for merging into a history page
+       * (`mergeKeysetLists`) instead of returning every match. Stays unfiltered by phase
+       * (P-7, PAGE-OQ-5) — a job-finished row has no linked result to scope on.
+       */
+      paged?: boolean;
+    } = {},
   ): Promise<Notification[]> {
+    const where = {
+      target_user: userId,
+      ...(options.read !== undefined ? { read: options.read } : {}),
+      ...(options.after ? { created_date: MoreThan(options.after) } : {}),
+      obj_notification_type: {
+        type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+      },
+    };
     return this._notificationRepository.find({
       select: this.getNotificattionSelect(),
       relations: this.getNotificationRelations(),
-      where: {
-        target_user: userId,
-        ...(options.read !== undefined ? { read: options.read } : {}),
-        ...(options.after ? { created_date: MoreThan(options.after) } : {}),
-        obj_notification_type: {
-          type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
-        },
-      },
+      where: options.paged
+        ? applyKeysetCursor(where, options.cursor, NOTIFICATION_KEYSET_FIELDS)
+        : where,
+      ...(options.paged
+        ? {
+            take: KEYSET_PAGE_SIZE + 1,
+            order: { created_date: 'DESC', notification_id: 'DESC' },
+          }
+        : {}),
     });
   }
 
@@ -266,18 +314,41 @@ export class NotificationService {
    */
   private async findCenterNoticeNotifications(
     userId: number,
-    options: { read?: boolean; after?: Date } = {},
+    options: {
+      read?: boolean;
+      after?: Date;
+      /** PAGE-T-3: phase (`result.version_id`) to scope to; absent -> all phases (PAGE-R-1). */
+      versionId?: number;
+      /** PAGE-T-3: opaque keyset cursor — only meaningful when `paged` is true. */
+      cursor?: string;
+      /** PAGE-T-3: see {@link findBilateralAiJobFinishedNotifications}'s `paged`. */
+      paged?: boolean;
+    } = {},
   ): Promise<Notification[]> {
+    const where = {
+      target_user: userId,
+      ...(options.read !== undefined ? { read: options.read } : {}),
+      ...(options.after ? { created_date: MoreThan(options.after) } : {}),
+      obj_result: {
+        is_active: true,
+        ...(options.versionId !== undefined
+          ? { version_id: options.versionId }
+          : {}),
+      },
+      obj_notification_type: { type: In(CENTER_NOTICE_TYPES) },
+    };
     return this._notificationRepository.find({
       select: this.getNotificattionSelect(),
       relations: this.getNotificationRelations(),
-      where: {
-        target_user: userId,
-        ...(options.read !== undefined ? { read: options.read } : {}),
-        ...(options.after ? { created_date: MoreThan(options.after) } : {}),
-        obj_result: { is_active: true },
-        obj_notification_type: { type: In(CENTER_NOTICE_TYPES) },
-      },
+      where: options.paged
+        ? applyKeysetCursor(where, options.cursor, NOTIFICATION_KEYSET_FIELDS)
+        : where,
+      ...(options.paged
+        ? {
+            take: KEYSET_PAGE_SIZE + 1,
+            order: { created_date: 'DESC', notification_id: 'DESC' },
+          }
+        : {}),
     });
   }
 
@@ -632,13 +703,40 @@ export class NotificationService {
     }
   }
 
-  async getAllNotifications(user: TokenDto) {
+  /**
+   * @akili-spec notifications/inbox-paginated-load
+   * PAGE-T-3 — phase scoping (`options.versionId`), pending/history split (`options.scope`) and
+   * keyset history pagination (`options.cursor`) for the Updates feed (design.md §5, §4.1).
+   *
+   * - `versionId` reaches the result-scoped and Center-notice where-builders (PAGE-R-1); the
+   *   AI-job finder stays unfiltered (PAGE-P-7, PAGE-OQ-5 — phase-less, always shown).
+   * - `scope=pending` skips every history query entirely (not "run and discard" — PAGE-R-2);
+   *   `scope=history` skips every pending query the same way.
+   * - The 3 history (viewed) sources are each fetched `KEYSET_PAGE_SIZE + 1` rows at a time and
+   *   merged/sorted/cut to `KEYSET_PAGE_SIZE` by `mergeKeysetLists` (PAGE-R-3).
+   * - No inner `await` — every element of the `Promise.all` array is a promise started
+   *   synchronously when the array literal is evaluated; `Promise.all` is what waits (PAGE-R-7).
+   */
+  async getAllNotifications(
+    user: TokenDto,
+    options: GetAllNotificationsOptions = {},
+  ) {
     try {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
+      const { versionId, scope, cursor } = options;
+      const runPending = scope !== 'history';
+      const runHistory = scope !== 'pending';
+
+      const resultScopeWhere = () => ({
+        is_active: true,
+        obj_result_by_initiatives: { initiative_role_id: 1 },
+        ...(versionId !== undefined ? { version_id: versionId } : {}),
+      });
+
       const [
-        notificationsViewed,
+        viewedResultScoped,
         notificationsPending,
         notificationAnnouncement,
         jobFinishedViewed,
@@ -646,87 +744,129 @@ export class NotificationService {
         centerNoticeViewed,
         centerNoticePending,
       ] = await Promise.all([
-        await this._notificationRepository.find({
-          select: this.getNotificattionSelect(),
-          relations: this.getNotificationRelations(),
-          where: {
-            target_user: user.id,
-            read: true,
-            obj_result: {
-              is_active: true,
-              obj_result_by_initiatives: { initiative_role_id: 1 },
-            },
-            // `PSR-DD-7`: the Center-notice types are read back only through
-            // `findCenterNoticeNotifications`'s ownerless path below — excluded here so an
-            // already-owned (accepted) notice is never merged in by both queries.
-            obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
-          },
-        }),
+        runHistory
+          ? this._notificationRepository.find({
+              select: this.getNotificattionSelect(),
+              relations: this.getNotificationRelations(),
+              where: applyKeysetCursor(
+                {
+                  target_user: user.id,
+                  read: true,
+                  obj_result: resultScopeWhere(),
+                  // `PSR-DD-7`: the Center-notice types are read back only through
+                  // `findCenterNoticeNotifications`'s ownerless path below - excluded here so an
+                  // already-owned (accepted) notice is never merged in by both queries.
+                  obj_notification_type: {
+                    type: Not(In(CENTER_NOTICE_TYPES)),
+                  },
+                },
+                cursor,
+                NOTIFICATION_KEYSET_FIELDS,
+              ),
+              take: KEYSET_PAGE_SIZE + 1,
+              order: { created_date: 'DESC', notification_id: 'DESC' },
+            })
+          : Promise.resolve([]),
 
-        await this._notificationRepository.find({
-          select: this.getNotificattionSelect(),
-          relations: this.getNotificationRelations(),
-          where: {
-            target_user: user.id,
-            read: false,
-            obj_result: {
-              is_active: true,
-              obj_result_by_initiatives: { initiative_role_id: 1 },
-            },
-            obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
-          },
-        }),
+        runPending
+          ? this._notificationRepository.find({
+              select: this.getNotificattionSelect(),
+              relations: this.getNotificationRelations(),
+              where: {
+                target_user: user.id,
+                read: false,
+                obj_result: resultScopeWhere(),
+                obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+              },
+            })
+          : Promise.resolve([]),
 
-        await this._notificationRepository.find({
-          select: {
-            text: true,
-            created_date: true,
-            obj_emitter_user: {
-              first_name: true,
-              last_name: true,
-            },
-            obj_notification_level: {
-              notifications_level_id: true,
-              type: true,
-            },
-            obj_notification_type: { notifications_type_id: true, type: true },
-          },
-          relations: {
-            obj_notification_level: true,
-            obj_notification_type: true,
-          },
-          where: {
-            obj_notification_level: { type: NotificationLevelEnum.APPLICATION },
-            obj_notification_type: { type: NotificationTypeEnum.ANNOUNCEMENT },
-            created_date: MoreThan(oneWeekAgo),
-          },
-        }),
+        runPending
+          ? this._notificationRepository.find({
+              select: {
+                text: true,
+                created_date: true,
+                obj_emitter_user: {
+                  first_name: true,
+                  last_name: true,
+                },
+                obj_notification_level: {
+                  notifications_level_id: true,
+                  type: true,
+                },
+                obj_notification_type: {
+                  notifications_type_id: true,
+                  type: true,
+                },
+              },
+              relations: {
+                obj_notification_level: true,
+                obj_notification_type: true,
+              },
+              where: {
+                obj_notification_level: {
+                  type: NotificationLevelEnum.APPLICATION,
+                },
+                obj_notification_type: {
+                  type: NotificationTypeEnum.ANNOUNCEMENT,
+                },
+                created_date: MoreThan(oneWeekAgo),
+              },
+            })
+          : Promise.resolve([]),
 
         // `design.md` §6.4 read-path branch — a bilateral AI job notification has no result, so
         // it can never satisfy the `obj_result` condition above; fetched separately and merged in.
-        this.findBilateralAiJobFinishedNotifications(user.id, { read: true }),
-        this.findBilateralAiJobFinishedNotifications(user.id, {
-          read: false,
-        }),
+        runHistory
+          ? this.findBilateralAiJobFinishedNotifications(user.id, {
+              read: true,
+              cursor,
+              paged: true,
+            })
+          : Promise.resolve([]),
+        runPending
+          ? this.findBilateralAiJobFinishedNotifications(user.id, {
+              read: false,
+            })
+          : Promise.resolve([]),
 
         // `PSR-T-7`/`PSR-DD-7` — same reasoning: an ownerless result's Center notice can never
         // satisfy the `initiative_role_id: 1` condition above; fetched separately and merged in.
-        this.findCenterNoticeNotifications(user.id, { read: true }),
-        this.findCenterNoticeNotifications(user.id, { read: false }),
+        runHistory
+          ? this.findCenterNoticeNotifications(user.id, {
+              read: true,
+              versionId,
+              cursor,
+              paged: true,
+            })
+          : Promise.resolve([]),
+        runPending
+          ? this.findCenterNoticeNotifications(user.id, {
+              read: false,
+              versionId,
+            })
+          : Promise.resolve([]),
       ]);
 
+      const viewedPage = runHistory
+        ? mergeKeysetLists(
+            [viewedResultScoped, jobFinishedViewed, centerNoticeViewed],
+            NOTIFICATION_KEYSET_FIELDS,
+          )
+        : { rows: [] as Notification[], hasMore: false, nextCursor: null };
+
       const notifications = {
-        notificationsViewed: [
-          ...this.mapNotificationResultFields(notificationsViewed),
-          ...jobFinishedViewed,
-          ...this.mapNotificationResultFields(centerNoticeViewed),
-        ],
+        notificationsViewed: this.mapNotificationResultFields(viewedPage.rows),
         notificationsPending: [
           ...this.mapNotificationResultFields(notificationsPending),
           ...jobFinishedPending,
           ...this.mapNotificationResultFields(centerNoticePending),
         ],
         notificationAnnouncement,
+        viewedMeta: {
+          hasMore: viewedPage.hasMore,
+          nextCursor: viewedPage.nextCursor,
+        },
       };
 
       return {

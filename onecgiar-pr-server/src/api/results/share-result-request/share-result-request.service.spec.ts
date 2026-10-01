@@ -59,13 +59,18 @@ describe('ShareResultRequestService', () => {
 
   const user = { id: 10 } as TokenDto;
 
+  // @akili-spec notifications/inbox-paginated-load (PAGE-T-2) — named so paging tests can assert
+  // the error object the catch block hands it (e.g. `status === 400`) without reimplementing the
+  // existing inline-mock pattern used elsewhere in this file.
+  const mockHandlersError = { returnErrorRes: jest.fn() };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ShareResultRequestService,
-        { provide: HandlersError, useValue: { returnErrorRes: jest.fn() } },
+        { provide: HandlersError, useValue: mockHandlersError },
         {
           provide: ShareResultRequestRepository,
           useValue: mockShareResultRequestRepository,
@@ -478,6 +483,7 @@ describe('ShareResultRequestService', () => {
             shared_inititiative_id: 77,
             request_status_id: 2,
             is_map_to_toc: true,
+            requested_date: '2026-01-05T00:00:00.000Z',
             obj_result: { source: 'Result' },
           },
         ]); // done
@@ -522,6 +528,7 @@ describe('ShareResultRequestService', () => {
             shared_inititiative_id: 78,
             request_status_id: 2,
             is_map_to_toc: true,
+            requested_date: '2026-01-06T00:00:00.000Z',
             obj_result: { source: 'Result' },
           },
         ]); // done
@@ -635,6 +642,7 @@ describe('ShareResultRequestService', () => {
             shared_inititiative_id: 80,
             request_status_id: 2,
             is_map_to_toc: false,
+            requested_date: '2026-01-07T00:00:00.000Z',
             obj_result: { source: 'Result' },
           },
         ]); // done
@@ -666,6 +674,7 @@ describe('ShareResultRequestService', () => {
             owner_initiative_id: 80,
             request_status_id: 3,
             is_map_to_toc: false,
+            requested_date: '2026-01-08T00:00:00.000Z',
             obj_result: { source: 'Result' },
           },
         ]); // done
@@ -792,6 +801,7 @@ describe('ShareResultRequestService', () => {
         shared_inititiative_id: 312,
         request_status_id: 2,
         is_map_to_toc: false,
+        requested_date: '2026-01-01T00:00:00.000Z',
         obj_result: { source: 'Result' },
       };
 
@@ -890,6 +900,7 @@ describe('ShareResultRequestService', () => {
         shared_inititiative_id: 321,
         request_status_id: 2,
         is_map_to_toc: false,
+        requested_date: '2026-01-02T00:00:00.000Z',
         obj_result: { source: 'Result' },
       };
 
@@ -995,6 +1006,7 @@ describe('ShareResultRequestService', () => {
           shared_inititiative_id: 330,
           request_status_id: 2,
           is_map_to_toc: true,
+          requested_date: '2026-01-03T00:00:00.000Z',
           obj_result: { source: 'Result' },
         };
         installRoutedFind({ sharedKey: [pendingRow], done: [doneRow] });
@@ -1031,6 +1043,7 @@ describe('ShareResultRequestService', () => {
           shared_inititiative_id: 331,
           request_status_id: 2,
           is_map_to_toc: true,
+          requested_date: '2026-01-04T00:00:00.000Z',
           obj_result: { source: 'Result' },
         };
         // buildWhereSentConditions: pendingOwner scopes on owner_initiative_id.
@@ -1553,6 +1566,235 @@ describe('ShareResultRequestService', () => {
 
       // `find()` is only ever called for the 3 buckets — enriching 25 rows adds zero extra calls.
       expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  // @akili-spec notifications/inbox-paginated-load (PAGE-T-2)
+  // PAGE-R-1, R-2, R-3, R-6 — `version_id`/`scope`/`cursor` on Received/Sent. Falsifiers (a)-(f)
+  // from tasks.md are each a named `it` below.
+  describe('PAGE-T-2 — version_id / scope / cursor paging (Received/Sent)', () => {
+    beforeEach(() => {
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3);
+      mockRoleByUserRepository.find.mockResolvedValue([{ initiative_id: 100 }]);
+    });
+
+    // Falsifier (a): with version_id=5, a captured `find` where for EACH bucket (pendingOwner,
+    // pendingShared, every done entry) lacking obj_result.version_id = 5 fails.
+    it('(a) version_id=5 reaches obj_result.version_id on pendingOwner, pendingShared and every done entry — Received', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+      await service.getReceivedResultRequest(user, { versionId: '5' });
+
+      const whereArgs = mockShareResultRequestRepository.find.mock.calls.map(
+        (call: any) => call[0].where,
+      );
+      expect(whereArgs).toHaveLength(3); // pendingOwner, pendingShared, done (non-admin, no cursor)
+      for (const where of whereArgs) {
+        const entries = Array.isArray(where) ? where : [where];
+        for (const entry of entries) {
+          expect(entry.obj_result).toMatchObject({ version_id: 5 });
+        }
+      }
+    });
+
+    it('(a) version_id=5 reaches obj_result.version_id on pendingOwner, pendingShared and every done entry — Sent', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+      await service.getSentResultRequest(user, { versionId: '5' });
+
+      const whereArgs = mockShareResultRequestRepository.find.mock.calls.map(
+        (call: any) => call[0].where,
+      );
+      expect(whereArgs).toHaveLength(3);
+      for (const where of whereArgs) {
+        const entries = Array.isArray(where) ? where : [where];
+        for (const entry of entries) {
+          expect(entry.obj_result).toMatchObject({ version_id: 5 });
+        }
+      }
+    });
+
+    // Falsifier (b): scope=pending calling find for done, or scope=history calling it for
+    // pending, fails.
+    it('(b) scope=pending fetches only the 2 pending buckets, never done', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+      await service.getReceivedResultRequest(user, { scope: 'pending' });
+
+      expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(2);
+      for (const call of mockShareResultRequestRepository.find.mock.calls) {
+        expect(Array.isArray((call[0] as any).where)).toBe(false);
+      }
+    });
+
+    it('(b) scope=history fetches only the done bucket, never pending', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+      await service.getReceivedResultRequest(user, { scope: 'history' });
+
+      expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(1);
+      expect(
+        Array.isArray(
+          (mockShareResultRequestRepository.find.mock.calls[0][0] as any).where,
+        ),
+      ).toBe(true);
+    });
+
+    it('(b) scope=pending returns [] for done with hasMore:false/nextCursor:null; scope=history returns [] for pending', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+      const pendingOnly: any = await service.getReceivedResultRequest(user, {
+        scope: 'pending',
+      });
+      expect(pendingOnly.response.receivedContributionsDone).toEqual([]);
+      expect(pendingOnly.response.doneMeta).toEqual({
+        hasMore: false,
+        nextCursor: null,
+      });
+
+      const historyOnly: any = await service.getReceivedResultRequest(user, {
+        scope: 'history',
+      });
+      expect(historyOnly.response.receivedContributionsPending).toEqual([]);
+    });
+
+    // Falsifier (c): admin with 201 mocked done rows returns 200 + hasMore=true.
+    it('(c) admin with 201 mocked done rows: done is cut to 200 with hasMore=true', async () => {
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(1); // admin
+      mockRoleByUserRepository.find.mockResolvedValue([]);
+
+      const manyDoneRows = Array.from({ length: 201 }, (_, i) => ({
+        share_result_request_id: 9000 + i,
+        result_id: 9000 + i,
+        request_status_id: 2,
+        is_map_to_toc: false,
+        requested_date: new Date(2026, 0, 1, 0, 0, i).toISOString(),
+        obj_result: { source: 'Result' },
+      }));
+
+      mockShareResultRequestRepository.find.mockImplementation(
+        async ({ where }: any) => (Array.isArray(where) ? manyDoneRows : []),
+      );
+
+      const response: any = await service.getReceivedResultRequest(user);
+
+      expect(response.response.receivedContributionsDone).toHaveLength(200);
+      expect(response.response.doneMeta.hasMore).toBe(true);
+      expect(response.response.doneMeta.nextCursor).toEqual(expect.any(String));
+    });
+
+    // Falsifier (d): no-param call missing any legacy key fails.
+    it('(d) no-param (legacy) call keeps every existing response key and adds doneMeta', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+      const received: any = await service.getReceivedResultRequest(user);
+      expect(received.response).toEqual(
+        expect.objectContaining({
+          receivedContributionsPending: expect.any(Array),
+          receivedContributionsDone: expect.any(Array),
+          doneMeta: expect.objectContaining({ hasMore: expect.any(Boolean) }),
+        }),
+      );
+
+      const sent: any = await service.getSentResultRequest(user);
+      expect(sent.response).toEqual(
+        expect.objectContaining({
+          sentContributionsPending: expect.any(Array),
+          sentContributionsDone: expect.any(Array),
+          doneMeta: expect.objectContaining({ hasMore: expect.any(Boolean) }),
+        }),
+      );
+    });
+
+    // Falsifier (e): version_id=abc or bad cursor not -> 400 fails.
+    it('(e) version_id=abc -> 400, never reaching the repository', async () => {
+      const response: any = await service.getReceivedResultRequest(user, {
+        versionId: 'abc',
+      });
+
+      expect(mockShareResultRequestRepository.find).not.toHaveBeenCalled();
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ status: 400 }),
+        }),
+      );
+      expect(response).toBe(
+        mockHandlersError.returnErrorRes.mock.results[0].value,
+      );
+    });
+
+    it('(e) malformed cursor -> 400, never reaching the repository (even though scope=pending would otherwise skip history)', async () => {
+      await service.getReceivedResultRequest(user, {
+        scope: 'pending',
+        cursor: 'not-a-valid-cursor!!',
+      });
+
+      expect(mockShareResultRequestRepository.find).not.toHaveBeenCalled();
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ status: 400 }),
+        }),
+      );
+    });
+
+    // Falsifier (f): 350 mocked pending rows returned < 350 fails (pending is never paged).
+    it('(f) 350 mocked pending rows on pendingOwner are all returned, never truncated', async () => {
+      const manyPendingRows = Array.from({ length: 350 }, (_, i) => ({
+        share_result_request_id: 10000 + i,
+        result_id: 10000 + i,
+        shared_inititiative_id: 100,
+        request_status_id: 1,
+        is_map_to_toc: false,
+        obj_result: { source: 'Result' },
+      }));
+
+      mockShareResultRequestRepository.find
+        .mockResolvedValueOnce(manyPendingRows) // pendingOwner
+        .mockResolvedValueOnce([]) // pendingShared
+        .mockResolvedValueOnce([]); // done
+
+      const response: any = await service.getReceivedResultRequest(user);
+
+      expect(response.response.receivedContributionsPending).toHaveLength(350);
+    });
+
+    // PAGE-R-3 — order and take reach the repository for the `done` bucket only.
+    it('passes order (requested_date DESC, share_result_request_id DESC) and take=201 only on the done fetch', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+      await service.getReceivedResultRequest(user);
+
+      const calls = mockShareResultRequestRepository.find.mock.calls as any[];
+      const doneCall = calls.find((call) => Array.isArray(call[0].where));
+      const pendingCalls = calls.filter(
+        (call) => !Array.isArray(call[0].where),
+      );
+
+      expect(doneCall[0].take).toBe(201);
+      expect(doneCall[0].order).toEqual({
+        requested_date: 'DESC',
+        share_result_request_id: 'DESC',
+      });
+      for (const call of pendingCalls) {
+        expect(call[0].take).toBeUndefined();
+        expect(call[0].order).toBeUndefined();
+      }
+    });
+
+    // PAGE-R-3 — a valid cursor expands the done `where` into the keyset OR (2 entries -> 4 for
+    // non-admin) instead of the plain 2-entry array.
+    it('a valid cursor expands the non-admin done where from 2 entries to 4 (keyset OR)', async () => {
+      mockShareResultRequestRepository.find.mockResolvedValue([]);
+      const cursor = Buffer.from(
+        '2026-01-01T00:00:00.000Z|123',
+        'utf8',
+      ).toString('base64url');
+
+      await service.getReceivedResultRequest(user, { cursor });
+
+      const calls = mockShareResultRequestRepository.find.mock.calls as any[];
+      const doneCall = calls.find((call) => Array.isArray(call[0].where));
+      expect(doneCall[0].where).toHaveLength(4);
     });
   });
 });
