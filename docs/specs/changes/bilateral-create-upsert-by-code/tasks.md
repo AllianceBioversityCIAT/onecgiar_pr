@@ -1,6 +1,6 @@
 # Tasks — `changes/bilateral-create-upsert-by-code`
 
-- **Status:** `in-progress` (T-1, T-2 done)
+- **Status:** `in-progress` (T-1, T-2 done · T-5 PR 1 pass done, revisit after T-4)
 - **Budget (`design.md` §9):** 6 tasks · ~1,000 LOC · 1–2 review rounds per task
 - **Branch:** `feat/bilateral-create-upsert-by-code` from `performance-refactor` @ `35e58fd87`
 - **PR strategy:**
@@ -181,7 +181,7 @@
 
 ---
 
-### `UBC-T-5` — Contract doc and the Notion versioning section
+### [~] `UBC-T-5` — Contract doc and the Notion versioning section
 
 - **Type:** `docs` · **Size:** `S` · **Depends on:** `UBC-T-2` (PR 1); updated again after `UBC-T-4`
 - **Implements:** `UBC-R-12` (PRMS side); settles `P-15` as far as the docs go
