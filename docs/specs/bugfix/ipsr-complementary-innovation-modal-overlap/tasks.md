@@ -83,7 +83,7 @@
 
 ### `ICM-T-3` — Add a `×` to the 6 header-less IPSR modals (added 2026-10-01, Pivot)
 
-- **Status:** `[ ]` — Pivot approved by the user 2026-10-01
+- **Status:** `[~]` partial 2026-10-01. `ICM-R-6` (`×` on the 6 modals) is done: Reviewer PASS and user HITL for Step 4. `ICM-R-7` / `ICM-AC-8` ("Add project" buttons) are **deferred by the user** after 3 attempts; see `execution.md` → Deferral
 - **Type:** client
 - **Description:**
   1. In the shared `app-pr-dialog` (`shared/components/pr-dialog/`), add an **opt-in** boolean input `floatingClose`, default `false`. When it is true and `showHeader` is false, render the existing `.pr-dialog__close` button (same markup, `aria-label="Close"`, calls `hide()`) absolutely positioned in the panel's top-right corner. With the default, the output is unchanged for every consumer.

@@ -179,3 +179,80 @@
 - **Final verification:** Jest 84/903 green; lint clean.
 - **Constitution Impact:** none.
 - **Skills deviation:** `tailwind-design-system` was dropped (SCSS-only declaration).
+- Committed as `7bc36b21f`.
+
+### ICM-T-3 — `×` on the 6 header-less IPSR modals + "Add project" buttons · in progress · 2026-10-01
+
+**Attempt 1** — Implementer `akili-implementer` (T2, effort medium). Skills: `angular-developer`, `tailwind-design-system`. Leader-scoped from the Pivot Record: flip AC-6 to `expectClose: true` in the T-1 Cypress spec and the snippet note, since `ICM-AC-6` (c) applies after T-3.
+- **Files:**
+  - `pr-dialog.component.{ts,html,scss}`: opt-in `floatingClose`, default false.
+  - New `pr-dialog.component.spec.ts` (76 lines, 4 tests).
+  - 6 modal templates: `[floatingClose]="true"`.
+  - `step-n4-add-project.component.scss`: `.buttons` changed `fixed` → `absolute`.
+  - 3 Step 4 zoneless specs: a new `describe` with the real `PrDialogComponent`.
+  - Cypress AC-6 `expectClose: true`, plus comments; `ipsr-modal-probe.js`: 2 comments.
+- **Implementer verification:**
+  - Falsifier 1 (remove the flag from add-partner) → `Expected: 1, Received: 0`.
+  - Falsifier 2 (default `true`) → `Expected: 0, Received: 1`. Both were restored.
+  - Green: step-n4 + pr-dialog `14/62`; consumers `3/8`; ipsr `84/906`. Lint clean.
+  - It ran mutations rather than test-first red; this is accepted because the falsifier was executed against the final code.
+  - Note: on submission/unsubmit the `×` sits on the dark full-bleed title bar (no text overlap). This is flagged for HITL.
+- **Evidence re-run (Leader inline): VERIFIED.**
+  - Jest over ipsr + pr-dialog + retrieve-modal + share-request-modal → `Test Suites: 91 passed · Tests: 962 passed`.
+  - The consumer grep lists exactly the 6 templates.
+  - Falsifier 1 re-run → `Expected: 1 / Received: 0 · Tests: 1 failed, 1 passed`, then restored (flag count back to 1).
+  - `npx ng lint --quiet` → exit 0.
+- **Budget tripwire fired (3rd time):** T-3 is ~274 LOC (198 changed + 76 new spec) vs ~92 expected. The spec total is ~922 vs the 750 tripwire. Main driver: test code. **Stopped and escalated before the Reviewer spawn.**
+- **User decision (2026-10-01):** "Aceptar (~920)". Tripwire raised to 1000 LOC / 6 review rounds (`design.md` §12).
+- **Reviewer (attempt 1): `STATUS: FAIL`** (verbatim in `execution-reviews/icm-t3-a1.md`). The `×` on submission/unsubmit is dark on the dark full-bleed title bar (~1.1:1 contrast), which violates `ICM-R-6` ("visible") and `docs/ux-ui/design.md` §7 rule 3 / §10 AA. The rest is clean: opt-in, markup, exactly 6 modals, the add-project containing block, and real-artifact tests.
+- **Leader adjudication:** in scope and valid. Attempt 1 consumed → **Attempt 2**, effort medium → high, scoped to the remediation.
+
+**Attempt 2** — Implementer `akili-implementer` (T2, effort high).
+
+- **Files:** `ipsr-submission-modal.component.scss`, `ipsr-unsubmit-modal.component.scss` (scoped `.pr-dialog__close--floating` with white color, `rgba(white, .12)` hover, white focus-visible ring) and `step-n4-add-project.component.scss` (`[advisory-grade]` `.buttons`: `width: 100%` → `width: auto; left: 20px`, right unchanged).
+- **Note:** the Implementer loaded the skills after its first edit rather than before. This was recorded and does not affect the outcome.
+- **Evidence re-run (Leader inline): VERIFIED.**
+  - Jest ipsr + pr-dialog → `85 passed / 910 passed`. Lint exit 0.
+  - Selector chain confirmed: `pr-dialog.component.html:22` renders `pr-dialog__close--floating`, and both templates pass the matching `styleClass` (`ipsr-*-modal.component.html:4`).
+  - Tokens exist (`colors.scss:25,152,155`).
+  - Contrast computed independently: white vs `#271862` = **15.07:1** (≥ 3:1, WCAG 1.4.11).
+- **Reviewer (attempt 2): `STATUS: PASS`.** a1 item 1 is closed. White `×` at ~15:1. The override wins on specificity: the new selector is 0,2,1 against the shared rule's 0,2,0, and on hover/focus 0,3,1 against 0,3,0. The selector chain is correct, the change uses tokens only, and it is scoped to the 2 modals. `app-pr-dialog` is untouched. The `[advisory-grade]` `.buttons` change causes no regression.
+- **ADVISORY (recorded, not gating):** the bottom edge of the white focus ring may fall onto the white panel and vanish, though the top and sides stay visible. Check at HITL; `outline-offset: 0` would fix it.
+- **Not closable yet:** the DoD's HITL items are owed by the user: the 6 modals' `×`, AC-8 add-project buttons incl. the open select, the add-partner probe (c), and no duplicate `×` on update-result / Step 3 evidence.
+- **HITL (user, 2026-10-01):**
+  - "Step 4 OK", but the "Add project" buttons render inside the modal on open and then move to the screen corner. A hard reload did not change this.
+  - User DevTools diag (truncated paste): `ICM-DIAG {"viewport":[1440,900],"panelPos":"static"`. The panel is not positioned, so the `absolute` buttons resolve against `.pr-dialog-mask` (`fixed; inset:0`).
+  - **Leader hypothesis (unverified):** the global `.pr-dialog { animation: pr-dialog-enter 220ms }` (`styles.scss:825-830`, keyframes at `:1051`) likely includes a transform. That makes the panel a containing block during the animation, so the buttons look inside, then jump when it ends. It is still unexplained why neither `::ng-deep app-pr-dialog .step-n4-add-project-dialog { position: relative }` nor `.pr-dialog--floating-close { position: relative }` applies.
+  - The user cannot run further DevTools snippets ("no sé cómo hacer lo que me pides"). The Leader has no authenticated session.
+- **Verdict:** HITL failure of `ICM-AC-8` = implicit FAIL. Attempt 2 consumed → **Attempt 3 (final)**, effort xhigh. Diagnosis moves to an unauthenticated **Cypress component test** in a real browser (`cypress.config.js` `component`, global styles via `cypress/support/component.ts`), which also becomes the regression test for `ICM-AC-8`.
+
+**Attempt 3 (final)** — Implementer `akili-implementer` (T2, effort xhigh). Skills: `angular-developer`, `systematic-debugging`.
+
+- **Diagnosis (Cypress CT, real `StepN4AddProjectComponent` + real `PrDialogComponent` + global styles, no login):** the pre-fix (attempt-2) code **did not reproduce**. The panel class is `pr-dialog step-n4-add-project-dialog pr-dialog--floating-close`, its computed position is `relative` at rest, the buttons are contained in the panel, and both `position: relative` rules are present in `document.styleSheets`. This holds at 1440×900 and 1100×700.
+- **Harness sensitivity:** with both `relative` declarations stripped, the result is `panelComputedPosition:"static"`, `offsetParent` = `.pr-dialog-mask`, and the buttons at the viewport corner. That matches the user's symptom exactly. Reinstating `position: fixed` also goes red.
+- **Root-cause claim:** `ng serve` uses `@angular/build:dev-server` (esbuild/Vite; `angular.json:101`), while CT and Jest use webpack. A cascade or order difference under the live builder is "the most plausible explanation". This is **UNVERIFIED — confirm at source before relying on it.** The Implementer could not observe the live builder output.
+- **Fix:** `position: relative !important` on the existing `::ng-deep app-pr-dialog .step-n4-add-project-dialog` rule (consumer only). `pr-dialog` and `styles.scss` are untouched, and `.buttons` stays `absolute`.
+- **Regression test:** new `step-n4-add-project.component.cy.ts` (~130 lines). It waits for the enter animation, then asserts at both viewports: the panel is not `static`, the buttons are inside the panel, and they do not overlap the select. Red under both falsifiers, green after.
+- **Evidence re-run (Leader inline): VERIFIED.** The CT spec → `2 passing` (both viewports). Jest ipsr + pr-dialog → `85 / 910` passed. Lint exit 0. No leftover falsifier markers.
+- **Leader note:** the fix rests on an unconfirmed cause, and the CT gate passed before the fix too, so it cannot discriminate the live defect. **The binding evidence is the user's HITL on the live `ng serve`** (open "Add project" and see whether the buttons stay inside). That is requested before the Reviewer verdict closes the task.
+- **HITL after attempt 3 (user, 2026-10-01):** "sigue estando fuera, pero dejemos así por ahora". The live `ng serve` still shows the "Add project" buttons at the screen corner, so attempt 3's fix did not work on the real app.
+
+## Deferral: ICM-T-3 / `ICM-R-7` ("Add project" buttons) — paused by the user (2026-10-01)
+
+- **Attempts:** 3 of 3 for T-3.
+  - Attempt 1: Reviewer FAIL (`×` contrast).
+  - Attempt 2: Reviewer PASS, but HITL FAIL on `ICM-AC-8`.
+  - Attempt 3: HITL FAIL on `ICM-AC-8`.
+- **Rollback of attempt 3 only (Leader, scoped pathspec):**
+  - Reverted the speculative `position: relative !important` and its comment in `step-n4-add-project.component.scss`, back to the attempt-2 `position: relative`.
+  - Deleted `step-n4-add-project.component.cy.ts`: it passed before the fix too, so it does not discriminate the live defect.
+  - Lint exit 0 after the rollback. `package-lock.json` (unattributed) was not touched.
+- **Kept (reviewed, PASS in attempt 2):**
+  - `ICM-R-6` floating `×` on the 6 modals. The user confirmed "Step 4 OK".
+  - Submission/unsubmit `×` contrast: Reviewer PASS, user visual not yet confirmed.
+  - `.buttons` `fixed` → `absolute`. This is neutral on the live app (same corner), and correct where the panel is positioned (CT).
+- **Open defect (follow-up):** on the live app the add-project panel computes `position: static` (user DevTools read). Both `relative` rules exist in source and win in the webpack CT harness, so the live esbuild/Vite-served cascade differs.
+  - Root cause: unconfirmed.
+  - Next step: inspect the live served stylesheet in an authenticated browser (Elements → Styles on `.step-n4-add-project-dialog`).
+- **Status:** T-3 `[~]`. `ICM-R-6` is done. `ICM-R-7` / `ICM-AC-8` are **deferred by the user**, not passed.
+- **User decision (2026-10-01):** "Sí, commit". The reviewed `ICM-R-6` work is committed, and `ICM-R-7` stays deferred.

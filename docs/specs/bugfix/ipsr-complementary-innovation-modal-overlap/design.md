@@ -132,7 +132,7 @@ No unaddressed breakage was found. The HITL visual pass in T-2 covers Step 1, St
 |---|---|---|
 | 2 | ~100 (≈5 SCSS + ≈95 Cypress) → **re-baselined 2026-10-01: ~415** (≈5 SCSS + 252 Cypress + 155 DevTools probe, Plan B) | 1 |
 
-Matches Lite. `/akili-execute` trips if it exceeds 3 tasks, 200 LOC or 2 rounds. **Tripwire fired at T-1 (407 LOC); the user accepted the new size on 2026-10-01. New tripwire: 3 tasks, 500 LOC, 2 rounds.** **Fired again at T-1 attempt 2 (542 LOC); the user accepted ~550 on 2026-10-01. New tripwire: 3 tasks, 600 LOC, 3 rounds.** **Pivot 2026-10-01 (T-3, `ICM-DD-2`) adds ~90 LOC → expected ~640; tripwire 3 tasks / 750 LOC / 5 review rounds, approved by the user 2026-10-01.**
+Matches Lite. `/akili-execute` trips if it exceeds 3 tasks, 200 LOC or 2 rounds. **Tripwire fired at T-1 (407 LOC); the user accepted the new size on 2026-10-01. New tripwire: 3 tasks, 500 LOC, 2 rounds.** **Fired again at T-1 attempt 2 (542 LOC); the user accepted ~550 on 2026-10-01. New tripwire: 3 tasks, 600 LOC, 3 rounds.** **Pivot 2026-10-01 (T-3, `ICM-DD-2`) adds ~90 LOC → expected ~640; tripwire 3 tasks / 750 LOC / 5 review rounds, approved by the user 2026-10-01.** **Fired at T-3 (~922 total); the user accepted ~920 on 2026-10-01. Tripwire: 3 tasks / 1000 LOC / 6 review rounds.**
 
 ### `ICM-DD-2` — Opt-in floating `×` in `app-pr-dialog` (Pivot 2026-10-01, user request)
 

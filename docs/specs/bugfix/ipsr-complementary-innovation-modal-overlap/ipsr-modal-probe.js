@@ -8,9 +8,10 @@
  * Generic over any open `.pr-dialog` panel (ICM-AC-6): it reads the live panel/sidebar/header
  * rects at run time, never hard-coded pixels. Probe points are derived from rect intersections —
  * when an intersection is empty (e.g. the sidebar is hidden below the `md` breakpoint, or a panel
- * has no `.pr-dialog__close` because it renders `[showHeader]="false"` — true for every Step 4
- * "Add ..." modal, verified against source, see the Cypress spec's file header), that probe is
- * reported `n/a`, never `PASS`.
+ * has no `.pr-dialog__close` at all), that probe is reported `n/a`, never `PASS`. Before `ICM-T-3`
+ * every Step 4 "Add ..." modal rendered `[showHeader]="false"` with no close control at all; after
+ * `ICM-T-3` (`ICM-DD-2`) the 6 header-less IPSR modals (including every Step 4 "Add ..." modal) set
+ * `[floatingClose]="true"` and DO render a `.pr-dialog__close`, so probe (c) now applies there too.
  *
  * Probes (requirements.md ICM-AC-1..6, design.md §10):
  *   (a) a panel point that also lies inside the sidebar's rect       → must resolve inside the panel
@@ -147,8 +148,9 @@
     if (!passB) fails.push('b');
   }
 
-  // Probe (c): the × center (or its icon). n/a when this panel has no close button at all
-  // (e.g. [showHeader]="false" — every Step 4 "Add ..." modal renders no .pr-dialog__close).
+  // Probe (c): the × center (or its icon). n/a when this panel has no close button at all. Before
+  // `ICM-T-3` this was every Step 4 "Add ..." modal ([showHeader]="false"); after `ICM-T-3` those
+  // 6 modals set [floatingClose]="true" and DO render a .pr-dialog__close.
   if (!closeEl) {
     rows.push({ probe: '(c) × center', point: 'n/a (no .pr-dialog__close in this panel)', topmost: 'n/a', result: 'n/a' });
   } else {

@@ -32,8 +32,9 @@ import { SIDEBAR, HEADER, DIALOG_CLOSE, assertViewport, probeDialogStacking, typ
  *    (`hlm-sidebar.ts:81` — `hidden ... md:flex`): no probe below is ever run against a hidden
  *    sidebar at these viewports.
  *  - `app-pr-dialog` renders `.pr-dialog-mask` + `.pr-dialog {styleClass}` INLINE, `@if (visible)`
- *    (`src/app/shared/components/pr-dialog/pr-dialog.component.html:1-26`). The close `×` is
- *    `.pr-dialog__close` and only exists `@if (closable)` under `@if (showHeader)` (`.html:9-17`).
+ *    (`src/app/shared/components/pr-dialog/pr-dialog.component.html`). The close `×` is
+ *    `.pr-dialog__close` and exists `@if (closable)` under `@if (showHeader)`, OR — after `ICM-T-3`
+ *    (`ICM-DD-2`) — as the opt-in floating variant `@if (floatingClose && !showHeader && closable)`.
  *  - Step 2.1 trigger: `[data-testid="add-complementary-innovation"]`
  *    (`.../step-n2/pages/complementary-innovation/components/new-complementary-innovation/
  *    new-complementary-innovation.component.html:3`), wired to
@@ -48,12 +49,14 @@ import { SIDEBAR, HEADER, DIALOG_CLOSE, assertViewport, probeDialogStacking, typ
  *    (`step-n4-add-partner.component.html:30-31`, no `data-testid`) — `app-pr-button` renders a
  *    clickable root `div.pr_button` with the label in a nested `div.text`
  *    (`src/app/custom-fields/pr-button/pr-button.component.html:1-15`), so it is targeted by text.
- *    ⚠️ **This dialog sets `[showHeader]="false"`** (`.html:2`), and so do every other Step 4 "Add …"
- *    modal (`step-n4-add-bilateral.component.html:6`, `step-n4-add-project.component.html:8`,
- *    `step-n4-edit-bilateral.component.html:2`) — none of them render a `.pr-dialog__close` at all
- *    (`pr-dialog.component.html:9-17`: the `×` only exists inside the `@if (showHeader)` branch).
- *    `ICM-AC-6` is therefore run WITHOUT probe (c) for this sibling — see `probeDialogStacking`'s
- *    `expectClose` flag and the report filed with this task for the escalation.
+ *    This dialog sets `[showHeader]="false"`, and so do every other Step 4 "Add …" modal
+ *    (`step-n4-add-bilateral.component.html`, `step-n4-add-project.component.html`,
+ *    `step-n4-edit-bilateral.component.html`). Before `ICM-T-3` none of them rendered a
+ *    `.pr-dialog__close` at all (the `×` only existed inside the `@if (showHeader)` branch). **After
+ *    `ICM-T-3`** (`ICM-DD-2`), this dialog also sets `[floatingClose]="true"`
+ *    (`step-n4-add-partner.component.html`), so `app-pr-dialog` renders the opt-in floating `×` in
+ *    the panel's top-right corner — `ICM-AC-6` (c) now applies and `probeDialogStacking` runs WITH
+ *    `expectClose: true` for this sibling (`ICM-R-6`, `ICM-AC-7`).
  *
  * REWORK (attempt 2, `execution-reviews/icm-t1-a1.md` item 1, required fix):
  *  - **No more hard non-null asserts on intersections.** `probeDialogStacking` geometry rules out
@@ -198,8 +201,9 @@ describeWithToken('IPSR — modal stacking regression (ICM-T-1)', () => {
   // panel-height math in `execution-reviews/icm-t1-a2.md` ADVISORY — title ~40 + min-height 500 −
   // ~10 for the buttons ≈ 530px tall panel, top ≈ 85px, below a 56px header absent the test-env
   // banner) — that n/a is NOT a failure: the INCONCLUSIVE guard is already satisfied by probe (a).
-  // (d) is expected to evaluate. (c) stays n/a by design: `[showHeader]="false"` renders no
-  // `.pr-dialog__close`.
+  // (d) is expected to evaluate. (c) applies after `ICM-T-3`: `step-n4-add-partner` now sets
+  // `[floatingClose]="true"` (`ICM-DD-2`), so `app-pr-dialog` renders a `.pr-dialog__close` even
+  // though `[showHeader]="false"`.
   it('ICM-AC-6: Step 4 "Add partner" sibling modal paints above the chrome — 1100x700, sidebar expanded', () => {
     cy.viewport(1100, 700);
     assertViewport(1100, 700);
@@ -209,6 +213,6 @@ describeWithToken('IPSR — modal stacking regression (ICM-T-1)', () => {
     setSidebar('expanded');
 
     cy.contains('app-step-n4-add-partner .pr_button', 'Add partner').click();
-    probeDialogStacking(ADD_PARTNER_PANEL, { expectClose: false });
+    probeDialogStacking(ADD_PARTNER_PANEL, { expectClose: true });
   });
 });
