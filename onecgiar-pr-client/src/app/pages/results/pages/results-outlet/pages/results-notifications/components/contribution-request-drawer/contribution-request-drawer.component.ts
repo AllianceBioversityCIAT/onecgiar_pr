@@ -15,6 +15,20 @@ export interface ContributionRequestDrawerHeaderParts {
   tail: string;
   resultCode: string;
   resultTitle: string;
+  /**
+   * PSR-T-9 (design.md §6.1 "Bilateral contributor request", PSR-R-10): a bold `font-mono` code
+   * rendered right after `lead` — the bilateral-contributor sentence's leading `{owner sp}`, which
+   * `lead`/`requesterCode` alone can't express (`lead` is plain text, `requesterCode` always forces
+   * the "from" prefix). Absent/undefined renders nothing — byte-identical to before (CRD zero-touch).
+   */
+  leadCode?: string;
+  /**
+   * PSR-T-9 (design.md §6.1/§6.2, PSR-R-11 "showing … the Creating Center"): free text rendered
+   * after `resultTitle` — the bilateral-contributor sentence's "on behalf of {center}" tail, which
+   * has nowhere to go in the pre-existing `lead … resultTitle` shape. Absent/undefined renders
+   * nothing (CRD zero-touch).
+   */
+  suffix?: string;
 }
 
 /** design.md §6.2 `reviewRows`: one "Where it contributes" table = an array of these, 7 per table. */
@@ -48,6 +62,13 @@ export interface ContributionRequestDrawerViewFields {
    * `viewMetadataRows` — the most important thing to know at a glance.
    */
   status?: string | null;
+  /**
+   * PSR-T-9 (PSR-R-11 "showing the request kind"): a human label for the request's kind (e.g.
+   * "Primary program request" / "Contributor request" / "Contribution request"). `notification-item`
+   * (wired by `PSR-T-8`) resolves the actual value; this component never invents one — absent/blank
+   * omits the row like every other field here (NOTIF-R-5/NOTIF-AC-7).
+   */
+  requestKind?: string | null;
   resultType?: string | null;
   phase?: string | null;
   primaryProgram?: string | null;
@@ -121,6 +142,24 @@ export class ContributionRequestDrawerComponent {
   readonly blockedReason = input<string | null>(null);
   readonly acceptHelper = input<string | null>(null);
 
+  /**
+   * PSR-T-9 (design.md §6.2 "decide mode reads the kind ... Accept label"): the `decide`-footer
+   * Accept button text. `null` (the default) keeps the pre-existing `copy.footer.acceptContribution`
+   * label — CRD zero-touch: no caller that leaves this unset sees any change. The caller (kept
+   * minimal here, fully wired by `PSR-T-8`) is the one that knows the row's kind and picks the
+   * right string (`copy.footer.acceptContribution` / `acceptAsPrimary` / plain "Accept"); this
+   * component stays presentational and never derives it itself (CRD-R-11 "same actions as the row").
+   */
+  readonly acceptLabel = input<string | null>(null);
+
+  /**
+   * PSR-T-9 (design.md §6.2 "No ToC 'Align' projection for primary requests"): gates the projected
+   * `[crdAlign]` slot. Defaults to `true` (today's behaviour, unchanged) — the caller sets it to
+   * `false` for a primary request so the slot never renders even if something is projected into it,
+   * regardless of `isBilateralResult`/`tocInitiative` seeding upstream (defense in depth, CRD-R-11).
+   */
+  readonly showAlignSlot = input(true);
+
   /** CRD-R-10 "Bilateral row accept": scroll the projected `[crdAlign]` slot into view after open. */
   readonly focusAlign = input(false);
 
@@ -152,6 +191,9 @@ export class ContributionRequestDrawerComponent {
 
     // NOTIF-T-14: status is first — the most important thing to know at a glance (NOTIF-R-5).
     push(labels.status, fields.status);
+    // PSR-T-9 (PSR-R-11): the request kind, right after status — both are "what is this" context,
+    // shown before the "about the result" fields below.
+    push(labels.requestKind, fields.requestKind);
     if (fields.source === 'request') {
       push(labels.resultType, fields.resultType);
     }

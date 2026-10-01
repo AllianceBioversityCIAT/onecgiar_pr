@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
@@ -87,26 +88,87 @@ describe('NotificationController', () => {
     });
   });
 
+  // PAGE-T-3 (notifications/inbox-paginated-load): `version_id`/`scope`/`cursor` parsing and
+  // validation (design.md §4.1, §5 "Errors"; requirements.md PAGE-R-1, PAGE-R-6, PAGE-AC-10).
   describe('getAllNotifications', () => {
-    it('should call NotificationService.getAllNotifications with correct parameters', async () => {
-      const user: TokenDto = {
-        id: 1,
-        email: 'test@example.com',
-        first_name: 'test',
-        last_name: 'user',
-      };
+    const user: TokenDto = {
+      id: 1,
+      email: 'test@example.com',
+      first_name: 'test',
+      last_name: 'user',
+    };
 
-      const result = {
-        response: {},
-        status: 200,
-        message: 'List of all notifications retrieved successfully',
-      };
+    const result = {
+      response: {},
+      status: 200,
+      message: 'List of all notifications retrieved successfully',
+    };
+
+    it('legacy call (no paging params) calls the service with all options undefined (PAGE-AC-10)', async () => {
       jest.spyOn(service, 'getAllNotifications').mockResolvedValue(result);
 
       const response = await controller.getAllNotifications(user);
 
-      expect(service.getAllNotifications).toHaveBeenCalledWith(user);
+      expect(service.getAllNotifications).toHaveBeenCalledWith(user, {
+        versionId: undefined,
+        scope: undefined,
+        cursor: undefined,
+      });
       expect(response).toBe(result);
+    });
+
+    it('parses version_id, scope and cursor through to the service', async () => {
+      jest.spyOn(service, 'getAllNotifications').mockResolvedValue(result);
+      const cursor = Buffer.from(
+        '2026-09-30T10:00:00.000Z|123',
+        'utf8',
+      ).toString('base64url');
+
+      await controller.getAllNotifications(user, '7', 'history', cursor);
+
+      expect(service.getAllNotifications).toHaveBeenCalledWith(user, {
+        versionId: 7,
+        scope: 'history',
+        cursor,
+      });
+    });
+
+    it('treats an unrecognized scope value as absent (legacy) rather than erroring', async () => {
+      jest.spyOn(service, 'getAllNotifications').mockResolvedValue(result);
+
+      await controller.getAllNotifications(user, undefined, 'not-a-scope');
+
+      expect(service.getAllNotifications).toHaveBeenCalledWith(user, {
+        versionId: undefined,
+        scope: undefined,
+        cursor: undefined,
+      });
+    });
+
+    it.each(['0', '-1', 'abc', '1.5'])(
+      'rejects an invalid version_id (%s) with 400, regardless of scope',
+      async (badVersionId) => {
+        jest.spyOn(service, 'getAllNotifications');
+
+        expect(() =>
+          controller.getAllNotifications(user, badVersionId, 'pending'),
+        ).toThrow(BadRequestException);
+        expect(service.getAllNotifications).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects a malformed cursor with 400, even when scope is "pending" (which would otherwise skip history)', () => {
+      jest.spyOn(service, 'getAllNotifications');
+
+      expect(() =>
+        controller.getAllNotifications(
+          user,
+          undefined,
+          'pending',
+          'not-a-valid-cursor!!',
+        ),
+      ).toThrow(BadRequestException);
+      expect(service.getAllNotifications).not.toHaveBeenCalled();
     });
   });
 

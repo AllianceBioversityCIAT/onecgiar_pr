@@ -42,6 +42,8 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
   viewFieldLabels: {
     /** NOTIF-T-14 (NOTIF-R-5): rendered first — the row's decision/info status. */
     status: 'Status',
+    /** PSR-T-9 (PSR-R-11 "showing the request kind"): rendered second, right after status. */
+    requestKind: 'Request type',
     resultType: 'Result type',
     phase: 'Phase',
     primaryProgram: 'Primary program',
@@ -66,7 +68,28 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
     tail: 'to contribute to result',
     bilateralLeadPrefix: 'Center',
     bilateralVerb: 'has reported a contribution to',
-    bilateralTail: 'for result'
+    bilateralTail: 'for result',
+    /**
+     * PSR-T-9 (design.md §6.1 "Bilateral contributor request", PSR-R-10): the row/drawer sentence
+     * — "**{owner sp}**, as primary Science Program, has tagged **{sp}** as a contributing Science
+     * Program to result **{code}** - {title} on behalf of {center}". `verb`/`tail` slot into the
+     * pre-existing `lead(+leadCode) … verb … responderCode … tail … resultCode – resultTitle` shape;
+     * `onBehalfOf` composes the new `suffix` field (`notification-item`, wired by `PSR-T-8`, builds
+     * `suffix: \`${onBehalfOf} ${center}\``).
+     */
+    bilateralContributorVerb: ', as primary Science Program, has tagged',
+    bilateralContributorTail: 'as a contributing Science Program to result',
+    onBehalfOf: 'on behalf of',
+    /**
+     * PSR-T-8 (design.md §6.1 "Primary request" row/drawer sentence, PSR-R-9): "{center} has
+     * tagged **{sp}** as the primary Science Program of result **{code}** - {title}". Slots into
+     * the same `lead … verb … responderCode … tail … resultCode – resultTitle` shape as the
+     * pre-existing branches — `notification-item`'s `drawerHeader()` sets `lead` to the Creating
+     * Center label and `responderCode` to the requested SP, leaving `requesterCode` empty (no
+     * "from X" clause) exactly like the bilateral-contributor branch.
+     */
+    primaryVerb: 'has tagged',
+    primaryTail: 'as the primary Science Program of result'
   },
   align: {
     hint: 'Pick the indicator this result contributes to in your own theory of change. You can do this later.',
@@ -74,6 +97,21 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
   },
   footer: {
     acceptContribution: 'Accept contribution',
+    /**
+     * PSR-T-9 (design.md §6.1/§6.2): the `decide`-footer Accept label for a pending PRIMARY
+     * program request. `notification-item` (wired by `PSR-T-8`) passes this through the drawer's
+     * `acceptLabel` input — the drawer itself never decides which label a given row gets, it only
+     * falls back to `acceptContribution` above when the caller passes none (CRD zero-touch: every
+     * pre-existing caller that never sets `acceptLabel` keeps seeing `acceptContribution`).
+     */
+    acceptAsPrimary: 'Accept as primary',
+    /**
+     * PSR-T-9 (design.md §6.1 "Bilateral contributor request"): the plain "Accept" label for a
+     * bilateral contributor request row — distinct from `acceptContribution`'s "Accept contribution"
+     * (existing/W1-W2 rows) and `acceptAsPrimary`'s "Accept as primary" (primary requests). `PSR-T-8`
+     * passes this through the drawer's `acceptLabel` input for that row kind.
+     */
+    accept: 'Accept',
     decline: 'Decline',
     declineConfirmTitle: 'Decline this contribution?',
     cancel: 'Cancel',
@@ -97,6 +135,34 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
   notificationItem: {
     /** `NOTIF-DD-3`: single chip for every `source:'request'` row — no sub-typing. */
     contributionRequestChip: 'Contribution request',
+    /**
+     * PSR-T-8 (design.md §6.1 "Primary request" row, PSR-R-9): chip text for a `request_type:
+     * 'primary'` row — single source for the row's own chip AND the drawer's `view`-mode
+     * `requestKind` metadata field (`requestKindLabel` getter reads this same string for both), so
+     * the row and the drawer can never say something different about the same request (PSR-T-8
+     * task brief).
+     */
+    primaryRequestChip: 'Primary program request',
+    /**
+     * PSR-T-8 (design.md §6.1 "Bilateral contributor request" row, PSR-R-10): chip text for a
+     * bilateral (`source_name: 'W3/Bilaterals'`) contribution request — distinct from the plain
+     * `contributionRequestChip` above, which stays the W1/W2 / non-bilateral wording (`PSR-DD-10`).
+     */
+    contributorRequestChip: 'Contributor request',
+    /**
+     * PSR-T-8 (PSR-R-9 "missing-acronym clause"): fallback when a request's `creating_center` has
+     * neither `acronym` nor `name` — never renders an empty name or "()". Chosen over a blank
+     * string so the sentence still reads as a complete clause ("the Center has tagged SP09 …").
+     */
+    unknownCenterFallback: 'the Center',
+    /**
+     * PSR-T-8 rework attempt 2 (Reviewer finding, advisory): fallback when a bilateral contributor
+     * row's `owner_program_code` is missing — avoids both an empty bold span and a sentence that
+     * starts with the verb's leading comma (", as primary Science Program, has tagged …").
+     * `drawerHeader()` uses this as `lead` (plain text) whenever `ownerProgramCode` is falsy, which
+     * also routes the CRD template to its `@else` branch instead of the `leadCode` one.
+     */
+    unknownProgramFallback: 'The primary Science Program',
     /** Wording matches `NOTIF-T-6`'s planned tab labels, per the user's 2026-09-29 decision. */
     statusNeedsDecision: NEEDS_DECISION_LABEL,
     statusInfo: FOR_YOUR_INFORMATION_LABEL,
@@ -107,7 +173,16 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
      * `obj_result.source_name` (`'W1/W2'` | `'W3/Bilaterals'`), never fabricated for any other value.
      */
     fundingWindowW1W2: 'W1/W2',
-    fundingWindowBilateral: 'W3/Bilateral'
+    fundingWindowBilateral: 'W3/Bilateral',
+    /**
+     * PSR-T-9 (PSR-R-2 "no longer actionable" / PSR-R-4 stale-tab idempotency, PSR-R-8): the exact
+     * server-contract text for a 409 on accept/decline (already decided or cancelled — a stale tab,
+     * a second click from another member, or a Center re-pick that cancelled this request's round).
+     * `acceptOrReject()`'s error branch shows this instead of the generic error toast; the
+     * surrounding `finalize()` still runs unconditionally, so the row's list refetches either way
+     * and the request stops being actionable.
+     */
+    staleRequestMessage: 'This request was already answered'
   },
   /**
    * NOTIF-T-6: the three decision-state tab labels (`NOTIF-R-1`/`NOTIF-US-1`), rendered in
@@ -155,5 +230,17 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
     notificationSettings: 'Notification settings',
     markAllAsRead: 'Mark all as read',
     announcements: 'Announcements'
+  },
+  /**
+   * @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2/§6.3, PAGE-R-4/R-10).
+   * Copy for the paginated-history footer: the "Load more" button, the trailing skeleton row's
+   * caption while a source's first history page is still outstanding, and the filtered-scope hint
+   * shown next to "Load more" while a toolbar filter/search is active (PAGE-R-10) — exact wording
+   * from `design.md` §6.2, not paraphrased.
+   */
+  inbox: {
+    loadMore: 'Load more',
+    loadingHistory: 'Loading history…',
+    filteredHint: 'Filters apply to loaded notifications. Load more to include older ones.'
   }
 } as const;

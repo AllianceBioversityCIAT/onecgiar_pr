@@ -1,7 +1,11 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ShareResultRequestService } from './share-result-request.service';
 import { ShareResultRequestController } from './share-result-request.controller';
 import { ShareResultRequestRepository } from './share-result-request.repository';
+import { PrimaryProgramRequestService } from './services/primary-program-request.service';
+import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
+import { ClarisaProjectMapping } from '../../../clarisa/clarisa-projects/entity/clarisa-project-mapping.entity';
 import {
   HandlersError,
   ReturnResponse,
@@ -35,6 +39,11 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
   providers: [
     ShareResultRequestService,
     ShareResultRequestRepository,
+    // `PSR-T-2`: request/cancel-round/state/alignment lifecycle for the pending "primary Science
+    // Program" request, kept separate from ShareResultRequestService per design.md §2.1. Exported
+    // so T-5's creation-path callers (createResultHeader, promoteDraft, updatePrimaryAssignment)
+    // can inject it.
+    PrimaryProgramRequestService,
     HandlersError,
     ResultRepository,
     ResultByInitiativesRepository,
@@ -58,8 +67,18 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
     // P2-3188: resolves the result's lead centre, whose users are the recipients.
     ResultsCenterRepository,
   ],
-  exports: [ShareResultRequestRepository, ShareResultRequestService],
+  exports: [
+    ShareResultRequestRepository,
+    ShareResultRequestService,
+    PrimaryProgramRequestService,
+  ],
   imports: [
+    // `PSR-T-2` — plain repositories for two entities outside this module's usual graph, NOT
+    // their owning modules: `ClarisaProjectsModule` isn't needed (only the mapping table is
+    // read), and importing `ResultsByProjectsModule`/`BilateralModule` here would cycle back
+    // (`bilateral.module.ts` already imports `ShareResultRequestModule`). Same pattern as
+    // `ClarisaProjectsModule`'s own `TypeOrmModule.forFeature([ClarisaCenter])` (BCT-T-2).
+    TypeOrmModule.forFeature([ResultsByProjects, ClarisaProjectMapping]),
     EmailNotificationManagementModule,
     ResultsTocResultsModule,
     forwardRef(() => VersioningModule),

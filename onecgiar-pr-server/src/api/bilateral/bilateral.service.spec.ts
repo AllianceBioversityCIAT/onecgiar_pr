@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
@@ -152,8 +154,32 @@ describe('BilateralService (unit)', () => {
     const roleByUserRepository = {
       getUserIdsByInitiative: jest.fn().mockResolvedValue([21, 22]),
     };
+    // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-1: the shared resolve-step
+    // collaborator. `findInPhase` resolving `undefined` is the default "no code / not found in
+    // the open phase" case: `resolveResultCodeTarget` short-circuits before ever reaching this
+    // (no `result_code` on the fixture DTOs above), so these are only exercised by the
+    // resolve-step describe block below, which overrides what it needs per case.
+    const bilateralVersioningRulesService = {
+      getActiveReportingPhase: jest.fn().mockResolvedValue({ id: 36 }),
+      findInPhase: jest.fn().mockResolvedValue(undefined),
+      resolveVersionableResult: jest.fn(),
+      assertCallerMayVersion: jest.fn().mockResolvedValue(undefined),
+      assertNotKnowledgeProduct: jest.fn(),
+    };
     const notificationService = {
       emitResultNotification: jest.fn().mockResolvedValue(undefined),
+    };
+    // `PSR-T-5`: `populateInitiativeAndTocFromProgramCode` requests a primary Science Program
+    // instead of writing role 1 directly.
+    const primaryProgramRequestService = {
+      request: jest
+        .fn()
+        .mockResolvedValue({ ok: true, shareResultRequestId: 1 }),
+      stateFor: jest.fn().mockResolvedValue({
+        state: 'none',
+        program_code: null,
+        declined_by_codes: [],
+      }),
     };
     // BCT-T-5 — the new trailing @Optional() constructor param. Real behaviour (targets,
     // ordering, dedup, texts) is unit-tested against the real implementation in
@@ -212,6 +238,8 @@ describe('BilateralService (unit)', () => {
       otherOutcomeHandler as any,
       adUserService as any,
       roleByUserRepository as any,
+      primaryProgramRequestService as any,
+      bilateralVersioningRulesService as any,
       notificationService as any,
       // BCT-T-5 falsifier: "the service fails to construct when the optional dependency is
       // absent" — `opts.withResultTaggedNotificationService: false` calls the real constructor
@@ -259,13 +287,119 @@ describe('BilateralService (unit)', () => {
         resultsKnowledgeProductsService,
         adUserService,
         roleByUserRepository,
+        bilateralVersioningRulesService,
         notificationService,
+        primaryProgramRequestService,
         resultTaggedNotificationService,
       },
       handlers: {
         knowledgeProductHandler,
       },
     };
+  };
+
+  /**
+   * Reusable harness: `create()` has ~20 collaborators, all methods on the same `as any`
+   * service instance, so every one of them is stubbed with `jest.spyOn(svc, 'name')`. T5
+   * (`announcePendingReview` at the ingest hook) needs the exact same shape to assert its own
+   * ordering (post-commit, after the transaction resolves) — reuse `arrangeCreateHarness`
+   * from this describe block rather than re-deriving the collaborator list.
+   *
+   * `dataSource.transaction` runs the closure with a throwaway `{}` manager: `bilateral.service.ts`'s
+   * own comment at :300-306 documents that the transaction enlists no repository (BCT-P-5), so a
+   * fake manager is faithful to what the real one already does.
+   */
+  const buildDto = () => ({
+    result: {
+      data: {
+        result_type_id: ResultTypeEnum.OTHER_OUTPUT,
+        title: 'Harness result',
+        geo_focus: {
+          scope_code: 1,
+          regions: [],
+          countries: [],
+          subnational_areas: [],
+        },
+        lead_center: { acronym: 'AFRICARICE' },
+        contributing_center: [],
+        contributing_bilateral_projects: [],
+        contributing_partners: [],
+        evidence: [],
+      },
+    },
+  });
+
+  const arrangeCreateHarness = () => {
+    const { service } = makeService();
+    const svc: any = service;
+
+    jest.spyOn(svc, 'runResultTypePreflight').mockResolvedValue(undefined);
+    jest
+      .spyOn(svc, 'validateTocMappingInitiatives')
+      .mockResolvedValue(undefined);
+    svc._yearRepository = {
+      findOne: jest.fn().mockResolvedValue({ year: 2025 }),
+    };
+    jest.spyOn(svc, 'resolveContributingProjects').mockResolvedValue(new Map());
+
+    // `closed` flips only once the transaction closure's promise has actually resolved —
+    // distinct from the mock merely having been *called* (invocationCallOrder proves call
+    // order, not resolution order). The "post-commit" test below asserts on this flag directly.
+    const transactionState = { closed: false };
+    svc.dataSource = {
+      transaction: jest.fn(async (cb: any) => {
+        const result = await cb({});
+        transactionState.closed = true;
+        return result;
+      }),
+    };
+    svc.__transactionState = transactionState;
+
+    svc._userRepository = { findOne: jest.fn().mockResolvedValue({ id: 1 }) };
+    jest.spyOn(svc, 'findOrCreateUser').mockResolvedValue({ id: 42 });
+    jest.spyOn(svc, 'resolveSubmitterPayload').mockReturnValue({});
+    svc._versioningService = {
+      $_findActivePhase: jest.fn().mockResolvedValue({ id: 9 }),
+      // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-2 reviewer advisory: a real
+      // stub (not absent) so a version target that wrongly called `versionProcessV2` (the
+      // rejected `DD-2` alternative) would fail a deliberate `not.toHaveBeenCalled()` assertion
+      // instead of a bare `TypeError`.
+      versionProcessV2: jest.fn(),
+    };
+    jest.spyOn(svc, 'ensureUniqueTitle').mockResolvedValue(undefined);
+    jest
+      .spyOn(svc, 'buildExternalIdentity')
+      .mockReturnValue({ external_reference: null });
+    jest
+      .spyOn(svc, 'initializeResultHeader')
+      .mockResolvedValue({ id: 10, result_code: 'RC-1' });
+    jest.spyOn(svc, 'handleLeadCenter').mockResolvedValue(undefined);
+    jest.spyOn(svc, 'findScope').mockResolvedValue({ id: 5 });
+    jest.spyOn(svc, 'validateGeoFocus').mockReturnValue(undefined);
+    jest.spyOn(svc, 'handleRegions').mockResolvedValue(undefined);
+    jest.spyOn(svc, 'handleCountries').mockResolvedValue(undefined);
+    jest.spyOn(svc, 'resolveScopeId').mockReturnValue(5);
+    jest.spyOn(svc, 'handleTocMapping').mockResolvedValue(undefined);
+    jest.spyOn(svc, 'handleInstitutions').mockResolvedValue(undefined);
+    jest.spyOn(svc, 'handleEvidence').mockResolvedValue(undefined);
+    jest.spyOn(svc, 'handleNonPooledProject').mockResolvedValue(undefined);
+    jest.spyOn(svc, 'runResultTypeHandlers').mockResolvedValue(undefined);
+    jest.spyOn(svc, 'handleContributingCenters').mockResolvedValue(undefined);
+    jest
+      .spyOn(svc, 'ensureDerivedContributingCenters')
+      .mockResolvedValue(undefined);
+    // Read back after the two writes above: kept truthy (and Bilateral-sourced) so it exercises
+    // `filterActiveRelations` the same way a real ingest would.
+    svc._resultRepository.findOne = jest
+      .fn()
+      .mockResolvedValue({ id: 10, source: SourceEnum.Bilateral });
+    jest
+      .spyOn(svc, 'enrichBilateralResultResponse')
+      .mockResolvedValue(undefined);
+    // BCT-T-5: the ingest hook now calls the orchestrator, not the submitted emitter directly.
+    jest.spyOn(svc, 'announcePendingReview').mockResolvedValue(undefined);
+
+    return { service: svc };
   };
 
   it('unwrapIncomingResults should support results[], result and data', () => {
@@ -514,6 +648,21 @@ describe('BilateralService (unit)', () => {
       );
     });
 
+    it('searches the ToC by the program official code, not the PRMS initiative id', async () => {
+      const { service, stubs: stubsTyped } = makeService();
+      const stubs: any = stubsTyped;
+      arrangeFullMatch(stubs);
+
+      await service.handleTocMapping(baseToc(), [], 1, 42);
+
+      // toc_work_packages.initiativeId holds 'CLIMATE', never 5 — an id here never matches.
+      expect(
+        stubs.resultsTocResultsRepository.findTocResultsForBilateral,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ initiative_id: 'CLIMATE' }),
+      );
+    });
+
     it('keeps the constant 1 when target_contribution is not sent (full match, backward compatibility)', async () => {
       const { service, stubs: stubsTyped } = makeService();
       const stubs: any = stubsTyped;
@@ -575,6 +724,26 @@ describe('BilateralService (unit)', () => {
       expect(
         warnCalls.some((message: string) => message.includes('12.5')),
       ).toBe(false);
+    });
+
+    // `PSR-T-5` tasks.md Falsifier: "the ingest `create` no longer writes role 1 → FAIL" /
+    // design.md P-3 "the API ingest writes role 1 via `processToc` → `upsertResultInitiative`" —
+    // the reversion challenge's premise this task leaves untouched. `handleTocMapping` pushes the
+    // `toc` mapping with `roleId: 1` (bilateral.service.ts:1449) and calls `upsertResultInitiative`
+    // directly; it must still write role 1 and must never go through `PrimaryProgramRequestService
+    // .request()`.
+    it('PSR-T-5: still writes role 1 directly and never calls request()', async () => {
+      const { service, stubs: stubsTyped } = makeService();
+      const stubs: any = stubsTyped;
+      arrangeFullMatch(stubs);
+
+      await service.handleTocMapping(baseToc(), [], 1, 42);
+
+      expect(stubs.resultByInitiativesRepository.update).toHaveBeenCalledWith(
+        { id: 777 },
+        expect.objectContaining({ initiative_role_id: 1, is_active: true }),
+      );
+      expect(stubs.primaryProgramRequestService.request).not.toHaveBeenCalled();
     });
   });
 
@@ -2177,107 +2346,6 @@ describe('BilateralService (unit)', () => {
   });
 
   describe('create() — call-site ordering (BCT-T-3 / reusable by T5)', () => {
-    /**
-     * Reusable harness: `create()` has ~20 collaborators, all methods on the same `as any`
-     * service instance, so every one of them is stubbed with `jest.spyOn(svc, 'name')`. T5
-     * (`announcePendingReview` at the ingest hook) needs the exact same shape to assert its own
-     * ordering (post-commit, after the transaction resolves) — reuse `arrangeCreateHarness`
-     * from this describe block rather than re-deriving the collaborator list.
-     *
-     * `dataSource.transaction` runs the closure with a throwaway `{}` manager: `bilateral.service.ts`'s
-     * own comment at :300-306 documents that the transaction enlists no repository (BCT-P-5), so a
-     * fake manager is faithful to what the real one already does.
-     */
-    const buildDto = () => ({
-      result: {
-        data: {
-          result_type_id: ResultTypeEnum.OTHER_OUTPUT,
-          title: 'Harness result',
-          geo_focus: {
-            scope_code: 1,
-            regions: [],
-            countries: [],
-            subnational_areas: [],
-          },
-          lead_center: { acronym: 'AFRICARICE' },
-          contributing_center: [],
-          contributing_bilateral_projects: [],
-          contributing_partners: [],
-          evidence: [],
-        },
-      },
-    });
-
-    const arrangeCreateHarness = () => {
-      const { service } = makeService();
-      const svc: any = service;
-
-      jest.spyOn(svc, 'runResultTypePreflight').mockResolvedValue(undefined);
-      jest
-        .spyOn(svc, 'validateTocMappingInitiatives')
-        .mockResolvedValue(undefined);
-      svc._yearRepository = {
-        findOne: jest.fn().mockResolvedValue({ year: 2025 }),
-      };
-      jest
-        .spyOn(svc, 'resolveContributingProjects')
-        .mockResolvedValue(new Map());
-
-      // `closed` flips only once the transaction closure's promise has actually resolved —
-      // distinct from the mock merely having been *called* (invocationCallOrder proves call
-      // order, not resolution order). The "post-commit" test below asserts on this flag directly.
-      const transactionState = { closed: false };
-      svc.dataSource = {
-        transaction: jest.fn(async (cb: any) => {
-          const result = await cb({});
-          transactionState.closed = true;
-          return result;
-        }),
-      };
-      svc.__transactionState = transactionState;
-
-      svc._userRepository = { findOne: jest.fn().mockResolvedValue({ id: 1 }) };
-      jest.spyOn(svc, 'findOrCreateUser').mockResolvedValue({ id: 42 });
-      jest.spyOn(svc, 'resolveSubmitterPayload').mockReturnValue({});
-      svc._versioningService = {
-        $_findActivePhase: jest.fn().mockResolvedValue({ id: 9 }),
-      };
-      jest.spyOn(svc, 'ensureUniqueTitle').mockResolvedValue(undefined);
-      jest
-        .spyOn(svc, 'buildExternalIdentity')
-        .mockReturnValue({ external_reference: null });
-      jest
-        .spyOn(svc, 'initializeResultHeader')
-        .mockResolvedValue({ id: 10, result_code: 'RC-1' });
-      jest.spyOn(svc, 'handleLeadCenter').mockResolvedValue(undefined);
-      jest.spyOn(svc, 'findScope').mockResolvedValue({ id: 5 });
-      jest.spyOn(svc, 'validateGeoFocus').mockReturnValue(undefined);
-      jest.spyOn(svc, 'handleRegions').mockResolvedValue(undefined);
-      jest.spyOn(svc, 'handleCountries').mockResolvedValue(undefined);
-      jest.spyOn(svc, 'resolveScopeId').mockReturnValue(5);
-      jest.spyOn(svc, 'handleTocMapping').mockResolvedValue(undefined);
-      jest.spyOn(svc, 'handleInstitutions').mockResolvedValue(undefined);
-      jest.spyOn(svc, 'handleEvidence').mockResolvedValue(undefined);
-      jest.spyOn(svc, 'handleNonPooledProject').mockResolvedValue(undefined);
-      jest.spyOn(svc, 'runResultTypeHandlers').mockResolvedValue(undefined);
-      jest.spyOn(svc, 'handleContributingCenters').mockResolvedValue(undefined);
-      jest
-        .spyOn(svc, 'ensureDerivedContributingCenters')
-        .mockResolvedValue(undefined);
-      // Read back after the two writes above: kept truthy (and Bilateral-sourced) so it exercises
-      // `filterActiveRelations` the same way a real ingest would.
-      svc._resultRepository.findOne = jest
-        .fn()
-        .mockResolvedValue({ id: 10, source: SourceEnum.Bilateral });
-      jest
-        .spyOn(svc, 'enrichBilateralResultResponse')
-        .mockResolvedValue(undefined);
-      // BCT-T-5: the ingest hook now calls the orchestrator, not the submitted emitter directly.
-      jest.spyOn(svc, 'announcePendingReview').mockResolvedValue(undefined);
-
-      return { service: svc };
-    };
-
     it('derives after handleNonPooledProject and handleContributingCenters, with (resultId, userId)', async () => {
       const { service } = arrangeCreateHarness();
 
@@ -2298,6 +2366,29 @@ describe('BilateralService (unit)', () => {
         10,
         42,
       );
+    });
+
+    // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-1/DD-5/R-10: additive
+    // per-result outcomes, `operation: 'created'` for the unchanged (no-code) path.
+    it('stamps response.outcomes with operation "created" for a codeless create', async () => {
+      const { service } = arrangeCreateHarness();
+      (service.initializeResultHeader as jest.Mock).mockResolvedValue({
+        id: 10,
+        result_code: 'RC-1',
+        status_id: ResultStatusData.PendingReview.value,
+      });
+
+      const result = await service.create(buildDto());
+
+      expect(result.response.outcomes).toEqual([
+        {
+          result_code: 'RC-1',
+          operation: 'created',
+          status_id: ResultStatusData.PendingReview.value,
+          status: ResultStatusData.PendingReview.name,
+          external_reference: null,
+        },
+      ]);
     });
 
     // BCT-T-5 — the ingest hook. `announcePendingReview` replaces the direct
@@ -2523,5 +2614,369 @@ describe('BilateralService (unit)', () => {
         expect.anything(),
       );
     });
+  });
+
+  // `PSR-T-5` — `promoteDraft`'s only caller (P-3, reversion challenge). design.md DD-2/DD-3: the
+  // chosen primary SP is sent a pending request instead of being written as the owner outright,
+  // and the ToC stub seed moves to accept.
+  describe('populateInitiativeAndTocFromProgramCode (PSR-T-5)', () => {
+    it('requests the resolved initiative instead of writing role 1, and seeds no ToC stub', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInitiatives.findOne.mockResolvedValue({
+        id: 404,
+        official_code: 'SP09',
+      });
+      (stubs.resultByInitiativesRepository as any).save = jest.fn();
+      (stubs.resultsTocResultsRepository as any).save = jest.fn();
+      (stubs.resultsTocResultsRepository as any).findOne = jest.fn();
+
+      await service.populateInitiativeAndTocFromProgramCode(10, 'sp09', 42);
+
+      expect(stubs.primaryProgramRequestService.request).toHaveBeenCalledWith(
+        10,
+        404,
+        expect.objectContaining({ id: 42 }),
+      );
+      expect(
+        (stubs.resultByInitiativesRepository as any).save,
+      ).not.toHaveBeenCalled();
+      expect(
+        (stubs.resultsTocResultsRepository as any).findOne,
+      ).not.toHaveBeenCalled();
+      expect(
+        (stubs.resultsTocResultsRepository as any).save,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when no program_code is provided', async () => {
+      const { service, stubs } = makeService();
+
+      await service.populateInitiativeAndTocFromProgramCode(10, null, 42);
+
+      expect(stubs.clarisaInitiatives.findOne).not.toHaveBeenCalled();
+      expect(stubs.primaryProgramRequestService.request).not.toHaveBeenCalled();
+    });
+
+    it('logs and swallows when no CLARISA initiative matches the code', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInitiatives.findOne.mockResolvedValue(null);
+
+      await service.populateInitiativeAndTocFromProgramCode(10, 'UNKNOWN', 42);
+
+      expect(stubs.primaryProgramRequestService.request).not.toHaveBeenCalled();
+      expect(service.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('no initiative found'),
+      );
+    });
+
+    // requirements.md PSR-R-1 "request step fails": promoteDraft must still succeed (this method
+    // never throws); the caller (`promoteDraft`) is unaffected and only a warning is logged.
+    it('logs and swallows when the primary program request fails', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInitiatives.findOne.mockResolvedValue({
+        id: 404,
+        official_code: 'SP09',
+      });
+      stubs.primaryProgramRequestService.request.mockResolvedValueOnce({
+        ok: false,
+        reason: 'internal_error',
+      });
+
+      await expect(
+        service.populateInitiativeAndTocFromProgramCode(10, 'SP09', 42),
+      ).resolves.toBeUndefined();
+
+      expect(service.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('primary program request failed'),
+      );
+    });
+  });
+
+  // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-1. `create()`'s resolve step:
+  // a `result_code` that cannot be carried forward rejects with a 4xx BEFORE any write, and an
+  // eligible target is rejected too (T-2/T-3 wire the real writes; this task only resolves and
+  // rejects). Every falsifier case below runs the FULL create() harness (arrangeCreateHarness) —
+  // not a bare service — so "nothing was written" is a real claim: if the resolve step were
+  // missing, wrong, or too late, this exact harness would happily complete the create and call
+  // findOrCreateUser / _resultRepository.save for real (tasks.md UBC-T-1 Disqualifier: "a case
+  // that mocks the resolve step itself proves nothing").
+  describe('create() — resolving result_code before any write (UBC-T-1)', () => {
+    const STAR = { id: 12, acronym: 'STAR' };
+
+    const buildDtoWithCode = (resultCode: string) => {
+      const dto = buildDto();
+      (dto.result.data as any).result_code = resultCode;
+      return dto;
+    };
+
+    it('a no-code create is unchanged (R-1): the resolve step is never consulted', async () => {
+      const { service } = arrangeCreateHarness();
+
+      const result = await service.create(buildDto());
+
+      expect(result.status).toBe(201);
+      expect(
+        service._bilateralVersioningRulesService.getActiveReportingPhase,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('rejects a code that does not exist anywhere (404) and writes nothing', async () => {
+      const { service } = arrangeCreateHarness();
+      service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+        undefined,
+      );
+      service._bilateralVersioningRulesService.resolveVersionableResult.mockRejectedValue(
+        new NotFoundException('No active result found for result_code 99999.'),
+      );
+
+      await expect(
+        service.create(buildDtoWithCode('99999'), STAR as any),
+      ).rejects.toBeInstanceOf(NotFoundException);
+
+      expect(service._resultRepository.save).not.toHaveBeenCalled();
+      expect(service.findOrCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('rejects a code owned by another platform (403) and writes nothing', async () => {
+      const { service } = arrangeCreateHarness();
+      const foreignSource = {
+        id: 900,
+        result_code: '28111',
+        status_id: ResultStatusData.Approved.value,
+      };
+      service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+        undefined,
+      );
+      service._bilateralVersioningRulesService.resolveVersionableResult.mockResolvedValue(
+        foreignSource,
+      );
+      service._bilateralVersioningRulesService.assertCallerMayVersion.mockRejectedValue(
+        new ForbiddenException(
+          'Result 28111 was reported by a different platform.',
+        ),
+      );
+
+      await expect(
+        service.create(buildDtoWithCode('28111'), STAR as any),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(service._resultRepository.save).not.toHaveBeenCalled();
+      expect(service.findOrCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('rejects a Knowledge Product code (409) and writes nothing', async () => {
+      const { service } = arrangeCreateHarness();
+      service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+        undefined,
+      );
+      service._bilateralVersioningRulesService.resolveVersionableResult.mockRejectedValue(
+        new ConflictException('Result 28222 is a Knowledge Product.'),
+      );
+
+      await expect(
+        service.create(buildDtoWithCode('28222'), STAR as any),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      expect(service._resultRepository.save).not.toHaveBeenCalled();
+      expect(service.findOrCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('rejects an open-phase code that is not in an editable status (409) and writes nothing', async () => {
+      const { service } = arrangeCreateHarness();
+      const approvedOpenPhaseRow = {
+        id: 500,
+        result_code: '28565',
+        status_id: ResultStatusData.Approved.value,
+      };
+      service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+        approvedOpenPhaseRow,
+      );
+
+      await expect(
+        service.create(buildDtoWithCode('28565'), STAR as any),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      // Ownership and the KP guard both ran, in order, before the status guard rejected.
+      expect(
+        service._bilateralVersioningRulesService.assertCallerMayVersion,
+      ).toHaveBeenCalledWith(approvedOpenPhaseRow, '28565', STAR);
+      expect(
+        service._bilateralVersioningRulesService.assertNotKnowledgeProduct,
+      ).toHaveBeenCalledWith(approvedOpenPhaseRow, '28565');
+      expect(service._resultRepository.save).not.toHaveBeenCalled();
+      expect(service.findOrCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('rejects an eligible update target (open phase, editable) with the T-3 placeholder, writing nothing', async () => {
+      const { service } = arrangeCreateHarness();
+      const editableOpenPhaseRow = {
+        id: 501,
+        result_code: '28565',
+        status_id: ResultStatusData.PendingReview.value,
+      };
+      service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+        editableOpenPhaseRow,
+      );
+
+      await expect(
+        service.create(buildDtoWithCode('28565'), STAR as any),
+      ).rejects.toMatchObject({
+        status: 409,
+        message:
+          'Updating an existing result through create is not available yet.',
+      });
+      expect(service._resultRepository.save).not.toHaveBeenCalled();
+      expect(service.findOrCreateUser).not.toHaveBeenCalled();
+      expect(
+        service._bilateralVersioningRulesService.resolveVersionableResult,
+      ).not.toHaveBeenCalled();
+    });
+
+    // Superseded by `create() — versioning with data (UBC-T-2)` below: an eligible
+    // version-with-data target no longer rejects — it flows into the real create path
+    // (`DD-2`). The eligibility check itself (ownership) still runs first, which that describe
+    // block's falsifier confirms alongside the write.
+  });
+
+  // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-2. An eligible `versioned`
+  // target flows into the SAME `arrangeCreateHarness()` full create() path used by UBC-T-1 above
+  // (not a bare service), so "the source row was never written" is a real claim about calls
+  // into `_resultRepository`, not an assumption about a path this harness never exercises
+  // (tasks.md UBC-T-2 Disqualifier).
+  describe('create() — versioning with data (UBC-T-2)', () => {
+    const STAR = { id: 12, acronym: 'STAR' };
+
+    // Falsifier fixture: source row in phase 35 (Approved), open phase 36 (the harness default
+    // for `getActiveReportingPhase`).
+    const approvedSource = {
+      id: 31921,
+      result_code: 28565,
+      version_id: 35,
+      status_id: ResultStatusData.Approved.value,
+    };
+
+    const buildVersionDto = (overrides: Record<string, unknown> = {}) => {
+      const dto = buildDto();
+      Object.assign(dto.result.data as any, {
+        result_code: '28565',
+        ...overrides,
+      });
+      return dto;
+    };
+
+    const arrangeVersionTarget = (
+      headerOverrides: Record<string, unknown> = {},
+    ) => {
+      const { service } = arrangeCreateHarness();
+      service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+        undefined,
+      );
+      service._bilateralVersioningRulesService.resolveVersionableResult.mockResolvedValue(
+        approvedSource,
+      );
+      // The new row's header, as the auto-increment trigger would leave it right after the
+      // insert (`P-9`): some other code, definitely not 28565, which is exactly what the
+      // restore step must correct.
+      (service.initializeResultHeader as jest.Mock).mockResolvedValue({
+        id: 777,
+        result_code: 999999,
+        status_id: ResultStatusData.PendingReview.value,
+        ...headerOverrides,
+      });
+      return { service };
+    };
+
+    it('falsifier: the new row gets the source code back and the source row is never saved or updated (R-3)', async () => {
+      const { service } = arrangeVersionTarget();
+
+      const result = await service.create(buildVersionDto(), STAR as any);
+
+      // Eligibility still runs against the SOURCE row before any write (T-1's guarantee holds).
+      expect(
+        service._bilateralVersioningRulesService.resolveVersionableResult,
+      ).toHaveBeenCalledWith('28565', 36);
+      expect(
+        service._bilateralVersioningRulesService.assertCallerMayVersion,
+      ).toHaveBeenCalledWith(approvedSource, '28565', STAR);
+
+      // DD-2: restore runs against the NEW row's id (777), with the SOURCE's own result_code.
+      expect(service._resultRepository.update).toHaveBeenCalledWith(777, {
+        result_code: 28565,
+      });
+
+      expect(result.response.outcomes).toEqual([
+        expect.objectContaining({
+          result_code: 28565,
+          operation: 'versioned',
+        }),
+      ]);
+
+      // Disqualifier guard: the source row (31921) must never be a `save`/`update` target.
+      const updateTargets = (
+        service._resultRepository.update as jest.Mock
+      ).mock.calls.map((call) => call[0]);
+      const saveTargets = (
+        service._resultRepository.save as jest.Mock
+      ).mock.calls.map((call) => call[0]?.id);
+      expect(updateTargets).not.toContain(approvedSource.id);
+      expect(saveTargets).not.toContain(approvedSource.id);
+
+      // Mutation (b) guard: the rejected DD-2 alternative (`versionProcessV2` + update) never
+      // runs. A deliberate assertion, not a `TypeError` from an absent stub.
+      expect(
+        service._versioningService.versionProcessV2,
+      ).not.toHaveBeenCalled();
+    });
+
+    // R-7, mutation (c) — reworked after Reviewer FAIL (attempt 1 stubbed the OUTCOME, which
+    // `keep_editing` never touches; the real read is `status_id: resolveInitialStatusId(bilateralDto)`
+    // at `bilateral.service.ts:4370`, inside `initializeResultHeader`). `initializeResultHeader`
+    // is RESTORED to its real implementation here — not stubbed — so `keep_editing` is the only
+    // input that can move the result. `_resultRepository.save`/`findOne` are wired to echo the
+    // real header back (id 777, matching the DD-2 falsifier above), the way an actual insert +
+    // read-back would.
+    it.each([
+      [true, ResultStatusData.Editing],
+      [false, ResultStatusData.PendingReview],
+    ])(
+      'status follows keep_editing=%s -> %s (R-7)',
+      async (keepEditing, expectedStatus) => {
+        const { service } = arrangeVersionTarget();
+        (service.initializeResultHeader as jest.Mock).mockRestore();
+
+        let savedHeader: any;
+        (service._resultRepository.save as jest.Mock).mockImplementation(
+          async (row: any) => {
+            savedHeader = { id: 777, ...row };
+            return savedHeader;
+          },
+        );
+        (service._resultRepository.findOne as jest.Mock).mockImplementation(
+          async (query: any) =>
+            query?.where?.id === 777
+              ? { ...savedHeader, source: SourceEnum.Bilateral }
+              : { id: 10, source: SourceEnum.Bilateral },
+        );
+
+        const result = await service.create(
+          buildVersionDto({ keep_editing: keepEditing }),
+          STAR as any,
+        );
+
+        // The real header-insert call is the only source of truth here: `keep_editing` is the
+        // only input that can move it between the two cases (mutation (c) at `:4370` — hardcode
+        // `resolveInitialStatusId`'s result — turns this red).
+        expect(service._resultRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({ status_id: expectedStatus.value }),
+        );
+        expect(result.response.outcomes[0]).toEqual(
+          expect.objectContaining({
+            operation: 'versioned',
+            status_id: expectedStatus.value,
+            status: expectedStatus.name,
+          }),
+        );
+      },
+    );
   });
 });

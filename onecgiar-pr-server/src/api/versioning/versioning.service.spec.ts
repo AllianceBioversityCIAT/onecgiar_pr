@@ -1620,4 +1620,73 @@ describe('VersioningService', () => {
       );
     });
   });
+
+  // `PSR-T-6` / `PSR-R-16` (SHOULD) — regression: current `$_phaseChangeReporting` replicates a
+  // bilateral result unconditionally, with no regard for whether it has an accepted primary
+  // Science Program yet. An on-hold result rolled over this way leaves a new-phase copy nobody
+  // can ever accept into (design.md §14 Open Gap: the `share_result_request` replicate query only
+  // joins role-1/role-2 rows, so the pending `primary` request is silently never carried across).
+  // Falsifier: "Rollover with an on-hold result throws" — asserted here as "must not even attempt
+  // to replicate it": no transaction, and the same deterministic skip every time (never crash the
+  // rollover, per the design note).
+  describe('$_phaseChangeReporting — PSR-T-6 / PSR-R-16 (skip on-hold bilateral results)', () => {
+    const onHoldBilateralResult: any = {
+      id: 9001,
+      result_code: 200,
+      result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      source: SourceEnum.Bilateral,
+    };
+    const phase: any = {
+      id: 40,
+      phase_name: 'Reporting 2027',
+      phase_year: 2027,
+    };
+    const user: any = { id: 42 };
+
+    it('skips replication instead of throwing/crashing (regression)', async () => {
+      const rbi = testingModule.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      (rbi.getOwnerInitiativeByResult as jest.Mock).mockResolvedValueOnce(null);
+      const dataSource = testingModule.get<DataSource>(DataSource) as any;
+      dataSource.transaction.mockClear();
+
+      const output = await service.$_phaseChangeReporting(
+        onHoldBilateralResult,
+        phase,
+        user,
+      );
+
+      expect(output).toBeNull();
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+    });
+
+    it('does not even check the owner for a non-bilateral result (source-gated)', async () => {
+      const rbi = testingModule.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      (rbi.getOwnerInitiativeByResult as jest.Mock).mockClear();
+      const dataSource = testingModule.get<DataSource>(DataSource) as any;
+      dataSource.transaction.mockClear();
+      (service as any)._resultRepository = {
+        replicate: jest.fn().mockResolvedValue([{ id: 8002, result_code: 5 }]),
+      };
+      (service as any)._evidencesService = {
+        replicateSPFiles: jest.fn().mockResolvedValue(undefined),
+      };
+
+      await service.$_phaseChangeReporting(
+        {
+          id: 5,
+          result_code: 5,
+          result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        } as any,
+        phase,
+        user,
+      );
+
+      expect(rbi.getOwnerInitiativeByResult).not.toHaveBeenCalled();
+      expect(dataSource.transaction).toHaveBeenCalled();
+    });
+  });
 });

@@ -169,7 +169,9 @@ export class HeaderPanelComponent implements OnInit {
       .subscribe(() => this.currentUrl.set(this.router.url));
 
     this.api.updateUserData(() => {
-      this.resultsNotificationsSE.get_updates_notifications();
+      // @akili-spec notifications/inbox-paginated-load — PAGE-T-5 (PAGE-R-1, PAGE-R-5): boot-time
+      // callers only need the unread/pending set, not a full history reload at the current phase.
+      this.resultsNotificationsSE.refreshPending('updates');
       this.resultsNotificationsSE.get_updates_pop_up_notifications();
       this.loadReportingAccessStatus();
     });

@@ -69,13 +69,21 @@ import { ChangeCenterResultTypeDto } from '../dto/change-center-result-type.dto'
 import { UpdateBilateralPrimaryAssignmentDto } from '../dto/update-bilateral-primary-assignment.dto';
 import { ResultsByProjects } from '../../results/results_by_projects/entities/results_by_projects.entity';
 import { ResultsByInititiative } from '../../results/results_by_inititiatives/entities/results_by_inititiative.entity';
-import { ResultsTocResult } from '../../results/results-toc-results/entities/results-toc-result.entity';
-import { ShareResultRequest } from '../../results/share-result-request/entities/share-result-request.entity';
 import {
   AoWBilateralRepository,
   ProjectTocLinkageNode,
 } from '../../results/results-toc-results/repositories/aow-bilateral.repository';
 import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
+import {
+  PrimaryProgramRequestService,
+  PrimaryRequestOutcome,
+  PrimaryRequestState,
+  PrimaryRequestStateEnum,
+} from '../../results/share-result-request/services/primary-program-request.service';
+import {
+  RequestTypeEnum,
+  ShareResultRequest,
+} from '../../results/share-result-request/entities/share-result-request.entity';
 
 // Canonical level names, matching result.repository.ts (~L3940) and toc-level.service.ts —
 // never "Work package Output/Outcome" (stale wording fixed 2026-09-18).
@@ -126,6 +134,10 @@ export class BilateralCenterService {
     // `api/ai` (`BIL-QTS-T-7` brief: do not change it) and is only imported here.
     @InjectRepository(ResultFieldRevision)
     private readonly resultFieldRevisionRepository: Repository<ResultFieldRevision>,
+    // `PSR-T-5` (design.md §2.1, §5): the creation/assignment paths request a primary Science
+    // Program instead of writing role 1 directly. Already exported by `ShareResultRequestModule`,
+    // which `bilateral.module.ts` imports (`PSR-T-2`) — no new module wiring needed.
+    private readonly primaryProgramRequestService: PrimaryProgramRequestService,
   ) {}
 
   /**
@@ -237,171 +249,195 @@ export class BilateralCenterService {
         ? undefined
         : Number(dto.contribution_percentage).toFixed(2);
 
-    const primaryChanged = await this.resultRepository.manager.transaction(
-      async (manager) => {
-        const projectRepository = manager.getRepository(ResultsByProjects);
-        const initiativeRepository = manager.getRepository(
-          ResultsByInititiative,
-        );
-        const tocRepository = manager.getRepository(ResultsTocResult);
-        const requestRepository = manager.getRepository(ShareResultRequest);
+    await this.resultRepository.manager.transaction(async (manager) => {
+      // `PSR-T-5` binding forward pointer #3 (T-2 review; promoted from advisory by the Leader
+      // in rework attempt 2) — serialize concurrent picks. InnoDB REPEATABLE READ takes its
+      // snapshot at a transaction's FIRST read, so without this, a second concurrent
+      // `updatePrimaryAssignment` call can take its snapshot before the first one's `request()`
+      // insert commits, and its later reads (the round-cancel `find()` above, `stateFor`) miss
+      // that insert even after waiting on a row lock further down. Locking the `Result` row
+      // FIRST — before any other read — forces a second concurrent call to block here until the
+      // first transaction commits, so every read after this one is against committed state.
+      await manager.findOne(Result, {
+        where: { id: parsedResultId },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-        const activeProjects = await projectRepository.find({
-          where: { result_id: parsedResultId, is_active: true },
-        });
-        const existingTargetProject = await projectRepository.findOne({
-          where: { result_id: parsedResultId, project_id: Number(project.id) },
-        });
+      const projectRepository = manager.getRepository(ResultsByProjects);
+      const initiativeRepository = manager.getRepository(ResultsByInititiative);
 
-        for (const association of activeProjects) {
-          if (Number(association.project_id) === Number(project.id)) {
-            await projectRepository.update(association.id, {
-              is_lead: true,
-              is_active: true,
-              last_updated_by: user.id,
-              ...(contribution === undefined
-                ? {}
-                : { contribution_percentage: contribution }),
-            });
-          } else if (association.is_lead) {
-            // The former lead is not implicitly converted into a contributor.
-            await projectRepository.update(association.id, {
-              is_lead: false,
-              is_active: false,
-              last_updated_by: user.id,
-            });
+      const activeProjects = await projectRepository.find({
+        where: { result_id: parsedResultId, is_active: true },
+      });
+      const existingTargetProject = await projectRepository.findOne({
+        where: { result_id: parsedResultId, project_id: Number(project.id) },
+      });
+
+      for (const association of activeProjects) {
+        if (Number(association.project_id) === Number(project.id)) {
+          await projectRepository.update(association.id, {
+            is_lead: true,
+            is_active: true,
+            last_updated_by: user.id,
+            ...(contribution === undefined
+              ? {}
+              : { contribution_percentage: contribution }),
+          });
+        } else if (association.is_lead) {
+          // The former lead is not implicitly converted into a contributor.
+          await projectRepository.update(association.id, {
+            is_lead: false,
+            is_active: false,
+            last_updated_by: user.id,
+          });
+        }
+      }
+      if (!existingTargetProject) {
+        await projectRepository.save({
+          result_id: parsedResultId,
+          project_id: Number(project.id),
+          is_lead: true,
+          is_active: true,
+          created_by: user.id,
+          ...(contribution === undefined
+            ? {}
+            : { contribution_percentage: contribution }),
+        });
+      } else if (!existingTargetProject.is_active) {
+        await projectRepository.update(existingTargetProject.id, {
+          is_lead: true,
+          is_active: true,
+          last_updated_by: user.id,
+          ...(contribution === undefined
+            ? {}
+            : { contribution_percentage: contribution }),
+        });
+      } else if (contribution !== undefined) {
+        // Already the active lead row: the reporter only changed the percentage.
+        await projectRepository.update(existingTargetProject.id, {
+          last_updated_by: user.id,
+          contribution_percentage: contribution,
+        });
+      }
+
+      const activePrimaryRows = await initiativeRepository.find({
+        where: {
+          result_id: parsedResultId,
+          initiative_role_id: 1,
+          is_active: true,
+        },
+      });
+      const currentPrimaryId = Number(activePrimaryRows[0]?.initiative_id ?? 0);
+      const nextPrimaryId = Number(primaryInitiative.id);
+      const changed = currentPrimaryId !== nextPrimaryId;
+
+      // `PSR-T-5` (design.md DD-2/DD-4): a primary change — first pick or swap — no longer
+      // writes role 1 (or the role-2/request cleanup, or the ToC clear) here. It sends a
+      // pending primary request instead; role 1 and those cleanups are written only at accept
+      // (T-3/T-4). On a swap the CURRENT owner is deliberately left untouched — "SP09 stays the
+      // primary SP until SP12 accepts" (`PSR-R-2`, DD-4) — so `activePrimaryRows` above is read
+      // only to detect a change, never mutated here.
+      if (changed) {
+        const outcome: PrimaryRequestOutcome =
+          await this.primaryProgramRequestService.request(
+            parsedResultId,
+            nextPrimaryId,
+            user,
+            manager,
+          );
+        if (outcome.ok === false) {
+          if (outcome.reason === 'not_aligned') {
+            throw new BadRequestException(outcome.message);
           }
+          // `internal_error`: requirements.md §7 Reliability — the lead-project/percentage save
+          // still succeeds; only logged, never thrown.
+          this.logger.warn(
+            `updatePrimaryAssignment: primary program request failed for result ${parsedResultId} (reason=internal_error)`,
+          );
         }
-        if (!existingTargetProject) {
-          await projectRepository.save({
-            result_id: parsedResultId,
-            project_id: Number(project.id),
-            is_lead: true,
-            is_active: true,
-            created_by: user.id,
-            ...(contribution === undefined
-              ? {}
-              : { contribution_percentage: contribution }),
-          });
-        } else if (!existingTargetProject.is_active) {
-          await projectRepository.update(existingTargetProject.id, {
-            is_lead: true,
-            is_active: true,
-            last_updated_by: user.id,
-            ...(contribution === undefined
-              ? {}
-              : { contribution_percentage: contribution }),
-          });
-        } else if (contribution !== undefined) {
-          // Already the active lead row: the reporter only changed the percentage.
-          await projectRepository.update(existingTargetProject.id, {
-            last_updated_by: user.id,
-            contribution_percentage: contribution,
-          });
-        }
-
-        const activePrimaryRows = await initiativeRepository.find({
+      } else {
+        // `PSR-T-5` reviewer FAIL (rework attempt 2, discovered issue 3 / judgment call 1): the
+        // Center re-picking the CURRENT owner while a swap request to a different SP is pending
+        // must still start a new round (design.md DD-8 "A Center pick starts a new round") —
+        // otherwise the stale pending/declined request stays active, keeps blocking submit
+        // (T-6's guard) and its SP could still accept later against the Center's latest choice
+        // (`PSR-R-2` "the result keeps working meanwhile" implies working, not stuck). `changed`
+        // is only ever false here when an owner already exists (an ownerless result always has
+        // `currentPrimaryId = 0 !== nextPrimaryId`), so this never touches an ownerless result.
+        const requestRepository = manager.getRepository(ShareResultRequest);
+        const openRounds = await requestRepository.find({
           where: {
             result_id: parsedResultId,
-            initiative_role_id: 1,
+            request_type: RequestTypeEnum.PRIMARY,
             is_active: true,
+            request_status_id: In(
+              BilateralCenterService.PRIMARY_OPEN_ROUND_STATUSES,
+            ),
           },
         });
-        const currentPrimaryId = Number(
-          activePrimaryRows[0]?.initiative_id ?? 0,
-        );
-        const nextPrimaryId = Number(primaryInitiative.id);
-        const changed = currentPrimaryId !== nextPrimaryId;
-
-        if (changed) {
-          for (const row of activePrimaryRows) {
-            await initiativeRepository.update(row.id, {
-              is_active: false,
-              last_updated_by: user.id,
-            });
-          }
-
-          // An initiative cannot be both the owner and an accepted contributor.
-          await initiativeRepository.update(
-            {
-              result_id: parsedResultId,
-              initiative_id: nextPrimaryId,
-              initiative_role_id: 2,
-              is_active: true,
-            },
-            { is_active: false, last_updated_by: user.id },
-          );
+        if (openRounds.length) {
+          // Forward pointer (PSR-T-1 attempt-1 advisory 2): `update()` with explicit columns,
+          // never a partial-select `save()`.
           await requestRepository.update(
             {
-              result_id: parsedResultId,
-              shared_inititiative_id: nextPrimaryId,
-              is_active: true,
-              is_map_to_toc: false,
-              request_status_id: In(
-                BilateralCenterService.CONTRIBUTION_REQUEST_STATUSES,
+              share_result_request_id: In(
+                openRounds.map((row) => row.share_result_request_id),
               ),
             },
             { is_active: false },
           );
-
-          const formerPrimary = await initiativeRepository.findOne({
-            where: {
-              result_id: parsedResultId,
-              initiative_id: nextPrimaryId,
-              initiative_role_id: 1,
-            },
-          });
-          if (formerPrimary) {
-            await initiativeRepository.update(formerPrimary.id, {
-              is_active: true,
-              last_updated_by: user.id,
-            });
-          } else {
-            await initiativeRepository.save({
-              result_id: parsedResultId,
-              initiative_id: nextPrimaryId,
-              initiative_role_id: 1,
-              is_active: true,
-              from_toc: false,
-              created_by: user.id,
-            });
-          }
-
-          // ToC mappings belong to their primary initiative. Do not carry a node,
-          // indicator or narrative into a different Science Program.
-          if (currentPrimaryId > 0) {
-            await tocRepository.update(
-              {
-                result_id: parsedResultId,
-                initiative_ids: currentPrimaryId,
-                is_active: true,
-              },
-              { is_active: false, last_updated_by: user.id },
-            );
-          }
         }
+      }
 
-        await manager.getRepository(ResultReviewHistory).save({
-          result_id: parsedResultId,
-          action: ReviewActionEnum.UPDATE,
-          comment: 'Updated lead project and primary Science Program',
-          created_by: user.id,
-        });
-
-        return changed;
-      },
-    );
+      await manager.getRepository(ResultReviewHistory).save({
+        result_id: parsedResultId,
+        action: ReviewActionEnum.UPDATE,
+        comment: 'Updated lead project and primary Science Program',
+        created_by: user.id,
+      });
+    });
 
     return {
       response: {
         resultId: parsedResultId,
         projectId: Number(project.id),
         primaryScienceProgramId: Number(primaryProgram.programId),
-        tocCleared: primaryChanged,
+        primary_request: await this.buildPrimaryRequestState(parsedResultId),
       },
       message: 'Lead project and primary Science Program updated successfully.',
       status: 200,
     };
+  }
+
+  /**
+   * `PSR-T-5` forward pointer (T-2 attempt-2 review), corrected in rework attempt 2 (reviewer FAIL,
+   * discovered issue 4 / judgment call 2): an active role-1 **owner always wins**, checked BEFORE
+   * `stateFor` — not only as a fallback when `stateFor` says `none`. `stateFor` has no way to see a
+   * **legacy** owner (a role-1 row written before this feature existed, with no `primary` request
+   * behind it) at all, but the same blind spot applies while that legacy owner has an open swap
+   * round: `stateFor` would then report `pending`/`sent_back` instead of `accepted`, which would
+   * wrongly disable the picker or show "declined" on a result that still has a working owner
+   * (design.md DD-4 "SP09 stays the primary SP until SP12 accepts" — this is true for a legacy
+   * owner exactly as it is for one this feature created). Only when there is genuinely no active
+   * role-1 owner do we defer to `stateFor` (`none` / `pending` / `sent_back`, the on-hold /
+   * sent-back cases where the result truly has no owner).
+   */
+  private async buildPrimaryRequestState(
+    resultId: number,
+  ): Promise<PrimaryRequestState> {
+    const owner =
+      await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
+        resultId,
+      );
+    if (owner?.id) {
+      return {
+        state: PrimaryRequestStateEnum.ACCEPTED,
+        program_code: owner.official_code ?? null,
+        declined_by_codes: [],
+      };
+    }
+
+    return this.primaryProgramRequestService.stateFor(resultId);
   }
 
   async createResultHeader(user: TokenDto, dto: CreateCenterResultDto) {
@@ -461,18 +497,42 @@ export class BilateralCenterService {
       where: { id: result.id },
     });
 
+    // `PSR-T-5` reviewer FAIL (rework attempt 2, discovered issue 1): the lead-project row must
+    // exist BEFORE `request()` runs — `PrimaryProgramRequestService.findLeadProjectId` resolves
+    // the lead project via `results_by_projects`, and a manual create with no lead project row yet
+    // always resolved `null`, so `request()` returned `not_aligned` and no pending row was ever
+    // created (requirements.md PSR-R-1 "manual create … the behavior is the same as the AI-draft
+    // scenario"). Moved above the `program_code` block; still before `syncContributingPrograms`.
+    if (dto.project_id) {
+      await this.resultsByProjectsRepository.save({
+        result_id: result.id,
+        project_id: dto.project_id,
+        created_by: user.id,
+        is_lead: true,
+      });
+    }
+
     if (dto.program_code) {
       const initiative = await this.clarisaInitiativesRepository.findOne({
         where: { official_code: dto.program_code, active: true },
       });
       if (initiative) {
-        await this.resultByInitiativesRepository.save({
-          result_id: result.id,
-          initiative_id: initiative.id,
-          initiative_role_id: 1,
-          is_active: true,
-          created_by: user.id,
-        });
+        // `PSR-T-5` (design.md DD-2): the chosen primary SP is sent a pending request instead of
+        // being written as the owner outright (role 1 is written only on accept, T-3/T-4).
+        // `request()` never throws (requirements.md §7 Reliability / PSR-R-1 "request step
+        // fails") — a failure is logged and swallowed so result creation still succeeds, leaving
+        // the result ownerless and retryable (`PSR-R-1`, "sent-back state").
+        const outcome: PrimaryRequestOutcome =
+          await this.primaryProgramRequestService.request(
+            result.id,
+            initiative.id,
+            user,
+          );
+        if (outcome.ok === false) {
+          this.logger.warn(
+            `createResultHeader: primary program request failed for result ${result.id} (reason=${outcome.reason})`,
+          );
+        }
       }
     }
 
@@ -522,15 +582,6 @@ export class BilateralCenterService {
       );
     }
     const leadCenterResolved = Boolean(leadCenter);
-
-    if (dto.project_id) {
-      await this.resultsByProjectsRepository.save({
-        result_id: result.id,
-        project_id: dto.project_id,
-        created_by: user.id,
-        is_lead: true,
-      });
-    }
 
     if (dto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
       try {
@@ -759,8 +810,41 @@ export class BilateralCenterService {
         initiativeId: owner?.id ?? null,
         officialCode: owner?.official_code ?? null,
         initiativeName: owner?.initiative_name ?? null,
+        // `PSR-T-6` (design.md §4 "Bilateral center result initiative/header read … Gains
+        // `primary_request`") — the ToC section host (§6.3) and the Center's on-hold / sent-back
+        // banner (`PSR-R-15`) both read this from the SAME initiative/header endpoint the picker
+        // uses. `buildPrimaryRequestState` already resolves `none` with no owner as pickable
+        // (T-5 forward pointer → T-10), so a read error here also can't 500 the page: it is
+        // wrapped so a lookup failure degrades to the same `none` the picker already treats as
+        // "nothing pending yet" instead of breaking the whole read.
+        primary_request: await this.safeBuildPrimaryRequestState(resultId),
       },
     };
+  }
+
+  /**
+   * `PSR-T-6` (T-5 advisory: "`buildPrimaryRequestState` runs after commit and can throw ... wrap
+   * it") — this is the FIRST place `buildPrimaryRequestState` is called from a plain read (every
+   * other call site is already inside a try/catch via `updatePrimaryAssignment`'s outer handler).
+   * A failure here must degrade to `none` rather than turn a header read into a 500.
+   */
+  private async safeBuildPrimaryRequestState(
+    resultId: number,
+  ): Promise<PrimaryRequestState> {
+    try {
+      return await this.buildPrimaryRequestState(resultId);
+    } catch (error) {
+      this.logger.warn(
+        `getResultInitiativeId: primary_request lookup failed for result ${resultId}: ${
+          error?.message ?? error
+        }`,
+      );
+      return {
+        state: PrimaryRequestStateEnum.NONE,
+        program_code: null,
+        declined_by_codes: [],
+      };
+    }
   }
 
   private async resolveResultVersionInfo(resultId: number) {
@@ -1673,6 +1757,13 @@ export class BilateralCenterService {
   private static readonly CONTRIBUTION_DRAFT_STATUS = 4;
 
   /**
+   * `PSR-T-5` — `share_result_request.request_status_id` values of a `primary` row that is still
+   * part of an open round (design.md §3.1 `RequestStatusId`: 1 = PENDING, 3 = DECLINED). Excludes
+   * 2 (ACCEPTED) on purpose — an accepted owner row is never deactivated here (DD-4).
+   */
+  private static readonly PRIMARY_OPEN_ROUND_STATUSES = [1, 3];
+
+  /**
    * Contributing Science Programs / Accelerators of the bilateral Contributors section (Nicoleta
    * Trifa via Ángel Jarrín, 2026-09-03: the question must be available whatever the project's
    * mapping, and it must persist).
@@ -1711,6 +1802,14 @@ export class BilateralCenterService {
       );
     const ownerId = owner?.id != null ? Number(owner.id) : null;
 
+    // `PSR-T-6` (design.md §5 item 5) — the pending primary SP can't ALSO be saved as a
+    // contributor: it would ask the same SP to be both at once, and once it accepts it becomes
+    // the owner (already excluded, below) anyway. Excluded the same way the owner is.
+    const pendingPrimaryId =
+      await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
+        resultId,
+      );
+
     const wanted = new Map<number, string>();
     for (const program of programs ?? []) {
       const code = String(program?.science_program_id ?? '')
@@ -1725,6 +1824,8 @@ export class BilateralCenterService {
         continue;
       }
       if (ownerId != null && Number(init.id) === ownerId) continue;
+      if (pendingPrimaryId != null && Number(init.id) === pendingPrimaryId)
+        continue;
       wanted.set(Number(init.id), code);
     }
 
@@ -1750,9 +1851,16 @@ export class BilateralCenterService {
     }
 
     // Requests this form manages: drafts (4) and pending (1), never W1/W2-style ToC requests.
+    // `request_type: CONTRIBUTION` is load-bearing (Reviewer FAIL, attempt 2): the pending
+    // `primary` row is ALSO status 1 / `is_active` true / `is_map_to_toc` false
+    // (`PrimaryProgramRequestService.request`), so without this filter it matches here too, and
+    // the "cancel anything not in `wanted`" loop below deactivates the very request this SP is
+    // waiting to accept — on every contributors save, including the one `createResultHeader`
+    // makes right after creating the pending primary request itself.
     const activeRequests = await this.shareResultRequestRepository.find({
       where: {
         result_id: resultId,
+        request_type: RequestTypeEnum.CONTRIBUTION,
         is_active: true,
         request_status_id: In(
           BilateralCenterService.CONTRIBUTION_REQUEST_STATUSES,
@@ -1791,6 +1899,7 @@ export class BilateralCenterService {
       const dormantDraft = await this.shareResultRequestRepository.findOne({
         where: {
           result_id: resultId,
+          request_type: RequestTypeEnum.CONTRIBUTION,
           shared_inititiative_id: initiativeId,
           request_status_id: BilateralCenterService.CONTRIBUTION_DRAFT_STATUS,
         },
@@ -1812,6 +1921,18 @@ export class BilateralCenterService {
         });
       }
       result.savedPrograms.push(code);
+    }
+
+    // `PSR-T-6` (design.md §5 item 5, `PSR-R-12` "saved after accept") — a draft saved while the
+    // result is still on hold keeps `owner_initiative_id: null` (the save above, unconditionally:
+    // `ownerId` IS that null when there is no owner yet). Once an owner exists, every draft this
+    // save just wrote — or a dormant one it reactivated, or one a previous save already left
+    // behind — must be released exactly like an accept does; `releaseContributors` is idempotent
+    // (status-4-only), so calling it on every save with an owner is safe and is what makes a
+    // contributor added AFTER the primary already accepted (the second `PSR-R-12` scenario) get
+    // its request without a second accept happening.
+    if (ownerId != null) {
+      await this.primaryProgramRequestService.releaseContributors(resultId);
     }
   }
 
@@ -2400,6 +2521,20 @@ export class BilateralCenterService {
     if (!owner?.id) {
       throw new BadRequestException(
         'The result has no Science Program assigned. Select a Science Program before submitting for review.',
+      );
+    }
+
+    // `PSR-T-6` (design.md DD-4, requirements.md `PSR-R-2` swap "MUST block Submit for review
+    // while the swap request is pending") — `stateFor` alone can't surface this: an ACCEPTED
+    // `primary` row (the current owner, just checked above) outranks a PENDING one in its
+    // priority order, so a swap in progress would otherwise look exactly like a settled result.
+    const pendingPrimaryId =
+      await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
+        parsedResultId,
+      );
+    if (pendingPrimaryId != null) {
+      throw new BadRequestException(
+        'A new primary Science Program request is pending for this result. Submit for review is unavailable until it is accepted or declined.',
       );
     }
 

@@ -61,6 +61,16 @@ export class BilateralApiService {
     );
   }
 
+  /**
+   * `PSR-T-10` (design.md §4 "Bilateral center result initiative/header read"): the Center's
+   * on-hold / sent-back banner and the ToC section notice both read `primary_request` from this
+   * same owner-initiative read the picker already uses — `{ initiativeId, officialCode,
+   * initiativeName, primary_request: { state, program_code, declined_by_codes } }`.
+   */
+  GET_resultInitiativeId(resultId: number | string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/initiative/${resultId}`);
+  }
+
   PATCH_plannedResult(resultId: number | string, body: Record<string, unknown>) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/planned-result/${resultId}`, body);
   }

@@ -335,6 +335,18 @@
       </div>
     }
 
+    <!-- @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2, PAGE-R-2/PAGE-AC-5):
+         skeleton gate while the pending set hasn't arrived yet — nothing below renders until then, so
+         resolved/read history racing ahead of pending can never paint first. -->
+    @if (resultsNotificationsSE.initialLoading) {
+      <div class="unified_notifications_list flex flex-col gap-[20px] w-full mb-[20px]" aria-busy="true" aria-live="polite">
+        <div class="flex flex-col w-full overflow-hidden rounded-[12px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)]">
+          @for (skeletonRow of [0, 1, 2]; track skeletonRow) {
+            <app-skeleton-notification-item />
+          }
+        </div>
+      </div>
+    } @else {
     <div class="unified_notifications_list flex flex-col gap-[20px] w-full mb-[20px]">
       @if (groupedTabList.today.length > 0) {
         <div class="unified_notifications_list_group flex flex-col gap-[10px]">
@@ -405,7 +417,45 @@
           You have no notifications related with the search.
         </div>
       }
+
+      <!-- @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2, PAGE-R-3):
+           trailing "Loading history…" skeleton row while any source's FIRST history page (this
+           generation) is still outstanding — pending rows above are already visible by this point. -->
+      @if (resultsNotificationsSE.historyLoading) {
+        <div
+          class="unified_notifications_list_group flex flex-col gap-[10px]"
+          aria-busy="true"
+          aria-live="polite"
+          [attr.aria-label]="copy.inbox.loadingHistory">
+          <div class="flex flex-col w-full overflow-hidden rounded-[12px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)]">
+            <app-skeleton-notification-item />
+          </div>
+          <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.inbox.loadingHistory }}</p>
+        </div>
+      }
     </div>
+    }
+
+    <!-- @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2, PAGE-R-4/R-10):
+         "Load more" is shown iff any source still has a next page (not during the initial skeleton
+         gate — PAGE-R-2's pending set hasn't even rendered yet). A busy state (an in-flight
+         `loadMore()` call) disables the button and announces `aria-busy`, per the a11y NFR. -->
+    @if (!resultsNotificationsSE.initialLoading && resultsNotificationsSE.hasMore) {
+      <div class="flex flex-col items-center gap-[8px] mb-[20px]">
+        @if (showFilteredHistoryHint) {
+          <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.inbox.filteredHint }}</p>
+        }
+        <button
+          hlmBtn
+          variant="outline"
+          type="button"
+          [disabled]="resultsNotificationsSE.loadingMore"
+          [attr.aria-busy]="resultsNotificationsSE.loadingMore"
+          (click)="resultsNotificationsSE.loadMore()">
+          {{ copy.inbox.loadMore }}
+        </button>
+      </div>
+    }
   }
 
   <!-- Only `settings` (SettingsComponent) is ever routed here now (NOTIF-T-6 Pivot re-scope). Always

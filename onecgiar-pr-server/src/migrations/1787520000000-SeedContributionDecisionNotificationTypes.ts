@@ -43,7 +43,7 @@ export class SeedContributionDecisionNotificationTypes1787520000000
         WHERE type = ?
           AND NOT EXISTS (
             SELECT 1
-            FROM \`notification\` n
+            FROM \`notifications\` n
             WHERE n.notification_type = \`notifications_type\`.notifications_type_id
           )
       `,

@@ -197,4 +197,112 @@ describe('UpdateNotificationComponent', () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
   });
+
+  // WCT-T-5 (`w1w2-center-tagged`, design.md §8.2, WCT-R-5): the bare-shape direct-tag row renders
+  // `lead` (owner SP code) in `<b>` right before the prefix sentence.
+  describe('WCT-T-5: Center-tagged row lead rendering', () => {
+    const bareCenterTaggedFixture = () => ({
+      notification_level: 2,
+      notification_id: 1,
+      created_date: new Date().toISOString(),
+      text: 'ABC',
+      obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+      obj_notification_level: { notifications_level_id: 2 },
+      obj_result: {
+        result_code: 9398,
+        title: 'A pooled funding result',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }],
+        obj_version: { id: 1 }
+      }
+    });
+
+    it('renders the bare SP01/ABC/9398 sentence with SP01 emphasized in <b>', () => {
+      const fresh = TestBed.createComponent(UpdateNotificationComponent);
+      fresh.componentInstance.notification = bareCenterTaggedFixture();
+      fresh.detectChanges();
+
+      const p: HTMLElement = fresh.nativeElement.querySelector('.update_notification_content_body_text');
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe('SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - A pooled funding result');
+      // SP01 is the lead, rendered in its own <b>, distinct from the prefix text.
+      const boldTexts = Array.from(p.querySelectorAll('b')).map(b => b.textContent?.trim());
+      expect(boldTexts).toContain('SP01');
+    });
+
+    it('a legacy composed fixture renders as it does today (no lead)', () => {
+      const fresh = TestBed.createComponent(UpdateNotificationComponent);
+      fresh.componentInstance.notification = {
+        ...bareCenterTaggedFixture(),
+        text: 'created by SP01 has tagged the International Center X. Click to see the result.'
+      };
+      fresh.detectChanges();
+
+      const p: HTMLElement = fresh.nativeElement.querySelector('.update_notification_content_body_text');
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe(
+        'The result 9398 - A pooled funding result created by SP01 has tagged the International Center X. Click to see the result.'
+      );
+    });
+  });
+
+  // WPT-T-4 (`w1w2-project-tagged`, design.md §8.2/§8.3, WPT-R-2): the enriched bare shape loops
+  // `segments` (SP09/B-A1080/ABC each in their own <b>, emitter plain) instead of lead/prefix.
+  describe('WPT-T-4: Bilateral-project-tagged row segments rendering', () => {
+    const enrichedProjectTaggedFixture = () => ({
+      notification_level: 2,
+      notification_id: 11,
+      created_date: new Date().toISOString(),
+      text: 'B-A1080 (ABC)',
+      obj_emitter_user: { first_name: 'Lucia', last_name: 'Ferrari' },
+      obj_notification_type: { type: NotificationType.RESULT_BILATERAL_PROJECT_TAGGED },
+      obj_notification_level: { notifications_level_id: 2 },
+      obj_result: {
+        result_code: 9341,
+        title: '<title>',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP09' } }],
+        obj_version: { id: 1 }
+      }
+    });
+
+    it('renders the SP09/B-A1080/ABC sentence, with those tokens (not the emitter) in <b>', () => {
+      const fresh = TestBed.createComponent(UpdateNotificationComponent);
+      fresh.componentInstance.notification = enrichedProjectTaggedFixture();
+      fresh.detectChanges();
+
+      const p: HTMLElement = fresh.nativeElement.querySelector('.update_notification_content_body_text');
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe('Lucia Ferrari from SP09 has tagged the bilateral project B-A1080 from your center (ABC) to result 9341 - <title>');
+      const boldTexts = Array.from(p.querySelectorAll('b')).map(b => b.textContent?.trim());
+      expect(boldTexts).toEqual(['SP09', 'B-A1080', 'ABC']);
+      expect(boldTexts).not.toContain('Lucia Ferrari');
+    });
+
+    it('the result link still renders "9341 - <title>"', () => {
+      const fresh = TestBed.createComponent(UpdateNotificationComponent);
+      fresh.componentInstance.notification = enrichedProjectTaggedFixture();
+      fresh.detectChanges();
+
+      const link: HTMLElement = fresh.nativeElement.querySelector('.update_notification_content_body_text a');
+      expect(link.textContent?.trim()).toBe('9341 - <title>');
+    });
+
+    it('regression: a BCT composed fixture renders unchanged, with no duplicated text', () => {
+      const fresh = TestBed.createComponent(UpdateNotificationComponent);
+      fresh.componentInstance.notification = {
+        ...enrichedProjectTaggedFixture(),
+        text: 'created by SP01 has tagged the B-A1080 of your center (ABC). Click to see the result.'
+      };
+      fresh.detectChanges();
+
+      const p: HTMLElement = fresh.nativeElement.querySelector('.update_notification_content_body_text');
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe(
+        'The result 9341 - <title> created by SP01 has tagged the B-A1080 of your center (ABC). Click to see the result.'
+      );
+    });
+  });
 });

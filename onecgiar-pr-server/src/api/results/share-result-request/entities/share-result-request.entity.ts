@@ -12,6 +12,17 @@ import { ClarisaActionAreaOutcome } from '../../../../clarisa/clarisa-action-are
 import { RequestStatus } from './request-status.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 
+/**
+ * `PSR-DD-1` / design.md §3.1 — discriminates a "pending primary Science Program" request
+ * (`primary`) from the existing share/contribution request kind (`contribution`). Default is
+ * `contribution` so every pre-existing row keeps today's behavior untouched
+ * (`PSR-R-*` backwards compatibility, requirements.md §7).
+ */
+export enum RequestTypeEnum {
+  CONTRIBUTION = 'contribution',
+  PRIMARY = 'primary',
+}
+
 @Entity('share_result_request')
 export class ShareResultRequest {
   @PrimaryGeneratedColumn({
@@ -32,14 +43,33 @@ export class ShareResultRequest {
   })
   obj_result: Result[];
 
+  /**
+   * `PSR-DD-1` — `contribution` (today's kind) or `primary` (pending primary Science Program
+   * request, design.md §1). Defaults to `contribution` so every existing row is unaffected.
+   */
+  @Column({
+    name: 'request_type',
+    type: 'enum',
+    enum: RequestTypeEnum,
+    enumName: 'share_result_request_type_enum',
+    nullable: false,
+    default: RequestTypeEnum.CONTRIBUTION,
+  })
+  request_type: RequestTypeEnum = RequestTypeEnum.CONTRIBUTION;
+
+  /**
+   * `PSR-DD-5` — nullable while a `primary` request is pending (no owner yet). Filled by
+   * `PrimaryProgramRequestService.accept` / `releaseContributors` (later tasks); NOT NULL for
+   * every `contribution`-kind row (today's behavior, unchanged).
+   */
   @Column({
     name: 'owner_initiative_id',
     type: 'int',
-    nullable: false,
+    nullable: true,
   })
-  owner_initiative_id: number;
+  owner_initiative_id: number | null;
 
-  @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: false })
+  @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: true })
   @JoinColumn({
     name: 'owner_initiative_id',
   })

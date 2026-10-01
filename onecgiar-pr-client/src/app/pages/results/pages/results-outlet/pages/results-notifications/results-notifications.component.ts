@@ -119,9 +119,64 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     this.activeSource.set(source);
   }
 
-  /** NOTIF-T-1: every currently-loaded Received (Pending+Done) + Sent (Pending+Done) +
-   * Updates (Pending+Viewed) row, merged and classified — no separate fetch. */
-  get unifiedList(): UnifiedNotification[] {
+  // ---------------------------------------------------------------------------------------------
+  // @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2/§6.3, PAGE-DD-8, PAGE-R-11)
+  //
+  // `unifiedList -> filteredUnifiedList -> sourceScopedList -> tabFilteredList -> groupedTabList` used
+  // to be five independent getters, each re-running `buildUnifiedList`/the filter pipes/the recency
+  // pipe on EVERY read (a template binding reads `groupedTabList` three times per render — `.today`,
+  // `.thisWeek`, `.earlier` — and `allTabCount`/`decisionTabCount`/`infoTabCount` each re-read
+  // `sourceScopedList`). `receivedData`/`sentData`/`updatesData`'s history arrays are REPLACED (new
+  // reference) on every paging change (PAGE-T-4's `setHistoryRows`/`appendHistoryRows`), never
+  // mutated in place, so an identity-keyed cache is valid: unchanged references + unchanged filter
+  // values + unchanged tab/side means the derivation is guaranteed to produce the same rows, and the
+  // chain is recomputed only when one of those actually changes (falsifier (e)). `buildUnifiedList`
+  // and the five filter pipes stay untouched (PAGE-DD-4).
+  // ---------------------------------------------------------------------------------------------
+
+  private derivedCacheKey: readonly unknown[] | null = null;
+  private derivedCache!: {
+    unifiedList: UnifiedNotification[];
+    filteredUnifiedList: UnifiedNotification[];
+    sourceScopedList: UnifiedNotification[];
+    tabFilteredList: UnifiedNotification[];
+    groupedTabList: TGroupedNotificationsByRecency<UnifiedNotification>;
+  };
+
+  private buildDerivedCacheKey(): readonly unknown[] {
+    const se = this.resultsNotificationsSE;
+    return [
+      se?.receivedData?.receivedContributionsPending,
+      se?.receivedData?.receivedContributionsDone,
+      se?.sentData?.sentContributionsPending,
+      se?.sentData?.sentContributionsDone,
+      se?.updatesData?.notificationsPending,
+      se?.updatesData?.notificationsViewed,
+      se?.initiativeIdFilter,
+      se?.searchFilter,
+      se?.centerIdsFilter,
+      se?.bilateralProjectIdsFilter,
+      se?.typeFilter,
+      se?.fundingFilter,
+      se?.resultTypeFilter,
+      this.activeSource(),
+      this.activeTab()
+    ];
+  }
+
+  private static sameCacheKey(a: readonly unknown[], b: readonly unknown[]): boolean {
+    return a.length === b.length && a.every((value, index) => value === b[index]);
+  }
+
+  /** Recomputes the whole chain only when `buildDerivedCacheKey()` differs from the last computed
+   * key (identity comparison — PAGE-DD-8); every getter below reads off this single cache instead of
+   * re-deriving independently. */
+  private get derived() {
+    const key = this.buildDerivedCacheKey();
+    if (this.derivedCacheKey && ResultsNotificationsComponent.sameCacheKey(this.derivedCacheKey, key)) {
+      return this.derivedCache;
+    }
+
     const received = this.resultsNotificationsSE?.receivedData;
     const sent = this.resultsNotificationsSE?.sentData;
     const updates = this.resultsNotificationsSE?.updatesData;
@@ -130,22 +185,45 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     const sentRows = [...(sent?.sentContributionsPending ?? []), ...(sent?.sentContributionsDone ?? [])];
     const updateRows = [...(updates?.notificationsPending ?? []), ...(updates?.notificationsViewed ?? [])];
 
-    return buildUnifiedList(receivedRows, sentRows, updateRows);
+    const unifiedList = buildUnifiedList(receivedRows, sentRows, updateRows);
+
+    let filteredUnifiedList: any[] = unifiedList;
+    filteredUnifiedList = this.filterByInitiativePipe.transform(filteredUnifiedList, this.resultsNotificationsSE?.initiativeIdFilter);
+    filteredUnifiedList = this.filterBySearchPipe.transform(filteredUnifiedList, this.resultsNotificationsSE?.searchFilter);
+    filteredUnifiedList = this.filterByCenterPipe.transform(filteredUnifiedList, this.resultsNotificationsSE?.centerIdsFilter);
+    filteredUnifiedList = this.filterByBilateralProjectPipe.transform(filteredUnifiedList, this.resultsNotificationsSE?.bilateralProjectIdsFilter);
+    filteredUnifiedList = this.filterByTypePipe.transform(filteredUnifiedList, this.resultsNotificationsSE?.typeFilter);
+    filteredUnifiedList = this.filterByFundingPipe.transform(filteredUnifiedList, this.resultsNotificationsSE?.fundingFilter);
+    filteredUnifiedList = this.filterByResultTypePipe.transform(filteredUnifiedList, this.resultsNotificationsSE?.resultTypeFilter);
+
+    // NOTIF-T-6 (Pivot re-scope, `NOTIF-DD-6`/`NOTIF-R-8`): `origin:'update'` rows are neither
+    // Received nor Sent — a judgment call (see the original getter's doc comment, preserved in
+    // substance here): they render under BOTH sides rather than becoming unreachable under either.
+    const excludedOrigin = this.activeSource() === 'received' ? 'sent' : 'received';
+    const sourceScopedList = filteredUnifiedList.filter(item => (item as any).origin !== excludedOrigin);
+
+    let tabFilteredList = sourceScopedList;
+    if (this.activeTab() === 'decision') tabFilteredList = sourceScopedList.filter(item => item.needsDecision);
+    else if (this.activeTab() === 'info') tabFilteredList = sourceScopedList.filter(item => !item.needsDecision);
+
+    const groupedTabList = this.groupByRecencyPipe.transform(tabFilteredList, 'activityDate');
+
+    this.derivedCacheKey = key;
+    this.derivedCache = { unifiedList, filteredUnifiedList, sourceScopedList, tabFilteredList, groupedTabList };
+    return this.derivedCache;
+  }
+
+  /** NOTIF-T-1: every currently-loaded Received (Pending+Done) + Sent (Pending+Done) +
+   * Updates (Pending+Viewed) row, merged and classified — no separate fetch. */
+  get unifiedList(): UnifiedNotification[] {
+    return this.derived.unifiedList;
   }
 
   /** NOTIF-T-3/NOTIF-R-10: the unified list narrowed by the filter toolbar's state (now this
    * component's own — NOTIF-T-6 Pivot re-scope). Each pipe's `transform()` is called against `any[]`
    * — see the identical note already on `filter-notification-by-center.pipe.ts`'s own signature. */
   get filteredUnifiedList(): UnifiedNotification[] {
-    let list: any[] = this.unifiedList;
-    list = this.filterByInitiativePipe.transform(list, this.resultsNotificationsSE?.initiativeIdFilter);
-    list = this.filterBySearchPipe.transform(list, this.resultsNotificationsSE?.searchFilter);
-    list = this.filterByCenterPipe.transform(list, this.resultsNotificationsSE?.centerIdsFilter);
-    list = this.filterByBilateralProjectPipe.transform(list, this.resultsNotificationsSE?.bilateralProjectIdsFilter);
-    list = this.filterByTypePipe.transform(list, this.resultsNotificationsSE?.typeFilter);
-    list = this.filterByFundingPipe.transform(list, this.resultsNotificationsSE?.fundingFilter);
-    list = this.filterByResultTypePipe.transform(list, this.resultsNotificationsSE?.resultTypeFilter);
-    return list;
+    return this.derived.filteredUnifiedList;
   }
 
   /**
@@ -158,21 +236,17 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
    * "pure" for that one row kind.
    */
   get sourceScopedList(): UnifiedNotification[] {
-    const excludedOrigin = this.activeSource() === 'received' ? 'sent' : 'received';
-    return this.filteredUnifiedList.filter(item => (item as any).origin !== excludedOrigin);
+    return this.derived.sourceScopedList;
   }
 
   /** NOTIF-R-1: the source-scoped list narrowed to the active tab. 'all' is a no-op narrowing. */
   get tabFilteredList(): UnifiedNotification[] {
-    const list = this.sourceScopedList;
-    if (this.activeTab() === 'decision') return list.filter(item => item.needsDecision);
-    if (this.activeTab() === 'info') return list.filter(item => !item.needsDecision);
-    return list;
+    return this.derived.tabFilteredList;
   }
 
   /** NOTIF-T-2: the active tab's rows, grouped Today/This week/Earlier by `activityDate`. */
   get groupedTabList(): TGroupedNotificationsByRecency<UnifiedNotification> {
-    return this.groupByRecencyPipe.transform(this.tabFilteredList, 'activityDate');
+    return this.derived.groupedTabList;
   }
 
   /**
@@ -246,10 +320,22 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     // every feed twice (up to 6 requests, last-response-wins on shared state). `getAllPhases()` is
     // now the single source of the fetch: the callback below only fires as a fallback for the rarer
     // case where NO phase resolves at all, so the page still has data instead of staying empty.
+    //
+    // @akili-spec notifications/inbox-paginated-load (PAGE-T-6, PAGE-T-5 audit forward pointer): this
+    // used to call the three legacy wrappers (`get_section_information`, `get_sent_notifications`,
+    // `get_updates_notifications` — each a thin `refreshSource()` delegate) with no arguments at
+    // all — a whole-inbox reload, which is exactly what `loadInbox()` (not `refreshSource()`) is for
+    // (design.md §2.2/§6.2, PAGE-R-1 "no phase"). Finding: `initialLoading` is ONLY ever set by
+    // `loadInbox()` in the service — `refreshSource()`/the legacy wrappers never touch it. Calling
+    // the legacy wrappers here left `initialLoading` stuck at its default `false` for this whole
+    // fallback path, so PAGE-T-6's skeleton gate (`@if (resultsNotificationsSE.initialLoading)`)
+    // never engaged for a user who lands with no phase resolved — pending and history rows could
+    // paint in arrival order instead of pending-first, the exact PAGE-R-2/PAGE-AC-5 regression the
+    // gate exists to prevent. `loadInbox()` (no `phaseId` argument — PAGE-R-1 "no phase" means all
+    // phases) sets `initialLoading = true` immediately and clears it once all 3 pending requests
+    // settle, so the gate now engages and resolves correctly on this path too.
     this.resultsNotificationsSE.getAllPhases(() => {
-      this.resultsNotificationsSE.get_section_information();
-      this.resultsNotificationsSE.get_sent_notifications();
-      this.resultsNotificationsSE.get_updates_notifications();
+      this.resultsNotificationsSE.loadInbox();
     });
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
@@ -543,6 +629,15 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     const fundingCount = this.resultsNotificationsSE.fundingFilter?.length ?? 0;
     const resultTypeCount = this.resultsNotificationsSE.resultTypeFilter?.length ?? 0;
     return programCount + centerCount + bilateralCount + typeCount + fundingCount + resultTypeCount;
+  }
+
+  /** @akili-spec notifications/inbox-paginated-load — PAGE-R-10/PAGE-AC-6: the hint shown next to
+   * "Load more" while a toolbar filter or the search box is active AND at least one source still has
+   * more history to fetch — filters/search only narrow the rows already loaded into memory, so older
+   * (not-yet-loaded) rows matching the active filter would otherwise appear to be missing. */
+  get showFilteredHistoryHint(): boolean {
+    const filtersActive = this.activeFilterCount > 0 || !!this.resultsNotificationsSE?.searchFilter;
+    return filtersActive && !!this.resultsNotificationsSE?.hasMore;
   }
 
   get activeFilterChips(): ActiveFilterChip[] {

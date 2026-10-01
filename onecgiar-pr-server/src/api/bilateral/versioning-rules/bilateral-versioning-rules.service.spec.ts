@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { BilateralVersioningRulesService } from './bilateral-versioning-rules.service';
@@ -44,12 +45,21 @@ describe('BilateralVersioningRulesService', () => {
         'phase' in options ? options.phase : ACTIVE_PHASE,
       ),
     };
+    // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-6: joined the constructor
+    // for `assertCallerMayVersion`'s lead-centre fallback, moved here from `bvs`.
+    const resultsCenterRepository = {
+      getAllResultsCenterByResultId: jest.fn(
+        async () => options.leadCenterRows ?? [],
+      ),
+    };
     return {
       service: new BilateralVersioningRulesService(
         resultRepository as any,
         versionRepository as any,
+        resultsCenterRepository as any,
       ),
       resultRepository,
+      resultsCenterRepository,
     };
   };
 
@@ -200,6 +210,103 @@ describe('BilateralVersioningRulesService', () => {
       await expect(
         service.findInPhase('28565', ACTIVE_PHASE.id),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-6. Moved here verbatim from
+  // `services/bilateral-versioning.service.spec.ts` (same fixtures, same cases): this is now
+  // where the ownership rule itself lives, shared by `/version` and `create`'s resolve step.
+  // `bvs.spec.ts` keeps a much smaller test proving it delegates here.
+  describe('assertCallerMayVersion — ownership shared by /version and create', () => {
+    const STAR = { id: 12, name: 'STAR', acronym: 'STAR' };
+
+    const source = (overrides: any = {}) => ({
+      id: 31921,
+      result_code: '28565',
+      external_platform_id: STAR.id,
+      ...overrides,
+    });
+
+    it('accepts the platform that reported the result', async () => {
+      const { service } = makeService();
+      await expect(
+        service.assertCallerMayVersion(source(), '28565', STAR as any),
+      ).resolves.toBeUndefined();
+    });
+
+    it('refuses a platform that did not report the result', async () => {
+      const { service } = makeService();
+      await expect(
+        service.assertCallerMayVersion(
+          source({ external_platform_id: 999 }),
+          '28565',
+          STAR as any,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('refuses when the API key resolved no platform', async () => {
+      const { service } = makeService();
+      await expect(
+        service.assertCallerMayVersion(source(), '28565', undefined),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    // No originating platform means a centre authored it in the tool, so the lead centre is
+    // the only thing tying the request to the data.
+    it('falls back to the lead centre when the result has no originating platform', async () => {
+      const { service } = makeService({
+        leadCenterRows: [
+          { code: 'CENTER-11', is_leading_result: 0 },
+          { code: 'CENTER-02', is_leading_result: 1 },
+        ],
+      });
+      await expect(
+        service.assertCallerMayVersion(
+          source({ external_platform_id: null }),
+          '28565',
+          STAR as any,
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    it('refuses when the lead centre is outside the platform scope', async () => {
+      const { service } = makeService({
+        leadCenterRows: [{ code: 'CENTER-11', is_leading_result: 1 }],
+      });
+      await expect(
+        service.assertCallerMayVersion(
+          source({ external_platform_id: null }),
+          '28565',
+          STAR as any,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('refuses when there is neither platform nor lead centre', async () => {
+      const { service } = makeService({
+        leadCenterRows: [{ code: 'CENTER-11', is_leading_result: 0 }],
+      });
+      await expect(
+        service.assertCallerMayVersion(
+          source({ external_platform_id: null }),
+          '28565',
+          STAR as any,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('refuses a platform with no configured centre scope', async () => {
+      const { service } = makeService({
+        leadCenterRows: [{ code: 'CENTER-02', is_leading_result: 1 }],
+      });
+      await expect(
+        service.assertCallerMayVersion(
+          source({ external_platform_id: null }),
+          '28565',
+          { id: 77, acronym: 'UNKNOWN_TOOL' } as any,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

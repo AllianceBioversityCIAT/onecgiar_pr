@@ -17,6 +17,13 @@ import { HlmCheckboxImports } from '@spartan/checkbox';
 // NOTIF-T-6 (Pivot re-scope): Announcements, ported from the retired `UpdatesModule` so the
 // Announcements section keeps a real renderer (standalone component, imported not declared).
 import { UpdateNotificationComponent } from './components/update-notification/update-notification.component';
+// @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2/§6.3): the initial-load
+// skeleton gate and the trailing "Loading history…" row both reuse the existing standalone
+// `app-skeleton-notification-item` (design.md §6.3 — "no new tokens"); `HlmButtonImports` is the
+// same Helm button import used by `NotificationItemModule`'s own drawer buttons, now needed here
+// too for the outline "Load more" control (PAGE-R-4).
+import { SkeletonNotificationItemComponent } from './components/notification-item/skeleton-notification-item/skeleton-notification-item.component';
+import { HlmButtonImports } from '@spartan/button';
 
 @NgModule({
   declarations: [ResultsNotificationsComponent],
@@ -26,8 +33,10 @@ import { UpdateNotificationComponent } from './components/update-notification/up
     CustomFieldsModule,
     NotificationItemModule,
     UpdateNotificationComponent,
+    SkeletonNotificationItemComponent,
     ...HlmBadgeImports,
-    ...HlmCheckboxImports
+    ...HlmCheckboxImports,
+    ...HlmButtonImports
   ]
 })
 export class ResultsNotificationsModule {}

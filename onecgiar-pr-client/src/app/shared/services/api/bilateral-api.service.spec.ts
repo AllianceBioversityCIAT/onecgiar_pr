@@ -72,6 +72,26 @@ describe('BilateralApiService', () => {
     req.flush(mockResponse);
   });
 
+  // PSR-T-10 (notifications/bilateral-primary-sp-request) — the Center's on-hold / sent-back
+  // banner and the ToC notice both read `primary_request` from this same owner-initiative GET.
+  it('GET_resultInitiativeId should GET the center initiative/:resultId read', done => {
+    const mockPrimaryRequestResponse = {
+      response: {
+        initiativeId: null,
+        officialCode: null,
+        initiativeName: null,
+        primary_request: { state: 'pending', program_code: 'SP09', declined_by_codes: [] }
+      }
+    };
+    service.GET_resultInitiativeId(10).subscribe(response => {
+      expect(response).toEqual(mockPrimaryRequestResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/initiative/10`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPrimaryRequestResponse);
+  });
+
   it('PATCH_plannedResult should PATCH planned-result', done => {
     const body = { planned_result: true };
     service.PATCH_plannedResult(10, body).subscribe(response => {

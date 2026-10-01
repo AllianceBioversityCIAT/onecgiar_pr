@@ -420,6 +420,76 @@ describe('NotificationItemComponent', () => {
       expect(spyPATCH_updateRequest).toHaveBeenCalled();
       expect(emitSpy).toHaveBeenCalled();
     });
+
+    it('PSR-T-9 (PSR-R-2/PSR-R-4/PSR-R-8): a 409 shows "This request was already answered" instead of the generic error, and still refreshes the list', async () => {
+      component.requestingAccept = false;
+      component.api.rolesSE.platformIsClosed = false;
+
+      component.notification = {
+        share_result_request_id: 2725,
+        result_id: '7774',
+        request_status_id: 1,
+        requested_date: '2024-08-29T01:24:56.104Z',
+        aprovaed_date: null,
+        is_map_to_toc: true,
+        obj_request_status: { request_status_id: 1, name: 'Pending' },
+        obj_result: {
+          result_code: '5618',
+          title: 'Understanding behaviour change in relation to agroecological transition: A novel approach',
+          status_id: '1',
+          obj_version: { id: '30', phase_name: 'Reporting 2024', status: true },
+          obj_result_type: { id: 7, name: 'Innovation development' },
+          obj_result_level: { id: 4, name: 'Initiative output' },
+          obj_results_toc_result: []
+        },
+        obj_requested_by: { id: 307, first_name: 'John', last_name: 'Doe' },
+        obj_approved_by: null,
+        obj_owner_initiative: {
+          id: 31,
+          official_code: 'INIT-31',
+          name: 'Transformational Agroecology across Food, Land, and Water systems'
+        },
+        obj_shared_inititiative: { id: 1, official_code: 'INIT-01', name: 'Accelerated Breeding' }
+      };
+      const spy = jest.spyOn(mockApiService.alertsFe, 'show');
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(throwError(() => ({ status: 409 })));
+      const emitSpy = jest.spyOn(component.requestEvent, 'emit');
+
+      component.acceptOrReject(true);
+
+      expect(spy).toHaveBeenCalledWith({
+        id: 'noti-error',
+        title: 'This request was already answered',
+        description: '',
+        status: 'information'
+      });
+      expect(component.requestingAccept).toBeFalsy();
+      // The row stops being actionable because finalize() still runs unconditionally on a 409.
+      expect(emitSpy).toHaveBeenCalled();
+    });
+
+    it('a non-409 error still shows the generic error toast (regression, CRD zero-touch)', () => {
+      component.requestingAccept = false;
+      component.api.rolesSE.platformIsClosed = false;
+      component.notification = {
+        share_result_request_id: 2725,
+        result_id: '7774',
+        request_status_id: 1,
+        is_map_to_toc: true,
+        obj_result: {
+          result_code: '5618',
+          status_id: '1',
+          obj_version: { id: '30', status: true },
+          obj_result_type: { id: 7, name: 'Innovation development' }
+        }
+      };
+      const spy = jest.spyOn(mockApiService.alertsFe, 'show');
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(throwError(() => ({ status: 500 })));
+
+      component.acceptOrReject(true);
+
+      expect(spy).toHaveBeenCalledWith({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+    });
   });
 
   describe('tocReview getter (P2-3085)', () => {
@@ -1009,7 +1079,11 @@ describe('NotificationItemComponent', () => {
       expect(avatar?.querySelector('i.pi')).toBeFalsy();
     });
 
-    it('renders an icon inside a rounded-square (bilateral) avatar for a W3/Bilaterals row, never initials', () => {
+    // PSR-T-8: superseded the old generic `pi-building` bilateral icon — every bilateral request
+    // is now either a primary request (flag) or a bilateral contributor request (people), never a
+    // third un-kinded bilateral row (`PSR-DD-10`). This fixture has no `request_type`, which
+    // defaults to `'contribution'` server-side, so it renders as the bilateral CONTRIBUTOR variant.
+    it('renders the people icon inside a rounded-square (bilateral contributor) avatar for a W3/Bilaterals row, never initials', () => {
       component.notification = buildRenderableNotification({ request_status_id: 1, obj_result: { source_name: 'W3/Bilaterals' } });
       fixture.detectChanges();
 
@@ -1018,7 +1092,23 @@ describe('NotificationItemComponent', () => {
       expect(avatar).toBeTruthy();
       expect(avatar?.classList.contains('notification_avatar_bilateral')).toBe(true);
 
-      expect(avatar?.querySelector('i.pi.pi-building')).toBeTruthy();
+      expect(avatar?.querySelector('i.pi.pi-users')).toBeTruthy();
+      expect(avatar?.querySelector('i.pi.pi-building')).toBeFalsy();
+      expect(avatar?.querySelector('.notification_avatar_initials')).toBeFalsy();
+    });
+
+    it('renders the flag icon inside a rounded-square (primary request) avatar for a request_type:"primary" row', () => {
+      component.notification = buildRenderableNotification({
+        request_status_id: 1,
+        request_type: 'primary',
+        obj_result: { source_name: 'W3/Bilaterals' }
+      });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const avatar = root.querySelector('.notification_avatar');
+      expect(avatar?.querySelector('i.pi.pi-flag')).toBeTruthy();
+      expect(avatar?.querySelector('i.pi.pi-users')).toBeFalsy();
       expect(avatar?.querySelector('.notification_avatar_initials')).toBeFalsy();
     });
 
@@ -1384,7 +1474,7 @@ describe('NotificationItemComponent', () => {
         openSpy.mockRestore();
       });
 
-      it('bilateral: closes the drawer BEFORE navigateToResult (CRD-DD-6, no stacked drawers)', () => {
+      it('bilateral contributor: closes the drawer BEFORE navigateToResult (CRD-DD-6, no stacked drawers)', () => {
         component.notification = buildBilateral();
         component.openDrawer('details');
         const calls: string[] = [];
@@ -1397,6 +1487,25 @@ describe('NotificationItemComponent', () => {
         component.onDrawerResult();
 
         expect(calls).toEqual(['closeDrawer', 'navigateToResult']);
+      });
+
+      // PSR-T-8 rework attempt 2 (Reviewer finding 1): a primary row must NEVER take the in-app
+      // `navigateToResult()` path — on a primary row `requesterCode` resolves to the REQUESTED SP
+      // (is_map_to_toc:false), so navigating there would land the user on that SP's bilateral-review
+      // page/queue for a result that must not appear there yet (requirements.md L94).
+      it('primary: never navigates in-app — opens resultUrl() in a new tab instead, like a non-bilateral result', () => {
+        component.notification = buildBilateral({ request_type: 'primary' });
+        component.openDrawer('details');
+        const navigateSpy = jest.spyOn(component, 'navigateToResult');
+        const closeSpy = jest.spyOn(component, 'closeDrawer');
+        const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+        component.onDrawerResult();
+
+        expect(navigateSpy).not.toHaveBeenCalled();
+        expect(closeSpy).not.toHaveBeenCalled();
+        expect(openSpy).toHaveBeenCalledWith(component.resultUrl(component.notification), '_blank');
+        openSpy.mockRestore();
       });
     });
 
@@ -1460,18 +1569,35 @@ describe('NotificationItemComponent', () => {
         expect(header.resultCode).toBe('9377');
       });
 
-      it('bilateral: names the reporting Center, invents no requester person name (CRD-T-4 forward pointer 5)', () => {
+      // PSR-T-8: supersedes the old generic bilateral header (a plain bilateral contribution
+      // request is now the "bilateral contributor" kind — `leadCode`/`suffix`, not `lead`).
+      it('bilateral contributor: leads with the owner SP code, invents no requester person name, and composes "on behalf of"', () => {
+        component.notification = buildBilateral({ creating_center: { acronym: 'CIAT' }, owner_program_code: 'INIT-09' });
+
+        const header = component.drawerHeader();
+
+        expect(header.lead).toBe('');
+        expect(header.leadCode).toBe('INIT-09');
+        expect(header.lead).not.toContain('John');
+        expect(header.responderCode).toBe(component.responderCode);
+        expect(header.suffix).toBe('on behalf of CIAT');
+        // Left empty on purpose: the CRD template omits "from X" entirely when this is falsy, so no
+        // requester name (invented or otherwise) is ever rendered for a bilateral request.
+        expect(header.requesterCode).toBe('');
+      });
+
+      it('primary request: leads with the Creating Center, no requester clause, and the primary tail', () => {
         component.notification = buildBilateral({
-          obj_result: { result_center_array: [{ clarisa_center_object: { clarisa_institution: { acronym: 'CIAT' } } }] }
+          request_type: 'primary',
+          creating_center: { acronym: 'CIAT' }
         });
 
         const header = component.drawerHeader();
 
-        expect(header.lead).toBe('Center CIAT');
-        expect(header.lead).not.toContain('John');
+        expect(header.lead).toBe('CIAT');
+        expect(header.verb).toBe('has tagged');
+        expect(header.tail).toBe('as the primary Science Program of result');
         expect(header.responderCode).toBe(component.responderCode);
-        // Left empty on purpose: the CRD template omits "from X" entirely when this is falsy, so no
-        // requester name (invented or otherwise) is ever rendered for a bilateral request.
         expect(header.requesterCode).toBe('');
       });
     });
@@ -1740,7 +1866,10 @@ describe('NotificationItemComponent', () => {
       expect(openDrawerSpy).not.toHaveBeenCalled();
     });
 
-    it('a bubbling click on the bilateral result span does not open the drawer', () => {
+    // PSR-T-8 rework attempt 2 (Reviewer finding 1): restores the pre-attempt-1 in-app
+    // `navigateToResult()` click-through for the bilateral CONTRIBUTOR row's result span — the
+    // same target `onDrawerResult()` uses for this row kind, so the row and the drawer agree.
+    it('a bubbling click on the bilateral contributor result span navigates in-app and does not open the drawer', () => {
       component.notification = buildFixture({ request_status_id: 1, is_map_to_toc: false, obj_result: { source_name: 'W3/Bilaterals' } });
       fixture.detectChanges();
       const openDrawerSpy = jest.spyOn(component, 'openDrawer');
@@ -2467,6 +2596,584 @@ describe('NotificationItemComponent', () => {
       });
     });
   });
+
+  // PSR-T-8 (`bilateral-primary-sp-request`): the primary / bilateral-contributor row variants,
+  // the Center notices, and the carried PSR-T-9 wiring (primary requests bypass ToC entirely).
+  describe('PSR-T-8 — primary / bilateral contributor / Center notices', () => {
+    const buildPsrFixture = (overrides: any = {}) => ({
+      share_result_request_id: 8001,
+      result_id: '10001',
+      request_status_id: 1,
+      requested_date: '2026-09-30T10:00:00.000Z',
+      is_map_to_toc: false,
+      obj_requested_by: { id: 1, first_name: 'Jane', last_name: 'Doe' },
+      obj_owner_initiative: null,
+      obj_shared_inititiative: { id: 12, official_code: 'SP12', name: 'Contributor program' },
+      creating_center: { acronym: 'AfricaRice', name: 'Africa Rice Center' },
+      ...overrides,
+      obj_result: {
+        result_code: 'RC-10001',
+        title: 'An ownerless bilateral result',
+        status_id: '1',
+        source_name: 'W3/Bilaterals',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        obj_results_toc_result: [],
+        ...(overrides.obj_result ?? {})
+      }
+    });
+
+    beforeEach(() => {
+      mockApiService.rolesSE.platformIsClosed = false;
+      mockApiService.rolesSE.isAdmin = false;
+      component.requestingAccept = false;
+      component.requestingReject = false;
+      component.isSent = false;
+    });
+
+    describe('primary request row', () => {
+      it('renders the "Primary program request" chip, the flag icon, and the row sentence (PSR-R-9)', () => {
+        component.notification = buildPsrFixture({ request_type: 'primary' });
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(component.rowTypeChipLabel).toBe('Primary program request');
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Primary program request');
+        expect(root.querySelector('.notification_avatar i.pi.pi-flag')).toBeTruthy();
+
+        const bodyText = root.querySelector('.notification_content_body_text')?.textContent?.replace(/\s+/g, ' ').trim();
+        expect(bodyText).toContain('AfricaRice has tagged SP12 as the primary Science Program of result');
+        expect(bodyText).toContain('RC-10001 - An ownerless bilateral result');
+      });
+
+      it('missing-acronym clause: falls back to the Center name, never an empty name or "()" (PSR-R-9 scenario)', () => {
+        component.notification = buildPsrFixture({ request_type: 'primary', creating_center: { acronym: null, name: 'Africa Rice Center' } });
+        expect(component.creatingCenterLabel).toBe('Africa Rice Center');
+
+        component.notification = buildPsrFixture({ request_type: 'primary', creating_center: {} });
+        expect(component.creatingCenterLabel).toBe('the Center');
+        expect(component.creatingCenterLabel).not.toBe('');
+        expect(component.creatingCenterLabel).not.toContain('()');
+      });
+
+      it('renders "Accept as primary" / "Decline" as the row button labels (PSR-R-9)', () => {
+        component.notification = buildPsrFixture({ request_type: 'primary' });
+        fixture.detectChanges();
+
+        const acceptBtn: any = fixture.nativeElement.querySelector('[data-testid="accept-contribution-btn"]');
+        const declineBtn: any = fixture.nativeElement.querySelector('[data-testid="decline-contribution-btn"]');
+        expect(acceptBtn.text).toBe('Accept as primary');
+        expect(declineBtn.text).toBe('Decline');
+      });
+
+      it('counts under "Needs your decision" while pending (PSR-R-9)', () => {
+        component.notification = buildPsrFixture({ request_type: 'primary', request_status_id: 1 });
+        expect(component.isPending).toBe(true);
+        expect(component.rowStatusLabel).toBe('Needs your decision');
+      });
+
+      describe('carried from PSR-T-9: bypasses ToC entirely', () => {
+        it('(1) the drawer never renders the Align slot for a pending primary request, in the rendered DOM', () => {
+          component.notification = buildPsrFixture({ request_type: 'primary' });
+          fixture.detectChanges();
+
+          component.openDrawer('details');
+          fixture.detectChanges();
+
+          const root: HTMLElement = fixture.nativeElement;
+          expect(root.querySelector('[data-testid="align-slot"]')).toBeNull();
+        });
+
+        it('(2) tocInitiative is unseeded and drawerFocusAlign is false after opening', () => {
+          component.notification = buildPsrFixture({ request_type: 'primary' });
+          component.openDrawer('details');
+
+          expect(component.tocInitiative).toBeNull();
+          expect(component.drawerFocusAlign()).toBe(false);
+        });
+
+        it('(3) onDrawerAccept() and the row Accept send the inert ToC payload and never open the ToC prompt', () => {
+          component.notification = buildPsrFixture({ request_type: 'primary' });
+          const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+          component.onDrawerAccept();
+          expect(component.showTocPromptDialog()).toBe(false);
+          expect(patchSpy).toHaveBeenCalledTimes(1);
+          let body = patchSpy.mock.calls[0][0];
+          expect(body.request_status_id).toBe(2);
+          expect(body.result_toc_result).toEqual({ planned_result: null, result_toc_results: [] });
+
+          patchSpy.mockClear();
+          component.onAcceptContribution();
+          expect(component.showTocPromptDialog()).toBe(false);
+          expect(patchSpy).toHaveBeenCalledTimes(1);
+          body = patchSpy.mock.calls[0][0];
+          expect(body.request_status_id).toBe(2);
+          expect(body.result_toc_result).toEqual({ planned_result: null, result_toc_results: [] });
+        });
+
+        it('(4) the Accept text is "Accept as primary" for both the row and the drawer', () => {
+          component.notification = buildPsrFixture({ request_type: 'primary' });
+          expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+        });
+
+        // PSR-T-8 rework attempt 2 (Reviewer finding 3): queries the real drawer debug instance's
+        // `showAlignSlot`/`acceptLabel` INPUTS — not just the row's own `isPrimaryRequest` getter,
+        // which proved nothing about what the drawer actually received.
+        it('the drawer actually receives showAlignSlot=false and acceptLabel="Accept as primary"', () => {
+          component.notification = buildPsrFixture({ request_type: 'primary' });
+          fixture.detectChanges();
+
+          const drawer: ContributionRequestDrawerComponent = fixture.debugElement.query(
+            By.directive(ContributionRequestDrawerComponent)
+          ).componentInstance;
+
+          expect(drawer.showAlignSlot()).toBe(false);
+          expect(drawer.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+        });
+      });
+    });
+
+    describe('bilateral contributor request row', () => {
+      const buildContributorFixture = (overrides: any = {}) =>
+        buildPsrFixture({ owner_program_code: 'SP09', ...overrides });
+
+      it('renders the "Contributor request" chip, the people icon, and the row sentence (PSR-R-10)', () => {
+        component.notification = buildContributorFixture();
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(component.rowTypeChipLabel).toBe('Contributor request');
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Contributor request');
+        expect(root.querySelector('.notification_avatar i.pi.pi-users')).toBeTruthy();
+
+        const bodyText = root.querySelector('.notification_content_body_text')?.textContent?.replace(/\s+/g, ' ').trim();
+        expect(bodyText).toContain('SP09, as primary Science Program, has tagged SP12 as a contributing Science Program to result');
+        expect(bodyText).toContain('RC-10001 - An ownerless bilateral result');
+        expect(bodyText).toContain('on behalf of AfricaRice');
+      });
+
+      it('renders plain "Accept" / "Decline" as the row button labels (PSR-R-10)', () => {
+        component.notification = buildContributorFixture();
+        fixture.detectChanges();
+
+        const acceptBtn: any = fixture.nativeElement.querySelector('[data-testid="accept-contribution-btn"]');
+        const declineBtn: any = fixture.nativeElement.querySelector('[data-testid="decline-contribution-btn"]');
+        expect(acceptBtn.text).toBe('Accept');
+        expect(declineBtn.text).toBe('Decline');
+      });
+
+      it('header: requesterCode stays empty, leadCode carries the owner SP, Align stays available (regression)', () => {
+        component.notification = buildContributorFixture();
+
+        const header = component.drawerHeader();
+        expect(header.requesterCode).toBe('');
+        expect(header.leadCode).toBe('SP09');
+        expect(header.suffix).toBe('on behalf of AfricaRice');
+        expect(component.isPrimaryRequest).toBe(false);
+        expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept);
+      });
+
+      // PSR-T-8 rework attempt 2 (Reviewer finding 3): the drawer's real input values, not just the
+      // row getter — regression counterpart to the primary-row assertion above.
+      it('the drawer actually receives showAlignSlot=true and acceptLabel="Accept"', () => {
+        component.notification = buildContributorFixture();
+        fixture.detectChanges();
+
+        const drawer: ContributionRequestDrawerComponent = fixture.debugElement.query(
+          By.directive(ContributionRequestDrawerComponent)
+        ).componentInstance;
+
+        expect(drawer.showAlignSlot()).toBe(true);
+        expect(drawer.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept);
+      });
+
+      it('null-owner-code fallback: no empty bold and no sentence starting with "," (Reviewer advisory)', () => {
+        component.notification = buildPsrFixture({ owner_program_code: null });
+
+        const header = component.drawerHeader();
+        expect(header.leadCode).toBeUndefined();
+        expect(header.lead).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.unknownProgramFallback);
+        // Neither empty bold (leadCode) nor an empty lead — the sentence always has a subject
+        // before the verb's leading comma, so it never starts with ",".
+        expect(header.lead).not.toBe('');
+      });
+    });
+
+    // PSR-T-8 rework attempt 2 (Reviewer finding 3): `requestKind` was untested — deleting the
+    // `requestKind:` line in `drawerViewFields()` kept the whole suite green before this.
+    describe('drawerViewFields().requestKind (PSR-R-11)', () => {
+      it('is "Primary program request" for a primary row (incl. resolved)', () => {
+        component.notification = buildPsrFixture({ request_type: 'primary', request_status_id: 2 });
+        expect(component.drawerViewFields().requestKind).toBe('Primary program request');
+      });
+
+      it('is "Contributor request" for a bilateral contributor row', () => {
+        component.notification = buildPsrFixture({ owner_program_code: 'SP09' });
+        expect(component.drawerViewFields().requestKind).toBe('Contributor request');
+      });
+
+      it('is "Contribution request" for a W1/W2 row', () => {
+        component.notification = buildPsrFixture({ is_map_to_toc: true, obj_result: { source_name: 'W1/W2' } });
+        expect(component.drawerViewFields().requestKind).toBe('Contribution request');
+      });
+
+      it('is null for an Updates/Center-notice row', () => {
+        component.notification = { source: 'update', obj_result: { result_code: '1', title: 't' } };
+        expect(component.drawerViewFields().requestKind).toBeNull();
+      });
+    });
+
+    // PSR-T-8 rework attempt 2 (Reviewer finding 2): proves the row sentence is READ from
+    // `CONTRIBUTION_REQUEST_DRAWER_COPY.header.*` at render time, not a parallel hard-coded string —
+    // mutating the copy object (not frozen at runtime, only `as const` at the type level) and
+    // observing the row change is the only way to actually discriminate this from "the strings
+    // happen to match".
+    describe('row sentence reads copy.header.* at render time (not hard-coded)', () => {
+      const originalPrimaryVerb = CONTRIBUTION_REQUEST_DRAWER_COPY.header.primaryVerb;
+      const originalContributorTail = CONTRIBUTION_REQUEST_DRAWER_COPY.header.bilateralContributorTail;
+
+      afterEach(() => {
+        (CONTRIBUTION_REQUEST_DRAWER_COPY.header as any).primaryVerb = originalPrimaryVerb;
+        (CONTRIBUTION_REQUEST_DRAWER_COPY.header as any).bilateralContributorTail = originalContributorTail;
+      });
+
+      it('primary row sentence changes when copy.header.primaryVerb changes', () => {
+        (CONTRIBUTION_REQUEST_DRAWER_COPY.header as any).primaryVerb = 'TOTALLY_CUSTOM_PRIMARY_VERB';
+        component.notification = buildPsrFixture({ request_type: 'primary' });
+        fixture.detectChanges();
+
+        const bodyText = fixture.nativeElement.querySelector('.notification_content_body_text')?.textContent;
+        expect(bodyText).toContain('TOTALLY_CUSTOM_PRIMARY_VERB');
+      });
+
+      it('bilateral contributor row sentence changes when copy.header.bilateralContributorTail changes', () => {
+        (CONTRIBUTION_REQUEST_DRAWER_COPY.header as any).bilateralContributorTail = 'TOTALLY_CUSTOM_CONTRIBUTOR_TAIL';
+        component.notification = buildPsrFixture({ owner_program_code: 'SP09' });
+        fixture.detectChanges();
+
+        const bodyText = fixture.nativeElement.querySelector('.notification_content_body_text')?.textContent;
+        expect(bodyText).toContain('TOTALLY_CUSTOM_CONTRIBUTOR_TAIL');
+      });
+    });
+
+    // Regression (falsifier): W1/W2 pending contributions must never say "Contributor request" or
+    // show a plain "Accept" — they keep inbox-revamp's wording exactly (PSR-DD-10).
+    describe('W1/W2 regression (PSR-DD-10)', () => {
+      it('keeps "Contribution request" chip, "Accept contribution" button, and Align unchanged', () => {
+        component.notification = buildPsrFixture({
+          is_map_to_toc: true,
+          obj_result: { source_name: 'W1/W2' }
+        });
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(component.rowTypeChipLabel).toBe('Contribution request');
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Contribution request');
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).not.toBe('Contributor request');
+
+        const acceptBtn: any = root.querySelector('[data-testid="accept-contribution-btn"]');
+        expect(acceptBtn.text).toBe('Accept contribution');
+        expect(acceptBtn.text).not.toBe('Accept');
+
+        expect(component.isPrimaryRequest).toBe(false);
+        expect(component.isBilateralContributorRequest).toBe(false);
+        expect(component.acceptsWithoutToc).toBe(false);
+      });
+    });
+
+    // Center notices: 3 plain `Notification` types read through the existing Updates (`source:
+    // 'update'`) branch — never buttons, always "For your information".
+    describe('Center notices (3 plain Notification types)', () => {
+      const buildNotice = (type: string, text: string) => ({
+        notification_id: 5001,
+        source: 'update',
+        created_date: '2026-09-30T10:00:00.000Z',
+        text,
+        obj_notification_type: { type },
+        obj_emitter_user: { first_name: 'System', last_name: '' },
+        obj_result: {
+          result_code: '501',
+          title: 'An ownerless bilateral result',
+          status_id: '1',
+          obj_version: { id: '30', status: true }
+        }
+      });
+
+      it.each([
+        ['Primary Program Request Accepted', 'SP09 accepted to be the primary Science Program of this result. Click to see the result.'],
+        ['Primary Program Request Declined', 'SP09 declined to be the primary Science Program of this result. Pick another primary Science Program.'],
+        ['Primary Program Request Moved', 'SP09 declined to be the primary Science Program of this result; the request was moved to SP12.']
+      ])('%s: composes one sentence with the SP as subject, never "The result" + suffix', (type, text) => {
+        component.notification = buildNotice(type, text);
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        const bodyText = root.querySelector('.notification_content_body_text')?.textContent?.replace(/\s+/g, ' ').trim();
+
+        expect(bodyText).toContain('SP09');
+        expect(bodyText).toContain('result 501 - An ownerless bilateral result');
+        // The garbled, two-subject shape the PSR-T-7 review failed on — never this.
+        expect(bodyText).not.toMatch(/^The result/);
+
+        // No buttons — Center notices are informative only.
+        expect(root.querySelector('[data-testid="accept-contribution-btn"]')).toBeNull();
+        expect(root.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+      });
+
+      it('counts under "For your information", never "Needs your decision"', () => {
+        component.notification = buildNotice('Primary Program Request Accepted', 'SP09 accepted to be the primary Science Program of this result.');
+        expect(component.isUpdateSource).toBe(true);
+        expect(component.rowStatusLabel).toBe('For your information');
+      });
+    });
+  });
+
+  // WCT-T-5 (`w1w2-center-tagged`, design.md §8.2-§8.5, WCT-R-5/R-6/R-9): the inbox Updates row
+  // renders `lead` in `<b>`, carries the `CG Center tagged` chip in green, and stays view-only.
+  describe('WCT-T-5: Center-tagged row (lead, chip, view-only)', () => {
+    const bareCenterTaggedFixture = () => ({
+      notification_id: 1,
+      source: 'update',
+      created_date: new Date().toISOString(),
+      text: 'ABC',
+      obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+      obj_result: {
+        result_code: 9398,
+        title: 'A pooled funding result',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }],
+        obj_version: { id: 1 }
+      }
+    });
+
+    it('renders the bare SP01/ABC/9398 sentence with SP01 emphasized in <b>', () => {
+      component.notification = bareCenterTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const p = root.querySelector('.notification_content_body_text')!;
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe('SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - A pooled funding result');
+      const boldTexts = Array.from(p.querySelectorAll('b')).map(b => b.textContent?.trim());
+      expect(boldTexts).toContain('SP01');
+    });
+
+    it('a legacy composed fixture renders as it does today (no lead)', () => {
+      component.notification = {
+        ...bareCenterTaggedFixture(),
+        text: 'created by SP01 has tagged the International Center X. Click to see the result.'
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const p = root.querySelector('.notification_content_body_text')!;
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe(
+        'The result 9398 - A pooled funding result created by SP01 has tagged the International Center X. Click to see the result.'
+      );
+    });
+
+    it('carries the "CG Center tagged" chip with the approved-status token class', () => {
+      component.notification = bareCenterTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+
+      expect(chip.textContent?.trim()).toBe('CG Center tagged');
+      expect(chip.className).toContain('!bg-[var(--pr-status-approved-bg)]');
+      expect(chip.className).toContain('!text-[var(--pr-status-approved-fg)]');
+    });
+
+    it('rowTypeChipLabel / rowTypeChipColorClass resolve the same way directly', () => {
+      component.notification = bareCenterTaggedFixture();
+
+      expect(component.rowTypeChipLabel).toBe('CG Center tagged');
+      expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-status-approved-bg)] !text-[var(--pr-status-approved-fg)]');
+    });
+
+    it('a Result Submitted update row keeps its raw label and violet chip (unaffected)', () => {
+      component.notification = {
+        source: 'update',
+        notification_id: 2,
+        created_date: new Date().toISOString(),
+        obj_notification_type: { type: NotificationType.RESULT_SUBMITTED },
+        obj_emitter_user: { first_name: 'Jane', last_name: 'Doe' },
+        obj_result: { result_code: 100, title: 'T', obj_result_by_initiatives: [], obj_version: { id: 1 } }
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+
+      expect(chip.textContent?.trim()).toBe(NotificationType.RESULT_SUBMITTED);
+      expect(chip.className).toContain('!bg-[var(--pr-color-primary-50)]');
+      expect(chip.className).toContain('!text-[var(--pr-color-primary-400)]');
+    });
+
+    it('is view-only: rowMode is "view" and no decision buttons render', () => {
+      component.notification = bareCenterTaggedFixture();
+      fixture.detectChanges();
+
+      expect(component.rowMode).toBe('view');
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="accept-contribution-btn"]')).toBeNull();
+      expect(root.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+    });
+
+    it('request-row chips (drawer requestKind) are unaffected by the new chip branch', () => {
+      component.notification = {
+        source: 'request',
+        request_status_id: 1,
+        obj_requested_by: { first_name: 'A', last_name: 'B' },
+        obj_owner_initiative: { official_code: 'SP01' },
+        obj_shared_inititiative: { official_code: 'SP02' },
+        obj_result: { result_code: 100, title: 'T', obj_result_by_initiatives: [], obj_version: { id: 1 } }
+      };
+
+      expect(component.rowTypeChipLabel).toBe('Contribution request');
+      expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]');
+    });
+  });
+
+  // WPT-T-4 (`w1w2-project-tagged`, design.md §8.2-§8.4, WPT-R-2/R-6/R-8): the inbox Updates row
+  // loops `segments` (SP09/B-A1080/ABC each in their own <b>, emitter plain), carries the amber
+  // "Bilateral project tagged" chip, and stays view-only.
+  describe('WPT-T-4: Bilateral-project-tagged row (segments, amber chip, view-only)', () => {
+    const enrichedProjectTaggedFixture = () => ({
+      notification_id: 11,
+      source: 'update',
+      created_date: new Date().toISOString(),
+      text: 'B-A1080 (ABC)',
+      obj_emitter_user: { first_name: 'Lucia', last_name: 'Ferrari' },
+      obj_notification_type: { type: NotificationType.RESULT_BILATERAL_PROJECT_TAGGED },
+      obj_result: {
+        result_code: 9341,
+        title: '<title>',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP09' } }],
+        obj_version: { id: 1 }
+      }
+    });
+
+    it('renders the SP09/B-A1080/ABC sentence, with those tokens (not the emitter) in <b>', () => {
+      component.notification = enrichedProjectTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const p = root.querySelector('.notification_content_body_text')!;
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe('Lucia Ferrari from SP09 has tagged the bilateral project B-A1080 from your center (ABC) to result 9341 - <title>');
+      const boldTexts = Array.from(p.querySelectorAll('b')).map(b => b.textContent?.trim());
+      expect(boldTexts).toEqual(['SP09', 'B-A1080', 'ABC']);
+      expect(boldTexts).not.toContain('Lucia Ferrari');
+    });
+
+    it('the result link still renders "9341 - <title>"', () => {
+      component.notification = enrichedProjectTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const link = root.querySelector('.notification_content_body a')!;
+      expect(link.textContent?.trim()).toBe('9341 - <title>');
+    });
+
+    it('carries the "Bilateral project tagged" chip with the in-progress status token class', () => {
+      component.notification = enrichedProjectTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+
+      expect(chip.textContent?.trim()).toBe('Bilateral project tagged');
+      expect(chip.className).toContain('!bg-[var(--pr-status-in-progress-bg)]');
+      expect(chip.className).toContain('!text-[var(--pr-status-in-progress-fg)]');
+    });
+
+    it('rowTypeChipLabel / rowTypeChipColorClass resolve the same way directly', () => {
+      component.notification = enrichedProjectTaggedFixture();
+
+      expect(component.rowTypeChipLabel).toBe('Bilateral project tagged');
+      expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-status-in-progress-bg)] !text-[var(--pr-status-in-progress-fg)]');
+    });
+
+    it('a RESULT_CENTER_TAGGED fixture is unaffected: still "CG Center tagged" / approved tokens', () => {
+      component.notification = {
+        notification_id: 12,
+        source: 'update',
+        created_date: new Date().toISOString(),
+        text: 'ABC',
+        obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+        obj_result: {
+          result_code: 9398,
+          title: 'A pooled funding result',
+          obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }],
+          obj_version: { id: 1 }
+        }
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+      expect(chip.textContent?.trim()).toBe('CG Center tagged');
+      expect(chip.className).toContain('!bg-[var(--pr-status-approved-bg)]');
+    });
+
+    it('another Updates type (Result Submitted) keeps the violet class', () => {
+      component.notification = {
+        source: 'update',
+        notification_id: 13,
+        created_date: new Date().toISOString(),
+        obj_notification_type: { type: NotificationType.RESULT_SUBMITTED },
+        obj_emitter_user: { first_name: 'Jane', last_name: 'Doe' },
+        obj_result: { result_code: 100, title: 'T', obj_result_by_initiatives: [], obj_version: { id: 1 } }
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+      expect(chip.className).toContain('!bg-[var(--pr-color-primary-50)]');
+    });
+
+    it('is view-only: rowMode is "view" and no decision buttons render', () => {
+      component.notification = enrichedProjectTaggedFixture();
+      fixture.detectChanges();
+
+      expect(component.rowMode).toBe('view');
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="accept-contribution-btn"]')).toBeNull();
+      expect(root.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+    });
+
+    it('regression: a BCT composed fixture renders unchanged, with no duplicated text', () => {
+      component.notification = {
+        notification_id: 14,
+        source: 'update',
+        created_date: new Date().toISOString(),
+        text: 'created by SP01 has tagged the B-A1080 of your center (ABC). Click to see the result.',
+        obj_notification_type: { type: NotificationType.RESULT_BILATERAL_PROJECT_TAGGED },
+        obj_result: {
+          result_code: 9398,
+          title: 'A pooled funding result',
+          obj_result_by_initiatives: [],
+          obj_version: { id: 1 }
+        }
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const p = root.querySelector('.notification_content_body_text')!;
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe(
+        'The result 9398 - A pooled funding result created by SP01 has tagged the B-A1080 of your center (ABC). Click to see the result.'
+      );
+    });
+  });
+
   describe('Bilateral AI Job Finished row (no result behind it)', () => {
     const aiJobRow = () => ({
       source: 'update',

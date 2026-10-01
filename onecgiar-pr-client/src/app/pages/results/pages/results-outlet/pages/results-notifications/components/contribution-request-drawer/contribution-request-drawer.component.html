@@ -21,16 +21,30 @@
       <p hlmSheetDescription class="text-[13px] leading-[1.5] text-ink-secondary" data-testid="crd-header-sentence">
         @if (headerParts(); as h) {
           {{ h.lead }}
-          <!-- CRD-R-2 "Bilateral sentence" (CRD-T-4): no invented requester name — omit "from X"
-               entirely when the caller (notification-item's drawerHeader()) leaves requesterCode empty. -->
-          @if (h.requesterCode) {
-            {{ copy.header.from }} <span class="font-mono font-semibold">{{ h.requesterCode }}</span>
+          <!-- PSR-T-9 (design.md §6.1 "Bilateral contributor request"): the bold leading {owner sp}
+               code, immediately abutting the verb with no separating space — the copy's verb
+               carries its own leading comma (", as primary Science Program, has tagged"). Absent
+               for every pre-existing caller, which takes the untouched `@else` branch below
+               (CRD zero-touch: byte-identical markup/whitespace to before this task). -->
+          @if (h.leadCode) {
+            <span class="font-mono font-semibold">{{ h.leadCode }}</span>{{ h.verb }}
+          } @else {
+            <!-- CRD-R-2 "Bilateral sentence" (CRD-T-4): no invented requester name — omit "from X"
+                 entirely when the caller (notification-item's drawerHeader()) leaves requesterCode empty. -->
+            @if (h.requesterCode) {
+              {{ copy.header.from }} <span class="font-mono font-semibold">{{ h.requesterCode }}</span>
+            }
+            {{ h.verb }}
           }
-          {{ h.verb }}
           @if (h.responderCode) {
             <span class="font-mono font-semibold">{{ h.responderCode }}</span>
           }
           {{ h.tail }} <span class="font-mono font-semibold">{{ h.resultCode }}</span> – {{ h.resultTitle }}
+          <!-- PSR-T-9 (design.md §6.2, PSR-R-11 "showing … the Creating Center"): the "on behalf of
+               {center}" tail — absent for every pre-existing caller (CRD zero-touch). -->
+          @if (h.suffix) {
+            {{ h.suffix }}
+          }
         }
       </p>
     </hlm-sheet-header>
@@ -109,7 +123,9 @@
       </section>
       }
 
-      <ng-content select="[crdAlign]" />
+      @if (showAlignSlot()) {
+        <ng-content select="[crdAlign]" />
+      }
     </div>
 
     @if (mode() !== 'view') {
@@ -151,7 +167,7 @@
               @if (acceptBusy()) {
                 <ng-icon name="lucideLoaderCircle" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
               }
-              {{ copy.footer.acceptContribution }}
+              {{ acceptLabel() ?? copy.footer.acceptContribution }}
             </button>
           </div>
         </div>
