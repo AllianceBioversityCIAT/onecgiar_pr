@@ -17,6 +17,7 @@ import {
   IsInt,
   Min,
   MaxLength,
+  Matches,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -1156,6 +1157,45 @@ export class CreateBilateralDto {
   @IsOptional()
   @IsBoolean()
   keep_editing?: boolean;
+
+  /**
+   * @akili-spec changes/bilateral-create-upsert-by-code — UBC-R-1/R-2/R-3.
+   *
+   * The PRMS result code of a result that already exists. When present, `create` resolves it
+   * instead of unconditionally creating a new row: a hit only in an earlier (approved) phase
+   * is carried forward with this payload's data, keeping the code; a hit in the open phase is
+   * a 409 (update in place is on hold); anything else (not found, another platform's code, a
+   * Knowledge Product) is rejected with a 4xx before any row is written. Absent, `create`
+   * behaves exactly as before this change (`UBC-R-1`).
+   *
+   * Producers send it either as a string (`"28565"`) or as a JSON integer (`28565`); both are
+   * accepted and normalised to a trimmed string here, so the service only ever sees digits.
+   * Anything else (a decimal, a negative, a boolean, an object) still fails validation.
+   */
+  @ApiPropertyOptional({
+    description:
+      'The PRMS result code of an earlier-phase approved result to version with this payload. A string of digits or an integer (both accepted). Absent creates a new result, exactly as before (UBC-R-1).',
+    oneOf: [
+      { type: 'string', pattern: '^\\d+$' },
+      { type: 'integer', minimum: 0 },
+    ],
+    example: '28565',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (
+      typeof value === 'number' &&
+      Number.isSafeInteger(value) &&
+      value >= 0
+    ) {
+      return String(value);
+    }
+    if (typeof value === 'string') return value.trim();
+    return value;
+  })
+  @IsString()
+  @Matches(/^\d+$/, { message: 'result_code must contain digits only.' })
+  result_code?: string;
 
   @ApiProperty({
     description: 'Result type identifier for the bilateral',
