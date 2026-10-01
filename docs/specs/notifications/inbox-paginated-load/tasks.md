@@ -82,7 +82,7 @@ Test commands are always scoped (`--testPathPattern`) — never a full suite.
   - **Consumers:** `findBilateralAiJobFinishedNotifications`, `findCenterNoticeNotifications` (also used by `getPopUpNotifications` — signatures may only gain optional args).
 - **DoD:** tests green · eslint clean · Swagger params documented.
 
-### PAGE-T-4 — Client API + service paging state
+### [x] PAGE-T-4 — Client API + service paging state
 
 - **Type:** client
 - **Description:** Extend `GET_allRequest`/`GET_sentRequest`/`GET_requestUpdates` with `{ versionId?, scope?, cursor? }`. Service: per-source state; `loadInbox`, `loadMore`, `refreshSource`, `refreshPending`; generation guard; `initialLoading` gated on the 3 pending; legacy wrappers (`get_section_information`, `get_sent_notifications`, `get_updates_notifications`) delegate to `refreshSource`; `onPhaseChange` → `loadInbox`; arrays replaced (not mutated) on append; missing meta → `hasMore:false`.

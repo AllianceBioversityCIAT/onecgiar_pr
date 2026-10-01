@@ -4269,15 +4269,76 @@ describe('ResultsApiService', () => {
     });
   });
 
-  describe('GET_allRequest - versionId branch', () => {
+  // @akili-spec notifications/inbox-paginated-load
+  // PAGE-T-4 (Reviewer FAIL #1, attempt 2): GET_allRequest/GET_sentRequest/GET_requestUpdates now
+  // take a single options object `{ versionId?, scope?, cursor? }` (design.md §4.1) instead of a
+  // positional `versionId`. These cases exercise `buildPagingQueryParams` directly through each of
+  // the 3 methods.
+  describe('GET_allRequest - paging options', () => {
     it('should include versionId param when provided', done => {
-      service.GET_allRequest('v2').subscribe(response => {
+      service.GET_allRequest({ versionId: 'v2' }).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received?version_id=v2`);
       expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should call GET_allRequest with no options and no query string', done => {
+      service.GET_allRequest().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should serialize scope and cursor together with versionId', done => {
+      service.GET_allRequest({ versionId: 'v2', scope: 'history', cursor: 'abc' }).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received?version_id=v2&scope=history&cursor=abc`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should URL-encode a cursor containing +, / and = characters', done => {
+      const rawCursor = 'a+b/c=d';
+      service.GET_allRequest({ scope: 'history', cursor: rawCursor }).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=history&cursor=${encodeURIComponent(rawCursor)}`);
+      expect(req.request.urlWithParams).toContain(`cursor=${encodeURIComponent(rawCursor)}`);
+      req.flush(mockResponse);
+    });
+
+    it('should omit version_id when versionId is null, undefined or an empty string', done => {
+      service.GET_allRequest({ versionId: '', scope: 'pending' }).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=pending`);
+      expect(req.request.url).not.toContain('version_id');
+      req.flush(mockResponse);
+    });
+
+    it('should omit version_id when versionId is 0 (falsy, not a real phase id)', done => {
+      service.GET_allRequest({ versionId: 0, scope: 'pending' }).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=pending`);
+      expect(req.request.url).not.toContain('version_id');
       req.flush(mockResponse);
     });
   });
@@ -4295,13 +4356,23 @@ describe('ResultsApiService', () => {
     });
 
     it('should call GET_sentRequest with versionId', done => {
-      service.GET_sentRequest('v3').subscribe(response => {
+      service.GET_sentRequest({ versionId: 'v3' }).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/sent?version_id=v3`);
       expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should serialize scope on GET_sentRequest', done => {
+      service.GET_sentRequest({ scope: 'pending' }).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/sent?scope=pending`);
       req.flush(mockResponse);
     });
   });
@@ -4319,13 +4390,23 @@ describe('ResultsApiService', () => {
     });
 
     it('should call GET_requestUpdates with versionId', done => {
-      service.GET_requestUpdates('v4').subscribe(response => {
+      service.GET_requestUpdates({ versionId: 'v4' }).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
 
       const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates?version_id=v4`);
       expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should serialize scope and cursor on GET_requestUpdates', done => {
+      service.GET_requestUpdates({ versionId: 'v4', scope: 'history', cursor: 'xyz' }).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates?version_id=v4&scope=history&cursor=xyz`);
       req.flush(mockResponse);
     });
   });

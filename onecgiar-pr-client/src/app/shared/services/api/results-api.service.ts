@@ -746,19 +746,40 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
   }
 
-  GET_allRequest(versionId?) {
-    const params = versionId ? `?version_id=${versionId}` : '';
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/received${params}`);
+  // @akili-spec notifications/inbox-paginated-load
+  // PAGE-T-4: `versionId`/`scope`/`cursor` are now accepted as a single options object (design.md
+  // §4.1 — "no new method names needed"). The only caller of these 3 methods is
+  // ResultsNotificationsService, so this is not a breaking change for any other consumer.
+  // Cursor is opaque and MUST NOT be logged (.cursorrules) — it is only ever forwarded verbatim.
+  private buildPagingQueryParams(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }): string {
+    if (!options) return '';
+    const params = new URLSearchParams();
+    // PAGE-T-4 rework (Reviewer L3): a plain truthy check — `0` is not a real phase id either, same
+    // as `''`/`null`/`undefined`; keep this on the safe/conservative side rather than threading a
+    // "0 is valid" special case through every caller.
+    if (options.versionId) {
+      params.set('version_id', String(options.versionId));
+    }
+    if (options.scope) {
+      params.set('scope', options.scope);
+    }
+    if (options.cursor) {
+      params.set('cursor', options.cursor);
+    }
+    const qs = params.toString();
+    return qs ? `?${qs}` : '';
   }
 
-  GET_sentRequest(versionId?) {
-    const params = versionId ? `?version_id=${versionId}` : '';
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/sent${params}`);
+  GET_allRequest(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/received${this.buildPagingQueryParams(options)}`);
   }
 
-  GET_requestUpdates(versionId?) {
-    const params = versionId ? `?version_id=${versionId}` : '';
-    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates${params}`);
+  GET_sentRequest(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/sent${this.buildPagingQueryParams(options)}`);
+  }
+
+  GET_requestUpdates(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) {
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates${this.buildPagingQueryParams(options)}`);
   }
 
   GET_notificationsPopUp() {
