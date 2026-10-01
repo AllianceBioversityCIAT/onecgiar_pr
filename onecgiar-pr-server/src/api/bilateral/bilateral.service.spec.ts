@@ -528,6 +528,21 @@ describe('BilateralService (unit)', () => {
       );
     });
 
+    it('searches the ToC by the program official code, not the PRMS initiative id', async () => {
+      const { service, stubs: stubsTyped } = makeService();
+      const stubs: any = stubsTyped;
+      arrangeFullMatch(stubs);
+
+      await service.handleTocMapping(baseToc(), [], 1, 42);
+
+      // toc_work_packages.initiativeId holds 'CLIMATE', never 5 — an id here never matches.
+      expect(
+        stubs.resultsTocResultsRepository.findTocResultsForBilateral,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ initiative_id: 'CLIMATE' }),
+      );
+    });
+
     it('keeps the constant 1 when target_contribution is not sent (full match, backward compatibility)', async () => {
       const { service, stubs: stubsTyped } = makeService();
       const stubs: any = stubsTyped;
