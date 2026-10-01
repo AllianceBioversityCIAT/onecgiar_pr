@@ -55,6 +55,10 @@
             <a [href]="aiJob.path" (click)="onAiJobLinkClick($event, aiJob.path)" style="text-decoration: underline; color: var(--pr-color-black)">View</a>
           }
         } @else {
+        @if (parts.lead) {
+          <b> {{ parts.lead }} </b>
+        }
+
         @if (parts.prefix) {
           @if (parts.emphasizePrefix) {
             <b> {{ parts.prefix }} </b>

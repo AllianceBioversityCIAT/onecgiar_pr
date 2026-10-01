@@ -11,9 +11,11 @@ import {
   getAiJobNotificationParts,
   getResultNotificationTextParts,
   resolveNotificationType,
+  NotificationType,
   type AiJobNotificationParts,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
+import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../../../../../../../internationalization/notification-center-tagged.copy';
 import type { ContributionRequestDrawerMode, ContributionRequestDrawerViewFields } from '../contribution-request-drawer/contribution-request-drawer.component';
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
@@ -224,6 +226,12 @@ export class NotificationItemComponent {
    */
   get rowTypeChipLabel(): string | null {
     if (this.isUpdateSource) {
+      // WCT-T-5 (`w1w2-center-tagged`, WCT-R-6): the one update type whose chip reads a friendlier
+      // copy string instead of the raw `NotificationType` value. Every other update type is
+      // unaffected — still the raw resolved name.
+      if (resolveNotificationType(this.notification) === NotificationType.RESULT_CENTER_TAGGED) {
+        return NOTIFICATION_CENTER_TAGGED_COPY.chipLabel;
+      }
       return resolveNotificationType(this.notification);
     }
     // PSR-T-8: was the fixed `contributionRequestChip` string for every request row; now resolved
@@ -980,6 +988,15 @@ export class NotificationItemComponent {
    * this task (`NOTIF-T-13`). No new tokens.
    */
   get rowTypeChipColorClass(): string {
+    // WCT-T-5 (`w1w2-center-tagged`, WCT-R-6/WCT-NFR-4): the Center-tagged update row's chip gets
+    // the existing green "approved" status token pair. Request-row chips and every other update
+    // type are unchanged.
+    if (this.isUpdateSource) {
+      return resolveNotificationType(this.notification) === NotificationType.RESULT_CENTER_TAGGED
+        ? '!bg-[var(--pr-status-approved-bg)] !text-[var(--pr-status-approved-fg)]'
+        : '!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]';
+    }
+
     return this.isPrimaryRequest
       ? '!bg-[var(--pr-status-submitted-bg)] !text-[var(--pr-status-submitted-fg)]'
       : '!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]';

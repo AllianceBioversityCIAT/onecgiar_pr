@@ -278,6 +278,102 @@ describe('notification-type constants', () => {
     });
   });
 
+  // WCT-T-4 (`w1w2-center-tagged`): the server now stores the bare tagged Center's acronym on
+  // `notification.text` for direct-tag rows (W1/W2, IPSR, SP review of a bilateral result) — the
+  // client builds the full sentence, naming the owner Science Program as `lead`, unlike legacy/BCT
+  // composed rows above (which keep the server-composed suffix, WCT-R-7).
+  describe('direct-tag Center row (WCT-T-4)', () => {
+    it('builds the bare-shape parts with the owner SP as lead', () => {
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, {
+        text: 'ABC',
+        obj_result: resultOf({ obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }] })
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+
+      expect(parts).toEqual({
+        lead: 'SP01',
+        prefix: 'has tagged your CG Center as a contributor (ABC) to result',
+        suffix: null,
+        emphasizePrefix: false
+      });
+    });
+
+    // WCT-R-5: the flattened plain-text form (bell link `search=`, the search-filter pipe) must
+    // carry the same sentence as the split-parts rendering, lead included.
+    it('flattens the bare shape with the lead first, matching the row sentence exactly', () => {
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, {
+        text: 'ABC',
+        obj_result: resultOf({
+          result_code: 9398,
+          title: '<title>',
+          obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }]
+        })
+      });
+
+      expect(buildResultNotificationText(notification)).toBe(
+        'SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - <title>'
+      );
+    });
+
+    it('never lets the bare prefix carry forbidden legacy/BCT phrases', () => {
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, {
+        text: 'ABC',
+        obj_result: resultOf({ obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }] })
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+
+      expect(parts.prefix).not.toContain('The result');
+      expect(parts.prefix).not.toContain('created by');
+      expect(parts.prefix).not.toContain('Click to see the result.');
+    });
+
+    it('falls back the lead to "a Science Program" when no owner SP is available', () => {
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, {
+        text: 'ABC',
+        obj_result: resultOf({ obj_result_by_initiatives: [] })
+      });
+
+      expect(getResultNotificationTextParts(notification).lead).toBe('a Science Program');
+    });
+
+    it('still falls back to the legacy rendering for a BCT-composed sentence', () => {
+      const bctText = 'reported by AfricaRice has tagged the CIP. Click to see the result.';
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: bctText });
+
+      expect(getResultNotificationTextParts(notification)).toEqual({
+        prefix: 'The result',
+        suffix: bctText,
+        emphasizePrefix: false
+      });
+    });
+
+    it('still falls back to the legacy rendering for the SP01-created-by composed sentence', () => {
+      const composedText = 'created by SP01 has tagged the X. Click to see the result.';
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: composedText });
+
+      expect(getResultNotificationTextParts(notification)).toEqual({
+        prefix: 'The result',
+        suffix: composedText,
+        emphasizePrefix: false
+      });
+    });
+
+    it('still falls back to the legacy rendering for empty or null text', () => {
+      const emptyNotification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: '' });
+      const nullNotification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: null });
+
+      for (const notification of [emptyNotification, nullNotification]) {
+        expect(getResultNotificationTextParts(notification)).toEqual({
+          prefix: 'The result',
+          suffix: null,
+          emphasizePrefix: false
+        });
+      }
+    });
+  });
+
   // NOTIF-T-12 (`NOTIF-R-14`, corrected 2026-09-30): the server now stores just the tagged
   // project's NAME on `notification.text` (not a whole composed sentence) — the client builds the
   // full sentence, naming the emitter and Science Program itself, unlike `RESULT_CENTER_TAGGED`

@@ -458,4 +458,50 @@ describe('PopUpNotificationItemComponent', () => {
       expect(router.navigateByUrl).toHaveBeenCalledWith('/result/result-detail/R100/general-information?phase=v1');
     });
   });
+
+  // WCT-T-5 (`w1w2-center-tagged`, design.md §8.2, WCT-R-5): the bell/popup consumer renders `lead`
+  // (owner SP code) in `<b>` right before the prefix sentence for a bare direct-tag row.
+  describe('WCT-T-5: Center-tagged row lead rendering', () => {
+    const bareCenterTaggedFixture = () => ({
+      notification_id: 1,
+      created_date: new Date().toISOString(),
+      text: 'ABC',
+      obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+      obj_result: {
+        result_code: 9398,
+        title: 'A pooled funding result',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }],
+        obj_version: { id: 1 }
+      }
+    });
+
+    it('renders the bare SP01/ABC/9398 sentence with SP01 emphasized in <b>', () => {
+      const fresh = TestBed.createComponent(PopUpNotificationItemComponent);
+      fresh.componentInstance.notification = bareCenterTaggedFixture();
+      fresh.detectChanges();
+
+      const p: HTMLElement = fresh.nativeElement.querySelector('p');
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe('SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - A pooled funding result');
+      const boldTexts = Array.from(p.querySelectorAll('b')).map(b => b.textContent?.trim());
+      expect(boldTexts).toContain('SP01');
+    });
+
+    it('a legacy composed fixture renders as it does today (no lead)', () => {
+      const fresh = TestBed.createComponent(PopUpNotificationItemComponent);
+      fresh.componentInstance.notification = {
+        ...bareCenterTaggedFixture(),
+        text: 'created by SP01 has tagged the International Center X. Click to see the result.'
+      };
+      fresh.detectChanges();
+
+      const p: HTMLElement = fresh.nativeElement.querySelector('p');
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe(
+        'The result 9398 - A pooled funding result created by SP01 has tagged the International Center X. Click to see the result.'
+      );
+    });
+  });
 });
