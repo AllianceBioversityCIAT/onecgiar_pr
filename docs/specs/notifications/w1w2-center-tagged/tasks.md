@@ -159,7 +159,7 @@
 - **Definition of done:**
   - [x] Red run green · `npx ng lint --quiet` clean · memory rule: affected specs run before commit
 
-### WCT-T-6 — Rollout: manual visual and data gates
+### [x] WCT-T-6 — Rollout: manual visual and data gates
 
 - **Type:** rollout
 - **Description:** These are human checks at the execute HITL pause. Each is recorded in `execution.md` as `pass`, `fail` or `not-run` (never implied).
@@ -178,7 +178,7 @@
   - **Disqualifier:** prtest is not deployed with this branch. Record `not-run`; never `pass`.
   - **Consumers:** none (no shared symbol changed)
 - **Definition of done:**
-  - [ ] All five checks recorded in `execution.md`
+  - [x] All five checks recorded in `execution.md`
 
 ## 4. Coverage closure (scenario and clause level)
 
