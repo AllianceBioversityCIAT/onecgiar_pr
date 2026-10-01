@@ -12,6 +12,7 @@ import {
   NotificationTypeEnum,
 } from './enum/notification.enum';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { In, Not } from 'typeorm';
 
 const mockNotificationLevelRepository = {
   findOne: jest.fn(),
@@ -1122,6 +1123,292 @@ describe('NotificationService', () => {
           eventType: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
         });
       });
+    });
+  });
+
+  // `PSR-T-7`/`PSR-DD-7`: the 3 Center-notice types read back through an ownerless path
+  // (design.md §6.1, §2.2) — no `initiative_role_id = 1` condition — so a declined/moved
+  // notice for a result with no role-1 owner is never silently dropped, and are excluded from
+  // the role-1-joined queries so an accepted notice (owned result) is never merged in twice.
+  describe('Center notices — ownerless read path (PSR-T-7)', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center-user@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    const CENTER_NOTICE_TYPES = [
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
+    ];
+
+    // Disqualifier guard: this fixture has NO `obj_result_by_initiatives` role-1 row at all —
+    // the ownerless path must not depend on one being absent-but-present, it must work when
+    // there is genuinely no owner.
+    const centerNoticeRow = (overrides: Record<string, any> = {}) => ({
+      notification_id: '2001',
+      target_user: 42,
+      result_id: 501,
+      read: false,
+      text: 'SP12 declined to be the primary Science Program of this result. Pick another primary Science Program. Click to see the result.',
+      obj_result: {
+        result_code: 501,
+        title: 'An ownerless bilateral result',
+        source: 'API',
+        is_active: true,
+        obj_result_by_initiatives: [], // no role-1 owner
+        obj_result_by_project: [],
+      },
+      obj_notification_type: {
+        type: NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+      },
+      created_date: new Date('2026-09-30T10:00:00Z'),
+      ...overrides,
+    });
+
+    describe('getAllNotifications', () => {
+      it('Falsifier 1: a declined notice for an ownerless result is NOT missing from getAllNotifications', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed (role-1-joined, excludes center notices)
+          .mockResolvedValueOnce([]) // notificationsPending (role-1-joined, excludes center notices)
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([]) // job-finished, pending
+          .mockResolvedValueOnce([]) // center notice, viewed
+          .mockResolvedValueOnce([centerNoticeRow()]); // center notice, pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(result.status).toBe(200);
+        expect(result.response.notificationsPending).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              notification_id: '2001',
+              text: centerNoticeRow().text,
+              obj_notification_type: {
+                type: NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+              },
+              obj_result: expect.objectContaining({
+                source: 'API',
+                source_name: 'W3/Bilaterals',
+              }),
+            }),
+          ]),
+        );
+
+        // The role-1-joined queries must exclude the 3 Center-notice types (PSR-DD-7).
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            where: expect.objectContaining({
+              obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+            }),
+          }),
+        );
+
+        // The ownerless query itself carries no `initiative_role_id` condition and is scoped
+        // to this recipient only.
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          7,
+          expect.objectContaining({
+            where: expect.objectContaining({
+              target_user: 42,
+              read: false,
+              obj_result: { is_active: true },
+              obj_notification_type: { type: In(CENTER_NOTICE_TYPES) },
+            }),
+          }),
+        );
+      });
+
+      // Reviewer finding 2 (rework attempt 2): a test that only checks the RESULT count can't
+      // fail — the mocked role-1 finds return `[]` regardless of `where`, so the row could only
+      // ever come back once no matter what the exclusion says. The real guard is the exclusion
+      // filter itself, on EVERY role-1-joined call (both viewed AND pending — attempt 1 only
+      // asserted call 1). Proven to fail first: deleting either exclusion in the service made
+      // this red (recorded below the block), then restored to green.
+      it('Falsifier 2: BOTH role-1-joined queries (viewed and pending) exclude the Center-notice types, so neither can ever return this row', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed — must exclude center-notice types
+          .mockResolvedValueOnce([]) // notificationsPending — must exclude center-notice types
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([]) // job-finished, pending
+          .mockResolvedValueOnce([]) // center notice, viewed
+          .mockResolvedValueOnce([centerNoticeRow()]); // center notice, pending
+
+        await service.getAllNotifications(user);
+
+        const exclusion = {
+          where: expect.objectContaining({
+            obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+          }),
+        };
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining(exclusion),
+        );
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining(exclusion),
+        );
+      });
+
+      it('Disqualifier guard: the fixture carries no role-1 row at all', () => {
+        expect(centerNoticeRow().obj_result.obj_result_by_initiatives).toEqual(
+          [],
+        );
+      });
+    });
+
+    describe('getPopUpNotifications', () => {
+      it('Falsifier 1: a declined notice for an ownerless result is NOT missing from getPopUpNotifications', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // result-based pop-ups (role-1-joined)
+          .mockResolvedValueOnce([]) // job-finished pop-ups
+          .mockResolvedValueOnce([centerNoticeRow()]); // center notice pop-ups
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+
+        const result = await service.getPopUpNotifications(user);
+
+        expect(result.response).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              notification_id: '2001',
+              text: centerNoticeRow().text,
+              obj_notification_type: {
+                type: NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+              },
+              obj_result: expect.objectContaining({
+                source: 'API',
+                source_name: 'W3/Bilaterals',
+              }),
+            }),
+          ]),
+        );
+      });
+
+      // Reviewer finding 2 (rework attempt 2): the real guard is the exclusion on the
+      // role-1-joined `whereConditions`, not the count of the mocked (empty-regardless) result.
+      it('Falsifier 2: the role-1-joined query excludes the Center-notice types, so it can never return this row', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // result-based pop-ups — must exclude center-notice types
+          .mockResolvedValueOnce([]) // job-finished pop-ups
+          .mockResolvedValueOnce([centerNoticeRow()]); // center notice pop-ups
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+
+        await service.getPopUpNotifications(user);
+
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            where: expect.objectContaining({
+              obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+            }),
+          }),
+        );
+      });
+    });
+  });
+
+  // `PSR-T-7` — the socket-push description for the 3 Center-notice types (`buildResultNotificationDescription`).
+  describe('buildResultNotificationDescription — Center notices (PSR-T-7)', () => {
+    beforeEach(() => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 2,
+      });
+      mockNotificationTypeRepository.findOne.mockResolvedValue({
+        notifications_type_id: 20,
+      });
+      mockNotificationRepository.save.mockResolvedValue(null);
+      mockSocketManagementService.getActiveUsers.mockResolvedValue({
+        response: [{ userId: 7 }],
+        status: 200,
+      });
+      mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+        status: 200,
+      });
+    });
+
+    // Reviewer finding 1 (rework attempt 2): the stored sentence's SUBJECT is the SP ("SP09
+    // accepted ... of this result. Click to see the result."), not a suffix that finishes a
+    // sentence started by "The result <id>". The identity replaces "this result" in place —
+    // the sentence keeps its own subject/verb and names the result exactly once.
+    it.each([
+      [
+        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+        'SP09 accepted to be the primary Science Program of this result. Click to see the result.',
+        'SP09 accepted to be the primary Science Program of result 501 - An ownerless bilateral result. Click to see the result.',
+      ],
+      [
+        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+        'SP09 declined to be the primary Science Program of this result. Pick another primary Science Program. Click to see the result.',
+        'SP09 declined to be the primary Science Program of result 501 - An ownerless bilateral result. Pick another primary Science Program. Click to see the result.',
+      ],
+      [
+        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
+        'SP09 declined to be the primary Science Program of this result; the request was moved to SP12. Click to see the result.',
+        'SP09 declined to be the primary Science Program of result 501 - An ownerless bilateral result; the request was moved to SP12. Click to see the result.',
+      ],
+    ])(
+      'names the result once, as the object of the SP-subject sentence, for %s',
+      async (type, storedSuffix, expectedDesc) => {
+        mockNotificationRepository.findOne.mockResolvedValue({
+          obj_emitter_user: null,
+          obj_result: {
+            result_code: 501,
+            title: 'An ownerless bilateral result',
+          },
+        });
+
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          type,
+          [7],
+          1,
+          501,
+          storedSuffix,
+        );
+
+        const [, notificationPayload] =
+          mockSocketManagementService.sendNotificationToUsers.mock.calls[0];
+        expect(notificationPayload.desc).toBe(expectedDesc);
+      },
+    );
+
+    it('falls back to the stored sentence unchanged when the result has no code/title (no identity to splice in)', async () => {
+      mockNotificationRepository.findOne.mockResolvedValue({
+        obj_emitter_user: null,
+        obj_result: null,
+      });
+
+      const storedSuffix =
+        'SP09 accepted to be the primary Science Program of this result. Click to see the result.';
+
+      await service.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+        [7],
+        1,
+        501,
+        storedSuffix,
+      );
+
+      const [, notificationPayload] =
+        mockSocketManagementService.sendNotificationToUsers.mock.calls[0];
+      expect(notificationPayload.desc).toBe(storedSuffix);
     });
   });
 });

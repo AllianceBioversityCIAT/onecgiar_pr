@@ -18,14 +18,26 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { NotificationService } from '../../notification/notification.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { PrimaryProgramRequestService } from './services/primary-program-request.service';
+import { HttpStatus } from '@nestjs/common';
+import { FindOperator } from 'typeorm';
 
 describe('ShareResultRequestService', () => {
   let service: ShareResultRequestService;
 
   const mockShareResultRequestRepository = {
     find: jest.fn(),
+    findOne: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
+  };
+  // `PSR-T-4`
+  const mockPrimaryProgramRequestService = {
+    accept: jest.fn(),
+    decline: jest.fn(),
+  };
+  const mockResultRepository = {
+    findOne: jest.fn(),
   };
   const mockNotificationService = {
     emitResultNotification: jest.fn(),
@@ -58,7 +70,11 @@ describe('ShareResultRequestService', () => {
           provide: ShareResultRequestRepository,
           useValue: mockShareResultRequestRepository,
         },
-        { provide: ResultRepository, useValue: {} },
+        { provide: ResultRepository, useValue: mockResultRepository },
+        {
+          provide: PrimaryProgramRequestService,
+          useValue: mockPrimaryProgramRequestService,
+        },
         // P2-3188 additions. Both are only exercised by the contribution-decision emission, which
         // these suites do not reach — but the constructor needs them resolvable.
         {
@@ -708,7 +724,13 @@ describe('ShareResultRequestService', () => {
       );
     }
 
-    /** Mirrors `getRequest`'s fetch-and-map step so expected fixtures aren't duplicating it. */
+    /**
+     * Mirrors `getRequest`'s fetch-and-map step so expected fixtures aren't duplicating it.
+     * `PSR-T-4`: every row now also carries `request_type` (defaults to `contribution`) and
+     * `creating_center` (derived from `obj_result.result_center_array`, which none of these
+     * fixtures set, so it resolves to `null`) — see `attachPrimaryRequestFields`. None of these
+     * fixtures are Bilateral-sourced, so `owner_program_code` is never added.
+     */
     function mapExpectedRow(row: any, toc?: any[]) {
       const mapped = {
         ...row,
@@ -720,6 +742,8 @@ describe('ShareResultRequestService', () => {
             row.obj_result.obj_result_by_project ?? []
           ).filter((l: any) => l.is_active),
         },
+        request_type: row.request_type ?? 'contribution',
+        creating_center: null,
       };
       return toc !== undefined
         ? { ...mapped, toc_contribution_review: toc }
@@ -1065,6 +1089,470 @@ describe('ShareResultRequestService', () => {
           mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
         ).toHaveBeenCalledTimes(1);
       });
+    });
+  });
+
+  // @akili-spec notifications/bilateral-primary-sp-request PSR-T-4
+  // updateResultRequestByUser(V2) must dispatch on the LOADED row's request_type, never on a DTO
+  // field, and never reach the primary service for a contribution row.
+  describe('PSR-T-4 — decide endpoint dispatch on request_type', () => {
+    const actingUser = { id: 77 } as TokenDto;
+
+    function contributionRow(overrides: any = {}) {
+      return {
+        share_result_request_id: 500,
+        request_type: 'contribution',
+        shared_inititiative_id: 10,
+        owner_initiative_id: 20,
+        is_map_to_toc: false,
+        from_toc: false,
+        ...overrides,
+      };
+    }
+
+    function primaryRow(overrides: any = {}) {
+      return {
+        share_result_request_id: 700,
+        request_type: 'primary',
+        shared_inititiative_id: 55,
+        owner_initiative_id: 55,
+        request_status_id: 1,
+        is_active: true,
+        ...overrides,
+      };
+    }
+
+    function buildDto(rr: any, requestStatusId: number) {
+      return {
+        result_request: rr,
+        result_toc_result: { planned_result: false, result_toc_results: [] },
+        request_status_id: requestStatusId,
+      } as any;
+    }
+
+    beforeEach(() => {
+      mockResultRepository.findOne.mockResolvedValue({
+        id: 1,
+        is_active: true,
+      });
+    });
+
+    it('a contribution request never calls the primary service and runs the existing flow', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(
+        contributionRow(),
+      );
+      const updateSpy = jest
+        .spyOn(service as any, 'updateShareResultRequest')
+        .mockResolvedValue(undefined);
+      const approvalSpy = jest
+        .spyOn(service as any, 'handleRequestApproval')
+        .mockResolvedValue(undefined);
+      const notifySpy = jest
+        .spyOn(service as any, 'emitContributionDecisionNotification')
+        .mockResolvedValue(undefined);
+
+      const response: any = await service.updateResultRequestByUser(
+        buildDto({ share_result_request_id: 500, result_id: 1 }, 2),
+        actingUser,
+      );
+
+      expect(mockPrimaryProgramRequestService.accept).not.toHaveBeenCalled();
+      expect(mockPrimaryProgramRequestService.decline).not.toHaveBeenCalled();
+      expect(updateSpy).toHaveBeenCalled();
+      expect(approvalSpy).toHaveBeenCalled();
+      expect(notifySpy).toHaveBeenCalled();
+      expect(response.status).toBe(HttpStatus.OK);
+    });
+
+    it.each([
+      ['updateResultRequestByUser', 2, 'accept'],
+      ['updateResultRequestByUser', 3, 'decline'],
+      ['updateResultRequestByUserV2', 2, 'accept'],
+      ['updateResultRequestByUserV2', 3, 'decline'],
+    ] as const)(
+      '%s: a primary row with request_status_id=%i calls PrimaryProgramRequestService.%s, never the contribution path',
+      async (method, statusId, fn) => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue(
+          primaryRow(),
+        );
+        const updateSpy = jest.spyOn(
+          service as any,
+          'updateShareResultRequest',
+        );
+        mockPrimaryProgramRequestService.accept.mockResolvedValue({
+          ok: true,
+          shareResultRequestId: 700,
+          state: 'accepted',
+        });
+        mockPrimaryProgramRequestService.decline.mockResolvedValue({
+          ok: true,
+          shareResultRequestId: 700,
+          state: 'declined',
+        });
+
+        const response: any = await (service as any)[method](
+          buildDto({ share_result_request_id: 700, result_id: 1 }, statusId),
+          actingUser,
+        );
+
+        expect(mockPrimaryProgramRequestService[fn]).toHaveBeenCalledWith(
+          700,
+          actingUser,
+        );
+        expect(updateSpy).not.toHaveBeenCalled();
+        expect(response.response.request_type).toBe('primary');
+        expect(response.status).toBe(HttpStatus.OK);
+      },
+    );
+
+    it('dispatch uses the JWT-decoded user only — never a DTO field (forward pointer 1)', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(primaryRow());
+      mockPrimaryProgramRequestService.accept.mockResolvedValue({
+        ok: true,
+        shareResultRequestId: 700,
+        state: 'accepted',
+      });
+
+      await service.updateResultRequestByUser(
+        buildDto(
+          {
+            share_result_request_id: 700,
+            result_id: 1,
+            approved_by: 999999, // a DTO-borne id that must NOT reach the primary service
+          } as any,
+          2,
+        ),
+        actingUser,
+      );
+
+      expect(mockPrimaryProgramRequestService.accept).toHaveBeenCalledWith(
+        700,
+        actingUser,
+      );
+    });
+
+    it.each([
+      ['forbidden', HttpStatus.FORBIDDEN],
+      ['conflict', HttpStatus.CONFLICT],
+      ['not_found', HttpStatus.NOT_FOUND],
+      ['internal_error', HttpStatus.INTERNAL_SERVER_ERROR],
+    ] as const)(
+      'maps a %s outcome to HTTP %i without leaking the underlying error',
+      async (reason, expectedStatus) => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue(
+          primaryRow(),
+        );
+        mockPrimaryProgramRequestService.accept.mockResolvedValue({
+          ok: false,
+          reason,
+        });
+
+        const response: any = await service.updateResultRequestByUser(
+          buildDto({ share_result_request_id: 700, result_id: 1 }, 2),
+          actingUser,
+        );
+
+        expect(response.status).toBe(expectedStatus);
+        if (reason === 'conflict') {
+          expect(response.message).toBe('This request was already answered');
+        }
+        expect(JSON.stringify(response)).not.toMatch(/stack|Error:/i);
+      },
+    );
+
+    it('rejects a non-accept/decline status for a primary row without reaching the primary service', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(primaryRow());
+
+      const response: any = await service.updateResultRequestByUser(
+        buildDto({ share_result_request_id: 700, result_id: 1 }, 1),
+        actingUser,
+      );
+
+      expect(mockPrimaryProgramRequestService.accept).not.toHaveBeenCalled();
+      expect(mockPrimaryProgramRequestService.decline).not.toHaveBeenCalled();
+      expect(response.status).toBe(HttpStatus.BAD_REQUEST);
+    });
+
+    // `PSR-T-4` rework attempt 2 (Reviewer FAIL, issue 1): a Center re-pick cancels the round by
+    // setting `is_active=false` on the old round's rows ONLY — `request_status_id` stays `1`
+    // (`primary-program-request.service.ts` L244-247; design.md §2.2 "Center re-picks SP12").
+    // Without an `is_active` check here, that cancelled-but-still-status-1 row is still
+    // "actionable" through this endpoint (requirements.md PSR-R-2: "no longer actionable").
+    it.each([
+      ['updateResultRequestByUser', 2],
+      ['updateResultRequestByUser', 3],
+      ['updateResultRequestByUserV2', 2],
+      ['updateResultRequestByUserV2', 3],
+    ] as const)(
+      '%s: a cancelled (is_active=false) primary row with request_status_id=1 is answered 409, never reaching the primary service',
+      async (method, statusId) => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue(
+          primaryRow({ is_active: false, request_status_id: 1 }),
+        );
+
+        const response: any = await (service as any)[method](
+          buildDto({ share_result_request_id: 700, result_id: 1 }, statusId),
+          actingUser,
+        );
+
+        expect(mockPrimaryProgramRequestService.accept).not.toHaveBeenCalled();
+        expect(mockPrimaryProgramRequestService.decline).not.toHaveBeenCalled();
+        expect(response.status).toBe(HttpStatus.CONFLICT);
+        expect(response.message).toBe('This request was already answered');
+      },
+    );
+
+    it('a contribution request from updateResultRequestByUserV2 never calls the primary service either', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(
+        contributionRow(),
+      );
+      const updateSpyV2 = jest
+        .spyOn(service as any, 'updateShareResultRequestV2')
+        .mockResolvedValue(undefined);
+      const approvalSpyV2 = jest
+        .spyOn(service as any, 'handleRequestApprovalV2')
+        .mockResolvedValue(undefined);
+      const notifySpy = jest
+        .spyOn(service as any, 'emitContributionDecisionNotification')
+        .mockResolvedValue(undefined);
+
+      const response: any = await service.updateResultRequestByUserV2(
+        buildDto({ share_result_request_id: 500, result_id: 1 }, 2),
+        actingUser,
+      );
+
+      expect(mockPrimaryProgramRequestService.accept).not.toHaveBeenCalled();
+      expect(mockPrimaryProgramRequestService.decline).not.toHaveBeenCalled();
+      expect(updateSpyV2).toHaveBeenCalled();
+      expect(approvalSpyV2).toHaveBeenCalled();
+      expect(notifySpy).toHaveBeenCalled();
+      expect(response.status).toBe(HttpStatus.OK);
+    });
+  });
+
+  // `PSR-T-4` rework attempt 2 (Reviewer FAIL, issue 2): the tasks.md Falsifier ("a pending primary
+  // row is missing from an SP09 member's received list or from a platform admin's") had no test
+  // that actually evaluates the `where` shape against a row fixture — the only earlier GET test
+  // mocked `find` to return its data regardless of `where`, which would pass even if the real
+  // filter dropped the row. These evaluate the condition object `buildWhereReceivedConditions`
+  // builds (design.md P-1/P-2) against a pending primary row directly.
+  describe('PSR-T-4 — visibility: received-list condition covers a pending primary row', () => {
+    function evaluateCondition(row: any, condition: any): boolean {
+      return Object.entries(condition).every(([key, expected]) => {
+        if (expected instanceof FindOperator) {
+          return (expected.value as any[]).includes(row[key]);
+        }
+        if (key === 'obj_result' && expected && typeof expected === 'object') {
+          return evaluateCondition(row.obj_result ?? {}, expected);
+        }
+        return row[key] === expected;
+      });
+    }
+
+    function conditionMatchesRow(conditions: any, row: any): boolean {
+      const list = Array.isArray(conditions) ? conditions : [conditions];
+      return list.some((condition) => evaluateCondition(row, condition));
+    }
+
+    // A pending primary row to SP 55: `shared_inititiative_id = owner_initiative_id = 55`,
+    // `is_map_to_toc = false`, no role-1 owner on the result (design.md §3.1 / P-1).
+    const pendingPrimaryRowToSp55 = {
+      request_type: 'primary',
+      shared_inititiative_id: 55,
+      owner_initiative_id: 55,
+      is_map_to_toc: false,
+      request_status_id: 1,
+      is_active: true,
+      obj_result: { is_active: true },
+    };
+
+    it('an SP member (role=3, user of initiative 55) has a bucket condition satisfied by the pending primary row to SP 55', () => {
+      const where = (service as any).buildWhereReceivedConditions(
+        [{ initiative_id: 55 }],
+        3,
+      );
+
+      expect(
+        conditionMatchesRow(where.pendingOwner, pendingPrimaryRowToSp55) ||
+          conditionMatchesRow(where.pendingShared, pendingPrimaryRowToSp55),
+      ).toBe(true);
+    });
+
+    it('a platform admin (role=1) condition scopes on no shared/owner initiative and still matches the row', () => {
+      const where = (service as any).buildWhereReceivedConditions([], 1);
+
+      expect(where.pendingOwner).not.toHaveProperty('shared_inititiative_id');
+      expect(where.pendingOwner).not.toHaveProperty('owner_initiative_id');
+      expect(
+        conditionMatchesRow(where.pendingOwner, pendingPrimaryRowToSp55),
+      ).toBe(true);
+    });
+
+    it('getReceivedResultRequestPopUp: the merged (extraConditions) shape still matches the row', () => {
+      const where = (service as any).buildWhereReceivedConditions(
+        [{ initiative_id: 55 }],
+        3,
+        { obj_result: { version_id: 99 } },
+      );
+      const rowWithVersion = {
+        ...pendingPrimaryRowToSp55,
+        obj_result: { ...pendingPrimaryRowToSp55.obj_result, version_id: 99 },
+      };
+
+      expect(
+        conditionMatchesRow(where.pendingOwner, rowWithVersion) ||
+          conditionMatchesRow(where.pendingShared, rowWithVersion),
+      ).toBe(true);
+    });
+  });
+
+  // @akili-spec notifications/bilateral-primary-sp-request PSR-T-4
+  // Received/sent/pop-up rows gain request_type, creating_center and (bilateral contribution
+  // rows only) owner_program_code — all derived from the SAME query, batched, never per row.
+  describe('PSR-T-4 — GET rows gain request_type / creating_center / owner_program_code', () => {
+    beforeEach(() => {
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3);
+      mockRoleByUserRepository.find.mockResolvedValue([{ initiative_id: 100 }]);
+    });
+
+    it('defaults request_type to contribution and sends both acronym and name as-is (missing acronym scenario, PSR-R-9)', async () => {
+      mockShareResultRequestRepository.find
+        .mockResolvedValueOnce([
+          {
+            share_result_request_id: 1,
+            result_id: 900,
+            shared_inititiative_id: 10,
+            request_status_id: 1,
+            is_map_to_toc: false,
+            obj_result: {
+              source: 'Result',
+              result_center_array: [
+                {
+                  is_active: true,
+                  is_leading_result: 1,
+                  clarisa_center_object: {
+                    clarisa_institution: {
+                      acronym: null,
+                      name: 'Bioversity (Alliance)',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const response: any = await service.getReceivedResultRequest(user);
+      const row = response.response.receivedContributionsPending[0];
+
+      expect(row.request_type).toBe('contribution');
+      // Server sends both fields raw; it never collapses a missing acronym itself.
+      expect(row.creating_center).toEqual({
+        acronym: null,
+        name: 'Bioversity (Alliance)',
+      });
+      expect(row.owner_program_code).toBeUndefined();
+    });
+
+    it('preserves request_type=primary and never adds owner_program_code to a primary row', async () => {
+      mockShareResultRequestRepository.find
+        .mockResolvedValueOnce([
+          {
+            share_result_request_id: 2,
+            result_id: 901,
+            request_type: 'primary',
+            shared_inititiative_id: 11,
+            owner_initiative_id: 11,
+            obj_owner_initiative: { id: 11, official_code: 'SP11' },
+            request_status_id: 1,
+            is_map_to_toc: false,
+            obj_result: { source: 'API', result_center_array: [] },
+          },
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const response: any = await service.getReceivedResultRequest(user);
+      const row = response.response.receivedContributionsPending[0];
+
+      expect(row.request_type).toBe('primary');
+      expect(row.owner_program_code).toBeUndefined();
+    });
+
+    it('a bilateral contribution row gets owner_program_code (the primary SP official code); a non-bilateral row does not', async () => {
+      mockShareResultRequestRepository.find
+        .mockResolvedValueOnce([
+          {
+            share_result_request_id: 3,
+            result_id: 902,
+            shared_inititiative_id: 12,
+            owner_initiative_id: 13,
+            obj_owner_initiative: { id: 13, official_code: 'SP09' },
+            request_status_id: 1,
+            is_map_to_toc: false,
+            obj_result: { source: 'API', result_center_array: [] },
+          },
+          {
+            share_result_request_id: 4,
+            result_id: 903,
+            shared_inititiative_id: 14,
+            owner_initiative_id: 15,
+            obj_owner_initiative: { id: 15, official_code: 'SP12' },
+            request_status_id: 1,
+            is_map_to_toc: false,
+            obj_result: { source: 'Result', result_center_array: [] },
+          },
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const response: any = await service.getReceivedResultRequest(user);
+      const rows = response.response.receivedContributionsPending;
+      const bilateralRow = rows.find(
+        (r: any) => r.share_result_request_id === 3,
+      );
+      const nonBilateralRow = rows.find(
+        (r: any) => r.share_result_request_id === 4,
+      );
+
+      expect(bilateralRow.owner_program_code).toBe('SP09');
+      expect(nonBilateralRow.owner_program_code).toBeUndefined();
+    });
+
+    it('Falsifier: no extra repository query fires as the number of enriched rows grows (no per-row lookup)', async () => {
+      const manyRows = Array.from({ length: 25 }, (_, i) => ({
+        share_result_request_id: 100 + i,
+        result_id: 1000 + i,
+        shared_inititiative_id: 20 + i,
+        owner_initiative_id: 30 + i,
+        obj_owner_initiative: { id: 30 + i, official_code: `SP${i}` },
+        request_status_id: 1,
+        is_map_to_toc: false,
+        obj_result: {
+          source: 'API',
+          result_center_array: [
+            {
+              is_active: true,
+              is_leading_result: 1,
+              clarisa_center_object: {
+                clarisa_institution: { acronym: 'CTR', name: 'Center' },
+              },
+            },
+          ],
+        },
+      }));
+
+      mockShareResultRequestRepository.find
+        .mockResolvedValueOnce(manyRows)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      await service.getReceivedResultRequest(user);
+
+      // `find()` is only ever called for the 3 buckets — enriching 25 rows adds zero extra calls.
+      expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(3);
     });
   });
 });

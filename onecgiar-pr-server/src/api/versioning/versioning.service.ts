@@ -271,6 +271,26 @@ export class VersioningService {
     entity_id?: number,
     same_portfolio_phase_change?: boolean,
   ) {
+    // `PSR-T-6` / `PSR-R-16` (SHOULD) — a bilateral result with no accepted primary Science
+    // Program is "on hold" (design.md §14 Open Gap: phase replication's `share_result_request`
+    // query only joins role-1 + role-2 rows, so a pending `primary` request — which has neither —
+    // is silently never carried forward). Replicating it anyway would leave a new-phase copy that
+    // nobody can ever accept into, with the old result's pending request now pointing at a result
+    // that is no longer the active one. Skip it and log instead of rolling it over half-formed;
+    // never throw the rollover over one on-hold result.
+    if (result.source === SourceEnum.Bilateral) {
+      const owner =
+        await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+          result.id,
+        );
+      if (!owner?.id) {
+        this._logger.warn(
+          `REPORTING: result ${result.id} is on hold (no accepted primary Science Program) — skipped from phase [${phase.id}]:${phase.phase_name} replication (PSR-R-16).`,
+        );
+        return null;
+      }
+    }
+
     this._logger.log(
       `REPORTING: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
     );
@@ -1029,6 +1049,16 @@ export class VersioningService {
         });
       }
 
+      // `PSR-T-6` / `PSR-R-16` — `$_phaseChangeReporting` returns `null` (never throws) when it
+      // skipped an on-hold bilateral result instead of replicating it.
+      if (!res) {
+        return ReturnResponseUtil.format({
+          message: `The result ${legacy_result.result_code} is on hold (no accepted primary Science Program) and was skipped from the ${phase.phase_name} phase replication.`,
+          response: null,
+          statusCode: HttpStatus.OK,
+        });
+      }
+
       return ReturnResponseUtil.format({
         message: `The result ${legacy_result.result_code} is in the ${phase.phase_name} phase with id ${res.id}`,
         response: res,
@@ -1226,6 +1256,16 @@ export class VersioningService {
           message: `Error in the version process of the result ${legacy_result.id}. Contact with support `,
           response: res.error,
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+
+      // `PSR-T-6` / `PSR-R-16` — `$_phaseChangeReporting` returns `null` (never throws) when it
+      // skipped an on-hold bilateral result instead of replicating it.
+      if (!res) {
+        return ReturnResponseUtil.format({
+          message: `The result ${legacy_result.result_code} is on hold (no accepted primary Science Program) and was skipped from the ${phase.phase_name} phase replication.`,
+          response: null,
+          statusCode: HttpStatus.OK,
         });
       }
 

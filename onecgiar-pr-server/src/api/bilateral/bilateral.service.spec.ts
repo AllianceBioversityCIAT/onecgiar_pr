@@ -155,6 +155,18 @@ describe('BilateralService (unit)', () => {
     const notificationService = {
       emitResultNotification: jest.fn().mockResolvedValue(undefined),
     };
+    // `PSR-T-5`: `populateInitiativeAndTocFromProgramCode` requests a primary Science Program
+    // instead of writing role 1 directly.
+    const primaryProgramRequestService = {
+      request: jest
+        .fn()
+        .mockResolvedValue({ ok: true, shareResultRequestId: 1 }),
+      stateFor: jest.fn().mockResolvedValue({
+        state: 'none',
+        program_code: null,
+        declined_by_codes: [],
+      }),
+    };
     // BCT-T-5 — the new trailing @Optional() constructor param. Real behaviour (targets,
     // ordering, dedup, texts) is unit-tested against the real implementation in
     // `result-tagged-notification.service.spec.ts`; here it is a no-op stub unless a test
@@ -212,6 +224,7 @@ describe('BilateralService (unit)', () => {
       otherOutcomeHandler as any,
       adUserService as any,
       roleByUserRepository as any,
+      primaryProgramRequestService as any,
       notificationService as any,
       // BCT-T-5 falsifier: "the service fails to construct when the optional dependency is
       // absent" — `opts.withResultTaggedNotificationService: false` calls the real constructor
@@ -260,6 +273,7 @@ describe('BilateralService (unit)', () => {
         adUserService,
         roleByUserRepository,
         notificationService,
+        primaryProgramRequestService,
         resultTaggedNotificationService,
       },
       handlers: {
@@ -575,6 +589,26 @@ describe('BilateralService (unit)', () => {
       expect(
         warnCalls.some((message: string) => message.includes('12.5')),
       ).toBe(false);
+    });
+
+    // `PSR-T-5` tasks.md Falsifier: "the ingest `create` no longer writes role 1 → FAIL" /
+    // design.md P-3 "the API ingest writes role 1 via `processToc` → `upsertResultInitiative`" —
+    // the reversion challenge's premise this task leaves untouched. `handleTocMapping` pushes the
+    // `toc` mapping with `roleId: 1` (bilateral.service.ts:1449) and calls `upsertResultInitiative`
+    // directly; it must still write role 1 and must never go through `PrimaryProgramRequestService
+    // .request()`.
+    it('PSR-T-5: still writes role 1 directly and never calls request()', async () => {
+      const { service, stubs: stubsTyped } = makeService();
+      const stubs: any = stubsTyped;
+      arrangeFullMatch(stubs);
+
+      await service.handleTocMapping(baseToc(), [], 1, 42);
+
+      expect(stubs.resultByInitiativesRepository.update).toHaveBeenCalledWith(
+        { id: 777 },
+        expect.objectContaining({ initiative_role_id: 1, is_active: true }),
+      );
+      expect(stubs.primaryProgramRequestService.request).not.toHaveBeenCalled();
     });
   });
 
@@ -2521,6 +2555,82 @@ describe('BilateralService (unit)', () => {
       expect(service.logger.error).toHaveBeenCalledWith(
         'Failed to derive contributing Centers for result 10',
         expect.anything(),
+      );
+    });
+  });
+
+  // `PSR-T-5` — `promoteDraft`'s only caller (P-3, reversion challenge). design.md DD-2/DD-3: the
+  // chosen primary SP is sent a pending request instead of being written as the owner outright,
+  // and the ToC stub seed moves to accept.
+  describe('populateInitiativeAndTocFromProgramCode (PSR-T-5)', () => {
+    it('requests the resolved initiative instead of writing role 1, and seeds no ToC stub', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInitiatives.findOne.mockResolvedValue({
+        id: 404,
+        official_code: 'SP09',
+      });
+      (stubs.resultByInitiativesRepository as any).save = jest.fn();
+      (stubs.resultsTocResultsRepository as any).save = jest.fn();
+      (stubs.resultsTocResultsRepository as any).findOne = jest.fn();
+
+      await service.populateInitiativeAndTocFromProgramCode(10, 'sp09', 42);
+
+      expect(stubs.primaryProgramRequestService.request).toHaveBeenCalledWith(
+        10,
+        404,
+        expect.objectContaining({ id: 42 }),
+      );
+      expect(
+        (stubs.resultByInitiativesRepository as any).save,
+      ).not.toHaveBeenCalled();
+      expect(
+        (stubs.resultsTocResultsRepository as any).findOne,
+      ).not.toHaveBeenCalled();
+      expect(
+        (stubs.resultsTocResultsRepository as any).save,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when no program_code is provided', async () => {
+      const { service, stubs } = makeService();
+
+      await service.populateInitiativeAndTocFromProgramCode(10, null, 42);
+
+      expect(stubs.clarisaInitiatives.findOne).not.toHaveBeenCalled();
+      expect(stubs.primaryProgramRequestService.request).not.toHaveBeenCalled();
+    });
+
+    it('logs and swallows when no CLARISA initiative matches the code', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInitiatives.findOne.mockResolvedValue(null);
+
+      await service.populateInitiativeAndTocFromProgramCode(10, 'UNKNOWN', 42);
+
+      expect(stubs.primaryProgramRequestService.request).not.toHaveBeenCalled();
+      expect(service.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('no initiative found'),
+      );
+    });
+
+    // requirements.md PSR-R-1 "request step fails": promoteDraft must still succeed (this method
+    // never throws); the caller (`promoteDraft`) is unaffected and only a warning is logged.
+    it('logs and swallows when the primary program request fails', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInitiatives.findOne.mockResolvedValue({
+        id: 404,
+        official_code: 'SP09',
+      });
+      stubs.primaryProgramRequestService.request.mockResolvedValueOnce({
+        ok: false,
+        reason: 'internal_error',
+      });
+
+      await expect(
+        service.populateInitiativeAndTocFromProgramCode(10, 'SP09', 42),
+      ).resolves.toBeUndefined();
+
+      expect(service.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('primary program request failed'),
       );
     });
   });

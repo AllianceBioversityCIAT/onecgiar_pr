@@ -43,6 +43,11 @@ import {
   ResultFieldRevisionFieldName,
   ResultFieldRevisionProvenance,
 } from '../../ai/entities/result-field-revision.entity';
+import {
+  PrimaryProgramRequestService,
+  PrimaryRequestStateEnum,
+} from '../../results/share-result-request/services/primary-program-request.service';
+import { RequestTypeEnum } from '../../results/share-result-request/entities/share-result-request.entity';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -339,6 +344,25 @@ describe('BilateralCenterService', () => {
           provide: getRepositoryToken(ResultFieldRevision),
           useValue: {
             save: jest.fn().mockResolvedValue({}),
+          },
+        },
+        // `PSR-T-5` — creation/assignment paths request a primary Science Program instead of
+        // writing role 1 directly. Default: succeeds, and `stateFor` reports no request yet.
+        {
+          provide: PrimaryProgramRequestService,
+          useValue: {
+            request: jest
+              .fn()
+              .mockResolvedValue({ ok: true, shareResultRequestId: 1 }),
+            stateFor: jest.fn().mockResolvedValue({
+              state: PrimaryRequestStateEnum.NONE,
+              program_code: null,
+              declined_by_codes: [],
+            }),
+            // `PSR-T-6` — no pending round / nothing to release by default; individual tests
+            // override these.
+            findPendingPrimaryInitiativeId: jest.fn().mockResolvedValue(null),
+            releaseContributors: jest.fn().mockResolvedValue({ released: 0 }),
           },
         },
       ],
@@ -669,6 +693,91 @@ describe('BilateralCenterService', () => {
           is_active: true,
         }),
       );
+    });
+
+    // `PSR-T-5` falsifier: "after createResultHeader with SP09, an active role-1 row exists →
+    // FAIL". design.md DD-2 — the chosen primary SP is sent a pending request, never written as
+    // the owner outright.
+    describe('PSR-T-5: primary program request instead of role 1', () => {
+      let primaryProgramRequestService: PrimaryProgramRequestService;
+
+      beforeEach(() => {
+        primaryProgramRequestService = module.get<PrimaryProgramRequestService>(
+          PrimaryProgramRequestService,
+        );
+        const clarisaRepo = module.get<ClarisaInitiativesRepository>(
+          ClarisaInitiativesRepository,
+        );
+        (clarisaRepo.findOne as jest.Mock).mockResolvedValue({
+          id: 10,
+          official_code: 'SP09',
+        });
+      });
+
+      it('requests the chosen SP instead of writing an active role-1 row', async () => {
+        await service.createResultHeader(user, {
+          result_level_id: 2,
+          result_type_id: 7,
+          program_code: 'SP09',
+        });
+
+        expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
+          99,
+          10,
+          user,
+        );
+        const resultByInitiativesRepository =
+          module.get<ResultByInitiativesRepository>(
+            ResultByInitiativesRepository,
+          );
+        expect(resultByInitiativesRepository.save).not.toHaveBeenCalledWith(
+          expect.objectContaining({ initiative_role_id: 1 }),
+        );
+      });
+
+      // `PSR-T-5` reviewer FAIL (rework attempt 2, discovered issue 1): manual create must write
+      // the lead-project row BEFORE `request()` runs — `PrimaryProgramRequestService
+      // .findLeadProjectId` resolves the lead project via `results_by_projects`, so calling
+      // `request()` first always found no project, returned `not_aligned`, and manual create
+      // silently produced no pending request at all.
+      it('saves the lead project before requesting the primary SP (manual create with project_id)', async () => {
+        const resultsByProjectsRepository =
+          module.get<ResultsByProjectsRepository>(ResultsByProjectsRepository);
+
+        await service.createResultHeader(user, {
+          result_level_id: 2,
+          result_type_id: 7,
+          project_id: 1443,
+          program_code: 'SP09',
+        } as any);
+
+        const projectSaveOrder = (resultsByProjectsRepository.save as jest.Mock)
+          .mock.invocationCallOrder[0];
+        const requestOrder = (primaryProgramRequestService.request as jest.Mock)
+          .mock.invocationCallOrder[0];
+        expect(projectSaveOrder).toBeLessThan(requestOrder);
+      });
+
+      // requirements.md PSR-R-1 "request step fails": creation still succeeds, logged only.
+      it('still succeeds when the primary program request fails (sent back, retry allowed)', async () => {
+        (
+          primaryProgramRequestService.request as jest.Mock
+        ).mockResolvedValueOnce({ ok: false, reason: 'internal_error' });
+        const logger = jest
+          .spyOn((service as any).logger, 'warn')
+          .mockImplementation(() => undefined);
+
+        const result = await service.createResultHeader(user, {
+          result_level_id: 2,
+          result_type_id: 7,
+          program_code: 'SP09',
+        });
+
+        expect(result.response.id).toBe(99);
+        expect(logger).toHaveBeenCalledWith(
+          expect.stringContaining('primary program request failed'),
+        );
+      });
     });
 
     it('still populates KP from CGSpace when a client title is provided', async () => {
@@ -1237,6 +1346,185 @@ describe('BilateralCenterService', () => {
         await service.saveContributors(10, { contributing_center: [] }, user2);
         expect(rbi.find).not.toHaveBeenCalled();
         expect(rbi.update).not.toHaveBeenCalled();
+      });
+
+      // `PSR-T-6` (design.md §5 item 5, "exclude the pending/owner SP") — regression: current
+      // code only excludes the OWNER SP; a pending primary SP (no owner yet) was still saveable
+      // as a contributor draft.
+      it('excludes the pending primary SP from the contributor list (PSR-T-6 regression)', async () => {
+        const { shareRepo } = arrange();
+        const rbi = module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        ) as any;
+        rbi.getOwnerInitiativeByResult = jest.fn().mockResolvedValue(null);
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          ) as any;
+        // SP02 (id 2) has a pending primary request — the very SP the Center is waiting on.
+        primaryProgramRequestService.findPendingPrimaryInitiativeId = jest
+          .fn()
+          .mockResolvedValue(2);
+
+        const response = await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(shareRepo.save).not.toHaveBeenCalled();
+        expect(shareRepo.update).not.toHaveBeenCalled();
+        expect(response.response).toEqual(
+          expect.objectContaining({ savedPrograms: [], failedPrograms: [] }),
+        );
+      });
+
+      // Reviewer FAIL (rework attempt 2, issue 1) — `activeRequests` (the "cancel anything not
+      // in `wanted`" query) had no `request_type` filter, so it also matched the pending
+      // `primary` row (same status 1 / `is_active` true / `is_map_to_toc` false shape), and the
+      // cancel loop deactivated it on EVERY contributors save — including the one
+      // `createResultHeader` makes right after creating that very request. The mock's `find`
+      // ignores `where` entirely, so the regression is pinned on the criteria passed to it, not
+      // on a fixture row it would filter for you.
+      it('the active-requests cancel query filters on request_type: contribution (ownerless / no swap, PSR-T-6 regression)', async () => {
+        const { rbi, shareRepo } = arrange();
+        rbi.getOwnerInitiativeByResult = jest.fn().mockResolvedValue(null);
+
+        await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(shareRepo.find).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              request_type: RequestTypeEnum.CONTRIBUTION,
+            }),
+          }),
+        );
+      });
+
+      // Same issue, swap case (Reviewer: "Cover the swap case as well (owner present plus a
+      // pending primary row)") — an owner already exists AND a swap primary request is pending;
+      // the cancel query must still be scoped to contribution rows only.
+      it('the active-requests cancel query filters on request_type: contribution (owner present, swap pending, PSR-T-6 regression)', async () => {
+        const { shareRepo } = arrange(); // default owner id 1 (SP01)
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          ) as any;
+        primaryProgramRequestService.findPendingPrimaryInitiativeId = jest
+          .fn()
+          .mockResolvedValue(12); // SP12 swap request pending against owner SP01
+
+        await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(shareRepo.find).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              request_type: RequestTypeEnum.CONTRIBUTION,
+            }),
+          }),
+        );
+      });
+
+      // Same issue, the dormant-draft lookup must be scoped the same way, or it could reactivate
+      // (or, worse, be shadowed by) the pending primary row instead of a genuine dormant draft.
+      it('the dormant-draft lookup filters on request_type: contribution (PSR-T-6 regression)', async () => {
+        const { shareRepo } = arrange();
+
+        await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(shareRepo.findOne).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              request_type: RequestTypeEnum.CONTRIBUTION,
+            }),
+          }),
+        );
+      });
+
+      // Reviewer FAIL (rework attempt 2, issue 2) — the only existing ownerless test asserted
+      // solely that `releaseContributors` was not called, which is also true if the save had
+      // already crashed before reaching it (`saveContributors` catches everything into a 500).
+      // This pins the actual Falsifier: the save must succeed (no 500), and the draft it writes
+      // must carry `owner_initiative_id: null` (DD-5), not merely "didn't release".
+      it('saving contributors on an ownerless (on-hold) result succeeds and saves a null-owner draft (PSR-T-6 regression, Falsifier)', async () => {
+        const { rbi, shareRepo } = arrange();
+        rbi.getOwnerInitiativeByResult = jest.fn().mockResolvedValue(null);
+
+        const response = await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(response.status).not.toBe(500);
+        expect(response.message).toBe('Contributors saved successfully');
+        expect(shareRepo.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            owner_initiative_id: null,
+            shared_inititiative_id: 2,
+            request_status_id: 4,
+          }),
+        );
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          ) as any;
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).not.toHaveBeenCalled();
+      });
+
+      // `PSR-T-6` (design.md §5 item 5, `PSR-R-12` "saved after accept") — regression: current
+      // code never calls `releaseContributors`, so a draft saved (or reactivated) while the
+      // result already has an owner would sit at status 4 forever instead of becoming a live
+      // request.
+      it('releases contributor drafts once an owner exists (PSR-T-6 regression)', async () => {
+        arrange(); // default owner id 1
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          ) as any;
+
+        await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).toHaveBeenCalledWith(10);
+      });
+
+      it('does not release contributors while the result is still ownerless (PSR-T-6)', async () => {
+        const { rbi } = arrange();
+        rbi.getOwnerInitiativeByResult = jest.fn().mockResolvedValue(null);
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          ) as any;
+
+        await service.saveContributors(
+          10,
+          { contributing_programs: [{ science_program_id: 'SP02' }] },
+          user2,
+        );
+
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).not.toHaveBeenCalled();
       });
     });
 
@@ -1876,60 +2164,255 @@ describe('BilateralCenterService', () => {
         update: jest.fn().mockResolvedValue({}),
         save: jest.fn().mockResolvedValue({}),
       };
-      const tocRepository = { update: jest.fn().mockResolvedValue({}) };
-      const requestRepository = { update: jest.fn().mockResolvedValue({}) };
       const historyRepository = { save: jest.fn().mockResolvedValue({}) };
+      const requestRepository = {
+        find: jest.fn().mockResolvedValue([]),
+        update: jest.fn().mockResolvedValue({}),
+      };
+      const fakeManager = {
+        findOne: jest.fn().mockResolvedValue({ id: 11513 }),
+        getRepository: jest.fn((entity: any) => {
+          if (entity.name === 'ResultsByProjects') return projectRepository;
+          if (entity.name === 'ResultsByInititiative')
+            return initiativeRepository;
+          if (entity.name === 'ShareResultRequest') return requestRepository;
+          if (entity.name === 'ResultReviewHistory') return historyRepository;
+          throw new Error(`Unexpected repository: ${entity.name}`);
+        }),
+      };
 
       (
         resultRepository.manager.transaction as jest.Mock
-      ).mockImplementationOnce(async (callback: any) =>
-        callback({
-          getRepository: (entity: any) => {
-            if (entity.name === 'ResultsByProjects') return projectRepository;
-            if (entity.name === 'ResultsByInititiative')
-              return initiativeRepository;
-            if (entity.name === 'ResultsTocResult') return tocRepository;
-            if (entity.name === 'ShareResultRequest') return requestRepository;
-            if (entity.name === 'ResultReviewHistory') return historyRepository;
-            throw new Error(`Unexpected repository: ${entity.name}`);
-          },
-        }),
-      );
+      ).mockImplementationOnce(async (callback: any) => callback(fakeManager));
 
-      return { initiativeRepository, projectRepository };
+      return {
+        initiativeRepository,
+        projectRepository,
+        requestRepository,
+        fakeManager,
+      };
     };
 
-    it('stores the internal CLARISA initiative id, not the W3 project-mapping id', async () => {
-      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
-      (
-        bilateralProjectsService.getProjectsByCenter as jest.Mock
-      ).mockResolvedValue({
-        projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+    // `PSR-T-5` falsifier: "after ... updatePrimaryAssignment, an active role-1 row exists →
+    // FAIL". design.md DD-2/DD-4 — a primary change requests the new SP instead of writing role
+    // 1 (or deactivating the current owner) directly; role 1 is written only at accept (T-3/T-4).
+    describe('PSR-T-5: requests the new SP instead of writing role 1', () => {
+      beforeEach(() => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          editingResult,
+        );
+        (
+          bilateralProjectsService.getProjectsByCenter as jest.Mock
+        ).mockResolvedValue({
+          projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+        });
+        (
+          module.get<ClarisaInitiativesRepository>(
+            ClarisaInitiativesRepository,
+          ) as any
+        ).findOne.mockResolvedValue({
+          id: 404,
+          official_code: 'SP04',
+          active: true,
+        });
       });
-      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
-        ClarisaInitiativesRepository,
-      ) as any;
-      clarisaInitiatives.findOne.mockResolvedValue({
-        id: 404,
-        official_code: 'SP04',
-        active: true,
-      });
-      const { initiativeRepository } = configureTransaction();
 
-      const response = await service.updatePrimaryAssignment(user, 11513, {
-        project_id: 20,
-        primary_science_program_id: 701,
+      it('resolves the internal CLARISA initiative id and requests it, writing no role-1 row', async () => {
+        const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
+          ClarisaInitiativesRepository,
+        ) as any;
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          );
+        const { initiativeRepository, fakeManager } = configureTransaction();
+
+        const response = await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(clarisaInitiatives.findOne).toHaveBeenCalledWith({
+          where: { official_code: 'SP04', active: true },
+        });
+        expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
+          11513,
+          404,
+          user,
+          fakeManager,
+        );
+        expect(initiativeRepository.save).not.toHaveBeenCalled();
+        expect(initiativeRepository.update).not.toHaveBeenCalled();
+        expect(response.response).toEqual(
+          expect.objectContaining({ primaryScienceProgramId: 701 }),
+        );
+        expect(response.response).toHaveProperty('primary_request');
+        expect(response.response).not.toHaveProperty('tocCleared');
       });
 
-      expect(clarisaInitiatives.findOne).toHaveBeenCalledWith({
-        where: { official_code: 'SP04', active: true },
+      // DD-4: swap — the current owner (role-1 row, initiative_id 100 from `configureTransaction`)
+      // stays the primary SP until the newly requested SP accepts.
+      it('leaves the current owner active on a swap (DD-4)', async () => {
+        const { initiativeRepository } = configureTransaction();
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(initiativeRepository.update).not.toHaveBeenCalledWith(
+          2,
+          expect.objectContaining({ is_active: false }),
+        );
       });
-      expect(initiativeRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ initiative_id: 404, initiative_role_id: 1 }),
-      );
-      expect(response.response).toEqual(
-        expect.objectContaining({ primaryScienceProgramId: 701 }),
-      );
+
+      // "Also required" (Leader, rework attempt 2, promoted from advisory / binding forward
+      // pointer #3): the pessimistic-write lock read must be the transaction's FIRST statement,
+      // so a second concurrent pick blocks here instead of taking its snapshot before this one's
+      // `request()` insert commits.
+      it('locks the Result row first, before any other manager call', async () => {
+        const { fakeManager } = configureTransaction();
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(fakeManager.findOne).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            where: { id: 11513 },
+            lock: { mode: 'pessimistic_write' },
+          }),
+        );
+        const lockOrder = (fakeManager.findOne as jest.Mock).mock
+          .invocationCallOrder[0];
+        const firstGetRepositoryOrder = (fakeManager.getRepository as jest.Mock)
+          .mock.invocationCallOrder[0];
+        expect(lockOrder).toBeLessThan(firstGetRepositoryOrder);
+      });
+
+      it('does not request again when the selected SP is unchanged', async () => {
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          );
+        configureTransaction();
+        // The already-active role-1 row's initiative_id (100) must resolve to the CLARISA id
+        // CLARISA resolves for the chosen program, so `changed` is false.
+        (
+          module.get<ClarisaInitiativesRepository>(
+            ClarisaInitiativesRepository,
+          ) as any
+        ).findOne.mockResolvedValue({
+          id: 100,
+          official_code: 'SP04',
+          active: true,
+        });
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
+      });
+
+      // `PSR-T-5` reviewer FAIL (rework attempt 2, discovered issue 3 / judgment call 1): design.md
+      // DD-8 "A Center pick starts a new round" — re-picking the CURRENT owner while a swap
+      // request to a different SP is pending must cancel that pending/declined round, or the
+      // stale request stays active and its SP could still accept later against the Center's
+      // latest choice.
+      it('cancels an open pending/declined round when the Center re-picks the current owner', async () => {
+        const { requestRepository } = configureTransaction();
+        // The already-active role-1 row's initiative_id (100) resolves to the same CLARISA id
+        // as the chosen program, so `changed` is false — the Center re-picked its current owner.
+        (
+          module.get<ClarisaInitiativesRepository>(
+            ClarisaInitiativesRepository,
+          ) as any
+        ).findOne.mockResolvedValue({
+          id: 100,
+          official_code: 'SP04',
+          active: true,
+        });
+        requestRepository.find.mockResolvedValue([
+          { share_result_request_id: 77 },
+          { share_result_request_id: 78 },
+        ]);
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(requestRepository.find).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              result_id: 11513,
+              request_type: 'primary',
+              is_active: true,
+            }),
+          }),
+        );
+        expect(requestRepository.update).toHaveBeenCalledWith(
+          { share_result_request_id: expect.anything() },
+          { is_active: false },
+        );
+        const [criteria] = requestRepository.update.mock.calls[0];
+        expect(criteria.share_result_request_id.value).toEqual([77, 78]);
+      });
+
+      // requirements.md PSR-R-3 — the same validation message the Project Information card uses.
+      it('rejects with 400 and the request() message when the SP is not an alignment', async () => {
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          );
+        (
+          primaryProgramRequestService.request as jest.Mock
+        ).mockResolvedValueOnce({
+          ok: false,
+          reason: 'not_aligned',
+          message:
+            'The selected primary Science Program is not allocated to the selected project.',
+        });
+        configureTransaction();
+
+        await expect(
+          service.updatePrimaryAssignment(user, 11513, {
+            project_id: 20,
+            primary_science_program_id: 701,
+          }),
+        ).rejects.toThrow(
+          'The selected primary Science Program is not allocated to the selected project.',
+        );
+      });
+
+      // requirements.md §7 Reliability — an internal error is logged, never fails the save.
+      it('still saves the lead project/percentage when the request fails unexpectedly', async () => {
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          );
+        (
+          primaryProgramRequestService.request as jest.Mock
+        ).mockResolvedValueOnce({ ok: false, reason: 'internal_error' });
+        const logger = jest
+          .spyOn((service as any).logger, 'warn')
+          .mockImplementation(() => undefined);
+        configureTransaction();
+
+        const response = await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(response.response.resultId).toBe(11513);
+        expect(logger).toHaveBeenCalledWith(
+          expect.stringContaining('primary program request failed'),
+        );
+      });
     });
 
     // P2-3760 — the Contribution % the bilateral form now asks for (P2-3352 § 6).
@@ -2092,6 +2575,204 @@ describe('BilateralCenterService', () => {
       ).rejects.toThrow(ForbiddenException);
       expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
     });
+
+    // `PSR-T-5` reviewer FAIL (rework attempt 2, discovered issue 4 / judgment call 2):
+    // `buildPrimaryRequestState` checks the role-1 owner BEFORE `stateFor`, value tests per the
+    // Reviewer's matrix.
+    describe('primary_request value (buildPrimaryRequestState)', () => {
+      const setUp = (
+        owner: { id: number; official_code?: string } | null,
+        state: {
+          state: string;
+          program_code: string | null;
+          declined_by_codes: string[];
+        },
+      ) => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          editingResult,
+        );
+        (
+          bilateralProjectsService.getProjectsByCenter as jest.Mock
+        ).mockResolvedValue({
+          projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+        });
+        (
+          module.get<ClarisaInitiativesRepository>(
+            ClarisaInitiativesRepository,
+          ) as any
+        ).findOne.mockResolvedValue({
+          id: 404,
+          official_code: 'SP04',
+          active: true,
+        });
+        const resultByInitiativesRepository =
+          module.get<ResultByInitiativesRepository>(
+            ResultByInitiativesRepository,
+          );
+        (
+          resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+        ).mockResolvedValueOnce(owner);
+        const primaryProgramRequestService =
+          module.get<PrimaryProgramRequestService>(
+            PrimaryProgramRequestService,
+          );
+        (
+          primaryProgramRequestService.stateFor as jest.Mock
+        ).mockResolvedValueOnce(state);
+        configureTransaction();
+      };
+
+      it('no owner, no primary rows → none', async () => {
+        setUp(null, {
+          state: 'none',
+          program_code: null,
+          declined_by_codes: [],
+        });
+
+        const response = await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(response.response.primary_request).toEqual({
+          state: 'none',
+          program_code: null,
+          declined_by_codes: [],
+        });
+      });
+
+      it('legacy owner (no primary rows at all) → accepted', async () => {
+        setUp(
+          { id: 55, official_code: 'SP09' },
+          { state: 'none', program_code: null, declined_by_codes: [] },
+        );
+
+        const response = await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(response.response.primary_request).toEqual({
+          state: 'accepted',
+          program_code: 'SP09',
+          declined_by_codes: [],
+        });
+      });
+
+      it('legacy owner + pending swap → accepted (owner wins over stateFor)', async () => {
+        setUp(
+          { id: 55, official_code: 'SP09' },
+          { state: 'pending', program_code: 'SP12', declined_by_codes: [] },
+        );
+
+        const response = await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(response.response.primary_request).toEqual({
+          state: 'accepted',
+          program_code: 'SP09',
+          declined_by_codes: [],
+        });
+      });
+
+      it('ownerless, pending request → pending', async () => {
+        setUp(null, {
+          state: 'pending',
+          program_code: 'SP12',
+          declined_by_codes: [],
+        });
+
+        const response = await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(response.response.primary_request).toEqual({
+          state: 'pending',
+          program_code: 'SP12',
+          declined_by_codes: [],
+        });
+      });
+
+      it('ownerless, declined round → sent_back', async () => {
+        setUp(null, {
+          state: 'sent_back',
+          program_code: null,
+          declined_by_codes: ['SP09'],
+        });
+
+        const response = await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        expect(response.response.primary_request).toEqual({
+          state: 'sent_back',
+          program_code: null,
+          declined_by_codes: ['SP09'],
+        });
+      });
+    });
+  });
+
+  // `PSR-T-6` (design.md §4 "Bilateral center result initiative/header read … Gains
+  // `primary_request`") — regression: current `getResultInitiativeId` response has no
+  // `primary_request` key at all.
+  describe('getResultInitiativeId — primary_request (PSR-T-6 regression)', () => {
+    it('includes primary_request built from the owner + stateFor', async () => {
+      const resultByInitiativesRepository =
+        module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        );
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue({
+        id: 9,
+        official_code: 'SP09',
+        initiative_name: 'Science Program 09',
+      });
+
+      const response = await service.getResultInitiativeId(11513);
+
+      expect(response.response).toEqual(
+        expect.objectContaining({
+          initiativeId: 9,
+          officialCode: 'SP09',
+          primary_request: {
+            state: 'accepted',
+            program_code: 'SP09',
+            declined_by_codes: [],
+          },
+        }),
+      );
+    });
+
+    it('degrades to none instead of throwing when the lookup fails', async () => {
+      const resultByInitiativesRepository =
+        module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        );
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue(null);
+      const primaryProgramRequestService =
+        module.get<PrimaryProgramRequestService>(
+          PrimaryProgramRequestService,
+        ) as any;
+      primaryProgramRequestService.stateFor.mockRejectedValue(
+        new Error('boom'),
+      );
+
+      const response = await service.getResultInitiativeId(11513);
+
+      expect(response.response.primary_request).toEqual({
+        state: 'none',
+        program_code: null,
+        declined_by_codes: [],
+      });
+    });
   });
 
   // P2-3157 — the transition that makes the Science Program review loop reachable.
@@ -2141,6 +2822,25 @@ describe('BilateralCenterService', () => {
       await expect(
         service.submitForReview(user, 77, undefined as any),
       ).rejects.toThrow(/Run the quality assessment/);
+      expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+    });
+
+    // `PSR-T-6` (design.md DD-4, requirements.md `PSR-R-2` swap "MUST block Submit for review
+    // while the swap request is pending") — regression: current `assertSubmittable` only checks
+    // the owner, never the pending-swap round, so submit currently succeeds with a pending swap.
+    it('blocks submit while a swap primary request is pending (PSR-T-6 regression)', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const primaryProgramRequestService =
+        module.get<PrimaryProgramRequestService>(
+          PrimaryProgramRequestService,
+        ) as any;
+      primaryProgramRequestService.findPendingPrimaryInitiativeId = jest
+        .fn()
+        .mockResolvedValue(12); // SP12 swap request pending against the current owner
+
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/pending/i);
       expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
     });
 

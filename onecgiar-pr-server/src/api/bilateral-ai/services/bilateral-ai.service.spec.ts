@@ -1719,6 +1719,38 @@ describe('BilateralAiService (unit)', () => {
     });
   });
 
+  // `PSR-T-5` tasks.md Falsifier: "The AI-job completion path (the draft result in status Draft)
+  // creates a primary request → FAIL". `createDraftFromCandidate` (job finish) never calls
+  // `populateInitiativeAndTocFromProgramCode` — only `promoteDraft` does (design.md §2.2 row 1,
+  // requirements.md PSR-R-1 "IT MUST NOT have created a primary request when the AI job finished
+  // (only when Create result was pressed)").
+  describe('PSR-T-5: job finish never requests a primary Science Program', () => {
+    it('createDraftFromCandidate (via processJob) never calls populateInitiativeAndTocFromProgramCode', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: ['prms/j1/report.pdf'],
+        audio_keys: [],
+        text_context: null,
+        program_code: 'SP09',
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [{ indicator: 'Innovation Development', title: 'X' }],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      expect(
+        stubs.bilateralService.populateInitiativeAndTocFromProgramCode,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
   describe('discardDraft', () => {
     it('should mark draft as discarded and deactivate result', async () => {
       const { service, stubs } = makeService();

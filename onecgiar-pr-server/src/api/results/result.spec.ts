@@ -80,7 +80,9 @@ import { InnovationUseService } from '../results-framework-reporting/innovation-
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
+import { PrimaryProgramRequestService } from './share-result-request/services/primary-program-request.service';
 import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
+import { RequestTypeEnum } from './share-result-request/entities/share-result-request.entity';
 import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
 import { AdUserService } from '../ad_users';
 
@@ -554,6 +556,12 @@ describe('ResultsService (unit, pure mocks)', () => {
     resultRequest: jest.fn().mockResolvedValue(undefined),
   } as any;
 
+  // `PSR-T-6` issue 3 — `_updateTocMapping` releases contributor drafts through this at review
+  // approval (ingest / legacy results that never went through accept).
+  const mockPrimaryProgramRequestService = {
+    releaseContributors: jest.fn().mockResolvedValue({ released: 0 }),
+  } as any;
+
   const mockShareResultRequestRepository = {
     find: jest.fn().mockResolvedValue([]),
     update: jest.fn().mockResolvedValue({ affected: 1 }),
@@ -788,6 +796,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: ShareResultRequestService,
           useValue: mockShareResultRequestService,
+        },
+        {
+          provide: PrimaryProgramRequestService,
+          useValue: mockPrimaryProgramRequestService,
         },
         {
           provide: ShareResultRequestRepository,
@@ -2222,6 +2234,156 @@ describe('ResultsService (unit, pure mocks)', () => {
       { id: 100 },
       expect.objectContaining({
         status_id: ResultStatusData.Approved.value, // 6
+      }),
+    );
+  });
+
+  // `PSR-T-6` (design.md §5 item 6, `PSR-R-13`, DD-9) — regression: `_updateTocMapping` read
+  // `initSubmitter.initiative_id` unconditionally. A result whose primary Science Program has not
+  // yet accepted (or was declined mid-review) has no active role-1 row, so `initSubmitter` is
+  // `null` and that read throws, which the outer `try/catch` turns into a 500 instead of the
+  // normal "approved" response (falsifier: "Approving a review of an ownerless result throws").
+  it('PSR-T-6 null-owner guard: approving a review of an ownerless (on-hold) bilateral result must not fail', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.APPROVE,
+    };
+    const manager = {
+      findOne: jest.fn().mockResolvedValueOnce(mockResult),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: jest.fn().mockReturnValue({ id: 1 }),
+      save: jest.fn().mockResolvedValue({ id: 1 }),
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+      callback(manager),
+    );
+    // An already-accepted contribution (status 2) exists — `acceptedIds` must be non-empty so
+    // the `.filter(id => id !== initSubmitter.initiative_id)` line actually dereferences
+    // `initSubmitter`, which is what makes this a real falsifier for the null-owner crash (an
+    // empty `acceptedIds` array never invokes its filter predicate at all, and so cannot).
+    // There is no role-1 owner yet (on hold).
+    mockShareResultRequestRepository.find.mockResolvedValueOnce([
+      { shared_inititiative_id: 3, request_status_id: 2 },
+      { shared_inititiative_id: 5, request_status_id: 4 },
+    ]);
+    (
+      mockResultByInitiativesRepository.findOne as jest.Mock
+    ).mockResolvedValueOnce(null);
+
+    const res = await resultService.reviewBilateralResult(
+      100,
+      reviewDecision,
+      userTest,
+    );
+
+    expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+    expect((res as returnFormatService).message).toContain('approved');
+  });
+
+  // `PSR-T-6` issue 3 (Reviewer, user-approved spec amendment) — design §5 item 6's premise ("no
+  // status-4 rows remain after release") does not hold for API-ingest / legacy-in-flight results,
+  // so approval must call `releaseContributors` itself (idempotent: it only touches ACTIVE
+  // status-4 CONTRIBUTION rows). Split into two cases per the Leader's brief:
+  // (a) already-released result → releaseContributors is still called (harmless no-op) and the
+  //     OLD legacy conversion path (`ShareResultRequestService.resultRequest`) is never used —
+  //     that is the actual `PSR-R-13` "no duplicate" guarantee, not skipping the call outright.
+  // (b) ingest/legacy result with an owner and live status-4 drafts → releaseContributors is
+  //     called and is what releases them (this is the case attempt-1's unconditional removal
+  //     broke: red against that code, see the report).
+  it('PSR-T-6 (a): approval of an already-released result never falls back to the legacy resultRequest conversion (PSR-R-13, no duplicate)', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.APPROVE,
+    };
+    const manager = {
+      findOne: jest.fn().mockResolvedValueOnce(mockResult),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: jest.fn().mockReturnValue({ id: 1 }),
+      save: jest.fn().mockResolvedValue({ id: 1 }),
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+      callback(manager),
+    );
+    // Already released: no more status-4/status-2 rows for this result.
+    mockShareResultRequestRepository.find.mockResolvedValueOnce([]);
+
+    await resultService.reviewBilateralResult(100, reviewDecision, userTest);
+
+    expect(
+      mockPrimaryProgramRequestService.releaseContributors,
+    ).toHaveBeenCalledWith(100);
+    expect(mockShareResultRequestService.resultRequest).not.toHaveBeenCalled();
+  });
+
+  it('PSR-T-6 (b): approval of an ingest/legacy result with an owner and live drafts releases them via releaseContributors', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.APPROVE,
+    };
+    const manager = {
+      findOne: jest.fn().mockResolvedValueOnce(mockResult),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: jest.fn().mockReturnValue({ id: 1 }),
+      save: jest.fn().mockResolvedValue({ id: 1 }),
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+      callback(manager),
+    );
+    // Ingest wrote a status-4 draft directly (owner already set); never went through accept.
+    mockShareResultRequestRepository.find.mockResolvedValueOnce([
+      { shared_inititiative_id: 5, request_status_id: 4 },
+    ]);
+    // Owner exists (default mockResultByInitiativesRepository.findOne: { initiative_id: 1, id: 1 }).
+
+    await resultService.reviewBilateralResult(100, reviewDecision, userTest);
+
+    expect(
+      mockPrimaryProgramRequestService.releaseContributors,
+    ).toHaveBeenCalledWith(100);
+  });
+
+  // `PSR-T-6` rework attempt 3 (Reviewer) — the approve-branch `shareResultRequests` lookup had
+  // no `request_type` filter, so an ACCEPTED (status 2) `primary` row for this same result (the
+  // owner's own accepted primary request) would also match. Pin the `where` clause directly.
+  it('PSR-T-6: the approve-branch share-request lookup filters on request_type: contribution', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.APPROVE,
+    };
+    const manager = {
+      findOne: jest.fn().mockResolvedValueOnce(mockResult),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: jest.fn().mockReturnValue({ id: 1 }),
+      save: jest.fn().mockResolvedValue({ id: 1 }),
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+      callback(manager),
+    );
+    mockShareResultRequestRepository.find.mockResolvedValueOnce([]);
+
+    await resultService.reviewBilateralResult(100, reviewDecision, userTest);
+
+    expect(mockShareResultRequestRepository.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          request_type: RequestTypeEnum.CONTRIBUTION,
+        }),
       }),
     );
   });

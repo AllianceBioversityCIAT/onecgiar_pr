@@ -120,6 +120,10 @@ import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/cl
 import { AssessedDuringExpertWorkshop } from '../ipsr/assessed-during-expert-workshop/entities/assessed-during-expert-workshop.entity';
 import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validation.interface';
 import { ExternalPlatformIdentity } from './interfaces/external-platform-identity.interface';
+import {
+  PrimaryProgramRequestService,
+  PrimaryRequestOutcome,
+} from '../results/share-result-request/services/primary-program-request.service';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
 const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
@@ -263,6 +267,11 @@ export class BilateralService {
     private readonly _otherOutcomeHandler: NoopBilateralHandler,
     private readonly _adUserService: AdUserService,
     private readonly _roleByUserRepository: RoleByUserRepository,
+    // `PSR-T-5` (design.md DD-2/DD-3) — `populateInitiativeAndTocFromProgramCode` (promoteDraft's
+    // only caller, P-3) requests a primary Science Program instead of writing role 1 directly.
+    // Already exported by `ShareResultRequestModule`, which `bilateral.module.ts` imports
+    // (`PSR-T-2`) — no new module wiring needed.
+    private readonly _primaryProgramRequestService: PrimaryProgramRequestService,
     @Optional()
     private readonly _notificationService?: NotificationService,
     // BCT-T-5 / design §5.5 — trailing @Optional() like `_notificationService` above, so a
@@ -4774,26 +4783,23 @@ export class BilateralService {
       return;
     }
 
-    await this.upsertResultInitiative(resultId, initiative.id, 1, userId);
-
-    const existingToc = await this._resultsTocResultsRepository.findOne({
-      where: {
-        result_id: resultId,
-        initiative_ids: initiative.id,
-        is_active: true,
-      },
-    });
-
-    if (!existingToc) {
-      await this._resultsTocResultsRepository.save({
-        created_by: userId,
-        toc_result_id: null,
-        initiative_ids: initiative.id,
-        result_id: resultId,
-        toc_level_id: null,
-        planned_result: true,
-        is_active: true,
-      });
+    // `PSR-T-5` (design.md DD-2/DD-3): a promoted AI draft no longer becomes the chosen Science
+    // Program's owner outright — it sends a pending primary request instead (role 1 is written
+    // only on accept, T-3/T-4). The ToC stub seed that used to run here unconditionally moved to
+    // accept too: it's keyed on the primary SP, which isn't final until that SP accepts.
+    // `request()` never throws (requirements.md §7 Reliability / PSR-R-1 "request step fails") —
+    // a failure is logged and swallowed so `promoteDraft` still succeeds, leaving the result
+    // ownerless and retryable.
+    const outcome: PrimaryRequestOutcome =
+      await this._primaryProgramRequestService.request(
+        resultId,
+        initiative.id,
+        { id: userId } as TokenDto,
+      );
+    if (outcome.ok === false) {
+      this.logger.warn(
+        `populateInitiativeAndTocFromProgramCode: primary program request failed for result ${resultId} (reason=${outcome.reason})`,
+      );
     }
   }
 

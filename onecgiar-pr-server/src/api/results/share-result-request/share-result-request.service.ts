@@ -10,7 +10,15 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { ShareResultRequest } from './entities/share-result-request.entity';
+import {
+  RequestTypeEnum,
+  ShareResultRequest,
+} from './entities/share-result-request.entity';
+import { SourceEnum } from '../entities/result.entity';
+import {
+  PrimaryDecisionOutcome,
+  PrimaryProgramRequestService,
+} from './services/primary-program-request.service';
 import { NotificationService } from '../../notification/notification.service';
 import {
   NotificationLevelEnum,
@@ -85,6 +93,15 @@ export class ShareResultRequestService {
     // (`getReceivedResultRequestPopUp`). @Optional() keeps every existing spec that builds this
     // service without it compiling — the one caller null-checks it.
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    // `PSR-T-4` — the `primary` branch of `results/request/update` (design.md §4, DD-6). Safe to
+    // inject directly (no cycle): `PrimaryProgramRequestService` does not inject
+    // `ShareResultRequestService` (T-2/T-3 doc comments), and both are providers of the same
+    // `ShareResultRequestModule`. @Optional(): `ResultsTocResultsModule` and
+    // `ResultsPackageTocResultModule` re-provide this service locally (they only call
+    // `resultRequest()`) without `PrimaryProgramRequestService`; without @Optional() Nest fails at
+    // boot. The decide endpoint lives in `ShareResultRequestModule`, where it always resolves.
+    @Optional()
+    private readonly _primaryProgramRequestService?: PrimaryProgramRequestService,
     @Optional()
     @Inject(forwardRef(() => NotificationService))
     private readonly _notificationService?: NotificationService,
@@ -708,8 +725,13 @@ export class ShareResultRequestService {
   private async enrichBucketsOnce(buckets: any[][]): Promise<any[][]> {
     const uniqueBuckets = Array.from(new Set(buckets));
     const concatenated = uniqueBuckets.flat();
-    const enriched =
+    const tocEnriched =
       await this.enrichRequestsWithTocContributionReview(concatenated);
+    // `PSR-T-4` (design.md §8 Performance): derived entirely from fields/relations the SAME
+    // `getRequest()` query already selects (`request_type`, `obj_result.result_center_array`,
+    // `obj_owner_initiative.official_code`) — zero extra queries, so it cannot scale with row
+    // count regardless of how many rows land in the union.
+    const enriched = this.attachPrimaryRequestFields(tocEnriched);
 
     const enrichedByShareRequestId = new Map<any, any>(
       enriched.map((row) => [row.share_result_request_id, row]),
@@ -830,11 +852,70 @@ export class ShareResultRequestService {
     });
   }
 
+  /**
+   * `PSR-T-4` (design.md §4, §8) — attaches `request_type`, `creating_center` (every row) and
+   * `owner_program_code` (bilateral contribution rows only) to each request row, derived purely
+   * from data `getRequestSelectFields()`/`getRequestRelations()` already fetch in the ONE query
+   * per bucket — no additional lookup, so this cannot introduce an N+1.
+   */
+  private attachPrimaryRequestFields(requests: any[]): any[] {
+    return requests.map((request) => {
+      const requestType: RequestTypeEnum =
+        request.request_type ?? RequestTypeEnum.CONTRIBUTION;
+
+      const enriched: any = {
+        ...request,
+        request_type: requestType,
+        creating_center: this.deriveCreatingCenter(request.obj_result),
+      };
+
+      // `PSR-R-10` — only bilateral CONTRIBUTION rows carry the primary SP's code for the
+      // "on behalf of {Center}" sentence; a `primary` row has no separate "owner" concept yet
+      // (design.md §3.1: owner == shared on that row itself).
+      if (
+        requestType !== RequestTypeEnum.PRIMARY &&
+        request.obj_result?.source === SourceEnum.Bilateral
+      ) {
+        enriched.owner_program_code =
+          request.obj_owner_initiative?.official_code ?? null;
+      }
+
+      return enriched;
+    });
+  }
+
+  /**
+   * `PSR-R-9` scenario "missing Center acronym" — the server sends BOTH `acronym` and `name`
+   * exactly as stored (never collapsed here); the client picks the fallback. `null` is returned
+   * only when the result has no active leading centre at all.
+   */
+  private deriveCreatingCenter(
+    objResult: any,
+  ): { acronym: string | null; name: string | null } | null {
+    const centers: any[] = objResult?.result_center_array ?? [];
+    const leadCenter = centers.find(
+      (center) => center?.is_active && Number(center?.is_leading_result) === 1,
+    );
+    const institution = leadCenter?.clarisa_center_object?.clarisa_institution;
+    if (!institution) {
+      return null;
+    }
+
+    return {
+      acronym: institution.acronym ?? null,
+      name: institution.name ?? null,
+    };
+  }
+
   private getRequestSelectFields(): FindOptionsSelect<ShareResultRequest> {
     return {
       share_result_request_id: true,
       result_id: true,
       shared_inititiative_id: true,
+      owner_initiative_id: true,
+      // `PSR-T-4` (design.md §4): rows gain `request_type` so the client can render the primary
+      // / bilateral-contributor / contribution row variants.
+      request_type: true,
       requested_date: true,
       aprovaed_date: true,
       request_status_id: true,
@@ -1113,6 +1194,21 @@ export class ShareResultRequestService {
         return this.createInvalidShareRequestResponse();
       }
 
+      // `PSR-T-4` (design.md §4, §5 item 2; forward pointers 1 and 2): dispatch on the LOADED
+      // row's `request_type`, never on a DTO field, and never derive the acting user from the
+      // DTO — `user` here is the JWT-decoded `@UserToken()` the controller already passes in.
+      const loadedRequest = await this._shareResultRequestRepository.findOne({
+        where: { share_result_request_id: rr.share_result_request_id },
+      });
+
+      if (loadedRequest?.request_type === RequestTypeEnum.PRIMARY) {
+        return this.dispatchPrimaryDecision(
+          loadedRequest,
+          request_status_id,
+          user,
+        );
+      }
+
       await this.updateShareResultRequest(rr, user, request_status_id);
 
       const findShare = await this._shareResultRequestRepository.findOne({
@@ -1142,6 +1238,117 @@ export class ShareResultRequestService {
     } catch (error) {
       this._logger.error('Error updating share result request', error);
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * `PSR-T-4` — the `primary` branch of `results/request/update` (V1 and V2 both call this).
+   * Forward pointer 4: the DTO decision only selects accept (`2`) or decline (`3`); nothing else
+   * from the DTO reaches `PrimaryProgramRequestService`.
+   */
+  private async dispatchPrimaryDecision(
+    row: ShareResultRequest,
+    requestStatusId: number,
+    user: TokenDto,
+  ): Promise<{ response: any; message: string; status: HttpStatus }> {
+    if (requestStatusId !== 2 && requestStatusId !== 3) {
+      return {
+        response: {},
+        message:
+          'A primary Science Program request can only be accepted or declined',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    // `PSR-T-4` rework attempt 2 (Reviewer FAIL, issue 1): a Center re-pick cancels the round by
+    // setting `is_active=false` on the old round's rows ONLY (`request_status_id` stays `1` —
+    // `primary-program-request.service.ts`'s `request()`, design.md §2.2 "Center re-picks SP12").
+    // Without this check, the status re-check alone (`1 === PENDING`) still lets a stale
+    // tab/pop-up/hand-built PATCH decide an already-cancelled row. requirements.md PSR-R-2: "no
+    // longer actionable"; PSR-R-8: the server MUST enforce this. Same 409 shape as
+    // `PrimaryDecisionOutcome`'s `conflict`, so the client's existing 409 handling covers it too.
+    if (!row.is_active) {
+      return this.mapPrimaryDecisionOutcomeToResponse({
+        ok: false,
+        reason: 'conflict',
+      });
+    }
+
+    if (!this._primaryProgramRequestService) {
+      this._logger.error(
+        `Primary decision unavailable in this module context (request ${row.share_result_request_id})`,
+      );
+      return this.mapPrimaryDecisionOutcomeToResponse({
+        ok: false,
+        reason: 'internal_error',
+      });
+    }
+
+    const outcome =
+      requestStatusId === 2
+        ? await this._primaryProgramRequestService.accept(
+            row.share_result_request_id,
+            user,
+          )
+        : await this._primaryProgramRequestService.decline(
+            row.share_result_request_id,
+            user,
+          );
+
+    return this.mapPrimaryDecisionOutcomeToResponse(outcome);
+  }
+
+  /**
+   * `PSR-T-4` forward pointer 3 (lens B guarantee, execution.md T-3): `forbidden` → 403,
+   * `conflict` → 409 with the exact "already answered" message, `not_found` → 404,
+   * `internal_error` → a generic 500 that never echoes the underlying error (already logged with
+   * ids only by `PrimaryProgramRequestService`). Response envelope unchanged, plus `request_type`.
+   */
+  private mapPrimaryDecisionOutcomeToResponse(
+    outcome: PrimaryDecisionOutcome,
+  ): { response: any; message: string; status: HttpStatus } {
+    if (outcome.ok) {
+      return {
+        response: {
+          share_result_request_id: outcome.shareResultRequestId,
+          request_type: RequestTypeEnum.PRIMARY,
+          state: outcome.state,
+        },
+        message: 'The requests have been updated successfully',
+        status: HttpStatus.OK,
+      };
+    }
+
+    // `strictNullChecks` is off in this project's tsconfig, which keeps the compiler from
+    // narrowing `PrimaryDecisionOutcome` down to its `{ ok: false; reason }` members past the
+    // `if (outcome.ok)` early return above; the explicit `Extract<>` cast recovers that shape.
+    const failure = outcome as Extract<PrimaryDecisionOutcome, { ok: false }>;
+    switch (failure.reason) {
+      case 'forbidden':
+        return {
+          response: {},
+          message: 'You are not authorized to decide this request',
+          status: HttpStatus.FORBIDDEN,
+        };
+      case 'conflict':
+        return {
+          response: {},
+          message: 'This request was already answered',
+          status: HttpStatus.CONFLICT,
+        };
+      case 'not_found':
+        return {
+          response: {},
+          message: 'The request was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      case 'internal_error':
+      default:
+        return {
+          response: {},
+          message: 'An unexpected error occurred',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
     }
   }
 
@@ -1549,6 +1756,20 @@ export class ShareResultRequestService {
 
       if (!rr?.share_result_request_id) {
         return this.createInvalidShareRequestResponse();
+      }
+
+      // `PSR-T-4` — same dispatch as V1 (see its comment): load the row server-side and branch on
+      // its `request_type`, never on a DTO field.
+      const loadedRequestV2 = await this._shareResultRequestRepository.findOne({
+        where: { share_result_request_id: rr.share_result_request_id },
+      });
+
+      if (loadedRequestV2?.request_type === RequestTypeEnum.PRIMARY) {
+        return this.dispatchPrimaryDecision(
+          loadedRequestV2,
+          request_status_id,
+          user,
+        );
       }
 
       await this.updateShareResultRequestV2(rr, user, request_status_id);

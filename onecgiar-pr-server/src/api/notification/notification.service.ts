@@ -11,11 +11,24 @@ import {
 import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
 import { NotificationDto } from '../../shared/microservices/socket-management/dto/create-socket.dto';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
-import { FindOperator, MoreThan } from 'typeorm';
+import { FindOperator, In, MoreThan, Not } from 'typeorm';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { Notification } from './entities/notification.entity';
+
+/**
+ * `PSR-T-7`/`PSR-DD-7` — the 3 Center-notice types (`emitCenterNotice` in
+ * `primary-program-request.service.ts`). Excluded from the role-1-joined queries below and read
+ * back only through {@link NotificationService.findCenterNoticeNotifications}'s ownerless path,
+ * so a notice for an ownerless (declined/sent-back) result is never silently dropped, and one for
+ * an already-owned result (accepted) is never merged in twice.
+ */
+const CENTER_NOTICE_TYPES = [
+  NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+  NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+  NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
+];
 
 @Injectable()
 export class NotificationService {
@@ -239,6 +252,31 @@ export class NotificationService {
         obj_notification_type: {
           type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
         },
+      },
+    });
+  }
+
+  /**
+   * `PSR-T-7`/`PSR-DD-7` — the Center-notice read path (`design.md` §6.1, §2.2): the 3 new types
+   * are read WITHOUT the `obj_result_by_initiatives: { initiative_role_id: 1 }` condition the
+   * queries below use (`P-6`), so a "declined"/"moved" notice is still visible even though its
+   * result has no role-1 owner. Mirrors `findBilateralAiJobFinishedNotifications`'s shape:
+   * scoped to the recipient (`target_user`) and to active notifications only (`obj_result.
+   * is_active`), with the same `read`/`after` narrowing the callers already use.
+   */
+  private async findCenterNoticeNotifications(
+    userId: number,
+    options: { read?: boolean; after?: Date } = {},
+  ): Promise<Notification[]> {
+    return this._notificationRepository.find({
+      select: this.getNotificattionSelect(),
+      relations: this.getNotificationRelations(),
+      where: {
+        target_user: userId,
+        ...(options.read !== undefined ? { read: options.read } : {}),
+        ...(options.after ? { created_date: MoreThan(options.after) } : {}),
+        obj_result: { is_active: true },
+        obj_notification_type: { type: In(CENTER_NOTICE_TYPES) },
       },
     });
   }
@@ -605,6 +643,8 @@ export class NotificationService {
         notificationAnnouncement,
         jobFinishedViewed,
         jobFinishedPending,
+        centerNoticeViewed,
+        centerNoticePending,
       ] = await Promise.all([
         await this._notificationRepository.find({
           select: this.getNotificattionSelect(),
@@ -616,6 +656,10 @@ export class NotificationService {
               is_active: true,
               obj_result_by_initiatives: { initiative_role_id: 1 },
             },
+            // `PSR-DD-7`: the Center-notice types are read back only through
+            // `findCenterNoticeNotifications`'s ownerless path below — excluded here so an
+            // already-owned (accepted) notice is never merged in by both queries.
+            obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
           },
         }),
 
@@ -629,6 +673,7 @@ export class NotificationService {
               is_active: true,
               obj_result_by_initiatives: { initiative_role_id: 1 },
             },
+            obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
           },
         }),
 
@@ -663,16 +708,23 @@ export class NotificationService {
         this.findBilateralAiJobFinishedNotifications(user.id, {
           read: false,
         }),
+
+        // `PSR-T-7`/`PSR-DD-7` — same reasoning: an ownerless result's Center notice can never
+        // satisfy the `initiative_role_id: 1` condition above; fetched separately and merged in.
+        this.findCenterNoticeNotifications(user.id, { read: true }),
+        this.findCenterNoticeNotifications(user.id, { read: false }),
       ]);
 
       const notifications = {
         notificationsViewed: [
           ...this.mapNotificationResultFields(notificationsViewed),
           ...jobFinishedViewed,
+          ...this.mapNotificationResultFields(centerNoticeViewed),
         ],
         notificationsPending: [
           ...this.mapNotificationResultFields(notificationsPending),
           ...jobFinishedPending,
+          ...this.mapNotificationResultFields(centerNoticePending),
         ],
         notificationAnnouncement,
       };
@@ -705,6 +757,9 @@ export class NotificationService {
           is_active: true,
           obj_result_by_initiatives: { initiative_role_id: 1 },
         },
+        // `PSR-DD-7`: excluded here — read back only through
+        // `findCenterNoticeNotifications`'s ownerless path below.
+        obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
       };
 
       if (userLastViewed.last_pop_up_viewed) {
@@ -731,6 +786,17 @@ export class NotificationService {
             : {}),
         });
 
+      // `PSR-T-7`/`PSR-DD-7` — same reasoning as `jobFinishedUpdates`: an ownerless result's
+      // Center notice can never satisfy `whereConditions.obj_result` above.
+      const centerNoticeUpdates = this.mapNotificationResultFields(
+        await this.findCenterNoticeNotifications(user.id, {
+          read: false,
+          ...(userLastViewed.last_pop_up_viewed
+            ? { after: userLastViewed.last_pop_up_viewed }
+            : {}),
+        }),
+      );
+
       const shareResultPendings =
         await this._shareResultRequestService.getReceivedResultRequestPopUp(
           user,
@@ -738,10 +804,15 @@ export class NotificationService {
 
       const isError = (shareResultPendings as any)?.response;
       const notifications = isError
-        ? [...notificationsUpdates, ...jobFinishedUpdates]
+        ? [
+            ...notificationsUpdates,
+            ...jobFinishedUpdates,
+            ...centerNoticeUpdates,
+          ]
         : [
             ...notificationsUpdates,
             ...jobFinishedUpdates,
+            ...centerNoticeUpdates,
             ...(Array.isArray(shareResultPendings) ? shareResultPendings : []),
           ];
 
@@ -946,6 +1017,26 @@ export class NotificationService {
           storedText?.trim(),
         );
       }
+      // `PSR-T-7`/`PSR-R-14` (rework attempt 2, Reviewer finding 1) — Center notices
+      // (accepted/declined/moved). Unlike `RESULT_CENTER_TAGGED` et al., `notification.text`
+      // here is NOT a suffix that completes a sentence started by "The result <id>" — it is a
+      // WHOLE sentence whose subject is the SP: "SP09 accepted to be the primary Science
+      // Program of this result. Click to see the result." (`emitCenterNotice`,
+      // `primary-program-request.service.ts`). Splicing the result identity in place of "this
+      // result" keeps the SP as subject and names the result exactly once, matching design.md
+      // §6.1's wording ("`{sp}` accepted ... of result …"). No identity to splice in (no
+      // resultCode/resultTitle) → the stored sentence is already a complete, standalone line,
+      // same reasoning as `BILATERAL_AI_JOB_FINISHED` below.
+      case NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED:
+      case NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED:
+      case NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED: {
+        const suffix = storedText?.trim();
+        if (!suffix) return `There is a new update on ${codeText}`;
+        const identity = [resultCode, resultTitle].filter(Boolean).join(' - ');
+        return identity
+          ? suffix.replace('of this result', `of result ${identity}`)
+          : suffix;
+      }
       case NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED:
         // No result to build an identity from (`result_id` is always `NULL` for this type,
         // `design.md` §6.4) — `notification.text` is already the complete, standalone sentence
@@ -1058,5 +1149,6 @@ interface WhereConditions {
       initiative_role_id: number;
     };
   };
+  obj_notification_type?: { type: FindOperator<string> };
   created_date?: FindOperator<Date>;
 }

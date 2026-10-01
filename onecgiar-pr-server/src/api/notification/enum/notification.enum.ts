@@ -27,4 +27,11 @@ export enum NotificationTypeEnum {
   // row is written directly by `emitBilateralAiJobNotification` (design.md §6.4) — not through
   // `emitResultNotification` — because a job notification has no result to hang the row on.
   BILATERAL_AI_JOB_FINISHED = 'Bilateral AI Job Finished',
+  // `PSR-T-1`/design.md §3.1, §6.1 (Center notices). Tells the lead Center's members the
+  // outcome of a pending "primary Science Program" request — accepted, declined (sent back,
+  // pick another SP), or declined-and-auto-moved to the other alignment. Read via an
+  // ownerless path (`PSR-DD-7`), since the result may have no role-1 owner yet.
+  PRIMARY_PROGRAM_REQUEST_ACCEPTED = 'Primary Program Request Accepted',
+  PRIMARY_PROGRAM_REQUEST_DECLINED = 'Primary Program Request Declined',
+  PRIMARY_PROGRAM_REQUEST_MOVED = 'Primary Program Request Moved',
 }

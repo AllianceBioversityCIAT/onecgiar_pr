@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { ShareResultRequest } from './entities/share-result-request.entity';
+import {
+  RequestTypeEnum,
+  ShareResultRequest,
+} from './entities/share-result-request.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { RequestStatus } from './entities/request-status.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
@@ -126,6 +129,13 @@ export class ShareResultRequestRepository
       // Determine which request_status_id to search for
       const requestStatusId = hasDraftRequests ? 4 : 1;
 
+      // `PSR-T-4` forward pointer (T-2/T-3 review): a `primary` row is inserted with
+      // `owner_initiative_id = shared_inititiative_id = requested SP` (design.md §3.1). Without
+      // this filter, a Center's contribution-request path could match that very row here — e.g.
+      // an attempt to save the currently-requested SP as a contributor, BEFORE the
+      // `initiativeId === shareInitId` self-share guard in `share-result-request.service.ts`
+      // (`createShareResultRequests`) runs — and treat the pending primary request as an existing
+      // contribution request to reuse/overwrite. Scoping to `contribution` rows closes that.
       const queryData = `
         SELECT
           srr.share_result_request_id,
@@ -148,12 +158,19 @@ export class ShareResultRequestRepository
           AND srr.owner_initiative_id = ?
           AND srr.shared_inititiative_id = ?
           AND srr.request_status_id IN (?)
+          AND srr.request_type = ?
           AND srr.is_active > 0;
       `;
 
       const shareResultRequest: ShareResultRequest[] = await this.query(
         queryData,
-        [resultId, ownerInitId, shareInitId, requestStatusId],
+        [
+          resultId,
+          ownerInitId,
+          shareInitId,
+          requestStatusId,
+          RequestTypeEnum.CONTRIBUTION,
+        ],
       );
 
       return shareResultRequest.length ? shareResultRequest[0] : undefined;
@@ -404,6 +421,16 @@ export class ShareResultRequestRepository
     }
   }
 
+  /**
+   * `PSR-T-4` forward pointer (T-2/T-3 review) applies to this owner/shared lookup too
+   * (`srr.owner_initiative_id = ? AND srr.shared_inititiative_id = ?`, same shape as
+   * `shareResultRequestExists`). Left unfiltered on purpose: this method has zero callers in the
+   * codebase today (confirmed by search) and its parameter binding is already broken independently
+   * of `request_type` — the query has 3 `?` placeholders in the WHERE clause plus `is_active > 0`,
+   * but the method only ever passes `[userId]`, so it would throw on the very first real call.
+   * Fixing that mismatch is a separate, unrelated defect outside this task's scope; adding a
+   * `request_type` filter to an unreachable, already-broken query would not close any real risk.
+   */
   async getRequestByUserId(userId: number) {
     const queryData = `
     SELECT

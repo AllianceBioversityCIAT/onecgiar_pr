@@ -149,10 +149,13 @@ import { ResultCoreInnovUseSectionEnum } from '../results-framework-reporting/re
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { CapdevDto } from './summary/dto/create-capacity-developents.dto';
-import { CreateTocShareResult } from './share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
+import { PrimaryProgramRequestService } from './share-result-request/services/primary-program-request.service';
 import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
-import { ShareResultRequest } from './share-result-request/entities/share-result-request.entity';
+import {
+  RequestTypeEnum,
+  ShareResultRequest,
+} from './share-result-request/entities/share-result-request.entity';
 import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
@@ -273,6 +276,18 @@ export class ResultsService {
     private readonly _shareResultRequestService?: ShareResultRequestService,
     @Optional()
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
+    // `PSR-T-6` issue 3 (Reviewer, user-approved spec amendment) — `PrimaryProgramRequestService`
+    // is already a provider `ShareResultRequestModule` exports (same module `ShareResultRequestService`
+    // comes from, already `forwardRef`'d above). Rework attempt 3 (Reviewer): `forwardRef` here
+    // too, not just on the module import — there is an import cycle
+    // (`primary-program-request.service` → `notification.service` → `share-result-request.service`
+    // → …) and, depending on load order, the class token can still be undefined when
+    // `ResultsService`'s own decorator runs, crashing Nest at boot. `@Optional()` for the same
+    // reason as its sibling above: existing specs that build `ResultsService` without it keep
+    // compiling.
+    @Optional()
+    @Inject(forwardRef(() => PrimaryProgramRequestService))
+    private readonly _primaryProgramRequestService?: PrimaryProgramRequestService,
     @Optional()
     private readonly _resultReviewHistoryRepository?: ResultReviewHistoryRepository,
     // @Optional() on purpose: this keeps every existing spec that constructs ResultsService without
@@ -4313,10 +4328,16 @@ export class ResultsService {
 
       let newStatusId: number;
       if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
+        // Rework attempt 3 (Reviewer) — `request_type: CONTRIBUTION` filters out an ACCEPTED
+        // (status 2) `primary` row for this same result (the owner's own accepted primary
+        // request): without it, that row would match this query too and — before this fix —
+        // relied only on `_updateTocMapping`'s separate `id !== initSubmitter.initiative_id`
+        // filter to be stripped back out, an incidental protection rather than a structural one.
         const shareResultRequests =
           await this._shareResultRequestRepository.find({
             where: {
               result_id: parsedResultId,
+              request_type: RequestTypeEnum.CONTRIBUTION,
               is_active: true,
               request_status_id: In([2, 4]),
             },
@@ -4720,6 +4741,18 @@ export class ResultsService {
       where: { result_id: resultId, initiative_role_id: 1 },
     });
 
+    // `PSR-T-6` / `PSR-R-13`, DD-9 — the only caller of `_updateTocMapping` is
+    // `reviewBilateralResult`, and it only reaches this point for a result whose primary Science
+    // Program has not yet accepted (on hold) or was declined mid-review (both leave no active
+    // role-1 row): `initSubmitter` is then `null`, and every read of `initSubmitter.initiative_id`
+    // below would throw. Guard instead of crashing an otherwise-valid review decision.
+    if (!initSubmitter) {
+      this._logger.warn(
+        `_updateTocMapping: result ${resultId} has no primary Science Program owner (on hold / sent back); skipping ToC contributor mapping update.`,
+      );
+      return;
+    }
+
     if (contributing?.accepted_contributing_initiatives?.length) {
       acceptedIds = contributing.accepted_contributing_initiatives
         .map((i) => i.id)
@@ -4753,23 +4786,22 @@ export class ResultsService {
       );
     }
 
-    if (pendingIds.length) {
-      if (!this._shareResultRequestService) {
-        this._logger.warn(
-          `ShareResultRequestService is not available for result ${resultId}. Skipping email notifications.`,
-        );
-        return;
-      }
-      const dataRequest: CreateTocShareResult = {
-        isToc: false,
-        initiativeShareId: pendingIds,
-        email_template: 'email_template_contribution',
-      };
-
-      await this._shareResultRequestService.resultRequest(
-        dataRequest,
-        resultId,
-        user,
+    // `PSR-T-6` issue 3 (Reviewer, user-approved spec amendment to design.md §5 item 6 / DD-9) —
+    // that section's premise ("no status-4 rows remain after release") does not hold for every
+    // bilateral result: API-ingest results (`bilateral.service.ts` L1496-1524) write status-4
+    // drafts with the owner already set and are born straight into Pending Review, so they never
+    // go through accept or a Center save; the same is true for results already in flight at
+    // deploy time with an owner and status-4 drafts already sitting there. Review approval used
+    // to be the only place those drafts were released — `releaseContributors` restores that for
+    // both groups. It is safe to call unconditionally here: it resolves the owner itself (the
+    // `initSubmitter` guard above already proved one exists) and touches ONLY active status-4
+    // CONTRIBUTION rows, so a result whose contributors were already released (the common case,
+    // `PSR-R-12`) finds none and is a no-op — no duplicate requests, per `PSR-R-13`.
+    if (this._primaryProgramRequestService) {
+      await this._primaryProgramRequestService.releaseContributors(resultId);
+    } else {
+      this._logger.warn(
+        `_updateTocMapping: PrimaryProgramRequestService not available for result ${resultId}; any remaining draft contributor request(s) were not released.`,
       );
     }
   }
