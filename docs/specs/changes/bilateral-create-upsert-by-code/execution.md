@@ -223,3 +223,9 @@ Adding these tests is outside the docs task's own scope; who writes them (T-3/T-
 - **ADR impact:** none (no TRD ADR touched).
 - **Advisories from attempt 1 that survive the pivot** (recorded, not tasks): `ensureUniqueTitle` uses `findOne` (a legacy duplicate can mask another row, the same as `results.service.ts:5558`); the no-code create still leaves orphan rows when a post-header check fails (P-4, pre-existing).
 - **Approval:** the user's answers above are the pivot decision. The remaining work (T-5 final pass, T-6) resumes on the user's go.
+
+### Pivot status amended — on hold, not cancelled (2026-09-30, user)
+
+- The user will confirm with STAR on **2026-10-01** whether results already in the open phase are ever resent. Until then, T-3 and T-4 are **on hold**, not cancelled, and R-2 / R-9 are on hold, not descoped. The shipped behaviour does not change: a code in the open phase gets 409.
+- Attempt 1's code is saved durably as a local git stash on this branch: `UBC-T-3 attempt 1 (update in place) — on hold pending STAR, 2026-09-30` (`git stash list`). If STAR says yes, resume T-3 from that stash plus the two attempt-1 FAILs above (Innovation Use hoist; region/country/subnational/evidence-duplicate checks), with the user's answers: the `id` may change (so option 2, the simple update by deactivate + fresh create, is now viable and much smaller), and notifications follow the current flow. The way forward has to be decided again at that point.
+- If STAR says no: drop the stash, mark T-3/T-4 cancelled, and run T-5's final pass.

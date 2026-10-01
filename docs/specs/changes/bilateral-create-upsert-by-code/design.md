@@ -111,7 +111,7 @@ Everything lives in `api/bilateral`:
   - This keeps the earlier row untouched (`R-3`) and uses the payload as the whole truth, which holds under `A-1`.
   - *Rejected:* `versionProcessV2` followed by an update. It would stack the payload onto the copied rows, because the writers are add-only (`P-6`). It also needs admin or lead-centre membership on a system token (`vs:1089-1101`), and it does not carry contributing projects in any case.
   - *Consequence:* anything the payload does not carry (share requests, budgets, linked results from the old phase) is not carried forward. That is correct under `A-1`, and it is recorded in the contract doc.
-- **`UBC-DD-3` — update = header in place + section reset + existing writers.** ⛔ *Descoped 2026-09-30 (Pivot at T-3): there is no update; a code in the open phase is a 409.*
+- **`UBC-DD-3` — update = header in place + section reset + existing writers.** ⏸ *On hold 2026-09-30 pending STAR; meanwhile a code in the open phase is a 409.*
   - The header fields the create sets from the payload are updated on the existing row. The row keeps its `id` and `result_code`, and its status follows `keep_editing` (`R-7`).
   - A **section reset** then deactivates the child rows of the add-only sections (`P-6`):
     - evidence
@@ -123,10 +123,10 @@ Everything lives in `api/bilateral`:
   - After the reset, the unchanged writers run.
   - `persistLeadCenter` is corrected to reactivate an existing row and demote the previous lead. This does not change behaviour for new results, which have no prior rows (`P-6`, `shared-state`).
   - Sections that already replace (`P-7`) are left alone.
-- **`UBC-DD-4` — the result type is immutable on update.** ⛔ *Descoped 2026-09-30 (Pivot at T-3): there is no update; a code in the open phase is a 409.* A payload whose `result_type_id` differs from the target row's is a 409. Changing the type is a new result.
+- **`UBC-DD-4` — the result type is immutable on update.** ⏸ *On hold 2026-09-30 pending STAR; meanwhile a code in the open phase is a 409.* A payload whose `result_type_id` differs from the target row's is a 409. Changing the type is a new result.
 - **`UBC-DD-5` — per-result outcomes.** `createdResults` (`P-13`) grows an `operation` and a status, and it is returned as `response.outcomes[]`. It is additive, and it is not named `results` (`P-14`).
 - **`UBC-DD-6` — one ownership rule.** `assertCallerMayVersion` is extracted from `bvs` into `rules`, so `/version` and `create` enforce the same owner rule (`P-11`). Its behaviour for `/version` is unchanged, and its existing specs must stay green.
-- **`UBC-DD-7` — the duplicate-title check excludes the target.** ⛔ *Descoped 2026-09-30 (Pivot at T-3): there is no update; a code in the open phase is a 409.* `ensureUniqueTitle` gains an optional id to exclude, following the pattern in `results.service.ts:5558-5571` (`P-12`). The update passes the target id. The version path needs none, because the source row is not in the open phase.
+- **`UBC-DD-7` — the duplicate-title check excludes the target.** ⏸ *On hold 2026-09-30 pending STAR; meanwhile a code in the open phase is a 409.* `ensureUniqueTitle` gains an optional id to exclude, following the pattern in `results.service.ts:5558-5571` (`P-12`). The update passes the target id. The version path needs none, because the source row is not in the open phase.
 - **`UBC-DD-8` — honest docs.**
   - The contract doc (`onecgiar-pr-server/docs/bilateral-result-summaries.en.md`) gets a `result_code`/operations section and a change-log row.
   - The Fetcher's `op` enum description is changed to say that `update` and `delete` are not implemented. That edit belongs to the Fetcher repo, and is owned by T-6's PR there.
@@ -145,6 +145,6 @@ The declared depth is Standard. The data-integrity and cross-repo surface is clo
 
 Recommended split into **two PRs**:
 - **PR 1:** version with data (T-1, T-2, T-5). This answers STAR's second question on its own.
-- **PR 2:** update in place (T-3, T-4). ⛔ *Cancelled 2026-09-30 (Pivot at T-3).*
+- **PR 2:** update in place (T-3, T-4). ⏸ *On hold pending STAR.*
 
 T-6 (Fetcher + live run) can land after either PR.

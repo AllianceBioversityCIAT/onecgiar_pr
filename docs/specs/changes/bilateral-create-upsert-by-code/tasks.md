@@ -1,11 +1,11 @@
 # Tasks — `changes/bilateral-create-upsert-by-code`
 
-- **Status:** `in-progress` (T-1, T-2 done · T-3, T-4 cancelled by the Pivot of 2026-09-30 · T-5 final pass and T-6 pending)
+- **Status:** `in-progress` (T-1, T-2 done · T-3, T-4 on hold pending STAR (2026-10-01) · T-5 final pass and T-6 pending)
 - **Budget (`design.md` §9):** 6 tasks · ~1,000 LOC · 1–2 review rounds per task
 - **Branch:** `feat/bilateral-create-upsert-by-code` from `performance-refactor` @ `35e58fd87`
 - **PR strategy:**
   - **PR 1** (T-1, T-2, T-5): version with data.
-  - ~~**PR 2** (T-3, T-4): update in place.~~ Cancelled by the Pivot of 2026-09-30.
+  - ~~**PR 2** (T-3, T-4): update in place.~~ On hold pending STAR (2026-10-01).
   - **T-6**: the Fetcher and the live run.
 - **Server verification (always scoped, never the full suite):** from `onecgiar-pr-server/`:
   - `npx jest --silent --reporters=summary --forceExit --testPathPattern="api/bilateral"`
@@ -95,7 +95,7 @@
 
 ---
 
-### [-] `UBC-T-3` — ⛔ CANCELLED (Pivot 2026-09-30, see `execution.md` → Pivot Record: UBC-T-3) — Update in place: header, immutable type, title rule, and a preflight of the post-header checks
+### `UBC-T-3` — ⏸ ON HOLD (2026-09-30, pending STAR confirmation on 2026-10-01; see `execution.md` → Pivot Record: UBC-T-3) — Update in place: header, immutable type, title rule, and a preflight of the post-header checks
 
 - **Type:** `server` · **Size:** `M` · **Depends on:** `UBC-T-1`
 - **Precondition (settled 2026-09-30):** `P-16` / `OQ-1`: Manuel confirmed that STAR sends the full result. Replace semantics stand. If a producer later sends partial data, that is a new change, not this task.
@@ -140,7 +140,7 @@
 
 ---
 
-### [-] `UBC-T-4` — ⛔ CANCELLED (Pivot 2026-09-30) — Section reset so the create writers replace instead of duplicating, plus the lead-centre correction
+### `UBC-T-4` — ⏸ ON HOLD (with T-3, pending STAR) — Section reset so the create writers replace instead of duplicating, plus the lead-centre correction
 
 - **Type:** `server` · **Size:** `M` · **Depends on:** `UBC-T-3`
 - **Implements:** `UBC-R-2` (sections)
@@ -198,7 +198,7 @@
 - **Skills:** `cognitive-doc-design`
 - **Review:** `checklist` — documentation, checked against the shipped behaviour
 - **Verification:**
-  - **Falsifier:** every rule and error the doc states is cross-checked against a test name from T-1..T-2 (T-3 and T-4 were cancelled by the Pivot of 2026-09-30). A statement with no backing test is a defect.
+  - **Falsifier:** every rule and error the doc states is cross-checked against a test name from T-1..T-2 (T-3 and T-4 on hold; add their tests if they resume). A statement with no backing test is a defect.
   - **Red run:** n/a (docs)
   - **Disqualifier:** a doc written from the design instead of the shipped code, which ignores differences found at execute time.
   - **Consumers:** producers reading the contract (STAR, MEL, TIP, the bulk uploader), `P-15`
@@ -211,7 +211,7 @@
 
 ### `UBC-T-6` — Fetcher `op` doc and a live run through the Fetcher on TEST
 
-- **Type:** cross-repo + manual · **Size:** `S` · **Depends on:** `UBC-T-2` (the update run was dropped with T-4, Pivot 2026-09-30)
+- **Type:** cross-repo + manual · **Size:** `S` · **Depends on:** `UBC-T-2` (the update run is on hold with T-4)
 - **Implements:** `UBC-R-11`, `R-12` (Fetcher side); gates `D4`, `D7`
 - **Design:** `DD-8`; `P-3`
 - **Files (expected):** `onecgiar_result_functions/services/fetcher/src/docs/openapi.json` (the `op` description), on its own branch and PR in that repo
@@ -240,7 +240,7 @@
 | Requirement / clause | Owner |
 |---|---|
 | `R-1` no code, no change | T-1 |
-| `R-2` update: same id and code, replaced data | ⛔ descoped (Pivot 2026-09-30); the open-phase 409 is T-1's |
+| `R-2` update: same id and code, replaced data | ⏸ on hold (T-3 + T-4); meanwhile the open-phase 409 is T-1's |
 | `R-2` *AND IT MUST NOT create a second row* | T-1 (the open-phase code is rejected with 409, nothing is written) |
 | `R-3` version with data; the earlier row stays identical | T-2 |
 | `R-4` ownership | T-1 |
@@ -248,7 +248,7 @@
 | `R-6` KP excluded | T-1 |
 | `R-7` status follows `keep_editing` | T-2 (version) |
 | `R-8` reject with a 4xx; *AND IT MUST NOT write any row* | T-1 (unit) + T-6 (end to end) |
-| `R-9` title excludes itself; another result's title is still rejected | ⛔ descoped with `R-2` |
+| `R-9` title excludes itself; another result's title is still rejected | ⏸ on hold with `R-2` (T-3) |
 | `R-10` outcomes, additive | T-1 (`created`) + T-2 (`versioned`); `updated` is never emitted |
 | `R-11` the code reaches PRMS through the Fetcher | T-1 (DTO) + T-6 (live) |
 | `R-12` honest docs | T-5 (PRMS) + T-6 (Fetcher) |
@@ -256,6 +256,6 @@
 | `A-1` / `P-16` full payload | T-2 (settled 2026-09-30) |
 | Scenario "Reject instead of creating" *AND IT MUST NOT write any row, no header included* | T-1 |
 | Scenario "Version" *BUT the 2025 row must NOT change* | T-2 |
-| Scenario "Update" *BUT must NOT fail on the duplicate-title rule because of its own title* | ⛔ descoped |
+| Scenario "Update" *BUT must NOT fail on the duplicate-title rule because of its own title* | ⏸ on hold (T-3) |
 
 **No task is `skip-eligible`.**
