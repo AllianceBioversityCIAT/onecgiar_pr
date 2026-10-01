@@ -259,3 +259,15 @@
 - *A11y:* the "Loading history…" row may be announced twice (`aria-busy` + `aria-live` + `aria-label` + visible text). Check in PAGE-T-7.
 - *Risk:* `results-notifications.module.ts` and the copy file are outside the expected file list. Both are minimal additions the task needs.
 - `refreshAllNotifications(phaseId)` still uses the legacy wrappers with an explicit phase. Acceptable: they delegate to a per-source refresh.
+
+## Run Summary (2026-10-01)
+
+- **Done:** PAGE-T-1..T-6 PASS. Commits on `spec/inbox-paginated-load`: `5f97542a4` (server T-1..T-3), `4a3ba70ca` (client T-4), `48a0bf87e` (client T-5/T-6).
+- **Pending:** PAGE-T-7 (HITL: before/after timing on the same account and phase, plus the visual and a11y check). Baseline can be measured on `e82c53722`.
+- **Pre-merge validation (green):**
+  - server scoped Jest → 11 suites, 278 passed · tsc clean · eslint clean.
+  - client touched specs → 25 suites, 864 passed · `ng lint` clean.
+- **Merge `origin/performance-refactor` (adds w1w2-center-tagged `66f12c3f3`, `92e1c83a7`, `4d0dcab6a`):** auto-merged with no conflicts (`notification.service.ts` and its spec). It is left **uncommitted** (`git merge --no-commit`, MERGE_HEAD present).
+- **Post-merge validation (re-run on user request, --maxWorkers=2):** server 12 suites / 288 passed · tsc clean · eslint clean; client 26 suites / 926 passed · `ng lint` clean. Merge committed and pushed to `performance-refactor`.
+- **Budget:** about 3 800 inserted lines across source and tests (T-1 506, T-2 646, T-3 630+, T-4 1 068, T-5 ~110, T-6 ~425). That is well over the ~1 200 tripwire, mostly in tests. Recorded as information; the user had asked to run to completion.
+- **Rework rounds:** T-3 ×2, T-4 ×2, all others ×1. Within the ≤ 2 rounds/task budget.

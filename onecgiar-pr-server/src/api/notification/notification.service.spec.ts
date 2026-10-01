@@ -667,6 +667,107 @@ describe('NotificationService', () => {
     });
   });
 
+  // WCT-T-1 (design.md §7.1, requirements.md WCT-R-5 push clause) — the real-time socket push
+  // must mirror the client's bare-shape sentence, not the shared `buildTaggedSuffixDescription`
+  // fallback. Composed (legacy) and empty text keep the old rendering, mirroring the
+  // `RESULT_BILATERAL_PROJECT_TAGGED` case above.
+  describe('RESULT_CENTER_TAGGED notification copy (WCT-R-5 push clause)', () => {
+    const emitAndReadDescription = async (
+      renderedText?: string,
+      resultOverrides: Record<string, any> = {},
+    ): Promise<string> => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 2,
+      });
+      mockNotificationTypeRepository.findOne.mockResolvedValue({
+        notifications_type_id: 8,
+      });
+      mockNotificationRepository.save.mockResolvedValue(null);
+      mockNotificationRepository.findOne.mockResolvedValue({
+        obj_emitter_user: {
+          id: 9,
+          first_name: 'Jane',
+          last_name: 'Doe',
+          email: 'jane@example.com',
+        },
+        obj_result: {
+          result_code: 9398,
+          title: 'A pooled funding result',
+          obj_result_by_initiatives: [
+            { obj_initiative: { id: 1, official_code: 'SP01' } },
+          ],
+          ...resultOverrides,
+        },
+      });
+      mockSocketManagementService.getActiveUsers.mockResolvedValue({
+        response: [{ userId: 2 }],
+        status: 200,
+      });
+      mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+        status: 200,
+      });
+
+      await service.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_CENTER_TAGGED,
+        [2],
+        9,
+        9398,
+        renderedText,
+      );
+
+      const [, payload] =
+        mockSocketManagementService.sendNotificationToUsers.mock.calls.at(-1);
+      return payload.desc;
+    };
+
+    // Falsifier: the push `desc` for bare 'ABC' on result 9398 owned by SP01 is anything other
+    // than `SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - <title>`.
+    it('builds the full sentence for a bare center acronym', async () => {
+      const desc = await emitAndReadDescription('ABC');
+
+      expect(desc).toBe(
+        'SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - A pooled funding result',
+      );
+    });
+
+    it('falls back to "a Science Program" when the owner SP code is missing', async () => {
+      const desc = await emitAndReadDescription('ABC', {
+        obj_result_by_initiatives: [],
+      });
+
+      expect(desc).toBe(
+        'a Science Program has tagged your CG Center as a contributor (ABC) to result 9398 - A pooled funding result',
+      );
+    });
+
+    // Falsifier: a composed legacy text's push `desc` changes.
+    it('falls back to the old suffix rendering for a composed (legacy) sentence', async () => {
+      const legacyText =
+        'created by SP01 has tagged the International Center X. Click to see the result.';
+      const desc = await emitAndReadDescription(legacyText);
+
+      expect(desc).toBe(
+        `The result 9398 - A pooled funding result ${legacyText}`,
+      );
+    });
+
+    it('falls back to the old suffix rendering for a BCT composed sentence', async () => {
+      const bctText =
+        'reported by AfricaRice has tagged the CIP. Click to see the result.';
+      const desc = await emitAndReadDescription(bctText);
+
+      expect(desc).toBe(`The result 9398 - A pooled funding result ${bctText}`);
+    });
+
+    it('falls back to the generic update line when text is empty', async () => {
+      const desc = await emitAndReadDescription('   ');
+
+      expect(desc).not.toContain('undefined');
+      expect(desc).toBe('There is a new update on result 9398');
+    });
+  });
+
   // `APF-T-3` / `design.md` §6.4 "Write path".
   describe('emitBilateralAiJobNotification', () => {
     it('writes a direct row: result_id NULL, target_user = the job owner, RESULT level', async () => {

@@ -11,6 +11,10 @@
       @if (isAiJob(notification)) {
         {{ textParts.prefix }}
       } @else {
+      @if (textParts.lead) {
+        <b> {{ textParts.lead }} </b>
+      }
+
       @if (textParts.prefix) {
         @if (textParts.emphasizePrefix) {
           <b> {{ textParts.prefix }} </b>

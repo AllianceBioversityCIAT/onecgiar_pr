@@ -39,6 +39,10 @@
           @if (aiJob) {
             {{ aiJob.message }}
           } @else {
+          @if (parts.lead) {
+            <b> {{ parts.lead }} </b>
+          }
+
           @if (parts.prefix) {
             @if (parts.emphasizePrefix) {
               <b> {{ parts.prefix }} </b>

@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { CreateResultsPackageTocResultDto } from './dto/create-results-package-toc-result.dto';
 import {
   HandlersError,
@@ -27,9 +27,12 @@ import { ResultsTocResultsService } from '../../results/results-toc-results/resu
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { In } from 'typeorm';
+import { ResultTaggedNotificationService } from '../../notification/services/result-tagged-notification.service';
 
 @Injectable()
 export class ResultsPackageTocResultService {
+  private readonly _logger = new Logger(ResultsPackageTocResultService.name);
+
   constructor(
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
@@ -49,6 +52,7 @@ export class ResultsPackageTocResultService {
     private readonly _resultTocResultService: ResultsTocResultsService,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     protected readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
+    private readonly _resultTaggedNotificationService: ResultTaggedNotificationService,
   ) {}
 
   async create(crtr: CreateResultsPackageTocResultDto, user: TokenDto) {
@@ -236,6 +240,10 @@ export class ResultsPackageTocResultService {
         const code = cc.map((el) => el.code);
         await this._resultsCenterRepository.updateCenter(rip.id, code, user.id);
 
+        // WCT-T-3 (docs/specs/notifications/w1w2-center-tagged, WCT-R-2
+        // (A-1 reverted, Pivot WCT-T-2 2026-09-30)): every newly saved Center,
+        // primary included, collected to notify Center Users post-persist.
+        const newlyLinkedCenterCodes: string[] = [];
         for (const cenCC of cc) {
           cenCC.primary = cenCC.primary || false;
           const rpC =
@@ -257,8 +265,14 @@ export class ResultsPackageTocResultService {
               last_updated_by: user.id,
               is_primary: cenCC.primary,
             });
+            newlyLinkedCenterCodes.push(cenCC.code);
           }
         }
+        await this.notifyNewlyTaggedCenters(
+          rip.id,
+          user.id,
+          newlyLinkedCenterCodes,
+        );
       } else {
         await this._resultsCenterRepository.updateCenter(rip.id, [], user.id);
       }
@@ -601,6 +615,31 @@ export class ResultsPackageTocResultService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  // WCT-T-3 (docs/specs/notifications/w1w2-center-tagged, WCT-R-2, WCT-NFR-1):
+  // post-persist, non-fatal — mirrors `notifyNewlyTaggedCenters` in
+  // `results_by_institutions.service.ts`.
+  private async notifyNewlyTaggedCenters(
+    resultId: number,
+    userId: number,
+    centerCodes: string[],
+  ): Promise<void> {
+    if (!centerCodes.length) return;
+    try {
+      await this._resultTaggedNotificationService.notifyTaggedCenters(
+        resultId,
+        userId,
+        centerCodes,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to emit tagged-centre notifications for result ${resultId}: ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
   }
 

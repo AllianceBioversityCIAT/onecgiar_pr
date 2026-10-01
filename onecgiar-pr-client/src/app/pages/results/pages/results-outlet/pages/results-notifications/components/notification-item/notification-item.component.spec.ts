@@ -2930,6 +2930,115 @@ describe('NotificationItemComponent', () => {
     });
   });
 
+  // WCT-T-5 (`w1w2-center-tagged`, design.md §8.2-§8.5, WCT-R-5/R-6/R-9): the inbox Updates row
+  // renders `lead` in `<b>`, carries the `CG Center tagged` chip in green, and stays view-only.
+  describe('WCT-T-5: Center-tagged row (lead, chip, view-only)', () => {
+    const bareCenterTaggedFixture = () => ({
+      notification_id: 1,
+      source: 'update',
+      created_date: new Date().toISOString(),
+      text: 'ABC',
+      obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+      obj_result: {
+        result_code: 9398,
+        title: 'A pooled funding result',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }],
+        obj_version: { id: 1 }
+      }
+    });
+
+    it('renders the bare SP01/ABC/9398 sentence with SP01 emphasized in <b>', () => {
+      component.notification = bareCenterTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const p = root.querySelector('.notification_content_body_text')!;
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe('SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - A pooled funding result');
+      const boldTexts = Array.from(p.querySelectorAll('b')).map(b => b.textContent?.trim());
+      expect(boldTexts).toContain('SP01');
+    });
+
+    it('a legacy composed fixture renders as it does today (no lead)', () => {
+      component.notification = {
+        ...bareCenterTaggedFixture(),
+        text: 'created by SP01 has tagged the International Center X. Click to see the result.'
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const p = root.querySelector('.notification_content_body_text')!;
+      const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+      expect(flat).toBe(
+        'The result 9398 - A pooled funding result created by SP01 has tagged the International Center X. Click to see the result.'
+      );
+    });
+
+    it('carries the "CG Center tagged" chip with the approved-status token class', () => {
+      component.notification = bareCenterTaggedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+
+      expect(chip.textContent?.trim()).toBe('CG Center tagged');
+      expect(chip.className).toContain('!bg-[var(--pr-status-approved-bg)]');
+      expect(chip.className).toContain('!text-[var(--pr-status-approved-fg)]');
+    });
+
+    it('rowTypeChipLabel / rowTypeChipColorClass resolve the same way directly', () => {
+      component.notification = bareCenterTaggedFixture();
+
+      expect(component.rowTypeChipLabel).toBe('CG Center tagged');
+      expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-status-approved-bg)] !text-[var(--pr-status-approved-fg)]');
+    });
+
+    it('a Result Submitted update row keeps its raw label and violet chip (unaffected)', () => {
+      component.notification = {
+        source: 'update',
+        notification_id: 2,
+        created_date: new Date().toISOString(),
+        obj_notification_type: { type: NotificationType.RESULT_SUBMITTED },
+        obj_emitter_user: { first_name: 'Jane', last_name: 'Doe' },
+        obj_result: { result_code: 100, title: 'T', obj_result_by_initiatives: [], obj_version: { id: 1 } }
+      };
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const chip = root.querySelector('[data-notif-type-chip]')!;
+
+      expect(chip.textContent?.trim()).toBe(NotificationType.RESULT_SUBMITTED);
+      expect(chip.className).toContain('!bg-[var(--pr-color-primary-50)]');
+      expect(chip.className).toContain('!text-[var(--pr-color-primary-400)]');
+    });
+
+    it('is view-only: rowMode is "view" and no decision buttons render', () => {
+      component.notification = bareCenterTaggedFixture();
+      fixture.detectChanges();
+
+      expect(component.rowMode).toBe('view');
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="accept-contribution-btn"]')).toBeNull();
+      expect(root.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+    });
+
+    it('request-row chips (drawer requestKind) are unaffected by the new chip branch', () => {
+      component.notification = {
+        source: 'request',
+        request_status_id: 1,
+        obj_requested_by: { first_name: 'A', last_name: 'B' },
+        obj_owner_initiative: { official_code: 'SP01' },
+        obj_shared_inititiative: { official_code: 'SP02' },
+        obj_result: { result_code: 100, title: 'T', obj_result_by_initiatives: [], obj_version: { id: 1 } }
+      };
+
+      expect(component.rowTypeChipLabel).toBe('Contribution request');
+      expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]');
+    });
+  });
+
   describe('Bilateral AI Job Finished row (no result behind it)', () => {
     const aiJobRow = () => ({
       source: 'update',

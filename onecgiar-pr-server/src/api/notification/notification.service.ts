@@ -1117,17 +1117,17 @@ export class NotificationService {
           storedText,
         );
       // NOTIF-T-12 (rework attempt 2): `RESULT_BILATERAL_PROJECT_TAGGED`'s `notification.text` is
-      // NOT always the same shape as `RESULT_CENTER_TAGGED`'s. The AC1/AC2 direct-tag flow now
-      // stores a bare project label (see `result-tagged-notification.service.ts`'s `emitFor()`,
-      // no `leadIn`) — composing `"The result <code> - <title> <label>"` for that shape reads as
-      // garbled, missing framing entirely. Only the BCT-T-4 submission flow (`leadIn` passed) and
-      // any pre-fix/legacy row still carry a whole composed sentence, which the shared fallback
-      // below (identical to `RESULT_CENTER_TAGGED`'s) handles correctly. Detect the shape with the
-      // same telltale substrings the client uses (`isComposedProjectTaggedText` — keep them in
-      // sync with `notification-type.constants.ts`'s twin).
+      // NOT always a composed sentence. The AC1/AC2 direct-tag flow now stores a bare project
+      // label (see `result-tagged-notification.service.ts`'s `emitFor()`, no `leadIn`) —
+      // composing `"The result <code> - <title> <label>"` for that shape reads as garbled, missing
+      // framing entirely. Only the BCT-T-4 submission flow (`leadIn` passed) and any pre-fix/legacy
+      // row still carry a whole composed sentence, which the shared fallback below handles
+      // correctly. Detect the shape with the same telltale substrings the client uses
+      // (`isComposedTaggedText` — keep them in sync with `notification-type.constants.ts`'s twin;
+      // `RESULT_CENTER_TAGGED` below joins this same detection, WCT-T-1).
       case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
         const suffix = storedText?.trim();
-        if (suffix && !this.isComposedProjectTaggedText(suffix)) {
+        if (suffix && !this.isComposedTaggedText(suffix)) {
           const identity = [resultCode, resultTitle]
             .filter(Boolean)
             .join(' - ');
@@ -1140,7 +1140,28 @@ export class NotificationService {
           suffix,
         );
       }
-      case NotificationTypeEnum.RESULT_CENTER_TAGGED:
+      // WCT-T-1 (design.md §7.1, requirements.md WCT-R-5 push clause, WCT-R-8): joins the same
+      // bare-vs-composed shape detection as RESULT_BILATERAL_PROJECT_TAGGED above, because the
+      // direct-tag flow (W1/W2, IPSR, SP review) now stores a bare Center acronym/code (no
+      // `leadIn`) instead of the whole sentence — composing `"The result <code> - <title> ABC"`
+      // from the shared suffix fallback below would garble it. Only the BCT-T-4 submission flow
+      // (`leadIn` passed) and any pre-fix/legacy row still carry a whole composed sentence, which
+      // the shared fallback (identical to RESULT_CONTRIBUTION_ACCEPTED/DECLINED's) handles.
+      case NotificationTypeEnum.RESULT_CENTER_TAGGED: {
+        const suffix = storedText?.trim();
+        if (suffix && !this.isComposedTaggedText(suffix)) {
+          const identity = [resultCode, resultTitle]
+            .filter(Boolean)
+            .join(' - ');
+          return `${programCode ?? 'a Science Program'} has tagged your CG Center as a contributor (${suffix}) to result${identity ? ` ${identity}` : ''}`;
+        }
+        return this.buildTaggedSuffixDescription(
+          codeText,
+          resultCode,
+          resultTitle,
+          suffix,
+        );
+      }
       // P2-3188 joins the same shape: the varying half is which Science Program decided, which
       // cannot be derived when the notification is read.
       case NotificationTypeEnum.RESULT_CONTRIBUTION_ACCEPTED:
@@ -1210,12 +1231,13 @@ export class NotificationService {
   }
 
   /**
-   * Server-side twin of `notification-type.constants.ts`'s `isComposedProjectTaggedText` — both
-   * detect the same literal server template from `result-tagged-notification.service.ts`'s
-   * `emitFor()`: `"${leadIn} has tagged the ${label}. Click to see the result."`. Keep the two in
-   * sync if that template ever changes.
+   * Server-side twin of `notification-type.constants.ts`'s `isComposedTaggedText` — both detect
+   * the same literal server template from `result-tagged-notification.service.ts`'s `emitFor()`:
+   * `"${leadIn} has tagged the ${label}. Click to see the result."`. Shared by
+   * `RESULT_BILATERAL_PROJECT_TAGGED` and `RESULT_CENTER_TAGGED` (type-neutral name, WCT-T-1).
+   * Keep the two in sync if that template ever changes.
    */
-  private isComposedProjectTaggedText(text: string): boolean {
+  private isComposedTaggedText(text: string): boolean {
     return (
       text.includes(' has tagged the ') ||
       text.trim().endsWith('Click to see the result.')

@@ -28,7 +28,16 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   below) feeds real `isUpdateSource` rows through the unified list's `origin: 'update'` tag.
 - **Chip taxonomy (`NOTIF-R-3`/`NOTIF-DD-3`):** `rowTypeChipLabel` — `"Contribution request"` for
   every request-source row, the resolved `NotificationType` for every update-source row (`null`,
-  chip omitted, if the type can't be resolved — never a fabricated label).
+  chip omitted, if the type can't be resolved — never a fabricated label). **WCT-T-5
+  (`w1w2-center-tagged`, WCT-R-6/DD-5) exception:** an update-source row whose resolved type is
+  `RESULT_CENTER_TAGGED` shows `NOTIFICATION_CENTER_TAGGED_COPY.chipLabel` ("CG Center tagged")
+  instead of the raw type name, and `rowTypeChipColorClass` pairs it with the green
+  `--pr-status-approved-bg/-fg` tokens (not the violet `--pr-color-primary-50/-400` pair every
+  other update type still gets). Request-row chips are untouched — the `isUpdateSource` branch is
+  checked first in both getters, before the `isPrimaryRequest` ternary. Same WCT-T-5: these rows'
+  sentence also renders `lead` (the owner Science Program code) in its own `<b>`, immediately
+  before `parts.prefix` — see `getResultNotificationTextParts()`'s `RESULT_CENTER_TAGGED` case in
+  `notification-type.constants.ts` for where `lead` comes from.
 - **Status indicator (`NOTIF-R-5`, item 2 of the task):** `rowStatusLabel` — "Needs your decision" /
   "For your information" (a `statusResolved` label was removed as dead code, rework attempt 2 —
   resolved rows never reach this getter's rendering path, they show the pre-existing
@@ -264,7 +273,17 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
   browser pass, not this doc.
 
-**Verified:** 2026-09-30 · qa-development-2026-ss · PSR-T-8 rework attempt 2
+**Verified:** 2026-09-30 · qa-development-2026-ss · WCT-T-5 (`w1w2-center-tagged`, attempt 2):
+an update-source `RESULT_CENTER_TAGGED` row's chip now reads `NOTIFICATION_CENTER_TAGGED_COPY.chipLabel`
+("CG Center tagged") with the green `--pr-status-approved-bg/-fg` pair, instead of the raw type
+name/violet pair every other update row still gets — see the "Chip taxonomy" bullet above, amended
+in this same stamp. The row's sentence also renders the owner SP code as `lead`, bolded ahead of
+`parts.prefix` (`getResultNotificationTextParts()`'s `RESULT_CENTER_TAGGED` case,
+`notification-type.constants.ts`). Request-row chips and every other update type are unchanged.
+Supersedes nothing below — it only amends the "Chip taxonomy" bullet; the PSR-T-8 stamp that
+follows still stands for everything else it describes.
+
+**Prior verification:** 2026-09-30 · qa-development-2026-ss · PSR-T-8 rework attempt 2
 (`bilateral-primary-sp-request`): row sentence now single-sourced from `drawerHeader()`/
 `copy.header.*` (no hard-coded English left in the row template), result-link routing fixed so the
 row and the drawer agree per kind (contributor → in-app `navigateToResult()`, primary →

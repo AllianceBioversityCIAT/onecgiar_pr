@@ -937,6 +937,103 @@ describe('ResultsByInstitutionsService', () => {
       });
     });
 
+    // WCT-T-2 (amended by Pivot, 2026-09-30): pin the partners-save audience — every
+    // newly linked code (lead included) reaches notifyTaggedCenters; no audience filter
+    // by lead/primary (DD-3 superseded) and no source filter (DD-6). User reverted D-1
+    // after this suite's own P2-3214 disqualifier (above) proved the lead is notified
+    // today — these tests only ADD coverage, they never edit the P2-3214 assertions.
+    describe('WCT-T-2: pinned partners-save audience (lead included, no source filter)', () => {
+      it('notifies every newly linked code, lead included, when neither was linked before', async () => {
+        mockResultsCenterRepository.getAllResultsCenterByResultIdAndCenterId
+          .mockResolvedValueOnce(null) // ABC is new
+          .mockResolvedValueOnce(null); // XYZ is new (and the lead)
+
+        await service.handleContributingCenters(
+          [
+            { code: 'ABC', is_leading_result: false } as any,
+            { code: 'XYZ', is_leading_result: true } as any,
+          ],
+          baseDto,
+          baseUser,
+        );
+
+        expect(
+          mockResultTaggedNotificationService.notifyTaggedCenters,
+        ).toHaveBeenCalledWith(123, baseUser.id, ['ABC', 'XYZ']);
+      });
+
+      it('does not notify for ABC when it was already linked by an ACTIVE row', async () => {
+        mockResultsCenterRepository.getAllResultsCenterByResultIdAndCenterId.mockResolvedValueOnce(
+          { center_id: 'ABC', is_active: true },
+        );
+
+        await service.handleContributingCenters(
+          [{ code: 'ABC', is_leading_result: false } as any],
+          baseDto,
+          baseUser,
+        );
+
+        expect(
+          mockResultTaggedNotificationService.notifyTaggedCenters,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('does not notify for ABC when it was already linked by an INACTIVE row', async () => {
+        mockResultsCenterRepository.getAllResultsCenterByResultIdAndCenterId.mockResolvedValueOnce(
+          { center_id: 'ABC', is_active: false },
+        );
+
+        await service.handleContributingCenters(
+          [{ code: 'ABC', is_leading_result: false } as any],
+          baseDto,
+          baseUser,
+        );
+
+        expect(
+          mockResultTaggedNotificationService.notifyTaggedCenters,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('resolves the save even when the emitter rejects (non-fatal)', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        mockResultsCenterRepository.getAllResultsCenterByResultIdAndCenterId.mockResolvedValueOnce(
+          null,
+        );
+        mockResultTaggedNotificationService.notifyTaggedCenters.mockRejectedValueOnce(
+          new Error('emitter down'),
+        );
+
+        await expect(
+          service.handleContributingCenters(
+            [{ code: 'ABC', is_leading_result: false } as any],
+            baseDto,
+            baseUser,
+          ),
+        ).resolves.toBeUndefined();
+
+        expect(mockResultsCenterRepository.save).toHaveBeenCalled();
+      });
+
+      // DD-6: no source filter is added. A `source = 'API'` result (SP review of a
+      // bilateral result through the same partners path) still notifies a newly
+      // linked centre with the same sentence.
+      it('still notifies a newly linked centre when the result source is API (DD-6, no source filter)', async () => {
+        mockResultsCenterRepository.getAllResultsCenterByResultIdAndCenterId.mockResolvedValueOnce(
+          null,
+        );
+
+        await service.handleContributingCenters(
+          [{ code: 'ABC', is_leading_result: false } as any],
+          { result_id: 123, source: 'API' } as any,
+          baseUser,
+        );
+
+        expect(
+          mockResultTaggedNotificationService.notifyTaggedCenters,
+        ).toHaveBeenCalledWith(123, baseUser.id, ['ABC']);
+      });
+    });
+
     it('clears centers when an empty payload is provided', async () => {
       await service.handleContributingCenters([], baseDto, baseUser);
 
