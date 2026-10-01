@@ -112,6 +112,16 @@ Every IPSR `app-pr-dialog` that today has no close `×` MUST show one in its top
 - BUT it must NOT add a second `×` to modals that already have one (the creator, `new-complementary-innovation`, `update-ipsr-result-modal`, the Step 3 evidence dialog)
 - AND IT MUST NOT change any `app-pr-dialog` outside these 6 (opt-in only)
 
+### Requirement: "Add project" action buttons stay inside the modal — `ICM-R-7` (MUST) — added 2026-10-01 (Pivot 2, user report)
+
+The Step 4 "Add project" modal's **Cancel** and **Add project** buttons MUST render inside the panel, at its bottom-right. Today they render at the viewport's bottom-right because `.buttons` is `position: fixed` (`step-n4-add-project.component.scss:31-38`). This is a pre-existing defect from the 2026-07-14 `p-dialog` → `app-pr-dialog` migration (`784549007`), not one caused by `ICM-T-2`.
+
+#### Scenario: Buttons inside the panel
+
+- GIVEN IPSR Step 4 with the "Add project" modal open, at viewport 1440×900 and 1100×700
+- THEN both buttons' bounding rects lie inside the panel's bounding rect
+- BUT the buttons must NOT overlap the project select
+
 ### Requirement: Existing modal behavior unchanged — `ICM-R-4` (MUST)
 
 - Escape and backdrop click MUST still close the modal.
@@ -143,6 +153,7 @@ Every IPSR `app-pr-dialog` that today has no close `×` MUST show one in its top
 | `ICM-AC-3` | Same, viewport 1100×700 (`95vw` branch, shorter height) | Open the modal | Same three checks; left/right gaps differ ≤ 2px |
 | `ICM-AC-4` | Modal open | Click `×` / press Escape / click mask | Modal closes; form reset |
 | `ICM-AC-5` | Step 2.1 page, modal closed, scrolled down | Scroll content under the header | Content passes under the header (topmost element at a header point is the header) |
+| `ICM-AC-8` | Step 4 "Add project" open, 1440×900 and 1100×700 | Measure the button rects | Both buttons are contained in the panel rect |
 | `ICM-AC-7` | Each of the 6 header-less IPSR modals open | Look / click the top-right `×` | `×` visible and topmost at its center, no overlap with the title; click closes and fires `onHide`; the 4 modals with an existing `×` show exactly one |
 | `ICM-AC-6` | IPSR Step 4, sidebar expanded, viewport 1100×700 (amended 2026-10-01: at 1440 the ~700px panel does not overlap the sidebar) | Open "Add partner" (sibling modal) | Probes over the sidebar and header resolve to the panel; a sidebar point outside the panel resolves to the mask; panel centered (≤ 2px). The `×` check is **n/a until `ICM-T-3`**: Step 4 modals render `[showHeader]="false"` and have no `×` today (amended 2026-10-01). After T-3 they show one (`ICM-R-6`), and the `×` check applies |
 

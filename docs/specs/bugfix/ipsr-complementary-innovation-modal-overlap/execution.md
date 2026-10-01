@@ -139,3 +139,43 @@
   - Budget tripwire fired twice; the user accepted both.
   - The Implementer's self-checks twice exercised copies instead of the shipped code, and the Leader re-ran against the shipped files each time.
 - **Constitution Impact:** none (test-only files; no module boundary).
+- **Pivot approved by the user (2026-10-01): "Aprobar".** `ICM-T-3` was added to the plan, after T-2. Budget: ~640 LOC expected, tripwire 750 LOC / 5 review rounds. The user chose "Continuar con T-2".
+
+### ICM-T-2 — Release the retained fade on IPSR `.section_container` · in progress · 2026-10-01
+
+**Attempt 1** — Implementer `akili-implementer` (T2, effort medium). Skills: `angular-developer` (the task's `tailwind-design-system` was dropped: this is a single SCSS animation declaration, so no Tailwind is involved).
+- **Green run — user's authenticated browser, with the T-2 rule applied (2026-10-01):**
+  - The rule was written to `ipsr.component.scss` at 14:17:27 (`stat`). The user's paste arrived after it, with the dev server hot-reloading from this worktree.
+  - Output: `ICM-PROBE PASS`. The red→green pair on the real app is `ICM-PROBE FAIL: a, b, c, d` → `ICM-PROBE PASS`.
+  - The sidebar state of this run was not stated. The collapsed-state run and the HITL visual pass are requested.
+- **Files:** `onecgiar-pr-client/src/app/pages/ipsr/ipsr.component.scss` (+10 lines: a comment plus `:host ::ng-deep .section_container { animation-fill-mode: backwards; }`).
+- **Implementer verification:**
+  - Jest `src/app/pages/ipsr` + `src/app/shared/components/pr-dialog` → `Test Suites: 84 passed, 84 total · Tests: 903 passed, 903 total`.
+  - Lint clean.
+  - Global grep: only `transitions.scss:13-14,113-114` set `fill-mode: both` (0,1,0), so the host rule (0,2,0) wins.
+  - Chunk grep: the IPSR lazy chunk is not compiled until a browser navigates there (dev-server on-demand), so it was not found via `curl`. Covered by the user's browser run.
+- **Evidence re-run (Leader inline): VERIFIED.** Same Jest command → `84 passed / 903 passed`. `npx ng lint --quiet` → exit 0, `All files pass linting.`
+- **Falsifier on the real app:** the user's red (rule absent) `ICM-PROBE FAIL: a, b, c, d` → green (rule present) `ICM-PROBE PASS`.
+- **Reviewer (attempt 1): `STATUS: PASS`.** The diff matches `ICM-DD-1` exactly, and specificity (0,2,0) beats (0,1,0) without `!important`. The rule reaches all 4 `.section_container` elements under `IpsrComponent` (`ipsr-routing.module.ts:6`). No stacking context exists above it (`app.component.html:48`, `hlm-sidebar-inset.ts:12`). No third trapping ancestor was found (grep for `animate__|fadeIn|detail_container|transform|filter|will-change|isolation|contain` in IPSR). The P-7 regression analysis holds. ADVISORY omitted (diff < 50 LOC).
+- **Not closable yet:** the DoD's HITL items are owed by the user: the collapsed-state probe run, the visual pass on the listed pages, and the computed `animation-fill-mode: backwards` on both ancestors (stale-bundle disqualifier). The task stays `[~]` until they are recorded.
+
+## Pivot Record 2: "Add project" buttons outside the modal (2026-10-01)
+
+- **Trigger:** user HITL report with a screenshot: "en el step 4 cuando se da clic en add project que los botones de cancel y add project se salen del modal".
+- **Root cause (Leader):**
+  - `step-n4-add-project.component.scss:31-38` sets `.buttons { position: fixed; bottom: 15px; right: 20px }`, which pins the buttons to the viewport.
+  - It was introduced by `7d339ae91` (2026-01-14) while the modal was a PrimeNG `p-dialog`. The Leader believes the old panel anchored fixed descendants, but this is unverified.
+  - It broke with `784549007` (2026-07-14, migration to `app-pr-dialog`).
+  - It is **pre-existing and not caused by `ICM-T-2`**: `animation-fill-mode` on an opacity animation does not create a containing block for fixed elements.
+- **Sibling sweep:** `grep -rn "position: fixed" --include='*.scss' src/app/pages/ipsr` → 2 hits: `add-project .buttons` (the defect) and `innovation-package-custom-table .pr-menu-panel` (an intended fixed menu). No other modal has it.
+- **User decision:** "Sí, en T-3 (Recomendado)". Added `ICM-R-7`, `ICM-AC-8`, and T-3 step 5 (`fixed` → `absolute`). Budget +~2 LOC (within the 750 tripwire).
+- **HITL (user, 2026-10-01): "Sí, resto OK".** Step 2.1 shows no overlap and the `×` is visible and closes, with the sidebar expanded and collapsed. The IPSR list, Step 1, Step 3 and contributors look as before. The one exception, the "Add project" buttons, is pre-existing and was moved to T-3 (Pivot 2).
+- **Stale-bundle disqualifier:** the user did not state the computed-style read explicitly. It is discharged by behavior instead: the probe went FAIL → PASS on the same page after the edit, which cannot happen with a stale bundle. Recorded as such.
+
+### ICM-T-2 — final result · **PASS** (attempt 1) · 2026-10-01
+
+- Reviewer PASS + evidence re-run VERIFIED + real-app red→green + HITL OK.
+- **Requirements covered:** `ICM-R-1..R-5`, `ICM-DD-1`.
+- **Final verification:** Jest 84/903 green; lint clean.
+- **Constitution Impact:** none.
+- **Skills deviation:** `tailwind-design-system` was dropped (SCSS-only declaration).

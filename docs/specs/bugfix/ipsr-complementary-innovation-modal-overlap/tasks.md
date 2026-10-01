@@ -56,6 +56,8 @@
 
 ### `ICM-T-2` — Release the retained fade on IPSR `.section_container` (green)
 
+- **Status:** `[x]` PASS 2026-10-01 (Reviewer PASS + user HITL OK)
+
 - **Type:** client
 - **Description:** In `onecgiar-pr-client/src/app/pages/ipsr/ipsr.component.scss`, add a host-scoped deep rule that sets `animation-fill-mode: backwards` on `.section_container`, with a short comment that cites this spec and the reason (a retained opacity animation creates a stacking context that traps `app-pr-dialog`). Do not use `!important`. Change nothing else. Then:
   1. Run T-1: it must be green in all 4 combinations, plus AC-5 and AC-6.
@@ -81,14 +83,15 @@
 
 ### `ICM-T-3` — Add a `×` to the 6 header-less IPSR modals (added 2026-10-01, Pivot)
 
-- **Status:** `[ ]` — pending user approval of the Pivot
+- **Status:** `[ ]` — Pivot approved by the user 2026-10-01
 - **Type:** client
 - **Description:**
   1. In the shared `app-pr-dialog` (`shared/components/pr-dialog/`), add an **opt-in** boolean input `floatingClose`, default `false`. When it is true and `showHeader` is false, render the existing `.pr-dialog__close` button (same markup, `aria-label="Close"`, calls `hide()`) absolutely positioned in the panel's top-right corner. With the default, the output is unchanged for every consumer.
   2. Set `[floatingClose]="true"` on exactly the 6 modals: `ipsr-submission-modal`, `ipsr-unsubmit-modal`, `step-n4-add-bilateral`, `step-n4-add-partner`, `step-n4-add-project`, `step-n4-edit-bilateral`.
   3. Add a Jest spec for `PrDialogComponent`: no floating `×` by default; with `floatingClose` + `showHeader=false` there is exactly one `×`, and clicking it emits `visibleChange(false)` and `onHide`; with `showHeader=true` the header `×` stays and no floating one is added.
+  5. **(Pivot 2, `ICM-R-7`)** In `step-n4-add-project.component.scss`, change `.buttons` from `position: fixed` to `position: absolute` (the panel is already `position: relative` via `::ng-deep app-pr-dialog .step-n4-add-project-dialog`). Keep `bottom: 15px; right: 20px`. Verification is the HITL check plus a DevTools rect read: both button rects inside the panel rect, at 1440×900 and 1100×700. jsdom cannot measure layout. Falsifier: with `fixed`, the button rects sit outside the panel (the user's screenshot, 2026-10-01).
   4. Extend the existing zoneless specs of the 3 Step 4 modals (`step-n4-add-partner`, `-add-bilateral`, `-add-project`) with a real-template check: the open modal contains exactly one `.pr-dialog__close`.
-- **Implements:** `ICM-R-6`, `ICM-AC-7`, and `ICM-AC-6` (c) after T-3
+- **Implements:** `ICM-R-6`, `ICM-AC-7`, `ICM-AC-6` (c) after T-3, `ICM-R-7`, `ICM-AC-8`
 - **Files (expected):** `shared/components/pr-dialog/pr-dialog.component.{ts,html,scss}`, new `pr-dialog.component.spec.ts`, the 6 modal templates, the 3 Step 4 zoneless specs
 - **Depends on:** `ICM-T-2`
 - **Estimate:** S
@@ -105,6 +108,7 @@
   - [ ] All consumer suites above green; `npx ng lint --quiet` clean
   - [ ] DevTools probe on add-partner after T-2 + T-3: (c) evaluated and passing
   - [ ] HITL visual on all 6 modals: `×` visible, no overlap with the title, closes the modal
+  - [ ] "Add project": both buttons inside the panel at 1440×900 and 1100×700 (`ICM-AC-8`)
 - **Skills:** `angular-developer`, `tailwind-design-system`
 
 ## 4. Dependency graph
