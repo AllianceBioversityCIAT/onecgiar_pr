@@ -230,5 +230,17 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
     notificationSettings: 'Notification settings',
     markAllAsRead: 'Mark all as read',
     announcements: 'Announcements'
+  },
+  /**
+   * @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2/§6.3, PAGE-R-4/R-10).
+   * Copy for the paginated-history footer: the "Load more" button, the trailing skeleton row's
+   * caption while a source's first history page is still outstanding, and the filtered-scope hint
+   * shown next to "Load more" while a toolbar filter/search is active (PAGE-R-10) — exact wording
+   * from `design.md` §6.2, not paraphrased.
+   */
+  inbox: {
+    loadMore: 'Load more',
+    loadingHistory: 'Loading history…',
+    filteredHint: 'Filters apply to loaded notifications. Load more to include older ones.'
   }
 } as const;

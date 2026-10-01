@@ -63,7 +63,9 @@ describe('ShareRequestModalComponent', () => {
     };
 
     mockResultsNotificationsService = {
-      get_section_information: jest.fn(),
+      // @akili-spec notifications/inbox-paginated-load — PAGE-T-5: the component now calls
+      // `refreshSource('received')` instead of the legacy `get_section_information` wrapper.
+      refreshSource: jest.fn(),
       get_section_innovation_packages: jest.fn()
     };
 
@@ -315,7 +317,7 @@ describe('ShareRequestModalComponent', () => {
       mockApiService.resultsSE.ipsrDataControlSE.inIpsr = false;
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
-      const spygGet_section_information = jest.spyOn(mockResultsNotificationsService, 'get_section_information');
+      const spyRefreshSource = jest.spyOn(mockResultsNotificationsService, 'refreshSource');
 
       component.acceptOrReject();
 
@@ -326,7 +328,7 @@ describe('ShareRequestModalComponent', () => {
         title: `Request successfully accepted`,
         status: 'success'
       });
-      expect(spygGet_section_information).toHaveBeenCalled();
+      expect(spyRefreshSource).toHaveBeenCalledWith('received');
     });
     it('should handle error on PATCH_updateRequest call', () => {
       const errorMessage = {

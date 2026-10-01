@@ -42,6 +42,11 @@ describe('ResultsNotificationsComponent', () => {
       resetFilters: jest.fn(),
       getAllPhases: jest.fn(),
       onPhaseChange: jest.fn(),
+      // @akili-spec notifications/inbox-paginated-load (PAGE-T-6, T-5 audit forward pointer):
+      // `ngOnInit()`'s no-phase-resolved fallback now calls this directly (design.md §2.2/§6.2,
+      // PAGE-R-1 "no phase") instead of the three legacy wrappers above, which are still mocked only
+      // because `refreshAllNotifications()` (called after an Accept/Decline) still uses them.
+      loadInbox: jest.fn(),
       phaseList: [],
       filteredInitiatives: [],
       entityLabel: 'Entity',
@@ -52,7 +57,16 @@ describe('ResultsNotificationsComponent', () => {
       bilateralProjectIdsFilter: [],
       receivedData: { receivedContributionsPending: [], receivedContributionsDone: [] },
       sentData: { sentContributionsPending: [], sentContributionsDone: [] },
-      updatesData: { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] }
+      updatesData: { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] },
+      // @akili-spec notifications/inbox-paginated-load (PAGE-T-6): paging state the component's
+      // template/getters now read straight off the service (design.md §6.2) — defaults match a
+      // fully-loaded, exhausted inbox so pre-existing tests above (written before this task) keep
+      // seeing the "Load more" control and skeleton gates hidden unless a test opts in.
+      initialLoading: false,
+      hasMore: false,
+      historyLoading: false,
+      loadingMore: false,
+      loadMore: jest.fn()
     };
 
     routerEvents$ = new Subject<any>();
@@ -120,20 +134,81 @@ describe('ResultsNotificationsComponent', () => {
     expect(resultsNotificationsServiceMock.get_section_information).not.toHaveBeenCalled();
     expect(resultsNotificationsServiceMock.get_sent_notifications).not.toHaveBeenCalled();
     expect(resultsNotificationsServiceMock.get_updates_notifications).not.toHaveBeenCalled();
+    // @akili-spec notifications/inbox-paginated-load (PAGE-T-6): the no-phase-resolved fallback
+    // (below) must not fire either, on a normal page load where a phase DOES resolve.
+    expect(resultsNotificationsServiceMock.loadInbox).not.toHaveBeenCalled();
   });
 
   // The fallback: when getAllPhases() resolves NO phase at all (rare — e.g. before the active
   // reporting phase is known), the callback passed by ngOnInit is the only remaining way the page
-  // gets any data, so it must still fetch the three feeds itself.
-  it('falls back to fetching Received, Sent and Updates directly when getAllPhases() resolves no phase', () => {
+  // gets any data.
+  //
+  // @akili-spec notifications/inbox-paginated-load (PAGE-T-6, PAGE-T-5 audit forward pointer): this
+  // used to assert the three legacy wrapper calls (`get_section_information`, `get_sent_notifications`,
+  // `get_updates_notifications` — each called with no arguments, each a thin `refreshSource()`
+  // delegate). Finding: `initialLoading` (PAGE-T-6's skeleton-gate flag) is ONLY ever set by
+  // `loadInbox()` in the service — `refreshSource()`/the legacy wrappers never touch it — so calling
+  // them here left the skeleton gate permanently disengaged on this fallback path (pending/history
+  // could paint in arrival order, the PAGE-R-2/PAGE-AC-5 regression the gate exists to prevent). The
+  // fix calls `loadInbox()` (no phase — PAGE-R-1 "no phase" means all phases) once instead, which
+  // both reloads the whole inbox AND engages/resolves the skeleton gate correctly.
+  it('falls back to loadInbox() (no phase) when getAllPhases() resolves no phase — engages the skeleton gate correctly', () => {
     component.ngOnInit();
     const onPhaseUnresolved = resultsNotificationsServiceMock.getAllPhases.mock.calls[0][0];
 
+    expect(resultsNotificationsServiceMock.loadInbox).not.toHaveBeenCalled();
+
     onPhaseUnresolved();
 
-    expect(resultsNotificationsServiceMock.get_section_information).toHaveBeenCalled();
-    expect(resultsNotificationsServiceMock.get_sent_notifications).toHaveBeenCalled();
-    expect(resultsNotificationsServiceMock.get_updates_notifications).toHaveBeenCalled();
+    expect(resultsNotificationsServiceMock.loadInbox).toHaveBeenCalledTimes(1);
+    expect(resultsNotificationsServiceMock.loadInbox).toHaveBeenCalledWith();
+    // The legacy wrappers are NOT called from this path any more — `loadInbox()` is the only call.
+    expect(resultsNotificationsServiceMock.get_section_information).not.toHaveBeenCalled();
+    expect(resultsNotificationsServiceMock.get_sent_notifications).not.toHaveBeenCalled();
+    expect(resultsNotificationsServiceMock.get_updates_notifications).not.toHaveBeenCalled();
+  });
+
+  // The skeleton gate itself reads `initialLoading` straight off the service (design.md §6.2). Two
+  // separate tests (not one toggling `initialLoading` mid-test) — a second `detectChanges()` after
+  // mutating state tripped Angular's own `checkNoChanges()` dev-mode pass on an unrelated internal
+  // timing detail in this same spec file's pre-existing "settings-route isolation" tests (see that
+  // describe block's own comment above); one `detectChanges()` per test sidesteps it here too.
+  it('the no-phase fallback: skeleton gate is up (no rows) while the service reports initialLoading=true', () => {
+    routerMock.url = '/result/results-outlet/results-notifications';
+    resultsNotificationsServiceMock.initialLoading = true;
+    resultsNotificationsServiceMock.receivedData = {
+      receivedContributionsPending: [{ share_result_request_id: 1, request_status_id: 1, requested_date: '2026-09-29T09:00:00Z' }],
+      receivedContributionsDone: []
+    };
+
+    component.ngOnInit();
+    const onPhaseUnresolved = resultsNotificationsServiceMock.getAllPhases.mock.calls[0][0];
+    onPhaseUnresolved();
+    fixture.detectChanges();
+
+    expect(resultsNotificationsServiceMock.loadInbox).toHaveBeenCalledTimes(1);
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-notification-item')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('app-skeleton-notification-item').length).toBeGreaterThan(0);
+  });
+
+  // The gate is not bypassed either: once the service (which the component only reads, never drives)
+  // reports `initialLoading=false` on the SAME fallback path, rows render normally — proving the gate
+  // does not stay up forever once `loadInbox()`'s own pending-settlement clears the flag.
+  it('the no-phase fallback: rows render once the service reports initialLoading=false', () => {
+    routerMock.url = '/result/results-outlet/results-notifications';
+    resultsNotificationsServiceMock.initialLoading = false;
+    resultsNotificationsServiceMock.receivedData = {
+      receivedContributionsPending: [{ share_result_request_id: 1, request_status_id: 1, requested_date: '2026-09-29T09:00:00Z' }],
+      receivedContributionsDone: []
+    };
+
+    component.ngOnInit();
+    const onPhaseUnresolved = resultsNotificationsServiceMock.getAllPhases.mock.calls[0][0];
+    onPhaseUnresolved();
+    fixture.detectChanges();
+
+    expect(resultsNotificationsServiceMock.loadInbox).toHaveBeenCalledTimes(1);
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-notification-item')).toBeTruthy();
   });
 
   it('should update query params', () => {
@@ -608,6 +683,224 @@ describe('ResultsNotificationsComponent', () => {
         b.textContent?.includes('Mark all as read')
       );
       expect(button).toBeFalsy();
+    });
+  });
+
+  // @akili-spec notifications/inbox-paginated-load (PAGE-T-6): skeleton gate, "Load more", the
+  // filtered-scope hint and the identity-keyed memoization (design.md §6.2/§6.3, PAGE-R-2/R-4/R-10/
+  // R-11). Falsifiers (a)-(e) from the task brief, one `it` per letter plus the skeleton-gate and
+  // "Loading history…" rendering this task also owns.
+  describe('Paginated inbox — skeleton gate, Load more, hint, memoization (PAGE-T-6)', () => {
+    const getLoadMoreButton = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b => b.textContent?.includes('Load more')) as
+        | HTMLButtonElement
+        | undefined;
+
+    beforeEach(() => {
+      routerMock.url = '/result/results-outlet/results-notifications';
+    });
+
+    it('renders the skeleton gate (no rows, no groups) while initialLoading is true', () => {
+      resultsNotificationsServiceMock.initialLoading = true;
+      resultsNotificationsServiceMock.receivedData = {
+        receivedContributionsPending: [{ share_result_request_id: 1, request_status_id: 1, requested_date: '2026-09-29T09:00:00Z' }],
+        receivedContributionsDone: []
+      };
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('app-notification-item')).toBeNull();
+      expect(compiled.querySelectorAll('app-skeleton-notification-item').length).toBeGreaterThan(0);
+    });
+
+    it('renders rows (not the skeleton gate) once initialLoading is false', () => {
+      resultsNotificationsServiceMock.initialLoading = false;
+      resultsNotificationsServiceMock.receivedData = {
+        receivedContributionsPending: [{ share_result_request_id: 1, request_status_id: 1, requested_date: '2026-09-29T09:00:00Z' }],
+        receivedContributionsDone: []
+      };
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-notification-item')).toBeTruthy();
+    });
+
+    it('shows a trailing "Loading history…" row while historyLoading is true', () => {
+      resultsNotificationsServiceMock.initialLoading = false;
+      resultsNotificationsServiceMock.historyLoading = true;
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Loading history…');
+    });
+
+    it('does not show the "Loading history…" row when historyLoading is false', () => {
+      resultsNotificationsServiceMock.historyLoading = false;
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Loading history…');
+    });
+
+    // Falsifier (a): all hasMore=false and the button is rendered -> fail.
+    it('falsifier (a): does not render "Load more" when every source is exhausted (hasMore=false)', () => {
+      resultsNotificationsServiceMock.hasMore = false;
+      fixture.detectChanges();
+
+      expect(getLoadMoreButton()).toBeUndefined();
+    });
+
+    // Falsifier (b): any hasMore=true and the button is absent -> fail.
+    it('falsifier (b): renders "Load more" when at least one source still has more (hasMore=true)', () => {
+      resultsNotificationsServiceMock.hasMore = true;
+      fixture.detectChanges();
+
+      expect(getLoadMoreButton()).toBeTruthy();
+    });
+
+    it('"Load more" is not shown during the initial skeleton gate even if hasMore is already true', () => {
+      resultsNotificationsServiceMock.initialLoading = true;
+      resultsNotificationsServiceMock.hasMore = true;
+      fixture.detectChanges();
+
+      expect(getLoadMoreButton()).toBeUndefined();
+    });
+
+    it('clicking "Load more" delegates to the service', () => {
+      resultsNotificationsServiceMock.hasMore = true;
+      fixture.detectChanges();
+
+      getLoadMoreButton()!.click();
+
+      expect(resultsNotificationsServiceMock.loadMore).toHaveBeenCalled();
+    });
+
+    // Falsifier (c): loading -> button not disabled or no aria-busy -> fail.
+    it('falsifier (c): "Load more" is disabled and aria-busy while loadingMore is true', () => {
+      resultsNotificationsServiceMock.hasMore = true;
+      resultsNotificationsServiceMock.loadingMore = true;
+      fixture.detectChanges();
+
+      const button = getLoadMoreButton()!;
+      expect(button.disabled).toBe(true);
+      expect(button.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('"Load more" is enabled and not aria-busy while loadingMore is false', () => {
+      resultsNotificationsServiceMock.hasMore = true;
+      resultsNotificationsServiceMock.loadingMore = false;
+      fixture.detectChanges();
+
+      const button = getLoadMoreButton()!;
+      expect(button.disabled).toBe(false);
+      expect(button.getAttribute('aria-busy')).toBe('false');
+    });
+
+    // Falsifier (d): filter active + hasMore -> hint absent fails; no filter -> hint present fails.
+    it('falsifier (d): shows the filtered-scope hint when a filter is active and hasMore is true', () => {
+      resultsNotificationsServiceMock.hasMore = true;
+      resultsNotificationsServiceMock.centerIdsFilter = [10];
+      fixture.detectChanges();
+
+      expect(component.showFilteredHistoryHint).toBe(true);
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        'Filters apply to loaded notifications. Load more to include older ones.'
+      );
+    });
+
+    it('falsifier (d): shows the filtered-scope hint when the search box is active (no filter chip) and hasMore is true', () => {
+      resultsNotificationsServiceMock.hasMore = true;
+      resultsNotificationsServiceMock.searchFilter = 'foo';
+      fixture.detectChanges();
+
+      expect(component.showFilteredHistoryHint).toBe(true);
+    });
+
+    it('falsifier (d): hides the hint when NO filter/search is active, even if hasMore is true', () => {
+      resultsNotificationsServiceMock.hasMore = true;
+      fixture.detectChanges();
+
+      expect(component.showFilteredHistoryHint).toBe(false);
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Filters apply to loaded notifications');
+    });
+
+    it('falsifier (d): hides the hint when a filter is active but every source is exhausted (hasMore=false)', () => {
+      resultsNotificationsServiceMock.hasMore = false;
+      resultsNotificationsServiceMock.centerIdsFilter = [10];
+      fixture.detectChanges();
+
+      expect(component.showFilteredHistoryHint).toBe(false);
+    });
+
+    // Falsifier (e): calling groupedTabList twice with unchanged inputs must not invoke the pipes
+    // twice; changing a filter must recompute.
+    describe('identity-keyed memoization (PAGE-R-11, PAGE-DD-8)', () => {
+      beforeEach(() => {
+        resultsNotificationsServiceMock.receivedData = {
+          receivedContributionsPending: [{ share_result_request_id: 1, request_status_id: 1, requested_date: '2026-09-29T09:00:00Z' }],
+          receivedContributionsDone: []
+        };
+      });
+
+      it('falsifier (e): calling groupedTabList twice with unchanged inputs does not re-invoke the recency pipe', () => {
+        const transformSpy = jest.spyOn((component as any).groupByRecencyPipe, 'transform');
+
+        component.groupedTabList;
+        component.groupedTabList;
+
+        expect(transformSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('falsifier (e): calling groupedTabList twice with unchanged inputs does not re-invoke the filter pipes either', () => {
+        const searchSpy = jest.spyOn((component as any).filterBySearchPipe, 'transform');
+
+        component.groupedTabList;
+        component.groupedTabList;
+
+        expect(searchSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('falsifier (e): changing a filter (searchFilter) DOES recompute on the next read', () => {
+        const transformSpy = jest.spyOn((component as any).groupByRecencyPipe, 'transform');
+
+        component.groupedTabList;
+        resultsNotificationsServiceMock.searchFilter = 'changed';
+        component.groupedTabList;
+
+        expect(transformSpy).toHaveBeenCalledTimes(2);
+      });
+
+      it('falsifier (e): changing the active tab DOES recompute on the next read', () => {
+        const transformSpy = jest.spyOn((component as any).groupByRecencyPipe, 'transform');
+
+        component.groupedTabList;
+        component.setActiveTab('decision');
+        component.groupedTabList;
+
+        expect(transformSpy).toHaveBeenCalledTimes(2);
+      });
+
+      it('falsifier (e): a NEW history array reference (an appended Load-more page) DOES recompute on the next read', () => {
+        const transformSpy = jest.spyOn((component as any).groupByRecencyPipe, 'transform');
+
+        component.groupedTabList;
+        resultsNotificationsServiceMock.receivedData = {
+          ...resultsNotificationsServiceMock.receivedData,
+          receivedContributionsDone: [{ share_result_request_id: 2, request_status_id: 2, requested_date: '2026-09-01T09:00:00Z' }]
+        };
+        component.groupedTabList;
+
+        expect(transformSpy).toHaveBeenCalledTimes(2);
+      });
+
+      it('reading unifiedList/filteredUnifiedList/sourceScopedList/tabFilteredList/groupedTabList in the same tick shares one recomputation', () => {
+        const transformSpy = jest.spyOn((component as any).groupByRecencyPipe, 'transform');
+
+        component.unifiedList;
+        component.filteredUnifiedList;
+        component.sourceScopedList;
+        component.tabFilteredList;
+        component.groupedTabList;
+
+        expect(transformSpy).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

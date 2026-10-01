@@ -56,8 +56,10 @@ describe('HeaderPanelComponent', () => {
     expect(component.getPlatformRole()).toBe('Administrator');
   });
 
-  it('should call get_updates_notifications and get_updates_pop_up_notifications on ngOnInit', () => {
-    const getUpdatesNotificationsSpy = jest.spyOn(component.resultsNotificationsSE, 'get_updates_notifications').mockImplementation(() => {});
+  it('should call refreshPending(\'updates\') and get_updates_pop_up_notifications on ngOnInit', () => {
+    // @akili-spec notifications/inbox-paginated-load — PAGE-T-5: boot only needs the pending set, not
+    // a full history reload (`get_updates_notifications` is the legacy full-reload wrapper).
+    const refreshPendingSpy = jest.spyOn(component.resultsNotificationsSE, 'refreshPending').mockImplementation(() => {});
     const getUpdatesPopUpNotificationsSpy = jest
       .spyOn(component.resultsNotificationsSE, 'get_updates_pop_up_notifications')
       .mockImplementation(() => {});
@@ -67,11 +69,11 @@ describe('HeaderPanelComponent', () => {
     component.ngOnInit();
 
     expect(updateUserDataSpy).toHaveBeenCalled();
-    expect(getUpdatesNotificationsSpy).toHaveBeenCalled();
+    expect(refreshPendingSpy).toHaveBeenCalledWith('updates');
     expect(getUpdatesPopUpNotificationsSpy).toHaveBeenCalled();
     expect(getCurrentPhasesSpy).toHaveBeenCalled();
 
-    getUpdatesNotificationsSpy.mockRestore();
+    refreshPendingSpy.mockRestore();
     getUpdatesPopUpNotificationsSpy.mockRestore();
     updateUserDataSpy.mockRestore();
     getCurrentPhasesSpy.mockRestore();

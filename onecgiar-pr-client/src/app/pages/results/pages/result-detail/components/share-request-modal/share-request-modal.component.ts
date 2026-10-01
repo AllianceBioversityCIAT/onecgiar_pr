@@ -236,7 +236,9 @@ export class ShareRequestModalComponent implements OnInit {
         if (this.api.resultsSE.ipsrDataControlSE.inIpsr) {
           this.resultsNotificationsSE.get_section_innovation_packages();
         } else {
-          this.resultsNotificationsSE.get_section_information();
+          // @akili-spec notifications/inbox-paginated-load — PAGE-T-5 (PAGE-R-1, PAGE-R-5): refresh
+          // only the received source (pending + first history page) at the current phaseFilter.
+          this.resultsNotificationsSE.refreshSource('received');
         }
       },
       error: err => {

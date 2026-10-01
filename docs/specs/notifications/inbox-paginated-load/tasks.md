@@ -101,7 +101,7 @@ Test commands are always scoped (`--testPathPattern`) — never a full suite.
   - **Consumers:** `results-notifications.component.ts`, `app.component.ts`, `header-panel.component.ts`, `websocket.service.ts`, `share-request-modal.component.ts`, existing service spec.
 - **DoD:** tests green · `npx ng lint --quiet` clean on touched files · existing service spec cases updated, not deleted.
 
-### PAGE-T-5 — External callers use pending-only / refreshSource
+### [x] PAGE-T-5 — External callers use pending-only / refreshSource
 
 - **Type:** client
 - **Description:** Boot calls in `app.component.ts` and `header-panel.component.ts` → `refreshPending('updates')`; `websocket.service.ts` → `refreshSource('received' | 'updates')`; `share-request-modal.component.ts` → `refreshSource('received')`. All use current `phaseFilter`.
@@ -120,7 +120,7 @@ Test commands are always scoped (`--testPathPattern`) — never a full suite.
   - **Consumers:** none beyond the 4 callers.
 - **DoD:** tests green · lint clean.
 
-### PAGE-T-6 — Inbox view: skeleton gate, history row, Load more, hint, memoized list
+### [x] PAGE-T-6 — Inbox view: skeleton gate, history row, Load more, hint, memoized list
 
 - **Type:** client
 - **Description:** Template: skeleton while `initialLoading`; trailing "Loading history…" skeleton while a first history page is pending; Spartan `hlmBtn` outline "Load more" iff any `hasMore`, `[disabled]` + `aria-busy` while loading; hint when filters/search active and any `hasMore`. Component: identity-keyed memoization of `unifiedList → … → groupedTabList`.

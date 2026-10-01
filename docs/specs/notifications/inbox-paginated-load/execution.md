@@ -184,3 +184,78 @@
 - `refreshSource(source)` and `refreshPending(source)` default to the current `phaseFilter`.
 - The legacy wrappers already delegate, so T-5 only swaps the boot callers to `refreshPending('updates')` and the socket/modal callers to `refreshSource(...)`.
 - History arrays are replaced on every change, so memoization by identity works.
+
+### PAGE-T-5 — External callers use pending-only / refreshSource — PASS
+
+| Field | Value |
+|---|---|
+| Date | 2026-10-01 |
+| Final status | PASS (attempt 1 of 3) |
+| Implements | PAGE-R-1, R-5, PAGE-DD-5, PAGE-DD-6 |
+| Skills | `angular-developer` |
+| Effort | Implementer medium · Reviewer checklist |
+
+**Attempt 1**
+
+- **Files changed:**
+  - `app.component.ts` and `header-panel.component.ts`: `refreshPending('updates')`. The header spec was updated.
+  - `websocket.service.ts`: `refreshSource('received' | 'updates')`. Its spec is **new** and mocks `ngx-socket-io`.
+  - `share-request-modal.component.ts`: `refreshSource('received')`. Its spec was updated.
+  - All callers omit `versionId`, so the service default (the current `phaseFilter`) applies.
+- **Verification:**
+  - `npx jest --testPathPattern="(app.component|header-panel|websocket|share-request-modal)"` → 7 suites, 88 passed.
+  - Lint: no errors in T-5's files. The 15 errors were in T-6's in-progress component spec.
+- **Falsifier grep:** no hits in the 4 callers. The remaining hits are `results-notifications.component.ts:324,326` (T-6's file) and the service testing its own legacy wrappers, which is allowed.
+- **Reviewer verdict: `STATUS: PASS`.** All 4 callers match the §6.2 table. No callbacks or side effects were lost. The websocket falsifier holds together with T-4's default-phase test (`toHaveBeenCalledWith('received')` fails if any second argument is passed).
+
+**ADVISORY (4R — non-gating):** in `websocket.service.spec.ts:182`, `not.toHaveBeenCalledWith(undefined)` is redundant. Adding `toHaveBeenCalledTimes(1)` would catch stray extra calls. With `phaseFilter` still null (inbox never opened), callers fetch all phases, which matches PAGE-R-1's "no phase" clause.
+
+**Forward pointer → PAGE-T-6 (sent to its Implementer mid-run):** migrate `results-notifications.component.ts:324,326`, which are no-arg legacy reloads. The repo-wide T-5 falsifier holds only after that. The Leader re-runs the grep at the T-6 audit.
+
+### PAGE-T-6 — Inbox view: skeleton gate, history row, Load more, hint, memoized list — PASS
+
+| Field | Value |
+|---|---|
+| Date | 2026-10-01 |
+| Final status | PASS (attempt 1 of 3; one Leader forward-pointer round before review) |
+| Implements | PAGE-R-2 (render gate), R-4, R-10, R-11, PAGE-AC-6, -7 |
+| Skills | `angular-developer`, `spartan`, `tailwind-design-system` |
+| Effort | Implementer medium-high · Reviewer checklist |
+
+**Attempt 1**
+
+- **Files changed:**
+  - `results-notifications.component.ts`: identity-keyed memoization of `unifiedList → … → groupedTabList` behind one `derived` getter, plus a new `showFilteredHistoryHint` getter.
+  - `results-notifications.component.html`: skeleton gate on `initialLoading`; a trailing "Loading history…" skeleton while `historyLoading`; Spartan `hlmBtn variant="outline"` "Load more" shown when `!initialLoading && hasMore`, with `[disabled]`/`aria-busy` bound to `loadingMore`; the hint.
+  - `results-notifications.module.ts`: imports `HlmButtonImports` and `SkeletonNotificationItemComponent`.
+  - `internationalization/contribution-request-drawer.copy.ts`: new `inbox` copy (§6.2 wording, verbatim).
+  - `results-notifications.component.spec.ts`: +229 lines of tests.
+  - `.scss` untouched, no new tokens.
+- **Leader forward pointer (from the PAGE-T-5 audit, applied before review):** the `ngOnInit` fallback inside `getAllPhases(() => …)` (the path where no phase resolves) called the three no-arg legacy wrappers. It now calls a single `loadInbox()`.
+  - Finding: `initialLoading` is set only by `loadInbox`, so the old fallback never engaged the skeleton gate on that path.
+  - Tests:
+    - "falls back to loadInbox() (no phase) when getAllPhases() resolves no phase"
+    - the no-phase skeleton up/down pair
+- **Verification:**
+  - `npx jest --testPathPattern=results-notifications.component` → 5 suites, 303 passed.
+  - `ng lint` → clean.
+  - T-5 falsifier grep → hits only inside `results-notifications.service.spec.ts`.
+- **Falsifiers:**
+  - (a), (b), (c): "Load more" presence, absence and disabled/`aria-busy`, checked in the DOM.
+  - (d): hint shown or hidden. DOM for the filter-chip and no-filter cases, getter-bound for search and exhausted.
+  - (e): spies on the real recency and search pipes. One call for unchanged inputs; recompute on a search, tab or array-reference change.
+- **Reviewer verdict: `STATUS: PASS`.**
+  - The memo key covers all 6 source arrays, all 7 filters, `activeSource()` and `activeTab()`.
+  - Every write path replaces values rather than mutating them.
+  - The gate always clears, and history never paints before pending.
+  - "Load more" is re-enabled after an error, so a retry is possible.
+  - Spartan import pattern matches `notification-item.module.ts`; no new tokens.
+  - `buildUnifiedList` and the pipes are untouched.
+
+**ADVISORY (4R — non-gating)**
+
+- *Reliability:* the memo keeps `buildUnifiedList`'s row copies until the key changes. A future in-place mutation with no reassignment would leave the list stale; suggest a "replace, never mutate" note on the service data fields.
+- *Readability:* two (d) cases check only the getter.
+- *A11y:* the "Loading history…" row may be announced twice (`aria-busy` + `aria-live` + `aria-label` + visible text). Check in PAGE-T-7.
+- *Risk:* `results-notifications.module.ts` and the copy file are outside the expected file list. Both are minimal additions the task needs.
+- `refreshAllNotifications(phaseId)` still uses the legacy wrappers with an explicit phase. Acceptable: they delegate to a per-source refresh.
