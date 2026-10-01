@@ -33,12 +33,14 @@ export const BILATERAL_CONTRIBUTORS_COPY = {
       `(<a href="${glossaryUrl}" target="_blank" rel="noopener noreferrer">${GLOSSARY_LINK_LABEL}</a>)<br />` +
       DIFFERENT_ENTITIES_NOTE
   },
-  /** P2-3859 — Center pills inside the "Contributing W3/bilateral projects" panel, under its search box. */
+  /** P2-3859 — one Center pill per Center that owns projects, inside the "Contributing W3/bilateral projects" panel, under its search box. */
   projectFilter: {
     /** Accessible name of the pill group (the pills themselves only show the acronym and a count). */
     groupLabel: 'Filter projects by Center',
     allCenters: 'All centers',
     count: (n: number): string => `(${n})`,
+    /** Tooltip + accessible name of a pill: the pill itself only shows the acronym, so the full name lives here. */
+    pillTitle: (centerName: string, n: number): string => `${centerName} (${n} ${n === 1 ? 'project' : 'projects'})`,
     /** The projects picker placeholder, which used to promise "all" projects even when filtered. */
     pickerPlaceholderAll: 'The drop-down list includes all bilateral projects',
     pickerPlaceholderFiltered: (centerAcronym: string): string => `The drop-down list includes the projects of ${centerAcronym}`
