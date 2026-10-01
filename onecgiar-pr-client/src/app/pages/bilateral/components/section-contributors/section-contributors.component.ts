@@ -154,13 +154,16 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * over `owner_center_institution_id` (the same catalogue field BCT-T-6 locks Centers with).
    *
    * QA (Santiago Sánchez, 30-sep-2026) found the first version — a separate strip with a Center
-   * select above the picker — too invasive. Now it is two pills INSIDE the picker's panel, under its
-   * search box (`[util]` slot of `pr-multi-select`): the page's Center, or "All centers".
+   * select above the picker — too invasive, so the filter moved INSIDE the picker's panel, under its
+   * search box (`[util]` slot of `pr-multi-select`), as pills. QA again (1-oct-2026): with only the
+   * page Center and "All centers" there was no way to filter by any other Center — so now there is
+   * one pill per Center that owns at least one project.
    *
-   * `false` = the user has not asked for every Center, so the list follows the page's Center (which
-   * arrives asynchronously from `BilateralContextService`). Once the user picks a pill, that wins.
+   * `null` = the user has not picked a pill, so it follows `defaultProjectCenterFilter()` — which
+   * matters because the page's Center (`BilateralContextService`) and the catalogues all arrive
+   * asynchronously. Once the user picks a pill, that choice wins.
    */
-  readonly showAllProjectCenters = signal(false);
+  readonly projectCenterFilterChoice = signal<ProjectCenterFilter | null>(null);
 
   /** How many catalogue projects each owner Center has. Projects with no resolved owner count nowhere. */
   private readonly projectCountByOwnerCenter = computed(() => {
@@ -173,26 +176,45 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     return counts;
   });
 
-  /**
-   * AC2 — the page's Center (`/bilateral/:acronym/...`), falling back to the result's lead Center
-   * while the context has not resolved its institution id, with its acronym and project count.
-   * `null` when there is no such Center or it owns no project in the catalogue: then there are no
-   * pills and the picker lists every project (starting on an empty dropdown would read as "no
-   * projects exist"). Projects with no resolved owner are only listed under "All centers".
-   */
-  readonly projectFilterCenter = computed<{ id: number; acronym: string; count: number } | null>(() => {
+  /** AC2 — the page's Center (`/bilateral/:acronym/...`), falling back to the result's lead Center. */
+  private readonly pageProjectCenterId = computed<number | null>(() => {
     const pageCenter = this.bilateralContext.centerInstitutionId() ?? this.leadCenterInstitutionIdSig();
-    if (pageCenter == null) return null;
-    const id = Number(pageCenter);
-    const count = this.projectCountByOwnerCenter().get(id) ?? 0;
-    if (!count) return null;
-    const center = this.availableCenters().find(c => Number(c.institutionId) === id);
-    return { id, acronym: center?.acronym || center?.code || String(id), count };
+    return pageCenter == null ? null : Number(pageCenter);
+  });
+
+  /**
+   * Every Center that owns at least one catalogue project, page Center first, then the rest by
+   * acronym. Only catalogue Centers (an owner id the centres catalogue does not know has no acronym
+   * to show) — except the page Center, which keeps its pill even then, as before. Projects with no
+   * resolved owner are only listed under "All centers": there is no Center to file them under.
+   */
+  readonly projectFilterCenters = computed<{ id: number; acronym: string; name: string; count: number }[]>(() => {
+    const counts = this.projectCountByOwnerCenter();
+    const pageId = this.pageProjectCenterId();
+    const byId = new Map(this.availableCenters().map(c => [Number(c.institutionId), c]));
+    const toPill = (id: number) => {
+      const c = byId.get(id);
+      return { id, acronym: c?.acronym || c?.code || String(id), name: c?.name || c?.full_name || '', count: counts.get(id) ?? 0 };
+    };
+    const others = [...counts.keys()]
+      .filter(id => id !== pageId && byId.has(id))
+      .map(toPill)
+      .sort((a, b) => a.acronym.localeCompare(b.acronym));
+    return pageId != null && counts.has(pageId) ? [toPill(pageId), ...others] : others;
+  });
+
+  /** The page's Center when it owns projects; "All centers" otherwise (an empty dropdown reads as "no projects exist"). */
+  readonly defaultProjectCenterFilter = computed<ProjectCenterFilter>(() => {
+    const pageId = this.pageProjectCenterId();
+    return pageId != null && this.projectCountByOwnerCenter().has(pageId) ? pageId : ALL_PROJECT_CENTERS;
   });
 
   readonly projectCenterFilter = computed<ProjectCenterFilter>(() => {
-    const center = this.projectFilterCenter();
-    return center && !this.showAllProjectCenters() ? center.id : ALL_PROJECT_CENTERS;
+    const choice = this.projectCenterFilterChoice();
+    // A choice that no longer names a pill (catalogue reloaded) falls back to the default.
+    if (choice === ALL_PROJECT_CENTERS) return choice;
+    if (choice != null && this.projectFilterCenters().some(c => c.id === choice)) return choice;
+    return this.defaultProjectCenterFilter();
   });
 
   /**
@@ -214,29 +236,47 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   });
 
   readonly projectsPickerPlaceholder = computed(() => {
-    const center = this.projectFilterCenter();
-    return this.projectCenterFilter() === ALL_PROJECT_CENTERS || !center
-      ? BILATERAL_CONTRIBUTORS_COPY.projectFilter.pickerPlaceholderAll
-      : BILATERAL_CONTRIBUTORS_COPY.projectFilter.pickerPlaceholderFiltered(center.acronym);
+    const filter = this.projectCenterFilter();
+    const center = filter === ALL_PROJECT_CENTERS ? null : this.projectFilterCenters().find(c => c.id === filter);
+    return center
+      ? BILATERAL_CONTRIBUTORS_COPY.projectFilter.pickerPlaceholderFiltered(center.acronym)
+      : BILATERAL_CONTRIBUTORS_COPY.projectFilter.pickerPlaceholderAll;
   });
 
   /** Gate as a computed (the spec overrides the template). No pills when read-only or with no Center to filter by. */
-  readonly showProjectCenterPills = computed(() => !this.readOnly() && this.projectFilterCenter() !== null);
+  readonly showProjectCenterPills = computed(() => !this.readOnly() && this.projectFilterCenters().length > 0);
 
-  /** The two pills: `[● IFPRI (176)] [All centers (1211)]`. Empty when there is no Center to filter by. */
-  readonly projectCenterPills = computed<{ mode: 'center' | 'all'; label: string; count: number; active: boolean }[]>(() => {
-    const center = this.projectFilterCenter();
-    if (!center) return [];
-    const all = this.showAllProjectCenters();
-    return [
-      { mode: 'center', label: center.acronym, count: center.count, active: !all },
-      { mode: 'all', label: BILATERAL_CONTRIBUTORS_COPY.projectFilter.allCenters, count: this.availableProjects().length, active: all }
-    ];
+  /**
+   * `[● IFPRI (176)] [All centers (1211)] [AfricaRice (12)] [Bioversity (40)] …` — page Center
+   * first, then "All centers", then every other Center by acronym. One pressed at a time.
+   */
+  readonly projectCenterPills = computed<{ value: ProjectCenterFilter; label: string; title: string; count: number; active: boolean }[]>(() => {
+    const centers = this.projectFilterCenters();
+    if (!centers.length) return [];
+    const filter = this.projectCenterFilter();
+    const pageId = this.pageProjectCenterId();
+    const pill = (c: { id: number; acronym: string; name: string; count: number }) => ({
+      value: c.id as ProjectCenterFilter,
+      label: c.acronym,
+      title: BILATERAL_CONTRIBUTORS_COPY.projectFilter.pillTitle(c.name || c.acronym, c.count),
+      count: c.count,
+      active: filter === c.id
+    });
+    const total = this.availableProjects().length;
+    const all = {
+      value: ALL_PROJECT_CENTERS as ProjectCenterFilter,
+      label: BILATERAL_CONTRIBUTORS_COPY.projectFilter.allCenters,
+      title: BILATERAL_CONTRIBUTORS_COPY.projectFilter.pillTitle(BILATERAL_CONTRIBUTORS_COPY.projectFilter.allCenters, total),
+      count: total,
+      active: filter === ALL_PROJECT_CENTERS
+    };
+    const [first, ...rest] = centers;
+    return first.id === pageId ? [pill(first), all, ...rest.map(pill)] : [all, ...centers.map(pill)];
   });
 
   /** View-only: swaps the picker's options, never the selection, and never saves. */
-  setProjectCenterFilter(mode: 'center' | 'all'): void {
-    this.showAllProjectCenters.set(mode === 'all');
+  setProjectCenterFilter(value: ProjectCenterFilter): void {
+    this.projectCenterFilterChoice.set(value);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
