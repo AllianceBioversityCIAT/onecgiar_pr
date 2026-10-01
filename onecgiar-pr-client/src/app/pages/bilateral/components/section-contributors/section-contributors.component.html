@@ -192,6 +192,12 @@
         pr-multi-select). QA found the old strip above the picker too invasive. View-only: they swap
         the OPTIONS, never the selection — `filteredProjectOptions()` keeps every already-selected
         project in the list so `pr-multi-select.writeValue` cannot drop it (AC4).
+        One pill per Center that owns projects (QA, 1-oct-2026: two pills left no way to pick another
+        Center): page Center, "All centers", then the rest by acronym; one pressed at a time.
+        Layout: they wrap, and past ~3 rows the group scrolls VERTICALLY (max-h + overflow-y-auto,
+        overscroll-contain) — a mouse wheel scrolls it naturally, and the next row peeking out tells
+        there is more; a horizontal strip would hide Centers behind a shift+wheel nobody does.
+        `p-[2px]` keeps the focus ring from being clipped by the overflow.
         🛑 The panel is open only while focus is inside `a.field` (`:focus-within`,
         custom-fields.scss). `mousedown.preventDefault` keeps focus where it was (the search box), so
         a pill click can never close the panel — Safari does not focus a clicked button, which would
@@ -202,23 +208,25 @@
         @if (showProjectCenterPills()) {
           <div
             role="group"
-            class="flex flex-wrap items-center gap-[6px]"
+            class="flex max-h-[94px] flex-wrap items-center gap-[6px] overflow-y-auto overscroll-contain p-[2px]"
             data-testid="projects-center-pills"
             [attr.aria-label]="contributorsCopy.projectFilter.groupLabel"
             (mousedown)="$event.preventDefault()"
             (click)="$event.stopPropagation()">
-            @for (pill of projectCenterPills(); track pill.mode) {
+            @for (pill of projectCenterPills(); track pill.value) {
               <button
                 type="button"
-                class="inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[12px] font-semibold leading-[18px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--pr-color-primary-300)]"
+                class="inline-flex shrink-0 items-center gap-[6px] whitespace-nowrap rounded-full border px-[10px] py-[3px] text-[12px] font-semibold leading-[18px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--pr-color-primary-300)]"
                 [class]="
                   pill.active
                     ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-600)] text-[var(--pr-color-white)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]'
                     : 'border-[var(--pr-border)] bg-[var(--pr-color-white)] text-[var(--pr-color-primary-600)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)]'
                 "
                 [attr.aria-pressed]="pill.active"
-                [attr.data-testid]="'projects-center-pill-' + pill.mode"
-                (click)="setProjectCenterFilter(pill.mode)">
+                [attr.title]="pill.title"
+                [attr.aria-label]="pill.title"
+                [attr.data-testid]="'projects-center-pill-' + pill.value"
+                (click)="setProjectCenterFilter(pill.value)">
                 @if (pill.active) {
                   <span class="h-[6px] w-[6px] rounded-full bg-current" aria-hidden="true"></span>
                 }

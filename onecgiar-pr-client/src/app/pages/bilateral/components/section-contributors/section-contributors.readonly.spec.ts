@@ -533,20 +533,24 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       // `ngOnInit` reloads the (stubbed, empty) catalogue over what `build()` seeded; seed it again.
       component.availableProjects.set([
         { id: 501, fullName: 'Project 501', ownerCenterInstitutionId: 11 },
-        { id: 502, fullName: 'Project 502', ownerCenterInstitutionId: 12 }
+        { id: 502, fullName: 'Project 502', ownerCenterInstitutionId: 12 },
+        { id: 503, fullName: 'Project 503', ownerCenterInstitutionId: 12 }
       ] as any);
       fixture.detectChanges();
     };
-    const pill = (mode: 'center' | 'all') =>
-      fixture.nativeElement.querySelector(`[data-testid="projects-center-pill-${mode}"]`) as HTMLButtonElement;
+    const pill = (value: number | 'all') =>
+      fixture.nativeElement.querySelector(`[data-testid="projects-center-pill-${value}"]`) as HTMLButtonElement;
     // The spans are laid out with `gap` (Angular strips the whitespace between them).
-    const pillText = (mode: 'center' | 'all') =>
-      Array.from(pill(mode).querySelectorAll('span'))
+    const textOf = (el: Element) =>
+      Array.from(el.querySelectorAll('span'))
         .map(sp => sp.textContent?.trim())
         .filter(Boolean)
         .join(' ');
+    const renderedPills = () =>
+      Array.from(fixture.nativeElement.querySelectorAll('[data-testid="projects-center-pills"] button') as NodeListOf<HTMLButtonElement>);
+    const pressed = () => renderedPills().filter(b => b.getAttribute('aria-pressed') === 'true').map(textOf);
 
-    it('renders two pills under the search box of the projects panel, the page Center pressed', () => {
+    it('renders one pill per Center under the search box — page Center pressed, All, then the rest', () => {
       editable.set(true);
       build();
       seed();
@@ -557,18 +561,19 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       expect(group.getAttribute('aria-label')).toBe('Filter projects by Center');
       // Right under the search input, inside the same panel.
       expect(host.querySelector('.options .search_input_container')?.nextElementSibling?.classList.contains('util_container')).toBe(true);
-      expect(pillText('center')).toBe('A11 (1)');
-      expect(pillText('all')).toBe('All centers (2)');
-      expect(pill('center').getAttribute('aria-pressed')).toBe('true');
-      expect(pill('all').getAttribute('aria-pressed')).toBe('false');
-      expect(pill('center').type).toBe('button');
+      expect(renderedPills().map(textOf)).toEqual(['A11 (1)', 'All centers (3)', 'A12 (2)']);
+      expect(pressed()).toEqual(['A11 (1)']);
+      // Acronym on the pill; the full name in title / aria-label.
+      expect(pill(12).getAttribute('title')).toBe('Center 12 (2 projects)');
+      expect(pill(12).getAttribute('aria-label')).toBe('Center 12 (2 projects)');
+      expect(renderedPills().every(b => b.type === 'button')).toBe(true);
       // The old strip is gone.
       expect(fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]')).toBeNull();
       // The slot is filled for the projects picker only.
       expect(fixture.nativeElement.querySelectorAll('[data-testid="projects-center-pills"]').length).toBe(1);
     });
 
-    it('a pill click keeps the panel open, toggles no option and saves nothing', () => {
+    it('clicking another Center pill keeps the panel open, filters to it, toggles no option and saves nothing', () => {
       editable.set(true);
       build();
       seed();
@@ -587,23 +592,29 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       // Focus: the mousedown is cancelled, so the browser never moves focus off the search box and
       // `a.field:focus-within` (what keeps the panel open) holds — Safari included.
       const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
-      pill('all').dispatchEvent(down);
+      pill(12).dispatchEvent(down);
       expect(down.defaultPrevented).toBe(true);
-      pill('all').click();
+      pill(12).click();
       fixture.detectChanges();
 
       expect(document.activeElement).toBe(search);
       expect(trigger.contains(document.activeElement)).toBe(true);
       expect(triggerClicks).not.toHaveBeenCalled();
-      expect(pill('all').getAttribute('aria-pressed')).toBe('true');
-      expect(pill('center').getAttribute('aria-pressed')).toBe('false');
-      expect(component.filteredProjectOptions().map(p => p.id)).toEqual([501, 502]);
+      expect(pressed()).toEqual(['A12 (2)']);
+      expect(component.filteredProjectOptions().map(p => p.id)).toEqual([502, 503]);
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes the projects of A12');
       expect(component.selectedProjectIds()).toEqual([]);
       expect(Array.from(host.querySelectorAll('.options input[type="checkbox"]')).some(c => (c as HTMLInputElement).checked)).toBe(false);
       expect(autoSave.saveContributors).not.toHaveBeenCalled();
 
-      pill('center').click();
+      pill('all').click();
       fixture.detectChanges();
+      expect(pressed()).toEqual(['All centers (3)']);
+      expect(component.filteredProjectOptions().map(p => p.id)).toEqual([501, 502, 503]);
+
+      pill(11).click();
+      fixture.detectChanges();
+      expect(pressed()).toEqual(['A11 (1)']);
       expect(component.filteredProjectOptions().map(p => p.id)).toEqual([501]);
       expect(autoSave.saveContributors).not.toHaveBeenCalled();
     });
@@ -615,7 +626,7 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       component.contributorsHydrated.set(true);
       component.selectedProjectIds.set([502]);
       fixture.detectChanges();
-      expect(pill('center').getAttribute('aria-pressed')).toBe('true');
+      expect(pressed()).toEqual(['A11 (1)']);
       expect(component.filteredProjectOptions().map(p => p.id)).toEqual([501, 502]);
       expect(component.selectedProjectIds()).toEqual([502]);
     });

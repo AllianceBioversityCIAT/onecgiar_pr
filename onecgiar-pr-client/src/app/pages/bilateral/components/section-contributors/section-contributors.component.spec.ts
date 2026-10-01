@@ -2134,21 +2134,37 @@ describe('SectionContributorsComponent', () => {
     const IFPRI = 20;
     const CIP = 21;
     const EMPTY = 22;
+    const AFRICARICE = 23;
+    const WORLDFISH = 24;
+    const UNKNOWN_OWNER = 99; // owns projects but is not in the centres catalogue
+    // Ids, catalogue order and acronym order all disagree, so only a real sort by acronym passes.
     const catalogue = [
       { id: 1, shortName: 'I1', fullName: 'IFPRI one', ownerCenterInstitutionId: IFPRI },
       { id: 2, shortName: 'I2', fullName: 'IFPRI two', ownerCenterInstitutionId: IFPRI },
       { id: 3, shortName: 'C3', fullName: 'CIP three', ownerCenterInstitutionId: CIP },
-      { id: 4, shortName: 'N4', fullName: 'No owner four', ownerCenterInstitutionId: null }
+      { id: 4, shortName: 'N4', fullName: 'No owner four', ownerCenterInstitutionId: null },
+      { id: 5, shortName: 'W5', fullName: 'WorldFish five', ownerCenterInstitutionId: WORLDFISH },
+      { id: 6, shortName: 'A6', fullName: 'AfricaRice six', ownerCenterInstitutionId: AFRICARICE },
+      { id: 7, shortName: 'W7', fullName: 'WorldFish seven', ownerCenterInstitutionId: WORLDFISH },
+      { id: 8, shortName: 'U8', fullName: 'Unknown owner eight', ownerCenterInstitutionId: UNKNOWN_OWNER }
     ];
+    const ALL_IDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
     const setup = (pageCenter: number | null = IFPRI) => {
       creation.isEditableByCenterUser = () => true;
       TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', pageCenter);
       build();
-      component.availableCenters.set([center(IFPRI, 'IFPRI', 'IFPRI'), center(CIP, 'CIP', 'CIP'), center(EMPTY, 'EM', 'EM')] as any);
+      component.availableCenters.set([
+        center(WORLDFISH, 'WF', 'WorldFish'),
+        center(IFPRI, 'IFPRI', 'IFPRI'),
+        center(CIP, 'CIP', 'CIP'),
+        center(EMPTY, 'EM', 'EM'),
+        center(AFRICARICE, 'AR', 'AfricaRice')
+      ] as any);
       component.availableProjects.set(catalogue);
     };
     const optionIds = () => component.filteredProjectOptions().map(p => p.id);
+    const pillSummary = () => component.projectCenterPills().map(p => `${p.label} (${p.count})${p.active ? ' *' : ''}`);
 
     it("AC2: starts on the page's Center pill and lists only that Center's projects", () => {
       setup();
@@ -2157,24 +2173,57 @@ describe('SectionContributorsComponent', () => {
       expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes the projects of IFPRI');
     });
 
-    it('offers exactly two pills — the page Center (active) and "All centers" — with their counts', () => {
+    it('offers the page Center (pressed), "All centers", then every other Center that owns projects, by acronym', () => {
       setup();
-      expect(component.projectCenterPills()).toEqual([
-        { mode: 'center', label: 'IFPRI', count: 2, active: true },
-        { mode: 'all', label: 'All centers', count: 4, active: false }
-      ]);
+      // EMPTY owns nothing → no pill; UNKNOWN_OWNER has no catalogue acronym → only under All.
+      expect(pillSummary()).toEqual(['IFPRI (2) *', 'All centers (8)', 'AfricaRice (1)', 'CIP (1)', 'WorldFish (2)']);
+      expect(component.projectCenterPills().map(p => p.value)).toEqual([IFPRI, ALL_PROJECT_CENTERS, AFRICARICE, CIP, WORLDFISH]);
+      // The pill shows the acronym; the full name goes to title / aria-label.
+      expect(component.projectCenterPills()[4].title).toBe(`Center ${WORLDFISH} (2 projects)`);
+      expect(component.projectCenterPills()[2].title).toBe(`Center ${AFRICARICE} (1 project)`);
     });
 
-    it('"All centers" lists every project, including those with no owner Center, and flips the active pill', () => {
+    it('clicking another Center lists only its projects, presses only that pill and names it in the placeholder', () => {
       setup();
-      component.setProjectCenterFilter('all');
-      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
-      expect(optionIds()).toEqual([1, 2, 3, 4]);
-      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes all bilateral projects');
-      expect(component.projectCenterPills().map(p => p.active)).toEqual([false, true]);
+      component.setProjectCenterFilter(WORLDFISH);
+      expect(component.projectCenterFilter()).toBe(WORLDFISH);
+      expect(optionIds()).toEqual([5, 7]);
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes the projects of WorldFish');
+      expect(component.projectCenterPills().filter(p => p.active).map(p => p.value)).toEqual([WORLDFISH]);
+      // Pill order does not move when another one is pressed.
+      expect(pillSummary()).toEqual(['IFPRI (2)', 'All centers (8)', 'AfricaRice (1)', 'CIP (1)', 'WorldFish (2) *']);
 
-      component.setProjectCenterFilter('center');
+      component.setProjectCenterFilter(AFRICARICE);
+      expect(optionIds()).toEqual([6]);
+    });
+
+    it('another Center keeps the already-selected projects of other Centers in the options (union)', () => {
+      setup();
+      component.selectedProjectIds.set([1, 3]);
+      component.setProjectCenterFilter(WORLDFISH);
+      expect(optionIds()).toEqual([1, 3, 5, 7]);
+      expect(component.selectedProjectIds()).toEqual([1, 3]);
+    });
+
+    it('"All centers" lists every project, including those with no owner or an unknown owner, and flips the active pill', () => {
+      setup();
+      component.setProjectCenterFilter(ALL_PROJECT_CENTERS);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+      expect(optionIds()).toEqual(ALL_IDS);
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes all bilateral projects');
+      expect(component.projectCenterPills().map(p => p.active)).toEqual([false, true, false, false, false]);
+
+      component.setProjectCenterFilter(IFPRI);
       expect(optionIds()).toEqual([1, 2]);
+    });
+
+    it('projects with no owner (or an owner outside the catalogue) are never under a Center pill', () => {
+      setup();
+      for (const pill of component.projectCenterPills().filter(p => p.value !== ALL_PROJECT_CENTERS)) {
+        component.setProjectCenterFilter(pill.value);
+        expect(optionIds()).not.toContain(4);
+        expect(optionIds()).not.toContain(8);
+      }
     });
 
     it("AC4: a saved project from another Center stays in the options and in the PATCH", () => {
@@ -2197,32 +2246,44 @@ describe('SectionContributorsComponent', () => {
       creation.resultLeadCenterId.set(CIP);
       setup(null);
       expect(component.projectCenterFilter()).toBe(CIP);
-      expect(component.projectCenterPills()[0]).toEqual({ mode: 'center', label: 'CIP', count: 1, active: true });
+      expect(pillSummary()).toEqual(['CIP (1) *', 'All centers (8)', 'AfricaRice (1)', 'IFPRI (2)', 'WorldFish (2)']);
     });
 
-    it('shows no pills and lists every project when the page Center owns no project (no empty dropdown)', () => {
+    it('page Center that owns no project: "All centers" pressed first, then every Center by acronym (no empty dropdown)', () => {
       setup(EMPTY);
       expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
-      expect(optionIds()).toEqual([1, 2, 3, 4]);
-      expect(component.showProjectCenterPills()).toBe(false);
-      expect(component.projectCenterPills()).toEqual([]);
+      expect(optionIds()).toEqual(ALL_IDS);
+      expect(component.showProjectCenterPills()).toBe(true);
+      expect(pillSummary()).toEqual(['All centers (8) *', 'AfricaRice (1)', 'CIP (1)', 'IFPRI (2)', 'WorldFish (2)']);
       expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes all bilateral projects');
     });
 
-    it('a user "All centers" choice wins over a page Center that resolves later', () => {
-      creation.resultLeadCenterId.set(CIP);
-      setup(null);
-      component.setProjectCenterFilter('all');
-      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', IFPRI);
-      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+    it('a choice that is no longer a pill (catalogue reloaded) falls back to the default', () => {
+      setup();
+      component.setProjectCenterFilter(WORLDFISH);
+      component.availableProjects.set(catalogue.filter(p => p.ownerCenterInstitutionId !== WORLDFISH));
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+      expect(component.projectCenterPills().filter(p => p.active).map(p => p.value)).toEqual([IFPRI]);
     });
 
-    it('toggling the pills never saves anything', () => {
+    it('a user choice wins over a page Center that resolves later', () => {
+      creation.resultLeadCenterId.set(CIP);
+      setup(null);
+      component.setProjectCenterFilter(ALL_PROJECT_CENTERS);
+      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', IFPRI);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+
+      component.setProjectCenterFilter(WORLDFISH);
+      expect(component.projectCenterFilter()).toBe(WORLDFISH);
+    });
+
+    it('pressing pills never saves anything', () => {
       setup();
       component.contributorsHydrated.set(true);
       autoSave.saveContributors.mockClear();
-      component.setProjectCenterFilter('all');
-      component.setProjectCenterFilter('center');
+      component.setProjectCenterFilter(ALL_PROJECT_CENTERS);
+      component.setProjectCenterFilter(WORLDFISH);
+      component.setProjectCenterFilter(IFPRI);
       expect(autoSave.saveContributors).not.toHaveBeenCalled();
     });
 
@@ -2231,6 +2292,7 @@ describe('SectionContributorsComponent', () => {
       expect(component.showProjectCenterPills()).toBe(true);
       component.availableProjects.set([]);
       expect(component.showProjectCenterPills()).toBe(false);
+      expect(component.projectCenterPills()).toEqual([]);
     });
 
     it('lives inside the projects picker, in its [util] slot, and the old strip is gone (markup contract)', () => {
@@ -2246,7 +2308,12 @@ describe('SectionContributorsComponent', () => {
       expect(pickerTag).toContain('@if (showProjectCenterPills()) {');
       expect(pickerTag).toContain('data-testid="projects-center-pills"');
       expect(pickerTag).toContain('[attr.aria-pressed]="pill.active"');
+      expect(pickerTag).toContain('[attr.title]="pill.title"');
       expect(pickerTag).toContain('type="button"');
+      // Many pills: they wrap, and past ~3 rows the group scrolls vertically.
+      expect(pickerTag).toContain('flex-wrap');
+      expect(pickerTag).toContain('max-h-[94px]');
+      expect(pickerTag).toContain('overflow-y-auto');
       // The panel stays open: focus is kept and the click does not bubble to the trigger.
       expect(pickerTag).toContain('(mousedown)="$event.preventDefault()"');
       expect(pickerTag).toContain('(click)="$event.stopPropagation()"');
