@@ -64,6 +64,16 @@ export class EvidencesService {
     'knowledge_product_metadata_related',
   ] as const;
 
+  // `getResultById` inner-joins the result's LEAD Science Program (`initiative_role_id = 1`), so
+  // a W3/Bilateral result that has none — a Center-led result whose primary SP request is still
+  // pending — came back as "not found": the Evidence GET answered 404 and the save threw on
+  // `result.id`. Evidence only needs the result row itself (its id and tag levels).
+  private _findActiveResult(resultId: number): Promise<Result | null> {
+    return this._resultRepository.findOne({
+      where: { id: resultId, is_active: true },
+    });
+  }
+
   private _normalizeEvidenceMarks(rows: any[]): void {
     for (const row of rows ?? []) {
       for (const mark of EvidencesService.EVIDENCE_MARKS) {
@@ -84,9 +94,7 @@ export class EvidencesService {
 
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
-      const result = await this._resultRepository.getResultById(
-        createEvidenceDto.result_id,
-      );
+      const result = await this._findActiveResult(createEvidenceDto.result_id);
       await this._versionRepository.getBaseVersion();
       await this._processMainEvidencesOnCreate(
         createEvidenceDto,
@@ -508,9 +516,7 @@ export class EvidencesService {
 
   async createV2(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
-      const result = await this._resultRepository.getResultById(
-        createEvidenceDto.result_id,
-      );
+      const result = await this._findActiveResult(createEvidenceDto.result_id);
       await this._versionRepository.getBaseVersion();
       await this._processMainEvidencesOnCreate(
         createEvidenceDto,
@@ -805,8 +811,7 @@ export class EvidencesService {
 
   async findAll(resultId: number) {
     try {
-      const result: Result =
-        await this._resultRepository.getResultById(resultId);
+      const result: Result = await this._findActiveResult(resultId);
       if (!result) {
         const error = new Error('Results Not Found');
         (error as any).response = {};
@@ -865,8 +870,7 @@ export class EvidencesService {
 
   async findAllV2(resultId: number) {
     try {
-      const result: Result =
-        await this._resultRepository.getResultById(resultId);
+      const result: Result = await this._findActiveResult(resultId);
       if (!result) {
         const error = new Error('Results Not Found');
         (error as any).response = {};
@@ -919,7 +923,7 @@ export class EvidencesService {
     user: TokenDto,
   ) {
     try {
-      const result = await this._resultRepository.getResultById(resultId);
+      const result = await this._findActiveResult(resultId);
 
       if (!result) {
         return {
