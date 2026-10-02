@@ -34,7 +34,7 @@ describe('EvidencesService', () => {
   };
 
   const mockResultRepository = {
-    getResultById: jest.fn(),
+    findOne: jest.fn(),
     update: jest.fn(),
   };
 
@@ -117,7 +117,7 @@ describe('EvidencesService', () => {
 
   describe('create', () => {
     it('should update the result and return OK when there are no evidences', async () => {
-      mockResultRepository.getResultById.mockResolvedValue({ id: 1 });
+      mockResultRepository.findOne.mockResolvedValue({ id: 1 });
       mockVersionRepository.getBaseVersion.mockResolvedValue({ id: 99 });
       mockEvidencesRepository.updateEvidences.mockResolvedValue(undefined);
       mockResultRepository.update.mockResolvedValue(undefined);
@@ -142,9 +142,7 @@ describe('EvidencesService', () => {
     });
 
     it('should delegate errors to HandlersError', async () => {
-      mockResultRepository.getResultById.mockRejectedValue(
-        new Error('db down'),
-      );
+      mockResultRepository.findOne.mockRejectedValue(new Error('db down'));
 
       const res = await service.create(
         { result_id: 1, evidences: [], supplementary: undefined },
@@ -158,7 +156,7 @@ describe('EvidencesService', () => {
 
   describe('createV2', () => {
     it('should process main evidences with evidence type 6 and return OK', async () => {
-      mockResultRepository.getResultById.mockResolvedValue({ id: 5 });
+      mockResultRepository.findOne.mockResolvedValue({ id: 5 });
       mockVersionRepository.getBaseVersion.mockResolvedValue({ id: 99 });
       mockEvidencesRepository.updateEvidences.mockResolvedValue(undefined);
 
@@ -203,15 +201,34 @@ describe('EvidencesService', () => {
 
   describe('findAll', () => {
     it('should delegate to HandlersError when the result is not found', async () => {
-      mockResultRepository.getResultById.mockResolvedValue(null);
+      mockResultRepository.findOne.mockResolvedValue(null);
 
       await service.findAll(123);
 
       expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
     });
 
+    // A W3/Bilateral result with no lead Science Program (primary SP request still pending) has
+    // no `results_by_inititiative` row with role 1; `getResultById` inner-joins it and answered
+    // 404. The lookup must read the result row alone.
+    it('should load a result that has no lead Science Program', async () => {
+      mockResultRepository.findOne.mockResolvedValue({ id: 12206 });
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValue(
+        null,
+      );
+      mockEvidencesRepository.getEvidencesByResultId.mockResolvedValue([]);
+
+      const res: any = await service.findAll(12206);
+
+      expect(mockResultRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 12206, is_active: true },
+      });
+      expect(res.status).toBe(HttpStatus.OK);
+      expect(res.response.result_id).toBe(12206);
+    });
+
     it('should normalize flags and return evidences + supplementary', async () => {
-      mockResultRepository.getResultById.mockResolvedValue({
+      mockResultRepository.findOne.mockResolvedValue({
         id: 1,
         gender_tag_level_id: 2,
         climate_change_tag_level_id: 3,
@@ -259,7 +276,7 @@ describe('EvidencesService', () => {
         'knowledge_product_metadata_related',
       ];
 
-      mockResultRepository.getResultById.mockResolvedValue({ id: 1 });
+      mockResultRepository.findOne.mockResolvedValue({ id: 1 });
       mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValue(
         null,
       );
@@ -291,7 +308,7 @@ describe('EvidencesService', () => {
 
   describe('findAllV2', () => {
     it('should return evidences for type 6 with normalized flags', async () => {
-      mockResultRepository.getResultById.mockResolvedValue({
+      mockResultRepository.findOne.mockResolvedValue({
         id: 1,
         gender_tag_level_id: null,
         climate_change_tag_level_id: null,
@@ -327,7 +344,7 @@ describe('EvidencesService', () => {
 
   describe('updateEvidencesPartial', () => {
     it('should return NOT_FOUND when the result does not exist', async () => {
-      mockResultRepository.getResultById.mockResolvedValue(null);
+      mockResultRepository.findOne.mockResolvedValue(null);
 
       const res = await service.updateEvidencesPartial([], 1, user);
 
@@ -335,7 +352,7 @@ describe('EvidencesService', () => {
     });
 
     it('should return BAD_REQUEST when there are duplicate links', async () => {
-      mockResultRepository.getResultById.mockResolvedValue({ id: 1 });
+      mockResultRepository.findOne.mockResolvedValue({ id: 1 });
 
       const res = await service.updateEvidencesPartial(
         [{ link: 'dup' } as any, { link: 'dup' } as any],
@@ -348,7 +365,7 @@ describe('EvidencesService', () => {
     });
 
     it('should deactivate missing evidences and keep existing ones', async () => {
-      mockResultRepository.getResultById.mockResolvedValue({ id: 1 });
+      mockResultRepository.findOne.mockResolvedValue({ id: 1 });
       mockEvidencesRepository.find.mockResolvedValue([
         { id: 1, is_active: 1 },
         { id: 2, is_active: 1 },

@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
@@ -8,9 +8,22 @@ import {
   BilateralProject,
   ScienceProgramMapping,
 } from '../../services/bilateral-creation.interfaces';
+import { BILATERAL_PRIMARY_ASSIGNMENT_COPY } from '../../../../internationalization/bilateral-primary-assignment.copy';
 
 /** P2-3352 § 6: "Default value: 100". Applied on screen when nothing was ever stored. */
 const DEFAULT_CONTRIBUTION_PERCENTAGE = 100;
+
+/**
+ * `notifications/bilateral-primary-sp-request` (PSR-T-10) — mirrors the server's
+ * `PrimaryRequestState` (design.md §4): `{ state, program_code, declined_by_codes }`, read from
+ * `GET api/bilateral/center/initiative/:resultId` and from the `primary-assignment` PATCH response
+ * (which replaced the old boolean "ToC cleared" flag, 2026-09-30 change log).
+ */
+interface PrimaryRequestState {
+  state: 'none' | 'pending' | 'sent_back' | 'accepted' | 'draft';
+  program_code: string | null;
+  declined_by_codes: string[];
+}
 
 @Component({
   selector: 'app-section-zero-dashboard',
@@ -40,6 +53,87 @@ export class SectionZeroDashboardComponent {
    * displayed value falls back to the stored one and, failing that, to the 100 the story specifies.
    */
   readonly pendingContribution = signal<number | null>(null);
+
+  /**
+   * PSR-T-10 — `null` until the first `GET_resultInitiativeId` resolves (or a result has no SP
+   * assignment to ask about). Combines a legacy/accepted owner with the pending request lifecycle
+   * (design.md §4), so `'none'` with no owner reads the same as a freshly sent-back result: pickable.
+   */
+  readonly primaryRequest = signal<PrimaryRequestState | null>(null);
+
+  readonly primaryPickerDisabled = computed(() => this.primaryRequest()?.state === 'pending');
+
+  private readonly declinedProgramCodes = computed(
+    () => new Set((this.primaryRequest()?.declined_by_codes ?? []).map((code) => code.toUpperCase())),
+  );
+
+  /**
+   * PSR-R-15 banner. `null` only while `accepted` (nothing to tell the Center about) or before the
+   * first read resolves. `pending`/`accepted` carry `program_code`; `sent_back` never does
+   * (`PrimaryProgramRequestService.stateFor`) — its SP code(s) come from `declined_by_codes`
+   * instead. `none` with no owner (never requested, or the auto-request failed — PSR-R-1 failure
+   * scenario) is rendered like a sent-back round but with no codes (execution.md L132, T-2 → T-10).
+   */
+  readonly primaryAssignmentBanner = computed(() => {
+    const request = this.primaryRequest();
+    if (!request) return null;
+    if (request.state === 'pending') {
+      const code = request.program_code ?? '';
+      return { tone: 'info' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.pending(code) };
+    }
+    if (request.state === 'sent_back') {
+      const codes = request.declined_by_codes.length
+        ? request.declined_by_codes.join(', ')
+        : request.program_code ?? '';
+      // PDR-R-9 / PDR-DD-8: once the result is read-only, "sent_back" means Rejected (final),
+      // not an awaiting-re-pick round — old sent-back results (not read-only) keep today's banner.
+      // Spec tone "danger" maps to `app-alert-status`'s `'error'` (its most severe status; the
+      // component has no `danger` value — see `alert-status.component.ts`).
+      if (this.readOnly()) {
+        return { tone: 'error' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.rejected(codes) };
+      }
+      return { tone: 'warning' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.sentBack(codes) };
+    }
+    if (request.state === 'none') {
+      return { tone: 'warning' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.noneUnpicked };
+    }
+    if (request.state === 'draft') {
+      const code = request.program_code ?? '';
+      return { tone: 'info' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.draft(code) };
+    }
+    return null;
+  });
+
+  /**
+   * design.md §6.3 — shown whenever Submit is server-blocked by the lack of an accepted owner.
+   * `draft` (PNS-R-5) is not server-blocked: the choice is saved and Submit is what sends it.
+   */
+  readonly submitBlockedReason = computed(() => {
+    const request = this.primaryRequest();
+    if (!request || request.state === 'accepted' || request.state === 'draft') return null;
+    return BILATERAL_PRIMARY_ASSIGNMENT_COPY.submitBlockedReason;
+  });
+
+  readonly declinedOptionSuffix = BILATERAL_PRIMARY_ASSIGNMENT_COPY.declinedOptionSuffix;
+
+  constructor() {
+    effect(() => {
+      const resultId = this.creationService.currentResultId();
+      if (resultId == null) {
+        this.primaryRequest.set(null);
+        return;
+      }
+      this.bilateralApi.GET_resultInitiativeId(resultId).subscribe({
+        next: ({ response }) => this.primaryRequest.set(response?.primary_request ?? null),
+        error: () => this.primaryRequest.set(null),
+      });
+    });
+  }
+
+  isDeclinedProgram(programCode: string | null | undefined): boolean {
+    if (!programCode) return false;
+    return this.declinedProgramCodes().has(programCode.toUpperCase());
+  }
 
   readonly canEditAssignment = computed(
     () => !this.readOnly() && this.creationService.currentResultId() != null,
@@ -152,6 +246,7 @@ export class SectionZeroDashboardComponent {
   }
 
   togglePrimaryOptions(): void {
+    if (this.primaryPickerDisabled()) return;
     this.assignmentError.set(null);
     const programs = this.availablePrimaryPrograms();
     if (programs.length <= 1) {
@@ -198,7 +293,13 @@ export class SectionZeroDashboardComponent {
           : {}),
       })
       .subscribe({
-        next: () => {
+        next: (result: { response?: { primary_request?: PrimaryRequestState } }) => {
+          // Replaces the old boolean "ToC cleared" flag (2026-09-30 change log) — reflect the new
+          // state immediately; `loadResult` below re-reads it too, but that is async and this
+          // avoids a blink back to the stale banner/picker state.
+          if (result?.response?.primary_request) {
+            this.primaryRequest.set(result.response.primary_request);
+          }
           this.creationService.applyPrimaryAssignment(project, primary);
           if (this.hasContributionChange()) {
             // Reflect it at once: `loadResult` below re-reads it from the server anyway, but the

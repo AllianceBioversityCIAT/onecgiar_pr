@@ -43,6 +43,8 @@ import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../intern
       [acceptHelper]="acceptHelper()"
       [focusAlign]="focusAlign()"
       [viewFields]="viewFields()"
+      [acceptLabel]="acceptLabel()"
+      [showAlignSlot]="showAlignSlot()"
       (closed)="onClosed()"
       (resultActivated)="onResultActivated()"
       (acceptClicked)="onAcceptClicked()"
@@ -69,6 +71,8 @@ class HostComponent {
   readonly acceptHelper = signal<string | null>(null);
   readonly focusAlign = signal(false);
   readonly viewFields = signal<ContributionRequestDrawerViewFields | null>(null);
+  readonly acceptLabel = signal<string | null>(null);
+  readonly showAlignSlot = signal(true);
 
   closedCount = 0;
   resultActivatedCount = 0;
@@ -172,6 +176,38 @@ describe('ContributionRequestDrawerComponent', () => {
     expect(projected?.textContent).toContain('align content');
     // Lives inside the drawer's scrolling body, not the header/footer.
     expect(query('[data-testid="crd-body"] [data-testid="align-slot"]')).toBeTruthy();
+  });
+
+  describe('PSR-T-9: kind-aware Accept label', () => {
+    it('DISQUALIFIER falsifier / CRD zero-touch: acceptLabel = null (default) still shows "Accept contribution" exactly as before', async () => {
+      await openDrawer();
+
+      const acceptBtn = query('[data-testid="crd-accept-btn"]');
+      expect(acceptBtn?.textContent?.trim()).toBe(copy.footer.acceptContribution);
+    });
+
+    it('a non-null acceptLabel overrides the footer Accept button text (e.g. "Accept as primary")', async () => {
+      host.acceptLabel.set(copy.footer.acceptAsPrimary);
+      await openDrawer();
+
+      const acceptBtn = query('[data-testid="crd-accept-btn"]');
+      expect(acceptBtn?.textContent?.trim()).toBe(copy.footer.acceptAsPrimary);
+    });
+  });
+
+  describe('PSR-T-9: no ToC Align projection for primary requests (showAlignSlot)', () => {
+    it('DISQUALIFIER falsifier / CRD zero-touch: showAlignSlot = true (default) still renders the projected [crdAlign] content', async () => {
+      await openDrawer();
+
+      expect(query('[data-testid="align-slot"]')).toBeTruthy();
+    });
+
+    it('Falsifier: showAlignSlot = false never renders the projected [crdAlign] content, even though it is projected', async () => {
+      host.showAlignSlot.set(false);
+      await openDrawer();
+
+      expect(query('[data-testid="align-slot"]')).toBeNull();
+    });
   });
 
   it('CRD-P-9: the rendered hlm-sheet-content carries the 720px width override', async () => {
@@ -278,6 +314,50 @@ describe('ContributionRequestDrawerComponent', () => {
       expect(text).toBe('Center CIAT has reported a contribution to SP01 for result 9377 – Some result title');
       expect(text).not.toContain('undefined');
       expect(text).not.toContain('from');
+    });
+
+    it('PSR-T-9 (PSR-R-10, design.md §6.1 "Bilateral contributor request"): leadCode renders bold right after lead, and suffix renders after the result title', async () => {
+      host.headerParts.set({
+        lead: '',
+        leadCode: 'SP09',
+        requesterCode: '',
+        verb: copy.header.bilateralContributorVerb,
+        responderCode: 'SP12',
+        tail: copy.header.bilateralContributorTail,
+        resultCode: '9377',
+        resultTitle: 'Some result title',
+        suffix: `${copy.header.onBehalfOf} CIAT`
+      });
+      await openDrawer();
+
+      const sentence = query('[data-testid="crd-header-sentence"]');
+      const text = (sentence?.textContent ?? '').replace(/\s+/g, ' ').trim();
+      expect(text).toBe(
+        'SP09, as primary Science Program, has tagged SP12 as a contributing Science Program to result 9377 – Some result title on behalf of CIAT'
+      );
+
+      const monoEls = sentence?.querySelectorAll('.font-mono') ?? [];
+      const monoTexts = Array.from(monoEls).map(el => el.textContent?.trim());
+      expect(monoTexts).toEqual(['SP09', 'SP12', '9377']);
+    });
+
+    it('DISQUALIFIER falsifier / CRD zero-touch: omitting leadCode/suffix renders byte-identical to before (no extra whitespace, no "undefined")', async () => {
+      host.headerParts.set({
+        lead: 'Priya Raghavan',
+        requesterCode: 'SP06',
+        verb: copy.header.verb,
+        responderCode: 'SP01',
+        tail: copy.header.tail,
+        resultCode: '9377',
+        resultTitle: 'Some result title'
+        // leadCode / suffix intentionally absent.
+      });
+      await openDrawer();
+
+      const sentence = query('[data-testid="crd-header-sentence"]');
+      const text = (sentence?.textContent ?? '').replace(/\s+/g, ' ').trim();
+      expect(text).toBe('Priya Raghavan from SP06 has asked SP01 to contribute to result 9377 – Some result title');
+      expect(text).not.toContain('undefined');
     });
   });
 
@@ -660,6 +740,37 @@ describe('ContributionRequestDrawerComponent', () => {
 
       const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
       expect(labels).not.toContain(copy.viewFieldLabels.status);
+      expect(labels).toEqual([copy.viewFieldLabels.phase]);
+    });
+
+    it('PSR-T-9 (PSR-R-11): renders "Request type" right after Status when `viewFields.requestKind` is populated', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'request',
+        status: 'Needs your decision',
+        requestKind: 'Primary program request',
+        phase: 'Phase 2026'
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels).toEqual([copy.viewFieldLabels.status, copy.viewFieldLabels.requestKind, copy.viewFieldLabels.phase]);
+
+      const values = queryAll('[data-testid="crd-view-metadata-value"]').map(el => el.textContent?.trim());
+      expect(values[1]).toBe('Primary program request');
+    });
+
+    it('PSR-T-9: omits the "Request type" row entirely when `viewFields.requestKind` is null/absent — never a blank row', async () => {
+      host.mode.set('view');
+      host.viewFields.set({
+        source: 'update',
+        phase: 'Phase 2026'
+        // requestKind intentionally absent.
+      });
+      await openDrawer();
+
+      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
+      expect(labels).not.toContain(copy.viewFieldLabels.requestKind);
       expect(labels).toEqual([copy.viewFieldLabels.phase]);
     });
 

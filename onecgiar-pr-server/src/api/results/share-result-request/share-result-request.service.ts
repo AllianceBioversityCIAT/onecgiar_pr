@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   forwardRef,
   HttpStatus,
   Inject,
@@ -10,7 +11,15 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { ShareResultRequest } from './entities/share-result-request.entity';
+import {
+  RequestTypeEnum,
+  ShareResultRequest,
+} from './entities/share-result-request.entity';
+import { SourceEnum } from '../entities/result.entity';
+import {
+  PrimaryDecisionOutcome,
+  PrimaryProgramRequestService,
+} from './services/primary-program-request.service';
 import { NotificationService } from '../../notification/notification.service';
 import {
   NotificationLevelEnum,
@@ -44,10 +53,43 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import {
+  applyKeysetCursor,
+  decodeCursor,
+  KEYSET_PAGE_SIZE,
+  sliceKeysetPage,
+} from '../../../shared/utils/keyset-cursor.util';
+
+/** @akili-spec notifications/inbox-paginated-load — shared keyset fields (PAGE-R-3). */
+const DONE_KEYSET_FIELDS = {
+  dateField: 'requested_date',
+  idField: 'share_result_request_id',
+} as const;
+
+/** Parsed/validated `version_id` + `scope` + `cursor` query params (PAGE-R-1, R-3, R-6). */
+export interface SharedRequestPagingParams {
+  versionId?: string;
+  scope?: string;
+  cursor?: string;
+}
+
+interface ParsedPagingParams {
+  versionId?: number;
+  scope?: 'pending' | 'history';
+  cursor?: string;
+}
 
 @Injectable()
 export class ShareResultRequestService {
   private readonly _logger = new Logger(ShareResultRequestService.name);
+
+  /**
+   * `PDR-R-3` / `PDR-DD-4` — the exact 400 message for a blank/missing justification on a primary
+   * decline, shared between the dispatcher's pre-service guard and the `invalid_input` mapping
+   * (the service can also return `invalid_input` if reached another way, e.g. directly in tests).
+   */
+  private static readonly JUSTIFICATION_REQUIRED_MESSAGE =
+    'Justification is required when declining a primary request';
 
   /**
    * P2-3188 — `request_status_id` → notification type. Only the two terminal decisions are here;
@@ -85,6 +127,15 @@ export class ShareResultRequestService {
     // (`getReceivedResultRequestPopUp`). @Optional() keeps every existing spec that builds this
     // service without it compiling — the one caller null-checks it.
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    // `PSR-T-4` — the `primary` branch of `results/request/update` (design.md §4, DD-6). Safe to
+    // inject directly (no cycle): `PrimaryProgramRequestService` does not inject
+    // `ShareResultRequestService` (T-2/T-3 doc comments), and both are providers of the same
+    // `ShareResultRequestModule`. @Optional(): `ResultsTocResultsModule` and
+    // `ResultsPackageTocResultModule` re-provide this service locally (they only call
+    // `resultRequest()`) without `PrimaryProgramRequestService`; without @Optional() Nest fails at
+    // boot. The decide endpoint lives in `ShareResultRequestModule`, where it always resolves.
+    @Optional()
+    private readonly _primaryProgramRequestService?: PrimaryProgramRequestService,
     @Optional()
     @Inject(forwardRef(() => NotificationService))
     private readonly _notificationService?: NotificationService,
@@ -451,22 +502,43 @@ export class ShareResultRequestService {
     );
   }
 
-  async getReceivedResultRequest(user: TokenDto) {
+  // @akili-spec notifications/inbox-paginated-load
+  async getReceivedResultRequest(
+    user: TokenDto,
+    pagingParams?: SharedRequestPagingParams,
+  ) {
     try {
+      const { versionId, scope, cursor } = this.parsePagingParams(pagingParams);
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
-      const whereConditions = this.buildWhereReceivedConditions(inits, role);
+      const extraConditions =
+        versionId !== undefined
+          ? { obj_result: { version_id: versionId } }
+          : undefined;
+      const whereConditions = this.buildWhereReceivedConditions(
+        inits,
+        role,
+        extraConditions,
+      );
 
       // @akili-spec bugfix/notifications-inbox-slow-load
       // PERF-DD-1 / PERF-DD-2: the 3 buckets are independent reads — fetch them concurrently.
       // For admins, `pendingOwner`/`pendingShared` are the identical `commonConditions` object
       // (see buildWhereReceivedConditions), so fetch it once and reuse the same result for both
       // positions instead of issuing the query twice.
-      const [
-        receivedContributionsPendingOwner,
-        receivedContributionsPendingShared,
-        receivedContributionsDone,
-      ] = await this.fetchThreeBucketsDeduped(whereConditions);
+      //
+      // @akili-spec notifications/inbox-paginated-load
+      // PAGE-R-2/R-3: `scope` now gates which buckets are fetched at all (not fetched-then-
+      // discarded) and `done` is keyset-paginated (PAGE-R-3) via `fetchThreeBucketsScoped`.
+      const {
+        pendingOwner: receivedContributionsPendingOwner,
+        pendingShared: receivedContributionsPendingShared,
+        done: receivedContributionsDone,
+        doneMeta,
+      } = await this.fetchThreeBucketsScoped(whereConditions, {
+        scope,
+        cursor,
+      });
 
       return {
         response: {
@@ -475,6 +547,7 @@ export class ShareResultRequestService {
             receivedContributionsPendingShared,
           ),
           receivedContributionsDone,
+          doneMeta,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -482,6 +555,129 @@ export class ShareResultRequestService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * @akili-spec notifications/inbox-paginated-load
+   * PAGE-R-1, R-3, R-6 — validates `version_id` (positive integer, else 400) and `cursor`
+   * (via `decodeCursor`, else 400 — eagerly, so a malformed cursor 400s even under
+   * `scope=pending`, which would otherwise never reach the history bucket that consumes it;
+   * design.md §4.1/§5). `scope` is normalized to `'pending' | 'history' | undefined`; any other
+   * value is treated as absent (both buckets fetched) — the spec defines no 400 for an unknown
+   * scope value.
+   */
+  private parsePagingParams(
+    params?: SharedRequestPagingParams,
+  ): ParsedPagingParams {
+    const versionIdRaw = params?.versionId;
+    let versionId: number | undefined;
+    if (versionIdRaw !== undefined && versionIdRaw !== '') {
+      if (!/^[1-9]\d*$/.test(String(versionIdRaw))) {
+        throw new BadRequestException('Invalid version_id');
+      }
+      versionId = Number(versionIdRaw);
+    }
+
+    const scopeRaw = params?.scope;
+    const scope: 'pending' | 'history' | undefined =
+      scopeRaw === 'pending' || scopeRaw === 'history' ? scopeRaw : undefined;
+
+    const cursor = params?.cursor || undefined;
+    if (cursor) {
+      decodeCursor(cursor); // validates eagerly; result re-derived inside applyKeysetCursor
+    }
+
+    return { versionId, scope, cursor };
+  }
+
+  /**
+   * @akili-spec notifications/inbox-paginated-load
+   * PAGE-R-2 (pending complete & skippable), PAGE-R-3 (done keyset-paginated, 200/page),
+   * PAGE-DD-1 — the scoped 3-bucket orchestration shared by `getReceivedResultRequest` and
+   * `getSentResultRequest`. `scope=history` skips the pending buckets entirely (not fetched,
+   * never truncated when it IS fetched — falsifier (f)); `scope=pending` skips `done` entirely
+   * (falsifier (b)). `done` is cursor-expanded (`applyKeysetCursor`) and fetched with
+   * `take: KEYSET_PAGE_SIZE + 1` ordered `(requested_date DESC, share_result_request_id DESC)`,
+   * then sliced to a page (`sliceKeysetPage`). Enrichment (`enrichBucketsOnce`) runs once over
+   * whichever buckets were actually fetched — legacy (no scope) fetches all 3, same as before.
+   */
+  private async fetchThreeBucketsScoped(
+    whereConditions: { pendingOwner: any; pendingShared: any; done: any },
+    pagingParams: { scope?: 'pending' | 'history'; cursor?: string },
+  ): Promise<{
+    pendingOwner: any[];
+    pendingShared: any[];
+    done: any[];
+    doneMeta: { hasMore: boolean; nextCursor: string | null };
+  }> {
+    const { scope, cursor } = pagingParams;
+    const fetchPending = scope !== 'history';
+    const fetchDone = scope !== 'pending';
+
+    let pendingOwner: any[] = [];
+    let pendingShared: any[] = [];
+    let doneRows: any[] = [];
+    let doneMeta: { hasMore: boolean; nextCursor: string | null } = {
+      hasMore: false,
+      nextCursor: null,
+    };
+
+    const tasks: Promise<void>[] = [];
+
+    if (fetchPending) {
+      if (whereConditions.pendingOwner === whereConditions.pendingShared) {
+        tasks.push(
+          this.getRequest(whereConditions.pendingOwner).then((rows) => {
+            pendingOwner = rows;
+            pendingShared = rows;
+          }),
+        );
+      } else {
+        tasks.push(
+          this.getRequest(whereConditions.pendingOwner).then((rows) => {
+            pendingOwner = rows;
+          }),
+        );
+        tasks.push(
+          this.getRequest(whereConditions.pendingShared).then((rows) => {
+            pendingShared = rows;
+          }),
+        );
+      }
+    }
+
+    if (fetchDone) {
+      const doneWhere = applyKeysetCursor(
+        whereConditions.done,
+        cursor,
+        DONE_KEYSET_FIELDS,
+      );
+      tasks.push(
+        this.getRequest(doneWhere, {
+          order: {
+            requested_date: 'DESC',
+            share_result_request_id: 'DESC',
+          },
+          take: KEYSET_PAGE_SIZE + 1,
+        }).then((rows) => {
+          const page = sliceKeysetPage(rows, DONE_KEYSET_FIELDS);
+          doneRows = page.rows;
+          doneMeta = { hasMore: page.hasMore, nextCursor: page.nextCursor };
+        }),
+      );
+    }
+
+    await Promise.all(tasks);
+
+    const [enrichedPendingOwner, enrichedPendingShared, enrichedDone] =
+      await this.enrichBucketsOnce([pendingOwner, pendingShared, doneRows]);
+
+    return {
+      pendingOwner: enrichedPendingOwner,
+      pendingShared: enrichedPendingShared,
+      done: enrichedDone,
+      doneMeta,
+    };
   }
 
   async getReceivedResultRequestPopUp(user: TokenDto) {
@@ -594,6 +790,10 @@ export class ShareResultRequestService {
       // resolved-request query, matching zero rows regardless of which requests actually exist.
       // Mirror the same bypass here: admin sees every resolved request unfiltered, exactly like
       // every pending one.
+      // @akili-spec notifications/inbox-paginated-load
+      // PAGE-R-1: `obj_result` is read back from `commonConditions` (not re-literaled) so a
+      // `version_id` merged into it via `extraConditions` (PAGE-P-2) reaches `done` too, not
+      // just the pending buckets above.
       done:
         role !== 1
           ? [
@@ -601,7 +801,7 @@ export class ShareResultRequestService {
                 ...commonConditions,
                 request_status_id: In([2, 3]),
                 is_active: true,
-                obj_result: { is_active: true },
+                obj_result: commonConditions.obj_result,
                 shared_inititiative_id: In(sharedInitiativeIds),
                 is_map_to_toc: false,
               },
@@ -609,7 +809,7 @@ export class ShareResultRequestService {
                 ...commonConditions,
                 request_status_id: In([2, 3]),
                 is_active: true,
-                obj_result: { is_active: true },
+                obj_result: commonConditions.obj_result,
                 owner_initiative_id: In(sharedInitiativeIds),
                 is_map_to_toc: true,
               },
@@ -619,7 +819,7 @@ export class ShareResultRequestService {
                 ...commonConditions,
                 request_status_id: In([2, 3]),
                 is_active: true,
-                obj_result: { is_active: true },
+                obj_result: commonConditions.obj_result,
               },
             ],
     };
@@ -627,48 +827,10 @@ export class ShareResultRequestService {
 
   /**
    * @akili-spec bugfix/notifications-inbox-slow-load
-   * PERF-DD-1 / PERF-DD-2: shared by `getReceivedResultRequest` and `getSentResultRequest`
-   * (identical 3-bucket shape: `pendingOwner`, `pendingShared`, `done`). When `role === 1`
-   * (admin), `whereConditions.pendingOwner` and `.pendingShared` are reference-equal (the same
-   * `commonConditions` object — see `buildWhereReceivedConditions`/`buildWhereSentConditions`),
-   * so fetch it once and reuse the result for both positions. Otherwise, run all 3 fetches
-   * concurrently — they are independent reads.
-   *
-   * PERF-DD-3: `getRequest` no longer enriches internally (fetch-and-map only) — this is the
-   * orchestration step for the 3-bucket callers (`getReceivedResultRequest`/`getSentResultRequest`):
-   * fetch all buckets, then run `enrichBucketsOnce` to enrich the union exactly once and re-split
-   * the enriched rows back into these 3 positions.
-   */
-  private async fetchThreeBucketsDeduped(whereConditions: {
-    pendingOwner: any;
-    pendingShared: any;
-    done: any;
-  }): Promise<[any[], any[], any[]]> {
-    let pendingOwner: any[];
-    let pendingShared: any[];
-    let done: any[];
-
-    if (whereConditions.pendingOwner === whereConditions.pendingShared) {
-      [pendingOwner, done] = await Promise.all([
-        this.getRequest(whereConditions.pendingOwner),
-        this.getRequest(whereConditions.done),
-      ]);
-      pendingShared = pendingOwner;
-    } else {
-      [pendingOwner, pendingShared, done] = await Promise.all([
-        this.getRequest(whereConditions.pendingOwner),
-        this.getRequest(whereConditions.pendingShared),
-        this.getRequest(whereConditions.done),
-      ]);
-    }
-
-    return this.enrichBucketsOnce([pendingOwner, pendingShared, done]) as any;
-  }
-
-  /**
-   * @akili-spec bugfix/notifications-inbox-slow-load
    * PERF-DD-1 / PERF-DD-2 (2-bucket variant): `getReceivedResultRequestPopUp`'s case — same
-   * admin-dedupe/concurrency rule as `fetchThreeBucketsDeduped`, without a `done` bucket.
+   * admin-dedupe/concurrency rule as `fetchThreeBucketsScoped`
+   * (@akili-spec notifications/inbox-paginated-load — superseded `fetchThreeBucketsDeduped`,
+   * which this popup 2-bucket helper never used), without a `done` bucket.
    *
    * PERF-DD-3: orchestration step for the popup call site (premise PERF-P-5's 3rd consumer) —
    * enrich the union of its 2 buckets exactly once via `enrichBucketsOnce`, so it does not
@@ -698,7 +860,7 @@ export class ShareResultRequestService {
    * @akili-spec bugfix/notifications-inbox-slow-load
    * PERF-DD-3 — the single shared orchestration step for all 3 call sites (premise PERF-P-5):
    * dedupes buckets by ARRAY REFERENCE first (the admin case hands the same array in two
-   * positions — `fetchThreeBucketsDeduped`/`fetchTwoBucketsDeduped` above), concatenates only the
+   * positions — `fetchThreeBucketsScoped`/`fetchTwoBucketsDeduped` above), concatenates only the
    * unique buckets, enriches that union exactly once, then re-splits the enriched rows back into
    * every caller-supplied bucket position by `share_result_request_id` (never by index/length —
    * see the task's re-split note). Because the map below is keyed by the ORIGINAL bucket
@@ -708,8 +870,13 @@ export class ShareResultRequestService {
   private async enrichBucketsOnce(buckets: any[][]): Promise<any[][]> {
     const uniqueBuckets = Array.from(new Set(buckets));
     const concatenated = uniqueBuckets.flat();
-    const enriched =
+    const tocEnriched =
       await this.enrichRequestsWithTocContributionReview(concatenated);
+    // `PSR-T-4` (design.md §8 Performance): derived entirely from fields/relations the SAME
+    // `getRequest()` query already selects (`request_type`, `obj_result.result_center_array`,
+    // `obj_owner_initiative.official_code`) — zero extra queries, so it cannot scale with row
+    // count regardless of how many rows land in the union.
+    const enriched = this.attachPrimaryRequestFields(tocEnriched);
 
     const enrichedByShareRequestId = new Map<any, any>(
       enriched.map((row) => [row.share_result_request_id, row]),
@@ -728,11 +895,22 @@ export class ShareResultRequestService {
     return buckets.map((bucket) => enrichedUniqueBuckets.get(bucket));
   }
 
-  private async getRequest(whereCondition: any) {
+  /**
+   * @akili-spec notifications/inbox-paginated-load
+   * PAGE-R-3 — `options.order`/`options.take` are additive (only the `done` bucket passes them,
+   * via `fetchThreeBucketsScoped`); every pre-existing caller omits `options` and keeps fetching
+   * the full unordered/untaken result set, unchanged (PAGE-R-2, PAGE-R-6).
+   */
+  private async getRequest(
+    whereCondition: any,
+    options?: { order?: any; take?: number },
+  ) {
     const results = await this._shareResultRequestRepository.find({
       select: this.getRequestSelectFields(),
       relations: this.getRequestRelations(),
       where: whereCondition,
+      ...(options?.order ? { order: options.order } : {}),
+      ...(options?.take ? { take: options.take } : {}),
     });
 
     return results.map((result: any) => {
@@ -830,11 +1008,70 @@ export class ShareResultRequestService {
     });
   }
 
+  /**
+   * `PSR-T-4` (design.md §4, §8) — attaches `request_type`, `creating_center` (every row) and
+   * `owner_program_code` (bilateral contribution rows only) to each request row, derived purely
+   * from data `getRequestSelectFields()`/`getRequestRelations()` already fetch in the ONE query
+   * per bucket — no additional lookup, so this cannot introduce an N+1.
+   */
+  private attachPrimaryRequestFields(requests: any[]): any[] {
+    return requests.map((request) => {
+      const requestType: RequestTypeEnum =
+        request.request_type ?? RequestTypeEnum.CONTRIBUTION;
+
+      const enriched: any = {
+        ...request,
+        request_type: requestType,
+        creating_center: this.deriveCreatingCenter(request.obj_result),
+      };
+
+      // `PSR-R-10` — only bilateral CONTRIBUTION rows carry the primary SP's code for the
+      // "on behalf of {Center}" sentence; a `primary` row has no separate "owner" concept yet
+      // (design.md §3.1: owner == shared on that row itself).
+      if (
+        requestType !== RequestTypeEnum.PRIMARY &&
+        request.obj_result?.source === SourceEnum.Bilateral
+      ) {
+        enriched.owner_program_code =
+          request.obj_owner_initiative?.official_code ?? null;
+      }
+
+      return enriched;
+    });
+  }
+
+  /**
+   * `PSR-R-9` scenario "missing Center acronym" — the server sends BOTH `acronym` and `name`
+   * exactly as stored (never collapsed here); the client picks the fallback. `null` is returned
+   * only when the result has no active leading centre at all.
+   */
+  private deriveCreatingCenter(
+    objResult: any,
+  ): { acronym: string | null; name: string | null } | null {
+    const centers: any[] = objResult?.result_center_array ?? [];
+    const leadCenter = centers.find(
+      (center) => center?.is_active && Number(center?.is_leading_result) === 1,
+    );
+    const institution = leadCenter?.clarisa_center_object?.clarisa_institution;
+    if (!institution) {
+      return null;
+    }
+
+    return {
+      acronym: institution.acronym ?? null,
+      name: institution.name ?? null,
+    };
+  }
+
   private getRequestSelectFields(): FindOptionsSelect<ShareResultRequest> {
     return {
       share_result_request_id: true,
       result_id: true,
       shared_inititiative_id: true,
+      owner_initiative_id: true,
+      // `PSR-T-4` (design.md §4): rows gain `request_type` so the client can render the primary
+      // / bilateral-contributor / contribution row variants.
+      request_type: true,
       requested_date: true,
       aprovaed_date: true,
       request_status_id: true,
@@ -952,14 +1189,22 @@ export class ShareResultRequestService {
     );
   }
 
-  async getSentResultRequest(user: TokenDto) {
+  // @akili-spec notifications/inbox-paginated-load
+  async getSentResultRequest(
+    user: TokenDto,
+    pagingParams?: SharedRequestPagingParams,
+  ) {
     try {
+      const { versionId, scope, cursor } = this.parsePagingParams(pagingParams);
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
 
       const extraContidions: any = {
         requested_by: user.id,
       };
+      if (versionId !== undefined) {
+        extraContidions.obj_result = { version_id: versionId };
+      }
       const whereConditions = this.buildWhereSentConditions(
         inits,
         role,
@@ -969,11 +1214,18 @@ export class ShareResultRequestService {
       // @akili-spec bugfix/notifications-inbox-slow-load
       // PERF-DD-1 / PERF-DD-2 — same admin-dedupe + concurrency pattern as
       // getReceivedResultRequest.
-      const [
-        sentContributionsPendingOwner,
-        sentContributionsPendingShared,
-        sentContributionsDone,
-      ] = await this.fetchThreeBucketsDeduped(whereConditions);
+      //
+      // @akili-spec notifications/inbox-paginated-load
+      // PAGE-R-2/R-3 — see `fetchThreeBucketsScoped` doc comment.
+      const {
+        pendingOwner: sentContributionsPendingOwner,
+        pendingShared: sentContributionsPendingShared,
+        done: sentContributionsDone,
+        doneMeta,
+      } = await this.fetchThreeBucketsScoped(whereConditions, {
+        scope,
+        cursor,
+      });
 
       return {
         response: {
@@ -982,6 +1234,7 @@ export class ShareResultRequestService {
             sentContributionsPendingShared,
           ),
           sentContributionsDone,
+          doneMeta,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -1040,6 +1293,9 @@ export class ShareResultRequestService {
           : commonConditions,
       // NOTIF-BUG-1 (2026-09-30): same admin bypass fix as `buildWhereReceivedConditions` — see
       // that method's comment for the full rationale.
+      // @akili-spec notifications/inbox-paginated-load
+      // PAGE-R-1: `obj_result` is read back from `commonConditions` (see
+      // `buildWhereReceivedConditions`'s matching comment) so `version_id` reaches `done` too.
       done:
         role !== 1
           ? [
@@ -1047,7 +1303,7 @@ export class ShareResultRequestService {
                 ...commonConditions,
                 request_status_id: In([2, 3]),
                 is_active: true,
-                obj_result: { is_active: true },
+                obj_result: commonConditions.obj_result,
                 owner_initiative_id: In(sharedInitiativeIds),
                 is_map_to_toc: false,
               },
@@ -1055,7 +1311,7 @@ export class ShareResultRequestService {
                 ...commonConditions,
                 request_status_id: In([2, 3]),
                 is_active: true,
-                obj_result: { is_active: true },
+                obj_result: commonConditions.obj_result,
                 shared_inititiative_id: In(sharedInitiativeIds),
                 is_map_to_toc: true,
               },
@@ -1065,7 +1321,7 @@ export class ShareResultRequestService {
                 ...commonConditions,
                 request_status_id: In([2, 3]),
                 is_active: true,
-                obj_result: { is_active: true },
+                obj_result: commonConditions.obj_result,
               },
             ],
     };
@@ -1113,6 +1369,22 @@ export class ShareResultRequestService {
         return this.createInvalidShareRequestResponse();
       }
 
+      // `PSR-T-4` (design.md §4, §5 item 2; forward pointers 1 and 2): dispatch on the LOADED
+      // row's `request_type`, never on a DTO field, and never derive the acting user from the
+      // DTO — `user` here is the JWT-decoded `@UserToken()` the controller already passes in.
+      const loadedRequest = await this._shareResultRequestRepository.findOne({
+        where: { share_result_request_id: rr.share_result_request_id },
+      });
+
+      if (loadedRequest?.request_type === RequestTypeEnum.PRIMARY) {
+        return this.dispatchPrimaryDecision(
+          loadedRequest,
+          request_status_id,
+          user,
+          createShareResultsRequestDto.justification,
+        );
+      }
+
       await this.updateShareResultRequest(rr, user, request_status_id);
 
       const findShare = await this._shareResultRequestRepository.findOne({
@@ -1142,6 +1414,139 @@ export class ShareResultRequestService {
     } catch (error) {
       this._logger.error('Error updating share result request', error);
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * `PSR-T-4` — the `primary` branch of `results/request/update` (V1 and V2 both call this).
+   * Forward pointer 4: the DTO decision only selects accept (`2`) or decline (`3`); nothing else
+   * from the DTO reaches `PrimaryProgramRequestService`.
+   */
+  private async dispatchPrimaryDecision(
+    row: ShareResultRequest,
+    requestStatusId: number,
+    user: TokenDto,
+    // Sourced from `CreateShareResultRequestDto.justification` (`PDR-T-2`). Blank is rejected with
+    // 400 both here (pre-service, "Justification is required when declining a primary request")
+    // and in `decline()` (`PDR-DD-4`, `invalid_input` → 400 via `mapPrimaryDecisionOutcomeToResponse`).
+    justification?: string,
+  ): Promise<{ response: any; message: string; status: HttpStatus }> {
+    if (requestStatusId !== 2 && requestStatusId !== 3) {
+      return {
+        response: {},
+        message:
+          'A primary Science Program request can only be accepted or declined',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    // `PSR-T-4` rework attempt 2 (Reviewer FAIL, issue 1): a Center re-pick cancels the round by
+    // setting `is_active=false` on the old round's rows ONLY (`request_status_id` stays `1` —
+    // `primary-program-request.service.ts`'s `request()`, design.md §2.2 "Center re-picks SP12").
+    // Without this check, the status re-check alone (`1 === PENDING`) still lets a stale
+    // tab/pop-up/hand-built PATCH decide an already-cancelled row. requirements.md PSR-R-2: "no
+    // longer actionable"; PSR-R-8: the server MUST enforce this. Same 409 shape as
+    // `PrimaryDecisionOutcome`'s `conflict`, so the client's existing 409 handling covers it too.
+    if (!row.is_active) {
+      return this.mapPrimaryDecisionOutcomeToResponse({
+        ok: false,
+        reason: 'conflict',
+      });
+    }
+
+    // `PDR-R-3` / `PDR-DD-4`: validated here too (not just inside `decline()`), so a blank
+    // justification is rejected with 400 BEFORE taking the row's pessimistic lock. Accept (`2`)
+    // and contribution decisions never reach this branch, so the justification is ignored there.
+    if (requestStatusId === 3 && !justification?.trim()) {
+      return {
+        response: {},
+        message: ShareResultRequestService.JUSTIFICATION_REQUIRED_MESSAGE,
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    if (!this._primaryProgramRequestService) {
+      this._logger.error(
+        `Primary decision unavailable in this module context (request ${row.share_result_request_id})`,
+      );
+      return this.mapPrimaryDecisionOutcomeToResponse({
+        ok: false,
+        reason: 'internal_error',
+      });
+    }
+
+    const outcome =
+      requestStatusId === 2
+        ? await this._primaryProgramRequestService.accept(
+            row.share_result_request_id,
+            user,
+          )
+        : await this._primaryProgramRequestService.decline(
+            row.share_result_request_id,
+            user,
+            justification,
+          );
+
+    return this.mapPrimaryDecisionOutcomeToResponse(outcome);
+  }
+
+  /**
+   * `PSR-T-4` forward pointer 3 (lens B guarantee, execution.md T-3): `forbidden` → 403,
+   * `conflict` → 409 with the exact "already answered" message, `not_found` → 404,
+   * `internal_error` → a generic 500 that never echoes the underlying error (already logged with
+   * ids only by `PrimaryProgramRequestService`). Response envelope unchanged, plus `request_type`.
+   */
+  private mapPrimaryDecisionOutcomeToResponse(
+    outcome: PrimaryDecisionOutcome,
+  ): { response: any; message: string; status: HttpStatus } {
+    if (outcome.ok) {
+      return {
+        response: {
+          share_result_request_id: outcome.shareResultRequestId,
+          request_type: RequestTypeEnum.PRIMARY,
+          state: outcome.state,
+        },
+        message: 'The requests have been updated successfully',
+        status: HttpStatus.OK,
+      };
+    }
+
+    // `strictNullChecks` is off in this project's tsconfig, which keeps the compiler from
+    // narrowing `PrimaryDecisionOutcome` down to its `{ ok: false; reason }` members past the
+    // `if (outcome.ok)` early return above; the explicit `Extract<>` cast recovers that shape.
+    const failure = outcome as Extract<PrimaryDecisionOutcome, { ok: false }>;
+    switch (failure.reason) {
+      case 'forbidden':
+        return {
+          response: {},
+          message: 'You are not authorized to decide this request',
+          status: HttpStatus.FORBIDDEN,
+        };
+      case 'conflict':
+        return {
+          response: {},
+          message: 'This request was already answered',
+          status: HttpStatus.CONFLICT,
+        };
+      case 'not_found':
+        return {
+          response: {},
+          message: 'The request was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      case 'invalid_input':
+        return {
+          response: {},
+          message: ShareResultRequestService.JUSTIFICATION_REQUIRED_MESSAGE,
+          status: HttpStatus.BAD_REQUEST,
+        };
+      case 'internal_error':
+      default:
+        return {
+          response: {},
+          message: 'An unexpected error occurred',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
     }
   }
 
@@ -1549,6 +1954,21 @@ export class ShareResultRequestService {
 
       if (!rr?.share_result_request_id) {
         return this.createInvalidShareRequestResponse();
+      }
+
+      // `PSR-T-4` — same dispatch as V1 (see its comment): load the row server-side and branch on
+      // its `request_type`, never on a DTO field.
+      const loadedRequestV2 = await this._shareResultRequestRepository.findOne({
+        where: { share_result_request_id: rr.share_result_request_id },
+      });
+
+      if (loadedRequestV2?.request_type === RequestTypeEnum.PRIMARY) {
+        return this.dispatchPrimaryDecision(
+          loadedRequestV2,
+          request_status_id,
+          user,
+          createShareResultsRequestDto.justification,
+        );
       }
 
       await this.updateShareResultRequestV2(rr, user, request_status_id);

@@ -56,6 +56,13 @@ export class PrDialogComponent implements OnDestroy {
   @Input({ transform: booleanAttribute }) dismissableMask = false;
   /** Extra class(es) applied to the dialog panel (mirrors PrimeNG styleClass). */
   @Input() styleClass = '';
+  /**
+   * Opt-in, default `false` (`ICM-DD-2`). When `true` AND `showHeader` is `false`, renders a
+   * floating `.pr-dialog__close` in the panel's top-right corner (same markup/behavior as the
+   * header `×`). With the default, every consumer's rendered DOM is unchanged — this is for the
+   * header-less IPSR modals that had no close control at all.
+   */
+  @Input({ transform: booleanAttribute }) floatingClose = false;
 
   /** Emitted after the dialog closes (mirrors PrimeNG onHide). */
   @Output() onHide = new EventEmitter<void>();

@@ -6,6 +6,7 @@ import { StepN4AddPartnerComponent } from './step-n4-add-partner.component';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
 import { RolesService } from '../../../../../../../../../../../../shared/services/global/roles.service';
+import { PrDialogComponent } from '../../../../../../../../../../../../shared/components/pr-dialog/pr-dialog.component';
 
 /**
  * P2-3322 — zoneless change detection regression guard.
@@ -88,5 +89,47 @@ describe('StepN4AddPartnerComponent (zoneless change detection)', () => {
 
     expect(component.showForm).toBe(true);
     expect(formEl()).toBeTruthy();
+  });
+});
+
+/**
+ * `ICM-T-3` — real-template check (`ICM-R-6`, `ICM-AC-7`). Unlike the suite above, this one imports
+ * the REAL `PrDialogComponent` instead of `StubPrDialogComponent`, because the stub's template is
+ * just `<ng-content></ng-content>` and never renders a `.pr-dialog__close` at all. The template sets
+ * `[floatingClose]="true"` (`step-n4-add-partner.component.html`), so the open modal must show
+ * exactly one floating `×`.
+ */
+describe('StepN4AddPartnerComponent (real app-pr-dialog template)', () => {
+  let fixture: ComponentFixture<StepN4AddPartnerComponent>;
+
+  beforeEach(async () => {
+    const apiMock = {
+      rolesSE: { readOnly: false },
+      alertsFe: { show: jest.fn() },
+      dataControlSE: { someMandatoryFieldIncomplete: () => false },
+      resultsSE: {}
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [StepN4AddPartnerComponent],
+      imports: [CommonModule, PrDialogComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: ApiService, useValue: apiMock },
+        { provide: InstitutionsService, useValue: { institutionsList: [] } },
+        { provide: RolesService, useValue: { readOnly: false } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(StepN4AddPartnerComponent);
+    fixture.componentInstance.visible = true;
+  });
+
+  it('shows exactly one .pr-dialog__close when open', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelectorAll('.pr-dialog__close').length).toBe(1);
   });
 });

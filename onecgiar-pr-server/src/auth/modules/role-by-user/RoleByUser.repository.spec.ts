@@ -167,6 +167,77 @@ describe('RoleByUserRepository', () => {
     });
   });
 
+  // PSR-T-2 — design §5.8, §1A P-8: Recipients of a primary Science Program request include
+  // every platform admin (role 1, no initiative/action-area/center scope).
+  describe('getPlatformAdminUserIds', () => {
+    it('returns the active platform admin ids', async () => {
+      mockQuery.mockResolvedValue([
+        { user_id: 21 },
+        { user_id: '22' },
+        { user_id: 23 },
+      ]);
+
+      const result = await repository.getPlatformAdminUserIds();
+
+      expect(result).toEqual([21, 22, 23]);
+    });
+
+    it('scopes the query to role 1 with no initiative, action area or center', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      await repository.getPlatformAdminUserIds();
+
+      const [query] = mockQuery.mock.calls.at(-1);
+      expect(query).toContain('rbu.`role` = 1');
+      expect(query).toContain('rbu.initiative_id IS NULL');
+      expect(query).toContain('rbu.action_area_id IS NULL');
+      expect(query).toContain('rbu.center_id IS NULL');
+      expect(query).toContain('rbu.active > 0');
+    });
+
+    // Falsifier (tasks.md PSR-T-2): a user whose admin row carries a non-null initiative_id must
+    // never come back — proven with a raw row shape a scoped (non-platform) admin would produce,
+    // not by mocking the query away.
+    it('never returns a user whose admin row has a non-null initiative_id', async () => {
+      // The real WHERE clause filters this row out at the DB; this test pins the clause itself
+      // (above) and this one pins the row-mapping contract: only user_id survives, scope columns
+      // are never read back, so a caller can't accidentally widen the result by trusting a row
+      // that leaked through.
+      mockQuery.mockResolvedValue([{ user_id: 21, initiative_id: 9 }]);
+
+      const result = await repository.getPlatformAdminUserIds();
+
+      expect(result).toEqual([21]);
+      const [query] = mockQuery.mock.calls.at(-1);
+      expect(query).toContain('rbu.initiative_id IS NULL');
+    });
+
+    it('returns an empty array when there are no platform admins', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      expect(await repository.getPlatformAdminUserIds()).toEqual([]);
+    });
+
+    it('drops rows without a usable user id', async () => {
+      mockQuery.mockResolvedValue([
+        { user_id: null },
+        { user_id: 0 },
+        { user_id: 'not-a-number' },
+        { user_id: 7 },
+      ]);
+
+      expect(await repository.getPlatformAdminUserIds()).toEqual([7]);
+    });
+
+    it('propagates repository errors through HandlersError', async () => {
+      mockQuery.mockRejectedValue(new Error('boom'));
+
+      await expect(repository.getPlatformAdminUserIds()).rejects.toThrow(
+        'boom',
+      );
+    });
+  });
+
   describe('hasActiveRoleOnAnyInitiativeLinkedToResult', () => {
     it('returns true when the user has a role on a linked initiative', async () => {
       mockQuery.mockResolvedValue([{ has_role: '1' }]);

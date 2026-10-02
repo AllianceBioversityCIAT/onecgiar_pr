@@ -28,7 +28,35 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   below) feeds real `isUpdateSource` rows through the unified list's `origin: 'update'` tag.
 - **Chip taxonomy (`NOTIF-R-3`/`NOTIF-DD-3`):** `rowTypeChipLabel` — `"Contribution request"` for
   every request-source row, the resolved `NotificationType` for every update-source row (`null`,
-  chip omitted, if the type can't be resolved — never a fabricated label).
+  chip omitted, if the type can't be resolved — never a fabricated label). **WCT-T-5
+  (`w1w2-center-tagged`, WCT-R-6/DD-5) exception:** an update-source row whose resolved type is
+  `RESULT_CENTER_TAGGED` shows `NOTIFICATION_CENTER_TAGGED_COPY.chipLabel` ("CG Center tagged")
+  instead of the raw type name, and `rowTypeChipColorClass` pairs it with the green
+  `--pr-status-approved-bg/-fg` tokens. **WPT-T-4 (`w1w2-project-tagged`, WPT-R-6/DD-5) exception,
+  same mechanism:** an update-source row whose resolved type is `RESULT_BILATERAL_PROJECT_TAGGED`
+  shows `NOTIFICATION_PROJECT_TAGGED_COPY.chipLabel` ("Bilateral project tagged") paired with the
+  amber `--pr-status-in-progress-bg/-fg` tokens. Every OTHER update type (not CG Center tagged, not
+  Bilateral project tagged) still gets the raw type name and the violet
+  `--pr-color-primary-50/-400` pair. Request-row chips are untouched — the `isUpdateSource` branch
+  is checked first in both getters, before the `isPrimaryRequest` ternary. Same WCT-T-5: these
+  rows' sentence also renders `lead` (the owner Science Program code) in its own `<b>`, immediately
+  before `parts.prefix` — see `getResultNotificationTextParts()`'s `RESULT_CENTER_TAGGED` case in
+  `notification-type.constants.ts` for where `lead` comes from.
+- **WPT-T-4 (`w1w2-project-tagged`, design.md §8.2-§8.4, WPT-R-2/DD-3/DD-5): `segments` replace
+  `lead`/`prefix` for the enriched/legacy-bare `RESULT_BILATERAL_PROJECT_TAGGED` shape.** The
+  template checks `parts.segments` FIRST, before the `lead`/`prefix` blocks — when present, it loops
+  the array instead (`<b>` only for each `emphasize: true` piece, plain text otherwise), never
+  rendering `lead`/`prefix` for that row. This is the one shape that needs more than one bolded
+  mid-sentence token (the owner SP code, the project code, and the Center label are each their own
+  segment) — `lead` alone can only bold a single leading token. The loop is written as a single
+  tight line with **no whitespace between segments or control-flow blocks**, plus an explicit
+  trailing `{{ ' ' }}` right before the result-link `<a>` — Angular's default whitespace handling
+  collapses a blank-line gap between block-closing `}` and the next element to nothing (verified by
+  diffing rendered `innerHTML`), so without that explicit space token the sentence runs straight
+  into the link (`"...to result9341"`). A composed/legacy sentence (BCT or pre-fix) or empty text
+  never sets `segments` — those rows fall through to the pre-existing `lead`/`prefix` rendering,
+  unchanged. See `getResultNotificationTextParts()`'s `RESULT_BILATERAL_PROJECT_TAGGED` case in
+  `notification-type.constants.ts` for where `segments` comes from.
 - **Status indicator (`NOTIF-R-5`, item 2 of the task):** `rowStatusLabel` — "Needs your decision" /
   "For your information" (a `statusResolved` label was removed as dead code, rework attempt 2 —
   resolved rows never reach this getter's rendering path, they show the pre-existing
@@ -58,20 +86,50 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
 
 ## The two flows (CRD-DD-10)
 - **Popups (row buttons, unchanged since before this spec).** Decline opens the reject-confirm
-  `app-pr-dialog` (`showConfirmRejectDialog`). Accept: ToC-carried → PATCH immediately; bilateral →
-  the "Map to your Theory of Change?" prompt (`showTocPromptDialog`) → "Map it" opens the mapping
-  step (`showTocMappingDialog`, `openTocMappingStep()`); legacy → `<app-share-request-modal>`. The
-  inline `toc_review` block (P2-3085) stays below the row, always expanded, independent of either
-  flow.
+  `app-pr-dialog` (`showConfirmRejectDialog`) — **except for `isPrimaryRequest`**, which opens
+  `app-primary-decline-justification-dialog` (`showPrimaryDeclineDialog`) instead, via
+  `onDeclineClick()` (`PDR-T-4`, see its own section below). Accept: ToC-carried → PATCH
+  immediately; bilateral → the "Map to your Theory of Change?" prompt (`showTocPromptDialog`) →
+  "Map it" opens the mapping step (`showTocMappingDialog`, `openTocMappingStep()`); legacy →
+  `<app-share-request-modal>`. The inline `toc_review` block (P2-3085) stays below the row, always
+  expanded, independent of either flow.
 - **Drawer (row body click, or Enter/Space on the row itself — `openDrawer('details')`).** Its own
-  inline decline confirmation (`drawerMode() === 'confirm-decline'`), an Align section for
-  bilateral requests projected via `[crdAlign]`, and a single "Accept contribution" button
+  inline decline confirmation (`drawerMode() === 'confirm-decline'`) — **except for
+  `isPrimaryRequest`**, whose drawer Decline (`onDrawerDeclineClicked()`) closes the drawer and
+  opens the same `showPrimaryDeclineDialog` instead (`PDR-T-4`) — an Align section for bilateral
+  requests projected via `[crdAlign]`, and a single "Accept contribution" button
   (`onDrawerAccept()`). See `../contribution-request-drawer/CLAUDE.md`.
-- **Mutual exclusion:** `openDrawer()` sets all three popup signals to `false`. The popup path
-  never opens the drawer directly — the shared `acceptOrReject()` `finalize` only resets the
-  drawer to closed/`'decide'` (it calls `closeDrawer()` on every PATCH, popup or drawer alike), it
-  never sets `drawerOpen` to `true`.
-- Both flows end at the same `acceptOrReject(isAccept, withTocMapping?)` → one PATCH.
+- **Mutual exclusion:** `openDrawer()` sets all four popup signals (incl. `showPrimaryDeclineDialog`)
+  to `false`. The popup path never opens the drawer directly — the shared `acceptOrReject()`
+  `finalize` only resets the drawer to closed/`'decide'` (it calls `closeDrawer()` on every PATCH,
+  popup or drawer alike), it never sets `drawerOpen` to `true`.
+- Both flows end at the same `acceptOrReject(isAccept, withTocMapping?, justification?)` → one
+  PATCH (`justification` only for a primary decline, `PDR-T-4`).
+
+## PDR-T-4: primary Decline asks for a justification (`notifications/primary-decline-rejects-result`)
+Both primary Decline entry points — the row button (`onDeclineClick()`) and the drawer footer
+(`onDrawerDeclineClicked()`) — open `app-primary-decline-justification-dialog`
+(`showPrimaryDeclineDialog`, PDR-T-3) instead of today's yes/no popups, **only** when
+`isPrimaryRequest`. Every other row kind (contributor, W1/W2) is untouched byte-for-byte
+(`PDR-R-2`) — both methods fall through to the pre-existing `showConfirmRejectDialog.set(true)` /
+`drawerMode.set('confirm-decline')` lines.
+- **Drawer closes first.** `onDrawerDeclineClicked()` calls `closeDrawer()` before opening the
+  dialog, so a primary decline never stacks the dialog on top of an open drawer (design.md §8.2).
+- **Confirm → `acceptOrReject(false, false, justification)`.** The method only puts
+  `justification` on the PATCH body when `!isAccept && isPrimaryRequest` — gated on the row kind,
+  not merely "a third argument was passed" — so a stray caller can never smuggle the key into a
+  contributor/W1W2 body.
+- **A primary decline runs its own pipe (`submitPrimaryDecline()`).** The shared
+  `acceptOrReject()` pipeline's `finalize` closes the drawer and every popup unconditionally, which
+  would wipe the dialog's typed text on a 400. The dedicated pipe's `finalize` instead checks
+  `keepPrimaryDeclineDialogOpen` (set in the `error` handler, read after it — RxJS runs `finalize`
+  after the destination's `next`/`error`) and skips the close/reset exactly on a 400, leaving
+  `showPrimaryDeclineDialog` `true` and flipping `requestingReject` (the dialog's `isSaving`) back
+  to `false` so the dialog's own double-click guard releases for a retry — never toggling `visible`
+  itself, which would wipe the typed text (T-3's own contract). 403/409/500 behave exactly like the
+  shared pipeline (close everything, 409 → `staleRequestMessage`).
+- **Toast wording.** A successful primary decline shows "Request successfully declined" — the
+  shared pipeline's contributor/W1W2 toast ("Request successfully rejected") is untouched.
 
 ## Drawer ownership
 `notification-item` owns **all** decision state for the drawer path: `drawerOpen`, `drawerMode`,
@@ -106,6 +164,70 @@ has `[crdAlign]` content projected into it. Do not move decision logic into the 
 - **Drawer path:** hydration is deferred to the **first** planned-result answer
   (`onTocPlannedResultChange()`); `openDrawer()` never hydrates. Viewing the drawer has no global
   side effects.
+
+## PSR-T-8: primary / bilateral contributor rows + Center notices (`bilateral-primary-sp-request`)
+Two new `source:'request'` row variants, on top of the pre-existing "Contribution request"
+(W1/W2 + everything else, unchanged, `PSR-DD-10`) and the 3 new Center-facing notices (plain
+`Notification` rows, rendered through the existing `isUpdateSource` branch — no new template
+branch needed there):
+- **`isPrimaryRequest`** (`notification.request_type === 'primary'`): chip "Primary program
+  request" (blue, reuses `--pr-status-submitted-bg/-fg` — no new tokens), flag icon (`pi-flag`),
+  sentence "`{creatingCenterLabel}` has tagged `{responderCode}` as the primary Science Program of
+  result …", row buttons "Accept as primary" / "Decline". **Bypasses ToC entirely**: `onAcceptContribution()`/
+  `onDrawerAccept()` both short-circuit to `acceptOrReject(true)` before the `acceptsWithoutToc`
+  check, `openDrawer()` never seeds `tocInitiative` for it, and the drawer's `[showAlignSlot]` is
+  `false` — never the "Map to your Theory of Change?" prompt, even though a primary request is
+  itself a bilateral result.
+- **`isBilateralContributorRequest`** (`isBilateralResult && !isPrimaryRequest` — this REPLACES the
+  old pre-spec generic "any bilateral row" branch outright, there is no third un-kinded bilateral
+  row any more): chip "Contributor request" (violet, same `--pr-color-primary-50/-400` pair as
+  before), people icon (`pi-users`), sentence "`{ownerProgramCode}`, as primary Science Program,
+  has tagged `{responderCode}` as a contributing Science Program to result … on behalf of
+  `{creatingCenterLabel}`", plain "Accept" / "Decline" buttons. Still goes through the ordinary
+  `acceptsWithoutToc` (prompt → optional mapping) flow, unchanged.
+- **`creatingCenterLabel`** — `notification.creating_center.acronym ?? .name`, falling back to
+  `copy.notificationItem.unknownCenterFallback` ("the Center") when both are missing. Never an
+  empty string or "()".
+- **`requestKindLabel`** — single source for the row chip AND the drawer's `view`-mode
+  `requestKind` field (`drawerViewFields()`), so the two can't drift (`PSR-R-11`).
+- **`drawerHeader()`** branches on `isPrimaryRequest`/`isBilateralContributorRequest` FIRST (both
+  return before the old W1/W2 branch); the bilateral-contributor branch uses `leadCode`/`suffix`
+  (added by the drawer's own `PSR-T-9` rework) instead of `lead`, and `requesterCode` stays `''` for
+  both new kinds (never a "from X" clause). A missing `owner_program_code` falls back to
+  `leadCode: undefined` + `lead: copy.notificationItem.unknownProgramFallback` ("The primary Science
+  Program") — never an empty bold span and never a sentence starting with the verb's leading comma.
+- **Single source, row and drawer (rework attempt 2):** the row's primary/contributor sentences
+  (cases 1/2/3 in the template) are built from `@let h = drawerHeader();`, reading `h.lead/leadCode/
+  verb/responderCode/tail/suffix` — the exact same object and the exact same `copy.header.*`
+  strings the drawer itself renders. There is no parallel hard-coded English in the row template any
+  more; changing a `copy.header.*` string changes both surfaces at once.
+- **Result-link routing per kind (rework attempt 2):** a bilateral CONTRIBUTOR row's result
+  identity — both the row's inline span and the drawer's `onDrawerResult()` — navigates **in-app**
+  via `navigateToResult()` (unchanged pre-spec behavior, `CRD-R-3`/`CRD-DD-6`). A PRIMARY row's
+  result identity — both the row's `<a>` and `onDrawerResult()` — opens `resultUrl()` in a new tab
+  instead, on both surfaces: `navigateToResult()` routes through `requesterCode`, which on a primary
+  row resolves to the REQUESTED SP (`is_map_to_toc:false` ⇒ `requesterCode = obj_owner_initiative`,
+  which the server sets equal to the requested SP for a primary row), and that SP's bilateral-review
+  queue is exactly where the result must **not** appear before it accepts (requirements.md L94).
+  `onDrawerResult()`'s guard is `isBilateralResult && !isPrimaryRequest`.
+  **2026-10-01 fix:** the new tab no longer lands on `resultUrl()` (Result Detail does not serve
+  W3/Bilaterals results). Every row `<a>` calls `onResultLinkClick()`, and for a bilateral result
+  it — like `onDrawerResult()` — goes through `NotificationNavigationService.openCenterEditorInNewTab()`
+  → `/bilateral/<center>/result/<code>?phase=`. The center is `creating_center.acronym`
+  ("Bioversity (Alliance)"); only without it is it looked up via `get/centers/:resultId`, whose
+  `acronym` is the INSTITUTION acronym ("Bioversity") — the bilateral route does not recognise
+  that one and lands on an empty `/bilateral/Bioversity/home`. On failure → Result Detail. The `href` stays `resultUrl()` for middle-click and the context menu.
+- **Center notices** (`Primary Program Request Accepted/Declined/Moved`, in
+  `notification-type.constants.ts`): render as ONE composed sentence via the existing
+  `isUpdateSource` branch/`updateTextParts` — never "The result" + suffix (that produced the
+  garbled, two-subject sentence `PSR-T-7`'s review failed attempt 1 for). No buttons; count under
+  "For your information" (plain `needsDecision:false` from `buildUnifiedList()`, unchanged).
+- **Counting/classification:** no change needed to `build-unified-list.ts` — a primary row's
+  `request_status_id`/`origin` already drive `needsDecision`/Received-Sent exactly like a
+  contribution row, so the existing generic logic covers it.
+- **Carried, T-9's 409 → information-toast branch**: `acceptOrReject()`'s error handler still shows
+  `copy.notificationItem.staleRequestMessage` ("This request was already answered") on a 409,
+  unconditionally for every row kind including these two new ones — nothing here special-cases it.
 
 ## Wording + chip sizing (NOTIF-T-16, 2026-09-30 — user-driven correction)
 Two small style fixes from the user's reference markup:
@@ -207,4 +329,43 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
   browser pass, not this doc.
 
-**Verified:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-16 ("Declined by" wording + chip font-size/weight/gap fixes, ad-hoc user style feedback; supersedes NOTIF-T-15's stamp above which still stands, just re-stamped here)
+**Verified:** 2026-10-01 · qa-development-2026-ss · bilateral result links → center editor (see "Result-link routing per kind"). Before that: PDR-T-4 (`notifications/primary-decline-rejects-result`):
+both primary Decline entry points (row `onDeclineClick()`, drawer `onDrawerDeclineClicked()`) now
+open `app-primary-decline-justification-dialog` (`showPrimaryDeclineDialog`) instead of
+`showConfirmRejectDialog`/`confirm-decline`, only for `isPrimaryRequest` — see the new "PDR-T-4"
+section above for the full contract (own-pipe 400 handling, drawer-closes-first, justification
+gating, toast wording). Contributor and W1/W2 Decline paths are untouched byte-for-byte (`PDR-R-2`,
+verified by dedicated regression tests). Supersedes nothing below — it only adds the new section and
+amends "The two flows" bullets; every prior stamp still stands for what it describes.
+
+**Prior verification:** 2026-10-01 · qa-development-2026-ss · WPT-T-4 (`w1w2-project-tagged`): the inbox
+Updates row for `RESULT_BILATERAL_PROJECT_TAGGED` now loops `parts.segments` (SP09/project
+code/Center label each in their own `<b>`, emitter plain) instead of `lead`/`prefix`, and carries
+the `NOTIFICATION_PROJECT_TAGGED_COPY.chipLabel` ("Bilateral project tagged") chip in amber
+(`--pr-status-in-progress-bg/-fg`) — see the amended "Chip taxonomy" and new "WPT-T-4" bullets
+above. CG Center tagged stays green, every other Updates type stays violet, request-row chips are
+unaffected. Supersedes nothing below — it only adds to the "Chip taxonomy" bullet and documents the
+new sentence-rendering bullet; every prior stamp still stands for what it describes.
+
+**Prior verification:** 2026-09-30 · qa-development-2026-ss · WCT-T-5 (`w1w2-center-tagged`, attempt 2):
+an update-source `RESULT_CENTER_TAGGED` row's chip now reads `NOTIFICATION_CENTER_TAGGED_COPY.chipLabel`
+("CG Center tagged") with the green `--pr-status-approved-bg/-fg` pair, instead of the raw type
+name/violet pair every other update row still gets — see the "Chip taxonomy" bullet above, amended
+in this same stamp. The row's sentence also renders the owner SP code as `lead`, bolded ahead of
+`parts.prefix` (`getResultNotificationTextParts()`'s `RESULT_CENTER_TAGGED` case,
+`notification-type.constants.ts`). Request-row chips and every other update type are unchanged.
+Supersedes nothing below — it only amends the "Chip taxonomy" bullet; the PSR-T-8 stamp that
+follows still stands for everything else it describes.
+
+**Prior verification:** 2026-09-30 · qa-development-2026-ss · PSR-T-8 rework attempt 2
+(`bilateral-primary-sp-request`): row sentence now single-sourced from `drawerHeader()`/
+`copy.header.*` (no hard-coded English left in the row template), result-link routing fixed so the
+row and the drawer agree per kind (contributor → in-app `navigateToResult()`, primary →
+`resultUrl()` in a new tab, both never land a pending primary row in the requested SP's review
+queue), and a missing `owner_program_code` now falls back to `unknownProgramFallback` instead of an
+empty bold/leading-comma sentence — see the section above; supersedes attempt 1's stamp (which
+added the primary-request / bilateral-contributor row variants and the carried PSR-T-9 drawer
+contract: `acceptLabel`, `showAlignSlot`, `requestKind`, `leadCode`/`suffix`), and NOTIF-T-16's stamp
+below, which still stands for the wording/chip-sizing fixes.
+
+**Prior verification:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-16 ("Declined by" wording + chip font-size/weight/gap fixes, ad-hoc user style feedback; supersedes NOTIF-T-15's stamp above which still stands, just re-stamped here)

@@ -6,6 +6,14 @@
       description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
     </app-alert-status>
 
+    @if (primaryAssignmentBanner(); as banner) {
+      <app-alert-status
+        [status]="banner.tone"
+        [collapsible]="false"
+        [description]="banner.message + (submitBlockedReason() ? ' ' + submitBlockedReason() : '')">
+      </app-alert-status>
+    }
+
     <div class="bp-section-header">
       <h3 class="bp-section-title">W3/Bilateral Project Details</h3>
       <p class="bp-section-subtitle">Fill in the project details to report a new bilateral results in PRMS</p>
@@ -90,7 +98,13 @@
             <dt class="bp-meta-field-label">Program</dt>
             @if (canEditAssignment()) {
               <dd class="bp-meta-field-value bp-primary-selector-wrap">
-                <button type="button" class="bp-primary-selector" (click)="togglePrimaryOptions()">
+                <button
+                  type="button"
+                  class="bp-primary-selector"
+                  [disabled]="primaryPickerDisabled()"
+                  [class.opacity-50]="primaryPickerDisabled()"
+                  [class.cursor-not-allowed]="primaryPickerDisabled()"
+                  (click)="togglePrimaryOptions()">
                   {{ primarySp.spName || primarySp.spShortName || primarySp.programCode }}
                   <i class="material-icons-round">expand_more</i>
                 </button>
@@ -99,6 +113,9 @@
                     @for (program of availablePrimaryPrograms(); track program.programId) {
                       <button type="button" (click)="selectPrimary(program)" [class.bp-primary-option--selected]="program.programId === primarySp.programId">
                         {{ program.programCode }} — {{ program.spName }}
+                        @if (isDeclinedProgram(program.programCode)) {
+                          <span class="bp-sp-allocation">{{ declinedOptionSuffix }}</span>
+                        }
                       </button>
                     }
                   </div>
@@ -115,7 +132,13 @@
           <div class="bp-meta-field">
             <dt class="bp-meta-field-label">Program</dt>
             <dd class="bp-meta-field-value bp-primary-selector-wrap">
-              <button type="button" class="bp-primary-selector" (click)="togglePrimaryOptions()">
+              <button
+                type="button"
+                class="bp-primary-selector"
+                [disabled]="primaryPickerDisabled()"
+                [class.opacity-50]="primaryPickerDisabled()"
+                [class.cursor-not-allowed]="primaryPickerDisabled()"
+                (click)="togglePrimaryOptions()">
                 Select Primary Science Program
                 <i class="material-icons-round">expand_more</i>
               </button>
@@ -124,6 +147,9 @@
                   @for (program of availablePrimaryPrograms(); track program.programId) {
                     <button type="button" (click)="selectPrimary(program)">
                       {{ program.programCode }} — {{ program.spName }}
+                      @if (isDeclinedProgram(program.programCode)) {
+                        <span class="bp-sp-allocation">{{ declinedOptionSuffix }}</span>
+                      }
                     </button>
                   }
                 </div>

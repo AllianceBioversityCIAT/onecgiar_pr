@@ -1,3 +1,6 @@
+import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../internationalization/notification-center-tagged.copy';
+import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../internationalization/notification-project-tagged.copy';
+
 /**
  * Notification types, keyed by NAME rather than by database id.
  *
@@ -24,7 +27,18 @@ export enum NotificationType {
   /** 2026-09-05 — a bilateral result reached Pending Review; sent to the primary SP's members. */
   BILATERAL_RESULT_SUBMITTED = 'Bilateral Result Submitted',
   /** An AI-assisted processing job finished. No result behind it (`result_id` is NULL). */
-  BILATERAL_AI_JOB_FINISHED = 'Bilateral AI Job Finished'
+  BILATERAL_AI_JOB_FINISHED = 'Bilateral AI Job Finished',
+  /**
+   * PSR-T-8 (`bilateral-primary-sp-request`, forward pointer from PSR-T-7): the 3 Center-facing
+   * informative notices (PSR-R-14). Server-composed sentences on `notification.text`, always with
+   * the SP as subject and the literal substring "of this result" — see
+   * `getResultNotificationTextParts()`'s case below for the splice that turns it into a single
+   * sentence with the result link in place of that substring. These strings are exactly what
+   * `notification.service.ts` seeds (design.md §3.1) — do not reword either side independently.
+   */
+  PRIMARY_PROGRAM_REQUEST_ACCEPTED = 'Primary Program Request Accepted',
+  PRIMARY_PROGRAM_REQUEST_DECLINED = 'Primary Program Request Declined',
+  PRIMARY_PROGRAM_REQUEST_MOVED = 'Primary Program Request Moved'
 }
 
 /**
@@ -51,6 +65,21 @@ const ACTOR_VERBS: Partial<Record<NotificationType, string>> = {
 
 /** A notification's text, split around the result link so templates can keep the anchor. */
 export interface NotificationTextParts {
+  /**
+   * Emphasized token rendered before `prefix` (WCT-T-4, DD-4). Optional — existing types never set
+   * it, so their rendering is unchanged. Today only the `RESULT_CENTER_TAGGED` bare shape sets it,
+   * to the owner Science Program's code.
+   */
+  lead?: string;
+  /**
+   * Mid-sentence emphasized/plain text parts, rendered in place of `lead` and `prefix` when
+   * present, before the result link (WPT-R-2, DD-3). Optional — existing types never set it, so
+   * their rendering is unchanged. Today only the enriched/legacy-bare
+   * `RESULT_BILATERAL_PROJECT_TAGGED` branch sets it, to let the Science Program code, the project
+   * code and the Center label each be bolded individually mid-sentence (which `lead` and `prefix`
+   * alone can't do).
+   */
+  segments?: { text: string; emphasize: boolean }[];
   /** Rendered before the "<code> - <title>" link. */
   prefix: string | null;
   /** Rendered immediately after the link, with no whitespace between (e.g. an attached comma). */
@@ -113,10 +142,11 @@ export function getProgramCode(notification: any): string | null {
 }
 
 /**
- * NOTIF-T-12 (rework, 2026-09-30): `RESULT_BILATERAL_PROJECT_TAGGED`'s `notification.text` carries
- * one of two shapes, never distinguishable by type alone:
- *  - a bare project label (the AC1/AC2 direct-tag flow's current shape, `target.label` with no
- *    `leadIn` — see `result-tagged-notification.service.ts`'s `emitFor()`);
+ * NOTIF-T-12 (rework, 2026-09-30) / WCT-T-4: both `RESULT_BILATERAL_PROJECT_TAGGED` and
+ * `RESULT_CENTER_TAGGED` store `notification.text` in one of two shapes, never distinguishable by
+ * type alone:
+ *  - a bare label (the direct-tag flow's current shape, `target.label` with no `leadIn` — see
+ *    `result-tagged-notification.service.ts`'s `emitFor()`);
  *  - a whole server-composed sentence, `"${leadIn} has tagged the ${label}. Click to see the
  *    result."` — emitted whenever `leadIn` IS passed (the already-shipped `BCT-T-4` submission
  *    flow, `notifyBilateralContributorsOnSubmission()`), and also the shape every row written
@@ -124,8 +154,39 @@ export function getProgramCode(notification: any): string | null {
  * Both composed-sentence sources share this exact literal template, so detecting either telltale
  * substring is sufficient — no need to special-case BCT vs. legacy separately.
  */
-function isComposedProjectTaggedText(text: string): boolean {
+function isComposedTaggedText(text: string): boolean {
   return text.includes(' has tagged the ') || text.trim().endsWith('Click to see the result.');
+}
+
+/**
+ * WPT-T-3 (`w1w2-project-tagged`, design §7.3/§8.1/§9, DD-2): splits an enriched bare
+ * `RESULT_BILATERAL_PROJECT_TAGGED` row's stored text (`"<project code> (<Center label>)"`, WPT-R-1)
+ * into its project code and Center label, anchored on the **last trailing** `(…)` with non-empty
+ * contents. A legacy bare row (no trailing parenthetical, WPT-R-3) yields a null `centerLabel`. Only
+ * called once the caller has already ruled out a composed or empty text (`isComposedTaggedText`) —
+ * never apply this to a BCT/legacy composed sentence (its own trailing `(ABC).` must NOT be parsed,
+ * WPT-R-4).
+ *
+ * `[^()]+` (not `.+`) inside the parens is what makes "last trailing" correct for a project name
+ * that itself contains parentheses, e.g. `"Seeds (Phase 2) project (ABC)"` → code
+ * `"Seeds (Phase 2) project"`, label `"ABC"` — greedy backtracking can't cross into the inner pair
+ * because it contains no parens to exclude.
+ *
+ * DR-1 (accepted risk): a legacy bare row whose code came from the `fullName` fallback and itself
+ * ends in `"(…)"` is misparsed as code+label — `short_name` is NOT NULL server-side, so this only
+ * happens when `short_name` is empty.
+ *
+ * Keep in sync with the server twin: `onecgiar-pr-server/src/api/notification/notification.service.ts`
+ * `parseTaggedProjectLabel`. Both pin the same five-shape table (design §9).
+ */
+function parseTaggedProjectLabel(text: string): { code: string; centerLabel: string | null } {
+  const match = text.match(/^(.*)\(([^()]+)\)\s*$/);
+  if (!match) return { code: text, centerLabel: null };
+
+  const centerLabel = match[2].trim();
+  if (!centerLabel) return { code: text, centerLabel: null };
+
+  return { code: match[1].trim(), centerLabel };
 }
 
 function buildBilateralReviewSuffix(decisionLabel: string, notification: any): string {
@@ -224,30 +285,74 @@ export function getResultNotificationTextParts(notification: any): NotificationT
         }
       );
 
-    // NOTIF-T-12 (`NOTIF-R-14`, corrected 2026-09-30, rework attempt 2): the server stores just the
-    // tagged project's NAME on `notification.text` for the AC1/AC2 direct-tag flow (no `leadIn`) —
-    // this case builds the full sentence client-side for THAT shape only. `BCT-T-4`'s submission
-    // flow (`leadIn` present) and any pre-fix/legacy row still carry a whole composed sentence on
-    // `text`, indistinguishable from the bare shape by type alone — `isComposedProjectTaggedText`
-    // detects that shape (and the empty/null case) and falls back to `RESULT_CENTER_TAGGED`'s
-    // rendering, which trusts `text` as an already-complete suffix.
+    // WPT-T-3 (`w1w2-project-tagged`, design §7.3/§8.1/§9, DD-2/DD-3, amends NOTIF-T-12): the
+    // server now stores `"<project code> (<Center label>)"` on `notification.text` for the
+    // direct-tag flow's AC1/AC2 (an enriched bare row, WPT-R-1) — this case builds the full
+    // sentence client-side for THAT shape AND for a legacy bare row (no trailing `(…)`, WPT-R-3),
+    // via `parseTaggedProjectLabel`. The emitter, the Science Program code, the project code and
+    // (when present) the Center label are each their own emphasized `segments` entry (DD-3), since
+    // `lead`/`prefix` alone can't bold three separate mid-sentence tokens. `BCT-T-4`'s submission
+    // flow (`leadIn` present) and any pre-fix/legacy composed row still carry a whole composed
+    // sentence on `text`, indistinguishable from the bare shape by type alone —
+    // `isComposedTaggedText` (shared with `RESULT_CENTER_TAGGED`, WCT-T-4/DD-2) detects that shape
+    // (and the empty/null case) FIRST (WPT-R-4: a BCT `(ABC).` must never be parsed) and falls back
+    // to the pre-existing prefix/suffix rendering, trusting `text` as an already-complete suffix. No
+    // `segments` are set on that fallback path.
     case NotificationType.RESULT_BILATERAL_PROJECT_TAGGED: {
       const text = notification?.text?.trim();
-      if (!text || isComposedProjectTaggedText(text)) {
+      if (!text || isComposedTaggedText(text)) {
+        return { prefix: 'The result', suffix: text || null, emphasizePrefix: false };
+      }
+
+      const emitter = getEmitterName(notification);
+      const programCode = getProgramCode(notification) ?? 'a Science Program';
+      const { code, centerLabel } = parseTaggedProjectLabel(text);
+
+      const segments: { text: string; emphasize: boolean }[] = [
+        { text: `${emitter} from `, emphasize: false },
+        { text: programCode, emphasize: true },
+        { text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.verb} `, emphasize: false },
+        { text: code, emphasize: true }
+      ];
+      if (centerLabel) {
+        segments.push({ text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseWithLabel.before}`, emphasize: false });
+        segments.push({ text: centerLabel, emphasize: true });
+        segments.push({ text: NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseWithLabel.after, emphasize: false });
+      } else {
+        segments.push({ text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseNoLabel}`, emphasize: false });
+      }
+
+      return {
+        prefix: segments.map(segment => segment.text).join(''),
+        suffix: null,
+        emphasizePrefix: false,
+        segments
+      };
+    }
+
+    // WCT-T-4 (`w1w2-center-tagged`, DD-1/DD-2/DD-4): the server now stores the bare tagged
+    // Center's acronym (falling back to its code) on `notification.text` for the direct-tag flow
+    // (W1/W2 partners save, IPSR contributors save, SP review of a bilateral result) — this case
+    // builds the full sentence client-side for THAT shape only, naming the owner Science Program as
+    // `lead` (DD-4: a separate emphasized part rather than bolding the whole prefix). Legacy rows
+    // and the already-shipped BCT submission flow (`leadIn` passed) still carry a whole composed
+    // sentence on `text`, indistinguishable from the bare shape by type alone —
+    // `isComposedTaggedText` (shared with NOTIF-T-12, DD-2) detects that shape (and the empty/null
+    // case) and falls back to the pre-existing rendering, which trusts `text` as an already-complete
+    // suffix (WCT-R-7).
+    case NotificationType.RESULT_CENTER_TAGGED: {
+      const text = notification?.text?.trim();
+      if (!text || isComposedTaggedText(text)) {
         return { prefix: 'The result', suffix: text || null, emphasizePrefix: false };
       }
       return {
-        prefix: `${getEmitterName(notification)} from ${getProgramCode(notification) ?? 'a Science Program'} has tagged project ${text} as contributor to result`,
+        lead: getProgramCode(notification) ?? 'a Science Program',
+        prefix: NOTIFICATION_CENTER_TAGGED_COPY.sentence(text),
         suffix: null,
         emphasizePrefix: false
       };
     }
 
-    // P2-3214 AC3. Unlike every other type, the variable half of this sentence names the tagged
-    // centre — which cannot be derived from the result (a result carries several centres, and a
-    // recipient may belong to more than one). The server composes it at emit time and ships it on
-    // `notification.text`; we only supply the lead-in.
-    case NotificationType.RESULT_CENTER_TAGGED:
     // P2-3188 shares the split: the server stores which Science Program decided, we supply the lead-in.
     case NotificationType.RESULT_CONTRIBUTION_ACCEPTED:
     case NotificationType.RESULT_CONTRIBUTION_DECLINED:
@@ -259,6 +364,40 @@ export function getResultNotificationTextParts(notification: any): NotificationT
         suffix: notification?.text?.trim() || null,
         emphasizePrefix: false
       };
+
+    // PSR-T-8 (forward pointer from PSR-T-7's review): T-7's stored sentence has the SP as
+    // subject ("SP09 accepted to be the primary Science Program of this result. Click to see the
+    // result."). Rendering it as prefix "The result" + suffix (the `BILATERAL_RESULT_SUBMITTED`
+    // pattern above) produces the exact garbled, two-subject sentence the Reviewer failed T-7's
+    // attempt 1 for — never do that here. Instead splice the result identity in for the literal
+    // substring "this result", the same splice `notification.service.ts` does server-side for the
+    // socket push: the text before "this result" (which already ends "... of ") plus the literal
+    // word "result" becomes `prefix` (rendered before the code–title link the template always
+    // renders), and whatever follows — starting with the stored punctuation, e.g. ".  Click to see
+    // the result." — is split into `linkTrailer` (leading punctuation, glued to the link with no
+    // space) and `suffix` (the rest, trimmed). A stored sentence without the marker (or missing
+    // entirely) renders standalone with no fabricated result reference.
+    case NotificationType.PRIMARY_PROGRAM_REQUEST_ACCEPTED:
+    case NotificationType.PRIMARY_PROGRAM_REQUEST_DECLINED:
+    case NotificationType.PRIMARY_PROGRAM_REQUEST_MOVED: {
+      const text = notification?.text?.trim();
+      if (!text) return { prefix: 'The result', suffix: null, emphasizePrefix: false };
+
+      const marker = 'this result';
+      const idx = text.indexOf(marker);
+      if (idx === -1) {
+        // No splice point found — render the stored sentence standalone rather than inventing one.
+        return { prefix: text, suffix: null, emphasizePrefix: false };
+      }
+
+      const prefix = `${text.slice(0, idx)}result`;
+      const remainder = text.slice(idx + marker.length);
+      const trailerMatch = remainder.match(/^([.,;:!?]*)\s*(.*)$/s);
+      const linkTrailer = trailerMatch?.[1] || undefined;
+      const suffix = trailerMatch?.[2]?.trim() || null;
+
+      return { prefix, linkTrailer, suffix, emphasizePrefix: false };
+    }
 
     default:
       // Deliberately neutral. The previous default claimed every unknown type had been "successfully
@@ -272,10 +411,10 @@ export function buildResultNotificationText(notification: any): string {
   const aiJob = getAiJobNotificationParts(notification);
   if (aiJob) return aiJob.message;
 
-  const { prefix, suffix, linkTrailer } = getResultNotificationTextParts(notification);
+  const { lead, prefix, suffix, linkTrailer } = getResultNotificationTextParts(notification);
   const identity = `${notification?.obj_result?.result_code} - ${notification?.obj_result?.title}${linkTrailer ?? ''}`;
 
-  return [prefix, identity, suffix].filter(part => !!part).join(' ');
+  return [lead, prefix, identity, suffix].filter(part => !!part).join(' ');
 }
 
 /** True when the notification reports a bilateral review decision (approved or rejected). */

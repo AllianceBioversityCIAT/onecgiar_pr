@@ -105,10 +105,13 @@ export class WebsocketService {
       this.resultsNotificationsService.updatesPopUpData.unshift(msg.result);
       this.resultFrameworkReportingHomeService.getRecentActivity();
 
+      // @akili-spec notifications/inbox-paginated-load — PAGE-T-5 (PAGE-R-1, PAGE-R-5): a socket event
+      // refreshes only its source (pending + first history page) at the current phaseFilter, not a
+      // full all-phases reload.
       if (!msg?.result?.notification_id) {
-        this.resultsNotificationsService.get_section_information();
+        this.resultsNotificationsService.refreshSource('received');
       } else {
-        this.resultsNotificationsService.get_updates_notifications();
+        this.resultsNotificationsService.refreshSource('updates');
       }
     });
   }

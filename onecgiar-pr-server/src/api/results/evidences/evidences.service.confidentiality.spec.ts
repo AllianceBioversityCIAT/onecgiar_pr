@@ -57,7 +57,7 @@ describe('EvidencesService — confidentiality of an uploaded file', () => {
     update: jest.fn(),
     save: jest.fn(),
   };
-  const mockResultRepository = { getResultById: jest.fn(), update: jest.fn() };
+  const mockResultRepository = { findOne: jest.fn(), update: jest.fn() };
   const mockVersionRepository = { getBaseVersion: jest.fn() };
 
   beforeEach(async () => {

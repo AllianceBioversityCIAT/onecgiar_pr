@@ -482,6 +482,44 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     }
   }
 
+  /**
+   * `PSR-T-2` / design.md §5.8, §1A P-8 — every active platform admin: a `role_by_user` row with
+   * `role = 1` and `initiative_id`, `action_area_id` AND `center_id` all NULL. Distinct from
+   * {@link isUserAdmin} (answers "is this one user an admin") and from {@link getUserIdsByCenter} /
+   * {@link getUserIdsByInitiative} (scoped to one center/initiative) — this is the Recipients list
+   * for a primary Science Program request (requirements.md glossary "Recipients").
+   *
+   * Falsifier (`tasks.md` PSR-T-2): must never return a user whose admin row carries a non-null
+   * `initiative_id` (or `action_area_id` / `center_id`) — the three `IS NULL` conditions are what
+   * make the row "platform-wide" rather than scoped.
+   */
+  async getPlatformAdminUserIds(): Promise<number[]> {
+    const queryData = `
+    SELECT DISTINCT
+      rbu.\`user\` AS user_id
+    FROM role_by_user rbu
+    WHERE rbu.\`role\` = 1
+      AND rbu.initiative_id IS NULL
+      AND rbu.action_area_id IS NULL
+      AND rbu.center_id IS NULL
+      AND rbu.active > 0
+      AND rbu.\`user\` IS NOT NULL;
+    `;
+    try {
+      const result: Array<{ user_id: number | string }> =
+        await this.query(queryData);
+      return (result ?? [])
+        .map((row) => Number(row.user_id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getUserIdsByCenter(centerCode: string): Promise<number[]> {
     const queryData = `
     SELECT DISTINCT

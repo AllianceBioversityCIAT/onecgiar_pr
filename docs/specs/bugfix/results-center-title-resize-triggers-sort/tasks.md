@@ -137,7 +137,7 @@ Client coverage must stay above 50/60/60/60 (unaffected — each change is a han
 - [ ] `RCR-T-2..4` PR/commit opened with the commit message convention.
 - [x] CI-equivalent local gate green (lint, full targeted Jest run — no migration involved, `migration:check:ci` is a no-op here).
 - [x] Manual QA for `RCR-T-1`: reproduced the original repro (drag Title column resizer, release inside header) against the real running app with an injected session — confirmed no sort change.
-- [ ] Manual QA for `RCR-T-2..4`: not yet done in a real browser (mechanism-level Jest proof only, same real-DOM-event technique as `RCR-T-1`'s Jest tests) — recommended before closing this spec if a browser session is available.
+- [x] Manual QA for `RCR-T-2..4`: completed in the authenticated Orca browser on 2026-09-23. Programme Results (`SP01/results`) passed on the `Result` header; Bilateral centre results (`/bilateral/CIMMYT/results?phase=36`) passed on the `Title` header; Portfolio Overview (`/portfolio-overview`) passed on the `Total` header. In all three, resize changed width, the phantom click was prevented without changing sort, and a later plain click still sorted.
 
 ## 7. Cleanup & follow-ups
 

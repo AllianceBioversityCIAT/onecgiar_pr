@@ -14,6 +14,7 @@ import {
   ProjectDefault,
 } from '../section-toc-default/section-toc-default.component';
 import { TocLinkageSwitchDialogService } from '../toc-linkage-switch-dialog/toc-linkage-switch-dialog.service';
+import { BILATERAL_PRIMARY_ASSIGNMENT_COPY } from '../../../../internationalization/bilateral-primary-assignment.copy';
 
 const RESULT_TYPE_TO_LABEL: Record<number, string> = {
   1: 'Policy Change', 2: 'Innovation Use', 4: 'Other Outcome',
@@ -89,6 +90,8 @@ export class SectionTocComponent implements OnInit {
   });
 
   readonly initiativeId = signal<number | null>(null);
+  /** PSR-T-10 (design.md §6.3) — "Available once the primary Science Program accepts." */
+  readonly tocNoticeCopy = BILATERAL_PRIMARY_ASSIGNMENT_COPY.tocNotice;
 
   readonly showLevelSelector = computed(() => {
     const levelId = this.resultLevelId();

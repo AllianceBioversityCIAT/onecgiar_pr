@@ -2203,15 +2203,18 @@ describe('ProgrammeResultsComponent', () => {
 
     it('swallows the phantom click the browser fires after a resize drag ends over the header, without swallowing a later unrelated click', () => {
       const titleCol = component.visibleColumns().find(c => c.key === 'title')!;
-      const fakeTh = document.createElement('th');
-      Object.defineProperty(fakeTh, 'getBoundingClientRect', { value: () => ({ width: 300 }) });
+      const titleHeader = fixture.debugElement
+        .queryAll(By.css('th.pgr-th--sortable'))
+        .find(header => (header.nativeElement as HTMLElement).textContent?.includes('Result'));
+      expect(titleHeader).toBeTruthy();
+      Object.defineProperty(titleHeader!.nativeElement, 'getBoundingClientRect', { value: () => ({ width: 300 }) });
 
       const sortSpy = jest.spyOn(table(), 'sort');
 
       component.onResizeStart(
         { clientX: 300, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent,
         titleCol,
-        fakeTh
+        titleHeader!.nativeElement
       );
       window.dispatchEvent(new MouseEvent('mousemove', { clientX: 250 }));
       window.dispatchEvent(new MouseEvent('mouseup'));
@@ -2219,13 +2222,20 @@ describe('ProgrammeResultsComponent', () => {
       // Stands in for the native click the browser synthesizes on <th> right after this drag's
       // mouseup — this is the click that would otherwise reach PrSortableColumnDirective/sort().
       const phantomClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-      document.dispatchEvent(phantomClick);
+      titleHeader!.nativeElement.dispatchEvent(phantomClick);
       expect(phantomClick.defaultPrevented).toBe(true);
       expect(sortSpy).not.toHaveBeenCalled();
+      expect(table().activeSortField()).toBe('code');
+      expect(table().activeSortOrder()).toBe(-1);
+      expect(component.customWidths()['title']).toBe(250);
+      expect((titleHeader!.nativeElement as HTMLElement).getAttribute('aria-sort')).toBeNull();
 
       const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-      document.dispatchEvent(laterUnrelatedClick);
+      titleHeader!.nativeElement.dispatchEvent(laterUnrelatedClick);
       expect(laterUnrelatedClick.defaultPrevented).toBe(false);
+      expect(sortSpy).toHaveBeenCalledWith('title');
+      expect(table().activeSortField()).toBe('title');
+      expect(table().activeSortOrder()).toBe(1);
     });
 
     it('resets an individual column width on double-click', () => {

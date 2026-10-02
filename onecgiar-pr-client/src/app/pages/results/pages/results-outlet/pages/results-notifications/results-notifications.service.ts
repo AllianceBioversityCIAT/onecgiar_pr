@@ -2,6 +2,23 @@ import { Injectable } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 
+type SourceKey = 'received' | 'sent' | 'updates';
+
+interface SourcePaging {
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+interface SourceConfig {
+  api: (options: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) => any;
+  pendingKey: string;
+  historyKey: string;
+  metaKey: string;
+  dateField: string;
+}
+
+const ALL_SOURCES: SourceKey[] = ['received', 'sent', 'updates'];
+
 @Injectable({
   providedIn: 'root'
 })
@@ -54,90 +71,380 @@ export class ResultsNotificationsService {
   filteredInitiatives = [];
   entityLabel = 'Entity';
 
+  // ---------------------------------------------------------------------------------------------
+  // @akili-spec notifications/inbox-paginated-load
+  // PAGE-T-4 — per-source paging state + load-generation guard (design.md §2.2, §6.2, PAGE-DD-7).
+  //
+  // `receivedData`/`sentData`/`updatesData` above STAY the view model the component/pipes already
+  // read (PAGE-DD-4): `*Pending`/`notificationsPending` is the pending set (never paginated,
+  // PAGE-R-2), `*Done`/`notificationsViewed` is the accumulated history across however many pages
+  // have loaded (PAGE-R-3/R-4). Everything below only changes HOW those arrays get filled.
+  // ---------------------------------------------------------------------------------------------
+
+  /** Bumped on every `loadInbox()` call; a response whose captured generation no longer matches
+   * `this.generation` is from a superseded phase load. Gates ONLY the inbox-wide `initialLoading`
+   * bookkeeping (PAGE-R-5, PAGE-DD-7) — per-SOURCE data application is guarded by `sourceGen` below,
+   * not by this field (Reviewer FAIL #2, attempt 2: a single global token does not protect a source
+   * from a race against its OWN `refreshSource`/`loadMore` calls within the same generation). */
+  private generation = 0;
+
+  /**
+   * PAGE-T-4 rework (Reviewer FAIL #2, attempt 2): one generation token PER SOURCE, independent of
+   * `generation` above. Bumped by `loadInbox` (all 3 sources) AND by `refreshSource` (that source
+   * only) — any fetch for a source captures `this.sourceGen[source]` at issue time and drops its
+   * response (data application only — `onSettled` still always fires, see below) if the source has
+   * since moved on to a newer generation. This is what makes `refreshSource` cancel an in-flight
+   * `loadMore` page for the same source instead of letting it land afterwards, and what stops two
+   * concurrent `refreshSource` calls on the same source from both appending/duplicating.
+   */
+  private sourceGen: Record<SourceKey, number> = { received: 0, sent: 0, updates: 0 };
+
+  /** `true` while `loadInbox()`'s 3 pending requests (received/sent/updates) have not ALL arrived
+   * yet — gates first render (PAGE-R-2: "list does not render rows until the pending set has
+   * arrived"). Deliberately NOT gated on history: a history response racing ahead of pending must
+   * not flip this early (falsifier (a)). */
+  initialLoading = false;
+
+  /** `true` while a `loadMore()` call has in-flight requests. A second `loadMore()` call while this
+   * is `true` is a no-op — it must not issue any request (PAGE-R-4 "in-flight", falsifier (c)). */
+  loadingMore = false;
+
+  private paging: Record<SourceKey, SourcePaging> = {
+    received: { hasMore: false, nextCursor: null },
+    sent: { hasMore: false, nextCursor: null },
+    updates: { hasMore: false, nextCursor: null }
+  };
+
+  /** Sources whose FIRST history page (of their current `sourceGen`) has not resolved yet. Exposed
+   * via `historyLoading` for the component's "Loading history…" row (design.md §6.2). Membership is
+   * added right before a first-page request is issued and removed in that request's own
+   * error/complete handler — gated by `sourceGen` (L2) so a superseded (stale) completion cannot
+   * clear the flag a NEWER fetch for the same source is still relying on. */
+  private firstHistoryOutstanding = new Set<SourceKey>();
+
+  private readonly sourceConfig: Record<SourceKey, SourceConfig> = {
+    received: {
+      api: options => this.api.resultsSE.GET_allRequest(options),
+      pendingKey: 'receivedContributionsPending',
+      historyKey: 'receivedContributionsDone',
+      metaKey: 'doneMeta',
+      dateField: 'requested_date'
+    },
+    sent: {
+      api: options => this.api.resultsSE.GET_sentRequest(options),
+      pendingKey: 'sentContributionsPending',
+      historyKey: 'sentContributionsDone',
+      metaKey: 'doneMeta',
+      dateField: 'requested_date'
+    },
+    updates: {
+      api: options => this.api.resultsSE.GET_requestUpdates(options),
+      pendingKey: 'notificationsPending',
+      historyKey: 'notificationsViewed',
+      metaKey: 'viewedMeta',
+      dateField: 'created_date'
+    }
+  };
+
+  /** Any source still has a next page — drives "Load more" visibility (PAGE-R-4). */
+  get hasMore(): boolean {
+    return ALL_SOURCES.some(source => this.paging[source].hasMore);
+  }
+
+  /** Any source's first history page (this generation) is still outstanding. */
+  get historyLoading(): boolean {
+    return this.firstHistoryOutstanding.size > 0;
+  }
+
   constructor(private readonly api: ApiService) {}
 
-  get_sent_notifications(versionId?, callback?) {
-    this.loadingSent = true;
+  // ---------------------------------------------------------------------------------------------
+  // PAGE-T-4 — core paging methods
+  // ---------------------------------------------------------------------------------------------
+
+  /**
+   * Phase change / inbox entry (PAGE-R-5, design.md §2.2). Bumps the load generation, discards
+   * every loaded row AND cursor for all 3 sources, then fires all 6 requests (pending ×3, history
+   * first page ×3) per source at once. `initialLoading` only clears once all 3 pending requests
+   * have settled (success or error) — see the generation-captured `onPendingSettled` below.
+   */
+  loadInbox(phaseId?: any): void {
+    this.generation++;
+    const gen = this.generation;
+
+    this.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [] };
     this.sentData = { sentContributionsPending: [], sentContributionsDone: [] };
-    this.api.resultsSE.GET_sentRequest(versionId).subscribe({
-      next: ({ response }) => {
-        if (!response) {
-          return;
+    this.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+    this.paging = {
+      received: { hasMore: false, nextCursor: null },
+      sent: { hasMore: false, nextCursor: null },
+      updates: { hasMore: false, nextCursor: null }
+    };
+    this.initialLoading = true;
+
+    let pendingSettled = 0;
+    const onPendingSettled = () => {
+      pendingSettled++;
+      if (pendingSettled === ALL_SOURCES.length && gen === this.generation) {
+        this.initialLoading = false;
+      }
+    };
+
+    ALL_SOURCES.forEach(source => {
+      // PAGE-T-4 rework (Reviewer FAIL #2): bump this source's own generation too, so an in-flight
+      // `loadMore`/`refreshSource` page from before this `loadInbox()` call cannot land afterwards.
+      const sgen = ++this.sourceGen[source];
+      this.setLoadingFlag(source, true);
+      let legsSettled = 0;
+      const onLegSettled = () => {
+        legsSettled++;
+        if (legsSettled === 2 && sgen === this.sourceGen[source]) {
+          this.setLoadingFlag(source, false);
         }
+      };
+      this.fetchPending(source, phaseId, sgen, () => {
+        onPendingSettled();
+        onLegSettled();
+      });
+      this.fetchHistory(source, phaseId, sgen, undefined, onLegSettled);
+    });
+  }
 
-        const { sentContributionsDone, sentContributionsPending } = response;
+  /**
+   * "Load more" (PAGE-R-4). Fetches the next history page of every source that still has one,
+   * appending to that source's existing array (never replacing it — falsifier (e): the array
+   * reference must change only because new rows were concatenated in, not because it was rebuilt
+   * from scratch). A second call while a previous one is still in flight does nothing at all
+   * (falsifier (c)). Does NOT bump `sourceGen` itself — a `refreshSource`/`loadInbox` that starts
+   * while a page is in flight bumps it instead, which is exactly what cancels this page's
+   * application on arrival (Reviewer FAIL #2a).
+   */
+  loadMore(): void {
+    if (this.loadingMore) return;
 
-        const orderedSentContributionsDone = sentContributionsDone.sort((a, b) => Date.parse(b.requested_date) - Date.parse(a.requested_date));
+    const sources = ALL_SOURCES.filter(source => this.paging[source].hasMore);
+    if (sources.length === 0) return;
 
-        const orderedSentContributionsPending = sentContributionsPending.sort((a, b) => Date.parse(b.requested_date) - Date.parse(a.requested_date));
+    this.loadingMore = true;
+    let settled = 0;
+    const onSettled = () => {
+      settled++;
+      if (settled === sources.length) {
+        this.loadingMore = false;
+      }
+    };
 
-        this.sentData = {
-          sentContributionsDone: orderedSentContributionsDone,
-          sentContributionsPending: orderedSentContributionsPending
-        };
-      },
-      error: err => console.error(err),
-      complete: () => {
-        this.loadingSent = false;
+    sources.forEach(source => {
+      const cursor = this.paging[source].nextCursor ?? undefined;
+      const sgen = this.sourceGen[source];
+      this.fetchHistory(source, this.phaseFilter, sgen, cursor, onSettled);
+    });
+  }
+
+  /**
+   * Pending + first history page for ONE source at the given phase (design.md §6.2). Replaces that
+   * source's history entirely — any Load-more pages already fetched (or still in flight) for it are
+   * discarded (PAGE-DD-6, a known/accepted reversion; Reviewer FAIL #2a/#2b). Does not touch the
+   * other 2 sources or bump the inbox-wide `generation` (a socket event or single-request refresh
+   * must not reset the whole inbox). `versionId` defaults to the current `phaseFilter` when omitted
+   * (Leader L1) so a T-5 caller can call `refreshSource('received')` with no explicit phase.
+   */
+  refreshSource(source: SourceKey, versionId: any = this.phaseFilter, callback?: () => void): void {
+    this.resetSourceView(source);
+    this.paging = { ...this.paging, [source]: { hasMore: false, nextCursor: null } };
+
+    // PAGE-T-4 rework (Reviewer FAIL #2b): bumping this source's generation cancels any OTHER
+    // in-flight fetch for the same source (an earlier loadMore page, or a concurrent refreshSource
+    // call) — their responses will still settle `onSettled`, but will no longer apply their data or
+    // clear this call's `loadingX`/callback (L2's sgen-gated settle check below).
+    const sgen = ++this.sourceGen[source];
+    this.setLoadingFlag(source, true);
+    let legsSettled = 0;
+    const onLegSettled = () => {
+      legsSettled++;
+      if (legsSettled === 2 && sgen === this.sourceGen[source]) {
+        this.setLoadingFlag(source, false);
         callback?.();
       }
+    };
+
+    this.fetchPending(source, versionId, sgen, onLegSettled);
+    this.fetchHistory(source, versionId, sgen, undefined, onLegSettled);
+  }
+
+  /** Pending set only, for callers outside the inbox (boot-time bell/header — design.md §6.2).
+   * `versionId` defaults to the current `phaseFilter` when omitted (Leader L1). Does not bump
+   * `sourceGen` (it never touches history/paging), but still captures the CURRENT `sourceGen` so a
+   * concurrent `refreshSource`/`loadInbox` on the same source — which does bump it — correctly
+   * supersedes this fetch's own data application. */
+  refreshPending(source: SourceKey, versionId: any = this.phaseFilter): void {
+    const sgen = this.sourceGen[source];
+    this.fetchPending(source, versionId, sgen);
+  }
+
+  private fetchPending(source: SourceKey, versionId: any, sgen: number, onSettled?: () => void): void {
+    const config = this.sourceConfig[source];
+    config.api({ versionId, scope: 'pending' }).subscribe({
+      next: ({ response }: any) => {
+        if (sgen !== this.sourceGen[source] || !response) return;
+
+        const rows = (response[config.pendingKey] || [])
+          .slice()
+          .sort((a: any, b: any) => Date.parse(b?.[config.dateField]) - Date.parse(a?.[config.dateField]));
+        this.applyPendingRows(source, rows);
+
+        if (source === 'updates') {
+          this.updatesData = { ...this.updatesData, notificationAnnouncements: response.notificationAnnouncement || [] };
+        }
+      },
+      error: err => {
+        this.logPagingError(err);
+        onSettled?.();
+      },
+      complete: () => onSettled?.()
     });
+  }
+
+  private fetchHistory(source: SourceKey, versionId: any, sgen: number, cursor: string | undefined, onSettled?: () => void): void {
+    const isFirstPage = cursor === undefined;
+    if (isFirstPage) this.firstHistoryOutstanding.add(source);
+
+    const config = this.sourceConfig[source];
+    config.api({ versionId, scope: 'history', cursor }).subscribe({
+      next: ({ response }: any) => {
+        if (sgen !== this.sourceGen[source] || !response) return;
+
+        const rows = response[config.historyKey] || [];
+        // PAGE-R-11/design.md §11: missing meta (e.g. an old server during rollback) -> hasMore:false.
+        const meta = response[config.metaKey] || { hasMore: false, nextCursor: null };
+        // PAGE-T-4 rework (Reviewer FAIL #2b): a FIRST page always SETS the history array (it is
+        // always preceded by `resetSourceView`/`loadInbox`'s reset, so there is nothing to append
+        // to); only a `loadMore` page (not the first) appends. Appending a first page as well would
+        // double it the moment two first-page fetches for the same source ever both reach here.
+        if (isFirstPage) {
+          this.setHistoryRows(source, rows);
+        } else {
+          this.appendHistoryRows(source, rows);
+        }
+        this.paging = { ...this.paging, [source]: { hasMore: !!meta.hasMore, nextCursor: meta.nextCursor ?? null } };
+      },
+      error: err => {
+        this.logPagingError(err);
+        // PAGE-R-4 "error": already-loaded rows and paging stay untouched, so Load more stays
+        // available to retry (falsifier (d)).
+        if (isFirstPage && sgen === this.sourceGen[source]) this.firstHistoryOutstanding.delete(source);
+        onSettled?.();
+      },
+      complete: () => {
+        // L2: only clear `historyLoading` for this source if THIS is still the current fetch — a
+        // stale (superseded) completion must not clear the flag a newer fetch is relying on.
+        if (isFirstPage && sgen === this.sourceGen[source]) this.firstHistoryOutstanding.delete(source);
+        onSettled?.();
+      }
+    });
+  }
+
+  /** `.cursorrules`: never log a request's URL/params (the cursor travels in there) — only a status
+   * code and a static message. */
+  private logPagingError(err: any): void {
+    console.error('ResultsNotificationsService: paginated request failed', err?.status);
+  }
+
+  private applyPendingRows(source: SourceKey, rows: any[]): void {
+    switch (source) {
+      case 'received':
+        this.receivedData = { ...this.receivedData, receivedContributionsPending: rows };
+        break;
+      case 'sent':
+        this.sentData = { ...this.sentData, sentContributionsPending: rows };
+        break;
+      case 'updates':
+        this.updatesData = { ...this.updatesData, notificationsPending: rows };
+        break;
+    }
+  }
+
+  /** A FIRST history page REPLACES the source's history array (always a fresh copy, never the
+   * response's own array reference) — used by `loadInbox`/`refreshSource`, both of which already
+   * reset that source's view before issuing the request. Reviewer FAIL #2b: this is what stops a
+   * `loadMore` page's leftover rows (or a second concurrent first-page fetch) from being appended
+   * onto a freshly-reset source instead of replacing it. */
+  private setHistoryRows(source: SourceKey, rows: any[]): void {
+    switch (source) {
+      case 'received':
+        this.receivedData = { ...this.receivedData, receivedContributionsDone: [...rows] };
+        break;
+      case 'sent':
+        this.sentData = { ...this.sentData, sentContributionsDone: [...rows] };
+        break;
+      case 'updates':
+        this.updatesData = { ...this.updatesData, notificationsViewed: [...rows] };
+        break;
+    }
+  }
+
+  /** Always concatenates into a NEW array (never mutates the existing one in place) — falsifier (e):
+   * an unchanged array reference after an append would silently break any memoization keyed on it.
+   * Only used for a `loadMore` (non-first) page. */
+  private appendHistoryRows(source: SourceKey, rows: any[]): void {
+    switch (source) {
+      case 'received':
+        this.receivedData = {
+          ...this.receivedData,
+          receivedContributionsDone: [...(this.receivedData.receivedContributionsDone || []), ...rows]
+        };
+        break;
+      case 'sent':
+        this.sentData = {
+          ...this.sentData,
+          sentContributionsDone: [...(this.sentData.sentContributionsDone || []), ...rows]
+        };
+        break;
+      case 'updates':
+        this.updatesData = {
+          ...this.updatesData,
+          notificationsViewed: [...(this.updatesData.notificationsViewed || []), ...rows]
+        };
+        break;
+    }
+  }
+
+  private resetSourceView(source: SourceKey): void {
+    switch (source) {
+      case 'received':
+        this.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [] };
+        break;
+      case 'sent':
+        this.sentData = { sentContributionsPending: [], sentContributionsDone: [] };
+        break;
+      case 'updates':
+        this.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+        break;
+    }
+  }
+
+  private setLoadingFlag(source: SourceKey, value: boolean): void {
+    if (source === 'received') this.loadingReceived = value;
+    else if (source === 'sent') this.loadingSent = value;
+    else this.loadingUpdates = value;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Legacy wrappers — kept so existing callers/specs keep compiling unchanged (PAGE-T-4 scope: T-5
+  // migrates the 4 external callers, T-6 migrates the component). Each is a thin delegation to
+  // `refreshSource` above (design.md §6.2).
+  // ---------------------------------------------------------------------------------------------
+
+  get_sent_notifications(versionId?, callback?) {
+    this.refreshSource('sent', versionId, callback);
   }
 
   get_section_information(versionId?, callback?) {
-    this.loadingReceived = true;
-    this.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [] };
-    this.api.resultsSE.GET_allRequest(versionId).subscribe({
-      next: ({ response }) => {
-        if (!response) {
-          return;
-        }
-
-        const { receivedContributionsDone, receivedContributionsPending } = response;
-
-        const orderedReceivedContributionsDone = receivedContributionsDone.sort(
-          (a, b) => Date.parse(b.requested_date) - Date.parse(a.requested_date)
-        );
-
-        const orderedReceivedContributionsPending = receivedContributionsPending.sort(
-          (a, b) => Date.parse(b.requested_date) - Date.parse(a.requested_date)
-        );
-
-        this.receivedData = {
-          receivedContributionsDone: orderedReceivedContributionsDone,
-          receivedContributionsPending: orderedReceivedContributionsPending
-        };
-      },
-      error: err => console.error(err),
-      complete: () => {
-        this.loadingReceived = false;
-        callback?.();
-      }
-    });
+    this.refreshSource('received', versionId, callback);
   }
 
   get_updates_notifications(versionId?) {
-    this.loadingUpdates = true;
-    this.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
-    this.api.resultsSE.GET_requestUpdates(versionId).subscribe({
-      next: ({ response }) => {
-        const { notificationsPending, notificationsViewed, notificationAnnouncement } = response;
-
-        const orderedNotificationsPending = notificationsPending.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
-
-        const orderedNotificationsViewed = notificationsViewed.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
-
-        this.updatesData = {
-          notificationAnnouncements: notificationAnnouncement,
-          notificationsPending: orderedNotificationsPending,
-          notificationsViewed: orderedNotificationsViewed
-        };
-      },
-      error: err => console.error(err),
-      complete: () => {
-        this.loadingUpdates = false;
-      }
-    });
+    this.refreshSource('updates', versionId);
   }
 
   get_updates_pop_up_notifications() {
@@ -262,9 +569,10 @@ export class ResultsNotificationsService {
   // ---------------------------------------------------------------------
 
   onPhaseChange(phaseId) {
-    this.get_updates_notifications(phaseId);
-    this.get_section_information(phaseId);
-    this.get_sent_notifications(phaseId);
+    // @akili-spec notifications/inbox-paginated-load — PAGE-R-5: a phase change discards every
+    // loaded row/cursor and reloads pending + first history pages for the new phase. `loadInbox`
+    // (not the 3 legacy wrappers) is now the single source of that fetch.
+    this.loadInbox(phaseId);
     this.filterInitiativesByPhase(phaseId);
   }
 

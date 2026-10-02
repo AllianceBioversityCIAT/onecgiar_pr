@@ -1627,25 +1627,39 @@ describe('BilateralResultsListComponent', () => {
     });
 
     it('swallows the phantom click the browser fires after a resize drag ends over the header, without swallowing a later unrelated click', () => {
-      const th = document.createElement('th');
-      th.getBoundingClientRect = jest.fn(() => ({ width: 280 } as DOMRect));
+      const titleHeader = Array.from(fixture.nativeElement.querySelectorAll('th.rc-th--sortable') as NodeListOf<HTMLElement>).find(header =>
+        (header.textContent ?? '').includes('Title'),
+      );
+      expect(titleHeader).toBeTruthy();
+      titleHeader!.getBoundingClientRect = jest.fn(() => ({ width: 280 } as DOMRect));
 
       const sortSpy = jest.spyOn(component.table!, 'sort');
 
-      component.onResizeStart({ clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, titleColumn, th);
+      component.onResizeStart(
+        { clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent,
+        titleColumn,
+        titleHeader!
+      );
       window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
       window.dispatchEvent(new MouseEvent('mouseup'));
 
       // Stands in for the native click the browser synthesizes on <th> right after this drag's
       // mouseup — this is the click that would otherwise reach PrSortableColumnDirective/sort().
       const phantomClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-      document.dispatchEvent(phantomClick);
+      titleHeader!.dispatchEvent(phantomClick);
       expect(phantomClick.defaultPrevented).toBe(true);
       expect(sortSpy).not.toHaveBeenCalled();
+      expect(component.table!.activeSortField()).toBe('result_code');
+      expect(component.table!.activeSortOrder()).toBe(-1);
+      expect(component.customWidths().title).toBe(330);
+      expect(titleHeader!.getAttribute('aria-sort')).toBeNull();
 
       const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-      document.dispatchEvent(laterUnrelatedClick);
+      titleHeader!.dispatchEvent(laterUnrelatedClick);
       expect(laterUnrelatedClick.defaultPrevented).toBe(false);
+      expect(sortSpy).toHaveBeenCalledWith('title');
+      expect(component.table!.activeSortField()).toBe('title');
+      expect(component.table!.activeSortOrder()).toBe(1);
     });
   });
 

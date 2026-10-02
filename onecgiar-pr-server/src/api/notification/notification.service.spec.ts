@@ -12,6 +12,7 @@ import {
   NotificationTypeEnum,
 } from './enum/notification.enum';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { In, Not } from 'typeorm';
 
 const mockNotificationLevelRepository = {
   findOne: jest.fn(),
@@ -449,7 +450,7 @@ describe('NotificationService', () => {
         expect.objectContaining({
           initiativeOfficialCode: 'SP5',
           message:
-            'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 1234 - Tagged bilateral result',
+            'Jane Doe from SP5 has tagged the bilateral project P-1568-WBS0 from your center to result 1234 - Tagged bilateral result',
         }),
       ]);
     });
@@ -584,6 +585,7 @@ describe('NotificationService', () => {
     const emitAndReadDescription = async (
       renderedText?: string,
       resultOverrides: Record<string, any> = {},
+      emitterOverride?: Record<string, any> | null,
     ): Promise<string> => {
       mockNotificationLevelRepository.findOne.mockResolvedValue({
         notifications_level_id: 2,
@@ -593,12 +595,15 @@ describe('NotificationService', () => {
       });
       mockNotificationRepository.save.mockResolvedValue(null);
       mockNotificationRepository.findOne.mockResolvedValue({
-        obj_emitter_user: {
-          id: 9,
-          first_name: 'Jane',
-          last_name: 'Doe',
-          email: 'jane@example.com',
-        },
+        obj_emitter_user:
+          emitterOverride === undefined
+            ? {
+                id: 9,
+                first_name: 'Jane',
+                last_name: 'Doe',
+                email: 'jane@example.com',
+              }
+            : emitterOverride,
         obj_result: {
           result_code: 4321,
           title: 'A bilateral result title',
@@ -630,11 +635,54 @@ describe('NotificationService', () => {
       return payload.desc;
     };
 
-    it('builds the full sentence for a genuine bare project label', async () => {
+    // WPT-T-2 (`w1w2-project-tagged`, design §7.3/§9) — the five-shape table (shared with the
+    // client's `notification-type.constants.spec.ts`, DR-2).
+    it('builds the full sentence for a legacy bare project label (no Center label)', async () => {
       const desc = await emitAndReadDescription('P-1568-WBS0');
 
       expect(desc).toBe(
-        'Jane Doe from SP5 has tagged project P-1568-WBS0 as contributor to result 4321 - A bilateral result title',
+        'Jane Doe from SP5 has tagged the bilateral project P-1568-WBS0 from your center to result 4321 - A bilateral result title',
+      );
+      expect(desc).not.toContain('as contributor');
+      expect(desc).not.toContain('The result');
+      expect(desc).not.toContain('created by');
+      expect(desc).not.toContain('Click to see the result.');
+      expect(desc).not.toContain('()');
+    });
+
+    it('builds the full sentence for an enriched bare row, with the Center label in parentheses', async () => {
+      const desc = await emitAndReadDescription('B-A1080 (ABC)');
+
+      expect(desc).toBe(
+        'Jane Doe from SP5 has tagged the bilateral project B-A1080 from your center (ABC) to result 4321 - A bilateral result title',
+      );
+    });
+
+    it('treats only the LAST trailing (...) as the Center label, so a project name with its own parentheses keeps them in the code', async () => {
+      const desc = await emitAndReadDescription(
+        'Seeds (Phase 2) project (ABC)',
+      );
+
+      expect(desc).toBe(
+        'Jane Doe from SP5 has tagged the bilateral project Seeds (Phase 2) project from your center (ABC) to result 4321 - A bilateral result title',
+      );
+    });
+
+    it('falls back to "a Science Program" when the owner SP code is missing', async () => {
+      const desc = await emitAndReadDescription('B-A1080 (ABC)', {
+        obj_result_by_initiatives: [],
+      });
+
+      expect(desc).toBe(
+        'Jane Doe from a Science Program has tagged the bilateral project B-A1080 from your center (ABC) to result 4321 - A bilateral result title',
+      );
+    });
+
+    it('falls back to "A user" when the emitter is missing', async () => {
+      const desc = await emitAndReadDescription('B-A1080 (ABC)', {}, null);
+
+      expect(desc).toBe(
+        'A user from SP5 has tagged the bilateral project B-A1080 from your center (ABC) to result 4321 - A bilateral result title',
       );
     });
 
@@ -663,6 +711,107 @@ describe('NotificationService', () => {
 
       expect(desc).not.toContain('undefined');
       expect(desc).toBe('There is a new update on result 4321');
+    });
+  });
+
+  // WCT-T-1 (design.md §7.1, requirements.md WCT-R-5 push clause) — the real-time socket push
+  // must mirror the client's bare-shape sentence, not the shared `buildTaggedSuffixDescription`
+  // fallback. Composed (legacy) and empty text keep the old rendering, mirroring the
+  // `RESULT_BILATERAL_PROJECT_TAGGED` case above.
+  describe('RESULT_CENTER_TAGGED notification copy (WCT-R-5 push clause)', () => {
+    const emitAndReadDescription = async (
+      renderedText?: string,
+      resultOverrides: Record<string, any> = {},
+    ): Promise<string> => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 2,
+      });
+      mockNotificationTypeRepository.findOne.mockResolvedValue({
+        notifications_type_id: 8,
+      });
+      mockNotificationRepository.save.mockResolvedValue(null);
+      mockNotificationRepository.findOne.mockResolvedValue({
+        obj_emitter_user: {
+          id: 9,
+          first_name: 'Jane',
+          last_name: 'Doe',
+          email: 'jane@example.com',
+        },
+        obj_result: {
+          result_code: 9398,
+          title: 'A pooled funding result',
+          obj_result_by_initiatives: [
+            { obj_initiative: { id: 1, official_code: 'SP01' } },
+          ],
+          ...resultOverrides,
+        },
+      });
+      mockSocketManagementService.getActiveUsers.mockResolvedValue({
+        response: [{ userId: 2 }],
+        status: 200,
+      });
+      mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+        status: 200,
+      });
+
+      await service.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_CENTER_TAGGED,
+        [2],
+        9,
+        9398,
+        renderedText,
+      );
+
+      const [, payload] =
+        mockSocketManagementService.sendNotificationToUsers.mock.calls.at(-1);
+      return payload.desc;
+    };
+
+    // Falsifier: the push `desc` for bare 'ABC' on result 9398 owned by SP01 is anything other
+    // than `SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - <title>`.
+    it('builds the full sentence for a bare center acronym', async () => {
+      const desc = await emitAndReadDescription('ABC');
+
+      expect(desc).toBe(
+        'SP01 has tagged your CG Center as a contributor (ABC) to result 9398 - A pooled funding result',
+      );
+    });
+
+    it('falls back to "a Science Program" when the owner SP code is missing', async () => {
+      const desc = await emitAndReadDescription('ABC', {
+        obj_result_by_initiatives: [],
+      });
+
+      expect(desc).toBe(
+        'a Science Program has tagged your CG Center as a contributor (ABC) to result 9398 - A pooled funding result',
+      );
+    });
+
+    // Falsifier: a composed legacy text's push `desc` changes.
+    it('falls back to the old suffix rendering for a composed (legacy) sentence', async () => {
+      const legacyText =
+        'created by SP01 has tagged the International Center X. Click to see the result.';
+      const desc = await emitAndReadDescription(legacyText);
+
+      expect(desc).toBe(
+        `The result 9398 - A pooled funding result ${legacyText}`,
+      );
+    });
+
+    it('falls back to the old suffix rendering for a BCT composed sentence', async () => {
+      const bctText =
+        'reported by AfricaRice has tagged the CIP. Click to see the result.';
+      const desc = await emitAndReadDescription(bctText);
+
+      expect(desc).toBe(`The result 9398 - A pooled funding result ${bctText}`);
+    });
+
+    it('falls back to the generic update line when text is empty', async () => {
+      const desc = await emitAndReadDescription('   ');
+
+      expect(desc).not.toContain('undefined');
+      expect(desc).toBe('There is a new update on result 9398');
     });
   });
 
@@ -874,6 +1023,7 @@ describe('NotificationService', () => {
           target_user: 42,
           result_id: 11,
           read: true,
+          created_date: new Date('2026-09-20T10:00:00Z'),
           obj_result: {
             result_code: 11,
             title: 'A W1/W2 result',
@@ -1122,6 +1272,550 @@ describe('NotificationService', () => {
           eventType: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
         });
       });
+    });
+  });
+
+  // `PSR-T-7`/`PSR-DD-7`: the 3 Center-notice types read back through an ownerless path
+  // (design.md §6.1, §2.2) — no `initiative_role_id = 1` condition — so a declined/moved
+  // notice for a result with no role-1 owner is never silently dropped, and are excluded from
+  // the role-1-joined queries so an accepted notice (owned result) is never merged in twice.
+  describe('Center notices — ownerless read path (PSR-T-7)', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center-user@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    const CENTER_NOTICE_TYPES = [
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
+    ];
+
+    // Disqualifier guard: this fixture has NO `obj_result_by_initiatives` role-1 row at all —
+    // the ownerless path must not depend on one being absent-but-present, it must work when
+    // there is genuinely no owner.
+    const centerNoticeRow = (overrides: Record<string, any> = {}) => ({
+      notification_id: '2001',
+      target_user: 42,
+      result_id: 501,
+      read: false,
+      text: 'SP12 declined to be the primary Science Program of this result. Pick another primary Science Program. Click to see the result.',
+      obj_result: {
+        result_code: 501,
+        title: 'An ownerless bilateral result',
+        source: 'API',
+        is_active: true,
+        obj_result_by_initiatives: [], // no role-1 owner
+        obj_result_by_project: [],
+      },
+      obj_notification_type: {
+        type: NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+      },
+      created_date: new Date('2026-09-30T10:00:00Z'),
+      ...overrides,
+    });
+
+    describe('getAllNotifications', () => {
+      it('Falsifier 1: a declined notice for an ownerless result is NOT missing from getAllNotifications', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed (role-1-joined, excludes center notices)
+          .mockResolvedValueOnce([]) // notificationsPending (role-1-joined, excludes center notices)
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([]) // job-finished, pending
+          .mockResolvedValueOnce([]) // center notice, viewed
+          .mockResolvedValueOnce([centerNoticeRow()]); // center notice, pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(result.status).toBe(200);
+        expect(result.response.notificationsPending).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              notification_id: '2001',
+              text: centerNoticeRow().text,
+              obj_notification_type: {
+                type: NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+              },
+              obj_result: expect.objectContaining({
+                source: 'API',
+                source_name: 'W3/Bilaterals',
+              }),
+            }),
+          ]),
+        );
+
+        // The role-1-joined queries must exclude the 3 Center-notice types (PSR-DD-7). Call 1
+        // (viewed) is keyset-paged (PAGE-T-3), so its `where` is the cursor-expanded array —
+        // with no cursor it is a single-entry array wrapping the original condition.
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            where: [
+              expect.objectContaining({
+                obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+              }),
+            ],
+          }),
+        );
+
+        // The ownerless query itself carries no `initiative_role_id` condition and is scoped
+        // to this recipient only.
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          7,
+          expect.objectContaining({
+            where: expect.objectContaining({
+              target_user: 42,
+              read: false,
+              obj_result: { is_active: true },
+              obj_notification_type: { type: In(CENTER_NOTICE_TYPES) },
+            }),
+          }),
+        );
+      });
+
+      // Reviewer finding 2 (rework attempt 2): a test that only checks the RESULT count can't
+      // fail — the mocked role-1 finds return `[]` regardless of `where`, so the row could only
+      // ever come back once no matter what the exclusion says. The real guard is the exclusion
+      // filter itself, on EVERY role-1-joined call (both viewed AND pending — attempt 1 only
+      // asserted call 1). Proven to fail first: deleting either exclusion in the service made
+      // this red (recorded below the block), then restored to green.
+      it('Falsifier 2: BOTH role-1-joined queries (viewed and pending) exclude the Center-notice types, so neither can ever return this row', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed — must exclude center-notice types
+          .mockResolvedValueOnce([]) // notificationsPending — must exclude center-notice types
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([]) // job-finished, pending
+          .mockResolvedValueOnce([]) // center notice, viewed
+          .mockResolvedValueOnce([centerNoticeRow()]); // center notice, pending
+
+        await service.getAllNotifications(user);
+
+        // Call 1 (viewed) is keyset-paged (PAGE-T-3): its `where` is the cursor-expanded
+        // single-entry array; call 2 (pending) is never paged and keeps the plain object.
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            where: [
+              expect.objectContaining({
+                obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+              }),
+            ],
+          }),
+        );
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({
+            where: expect.objectContaining({
+              obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+            }),
+          }),
+        );
+      });
+
+      it('Disqualifier guard: the fixture carries no role-1 row at all', () => {
+        expect(centerNoticeRow().obj_result.obj_result_by_initiatives).toEqual(
+          [],
+        );
+      });
+    });
+
+    describe('getPopUpNotifications', () => {
+      it('Falsifier 1: a declined notice for an ownerless result is NOT missing from getPopUpNotifications', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // result-based pop-ups (role-1-joined)
+          .mockResolvedValueOnce([]) // job-finished pop-ups
+          .mockResolvedValueOnce([centerNoticeRow()]); // center notice pop-ups
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+
+        const result = await service.getPopUpNotifications(user);
+
+        expect(result.response).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              notification_id: '2001',
+              text: centerNoticeRow().text,
+              obj_notification_type: {
+                type: NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+              },
+              obj_result: expect.objectContaining({
+                source: 'API',
+                source_name: 'W3/Bilaterals',
+              }),
+            }),
+          ]),
+        );
+      });
+
+      // Reviewer finding 2 (rework attempt 2): the real guard is the exclusion on the
+      // role-1-joined `whereConditions`, not the count of the mocked (empty-regardless) result.
+      it('Falsifier 2: the role-1-joined query excludes the Center-notice types, so it can never return this row', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // result-based pop-ups — must exclude center-notice types
+          .mockResolvedValueOnce([]) // job-finished pop-ups
+          .mockResolvedValueOnce([centerNoticeRow()]); // center notice pop-ups
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+
+        await service.getPopUpNotifications(user);
+
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            where: expect.objectContaining({
+              obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+            }),
+          }),
+        );
+      });
+    });
+  });
+
+  // `PSR-T-7` — the socket-push description for the 3 Center-notice types (`buildResultNotificationDescription`).
+  describe('buildResultNotificationDescription — Center notices (PSR-T-7)', () => {
+    beforeEach(() => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 2,
+      });
+      mockNotificationTypeRepository.findOne.mockResolvedValue({
+        notifications_type_id: 20,
+      });
+      mockNotificationRepository.save.mockResolvedValue(null);
+      mockSocketManagementService.getActiveUsers.mockResolvedValue({
+        response: [{ userId: 7 }],
+        status: 200,
+      });
+      mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+        status: 200,
+      });
+    });
+
+    // Reviewer finding 1 (rework attempt 2): the stored sentence's SUBJECT is the SP ("SP09
+    // accepted ... of this result. Click to see the result."), not a suffix that finishes a
+    // sentence started by "The result <id>". The identity replaces "this result" in place —
+    // the sentence keeps its own subject/verb and names the result exactly once.
+    it.each([
+      [
+        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+        'SP09 accepted to be the primary Science Program of this result. Click to see the result.',
+        'SP09 accepted to be the primary Science Program of result 501 - An ownerless bilateral result. Click to see the result.',
+      ],
+      [
+        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+        'SP09 declined to be the primary Science Program of this result. Pick another primary Science Program. Click to see the result.',
+        'SP09 declined to be the primary Science Program of result 501 - An ownerless bilateral result. Pick another primary Science Program. Click to see the result.',
+      ],
+      [
+        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
+        'SP09 declined to be the primary Science Program of this result; the request was moved to SP12. Click to see the result.',
+        'SP09 declined to be the primary Science Program of result 501 - An ownerless bilateral result; the request was moved to SP12. Click to see the result.',
+      ],
+    ])(
+      'names the result once, as the object of the SP-subject sentence, for %s',
+      async (type, storedSuffix, expectedDesc) => {
+        mockNotificationRepository.findOne.mockResolvedValue({
+          obj_emitter_user: null,
+          obj_result: {
+            result_code: 501,
+            title: 'An ownerless bilateral result',
+          },
+        });
+
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          type,
+          [7],
+          1,
+          501,
+          storedSuffix,
+        );
+
+        const [, notificationPayload] =
+          mockSocketManagementService.sendNotificationToUsers.mock.calls[0];
+        expect(notificationPayload.desc).toBe(expectedDesc);
+      },
+    );
+
+    it('falls back to the stored sentence unchanged when the result has no code/title (no identity to splice in)', async () => {
+      mockNotificationRepository.findOne.mockResolvedValue({
+        obj_emitter_user: null,
+        obj_result: null,
+      });
+
+      const storedSuffix =
+        'SP09 accepted to be the primary Science Program of this result. Click to see the result.';
+
+      await service.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+        [7],
+        1,
+        501,
+        storedSuffix,
+      );
+
+      const [, notificationPayload] =
+        mockSocketManagementService.sendNotificationToUsers.mock.calls[0];
+      expect(notificationPayload.desc).toBe(storedSuffix);
+    });
+  });
+
+  // PAGE-T-3 (notifications/inbox-paginated-load): phase scoping, pending/history split,
+  // keyset pagination and concurrency for `getAllNotifications` (design.md §5; requirements.md
+  // PAGE-R-1, R-2, R-3, R-6, R-7; PAGE-AC-1, -10, -11).
+  describe('getAllNotifications — PAGE-T-3 pagination/phase/concurrency', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'user@cgiar.org',
+      first_name: 'Test',
+      last_name: 'User',
+    };
+
+    const viewedRow = (
+      id: string,
+      createdDate: string,
+      overrides: Record<string, any> = {},
+    ) => ({
+      notification_id: id,
+      target_user: 42,
+      result_id: 10,
+      read: true,
+      created_date: new Date(createdDate),
+      obj_result: {
+        result_code: 10,
+        title: 'A result',
+        source: 'Result',
+        obj_result_by_project: [],
+      },
+      obj_notification_type: { type: NotificationTypeEnum.RESULT_CREATED },
+      ...overrides,
+    });
+
+    // Falsifier (a): EVERY `find()` call returns its own never-resolving deferred (not just
+    // the first) — an inner `await` reintroduced at ANY position (not only element 1) blocks
+    // the array literal's evaluation on that element's still-pending promise, so a later
+    // element's `find()` is never invoked and `resolvers.length`/call count stays below 7
+    // forever. Resolving them all and awaiting the result is what proves the service doesn't
+    // actually need them to resolve before invoking the rest (PAGE-R-7, PAGE-AC-11).
+    it('Falsifier (a): starts every query concurrently — all 7 find() calls are invoked before any resolves (PAGE-R-7, PAGE-AC-11)', async () => {
+      const resolvers: Array<(value: any[]) => void> = [];
+
+      mockNotificationRepository.find.mockImplementation(
+        () =>
+          new Promise<any[]>((resolve) => {
+            resolvers.push(resolve);
+          }),
+      );
+
+      const pending = service.getAllNotifications(user);
+
+      // Give the microtask queue a few ticks so every call that was going to be invoked
+      // synchronously/concurrently has had the chance to run. None of these ticks can ever
+      // unblock a sequential `await` on an unresolved `find()` — only resolving it does.
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // All 7 queries (viewed, pending, announcement, job-viewed, job-pending,
+      // center-viewed, center-pending) must have been invoked already — none blocked behind
+      // another still-unresolved call, no matter which element the dependency is on.
+      expect(mockNotificationRepository.find).toHaveBeenCalledTimes(7);
+      expect(resolvers).toHaveLength(7);
+
+      resolvers.forEach((resolve) => resolve([]));
+      const result = await pending;
+      expect(result.status).toBe(200);
+    });
+
+    // Falsifier (b), half 1: version_id must reach the result-scoped and Center-notice
+    // where-builders, but the AI-job finder must stay unfiltered (PAGE-R-1, PAGE-P-7).
+    it('Falsifier (b): version_id reaches the result-scoped and Center-notice queries, never the AI-job finder', async () => {
+      mockNotificationRepository.find.mockResolvedValue([]);
+
+      await service.getAllNotifications(user, { versionId: 2026 });
+
+      const calls = mockNotificationRepository.find.mock.calls;
+      // Call 1: viewed, result-scoped (keyset-paged -> where is a single-entry array).
+      expect(calls[0][0].where).toEqual([
+        expect.objectContaining({
+          obj_result: expect.objectContaining({ version_id: 2026 }),
+        }),
+      ]);
+      // Call 2: pending, result-scoped (never paged -> plain object).
+      expect(calls[1][0].where).toEqual(
+        expect.objectContaining({
+          obj_result: expect.objectContaining({ version_id: 2026 }),
+        }),
+      );
+      // Call 4: AI-job viewed — must NOT carry a version_id condition anywhere.
+      expect(JSON.stringify(calls[3][0].where)).not.toContain('version_id');
+      // Call 5: AI-job pending — same.
+      expect(JSON.stringify(calls[4][0].where)).not.toContain('version_id');
+      // Call 6: Center-notice viewed — must carry version_id.
+      expect(calls[5][0].where).toEqual([
+        expect.objectContaining({
+          obj_result: expect.objectContaining({ version_id: 2026 }),
+        }),
+      ]);
+      // Call 7: Center-notice pending — must carry version_id.
+      expect(calls[6][0].where).toEqual(
+        expect.objectContaining({
+          obj_result: expect.objectContaining({ version_id: 2026 }),
+        }),
+      );
+    });
+
+    // Falsifier (b), half 2: with no version_id, none of the result-scoped/Center-notice
+    // queries should carry a version_id condition (today's legacy, all-phases behavior).
+    it('omits the version_id condition entirely when no versionId is given', async () => {
+      mockNotificationRepository.find.mockResolvedValue([]);
+
+      await service.getAllNotifications(user);
+
+      const calls = mockNotificationRepository.find.mock.calls;
+      calls.forEach((call) => {
+        expect(JSON.stringify(call[0].where)).not.toContain('version_id');
+      });
+    });
+
+    // Falsifier (c): 3 viewed lists of 150 each, interleaved dates -> the merged page must be
+    // exactly the 200 newest overall, with hasMore = true (PAGE-R-3, PAGE-AC-3).
+    it('Falsifier (c): merges 3 viewed sources of 150 each into the 200 newest overall, hasMore = true', async () => {
+      const base = new Date('2026-09-30T00:00:00Z').getTime();
+
+      // Result-scoped: ids 1..150, every 3rd minute (0,3,6,...)
+      const resultScoped = Array.from({ length: 150 }, (_, i) =>
+        viewedRow(`${1000 + i}`, new Date(base - i * 3 * 60000).toISOString()),
+      );
+      // AI-job: ids 2000..2149, offset by 1 minute (1,4,7,...), no obj_result.
+      const jobFinished = Array.from({ length: 150 }, (_, i) => ({
+        notification_id: `${2000 + i}`,
+        target_user: 42,
+        result_id: null,
+        obj_result: null,
+        read: true,
+        created_date: new Date(base - (i * 3 + 1) * 60000),
+        obj_notification_type: {
+          type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+        },
+      }));
+      // Center-notice: ids 3000..3149, offset by 2 minutes (2,5,8,...)
+      const centerNotice = Array.from({ length: 150 }, (_, i) =>
+        viewedRow(
+          `${3000 + i}`,
+          new Date(base - (i * 3 + 2) * 60000).toISOString(),
+          {
+            obj_notification_type: {
+              type: NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+            },
+          },
+        ),
+      );
+
+      // `scope: 'history'` skips every pending query entirely (PAGE-R-2) — only the 3
+      // viewed queries call `find()`, in this order: result-scoped, job-finished, center-notice.
+      mockNotificationRepository.find
+        .mockResolvedValueOnce(resultScoped) // notificationsViewed (result-scoped)
+        .mockResolvedValueOnce(jobFinished) // job-finished, viewed
+        .mockResolvedValueOnce(centerNotice); // center notice, viewed
+
+      const result = await service.getAllNotifications(user, {
+        scope: 'history',
+      });
+
+      // scope=history skips every pending query entirely (PAGE-R-2) — only the 3 viewed
+      // sources call find().
+      expect(mockNotificationRepository.find).toHaveBeenCalledTimes(3);
+      expect(result.response.notificationsViewed).toHaveLength(200);
+      expect(result.response.viewedMeta.hasMore).toBe(true);
+      // The 200 newest overall are the ids whose offset (0..199 minutes back) is smallest —
+      // i.e. every row up to and including minute 199. Minute 199 is id 2066
+      // (jobFinished index 66 -> 66*3+1 = 199).
+      const returnedIds = result.response.notificationsViewed.map(
+        (n: any) => n.notification_id,
+      );
+      expect(returnedIds).toContain('2066');
+      expect(returnedIds).not.toContain('2067'); // minute 202 -> rank 203, excluded
+      // notificationsPending/notificationAnnouncement are empty under scope=history (PAGE-R-2).
+      expect(result.response.notificationsPending).toEqual([]);
+      expect(result.response.notificationAnnouncement).toEqual([]);
+    });
+
+    // Falsifier (d): the legacy (no-param) response shape must keep every pre-existing key.
+    it('Falsifier (d): legacy call (no options) keeps notificationsPending/notificationsViewed/notificationAnnouncement', async () => {
+      mockNotificationRepository.find.mockResolvedValue([]);
+
+      const result = await service.getAllNotifications(user);
+
+      expect(result.response).toEqual(
+        expect.objectContaining({
+          notificationsPending: expect.any(Array),
+          notificationsViewed: expect.any(Array),
+          notificationAnnouncement: expect.any(Array),
+          viewedMeta: expect.objectContaining({
+            hasMore: expect.any(Boolean),
+          }),
+        }),
+      );
+    });
+
+    // PAGE-R-2 scenario "pending never paged" / scope table (design.md §4.1): scope=pending
+    // must skip the history queries entirely (not run-and-discard) and return an empty,
+    // non-paginated history bucket.
+    it('scope=pending skips the history queries entirely and returns an empty, non-paginated history bucket', async () => {
+      mockNotificationRepository.find.mockResolvedValue([
+        viewedRow('1', '2026-09-29T00:00:00Z'),
+      ]);
+
+      const result = await service.getAllNotifications(user, {
+        scope: 'pending',
+      });
+
+      // Only the 4 pending-side queries run (pending, announcement, job-pending,
+      // center-pending) — none of the 3 history queries.
+      expect(mockNotificationRepository.find).toHaveBeenCalledTimes(4);
+      expect(result.response.notificationsViewed).toEqual([]);
+      expect(result.response.viewedMeta).toEqual({
+        hasMore: false,
+        nextCursor: null,
+      });
+    });
+
+    // PAGE-R-3 "next page": a cursor is forwarded into the keyset expansion for every
+    // viewed sub-query.
+    it('forwards the cursor into the keyset expansion of every viewed sub-query', async () => {
+      mockNotificationRepository.find.mockResolvedValue([]);
+      const cursor = Buffer.from(
+        '2026-09-29T00:00:00.000Z|500',
+        'utf8',
+      ).toString('base64url');
+
+      await service.getAllNotifications(user, {
+        scope: 'history',
+        cursor,
+      });
+
+      const calls = mockNotificationRepository.find.mock.calls;
+      // Under scope=history, only the 3 viewed queries run (pending calls are skipped), in
+      // this order: call 1 = result-scoped viewed, call 2 = AI-job viewed, call 3 =
+      // Center-notice viewed. Each carries the cursor's keyset OR (date < d, or date = d AND
+      // id < i) — 2 entries per original single condition.
+      expect(calls[0][0].where).toHaveLength(2); // call 1: result-scoped viewed
+      expect(calls[0][0].take).toBe(201);
+      expect(calls[1][0].where).toHaveLength(2); // call 2: AI-job viewed
+      expect(calls[2][0].where).toHaveLength(2); // call 3: Center-notice viewed
     });
   });
 });

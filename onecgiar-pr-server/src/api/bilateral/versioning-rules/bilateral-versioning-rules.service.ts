@@ -1,15 +1,19 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import { VersionRepository } from '../../versioning/versioning.repository';
+import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { Result, SourceEnum } from '../../results/entities/result.entity';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { ClarisaApiKeyValidationMis } from '../interfaces/clarisa-api-key-validation.interface';
+import { centerCodesForPlatform } from '../constants/platform-center-scope.constants';
 
 /**
  * When a W3/Bilateral result may be carried into the open reporting phase, and which one.
@@ -33,6 +37,9 @@ export class BilateralVersioningRulesService {
   constructor(
     private readonly _resultRepository: ResultRepository,
     private readonly _versionRepository: VersionRepository,
+    // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-6: added so
+    // `assertCallerMayVersion`'s lead-centre fallback (moved here from `bvs`) can resolve it.
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
   ) {}
 
   /**
@@ -167,6 +174,71 @@ export class BilateralVersioningRulesService {
     }
 
     return Number(main.initiative_id);
+  }
+
+  /**
+   * Ownership, in two steps.
+   *
+   * The exact check is `external_platform_id === mis.id`: the platform that created the
+   * result is the one asking for it. When the result carries no originating platform — a
+   * centre authored it in the reporting tool — the only thing linking the request to the
+   * data is the centre, so the lead centre is matched against the platform's declared
+   * scope. See `platform-center-scope.constants.ts` for why that map exists and how it
+   * drifts.
+   *
+   * @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-6: moved here from
+   * `BilateralVersioningService` so `create`'s resolve step (`UBC-R-4`) and `/version` share
+   * one ownership rule. Behaviour is unchanged from the version this replaces.
+   */
+  async assertCallerMayVersion(
+    source: Result,
+    resultCode: string,
+    platform?: ClarisaApiKeyValidationMis,
+  ): Promise<void> {
+    if (!platform?.id) {
+      throw new ForbiddenException(
+        'The calling platform could not be identified from the API key.',
+      );
+    }
+
+    const originatingPlatformId = Number(source.external_platform_id);
+    if (Number.isFinite(originatingPlatformId) && originatingPlatformId > 0) {
+      if (originatingPlatformId !== Number(platform.id)) {
+        throw new ForbiddenException(
+          `Result ${resultCode} was reported by a different platform. Only the platform that reported a result can carry it forward.`,
+        );
+      }
+      return;
+    }
+
+    const allowedCenters = centerCodesForPlatform(platform.acronym);
+    if (!allowedCenters.length) {
+      throw new ForbiddenException(
+        `Result ${resultCode} has no originating platform, and ${platform.acronym ?? platform.id} has no centre scope configured to claim it.`,
+      );
+    }
+
+    const centers =
+      await this._resultsCenterRepository.getAllResultsCenterByResultId(
+        source.id,
+      );
+    // The repository aliases `results_center.center_id` as `code` — the CLARISA centre code,
+    // which is what the platform scope map is keyed by.
+    const leadCenterCode = (centers ?? []).find(
+      (center: any) => Number(center?.is_leading_result) === 1,
+    )?.code;
+
+    if (!leadCenterCode) {
+      throw new ForbiddenException(
+        `Result ${resultCode} has neither an originating platform nor a lead centre, so ownership cannot be established.`,
+      );
+    }
+
+    if (!allowedCenters.includes(String(leadCenterCode))) {
+      throw new ForbiddenException(
+        `Result ${resultCode} belongs to centre ${leadCenterCode}, which is outside the scope of ${platform.acronym ?? platform.id}.`,
+      );
+    }
   }
 
   /** The centre leading this result, or null. The identity both callers authorise against. */

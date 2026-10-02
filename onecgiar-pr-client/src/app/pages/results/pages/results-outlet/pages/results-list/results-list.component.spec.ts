@@ -40,6 +40,7 @@ class PrTableStubComponent {
 describe('ResultsListComponent', () => {
   let component: ResultsListComponent;
   let fixture: ComponentFixture<ResultsListComponent>;
+  const originalGetElementById = document.getElementById.bind(document);
   let mockApiService: any;
   let mockShareRequestModalService: any;
   let mockResultLevelService: any;
@@ -169,6 +170,7 @@ describe('ResultsListComponent', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    document.getElementById = originalGetElementById;
   });
 
   describe('ngOnInit()', () => {
@@ -227,7 +229,8 @@ describe('ResultsListComponent', () => {
     it('should call onDeleteREsult on command call of itemsWithDelete[2]', () => {
       const spy = jest.spyOn(component, 'onDeleteREsult');
       document.getElementById = jest.fn().mockReturnValue({
-        scrollIntoView: jest.fn()
+        scrollIntoView: jest.fn(),
+        querySelectorAll: jest.fn(() => [])
       });
 
       component.itemsWithDelete[3].command();
@@ -327,7 +330,8 @@ describe('ResultsListComponent', () => {
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       document.getElementById = jest.fn().mockReturnValue({
-        scrollIntoView: jest.fn()
+        scrollIntoView: jest.fn(),
+        querySelectorAll: jest.fn(() => [])
       });
       component.onDeleteREsult();
       jest.runAllTimers();
@@ -561,6 +565,22 @@ describe('ResultsListComponent', () => {
     it('swallows the phantom click the browser fires after a resize drag ends over the header, without swallowing a later unrelated click', () => {
       const th = document.createElement('th');
       th.getBoundingClientRect = jest.fn(() => ({ width: 280 }) as DOMRect);
+      const validateOrderSpy = jest.spyOn(component, 'validateOrder');
+      const sortState = { field: 'result_code', order: -1 };
+      const sortSpy = jest.fn((field: string) => {
+        if (sortState.field === field) {
+          sortState.order = sortState.order === 1 ? -1 : 1;
+        } else {
+          sortState.field = field;
+          sortState.order = 1;
+        }
+      });
+      th.addEventListener('click', () => {
+        sortSpy(titleColumn.attr);
+        component.validateOrder(titleColumn.attr);
+      });
+      document.body.appendChild(th);
+      component.combine = false;
 
       component.onResizeStart({ clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, titleColumn, th);
       window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
@@ -569,12 +589,22 @@ describe('ResultsListComponent', () => {
       // Stands in for the native click the browser synthesizes on <th> right after this drag's
       // mouseup — this is the click that would otherwise reach PrSortableColumnDirective/validateOrder.
       const phantomClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-      document.dispatchEvent(phantomClick);
+      th.dispatchEvent(phantomClick);
       expect(phantomClick.defaultPrevented).toBe(true);
+      expect(component.customWidths().title).toBe(330);
+      expect(sortState).toEqual({ field: 'result_code', order: -1 });
+      expect(sortSpy).not.toHaveBeenCalled();
+      expect(validateOrderSpy).not.toHaveBeenCalled();
+      expect(component.combine).toBe(false);
 
       const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-      document.dispatchEvent(laterUnrelatedClick);
+      th.dispatchEvent(laterUnrelatedClick);
       expect(laterUnrelatedClick.defaultPrevented).toBe(false);
+      expect(sortSpy).toHaveBeenCalledWith(titleColumn.attr);
+      expect(sortState).toEqual({ field: titleColumn.attr, order: 1 });
+      expect(validateOrderSpy).toHaveBeenCalledWith(titleColumn.attr);
+
+      th.remove();
     });
   });
 
@@ -1194,7 +1224,8 @@ describe('ResultsListComponent', () => {
       });
 
       document.getElementById = jest.fn().mockReturnValue({
-        scrollIntoView: jest.fn()
+        scrollIntoView: jest.fn(),
+        querySelectorAll: jest.fn(() => [])
       });
       component.onDeleteREsult();
       jest.runAllTimers();

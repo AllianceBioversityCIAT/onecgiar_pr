@@ -44,7 +44,10 @@
         <span>
           The Level options come from the primary Science Program's Theory of Change
           @if (programCode()) {
-            ({{ programCode() }}), which has not been stored on this result yet — use Save draft and they will load here.
+            <!-- PSR-T-10 (design.md §6.3): the SP is chosen but has no owner yet (never stored, or
+                 a primary request still pending / sent back) — "not stored" would be misleading
+                 once a request exists, so the copy is agnostic between the two causes. -->
+            ({{ programCode() }}). {{ tocNoticeCopy }}
           } @else {
             — select the primary Science Program and save the draft, then they will load here.
           }

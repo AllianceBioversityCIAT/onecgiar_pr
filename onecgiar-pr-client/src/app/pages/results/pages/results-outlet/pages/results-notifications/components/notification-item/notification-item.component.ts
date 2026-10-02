@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
@@ -6,14 +6,18 @@ import { ResultLevelService } from '../../../../../result-creator/services/resul
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
+import { NotificationNavigationService } from '../../../../../../../../shared/services/notification-navigation.service';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
 import {
   getAiJobNotificationParts,
   getResultNotificationTextParts,
   resolveNotificationType,
+  NotificationType,
   type AiJobNotificationParts,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
+import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../../../../../../../internationalization/notification-center-tagged.copy';
+import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../../../../../../../internationalization/notification-project-tagged.copy';
 import type { ContributionRequestDrawerMode, ContributionRequestDrawerViewFields } from '../contribution-request-drawer/contribution-request-drawer.component';
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
@@ -45,6 +49,9 @@ export interface DrawerHeaderParts {
   tail: string;
   resultCode: string;
   resultTitle: string;
+  // PSR-T-8/T-9: mirror `ContributionRequestDrawerHeaderParts` (bilateral-contributor sentence).
+  leadCode?: string;
+  suffix?: string;
 }
 
 // CRD-T-3: one row of the "Where it contributes" table (design.md §6.2 `reviewRows`).
@@ -83,6 +90,19 @@ export class NotificationItemComponent {
   showConfirmRejectDialog = signal(false);
   showTocPromptDialog = signal(false);
   showTocMappingDialog = signal(false);
+  /**
+   * PDR-T-4 (design.md §8.2): a primary request's Decline — row button or drawer footer — opens
+   * THIS dialog instead of `showConfirmRejectDialog`. Mutually exclusive with the other three
+   * popups and the drawer, same as them (`openDrawer()` resets it to `false` alongside the rest).
+   */
+  showPrimaryDeclineDialog = signal(false);
+  /**
+   * PDR-T-4 (design.md §8.2 "a 400 keeps the dialog open"): set in `submitPrimaryDecline()`'s own
+   * `error` handler, read in that same method's `finalize` so it can skip the unconditional
+   * close/reset it would otherwise run for every other outcome. Never read outside that one pair of
+   * callbacks.
+   */
+  private keepPrimaryDeclineDialogOpen = false;
 
   /** CRD-T-4: centralized copy for the row's accessible name and the drawer's Align section. */
   readonly copy = CONTRIBUTION_REQUEST_DRAWER_COPY;
@@ -110,6 +130,8 @@ export class NotificationItemComponent {
   /** CRD-DD-3: the global ToC hydration is deferred from "open" to "first answer". */
   private tocHydrated = false;
 
+  private readonly notificationNavigation = inject(NotificationNavigationService);
+
   constructor(
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
@@ -121,6 +143,67 @@ export class NotificationItemComponent {
 
   get isBilateralResult() {
     return this.notification?.obj_result?.source_name === 'W3/Bilaterals';
+  }
+
+  /**
+   * PSR-T-8 (design.md §6.1 "Primary request" row, `PSR-R-9`): a pending-or-resolved ask for an SP
+   * to become the result's primary Science Program. Server payload contract (PSR-T-4/T-5):
+   * `request_type: 'primary'` (default `'contribution'` for every pre-existing/legacy row, so this
+   * is false for anything this spec didn't touch). Never true for an `isUpdateSource` row (those
+   * have no `request_type` at all — they're the 3 Center notices, handled entirely by
+   * `notification-type.constants.ts`/`updateTextParts`, not by this getter).
+   */
+  get isPrimaryRequest(): boolean {
+    return !this.isUpdateSource && this.notification?.request_type === 'primary';
+  }
+
+  /**
+   * PSR-T-8 (design.md §6.1 "Bilateral contributor request" row, `PSR-R-10`): every bilateral
+   * contribution request is this variant now — `request_type='contribution'` (the default) AND
+   * `source_name: 'W3/Bilaterals'`. This getter replaces the old pre-spec generic "any bilateral
+   * row" branch outright: there is no longer a third, un-kinded bilateral row (`PSR-DD-1`..`10`
+   * give every bilateral request a kind). W1/W2 rows are untouched (`isBilateralResult` is false
+   * for them, so this stays false too, `PSR-DD-10`).
+   */
+  get isBilateralContributorRequest(): boolean {
+    return this.isBilateralResult && !this.isPrimaryRequest;
+  }
+
+  /**
+   * PSR-T-8 (PSR-R-9 "missing-acronym clause"): the Creating Center's label for the primary/
+   * contributor sentences — `creating_center.acronym ?? creating_center.name`, falling back to
+   * `copy.notificationItem.unknownCenterFallback` ("the Center") when BOTH are missing so the
+   * sentence never renders an empty name or "()" (the scenario's own wording).
+   */
+  get creatingCenterLabel(): string {
+    const center = this.notification?.creating_center;
+    const acronym = typeof center?.acronym === 'string' ? center.acronym.trim() : '';
+    const name = typeof center?.name === 'string' ? center.name.trim() : '';
+    return acronym || name || this.copy.notificationItem.unknownCenterFallback;
+  }
+
+  /**
+   * PSR-T-8: the primary SP's code for a bilateral CONTRIBUTOR row's sentence ("**{owner sp}**, as
+   * primary Science Program, has tagged …") — server field `owner_program_code` (design.md §4,
+   * "bilateral contribution rows only"). Distinct from `responderCode` below, which resolves the
+   * CONTRIBUTOR SP for this same row kind.
+   */
+  get ownerProgramCode(): string {
+    return this.notification?.owner_program_code ?? '';
+  }
+
+  /**
+   * PSR-T-8 (PSR-R-11 "showing the request kind"): single source for the row's own type chip
+   * (`rowTypeChipLabel` below) AND the drawer's `view`-mode `requestKind` metadata field
+   * (`drawerViewFields()`), so the two can never say something different about the same request
+   * (the task brief's own wording). Only meaningful for a `source:'request'` row — an
+   * `isUpdateSource` row's chip/requestKind never reads this getter (see the callers).
+   */
+  get requestKindLabel(): string {
+    const labels = this.copy.notificationItem;
+    if (this.isPrimaryRequest) return labels.primaryRequestChip;
+    if (this.isBilateralContributorRequest) return labels.contributorRequestChip;
+    return labels.contributionRequestChip;
   }
 
   /** CRD-T-3: gates row interactivity for the drawer (CRD-R-1, wired in CRD-T-4). Unchanged by NOTIF-T-5 (CRD-DD-10). */
@@ -160,9 +243,23 @@ export class NotificationItemComponent {
    */
   get rowTypeChipLabel(): string | null {
     if (this.isUpdateSource) {
+      // WCT-T-5 (`w1w2-center-tagged`, WCT-R-6): the one update type whose chip reads a friendlier
+      // copy string instead of the raw `NotificationType` value. Every other update type is
+      // unaffected — still the raw resolved name.
+      if (resolveNotificationType(this.notification) === NotificationType.RESULT_CENTER_TAGGED) {
+        return NOTIFICATION_CENTER_TAGGED_COPY.chipLabel;
+      }
+      // WPT-T-4 (`w1w2-project-tagged`, WPT-R-6): same treatment for the bilateral-project-tagged
+      // update type — its chip reads the copy's friendlier label instead of the raw type name.
+      if (resolveNotificationType(this.notification) === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED) {
+        return NOTIFICATION_PROJECT_TAGGED_COPY.chipLabel;
+      }
       return resolveNotificationType(this.notification);
     }
-    return this.copy.notificationItem.contributionRequestChip;
+    // PSR-T-8: was the fixed `contributionRequestChip` string for every request row; now resolved
+    // per kind (primary / bilateral contributor / plain contribution), single source with the
+    // drawer's `requestKind` field (see `requestKindLabel`'s own docstring).
+    return this.requestKindLabel;
   }
 
   /**
@@ -247,6 +344,10 @@ export class NotificationItemComponent {
       // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
       // badge): reuse the row's own status getter, never recompute it here.
       status: this.rowStatusLabel,
+      // PSR-T-8 (PSR-R-11 "showing the request kind"): only meaningful for a `source:'request'` row
+      // — `requestKindLabel` reads `isPrimaryRequest`/`isBilateralContributorRequest`, both hard
+      // false for an `isUpdateSource` row, so this is `null` for every Center notice/Updates row.
+      requestKind: this.isUpdateSource ? null : this.requestKindLabel,
       resultType: n?.obj_result?.obj_result_type?.name ?? null,
       phase: n?.obj_result?.obj_version?.phase_name ?? null,
       primaryProgram: n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? null,
@@ -371,7 +472,12 @@ export class NotificationItemComponent {
    * applies — and that modal is still never reopened (see ./CLAUDE.md).
    */
   get acceptsWithoutToc(): boolean {
-    return this.isBilateralResult;
+    // PSR-T-8: a primary request never goes through the bilateral ToC-prompt/mapping flow at all —
+    // it is handled by its own branch, first, in both `onAcceptContribution()` and
+    // `onDrawerAccept()` below. Excluding it here too is defense in depth: even if a caller reached
+    // this getter directly, it would no longer claim a primary request "accepts without ToC" in the
+    // bilateral sense (prompt → optional mapping) — it just accepts, full stop.
+    return this.isBilateralResult && !this.isPrimaryRequest;
   }
 
   /**
@@ -382,7 +488,11 @@ export class NotificationItemComponent {
    * modal-first flow.
    */
   onAcceptContribution() {
-    if (this.notification?.is_map_to_toc) {
+    // PSR-T-8: a primary request accepts on the first click, exactly like the ToC-carried path —
+    // no prompt, no mapping step, no `tocInitiative` seed. It is `is_map_to_toc: false` on the
+    // server (design.md §3.1), so without this branch it would fall into `acceptsWithoutToc` (today
+    // false for it) or, worse, the legacy modal-first flow via `mapAndAccept()`.
+    if (this.notification?.is_map_to_toc || this.isPrimaryRequest) {
       this.acceptOrReject(true);
       return;
     }
@@ -394,6 +504,45 @@ export class NotificationItemComponent {
     }
 
     this.mapAndAccept(this.notification);
+  }
+
+  /**
+   * PDR-T-4 (design.md §8.2 "Row Decline"): single entry point for the row's Decline button. A
+   * primary request opens the new justification dialog (`showPrimaryDeclineDialog`) — never
+   * `showConfirmRejectDialog`, which stays exactly as-is for every other row kind (contributor,
+   * W1/W2), byte-for-byte (`PDR-R-2`).
+   */
+  onDeclineClick() {
+    if (this.isPrimaryRequest) {
+      this.showPrimaryDeclineDialog.set(true);
+      return;
+    }
+    this.showConfirmRejectDialog.set(true);
+  }
+
+  /**
+   * PDR-T-4 (design.md §8.2 "Drawer Decline"): the drawer's `declineClicked` output (its `decide`-
+   * footer Decline button). A primary request closes the drawer FIRST, then opens the justification
+   * dialog — never a dialog stacked on top of an open drawer (`PDR-R-1` "same layout…", design's
+   * "the drawer closes first"). Every other row kind keeps today's inline `confirm-decline` footer,
+   * untouched (`PDR-R-2`).
+   */
+  onDrawerDeclineClicked() {
+    if (this.isPrimaryRequest) {
+      this.closeDrawer();
+      this.showPrimaryDeclineDialog.set(true);
+      return;
+    }
+    this.drawerMode.set('confirm-decline');
+  }
+
+  /**
+   * PDR-T-4: Confirm on the primary-decline dialog — the dialog already guarantees a trimmed,
+   * non-empty `justification` (its own `confirmDisabled`), so this is a thin pass-through to the
+   * shared decision entry point.
+   */
+  onPrimaryDeclineConfirm(justification: string) {
+    this.acceptOrReject(false, false, justification);
   }
 
   /**
@@ -454,8 +603,12 @@ export class NotificationItemComponent {
     this.showConfirmRejectDialog.set(false);
     this.showTocPromptDialog.set(false);
     this.showTocMappingDialog.set(false);
+    this.showPrimaryDeclineDialog.set(false);
 
-    if (mode === 'decide' && this.isBilateralResult) {
+    // PSR-T-8: a primary request never seeds the Align block — `showAlignSlot` also hides the
+    // projected `[crdAlign]` slot on the drawer (defense in depth), but the real fix is here:
+    // `tocInitiative` must stay unseeded so a primary accept can never carry a ToC payload.
+    if (mode === 'decide' && this.isBilateralResult && !this.isPrimaryRequest) {
       this.seedTocInitiative();
     }
 
@@ -494,7 +647,10 @@ export class NotificationItemComponent {
    *   - Legacy ............... closeDrawer() BEFORE mapAndAccept() (CRD-DD-6: never stack the drawer under the modal).
    */
   onDrawerAccept() {
-    if (this.notification?.is_map_to_toc) {
+    // PSR-T-8 (carried forward-pointer, PSR-T-9): a primary request's drawer Accept sends the same
+    // inert ToC payload as the ToC-carried path — never `acceptOrReject(true, true)`, and never the
+    // legacy `mapAndAccept()` fallback at the bottom of this method.
+    if (this.notification?.is_map_to_toc || this.isPrimaryRequest) {
       this.acceptOrReject(true);
       return;
     }
@@ -537,17 +693,46 @@ export class NotificationItemComponent {
   }
 
   /**
-   * CRD-R-3: Result card activation. Non-bilateral opens `resultUrl()` in a new tab; bilateral
-   * closes the drawer FIRST so two drawers never stack, then navigates in-app (CRD-DD-6).
+   * CRD-R-3: Result card activation. Non-bilateral opens `resultUrl()` in a new tab; a bilateral
+   * CONTRIBUTOR request closes the drawer FIRST so two drawers never stack, then navigates in-app
+   * (CRD-DD-6).
+   *
+   * PSR-T-8 rework attempt 2 (Reviewer finding 1): a PRIMARY request must NOT take the in-app
+   * `navigateToResult()` path — that method routes to `requesterCode`'s bilateral-review page
+   * (`navigateToResult()` below), and for a primary row `requesterCode` resolves to the requested
+   * SP (`responderCode`'s sibling, is_map_to_toc:false ⇒ requesterCode = owner_initiative, which on
+   * a primary row IS the requested SP per the server's `primary-program-request.service.ts`). That
+   * would land the user on the requested SP's review queue for a result that MUST NOT appear there
+   * (requirements.md L94) — before it has even accepted. A primary request therefore takes the same
+   * `resultUrl()`-in-a-new-tab path as a non-bilateral row, exactly like the row's own inline link.
    */
   onDrawerResult() {
-    if (this.isBilateralResult) {
+    if (this.isBilateralResult && !this.isPrimaryRequest) {
       this.closeDrawer();
       this.navigateToResult(this.notification);
       return;
     }
 
+    if (this.isBilateralResult) {
+      this.notificationNavigation.openCenterEditorInNewTab(this.notification);
+      return;
+    }
+
     window.open(this.resultUrl(this.notification), '_blank');
+  }
+
+  /**
+   * Row result link. A W3/Bilaterals result (e.g. a primary program request) opens in its lead
+   * center's editor instead of Result Detail, which does not serve bilateral results. The href
+   * keeps Result Detail for middle-click / context menu.
+   */
+  onResultLinkClick(event: MouseEvent): void {
+    event.stopPropagation();
+    if (!this.isBilateralResult) return;
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
+    event.preventDefault();
+    this.notificationNavigation.openCenterEditorInNewTab(this.notification);
   }
 
   /**
@@ -562,17 +747,49 @@ export class NotificationItemComponent {
     const resultCode = this.notification?.obj_result?.result_code ?? '';
     const resultTitle = this.notification?.obj_result?.title ?? '';
 
-    if (this.isBilateralResult) {
-      const centerName = this.notification?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym ?? '';
-
+    // PSR-T-8 (design.md §6.1 "Primary request" row, PSR-R-9): "{center} has tagged {sp} as the
+    // primary Science Program of result {code} - {title}". `lead` IS the Creating Center label
+    // (never "Center X" — the primary sentence has no such prefix), `responderCode` is the
+    // requested SP (`is_map_to_toc: false` on a primary row, so `responderCode` already resolves to
+    // `obj_shared_inititiative` — see the getter above), and `requesterCode` stays empty so the CRD
+    // template never renders a "from X" clause.
+    if (this.isPrimaryRequest) {
       return {
-        lead: `${header.bilateralLeadPrefix} ${centerName}`.trim(),
+        lead: this.creatingCenterLabel,
         requesterCode: '',
-        verb: header.bilateralVerb,
+        verb: header.primaryVerb,
         responderCode: this.responderCode,
-        tail: header.bilateralTail,
+        tail: header.primaryTail,
         resultCode,
         resultTitle
+      };
+    }
+
+    // PSR-T-8 (design.md §6.1 "Bilateral contributor request" row, PSR-R-10): "**{owner sp}**, as
+    // primary Science Program, has tagged **{sp}** as a contributing Science Program to result
+    // **{code}** - {title} on behalf of {center}". This REPLACES the old pre-spec generic bilateral
+    // branch outright (`isBilateralContributorRequest` is true for every bilateral contribution
+    // request now, `PSR-DD-10`) — `lead` is left empty (nothing precedes the bold owner-SP code),
+    // `leadCode` carries the owner SP, and `suffix` composes "on behalf of {center}" per the
+    // drawer's own contract (`contribution-request-drawer/CLAUDE.md`). `requesterCode` stays empty
+    // on purpose (the task brief: "must stay empty; assert it").
+    if (this.isBilateralContributorRequest) {
+      // PSR-T-8 rework attempt 2 (Reviewer finding 2, advisory): a missing `owner_program_code`
+      // must not render an empty bold span or a sentence starting with the verb's leading comma.
+      // `leadCode` stays `undefined` (never `''`) when the code is missing, which routes the row
+      // AND the drawer's `@else` branch to `lead` instead — a plain-text fallback, never both
+      // empty.
+      const ownerCode = this.ownerProgramCode;
+      return {
+        lead: ownerCode ? '' : this.copy.notificationItem.unknownProgramFallback,
+        requesterCode: '',
+        leadCode: ownerCode || undefined,
+        verb: header.bilateralContributorVerb,
+        responderCode: this.responderCode,
+        tail: header.bilateralContributorTail,
+        resultCode,
+        resultTitle,
+        suffix: `${header.onBehalfOf} ${this.creatingCenterLabel}`
       };
     }
 
@@ -588,6 +805,19 @@ export class NotificationItemComponent {
       resultCode,
       resultTitle
     };
+  }
+
+  /**
+   * PSR-T-8 (design.md §6.2 "decide mode reads the kind ... Accept label", carried from PSR-T-9):
+   * the drawer's `decide`-footer Accept label per row kind — `null` (every pre-existing caller,
+   * W1/W2 and ToC-carried alike) falls back to the drawer's own `copy.footer.acceptContribution`.
+   * This is also the row's own Accept button text (`buttonTextConfirm` in the template), single
+   * source so the row and drawer can never say a different word for the same action (PSR-R-11).
+   */
+  drawerAcceptLabel(): string | null {
+    if (this.isPrimaryRequest) return CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary;
+    if (this.isBilateralContributorRequest) return CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept;
+    return null;
   }
 
   /**
@@ -830,6 +1060,36 @@ export class NotificationItemComponent {
     this.api.dataControlSE.showShareRequest = true;
   }
 
+  /**
+   * PSR-T-8 (design.md §6.1 "Tokens: existing only. Blue pill = the existing info/brand-blue
+   * pair."): the type chip's background/foreground classes for a `source:'request'` row. Primary
+   * requests get the existing `--pr-status-submitted-*` blue pair (the info/brand-blue pair
+   * already in `colors.scss`); every other request row (bilateral contributor or plain
+   * contribution) keeps the violet `--pr-color-primary-50/-400` pair the chip already used before
+   * this task (`NOTIF-T-13`). No new tokens.
+   */
+  get rowTypeChipColorClass(): string {
+    // WCT-T-5 (`w1w2-center-tagged`, WCT-R-6/WCT-NFR-4): the Center-tagged update row's chip gets
+    // the existing green "approved" status token pair. Request-row chips and every other update
+    // type are unchanged.
+    if (this.isUpdateSource) {
+      const notificationType = resolveNotificationType(this.notification);
+      if (notificationType === NotificationType.RESULT_CENTER_TAGGED) {
+        return '!bg-[var(--pr-status-approved-bg)] !text-[var(--pr-status-approved-fg)]';
+      }
+      // WPT-T-4 (`w1w2-project-tagged`, WPT-R-6/WPT-NFR-4): the bilateral-project-tagged row's chip
+      // gets the existing amber "in progress" status token pair. Every other update type is unchanged.
+      if (notificationType === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED) {
+        return '!bg-[var(--pr-status-in-progress-bg)] !text-[var(--pr-status-in-progress-fg)]';
+      }
+      return '!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]';
+    }
+
+    return this.isPrimaryRequest
+      ? '!bg-[var(--pr-status-submitted-bg)] !text-[var(--pr-status-submitted-fg)]'
+      : '!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]';
+  }
+
   get isQAed() {
     return this.notification?.obj_result?.status_id == 2 && this.notification?.request_status_id == 1;
   }
@@ -857,7 +1117,7 @@ export class NotificationItemComponent {
     return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
   }
 
-  acceptOrReject(isAccept: boolean, withTocMapping = false) {
+  acceptOrReject(isAccept: boolean, withTocMapping = false, justification?: string) {
     if (this.invalidateRequest()) {
       return;
     }
@@ -872,15 +1132,34 @@ export class NotificationItemComponent {
     // P2-3187 AC4: when the contributor chose "Map it", the mapping travels WITH this same PATCH —
     // `mapWorkPackagesToInitiative*` writes the contributor's `result_toc_result` rows on approval,
     // so one request records the decision and the optional mapping together (no second accept).
-    const body = {
+    const body: Record<string, unknown> = {
       result_request: this.notification,
       result_toc_result:
         withTocMapping && isAccept ? this.buildTocMappingPayload() : { planned_result: null, result_toc_results: [] },
       request_status_id: isAccept ? 2 : 3
     };
 
+    // PDR-T-4 (design.md §8.2): `justification` is added to the body only for a primary decline —
+    // never on accept, and never for a contributor/W1W2 decline (`PDR-R-2`, `requesterCode` getter
+    // untouched). `isPrimaryRequest` gates it, not merely "a justification argument was passed", so
+    // a stray caller can never smuggle the key in for the wrong row kind.
+    const isPrimaryDecline = !isAccept && this.isPrimaryRequest;
+    if (isPrimaryDecline) {
+      body['justification'] = justification;
+    }
+
     if (isAccept) this.requestingAccept = true;
     else this.requestingReject = true;
+
+    // PDR-T-4 (design.md §8.2 "own pipe"): a primary decline's error handling must NOT run the
+    // shared `finalize` below unconditionally — a 400 has to keep the justification dialog open
+    // with its text, which the shared `finalize` (always closes/resets everything) would wipe.
+    // Every other call (accept, contributor/W1W2 decline) falls through to the untouched pipeline
+    // beneath this, byte-for-byte (`PDR-R-2`).
+    if (isPrimaryDecline) {
+      this.submitPrimaryDecline(body);
+      return;
+    }
 
     this.api.resultsSE
       .PATCH_updateRequest(body, this.isP25Request)
@@ -911,6 +1190,93 @@ export class NotificationItemComponent {
         },
         error: err => {
           console.error(err);
+          // PSR-T-9 (PSR-R-2 "no longer actionable" / PSR-R-4 stale-tab idempotency / PSR-R-8): the
+          // server answers 409 when the request is no longer pending — already decided (another
+          // member, a stale tab) or cancelled (the Center re-picked). The `finalize` above already
+          // runs unconditionally (closes the drawer, resets the popup signals, emits
+          // `requestEvent`), which is what makes the row stop being actionable; this branch only
+          // swaps the toast for the exact server-contract text instead of the generic error one.
+          if (err?.status === 409) {
+            this.api.alertsFe.show({
+              id: 'noti-error',
+              title: this.copy.notificationItem.staleRequestMessage,
+              description: '',
+              status: 'information'
+            });
+            return;
+          }
+          this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+        }
+      });
+  }
+
+  /**
+   * PDR-T-4 (design.md §8.2 "own pipe"): the primary decline's own PATCH pipeline. Mirrors the
+   * shared one above (accept / contributor / W1W2 decline, left byte-for-byte untouched) with one
+   * difference: on a **400** the dialog must stay open with its text kept (`PDR-R-1` "server
+   * error" scenario), so this `finalize` conditionally skips the close/reset it would otherwise run
+   * unconditionally. `keepPrimaryDeclineDialogOpen` is set in the `error` branch just below — RxJS
+   * runs `finalize` after the destination's `next`/`error` callback, so the flag is always read
+   * after it was written for the same emission.
+   */
+  private submitPrimaryDecline(body: Record<string, unknown>) {
+    this.keepPrimaryDeclineDialogOpen = false;
+
+    this.api.resultsSE
+      .PATCH_updateRequest(body, this.isP25Request)
+      .pipe(
+        finalize(() => {
+          this.requestingReject = false;
+          if (this.keepPrimaryDeclineDialogOpen) {
+            // 400: keep `showPrimaryDeclineDialog` true (text survives) and the drawer already
+            // closed on open (`onDrawerDeclineClicked`) stays closed — nothing else to undo here.
+            // `requestingReject` (the dialog's `isSaving`) still flips false→true→false, which is
+            // what releases the dialog's own double-click guard for a retry.
+            this.keepPrimaryDeclineDialogOpen = false;
+            return;
+          }
+          this.closeDrawer();
+          this.showConfirmRejectDialog.set(false);
+          this.showTocPromptDialog.set(false);
+          this.showTocMappingDialog.set(false);
+          this.showPrimaryDeclineDialog.set(false);
+          this.requestEvent.emit();
+        })
+      )
+      .subscribe({
+        next: () => {
+          // design.md §8.2: bilateral decline wording — distinct from the shared pipeline's
+          // "Request successfully rejected" (contributor/W1W2 byte-for-byte, `PDR-R-2`).
+          this.api.alertsFe.show({
+            id: 'noti',
+            title: 'Request successfully declined',
+            status: 'information'
+          });
+        },
+        error: err => {
+          console.error(err);
+          // PDR-R-1 "server error": a 400 (blank/missing justification, re-validated server-side,
+          // `PDR-R-3`) keeps the dialog open with its text and shows the server's message.
+          if (err?.status === 400) {
+            this.keepPrimaryDeclineDialogOpen = true;
+            this.api.alertsFe.show({
+              id: 'noti-error',
+              title: err?.error?.message || 'Justification is required when declining a primary request',
+              description: '',
+              status: 'error'
+            });
+            return;
+          }
+          // 403/409/500 keep today's behavior: the `finalize` above already closed everything.
+          if (err?.status === 409) {
+            this.api.alertsFe.show({
+              id: 'noti-error',
+              title: this.copy.notificationItem.staleRequestMessage,
+              description: '',
+              status: 'information'
+            });
+            return;
+          }
           this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
         }
       });

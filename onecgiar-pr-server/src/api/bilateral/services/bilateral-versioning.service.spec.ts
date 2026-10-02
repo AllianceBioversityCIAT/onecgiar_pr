@@ -9,13 +9,15 @@ import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 /**
- * What this service still owns after the eligibility rules moved to
- * `BilateralVersioningRulesService`: **who may ask** on the API side — a platform, not a user
- * — and refusing to report success when replication left nothing. The shared replicator
- * creates the copy in Editing; this API path must leave it there for Submit for Review.
+ * What this service still owns: refusing to report success when replication left nothing.
+ * The shared replicator creates the copy in Editing; this API path must leave it there for
+ * Submit for Review.
  *
- * The eligibility rules themselves are tested in the rules service's own spec, once, because
- * the reporting tool path shares them.
+ * `assertCallerMayVersion` — "who may ask" on the API side — moved to
+ * `BilateralVersioningRulesService` (`@akili-spec changes/bilateral-create-upsert-by-code`,
+ * UBC-DD-6), shared with `create`'s resolve step. Its exhaustive cases now live in the rules
+ * service's own spec; the `ownership` block below only proves this service delegates to it
+ * and honours its rejection.
  */
 describe('BilateralVersioningService', () => {
   const ACTIVE_PHASE = { id: 7, phase_name: 'Reporting 2026' };
@@ -50,11 +52,10 @@ describe('BilateralVersioningService', () => {
       resolveVersionableResult: jest.fn(async () => source),
       resolveTargetEntityId: jest.fn(async () => 51),
       findInPhase: jest.fn(async () => created),
+      assertCallerMayVersion:
+        options.assertCallerMayVersion ?? jest.fn(async () => undefined),
     };
     const versioningService = { versionProcessV2: jest.fn(async () => ({})) };
-    const resultsCenterRepository = {
-      getAllResultsCenterByResultId: jest.fn(async () => options.centers ?? []),
-    };
     const userRepository = {
       findOne: jest.fn(async () => ({
         id: 1776,
@@ -67,7 +68,6 @@ describe('BilateralVersioningService', () => {
     const service = new BilateralVersioningService(
       rules as any,
       versioningService as any,
-      resultsCenterRepository as any,
       userRepository as any,
     );
     jest
@@ -138,66 +138,32 @@ describe('BilateralVersioningService', () => {
     await expect(run(service)).rejects.toBeInstanceOf(ConflictException);
   });
 
-  describe('ownership — the one check the API path owns', () => {
-    it('refuses a platform that did not report the result', async () => {
+  // @akili-spec changes/bilateral-create-upsert-by-code — UBC-DD-6: the exhaustive ownership
+  // cases (foreign platform, lead-centre fallback, unscoped platform, ...) now live in
+  // versioning-rules/bilateral-versioning-rules.service.spec.ts, describe('assertCallerMayVersion
+  // — ownership shared by /version and create'), against the real implementation. This is
+  // strictly narrower on purpose: it proves versionResult calls that method with the source and
+  // platform it resolved, and that a rejection from it stops the flow before replication — not
+  // a second copy of the eligibility matrix.
+  describe('ownership — delegated to the shared rule', () => {
+    it('calls the shared rule with the resolved source and the calling platform', async () => {
+      const { service, rules } = makeService();
+      await run(service);
+      expect(rules.assertCallerMayVersion).toHaveBeenCalledWith(
+        approvedPreviousPhase(),
+        '28565',
+        STAR,
+      );
+    });
+
+    it('propagates the shared rule rejection and never replicates', async () => {
       const { service, versioningService } = makeService({
-        source: approvedPreviousPhase({ external_platform_id: 999 }),
+        assertCallerMayVersion: jest
+          .fn()
+          .mockRejectedValue(new ForbiddenException('not yours')),
       });
       await expect(run(service)).rejects.toBeInstanceOf(ForbiddenException);
       expect(versioningService.versionProcessV2).not.toHaveBeenCalled();
-    });
-
-    it('refuses when the API key resolved no platform', async () => {
-      const { service } = makeService();
-      await expect(
-        service.versionResult({ result_code: '28565' } as any, undefined),
-      ).rejects.toBeInstanceOf(ForbiddenException);
-    });
-
-    // No originating platform means a centre authored it in the tool, so the lead centre is
-    // the only thing tying the request to the data.
-    it('falls back to the lead centre when the result has no originating platform', async () => {
-      const { service, versioningService } = makeService({
-        source: approvedPreviousPhase({ external_platform_id: null }),
-        centers: [
-          { code: 'CENTER-11', is_leading_result: 0 },
-          { code: 'CENTER-02', is_leading_result: 1 },
-        ],
-      });
-      await run(service);
-      expect(versioningService.versionProcessV2).toHaveBeenCalled();
-    });
-
-    it('refuses when the lead centre is outside the platform scope', async () => {
-      const { service } = makeService({
-        source: approvedPreviousPhase({ external_platform_id: null }),
-        centers: [{ code: 'CENTER-11', is_leading_result: 1 }],
-      });
-      await expect(run(service)).rejects.toBeInstanceOf(ForbiddenException);
-    });
-
-    it('refuses when there is neither platform nor lead centre', async () => {
-      const { service } = makeService({
-        source: approvedPreviousPhase({ external_platform_id: null }),
-        centers: [{ code: 'CENTER-11', is_leading_result: 0 }],
-      });
-      await expect(run(service)).rejects.toBeInstanceOf(ForbiddenException);
-    });
-
-    it('refuses a platform with no configured centre scope', async () => {
-      const { service } = makeService({
-        source: approvedPreviousPhase({ external_platform_id: null }),
-        centers: [{ code: 'CENTER-02', is_leading_result: 1 }],
-      });
-      await expect(
-        service.versionResult(
-          { result_code: '28565' } as any,
-          {
-            id: 77,
-            acronym: 'UNKNOWN_TOOL',
-          } as any,
-        ),
-      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

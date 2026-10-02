@@ -11,12 +11,22 @@
       @if (isAiJob(notification)) {
         {{ textParts.prefix }}
       } @else {
+      <!-- WPT-T-4 (`w1w2-project-tagged`, WPT-R-2, DD-5): `segments`, when present, replace the
+           `lead`/`prefix` blocks below. -->
+      @if (textParts.segments) {
+        @for (segment of textParts.segments; track $index) {@if (segment.emphasize) {<b>{{ segment.text }}</b>} @else {{{ segment.text }}}}{{ ' ' }}
+      } @else {
+      @if (textParts.lead) {
+        <b> {{ textParts.lead }} </b>
+      }
+
       @if (textParts.prefix) {
         @if (textParts.emphasizePrefix) {
           <b> {{ textParts.prefix }} </b>
         } @else {
           {{ textParts.prefix }}
         }
+      }
       }
 
       <!-- Attached comma (NDCW-R-2): no whitespace inside the span's tail nor between </span> and the trailer. -->

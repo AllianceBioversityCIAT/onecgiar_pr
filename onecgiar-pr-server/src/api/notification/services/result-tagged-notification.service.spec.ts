@@ -60,49 +60,50 @@ describe('ResultTaggedNotificationService', () => {
   const lastEmitCall = () =>
     notificationService.emitResultNotification.mock.calls.at(-1);
 
-  describe('notifyTaggedCenters (AC1)', () => {
-    it('emits to the users of the tagged centre with the AC3 copy', async () => {
+  describe('notifyTaggedCenters (AC1, amended by WCT-R-8)', () => {
+    // WCT-R-8 falsifier: Center ABC (acronym ABC) tagged with no leadIn stores exactly 'ABC'.
+    it('stores the bare acronym as the notification text', async () => {
       centerRepo.find.mockResolvedValueOnce([
         {
-          code: 'CENTER-01',
-          clarisa_institution: { name: 'Africa Rice Center' },
+          code: 'ABC',
+          clarisa_institution: { acronym: 'ABC', name: 'A Long Center Name' },
         },
       ]);
       roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([11, 12]);
 
-      await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['CENTER-01']);
+      await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['ABC']);
 
-      const [level, type, userIds, emitter, resultId, suffix] = lastEmitCall();
+      const [level, type, userIds, emitter, resultId, text] = lastEmitCall();
       expect(level).toBe(NotificationLevelEnum.RESULT);
       expect(type).toBe(NotificationTypeEnum.RESULT_CENTER_TAGGED);
       expect(userIds).toEqual([11, 12]);
       expect(emitter).toBe(EMITTER);
       expect(resultId).toBe(RESULT_ID);
-      expect(suffix).toBe(
-        'created by SP04 has tagged the Africa Rice Center. Click to see the result.',
-      );
+      expect(text).toBe('ABC');
     });
 
-    it('names the owning Science Program from the initiative_role_id = 1 row', async () => {
+    // WCT-R-8 falsifier: a center with a null acronym is stored as something other than its code.
+    it('falls back to the centre code when the institution acronym is null', async () => {
       centerRepo.find.mockResolvedValueOnce([
-        { code: 'C1', clarisa_institution: { name: 'Centre One' } },
+        {
+          code: 'C1',
+          clarisa_institution: { acronym: null, name: 'Centre One' },
+        },
       ]);
       roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([11]);
 
       await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['C1']);
 
-      // SP99 sits first in the array but is not the owner.
-      expect(lastEmitCall()[5]).toContain('SP04');
-      expect(lastEmitCall()[5]).not.toContain('SP99');
+      expect(lastEmitCall()[5]).toBe('C1');
     });
 
-    it('falls back to the centre code when the institution name is missing', async () => {
+    it('falls back to the centre code when there is no clarisa_institution at all', async () => {
       centerRepo.find.mockResolvedValueOnce([{ code: 'C1' }]);
       roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([11]);
 
       await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['C1']);
 
-      expect(lastEmitCall()[5]).toContain('has tagged the C1.');
+      expect(lastEmitCall()[5]).toBe('C1');
     });
 
     it('does nothing when no centre codes are given', async () => {
@@ -148,8 +149,81 @@ describe('ResultTaggedNotificationService', () => {
       const [, type, , , , text] = lastEmitCall();
       expect(type).toBe(NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED);
       // NOTIF-T-12: the composed sentence moved to the client — the default lead-in flow now
-      // stores just the project label in `notification.text`.
-      expect(text).toBe('P-1568-WBS0');
+      // stores just the project label. WPT-R-1/D-6: it also carries the owner Center's label,
+      // falling back to the Center's code when (as here) its institution has no acronym.
+      expect(text).toBe('P-1568-WBS0 (CENTER-06)');
+    });
+
+    // WPT-R-1 case 1 — acronym available: the stored label is exactly `<code> (<acronym>)`.
+    it('stores the project code with the owner Center acronym (WPT-R-1 case 1)', async () => {
+      projectRepo.find.mockResolvedValueOnce([
+        { id: 1042, shortName: 'B-A1080', organizationCode: 67 },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'CENTER-06',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+      await service.notifyTaggedBilateralProjects(RESULT_ID, EMITTER, [1042]);
+
+      expect(lastEmitCall()[5]).toBe('B-A1080 (ABC)');
+    });
+
+    // WPT-R-1 case 2 — null acronym falls back to the Center code, and MUST NOT store `()`.
+    it.each([
+      ['no institution', undefined],
+      ['an institution without acronym', { name: 'No Acronym Institution' }],
+      ['a null acronym', { acronym: null, name: 'Null Acronym' }],
+      ['an empty acronym', { acronym: '', name: 'Empty' }],
+    ])(
+      'falls back to the Center code when there is %s, never rendering () (WPT-R-1 case 2)',
+      async (_label, institution) => {
+        projectRepo.find.mockResolvedValueOnce([
+          { id: 1042, shortName: 'B-A1080', organizationCode: 67 },
+        ]);
+        centerRepo.find.mockResolvedValueOnce([
+          {
+            code: 'CENTER-07',
+            institutionId: 67,
+            clarisa_institution: institution,
+          },
+        ]);
+        roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+        await service.notifyTaggedBilateralProjects(RESULT_ID, EMITTER, [1042]);
+
+        const text = lastEmitCall()[5] as string;
+        expect(text).toBe('B-A1080 (CENTER-07)');
+        expect(text).not.toContain('()');
+      },
+    );
+
+    // WPT-R-1 case 3 — no `short_name`: the project code falls back to `full_name`.
+    it('falls back to full_name when the project has no short_name (WPT-R-1 case 3)', async () => {
+      projectRepo.find.mockResolvedValueOnce([
+        {
+          id: 1042,
+          shortName: null,
+          fullName: 'Bilateral Alpha Project',
+          organizationCode: 67,
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'CENTER-06',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+      await service.notifyTaggedBilateralProjects(RESULT_ID, EMITTER, [1042]);
+
+      expect(lastEmitCall()[5]).toBe('Bilateral Alpha Project (ABC)');
     });
 
     // CLARISA leaves the Alliance-descended institutions with organization_code = NULL; those
@@ -227,6 +301,28 @@ describe('ResultTaggedNotificationService', () => {
       expect(projectRepo.find).not.toHaveBeenCalled();
       expect(notificationService.emitResultNotification).not.toHaveBeenCalled();
     });
+
+    // WPT-R-5 case 6 — several projects of the same Center on one call still produce one row.
+    it('sends one project emit for two projects owned by the same Center on one call (WPT-R-5 case 6)', async () => {
+      projectRepo.find.mockResolvedValueOnce([
+        { id: 10, shortName: 'B-A1080', organizationCode: 67 },
+        { id: 11, shortName: 'B-A1099', organizationCode: 67 },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'ABC-CENTER',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValue([21, 22]);
+
+      await service.notifyTaggedBilateralProjects(RESULT_ID, EMITTER, [10, 11]);
+
+      expect(notificationService.emitResultNotification).toHaveBeenCalledTimes(
+        1,
+      );
+    });
   });
 
   // BR4, as decided: one notification per affected organisation, not one per link.
@@ -246,10 +342,23 @@ describe('ResultTaggedNotificationService', () => {
       );
     });
 
-    it('drops users already told about this result by either tagged type', async () => {
+    // Rewritten per WPT-R-5/D-6 (design §10.1): the direct-tag flow dedups per type now, so this
+    // used to say "by either tagged type" — it is kept, naming the SAME type, not deleted. The
+    // cross-type case (a prior row of the OTHER type does NOT block) is covered below, case 4.
+    it('drops users already told about this result by the same tagged type (D-6)', async () => {
       notificationRepo.find.mockResolvedValueOnce([
-        { target_user: 11 },
-        { target_user: 12 },
+        {
+          target_user: 11,
+          obj_notification_type: {
+            type: NotificationTypeEnum.RESULT_CENTER_TAGGED,
+          },
+        },
+        {
+          target_user: 12,
+          obj_notification_type: {
+            type: NotificationTypeEnum.RESULT_CENTER_TAGGED,
+          },
+        },
       ]);
       centerRepo.find.mockResolvedValueOnce([
         { code: 'C1', clarisa_institution: { name: 'Centre One' } },
@@ -261,8 +370,15 @@ describe('ResultTaggedNotificationService', () => {
       expect(lastEmitCall()[2]).toEqual([13]);
     });
 
-    it('suppresses the emit entirely when every recipient was already notified', async () => {
-      notificationRepo.find.mockResolvedValueOnce([{ target_user: 11 }]);
+    it('suppresses the emit entirely when every recipient was already notified (same type)', async () => {
+      notificationRepo.find.mockResolvedValueOnce([
+        {
+          target_user: 11,
+          obj_notification_type: {
+            type: NotificationTypeEnum.RESULT_CENTER_TAGGED,
+          },
+        },
+      ]);
       centerRepo.find.mockResolvedValueOnce([
         { code: 'C1', clarisa_institution: { name: 'Centre One' } },
       ]);
@@ -285,6 +401,178 @@ describe('ResultTaggedNotificationService', () => {
         NotificationTypeEnum.RESULT_CENTER_TAGGED,
         NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
       ]);
+    });
+  });
+
+  // WPT-T-1 — per-type dedup in the direct-tag flow only (WPT-R-5, D-6). BCT keeps its
+  // cross-type set, proven here too (cases 7, 8) so the per-type change cannot leak into it.
+  describe('per-type dedup (WPT-R-5, D-6)', () => {
+    // Case 4 — falsifier: fails against today's code (one shared cross-type set) because a prior
+    // RESULT_BILATERAL_PROJECT_TAGGED row would wrongly block this RESULT_CENTER_TAGGED emit.
+    it('notifyTaggedCenters still notifies U despite a prior project-tagged row (case 4)', async () => {
+      notificationRepo.find.mockResolvedValueOnce([
+        {
+          target_user: 11,
+          obj_notification_type: {
+            type: NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+          },
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        { code: 'C1', clarisa_institution: { name: 'Centre One' } },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([11]);
+
+      await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['C1']);
+
+      expect(lastEmitCall()[2]).toEqual([11]);
+    });
+
+    // Case 5 — the direct flow still dedups within the SAME type (unchanged by D-6).
+    it('notifyTaggedBilateralProjects does not re-notify U for a prior project-tagged row (case 5)', async () => {
+      notificationRepo.find.mockResolvedValueOnce([
+        {
+          target_user: 11,
+          obj_notification_type: {
+            type: NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+          },
+        },
+      ]);
+      projectRepo.find.mockResolvedValueOnce([
+        { id: 10, shortName: 'B-A1080', organizationCode: 67 },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'ABC-CENTER',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([11]);
+
+      await service.notifyTaggedBilateralProjects(RESULT_ID, EMITTER, [10]);
+
+      expect(notificationService.emitResultNotification).not.toHaveBeenCalled();
+    });
+
+    // Case 7 — BCT: a Center that is both tagged (hand or derived) and the owner of a tagged
+    // project still gets only the project emit (BCT-R-9/DD-5), never leaking per-type dedup in.
+    it('BCT: a Center that is both tagged and project owner gets only the project emit (case 7)', async () => {
+      resultRepo.findOne.mockResolvedValue({
+        id: RESULT_ID,
+        status_id: 5,
+        source: SourceEnum.Bilateral,
+        obj_result_by_initiatives: [],
+      });
+      resultsCenterRepo.find.mockResolvedValueOnce([
+        {
+          center_id: 'AR',
+          is_leading_result: true,
+          is_active: true,
+          clarisa_center_object: {
+            code: 'AR',
+            clarisa_institution: { acronym: 'AR' },
+          },
+        },
+        {
+          center_id: 'ABC-CENTER',
+          is_leading_result: false,
+          is_active: true,
+          clarisa_center_object: {
+            code: 'ABC-CENTER',
+            clarisa_institution: { name: 'ABC Full Name' },
+          },
+        },
+      ]);
+      resultsByProjectsRepo.find.mockResolvedValueOnce([
+        {
+          project_id: 200,
+          is_lead: false,
+          obj_clarisa_project: {
+            id: 200,
+            shortName: 'B-A1080',
+            organizationCode: 67,
+          },
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'ABC-CENTER',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValue([21]);
+
+      await service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER);
+
+      expect(notificationService.emitResultNotification).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(lastEmitCall()[1]).toBe(
+        NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+      );
+    });
+
+    // Case 8 (AC32) — a prior DIRECT RESULT_CENTER_TAGGED row for user 21 still blocks them in
+    // BCT against a PROJECT target (cross-type): the only BCT target here is the non-lead project
+    // owned by CIP (RESULT_BILATERAL_PROJECT_TAGGED), with no hand-tagged Center target at all.
+    // This is deliberately cross-type — reviewer-flagged attempt 1 used a same-type Center target
+    // (CIP -> RESULT_CENTER_TAGGED), which a leaked per-type rule would also have blocked, so it
+    // could never fail. Falsifier: forcing `unionNotified` to `null` makes the project target read
+    // `notifiedByType.get(RESULT_BILATERAL_PROJECT_TAGGED)`, an empty set, so user 21 is NOT
+    // filtered and the emit fires — red. With the real code (BCT's union set), user 21 is in the
+    // merged set via their prior RESULT_CENTER_TAGGED row, so the emit is suppressed — green.
+    it('BCT: a prior direct RESULT_CENTER_TAGGED row still blocks the user against a cross-type project target (case 8, AC32)', async () => {
+      notificationRepo.find.mockResolvedValueOnce([
+        {
+          target_user: 21,
+          obj_notification_type: {
+            type: NotificationTypeEnum.RESULT_CENTER_TAGGED,
+          },
+        },
+      ]);
+      resultRepo.findOne.mockResolvedValue({
+        id: RESULT_ID,
+        status_id: 5,
+        source: SourceEnum.Bilateral,
+        obj_result_by_initiatives: [],
+      });
+      resultsCenterRepo.find.mockResolvedValueOnce([
+        {
+          center_id: 'AR',
+          is_leading_result: true,
+          is_active: true,
+          clarisa_center_object: {
+            code: 'AR',
+            clarisa_institution: { acronym: 'AR' },
+          },
+        },
+      ]);
+      resultsByProjectsRepo.find.mockResolvedValueOnce([
+        {
+          project_id: 200,
+          is_lead: false,
+          obj_clarisa_project: {
+            id: 200,
+            shortName: 'P-CIP',
+            organizationCode: 67,
+          },
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'CIP',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'CIP' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+      await service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER);
+
+      expect(roleByUserRepo.getUserIdsByCenter).toHaveBeenCalledWith('CIP');
+      expect(notificationService.emitResultNotification).not.toHaveBeenCalled();
     });
   });
 
@@ -632,7 +920,14 @@ describe('ResultTaggedNotificationService', () => {
     });
 
     it('does not re-notify a user already told about this result (AC32)', async () => {
-      notificationRepo.find.mockResolvedValueOnce([{ target_user: 21 }]);
+      notificationRepo.find.mockResolvedValueOnce([
+        {
+          target_user: 21,
+          obj_notification_type: {
+            type: NotificationTypeEnum.RESULT_CENTER_TAGGED,
+          },
+        },
+      ]);
       resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
       resultsCenterRepo.find.mockResolvedValueOnce([
         leadingCenterRow('AR'),
@@ -648,7 +943,14 @@ describe('ResultTaggedNotificationService', () => {
     });
 
     it('does notify a Center newly added before re-submission, while an already-notified Center stays silent (AC32)', async () => {
-      notificationRepo.find.mockResolvedValueOnce([{ target_user: 21 }]);
+      notificationRepo.find.mockResolvedValueOnce([
+        {
+          target_user: 21,
+          obj_notification_type: {
+            type: NotificationTypeEnum.RESULT_CENTER_TAGGED,
+          },
+        },
+      ]);
       resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
       resultsCenterRepo.find.mockResolvedValueOnce([
         leadingCenterRow('AR'),

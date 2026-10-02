@@ -1,0 +1,42 @@
+@if (visible()) {
+  <app-pr-dialog
+    [visible]="visible()"
+    [modal]="true"
+    [closeOnEscape]="!isSaving()"
+    [showHeader]="false"
+    [dismissableMask]="!isSaving()"
+    styleClass="confirmation-modal reject"
+    (onHide)="onCancel()">
+    <i
+      class="pi pi-times modal-close-icon"
+      [class.disabled]="isSaving()"
+      [style.cursor]="isSaving() ? 'not-allowed' : 'pointer'"
+      (click)="onCancel()"></i>
+    <div class="modal-body">
+      <div class="modal-icon reject">
+        <i class="pi pi-times"></i>
+      </div>
+      <h2 class="modal-title reject">{{ title() }}</h2>
+      <p class="modal-message">{{ message() }}</p>
+      <div class="modal-field">
+        <label class="modal-label required" for="primaryDeclineJustification">{{ copy.label }}</label>
+        <textarea
+          [ngModel]="text()"
+          (ngModelChange)="text.set($event)"
+          id="primaryDeclineJustification"
+          [rows]="4"
+          [disabled]="isSaving()"
+          [placeholder]="copy.placeholder"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button hlmBtn variant="outline" size="lg" (click)="onCancel()" [disabled]="isSaving()">{{ copy.cancel }}</button>
+      <button hlmBtn size="lg" (click)="onConfirm()" [disabled]="confirmDisabled()">
+        {{ copy.confirm }}
+        @if (isSaving()) {
+          <i class="pi pi-spinner pi-spin"></i>
+        }
+      </button>
+    </div>
+  </app-pr-dialog>
+}

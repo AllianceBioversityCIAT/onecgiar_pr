@@ -51,7 +51,7 @@ describe('EvidencesService — CGSpace item/UUID evidence links (P2-3692)', () =
     find: jest.fn(),
   };
   const mockResultRepository = {
-    getResultById: jest.fn(),
+    findOne: jest.fn(),
     update: jest.fn(),
   };
   const mockMqapService = { getDataFromCGSpaceHandle: jest.fn() };
@@ -180,7 +180,7 @@ describe('EvidencesService — CGSpace item/UUID evidence links (P2-3692)', () =
     });
 
     it('saves the section at the FIRST attempt, with no "piece of evidence was not saved" error', async () => {
-      mockResultRepository.getResultById.mockResolvedValue({ id: 9357 });
+      mockResultRepository.findOne.mockResolvedValue({ id: 9357 });
       mockEvidencesRepository.getEvidencesByResultIdAndLink.mockResolvedValue(
         undefined,
       );

@@ -72,7 +72,7 @@ describe('EvidencesService.replicateSPFiles — P2-3601', () => {
       providers: [
         EvidencesService,
         { provide: EvidencesRepository, useValue: mockEvidencesRepository },
-        { provide: ResultRepository, useValue: { getResultById: jest.fn() } },
+        { provide: ResultRepository, useValue: { findOne: jest.fn() } },
         { provide: VersionRepository, useValue: { getBaseVersion: jest.fn() } },
         {
           provide: ResultsKnowledgeProductsRepository,

@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { ShareResultRequest } from './entities/share-result-request.entity';
+import {
+  RequestTypeEnum,
+  ShareResultRequest,
+} from './entities/share-result-request.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { RequestStatus } from './entities/request-status.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
@@ -112,20 +115,37 @@ export class ShareResultRequestRepository
     shareInitId: number,
   ) {
     try {
-      // Check if there are active records with request_status_id = 4 for this result
+      // Check if there are active CONTRIBUTION drafts (request_status_id = 4) for this result.
+      // `PNS-T-1` (design.md §5 item 6): status 4 is now ALSO used by a saved-but-not-sent
+      // `primary` row (`PNS-DD-1`) — without this `request_type` filter, a result with only a
+      // draft `primary` choice (no contribution draft at all) would be wrongly treated as having
+      // draft contribution requests, searching for request_status_id 4 below for a share/contribute
+      // check that should be comparing against PENDING (1) contribution rows instead.
+      // @akili-spec notifications/primary-notify-on-submit
       const checkDraftQuery = `
         SELECT COUNT(*) as count
         FROM share_result_request srr
         WHERE srr.result_id = ?
           AND srr.request_status_id = 4
+          AND srr.request_type = ?
           AND srr.is_active > 0;
       `;
-      const draftResult = await this.query(checkDraftQuery, [resultId]);
+      const draftResult = await this.query(checkDraftQuery, [
+        resultId,
+        RequestTypeEnum.CONTRIBUTION,
+      ]);
       const hasDraftRequests = draftResult[0]?.count > 0;
 
       // Determine which request_status_id to search for
       const requestStatusId = hasDraftRequests ? 4 : 1;
 
+      // `PSR-T-4` forward pointer (T-2/T-3 review): a `primary` row is inserted with
+      // `owner_initiative_id = shared_inititiative_id = requested SP` (design.md §3.1). Without
+      // this filter, a Center's contribution-request path could match that very row here — e.g.
+      // an attempt to save the currently-requested SP as a contributor, BEFORE the
+      // `initiativeId === shareInitId` self-share guard in `share-result-request.service.ts`
+      // (`createShareResultRequests`) runs — and treat the pending primary request as an existing
+      // contribution request to reuse/overwrite. Scoping to `contribution` rows closes that.
       const queryData = `
         SELECT
           srr.share_result_request_id,
@@ -148,12 +168,19 @@ export class ShareResultRequestRepository
           AND srr.owner_initiative_id = ?
           AND srr.shared_inititiative_id = ?
           AND srr.request_status_id IN (?)
+          AND srr.request_type = ?
           AND srr.is_active > 0;
       `;
 
       const shareResultRequest: ShareResultRequest[] = await this.query(
         queryData,
-        [resultId, ownerInitId, shareInitId, requestStatusId],
+        [
+          resultId,
+          ownerInitId,
+          shareInitId,
+          requestStatusId,
+          RequestTypeEnum.CONTRIBUTION,
+        ],
       );
 
       return shareResultRequest.length ? shareResultRequest[0] : undefined;
@@ -229,18 +256,19 @@ export class ShareResultRequestRepository
 		v.phase_year
     FROM
     	share_result_request srr
-    	inner join \`result\` r on r.id = srr.result_id 
+    	inner join \`result\` r on r.id = srr.result_id
     						and r.is_active > 0
-    	inner join result_level rl on rl.id = r.result_level_id 
-    	inner join result_type rt on rt.id = r.result_type_id 
-		left join users u on u.id = srr.requested_by 
-    	left join users u2 on u2.id = srr.approved_by 
-		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id 
-    	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
-		INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+    	inner join result_level rl on rl.id = r.result_level_id
+    	inner join result_type rt on rt.id = r.result_type_id
+		left join users u on u.id = srr.requested_by
+    	left join users u2 on u2.id = srr.approved_by
+		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id
+    	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id
+		INNER JOIN result_status rs ON rs.result_status_id = r.status_id
 		inner join \`version\` v on v.id = r.version_id
-    WHERE 
+    WHERE
 		srr.is_active > 0
+		and not (srr.request_type = 'primary' and srr.request_status_id = 4)
 		${
       roleId == 1
         ? ''
@@ -319,6 +347,7 @@ export class ShareResultRequestRepository
 		inner join \`version\` v on v.id = r.version_id 
     WHERE 
 	srr.is_active > 0
+	and not (srr.request_type = 'primary' and srr.request_status_id = 4)
 	${
     roleId == 1
       ? ''
@@ -404,6 +433,16 @@ export class ShareResultRequestRepository
     }
   }
 
+  /**
+   * `PSR-T-4` forward pointer (T-2/T-3 review) applies to this owner/shared lookup too
+   * (`srr.owner_initiative_id = ? AND srr.shared_inititiative_id = ?`, same shape as
+   * `shareResultRequestExists`). Left unfiltered on purpose: this method has zero callers in the
+   * codebase today (confirmed by search) and its parameter binding is already broken independently
+   * of `request_type` — the query has 3 `?` placeholders in the WHERE clause plus `is_active > 0`,
+   * but the method only ever passes `[userId]`, so it would throw on the very first real call.
+   * Fixing that mismatch is a separate, unrelated defect outside this task's scope; adding a
+   * `request_type` filter to an unreachable, already-broken query would not close any real risk.
+   */
   async getRequestByUserId(userId: number) {
     const queryData = `
     SELECT

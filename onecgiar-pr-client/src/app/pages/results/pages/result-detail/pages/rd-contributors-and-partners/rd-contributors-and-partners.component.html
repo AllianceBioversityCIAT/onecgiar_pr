@@ -269,7 +269,7 @@
   <div style="position: relative">
     <app-pr-multi-select
       data-testid="cp-field-bilateral_projects"
-      [options]="this.rdPartnersSE.clarisaProjectsList"
+      [options]="filteredBilateralProjectOptions()"
       [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
       [required]="false"
       optionLabel="fullName"
@@ -279,6 +279,49 @@
       selectedOptionLabel="fullName"
       placeholder="Select project"
       [displayLabelFormatter]="formatBilateralProjectLabel.bind(this)">
+      <!--
+        P2-3860: the W3/Bilateral form's Center pills (P2-3859), here inside the panel under its search
+        box (`[util]` slot of pr-multi-select). Default "All centers" (the W1/W2 reporter belongs to a
+        Program, not a Center), then every Center owning a listed project by acronym; one pressed at a time.
+        View-only: they swap the OPTIONS, never the selection — `filteredBilateralProjectOptions()` keeps
+        every selected project in the list (union) — and never save.
+        🛑 The panel is open only while focus is inside `a.field` (`:focus-within`). `mousedown.preventDefault`
+        keeps focus where it was so a pill click can never close it (Safari does not focus a clicked button);
+        `click.stopPropagation` keeps the click out of the trigger. Past ~3 rows the group scrolls vertically.
+      -->
+      <div util>
+        @if (showProjectCenterPills()) {
+          <div
+            role="group"
+            class="flex max-h-[94px] flex-wrap items-center gap-[6px] overflow-y-auto overscroll-contain p-[2px]"
+            data-testid="cp-bilateral-projects-center-pills"
+            [attr.aria-label]="projectFilterCopy.groupLabel"
+            (mousedown)="$event.preventDefault()"
+            (click)="$event.stopPropagation()">
+            @for (pill of projectCenterPills(); track pill.value) {
+              <button
+                type="button"
+                class="inline-flex shrink-0 items-center gap-[6px] whitespace-nowrap rounded-full border px-[10px] py-[3px] text-[12px] font-semibold leading-[18px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--pr-color-primary-300)]"
+                [class]="
+                  pill.active
+                    ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-600)] text-[var(--pr-color-white)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]'
+                    : 'border-[var(--pr-border)] bg-[var(--pr-color-white)] text-[var(--pr-color-primary-600)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)]'
+                "
+                [attr.aria-pressed]="pill.active"
+                [attr.title]="pill.title"
+                [attr.aria-label]="pill.title"
+                [attr.data-testid]="'cp-bilateral-projects-center-pill-' + pill.value"
+                (click)="setProjectCenterFilter(pill.value)">
+                @if (pill.active) {
+                  <span class="h-[6px] w-[6px] rounded-full bg-current" aria-hidden="true"></span>
+                }
+                <span>{{ pill.label }}</span>
+                <span class="font-medium opacity-80">{{ projectFilterCopy.count(pill.count) }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
     </app-pr-multi-select>
 
     @if (!this.rdPartnersSE.hasTocResultMapped() || this.rdPartnersSE.loadingBilateralProjects()) {
@@ -474,10 +517,11 @@
         [(ngModel)]="contributor.planned_result"
         (selectOptionEvent)="onPlannedResultChange(contributor)"
         [readOnly]="true"
+        [hasValueOverride]="isAcceptedWithoutToc(contributor) ? true : null"
         [hideOptions]="!contributor?.result_toc_results?.length">
       </app-pr-yes-or-not>
 
-      @if (!contributor?.result_toc_results?.length) {
+      @if (!contributor?.result_toc_results?.length && !isAcceptedWithoutToc(contributor)) {
         <div class="pr-message">
           <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
           <p>

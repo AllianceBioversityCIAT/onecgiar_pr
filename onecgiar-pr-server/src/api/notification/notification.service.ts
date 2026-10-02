@@ -11,11 +11,51 @@ import {
 import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
 import { NotificationDto } from '../../shared/microservices/socket-management/dto/create-socket.dto';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
-import { FindOperator, MoreThan } from 'typeorm';
+import { FindOperator, In, MoreThan, Not } from 'typeorm';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { Notification } from './entities/notification.entity';
+import {
+  applyKeysetCursor,
+  KeysetFields,
+  KEYSET_PAGE_SIZE,
+  mergeKeysetLists,
+} from '../../shared/utils/keyset-cursor.util';
+
+/**
+ * `PSR-T-7`/`PSR-DD-7` — the 3 Center-notice types (`emitCenterNotice` in
+ * `primary-program-request.service.ts`). Excluded from the role-1-joined queries below and read
+ * back only through {@link NotificationService.findCenterNoticeNotifications}'s ownerless path,
+ * so a notice for an ownerless (declined/sent-back) result is never silently dropped, and one for
+ * an already-owned result (accepted) is never merged in twice.
+ */
+const CENTER_NOTICE_TYPES = [
+  NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+  NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+  NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
+];
+
+/**
+ * @akili-spec notifications/inbox-paginated-load
+ * PAGE-T-3 — keyset ordering for `notification` rows: `(created_date DESC, notification_id
+ * DESC)`. Shared by every history (viewed) query in `getAllNotifications` so cursors stay
+ * consistent across the 3 merged sources.
+ */
+const NOTIFICATION_KEYSET_FIELDS: KeysetFields = {
+  dateField: 'created_date',
+  idField: 'notification_id',
+};
+
+/** `getAllNotifications` scope/cursor options (PAGE-R-1, R-2, R-3, R-6, R-7). */
+export interface GetAllNotificationsOptions {
+  /** Phase (`result.version_id`) to scope result-linked rows to; absent -> all phases. */
+  versionId?: number;
+  /** `pending` -> pending set only; `history` -> history (viewed) page only; absent -> legacy (both). */
+  scope?: 'pending' | 'history';
+  /** Opaque keyset cursor for the next history page (PAGE-DD-2). */
+  cursor?: string;
+}
 
 @Injectable()
 export class NotificationService {
@@ -227,19 +267,88 @@ export class NotificationService {
    */
   private async findBilateralAiJobFinishedNotifications(
     userId: number,
-    options: { read?: boolean; after?: Date } = {},
+    options: {
+      read?: boolean;
+      after?: Date;
+      /** PAGE-T-3: opaque keyset cursor — only meaningful when `paged` is true. */
+      cursor?: string;
+      /**
+       * PAGE-T-3: when true, fetches `KEYSET_PAGE_SIZE + 1` rows ordered
+       * `(created_date DESC, notification_id DESC)` for merging into a history page
+       * (`mergeKeysetLists`) instead of returning every match. Stays unfiltered by phase
+       * (P-7, PAGE-OQ-5) — a job-finished row has no linked result to scope on.
+       */
+      paged?: boolean;
+    } = {},
   ): Promise<Notification[]> {
+    const where = {
+      target_user: userId,
+      ...(options.read !== undefined ? { read: options.read } : {}),
+      ...(options.after ? { created_date: MoreThan(options.after) } : {}),
+      obj_notification_type: {
+        type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+      },
+    };
     return this._notificationRepository.find({
       select: this.getNotificattionSelect(),
       relations: this.getNotificationRelations(),
-      where: {
-        target_user: userId,
-        ...(options.read !== undefined ? { read: options.read } : {}),
-        ...(options.after ? { created_date: MoreThan(options.after) } : {}),
-        obj_notification_type: {
-          type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
-        },
+      where: options.paged
+        ? applyKeysetCursor(where, options.cursor, NOTIFICATION_KEYSET_FIELDS)
+        : where,
+      ...(options.paged
+        ? {
+            take: KEYSET_PAGE_SIZE + 1,
+            order: { created_date: 'DESC', notification_id: 'DESC' },
+          }
+        : {}),
+    });
+  }
+
+  /**
+   * `PSR-T-7`/`PSR-DD-7` — the Center-notice read path (`design.md` §6.1, §2.2): the 3 new types
+   * are read WITHOUT the `obj_result_by_initiatives: { initiative_role_id: 1 }` condition the
+   * queries below use (`P-6`), so a "declined"/"moved" notice is still visible even though its
+   * result has no role-1 owner. Mirrors `findBilateralAiJobFinishedNotifications`'s shape:
+   * scoped to the recipient (`target_user`) and to active notifications only (`obj_result.
+   * is_active`), with the same `read`/`after` narrowing the callers already use.
+   */
+  private async findCenterNoticeNotifications(
+    userId: number,
+    options: {
+      read?: boolean;
+      after?: Date;
+      /** PAGE-T-3: phase (`result.version_id`) to scope to; absent -> all phases (PAGE-R-1). */
+      versionId?: number;
+      /** PAGE-T-3: opaque keyset cursor — only meaningful when `paged` is true. */
+      cursor?: string;
+      /** PAGE-T-3: see {@link findBilateralAiJobFinishedNotifications}'s `paged`. */
+      paged?: boolean;
+    } = {},
+  ): Promise<Notification[]> {
+    const where = {
+      target_user: userId,
+      ...(options.read !== undefined ? { read: options.read } : {}),
+      ...(options.after ? { created_date: MoreThan(options.after) } : {}),
+      obj_result: {
+        is_active: true,
+        ...(options.versionId !== undefined
+          ? { version_id: options.versionId }
+          : {}),
       },
+      obj_notification_type: { type: In(CENTER_NOTICE_TYPES) },
+    };
+    return this._notificationRepository.find({
+      select: this.getNotificattionSelect(),
+      relations: this.getNotificationRelations(),
+      where: options.paged
+        ? applyKeysetCursor(where, options.cursor, NOTIFICATION_KEYSET_FIELDS)
+        : where,
+      ...(options.paged
+        ? {
+            take: KEYSET_PAGE_SIZE + 1,
+            order: { created_date: 'DESC', notification_id: 'DESC' },
+          }
+        : {}),
     });
   }
 
@@ -594,87 +703,170 @@ export class NotificationService {
     }
   }
 
-  async getAllNotifications(user: TokenDto) {
+  /**
+   * @akili-spec notifications/inbox-paginated-load
+   * PAGE-T-3 — phase scoping (`options.versionId`), pending/history split (`options.scope`) and
+   * keyset history pagination (`options.cursor`) for the Updates feed (design.md §5, §4.1).
+   *
+   * - `versionId` reaches the result-scoped and Center-notice where-builders (PAGE-R-1); the
+   *   AI-job finder stays unfiltered (PAGE-P-7, PAGE-OQ-5 — phase-less, always shown).
+   * - `scope=pending` skips every history query entirely (not "run and discard" — PAGE-R-2);
+   *   `scope=history` skips every pending query the same way.
+   * - The 3 history (viewed) sources are each fetched `KEYSET_PAGE_SIZE + 1` rows at a time and
+   *   merged/sorted/cut to `KEYSET_PAGE_SIZE` by `mergeKeysetLists` (PAGE-R-3).
+   * - No inner `await` — every element of the `Promise.all` array is a promise started
+   *   synchronously when the array literal is evaluated; `Promise.all` is what waits (PAGE-R-7).
+   */
+  async getAllNotifications(
+    user: TokenDto,
+    options: GetAllNotificationsOptions = {},
+  ) {
     try {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
+      const { versionId, scope, cursor } = options;
+      const runPending = scope !== 'history';
+      const runHistory = scope !== 'pending';
+
+      const resultScopeWhere = () => ({
+        is_active: true,
+        obj_result_by_initiatives: { initiative_role_id: 1 },
+        ...(versionId !== undefined ? { version_id: versionId } : {}),
+      });
+
       const [
-        notificationsViewed,
+        viewedResultScoped,
         notificationsPending,
         notificationAnnouncement,
         jobFinishedViewed,
         jobFinishedPending,
+        centerNoticeViewed,
+        centerNoticePending,
       ] = await Promise.all([
-        await this._notificationRepository.find({
-          select: this.getNotificattionSelect(),
-          relations: this.getNotificationRelations(),
-          where: {
-            target_user: user.id,
-            read: true,
-            obj_result: {
-              is_active: true,
-              obj_result_by_initiatives: { initiative_role_id: 1 },
-            },
-          },
-        }),
+        runHistory
+          ? this._notificationRepository.find({
+              select: this.getNotificattionSelect(),
+              relations: this.getNotificationRelations(),
+              where: applyKeysetCursor(
+                {
+                  target_user: user.id,
+                  read: true,
+                  obj_result: resultScopeWhere(),
+                  // `PSR-DD-7`: the Center-notice types are read back only through
+                  // `findCenterNoticeNotifications`'s ownerless path below - excluded here so an
+                  // already-owned (accepted) notice is never merged in by both queries.
+                  obj_notification_type: {
+                    type: Not(In(CENTER_NOTICE_TYPES)),
+                  },
+                },
+                cursor,
+                NOTIFICATION_KEYSET_FIELDS,
+              ),
+              take: KEYSET_PAGE_SIZE + 1,
+              order: { created_date: 'DESC', notification_id: 'DESC' },
+            })
+          : Promise.resolve([]),
 
-        await this._notificationRepository.find({
-          select: this.getNotificattionSelect(),
-          relations: this.getNotificationRelations(),
-          where: {
-            target_user: user.id,
-            read: false,
-            obj_result: {
-              is_active: true,
-              obj_result_by_initiatives: { initiative_role_id: 1 },
-            },
-          },
-        }),
+        runPending
+          ? this._notificationRepository.find({
+              select: this.getNotificattionSelect(),
+              relations: this.getNotificationRelations(),
+              where: {
+                target_user: user.id,
+                read: false,
+                obj_result: resultScopeWhere(),
+                obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+              },
+            })
+          : Promise.resolve([]),
 
-        await this._notificationRepository.find({
-          select: {
-            text: true,
-            created_date: true,
-            obj_emitter_user: {
-              first_name: true,
-              last_name: true,
-            },
-            obj_notification_level: {
-              notifications_level_id: true,
-              type: true,
-            },
-            obj_notification_type: { notifications_type_id: true, type: true },
-          },
-          relations: {
-            obj_notification_level: true,
-            obj_notification_type: true,
-          },
-          where: {
-            obj_notification_level: { type: NotificationLevelEnum.APPLICATION },
-            obj_notification_type: { type: NotificationTypeEnum.ANNOUNCEMENT },
-            created_date: MoreThan(oneWeekAgo),
-          },
-        }),
+        runPending
+          ? this._notificationRepository.find({
+              select: {
+                text: true,
+                created_date: true,
+                obj_emitter_user: {
+                  first_name: true,
+                  last_name: true,
+                },
+                obj_notification_level: {
+                  notifications_level_id: true,
+                  type: true,
+                },
+                obj_notification_type: {
+                  notifications_type_id: true,
+                  type: true,
+                },
+              },
+              relations: {
+                obj_notification_level: true,
+                obj_notification_type: true,
+              },
+              where: {
+                obj_notification_level: {
+                  type: NotificationLevelEnum.APPLICATION,
+                },
+                obj_notification_type: {
+                  type: NotificationTypeEnum.ANNOUNCEMENT,
+                },
+                created_date: MoreThan(oneWeekAgo),
+              },
+            })
+          : Promise.resolve([]),
 
         // `design.md` §6.4 read-path branch — a bilateral AI job notification has no result, so
         // it can never satisfy the `obj_result` condition above; fetched separately and merged in.
-        this.findBilateralAiJobFinishedNotifications(user.id, { read: true }),
-        this.findBilateralAiJobFinishedNotifications(user.id, {
-          read: false,
-        }),
+        runHistory
+          ? this.findBilateralAiJobFinishedNotifications(user.id, {
+              read: true,
+              cursor,
+              paged: true,
+            })
+          : Promise.resolve([]),
+        runPending
+          ? this.findBilateralAiJobFinishedNotifications(user.id, {
+              read: false,
+            })
+          : Promise.resolve([]),
+
+        // `PSR-T-7`/`PSR-DD-7` — same reasoning: an ownerless result's Center notice can never
+        // satisfy the `initiative_role_id: 1` condition above; fetched separately and merged in.
+        runHistory
+          ? this.findCenterNoticeNotifications(user.id, {
+              read: true,
+              versionId,
+              cursor,
+              paged: true,
+            })
+          : Promise.resolve([]),
+        runPending
+          ? this.findCenterNoticeNotifications(user.id, {
+              read: false,
+              versionId,
+            })
+          : Promise.resolve([]),
       ]);
 
+      const viewedPage = runHistory
+        ? mergeKeysetLists(
+            [viewedResultScoped, jobFinishedViewed, centerNoticeViewed],
+            NOTIFICATION_KEYSET_FIELDS,
+          )
+        : { rows: [] as Notification[], hasMore: false, nextCursor: null };
+
       const notifications = {
-        notificationsViewed: [
-          ...this.mapNotificationResultFields(notificationsViewed),
-          ...jobFinishedViewed,
-        ],
+        notificationsViewed: this.mapNotificationResultFields(viewedPage.rows),
         notificationsPending: [
           ...this.mapNotificationResultFields(notificationsPending),
           ...jobFinishedPending,
+          ...this.mapNotificationResultFields(centerNoticePending),
         ],
         notificationAnnouncement,
+        viewedMeta: {
+          hasMore: viewedPage.hasMore,
+          nextCursor: viewedPage.nextCursor,
+        },
       };
 
       return {
@@ -705,6 +897,9 @@ export class NotificationService {
           is_active: true,
           obj_result_by_initiatives: { initiative_role_id: 1 },
         },
+        // `PSR-DD-7`: excluded here — read back only through
+        // `findCenterNoticeNotifications`'s ownerless path below.
+        obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
       };
 
       if (userLastViewed.last_pop_up_viewed) {
@@ -731,6 +926,17 @@ export class NotificationService {
             : {}),
         });
 
+      // `PSR-T-7`/`PSR-DD-7` — same reasoning as `jobFinishedUpdates`: an ownerless result's
+      // Center notice can never satisfy `whereConditions.obj_result` above.
+      const centerNoticeUpdates = this.mapNotificationResultFields(
+        await this.findCenterNoticeNotifications(user.id, {
+          read: false,
+          ...(userLastViewed.last_pop_up_viewed
+            ? { after: userLastViewed.last_pop_up_viewed }
+            : {}),
+        }),
+      );
+
       const shareResultPendings =
         await this._shareResultRequestService.getReceivedResultRequestPopUp(
           user,
@@ -738,10 +944,15 @@ export class NotificationService {
 
       const isError = (shareResultPendings as any)?.response;
       const notifications = isError
-        ? [...notificationsUpdates, ...jobFinishedUpdates]
+        ? [
+            ...notificationsUpdates,
+            ...jobFinishedUpdates,
+            ...centerNoticeUpdates,
+          ]
         : [
             ...notificationsUpdates,
             ...jobFinishedUpdates,
+            ...centerNoticeUpdates,
             ...(Array.isArray(shareResultPendings) ? shareResultPendings : []),
           ];
 
@@ -906,21 +1117,32 @@ export class NotificationService {
           storedText,
         );
       // NOTIF-T-12 (rework attempt 2): `RESULT_BILATERAL_PROJECT_TAGGED`'s `notification.text` is
-      // NOT always the same shape as `RESULT_CENTER_TAGGED`'s. The AC1/AC2 direct-tag flow now
-      // stores a bare project label (see `result-tagged-notification.service.ts`'s `emitFor()`,
-      // no `leadIn`) — composing `"The result <code> - <title> <label>"` for that shape reads as
-      // garbled, missing framing entirely. Only the BCT-T-4 submission flow (`leadIn` passed) and
-      // any pre-fix/legacy row still carry a whole composed sentence, which the shared fallback
-      // below (identical to `RESULT_CENTER_TAGGED`'s) handles correctly. Detect the shape with the
-      // same telltale substrings the client uses (`isComposedProjectTaggedText` — keep them in
-      // sync with `notification-type.constants.ts`'s twin).
+      // NOT always a composed sentence. The AC1/AC2 direct-tag flow now stores a bare project
+      // label (see `result-tagged-notification.service.ts`'s `emitFor()`, no `leadIn`) —
+      // composing `"The result <code> - <title> <label>"` for that shape reads as garbled, missing
+      // framing entirely. Only the BCT-T-4 submission flow (`leadIn` passed) and any pre-fix/legacy
+      // row still carry a whole composed sentence, which the shared fallback below handles
+      // correctly. Detect the shape with the same telltale substrings the client uses
+      // (`isComposedTaggedText` — keep them in sync with `notification-type.constants.ts`'s twin;
+      // `RESULT_CENTER_TAGGED` below joins this same detection, WCT-T-1).
+      //
+      // WPT-T-2 (`w1w2-project-tagged`, design §7.3/§9, DD-2): a bare row is no longer always a
+      // legacy label — WPT-T-1 now stores an enriched `"<project code> (<Center label>)"` shape
+      // (WPT-R-1). `parseTaggedProjectLabel` splits the two apart; a legacy bare row (no trailing
+      // `(…)`) still yields a null `centerLabel`, in which case the `from your center (...)`
+      // clause is omitted entirely (WPT-R-3). The composed/empty check above still runs FIRST, so
+      // a BCT row's own trailing `(ABC).` is never misparsed as this shape (WPT-R-4).
       case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
         const suffix = storedText?.trim();
-        if (suffix && !this.isComposedProjectTaggedText(suffix)) {
+        if (suffix && !this.isComposedTaggedText(suffix)) {
+          const { code, centerLabel } = this.parseTaggedProjectLabel(suffix);
           const identity = [resultCode, resultTitle]
             .filter(Boolean)
             .join(' - ');
-          return `${userName ?? 'A user'} from ${programCode ?? 'a Science Program'} has tagged project ${suffix} as contributor to result${identity ? ` ${identity}` : ''}`;
+          const centerClause = centerLabel
+            ? ` from your center (${centerLabel})`
+            : ' from your center';
+          return `${userName ?? 'A user'} from ${programCode ?? 'a Science Program'} has tagged the bilateral project ${code}${centerClause} to result${identity ? ` ${identity}` : ''}`;
         }
         return this.buildTaggedSuffixDescription(
           codeText,
@@ -929,7 +1151,28 @@ export class NotificationService {
           suffix,
         );
       }
-      case NotificationTypeEnum.RESULT_CENTER_TAGGED:
+      // WCT-T-1 (design.md §7.1, requirements.md WCT-R-5 push clause, WCT-R-8): joins the same
+      // bare-vs-composed shape detection as RESULT_BILATERAL_PROJECT_TAGGED above, because the
+      // direct-tag flow (W1/W2, IPSR, SP review) now stores a bare Center acronym/code (no
+      // `leadIn`) instead of the whole sentence — composing `"The result <code> - <title> ABC"`
+      // from the shared suffix fallback below would garble it. Only the BCT-T-4 submission flow
+      // (`leadIn` passed) and any pre-fix/legacy row still carry a whole composed sentence, which
+      // the shared fallback (identical to RESULT_CONTRIBUTION_ACCEPTED/DECLINED's) handles.
+      case NotificationTypeEnum.RESULT_CENTER_TAGGED: {
+        const suffix = storedText?.trim();
+        if (suffix && !this.isComposedTaggedText(suffix)) {
+          const identity = [resultCode, resultTitle]
+            .filter(Boolean)
+            .join(' - ');
+          return `${programCode ?? 'a Science Program'} has tagged your CG Center as a contributor (${suffix}) to result${identity ? ` ${identity}` : ''}`;
+        }
+        return this.buildTaggedSuffixDescription(
+          codeText,
+          resultCode,
+          resultTitle,
+          suffix,
+        );
+      }
       // P2-3188 joins the same shape: the varying half is which Science Program decided, which
       // cannot be derived when the notification is read.
       case NotificationTypeEnum.RESULT_CONTRIBUTION_ACCEPTED:
@@ -945,6 +1188,26 @@ export class NotificationService {
           resultTitle,
           storedText?.trim(),
         );
+      }
+      // `PSR-T-7`/`PSR-R-14` (rework attempt 2, Reviewer finding 1) — Center notices
+      // (accepted/declined/moved). Unlike `RESULT_CENTER_TAGGED` et al., `notification.text`
+      // here is NOT a suffix that completes a sentence started by "The result <id>" — it is a
+      // WHOLE sentence whose subject is the SP: "SP09 accepted to be the primary Science
+      // Program of this result. Click to see the result." (`emitCenterNotice`,
+      // `primary-program-request.service.ts`). Splicing the result identity in place of "this
+      // result" keeps the SP as subject and names the result exactly once, matching design.md
+      // §6.1's wording ("`{sp}` accepted ... of result …"). No identity to splice in (no
+      // resultCode/resultTitle) → the stored sentence is already a complete, standalone line,
+      // same reasoning as `BILATERAL_AI_JOB_FINISHED` below.
+      case NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED:
+      case NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED:
+      case NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED: {
+        const suffix = storedText?.trim();
+        if (!suffix) return `There is a new update on ${codeText}`;
+        const identity = [resultCode, resultTitle].filter(Boolean).join(' - ');
+        return identity
+          ? suffix.replace('of this result', `of result ${identity}`)
+          : suffix;
       }
       case NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED:
         // No result to build an identity from (`result_id` is always `NULL` for this type,
@@ -979,16 +1242,51 @@ export class NotificationService {
   }
 
   /**
-   * Server-side twin of `notification-type.constants.ts`'s `isComposedProjectTaggedText` — both
-   * detect the same literal server template from `result-tagged-notification.service.ts`'s
-   * `emitFor()`: `"${leadIn} has tagged the ${label}. Click to see the result."`. Keep the two in
-   * sync if that template ever changes.
+   * Server-side twin of `notification-type.constants.ts`'s `isComposedTaggedText` — both detect
+   * the same literal server template from `result-tagged-notification.service.ts`'s `emitFor()`:
+   * `"${leadIn} has tagged the ${label}. Click to see the result."`. Shared by
+   * `RESULT_BILATERAL_PROJECT_TAGGED` and `RESULT_CENTER_TAGGED` (type-neutral name, WCT-T-1).
+   * Keep the two in sync if that template ever changes.
    */
-  private isComposedProjectTaggedText(text: string): boolean {
+  private isComposedTaggedText(text: string): boolean {
     return (
       text.includes(' has tagged the ') ||
       text.trim().endsWith('Click to see the result.')
     );
+  }
+
+  /**
+   * WPT-T-2 (`w1w2-project-tagged`, design §7.3/§9, DD-2): splits an enriched bare
+   * `RESULT_BILATERAL_PROJECT_TAGGED` row's stored text (`"<project code> (<Center label>)"`,
+   * WPT-R-1) into its project code and Center label, anchored on the **last trailing** `(…)`
+   * with non-empty contents. A legacy bare row (no trailing parenthetical, WPT-R-3) yields a null
+   * `centerLabel`. Only called once the caller has already ruled out a composed or empty text
+   * (`isComposedTaggedText`) — never apply this to a BCT/legacy composed sentence (its own
+   * trailing `(ABC).` must NOT be parsed, WPT-R-4).
+   *
+   * `[^()]+` (not `.+`) inside the parens is what makes "last trailing" correct for a project
+   * name that itself contains parentheses, e.g. `"Seeds (Phase 2) project (ABC)"` → code
+   * `"Seeds (Phase 2) project"`, label `"ABC"`.
+   *
+   * DR-1 (accepted risk): a legacy bare row whose code came from the `fullName` fallback and
+   * itself ends in `"(…)"` is misparsed as code+label — `short_name` is NOT NULL server-side, so
+   * this only happens when `short_name` is empty.
+   *
+   * Keep in sync with the client twin:
+   * `onecgiar-pr-client/src/app/shared/constants/notification-type.constants.ts`
+   * `parseTaggedProjectLabel`. Both pin the same five-shape table (design §9).
+   */
+  private parseTaggedProjectLabel(text: string): {
+    code: string;
+    centerLabel: string | null;
+  } {
+    const match = text.match(/^(.*)\(([^()]+)\)\s*$/);
+    if (!match) return { code: text, centerLabel: null };
+
+    const centerLabel = match[2].trim();
+    if (!centerLabel) return { code: text, centerLabel: null };
+
+    return { code: match[1].trim(), centerLabel };
   }
 
   /**
@@ -1058,5 +1356,6 @@ interface WhereConditions {
       initiative_role_id: number;
     };
   };
+  obj_notification_type?: { type: FindOperator<string> };
   created_date?: FindOperator<Date>;
 }

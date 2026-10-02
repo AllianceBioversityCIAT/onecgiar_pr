@@ -601,6 +601,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  /** Bilateral review is P25-only: an accepted contributor (`is_accepted`, getTocByResultV2) with no
+   *  ToC rows is not pending — the header reads "Accepted without ToC mapped" with the answered tint. */
+  isAcceptedWithoutToc(contributor: any): boolean {
+    return !!contributor?.is_accepted && !contributor?.result_toc_results?.length;
+  }
+
   onPlannedResultChange(): void {
     if (!this.tocInitiative) return;
 
