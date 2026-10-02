@@ -20,7 +20,7 @@ const DEFAULT_CONTRIBUTION_PERCENTAGE = 100;
  * (which replaced the old boolean "ToC cleared" flag, 2026-09-30 change log).
  */
 interface PrimaryRequestState {
-  state: 'none' | 'pending' | 'sent_back' | 'accepted';
+  state: 'none' | 'pending' | 'sent_back' | 'accepted' | 'draft';
   program_code: string | null;
   declined_by_codes: string[];
 }
@@ -97,13 +97,20 @@ export class SectionZeroDashboardComponent {
     if (request.state === 'none') {
       return { tone: 'warning' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.noneUnpicked };
     }
+    if (request.state === 'draft') {
+      const code = request.program_code ?? '';
+      return { tone: 'info' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.draft(code) };
+    }
     return null;
   });
 
-  /** design.md §6.3 — shown whenever Submit is server-blocked by the lack of an accepted owner. */
+  /**
+   * design.md §6.3 — shown whenever Submit is server-blocked by the lack of an accepted owner.
+   * `draft` (PNS-R-5) is not server-blocked: the choice is saved and Submit is what sends it.
+   */
   readonly submitBlockedReason = computed(() => {
     const request = this.primaryRequest();
-    if (!request || request.state === 'accepted') return null;
+    if (!request || request.state === 'accepted' || request.state === 'draft') return null;
     return BILATERAL_PRIMARY_ASSIGNMENT_COPY.submitBlockedReason;
   });
 

@@ -13,7 +13,7 @@
 
 ## 2. Summary
 
-The saved primary choice is a `primary` row in `share_result_request` with status **DRAFT (4)**, the status PSR already uses for unreleased contributor drafts. Submit flips it to **PENDING (1)** in the submit transaction. Accept and decline learn one new fact: the result may already be in Pending Review.
+The saved primary choice is a `primary` row in `share_result_request` with status **DRAFT (4)**, the status PSR already uses for unreleased contributor drafts. Submit flips it to **PENDING (1)** in the submit transaction. Accept learns one new fact: the result may already be in Pending Review. Decline is owned by `PDR` (amended 2026-10-01).
 
 No migration. No new endpoint. No change to any request or response shape except one new `state` value (`draft`) on the existing primary-state read.
 
@@ -50,7 +50,7 @@ No schema change. One new use of an existing value:
 
 | # | Where | Rule | Req |
 |---|---|---|---|
-| 1 | `request()` | New option `asDraft`. Inserts status DRAFT instead of PENDING. Idempotency check also matches an active DRAFT row for the same SP. `cancelRound` also deactivates active DRAFT `primary` rows (query already filters `request_type = primary`, so contributor drafts are untouched) | R-1 |
+| 1 | `request()` | New option `asDraft`. Inserts status DRAFT instead of PENDING. Idempotency check also matches an active DRAFT row for the same SP. The DD-8 round cancel also deactivates active DRAFT `primary` rows (`opts.cancelRound` was later removed by PDR) (query already filters `request_type = primary`, so contributor drafts are untouched) | R-1 |
 | 2 | Create paths (`createResultHeader`, `populateInitiativeAndTocFromProgramCode`) | Pass `asDraft: true` | R-1 |
 | 3 | `updatePrimaryAssignment` | Pass `asDraft: true` only when there is **no owner** and the result is Editing/Draft. Swap (owner exists) unchanged | R-1, scope |
 | 4 | New `findDraftPrimaryInitiativeId(resultId, manager?)` | Mirror of `findPendingPrimaryInitiativeId` for status 4 | R-1, R-2 |
@@ -59,7 +59,7 @@ No schema change. One new use of an existing value:
 | 7 | `assertSubmittable` | No owner → allowed only if a DRAFT primary exists; else today's error. Swap guard (pending) unchanged | R-2 |
 | 8 | `submitForReview` transaction | If ownerless: new `sendDraft(resultId, manager)` flips DRAFT→PENDING **inside** the transaction; failure throws and rolls back the submit. After commit: call `announcePendingReview` **only if an owner exists** | R-2 |
 | 9 | `accept()` post-commit | If the result's status is Pending Review, call `BilateralService.announcePendingReview(resultId, acceptingUserId)` after the Center notice. Resolved lazily through `ModuleRef` (`strict: false`), never throws | R-3 |
-| 10 | `decline()` transaction | Ownerless + not moved + result in Pending Review → set `status_id` to Editing. Moved case: the new row is PENDING (today's `request()` default), status kept | R-4 |
+| 10 | `decline()` | **No PNS change** (amended 2026-10-01). `PDR-R-4` already sets Rejected for any ownerless decline, including from Pending Review. A regression test only | R-4 |
 
 ## 6. Frontend Plan
 

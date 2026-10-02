@@ -365,6 +365,9 @@ describe('BilateralCenterService', () => {
             // `PNS-T-1` — no saved-but-not-sent draft round by default; individual tests override.
             findDraftPrimaryInitiativeId: jest.fn().mockResolvedValue(null),
             releaseContributors: jest.fn().mockResolvedValue({ released: 0 }),
+            // `PNS-T-2` — flips a DRAFT primary round to PENDING inside the submit transaction;
+            // individual tests override to simulate a failure.
+            sendDraft: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -3214,6 +3217,104 @@ describe('BilateralCenterService', () => {
       await expect(
         service.submitForReview(user, 77, decisionDto),
       ).rejects.toThrow(/no Science Program assigned/);
+    });
+
+    // `PNS-T-2` (requirements.md `PNS-R-2`, design.md §5 items 7-8) — submit now sends the
+    // saved (DRAFT) primary choice for an ownerless result instead of refusing it.
+    describe('PNS-R-2 — ownerless submit sends the saved primary choice', () => {
+      let primaryProgramRequestService: PrimaryProgramRequestService;
+      let resultByInitiativesRepository: ResultByInitiativesRepository;
+
+      beforeEach(() => {
+        primaryProgramRequestService = module.get<PrimaryProgramRequestService>(
+          PrimaryProgramRequestService,
+        );
+        resultByInitiativesRepository =
+          module.get<ResultByInitiativesRepository>(
+            ResultByInitiativesRepository,
+          );
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          editingResult,
+        );
+        // Ownerless for this whole describe block; each test sets the DRAFT lookup it needs.
+        (
+          resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+        ).mockResolvedValue(null);
+      });
+
+      // `Fails if` (tasks.md) — on today's (pre-T-2) code this gets "The result has no Science
+      // Program assigned" instead of succeeding. Must be seen red first.
+      it('ownerless + a saved DRAFT choice → Pending Review, sendDraft runs inside the submit transaction, announcePendingReview is NOT called (R-2 main, first AND IT MUST)', async () => {
+        (
+          primaryProgramRequestService.findDraftPrimaryInitiativeId as jest.Mock
+        ).mockResolvedValue(9); // SP09 saved as a draft choice
+
+        const result = await service.submitForReview(user, 77, decisionDto);
+
+        expect((result.response as any).status).toBe(
+          ResultStatusData.PendingReview.value,
+        );
+        // `sendDraft` is called with the SAME manager the transaction's other writes use
+        // (passed through from `resultRepository.manager.transaction`'s callback argument).
+        expect(resultRepository.manager.transaction).toHaveBeenCalled();
+        expect(primaryProgramRequestService.sendDraft).toHaveBeenCalledWith(
+          77,
+          expect.anything(),
+        );
+        const bilateralService = module.get<BilateralService>(
+          BilateralService,
+        ) as any;
+        expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
+      });
+
+      // R-2 no-choice scenario, restated explicitly for this describe block's ownerless setup
+      // (the plain "refuses a result with no Science Program assigned" test above already
+      // covers the same message; this one pins that the DRAFT lookup is what is consulted).
+      it("ownerless, no saved choice → refused with today's message, no update (R-2 no-choice)", async () => {
+        (
+          primaryProgramRequestService.findDraftPrimaryInitiativeId as jest.Mock
+        ).mockResolvedValue(null);
+
+        await expect(
+          service.submitForReview(user, 77, decisionDto),
+        ).rejects.toThrow(/no Science Program assigned/);
+        expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+      });
+
+      // R-2 failure scenario — `sendDraft` throwing must reject the whole submit; the status
+      // update inside the SAME transaction callback must not be left committed.
+      it('sendDraft throws → submit rejects, the transaction callback rejects (R-2 failure)', async () => {
+        (
+          primaryProgramRequestService.findDraftPrimaryInitiativeId as jest.Mock
+        ).mockResolvedValue(9);
+        (primaryProgramRequestService.sendDraft as jest.Mock).mockRejectedValue(
+          new Error('no active DRAFT primary row'),
+        );
+
+        await expect(
+          service.submitForReview(user, 77, decisionDto),
+        ).rejects.toThrow('no active DRAFT primary row');
+        const bilateralService = module.get<BilateralService>(
+          BilateralService,
+        ) as any;
+        expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
+      });
+    });
+
+    // R-2 existing scenario — restated for clarity next to the new ownerless tests: an owner
+    // already exists, so `sendDraft` must never be called (only `announcePendingReview` is).
+    it('owner exists → announcePendingReview is called, sendDraft is NOT called (R-2 existing)', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const bilateral = module.get<BilateralService>(BilateralService) as any;
+      const primaryProgramRequestService =
+        module.get<PrimaryProgramRequestService>(
+          PrimaryProgramRequestService,
+        ) as any;
+
+      await service.submitForReview(user, 77, decisionDto);
+
+      expect(bilateral.announcePendingReview).toHaveBeenCalledWith(77, user.id);
+      expect(primaryProgramRequestService.sendDraft).not.toHaveBeenCalled();
     });
   });
 

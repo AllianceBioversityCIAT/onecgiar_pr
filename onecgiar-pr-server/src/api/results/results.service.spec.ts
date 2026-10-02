@@ -3,6 +3,8 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { MWB_COMPLETENESS_CAP } from './results-validation-module/completeness';
 import { ReviewDecisionEnum } from './dto/review-decision.dto';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { SourceEnum } from './entities/result.entity';
 
 /**
  * `changes/my-work-board` MWB-T-1 — `findAllByRoleFiltered` (the `roles/filter` list) gains an
@@ -521,6 +523,114 @@ describe('ResultsService — emitBilateralReviewNotification per-recipient wordi
     expect(calls).toHaveLength(2);
     expect(calls[1][5]).toBe(
       'where your center was tagged, has been approved by the Science Program.',
+    );
+  });
+});
+
+/**
+ * `PNS-T-2` (requirements.md `PNS-R-2` second `AND IT MUST`, design.md `PNS-DD-4` reversion
+ * challenge) — a bilateral result that reached Pending Review ownerless (`PNS-R-2`'s
+ * submit-sends-the-request path) is hidden from every SP review list (owner-based queries), but
+ * nothing stopped a platform admin from opening it directly and approving/rejecting it, which
+ * would dereference an owner that does not exist yet. `reviewBilateralResult` now refuses with
+ * 400 "This result is awaiting the primary Science Program's acceptance." until the primary
+ * accepts — `assertDecision` is mocked to always allow here (its own admin/role logic is
+ * `bilateral-access.service.spec.ts`'s territory), so this guard is proved independent of role.
+ */
+describe('ResultsService — reviewBilateralResult owner guard (PNS-T-2)', () => {
+  const user: TokenDto = { id: 7 } as TokenDto;
+
+  function makeService(config: {
+    status_id?: number;
+    owner?: { id: number } | null;
+  }) {
+    const service: any = Object.create(ResultsService.prototype);
+    const pendingResult = {
+      id: 42,
+      source: SourceEnum.Bilateral,
+      is_active: true,
+      status_id: config.status_id ?? ResultStatusData.PendingReview.value,
+    };
+    const fakeManager = {
+      findOne: jest.fn().mockResolvedValue(pendingResult),
+      update: jest.fn().mockResolvedValue({}),
+      create: jest.fn((_entity: unknown, payload: unknown) => payload),
+      save: jest.fn().mockResolvedValue({}),
+    };
+    service._dataSource = {
+      transaction: jest.fn(async (cb: any) => cb(fakeManager)),
+    };
+    service._bilateralAccessService = {
+      assertDecision: jest.fn().mockResolvedValue(undefined),
+    };
+    service._resultByInitiativesRepository = {
+      getOwnerInitiativeByResult: jest
+        .fn()
+        .mockResolvedValue(config.owner ?? null),
+    };
+    service._handlersError = {
+      returnErrorRes: jest.fn((c: any) => c.error),
+    };
+    service.emitBilateralReviewNotification = jest
+      .fn()
+      .mockResolvedValue(undefined);
+    service.enqueueBilateralWebhook = jest.fn().mockResolvedValue(undefined);
+    service._shareResultRequestRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    service._updateTocMapping = jest.fn().mockResolvedValue(undefined);
+    return { service, fakeManager };
+  }
+
+  // `Fails if`-style falsifier: on today's (pre-T-2) code there is no owner check at all, so
+  // an ownerless Pending Review result approves successfully instead of refusing. Red first.
+  it('no owner on a Pending Review result → 400 with the exact PNS-R-2 text, APPROVE decision, no status update committed', async () => {
+    const { service, fakeManager } = makeService({ owner: null });
+
+    const res = await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.APPROVE },
+      user,
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.message).toBe(
+      "This result is awaiting the primary Science Program's acceptance.",
+    );
+    expect(fakeManager.update).not.toHaveBeenCalled();
+    expect(service.emitBilateralReviewNotification).not.toHaveBeenCalled();
+  });
+
+  it('no owner on a Pending Review result → same refusal on a REJECT decision too', async () => {
+    const { service } = makeService({ owner: null });
+
+    const res = await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.REJECT, justification: 'not relevant' },
+      user,
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.message).toBe(
+      "This result is awaiting the primary Science Program's acceptance.",
+    );
+  });
+
+  it('an owner exists → the guard does not interfere; approval proceeds', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+
+    const res = await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.APPROVE },
+      user,
+    );
+
+    expect(res.status).toBe(200);
+    expect(fakeManager.update).toHaveBeenCalledWith(
+      expect.anything(),
+      { id: 42 },
+      expect.objectContaining({ status_id: ResultStatusData.Approved.value }),
     );
   });
 });

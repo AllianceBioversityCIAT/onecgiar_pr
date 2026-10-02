@@ -1,5 +1,6 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ModuleRef } from '@nestjs/core';
 import { EntityManager, In, Not, Repository } from 'typeorm';
 import { ShareResultRequestRepository } from '../share-result-request.repository';
 import {
@@ -35,6 +36,31 @@ import {
 } from '../../../notification/enum/notification.enum';
 import { env } from 'node:process';
 import Handlebars from 'handlebars';
+// `PNS-T-2` rework attempt 2 (Reviewer FAIL) — `BilateralService` already injects this module
+// (`bilateral.service.ts` → `_primaryProgramRequestService`, no `forwardRef`), so a **static,
+// file-top-level** import of `bilateral.service.ts` here is a real import cycle at the Node/TS
+// module-resolution level, not just at the NestJS module-graph level: `api/modules.routes.ts`
+// loads `ResultsModule` (→ this file) before `BilateralModule` is ever reached, so when this file
+// used to reach its `import { BilateralService } from ...` line, `bilateral.service.ts` started
+// loading for the FIRST time and immediately required this file back — which was still mid
+// top-to-bottom evaluation and had not yet defined `PrimaryProgramRequestService`. That bound
+// `BilateralService`'s own `_primaryProgramRequestService` constructor param to `undefined` in
+// `design:paramtypes`, which Nest cannot resolve (no `forwardRef` on that side) → boot crash. See
+// `primary-program-request.load-order.spec.ts` for the reproduction/proof and
+// `.agents/reviewer.md`'s FAIL report on this task for the full trace.
+//
+// `forwardRef` alone does not fix a STATIC top-level import — `forwardRef` only defers *when a
+// decorator resolves its token*, not *when the module file itself is first `require`d*. The classic
+// forwardRef dance needs both sides wrapped; the actually-safe fix for a one-directional runtime-only
+// need (this file never needs `BilateralService` at the top level, only inside one method) is to
+// never give it a static binding at all: `BilateralService` is loaded with a dynamic `import()`
+// **inside** `announceIfPendingReview`, so Node never touches `bilateral.service.ts` while this file
+// is mid-evaluation — only later, the first time `accept()` actually reaches that branch at
+// runtime, long after every module in the app has finished loading. Under this project's
+// `tsconfig.json` (`"module": "commonjs"`), TypeScript downlevels `import()` to
+// `Promise.resolve().then(() => require(...))`, which keeps it genuinely deferred (not hoisted to
+// a top-level `require` by the bundler) under both `ts-jest` and the Lambda/serverless-plugin-
+// typescript build.
 
 /** design.md §3.1: `request_status_id` values on a `share_result_request` row. */
 const enum RequestStatusId {
@@ -169,6 +195,10 @@ export class PrimaryProgramRequestService {
     // time without `forwardRef` here, crashing Nest's DI container at boot.
     @Inject(forwardRef(() => NotificationService))
     private readonly notificationService: NotificationService,
+    // `PNS-T-2` (design.md §5 item 9, P-7) — lazy lookup only, resolved inside `accept()`; never
+    // a constructor-decorated dependency, so no `forwardRef` is needed here (see the
+    // `BilateralService` import comment above).
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   /**
@@ -459,6 +489,40 @@ export class PrimaryProgramRequestService {
       },
     });
     return draft?.shared_inititiative_id ?? null;
+  }
+
+  /**
+   * `PNS-T-2` (design.md §5 item 8, `PNS-DD-2`) — flips the saved-but-not-sent DRAFT primary
+   * round to PENDING, **inside the caller's submit transaction**: `BilateralCenterService
+   * .submitForReview` passes its transaction `manager` so this write is atomic with the
+   * result's status move to Pending Review (`PNS-R-2` "the whole submit MUST fail" scenario).
+   *
+   * Throws (does not return an outcome object, unlike {@link request}) on any failure — 0 rows
+   * affected (no active DRAFT primary row for this result, which `assertSubmittable` should
+   * already have ruled out, or a race that cancelled it between the guard and the submit) or a
+   * query error — so the caller's transaction callback rejects and the whole submit rolls back.
+   *
+   * `manager` is required (not optional like `request()`'s): this method only exists to run
+   * inside a transaction; a caller without one should not reach it.
+   *
+   * @akili-spec notifications/primary-notify-on-submit
+   */
+  async sendDraft(resultId: number, manager: EntityManager): Promise<void> {
+    const repo = manager.getRepository(ShareResultRequest);
+    const result = await repo.update(
+      {
+        result_id: resultId,
+        request_type: RequestTypeEnum.PRIMARY,
+        request_status_id: RequestStatusId.DRAFT,
+        is_active: true,
+      },
+      { request_status_id: RequestStatusId.PENDING },
+    );
+    if (!result.affected) {
+      throw new Error(
+        `PrimaryProgramRequestService.sendDraft: no active DRAFT primary row found for result ${resultId}`,
+      );
+    }
   }
 
   /**
@@ -754,6 +818,14 @@ export class PrimaryProgramRequestService {
           user.id,
           `${spCode ?? 'The Science Program'} accepted to be the primary Science Program of this result. Click to see the result.`,
         );
+
+        // `PNS-R-3`/`PNS-DD-3` — a result that reached Pending Review ownerless (`PNS-R-2`) had
+        // its submitted/contributor-tagging notices deferred because no owner existed yet; now
+        // one does. Only fires when the result is ALREADY Pending Review (the normal PSR
+        // flow — accept on an Editing result, swap acceptance — never announces here; a
+        // subsequent Submit still runs its own `announcePendingReview`, so this never doubles
+        // up with it, `BUT` "no duplicates").
+        await this.announceIfPendingReview(accepted.resultId, user.id);
       }
 
       return outcome;
@@ -1217,6 +1289,58 @@ export class PrimaryProgramRequestService {
     } catch (error) {
       this.logger.warn(
         `PrimaryProgramRequestService.emitCenterNotice failed (resultId=${resultId}, type=${notificationType}): ${
+          error?.message ?? error
+        }`,
+      );
+    }
+  }
+
+  /**
+   * `PNS-T-2` (design.md §5 item 9, `PNS-DD-3`) — after an accept, tells the submitted/tagging
+   * notifications to run IF this result reached Pending Review ownerless (`PNS-R-2`): reads the
+   * result's CURRENT status fresh (accept() itself never writes `Result.status_id`), and only
+   * when it is Pending Review loads `bilateral.service.ts` with a dynamic `import()` — never a
+   * static top-level import (see the class-level comment on the removed import, and
+   * `primary-program-request.load-order.spec.ts`) — and resolves `BilateralService` through
+   * `ModuleRef` (`strict: false` — P-7, the module graph can't import it back without a cycle)
+   * before calling `announcePendingReview`. Never throws: an accept must stay committed even if
+   * this fails.
+   *
+   * `ModuleRef.get` still needs the *class reference* `BilateralService` as its lookup token (it
+   * does not accept the service by name/string here), which is exactly what the dynamic `import()`
+   * hands it — resolved lazily, at call time, long after every module has finished loading.
+   *
+   * @akili-spec notifications/primary-notify-on-submit
+   */
+  private async announceIfPendingReview(
+    resultId: number,
+    acceptingUserId: number,
+  ): Promise<void> {
+    try {
+      const result = await this.resultRepository.findOne({
+        where: { id: resultId },
+      });
+      if (Number(result?.status_id) !== ResultStatusData.PendingReview.value) {
+        return;
+      }
+
+      const { BilateralService } = await import(
+        '../../../bilateral/bilateral.service'
+      );
+      const bilateralService = this.moduleRef.get(BilateralService, {
+        strict: false,
+      });
+      if (!bilateralService) {
+        this.logger.warn(
+          `PrimaryProgramRequestService.accept: BilateralService unavailable; skipping Pending Review announcement for result ${resultId}`,
+        );
+        return;
+      }
+
+      await bilateralService.announcePendingReview(resultId, acceptingUserId);
+    } catch (error) {
+      this.logger.warn(
+        `PrimaryProgramRequestService.accept: announceIfPendingReview failed (resultId=${resultId}): ${
           error?.message ?? error
         }`,
       );

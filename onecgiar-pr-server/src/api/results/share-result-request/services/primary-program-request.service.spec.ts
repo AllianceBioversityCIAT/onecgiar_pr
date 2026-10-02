@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { ModuleRef } from '@nestjs/core';
 import {
   PrimaryProgramRequestService,
   PrimaryRequestStateEnum,
@@ -86,6 +87,12 @@ describe('PrimaryProgramRequestService', () => {
   };
   const mockNotificationService = {
     emitResultNotification: jest.fn(),
+  };
+  // `PNS-T-2` — `accept()`'s post-commit `announceIfPendingReview` resolves `BilateralService`
+  // lazily through this; `.get` returns `undefined` by default (unavailable, logged and
+  // skipped), same posture `_resultTaggedNotificationService`'s `@Optional()` takes elsewhere.
+  const mockModuleRef = {
+    get: jest.fn(),
   };
 
   // Transactional per-entity repositories the `accept`/`decline` transaction resolves through
@@ -218,6 +225,10 @@ describe('PrimaryProgramRequestService', () => {
           provide: NotificationService,
           useValue: mockNotificationService,
         },
+        {
+          provide: ModuleRef,
+          useValue: mockModuleRef,
+        },
       ],
     }).compile();
 
@@ -265,6 +276,10 @@ describe('PrimaryProgramRequestService', () => {
       title: 'A result',
       version_id: 1,
     });
+    // `PNS-T-2` — `accept()`'s post-commit `ModuleRef.get` default: unavailable (undefined),
+    // so `announceIfPendingReview` logs and returns rather than throwing. Individual tests
+    // override with a fake `BilateralService`.
+    mockModuleRef.get.mockReturnValue(undefined);
   });
 
   /** SP09 = initiative 9 / official_code 'SP09'; SP12 = initiative 12 / official_code 'SP12'. */
@@ -1113,6 +1128,91 @@ describe('PrimaryProgramRequestService', () => {
         }),
       );
     });
+
+    // `PNS-T-2` (requirements.md `PNS-R-3`, design.md §5 item 9, `PNS-DD-3`) — accepting a
+    // result that reached Pending Review ownerless (`PNS-R-2`) now also sends the submitted +
+    // contributor-tagging notices, exactly once, after the Center "accepted" notice.
+    describe('PNS-R-3 — post-commit announcement to a result already in Pending Review', () => {
+      function acceptOrdinarySetup() {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce({
+          share_result_request_id: 1,
+          request_status_id: 1,
+          shared_inititiative_id: 9,
+          result_id: 100,
+        });
+        mockInitiativeRepoTx.find.mockResolvedValueOnce([]); // no previous owner
+        mockInitiativeRepoTx.findOne.mockResolvedValueOnce(null); // no former-primary row
+        mockTocRepoTx.findOne.mockResolvedValueOnce(null); // no existing ToC stub
+        mockInitiativeCodes({ 9: 'SP09' });
+      }
+
+      // Fails-if (tasks.md): on today's (pre-T-2) code `accept()` never reads the result's
+      // status and never resolves `BilateralService`, so this call is never made. Red first.
+      it('Pending Review → announcePendingReview(resultId, acceptingUserId) called once', async () => {
+        acceptOrdinarySetup();
+        mockResultRepository.findOne.mockResolvedValueOnce({
+          id: 100,
+          status_id: ResultStatusData.PendingReview.value,
+        });
+        const fakeBilateralService = {
+          announcePendingReview: jest.fn().mockResolvedValue(undefined),
+        };
+        mockModuleRef.get.mockReturnValue(fakeBilateralService);
+
+        const outcome = await service.accept(1, user);
+
+        expect(outcome.ok).toBe(true);
+        expect(fakeBilateralService.announcePendingReview).toHaveBeenCalledWith(
+          100,
+          user.id,
+        );
+        expect(
+          fakeBilateralService.announcePendingReview,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      // `BUT` no duplicates — the normal PSR accept path (still Editing: no prior submit put it
+      // in Pending Review) must not announce, and `releaseContributors` must still run exactly
+      // once (the new logic doesn't add a second call).
+      it('Editing (no prior submit) → announcePendingReview is NOT called; releaseContributors still runs once', async () => {
+        acceptOrdinarySetup();
+        mockResultRepository.findOne.mockResolvedValueOnce({
+          id: 100,
+          status_id: ResultStatusData.Editing.value,
+        });
+        const fakeBilateralService = {
+          announcePendingReview: jest.fn(),
+        };
+        mockModuleRef.get.mockReturnValue(fakeBilateralService);
+        const releaseContributorsSpy = jest.spyOn(
+          service,
+          'releaseContributors',
+        );
+
+        const outcome = await service.accept(1, user);
+
+        expect(outcome.ok).toBe(true);
+        expect(
+          fakeBilateralService.announcePendingReview,
+        ).not.toHaveBeenCalled();
+        expect(releaseContributorsSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('BilateralService unavailable (ModuleRef.get returns undefined) → logs and does not throw', async () => {
+        acceptOrdinarySetup();
+        mockResultRepository.findOne.mockResolvedValueOnce({
+          id: 100,
+          status_id: ResultStatusData.PendingReview.value,
+        });
+        mockModuleRef.get.mockReturnValue(undefined);
+
+        await expect(service.accept(1, user)).resolves.toEqual({
+          ok: true,
+          shareResultRequestId: 1,
+          state: 'accepted',
+        });
+      });
+    });
   });
 
   describe('decline() — PDR-R-3 / PDR-R-4 / PDR-R-5 / PDR-R-6 / PDR-R-7 / PDR-R-10 / PDR-R-11 (table-driven)', () => {
@@ -1438,6 +1538,39 @@ describe('PrimaryProgramRequestService', () => {
         for (const call of warnSpy.mock.calls) {
           expect(JSON.stringify(call)).not.toContain(secretJustification);
         }
+      });
+
+      // `PNS-T-2` regression (requirements.md `PNS-R-4` → `PDR-R-4`/`PDR-R-5`) — a result that
+      // reached Pending Review ownerless (`PNS-R-2`'s submit-sends-the-request path) and is then
+      // declined follows the SAME ownerless-decline rule as an unsubmitted result: Rejected, no
+      // auto-move, no new primary request. `decline()` gets no PNS-T-2 code change (it never
+      // reads `Result.status_id` at all), so this is a regression guard, exempt from red-first
+      // per tasks.md — it may already be green on arrival, which is expected because PDR
+      // (`ea4411693`) already shipped the rule this just confirms still holds post-submit.
+      it('PNS regression: declining an ownerless result already in Pending Review → Rejected, no new primary request', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(
+          pendingRow({ result_id: 400 }),
+        );
+
+        const outcome = await service.decline(
+          1,
+          user,
+          'Declined after submit — outside our remit',
+        );
+
+        expect(outcome).toEqual({
+          ok: true,
+          shareResultRequestId: 1,
+          state: 'rejected',
+        });
+        expect(mockResultRepoTx.update).toHaveBeenCalledWith(
+          { id: 400 },
+          expect.objectContaining({
+            status_id: ResultStatusData.Rejected.value,
+          }),
+        );
+        // No new primary request to any other SP.
+        expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
       });
 
       // (h) + Reviewer B (attempt 2, FAIL issue 2): the success log line design.md §11 requires

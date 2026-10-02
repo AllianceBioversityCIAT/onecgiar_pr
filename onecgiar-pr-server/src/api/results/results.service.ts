@@ -4295,6 +4295,22 @@ export class ResultsService {
           );
         }
 
+        // `PNS-R-2` second `AND IT MUST` / `PNS-DD-4` reversion challenge — a result that
+        // reached Pending Review ownerless (`PNS-R-2`'s submit-sends-the-request path) is
+        // hidden from every SP review list (owner-based queries), but a platform admin could
+        // still open and decide it here. Refuse until the primary accepts, whether the caller
+        // is an admin or not.
+        // @akili-spec notifications/primary-notify-on-submit
+        const owner =
+          await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+            parsedResultId,
+          );
+        if (!owner?.id) {
+          throw new BadRequestException(
+            "This result is awaiting the primary Science Program's acceptance.",
+          );
+        }
+
         let newStatusId: number;
         if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
           newStatusId = ResultStatusData.Approved.value;

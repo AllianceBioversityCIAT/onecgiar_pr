@@ -30,7 +30,7 @@
 | **Skills** | `nestjs-expert`, `tdd` |
 
 **Scope**
-- `primary-program-request.service.ts`: `request()` option `asDraft`. It inserts status 4, its idempotency matches an active DRAFT for the same SP, and `cancelRound` deactivates active DRAFT `primary` rows. New `findDraftPrimaryInitiativeId`. `stateFor` returns `draft` (with `program_code`) after accepted/pending.
+- `primary-program-request.service.ts`: `request()` option `asDraft`. It inserts status 4, its idempotency matches an active DRAFT for the same SP, and the DD-8 round cancel deactivates active DRAFT `primary` rows. New `findDraftPrimaryInitiativeId`. `stateFor` returns `draft` (with `program_code`) after accepted/pending.
 - `bilateral-center.service.ts`: `createResultHeader` passes `asDraft: true`. `updatePrimaryAssignment` passes `asDraft: true` only when there is no owner and the status is Editing/Draft. The contributor exclusion (≈L1809) also excludes the draft SP.
 - `bilateral.service.ts` `populateInitiativeAndTocFromProgramCode`: passes `asDraft: true`.
 - `share-result-request.repository.ts` `shareResultRequestExists`: the draft count filters `request_type = contribution`.
@@ -54,7 +54,7 @@
 
 ---
 
-### `PNS-T-2` — Submit sends; accept announces; decline returns to Editing; review guard
+### [x] `PNS-T-2` — Submit sends; accept announces; decline regression; review guard
 
 | Field | Value |
 |---|---|
@@ -69,7 +69,7 @@
 - `bilateral-center.service.ts` `assertSubmittable`: when there is no owner, a DRAFT primary is allowed; otherwise today's message. The swap (pending) guard is unchanged.
 - `submitForReview`: when there is no owner, `PrimaryProgramRequestService.sendDraft(resultId, manager)` (new; DRAFT→PENDING via `update()`; throws on 0 rows / error) runs inside the existing transaction. `announcePendingReview` runs only when an owner exists.
 - `primary-program-request.service.ts` `accept()`: after commit and the Center notice, if the result is Pending Review, it resolves `BilateralService` through `ModuleRef` (`strict: false`) and calls `announcePendingReview`. Wrapped so it never throws.
-- `decline()`: ownerless, not moved, result in Pending Review → `Result.status_id` = Editing in the same transaction.
+- `decline()`: **no code change** (amended 2026-10-01, `PDR-R-4` owns it). Add a regression test only.
 - `results.service.ts` `reviewBilateralResult`: no owner → 400 "This result is awaiting the primary Science Program's acceptance."
 
 **Tests** (`bilateral-center.service.spec.ts`, `primary-program-request.service.spec.ts`, `results.service` review spec if one exists, else `bilateral-center` spec)
@@ -78,10 +78,10 @@
 - owner exists → `announcePendingReview` called, `sendDraft` not called (R-2 existing)
 - `sendDraft` throws → submit rejects, the transaction callback rejects (no status update committed) (R-2 failure)
 - accept on Pending Review → `announcePendingReview(resultId, userId)` called once. Accept on Editing → not called (R-3 + `BUT` no duplicates: `releaseContributors` is still called once)
-- decline single alignment on Pending Review → `status_id` updated to Editing. Decline with auto-move → no status update, moved row is PENDING (R-4 both)
+- decline (with justification) on an ownerless result in Pending Review → status set to Rejected, no new primary request (R-4 → `PDR-R-4`). A regression test: it may be green on arrival, which is expected because PDR already shipped the rule
 - `reviewBilateralResult` with no owner → 400 with the exact text (R-2 second `AND IT MUST`)
 
-**Fails if:** the submit test with an ownerless result still gets "The result has no Science Program assigned" (today's code), or decline leaves `status_id` untouched. Both must be seen red first.
+**Fails if:** the submit test with an ownerless result still gets "The result has no Science Program assigned" (today's code). That test must be seen red first. The R-4 decline test is a regression guard and is exempt from red-first.
 
 **Cannot prove:** rollback in real MySQL (a mocked `transaction` only proves the callback rejects). The real rollback is proven in the §5 manual check by forcing a failure: comment out the DRAFT row before submit and expect the 400 with status unchanged.
 
@@ -91,7 +91,7 @@
 
 ---
 
-### `PNS-T-3` — Client: `draft` state banner and Submit not blocked
+### [x] `PNS-T-3` — Client: `draft` state banner and Submit not blocked
 
 | Field | Value |
 |---|---|
@@ -132,7 +132,7 @@ PNS-T-1 ──► PNS-T-2
 |---|---|---|
 | Server Jest | R-1..R-4 scenarios | T-1, T-2 |
 | Client Jest | R-5 | T-3 |
-| **Manual (HITL pause, local)** | Create with SP09 → SP09 user inbox has **no** request → banner "will be asked…" → Submit → SP09 inbox shows request, SP09 review list does **not** show the result → Accept → result in SP09 review queue + "submitted" notice → separate result: Decline (single alignment) → result back in Editing with sent-back banner | User |
+| **Manual (HITL pause, local)** | Create with SP09 → SP09 user inbox has **no** request → banner "will be asked…" → Submit → SP09 inbox shows request, SP09 review list does **not** show the result → Accept → result in SP09 review queue + "submitted" notice → separate result: Submit, then Decline with a justification → result **Rejected** | User |
 
 ## 6. Coverage closure
 
@@ -148,5 +148,5 @@ PNS-T-1 ──► PNS-T-2
 | R-2 `AND IT MUST` review decision refused without owner | T-2 |
 | R-2 no choice / owner exists / failure | T-2 |
 | R-3 accept → queue + notices, Center notice, `BUT` no duplicates | T-2 |
-| R-4 single decline → Editing; auto-move stays Pending Review | T-2 |
+| R-4 decline after submit → Rejected (`PDR-R-4`), no auto-move | T-2 (regression) |
 | R-5 banner, Submit enabled, picker enabled, post-submit banner | T-3 (post-submit = `pending` regression test) |

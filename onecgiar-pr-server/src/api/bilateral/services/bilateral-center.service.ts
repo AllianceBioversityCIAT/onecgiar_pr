@@ -2379,6 +2379,16 @@ export class BilateralCenterService {
     const parsedResultId = result.id;
     const assessment = await this.assertAssessmentDecision(parsedResultId, dto);
 
+    // `PNS-R-2` — decide once, before the transaction, whether this submit is sending a saved
+    // (DRAFT) choice for the first time (no owner yet) or is the existing owner-present path.
+    // `assertSubmittable` already proved one of "has an owner" / "has a DRAFT primary" is true.
+    // @akili-spec notifications/primary-notify-on-submit
+    const owner =
+      await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
+        parsedResultId,
+      );
+    const hasOwner = !!owner?.id;
+
     await this.resultRepository.manager.transaction(async (manager) => {
       // The decision and status transition are one atomic event. `NOW()` is
       // deliberate: MySQL owns the timestamp, avoiding a local JS Date.
@@ -2422,13 +2432,34 @@ export class BilateralCenterService {
         created_by: user.id,
       });
       await manager.save(ResultReviewHistory, reviewHistory);
+
+      // `PNS-R-2`/`PNS-DD-2` — ownerless: this submit is what turns the saved (DRAFT) choice
+      // into the actual pending request, INSIDE this same transaction. `sendDraft` throws on
+      // failure (no active DRAFT row / a query error), which rejects this callback and rolls
+      // back the whole submit — no result may land in Pending Review with nobody asked.
+      // @akili-spec notifications/primary-notify-on-submit
+      if (!hasOwner) {
+        await this.primaryProgramRequestService.sendDraft(
+          parsedResultId,
+          manager,
+        );
+      }
     });
 
     // 2026-09-05: tell the primary Science Program's members the result is waiting for them.
     // BCT-T-5: goes through the shared orchestrator (submitted notification, then contributor
     // tagging) instead of calling the submitted emitter directly. Post-commit and non-blocking
     // (`announcePendingReview` never throws) — the submit already succeeded.
-    await this.bilateralService.announcePendingReview(parsedResultId, user.id);
+    // `PNS-R-2` second `AND IT MUST` — an ownerless submit sends the request but MUST NOT also
+    // fire the submitted/tagging notices here: there is no owner yet for them to be about.
+    // `accept()` (`PrimaryProgramRequestService`, `PNS-R-3`) sends them later, once one exists.
+    // @akili-spec notifications/primary-notify-on-submit
+    if (hasOwner) {
+      await this.bilateralService.announcePendingReview(
+        parsedResultId,
+        user.id,
+      );
+    }
 
     return {
       response: {
@@ -2554,9 +2585,20 @@ export class BilateralCenterService {
         parsedResultId,
       );
     if (!owner?.id) {
-      throw new BadRequestException(
-        'The result has no Science Program assigned. Select a Science Program before submitting for review.',
-      );
+      // `PNS-R-2`/`PNS-DD-1` — an ownerless result can still submit when the Center already
+      // saved a primary choice (a DRAFT `primary` row, `PNS-R-1`): Submit is what turns that
+      // choice into the actual request (`submitForReview`'s `sendDraft`, below). No saved
+      // choice at all keeps today's refusal.
+      // @akili-spec notifications/primary-notify-on-submit
+      const draftPrimaryId =
+        await this.primaryProgramRequestService.findDraftPrimaryInitiativeId(
+          parsedResultId,
+        );
+      if (draftPrimaryId == null) {
+        throw new BadRequestException(
+          'The result has no Science Program assigned. Select a Science Program before submitting for review.',
+        );
+      }
     }
 
     // `PSR-T-6` (design.md DD-4, requirements.md `PSR-R-2` swap "MUST block Submit for review

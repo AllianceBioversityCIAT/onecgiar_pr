@@ -14,7 +14,8 @@
 | **Date** | 2026-10-01 |
 | **Source** | User request, 2026-10-01. Decisions: Submit sends the request (option 1); separate spec from `primary-decline-rejects-result` |
 | **Baseline cited** | `docs/prd.md` US-S3 · `docs/trd/trd.md` `results` (`share_result_request`), `Notification` |
-| **Related specs** | `notifications/bilateral-primary-sp-request` (parent, PSR) · `notifications/primary-decline-rejects-result` (proposal only, it changes the decline outcome later) |
+| **Related specs** | `notifications/bilateral-primary-sp-request` (parent, PSR) · `notifications/primary-decline-rejects-result` (PDR, shipped in `ea4411693`: it owns the decline outcome) |
+| **Amended** | 2026-10-01 (Pivot Record `PNS-T-2`, approved by Santiago Sanchez): `PNS-R-4` defers to `PDR-R-4`/`PDR-R-5` |
 
 ---
 
@@ -39,7 +40,7 @@ Today a Center that **creates** a bilateral result with a primary SP sends that 
 **Out:**
 - **Swap** (the result already has an owner and the Center picks another SP): unchanged. The request is sent immediately and Submit stays blocked while it is pending (`PSR-R-2`).
 - API ingest (`PSR` OQ-6).
-- The decline **outcome** (sent back today; Rejected once `primary-decline-rejects-result` ships). This spec only sets the result's status when a submitted, ownerless result is declined (`PNS-R-4`).
+- The decline **outcome**. `primary-decline-rejects-result` (`PDR-R-4`, `PDR-R-5`) owns it: an ownerless decline sets Rejected, with no auto-move, whether or not the result was submitted. `PNS-R-4` only pins that this also holds after submit.
 - Email: no new mail.
 
 ## 5. Personas
@@ -88,7 +89,7 @@ When a Center submits a result that has **no owner** and has a saved primary cho
 - AND IT MUST refuse any review decision (approve/reject) on that result until the primary accepts, with "This result is awaiting the primary Science Program's acceptance." (a platform admin can open it even though SP lists hide it)
 
 #### Scenario: submit with no owner and no saved choice
-- GIVEN a result with no owner and no saved primary choice (never picked, or sent back)
+- GIVEN a result with no owner and no saved primary choice (never picked)
 - WHEN the Center presses **Submit for review**
 - THEN the request is refused with today's message "The result has no Science Program assigned…"
 - AND nothing changes
@@ -115,21 +116,17 @@ When the SP accepts the primary request of a result that is already in Pending R
 - AND the Creating Center receives the "accepted" notice (`PSR-R-14`)
 - BUT contributor requests MUST NOT be created twice (the release at accept and the tagging at submit stay idempotent)
 
-### Requirement `PNS-R-4`: Declining a submitted result returns it to the Center
+### Requirement `PNS-R-4`: Declining a submitted result follows PDR
 
-When the primary request of a result in Pending Review with no owner is declined and not auto-moved, the system MUST set the result back to **Editing**, so the Center can pick again and submit again.
+> **Amended 2026-10-01** (Pivot Record `PNS-T-2`). It used to say "returns it to Editing, auto-move kept". `PDR-R-4`/`PDR-R-5` (shipped) replace that.
 
-#### Scenario: single-alignment decline after submit
-- GIVEN a result in Pending Review, no owner, pending request to SP13 (only alignment)
-- WHEN SP13 declines
-- THEN the result is in Editing and shows the sent-back banner (`PSR-R-7`)
-- AND the Center can pick a primary and submit again
+When the primary request of a result in Pending Review with no owner is declined, the system MUST apply `PDR-R-4` exactly as it does for an unsubmitted result. The result becomes **Rejected**, and no primary request goes to any other SP (`PDR-R-5`). PNS adds no decline rule of its own.
 
-#### Scenario: auto-move after submit (2 alignments, today's rule)
-- GIVEN a result in Pending Review, pending request to SP09, other alignment SP12
-- WHEN SP09 declines
-- THEN a **pending** request goes to SP12 straight away (the result was already submitted)
-- AND the result stays in Pending Review
+#### Scenario: decline after submit
+- GIVEN a result in Pending Review, no owner, pending primary request to SP09 (any number of alignments)
+- WHEN SP09 declines with a justification
+- THEN the result is **Rejected** (not left in Pending Review, not Editing)
+- AND no new primary request is created
 
 ### Requirement `PNS-R-5`: The Center sees that the request goes out on submit
 
@@ -158,7 +155,7 @@ On the Project Information card, while a primary choice is saved and not yet sen
 | Submit refused for an ownerless result with a choice / allowed with none | Server Jest on `assertSubmittable` + `submitForReview` (`PNS-R-2`) |
 | Saved choice leaks into the inbox or into the contributor-draft logic (`request_status_id = 4` is shared with contributor drafts) | Server Jest on `shareResultRequestExists` + inbox query scope. **Partial gap:** the inbox SQL is not unit-testable here; manual check at the HITL pause (SP09 inbox empty after create) |
 | Submitted/tagging notices fire without an owner, or twice | Server Jest on `submitForReview` and `accept` (`PNS-R-3`) |
-| Declined submitted result stuck in Pending Review | Server Jest on `decline` (`PNS-R-4`) |
+| Declined submitted result stuck in Pending Review | Server Jest regression on `decline` from Pending Review → Rejected (`PNS-R-4` → `PDR-R-4`) |
 | Wrong banner / Submit still blocked in UI | Client Jest on `section-zero-dashboard` (`PNS-R-5`) |
 | End-to-end flow (create → submit → inbox → accept → review queue) | **No automated E2E.** Manual check at the HITL pause on local |
 
@@ -169,10 +166,10 @@ On the Project Information card, while a primary choice is saved and not yet sen
 | `PNS-R-1` | Create does not send the primary request | MUST |
 | `PNS-R-2` | Submit sends the primary request | MUST |
 | `PNS-R-3` | Accept of a submitted result enters the review queue | MUST |
-| `PNS-R-4` | Decline of a submitted result returns it to Editing | MUST |
+| `PNS-R-4` | Decline of a submitted result follows `PDR-R-4` (Rejected) | MUST |
 | `PNS-R-5` | Center banner "sent on submit" | MUST |
 
 ## 10. Open Questions (defaults adopted unless changed)
 
-- **OQ-1** Decline after submit returns to **Editing** (not Draft, even for AI results). Default: Editing.
+- ~~**OQ-1** Decline after submit returns to **Editing**.~~ **Superseded** by `PDR-R-4` (Rejected), amended 2026-10-01.
 - **OQ-2** Results with a request already pending at deploy time stay as they are. Default: no data backfill.

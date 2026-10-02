@@ -25,6 +25,12 @@ export const BILATERAL_PRIMARY_ASSIGNMENT_COPY = {
      */
     rejected: (programCodes: string): string =>
       `Declined by ${programCodes} as primary Science Program. The result was rejected.`,
+    /**
+     * `notifications/primary-notify-on-submit` PNS-R-5: `state === 'draft'` — the choice is saved
+     * but not yet sent (create / Project Information save). Submit is what sends it.
+     */
+    draft: (programCode: string): string =>
+      `${programCode} will be asked to be the primary Science Program when you submit for review`,
   },
   /** design.md §6.3 — shown next to the banner while the result has no owner. */
   submitBlockedReason:

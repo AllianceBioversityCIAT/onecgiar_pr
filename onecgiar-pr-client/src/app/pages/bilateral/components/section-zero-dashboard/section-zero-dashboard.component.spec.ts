@@ -522,4 +522,59 @@ describe('SectionZeroDashboardComponent', () => {
       expect(el.textContent).not.toContain('The result was rejected.');
     });
   });
+
+  // PNS-T-3 (notifications/primary-notify-on-submit) — PNS-R-5: a saved-but-not-yet-sent primary
+  // choice shows an info banner, keeps the picker enabled, and does NOT block Submit. Falls through
+  // to the `none` branch (today's `noneUnpicked` warning) if `'draft'` is missing from the switch —
+  // that is the defect this task guards against.
+  describe('PNS-T-3 — draft state banner and Submit not blocked', () => {
+    const setPrimaryRequest = (
+      state: 'none' | 'pending' | 'sent_back' | 'accepted' | 'draft',
+      programCode: string | null = null,
+      declinedByCodes: string[] = [],
+    ) => {
+      const api = TestBed.inject(BilateralApiService) as any;
+      api.GET_resultInitiativeId.mockReturnValue(
+        primaryRequestResponse(state as any, programCode, declinedByCodes),
+      );
+    };
+
+    const openResult = (resultId: number) => {
+      (creationService.selectedProject as any).set(project(12, 'OLDPROJ'));
+      (creationService.currentResultId as any).set(resultId);
+      fixture.detectChanges();
+    };
+
+    it('Falsifier: state "draft" shows the info banner "SP09 will be asked to be the primary Science Program when you submit for review"', () => {
+      setPrimaryRequest('draft', 'SP09');
+      openResult(41);
+
+      expect(component.primaryAssignmentBanner()?.tone).toBe('info');
+      expect(component.primaryAssignmentBanner()?.message).toBe(
+        'SP09 will be asked to be the primary Science Program when you submit for review',
+      );
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain(
+        'SP09 will be asked to be the primary Science Program when you submit for review',
+      );
+    });
+
+    it('Falsifier: state "draft" does not block Submit and keeps the picker enabled', () => {
+      setPrimaryRequest('draft', 'SP09');
+      openResult(42);
+
+      expect(component.submitBlockedReason()).toBeNull();
+      expect(component.primaryPickerDisabled()).toBe(false);
+    });
+
+    it('Regression: state "pending" still shows "Awaiting SP09 acceptance..." and blocks Submit', () => {
+      setPrimaryRequest('pending', 'SP09');
+      openResult(43);
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('Awaiting SP09 acceptance as primary Science Program');
+      expect(component.submitBlockedReason()).not.toBeNull();
+      expect(component.primaryPickerDisabled()).toBe(true);
+    });
+  });
 });

@@ -86,3 +86,137 @@ ADVISORY (attempt 2):
   - Both remediations (a) and (b) were applied.
 - P-5 evidence: `share-result-request.repository.ts` `getRequestByUser` had no status filter, so the DRAFT `primary` exclusion was added (also in `getPendingByUser`). The main received inbox (`buildWhereReceivedConditions`) already filters status 1 / [2,3]. Manual HITL check is still owed.
 - Commit: PNS hunks only, staged from the split patch. PDR's uncommitted hunks stay in the working tree.
+
+## Pivot Record: PNS-T-2
+
+- **Date:** 2026-10-01. **Approved by:** Santiago Sanchez (also approved running T-2 and T-3 in parallel).
+- **Blocker:** `primary-decline-rejects-result` shipped in `ea4411693`. Under `PDR-R-4`/`PDR-R-5`, any ownerless primary decline sets the result to **Rejected**, with a justification and a REJECTED history entry, and never auto-moves. The old `PNS-R-4` said the opposite: return to Editing and keep the auto-move.
+- **Revised direction:** `PNS-R-4` now defers to `PDR-R-4`. PNS-T-2 makes no `decline()` code change and adds only a regression test (decline from Pending Review → Rejected, no new primary request). OQ-1 is superseded.
+- **Amended:**
+  - `requirements.md`: Related specs, Amended row, Out of scope, R-2 no-choice text, R-4, §8, §9, OQ-1.
+  - `design.md`: §2, §5 items 1 and 10.
+  - `tasks.md`: T-1 scope wording, T-2 title/scope/tests/Fails if, §5 manual check, §6.
+- **Sweep:**
+  - Forward: grep for `Editing with`, `returns it to`, `auto-move kept`, `cancelRound`, `sent back` leaves only the amendment notes.
+  - Backward: references to `R-4`, `sent-back` and `PSR-R-7` were checked. The remaining "Editing" mentions are submit preconditions and are still valid.
+- **ADR:** none affected (spec-level rule only).
+- PDR also removed `opts.cancelRound` from `request()`. `asDraft` and the idempotency branch are intact (Work 2 report).
+
+### `PNS-T-3` — Client: `draft` state banner and Submit not blocked
+
+| Field | Value |
+|---|---|
+| **Final status** | PASS (attempt 1) |
+| **Date** | 2026-10-01 |
+| **Attempts** | 1 |
+| **Effort** | medium |
+| **Skills** | `angular-developer`, `spartan` (as listed) |
+| **Run with** | `PNS-T-2`, in parallel (disjoint packages, user-approved) |
+| **Requirements** | `PNS-R-5` |
+
+**Files:**
+- `section-zero-dashboard.component.ts`: `'draft'` added to the state union; draft returns an `info` banner with `banner.draft(code)`; `submitBlockedReason()` returns null for draft. `primaryPickerDisabled` is unchanged (only `pending` disables the picker).
+- `bilateral-primary-assignment.copy.ts`: `banner.draft`.
+- `section-zero-dashboard.component.spec.ts`: 3 tests.
+
+**Evidence:**
+- Red before the change: the draft banner tone was `undefined`; the draft blocked reason was "Submit for review is unavailable until a primary Science Program accepts."; the pending regression passed.
+- Green: `1 passed · 34 passed`.
+- `ng lint --quiet`: all files pass. Per-file eslint has no flat config in the client.
+
+**Reviewer: PASS.** "The diff (about 74 LOC, client only, inside the T-3 boundary) does what PNS-T-3 scopes." The exact copy, picker behavior and PDR's `sent_back`/`readOnly()` branch are intact, and no new tokens were added.
+- Scope note: the client tests prove only the "no Submit-blocked reason" half of `PNS-R-5`. Whether Submit is enabled is decided on the server (T-2) and is checked at the manual HITL step.
+
+ADVISORY:
+- Reliability: a `draft` with a null `program_code` would render " will be asked…" with no SP code. The `pending` branch has the same pattern.
+- Readability: the new spec helpers duplicate setup from earlier describe blocks.
+
+## Budget Tripwire (2026-10-01)
+
+| Measure | Budget (`design.md` §9) | Actual at PNS-T-2 implementation |
+|---|---|---|
+| Tasks | 3 (escalate at > 4) | 3 |
+| LOC (code + tests) | ~300 (escalate at > ~450) | **~1,070**: production ~360 (T-1 ~180, T-2 ~165, T-3 ~20), tests ~700 (T-1 ~305, T-2 ~345, T-3 ~55) |
+| Review rounds | 2 | 3 before the T-2 review (T-1 ×2, T-3 ×1) |
+
+- **Cause:** the overrun is mostly tests. Red-first tests, plus regression and compatibility tests (the legacy-PENDING fix in T-1 attempt 2), and long `@akili-spec` comments in the spec files. Production code was about 1.7× the estimate. The functional scope did not grow.
+- **Decision:** the user said to continue ("continua", 2026-10-01).
+- **For `/akili-archive`:** recalibrate the LOC estimates for server tasks with red-first transactional tests.
+
+### `PNS-T-2` — Submit sends; accept announces; decline regression; review guard
+
+| Field | Value |
+|---|---|
+| **Status** | in rework |
+| **Date** | 2026-10-01 |
+| **Effort** | high → xhigh (bumped on rework) |
+| **Skills** | `nestjs-expert`, `tdd`, `error-handling-patterns` (as listed) |
+| **Run with** | `PNS-T-3`, in parallel |
+| **Requirements** | `PNS-R-2`, `PNS-R-3`, `PNS-R-4` (amended) |
+
+**Attempt 1 — Implementer:**
+- `assertSubmittable` allows an ownerless result when it has a DRAFT.
+- `submitForReview`: `sendDraft(resultId, manager)` runs inside the transaction; `announcePendingReview` runs only when there is an owner.
+- New `sendDraft` throws on 0 rows.
+- `accept()` → `announceIfPendingReview`, which looks up `BilateralService` lazily through `ModuleRef` and never throws.
+- `reviewBilateralResult` gets an owner guard (400).
+- `decline()`: no change; a regression test only.
+- Tests in `bilateral-center.service.spec.ts`, `primary-program-request.service.spec.ts` and `results.service.spec.ts`.
+- Red seen for: R-2 main and failure, R-3, and the review guard.
+- Green: `7 passed · 298 passed`; eslint 0 errors; `tsc` clean; `migration:check` Pending: 0.
+- Assumptions:
+  1. Guard tests placed in `results.service.spec.ts`.
+  2. The owner is read twice, the second time before the transaction.
+  3. `BilateralService` import is used only at call time.
+
+**Attempt 1 — Reviewer: FAIL** (verbatim issue):
+1. **Discovered Issue:** In `primary-program-request.service.ts`, the new top-level `import { BilateralService } from '../../../bilateral/bilateral.service';` (line 46) creates a file-level import cycle. Based on how the app loads its files, it is expected to make Nest fail at startup.
+   - Load order: `api/modules.routes.ts` loads `ResultsModule` first (line 3), then `results.service.ts`, which imports `primary-program-request.service.ts` (lines 152-153).
+   - At line 46, `bilateral.service.ts` loads for the first time and imports `primary-program-request.service.ts` back (`bilateral.service.ts:125-128`). That file has not defined its class yet, so the import is `undefined`.
+   - `BilateralService` injects it with a plain constructor type (`bilateral.service.ts:285`, no `forwardRef`), so Nest records `undefined` for that constructor argument and cannot start.
+   - The green tests cannot catch this: the spec files import in the safe order, `results.service.spec.ts` builds the service with `Object.create`, and nothing in the evidence booted `AppModule`.
+   - Precedent: the "Defect A" comment in the same file (lines 172-178).
+   **Violated Rule:** `design.md` P-7 and `PNS-DD-3` ("Lazy `ModuleRef` lookup avoids the module cycle"); `.agents/reviewer.md` §2 ("bad imports introduced").
+   **Remediation:** remove the top-level import and load the class inside `announceIfPendingReview` with a dynamic `await import(...)`, or use a string token. Do not rely on `forwardRef` alone. Prove it by booting Nest (`npm run start:dev`) or with a spec that imports `./app.module` first and asserts that neither class's `design:paramtypes` contains `undefined`.
+
+Confirmed conforming by the Reviewer: R-2 (all scenarios), legacy PENDING still blocked, R-3 never throws, R-4 regression present, exact guard text. Assumption 1 (test location) is allowed. Assumption 2 (read before the transaction) has no harmful race: a DRAFT can never be accepted, and a second concurrent submit's `sendDraft` updates 0 rows and rolls back.
+
+ADVISORY (attempt 1):
+- Reliability: the owner is read twice; return it from `assertSubmittable` instead.
+- Risk: `announceIfPendingReview` does not check that the result had no owner before this accept. **Leader note:** unreachable today, because a swap is only possible in Editing/Draft (`updatePrimaryAssignment` guard) and Submit is blocked while a swap is pending.
+- Reliability: the status update in the submit transaction has no `WHERE status_id IN (...)` guard on the owner path. This was already true before this change.
+
+**Leader adjudication:** in-scope FAIL; attempt 2 at xhigh.
+
+**Attempt 2 — Implementer (effort xhigh, skills `nestjs-expert` + `systematic-debugging`):** `tdd` was swapped for `systematic-debugging` because this was a load-order defect proven by a boot/metadata probe, not by a unit red→green.
+- **Red probe** (attempt-1 code, `require('app.module')` first, mirroring Nest `Injector` param resolution): `bilateralUndefinedAt: [46]` (`_primaryProgramRequestService`). The defect is confirmed real.
+- **Fix:** the static import was removed. `announceIfPendingReview` now does `await import('../../../bilateral/bilateral.service')` and then `moduleRef.get(..., { strict: false })`. Under the commonjs target this compiles to a deferred `require`. The R-3 tests are unchanged.
+- **New guard spec:** `primary-program-request.load-order.spec.ts`.
+- **Green:**
+  - The probe passes.
+  - `npm run start:dev` reached "Nest application successfully started", then hit `EADDRINUSE :3400` because another dev server is already on that port (after DI had resolved).
+  - Jest `8 passed · 299 passed`; eslint clean; `tsc` clean.
+
+**Attempt 2 — Reviewer: PASS.** "The attempt-1 FAIL is fixed, and I found no regressions." There are no static bilateral imports left, the lookup is lazy as P-7 and `PNS-DD-3` require, and the dynamic import sits inside the existing try/catch so `accept()` never throws. The load-order spec is a valid guard: it uses the production load order, opens no DB connection, and fails if the static import returns.
+
+ADVISORY (attempt 2):
+- Readability/risk: the load-order spec hand-copies Nest's metadata keys and injector logic. Import the keys from `@nestjs/common/constants` instead.
+- Readability: the comment block over the removed import and the JSDoc on `announceIfPendingReview` duplicate each other and could be cut to 3–4 lines.
+
+**Final status: PASS (attempt 2).**
+- Requirements: `PNS-R-2`, `PNS-R-3`, `PNS-R-4` (amended → `PDR-R-4`).
+- Decisions:
+  - `decline()` unchanged (Pivot Record).
+  - Review-guard tests in `results.service.spec.ts`.
+  - Owner read twice (advisory).
+  - Dynamic import plus `ModuleRef` for the lazy lookup.
+- Owed to the manual HITL check: real MySQL rollback when `sendDraft` fails; Submit button enabled on the client; the end-to-end flow (tasks §5).
+
+## Summary
+
+All 3 tasks PASS.
+- **T-1:** 2 attempts; committed `e97d9e8da`.
+- **T-2:** 2 attempts.
+- **T-3:** 1 attempt.
+- One Pivot (`PNS-R-4` → `PDR-R-4`) and one budget tripwire (the user said continue).
+- **Pending:** the manual HITL check (tasks §5), then the commit of T-2 + T-3 with the user's OK.
