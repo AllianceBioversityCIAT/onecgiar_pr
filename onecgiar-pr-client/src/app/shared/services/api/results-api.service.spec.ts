@@ -429,6 +429,46 @@ describe('ResultsApiService', () => {
     });
   });
 
+  // ── ACS-TEST-1 (docs/specs/bugfix/achieved-counts-submitted, ACS-T-1) ─────────────────────
+  // Regression test: `GET_TocResultsByAowId` must pipe its response through the (not-yet-wired)
+  // achieved display-basis normaliser (design.md §8.1, ACS-DD-1) so a Submitted-not-yet-QA'd
+  // indicator reads `actual_achieved_value_sum` 1, not 0, once the pipe is in place. The fixture
+  // is inlined here rather than importing the not-yet-existing `achieved-display-basis` helper
+  // (per the Leader's brief) so this file's other, already-passing cases keep compiling.
+  describe('GET_TocResultsByAowId', () => {
+    it('emits actual_achieved_value_sum 1 for a submitted-only indicator once the display-basis pipe is wired', done => {
+      const fixture = {
+        response: {
+          tocResults: [
+            {
+              toc_result_id: 1,
+              indicators: [
+                {
+                  indicator_id: 1,
+                  actual_achieved_value_sum: 0,
+                  achieved_value_sum: 1,
+                  progress_percentage: '0%',
+                  achieved_progress_percentage: '100%',
+                },
+              ],
+            },
+          ],
+        },
+      };
+
+      service.GET_TocResultsByAowId('SP01').subscribe((response: any) => {
+        // Fails today: the method returns the raw HTTP response untouched, so this stays 0.
+        expect(response.response.tocResults[0].indicators[0].actual_achieved_value_sum).toBe(1);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results?program=SP01`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(fixture);
+    });
+  });
+
   describe('GET_depthSearch', () => {
     it('should call GET_depthSearch and unwrap the response array', done => {
       const title = 'title';

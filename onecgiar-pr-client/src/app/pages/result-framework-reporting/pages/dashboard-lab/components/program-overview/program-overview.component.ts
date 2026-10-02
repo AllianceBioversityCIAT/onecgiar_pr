@@ -41,6 +41,7 @@ import type { ECElementEvent } from 'echarts/core';
 // @akili-spec changes/reporting-entry-hub — reuse the hub's centralised copy for the Report button's tooltip text.
 import { HUB_COPY } from '../reporting-entry-hub/hub-copy';
 import { SCIENCE_PROGRAM_DESCRIPTIONS } from '../reporting-program-band/reporting-program-band.component';
+import { SHOW_QA_PREL_SPLIT } from '../../../../../../shared/constants/achieved-display-basis';
 
 /** A matrix card's view mode: default 'vertical-bar', then 'horizontal-bar', then 'heatmap'. */
 export type ChartViewMode = 'vertical-bar' | 'horizontal-bar' | 'heatmap';
@@ -121,6 +122,17 @@ export interface TocAchievement {
   total: number;
   indicators_counted: number;
   indicators_total: number;
+  /**
+   * @akili-spec bugfix/achieved-counts-submitted — union ("Achieved") basis the server carries
+   * alongside the QA/Prel pair above. `achieved-display-basis.ts` re-points `progress_value` /
+   * `progress_percentage` from these (default, switch off) and keeps the QA originals under
+   * `qa_progress_value` / `qa_progress_percentage` below.
+   */
+  achieved_value?: number | null;
+  achieved_progress_percentage?: string | null;
+  /** Client-only: the pre-normalisation QA value, preserved by the display-basis normaliser. */
+  qa_progress_value?: number | null;
+  qa_progress_percentage?: string | null;
 }
 
 /** One row of a "count by category" breakdown. Colour is per CARD, not per row, so it is not here. */
@@ -214,6 +226,13 @@ export interface HeatmapModel {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProgramOverviewComponent {
+  /**
+   * ACS-R-5 / ACS-S-9 — @akili-spec bugfix/achieved-counts-submitted. Flag read by the template to
+   * hide the QA/Prel pair in favour of a single union ("Achieved") figure. Flip
+   * `SHOW_QA_PREL_SPLIT` to restore the two-track display with no server change (ACS-S-10).
+   */
+  readonly showQaPrelSplit = SHOW_QA_PREL_SPLIT;
+
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
   /** Long About copy. Empty → short stand-in using the program name. */
@@ -768,6 +787,13 @@ export class ProgramOverviewComponent {
 
     if (!counted) {
       return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} KPI reporting progress is counted separately on the left.`;
+    }
+
+    if (!this.showQaPrelSplit) {
+      return (
+        `ToC achievement — ${this.achievementLabel(achievement)}, averaged across ${scope}.${kpiNote} ` +
+        'This is separate from the KPI reporting count (reported/planned) on the same row.'
+      );
     }
 
     return (

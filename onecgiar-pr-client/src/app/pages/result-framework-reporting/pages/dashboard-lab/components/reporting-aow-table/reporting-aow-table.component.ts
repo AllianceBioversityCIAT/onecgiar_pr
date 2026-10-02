@@ -6,6 +6,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowDown, lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideLink, lucideX } from '@ng-icons/lucide';
 import { PrToastService } from '../../../../../../shared/components/pr-toast/pr-toast.service';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
+import { SHOW_QA_PREL_SPLIT } from '../../../../../../shared/constants/achieved-display-basis';
 import {
   PrTableComponent,
   PrSortableColumnDirective,
@@ -40,6 +41,18 @@ export interface ReportingIndicator {
    */
   preliminary_achieved_value_sum?: number;
   preliminary_progress_percentage?: string | number;
+  /**
+   * @akili-spec bugfix/achieved-counts-submitted — union ("Achieved") basis field the server
+   * carries alongside the QA/Prel pair above. `achieved-display-basis.ts` re-points
+   * `actual_achieved_value_sum` / `progress_percentage` from `achieved_value_sum` /
+   * `achieved_progress_percentage` (default, switch off) and keeps the QA originals under
+   * `qa_actual_achieved_value_sum` / `qa_progress_percentage` below.
+   */
+  achieved_value_sum?: number;
+  achieved_progress_percentage?: string | number;
+  /** Client-only: the pre-normalisation QA values, preserved by the display-basis normaliser. */
+  qa_actual_achieved_value_sum?: number;
+  qa_progress_percentage?: string | number;
   unit_messurament?: string;
   result_type_name?: string;
   type_name?: string;
@@ -116,6 +129,17 @@ export interface TocAchievement {
   total: number;
   indicators_counted: number;
   indicators_total: number;
+  /**
+   * @akili-spec bugfix/achieved-counts-submitted — union ("Achieved") basis the server carries
+   * alongside the QA/Prel pair above. `achieved-display-basis.ts` re-points `progress_value` /
+   * `progress_percentage` from these (default, switch off) and keeps the QA originals under
+   * `qa_progress_value` / `qa_progress_percentage` below.
+   */
+  achieved_value?: number | null;
+  achieved_progress_percentage?: string | null;
+  /** Client-only: the pre-normalisation QA value, preserved by the display-basis normaliser. */
+  qa_progress_value?: number | null;
+  qa_progress_percentage?: string | null;
 }
 
 /** A row's workflow state, as far as the data allows. See `statusOf`. */
@@ -208,6 +232,13 @@ interface IndicatorBand {
   providers: [provideIcons({ lucideArrowDown, lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideLink, lucideX })]
 })
 export class ReportingAowTableComponent {
+  /**
+   * ACS-R-5 / ACS-S-9 — @akili-spec bugfix/achieved-counts-submitted. Flag read by the template to
+   * hide the QA/Prel pair in favour of a single union ("Achieved") figure. Flip
+   * `SHOW_QA_PREL_SPLIT` to restore the two-track display with no server change (ACS-S-10).
+   */
+  readonly showQaPrelSplit = SHOW_QA_PREL_SPLIT;
+
   readonly groups = input.required<ReportingAowGroup[]>();
   /** Free-text filter, owned by the parent toolbar. Matched against the title and the indicator. */
   readonly search = input<string>('');
@@ -1105,6 +1136,13 @@ export class ReportingAowTableComponent {
       return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} KPI reporting progress uses every planned KPI in the ratio above.`;
     }
 
+    if (!this.showQaPrelSplit) {
+      return (
+        `ToC achievement — ${this.achievementLabel(achievement)}, averaged across ${scope}.${kpiNote} ` +
+        'KPI reporting progress counts every planned KPI separately.'
+      );
+    }
+
     return (
       `ToC achievement — QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
       `averaged across ${scope}.${kpiNote} KPI reporting progress counts every planned KPI separately.`
@@ -1142,6 +1180,10 @@ export class ReportingAowTableComponent {
    * and without saying so the two numbers look like they should add up.
    */
   progressTracksTooltip(row: ReportingIndicator): string {
+    if (!this.showQaPrelSplit) {
+      return `ToC achievement — ${row?.progress_percentage ?? '0%'} of the target.`;
+    }
+
     return (
       `QA ${row?.progress_percentage ?? '0%'} — results that passed quality review (QAed or Approved). ` +
       `Preliminary ${row?.preliminary_progress_percentage ?? '0%'} — results submitted but not yet reviewed, plus Approved ones. ` +

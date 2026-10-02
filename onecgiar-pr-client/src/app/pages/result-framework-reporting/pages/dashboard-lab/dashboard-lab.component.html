@@ -1610,24 +1610,33 @@
                     </div>
 
                     @if (banner.achievement) {
+                      <!-- @akili-spec bugfix/achieved-counts-submitted -->
                       <div
                         class="flex shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[14px] leading-tight max-[768px]:sr-only"
                         [prTooltip]="achievementTooltip(banner.achievement)"
                         prTooltipPosition="top">
-                        <div class="flex items-baseline gap-[10px] whitespace-nowrap">
-                          <span class="flex items-baseline gap-[4px]">
-                            <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                        @if (showQaPrelSplit) {
+                          <div class="flex items-baseline gap-[10px] whitespace-nowrap">
+                            <span class="flex items-baseline gap-[4px]">
+                              <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                              <span class="text-[14px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                                {{ achievementLabel(banner.achievement) }}
+                              </span>
+                            </span>
+                            <span class="flex items-baseline gap-[4px]">
+                              <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                              <span class="text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                                {{ preliminaryAchievementLabel(banner.achievement) }}
+                              </span>
+                            </span>
+                          </div>
+                        } @else {
+                          <div class="flex items-baseline gap-[10px] whitespace-nowrap">
                             <span class="text-[14px] font-bold tabular-nums text-[var(--pr-text-heading)]">
                               {{ achievementLabel(banner.achievement) }}
                             </span>
-                          </span>
-                          <span class="flex items-baseline gap-[4px]">
-                            <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
-                            <span class="text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
-                              {{ preliminaryAchievementLabel(banner.achievement) }}
-                            </span>
-                          </span>
-                        </div>
+                          </div>
+                        }
                         @if (achievementCoverage(banner.achievement)) {
                           <span class="whitespace-nowrap text-[10.5px] font-medium text-[var(--pr-text-muted)]">
                             {{ achievementCoverage(banner.achievement) }}
@@ -1814,16 +1823,26 @@
                               <!-- 6. Progress (Strictly in Column 6, aligned under PROGRESS) -->
                               <div class="text-center text-xs tabular-nums shrink-0 max-[899px]:sr-only">
                                 @if (hlo.achievement) {
-                                  <span
-                                    class="font-bold text-slate-900 whitespace-nowrap"
-                                    [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
-                                    prTooltipPosition="top">
-                                    <span class="text-[9.5px] font-bold uppercase text-slate-500 mr-1">QA</span>{{ achievementLabel(hlo.achievement) }}
-                                  </span>
-                                  <span class="text-slate-300 mx-1">·</span>
-                                  <span class="font-medium text-slate-600 whitespace-nowrap">
-                                    <span class="text-[9.5px] font-bold uppercase text-slate-500 mr-1">PREL</span>{{ preliminaryAchievementLabel(hlo.achievement) }}
-                                  </span>
+                                  <!-- @akili-spec bugfix/achieved-counts-submitted -->
+                                  @if (showQaPrelSplit) {
+                                    <span
+                                      class="font-bold text-slate-900 whitespace-nowrap"
+                                      [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
+                                      prTooltipPosition="top">
+                                      <span class="text-[9.5px] font-bold uppercase text-slate-500 mr-1">QA</span>{{ achievementLabel(hlo.achievement) }}
+                                    </span>
+                                    <span class="text-slate-300 mx-1">·</span>
+                                    <span class="font-medium text-slate-600 whitespace-nowrap">
+                                      <span class="text-[9.5px] font-bold uppercase text-slate-500 mr-1">PREL</span>{{ preliminaryAchievementLabel(hlo.achievement) }}
+                                    </span>
+                                  } @else {
+                                    <span
+                                      class="font-bold text-slate-900 whitespace-nowrap"
+                                      [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
+                                      prTooltipPosition="top">
+                                      {{ achievementLabel(hlo.achievement) }}
+                                    </span>
+                                  }
                                 } @else {
                                   <span class="text-slate-400 font-medium">—</span>
                                 }

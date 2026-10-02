@@ -20,6 +20,7 @@ import { EntityDetails } from '../../../pages/result-framework-reporting/pages/e
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
 import { BilateralApiService } from './bilateral-api.service';
 import { BilateralOverviewService } from '../../../pages/bilateral/services/bilateral-overview.service';
+import { toDisplayBasis } from '../../constants/achieved-display-basis';
 
 @Injectable({
   providedIn: 'root'
@@ -1567,6 +1568,8 @@ export class ResultsApiService {
     );
   }
 
+  // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
+  // normaliser so every ToC-progress consumer reads the union ("Achieved") basis by default.
   GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string, versionId?: number) {
     const queryParams: string[] = [`program=${entityId}`];
 
@@ -1577,9 +1580,11 @@ export class ResultsApiService {
     }
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-    return this.http.get<{ message: string; response: any; status: boolean }>(
-      `${environment.apiBaseUrl}api/results-framework-reporting/toc-results${queryString}`
-    );
+    return this.http
+      .get<{ message: string; response: any; status: boolean }>(
+        `${environment.apiBaseUrl}api/results-framework-reporting/toc-results${queryString}`
+      )
+      .pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
   GET_IndicatorContributionSummary(entityId: string, versionId?: number) {
@@ -1596,28 +1601,34 @@ export class ResultsApiService {
    * Not the same as the science-program progress endpoint used elsewhere, which counts
    * reported results by status. This one answers how far along the ToC commitments are.
    */
+  // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
+  // normaliser (re-points `progress` and every `areas[].progress`).
   GET_ScienceProgramTocProgress(entityId: string, versionId?: number) {
     let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/program-progress?programId=${entityId}`;
     if (typeof versionId === 'number' && Number.isFinite(versionId)) {
       url += `&versionId=${encodeURIComponent(String(versionId))}`;
     }
-    return this.http.get<any>(url);
+    return this.http.get<any>(url).pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
+  // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
+  // normaliser (re-points every node's `progress` and `indicators[]` inside `tocResults[]`).
   GET_2030Outcomes(entityId: string, versionId?: number) {
     let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`;
     if (typeof versionId === 'number' && Number.isFinite(versionId)) {
       url += `&versionId=${encodeURIComponent(String(versionId))}`;
     }
-    return this.http.get<any>(url);
+    return this.http.get<any>(url).pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
+  // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
+  // normaliser (re-points every node's `progress` and `indicators[]` inside `tocResults[]`).
   GET_IntermediateOutcomes(entityId: string, versionId?: number) {
     let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=${entityId}`;
     if (typeof versionId === 'number' && Number.isFinite(versionId)) {
       url += `&versionId=${encodeURIComponent(String(versionId))}`;
     }
-    return this.http.get<any>(url);
+    return this.http.get<any>(url).pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
   GET_W3BilateralProjects(tocResultId: string) {

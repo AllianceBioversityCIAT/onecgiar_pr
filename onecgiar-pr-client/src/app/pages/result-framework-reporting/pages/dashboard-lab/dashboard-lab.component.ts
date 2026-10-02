@@ -15,6 +15,7 @@ import {
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronDown } from '@ng-icons/lucide';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
+import { SHOW_QA_PREL_SPLIT } from '../../../../shared/constants/achieved-display-basis';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -438,6 +439,13 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardLabComponent implements OnInit, OnDestroy {
+  /**
+   * ACS-R-5 / ACS-S-9 — @akili-spec bugfix/achieved-counts-submitted. Flag read by the template to
+   * hide the QA/Prel pair in favour of a single union ("Achieved") figure. Flip
+   * `SHOW_QA_PREL_SPLIT` to restore the two-track display with no server change (ACS-S-10).
+   */
+  readonly showQaPrelSplit = SHOW_QA_PREL_SPLIT;
+
   readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly api = inject(ApiService);
   // Public: the template reads reportingCurrentPhase for the band's cycle eyebrow.
@@ -3372,6 +3380,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const kpiNote = Number.isFinite(kpiTotal) && kpiTotal > 0 ? ` ${kpiTotal} KPIs sit under those nodes.` : '';
     if (!counted) {
       return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} KPI reporting progress is counted separately on the left.`;
+    }
+    if (!this.showQaPrelSplit) {
+      return (
+        `ToC achievement — ${this.achievementLabel(achievement)}, averaged across ${scope}.${kpiNote} ` +
+        'This is separate from the KPI reporting count (reported/planned) on the same row.'
+      );
     }
     return (
       `ToC achievement — QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +

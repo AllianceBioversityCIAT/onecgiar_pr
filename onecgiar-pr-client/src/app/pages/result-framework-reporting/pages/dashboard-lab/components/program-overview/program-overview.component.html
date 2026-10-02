@@ -538,19 +538,26 @@
         laid out for the rail's vertical rhythm instead of the row grid's horizontal pill.
       -->
       @if (programAchievement()) {
+        <!-- @akili-spec bugfix/achieved-counts-submitted -->
         <div
           class="flex flex-col gap-[6px] rounded-[8px] border border-emerald-200 bg-emerald-50 px-[12px] py-[10px]"
           [prTooltip]="achievementTooltip(programAchievement(), 'Areas of Work')"
           prTooltipPosition="top">
           <span class="text-[10px] font-bold uppercase tracking-[0.06em] text-emerald-700">Achieved</span>
-          <div class="flex items-baseline justify-between">
-            <span class="text-[11px] font-medium text-emerald-700/80">QA</span>
-            <span class="pr-figure-sm font-bold text-emerald-700">{{ achievementLabel(programAchievement()) }}</span>
-          </div>
-          <div class="flex items-baseline justify-between">
-            <span class="text-[11px] font-medium text-emerald-700/80">Prel.</span>
-            <span class="pr-figure-sm font-semibold text-emerald-600/80">{{ preliminaryLabel(programAchievement()) }}</span>
-          </div>
+          @if (showQaPrelSplit) {
+            <div class="flex items-baseline justify-between">
+              <span class="text-[11px] font-medium text-emerald-700/80">QA</span>
+              <span class="pr-figure-sm font-bold text-emerald-700">{{ achievementLabel(programAchievement()) }}</span>
+            </div>
+            <div class="flex items-baseline justify-between">
+              <span class="text-[11px] font-medium text-emerald-700/80">Prel.</span>
+              <span class="pr-figure-sm font-semibold text-emerald-600/80">{{ preliminaryLabel(programAchievement()) }}</span>
+            </div>
+          } @else {
+            <div class="flex items-baseline justify-between">
+              <span class="pr-figure-sm font-bold text-emerald-700">{{ achievementLabel(programAchievement()) }}</span>
+            </div>
+          }
           @if (achievementCoverage(programAchievement(), 'Areas of Work')) {
             <span class="text-[10.5px] font-medium text-emerald-700/70">{{ achievementCoverage(programAchievement(), 'Areas of Work') }}</span>
           }
@@ -872,18 +879,25 @@
                 [prTooltip]="row.achievement ? achievementTooltip(row.achievement) : ''"
                 prTooltipPosition="top">
                 @if (row.achievement) {
-                  <!-- Label before value ("QA 10%", not "10% QA"): the other order runs the two
-                       figures together into one unreadable string. -->
-                  <span class="flex items-baseline gap-[8px] whitespace-nowrap @max-[700px]:flex-col @max-[700px]:items-end @max-[700px]:gap-[2px]">
-                    <span class="flex items-baseline gap-[4px]">
-                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                  <!-- @akili-spec bugfix/achieved-counts-submitted -->
+                  @if (showQaPrelSplit) {
+                    <!-- Label before value ("QA 10%", not "10% QA"): the other order runs the two
+                         figures together into one unreadable string. -->
+                    <span class="flex items-baseline gap-[8px] whitespace-nowrap @max-[700px]:flex-col @max-[700px]:items-end @max-[700px]:gap-[2px]">
+                      <span class="flex items-baseline gap-[4px]">
+                        <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                        <span class="text-[13px] font-bold tabular-nums text-emerald-700">{{ achievementLabel(row.achievement) }}</span>
+                      </span>
+                      <span class="flex items-baseline gap-[4px]">
+                        <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                        <span class="text-[12.5px] font-semibold tabular-nums text-emerald-600/80">{{ preliminaryLabel(row.achievement) }}</span>
+                      </span>
+                    </span>
+                  } @else {
+                    <span class="flex items-baseline gap-[8px] whitespace-nowrap">
                       <span class="text-[13px] font-bold tabular-nums text-emerald-700">{{ achievementLabel(row.achievement) }}</span>
                     </span>
-                    <span class="flex items-baseline gap-[4px]">
-                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
-                      <span class="text-[12.5px] font-semibold tabular-nums text-emerald-600/80">{{ preliminaryLabel(row.achievement) }}</span>
-                    </span>
-                  </span>
+                  }
                   @if (achievementCoverage(row.achievement)) {
                     <span class="text-[10px] font-medium text-[var(--pr-text-muted)] @max-[700px]:hidden">{{ achievementCoverage(row.achievement) }}</span>
                   }

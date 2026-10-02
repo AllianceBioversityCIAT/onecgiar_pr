@@ -15,6 +15,7 @@ import { AowHloCreateModalComponent } from './components/aow-hlo-table-create-mo
 import { ResultLevelService } from '../../../../../../../results/pages/result-creator/services/result-level.service';
 import { AowViewResultsDrawerComponent } from './components/aow-view-results-drawer/aow-view-results-drawer.component';
 import { AowTargetDetailsDrawerComponent } from './components/aow-target-details-drawer/aow-target-details-drawer.component';
+import { SHOW_QA_PREL_SPLIT } from '../../../../../../../../shared/constants/achieved-display-basis';
 
 export interface ColumnOrder {
   title: string;
@@ -44,6 +45,13 @@ export interface ColumnOrder {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AowHloTableComponent {
+  /**
+   * ACS-R-5 / ACS-S-9 — @akili-spec bugfix/achieved-counts-submitted. Flag read by the template to
+   * hide the QA/Prel pair in favour of a single union ("Achieved") figure. Flip
+   * `SHOW_QA_PREL_SPLIT` to restore the two-track display with no server change (ACS-S-10).
+   */
+  readonly showQaPrelSplit = SHOW_QA_PREL_SPLIT;
+
   entityAowService = inject(EntityAowService);
   resultLevelService = inject(ResultLevelService);
 
@@ -248,9 +256,9 @@ export class AowHloTableComponent {
       return `None of the ${total} indicators has a target set, so no percentage can be calculated.`;
     }
 
-    const base =
-      `QA ${this.levelProgress(item)} and Preliminary ${this.levelPreliminaryProgress(item)}, ` +
-      `averaged over ${counted} of ${total} indicators.`;
+    const base = this.showQaPrelSplit
+      ? `QA ${this.levelProgress(item)} and Preliminary ${this.levelPreliminaryProgress(item)}, averaged over ${counted} of ${total} indicators.`
+      : `ToC achievement — ${this.levelProgress(item)}, averaged over ${counted} of ${total} indicators.`;
 
     return excluded > 0
       ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
@@ -270,6 +278,10 @@ export class AowHloTableComponent {
   progressTooltip(result: any): string {
     const qa = result?.progress_percentage ?? '0%';
     const preliminary = result?.preliminary_progress_percentage ?? '0%';
+
+    if (!this.showQaPrelSplit) {
+      return `ToC achievement — ${qa} of the target.`;
+    }
 
     return (
       `QA ${qa} — results that passed quality review (QAed or Approved). ` +
