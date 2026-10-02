@@ -515,15 +515,16 @@
 
                 @for (contributor of fields?.contributors_result_toc_result; track contributor.initiative_id) {
                   <app-pr-yes-or-not
-                    [label]="`${contributor?.official_code} - ${contributor?.short_name}`"
+                    [label]="`${contributor?.official_code} - ${contributor?.short_name}${isAcceptedWithoutToc(contributor) ? ' - Accepted without ToC mapped' : ''}`"
                     [required]="!!contributor?.result_toc_results?.length"
                     [(ngModel)]="contributor.planned_result"
                     (selectOptionEvent)="onPlannedResultChange()"
                     [readOnly]="true"
+                    [hasValueOverride]="isAcceptedWithoutToc(contributor) ? true : null"
                     [hideOptions]="!contributor?.result_toc_results?.length">
                   </app-pr-yes-or-not>
 
-                  @if (!contributor?.result_toc_results?.length) {
+                  @if (!contributor?.result_toc_results?.length && !isAcceptedWithoutToc(contributor)) {
                     <div class="pending-message">
                       <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
                       <p>

@@ -795,13 +795,19 @@ export class ResultsTocResultsService {
         short_name: resultInit.short_name ?? null,
       });
 
-      const contributorMappings =
-        (conAccepted ?? []).map((initiative) =>
-          serializeInitiativeEntry(Number(initiative?.id), {
+      // `is_accepted` lets the client tell an accepted contributor that never mapped its ToC
+      // (no `results_toc_result` rows → `result_toc_results: null`) apart from a pending request,
+      // which serializes the same way.
+      const contributorMappings: Array<
+        ReturnType<typeof serializeInitiativeEntry> & { is_accepted: boolean }
+      > =
+        (conAccepted ?? []).map((initiative) => ({
+          ...serializeInitiativeEntry(Number(initiative?.id), {
             official_code: initiative?.official_code ?? null,
             short_name: initiative?.short_name ?? null,
           }),
-        ) ?? [];
+          is_accepted: true,
+        })) ?? [];
 
       for (const pending of conPending ?? []) {
         const pendingId = Number(pending?.id);
@@ -820,6 +826,7 @@ export class ResultsTocResultsService {
             result_toc_results: null,
             toc_progressive_narrative: null,
             toc_level_id: null,
+            is_accepted: false,
           });
         }
       }
