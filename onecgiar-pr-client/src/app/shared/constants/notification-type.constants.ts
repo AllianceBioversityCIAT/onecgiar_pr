@@ -1,3 +1,4 @@
+import { BILATERAL_DECISION_NOTICE_COPY } from '../../internationalization/bilateral-decision-notice.copy';
 import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../internationalization/notification-center-tagged.copy';
 import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../internationalization/notification-project-tagged.copy';
 
@@ -207,6 +208,49 @@ function buildCenterDecisionParts(notification: any): NotificationTextParts | nu
   return { prefix: 'The result', linkTrailer: ',', suffix: text, emphasizePrefix: false };
 }
 
+/**
+ * SACN-T-3 (`notifications/sp-approval-center-notice`, design §8.2, SACN-R-3/R-4/R-5/R-7): a center
+ * recipient's Approve row stores one of two exact sentences on `text` — `"<SPXX>${verb}"` or the
+ * whole `fallbackLead` — both ending in the fixed `tail`. Detected by that tail FIRST, since the
+ * legacy center sentence (`buildCenterDecisionParts`, "where your center was tagged … approved by
+ * the Science Program SPXX.") never ends in it. Returns `segments` (bold SP code + plain verb, or
+ * the unbolded fallback lead alone) so the template renders the WPT-style mid-sentence bold — and
+ * `prefix` set to the same joined text, purely so `buildResultNotificationText` (search/plain-text)
+ * flattens to the identical string without needing its own segments-aware branch (same trick as the
+ * `RESULT_BILATERAL_PROJECT_TAGGED` case below). Never applied outside `BILATERAL_RESULT_APPROVED`
+ * (SACN-R-7's Rejected cases, and any other type, fall straight through to today's logic) — the
+ * caller gates that, not this function.
+ */
+function buildApprovedCenterNoticeParts(notification: any): NotificationTextParts | null {
+  const text = notification?.text?.trim();
+  if (!text || !text.endsWith(BILATERAL_DECISION_NOTICE_COPY.tail)) return null;
+
+  if (text === BILATERAL_DECISION_NOTICE_COPY.fallbackLead) {
+    return {
+      prefix: BILATERAL_DECISION_NOTICE_COPY.fallbackLead,
+      suffix: null,
+      emphasizePrefix: false,
+      segments: [{ text: BILATERAL_DECISION_NOTICE_COPY.fallbackLead, emphasize: false }]
+    };
+  }
+
+  const { verb } = BILATERAL_DECISION_NOTICE_COPY;
+  if (!text.endsWith(verb)) return null;
+
+  const code = text.slice(0, text.length - verb.length);
+  if (!code) return null;
+
+  return {
+    prefix: `${code}${verb}`,
+    suffix: null,
+    emphasizePrefix: false,
+    segments: [
+      { text: code, emphasize: true },
+      { text: verb, emphasize: false }
+    ]
+  };
+}
+
 /** A finished AI job notification, split into its sentence and its in-app destination. */
 export interface AiJobNotificationParts {
   /** The server-composed sentence, without the trailing link. */
@@ -266,9 +310,11 @@ export function getResultNotificationTextParts(notification: any): NotificationT
     case NotificationType.RESULT_QUALITY_ASSESSED:
       return { prefix: 'The result', suffix: 'was successfully Quality Assessed.', emphasizePrefix: false };
 
-    // P2-3157 AC2
+    // P2-3157 AC2. SACN-T-3: the new-shape center notice is tried FIRST (Approve only) — it falls
+    // through to the legacy center/submitter rendering for anything it doesn't recognise.
     case NotificationType.BILATERAL_RESULT_APPROVED:
       return (
+        buildApprovedCenterNoticeParts(notification) ??
         buildCenterDecisionParts(notification) ?? {
           prefix: '✅ Your Result',
           suffix: buildBilateralReviewSuffix('Approved', notification),
