@@ -1270,10 +1270,19 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     }, 200);
   }
 
+  /** P25+ only: `is_accepted` (getTocByResultV2) tells an accepted contributor with no ToC rows apart
+   *  from a pending request — both arrive with `result_toc_results: null`. Older phases keep "Pending". */
+  isAcceptedWithoutToc(contributor: any): boolean {
+    return this.isCP2026() && !!contributor?.is_accepted && !contributor?.result_toc_results?.length;
+  }
+
   getContributorDescription(contributor: any) {
     const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - ${this.tocQuestionLabel()}`;
 
     if (!contributor?.result_toc_results?.length) {
+      if (this.isAcceptedWithoutToc(contributor)) {
+        return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Accepted without ToC mapped`;
+      }
       return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;
     }
 

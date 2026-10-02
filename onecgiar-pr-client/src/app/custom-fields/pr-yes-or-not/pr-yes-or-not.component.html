@@ -12,7 +12,7 @@
     [description]="this.description"
     [tooltip]="this.tooltip"
     [required]="this.required"
-    [hasValue]="this.value !== null && this.value !== undefined"
+    [hasValue]="this.hasValueOverride ?? (this.value !== null && this.value !== undefined)"
     [showDescription]="!hideDescription"
     [descInlineStyles]="descInlineStyles"
     [labelDescInlineStyles]="this.labelDescInlineStyles"

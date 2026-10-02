@@ -739,6 +739,25 @@ describe('RdContributorsAndPartnersComponent', () => {
     });
   });
 
+  describe('getContributorDescription', () => {
+    it('labels a pending contributor (no ToC rows, not accepted) as Pending confirmation', () => {
+      const label = component.getContributorDescription({ official_code: 'SP08', short_name: 'Food', result_toc_results: null, is_accepted: false });
+      expect(label).toBe('<strong>SP08 Food</strong> - Pending confirmation');
+    });
+
+    it('labels a P25 accepted contributor without ToC mapping as Accepted without ToC mapped', () => {
+      jest.spyOn(component, 'isCP2026').mockReturnValue(true);
+      const label = component.getContributorDescription({ official_code: 'SP08', short_name: 'Food', result_toc_results: null, is_accepted: true });
+      expect(label).toBe('<strong>SP08 Food</strong> - Accepted without ToC mapped');
+    });
+
+    it('keeps Pending confirmation for an accepted contributor without ToC mapping outside P25', () => {
+      jest.spyOn(component, 'isCP2026').mockReturnValue(false);
+      const label = component.getContributorDescription({ official_code: 'SP08', short_name: 'Food', result_toc_results: null, is_accepted: true });
+      expect(label).toBe('<strong>SP08 Food</strong> - Pending confirmation');
+    });
+  });
+
   describe('onRemoveAcceptedContributing', () => {
     it('should remove from accepted_contributing_initiatives', () => {
       mockRdPartnersSE.partnersBody.contributing_initiatives = {

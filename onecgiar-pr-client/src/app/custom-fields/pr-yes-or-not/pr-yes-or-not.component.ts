@@ -32,6 +32,9 @@ export class PrYesOrNotComponent {
   @Input() descInlineStyles: string = '';
   @Input() labelDescInlineStyles?: string = '';
   @Input() fieldRef: string | number;
+  /** Overrides the card's "answered" tint when the state comes from outside the Yes/No value
+   *  (e.g. a P25 contributor that accepted without ToC mapping: `value` is null but it is done). */
+  @Input() hasValueOverride: boolean | null = null;
 
   @Output() selectOptionEvent = new EventEmitter<boolean>();
   private _value: boolean;
