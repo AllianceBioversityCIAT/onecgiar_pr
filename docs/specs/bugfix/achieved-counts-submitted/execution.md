@@ -194,3 +194,22 @@ Every node carries its own `progress`, which confirms design §8.1.
 - **Budget:** about 1,200 LOC including tests and docs, against a design estimate of about 350, and 6 review rounds against an estimate of 2. The user was informed during T-4. The cause is test depth (more than half the lines), the a11y builders, and component docs. Every task passed within its rework ceiling.
 
 **Final:** PASS after 2 attempts.
+
+## Post-execution integration (2026-10-02)
+
+The user authorized committing and pushing: first `qa-development-2026-ss`, then merging in `performance-refactor`, validating, and pushing to `performance-refactor`.
+
+1. **Commits on `qa-development-2026-ss`, pushed:**
+   - `4832d9f55` server
+   - `5ef2cee3b` client
+   - `fe72a35a8` spec
+2. **Merge of `origin/performance-refactor` (P2-3858 entities-overview + contributor fixes):** clean, no conflicts.
+3. **Validation after the merge** (all runs used `--maxWorkers=2` and ran one at a time):
+   - Server jest, scoped: 29 suites / 420 passed.
+   - Server `tsc --noEmit`: clean.
+   - Client jest, scoped (this spec's surfaces plus the merged entities-overview and reporting-nav-sidebar): 41 suites / 1930 passed.
+   - **Client `tsc -p tsconfig.app.json --noEmit`: 15 errors (TS4111), all in `achieved-display-basis.ts`.** The app tsconfig sets `noPropertyAccessFromIndexSignature`, and `Record<string, any>` triggers it.
+     - Jest missed this because its `diagnostics: false` skips type checking. The production build would have failed.
+     - **Leader inline fix (mechanical, 1 line, user-visible):** `type AnyRecord = any`, with a comment explaining why.
+     - After the fix: tsc reports 0 errors, eslint is clean, and jest on `achieved-display-basis|results-api.service` passes 332.
+     - Lesson for kaizen: a client task's verify step should include `tsc -p tsconfig.app.json --noEmit` (or a build), not only jest.

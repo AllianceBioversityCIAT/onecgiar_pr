@@ -23,7 +23,8 @@
 /** ACS-R-5 / ACS-S-10 — the one switch. Flip to `true` to restore the QA/Prel split; no server change needed. */
 export const SHOW_QA_PREL_SPLIT = false;
 
-type AnyRecord = Record<string, any>;
+// `any`, not `Record<string, any>`: the app tsconfig sets noPropertyAccessFromIndexSignature.
+type AnyRecord = any;
 
 /**
  * `[field every surface already binds to, the union-basis source field, where the QA value survives]`.
