@@ -314,6 +314,50 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     return this.selectedCenterInstitutionIds().filter(id => Number(id) !== lead);
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // LPC · the lead W3/bilateral project is shown apart from "Contributing W3/bilateral projects"
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Mirror of P2-3864 (lead Center), this time for the lead project (LPC-R-1…3).
+   *
+   * 🛑 DISPLAY ONLY. `selectedProjectIds()` keeps the lead exactly as before — it is what
+   * `buildContributorsPayload()` sends (`is_lead: true`) and what `onProjectsChange` re-adds — so the
+   * PATCH is unchanged (LPC-R-3). Only the picker's options, its model and the chip strip read the
+   * lead-free views below; the new read-only field reads this id too.
+   *
+   * Signal-derived (same resolution `hydrateLeadAndSelection` uses for `readonlyLeadProjectId`), not
+   * `readonlyLeadProjectId` itself: that one is a plain field and a `computed()` would never see it
+   * change. When the lead project id is not in `availableProjects()` (or the catalogue failed), this
+   * is `null`, so nothing is filtered out (LPC-R-3 "not resolvable" scenario).
+   */
+  private readonly leadProjectIdSig = computed<number | null>(() => {
+    const project = this.creationService.selectedProject();
+    if (!project?.id) return null;
+    const leadProjId = Number(project.id);
+    return this.availableProjects().some(p => p.id === leadProjId) ? leadProjId : null;
+  });
+
+  /** LPC-R-1 — the read-only "Lead W3/bilateral project" value; `null` when there is no resolvable lead. */
+  readonly leadProjectLabel = computed<string | null>(() => {
+    const lead = this.leadProjectIdSig();
+    if (lead == null) return null;
+    return this.getProjectDisplayName(lead) || null;
+  });
+
+  /** LPC-R-2 — the lead is not offered in the Contributing W3/bilateral projects list. */
+  readonly contributingProjectOptions = computed(() => {
+    const lead = this.leadProjectIdSig();
+    return this.filteredProjectOptions().filter(p => Number(p.id) !== lead);
+  });
+
+  readonly contributingProjectDisabledOptions = computed(() => this.contributingProjectOptions().filter(p => p.disabled));
+
+  /** LPC-R-2/LPC-R-3 — the chips and the picker model: every selected project except the lead, order kept. */
+  readonly displayedContributingProjectIds = computed(() => {
+    const lead = this.leadProjectIdSig();
+    return this.selectedProjectIds().filter(id => Number(id) !== lead);
+  });
+
   /**
    * BCT-R-1 / BCT-R-3 / BCT-R-4 — Centers owned by a currently-selected, non-lead project.
    *
