@@ -1,5 +1,5 @@
 <app-pr-dialog [(visible)]="this.visible"
-    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [floatingClose]="true" [dismissableMask]="true"
     styleClass="step-n4-edit-bilateral-dialog">
     <div class="modal_title" *ngIf="this.isonlyread == false">Edit bilateral</div>
     <div class="modal_title" *ngIf="this.isonlyread == true">Bilateral Info</div>

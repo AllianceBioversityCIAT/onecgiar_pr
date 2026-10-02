@@ -1,0 +1,14 @@
+# ICM-T-3 · attempt 1 · Reviewer report (verbatim ISSUES + ADVISORY)
+
+STATUS: FAIL
+
+ISSUES:
+1. **Discovered Issue:** On `ipsr-submission-modal` and `ipsr-unsubmit-modal` the new × is effectively invisible. Both modals have a title bar that spans the full panel width (`.modal_title { width: 100%; background-color: var(--pr-color-primary-800); padding: 10px 20px; }` in their `.component.scss`, lines 35-43). The bar is about 37px tall. The floating × sits at `top: 0.75rem` (9px) and is 28px tall, so it falls entirely inside the bar. Its colour comes from the shared `.pr-dialog__close` rule: `color: var(--pr-color-secondary-400)` (#2b2838), drawn on #271862. That is dark on dark, roughly 1.1:1 contrast. The 4 Step 4 modals are fine: their title bar is `width: 200px`, so the × sits on white. Jest (jsdom) cannot catch this, and the pending HITL pass would only catch it later.
+   * **Violated Rule:** `requirements.md` ICM-R-6 says "a `×` … **is visible there**". `ICM-AC-7` says "`×` visible and topmost at its center". `docs/ux-ui/design.md` L237 (§7 rule 3) says "Text on violet/chrome is white … Never place low-contrast greys". §10 (L384) requires WCAG 2.1 AA contrast.
+   * **Remediation Suggestion:** Keep `app-pr-dialog` unchanged. In each of the two consumers' existing `::ng-deep app-pr-dialog .ipsr-submission-modal-dialog` and `.ipsr-unsubmit-modal-dialog` blocks, add a scoped `.pr-dialog__close--floating { color: var(--pr-color-white); }`. Give it a hover background that still contrasts on the bar too, because `--pr-color-accents-2` is near-white and would hide a white icon. A `bg-white/10`-equivalent rgba or a primary-700 token would work. Add these two modals explicitly to the HITL checklist with "× contrast on the title bar".
+
+ADVISORY:
+- RELIABILITY: For add-project, `.buttons` is positioned and comes later in the DOM, so with `z-index: auto` it paints above any `app-pr-select` dropdown that is not positioned or has a lower z-index. The dropdown opens downward into the 80px band. During HITL, confirm the open option list is not covered by Cancel / Add project.
+- READABILITY: `width: 100%` together with `right: 20px` puts the `.buttons` box 20px past the panel's left edge. The panel's `overflow: auto` clips it, so nothing breaks, but `left: 20px; right: 20px; width: auto` would say what is meant. This is the same as the pre-existing `fixed` rule, so it is not a regression.
+- RELIABILITY: the floating × lives inside the panel's own `overflow: auto` scroll box (`.pr-dialog`), so on a panel tall enough to scroll (submission/unsubmit `min-height: 700px` at 1100×700) it scrolls out of view. Escape and a mask click still work. Worth a note in the HITL pass.
+- READABILITY: the condition `floatingClose && !showHeader && closable` is written twice in the template. A `get showFloatingClose()` would keep the class binding and the `@if` from drifting apart.

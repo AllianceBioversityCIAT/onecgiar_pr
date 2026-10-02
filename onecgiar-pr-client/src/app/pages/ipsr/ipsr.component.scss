@@ -1,3 +1,13 @@
 :host {
   display: block;
 }
+
+// docs/specs/bugfix/ipsr-complementary-innovation-modal-overlap (ICM-DD-1): the retained
+// `opacity` fade on `.section_container` keeps `animation-fill-mode: both`, which pins a
+// stacking context on the container for the life of the page. That stacking context traps
+// `app-pr-dialog`'s fixed mask/panel underneath the sidebar and header. Releasing the
+// retained end state (`backwards` keeps the 0-opacity start only) removes the trap; the
+// end state equals the default `opacity: 1`, so nothing visual is lost.
+:host ::ng-deep .section_container {
+  animation-fill-mode: backwards;
+}

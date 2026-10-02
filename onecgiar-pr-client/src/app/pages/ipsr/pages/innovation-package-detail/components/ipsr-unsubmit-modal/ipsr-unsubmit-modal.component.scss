@@ -8,6 +8,23 @@
   .pr-dialog__body {
     padding: 0;
   }
+
+  // ICM-T-3 rework (attempt 2): the floating × sits inside .modal_title, a full-bleed
+  // --pr-color-primary-800 bar. The shared .pr-dialog__close color (--pr-color-secondary-400,
+  // #2b2838) is dark-on-dark there (~1.1:1). Override to white, scoped to this consumer only —
+  // app-pr-dialog itself is untouched.
+  .pr-dialog__close--floating {
+    color: var(--pr-color-white);
+
+    &:hover {
+      background-color: rgba(var(--pr-color-white-rgb), 0.12);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--pr-color-white);
+      outline-offset: 2px;
+    }
+  }
 }
 
 .modal_container {

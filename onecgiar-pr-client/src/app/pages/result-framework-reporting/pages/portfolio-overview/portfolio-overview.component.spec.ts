@@ -667,10 +667,14 @@ describe('PortfolioOverviewComponent', () => {
       expect(phantomClick.defaultPrevented).toBe(true);
       expect(component.sortKey()).toBe(sortKeyBefore);
       expect(component.sortAsc()).toBe(sortAscBefore);
+      expect(component.columnWidths()[column.label]).toBe(230);
 
       const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
       document.dispatchEvent(laterUnrelatedClick);
       expect(laterUnrelatedClick.defaultPrevented).toBe(false);
+      component.sortBy(column);
+      expect(component.sortKey()).toBe('programme');
+      expect(component.sortAsc()).toBe(false);
     });
   });
 

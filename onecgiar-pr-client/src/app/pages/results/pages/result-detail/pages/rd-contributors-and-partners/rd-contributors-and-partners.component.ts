@@ -18,6 +18,17 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
 import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { PROJECT_CENTER_FILTER_COPY } from '../../../../../../internationalization/project-center-filter.copy';
+import {
+  ALL_PROJECT_CENTERS,
+  ProjectCenterFilter,
+  ProjectCenterPill,
+  ProjectOwnerCenter,
+  buildProjectCenterPills,
+  collectProjectOwnerCenters,
+  filterProjectsByOwnerCenter,
+  resolveProjectCenterFilter
+} from '../../../../../../shared/utils/project-center-filter.util';
 @Component({
   selector: 'app-rd-contributors-and-partners',
   templateUrl: './rd-contributors-and-partners.component.html',
@@ -1288,6 +1299,105 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
       return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
     }
     return option?.full_name || option?.title || option?.name || '';
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // P2-3860 · Center filter on "Contributing W3 and/or bilateral projects"
+  // ─────────────────────────────────────────────────────────────────────────
+  // Same pills the W3/Bilateral form ships (P2-3859), inside the panel under its search box (`[util]`
+  // slot of `app-pr-multi-select`). Default = "All centers" (Yeck: in W1/W2 the reporter belongs to a
+  // Program, not a Center). Owner Center = `organization_id` / `organization_acronym` /
+  // `organization_name`, which both projects endpoints return (`aow-bilateral.repository.ts`
+  // `findBilateralProjectsByProgramOfficialCode` / `findBilateralProjectById`).
+  // View-only: it swaps the OPTIONS, never `clarisaProjectsList` (the P2-3838 owner-Center lookup
+  // `projectOwnerCenter()` reads that full list) and never `partnersBody` — so nothing is saved and the
+  // unsaved-changes tracker never sees it.
+  // `clarisaProjectsList` is a plain field (not a signal), so the derived lists are memoized by
+  // reference: `[options]` must keep the same array between CD passes or the picker re-decorates.
+
+  readonly projectFilterCopy = PROJECT_CENTER_FILTER_COPY;
+  readonly projectCenterFilterChoice = signal<ProjectCenterFilter>(ALL_PROJECT_CENTERS);
+
+  private _projectOwnersCache: { source: any[] | null; centers: ProjectOwnerCenter[] } = { source: null, centers: [] };
+  private _projectOptionsCache: { source: any[] | null; filter: ProjectCenterFilter | null; selectedKey: string; options: any[] } = {
+    source: null,
+    filter: null,
+    selectedKey: '',
+    options: []
+  };
+  private _projectPillsCache: { centers: ProjectOwnerCenter[] | null; total: number; active: ProjectCenterFilter | null; pills: ProjectCenterPill[] } = {
+    centers: null,
+    total: -1,
+    active: null,
+    pills: []
+  };
+
+  /** Every Center owning at least one listed project, by acronym. */
+  projectOwnerCenters(): ProjectOwnerCenter[] {
+    const source = this.rdPartnersSE.clarisaProjectsList ?? [];
+    if (this._projectOwnersCache.source !== source) {
+      this._projectOwnersCache = {
+        source,
+        centers: collectProjectOwnerCenters(source, (p: any) =>
+          p?.organization_id == null ? null : { id: Number(p.organization_id), acronym: p.organization_acronym, name: p.organization_name }
+        )
+      };
+    }
+    return this._projectOwnersCache.centers;
+  }
+
+  /** The pressed pill; a Center that no longer owns a listed project (program reloaded) falls back to "All centers". */
+  projectCenterFilter(): ProjectCenterFilter {
+    return resolveProjectCenterFilter(this.projectCenterFilterChoice(), this.projectOwnerCenters());
+  }
+
+  /** The picker's options: the Center's projects PLUS every already-selected project (union), catalogue order. */
+  filteredBilateralProjectOptions(): any[] {
+    const source = this.rdPartnersSE.clarisaProjectsList ?? [];
+    const filter = this.projectCenterFilter();
+    const selectedIds = (this.rdPartnersSE.partnersBody?.bilateral_projects ?? [])
+      .map((p: any) => p?.project_id ?? p?.obj_clarisa_project?.id)
+      .filter((id: unknown) => id != null)
+      .map(String);
+    const selectedKey = selectedIds.join(',');
+    const cache = this._projectOptionsCache;
+    if (cache.source !== source || cache.filter !== filter || cache.selectedKey !== selectedKey) {
+      this._projectOptionsCache = {
+        source,
+        filter,
+        selectedKey,
+        options: filterProjectsByOwnerCenter(
+          source,
+          filter,
+          (p: any) => p?.organization_id,
+          (p: any) => p?.project_id,
+          new Set(selectedIds)
+        )
+      };
+    }
+    return this._projectOptionsCache.options;
+  }
+
+  /** No pills when read-only or when no listed project has an owner Center. */
+  showProjectCenterPills(): boolean {
+    return !this.api.rolesSE.readOnly && this.projectOwnerCenters().length > 0;
+  }
+
+  /** `[● All centers (n)] [ABC (n)] …` — "All centers" first, then the Centers by acronym. */
+  projectCenterPills(): ProjectCenterPill[] {
+    const centers = this.projectOwnerCenters();
+    const total = (this.rdPartnersSE.clarisaProjectsList ?? []).length;
+    const active = this.projectCenterFilter();
+    const cache = this._projectPillsCache;
+    if (cache.centers !== centers || cache.total !== total || cache.active !== active) {
+      this._projectPillsCache = { centers, total, active, pills: buildProjectCenterPills(centers, total, active) };
+    }
+    return this._projectPillsCache.pills;
+  }
+
+  /** View-only: swaps the picker's options, never the selection, and never saves. */
+  setProjectCenterFilter(value: ProjectCenterFilter): void {
+    this.projectCenterFilterChoice.set(value);
   }
 
   formatBilateralProjectLabel(project: any): string {

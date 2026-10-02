@@ -57,6 +57,27 @@
   }
 }
 
+// ICM-DD-2 (opt-in, default off): a positioning context for the floating × below. Scoped to this
+// flag-specific class so `.pr-dialog`'s default output (floatingClose=false, the other 45
+// consumers) is byte-identical to before.
+.pr-dialog--floating-close {
+  position: relative;
+}
+
+.pr-dialog__close--floating {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+
+  // docs/ux-ui/design.md §10 — focus rings MUST be visible; `--pr-color-primary-300` is the
+  // documented focus accent. Scoped to the floating variant only (header × is unchanged).
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
 .pr-dialog__body {
   padding: 1rem 1.5rem 1.5rem;
 }

@@ -32,8 +32,17 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  width: 100%;
-  position: fixed;
+  // ICM-T-3 rework (attempt 2, advisory): width: 100% combined with right: 20px extended the box
+  // 20px past the panel's left edge (invisible only because .pr-dialog's overflow: auto clips it).
+  // left/right/width: auto says what is meant and is visually identical — justify-content: flex-end
+  // anchors the buttons against the unchanged right: 20px regardless of the box's left bound.
+  left: 20px;
+  width: auto;
+  // ICM-R-7 (Pivot 2, pre-existing defect since the p-dialog -> app-pr-dialog migration,
+  // `784549007`): `fixed` pinned these to the viewport instead of the panel (`.step-n4-add-project-dialog`
+  // is already `position: relative`, see `::ng-deep` rule above). `absolute` keeps them anchored to the
+  // panel so they render inside it at both 1440x900 and 1100x700.
+  position: absolute;
   bottom: 15px;
   right: 20px;
 }
