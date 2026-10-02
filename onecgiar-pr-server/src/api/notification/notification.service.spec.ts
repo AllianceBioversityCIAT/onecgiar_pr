@@ -508,8 +508,38 @@ describe('NotificationService', () => {
       return payload.desc;
     };
 
-    // NDCW-R-2/R-3: the center sentence is stored text; the toast must carry the same words.
-    it('builds the center copy from stored text (approved)', async () => {
+    // SACN-R-3/R-4 (design §7.3): Approve now stores the new-shape lead sentence; the description
+    // builder appends the result identity directly (no "The result" prefix, no comma). This
+    // replaces the old approve-center assertion (`where your center was tagged … approved`) for
+    // NEW rows — the legacy shape is covered separately below (SACN-R-7).
+    it('builds the new-shape approved center copy with the SP code and the result identity appended', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+        {},
+        "SP06, as primary Science Program, has approved your center's result",
+      );
+
+      expect(desc).toBe(
+        "SP06, as primary Science Program, has approved your center's result 4321 - A bilateral result title",
+      );
+      expect(desc).not.toContain('Your Result');
+      expect(desc).not.toContain('where your center was tagged');
+    });
+
+    it('builds the new-shape approved center copy with the no-code fallback lead when the SP code is unknown', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+        {},
+        "The primary Science Program has approved your center's result",
+      );
+
+      expect(desc).toBe(
+        "The primary Science Program has approved your center's result 4321 - A bilateral result title",
+      );
+    });
+
+    // SACN-R-7: a legacy approve-center row (stored before this change) keeps rendering as before.
+    it('keeps the legacy approve-center rendering for a pre-SACN row', async () => {
       const desc = await emitAndReadDescription(
         NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
         {},
@@ -519,9 +549,9 @@ describe('NotificationService', () => {
       expect(desc).toBe(
         'The result 4321 - A bilateral result title, where your center was tagged, has been approved by the Science Program SP03.',
       );
-      expect(desc).not.toContain('Your Result');
     });
 
+    // SACN-R-9 / Reject out of scope: the legacy center copy for Reject is unchanged.
     it('builds the center copy from stored text (rejected, no program code)', async () => {
       const desc = await emitAndReadDescription(
         NotificationTypeEnum.BILATERAL_RESULT_REJECTED,

@@ -105,6 +105,7 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
 import { buildInitiativeEntityMapPayload } from '../initiative_entity_map/initiative-entity-map.util';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { NotificationService } from '../notification/notification.service';
+import { BILATERAL_DECISION_NOTICE_COPY } from '../notification/constants/bilateral-decision-notice.constants';
 import {
   NotificationLevelEnum,
   NotificationTypeEnum,
@@ -2933,7 +2934,7 @@ export class ResultsService {
       }
 
       const { submitterIds, centerIds } =
-        await this.getBilateralReviewRecipientIds(resultId, user.id);
+        await this.getBilateralReviewRecipientIds(resultId, user.id, decision);
 
       if (!submitterIds.length && !centerIds.length) {
         this._logger.warn(
@@ -2958,16 +2959,23 @@ export class ResultsService {
         );
       }
 
-      // Center Users who did not submit: the stored text names the center relationship.
+      // Center recipients (any active role on the lead center for Approve — SACN-R-1; existing
+      // Center-User-only set for Reject, unchanged): the stored text names the relationship.
       if (centerIds.length) {
         const programCode =
           await this.resolveOwnerProgramCodeForResult(resultId);
-        const programText = programCode
-          ? ` by the Science Program ${programCode}`
-          : ' by the Science Program';
-        const renderedText = `where your center was tagged, has been ${
-          isApprove ? 'approved' : 'rejected'
-        }${programText}.`;
+        // SACN-R-3/DD-2: Approve stores the new lead sentence recognised by its fixed tail
+        // (`buildBilateralReviewDescription`); Reject keeps the legacy center wording (NDCW,
+        // out of scope for this spec — SACN disqualifier).
+        const renderedText = isApprove
+          ? programCode
+            ? `${programCode}${BILATERAL_DECISION_NOTICE_COPY.verb}`
+            : BILATERAL_DECISION_NOTICE_COPY.fallbackLead
+          : `where your center was tagged, has been rejected${
+              programCode
+                ? ` by the Science Program ${programCode}`
+                : ' by the Science Program'
+            }.`;
 
         await this._notificationService.emitResultNotification(
           NotificationLevelEnum.RESULT,
@@ -3016,13 +3024,18 @@ export class ResultsService {
   }
 
   /**
-   * Submitter and the other recipients (every active Center User of the result's lead centre),
-   * kept separate because their wording differs. Overall de-duplicated: a submitter who is also
-   * a Center User appears only in `submitterIds`. The emitter is removed from both.
+   * Submitter and the other recipients, kept separate because their wording differs. Overall
+   * de-duplicated: a submitter who is also a center recipient appears only in `submitterIds`. The
+   * emitter is removed from both.
+   *
+   * SACN-R-1/DD-1: the center recipient set depends on the decision. Approve uses
+   * `getUserIdsByCenterAnyRole` (every active role on the lead center, widened from Center User
+   * only) — Reject keeps `getUserIdsByCenter` (Center User only, SACN-R-9) exactly as before.
    */
   private async getBilateralReviewRecipientIds(
     resultId: number,
     emitterUserId: number,
+    decision: ReviewDecisionEnum,
   ): Promise<{ submitterIds: number[]; centerIds: number[] }> {
     const recipientIds = new Set<number>();
     const submitterIds = new Set<number>();
@@ -3046,7 +3059,13 @@ export class ResultsService {
     if (leadCenterCode && this._roleByUserRepository) {
       try {
         const centerUserIds =
-          await this._roleByUserRepository.getUserIdsByCenter(leadCenterCode);
+          decision === ReviewDecisionEnum.APPROVE
+            ? await this._roleByUserRepository.getUserIdsByCenterAnyRole(
+                leadCenterCode,
+              )
+            : await this._roleByUserRepository.getUserIdsByCenter(
+                leadCenterCode,
+              );
         centerUserIds.forEach((id) => recipientIds.add(id));
       } catch (error) {
         this._logger.warn(

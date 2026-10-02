@@ -22,6 +22,7 @@ import {
   KEYSET_PAGE_SIZE,
   mergeKeysetLists,
 } from '../../shared/utils/keyset-cursor.util';
+import { BILATERAL_DECISION_NOTICE_COPY } from './constants/bilateral-decision-notice.constants';
 
 /**
  * `PSR-T-7`/`PSR-DD-7` — the 3 Center-notice types (`emitCenterNotice` in
@@ -1304,9 +1305,17 @@ export class NotificationService {
     const identity = [resultCode, this.truncateTitle(resultTitle)]
       .filter((part) => part !== undefined && part !== null && part !== '')
       .join(' - ');
-    // Center recipients: the stored text already names the relationship and the deciding
-    // program, so it replaces the "Your Result ..." sentence (NDCW-R-2/R-3).
     const centerText = storedText?.trim();
+    // SACN-R-3/R-4 (design §7.3): the new-shape center sentence for an Approve decision — stored
+    // text ends in the fixed tail from `BILATERAL_DECISION_NOTICE_COPY`. Detected first so a
+    // legacy row's own trailing wording (checked next) never double-matches. The result identity
+    // is appended directly (no "The result" prefix, no comma) — when missing, the text alone.
+    if (centerText?.endsWith(BILATERAL_DECISION_NOTICE_COPY.tail)) {
+      return identity ? `${centerText} ${identity}` : centerText;
+    }
+    // Legacy center recipients (Reject, and pre-SACN Approve rows): the stored text already
+    // names the relationship and the deciding program, so it replaces the "Your Result ..."
+    // sentence (NDCW-R-2/R-3).
     if (centerText) {
       return identity
         ? `The result ${identity}, ${centerText}`
