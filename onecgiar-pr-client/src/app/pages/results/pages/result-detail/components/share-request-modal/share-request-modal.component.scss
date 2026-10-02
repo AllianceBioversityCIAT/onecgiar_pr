@@ -1,7 +1,7 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
 // app-pr-dialog wrapper: restore the flush layout the old p-dialog had
-// ([style]padding:0) so the full-bleed title bar and absolute buttons render.
+// ([style]padding:0) so the full-bleed title bar and sticky buttons render.
 ::ng-deep app-pr-dialog .share-request-dialog {
   position: relative;
 
@@ -11,7 +11,7 @@
 }
 
 .modal_container {
-  padding: 20px 50px 80px 50px;
+  padding: 20px 50px 20px 50px;
   width: 100vw !important;
   max-width: 60vw !important;
   min-height: 700px !important;
@@ -30,15 +30,16 @@
 }
 
 .buttons {
-  position: absolute;
-  right: 0;
+  // sticky (not absolute): .pr-dialog is the scroll container, so an absolute bar stays at the
+  // initial bottom and floats over the form once the TOC section expands the content.
+  position: sticky;
   bottom: 0;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 0px;
-  padding-right: 50px;
-  padding-bottom: 10px;
+  padding: 10px 50px;
+  background-color: var(--pr-color-white);
 }
 
 .information {
