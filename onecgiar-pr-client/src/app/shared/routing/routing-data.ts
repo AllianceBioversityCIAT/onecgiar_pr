@@ -216,6 +216,13 @@ export const adminModuleRouting: PrRoute[] = [
     loadComponent: () => import('../../pages/admin-section/pages/user-management/user-management.component')
   },
   {
+    // P2-3858 (INC-163934-2): every P/A and every Center Overview on one page. Admin via the parent guard.
+    prName: 'All P/As and Centers',
+    path: 'entities-overview',
+    loadComponent: () =>
+      import('../../pages/admin-section/pages/entities-overview/entities-overview.component').then(m => m.EntitiesOverviewComponent)
+  },
+  {
     // @akili-spec changes/mass-reporting-flow
     prName: 'AI Narrative',
     path: 'ai-narrative',
