@@ -85,6 +85,13 @@ export class SectionZeroDashboardComponent {
       const codes = request.declined_by_codes.length
         ? request.declined_by_codes.join(', ')
         : request.program_code ?? '';
+      // PDR-R-9 / PDR-DD-8: once the result is read-only, "sent_back" means Rejected (final),
+      // not an awaiting-re-pick round — old sent-back results (not read-only) keep today's banner.
+      // Spec tone "danger" maps to `app-alert-status`'s `'error'` (its most severe status; the
+      // component has no `danger` value — see `alert-status.component.ts`).
+      if (this.readOnly()) {
+        return { tone: 'error' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.rejected(codes) };
+      }
       return { tone: 'warning' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.sentBack(codes) };
     }
     if (request.state === 'none') {

@@ -463,4 +463,63 @@ describe('SectionZeroDashboardComponent', () => {
       );
     });
   });
+
+  // PDR-T-5 (notifications/primary-decline-rejects-result) — PDR-R-9 / PDR-DD-8: once the result
+  // is read-only, a "sent_back" primaryRequest means Rejected (final), not an awaiting-re-pick
+  // round. Old sent-back results (not read-only) must keep today's banner and picker untouched.
+  describe('PDR-T-5 — rejected banner (sent_back + readOnly)', () => {
+    const setPrimaryRequest = (
+      state: 'none' | 'pending' | 'sent_back' | 'accepted',
+      programCode: string | null = null,
+      declinedByCodes: string[] = [],
+    ) => {
+      const api = TestBed.inject(BilateralApiService) as any;
+      api.GET_resultInitiativeId.mockReturnValue(
+        primaryRequestResponse(state, programCode, declinedByCodes),
+      );
+    };
+
+    const openResult = (resultId: number) => {
+      (creationService.selectedProject as any).set(project(12, 'OLDPROJ'));
+      (creationService.currentResultId as any).set(resultId);
+      fixture.detectChanges();
+    };
+
+    it('Falsifier: sent_back + readOnly shows the rejected banner, danger tone, with no "Pick another" text', () => {
+      setPrimaryRequest('sent_back', null, ['SP09']);
+      openResult(31);
+      fixture.componentRef.setInput('readOnly', true);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain(
+        'Declined by SP09 as primary Science Program. The result was rejected.',
+      );
+      expect(el.textContent).not.toContain('Pick another');
+      // app-alert-status has no 'danger' status; 'error' is its most severe equivalent.
+      expect(component.primaryAssignmentBanner()?.tone).toBe('error');
+    });
+
+    it('Falsifier: sent_back + NOT readOnly keeps the old "Pick another" banner (old sent-back results)', () => {
+      setPrimaryRequest('sent_back', null, ['SP09']);
+      openResult(32);
+      fixture.componentRef.setInput('readOnly', false);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('Declined by SP09. Pick another primary Science Program');
+      expect(el.textContent).not.toContain('The result was rejected.');
+      expect(component.primaryAssignmentBanner()?.tone).toBe('warning');
+    });
+
+    it('Falsifier: pending + readOnly does NOT show the rejected text', () => {
+      setPrimaryRequest('pending', 'SP09');
+      openResult(33);
+      fixture.componentRef.setInput('readOnly', true);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).not.toContain('The result was rejected.');
+    });
+  });
 });

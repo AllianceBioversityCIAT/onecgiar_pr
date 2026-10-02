@@ -1135,11 +1135,16 @@ describe('ShareResultRequestService', () => {
       };
     }
 
-    function buildDto(rr: any, requestStatusId: number) {
+    function buildDto(
+      rr: any,
+      requestStatusId: number,
+      justification?: string,
+    ) {
       return {
         result_request: rr,
         result_toc_result: { planned_result: false, result_toc_results: [] },
         request_status_id: requestStatusId,
+        justification,
       } as any;
     }
 
@@ -1203,15 +1208,30 @@ describe('ShareResultRequestService', () => {
           state: 'declined',
         });
 
+        // PDR-T-2: a primary decline now needs a non-blank `justification` on the DTO — the
+        // dispatcher 400s before reaching the service otherwise (see the dedicated 400 describe
+        // block below for that guard). This test is about dispatch routing, so it supplies one.
         const response: any = await (service as any)[method](
-          buildDto({ share_result_request_id: 700, result_id: 1 }, statusId),
+          buildDto(
+            { share_result_request_id: 700, result_id: 1 },
+            statusId,
+            fn === 'decline' ? 'Outside portfolio' : undefined,
+          ),
           actingUser,
         );
 
-        expect(mockPrimaryProgramRequestService[fn]).toHaveBeenCalledWith(
-          700,
-          actingUser,
-        );
+        if (fn === 'decline') {
+          expect(mockPrimaryProgramRequestService[fn]).toHaveBeenCalledWith(
+            700,
+            actingUser,
+            'Outside portfolio',
+          );
+        } else {
+          expect(mockPrimaryProgramRequestService[fn]).toHaveBeenCalledWith(
+            700,
+            actingUser,
+          );
+        }
         expect(updateSpy).not.toHaveBeenCalled();
         expect(response.response.request_type).toBe('primary');
         expect(response.status).toBe(HttpStatus.OK);
@@ -1340,6 +1360,142 @@ describe('ShareResultRequestService', () => {
       expect(approvalSpyV2).toHaveBeenCalled();
       expect(notifySpy).toHaveBeenCalled();
       expect(response.status).toBe(HttpStatus.OK);
+    });
+
+    // `PDR-T-2` (design.md §7.2, §9, requirements.md PDR-R-3): the dispatcher 400s a blank
+    // justification on a primary decline BEFORE calling the service, on both V1 and V2.
+    it.each([
+      ['updateResultRequestByUser', '  '],
+      ['updateResultRequestByUserV2', '  '],
+      ['updateResultRequestByUser', undefined],
+      ['updateResultRequestByUserV2', undefined],
+    ] as const)(
+      '%s: request_status_id=3 with justification %p on a primary row returns 400 and never calls decline',
+      async (method, blankJustification) => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue(
+          primaryRow(),
+        );
+
+        const response: any = await (service as any)[method](
+          buildDto(
+            { share_result_request_id: 700, result_id: 1 },
+            3,
+            blankJustification,
+          ),
+          actingUser,
+        );
+
+        expect(mockPrimaryProgramRequestService.decline).not.toHaveBeenCalled();
+        expect(response.status).toBe(HttpStatus.BAD_REQUEST);
+        expect(response.message).toBe(
+          'Justification is required when declining a primary request',
+        );
+      },
+    );
+
+    // `PDR-R-3`: a justification on an accept MUST be ignored — never reaches `accept()`.
+    it('updateResultRequestByUserV2: request_status_id=2 with a justification does not pass it to accept, nothing stored', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(primaryRow());
+      mockPrimaryProgramRequestService.accept.mockResolvedValue({
+        ok: true,
+        shareResultRequestId: 700,
+        state: 'accepted',
+      });
+
+      const response: any = await service.updateResultRequestByUserV2(
+        buildDto({ share_result_request_id: 700, result_id: 1 }, 2, 'x'),
+        actingUser,
+      );
+
+      expect(mockPrimaryProgramRequestService.accept).toHaveBeenCalledWith(
+        700,
+        actingUser,
+      );
+      expect(mockPrimaryProgramRequestService.decline).not.toHaveBeenCalled();
+      expect(response.status).toBe(HttpStatus.OK);
+    });
+
+    // `PDR-R-2` regression guard: a contribution row declined without a justification MUST NOT
+    // get 400 — the dispatcher's justification guard only applies to the primary branch.
+    it('a contribution row declined without a justification is not rejected with 400 (PDR-R-2 unaffected)', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(
+        contributionRow(),
+      );
+      jest
+        .spyOn(service as any, 'updateShareResultRequest')
+        .mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'handleRequestApproval')
+        .mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'emitContributionDecisionNotification')
+        .mockResolvedValue(undefined);
+
+      const response: any = await service.updateResultRequestByUser(
+        buildDto({ share_result_request_id: 500, result_id: 1 }, 3),
+        actingUser,
+      );
+
+      expect(mockPrimaryProgramRequestService.decline).not.toHaveBeenCalled();
+      expect(response.status).not.toBe(HttpStatus.BAD_REQUEST);
+      expect(response.status).toBe(HttpStatus.OK);
+    });
+
+    // `PDR-T-2` / design.md §7.2: `mapPrimaryDecisionOutcomeToResponse` maps the service's
+    // `invalid_input` outcome to 400 with the exact PDR-R-3 message.
+    it('maps an invalid_input outcome from the service to 400 with the exact PDR-R-3 message', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(primaryRow());
+      mockPrimaryProgramRequestService.decline.mockResolvedValue({
+        ok: false,
+        reason: 'invalid_input',
+      });
+
+      const response: any = await service.updateResultRequestByUser(
+        buildDto(
+          { share_result_request_id: 700, result_id: 1 },
+          3,
+          'Outside portfolio',
+        ),
+        actingUser,
+      );
+
+      expect(mockPrimaryProgramRequestService.decline).toHaveBeenCalledWith(
+        700,
+        actingUser,
+        'Outside portfolio',
+      );
+      expect(response.status).toBe(HttpStatus.BAD_REQUEST);
+      expect(response.message).toBe(
+        'Justification is required when declining a primary request',
+      );
+    });
+
+    // A valid primary decline passes the raw (untrimmed) text through to `decline()`, which owns
+    // trimming itself (design.md §7.1) — the dispatcher only checks for blank-after-trim.
+    it('a valid primary decline passes the justification text through to decline, untouched', async () => {
+      mockShareResultRequestRepository.findOne.mockResolvedValue(primaryRow());
+      mockPrimaryProgramRequestService.decline.mockResolvedValue({
+        ok: true,
+        shareResultRequestId: 700,
+        state: 'rejected',
+      });
+
+      const response: any = await service.updateResultRequestByUserV2(
+        buildDto(
+          { share_result_request_id: 700, result_id: 1 },
+          3,
+          '  Outside portfolio  ',
+        ),
+        actingUser,
+      );
+
+      expect(mockPrimaryProgramRequestService.decline).toHaveBeenCalledWith(
+        700,
+        actingUser,
+        '  Outside portfolio  ',
+      );
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(response.response.state).toBe('rejected');
     });
   });
 

@@ -89,6 +89,19 @@ export class NotificationItemComponent {
   showConfirmRejectDialog = signal(false);
   showTocPromptDialog = signal(false);
   showTocMappingDialog = signal(false);
+  /**
+   * PDR-T-4 (design.md §8.2): a primary request's Decline — row button or drawer footer — opens
+   * THIS dialog instead of `showConfirmRejectDialog`. Mutually exclusive with the other three
+   * popups and the drawer, same as them (`openDrawer()` resets it to `false` alongside the rest).
+   */
+  showPrimaryDeclineDialog = signal(false);
+  /**
+   * PDR-T-4 (design.md §8.2 "a 400 keeps the dialog open"): set in `submitPrimaryDecline()`'s own
+   * `error` handler, read in that same method's `finalize` so it can skip the unconditional
+   * close/reset it would otherwise run for every other outcome. Never read outside that one pair of
+   * callbacks.
+   */
+  private keepPrimaryDeclineDialogOpen = false;
 
   /** CRD-T-4: centralized copy for the row's accessible name and the drawer's Align section. */
   readonly copy = CONTRIBUTION_REQUEST_DRAWER_COPY;
@@ -491,6 +504,45 @@ export class NotificationItemComponent {
   }
 
   /**
+   * PDR-T-4 (design.md §8.2 "Row Decline"): single entry point for the row's Decline button. A
+   * primary request opens the new justification dialog (`showPrimaryDeclineDialog`) — never
+   * `showConfirmRejectDialog`, which stays exactly as-is for every other row kind (contributor,
+   * W1/W2), byte-for-byte (`PDR-R-2`).
+   */
+  onDeclineClick() {
+    if (this.isPrimaryRequest) {
+      this.showPrimaryDeclineDialog.set(true);
+      return;
+    }
+    this.showConfirmRejectDialog.set(true);
+  }
+
+  /**
+   * PDR-T-4 (design.md §8.2 "Drawer Decline"): the drawer's `declineClicked` output (its `decide`-
+   * footer Decline button). A primary request closes the drawer FIRST, then opens the justification
+   * dialog — never a dialog stacked on top of an open drawer (`PDR-R-1` "same layout…", design's
+   * "the drawer closes first"). Every other row kind keeps today's inline `confirm-decline` footer,
+   * untouched (`PDR-R-2`).
+   */
+  onDrawerDeclineClicked() {
+    if (this.isPrimaryRequest) {
+      this.closeDrawer();
+      this.showPrimaryDeclineDialog.set(true);
+      return;
+    }
+    this.drawerMode.set('confirm-decline');
+  }
+
+  /**
+   * PDR-T-4: Confirm on the primary-decline dialog — the dialog already guarantees a trimmed,
+   * non-empty `justification` (its own `confirmDisabled`), so this is a thin pass-through to the
+   * shared decision entry point.
+   */
+  onPrimaryDeclineConfirm(justification: string) {
+    this.acceptOrReject(false, false, justification);
+  }
+
+  /**
    * CRD-T-3: the untouched-mapping seed, extracted from `openTocMappingStep()` so `openDrawer()`
    * can reuse it WITHOUT the global hydration (CRD-DD-3 — hydration is deferred to the first
    * planned-result answer, see `onTocPlannedResultChange()`). Shape unchanged from before the
@@ -548,6 +600,7 @@ export class NotificationItemComponent {
     this.showConfirmRejectDialog.set(false);
     this.showTocPromptDialog.set(false);
     this.showTocMappingDialog.set(false);
+    this.showPrimaryDeclineDialog.set(false);
 
     // PSR-T-8: a primary request never seeds the Align block — `showAlignSlot` also hides the
     // projected `[crdAlign]` slot on the drawer (defense in depth), but the real fix is here:
@@ -1042,7 +1095,7 @@ export class NotificationItemComponent {
     return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
   }
 
-  acceptOrReject(isAccept: boolean, withTocMapping = false) {
+  acceptOrReject(isAccept: boolean, withTocMapping = false, justification?: string) {
     if (this.invalidateRequest()) {
       return;
     }
@@ -1057,15 +1110,34 @@ export class NotificationItemComponent {
     // P2-3187 AC4: when the contributor chose "Map it", the mapping travels WITH this same PATCH —
     // `mapWorkPackagesToInitiative*` writes the contributor's `result_toc_result` rows on approval,
     // so one request records the decision and the optional mapping together (no second accept).
-    const body = {
+    const body: Record<string, unknown> = {
       result_request: this.notification,
       result_toc_result:
         withTocMapping && isAccept ? this.buildTocMappingPayload() : { planned_result: null, result_toc_results: [] },
       request_status_id: isAccept ? 2 : 3
     };
 
+    // PDR-T-4 (design.md §8.2): `justification` is added to the body only for a primary decline —
+    // never on accept, and never for a contributor/W1W2 decline (`PDR-R-2`, `requesterCode` getter
+    // untouched). `isPrimaryRequest` gates it, not merely "a justification argument was passed", so
+    // a stray caller can never smuggle the key in for the wrong row kind.
+    const isPrimaryDecline = !isAccept && this.isPrimaryRequest;
+    if (isPrimaryDecline) {
+      body['justification'] = justification;
+    }
+
     if (isAccept) this.requestingAccept = true;
     else this.requestingReject = true;
+
+    // PDR-T-4 (design.md §8.2 "own pipe"): a primary decline's error handling must NOT run the
+    // shared `finalize` below unconditionally — a 400 has to keep the justification dialog open
+    // with its text, which the shared `finalize` (always closes/resets everything) would wipe.
+    // Every other call (accept, contributor/W1W2 decline) falls through to the untouched pipeline
+    // beneath this, byte-for-byte (`PDR-R-2`).
+    if (isPrimaryDecline) {
+      this.submitPrimaryDecline(body);
+      return;
+    }
 
     this.api.resultsSE
       .PATCH_updateRequest(body, this.isP25Request)
@@ -1102,6 +1174,78 @@ export class NotificationItemComponent {
           // runs unconditionally (closes the drawer, resets the popup signals, emits
           // `requestEvent`), which is what makes the row stop being actionable; this branch only
           // swaps the toast for the exact server-contract text instead of the generic error one.
+          if (err?.status === 409) {
+            this.api.alertsFe.show({
+              id: 'noti-error',
+              title: this.copy.notificationItem.staleRequestMessage,
+              description: '',
+              status: 'information'
+            });
+            return;
+          }
+          this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+        }
+      });
+  }
+
+  /**
+   * PDR-T-4 (design.md §8.2 "own pipe"): the primary decline's own PATCH pipeline. Mirrors the
+   * shared one above (accept / contributor / W1W2 decline, left byte-for-byte untouched) with one
+   * difference: on a **400** the dialog must stay open with its text kept (`PDR-R-1` "server
+   * error" scenario), so this `finalize` conditionally skips the close/reset it would otherwise run
+   * unconditionally. `keepPrimaryDeclineDialogOpen` is set in the `error` branch just below — RxJS
+   * runs `finalize` after the destination's `next`/`error` callback, so the flag is always read
+   * after it was written for the same emission.
+   */
+  private submitPrimaryDecline(body: Record<string, unknown>) {
+    this.keepPrimaryDeclineDialogOpen = false;
+
+    this.api.resultsSE
+      .PATCH_updateRequest(body, this.isP25Request)
+      .pipe(
+        finalize(() => {
+          this.requestingReject = false;
+          if (this.keepPrimaryDeclineDialogOpen) {
+            // 400: keep `showPrimaryDeclineDialog` true (text survives) and the drawer already
+            // closed on open (`onDrawerDeclineClicked`) stays closed — nothing else to undo here.
+            // `requestingReject` (the dialog's `isSaving`) still flips false→true→false, which is
+            // what releases the dialog's own double-click guard for a retry.
+            this.keepPrimaryDeclineDialogOpen = false;
+            return;
+          }
+          this.closeDrawer();
+          this.showConfirmRejectDialog.set(false);
+          this.showTocPromptDialog.set(false);
+          this.showTocMappingDialog.set(false);
+          this.showPrimaryDeclineDialog.set(false);
+          this.requestEvent.emit();
+        })
+      )
+      .subscribe({
+        next: () => {
+          // design.md §8.2: bilateral decline wording — distinct from the shared pipeline's
+          // "Request successfully rejected" (contributor/W1W2 byte-for-byte, `PDR-R-2`).
+          this.api.alertsFe.show({
+            id: 'noti',
+            title: 'Request successfully declined',
+            status: 'information'
+          });
+        },
+        error: err => {
+          console.error(err);
+          // PDR-R-1 "server error": a 400 (blank/missing justification, re-validated server-side,
+          // `PDR-R-3`) keeps the dialog open with its text and shows the server's message.
+          if (err?.status === 400) {
+            this.keepPrimaryDeclineDialogOpen = true;
+            this.api.alertsFe.show({
+              id: 'noti-error',
+              title: err?.error?.message || 'Justification is required when declining a primary request',
+              description: '',
+              status: 'error'
+            });
+            return;
+          }
+          // 403/409/500 keep today's behavior: the `finalize` above already closed everything.
           if (err?.status === 409) {
             this.api.alertsFe.show({
               id: 'noti-error',

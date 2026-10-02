@@ -16,6 +16,12 @@ import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entit
 import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
 import { ResultsByInititiative } from '../../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultsTocResult } from '../../results-toc-results/entities/results-toc-result.entity';
+import { Result } from '../../entities/result.entity';
+import {
+  ResultReviewHistory,
+  ReviewActionEnum,
+} from '../../result-review-history/entities/result-review-history.entity';
+import { ResultStatusData } from '../../../../shared/constants/result-status.enum';
 import { RoleByUserRepository } from '../../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsCenterRepository } from '../../results-centers/results-centers.repository';
 import { ResultRepository } from '../../result.repository';
@@ -102,11 +108,20 @@ describe('PrimaryProgramRequestService', () => {
     save: jest.fn(),
     update: jest.fn(),
   };
+  const mockResultRepoTx = {
+    update: jest.fn(),
+  };
+  const mockHistoryRepoTx = {
+    create: jest.fn((obj: unknown) => obj),
+    save: jest.fn(),
+  };
 
   function txRepoFor(entity: unknown) {
     if (entity === ShareResultRequest) return mockRequestRepoTx;
     if (entity === ResultsByInititiative) return mockInitiativeRepoTx;
     if (entity === ResultsTocResult) return mockTocRepoTx;
+    if (entity === Result) return mockResultRepoTx;
+    if (entity === ResultReviewHistory) return mockHistoryRepoTx;
     // T-5 review (2nd defect): `request()` now also routes its lead-project / alignment reads
     // through the caller-supplied manager. `decline()`'s auto-move calls `request()` with this
     // same transaction's manager, so this fake must resolve these three too — reusing the SAME
@@ -222,6 +237,8 @@ describe('PrimaryProgramRequestService', () => {
     mockInitiativeRepoTx.find.mockResolvedValue([]);
     mockInitiativeRepoTx.findOne.mockResolvedValue(null);
     mockTocRepoTx.findOne.mockResolvedValue(null);
+    mockResultRepoTx.update.mockClear();
+    mockHistoryRepoTx.save.mockClear();
     mockRequestRepoTx.find.mockResolvedValue([]);
     mockRequestRepoTx.findOne.mockResolvedValue(null);
     mockRequestRepoTx.insert.mockResolvedValue({
@@ -368,51 +385,6 @@ describe('PrimaryProgramRequestService', () => {
     });
   });
 
-  describe('getOtherAlignment — DD-8 round-based auto-move helper', () => {
-    it('returns the only other SP on a two-alignment project', async () => {
-      mockMappings([
-        { programCode: 'SP09', allocation: '70', status: 'Confirmed' } as any,
-        { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
-      ]);
-      mockInitiatives([
-        { id: 9, official_code: 'SP09' },
-        { id: 12, official_code: 'SP12' },
-      ]);
-
-      await expect(
-        service.getOtherAlignment(leadProjectId, 9),
-      ).resolves.toEqual({ initiativeId: 12, programCode: 'SP12' });
-    });
-
-    it('returns null on a single-alignment project', async () => {
-      mockMappings([
-        { programCode: 'SP13', allocation: '100', status: 'Confirmed' } as any,
-      ]);
-      mockInitiatives([{ id: 13, official_code: 'SP13' }]);
-
-      await expect(
-        service.getOtherAlignment(leadProjectId, 13),
-      ).resolves.toBeNull();
-    });
-
-    it('returns null on a >2-alignment project (no single deterministic other SP)', async () => {
-      mockMappings([
-        { programCode: 'SP09', allocation: '40', status: 'Confirmed' } as any,
-        { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
-        { programCode: 'SP03', allocation: '30', status: 'Confirmed' } as any,
-      ]);
-      mockInitiatives([
-        { id: 9, official_code: 'SP09' },
-        { id: 12, official_code: 'SP12' },
-        { id: 3, official_code: 'SP03' },
-      ]);
-
-      await expect(
-        service.getOtherAlignment(leadProjectId, 9),
-      ).resolves.toBeNull();
-    });
-  });
-
   describe('request()', () => {
     beforeEach(() => {
       mockLeadProject(leadProjectId);
@@ -554,38 +526,6 @@ describe('PrimaryProgramRequestService', () => {
       );
       expect(mockShareResultRequestRepository.insert).toHaveBeenCalledWith(
         expect.objectContaining({ shared_inititiative_id: 9 }),
-      );
-    });
-
-    // Reviewer FAIL #2 (rework, attempt 2): request()'s DD-8 cancel must be opt-in, because T-3's
-    // decline auto-move calls request(other) right after setting the JUST-declined row to status
-    // 3 (kept active, design.md §2.2/§5 item 3) — an unconditional cancel would deactivate that
-    // very row, so "the other SP already declined this round" (DD-8) could never be found again
-    // and SP09/SP12 would ping-pong forever (the PSR-R-7 "both SPs decline" scenario this guards).
-    it('with cancelRound: false, does not touch the round and still inserts the new pending SP', async () => {
-      mockShareResultRequestRepository.find.mockResolvedValue([
-        {
-          share_result_request_id: 11,
-          request_status_id: 3,
-          shared_inititiative_id: 9,
-        } as ShareResultRequest,
-      ]);
-      mockShareResultRequestRepository.insert.mockResolvedValue({
-        identifiers: [{ share_result_request_id: 50 }],
-      });
-
-      const outcome = await service.request(1, 12, user, undefined, {
-        cancelRound: false,
-      });
-
-      expect(outcome).toEqual({ ok: true, shareResultRequestId: 50 });
-      // The just-declined SP09 row (still active, per design §2.2) must be left alone.
-      expect(mockShareResultRequestRepository.update).not.toHaveBeenCalled();
-      expect(mockShareResultRequestRepository.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          shared_inititiative_id: 12,
-          owner_initiative_id: 12,
-        }),
       );
     });
 
@@ -1175,40 +1115,114 @@ describe('PrimaryProgramRequestService', () => {
     });
   });
 
-  describe('decline() — PSR-R-5 / PSR-R-6 / PSR-R-7 / PSR-R-8 / DD-8 (table-driven)', () => {
-    const leadProjectId = 501;
+  describe('decline() — PDR-R-3 / PDR-R-4 / PDR-R-5 / PDR-R-6 / PDR-R-7 / PDR-R-10 / PDR-R-11 (table-driven)', () => {
+    const pendingRow = (overrides: Partial<ShareResultRequest> = {}) => ({
+      share_result_request_id: 1,
+      request_status_id: 1,
+      shared_inititiative_id: 9,
+      result_id: 100,
+      ...overrides,
+    });
+
+    beforeEach(() => {
+      mockInitiativeCodes({ 9: 'SP09', 12: 'SP12' });
+      // Reviewer A (attempt 2, FAIL issue 1; attempt 3, FAIL issue 1 widened the scope): the
+      // top-level `beforeEach` wires the OUTER, non-transactional
+      // `mockShareResultRequestRepository.manager.getRepository` to the SAME `txRepoFor` the
+      // transaction callback's own manager uses, so a mutant that routes a write through
+      // `this.shareResultRequestRepository.manager.getRepository(Entity)` instead of the callback's
+      // `manager` reached the SAME mock either way and every assertion stayed green. This covers
+      // all three entities `decline()`'s transaction touches — `Result`, `ResultReviewHistory`,
+      // AND `ShareResultRequest` (attempt 2 only covered the first two, missing the status-3 row
+      // update and the contribution-deactivation write, both on `ShareResultRequest`). `decline()`
+      // has no legitimate reason to call the outer manager for any of the three (the only outer-
+      // manager call it makes at all is `.manager.transaction(...)` itself — grepped, no
+      // `this.shareResultRequestRepository.manager.getRepository(...)` call exists in `decline()`),
+      // so making the outer resolution throw for them turns every such mutant into a visible
+      // failure instead of a silent pass — without touching the shared top-level wiring other
+      // describe blocks (accept(), request(), releaseContributors()) rely on.
+      mockShareResultRequestRepository.manager.getRepository.mockImplementation(
+        (entity: unknown) => {
+          if (
+            entity === Result ||
+            entity === ResultReviewHistory ||
+            entity === ShareResultRequest
+          ) {
+            throw new Error(
+              `decline() must resolve ${String(entity)} through the transaction manager, not the outer manager`,
+            );
+          }
+          return txRepoFor(entity);
+        },
+      );
+    });
+
+    // --- PDR-T-1 "FIRST STEP" (PDR-P-6): every write below (`Result`, `ResultReviewHistory`, the
+    // `share_result_request` rows) resolves ONLY through `manager.getRepository(Entity)` inside
+    // the transaction callback — there is no plain injected `Repository<Result>` or
+    // `Repository<ResultReviewHistory>` field on this service at all. The `beforeEach` above makes
+    // the OUTER manager throw for `Result`/`ResultReviewHistory`/`ShareResultRequest`, so any
+    // assertion against `mockResultRepoTx` / `mockHistoryRepoTx` / `mockRequestRepoTx` below is now
+    // proof (not just proof-by-construction)
+    // that the write went through the SAME manager the transaction callback received — a mutant
+    // that reroutes to the outer manager throws synchronously and the outcome/assertions diverge.
+    it('(g) blank justification ("") is rejected before any repository write', async () => {
+      const outcome = await service.decline(1, user, '');
+
+      expect(outcome).toEqual({ ok: false, reason: 'invalid_input' });
+      expect(
+        mockShareResultRequestRepository.manager.transaction,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('(g) whitespace-only justification ("   ") is rejected before any repository write', async () => {
+      const outcome = await service.decline(1, user, '   ');
+
+      expect(outcome).toEqual({ ok: false, reason: 'invalid_input' });
+      expect(
+        mockShareResultRequestRepository.manager.transaction,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('(g) undefined justification is rejected before any repository write', async () => {
+      const outcome = await service.decline(1, user, undefined as any);
+
+      expect(outcome).toEqual({ ok: false, reason: 'invalid_input' });
+      expect(
+        mockShareResultRequestRepository.manager.transaction,
+      ).not.toHaveBeenCalled();
+    });
 
     it('returns forbidden (403) for a user with roles only on another SP', async () => {
-      mockRequestRepoTx.findOne.mockResolvedValueOnce({
-        share_result_request_id: 1,
-        request_status_id: 1,
-        shared_inititiative_id: 9,
-        result_id: 100,
-      });
+      mockRequestRepoTx.findOne.mockResolvedValueOnce(pendingRow());
       mockRoleByUserRepository.isUserAdmin.mockResolvedValue(false);
       mockRoleByUserRepository.hasActiveRoleOnInitiative.mockResolvedValue(
         false,
       );
 
-      await expect(service.decline(1, user)).resolves.toEqual({
+      await expect(
+        service.decline(1, user, 'Outside portfolio'),
+      ).resolves.toEqual({
         ok: false,
         reason: 'forbidden',
       });
     });
 
-    it('returns conflict (409) when the row is no longer pending', async () => {
-      mockRequestRepoTx.findOne.mockResolvedValueOnce({
-        share_result_request_id: 1,
-        request_status_id: 3,
-        shared_inititiative_id: 9,
-        result_id: 100,
-      });
+    // (j) race: the row is already decided by the time this decline reaches the lock.
+    it('(j) returns conflict (409) and writes nothing when the row is no longer pending', async () => {
+      mockRequestRepoTx.findOne.mockResolvedValueOnce(
+        pendingRow({ request_status_id: 3 }),
+      );
 
-      await expect(service.decline(1, user)).resolves.toEqual({
+      await expect(
+        service.decline(1, user, 'Outside portfolio'),
+      ).resolves.toEqual({
         ok: false,
         reason: 'conflict',
       });
       expect(mockRequestRepoTx.update).not.toHaveBeenCalled();
+      expect(mockResultRepoTx.update).not.toHaveBeenCalled();
+      expect(mockHistoryRepoTx.save).not.toHaveBeenCalled();
     });
 
     // Defect B (T-3 follow-up, Reviewer finding on T-4) — same service-level enforcement as
@@ -1217,7 +1231,9 @@ describe('PrimaryProgramRequestService', () => {
     it('returns conflict (409) and touches nothing for an inactive (cancelled) row, even with status PENDING', async () => {
       mockRequestRepoTx.findOne.mockResolvedValueOnce(null); // is_active:true filter excludes it
 
-      await expect(service.decline(1, user)).resolves.toEqual({
+      await expect(
+        service.decline(1, user, 'Outside portfolio'),
+      ).resolves.toEqual({
         ok: false,
         reason: 'conflict',
       });
@@ -1230,267 +1246,70 @@ describe('PrimaryProgramRequestService', () => {
       expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
     });
 
-    // alignments = 1 (single SP) → always sent back, no move attempted.
-    it('1 alignment: sends the result back, no auto-move', async () => {
-      mockLeadProject(leadProjectId);
-      mockMappings([
-        { programCode: 'SP13', allocation: '100', status: 'Confirmed' } as any,
-      ]);
-      mockInitiatives([{ id: 13, official_code: 'SP13' }]);
-      mockInitiativeCodes({ 13: 'SP13' });
-      mockRequestRepoTx.findOne.mockResolvedValueOnce({
-        share_result_request_id: 1,
-        request_status_id: 1,
-        shared_inititiative_id: 13,
-        result_id: 100,
-      });
-
-      const outcome = await service.decline(1, user);
-
-      expect(outcome).toEqual({
-        ok: true,
-        shareResultRequestId: 1,
-        state: 'declined',
-      });
-      expect(mockRequestRepoTx.update).toHaveBeenCalledWith(
-        { share_result_request_id: 1 },
-        expect.objectContaining({ request_status_id: 3 }),
-      );
-      expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
-      expect(
-        mockNotificationService.emitResultNotification,
-      ).toHaveBeenCalledWith(
-        expect.anything(),
-        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
-        expect.any(Array),
-        99,
-        100,
-        expect.any(String),
-      );
-      // "swap: the old owner stays" — decline never touches role 1 / ResultsByInititiative.
-      expect(mockInitiativeRepoTx.update).not.toHaveBeenCalled();
-      expect(mockInitiativeRepoTx.save).not.toHaveBeenCalled();
-    });
-
-    // alignments = 2, other SP has NOT declined this round → auto-move (PSR-R-5).
-    it('2 alignments, other not yet declined: auto-moves to the other SP and removes it from contributor drafts', async () => {
-      mockLeadProject(leadProjectId);
-      mockMappings([
-        { programCode: 'SP09', allocation: '70', status: 'Confirmed' } as any,
-        { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
-      ]);
-      mockInitiatives([
-        { id: 9, official_code: 'SP09' },
-        { id: 12, official_code: 'SP12' },
-      ]);
-      mockInitiativeCodes({ 9: 'SP09', 12: 'SP12' });
-
-      mockRequestRepoTx.findOne
-        .mockResolvedValueOnce({
-          share_result_request_id: 1,
-          request_status_id: 1,
-          shared_inititiative_id: 9,
-          result_id: 100,
-        })
-        // otherAlreadyDeclined check for SP12 → none.
-        .mockResolvedValueOnce(null);
-      mockRequestRepoTx.insert.mockResolvedValueOnce({
-        identifiers: [{ share_result_request_id: 77 }],
-      });
-
-      const outcome = await service.decline(1, user);
-
-      expect(outcome).toEqual({
-        ok: true,
-        shareResultRequestId: 1,
-        state: 'moved',
-      });
-      // The move itself: a new pending `primary` row to SP12.
-      expect(mockRequestRepoTx.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          shared_inititiative_id: 12,
-          request_type: RequestTypeEnum.PRIMARY,
-          request_status_id: 1,
-        }),
-      );
-      // SP12 removed from any contributor draft/pending row (PSR-R-5 "can't be both").
-      expect(mockRequestRepoTx.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          request_type: RequestTypeEnum.CONTRIBUTION,
-          shared_inititiative_id: 12,
-        }),
-        { is_active: false },
-      );
-      expect(
-        mockNotificationService.emitResultNotification,
-      ).toHaveBeenCalledWith(
-        expect.anything(),
-        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
-        expect.any(Array),
-        99,
-        100,
-        expect.stringContaining('SP12'),
-      );
-    });
-
-    // Falsifier: 2-alignment decline where the other SP already declined still creates a
-    // request → FAIL.
-    it('2 alignments, other SP already declined this round: sends back, no second request', async () => {
-      mockLeadProject(leadProjectId);
-      mockMappings([
-        { programCode: 'SP09', allocation: '70', status: 'Confirmed' } as any,
-        { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
-      ]);
-      mockInitiatives([
-        { id: 9, official_code: 'SP09' },
-        { id: 12, official_code: 'SP12' },
-      ]);
-      mockInitiativeCodes({ 9: 'SP09', 12: 'SP12' });
-
-      mockRequestRepoTx.findOne
-        .mockResolvedValueOnce({
-          share_result_request_id: 1,
-          request_status_id: 1,
-          shared_inititiative_id: 9,
-          result_id: 100,
-        })
-        // otherAlreadyDeclined check for SP12 → a row (PSR-R-7 "both SPs decline").
-        .mockResolvedValueOnce({
-          share_result_request_id: 44,
-          shared_inititiative_id: 12,
-          request_status_id: 3,
-          is_active: true,
-        });
-
-      const outcome = await service.decline(1, user);
-
-      expect(outcome).toEqual({
-        ok: true,
-        shareResultRequestId: 1,
-        state: 'declined',
-      });
-      expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
-      expect(
-        mockNotificationService.emitResultNotification,
-      ).toHaveBeenCalledWith(
-        expect.anything(),
-        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
-        expect.any(Array),
-        99,
-        100,
-        expect.any(String),
-      );
-    });
-
-    // alignments = 3 → always sent back (PSR-R-6), regardless of any other SP's status.
-    it('3 alignments: sends the result back directly, no auto-move', async () => {
-      mockLeadProject(leadProjectId);
-      mockMappings([
-        { programCode: 'SP09', allocation: '40', status: 'Confirmed' } as any,
-        { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
-        { programCode: 'SP03', allocation: '30', status: 'Confirmed' } as any,
-      ]);
-      mockInitiatives([
-        { id: 9, official_code: 'SP09' },
-        { id: 12, official_code: 'SP12' },
-        { id: 3, official_code: 'SP03' },
-      ]);
-      mockInitiativeCodes({ 9: 'SP09', 12: 'SP12', 3: 'SP03' });
-      mockRequestRepoTx.findOne.mockResolvedValueOnce({
-        share_result_request_id: 1,
-        request_status_id: 1,
-        shared_inititiative_id: 9,
-        result_id: 100,
-      });
-
-      const outcome = await service.decline(1, user);
-
-      expect(outcome).toEqual({
-        ok: true,
-        shareResultRequestId: 1,
-        state: 'declined',
-      });
-      expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
-    });
-
-    // --- T-3 rework attempt 2, Lens A issue 1: a swap decline (an active role-1 owner exists)
-    // must NEVER auto-move — requirements.md PSR-R-2 swap "SP09 stays ... on decline SP09
-    // stays"; design.md §2.2 "otherwise ... none (swap: the old owner stays)". Table-driven over
-    // alignments {1, 2, 3}, all with an active owner present.
-    describe('swap decline (an active role-1 owner exists): never auto-moves', () => {
+    // --- PDR-R-4 / PDR-R-5 ownerless: rejects the result, never moves. `decline()` no longer
+    // reads the lead project or its alignments at all (PDR-DD-3 deleted that branch in full), so
+    // the SAME assertions hold whatever the project's real alignment count is — rewritten from
+    // the old PSR-T-3 "1/2/3 alignments" table, which asserted the now-removed auto-move/send-back
+    // split.
+    describe('ownerless: rejects the result (no move, whatever the alignment count)', () => {
       beforeEach(() => {
-        // An active owner (SP09, initiative 9) is present for every test in this block.
-        mockInitiativeRepoTx.findOne.mockResolvedValue({
-          id: 77,
-          result_id: 100,
-          initiative_id: 9,
-          initiative_role_id: 1,
-          is_active: true,
-        });
+        mockInitiativeRepoTx.findOne.mockResolvedValueOnce(null); // no active role-1 owner
       });
 
-      it('1 alignment, owner exists: declined, no move, owner untouched', async () => {
-        mockLeadProject(leadProjectId);
-        mockMappings([
-          {
-            programCode: 'SP13',
-            allocation: '100',
-            status: 'Confirmed',
-          } as any,
-        ]);
-        mockInitiatives([{ id: 13, official_code: 'SP13' }]);
-        mockInitiativeCodes({ 13: 'SP13' });
-        // The pending swap request is to SP13 (a third alignment) — the owner is SP09.
-        mockRequestRepoTx.findOne.mockResolvedValueOnce({
-          share_result_request_id: 1,
-          request_status_id: 1,
-          shared_inititiative_id: 13,
-          result_id: 100,
-        });
+      // (a)/(b) — SP09 declines result 9391, SP12 was saved as a contributor (requirements.md
+      // PDR-R-4 worked example).
+      it('(a)/(b) rejects the result, writes the REJECTED history row, drops the contributor draft — no new primary row for SP12', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(pendingRow());
 
-        const outcome = await service.decline(1, user);
+        const outcome = await service.decline(
+          1,
+          user,
+          '  This work is outside our portfolio  ',
+        );
 
         expect(outcome).toEqual({
           ok: true,
           shareResultRequestId: 1,
-          state: 'declined',
+          state: 'rejected',
         });
+        // The request row itself: Declined, kept ACTIVE (PDR-R-11 / falsifier (f) below).
+        expect(mockRequestRepoTx.update).toHaveBeenCalledWith(
+          { share_result_request_id: 1 },
+          expect.objectContaining({ request_status_id: 3 }),
+        );
+        // (f) falsifier: that same update call must not deactivate the row.
+        expect(mockRequestRepoTx.update.mock.calls[0][1]).not.toHaveProperty(
+          'is_active',
+        );
+        // Result → Rejected (7), reviewed_by/reviewed_at — same shape as the review reject
+        // (`results.service.ts reviewBilateralResult`, PDR-P-2).
+        expect(mockResultRepoTx.update).toHaveBeenCalledWith(
+          { id: 100 },
+          expect.objectContaining({
+            status_id: ResultStatusData.Rejected.value,
+            reviewed_by: 99,
+          }),
+        );
+        // One REJECTED history row, trimmed justification, prefixed with the decliner's code.
+        expect(mockHistoryRepoTx.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_id: 100,
+            action: ReviewActionEnum.REJECT,
+            comment:
+              'SP09 declined to be the primary Science Program of this result: This work is outside our portfolio',
+            created_by: 99,
+          }),
+        );
+        // (e) the contributor draft is dropped — no insert, and the contribution rows deactivated.
         expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
-        expect(mockInitiativeRepoTx.update).not.toHaveBeenCalled();
-        expect(mockInitiativeRepoTx.save).not.toHaveBeenCalled();
-      });
-
-      // The exact bug the review found: SP12's swap request declines while SP09 (the alignment
-      // pair) is the current owner — `getOtherAlignment` would return SP09 itself.
-      it('2 alignments (owner is one of them), other not declined: still declined, no move to the current owner', async () => {
-        mockLeadProject(leadProjectId);
-        mockMappings([
-          { programCode: 'SP09', allocation: '70', status: 'Confirmed' } as any,
-          { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
-        ]);
-        mockInitiatives([
-          { id: 9, official_code: 'SP09' },
-          { id: 12, official_code: 'SP12' },
-        ]);
-        mockInitiativeCodes({ 9: 'SP09', 12: 'SP12' });
-        mockRequestRepoTx.findOne.mockResolvedValueOnce({
-          share_result_request_id: 2,
-          request_status_id: 1,
-          shared_inititiative_id: 12,
-          result_id: 100,
-        });
-
-        const outcome = await service.decline(2, user);
-
-        expect(outcome).toEqual({
-          ok: true,
-          shareResultRequestId: 2,
-          state: 'declined',
-        });
-        // Falsifier: must NOT insert a new pending `primary` row to SP09 (the current owner).
-        expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
-        expect(mockInitiativeRepoTx.update).not.toHaveBeenCalled();
-        expect(mockInitiativeRepoTx.save).not.toHaveBeenCalled();
+        expect(mockRequestRepoTx.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            request_type: RequestTypeEnum.CONTRIBUTION,
+            is_active: true,
+          }),
+          { is_active: false },
+        );
+        // Center notice: ownerless text, no "moved"/"Pick another" wording.
         expect(
           mockNotificationService.emitResultNotification,
         ).toHaveBeenCalledWith(
@@ -1499,95 +1318,209 @@ describe('PrimaryProgramRequestService', () => {
           expect.any(Array),
           99,
           100,
-          expect.any(String),
+          expect.stringContaining('The result was rejected'),
         );
+        expect(
+          mockNotificationService.emitResultNotification.mock.calls[0][5],
+        ).not.toContain('Pick another');
+        // Reviewer A advisory (RELIABILITY, attempt 1): the old 1-alignment ownerless test asserted
+        // the role-1 owner row is never written to on an ownerless decline (there is no owner to
+        // touch). Re-added here so a stray write to `ResultsByInititiative` is caught.
+        expect(mockInitiativeRepoTx.update).not.toHaveBeenCalled();
+        expect(mockInitiativeRepoTx.save).not.toHaveBeenCalled();
       });
 
-      it('3 alignments, owner exists: declined, no move', async () => {
-        mockLeadProject(leadProjectId);
-        mockMappings([
-          { programCode: 'SP09', allocation: '40', status: 'Confirmed' } as any,
-          { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
-          { programCode: 'SP03', allocation: '30', status: 'Confirmed' } as any,
-        ]);
-        mockInitiatives([
-          { id: 9, official_code: 'SP09' },
-          { id: 12, official_code: 'SP12' },
-          { id: 3, official_code: 'SP03' },
-        ]);
-        mockInitiativeCodes({ 9: 'SP09', 12: 'SP12', 3: 'SP03' });
-        mockRequestRepoTx.findOne.mockResolvedValueOnce({
-          share_result_request_id: 3,
-          request_status_id: 1,
-          shared_inititiative_id: 3,
-          result_id: 100,
-        });
+      it('(b) rejects just the same with a single-alignment project (decline() never reads alignments)', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(
+          pendingRow({ shared_inititiative_id: 9, result_id: 200 }),
+        );
 
-        const outcome = await service.decline(3, user);
+        const outcome = await service.decline(1, user, 'Single-SP decline');
 
         expect(outcome).toEqual({
           ok: true,
-          shareResultRequestId: 3,
-          state: 'declined',
+          shareResultRequestId: 1,
+          state: 'rejected',
         });
+        expect(mockResultRepoTx.update).toHaveBeenCalledWith(
+          { id: 200 },
+          expect.objectContaining({
+            status_id: ResultStatusData.Rejected.value,
+          }),
+        );
         expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
-        expect(mockInitiativeRepoTx.update).not.toHaveBeenCalled();
+      });
+
+      it('(b) rejects just the same with a three-alignment project (decline() never reads alignments)', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(
+          pendingRow({ shared_inititiative_id: 9, result_id: 300 }),
+        );
+
+        const outcome = await service.decline(1, user, 'Three-SP decline');
+
+        expect(outcome).toEqual({
+          ok: true,
+          shareResultRequestId: 1,
+          state: 'rejected',
+        });
+        expect(mockResultRepoTx.update).toHaveBeenCalledWith(
+          { id: 300 },
+          expect.objectContaining({
+            status_id: ResultStatusData.Rejected.value,
+          }),
+        );
+        expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
+      });
+
+      // (c) atomic + disqualifier: the ResultReviewHistory save throws. `Result.update` already
+      // ran through the SAME transaction `manager` — this is no longer merely proof-by-construction
+      // (Reviewer A, attempt 2, FAIL issue 1): the `beforeEach` above makes the OUTER,
+      // non-transactional manager throw for `Result`/`ResultReviewHistory`, so `mockResultRepoTx`
+      // is reachable ONLY via the callback's `manager.getRepository(Result)` — a mutant that routes
+      // that write through `this.shareResultRequestRepository.manager.getRepository(Result)` would
+      // throw synchronously instead of reaching `mockResultRepoTx`, and the assertion below would
+      // fail. A real `EntityManager.transaction()` rolls everything back together when the callback
+      // rejects — this unit test cannot exercise the real rollback (no DB), but it DOES prove every
+      // write in this branch goes through the one manager, which is the disqualifier's requirement.
+      it('(c) propagates to internal_error when the ResultReviewHistory save throws, after the Result write already ran on the SAME manager', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(pendingRow());
+        mockHistoryRepoTx.save.mockRejectedValueOnce(new Error('db down'));
+
+        const outcome = await service.decline(1, user, 'Outside portfolio');
+
+        expect(outcome).toEqual({ ok: false, reason: 'internal_error' });
+        expect(mockResultRepoTx.update).toHaveBeenCalledWith(
+          { id: 100 },
+          expect.objectContaining({
+            status_id: ResultStatusData.Rejected.value,
+          }),
+        );
+        // The history save throw must stop the callback before the contribution-deactivation
+        // write runs (Reviewer A remediation) — otherwise a partial-write bug could hide behind
+        // this same `internal_error` outcome.
+        expect(mockRequestRepoTx.update).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            request_type: RequestTypeEnum.CONTRIBUTION,
+          }),
+          { is_active: false },
+        );
+        // No notice on a failed decline.
+        expect(
+          mockNotificationService.emitResultNotification,
+        ).not.toHaveBeenCalled();
+      });
+
+      // (i) a notice-emit failure must not undo the already-committed rejection.
+      it('(i) stays rejected even when the Center notice fails to emit', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(pendingRow());
+        mockNotificationService.emitResultNotification.mockRejectedValueOnce(
+          new Error('notification service down'),
+        );
+
+        await expect(
+          service.decline(1, user, 'Outside portfolio'),
+        ).resolves.toEqual({
+          ok: true,
+          shareResultRequestId: 1,
+          state: 'rejected',
+        });
+      });
+
+      // (h) the justification text must never reach a log line, including the `catch` warn.
+      it('(h) never logs the justification text, even on a failure path', async () => {
+        const warnSpy = jest.spyOn((service as any).logger, 'warn');
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(pendingRow());
+        mockHistoryRepoTx.save.mockRejectedValueOnce(new Error('db down'));
+        const secretJustification = 'TOP-SECRET-JUSTIFICATION-TEXT';
+
+        await service.decline(1, user, secretJustification);
+
+        for (const call of warnSpy.mock.calls) {
+          expect(JSON.stringify(call)).not.toContain(secretJustification);
+        }
+      });
+
+      // (h) + Reviewer B (attempt 2, FAIL issue 2): the success log line design.md §11 requires
+      // must fire on a reject outcome, carry ids only (resultId/requestId), and never the
+      // justification text.
+      it('(h) logs one line with resultId/requestId (ids only, never the justification) on a successful reject', async () => {
+        const logSpy = jest.spyOn((service as any).logger, 'log');
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(pendingRow());
+        const secretJustification = 'TOP-SECRET-JUSTIFICATION-TEXT';
+
+        const outcome = await service.decline(1, user, secretJustification);
+
+        expect(outcome).toEqual({
+          ok: true,
+          shareResultRequestId: 1,
+          state: 'rejected',
+        });
+        // Both reviewers' advisory: `stringContaining('1')` / `('100')` is close to vacuous —
+        // pin the exact substring (resultId=100 from `pendingRow()`, requestId=1, userId=99).
+        expect(logSpy).toHaveBeenCalledWith(
+          expect.stringContaining(
+            'result 100 rejected by primary decline (requestId=1, userId=99)',
+          ),
+        );
+        const rejectLogCalls = logSpy.mock.calls.filter((call) =>
+          String(call[0]).includes('rejected by primary decline'),
+        );
+        expect(rejectLogCalls).toHaveLength(1);
+        for (const call of logSpy.mock.calls) {
+          expect(JSON.stringify(call)).not.toContain(secretJustification);
+        }
       });
     });
 
-    // --- T-3 rework attempt 2, Lens A issue 2: the CONTRIBUTION cleanup must only run once the
-    // move itself is confirmed. Force `request()` to report `internal_error` (its own `insert`
-    // rejects) and assert the decline still lands as *declined*, with no contributor cleanup.
-    it('move failure (no owner, 2 alignments): falls back to declined, no contributor cleanup, no moved notice', async () => {
-      mockLeadProject(leadProjectId);
-      mockMappings([
-        { programCode: 'SP09', allocation: '70', status: 'Confirmed' } as any,
-        { programCode: 'SP12', allocation: '30', status: 'Confirmed' } as any,
-      ]);
-      mockInitiatives([
-        { id: 9, official_code: 'SP09' },
-        { id: 12, official_code: 'SP12' },
-      ]);
-      mockInitiativeCodes({ 9: 'SP09', 12: 'SP12' });
-      mockInitiativeRepoTx.findOne.mockResolvedValueOnce(null); // no owner
-
-      mockRequestRepoTx.findOne
-        .mockResolvedValueOnce({
-          share_result_request_id: 1,
-          request_status_id: 1,
-          shared_inititiative_id: 9,
+    // --- PDR-R-7 swap: an active role-1 owner already exists. No Result/history write, no move,
+    // regardless of alignment count — rewritten from the old "swap decline never auto-moves"
+    // table (T-3 rework attempt 2), simplified because `decline()` no longer reads alignments at
+    // all.
+    describe('swap: an active role-1 owner exists', () => {
+      beforeEach(() => {
+        mockInitiativeRepoTx.findOne.mockResolvedValueOnce({
+          id: 77,
           result_id: 100,
-        })
-        // otherAlreadyDeclined check for SP12 → none.
-        .mockResolvedValueOnce(null);
-      // The move's own insert blows up → request() catches it and returns internal_error.
-      mockRequestRepoTx.insert.mockRejectedValueOnce(new Error('db down'));
-
-      const outcome = await service.decline(1, user);
-
-      expect(outcome).toEqual({
-        ok: true,
-        shareResultRequestId: 1,
-        state: 'declined',
+          initiative_id: 9,
+          initiative_role_id: 1,
+          is_active: true,
+        });
       });
-      // No CONTRIBUTION-row cleanup: the move never actually happened.
-      expect(mockRequestRepoTx.update).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          request_type: RequestTypeEnum.CONTRIBUTION,
-          shared_inititiative_id: 12,
-        }),
-        { is_active: false },
-      );
-      expect(
-        mockNotificationService.emitResultNotification,
-      ).toHaveBeenCalledWith(
-        expect.anything(),
-        NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
-        expect.any(Array),
-        99,
-        100,
-        expect.any(String),
-      );
+
+      // (d) falsifier: Result.update / history save must NOT be called on a swap decline.
+      it('(d) declines the swap request without touching Result or writing review history', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce(
+          pendingRow({
+            shared_inititiative_id: 12,
+            share_result_request_id: 2,
+          }),
+        );
+
+        const outcome = await service.decline(2, user, 'Not our mandate');
+
+        expect(outcome).toEqual({
+          ok: true,
+          shareResultRequestId: 2,
+          state: 'declined',
+        });
+        expect(mockResultRepoTx.update).not.toHaveBeenCalled();
+        expect(mockHistoryRepoTx.save).not.toHaveBeenCalled();
+        expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
+        // The owner (role 1 / ResultsByInititiative) is never touched.
+        expect(mockInitiativeRepoTx.update).not.toHaveBeenCalled();
+        expect(mockInitiativeRepoTx.save).not.toHaveBeenCalled();
+        // Center notice: swap text, names the current owner, no "rejected" wording.
+        expect(
+          mockNotificationService.emitResultNotification,
+        ).toHaveBeenCalledWith(
+          expect.anything(),
+          NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+          expect.any(Array),
+          99,
+          100,
+          expect.stringContaining('SP09 remains the primary'),
+        );
+      });
     });
   });
 

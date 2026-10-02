@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 import { ShareResultRequest } from '../entities/share-result-request.entity';
 
 export class CreateShareResultRequestDto {
@@ -49,6 +50,16 @@ export class CreateShareResultRequestDto {
     example: 10,
   })
   changePrimaryInit?: number;
+
+  @ApiProperty({
+    description:
+      'Justification for declining a primary Science Program request. Required (non-blank, after trimming) when declining a primary request (request_status_id = 3); ignored on accept or on a contribution decision',
+    required: false,
+    example: 'This work is outside our portfolio',
+  })
+  @IsOptional()
+  @IsString()
+  justification?: string;
 }
 
 export class ResultToResultInterfaceToc {

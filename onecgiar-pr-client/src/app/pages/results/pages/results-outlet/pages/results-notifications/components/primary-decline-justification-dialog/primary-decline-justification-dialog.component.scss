@@ -1,0 +1,140 @@
+// @akili-spec notifications/primary-decline-rejects-result (PDR-T-3)
+//
+// Visual parity with the W3/Bilateral "Reject result" dialog (design.md DD-6, PDR-R-1).
+// This is a deliberate COPY of the relevant rules from
+// result-framework-reporting/pages/bilateral-review/components/result-review-drawer/result-review-drawer.component.scss
+// (`::ng-deep .confirmation-modal { ... .reject ... }`), trimmed to only the "reject" variant this
+// component uses (no "approve" styling). Copied rather than imported across feature folders on
+// purpose: this component lives under results-notifications/, an unrelated feature tree, and a
+// cross-feature `styleUrl` would be a layering violation for a handful of shared rules. See the
+// PDR-T-3 execution notes for the investigation that found the source of truth.
+::ng-deep .confirmation-modal {
+  &.pr-dialog {
+    border-radius: 12px !important;
+    overflow: hidden;
+    max-width: 650px !important;
+    width: 650px !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .pr-dialog__body {
+    padding: 0 !important;
+    background-color: white;
+    position: relative;
+  }
+
+  .modal-close-icon {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    color: var(--pr-color-accents-5);
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s;
+    z-index: 1;
+
+    &:hover {
+      color: var(--pr-color-accents-4);
+    }
+  }
+
+  .modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 40px 32px 24px;
+    background-color: var(--pr-color-white);
+  }
+
+  .modal-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+
+    i {
+      font-size: 36px;
+    }
+
+    &.reject {
+      border: 3px solid var(--pr-color-red-500);
+      background-color: transparent;
+
+      i {
+        color: var(--pr-color-red-500);
+      }
+    }
+  }
+
+  .modal-title {
+    margin: 0 0 16px !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+
+    &.reject {
+      color: var(--pr-color-red-500);
+    }
+  }
+
+  .modal-message {
+    margin: 0 !important;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--pr-color-accents-5);
+  }
+
+  .modal-field {
+    width: 100%;
+    margin-top: 20px;
+    text-align: left;
+
+    textarea {
+      width: 100%;
+      resize: vertical;
+      border: 1px solid var(--pr-border, #cbd5e1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13.5px;
+      font-family: inherit;
+      color: var(--pr-text-heading, #1e293b);
+      background-color: #ffffff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+
+      &:focus {
+        border-color: var(--pr-color-primary-400, #6b46e5);
+        box-shadow: 0 0 0 2px var(--pr-color-primary-100, #e9e0ff);
+      }
+
+      &::placeholder {
+        color: #94a3b8;
+      }
+    }
+  }
+
+  .modal-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--pr-color-accents-5);
+    margin-bottom: 8px;
+
+    &.required::after {
+      content: ' *';
+      color: var(--pr-color-red-500);
+    }
+  }
+
+  .modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 0 24px 32px;
+    background-color: var(--pr-color-white);
+  }
+}

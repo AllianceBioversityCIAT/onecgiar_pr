@@ -4,7 +4,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -28,6 +28,9 @@ import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../intern
 // tests/mocks/spartanBrainMock.ts, same as every other Brain-based overlay in this repo) so the
 // decline confirm/cancel wiring tests below can drive its actual footer buttons.
 import { ContributionRequestDrawerComponent } from '../contribution-request-drawer/contribution-request-drawer.component';
+// PDR-T-4: the real primary-decline justification dialog (PDR-T-3), rendered so the row/drawer
+// wiring tests below can observe `[(visible)]` and drive its actual Confirm/Cancel buttons.
+import { PrimaryDeclineJustificationDialogComponent } from '../primary-decline-justification-dialog/primary-decline-justification-dialog.component';
 // NOTIF-T-5: property-based chip check — every rendered type chip must be a member of this set
 // (or the fixed "Contribution request" string), never a fabricated label (NOTIF-R-3/NOTIF-AC-7).
 import { NotificationType } from '../../../../../../../../shared/constants/notification-type.constants';
@@ -90,7 +93,15 @@ describe('NotificationItemComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [NotificationItemComponent],
-      imports: [HttpClientTestingModule, FormatTimeAgoPipe, CommonModule, ContributionRequestDrawerComponent, ...HlmBadgeImports, ...HlmButtonImports],
+      imports: [
+        HttpClientTestingModule,
+        FormatTimeAgoPipe,
+        CommonModule,
+        ContributionRequestDrawerComponent,
+        PrimaryDeclineJustificationDialogComponent,
+        ...HlmBadgeImports,
+        ...HlmButtonImports
+      ],
       providers: [
         {
           provide: ApiService,
@@ -2926,6 +2937,343 @@ describe('NotificationItemComponent', () => {
         component.notification = buildNotice('Primary Program Request Accepted', 'SP09 accepted to be the primary Science Program of this result.');
         expect(component.isUpdateSource).toBe(true);
         expect(component.rowStatusLabel).toBe('For your information');
+      });
+    });
+  });
+
+  // PDR-T-4 (`notifications/primary-decline-rejects-result`): wires the new justification dialog
+  // into the row's Decline button and the drawer's Decline footer for `isPrimaryRequest` rows only.
+  // Contributor/W1W2 paths must stay byte-for-byte (`PDR-R-2`) — several tests below are regression
+  // falsifiers for exactly that.
+  describe('PDR-T-4 — primary-decline justification dialog wiring', () => {
+    const buildPrimaryFixture = (overrides: any = {}) => ({
+      share_result_request_id: 9001,
+      result_id: '9391',
+      request_status_id: 1,
+      requested_date: '2026-09-30T10:00:00.000Z',
+      is_map_to_toc: false,
+      request_type: 'primary',
+      obj_requested_by: { id: 1, first_name: 'Jane', last_name: 'Doe' },
+      obj_owner_initiative: { id: 9, official_code: 'SP09', name: 'Program 09' },
+      obj_shared_inititiative: { id: 9, official_code: 'SP09', name: 'Program 09' },
+      creating_center: { acronym: 'AfricaRice', name: 'Africa Rice Center' },
+      obj_result: {
+        result_code: '9391',
+        title: 'An ownerless bilateral result',
+        status_id: '1',
+        source_name: 'W3/Bilaterals',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        obj_results_toc_result: []
+      },
+      ...overrides
+    });
+
+    const buildContributorFixture = (overrides: any = {}) => ({
+      share_result_request_id: 9002,
+      result_id: '9392',
+      request_status_id: 1,
+      requested_date: '2026-09-30T10:00:00.000Z',
+      is_map_to_toc: false,
+      obj_requested_by: { id: 1, first_name: 'Jane', last_name: 'Doe' },
+      owner_program_code: 'SP09',
+      obj_owner_initiative: { id: 9, official_code: 'SP09', name: 'Program 09' },
+      obj_shared_inititiative: { id: 12, official_code: 'SP12', name: 'Program 12' },
+      creating_center: { acronym: 'AfricaRice', name: 'Africa Rice Center' },
+      obj_result: {
+        result_code: '9392',
+        title: 'A bilateral contribution result',
+        status_id: '1',
+        source_name: 'W3/Bilaterals',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        obj_results_toc_result: []
+      },
+      ...overrides
+    });
+
+    const buildW1W2Fixture = (overrides: any = {}) => ({
+      share_result_request_id: 9003,
+      result_id: '9393',
+      request_status_id: 1,
+      requested_date: '2026-09-30T10:00:00.000Z',
+      is_map_to_toc: true,
+      obj_requested_by: { id: 1, first_name: 'Jane', last_name: 'Doe' },
+      obj_owner_initiative: { id: 9, official_code: 'SP09', name: 'Program 09' },
+      obj_shared_inititiative: { id: 12, official_code: 'SP12', name: 'Program 12' },
+      obj_result: {
+        result_code: '9393',
+        title: 'A W1/W2 contribution result',
+        status_id: '1',
+        source_name: 'W1/W2',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        obj_results_toc_result: []
+      },
+      ...overrides
+    });
+
+    beforeEach(() => {
+      mockApiService.rolesSE.platformIsClosed = false;
+      mockApiService.rolesSE.isAdmin = false;
+      component.requestingAccept = false;
+      component.requestingReject = false;
+      component.isSent = false;
+      component.showConfirmRejectDialog.set(false);
+      component.showPrimaryDeclineDialog.set(false);
+    });
+
+    describe('row Decline button', () => {
+      it('falsifier: a primary row Decline opens the justification dialog, never showConfirmRejectDialog, and sends nothing before Confirm', () => {
+        component.notification = buildPrimaryFixture();
+        const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+        component.onDeclineClick();
+
+        expect(component.showPrimaryDeclineDialog()).toBe(true);
+        expect(component.showConfirmRejectDialog()).toBe(false);
+        expect(patchSpy).not.toHaveBeenCalled();
+      });
+
+      it('falsifier: a bilateral contributor row Decline opens the yes/no confirm dialog, never the justification dialog', () => {
+        component.notification = buildContributorFixture();
+
+        component.onDeclineClick();
+
+        expect(component.showConfirmRejectDialog()).toBe(true);
+        expect(component.showPrimaryDeclineDialog()).toBe(false);
+      });
+
+      it('falsifier: a W1/W2 row Decline opens the yes/no confirm dialog, never the justification dialog', () => {
+        component.notification = buildW1W2Fixture();
+
+        component.onDeclineClick();
+
+        expect(component.showConfirmRejectDialog()).toBe(true);
+        expect(component.showPrimaryDeclineDialog()).toBe(false);
+      });
+    });
+
+    describe('drawer Decline footer', () => {
+      it('falsifier: primary drawer Decline closes the drawer (never leaves it open under the dialog) and opens the dialog, instead of confirm-decline', () => {
+        component.notification = buildPrimaryFixture();
+        component.openDrawer('details');
+        expect(component.drawerOpen()).toBe(true);
+
+        component.onDrawerDeclineClicked();
+
+        expect(component.drawerOpen()).toBe(false);
+        expect(component.showPrimaryDeclineDialog()).toBe(true);
+        expect(component.drawerMode()).not.toBe('confirm-decline');
+      });
+
+      it('regression: a bilateral contributor drawer Decline still opens the inline confirm-decline footer, never the dialog', () => {
+        component.notification = buildContributorFixture();
+        component.openDrawer('details');
+
+        component.onDrawerDeclineClicked();
+
+        expect(component.drawerMode()).toBe('confirm-decline');
+        expect(component.drawerOpen()).toBe(true);
+        expect(component.showPrimaryDeclineDialog()).toBe(false);
+      });
+    });
+
+    describe('Confirm → acceptOrReject(false, false, justification)', () => {
+      it('falsifier: sends justification and request_status_id 3 for a primary decline', () => {
+        component.notification = buildPrimaryFixture();
+        const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+        component.onPrimaryDeclineConfirm('Outside portfolio');
+
+        expect(patchSpy).toHaveBeenCalledTimes(1);
+        const body = patchSpy.mock.calls[0][0];
+        expect(body.justification).toBe('Outside portfolio');
+        expect(body.request_status_id).toBe(3);
+      });
+
+      it('falsifier: a bilateral contributor Decline (via the yes/no dialog) never sends a justification key', () => {
+        component.notification = buildContributorFixture();
+        const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+        component.acceptOrReject(false);
+
+        expect(patchSpy).toHaveBeenCalledTimes(1);
+        const body = patchSpy.mock.calls[0][0];
+        expect('justification' in body).toBe(false);
+      });
+
+      it('falsifier: a W1/W2 Decline never sends a justification key', () => {
+        component.notification = buildW1W2Fixture();
+        const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+
+        component.acceptOrReject(false);
+
+        expect(patchSpy).toHaveBeenCalledTimes(1);
+        const body = patchSpy.mock.calls[0][0];
+        expect('justification' in body).toBe(false);
+      });
+
+      it('success: shows "Request successfully declined" and closes the dialog', () => {
+        component.notification = buildPrimaryFixture();
+        component.showPrimaryDeclineDialog.set(true);
+        const alertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
+        const emitSpy = jest.spyOn(component.requestEvent, 'emit');
+
+        component.onPrimaryDeclineConfirm('Outside portfolio');
+
+        expect(alertSpy).toHaveBeenCalledWith({ id: 'noti', title: 'Request successfully declined', status: 'information' });
+        expect(component.showPrimaryDeclineDialog()).toBe(false);
+        expect(component.requestingReject).toBe(false);
+        expect(emitSpy).toHaveBeenCalled();
+      });
+    });
+
+    describe('server error handling (PDR-R-1 "server error" scenario)', () => {
+      it('falsifier: a 400 keeps the dialog open with its text and shows the server message, instead of closing or losing the toast', () => {
+        component.notification = buildPrimaryFixture();
+        component.showPrimaryDeclineDialog.set(true);
+        jest
+          .spyOn(mockApiService.resultsSE, 'PATCH_updateRequest')
+          .mockReturnValue(throwError(() => ({ status: 400, error: { message: 'Justification is required when declining a primary request' } })));
+        const alertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
+        const emitSpy = jest.spyOn(component.requestEvent, 'emit');
+
+        component.onPrimaryDeclineConfirm('   ');
+
+        expect(component.showPrimaryDeclineDialog()).toBe(true);
+        expect(component.requestingReject).toBe(false);
+        expect(alertSpy).toHaveBeenCalledWith({
+          id: 'noti-error',
+          title: 'Justification is required when declining a primary request',
+          description: '',
+          status: 'error'
+        });
+        expect(emitSpy).not.toHaveBeenCalled();
+      });
+
+      it('falsifier: a 409 keeps today\'s behavior — dialog closes and the stale-request toast shows', () => {
+        component.notification = buildPrimaryFixture();
+        component.showPrimaryDeclineDialog.set(true);
+        jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(throwError(() => ({ status: 409 })));
+        const alertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
+        const emitSpy = jest.spyOn(component.requestEvent, 'emit');
+
+        component.onPrimaryDeclineConfirm('Outside portfolio');
+
+        expect(component.showPrimaryDeclineDialog()).toBe(false);
+        expect(alertSpy).toHaveBeenCalledWith({
+          id: 'noti-error',
+          title: component.copy.notificationItem.staleRequestMessage,
+          description: '',
+          status: 'information'
+        });
+        expect(emitSpy).toHaveBeenCalled();
+      });
+
+      it('a 500 keeps today\'s behavior — dialog closes and the generic error toast shows', () => {
+        component.notification = buildPrimaryFixture();
+        component.showPrimaryDeclineDialog.set(true);
+        jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(throwError(() => ({ status: 500 })));
+        const alertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
+
+        component.onPrimaryDeclineConfirm('Outside portfolio');
+
+        expect(component.showPrimaryDeclineDialog()).toBe(false);
+        expect(alertSpy).toHaveBeenCalledWith({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+      });
+    });
+
+    describe('rendered dialog (real component)', () => {
+      it('the row binds resultCode/programCode into the real dialog, and Confirm reaches acceptOrReject with the typed justification', () => {
+        component.notification = buildPrimaryFixture();
+        fixture.detectChanges();
+
+        component.onDeclineClick();
+        fixture.detectChanges();
+
+        const dialog: PrimaryDeclineJustificationDialogComponent = fixture.debugElement.query(
+          By.directive(PrimaryDeclineJustificationDialogComponent)
+        ).componentInstance;
+
+        expect(dialog.resultCode()).toBe('9391');
+        expect(dialog.programCode()).toBe('SP09');
+
+        const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+        dialog.text.set('Outside portfolio');
+        dialog.onConfirm();
+
+        expect(patchSpy).toHaveBeenCalledTimes(1);
+        expect(patchSpy.mock.calls[0][0].justification).toBe('Outside portfolio');
+      });
+
+      // Reviewer finding (attempt 1 FAIL): the earlier 400 test only checked the
+      // `showPrimaryDeclineDialog()` signal through a synchronous `throwError` — a change that
+      // toggled `visible` off/on during the 400 handling would still pass it, because the signal
+      // ends up `true` either way and the dialog's own `effect` (which resets `text` whenever
+      // `visible()` changes to `true`) never got a chance to run inside a synchronous throw. This
+      // test drives the REAL dialog instance through an async `Subject`, so a `visible` toggle
+      // would actually wipe `dialog.text` and the assertion below would catch it.
+      //
+      // Reviewer finding (attempt 2 FAIL, PDR-T-4 Reviewer via static analysis): the dialog's
+      // `confirmDisabled`/`text` were plain fields read by an `OnPush` template — an `effect()`
+      // mutating a plain field never marks an OnPush view dirty, so the DOM stayed disabled after
+      // the 400 until an unrelated interaction, and this test needed `detectChanges(false)` to
+      // dodge the resulting NG0100. Attempt 3 made `confirmed`/`text` signals and `confirmDisabled`
+      // a `computed()` (`primary-decline-justification-dialog.component.ts`), so the OnPush view
+      // now updates on its own — a single, ordinary `detectChanges()` is correct here, and if NG0100
+      // reappears that is a real regression, not noise to route around.
+      it('falsifier: a 400 keeps the real dialog open with its TYPED TEXT kept and Confirm re-enabled (not just the signal)', async () => {
+        component.notification = buildPrimaryFixture();
+        fixture.detectChanges();
+
+        component.onDeclineClick();
+        fixture.detectChanges();
+
+        const dialog: PrimaryDeclineJustificationDialogComponent = fixture.debugElement.query(
+          By.directive(PrimaryDeclineJustificationDialogComponent)
+        ).componentInstance;
+
+        const patchSubject = new Subject<any>();
+        jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(patchSubject as any);
+
+        dialog.text.set('Outside portfolio');
+        dialog.onConfirm();
+        fixture.detectChanges();
+        // Flushes the dialog's own signal `effect()`s (Angular schedules them as a microtask, not
+        // synchronously inside `detectChanges()`), so `wasSaving` is recorded as `true` before the
+        // error below flips `isSaving` back to `false`.
+        await fixture.whenStable();
+
+        // In flight: Confirm/Cancel disabled, spinner state on (isSaving bound from requestingReject).
+        expect(component.requestingReject).toBe(true);
+        expect(dialog.isSaving()).toBe(true);
+        expect(dialog.confirmDisabled()).toBe(true);
+
+        patchSubject.error({ status: 400, error: { message: 'Justification is required when declining a primary request' } });
+        // A plain, ordinary `detectChanges()` — no `false` flag. `confirmDisabled` is a `computed()`
+        // over signals now, so the OnPush view is marked dirty on its own; this must NOT throw NG0100.
+        fixture.detectChanges();
+        // Flushes the `isSaving` true→false effect, which releases the dialog's own double-click
+        // guard (`confirmed.set(false)`) — without this, `confirmDisabled` would still read the
+        // stale in-flight value even though every signal it reads has already updated.
+        await fixture.whenStable();
+
+        expect(dialog.visible()).toBe(true);
+        expect(dialog.text()).toBe('Outside portfolio');
+        expect(dialog.confirmDisabled()).toBe(false);
+        expect(component.showPrimaryDeclineDialog()).toBe(true);
+
+        // DOM proof, not just the signal (PDR-T-4 Reviewer attempt 3 ask): the rendered Confirm
+        // button must actually be enabled. Under the Jest `spartanBrainMock`, `BrnButton`'s
+        // `disabled` input is never host-bound to the native DOM attribute (notification-item's
+        // own "Jest caveat" doc), so assert through the directive instance, not `nativeElement.disabled`.
+        const dialogDe = fixture.debugElement.query(By.directive(PrimaryDeclineJustificationDialogComponent));
+        const confirmButtonDe = dialogDe.queryAll(By.css('.modal-actions button'))[1];
+        expect(confirmButtonDe.injector.get(BrnButton).disabled).toBeFalsy();
       });
     });
   });

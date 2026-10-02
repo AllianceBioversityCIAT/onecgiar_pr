@@ -84,6 +84,14 @@ export class ShareResultRequestService {
   private readonly _logger = new Logger(ShareResultRequestService.name);
 
   /**
+   * `PDR-R-3` / `PDR-DD-4` — the exact 400 message for a blank/missing justification on a primary
+   * decline, shared between the dispatcher's pre-service guard and the `invalid_input` mapping
+   * (the service can also return `invalid_input` if reached another way, e.g. directly in tests).
+   */
+  private static readonly JUSTIFICATION_REQUIRED_MESSAGE =
+    'Justification is required when declining a primary request';
+
+  /**
    * P2-3188 — `request_status_id` → notification type. Only the two terminal decisions are here;
    * `1` (pending) and anything added later map to undefined and emit nothing, which is safer than
    * a default that would label an unknown status as one of these two.
@@ -1373,6 +1381,7 @@ export class ShareResultRequestService {
           loadedRequest,
           request_status_id,
           user,
+          createShareResultsRequestDto.justification,
         );
       }
 
@@ -1417,6 +1426,10 @@ export class ShareResultRequestService {
     row: ShareResultRequest,
     requestStatusId: number,
     user: TokenDto,
+    // Sourced from `CreateShareResultRequestDto.justification` (`PDR-T-2`). Blank is rejected with
+    // 400 both here (pre-service, "Justification is required when declining a primary request")
+    // and in `decline()` (`PDR-DD-4`, `invalid_input` → 400 via `mapPrimaryDecisionOutcomeToResponse`).
+    justification?: string,
   ): Promise<{ response: any; message: string; status: HttpStatus }> {
     if (requestStatusId !== 2 && requestStatusId !== 3) {
       return {
@@ -1441,6 +1454,17 @@ export class ShareResultRequestService {
       });
     }
 
+    // `PDR-R-3` / `PDR-DD-4`: validated here too (not just inside `decline()`), so a blank
+    // justification is rejected with 400 BEFORE taking the row's pessimistic lock. Accept (`2`)
+    // and contribution decisions never reach this branch, so the justification is ignored there.
+    if (requestStatusId === 3 && !justification?.trim()) {
+      return {
+        response: {},
+        message: ShareResultRequestService.JUSTIFICATION_REQUIRED_MESSAGE,
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
     if (!this._primaryProgramRequestService) {
       this._logger.error(
         `Primary decision unavailable in this module context (request ${row.share_result_request_id})`,
@@ -1460,6 +1484,7 @@ export class ShareResultRequestService {
         : await this._primaryProgramRequestService.decline(
             row.share_result_request_id,
             user,
+            justification,
           );
 
     return this.mapPrimaryDecisionOutcomeToResponse(outcome);
@@ -1508,6 +1533,12 @@ export class ShareResultRequestService {
           response: {},
           message: 'The request was not found',
           status: HttpStatus.NOT_FOUND,
+        };
+      case 'invalid_input':
+        return {
+          response: {},
+          message: ShareResultRequestService.JUSTIFICATION_REQUIRED_MESSAGE,
+          status: HttpStatus.BAD_REQUEST,
         };
       case 'internal_error':
       default:
@@ -1936,6 +1967,7 @@ export class ShareResultRequestService {
           loadedRequestV2,
           request_status_id,
           user,
+          createShareResultsRequestDto.justification,
         );
       }
 

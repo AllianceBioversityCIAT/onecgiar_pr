@@ -1,6 +1,6 @@
 # section-zero-dashboard (bilateral)
 
-**Verified:** 2026-09-30 · spec `notifications/bilateral-primary-sp-request` PSR-T-10 (attempt 2)
+**Verified:** 2026-10-01 · spec `notifications/primary-decline-rejects-result` PDR-R-9 / PDR-DD-8
 
 ## What it is
 Section 0 of the bilateral form: the read-mostly card that identifies the result (code, type,
@@ -30,6 +30,16 @@ card; bring it back only when one of those actions actually ships.
   banner ("Pick a primary Science Program", no codes), adds `submitBlockedReason`, and keeps the
   picker enabled. Copy lives in
   `internationalization/bilateral-primary-assignment.copy.ts`.
+- **PDR-R-9 / PDR-DD-8 (2026-10-01):** `sent_back` + `readOnly()` true is a second, final variant —
+  the result was **Rejected** for the Center, not merely awaiting a re-pick. `primaryAssignmentBanner()`
+  then renders `BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.rejected(codes)` with `tone: 'error'` (the
+  spec's "danger" tone maps to `app-alert-status`'s `'error'` — the component has no `danger` value).
+  No "Pick another" wording, and the picker is gone too, because `canEditAssignment()` already gates
+  on `readOnly()`. When `sent_back` is NOT read-only (older sent-back results), the original warning
+  banner (`sentBack(codes)`) and the enabled picker are unchanged. ⚠️ Known caveat: `readOnly()` is
+  also `true` for PendingReview/Approved results; a `sent_back` result in one of those states would
+  hit this same rejected branch, but that combination is believed unreachable — a DB check to confirm
+  it never occurs is pending at PDR-T-6.
 
 ## Where it is used
 - `pages/bilateral-result-creator/bilateral-result-creator.component.html:210` — the only host.

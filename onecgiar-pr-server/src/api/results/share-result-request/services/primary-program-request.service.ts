@@ -13,6 +13,12 @@ import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entit
 import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
 import { ResultsByInititiative } from '../../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultsTocResult } from '../../results-toc-results/entities/results-toc-result.entity';
+import { Result } from '../../entities/result.entity';
+import {
+  ResultReviewHistory,
+  ReviewActionEnum,
+} from '../../result-review-history/entities/result-review-history.entity';
+import { ResultStatusData } from '../../../../shared/constants/result-status.enum';
 import { RoleByUserRepository } from '../../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsCenterRepository } from '../../results-centers/results-centers.repository';
 import { ResultRepository } from '../../result.repository';
@@ -94,11 +100,12 @@ export type PrimaryDecisionOutcome =
   | {
       ok: true;
       shareResultRequestId: number;
-      state: 'accepted' | 'declined' | 'moved';
+      state: 'accepted' | 'declined' | 'rejected';
     }
   | { ok: false; reason: 'not_found' }
   | { ok: false; reason: 'forbidden' }
   | { ok: false; reason: 'conflict' }
+  | { ok: false; reason: 'invalid_input' }
   | { ok: false; reason: 'internal_error' };
 
 /**
@@ -108,7 +115,7 @@ export type PrimaryDecisionOutcome =
  * This task implements:
  * - `request()` — P-7 alignment validation + DD-8 round cancellation + insert, never throwing.
  * - `stateFor()` — PSR-R-7 state derivation for the Center's on-hold / sent-back banner.
- * - `getAlignments()` / `getOtherAlignment()` — the alignment helper T-3's decline cascade needs.
+ * - `getAlignments()` — the alignment helper `request()` needs for P-7 validation.
  *
  * **Circular-import note (brief, "Pointers to existing code"):** the alignment rule (P-7) is only
  * reachable today through `BilateralProjectsService`
@@ -170,15 +177,10 @@ export class PrimaryProgramRequestService {
    * pending row. Idempotent for the same SP (re-saving the currently pending SP creates no
    * second row).
    *
-   * `opts.cancelRound` (default `true`) gates the DD-8 round cancellation — it MUST be `false`
-   * when T-3's decline auto-move calls this for "the other SP" (design.md §5 item 3, §2.2): that
-   * call happens right after the JUST-declined row was set to status 3 and **kept active**
-   * ("kept active" is load-bearing — it is how a later decline finds "the other SP already
-   * declined this round", DD-8). An unconditional cancel would deactivate that very row and make
-   * the round-lookup blind to it, letting SP09/SP12 ping-pong forever (the PSR-R-7 "both SPs
-   * decline" case this rule exists to forbid). Only an actual **Center** re-pick (`PSR-R-2`) sets
-   * `cancelRound: true` (the default), because DD-8 says "A Center pick starts a new round" —
-   * T-3's auto-move is not a Center pick.
+   * The DD-8 round cancellation always runs on a Center re-pick (`PSR-R-2`) — the auto-move this
+   * once supported (T-3's decline moving ownership to "the other SP") was removed in `PDR-T-1`:
+   * `decline()` no longer re-invokes `request()`, so there is no caller left that needs to skip
+   * the cancel.
    *
    * Never throws: every failure path returns `{ ok: false, ... }`. `manager`, when given, makes
    * the `share_result_request` reads/writes participate in the caller's transaction (the CLARISA
@@ -199,9 +201,8 @@ export class PrimaryProgramRequestService {
     spInitiativeId: number,
     user: TokenDto,
     manager?: EntityManager,
-    opts?: { cancelRound?: boolean; asDraft?: boolean },
+    opts?: { asDraft?: boolean },
   ): Promise<PrimaryRequestOutcome> {
-    const cancelRound = opts?.cancelRound ?? true;
     // @akili-spec notifications/primary-notify-on-submit
     const asDraft = opts?.asDraft ?? false;
     const targetStatus = asDraft
@@ -275,30 +276,26 @@ export class PrimaryProgramRequestService {
         }
       }
 
-      // DD-8 — cancel the current round ONLY on an actual Center pick: every active
-      // PENDING/DECLINED/DRAFT row (not an ACCEPTED owner row — that one is only replaced at
-      // accept-time, by T-4, per DD-4's swap rule). `PNS-DD-1`: a DRAFT round row is cancelled the
-      // same way a PENDING one is — changing the saved choice (SP09 → SP12) must leave no active
-      // SP09 draft. Skipped when `cancelRound` is false (T-3's decline auto-move) — see the
-      // `request()` doc comment for why.
-      if (cancelRound) {
-        const roundRowIds = activeRows
-          .filter(
-            (row) =>
-              row.request_status_id === RequestStatusId.PENDING ||
-              row.request_status_id === RequestStatusId.DECLINED ||
-              row.request_status_id === RequestStatusId.DRAFT,
-          )
-          .map((row) => row.share_result_request_id);
+      // DD-8 — cancel the current round on every Center pick: every active PENDING/DECLINED/DRAFT
+      // row (not an ACCEPTED owner row — that one is only replaced at accept-time, by T-4, per
+      // DD-4's swap rule). `PNS-DD-1`: a DRAFT round row is cancelled the same way a PENDING one
+      // is — changing the saved choice (SP09 → SP12) must leave no active SP09 draft.
+      const roundRowIds = activeRows
+        .filter(
+          (row) =>
+            row.request_status_id === RequestStatusId.PENDING ||
+            row.request_status_id === RequestStatusId.DECLINED ||
+            row.request_status_id === RequestStatusId.DRAFT,
+        )
+        .map((row) => row.share_result_request_id);
 
-        if (roundRowIds.length) {
-          // Forward pointer (PSR-T-1 attempt-1 advisory 2): never `save()` a partially selected
-          // `ShareResultRequest` — `update()` with explicit columns only.
-          await repo.update(
-            { share_result_request_id: In(roundRowIds) },
-            { is_active: false },
-          );
-        }
+      if (roundRowIds.length) {
+        // Forward pointer (PSR-T-1 attempt-1 advisory 2): never `save()` a partially selected
+        // `ShareResultRequest` — `update()` with explicit columns only.
+        await repo.update(
+          { share_result_request_id: In(roundRowIds) },
+          { is_active: false },
+        );
       }
 
       const insertResult = await repo.insert({
@@ -539,23 +536,6 @@ export class PrimaryProgramRequestService {
   }
 
   /**
-   * DD-8 — "the other SP": resolves only when the lead project has exactly one aligned SP besides
-   * `excludeInitiativeId` (the two-alignment auto-move rule, PSR-R-5). Returns `null` for a
-   * single-alignment project (nothing to move to) and for a >2-alignment project (design does not
-   * auto-pick among several candidates — PSR-R-6 sends the result back instead).
-   */
-  async getOtherAlignment(
-    leadProjectId: number,
-    excludeInitiativeId: number,
-  ): Promise<AlignedScienceProgram | null> {
-    const alignments = await this.getAlignments(leadProjectId);
-    const others = alignments.filter(
-      (alignment) => alignment.initiativeId !== excludeInitiativeId,
-    );
-    return others.length === 1 ? others[0] : null;
-  }
-
-  /**
    * `PSR-T-3` / `PSR-R-4` / `PSR-R-8` — accept a pending primary request. One transaction: the
    * request row is locked (`pessimistic_write`) and its status re-checked (409 if not PENDING,
    * design.md §5 item 2 — this is both the idempotency guard and the concurrency guard: a second
@@ -788,40 +768,55 @@ export class PrimaryProgramRequestService {
   }
 
   /**
-   * `PSR-T-3` / `PSR-R-5` / `PSR-R-6` / `PSR-R-7` / `PSR-R-8` — decline a pending primary request.
-   * Same lock + status re-check + authorization as {@link accept}. The declined row is set to
-   * status 3 and left **active** — design.md §2.2 calls this out as load-bearing: DD-8's "did the
-   * other SP already decline this round" lookup needs that very row visible.
+   * `PDR-T-1` (requirements.md `PDR-R-3`..`R-7`, design.md §7.1) — decline a pending primary
+   * request. Same lock + status re-check + authorization as {@link accept}. The declined row is
+   * set to status 3 and left **active** (`PDR-R-11` — the SP's inbox needs it visible as
+   * Declined).
    *
-   * **Swap decline never auto-moves (Leader adjudication, T-3 rework attempt 2):** if the result
-   * already has an active role-1 owner (a swap request is pending), auto-move is skipped
-   * entirely — not even to a third alignment — and the outcome is always *declined* (sent back);
-   * `PSR-R-2` swap says the old owner stays, and design.md §2.2's "otherwise" row has no move.
+   * `justification` is trimmed and MUST NOT be blank: a blank justification returns
+   * `invalid_input` **before** the transaction opens — no repository write happens (`PDR-R-3`).
    *
-   * Two-alignment auto-move (`PSR-R-5`/DD-8, ownerless results only): when the lead project has
-   * exactly one other alignment AND that alignment has no active declined `primary` row of its
-   * own this round, this calls {@link request} for the other SP with `cancelRound: false`
-   * (forward pointer from the T-2 review — must run AFTER this row is already status 3/active,
-   * and must not cancel the round). Only once that move actually succeeds does it remove the
-   * other SP from any active *contribution* draft/pending row (it can't be both a contributor and
-   * the newly-requested primary) — a failed move must not silently drop the contributor draft.
-   * Otherwise (single alignment, >2 alignments, an owner exists, or the other SP already declined
-   * this round) the result is sent back — no new request.
+   * **No auto-move, ever** (`PDR-R-5` — removes the old `PSR-R-5`/`PSR-R-6` two/three-alignment
+   * rules in full; see design.md §10.1 reversion challenge for what this removal was checked
+   * against).
    *
-   * Center notice ("moved" or "declined") is emitted after commit, never blocking or rolling back
-   * the decline itself (`PSR-R-14`).
+   * - **Swap** (an active role-1 owner already exists, `PDR-R-7`): the owner and the result's
+   *   status are left untouched; no `Result`/`ResultReviewHistory` write. Outcome `declined`.
+   * - **Ownerless** (`PDR-R-4`, `DD-1`/`DD-2`): in the SAME transaction `manager` — mirroring the
+   *   review-reject data shape (`results.service.ts` `reviewBilateralResult`, design.md §2) —
+   *   `Result.status_id` → Rejected (7) with `reviewed_by`/`reviewed_at`; one `ResultReviewHistory`
+   *   row (`REJECTED`, comment prefixed with the declining SP's code, `created_by` the decliner);
+   *   every active pending/draft **contribution** row of the result is deactivated (`PDR-R-4`
+   *   item 4, `PDR-R-6`). The primary row itself is NOT deactivated (`DD-2`) — only contribution
+   *   rows. Outcome `rejected`.
+   *
+   * Center notice (ownerless or swap text, `PDR-R-10`) is emitted after commit, never blocking or
+   * rolling back the decline itself — `emitCenterNotice` already swallows its own errors.
+   *
+   * The justification text MUST NOT appear in any log line (`.cursorrules`, `PDR-R-3` §7 NFR
+   * Security) — only ids are logged on the `catch` warn below.
    */
   async decline(
     requestId: number,
     user: TokenDto,
+    justification: string,
   ): Promise<PrimaryDecisionOutcome> {
+    const trimmedJustification = justification?.trim();
+    if (!trimmedJustification) {
+      return { ok: false, reason: 'invalid_input' };
+    }
+
     let notice:
-      | { resultId: number; kind: 'declined'; spInitiativeId: number }
       | {
           resultId: number;
-          kind: 'moved';
+          kind: 'rejected';
           spInitiativeId: number;
-          otherInitiativeId: number;
+        }
+      | {
+          resultId: number;
+          kind: 'swap';
+          spInitiativeId: number;
+          ownerInitiativeId: number;
         }
       | null = null;
 
@@ -862,7 +857,7 @@ export class PrimaryProgramRequestService {
             const resultId = row.result_id;
             const declinedInitiativeId = row.shared_inititiative_id;
 
-            // "kept active" (design.md §2.2) — DD-8's round lookup needs this row visible.
+            // "kept active" (`PDR-R-11`) — the SP's inbox needs this row visible as Declined.
             await requestRepo.update(
               { share_result_request_id: row.share_result_request_id },
               {
@@ -872,128 +867,113 @@ export class PrimaryProgramRequestService {
               },
             );
 
-            // Leader adjudication (T-3 rework, attempt 2): a swap decline — an active role-1
-            // owner already exists for this result — never auto-moves, not even to a third
-            // alignment. requirements.md PSR-R-2 swap: "SP09 stays the primary SP ... on decline
-            // SP09 stays"; design.md §2.2 "SP declines, otherwise ... none (swap: the old owner
-            // stays)". Auto-move (PSR-R-5/DD-8) only applies when the result has NO owner yet.
+            // `PDR-R-7` swap — an active role-1 owner already exists: the owner stays, the
+            // result's status is untouched, no Result/history write.
             const initiativeRepo = manager.getRepository(ResultsByInititiative);
-            const ownerExists = !!(await initiativeRepo.findOne({
+            const ownerRow = await initiativeRepo.findOne({
               where: {
                 result_id: resultId,
                 initiative_role_id: 1,
                 is_active: true,
               },
-            }));
+            });
 
-            const leadProjectId = ownerExists
-              ? null
-              : await this.findLeadProjectId(resultId);
-            const other =
-              !ownerExists && leadProjectId
-                ? await this.getOtherAlignment(
-                    leadProjectId,
-                    declinedInitiativeId,
-                  )
-                : null;
-
-            if (other) {
-              const otherAlreadyDeclined = await requestRepo.findOne({
-                where: {
-                  result_id: resultId,
-                  request_type: RequestTypeEnum.PRIMARY,
-                  shared_inititiative_id: other.initiativeId,
-                  request_status_id: RequestStatusId.DECLINED,
-                  is_active: true,
-                },
-              });
-
-              if (!otherAlreadyDeclined) {
-                const moveOutcome = await this.request(
-                  resultId,
-                  other.initiativeId,
-                  user,
-                  manager,
-                  { cancelRound: false },
-                );
-
-                if (moveOutcome.ok) {
-                  // PSR-R-5: an SP saved as a contributor can't also be the moved-to primary
-                  // target. Only deactivated once the move itself is confirmed — otherwise a
-                  // failed move (T-2 review forward pointer) would silently lose the contributor
-                  // draft on a result that never actually moved.
-                  await requestRepo.update(
-                    {
-                      result_id: resultId,
-                      request_type: RequestTypeEnum.CONTRIBUTION,
-                      shared_inititiative_id: other.initiativeId,
-                      is_active: true,
-                      request_status_id: In(CONTRIBUTION_ACTIVE_STATUSES),
-                    },
-                    { is_active: false },
-                  );
-
-                  notice = {
-                    resultId,
-                    kind: 'moved',
-                    spInitiativeId: declinedInitiativeId,
-                    otherInitiativeId: other.initiativeId,
-                  };
-                  return {
-                    ok: true,
-                    shareResultRequestId: row.share_result_request_id,
-                    state: 'moved',
-                  };
-                }
-
-                // request() never throws but reported an internal failure: fall through to "sent
-                // back" rather than leave the Center silently uninformed. The decline itself (this
-                // row's status 3) is already valid and stays committed either way. The other SP's
-                // contributor draft is left untouched — the move did not happen.
-                this.logger.warn(
-                  `PrimaryProgramRequestService.decline: auto-move to ${other.initiativeId} failed for result ${resultId}`,
-                );
-              }
+            if (ownerRow) {
+              notice = {
+                resultId,
+                kind: 'swap',
+                spInitiativeId: declinedInitiativeId,
+                ownerInitiativeId: ownerRow.initiative_id,
+              };
+              return {
+                ok: true,
+                shareResultRequestId: row.share_result_request_id,
+                state: 'declined',
+              };
             }
+
+            // `PDR-R-4` ownerless — the result is rejected. Same transaction `manager`,
+            // same write shape as the review reject (`results.service.ts reviewBilateralResult`,
+            // `PDR-P-2`/`PDR-P-6`).
+            const resultRepo = manager.getRepository(Result);
+            await resultRepo.update(
+              { id: resultId },
+              {
+                status_id: ResultStatusData.Rejected.value,
+                reviewed_by: user.id,
+                reviewed_at: new Date(),
+              },
+            );
+
+            const declinedSpCode =
+              await this.resolveOfficialCode(declinedInitiativeId);
+            const historyRepo = manager.getRepository(ResultReviewHistory);
+            await historyRepo.save(
+              historyRepo.create({
+                result_id: resultId,
+                action: ReviewActionEnum.REJECT,
+                comment: `${declinedSpCode ?? 'The Science Program'} declined to be the primary Science Program of this result: ${trimmedJustification}`,
+                created_by: user.id,
+              }),
+            );
+
+            // `PDR-R-4` item 4 / `PDR-R-6` — drop every pending/draft contribution request.
+            await requestRepo.update(
+              {
+                result_id: resultId,
+                request_type: RequestTypeEnum.CONTRIBUTION,
+                request_status_id: In(CONTRIBUTION_ACTIVE_STATUSES),
+                is_active: true,
+              },
+              { is_active: false },
+            );
 
             notice = {
               resultId,
-              kind: 'declined',
+              kind: 'rejected',
               spInitiativeId: declinedInitiativeId,
             };
             return {
               ok: true,
               shareResultRequestId: row.share_result_request_id,
-              state: 'declined',
+              state: 'rejected',
             };
           },
         );
 
       if (outcome.ok && notice) {
-        if (notice.kind === 'moved') {
-          const [spCode, otherCode] = await Promise.all([
-            this.resolveOfficialCode(notice.spInitiativeId),
-            this.resolveOfficialCode(notice.otherInitiativeId),
-          ]);
-          await this.emitCenterNotice(
-            notice.resultId,
-            NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
-            user.id,
-            `${spCode ?? 'The Science Program'} declined to be the primary Science Program of this result; the request was moved to ${otherCode ?? 'another Science Program'}. Click to see the result.`,
+        if (notice.kind === 'rejected') {
+          // design.md §11 — one line on the reject outcome, ids only, no justification text
+          // (.cursorrules / PDR-R-3 §7 NFR Security). Logged right after commit, before the
+          // notice emit, so it fires even if the Center notice below fails.
+          this.logger.log(
+            `PrimaryProgramRequestService.decline: result ${notice.resultId} rejected by primary decline (requestId=${requestId}, userId=${user.id})`,
           );
-        } else {
           const spCode = await this.resolveOfficialCode(notice.spInitiativeId);
           await this.emitCenterNotice(
             notice.resultId,
             NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
             user.id,
-            `${spCode ?? 'The Science Program'} declined to be the primary Science Program of this result. Pick another primary Science Program. Click to see the result.`,
+            `${spCode ?? 'The Science Program'} declined to be the primary Science Program of this result. The result was rejected. Reason: ${trimmedJustification}`,
+          );
+        } else {
+          const [spCode, ownerCode] = await Promise.all([
+            this.resolveOfficialCode(notice.spInitiativeId),
+            this.resolveOfficialCode(notice.ownerInitiativeId),
+          ]);
+          await this.emitCenterNotice(
+            notice.resultId,
+            NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+            user.id,
+            `${spCode ?? 'The Science Program'} declined to become the primary Science Program of this result. ${ownerCode ?? 'The current Science Program'} remains the primary. Reason: ${trimmedJustification}`,
           );
         }
       }
 
       return outcome;
     } catch (error) {
+      // .cursorrules / PDR-R-3 §7 NFR Security: ids only — the justification never reaches a log
+      // line, including this catch.
       this.logger.warn(
         `PrimaryProgramRequestService.decline failed (requestId=${requestId}): ${
           error?.message ?? error

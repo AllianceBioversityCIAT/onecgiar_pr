@@ -281,7 +281,7 @@
               [text]="'Decline'"
               colorType="danger"
               [showBackground]="false"
-              (click)="$event.stopPropagation(); showConfirmRejectDialog.set(true)"
+              (click)="$event.stopPropagation(); onDeclineClick()"
               [verticalMargin]="0"
               [style]="{ whiteSpace: 'nowrap' }"
               [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
@@ -665,6 +665,19 @@
   </div>
 </app-pr-dialog>
 
+<!-- PDR-T-4 (design.md §8.2): a primary request's Decline — row button or drawer footer — opens
+     this instead of the reject-confirm dialog above (`PDR-R-1`). Mutually exclusive with every
+     other popup and the drawer (`openDrawer()` resets it; `onDrawerDeclineClicked()` closes the
+     drawer before opening it). -->
+<app-primary-decline-justification-dialog
+  [(visible)]="showPrimaryDeclineDialog"
+  [resultCode]="notification?.obj_result?.result_code"
+  [programCode]="responderCode"
+  [isSaving]="requestingReject"
+  (cancelEvent)="showPrimaryDeclineDialog.set(false)"
+  (confirm)="onPrimaryDeclineConfirm($event)">
+</app-primary-decline-justification-dialog>
+
 <!-- P2-3187 AC4 (Option A) — CRD-T-7 (pivot, CRD-DD-10): restored verbatim from HEAD. After the
      contributor chooses to accept a bilateral contribution via the ROW button, the ToC mapping is
      offered as an OPTIONAL step. Both dialogs live in this card and feed ONE accept PATCH: the
@@ -804,7 +817,7 @@
   (closed)="onDrawerClosedSignal()"
   (resultActivated)="onDrawerResult()"
   (acceptClicked)="onDrawerAccept()"
-  (declineClicked)="drawerMode.set('confirm-decline')"
+  (declineClicked)="onDrawerDeclineClicked()"
   (declineConfirmed)="acceptOrReject(false)"
   (declineCancelled)="drawerMode.set('decide')">
   <!-- NOTIF-T-5 item 1: `[crdAlign]` is the Align/ToC-mapping block (CRD-DD-3) — per design.md

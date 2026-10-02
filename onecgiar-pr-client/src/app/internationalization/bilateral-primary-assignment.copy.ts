@@ -17,6 +17,14 @@ export const BILATERAL_PRIMARY_ASSIGNMENT_COPY = {
      * "Pick another" is wrong; there is nothing to return to (Leader decision, PSR-T-10 attempt 2).
      */
     noneUnpicked: 'Pick a primary Science Program',
+    /**
+     * `notifications/primary-decline-rejects-result` PDR-R-9 / PDR-DD-8: `state === 'sent_back'`
+     * AND `readOnly()` — the result is Rejected (final for the Center), not merely awaiting a
+     * re-pick. No "Pick another primary Science Program" text here; the picker is gone too
+     * (`canEditAssignment()` already gates on `readOnly()`).
+     */
+    rejected: (programCodes: string): string =>
+      `Declined by ${programCodes} as primary Science Program. The result was rejected.`,
   },
   /** design.md §6.3 — shown next to the banner while the result has no owner. */
   submitBlockedReason:

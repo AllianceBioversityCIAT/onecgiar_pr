@@ -86,20 +86,50 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
 
 ## The two flows (CRD-DD-10)
 - **Popups (row buttons, unchanged since before this spec).** Decline opens the reject-confirm
-  `app-pr-dialog` (`showConfirmRejectDialog`). Accept: ToC-carried → PATCH immediately; bilateral →
-  the "Map to your Theory of Change?" prompt (`showTocPromptDialog`) → "Map it" opens the mapping
-  step (`showTocMappingDialog`, `openTocMappingStep()`); legacy → `<app-share-request-modal>`. The
-  inline `toc_review` block (P2-3085) stays below the row, always expanded, independent of either
-  flow.
+  `app-pr-dialog` (`showConfirmRejectDialog`) — **except for `isPrimaryRequest`**, which opens
+  `app-primary-decline-justification-dialog` (`showPrimaryDeclineDialog`) instead, via
+  `onDeclineClick()` (`PDR-T-4`, see its own section below). Accept: ToC-carried → PATCH
+  immediately; bilateral → the "Map to your Theory of Change?" prompt (`showTocPromptDialog`) →
+  "Map it" opens the mapping step (`showTocMappingDialog`, `openTocMappingStep()`); legacy →
+  `<app-share-request-modal>`. The inline `toc_review` block (P2-3085) stays below the row, always
+  expanded, independent of either flow.
 - **Drawer (row body click, or Enter/Space on the row itself — `openDrawer('details')`).** Its own
-  inline decline confirmation (`drawerMode() === 'confirm-decline'`), an Align section for
-  bilateral requests projected via `[crdAlign]`, and a single "Accept contribution" button
+  inline decline confirmation (`drawerMode() === 'confirm-decline'`) — **except for
+  `isPrimaryRequest`**, whose drawer Decline (`onDrawerDeclineClicked()`) closes the drawer and
+  opens the same `showPrimaryDeclineDialog` instead (`PDR-T-4`) — an Align section for bilateral
+  requests projected via `[crdAlign]`, and a single "Accept contribution" button
   (`onDrawerAccept()`). See `../contribution-request-drawer/CLAUDE.md`.
-- **Mutual exclusion:** `openDrawer()` sets all three popup signals to `false`. The popup path
-  never opens the drawer directly — the shared `acceptOrReject()` `finalize` only resets the
-  drawer to closed/`'decide'` (it calls `closeDrawer()` on every PATCH, popup or drawer alike), it
-  never sets `drawerOpen` to `true`.
-- Both flows end at the same `acceptOrReject(isAccept, withTocMapping?)` → one PATCH.
+- **Mutual exclusion:** `openDrawer()` sets all four popup signals (incl. `showPrimaryDeclineDialog`)
+  to `false`. The popup path never opens the drawer directly — the shared `acceptOrReject()`
+  `finalize` only resets the drawer to closed/`'decide'` (it calls `closeDrawer()` on every PATCH,
+  popup or drawer alike), it never sets `drawerOpen` to `true`.
+- Both flows end at the same `acceptOrReject(isAccept, withTocMapping?, justification?)` → one
+  PATCH (`justification` only for a primary decline, `PDR-T-4`).
+
+## PDR-T-4: primary Decline asks for a justification (`notifications/primary-decline-rejects-result`)
+Both primary Decline entry points — the row button (`onDeclineClick()`) and the drawer footer
+(`onDrawerDeclineClicked()`) — open `app-primary-decline-justification-dialog`
+(`showPrimaryDeclineDialog`, PDR-T-3) instead of today's yes/no popups, **only** when
+`isPrimaryRequest`. Every other row kind (contributor, W1/W2) is untouched byte-for-byte
+(`PDR-R-2`) — both methods fall through to the pre-existing `showConfirmRejectDialog.set(true)` /
+`drawerMode.set('confirm-decline')` lines.
+- **Drawer closes first.** `onDrawerDeclineClicked()` calls `closeDrawer()` before opening the
+  dialog, so a primary decline never stacks the dialog on top of an open drawer (design.md §8.2).
+- **Confirm → `acceptOrReject(false, false, justification)`.** The method only puts
+  `justification` on the PATCH body when `!isAccept && isPrimaryRequest` — gated on the row kind,
+  not merely "a third argument was passed" — so a stray caller can never smuggle the key into a
+  contributor/W1W2 body.
+- **A primary decline runs its own pipe (`submitPrimaryDecline()`).** The shared
+  `acceptOrReject()` pipeline's `finalize` closes the drawer and every popup unconditionally, which
+  would wipe the dialog's typed text on a 400. The dedicated pipe's `finalize` instead checks
+  `keepPrimaryDeclineDialogOpen` (set in the `error` handler, read after it — RxJS runs `finalize`
+  after the destination's `next`/`error`) and skips the close/reset exactly on a 400, leaving
+  `showPrimaryDeclineDialog` `true` and flipping `requestingReject` (the dialog's `isSaving`) back
+  to `false` so the dialog's own double-click guard releases for a retry — never toggling `visible`
+  itself, which would wipe the typed text (T-3's own contract). 403/409/500 behave exactly like the
+  shared pipeline (close everything, 409 → `staleRequestMessage`).
+- **Toast wording.** A successful primary decline shows "Request successfully declined" — the
+  shared pipeline's contributor/W1W2 toast ("Request successfully rejected") is untouched.
 
 ## Drawer ownership
 `notification-item` owns **all** decision state for the drawer path: `drawerOpen`, `drawerMode`,
@@ -292,7 +322,16 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
   browser pass, not this doc.
 
-**Verified:** 2026-10-01 · qa-development-2026-ss · WPT-T-4 (`w1w2-project-tagged`): the inbox
+**Verified:** 2026-10-01 · qa-development-2026-ss · PDR-T-4 (`notifications/primary-decline-rejects-result`):
+both primary Decline entry points (row `onDeclineClick()`, drawer `onDrawerDeclineClicked()`) now
+open `app-primary-decline-justification-dialog` (`showPrimaryDeclineDialog`) instead of
+`showConfirmRejectDialog`/`confirm-decline`, only for `isPrimaryRequest` — see the new "PDR-T-4"
+section above for the full contract (own-pipe 400 handling, drawer-closes-first, justification
+gating, toast wording). Contributor and W1/W2 Decline paths are untouched byte-for-byte (`PDR-R-2`,
+verified by dedicated regression tests). Supersedes nothing below — it only adds the new section and
+amends "The two flows" bullets; every prior stamp still stands for what it describes.
+
+**Prior verification:** 2026-10-01 · qa-development-2026-ss · WPT-T-4 (`w1w2-project-tagged`): the inbox
 Updates row for `RESULT_BILATERAL_PROJECT_TAGGED` now loops `parts.segments` (SP09/project
 code/Center label each in their own `<b>`, emitter plain) instead of `lead`/`prefix`, and carries
 the `NOTIFICATION_PROJECT_TAGGED_COPY.chipLabel` ("Bilateral project tagged") chip in amber
