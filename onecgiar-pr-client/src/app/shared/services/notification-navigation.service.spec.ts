@@ -44,6 +44,12 @@ describe('NotificationNavigationService', () => {
     expect(bilateralApi.GET_centersByResultId).toHaveBeenCalledWith(91);
   });
 
+  it('uses the creating center acronym of a request without calling the centers lookup', async () => {
+    const notification = { ...buildNotification(), creating_center: { acronym: 'Bioversity (Alliance)' } };
+    expect(await resolve(notification)).toBe('/bilateral/Bioversity%20%28Alliance%29/result/9544?phase=36');
+    expect(bilateralApi.GET_centersByResultId).not.toHaveBeenCalled();
+  });
+
   it('uses the first center code when no center leads and there is no acronym', async () => {
     bilateralApi.GET_centersByResultId.mockReturnValue(of({ response: [{ code: 'C-7' }] }));
     expect(await resolve(buildNotification())).toBe('/bilateral/C-7/result/9544?phase=36');

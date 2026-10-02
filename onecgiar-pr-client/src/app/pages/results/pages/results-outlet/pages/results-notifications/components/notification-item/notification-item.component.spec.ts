@@ -1504,19 +1504,56 @@ describe('NotificationItemComponent', () => {
       // `navigateToResult()` path — on a primary row `requesterCode` resolves to the REQUESTED SP
       // (is_map_to_toc:false), so navigating there would land the user on that SP's bilateral-review
       // page/queue for a result that must not appear there yet (requirements.md L94).
-      it('primary: never navigates in-app — opens resultUrl() in a new tab instead, like a non-bilateral result', () => {
+      // A bilateral result is not served by Result Detail: the new tab goes to the lead center's editor.
+      it('primary: never navigates in-app — opens the lead center editor in a new tab', () => {
         component.notification = buildBilateral({ request_type: 'primary' });
         component.openDrawer('details');
         const navigateSpy = jest.spyOn(component, 'navigateToResult');
         const closeSpy = jest.spyOn(component, 'closeDrawer');
-        const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
 
         component.onDrawerResult();
 
         expect(navigateSpy).not.toHaveBeenCalled();
         expect(closeSpy).not.toHaveBeenCalled();
-        expect(openSpy).toHaveBeenCalledWith(component.resultUrl(component.notification), '_blank');
-        openSpy.mockRestore();
+        expect(openCenterSpy).toHaveBeenCalledWith(component.notification);
+      });
+    });
+
+    describe('onResultLinkClick()', () => {
+      const click = (init: MouseEventInit = {}) => new MouseEvent('click', { button: 0, cancelable: true, ...init });
+
+      it('bilateral: opens the lead center editor instead of following the Result Detail href', () => {
+        component.notification = buildBilateral({ request_type: 'primary' });
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+        const event = click();
+
+        component.onResultLinkClick(event);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(openCenterSpy).toHaveBeenCalledWith(component.notification);
+      });
+
+      it('bilateral + modifier key: leaves the native href alone', () => {
+        component.notification = buildBilateral({ request_type: 'primary' });
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+        const event = click({ ctrlKey: true });
+
+        component.onResultLinkClick(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(openCenterSpy).not.toHaveBeenCalled();
+      });
+
+      it('non-bilateral: keeps the Result Detail href', () => {
+        component.notification = { obj_result: { source_name: 'W1/W2', result_code: 1 } };
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab');
+        const event = click();
+
+        component.onResultLinkClick(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(openCenterSpy).not.toHaveBeenCalled();
       });
     });
 

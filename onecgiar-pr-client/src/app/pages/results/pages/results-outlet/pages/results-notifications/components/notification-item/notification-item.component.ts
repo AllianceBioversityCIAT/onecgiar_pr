@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
@@ -6,6 +6,7 @@ import { ResultLevelService } from '../../../../../result-creator/services/resul
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
+import { NotificationNavigationService } from '../../../../../../../../shared/services/notification-navigation.service';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
 import {
   getAiJobNotificationParts,
@@ -128,6 +129,8 @@ export class NotificationItemComponent {
   drawerFocusAlign = signal(false);
   /** CRD-DD-3: the global ToC hydration is deferred from "open" to "first answer". */
   private tocHydrated = false;
+
+  private readonly notificationNavigation = inject(NotificationNavigationService);
 
   constructor(
     public api: ApiService,
@@ -710,7 +713,26 @@ export class NotificationItemComponent {
       return;
     }
 
+    if (this.isBilateralResult) {
+      this.notificationNavigation.openCenterEditorInNewTab(this.notification);
+      return;
+    }
+
     window.open(this.resultUrl(this.notification), '_blank');
+  }
+
+  /**
+   * Row result link. A W3/Bilaterals result (e.g. a primary program request) opens in its lead
+   * center's editor instead of Result Detail, which does not serve bilateral results. The href
+   * keeps Result Detail for middle-click / context menu.
+   */
+  onResultLinkClick(event: MouseEvent): void {
+    event.stopPropagation();
+    if (!this.isBilateralResult) return;
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
+    event.preventDefault();
+    this.notificationNavigation.openCenterEditorInNewTab(this.notification);
   }
 
   /**

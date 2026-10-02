@@ -112,9 +112,20 @@ export function buildReviewDrawerRoute(
   };
 }
 
+/**
+ * Encodes one path segment the way Angular's router serializer does. `encodeURIComponent` leaves
+ * `(` `)` alone, and the router reads a raw `(` as auxiliary-outlet syntax: a center like
+ * "Bioversity (Alliance)" would be split and the route would fall through to `/home`.
+ */
+const encodeSegment = (segment: unknown): string => {
+  const value = String(segment);
+  if (value.startsWith('/')) return value;
+  return encodeURIComponent(value).replace(/\(/g, '%28').replace(/\)/g, '%29');
+};
+
 /** Serializes a route result to a plain URL string (no router needed). */
 export function bilateralRouteToUrl(route: Pick<BilateralOpenRouteResult, 'commands' | 'queryParams'>): string {
-  const path = route.commands.map(segment => String(segment)).join('/');
+  const path = route.commands.map(encodeSegment).join('/');
   const query = Object.entries(route.queryParams)
     .filter(([, value]) => value !== undefined && value !== null)
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)

@@ -210,6 +210,13 @@ branch needed there):
   which the server sets equal to the requested SP for a primary row), and that SP's bilateral-review
   queue is exactly where the result must **not** appear before it accepts (requirements.md L94).
   `onDrawerResult()`'s guard is `isBilateralResult && !isPrimaryRequest`.
+  **2026-10-01 fix:** the new tab no longer lands on `resultUrl()` (Result Detail does not serve
+  W3/Bilaterals results). Every row `<a>` calls `onResultLinkClick()`, and for a bilateral result
+  it — like `onDrawerResult()` — goes through `NotificationNavigationService.openCenterEditorInNewTab()`
+  → `/bilateral/<center>/result/<code>?phase=`. The center is `creating_center.acronym`
+  ("Bioversity (Alliance)"); only without it is it looked up via `get/centers/:resultId`, whose
+  `acronym` is the INSTITUTION acronym ("Bioversity") — the bilateral route does not recognise
+  that one and lands on an empty `/bilateral/Bioversity/home`. On failure → Result Detail. The `href` stays `resultUrl()` for middle-click and the context menu.
 - **Center notices** (`Primary Program Request Accepted/Declined/Moved`, in
   `notification-type.constants.ts`): render as ONE composed sentence via the existing
   `isUpdateSource` branch/`updateTextParts` — never "The result" + suffix (that produced the
@@ -322,7 +329,7 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
   browser pass, not this doc.
 
-**Verified:** 2026-10-01 · qa-development-2026-ss · PDR-T-4 (`notifications/primary-decline-rejects-result`):
+**Verified:** 2026-10-01 · qa-development-2026-ss · bilateral result links → center editor (see "Result-link routing per kind"). Before that: PDR-T-4 (`notifications/primary-decline-rejects-result`):
 both primary Decline entry points (row `onDeclineClick()`, drawer `onDrawerDeclineClicked()`) now
 open `app-primary-decline-justification-dialog` (`showPrimaryDeclineDialog`) instead of
 `showConfirmRejectDialog`/`confirm-decline`, only for `isPrimaryRequest` — see the new "PDR-T-4"

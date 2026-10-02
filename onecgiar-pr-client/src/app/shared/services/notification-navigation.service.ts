@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Router } from '@angular/router';
+import { Observable, catchError, map, of, timeout } from 'rxjs';
 import { getProgramCode } from '../constants/notification-type.constants';
 import { bilateralRouteToUrl, buildCenterEditorRoute, buildReviewDrawerRoute } from '../routing/bilateral-result-open-route.util';
 import { BilateralApiService } from './api/bilateral-api.service';
@@ -14,6 +15,7 @@ export const DECISION_URL_TIMEOUT_MS = 8000;
 @Injectable({ providedIn: 'root' })
 export class NotificationNavigationService {
   private readonly bilateralApi = inject(BilateralApiService);
+  private readonly router = inject(Router);
 
   /** Review drawer URL for "submitted for your review"; null when the payload has no SP code. */
   reviewRequestUrl(notification: any): string | null {
@@ -47,6 +49,14 @@ export class NotificationNavigationService {
     const resultCode = notification?.obj_result?.result_code;
     const phase = notification?.obj_result?.obj_version?.id;
 
+    // A primary/contributor request carries the creating center with the route's own acronym
+    // ("Bioversity (Alliance)"). The centers lookup below returns the institution acronym
+    // ("Bioversity"), which the bilateral route does not recognise, so it is only the fallback.
+    const creatingCenter = notification?.creating_center?.acronym;
+    if (creatingCenter && resultCode) {
+      return of(bilateralRouteToUrl(buildCenterEditorRoute(creatingCenter, resultCode, phase)));
+    }
+
     return this.bilateralApi.GET_centersByResultId(notification?.result_id).pipe(
       map(response => {
         const centers = response?.response ?? [];
@@ -56,5 +66,36 @@ export class NotificationNavigationService {
       }),
       catchError(() => of(fallback))
     );
+  }
+
+  /** W3/Bilaterals results are edited in the center editor, not in Result Detail. */
+  isBilateralResult(notification: any): boolean {
+    return notification?.obj_result?.source_name === 'W3/Bilaterals';
+  }
+
+  /**
+   * Opens the result in its lead center's editor in a new tab. The tab is opened synchronously
+   * (the popup blocker only allows that inside the click) and pointed at the URL once it resolves.
+   * A blocked tab falls back to the current tab; a failed lookup falls back to Result Detail.
+   */
+  openCenterEditorInNewTab(notification: any): void {
+    const fallback = this.resultDetailUrl(notification);
+    const tab = window.open('', '_blank');
+    if (tab) tab.opener = null;
+
+    this.decisionUrl$(notification)
+      .pipe(
+        timeout(DECISION_URL_TIMEOUT_MS),
+        catchError(() => of(fallback))
+      )
+      .subscribe(resolved => {
+        const url = resolved ?? fallback;
+        if (!url) {
+          tab?.close();
+          return;
+        }
+        if (tab) tab.location.href = `${window.location.origin}${url}`;
+        else this.router.navigateByUrl(url);
+      });
   }
 }

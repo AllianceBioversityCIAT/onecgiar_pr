@@ -64,7 +64,7 @@
             rel="noopener noreferrer"
             class="font-mono"
             style="text-decoration: underline; color: var(--pr-color-black)"
-            (click)="$event.stopPropagation()"
+            (click)="onResultLinkClick($event)"
             >{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</a
           >{{ parts.linkTrailer }}
 
@@ -161,7 +161,7 @@
                 rel="noopener noreferrer"
                 class="font-mono"
                 style="text-decoration: underline; color: var(--pr-color-black)"
-                (click)="$event.stopPropagation()">
+                (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
             </p>
@@ -204,7 +204,7 @@
                 rel="noopener noreferrer"
                 class="font-mono"
                 style="text-decoration: underline; color: var(--pr-color-black)"
-                (click)="$event.stopPropagation()">
+                (click)="onResultLinkClick($event)">
                 {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
               </a>
 
@@ -351,7 +351,7 @@
                 rel="noopener noreferrer"
                 class="font-mono"
                 style="text-decoration: underline; color: var(--pr-color-black)"
-                (click)="$event.stopPropagation()">
+                (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
             </p>
@@ -394,7 +394,7 @@
               rel="noopener noreferrer"
               class="font-mono"
               style="text-decoration: underline; color: var(--pr-color-black)"
-              (click)="$event.stopPropagation()">
+              (click)="onResultLinkClick($event)">
               {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
             </a>
 
@@ -495,7 +495,7 @@
                 rel="noopener noreferrer"
                 class="font-mono"
                 style="text-decoration: underline; color: var(--pr-color-black)"
-                (click)="$event.stopPropagation()">
+                (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
             </p>
@@ -538,7 +538,7 @@
               rel="noopener noreferrer"
               class="font-mono"
               style="text-decoration: underline; color: var(--pr-color-black)"
-              (click)="$event.stopPropagation()">
+              (click)="onResultLinkClick($event)">
               {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
             </a>
 
