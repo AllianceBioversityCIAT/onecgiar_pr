@@ -26,6 +26,8 @@ interface TocResultRow {
   preliminary_progress_percentage?: string | null;
   /** indicator-achieved-value-per-center / RFR-DD-2: union-of-status "Achieved" figure. */
   achieved_value_sum?: number | null;
+  /** @akili-spec bugfix/achieved-counts-submitted — formatted % from achieved_value_sum (ACS-R-1/2). */
+  achieved_progress_percentage?: string | null;
   number_target?: string | null;
   target_date?: number | null;
   target_value?: number | null;
@@ -73,6 +75,8 @@ export interface TocResultResponse {
     preliminary_progress_percentage?: string | null;
     /** indicator-achieved-value-per-center / RFR-DD-2: union-of-status "Achieved" figure. */
     achieved_value_sum?: number | null;
+    /** @akili-spec bugfix/achieved-counts-submitted — formatted % from achieved_value_sum (ACS-R-1/2). */
+    achieved_progress_percentage?: string | null;
     number_target?: string | null;
     target_date?: number | null;
     target_value?: number | null;
@@ -437,6 +441,11 @@ export class AoWBilateralRepository {
         // computes this union-of-status figure — it was being dropped here before reaching
         // groupTocRows, so the client never received it.
         achieved_value_sum: achieved,
+        // @akili-spec bugfix/achieved-counts-submitted (ACS-R-1/ACS-R-2): same formatter as the
+        // QA/preliminary pairs above, applied to the union-basis figure.
+        achieved_progress_percentage: this.formatProgressPercentage(
+          this.calculateProgressPercentage(targetValue, achieved),
+        ),
       };
     });
 
@@ -723,6 +732,10 @@ export class AoWBilateralRepository {
           preliminary_progress_percentage:
             row.preliminary_progress_percentage ?? '0%',
           achieved_value_sum: row.achieved_value_sum ?? 0,
+          // @akili-spec bugfix/achieved-counts-submitted: this object lists its fields explicitly
+          // (see the preliminary pair above) — default mirrors it so no consumer has to guard.
+          achieved_progress_percentage:
+            row.achieved_progress_percentage ?? '0%',
           number_target: row.number_target,
           target_date: row.target_date,
           target_value: row.target_value,

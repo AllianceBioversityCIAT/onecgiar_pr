@@ -30,6 +30,15 @@ export interface ProgressRollup {
    */
   progress_value: number | null;
   preliminary_value: number | null;
+  /**
+   * @akili-spec bugfix/achieved-counts-submitted — union basis (status 2, 3, 6), ACS-R-3/ACS-S-7.
+   * Same shape as `progress_value`/`progress_percentage`, computed from `achieved_value_sum`
+   * alongside (never instead of) the QA and preliminary figures above. Optional so existing
+   * fixtures/literals built against this interface (pre-dating this field) keep compiling —
+   * `rollUpIndicators`/`rollUpChildren` always populate it on what they return.
+   */
+  achieved_value?: number | null;
+  achieved_progress_percentage?: string | null;
   /** Direct children that carried a measurable figure, out of those considered. */
   counted: number;
   total: number;
@@ -46,6 +55,8 @@ export interface ProgressRollup {
 interface NumericRollup {
   actual: number | null;
   preliminary: number | null;
+  /** @akili-spec bugfix/achieved-counts-submitted — union basis, alongside actual/preliminary. */
+  achieved: number | null;
   counted: number;
   total: number;
   indicators_counted: number;
@@ -56,6 +67,8 @@ export interface RollupIndicator {
   target_value_sum?: number | string | null;
   actual_achieved_value_sum?: number | string | null;
   preliminary_achieved_value_sum?: number | string | null;
+  /** @akili-spec bugfix/achieved-counts-submitted — union basis (status 2, 3, 6). */
+  achieved_value_sum?: number | string | null;
 }
 
 /**
@@ -106,8 +119,13 @@ function present(rollup: NumericRollup): ProgressRollup {
       rollup.preliminary === null
         ? NO_MEASURABLE_PROGRESS
         : formatProgress(rollup.preliminary),
+    achieved_progress_percentage:
+      rollup.achieved === null
+        ? NO_MEASURABLE_PROGRESS
+        : formatProgress(rollup.achieved),
     progress_value: rollup.actual,
     preliminary_value: rollup.preliminary,
+    achieved_value: rollup.achieved,
     counted: rollup.counted,
     total: rollup.total,
     indicators_counted: rollup.indicators_counted,
@@ -135,10 +153,17 @@ function rollUpIndicatorsNumeric(
         Number(indicator.target_value_sum),
       ) * 100,
   );
+  // @akili-spec bugfix/achieved-counts-submitted — same hasUsableTarget filter, union basis.
+  const achieved = measurable.map(
+    (indicator) =>
+      ratio(indicator.achieved_value_sum, Number(indicator.target_value_sum)) *
+      100,
+  );
 
   return {
     actual: averageOf(actuals),
     preliminary: averageOf(preliminaries),
+    achieved: averageOf(achieved),
     counted: measurable.length,
     total: list.length,
     indicators_counted: measurable.length,
@@ -186,6 +211,11 @@ export function rollUpChildren(
     ),
     preliminary: averageOf(
       measurable.map((child) => child.progress?.preliminary_value ?? 0),
+    ),
+    // @akili-spec bugfix/achieved-counts-submitted — same `measurable` set (keyed on
+    // progress_value !== null, which depends on targets only, so it is identical across bases).
+    achieved: averageOf(
+      measurable.map((child) => child.progress?.achieved_value ?? 0),
     ),
     counted: measurable.length,
     total: list.length,

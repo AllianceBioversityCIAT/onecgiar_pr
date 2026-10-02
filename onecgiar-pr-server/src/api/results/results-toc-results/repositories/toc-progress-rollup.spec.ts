@@ -145,6 +145,66 @@ describe('formatProgress', () => {
   });
 });
 
+// ── ACS-TEST-1 (docs/specs/bugfix/achieved-counts-submitted, ACS-T-1) ────────────────────────
+//
+// Achieved/union-basis rollup (ACS-R-3, ACS-S-7). `rollUpIndicators` / `rollUpChildren` must carry
+// a third figure — `achieved_value` / `achieved_progress_percentage` — alongside `actual` and
+// `preliminary`, computed with the SAME `hasUsableTarget` filter (indicator level) and the SAME
+// `measurable` set (child level, keyed on `progress_value !== null`) design.md §7 specifies. Expected
+// values are read off the requirements.md ACS-S-1/ACS-S-7 scenario (Target 1, Submitted contributes
+// 1 -> 100%), not recomputed the way the code does.
+describe('rollUpIndicators — achieved/union basis (ACS-R-3, design.md §7)', () => {
+  it('computes achieved_value and achieved_progress_percentage from achieved_value_sum, alongside the QA and preliminary figures', () => {
+    const submittedNotYetQaed = {
+      target_value_sum: 1,
+      actual_achieved_value_sum: 0, // QA basis: not yet QualityAssessed
+      preliminary_achieved_value_sum: 1, // Submitted + Approved basis
+      achieved_value_sum: 1, // union basis (2, 3, 6): already counts
+    };
+
+    // Fails today: RollupIndicator/ProgressRollup carry no achieved_value_sum / achieved_value /
+    // achieved_progress_percentage fields at all, so both reads below are undefined.
+    const rollup = rollUpIndicators([submittedNotYetQaed] as any) as any;
+
+    expect(rollup.achieved_value).toBe(100);
+    expect(rollup.achieved_progress_percentage).toBe('100%');
+  });
+});
+
+describe('rollUpChildren — achieved/union basis (ACS-S-7)', () => {
+  const node = (achievedValue: number | null) => ({
+    progress: {
+      progress_percentage: achievedValue === null ? null : `${achievedValue}%`,
+      preliminary_progress_percentage:
+        achievedValue === null ? null : `${achievedValue}%`,
+      progress_value: achievedValue,
+      preliminary_value: achievedValue,
+      achieved_value: achievedValue,
+      achieved_progress_percentage:
+        achievedValue === null ? null : `${achievedValue}%`,
+      counted: achievedValue === null ? 0 : 1,
+      total: 1,
+      indicators_counted: achievedValue === null ? 0 : 1,
+      indicators_total: 1,
+    },
+  });
+
+  it('averages achieved_value over two children (100, 0) the same way it averages progress_value', () => {
+    // Fails today: rollUpChildren never reads/returns achieved_value at all.
+    const rollup = rollUpChildren([node(100), node(0)] as any) as any;
+
+    expect(rollup.achieved_value).toBe(50);
+  });
+
+  it('skips a child with no usable target for achieved exactly as it does for actual (ACS-S-7 BUT clause)', () => {
+    const rollup = rollUpChildren([node(100), node(null)] as any) as any;
+
+    // The zero/no-target child is excluded from EVERY basis via the same `measurable` set — not
+    // averaged in as 0, and not counted toward achieved separately from actual/preliminary.
+    expect(rollup.achieved_value).toBe(100);
+  });
+});
+
 /**
  * P2-3296 AC3 regression. The first build averaged an Area of Work over its OUTCOMES only, and
  * every AoW of a programme came back with the identical figure — the outcomes hanging off an AoW
