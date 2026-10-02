@@ -30,7 +30,7 @@ import { ALL_PROJECT_CENTERS } from '../../../../../../shared/utils/project-cent
  * needs a dozen catalogues that have nothing to do with this field.
  */
 function bilateralProjectsFieldMarkup(): string {
-  const html = readFileSync(join(__dirname, 'rd-contributors-and-partners.component.html'), 'utf8');
+  const html = readFileSync(join(__dirname, 'rd-contributors-and-partners.component.html'), 'utf8').replace(/\r\n/g, '\n');
   const start = html.indexOf('<app-pr-multi-select\n      data-testid="cp-field-bilateral_projects"');
   const end = html.indexOf('</app-pr-multi-select>', start);
   if (start < 0 || end < 0) throw new Error('bilateral projects field not found in the template');
