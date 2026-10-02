@@ -216,26 +216,30 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
         order by rbu.\`role\` asc
 	    	LIMIT 1) = 1) then true
 	    	else CASE 
-	    		WHEN ((
+	    		-- EXISTS, not "= (subquery)": a user can hold several role rows on the same
+	    		-- initiative (e.g. an inactive old role plus the current one), which made the
+	    		-- scalar subquery return more than 1 row and broke submit. Only active rows count.
+	    		WHEN EXISTS (
 	    		SELECT
-	    			rbu.\`role\`
+	    			1
 	    		FROM
 	    			users u
-	    		left join role_by_user rbu on
+	    		inner join role_by_user rbu on
 	    			rbu.\`user\` = u.id
 	    		WHERE
 	    			u.active > 0
 	    			and u.id = ?
-	    			and rbu.initiative_id = (
+	    			and rbu.active > 0
+	    			and rbu.\`role\` in (${rolesToValidate?.toString() || 'NAN'})
+	    			and rbu.initiative_id in (
 	    			SELECT
 	    				rbi.inititiative_id
 	    			from
 	    				results_by_inititiative rbi
 	    			where
 	    				rbi.result_id = ?
-	    				and rbi.initiative_role_id = 1)) in (${
-                rolesToValidate?.toString() || 'NAN'
-              })) THEN TRUE
+	    				and rbi.initiative_role_id = 1
+	    				and rbi.is_active > 0)) THEN TRUE
 	    		else false
 	    	END
 	    END as validation;
