@@ -520,6 +520,39 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     }
   }
 
+  /**
+   * `SACN-T-1` / design §7.1 — every user with an ACTIVE role, of ANY kind, on the center.
+   * Mirror of {@link getUserIdsByInitiative} for the center axis: no role predicate. Used only
+   * by the Approve branch of the bilateral review recipients (SACN-R-1) — not a replacement for
+   * {@link getUserIdsByCenter}, which stays scoped to `role = 9` (Center User) for its six other
+   * callers (SACN-R-9, SACN-DD-1).
+   */
+  async getUserIdsByCenterAnyRole(centerCode: string): Promise<number[]> {
+    const queryData = `
+    SELECT DISTINCT
+      rbu.\`user\` AS user_id
+    FROM role_by_user rbu
+    WHERE rbu.center_id = ?
+      AND rbu.active > 0
+      AND rbu.\`user\` IS NOT NULL;
+    `;
+    try {
+      const result: Array<{ user_id: number | string }> = await this.query(
+        queryData,
+        [centerCode],
+      );
+      return (result ?? [])
+        .map((row) => Number(row.user_id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getUserIdsByCenter(centerCode: string): Promise<number[]> {
     const queryData = `
     SELECT DISTINCT
