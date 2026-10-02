@@ -329,6 +329,53 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
   browser pass, not this doc.
 
+## SACN-T-4: approve row gets a check icon, Approved + Rejected share "Decision update" chip (`sp-approval-center-notice`)
+- **Avatar:** a NEW `isApprovedDecisionUpdateRow` getter (`resolveNotificationType(...) ===
+  NotificationType.BILATERAL_RESULT_APPROVED`) adds a third branch to the Updates-row avatar box,
+  between `aiJob` and the initials fallback — `<i class="pi pi-check-circle">` for Approved only.
+  Rejected rows fall through to the pre-existing initials branch unchanged (SACN-R-6 "Rejected row
+  chip" scenario: chip changes, icon doesn't).
+- **Chip:** `rowTypeChipLabel` gains a third override (same `isUpdateSource` branch as the WCT/WPT
+  overrides above), checked AFTER those two: `isBilateralReviewNotification(this.notification)`
+  (from `notification-type.constants.ts`, already existed — true for Approved OR Rejected) →
+  `BILATERAL_DECISION_NOTICE_COPY.chipLabel` ("Decision update", reused from
+  `internationalization/bilateral-decision-notice.copy.ts` — not redeclared, per SACN-T-3's forward
+  pointer). Applies to BOTH Approved and Rejected rows, and to legacy rows (no new-shape `text`) —
+  the chip override reads only the resolved `NotificationType`, never the sentence shape, so
+  SACN-R-7 "legacy rows keep rendering" holds for the chip even though the sentence itself is
+  unparsed for a legacy row.
+- **Color class — explicit neutral surface-sunken pair (rework attempt 3, design.md §8.3 AMENDED
+  2026-10-02, Pivot):** attempt 1 left `rowTypeChipColorClass` unbranched for Approved/Rejected, so
+  they fell into the violet `--pr-color-primary-50/-400` fallback every other unlisted update type
+  gets (Reviewer finding 1: chip rendered violet, not grey). Attempt 2 fixed that by returning `''`
+  — no `!important` override, so the badge's own `bg-secondary text-secondary-foreground`
+  (hlm-badge.ts) would win. But in this app's theme bridge `--secondary` resolves to
+  `--pr-color-primary-25` (#faf9fe, near-white), which does not read grey — design.md §8.3 was
+  amended to drop the "let `--secondary` show through" approach and instead specify an explicit
+  neutral pair. Fix (attempt 3): `isUpdateSource` branch's `isBilateralReviewNotification(...)`
+  check (Approved OR Rejected) now returns `'!bg-[var(--pr-surface-sunken)]
+  !text-[var(--pr-text)]'` — same literal-arbitrary-value pattern the WCT/WPT pairs above already
+  use, pointed at `--pr-surface-sunken` (#f3f2f7, `colors.scss` L273) / `--pr-text` (dark ink). The
+  global `--secondary` mapping in `styles.scss` is NOT touched. Funding chip, meta line
+  (`<level> · <type> · <time ago>`), and result-link styling are still untouched (SACN-DD-5).
+  Regression: `rowTypeChipColorClass (SACN-T-4 rework attempt 3, design.md §8.3 amendment)` asserts
+  Approved/Rejected return the exact `!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]` string
+  (not `--pr-color-primary-50`, not `''`) while WCT/WPT keep their own distinct pairs — the spec
+  checks the CLASS CHOICE only; it matches the design.md §8.3 class contract, but the actual visual
+  match to the mockup is still the HITL manual check, not something a unit test can verify.
+- **Drawer `requestKind` is unaffected** — it was already `null` for every `isUpdateSource` row
+  before this task (see `drawerViewFields()`'s own comment), so neither chip override feeds it; the
+  drawer shows no "type" field at all for Updates rows, Approved/Rejected included.
+
+**Verified:** 2026-10-02 · qa-development-2026-ss · SACN-T-4 rework attempt 3 (post-Pivot): Approved/
+Rejected chips return the neutral pair `!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]`
+(amended design §8.3) instead of the violet fallback — class contract met; visual match pending
+HITL. Supersedes attempt 1's stamp below only for the color bullet; check-icon/chip-label/avatar
+behavior unchanged.
+
+**Prior verification:** 2026-10-02 · qa-development-2026-ss · SACN-T-4 (`sp-approval-center-notice`):
+approve row check icon + "Decision update" chip (Approved + Rejected) — see the section above.
+
 **Verified:** 2026-10-01 · qa-development-2026-ss · bilateral result links → center editor (see "Result-link routing per kind"). Before that: PDR-T-4 (`notifications/primary-decline-rejects-result`):
 both primary Decline entry points (row `onDeclineClick()`, drawer `onDrawerDeclineClicked()`) now
 open `app-primary-decline-justification-dialog` (`showPrimaryDeclineDialog`) instead of

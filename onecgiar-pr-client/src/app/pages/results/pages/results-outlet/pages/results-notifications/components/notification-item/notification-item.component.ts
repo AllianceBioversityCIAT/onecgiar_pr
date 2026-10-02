@@ -12,12 +12,14 @@ import {
   getAiJobNotificationParts,
   getResultNotificationTextParts,
   resolveNotificationType,
+  isBilateralReviewNotification,
   NotificationType,
   type AiJobNotificationParts,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
 import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../../../../../../../internationalization/notification-center-tagged.copy';
 import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../../../../../../../internationalization/notification-project-tagged.copy';
+import { BILATERAL_DECISION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-decision-notice.copy';
 import type { ContributionRequestDrawerMode, ContributionRequestDrawerViewFields } from '../contribution-request-drawer/contribution-request-drawer.component';
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
@@ -254,6 +256,12 @@ export class NotificationItemComponent {
       if (resolveNotificationType(this.notification) === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED) {
         return NOTIFICATION_PROJECT_TAGGED_COPY.chipLabel;
       }
+      // SACN-T-4 (`sp-approval-center-notice`, SACN-R-6/R-7, design §8.3/DD-4): same treatment for
+      // a bilateral review decision row — Approved AND Rejected both read the friendlier "Decision
+      // update" label instead of the raw "Bilateral Result Approved/Rejected" type name.
+      if (isBilateralReviewNotification(this.notification)) {
+        return BILATERAL_DECISION_NOTICE_COPY.chipLabel;
+      }
       return resolveNotificationType(this.notification);
     }
     // PSR-T-8: was the fixed `contributionRequestChip` string for every request row; now resolved
@@ -296,6 +304,18 @@ export class NotificationItemComponent {
   /** A finished AI job has no result behind it: no result link, no drawer, just its sentence. */
   get aiJobParts(): AiJobNotificationParts | null {
     return getAiJobNotificationParts(this.notification);
+  }
+
+  /**
+   * SACN-T-4 (design §8.3, SACN-R-6): the approve row's avatar box shows a check icon instead of
+   * the emitter's initials — Approved only (mirrors the `aiJob` icon branch above). Rejected rows
+   * keep showing initials (SACN-R-6 "Rejected row chip" scenario: chip changes, icon doesn't).
+   */
+  get isApprovedDecisionUpdateRow(): boolean {
+    // SACN-T-4 rework attempt 2 (Reviewer advisory, cheap): guard with `isUpdateSource` — this
+    // getter is only ever read from the Updates-row avatar branch, so a `source:'request'` row
+    // resolving (however unlikely) to the same `NotificationType` value can never flip it true.
+    return this.isUpdateSource && resolveNotificationType(this.notification) === NotificationType.BILATERAL_RESULT_APPROVED;
   }
 
   /**
@@ -1081,6 +1101,20 @@ export class NotificationItemComponent {
       // gets the existing amber "in progress" status token pair. Every other update type is unchanged.
       if (notificationType === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED) {
         return '!bg-[var(--pr-status-in-progress-bg)] !text-[var(--pr-status-in-progress-fg)]';
+      }
+      // SACN-T-4 rework attempt 3 (design.md §8.3 AMENDED 2026-10-02, Pivot): a bilateral review
+      // decision row (Approved OR Rejected, `isBilateralReviewNotification`) pairs the
+      // `hlmBadge variant="secondary"` chip with an explicit neutral grey pair instead of the
+      // theme's own secondary mapping. Attempt 2 returned `''`, which let the badge's own
+      // `bg-secondary text-secondary-foreground` (hlm-badge.ts) win — but in THIS app's theme
+      // bridge `--secondary` resolves to `--pr-color-primary-25` (#faf9fe, near-white), which does
+      // not read grey (the design amendment's own wording). Fix: return the same explicit
+      // `!bg-[var(...)] !text-[var(...)]` pattern the WCT/WPT pairs above already use, pointed at
+      // `--pr-surface-sunken` (#f3f2f7, `colors.scss` L273) / `--pr-text` (dark ink) — matches the
+      // design.md §8.3 class contract; visual match pending HITL. The global `--secondary` mapping
+      // in `styles.scss` is NOT touched (design.md §8.3 amendment, explicit).
+      if (isBilateralReviewNotification(this.notification)) {
+        return '!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]';
       }
       return '!bg-[var(--pr-color-primary-50)] !text-[var(--pr-color-primary-400)]';
     }

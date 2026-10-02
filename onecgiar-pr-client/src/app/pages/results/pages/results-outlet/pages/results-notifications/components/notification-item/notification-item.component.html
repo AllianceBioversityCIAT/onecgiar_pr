@@ -24,6 +24,10 @@
       <div class="notification_avatar">
         @if (aiJob) {
           <span class="material-icons-round" style="font-size: 16px" aria-hidden="true">auto_awesome</span>
+        } @else if (isApprovedDecisionUpdateRow) {
+          <!-- SACN-T-4 (design §8.3, SACN-R-6): Approved bilateral review row — check icon instead
+               of initials. Rejected rows fall through to the initials branch, unchanged. -->
+          <i class="pi pi-check-circle" aria-hidden="true"></i>
         } @else {
         <span class="notification_avatar_initials">{{
           ((notification?.obj_emitter_user?.first_name?.charAt(0) ?? '') + (notification?.obj_emitter_user?.last_name?.charAt(0) ?? ''))

@@ -34,6 +34,9 @@ import { PrimaryDeclineJustificationDialogComponent } from '../primary-decline-j
 // NOTIF-T-5: property-based chip check — every rendered type chip must be a member of this set
 // (or the fixed "Contribution request" string), never a fabricated label (NOTIF-R-3/NOTIF-AC-7).
 import { NotificationType } from '../../../../../../../../shared/constants/notification-type.constants';
+// SACN-T-4 (`sp-approval-center-notice`): the "Decision update" chip string, reused rather than
+// redeclared (forward pointer from SACN-T-3).
+import { BILATERAL_DECISION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-decision-notice.copy';
 
 describe('NotificationItemComponent', () => {
   let component: NotificationItemComponent;
@@ -3556,6 +3559,198 @@ describe('NotificationItemComponent', () => {
       expect(flat).toBe(
         'The result 9398 - A pooled funding result created by SP01 has tagged the B-A1080 of your center (ABC). Click to see the result.'
       );
+    });
+  });
+
+  // SACN-T-4 (`sp-approval-center-notice`, design.md §8.3, SACN-R-6/R-7): the approve row's avatar
+  // gets a check icon instead of initials, and both Approved/Rejected rows carry the "Decision
+  // update" chip. Funding chip, meta line and link style are untouched (SACN-DD-5).
+  describe('SACN-T-4: bilateral review decision row (check icon, "Decision update" chip)', () => {
+    const approvedCenterNoticeFixture = (overrides: any = {}) => ({
+      notification_id: 20,
+      source: 'update',
+      created_date: new Date().toISOString(),
+      text: "SP06, as primary Science Program, has approved your center's result",
+      obj_notification_type: { type: NotificationType.BILATERAL_RESULT_APPROVED },
+      obj_emitter_user: { first_name: 'Jane', last_name: 'Doe' },
+      obj_result: {
+        result_code: 9330,
+        title: 'Solar-powered cold storage adoption in Kenyan markets',
+        source_name: 'W3/Bilaterals',
+        obj_result_level: { name: 'Outcome' },
+        obj_result_type: { name: 'Innovation Use' },
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP06' } }],
+        obj_version: { id: 1 }
+      },
+      ...overrides
+    });
+
+    describe('reference row (SACN-R-6)', () => {
+      it('renders the check icon instead of initials, no Accept/Decline buttons', () => {
+        component.notification = approvedCenterNoticeFixture();
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('.notification_avatar .pi-check-circle')).toBeTruthy();
+        expect(root.querySelector('.notification_avatar_initials')).toBeNull();
+        expect(root.querySelector('[data-testid="accept-contribution-btn"]')).toBeNull();
+        expect(root.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+        expect(root.querySelector('.notification_content_actions_buttons')).toBeNull();
+      });
+
+      it('carries the "Decision update" type chip and the unchanged "W3/Bilateral" funding chip', () => {
+        component.notification = approvedCenterNoticeFixture();
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        const typeChip = root.querySelector('[data-notif-type-chip]');
+        const fundingChip = root.querySelector('[data-notif-funding-chip]');
+
+        expect(typeChip?.textContent?.trim()).toBe(BILATERAL_DECISION_NOTICE_COPY.chipLabel);
+        expect(typeChip?.textContent?.trim()).toBe('Decision update');
+        expect(fundingChip?.textContent?.trim()).toBe('W3/Bilateral');
+      });
+
+      it('body text contains the T3 sentence with single spaces, SP06 emphasized, result link intact', () => {
+        component.notification = approvedCenterNoticeFixture();
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        const p = root.querySelector('.notification_content_body_text')!;
+        const flat = p.textContent!.replace(/\s+/g, ' ').trim();
+
+        expect(flat).toBe(
+          "SP06, as primary Science Program, has approved your center's result 9330 - Solar-powered cold storage adoption in Kenyan markets"
+        );
+        expect(flat).not.toMatch(/ {2}/);
+        const boldTexts = Array.from(p.querySelectorAll('b')).map(b => b.textContent?.trim());
+        expect(boldTexts).toEqual(['SP06']);
+      });
+
+      it('is view-only: rowMode is "view"', () => {
+        component.notification = approvedCenterNoticeFixture();
+        fixture.detectChanges();
+
+        expect(component.rowMode).toBe('view');
+      });
+    });
+
+    describe('rejected row (SACN-R-6 "Rejected row chip" scenario)', () => {
+      const rejectedFixture = () =>
+        approvedCenterNoticeFixture({
+          text: 'created by SP06 has rejected the result. Click to see the result.',
+          obj_notification_type: { type: NotificationType.BILATERAL_RESULT_REJECTED }
+        });
+
+      it('chip reads "Decision update" but initials are still shown (no check icon)', () => {
+        component.notification = rejectedFixture();
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        const chip = root.querySelector('[data-notif-type-chip]');
+
+        expect(chip?.textContent?.trim()).toBe('Decision update');
+        expect(root.querySelector('.notification_avatar_initials')).toBeTruthy();
+        expect(root.querySelector('.notification_avatar .pi-check-circle')).toBeNull();
+      });
+    });
+
+    describe('rowTypeChipLabel / isApprovedDecisionUpdateRow resolve the same way directly', () => {
+      it('Approved', () => {
+        component.notification = approvedCenterNoticeFixture();
+        expect(component.rowTypeChipLabel).toBe('Decision update');
+        expect(component.isApprovedDecisionUpdateRow).toBe(true);
+      });
+
+      it('Rejected', () => {
+        component.notification = approvedCenterNoticeFixture({ obj_notification_type: { type: NotificationType.BILATERAL_RESULT_REJECTED } });
+        expect(component.rowTypeChipLabel).toBe('Decision update');
+        expect(component.isApprovedDecisionUpdateRow).toBe(false);
+      });
+    });
+
+    // SACN-T-4 rework attempt 3 (design.md §8.3 AMENDED 2026-10-02, Pivot): Approved/Rejected must
+    // NOT carry the violet `--pr-color-primary-50/-400` fallback pair, and must NOT fall back to
+    // `''` either — attempt 2's `''` let the theme's own `--secondary` mapping show through
+    // (#faf9fe, near-white), which doesn't read grey against the reference. The amended contract is
+    // an explicit neutral pair: `!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]`. Asserts the
+    // CLASS CHOICE only — the visual match itself is the HITL manual check against
+    // `mockup/reference-row.png`, not something a unit test can verify. WCT/WPT keep their own
+    // distinct pairs, unaffected.
+    describe('rowTypeChipColorClass (SACN-T-4 rework attempt 3, design.md §8.3 amendment)', () => {
+      it('Approved: neutral surface-sunken pair, not the violet fallback', () => {
+        component.notification = approvedCenterNoticeFixture();
+        expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]');
+        expect(component.rowTypeChipColorClass).not.toContain('--pr-color-primary-50');
+      });
+
+      it('Rejected: neutral surface-sunken pair, not the violet fallback', () => {
+        component.notification = approvedCenterNoticeFixture({ obj_notification_type: { type: NotificationType.BILATERAL_RESULT_REJECTED } });
+        expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]');
+        expect(component.rowTypeChipColorClass).not.toContain('--pr-color-primary-50');
+      });
+
+      it('WCT/WPT rows keep their own distinct color pairs (unaffected)', () => {
+        component.notification = {
+          notification_id: 23,
+          source: 'update',
+          created_date: new Date().toISOString(),
+          text: 'ABC',
+          obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+          obj_result: { result_code: 9398, title: 'A pooled funding result', obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }], obj_version: { id: 1 } }
+        };
+        expect(component.rowTypeChipColorClass).toBe('!bg-[var(--pr-status-approved-bg)] !text-[var(--pr-status-approved-fg)]');
+      });
+    });
+
+    it('legacy approve row (no new-shape text) still gets the "Decision update" chip (SACN-R-7)', () => {
+      component.notification = approvedCenterNoticeFixture({
+        text: 'created by SP06 has approved the result. Click to see the result.'
+      });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Decision update');
+      expect(root.querySelector('.notification_avatar .pi-check-circle')).toBeTruthy();
+    });
+
+    it('a Center-tagged row is unaffected: chip stays "CG Center tagged"', () => {
+      component.notification = {
+        notification_id: 21,
+        source: 'update',
+        created_date: new Date().toISOString(),
+        text: 'ABC',
+        obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+        obj_result: {
+          result_code: 9398,
+          title: 'A pooled funding result',
+          obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP01' } }],
+          obj_version: { id: 1 }
+        }
+      };
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('CG Center tagged');
+    });
+
+    it('a Bilateral-project-tagged row is unaffected: chip stays "Bilateral project tagged"', () => {
+      component.notification = {
+        notification_id: 22,
+        source: 'update',
+        created_date: new Date().toISOString(),
+        text: 'B-A1080 (ABC)',
+        obj_emitter_user: { first_name: 'Lucia', last_name: 'Ferrari' },
+        obj_notification_type: { type: NotificationType.RESULT_BILATERAL_PROJECT_TAGGED },
+        obj_result: {
+          result_code: 9341,
+          title: '<title>',
+          obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP09' } }],
+          obj_version: { id: 1 }
+        }
+      };
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Bilateral project tagged');
     });
   });
 
