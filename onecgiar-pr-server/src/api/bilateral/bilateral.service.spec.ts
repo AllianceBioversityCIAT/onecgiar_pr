@@ -2636,6 +2636,8 @@ describe('BilateralService (unit)', () => {
         10,
         404,
         expect.objectContaining({ id: 42 }),
+        undefined,
+        { asDraft: true },
       );
       expect(
         (stubs.resultByInitiativesRepository as any).save,
