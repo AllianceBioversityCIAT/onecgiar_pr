@@ -213,3 +213,53 @@ The user authorized committing and pushing: first `qa-development-2026-ss`, then
      - **Leader inline fix (mechanical, 1 line, user-visible):** `type AnyRecord = any`, with a comment explaining why.
      - After the fix: tsc reports 0 errors, eslint is clean, and jest on `achieved-display-basis|results-api.service` passes 332.
      - Lesson for kaizen: a client task's verify step should include `tsc -p tsconfig.app.json --noEmit` (or a build), not only jest.
+
+### `ACS-T-5` — Verification at the HITL pause (manual) — **in progress**
+
+**Local check by the user, 2026-10-02** (localhost, after the `01ccea9e8` role fix let the submit go through). Result 9754 "QA / PRELIM" (Other Output, SP01 · AOW01) was submitted, status 3.
+
+| Check | Evidence (user screenshots) | Verdict |
+|---|---|---|
+| ACS-S-1/S-4: a submitted result counts as Achieved, and % and badge follow | SP01 · Reporting · AOW01 · HLO 2 "Target markets", indicator "01-GATES W2 DLC … CIMMYT": Target 3, **Achieved 1**, **33.3%**, **In progress** | ✅ |
+| ACS-S-7: roll-up uses the union basis with the same mean | HLO 2 header: 10 target, 1 achieved, **6.7%** (= 33.3 / 5 indicators). AoW header 3.9% | ✅ |
+| ACS-S-8: KPI counts include submitted | AOW01 card **2/23** (9%). Overview "Progress by area of work": **2 of 23**, Complete 1, In progress 1 | ✅ |
+| ACS-S-9: no QA/Prel visible | Reporting rows and headers, By-AoW view and Overview show a single bar and figure with no "QA"/"Prel." labels | ✅ (desktop width) |
+| ACS-S-5: 30983 SF · AoW5 · HLO 5.3 CIMMYT = 1 / 20% with siblings at 0 | — | ⏳ pending on testing after the deploy |
+| Narrow width / layout | — | ⏳ pending |
+| ACS-S-3: Editing does not count | — | ⏳ optional |
+
+Side finding fixed during T-5: submit failed with `[RoleByUserRepository] Subquery returns more than 1 row`. This was pre-existing and is not caused by this spec. `validationRolePermissions` did not filter `role_by_user.active`. The user has role 5 active plus role 6 inactive on SP01, so the scalar subquery returned 2 rows. Fixed by rewriting that branch as an `EXISTS` restricted to active role rows and active owner rows. Commit `01ccea9e8`, pushed to `qa-development-2026-ss` and `performance-refactor`. The user verified the new predicate returns 1 in the database. RoleByUser and submissions specs pass 42/42.
+
+**T-5 close (2026-10-02): PASS, with a recorded user waiver.**
+- **ACS-S-5 (30983, SF · AoW5 · HLO 5.3 CIMMYT): waived by the user.** That case exists only in production data, not in testing. The user chose to trust the release.
+  - **Residual risk: low.** Which center row a result counts in is out of scope for this spec (`reported-results-center-scoping`), and T-2 did not change it (no SQL change). The union `achieved_value_sum` on the per-center path already shipped with `indicator-achieved-value-per-center`.
+  - **Post-release check recommended in production:** that row should read 1 / 20%, In progress.
+- **Narrow-width layout:** not checked by eye. Cypress CT row-layout, which runs in a real browser, passed 4/4 at T-4.
+- **ACS-S-3 (Editing does not count):** not checked by hand. The status set `IN (2,3,6)` in SQL is unchanged.
+
+## Summary
+
+All 5 tasks are complete.
+
+| Task | Attempts | Verdict |
+|---|---|---|
+| T-1 | 1 | PASS |
+| T-2 | 1 | PASS |
+| T-3 | 1 | PASS |
+| T-4 | 2 | PASS (first attempt FAIL: a missed AoW header surface and a component doc) |
+| T-5 | — | PASS, with a waiver on S-5 |
+
+**Shipped:**
+- Server: an additive union "Achieved" figure on indicator rows and on every roll-up.
+- Client: a display-basis normaliser at the API choke point, plus the QA/Prel split hidden behind `SHOW_QA_PREL_SPLIT`.
+
+**Integration fixes found after execution:**
+- The client app build failed type checking on the normaliser (`6d60a5bd4`), which Jest missed.
+- A pre-existing submit crash on users who hold several roles (`01ccea9e8`, outside this spec).
+
+**Budget:** about 1,200 LOC against an estimate of about 350, and 6 review rounds against 2. Most of the difference is test depth.
+
+**For `/akili-archive` (kaizen):**
+1. A client task's verify step should include `tsc -p tsconfig.app.json --noEmit` or a build.
+2. The surface list in design should be derived from a grep across the whole module, not from the proposal.
+3. The machine-load rule: Jest runs with `--maxWorkers=2`, one run at a time.

@@ -1,6 +1,6 @@
 # `bugfix/achieved-counts-submitted` — Tasks
 
-**Depth:** Standard (Bug Mode) · **Status:** in progress · Budget: 5 tasks · ~350 LOC · 2 review rounds (`design.md` §12)
+**Depth:** Standard (Bug Mode) · **Status:** complete · Budget: 5 tasks · ~350 LOC · 2 review rounds (`design.md` §12)
 
 ## 1. Scope
 
@@ -8,9 +8,9 @@ Implements `ACS-R-1..5` per `design.md` (`ACS-DD-1..5`). No migration, no SQL ch
 
 ## 2. Pre-flight
 
-- [ ] On `qa-development-2026-ss` (or a branch from it); uncommitted notification work in the tree is **not** part of this spec — do not stage it.
+- [x] On `qa-development-2026-ss` (or a branch from it); uncommitted notification work in the tree is **not** part of this spec — do not stage it.
 - [x] Inline SQL check run 2026-10-02: **30983** (id 34339) is `status_id = 3`, active, `contributing_indicator = 1` on one 2026 target row (7 sibling targets NULL) → valid live evidence. **31037** (id 34393) is `status_id = 3` but **soft-deleted** (`result.is_active = 0`, its `rtr`/`rtri`/`rit` rows also 0, contribution 1.00) — it was active when Nicoleta took the screenshot (Prel 100%) and was deleted afterwards, so it can no longer serve as live evidence. `ACS-S-1` stays as a fixture scenario in T-1; T-5 uses 30983 plus any active status-3 result.
-- [ ] Scoped test runs only (`--testPathPattern` / `--spec`) — never the full suite.
+- [x] Scoped test runs only (`--testPathPattern` / `--spec`) — never the full suite.
 
 ## 3. Task list
 
@@ -58,7 +58,7 @@ Implements `ACS-R-1..5` per `design.md` (`ACS-DD-1..5`). No migration, no SQL ch
 - **Verify:** `npx jest --silent --reporters=summary --no-coverage --testPathPattern="reporting-aow-table|program-overview|aow-hlo-table|entity-aow-card|dashboard-lab.component"` · `npx cypress run --component --spec "src/app/pages/result-framework-reporting/pages/dashboard-lab/components/**/*row-layout.cy.ts"` · `npx ng lint --quiet`.
 - **Cannot prove:** jsdom presence-asserts labels, it does not prove nothing clips or misaligns → Cypress CT (real browser) + T-5 visual check. Pre-existing red CT specs on this branch (memory: CT suite broadly red) do not count as pass or fail of this task — compare against a run on the parent commit and report only new failures.
 
-### [ ] `ACS-T-5` — Verification at the HITL pause (manual)
+### [x] `ACS-T-5` — Verification at the HITL pause (manual)
 
 - **Size:** XS · **Depends on:** T-2, T-3, T-4 · **Skills:** `run` / `claude-in-chrome` (optional)
 - **Covers:** real-data side of `ACS-S-1`, `ACS-S-5`, `ACS-S-8`, visual side of `ACS-S-9`, `ACS-S-3`
