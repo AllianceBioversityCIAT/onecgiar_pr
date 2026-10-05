@@ -20,6 +20,8 @@ describe('ShareResultRequestController', () => {
     getResultRequestByUser: jest.fn(),
     updateResultRequestByUser: jest.fn(),
     updateResultRequestByUserV2: jest.fn(),
+    // @akili-spec notifications/detail-side-panel (DSP-T-1)
+    getApprovalChain: jest.fn(),
   };
 
   const user = { id: 10 } as TokenDto;
@@ -97,6 +99,23 @@ describe('ShareResultRequestController', () => {
         scope: 'pending',
         cursor: undefined,
       });
+    });
+  });
+
+  // @akili-spec notifications/detail-side-panel (DSP-T-1)
+  describe('getApprovalChain', () => {
+    it('forwards resultId (as received) and the user to the service', async () => {
+      mockShareResultRequestService.getApprovalChain.mockResolvedValue({
+        response: { result_id: 9400, submission: {}, steps: [] },
+        message: 'Successful response',
+        status: 200,
+      });
+
+      await controller.getApprovalChain('9400', user);
+
+      expect(
+        mockShareResultRequestService.getApprovalChain,
+      ).toHaveBeenCalledWith('9400', user);
     });
   });
 });

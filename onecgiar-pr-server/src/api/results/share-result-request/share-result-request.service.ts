@@ -8,7 +8,12 @@ import {
   Optional,
 } from '@nestjs/common';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ShareResultRequestRepository } from './share-result-request.repository';
+import {
+  ApprovalChainInitiativeRoleRow,
+  ApprovalChainRequestRow,
+  composeApprovalChain,
+  ShareResultRequestRepository,
+} from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
@@ -2155,5 +2160,125 @@ export class ShareResultRequestService {
   ) {
     // Currently same as V1, but can be modified independently
     await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
+  }
+
+  // ============================================
+  // APPROVAL CHAIN (notifications/detail-side-panel — DSP-R-12)
+  // ============================================
+
+  /**
+   * @akili-spec notifications/detail-side-panel
+   * DSP-R-12, design.md §4.1/§7 — 400 on a non-positive-integer id, 404 when the result is missing
+   * or inactive, 403 when the viewer is neither an admin nor involved in the result (no response
+   * body data leaks in that case — just the thrown message). Authorization goes through the real
+   * `$_getMaxRoleByUser` / `role_by_user` lookups (not a stub), same source as
+   * `getUserInitiatives()` above.
+   */
+  async getApprovalChain(resultId: number | string, user: TokenDto) {
+    try {
+      const parsedResultId = this.parseApprovalChainResultId(resultId);
+
+      const resultRow =
+        await this._shareResultRequestRepository.getResultForApprovalChain(
+          parsedResultId,
+        );
+
+      if (!resultRow || !resultRow.is_active) {
+        throw {
+          message: 'The result was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const { submissionRow, initiativeRoleRows, requestRows } =
+        await this._shareResultRequestRepository.getApprovalChainData(
+          parsedResultId,
+        );
+
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+      const viewerInitiatives = await this.getUserInitiatives(user);
+      const viewerInitiativeIds = viewerInitiatives.map((i) => i.initiative_id);
+
+      const isAdmin = role === 1;
+      const isInvolved = this.isViewerInvolvedInApprovalChain(
+        viewerInitiativeIds,
+        initiativeRoleRows,
+        requestRows,
+      );
+
+      if (!isAdmin && !isInvolved) {
+        throw {
+          message: 'You are not authorized to view this approval chain',
+          status: HttpStatus.FORBIDDEN,
+        };
+      }
+
+      const response = composeApprovalChain(
+        parsedResultId,
+        resultRow,
+        submissionRow,
+        initiativeRoleRows,
+        requestRows,
+        viewerInitiativeIds,
+      );
+
+      return {
+        response,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private parseApprovalChainResultId(resultId: number | string): number {
+    if (
+      resultId === undefined ||
+      resultId === null ||
+      !/^[1-9]\d*$/.test(String(resultId))
+    ) {
+      throw {
+        message: 'resultId must be a positive integer',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+    return Number(resultId);
+  }
+
+  private isViewerInvolvedInApprovalChain(
+    viewerInitiativeIds: number[],
+    initiativeRoleRows: ApprovalChainInitiativeRoleRow[],
+    requestRows: ApprovalChainRequestRow[],
+  ): boolean {
+    if (!viewerInitiativeIds.length) {
+      return false;
+    }
+
+    const viewerSet = new Set(viewerInitiativeIds);
+    const involvedIds = new Set<number>();
+
+    for (const row of initiativeRoleRows) {
+      involvedIds.add(row.initiative_id);
+    }
+
+    for (const row of requestRows) {
+      [
+        row.shared_inititiative_id,
+        row.owner_initiative_id,
+        row.requester_initiative_id,
+        row.approving_inititiative_id,
+      ]
+        .filter((id): id is number => id !== null && id !== undefined)
+        .forEach((id) => involvedIds.add(id));
+    }
+
+    for (const id of involvedIds) {
+      if (viewerSet.has(id)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
