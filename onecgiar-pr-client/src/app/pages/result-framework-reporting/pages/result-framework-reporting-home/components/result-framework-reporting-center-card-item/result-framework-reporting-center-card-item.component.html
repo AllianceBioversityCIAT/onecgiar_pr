@@ -1,9 +1,19 @@
 <div
   class="group flex min-h-[136px] flex-col gap-2.5 rounded-xl border border-[var(--pr-color-accents-2)] bg-white p-4 transition-[border-color,box-shadow] duration-200 hover:border-brand-300 hover:shadow-[0_6px_18px_rgba(var(--pr-color-primary-rgb),0.14)]">
   <div class="flex min-w-0 items-center gap-2">
-    <div class="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-25" aria-hidden="true">
-      <i class="material-icons-round text-[15px] text-brand-400">account_balance</i>
-    </div>
+    @if (logoSrc && !imageLoadError()) {
+      <img
+        class="size-6 shrink-0 rounded-md object-contain"
+        [src]="logoSrc"
+        [alt]="item?.center_acronym"
+        width="24"
+        height="24"
+        (error)="imageLoadError.set(true)" />
+    } @else {
+      <div class="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-25" aria-hidden="true">
+        <i class="material-icons-round text-[15px] text-brand-400">account_balance</i>
+      </div>
+    }
     <p class="m-0 truncate text-xs font-medium text-[var(--pr-color-accents-5)]">CGIAR Center</p>
   </div>
 
