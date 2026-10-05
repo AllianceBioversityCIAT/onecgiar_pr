@@ -3754,6 +3754,71 @@ describe('NotificationItemComponent', () => {
     });
   });
 
+  describe('BPT-T-3: Center-reported bilateral project tagged row (avatar)', () => {
+    const centerReportedFixture = (overrides: any = {}) => ({
+      notification_id: 24,
+      source: 'update',
+      created_date: new Date().toISOString(),
+      text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+      obj_notification_type: { type: NotificationType.RESULT_BILATERAL_PROJECT_TAGGED },
+      obj_emitter_user: { first_name: 'Jane', last_name: 'Doe' },
+      obj_result: {
+        result_code: 9322,
+        title: 'A bilateral result',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP09' } }],
+        obj_version: { id: 1 }
+      },
+      ...overrides
+    });
+
+    it('isCenterReportedProjectRow is true for the Center-reported shape', () => {
+      component.notification = centerReportedFixture();
+      expect(component.isCenterReportedProjectRow).toBe(true);
+    });
+
+    it('isCenterReportedProjectRow is false for the W1/W2 enriched/bare shape (same type)', () => {
+      component.notification = centerReportedFixture({ text: 'B-A1080 (ABC)' });
+      expect(component.isCenterReportedProjectRow).toBe(false);
+    });
+
+    it('isCenterReportedProjectRow is false for a non-update-source row', () => {
+      component.notification = { ...centerReportedFixture(), source: 'request' };
+      expect(component.isCenterReportedProjectRow).toBe(false);
+    });
+
+    it('renders the briefcase icon with the amber modifier class, no initials', () => {
+      component.notification = centerReportedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const avatar = root.querySelector('.notification_avatar');
+      expect(avatar?.querySelector('.pi-briefcase')).toBeTruthy();
+      expect(avatar?.classList.contains('notification_avatar_project_tagged')).toBe(true);
+      expect(root.querySelector('.notification_avatar_initials')).toBeNull();
+    });
+
+    it('a W1/W2 enriched row (same type) still renders initials, no briefcase', () => {
+      component.notification = centerReportedFixture({ text: 'B-A1080 (ABC)' });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('.notification_avatar .pi-briefcase')).toBeNull();
+      expect(root.querySelector('.notification_avatar_initials')).toBeTruthy();
+    });
+
+    it('AI-job and approved-decision avatar branches still win ahead of the briefcase', () => {
+      component.notification = centerReportedFixture({
+        text: "SP06, as primary Science Program, has approved your center's result",
+        obj_notification_type: { type: NotificationType.BILATERAL_RESULT_APPROVED }
+      });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('.notification_avatar .pi-check-circle')).toBeTruthy();
+      expect(root.querySelector('.notification_avatar .pi-briefcase')).toBeNull();
+    });
+  });
+
   describe('Bilateral AI Job Finished row (no result behind it)', () => {
     const aiJobRow = () => ({
       source: 'update',

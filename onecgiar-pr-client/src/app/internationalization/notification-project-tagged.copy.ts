@@ -7,6 +7,12 @@
  * `NotificationTextParts.segments` and `parseTaggedProjectLabel`. Composed rows (a whole
  * server-composed sentence, BCT or pre-fix legacy) and empty text are untouched by this file — see
  * `isComposedTaggedText`.
+ *
+ * BPT-T-3 (`bilateral-project-tagged`, design §8.1, BPT-NFR-3): the Center-reported shape (new BCT
+ * project rows, built by `parseCenterReportedProjectText` in `notification-type.constants.ts`)
+ * reuses `verb` and `centerClauseWithLabel` below rather than declaring its own copy — no new key
+ * was added for it. The reporter fallback text ("A CGIAR Center") is produced server-side, same as
+ * the W1/W2 shape's emitter fallback is produced client-side.
  */
 export const NOTIFICATION_PROJECT_TAGGED_COPY = {
   /** The non-emphasized verb clause between the SP code and the project code. */

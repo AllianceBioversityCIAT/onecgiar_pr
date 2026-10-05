@@ -7,6 +7,7 @@ import {
   isBilateralReviewNotification,
   isBilateralSubmittedNotification,
   isResultTaggedNotification,
+  parseCenterReportedProjectText,
   resolveNotificationType
 } from './notification-type.constants';
 
@@ -580,6 +581,70 @@ describe('notification-type constants', () => {
       const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: 'ABC' });
 
       expect(getResultNotificationTextParts(notification).segments).toBeUndefined();
+    });
+  });
+
+  describe('Center-reported bilateral project tagged (BPT-T-3)', () => {
+    // design.md §9 shape table, pinned identically on the server twin.
+    it.each([
+      ['ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)', { reporter: 'ICRISAT', code: 'B-A1187', owner: 'ABC' }],
+      [
+        'A CGIAR Center has tagged the bilateral project B-A1187 from your center (ABC)',
+        { reporter: 'A CGIAR Center', code: 'B-A1187', owner: 'ABC' }
+      ],
+      [
+        'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC)',
+        { reporter: 'ICRISAT', code: 'Seeds (Phase 2)', owner: 'ABC' }
+      ],
+      ['reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.', null],
+      ['B-A1080 (ABC)', null],
+      ['B-A1080', null],
+      ['', null],
+      ['ICRISAT has tagged the bilateral project B-A1187 from your center ()', null]
+    ])('parses %s', (text, expected) => {
+      expect(parseCenterReportedProjectText(text)).toEqual(expected);
+    });
+
+    it('flattens to the full sentence with the result identity appended', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+        obj_result: resultOf({ result_code: 9322, title: '<title>' })
+      });
+
+      expect(buildResultNotificationText(notification)).toBe(
+        'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 9322 - <title>'
+      );
+    });
+
+    it('emphasizes exactly reporter, code and owner — never "The result"', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['ICRISAT', 'B-A1187', 'ABC']);
+      expect(parts.prefix).not.toContain('The result');
+      expect(parts.suffix).toBeNull();
+      expect(parts.emphasizePrefix).toBe(false);
+    });
+
+    it('keeps the project code intact when it contains its own parentheses', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['ICRISAT', 'Seeds (Phase 2)', 'ABC']);
+    });
+
+    it('never falls into the composed-sentence fallback (order falsifier)', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.prefix).not.toBe('The result');
+      expect(parts.segments).toBeDefined();
     });
   });
 

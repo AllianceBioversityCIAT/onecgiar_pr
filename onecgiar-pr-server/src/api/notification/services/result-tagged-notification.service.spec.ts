@@ -688,9 +688,10 @@ describe('ResultTaggedNotificationService', () => {
       const [, type, userIds, , , suffix] = lastEmitCall();
       expect(type).toBe(NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED);
       expect(userIds).toEqual([21]);
-      // Acronym, not the full institution name — and the project label carries the owner Center.
+      // Acronym, not the full institution name — and the project text carries the owner Center
+      // (BPT-R-1: the Center-reported sentence, not the old composed lead-in form).
       expect(suffix).toBe(
-        'reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.',
+        'AR has tagged the bilateral project P-CIP from your center (CIP)',
       );
     });
 
@@ -722,8 +723,9 @@ describe('ResultTaggedNotificationService', () => {
       await service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER);
 
       const suffix = lastEmitCall()[5] as string;
+      // BPT-R-1: the Center-reported sentence, not the old composed lead-in form.
       expect(suffix).toBe(
-        'reported by AR has tagged the S-YAU44 of your center (ICRISAT). Click to see the result.',
+        'AR has tagged the bilateral project S-YAU44 from your center (ICRISAT)',
       );
       expect(suffix.match(/\(/g)).toHaveLength(1);
       expect(centerRepo.find).toHaveBeenCalledTimes(1);
@@ -765,8 +767,9 @@ describe('ResultTaggedNotificationService', () => {
         );
 
         const suffix = lastEmitCall()[5] as string;
+        // BPT-R-1: the Center-reported sentence, not the old composed lead-in form.
         expect(suffix).toBe(
-          'reported by AR has tagged the S-YAU44 of your center (AR-CODE-Z). Click to see the result.',
+          'AR has tagged the bilateral project S-YAU44 from your center (AR-CODE-Z)',
         );
         expect(suffix).not.toContain('()');
       },
@@ -916,7 +919,8 @@ describe('ResultTaggedNotificationService', () => {
       expect(lastEmitCall()[1]).toBe(
         NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
       );
-      expect(lastEmitCall()[5]).toContain('P-CIP of your center (CIP)');
+      // BPT-R-1: the Center-reported sentence, not the old composed lead-in form.
+      expect(lastEmitCall()[5]).toContain('P-CIP from your center (CIP)');
     });
 
     it('does not re-notify a user already told about this result (AC32)', async () => {
@@ -1063,6 +1067,259 @@ describe('ResultTaggedNotificationService', () => {
       await expect(
         service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  // BPT-T-1 — BPT-R-1: Center-reported text at emit time. New self-describing sentence stored on
+  // project targets only; Center targets and every other BCT behaviour stay byte-identical.
+  describe('notifyBilateralContributorsOnSubmission — Center-reported project text (BPT-R-1)', () => {
+    const pendingReviewBilateralResult = {
+      id: RESULT_ID,
+      status_id: 5,
+      source: SourceEnum.Bilateral,
+      obj_result_by_initiatives: [],
+    };
+
+    const leadingCenterRow = (acronym: string | undefined = 'AR') => ({
+      center_id: 'AR',
+      is_leading_result: true,
+      is_active: true,
+      clarisa_center_object: {
+        code: 'AR',
+        clarisa_institution: acronym
+          ? { acronym, name: 'Africa Rice Center Full Name' }
+          : undefined,
+      },
+    });
+
+    const centerRow = (code: string, name: string) => ({
+      center_id: code,
+      is_leading_result: false,
+      is_active: true,
+      clarisa_center_object: {
+        code,
+        clarisa_institution: { name },
+      },
+    });
+
+    // Scenario: Acronyms resolve (requirements.md BPT-R-1) — exact text, no leftovers from the
+    // old composed sentence, no empty `()`.
+    it('stores the exact Center-reported sentence for a project target when acronyms resolve', async () => {
+      resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
+      resultsCenterRepo.find.mockResolvedValueOnce([
+        leadingCenterRow('ICRISAT'),
+      ]);
+      resultsByProjectsRepo.find.mockResolvedValueOnce([
+        {
+          project_id: 300,
+          is_lead: false,
+          obj_clarisa_project: {
+            id: 300,
+            shortName: 'B-A1187',
+            organizationCode: 67,
+          },
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'ABC-CENTER',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+      await service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER);
+
+      const text = lastEmitCall()[5] as string;
+      expect(text).toBe(
+        'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+      );
+      expect(text).not.toContain('reported by');
+      expect(text).not.toContain('of your center');
+      expect(text).not.toContain('Click to see the result.');
+      expect(text).not.toContain('()');
+    });
+
+    // Scenario: Fallbacks — owner acronym null or empty falls to the owner Center's own code.
+    it.each([
+      ['a null owner acronym', { acronym: null, name: 'No Acronym' }],
+      ['an empty owner acronym', { acronym: '', name: 'Empty' }],
+    ])(
+      'falls back to the owner Center code when there is %s',
+      async (_label, institution) => {
+        resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
+        resultsCenterRepo.find.mockResolvedValueOnce([
+          leadingCenterRow('ICRISAT'),
+        ]);
+        resultsByProjectsRepo.find.mockResolvedValueOnce([
+          {
+            project_id: 301,
+            is_lead: false,
+            obj_clarisa_project: {
+              id: 301,
+              shortName: 'B-A1187',
+              organizationCode: 67,
+            },
+          },
+        ]);
+        centerRepo.find.mockResolvedValueOnce([
+          {
+            code: 'ABC-CODE',
+            institutionId: 67,
+            clarisa_institution: institution,
+          },
+        ]);
+        roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+        await service.notifyBilateralContributorsOnSubmission(
+          RESULT_ID,
+          EMITTER,
+        );
+
+        const text = lastEmitCall()[5] as string;
+        expect(text).toBe(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC-CODE)',
+        );
+        expect(text).not.toContain('()');
+      },
+    );
+
+    // Scenario: Fallbacks — reporter acronym empty falls to the leading Center's code.
+    it('falls back to the leading Center code when its institution acronym is empty', async () => {
+      resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
+      resultsCenterRepo.find.mockResolvedValueOnce([
+        {
+          center_id: 'AR-CODE',
+          is_leading_result: true,
+          is_active: true,
+          clarisa_center_object: {
+            code: 'AR-CODE',
+            clarisa_institution: { acronym: '', name: 'Africa Rice' },
+          },
+        },
+      ]);
+      resultsByProjectsRepo.find.mockResolvedValueOnce([
+        {
+          project_id: 302,
+          is_lead: false,
+          obj_clarisa_project: {
+            id: 302,
+            shortName: 'B-A1187',
+            organizationCode: 67,
+          },
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'ABC-CENTER',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+      await service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER);
+
+      const text = lastEmitCall()[5] as string;
+      expect(text).toBe(
+        'AR-CODE has tagged the bilateral project B-A1187 from your center (ABC)',
+      );
+    });
+
+    // Scenario: Fallbacks — no leading Center resolves at all: reporter is `A CGIAR Center`, and
+    // the existing degraded-lead-in warning is still logged (unchanged by this task).
+    it('falls back to "A CGIAR Center" when no leading Center row resolves, still logging the warning', async () => {
+      resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
+      resultsCenterRepo.find.mockResolvedValueOnce([
+        centerRow('CIP', 'CIP Name'),
+      ]);
+      resultsByProjectsRepo.find.mockResolvedValueOnce([
+        {
+          project_id: 303,
+          is_lead: false,
+          obj_clarisa_project: {
+            id: 303,
+            shortName: 'B-A1187',
+            organizationCode: 67,
+          },
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'ABC-CENTER',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      // Two recipients so both the project target (CIP is the reporting-ineligible lead fallback
+      // path) and the Center target (CIP itself) get distinct user ids.
+      roleByUserRepo.getUserIdsByCenter
+        .mockResolvedValueOnce([21])
+        .mockResolvedValueOnce([22]);
+      const warnSpy = jest.spyOn((service as any).logger, 'warn');
+
+      await service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER);
+
+      const projectText =
+        notificationService.emitResultNotification.mock.calls.find(
+          (call) =>
+            call[1] === NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+        )?.[5];
+      expect(projectText).toBe(
+        'A CGIAR Center has tagged the bilateral project B-A1187 from your center (ABC)',
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        `No reporting Center resolved for bilateral result ${RESULT_ID} — using the degraded lead-in`,
+      );
+    });
+
+    // Scenario: Center targets and BCT behavior unchanged — the Center-tagged row for a non-lead
+    // contributing Center on the SAME submission is byte-identical to today's composed sentence.
+    it('leaves the Center-tagged row text byte-identical to today while the project row gets the new sentence', async () => {
+      resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
+      resultsCenterRepo.find.mockResolvedValueOnce([
+        leadingCenterRow('ICRISAT'),
+        centerRow('CIP', 'CIP Name'),
+      ]);
+      resultsByProjectsRepo.find.mockResolvedValueOnce([
+        {
+          project_id: 304,
+          is_lead: false,
+          obj_clarisa_project: {
+            id: 304,
+            shortName: 'B-A1187',
+            organizationCode: 67,
+          },
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'ABC-CENTER',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'ABC' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter
+        .mockResolvedValueOnce([21])
+        .mockResolvedValueOnce([22]);
+
+      await service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER);
+
+      const calls = notificationService.emitResultNotification.mock.calls;
+      const projectCall = calls.find(
+        (call) =>
+          call[1] === NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+      );
+      const centerCall = calls.find(
+        (call) => call[1] === NotificationTypeEnum.RESULT_CENTER_TAGGED,
+      );
+      expect(projectCall?.[5]).toBe(
+        'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+      );
+      expect(centerCall?.[5]).toBe(
+        'reported by ICRISAT has tagged the CIP Name. Click to see the result.',
+      );
     });
   });
 });

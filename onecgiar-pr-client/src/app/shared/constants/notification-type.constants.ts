@@ -190,6 +190,39 @@ function parseTaggedProjectLabel(text: string): { code: string; centerLabel: str
   return { code: match[1].trim(), centerLabel };
 }
 
+/**
+ * BPT-T-3 (`bilateral-project-tagged`, design §8.1, §9, requirements.md BPT-R-2/R-4): parses a
+ * Center-reported `RESULT_BILATERAL_PROJECT_TAGGED` row's `text` — the shape the BCT flow writes
+ * for a project target from now on — into its reporter, project code and owner, end-anchored:
+ * `"<reporter> has tagged the bilateral project <code> from your center (<owner>)"`. Reporter is
+ * the shortest prefix before ` has tagged the bilateral project `; code is everything up to the
+ * LAST ` from your center (` (so a code containing its own parentheses, e.g. `Seeds (Phase 2)`,
+ * stays intact — mirrors `parseTaggedProjectLabel`'s last-trailing-parens rule); owner is the
+ * non-empty `[^()]+` inside the final parens. Returns `null` when the pattern doesn't match, or
+ * when any part is empty after trimming (including an empty `()`, which `[^()]+` already rules out).
+ *
+ * This runs BEFORE `isComposedTaggedText` in the `RESULT_BILATERAL_PROJECT_TAGGED` case (design
+ * DD-3), so a legacy/BCT-T-4 composed sentence (ends in `. Click to see the result.`, says "of
+ * your center") and a W1/W2 bare/enriched row (no ` has tagged the bilateral project ` substring)
+ * can never match here (BPT-R-4) — and a Center-reported row itself contains the substring
+ * ` has tagged the `, so without this ordering it would be misdetected as composed.
+ *
+ * Keep in sync with the server twin:
+ * `onecgiar-pr-server/src/api/notification/notification.service.ts`'s
+ * `parseCenterReportedProjectText`. Both pin the identical shape table (design §9, BPT-NFR-2).
+ */
+export function parseCenterReportedProjectText(text: string): { reporter: string; code: string; owner: string } | null {
+  const match = text.match(/^(.+?) has tagged the bilateral project (.+) from your center \(([^()]+)\)\s*$/);
+  if (!match) return null;
+
+  const reporter = match[1].trim();
+  const code = match[2].trim();
+  const owner = match[3].trim();
+  if (!reporter || !code || !owner) return null;
+
+  return { reporter, code, owner };
+}
+
 function buildBilateralReviewSuffix(decisionLabel: string, notification: any): string {
   const programCode = getProgramCode(notification);
   const programText = programCode ? `the Science Program ${programCode}` : 'the Science Program';
@@ -346,6 +379,31 @@ export function getResultNotificationTextParts(notification: any): NotificationT
     // `segments` are set on that fallback path.
     case NotificationType.RESULT_BILATERAL_PROJECT_TAGGED: {
       const text = notification?.text?.trim();
+
+      // BPT-T-3 (design §8.1, DD-3): the Center-reported shape (new BCT project rows, BPT-R-1)
+      // is self-describing — reporter, project code and owner are already on `text`, end-anchored
+      // — so it's checked FIRST, before the composed/bare detection below. Its own text contains
+      // " has tagged the ", so without this ordering it would be misdetected as a composed
+      // sentence by `isComposedTaggedText` (BPT-R-4, the order falsifier).
+      const centerReported = text ? parseCenterReportedProjectText(text) : null;
+      if (centerReported) {
+        const segments: { text: string; emphasize: boolean }[] = [
+          { text: centerReported.reporter, emphasize: true },
+          { text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.verb} `, emphasize: false },
+          { text: centerReported.code, emphasize: true },
+          { text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseWithLabel.before}`, emphasize: false },
+          { text: centerReported.owner, emphasize: true },
+          { text: NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseWithLabel.after, emphasize: false }
+        ];
+
+        return {
+          prefix: segments.map(segment => segment.text).join(''),
+          suffix: null,
+          emphasizePrefix: false,
+          segments
+        };
+      }
+
       if (!text || isComposedTaggedText(text)) {
         return { prefix: 'The result', suffix: text || null, emphasizePrefix: false };
       }

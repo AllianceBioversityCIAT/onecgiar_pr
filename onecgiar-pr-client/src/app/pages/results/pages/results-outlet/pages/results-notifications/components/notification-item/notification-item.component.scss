@@ -171,6 +171,15 @@ p {
     background: var(--pr-color-secondary-100);
     color: var(--pr-color-secondary-400);
   }
+
+  /* BPT-T-3 (`bilateral-project-tagged`, design §8.3/§8.4, BPT-R-5): Center-reported bilateral
+     project tagged row — amber rounded square with a briefcase icon, mirrors
+     `notification_avatar_bilateral` above but with the amber "in progress" status token pair. */
+  &.notification_avatar_project_tagged {
+    border-radius: 8px;
+    background: var(--pr-status-in-progress-bg);
+    color: var(--pr-status-in-progress-fg);
+  }
 }
 
 .notification_date {

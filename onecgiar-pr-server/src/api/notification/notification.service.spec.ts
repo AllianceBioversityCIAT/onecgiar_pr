@@ -742,6 +742,94 @@ describe('NotificationService', () => {
       expect(desc).not.toContain('undefined');
       expect(desc).toBe('There is a new update on result 4321');
     });
+
+    // BPT-T-2 (`bilateral-project-tagged`, design §7.2/§9, DD-3): the Center-reported shape is
+    // checked FIRST, before `isComposedTaggedText` — a server twin of the client's (future)
+    // `parseCenterReportedProjectText` in `notification-type.constants.ts`. Shape table pinned
+    // identically in both specs (BPT-NFR-2).
+    describe('Center-reported shape (BPT-R-3/R-4)', () => {
+      it.each([
+        [
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 4321 - A bilateral result title',
+        ],
+        [
+          'A CGIAR Center has tagged the bilateral project B-A1187 from your center (ABC)',
+          'A CGIAR Center has tagged the bilateral project B-A1187 from your center (ABC) to result 4321 - A bilateral result title',
+        ],
+        [
+          'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC)',
+          'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC) to result 4321 - A bilateral result title',
+        ],
+      ])(
+        'parses %s into the Center-reported sentence',
+        async (text, expected) => {
+          const desc = await emitAndReadDescription(text);
+
+          expect(desc).toBe(expected);
+        },
+      );
+
+      // Non-matches fall through to the existing (unchanged) composed/bare/empty paths.
+      it.each([
+        [
+          'reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.',
+          'The result 4321 - A bilateral result title reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.',
+        ],
+        [
+          'B-A1080 (ABC)',
+          'Jane Doe from SP5 has tagged the bilateral project B-A1080 from your center (ABC) to result 4321 - A bilateral result title',
+        ],
+        [
+          'B-A1080',
+          'Jane Doe from SP5 has tagged the bilateral project B-A1080 from your center to result 4321 - A bilateral result title',
+        ],
+        ['', 'There is a new update on result 4321'],
+        [
+          'ICRISAT has tagged the bilateral project B-A1187 from your center ()',
+          'The result 4321 - A bilateral result title ICRISAT has tagged the bilateral project B-A1187 from your center ()',
+        ],
+      ])(
+        'does NOT match the Center-reported shape for %s',
+        async (text, expected) => {
+          const desc = await emitAndReadDescription(text);
+
+          expect(desc).toBe(expected);
+        },
+      );
+
+      it('includes the full identity when both the result code and title resolve', async () => {
+        const desc = await emitAndReadDescription(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+        );
+
+        expect(desc).toBe(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 4321 - A bilateral result title',
+        );
+      });
+
+      it('drops the title from the identity when only the result code resolves', async () => {
+        const desc = await emitAndReadDescription(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+          { title: undefined },
+        );
+
+        expect(desc).toBe(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 4321',
+        );
+      });
+
+      it('drops the identity entirely when neither the result code nor the title resolve', async () => {
+        const desc = await emitAndReadDescription(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+          { title: undefined, result_code: undefined },
+        );
+
+        expect(desc).toBe(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result',
+        );
+      });
+    });
   });
 
   // WCT-T-1 (design.md §7.1, requirements.md WCT-R-5 push clause) — the real-time socket push

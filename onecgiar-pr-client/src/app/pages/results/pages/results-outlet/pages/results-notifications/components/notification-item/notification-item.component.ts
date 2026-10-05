@@ -13,6 +13,7 @@ import {
   getResultNotificationTextParts,
   resolveNotificationType,
   isBilateralReviewNotification,
+  parseCenterReportedProjectText,
   NotificationType,
   type AiJobNotificationParts,
   type NotificationTextParts
@@ -316,6 +317,20 @@ export class NotificationItemComponent {
     // getter is only ever read from the Updates-row avatar branch, so a `source:'request'` row
     // resolving (however unlikely) to the same `NotificationType` value can never flip it true.
     return this.isUpdateSource && resolveNotificationType(this.notification) === NotificationType.BILATERAL_RESULT_APPROVED;
+  }
+
+  /**
+   * BPT-T-3 (`bilateral-project-tagged`, design §8.3, BPT-R-5): true for the Center-reported
+   * `RESULT_BILATERAL_PROJECT_TAGGED` shape — an Updates row whose stored `text` matches
+   * `parseCenterReportedProjectText`. Guarded by `isUpdateSource` first (same defensive pattern as
+   * `isApprovedDecisionUpdateRow` above), so a `source:'request'` row can never flip it true. A
+   * W1/W2 enriched/bare row of the same `NotificationType` (no match) keeps its initials avatar.
+   */
+  get isCenterReportedProjectRow(): boolean {
+    if (!this.isUpdateSource) return false;
+    if (resolveNotificationType(this.notification) !== NotificationType.RESULT_BILATERAL_PROJECT_TAGGED) return false;
+    const text = this.notification?.text?.trim();
+    return !!text && !!parseCenterReportedProjectText(text);
   }
 
   /**

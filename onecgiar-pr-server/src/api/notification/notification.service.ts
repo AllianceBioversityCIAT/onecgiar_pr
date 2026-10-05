@@ -1135,6 +1135,21 @@ export class NotificationService {
       // a BCT row's own trailing `(ABC).` is never misparsed as this shape (WPT-R-4).
       case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
         const suffix = storedText?.trim();
+        // BPT-T-2 (`bilateral-project-tagged`, design §7.2, §9, DD-3): the Center-reported shape
+        // (BCT project targets, after this change) is self-describing — `text` already carries
+        // the reporter, project code and owner, end-anchored — so it's checked FIRST, before the
+        // composed/bare detection below. A match never falls into `isComposedTaggedText`, because
+        // old composed rows end in `. Click to see the result.` and say "of your center", not
+        // "from your center (...)" (BPT-R-4).
+        const centerReported = suffix
+          ? this.parseCenterReportedProjectText(suffix)
+          : null;
+        if (centerReported) {
+          const identity = [resultCode, resultTitle]
+            .filter(Boolean)
+            .join(' - ');
+          return `${centerReported.reporter} has tagged the bilateral project ${centerReported.code} from your center (${centerReported.owner}) to result${identity ? ` ${identity}` : ''}`;
+        }
         if (suffix && !this.isComposedTaggedText(suffix)) {
           const { code, centerLabel } = this.parseTaggedProjectLabel(suffix);
           const identity = [resultCode, resultTitle]
@@ -1288,6 +1303,45 @@ export class NotificationService {
     if (!centerLabel) return { code: text, centerLabel: null };
 
     return { code: match[1].trim(), centerLabel };
+  }
+
+  /**
+   * `BPT-T-2` (`bilateral-project-tagged`, design §7.2, §9, requirements.md BPT-R-3/R-4): parses
+   * a Center-reported `RESULT_BILATERAL_PROJECT_TAGGED` row's `text` — the shape the BCT flow
+   * writes for a project target from now on — into its reporter, project code and owner,
+   * end-anchored: `"<reporter> has tagged the bilateral project <code> from your center
+   * (<owner>)"`. Reporter is the shortest prefix before ` has tagged the bilateral project `;
+   * code is everything up to the LAST ` from your center (` (so a code containing its own
+   * parentheses, e.g. `Seeds (Phase 2)`, stays intact — mirrors `parseTaggedProjectLabel`'s
+   * last-trailing-parens rule, R-3 accepted risk); owner is the non-empty `[^()]+` inside the
+   * final parens. Returns `null` when the pattern doesn't match, or when any part is empty after
+   * trimming (including an empty `()`, which the `[^()]+` requirement already rules out).
+   *
+   * This runs BEFORE `isComposedTaggedText` in the `RESULT_BILATERAL_PROJECT_TAGGED` case (DD-3),
+   * so a legacy/BCT-T-4 composed sentence (ends in `. Click to see the result.`, says "of your
+   * center") and a W1/W2 bare/enriched row (no ` has tagged the bilateral project ` substring)
+   * can never match here (BPT-R-4).
+   *
+   * Keep in sync with the client twin:
+   * `onecgiar-pr-client/src/app/shared/constants/notification-type.constants.ts`
+   * `parseCenterReportedProjectText`. Both pin the identical shape table (design §9, BPT-NFR-2).
+   */
+  private parseCenterReportedProjectText(text: string): {
+    reporter: string;
+    code: string;
+    owner: string;
+  } | null {
+    const match = text.match(
+      /^(.+?) has tagged the bilateral project (.+) from your center \(([^()]+)\)\s*$/,
+    );
+    if (!match) return null;
+
+    const reporter = match[1].trim();
+    const code = match[2].trim();
+    const owner = match[3].trim();
+    if (!reporter || !code || !owner) return null;
+
+    return { reporter, code, owner };
   }
 
   /**

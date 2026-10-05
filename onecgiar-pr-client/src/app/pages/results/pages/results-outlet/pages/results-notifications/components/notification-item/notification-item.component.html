@@ -21,13 +21,18 @@
          labels invented, NOTIF-DD-3) instead of the Requests-tab `@switch` below. -->
     <div class="notification_content">
       @let aiJob = aiJobParts;
-      <div class="notification_avatar">
+      <div class="notification_avatar" [ngClass]="{ notification_avatar_project_tagged: isCenterReportedProjectRow }">
         @if (aiJob) {
           <span class="material-icons-round" style="font-size: 16px" aria-hidden="true">auto_awesome</span>
         } @else if (isApprovedDecisionUpdateRow) {
           <!-- SACN-T-4 (design §8.3, SACN-R-6): Approved bilateral review row — check icon instead
                of initials. Rejected rows fall through to the initials branch, unchanged. -->
           <i class="pi pi-check-circle" aria-hidden="true"></i>
+        } @else if (isCenterReportedProjectRow) {
+          <!-- BPT-T-3 (design §8.3, BPT-R-5): Center-reported bilateral project tagged row — amber
+               rounded-square briefcase instead of initials. A W1/W2 row of the same type (no match)
+               falls through to the initials branch, unchanged. -->
+          <i class="pi pi-briefcase" aria-hidden="true"></i>
         } @else {
         <span class="notification_avatar_initials">{{
           ((notification?.obj_emitter_user?.first_name?.charAt(0) ?? '') + (notification?.obj_emitter_user?.last_name?.charAt(0) ?? ''))
