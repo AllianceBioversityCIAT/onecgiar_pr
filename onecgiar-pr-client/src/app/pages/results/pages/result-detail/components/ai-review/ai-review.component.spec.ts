@@ -6,11 +6,13 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { DacScores } from '../../../../../../shared/services/api/ai-review.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { PrInputComponent } from '../../../../../../custom-fields/pr-input/pr-input.component';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
 
 describe('AiReviewComponent', () => {
   let component: AiReviewComponent;
   let fixture: ComponentFixture<AiReviewComponent>;
   let alertSpy: jest.SpyInstance;
+  let rolesSE: RolesService;
 
   const buildDacScore = (overrides: Partial<DacScores> = {}): DacScores => ({
     field_name: 'climate',
@@ -33,6 +35,9 @@ describe('AiReviewComponent', () => {
     component = fixture.componentInstance;
     alertSpy = jest.spyOn(TestBed.inject(CustomizedAlertsFeService), 'show').mockImplementation(() => undefined);
     component.aiReviewSE.dataControlSE.currentResultSignal.set({ id: 123 } as any);
+    // `RolesService.readOnly` starts TRUE until the roles arrive; these cases are about an editor.
+    rolesSE = TestBed.inject(RolesService);
+    rolesSE.readOnly = false;
     fixture.detectChanges();
   });
 
@@ -208,6 +213,72 @@ describe('AiReviewComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('.save-button-custom').length).toBe(2);
       // The actual assertion under test (AIR-R-1 / AIR-AC-1): no bulk Validate control.
       expect(fixture.nativeElement.querySelector('.validate-all-button')).toBeNull();
+    });
+  });
+
+  // P2-3110 (Santiago, 5-Oct-2026): view-only users and closed phases cannot edit or save in the
+  // pop-up, the same as in Section 1 — both arrive here as `rolesSE.readOnly`.
+  describe('read-only access (view-only user or closed phase)', () => {
+    const buildField = () => ({
+      field_name: 'title',
+      field_name_label: 'Title',
+      original_text: 'Current title',
+      proposed_text: 'Proposed title',
+      canSave: true
+    });
+
+    const openWith = (readOnly: boolean) => {
+      rolesSE.readOnly = readOnly;
+      // The score catalogue comes from the API; seed it so the options really render.
+      (component.scoreSE as any).genderTagScoreList = [
+        { id: '1', full_name: 'Not targeted' },
+        { id: '3', full_name: 'Principal' }
+      ];
+      component.aiReviewSE.showAiReview.set(true);
+      component.aiReviewSE.currnetFieldsList.set([buildField()]);
+      component.aiReviewSE.dacScores.set([buildDacScore({ canSave: true, impact_area_id: [10] })]);
+      fixture.detectChanges();
+    };
+
+    it('shows the notice and no Apply proposal or Save changes control', () => {
+      openWith(true);
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelector('.ai-review-readonly-notice')).not.toBeNull();
+      expect(el.querySelector('.apply-proposal-button')).toBeNull();
+      expect(el.querySelectorAll('.save-button-custom').length).toBe(0);
+      expect(el.querySelectorAll('.radio-button-item.is-readonly').length).toBeGreaterThan(0);
+    });
+
+    it('keeps every control for an editor (control for the read-only case)', () => {
+      openWith(false);
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelector('.ai-review-readonly-notice')).toBeNull();
+      expect(el.querySelector('.apply-proposal-button')).not.toBeNull();
+      expect(el.querySelectorAll('.save-button-custom').length).toBe(2);
+      expect(el.querySelectorAll('.radio-button-item').length).toBeGreaterThan(0);
+      expect(el.querySelector('.radio-button-item.is-readonly')).toBeNull();
+    });
+
+    it('ignores score, component and proposal changes and never saves', async () => {
+      rolesSE.readOnly = true;
+      const dacScore = buildDacScore({ tag_id: '3', impact_area_id: [10] });
+      const field = buildField();
+      const saveSpy = jest.spyOn(component.aiReviewSE, 'PATCH_saveDacScore');
+      const applySpy = jest.spyOn(component.aiReviewSE, 'onApplyProposal');
+
+      component.onResultVersionChange(dacScore, '2');
+      component.onComponentChange(dacScore, 11);
+      component.moveTextToInput(field);
+      component.onApplyProposal(field, 0);
+      await component.onSaveDacScore({ ...dacScore, canSave: true });
+
+      expect(dacScore.tag_id).toBe('3');
+      expect(dacScore.impact_area_id).toEqual([10]);
+      expect(field.original_text).toBe('Current title');
+      expect(saveSpy).not.toHaveBeenCalled();
+      expect(applySpy).not.toHaveBeenCalled();
     });
   });
 
