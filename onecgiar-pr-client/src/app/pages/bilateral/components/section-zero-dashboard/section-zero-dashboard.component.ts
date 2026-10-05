@@ -149,9 +149,20 @@ export class SectionZeroDashboardComponent {
     if (pending) return pending;
     const project = this.assignmentProject();
     const current = this.creationService.selectedPrimarySp();
-    const mapped = project?.sciencePrograms.find(
-      (program) => Number(program.programId) === Number(current?.programId),
-    );
+    // P2-3807 — the persisted primary is hydrated with the CLARISA initiative id (52), while the
+    // catalogue keys the same program by its W3 mapping id (269), which is what the server checks.
+    // The program code is the identity both sides share, so it is matched first: an id match
+    // alone could pair a CLARISA id with an unrelated mapping id that happens to be equal.
+    const currentCode = String(current?.programCode ?? '').trim().toUpperCase();
+    const mapped =
+      (currentCode
+        ? project?.sciencePrograms.find(
+            (program) => String(program.programCode ?? '').trim().toUpperCase() === currentCode,
+          )
+        : undefined) ??
+      project?.sciencePrograms.find(
+        (program) => Number(program.programId) === Number(current?.programId),
+      );
     if (mapped) return mapped;
     if (!current) return null;
     return {
