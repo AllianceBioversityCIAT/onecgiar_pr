@@ -1,6 +1,22 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowDown, lucideArrowUp, lucideSearch, lucideX } from '@ng-icons/lucide';
+import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
+import {
+  RankingMode,
+  StatusColumn,
+  buildHeatmapOption,
+  buildRankingOption,
+  buildRowsTable,
+  buildSegments,
+  buildSegmentsTable,
+  buildShareOption,
+  buildStatusDonutOption,
+  percentOf,
+  statusIdFromChartEvent
+} from './entities-overview.charts';
 import { take } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -8,7 +24,7 @@ import { CentersService } from '../../../../shared/services/global/centers.servi
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { CenterDto } from '../../../../shared/interfaces/center.dto';
-import { resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
+import { RESULT_STATUS_TOKENS, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
 import { ADMIN_ENTITIES_OVERVIEW_COPY } from '../../../../internationalization/admin-entities-overview.copy';
 import {
   CENTER_STATUS_IDS,
@@ -20,6 +36,26 @@ import {
 } from './entities-overview.aggregate';
 
 type LoadState = 'loading' | 'ready' | 'error';
+export type EntityView = 'programs' | 'centers';
+type SortKey = 'name' | 'total' | number;
+
+/** One line of the detail table, whichever view is active. Center rows load one by one. */
+export interface DetailRow {
+  code: string;
+  badge: string | null;
+  name: string;
+  title: string;
+  link: string;
+  state: LoadState;
+  row: EntityOverviewRow | null;
+}
+
+/** Resolves a `var(--token)` to the colour ECharts can paint; '' outside a browser (jsdom). */
+function resolveCssColor(value: string): string {
+  const match = /^var\((--[^)]+)\)$/.exec(value.trim());
+  if (!match || typeof document === 'undefined') return value;
+  return getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim() || value;
+}
 
 interface CenterRowState {
   code: string;
@@ -37,7 +73,8 @@ interface CenterRowState {
  */
 @Component({
   selector: 'app-entities-overview',
-  imports: [RouterLink],
+  imports: [RouterLink, PrVizChartComponent, NgIcon],
+  providers: [provideIcons({ lucideSearch, lucideX, lucideArrowUp, lucideArrowDown })],
   templateUrl: './entities-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -74,6 +111,134 @@ export class EntitiesOverviewComponent {
     )
   );
   readonly centersPartial = computed(() => this.centerRows().some(center => center.state === 'error'));
+  readonly centersLoading = computed(() => this.centerRows().some(center => center.state === 'loading'));
+
+  // ── Rework 5-Oct-2026: the Portfolio overview's visual language over these same figures ─────────────
+  readonly view = signal<EntityView>('programs');
+  readonly selectedStatus = signal<number | null>(null);
+  readonly rankingMode = signal<RankingMode>('horizontal');
+  readonly detailMode = signal<'table' | 'chart'>('table');
+  readonly search = signal('');
+  readonly sortKey = signal<SortKey>('total');
+  readonly sortDesc = signal(true);
+
+  /** Status columns of the active view, with the colour the charts paint (resolved once per view). */
+  readonly columns = computed<StatusColumn[]>(() => {
+    const ids = this.view() === 'programs' ? PROGRAM_STATUS_IDS : CENTER_STATUS_IDS;
+    return ids.map(id => ({ id, label: resultStatusLabel(id), color: resolveCssColor(RESULT_STATUS_TOKENS[id]?.fg ?? '') }));
+  });
+
+  readonly activeState = computed<LoadState>(() =>
+    this.view() === 'programs' ? this.programsState() : this.centersListState() === 'ready' && this.centersLoading() && !this.loadedCenterRows().length ? 'loading' : this.centersListState()
+  );
+  readonly loadedCenterRows = computed(() => this.centerRows().map(c => c.row).filter((row): row is EntityOverviewRow => row !== null));
+  readonly activeRows = computed(() => (this.view() === 'programs' ? this.programRows() : this.loadedCenterRows()));
+  readonly activeTotals = computed(() => (this.view() === 'programs' ? this.programTotals() : this.centerTotals()));
+  readonly segments = computed(() => buildSegments(this.columns(), this.activeTotals()));
+
+  readonly kpis = computed(() => {
+    const programs = this.programTotals();
+    const centers = this.centerTotals();
+    const submittedIdx = PROGRAM_STATUS_IDS.indexOf(3);
+    const approvedIdx = CENTER_STATUS_IDS.indexOf(6);
+    return {
+      total: programs.total + centers.total,
+      w1w2: programs.total,
+      w1w2Submitted: percentOf(programs.counts[submittedIdx] ?? 0, programs.total),
+      bilateral: centers.total,
+      bilateralApproved: percentOf(centers.counts[approvedIdx] ?? 0, centers.total),
+      programsReporting: this.programRows().filter(row => row.total > 0).length,
+      programsCount: this.programRows().length,
+      centersReporting: this.loadedCenterRows().filter(row => row.total > 0).length,
+      centersCount: this.centerRows().length
+    };
+  });
+
+  readonly donutOption = computed(() => buildStatusDonutOption(this.segments(), this.activeTotals().total, this.selectedStatus()));
+  readonly donutTable = computed(() => buildSegmentsTable(this.copy.statusTitle, this.segments()));
+  readonly rankingOption = computed(() => {
+    const mode = this.rankingMode();
+    if (mode === 'heatmap') {
+      const ramp = ['--pr-color-primary-50', '--pr-color-primary-200', '--pr-color-primary-400', '--pr-color-primary-700'].map(t => resolveCssColor(`var(${t})`));
+      return buildHeatmapOption(this.activeRows(), this.columns(), ramp);
+    }
+    return buildRankingOption(this.activeRows(), this.columns(), this.selectedStatus(), mode);
+  });
+  readonly rankingTable = computed(() => buildRowsTable(this.rankingTitle(), this.activeRows(), this.columns()));
+  readonly rankingHeight = computed(() => `${Math.max(260, this.activeRows().length * (this.rankingMode() === 'vertical' ? 0 : 26) + 60)}px`);
+  readonly shareOption = computed(() => buildShareOption(this.filteredDetail().map(d => d.row!).filter(Boolean), this.columns()));
+  readonly rankingTitle = computed(() => (this.view() === 'programs' ? this.copy.rankingProgramsTitle : this.copy.rankingCentersTitle));
+
+  /** Rows of the detail table: the active view, filtered by the search box, sorted by the clicked header. */
+  readonly detailRows = computed<DetailRow[]>(() =>
+    this.view() === 'programs'
+      ? this.programRows().map(row => ({ code: row.code, badge: row.code, name: row.name, title: row.name, link: row.link, state: 'ready' as LoadState, row }))
+      : this.centerRows().map(c => ({ code: c.code, badge: null, name: c.acronym, title: c.fullName, link: c.link, state: c.state, row: c.row }))
+  );
+  readonly filteredDetail = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const key = this.sortKey();
+    const sign = this.sortDesc() ? -1 : 1;
+    const value = (d: DetailRow): number | string => {
+      if (key === 'name') return d.name.toLowerCase();
+      if (!d.row) return -1;
+      if (key === 'total') return d.row.total;
+      return d.row.counts[this.columns().findIndex(column => column.id === key)] ?? 0;
+    };
+    return this.detailRows()
+      .filter(d => !term || d.name.toLowerCase().includes(term) || d.code.toLowerCase().includes(term) || d.title.toLowerCase().includes(term))
+      .sort((a, b) => {
+        const va = value(a);
+        const vb = value(b);
+        const cmp = typeof va === 'string' && typeof vb === 'string' ? va.localeCompare(vb) : Number(va) - Number(vb);
+        return cmp * sign || a.name.localeCompare(b.name);
+      });
+  });
+  readonly selectedLabel = computed(() => {
+    const id = this.selectedStatus();
+    return id === null ? null : resultStatusLabel(id);
+  });
+
+  setView(view: EntityView): void {
+    if (this.view() === view) return;
+    this.view.set(view);
+    this.selectedStatus.set(null);
+    this.search.set('');
+    this.sortKey.set('total');
+    this.sortDesc.set(true);
+  }
+
+  toggleStatus(statusId: number): void {
+    this.selectedStatus.update(current => (current === statusId ? null : statusId));
+    if (this.selectedStatus() !== null) {
+      this.sortKey.set(statusId);
+      this.sortDesc.set(true);
+    }
+  }
+
+  onChartClick(event: unknown): void {
+    const id = statusIdFromChartEvent(event as any);
+    if (id !== null) this.toggleStatus(id);
+  }
+
+  sortBy(key: SortKey): void {
+    if (this.sortKey() === key) {
+      this.sortDesc.update(desc => !desc);
+      return;
+    }
+    this.sortKey.set(key);
+    this.sortDesc.set(key !== 'name');
+  }
+
+  onSearch(event: Event): void {
+    this.search.set((event.target as HTMLInputElement).value ?? '');
+  }
+
+  /** The Results Center reads `?status=` (results-list.component); the same deep link the Portfolio overview uses. */
+  resultsCenterParams(): Record<string, number> {
+    const id = this.selectedStatus();
+    return id === null ? {} : { status: id };
+  }
 
   constructor() {
     this.resolvePhase();
