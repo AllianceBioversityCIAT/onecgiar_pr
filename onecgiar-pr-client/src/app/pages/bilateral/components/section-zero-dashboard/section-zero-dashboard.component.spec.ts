@@ -306,6 +306,29 @@ describe('SectionZeroDashboardComponent', () => {
           contribution_percentage: 80,
         });
       });
+
+      // P2-3807 — prtest #9553: the stored primary carries the CLARISA initiative id (52) while
+      // the catalogue keys SP03 by its mapping id (269); sending 52 got a 400 "not allocated".
+      it('sends the catalogue programId of the stored primary, matched by program code', () => {
+        const api = TestBed.inject(BilateralApiService) as any;
+        const current = project(1676, 'L-ACI032');
+        current.sciencePrograms = [
+          { programId: 269, programCode: 'SP03', allocation: '100.00', spName: 'Program three', spShortName: 'P3' },
+        ];
+        (creationService.currentResultId as any).set(12021);
+        (creationService.selectedProject as any).set(current);
+        (creationService.selectedPrimarySp as any).set({ programId: 52, programCode: 'SP03', allocation: '100' });
+        fixture.detectChanges();
+
+        component.onContributionInput('42');
+        component.saveAssignment();
+
+        expect(api.PATCH_primaryAssignment.mock.calls[0][1]).toEqual({
+          project_id: 1676,
+          primary_science_program_id: 269,
+          contribution_percentage: 42,
+        });
+      });
     });
 
     it('requires a program after selecting a project with multiple allocations', () => {
