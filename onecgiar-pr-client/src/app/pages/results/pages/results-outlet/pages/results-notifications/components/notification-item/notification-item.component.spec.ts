@@ -28,6 +28,9 @@ import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../intern
 // tests/mocks/spartanBrainMock.ts, same as every other Brain-based overlay in this repo) so the
 // decline confirm/cancel wiring tests below can drive its actual footer buttons.
 import { ContributionRequestDrawerComponent } from '../contribution-request-drawer/contribution-request-drawer.component';
+// DSP-T-3: the drawer's body/footer, relocated here — the `showAlignSlot`/`acceptLabel` assertions
+// below now query THIS component's debug instance instead of the (now shell-only) drawer's.
+import { NotificationDetailContentComponent } from '../notification-detail-content/notification-detail-content.component';
 // PDR-T-4: the real primary-decline justification dialog (PDR-T-3), rendered so the row/drawer
 // wiring tests below can observe `[(visible)]` and drive its actual Confirm/Cancel buttons.
 import { PrimaryDeclineJustificationDialogComponent } from '../primary-decline-justification-dialog/primary-decline-justification-dialog.component';
@@ -75,7 +78,11 @@ describe('NotificationItemComponent', () => {
       resultsSE: {
         currentResultId: 1,
         GET_TypeByResultLevel: () => of({}),
-        PATCH_updateRequest: () => of({ response: {} })
+        PATCH_updateRequest: () => of({ response: {} }),
+        // DSP-T-2 (notifications/detail-side-panel): default happy-path stub so every pre-existing
+        // `openDrawer()`/`acceptOrReject()` call in this suite (which now also fetches the chain)
+        // keeps working without each test having to know about it.
+        GET_requestApprovalChain: () => of({ response: { result_id: 1, submission: {}, steps: [] } })
       }
     };
 
@@ -101,6 +108,7 @@ describe('NotificationItemComponent', () => {
         FormatTimeAgoPipe,
         CommonModule,
         ContributionRequestDrawerComponent,
+        NotificationDetailContentComponent,
         PrimaryDeclineJustificationDialogComponent,
         ...HlmBadgeImports,
         ...HlmButtonImports
@@ -1323,6 +1331,117 @@ describe('NotificationItemComponent', () => {
       });
     });
 
+    // @akili-spec notifications/detail-side-panel (DSP-T-2)
+    describe('approvalChain (DSP-T-2)', () => {
+      const buildWithResultId = (resultId: number) => buildBilateral({ obj_result: { id: resultId } });
+
+      it('opening the row calls GET_requestApprovalChain with obj_result.id', () => {
+        const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain');
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+
+        expect(spy).toHaveBeenCalledWith(9400);
+        expect(component.approvalChain()).toEqual({ status: 'ok', data: { result_id: 1, submission: {}, steps: [] } });
+      });
+
+      it('settles on error after an HTTP failure', () => {
+        jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain').mockReturnValue(throwError(() => new Error('boom')));
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+
+        expect(component.approvalChain()).toEqual({ status: 'error' });
+      });
+
+      it('retryChain() re-dispatches the GET', () => {
+        const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain');
+        component.notification = buildWithResultId(9400);
+        component.openDrawer('details');
+        spy.mockClear();
+
+        component.retryChain();
+
+        expect(spy).toHaveBeenCalledWith(9400);
+      });
+
+      // DSP-T-2 attempt 2 (pivot): the PATCH goes through an async Subject — not a synchronous
+      // `of(...)` — so `finalize()` (which calls `closeDrawer()`, bumping `chainRequestToken`)
+      // behaves exactly as it does against a real HttpClient. A sync mock would resolve the `next`
+      // handler BEFORE `finalize`, hiding the exact ordering bug this pair of tests proves.
+      it('after a successful accept, no chain request is sent before the panel closes', () => {
+        const chainSpy = jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain');
+        const patch$ = new Subject<any>();
+        jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(patch$.asObservable());
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+        expect(chainSpy).toHaveBeenCalledTimes(1);
+
+        component.acceptOrReject(true);
+        patch$.next({ response: {} });
+        patch$.complete();
+
+        // Broken by re-inserting `this.fetchApprovalChain()` in the `next:` handler: chainSpy is
+        // then called a 2nd time here, before the drawer closes — red: "Expected number of calls: 1
+        // Received number of calls: 2".
+        expect(chainSpy).toHaveBeenCalledTimes(1);
+        expect(component.drawerOpen()).toBe(false);
+      });
+
+      it('after a successful accept, reopening the row fetches a fresh chain', () => {
+        const chainSpy = jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain');
+        const patch$ = new Subject<any>();
+        jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(patch$.asObservable());
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+        component.acceptOrReject(true);
+        patch$.next({ response: {} });
+        patch$.complete();
+
+        const freshChain$ = new Subject<any>();
+        chainSpy.mockReturnValue(freshChain$.asObservable());
+
+        component.openDrawer('details');
+
+        // Broken by disabling the open-path fetch (commenting out `this.fetchApprovalChain()` in
+        // `openDrawer()`): chainSpy is never called (every open is a no-op) — red: "Expected
+        // number of calls: 2 Received number of calls: 0".
+        expect(chainSpy).toHaveBeenCalledTimes(2);
+
+        const freshData = { result_id: 9400, submission: {}, steps: ['renewed'] };
+        freshChain$.next({ response: freshData });
+
+        expect(component.approvalChain()).toEqual({ status: 'ok', data: freshData });
+      });
+
+      it('a response arriving after close is ignored, not overwriting the state', () => {
+        const pending = new Subject<any>();
+        jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain').mockReturnValue(pending.asObservable());
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+        component.closeDrawer();
+        pending.next({ response: { result_id: 9400, submission: {}, steps: [] } });
+
+        expect(component.approvalChain()).toEqual({ status: 'loading' });
+      });
+
+      it('the accept PATCH payload is unchanged by the approval-chain wiring', () => {
+        const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+        component.notification = buildWithResultId(9400);
+        component.openDrawer('details');
+
+        component.acceptOrReject(true);
+
+        expect(patchSpy).toHaveBeenCalledWith(
+          { result_request: component.notification, result_toc_result: { planned_result: null, result_toc_results: [] }, request_status_id: 2 },
+          true
+        );
+      });
+    });
+
     describe('onDrawerAccept() — the CRD-R-6 decision table', () => {
       it('ToC-carried: one PATCH, status 2, inert payload', () => {
         component.notification = buildTocCarried();
@@ -1745,6 +1864,65 @@ describe('NotificationItemComponent', () => {
 
         expect(patchSpy).toHaveBeenCalledTimes(1);
         expect(patchSpy.mock.calls[0][0].request_status_id).toBe(3);
+      });
+    });
+
+    // DSP-T-3 attempt 2 (Reviewer FAIL issue 2): before this split, the ✕ was `hlmSheetClose` and
+    // the drawer spec itself proved the end-to-end close. Now the content's own ✕ only emits ITS
+    // OWN `closed` output — the only link back to the row is the template binding
+    // `(closed)="onDrawerClosedSignal()"` on `<app-notification-detail-content>`. This test proves
+    // that binding reaches `closeDrawer()` through the REAL mounted content component.
+    describe('DSP-T-3: the content ✕ click reaches notification-item.closeDrawer() (Reviewer FAIL issue 2)', () => {
+      it('clicking crd-close-btn calls closeDrawer() exactly once and removes the panel', async () => {
+        component.notification = buildTocCarried();
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(component.drawerOpen()).toBe(true);
+
+        const closeDrawerSpy = jest.spyOn(component, 'closeDrawer');
+
+        const closeBtn: HTMLElement = fixture.nativeElement.querySelector('[data-testid="crd-close-btn"]');
+        expect(closeBtn).toBeTruthy();
+        closeBtn.dispatchEvent(new Event('click'));
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(closeDrawerSpy).toHaveBeenCalledTimes(1);
+        expect(component.drawerOpen()).toBe(false);
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-panel"]')).toBeNull();
+      });
+    });
+
+    // DSP-T-3 attempt 2 (Reviewer FAIL issue 3 — Disqualifier "the moved-test count must equal the
+    // removed-test count"): relocated from the pre-split drawer spec
+    // (`NOTIF-T-4 > "emits closed exactly once on Escape in view mode"`), deleted outright in
+    // attempt 1 instead of moved. The shell's own "emits closed on Escape" test still proves the
+    // sheet's native Escape handling in isolation, but the property this test guards — a view-mode
+    // panel closes exactly once on Escape — depends on THIS row's `(closed)="onDrawerClosedSignal()"`
+    // wiring, which only a mounted notification-item test can prove. Recorded as the 48th
+    // relocation (moved = removed = 48, see execution.md).
+    describe('DSP-T-3: Escape inside the panel in view mode (relocated NOTIF-T-4 test, Reviewer FAIL issue 3)', () => {
+      it('emits closed exactly once on Escape in view mode, closing the drawer', async () => {
+        component.notification = buildTocCarried({ request_status_id: 2 });
+        component.isSent = false;
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(component.drawerOpen()).toBe(true);
+        expect(component.drawerMode()).toBe('view');
+
+        const closeDrawerSpy = jest.spyOn(component, 'closeDrawer');
+
+        const panelEl: HTMLElement = fixture.nativeElement.querySelector('[data-testid="crd-panel"]');
+        expect(panelEl).toBeTruthy();
+        panelEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(closeDrawerSpy).toHaveBeenCalledTimes(1);
+        expect(component.drawerOpen()).toBe(false);
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-panel"]')).toBeNull();
       });
     });
 
@@ -2254,45 +2432,39 @@ describe('NotificationItemComponent', () => {
         expect(fixture.nativeElement.querySelector('[data-notif-type-chip]')).toBeNull();
       });
 
-      it('drawerViewFields() supplies the emitter as submittedBy, source "update", and the phase', () => {
+      it('DSP-T-4: resultGrid() supplies the emitter as Submitted by and the phase (supersedes drawerViewFields())', () => {
         component.notification = buildUpdateFixture();
 
-        const fields = component.drawerViewFields();
+        const grid = component.resultGrid();
+        const byLabel = (label: string) => grid.find(f => f.label === label)?.value;
 
-        expect(fields.source).toBe('update');
-        expect(fields.submittedBy).toBe('Amy Lopez');
-        expect(fields.phase).toBe('Reporting 2026');
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.submittedBy)).toBe('Amy Lopez');
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.phase)).toBe('Reporting 2026');
       });
     });
 
     // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
-    // badge): `drawerViewFields()` must supply `status` from the same `rowStatusLabel` getter the
-    // row itself used to render, for all three row-status cases.
-    describe('drawerViewFields() status (NOTIF-T-14)', () => {
+    // badge) — DSP-T-4 moves the status from `drawerViewFields()`'s retired grid into `chips()`
+    // (first chip, always present) instead, same `rowStatusLabel` source, for all three row-status cases.
+    describe('chips() status (NOTIF-T-14, moved by DSP-T-4)', () => {
       it('a pending Received row (needs your decision)', () => {
         component.notification = buildRequestFixture({ request_status_id: 1 });
         component.isSent = false;
 
-        const fields = component.drawerViewFields();
-
-        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusNeedsDecision);
+        expect(component.chips()[0].text).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusNeedsDecision);
       });
 
       it('a resolved Received row (for your information)', () => {
         component.notification = buildRequestFixture({ request_status_id: 2 });
         component.isSent = false;
 
-        const fields = component.drawerViewFields();
-
-        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
+        expect(component.chips()[0].text).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
       });
 
       it('an Updates row (for your information)', () => {
         component.notification = buildUpdateFixture();
 
-        const fields = component.drawerViewFields();
-
-        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
+        expect(component.chips()[0].text).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
       });
     });
 
@@ -2769,19 +2941,26 @@ describe('NotificationItemComponent', () => {
           expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
         });
 
-        // PSR-T-8 rework attempt 2 (Reviewer finding 3): queries the real drawer debug instance's
+        // PSR-T-8 rework attempt 2 (Reviewer finding 3): queries the real content debug instance's
         // `showAlignSlot`/`acceptLabel` INPUTS — not just the row's own `isPrimaryRequest` getter,
-        // which proved nothing about what the drawer actually received.
-        it('the drawer actually receives showAlignSlot=false and acceptLabel="Accept as primary"', () => {
+        // which proved nothing about what the content actually received.
+        // DSP-T-3: `showAlignSlot`/`acceptLabel` moved from the (now shell-only)
+        // ContributionRequestDrawerComponent to NotificationDetailContentComponent — updated to
+        // query the new owner, assertions unchanged.
+        it('the content actually receives showAlignSlot=false and acceptLabel="Accept as primary"', () => {
           component.notification = buildPsrFixture({ request_type: 'primary' });
           fixture.detectChanges();
+          // DSP-T-3: the content only renders once the (mocked) sheet reports open — the shell's
+          // `*hlmSheetPortal` content is gated on sheet state, same as the real CDK Dialog.
+          component.openDrawer('details');
+          fixture.detectChanges();
 
-          const drawer: ContributionRequestDrawerComponent = fixture.debugElement.query(
-            By.directive(ContributionRequestDrawerComponent)
+          const content: NotificationDetailContentComponent = fixture.debugElement.query(
+            By.directive(NotificationDetailContentComponent)
           ).componentInstance;
 
-          expect(drawer.showAlignSlot()).toBe(false);
-          expect(drawer.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+          expect(content.showAlignSlot()).toBe(false);
+          expect(content.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
         });
       });
     });
@@ -2826,18 +3005,23 @@ describe('NotificationItemComponent', () => {
         expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept);
       });
 
-      // PSR-T-8 rework attempt 2 (Reviewer finding 3): the drawer's real input values, not just the
+      // PSR-T-8 rework attempt 2 (Reviewer finding 3): the content's real input values, not just the
       // row getter — regression counterpart to the primary-row assertion above.
-      it('the drawer actually receives showAlignSlot=true and acceptLabel="Accept"', () => {
+      // DSP-T-3: queries NotificationDetailContentComponent now (see the primary-row test above).
+      it('the content actually receives showAlignSlot=true and acceptLabel="Accept"', () => {
         component.notification = buildContributorFixture();
         fixture.detectChanges();
+        // DSP-T-3: the content only renders once the (mocked) sheet reports open — the shell's
+        // `*hlmSheetPortal` content is gated on sheet state, same as the real CDK Dialog.
+        component.openDrawer('details');
+        fixture.detectChanges();
 
-        const drawer: ContributionRequestDrawerComponent = fixture.debugElement.query(
-          By.directive(ContributionRequestDrawerComponent)
+        const content: NotificationDetailContentComponent = fixture.debugElement.query(
+          By.directive(NotificationDetailContentComponent)
         ).componentInstance;
 
-        expect(drawer.showAlignSlot()).toBe(true);
-        expect(drawer.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept);
+        expect(content.showAlignSlot()).toBe(true);
+        expect(content.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept);
       });
 
       it('null-owner-code fallback: no empty bold and no sentence starting with "," (Reviewer advisory)', () => {
@@ -2853,26 +3037,28 @@ describe('NotificationItemComponent', () => {
     });
 
     // PSR-T-8 rework attempt 2 (Reviewer finding 3): `requestKind` was untested — deleting the
-    // `requestKind:` line in `drawerViewFields()` kept the whole suite green before this.
-    describe('drawerViewFields().requestKind (PSR-R-11)', () => {
+    // `requestKind:` line in the old `drawerViewFields()` kept the whole suite green before this.
+    // DSP-T-4 moves the request kind out to `detailTitle()` (the panel's header title, DD-6) —
+    // same `rowTypeChipLabel` source as before, single source with the row's own type chip.
+    describe('detailTitle() (PSR-R-11, moved by DSP-T-4)', () => {
       it('is "Primary program request" for a primary row (incl. resolved)', () => {
         component.notification = buildPsrFixture({ request_type: 'primary', request_status_id: 2 });
-        expect(component.drawerViewFields().requestKind).toBe('Primary program request');
+        expect(component.detailTitle()).toBe('Primary program request');
       });
 
       it('is "Contributor request" for a bilateral contributor row', () => {
         component.notification = buildPsrFixture({ owner_program_code: 'SP09' });
-        expect(component.drawerViewFields().requestKind).toBe('Contributor request');
+        expect(component.detailTitle()).toBe('Contributor request');
       });
 
       it('is "Contribution request" for a W1/W2 row', () => {
         component.notification = buildPsrFixture({ is_map_to_toc: true, obj_result: { source_name: 'W1/W2' } });
-        expect(component.drawerViewFields().requestKind).toBe('Contribution request');
+        expect(component.detailTitle()).toBe('Contribution request');
       });
 
-      it('is null for an Updates/Center-notice row', () => {
+      it('falls back to the generic copy.title for an Updates/Center-notice row whose type cannot be resolved', () => {
         component.notification = { source: 'update', obj_result: { result_code: '1', title: 't' } };
-        expect(component.drawerViewFields().requestKind).toBeNull();
+        expect(component.detailTitle()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.title);
       });
     });
 

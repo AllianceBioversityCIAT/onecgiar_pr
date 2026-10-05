@@ -22,6 +22,14 @@ export class BrnButton {
 export class BrnSheet {
   @Input() side: 'top' | 'bottom' | 'left' | 'right' | undefined;
 
+  // DSP-T-3 (`notifications/detail-side-panel`, Reviewer FAIL issue 1): the real `BrnDialog` (which
+  // `BrnSheet`/`HlmSheet` extend) exposes these as `aria-labelledby`/`aria-describedby`-aliased
+  // inputs that flow into the CDK dialog's own config (`spartan-ng-brain-dialog.mjs` `_options()`).
+  // Purely additive stub fields (no behavior) so `<hlm-sheet [aria-labelledby]="…">` compiles under
+  // Jest and a spec can assert the forwarded value via `By.directive(HlmSheet)`.
+  @Input('aria-labelledby') ariaLabelledBy: string | null | undefined;
+  @Input('aria-describedby') ariaDescribedBy: string | null | undefined;
+
   // Mirrors the `BrnDialog` stub below (the real `BrnSheet extends BrnDialog`): `HlmSheet extends
   // BrnSheet`, so `[state]` / `(closed)` / `(stateChanged)` on `<hlm-sheet>` resolve against THIS
   // class under Jest.

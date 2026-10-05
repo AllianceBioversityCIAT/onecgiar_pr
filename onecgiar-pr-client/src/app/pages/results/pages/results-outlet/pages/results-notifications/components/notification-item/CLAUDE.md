@@ -65,8 +65,9 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   image; the template has no status element any more. `rowStatusLabel` now only feeds
   `drawerViewFields()`'s `status` field, which `NOTIF-T-14` (a parallel task this same rework round)
   renders inside the drawer's `view`-mode metadata grid instead (first row, "the most important
-  thing to know at a glance" — see `contribution-request-drawer.component.ts`'s
-  `ContributionRequestDrawerViewFields.status` / `viewMetadataRows`). See the copy file's docstring
+  thing to know at a glance" — see `../notification-detail-content/notification-detail-content.component.ts`'s
+  `ContributionRequestDrawerViewFields.status` / `viewMetadataRows` (DSP-T-3 moved both out of
+  `contribution-request-drawer`, now a thin shell). See the copy file's docstring
   (`contribution-request-drawer.copy.ts`, `notificationItem` section) for the same history.
 - **`[crdAlign]` gate:** the projected Align block now also requires
   `drawerMode() === 'decide' || drawerMode() === 'confirm-decline'`, on top of the pre-existing
@@ -76,8 +77,9 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   `[reviewRows]` input — NOT `drawerReviewTables()` directly. `drawerReviewTables()` still returns a
   single all-dash 7-field table when `tocReview` is empty (`CRD-R-4`, unchanged, still needed by
   `decide`/`confirm-decline` so the footer always has something to show). `drawerReviewRowsForMode()`
-  wraps it: in `view` mode with no real `tocReview` data it returns `[]` instead, so the drawer's own
-  `@if (mode() !== 'view' || reviewRows().length)` guard (`NOTIF-T-4`) hides the whole "Where it
+  wraps it: in `view` mode with no real `tocReview` data it returns `[]` instead, so the content
+  component's own `@if (mode() !== 'view' || reviewRows().length)` guard (`NOTIF-T-4`, moved to
+  `notification-detail-content` by DSP-T-3) hides the whole "Where it
   contributes" section rather than rendering a fabricated-looking dash table for every Updates row
   and every resolved/Sent request without a ToC mapping (`NOTIF-R-5`/`NOTIF-AC-7`).
 - **Click-target correctness (`NOTIF-AC-2`/`NOTIF-AC-3`):** the result-title `<a>` in the resolved-row
@@ -133,9 +135,33 @@ Both primary Decline entry points — the row button (`onDeclineClick()`) and th
 
 ## Drawer ownership
 `notification-item` owns **all** decision state for the drawer path: `drawerOpen`, `drawerMode`,
-`drawerFocusAlign`, `tocInitiative`, `tocMappingConsumed`, busy/blocked derivations. The drawer
-component is purely presentational — it renders inputs and emits outputs, makes no API calls, and
-has `[crdAlign]` content projected into it. Do not move decision logic into the drawer component.
+`drawerFocusAlign`, `drawerHeadingId` (DSP-T-3, below), `tocInitiative`, `tocMappingConsumed`,
+busy/blocked derivations. Neither the drawer nor the content component is anything but
+presentational — they render inputs and emit outputs, make no API calls, and have `[crdAlign]`
+content projected into the content component. Do not move decision logic into either one.
+
+## DSP-T-3 (`notifications/detail-side-panel`): the drawer split into a shell + a content component
+`app-contribution-request-drawer` (now a thin sheet shell — see its own `CLAUDE.md`) no longer
+renders the header sentence/RESULT card/review tables/footer itself; that markup and logic moved to
+`app-notification-detail-content` (own `CLAUDE.md`). This row wraps the content component in
+`<ng-template #detailTpl>` and renders it inside the shell via `ngTemplateOutlet` (design.md §2.2) —
+not as the shell's own body — so the SAME template instance can later be portaled to the
+wide-screen `<aside>` (a later task) without touching this row's template again.
+- **`drawerHeadingId`**: a per-instance id (`crd-heading-<n>`, a module-scoped counter — NOT derived
+  from the notification key, so it never collides even across unrelated instances) passed to BOTH
+  the content's `headingId` input (its own `h2[id]`) and the shell's `labelledBy` input, which the
+  shell forwards onto `<hlm-sheet>`'s own `aria-labelledby` (attempt 2 fix: NOT `hlm-sheet-content`,
+  a role-less element AT ignores — see the shell's `CLAUDE.md`) — the two must always receive the
+  SAME value or the sheet panel loses its accessible name (DSP falsifier). `drawerHeadingId +
+  '-desc'` is passed the same way as the shell's `describedBy` input (→ `aria-describedby`),
+  matched against the content's header-sentence `p[id]`.
+- **Two `closed` outputs, one handler.** The content's own ✕ button and the shell's native
+  scrim/Escape/outside-click dismissal are now separate outputs on separate components — both are
+  wired to `onDrawerClosedSignal()` here, so from the row's point of view nothing changed: either
+  close path still reaches the same guard (see "DD-6 trap" below).
+- **`[crdAlign]` projection is unchanged**: still a child of the content component in this row's
+  template (not the shell), still gated the same way (`isBilateralResult && tocInitiative && mode
+  in {decide, confirm-decline}`).
 
 ## DD-6 trap: close-before-refetch, twice
 - **Instance reuse — updated post-`NOTIF-T-6`.** The retired `received-requests`/`sent-requests`
@@ -285,8 +311,9 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - `notification-item.module.ts` registers this folder's sibling filter pipes
   (`FilterNotificationBy*Pipe`, `GroupNotificationsByRecencyPipe`) — imported by
   `results-notifications.module.ts` (the sole surviving consumer post-`NOTIF-T-6`). It also imports
-  the standalone `ContributionRequestDrawerComponent` and keeps `PrDialogComponent` (CRD-T-7 restored
-  it).
+  the standalone `ContributionRequestDrawerComponent` (DSP-T-3: now a thin shell) AND
+  `NotificationDetailContentComponent` (DSP-T-3: the extracted body/footer), plus
+  `PrimaryDeclineJustificationDialogComponent` and keeps `PrDialogComponent` (CRD-T-7 restored it).
 - Inputs: `notification`, `isSent`. Output: `requestEvent` — emitted in `finalize`, **after** the
   `next` handler, and the refetch may rebind this instance to a different notification (see the
   DD-6 trap above).
@@ -366,6 +393,16 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - **Drawer `requestKind` is unaffected** — it was already `null` for every `isUpdateSource` row
   before this task (see `drawerViewFields()`'s own comment), so neither chip override feeds it; the
   drawer shows no "type" field at all for Updates rows, Approved/Rejected included.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · cb27be98b · DSP-T-3 attempt 2 (`notifications/detail-side-panel`):
+the drawer split into a shell + `notification-detail-content` (see the "DSP-T-3" section above) —
+this stamp closes the Reviewer's attempt-1 advisory that the re-stamp and 3 stale pointers (the
+`viewMetadataRows` location, the `drawerReviewRowsForMode()` mode guard, the module-imports
+contract line) were missing. All three are now fixed in place, above. `drawerHeadingId` also feeds
+a second id, `drawerHeadingId + '-desc'`, passed as the shell's `describedBy` input (paired with the
+content's header-sentence `p[id]`) — the accessible-DESCRIPTION counterpart to `labelledBy`, same
+one-id-per-row contract. Supersedes nothing below — it only adds this stamp and fixes the 3
+pointers; every prior stamp still stands for what it describes.
 
 **Verified:** 2026-10-02 · qa-development-2026-ss · SACN-T-4 rework attempt 3 (post-Pivot): Approved/
 Rejected chips return the neutral pair `!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]`

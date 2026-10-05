@@ -4417,6 +4417,20 @@ describe('ResultsApiService', () => {
     });
   });
 
+  // @akili-spec notifications/detail-side-panel (DSP-T-2)
+  describe('GET_requestApprovalChain', () => {
+    it('should GET the approval chain for a result id', done => {
+      service.GET_requestApprovalChain(9400).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/result/9400/approval-chain`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
   describe('GET_requestUpdates', () => {
     it('should call GET_requestUpdates without versionId', done => {
       service.GET_requestUpdates().subscribe(response => {

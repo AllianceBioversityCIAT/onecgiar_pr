@@ -802,86 +802,102 @@
   </div>
 </app-pr-dialog>
 
-<!-- @akili-spec changes/contribution-request-drawer
-     CRD-R-1..R-11: replaces the removed reject-confirm / "Map to your Theory of Change?" / mapping
-     popup dialogs and the inline toc_review block. Mounted unconditionally (cheap while closed —
-     design.md §8); `notification-item` owns every input/output, the drawer itself is presentational. -->
+<!-- @akili-spec notifications/detail-side-panel (DSP-T-3)
+     CRD-R-1..R-11, unchanged: replaces the removed reject-confirm / "Map to your Theory of Change?"
+     / mapping popup dialogs and the inline toc_review block. Mounted unconditionally (cheap while
+     closed — design.md §8); `notification-item` owns every input/output.
+     The drawer is now a thin shell (DD-3): the body/footer live in `app-notification-detail-content`,
+     wrapped here in `#detailTpl` and rendered inside the shell via `ngTemplateOutlet` — the same
+     template instance the (future) wide-screen `<aside>` portal will reuse without touching this
+     markup again. -->
+<ng-template #detailTpl>
+  <app-notification-detail-content
+    [headingId]="drawerHeadingId"
+    [mode]="drawerMode()"
+    [title]="detailTitle()"
+    [chips]="chips()"
+    [headerParts]="drawerHeader()"
+    [resultCode]="notification?.obj_result?.result_code"
+    [resultTitle]="notification?.obj_result?.title"
+    [resultGrid]="resultGrid()"
+    [reviewRows]="drawerReviewRowsForMode()"
+    [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
+    [declineDisabled]="requestingAccept || requestingReject"
+    [acceptBusy]="requestingAccept"
+    [declineBusy]="requestingReject"
+    [blockedReason]="drawerBlockedReason()"
+    [acceptHelper]="drawerAcceptHelper()"
+    [acceptLabel]="drawerAcceptLabel()"
+    [showAlignSlot]="!isPrimaryRequest"
+    [focusAlign]="drawerFocusAlign()"
+    (closed)="onDrawerClosedSignal()"
+    (resultActivated)="onDrawerResult()"
+    (acceptClicked)="onDrawerAccept()"
+    (declineClicked)="onDrawerDeclineClicked()"
+    (declineConfirmed)="acceptOrReject(false)"
+    (declineCancelled)="drawerMode.set('decide')">
+    <!-- NOTIF-T-5 item 1: `[crdAlign]` is the Align/ToC-mapping block (CRD-DD-3) — per design.md
+         §6.2's `view`-mode table ("no footer — result card + metadata grid only"), it must never
+         project in `view` mode, only `decide`/`confirm-decline` (CRD-DD-10, unchanged). `tocInitiative`
+         is already only ever seeded for `mode==='decide'` (see `openDrawer()`), so this condition is
+         defense in depth, not the only guard. -->
+    @if (isBilateralResult && tocInitiative && (drawerMode() === 'decide' || drawerMode() === 'confirm-decline')) {
+      <!-- CRD-R-5: today's mapping controls, moved inline (bilateral only). CRD-P-5: relative + a
+           z-index so the ToC widget's dropdowns are not clipped by the sheet body's own scroll. -->
+      <!-- PSR-T-8: `data-testid="align-slot"` lets a rendered-DOM assertion confirm the slot never
+           projects for a primary request (belt-and-suspenders with `showAlignSlot`/the guards above). -->
+      <div crdAlign data-testid="align-slot" style="position: relative; z-index: 1" class="flex flex-col gap-3">
+        <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.align }}</h3>
+        <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.align.hint }}</p>
+
+        <app-pr-yes-or-not
+          label="Does this result align with the Program's planned TOC indicators?"
+          [required]="false"
+          [editable]="true"
+          [(ngModel)]="tocInitiative.planned_result"
+          (selectOptionEvent)="onTocPlannedResultChange()">
+        </app-pr-yes-or-not>
+
+        @if (tocInitiative.planned_result !== null && tocMappingConsumed()) {
+          <app-cp-multiple-wps
+            [editable]="true"
+            [initiative]="tocInitiative"
+            [initiativeId]="tocInitiative?.initiative_id"
+            [resultLevelId]="notification?.obj_result?.obj_result_level?.id"
+            [isIpsr]="false"
+            [isContributor]="false"
+            [isNotifications]="false"
+            [isUnplanned]="!tocInitiative.planned_result"
+            [showMultipleWPsContent]="tocMappingConsumed()"
+            [hidden]="true"
+            [forceP25]="true">
+          </app-cp-multiple-wps>
+        }
+
+        @if (isTocMappingTouched()) {
+          <!-- CRD-R-8 "Busy": Clear mapping must be disabled while an accept/decline PATCH is in flight,
+               same as the drawer's own actions, so it cannot re-seed `tocInitiative` mid-request. -->
+          <button
+            type="button"
+            hlmBtn
+            variant="ghost"
+            size="sm"
+            class="self-start text-[13px]"
+            data-testid="crd-align-clear-mapping-btn"
+            [disabled]="requestingAccept || requestingReject"
+            (click)="onClearTocMappingActivate()">
+            {{ copy.align.clearMapping }}
+          </button>
+        }
+      </div>
+    }
+  </app-notification-detail-content>
+</ng-template>
+
 <app-contribution-request-drawer
   [open]="drawerOpen()"
-  [mode]="drawerMode()"
-  [headerParts]="drawerHeader()"
-  [resultCode]="notification?.obj_result?.result_code"
-  [resultTitle]="notification?.obj_result?.title"
-  [reviewRows]="drawerReviewRowsForMode()"
-  [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
-  [declineDisabled]="requestingAccept || requestingReject"
-  [acceptBusy]="requestingAccept"
-  [declineBusy]="requestingReject"
-  [blockedReason]="drawerBlockedReason()"
-  [acceptHelper]="drawerAcceptHelper()"
-  [acceptLabel]="drawerAcceptLabel()"
-  [showAlignSlot]="!isPrimaryRequest"
-  [focusAlign]="drawerFocusAlign()"
-  [viewFields]="drawerViewFields()"
-  (closed)="onDrawerClosedSignal()"
-  (resultActivated)="onDrawerResult()"
-  (acceptClicked)="onDrawerAccept()"
-  (declineClicked)="onDrawerDeclineClicked()"
-  (declineConfirmed)="acceptOrReject(false)"
-  (declineCancelled)="drawerMode.set('decide')">
-  <!-- NOTIF-T-5 item 1: `[crdAlign]` is the Align/ToC-mapping block (CRD-DD-3) — per design.md
-       §6.2's `view`-mode table ("no footer — result card + metadata grid only"), it must never
-       project in `view` mode, only `decide`/`confirm-decline` (CRD-DD-10, unchanged). `tocInitiative`
-       is already only ever seeded for `mode==='decide'` (see `openDrawer()`), so this condition is
-       defense in depth, not the only guard. -->
-  @if (isBilateralResult && tocInitiative && (drawerMode() === 'decide' || drawerMode() === 'confirm-decline')) {
-    <!-- CRD-R-5: today's mapping controls, moved inline (bilateral only). CRD-P-5: relative + a
-         z-index so the ToC widget's dropdowns are not clipped by the sheet body's own scroll. -->
-    <!-- PSR-T-8: `data-testid="align-slot"` lets a rendered-DOM assertion confirm the slot never
-         projects for a primary request (belt-and-suspenders with `showAlignSlot`/the guards above). -->
-    <div crdAlign data-testid="align-slot" style="position: relative; z-index: 1" class="flex flex-col gap-3">
-      <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.align }}</h3>
-      <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.align.hint }}</p>
-
-      <app-pr-yes-or-not
-        label="Does this result align with the Program's planned TOC indicators?"
-        [required]="false"
-        [editable]="true"
-        [(ngModel)]="tocInitiative.planned_result"
-        (selectOptionEvent)="onTocPlannedResultChange()">
-      </app-pr-yes-or-not>
-
-      @if (tocInitiative.planned_result !== null && tocMappingConsumed()) {
-        <app-cp-multiple-wps
-          [editable]="true"
-          [initiative]="tocInitiative"
-          [initiativeId]="tocInitiative?.initiative_id"
-          [resultLevelId]="notification?.obj_result?.obj_result_level?.id"
-          [isIpsr]="false"
-          [isContributor]="false"
-          [isNotifications]="false"
-          [isUnplanned]="!tocInitiative.planned_result"
-          [showMultipleWPsContent]="tocMappingConsumed()"
-          [hidden]="true"
-          [forceP25]="true">
-        </app-cp-multiple-wps>
-      }
-
-      @if (isTocMappingTouched()) {
-        <!-- CRD-R-8 "Busy": Clear mapping must be disabled while an accept/decline PATCH is in flight,
-             same as the drawer's own actions, so it cannot re-seed `tocInitiative` mid-request. -->
-        <button
-          type="button"
-          hlmBtn
-          variant="ghost"
-          size="sm"
-          class="self-start text-[13px]"
-          data-testid="crd-align-clear-mapping-btn"
-          [disabled]="requestingAccept || requestingReject"
-          (click)="onClearTocMappingActivate()">
-          {{ copy.align.clearMapping }}
-        </button>
-      }
-    </div>
-  }
+  [labelledBy]="drawerHeadingId"
+  [describedBy]="drawerHeadingId + '-desc'"
+  (closed)="onDrawerClosedSignal()">
+  <ng-container *ngTemplateOutlet="detailTpl"></ng-container>
 </app-contribution-request-drawer>

@@ -22,6 +22,42 @@ import { BilateralApiService } from './bilateral-api.service';
 import { BilateralOverviewService } from '../../../pages/bilateral/services/bilateral-overview.service';
 import { toDisplayBasis } from '../../constants/achieved-display-basis';
 
+/**
+ * @akili-spec notifications/detail-side-panel (DSP-T-2)
+ * Client mirror of the server `ApprovalChainDto` (design.md §4.1,
+ * `onecgiar-pr-server/src/api/results/share-result-request/dto/approval-chain.dto.ts`). Carries
+ * only names, codes, dates, statuses and initiative ids — never an email or a user id.
+ */
+export type ApprovalChainSubmissionState = 'submitted' | 'not_submitted';
+export type ApprovalChainStepRole = 'primary' | 'contributor';
+export type ApprovalChainStepStatus = 'accepted' | 'pending' | 'declined';
+
+export interface ApprovalChainSubmissionDto {
+  state: ApprovalChainSubmissionState;
+  result_status_id: number;
+  result_status_name: string;
+  actor_name: string | null;
+  date: string | null;
+}
+
+export interface ApprovalChainStepDto {
+  initiative_id: number;
+  official_code: string;
+  short_name: string;
+  name: string;
+  role: ApprovalChainStepRole;
+  status: ApprovalChainStepStatus;
+  actor_name: string | null;
+  date: string | null;
+  is_viewer_program: boolean;
+}
+
+export interface ApprovalChainDto {
+  result_id: number;
+  submission: ApprovalChainSubmissionDto;
+  steps: ApprovalChainStepDto[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -777,6 +813,16 @@ export class ResultsApiService {
 
   GET_sentRequest(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/sent${this.buildPagingQueryParams(options)}`);
+  }
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-2, DSP-R-12)
+   * `GET /api/results/request/get/result/:resultId/approval-chain` (design.md §4.1). Mirrors the
+   * server `ApprovalChainDto` 1:1 — see `onecgiar-pr-server/src/api/results/share-result-request/dto/approval-chain.dto.ts`.
+   * Additive, read-only; the envelope's `response` is an `ApprovalChainDto`.
+   */
+  GET_requestApprovalChain(resultId: number | string) {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/result/${resultId}/approval-chain`);
   }
 
   GET_requestUpdates(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) {

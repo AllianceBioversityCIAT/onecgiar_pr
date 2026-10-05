@@ -35,20 +35,19 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
     contributionTarget: 'Contribution target'
   },
   /**
-   * NOTIF-T-4: `view` mode's per-source metadata grid labels (design.md §6.2). A field with no
-   * source on a given row is omitted entirely by the component — never rendered with this label
-   * next to a blank/dash value (NOTIF-R-5, NOTIF-AC-7).
+   * DSP-T-4 (design.md §6.2 "Field sources" / §6.3 "RESULT card"): the RESULT card's 6-field grid
+   * labels, in fixed order (Reporting center → Result type → Primary Science Program →
+   * Contributing programs → Submitted by → Phase). Replaces `viewFieldLabels` (DD-6 supersedes
+   * NOTIF-R-5/NOTIF-AC-7 for THIS grid only — a missing value renders the label with `dashValue`
+   * instead of being omitted; `status`/`requestKind` moved out to the chips row / `detailTitle()`).
    */
-  viewFieldLabels: {
-    /** NOTIF-T-14 (NOTIF-R-5): rendered first — the row's decision/info status. */
-    status: 'Status',
-    /** PSR-T-9 (PSR-R-11 "showing the request kind"): rendered second, right after status. */
-    requestKind: 'Request type',
-    resultType: 'Result type',
-    phase: 'Phase',
-    primaryProgram: 'Primary program',
+  resultGridLabels: {
     reportingCenter: 'Reporting center',
-    submittedBy: 'Submitted by'
+    resultType: 'Result type',
+    primaryProgram: 'Primary Science Program',
+    contributingPrograms: 'Contributing programs',
+    submittedBy: 'Submitted by',
+    phase: 'Phase'
   },
   dashValue: '–',
   showMore: 'Show more',
@@ -127,10 +126,9 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
    * `design.md`, closed by explicit user decision 2026-09-29, recorded in `execution.md`).
    * **No longer rendered in the row** — `NOTIF-T-12` (rework attempt 1) removed the row-level status
    * chip that used to render `statusNeedsDecision`/`statusInfo` directly. `notification-item`'s
-   * `rowStatusLabel` getter still resolves one of these two same strings, but only to feed
-   * `drawerViewFields().status`, which `NOTIF-T-14` (a parallel task this same rework round) renders
-   * inside the drawer's `view`-mode metadata grid instead (under the `viewFieldLabels.status` label
-   * above) — the gap this removal reopened.
+   * `rowStatusLabel` getter still resolves one of these two same strings; `DSP-T-4` now feeds it into
+   * the detail panel's `chips()` (first chip, status) instead of the retired `view`-mode metadata
+   * grid — same strings, new destination.
    */
   notificationItem: {
     /** `NOTIF-DD-3`: single chip for every `source:'request'` row — no sub-typing. */

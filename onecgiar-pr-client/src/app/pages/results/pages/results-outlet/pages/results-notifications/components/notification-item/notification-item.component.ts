@@ -21,7 +21,61 @@ import {
 import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../../../../../../../internationalization/notification-center-tagged.copy';
 import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../../../../../../../internationalization/notification-project-tagged.copy';
 import { BILATERAL_DECISION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-decision-notice.copy';
-import type { ContributionRequestDrawerMode, ContributionRequestDrawerViewFields } from '../contribution-request-drawer/contribution-request-drawer.component';
+// DSP-T-3 (notifications/detail-side-panel): this type moved with the body/footer logic it
+// describes, out of the (now shell-only) drawer, into the new content component.
+import type { ContributionRequestDrawerMode } from '../notification-detail-content/notification-detail-content.component';
+// DSP-T-2 (notifications/detail-side-panel): the approval-chain contract, mirrored from the server DTO.
+import type { ApprovalChainDto } from '../../../../../../../../shared/services/api/results-api.service';
+
+/**
+ * DSP-T-4 (design.md §6.2 "chips"): mirrors `ContributionRequestDrawerChip` structurally (same
+ * precedent as `DrawerHeaderParts`/`ContributionRequestDrawerHeaderParts` below — this file builds
+ * the raw values, the content component only renders them).
+ */
+export interface NotificationDetailChip {
+  text: string;
+  outlined?: boolean;
+}
+
+/**
+ * DSP-T-4 (design.md §6.2/§6.3 "RESULT card", DD-6/DD-7): mirrors `ContributionRequestDrawerGridField`.
+ */
+export interface NotificationDetailGridField {
+  label: string;
+  value: string;
+  mono?: boolean;
+  loading?: boolean;
+}
+
+const MONTH_ABBREVIATIONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * DSP-T-4 (design.md §6.2 "the date `activityDate` formatted `dd MMM yyyy`"): a pure formatter —
+ * no `DatePipe`/DI, since this feeds a plain string into `chips()`, not a template binding. Returns
+ * `null` for anything that doesn't parse to a valid date, so a malformed/missing `created_date`
+ * omits the chip entirely instead of rendering "Invalid Date".
+ */
+function formatActivityDate(raw: unknown): string | null {
+  if (!raw) return null;
+  const date = new Date(raw as string | number | Date);
+  if (Number.isNaN(date.getTime())) return null;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = MONTH_ABBREVIATIONS[date.getMonth()];
+  return `${day} ${month} ${date.getFullYear()}`;
+}
+
+/**
+ * DSP-T-2 (design.md §6.2 DD-10): the row's own approval-chain fetch state — `loading` while the
+ * GET is in flight (or has not started), `ok` with the envelope's `response` once it resolves,
+ * `error` on an HTTP failure. T-5 wires this into `notification-detail-content`'s `chain` input;
+ * this component only owns the fetch/state/stale-guard (DSP-R-8 "Loading and failure" state side).
+ */
+export type ApprovalChainState = { status: 'loading' } | { status: 'ok'; data: ApprovalChainDto } | { status: 'error' };
+
+// DSP-T-3 (DD-3 "unique id per row"): a per-instance counter, not derived from the notification key,
+// so the drawer content's `h2[id]` (and the shell's matching `aria-labelledby`) never collides even
+// across unrelated component instances created within the same test run or page lifetime.
+let nextDetailHeadingId = 0;
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
 export interface TocContributionReview {
@@ -130,8 +184,33 @@ export class NotificationItemComponent {
   drawerOpen = signal(false);
   drawerMode = signal<ContributionRequestDrawerMode>('decide');
   drawerFocusAlign = signal(false);
+  /**
+   * DSP-T-3 (DD-3): the id this row's drawer content heading (`h2[id]`) renders, and the value the
+   * shell's `[labelledBy]` must be passed — both wired to this SAME property so the sheet panel
+   * always has an accessible name pointed at an id that actually exists (falsifier: "the sheet
+   * panel has no accessible name").
+   */
+  readonly drawerHeadingId = `crd-heading-${nextDetailHeadingId++}`;
   /** CRD-DD-3: the global ToC hydration is deferred from "open" to "first answer". */
   private tocHydrated = false;
+
+  /**
+   * @akili-spec notifications/detail-side-panel
+   * DSP-T-2 (DSP-R-8 "Loading and failure" state side, DD-10 amended): the row's approval-chain
+   * fetch state. Starts on every `openDrawer()` call (any mode) only — a successful decision no
+   * longer dispatches its own fetch (the pivot: `closeDrawer()` runs in the same tick via
+   * `finalize`, which would always supersede that fetch's token before the response could land, so
+   * it could never be displayed). The panel closes instead, and the next `openDrawer()` fetches
+   * fresh. `retryChain()` is the drawer's Retry action.
+   */
+  approvalChain = signal<ApprovalChainState>({ status: 'loading' });
+  /**
+   * DSP-T-2: incremented on every fetch dispatch AND on close, so a response that lands for a
+   * superseded request — the row reopened (a new fetch wins), or closed in the meantime — is
+   * ignored instead of overwriting `approvalChain` (falsifier: "a response arriving after close
+   * overwrites the state").
+   */
+  private chainRequestToken = 0;
 
   private readonly notificationNavigation = inject(NotificationNavigationService);
 
@@ -360,35 +439,87 @@ export class NotificationItemComponent {
   }
 
   /**
-   * NOTIF-T-5 (design.md §6.2 field-adapter table): raw per-source fields for the drawer's `view`
-   * metadata grid. Always supplies whatever the row has — the drawer's own `viewMetadataRows`
-   * (NOTIF-T-4, closed scope) already omits `resultType`/`reportingCenter` for `source:'update'`
-   * rows per `NOTIF-P-2`, and omits any field that is empty/absent (`NOTIF-R-5`/`NOTIF-AC-7`).
-   *
-   * NOTIF-T-14: also supplies `status` from the existing `rowStatusLabel` getter, so the drawer's
-   * metadata grid renders the decision/info status `NOTIF-R-5` requires (the row-level badge that
-   * used to satisfy this was removed by `NOTIF-T-12` for not matching the reference image).
+   * DSP-T-4 (design.md §6.2 "title", DD-6): the detail panel's header title — request kind / update
+   * type label, same single source as the row's own type chip (`rowTypeChipLabel`) so the two can
+   * never say something different about the same request/update (same guarantee `requestKindLabel`'s
+   * own docstring already gives for the chip vs the old drawer field). Falls back to the generic
+   * `copy.title` ("Contribution request") when the kind/type can't be resolved — the same text every
+   * row's title showed, statically, before this task.
    */
-  drawerViewFields(): ContributionRequestDrawerViewFields {
-    const n = this.notification;
-    const actor = this.isUpdateSource ? n?.obj_emitter_user : n?.obj_requested_by;
-    const submittedBy = actor ? `${actor?.first_name ?? ''} ${actor?.last_name ?? ''}`.trim() : '';
+  detailTitle(): string {
+    return this.rowTypeChipLabel ?? this.copy.title;
+  }
 
-    return {
-      source: this.isUpdateSource ? 'update' : 'request',
-      // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
-      // badge): reuse the row's own status getter, never recompute it here.
-      status: this.rowStatusLabel,
-      // PSR-T-8 (PSR-R-11 "showing the request kind"): only meaningful for a `source:'request'` row
-      // — `requestKindLabel` reads `isPrimaryRequest`/`isBilateralContributorRequest`, both hard
-      // false for an `isUpdateSource` row, so this is `null` for every Center notice/Updates row.
-      requestKind: this.isUpdateSource ? null : this.requestKindLabel,
-      resultType: n?.obj_result?.obj_result_type?.name ?? null,
-      phase: n?.obj_result?.obj_version?.phase_name ?? null,
-      primaryProgram: n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? null,
-      reportingCenter: n?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym ?? null,
-      submittedBy: submittedBy || null
-    };
+  /**
+   * DSP-T-4 (design.md §6.2 "the date `activityDate` formatted `dd MMM yyyy`"): the notification's
+   * own date, for the chips row — `notification.created_date`, the same field the row's own
+   * `.notification_date` line formats with `appFormatTimeAgo` (a relative string); this is the
+   * chips row's absolute counterpart. `null` when missing/unparseable (chip omitted, never a
+   * fabricated/invalid date).
+   */
+  get activityDate(): string | null {
+    return formatActivityDate(this.notification?.created_date);
+  }
+
+  /**
+   * DSP-T-4 (design.md §6.2 "chips"/§6.3): the header's chips row, in this fixed order — status,
+   * funding (outlined), level · type, date. Status is the only chip that's always present
+   * (`rowStatusLabel` never returns null); the other three are omitted, never a blank chip, exactly
+   * like `fundingWindowBadge`/`resultLevelTypeBadge` already do for the row itself.
+   */
+  chips(): NotificationDetailChip[] {
+    const chips: NotificationDetailChip[] = [{ text: this.rowStatusLabel }];
+    if (this.fundingWindowBadge) chips.push({ text: this.fundingWindowBadge, outlined: true });
+    if (this.resultLevelTypeBadge) chips.push({ text: this.resultLevelTypeBadge });
+    if (this.activityDate) chips.push({ text: this.activityDate });
+    return chips;
+  }
+
+  /**
+   * DSP-T-4 (design.md §6.2 "Field sources" / §6.3 "RESULT card", DD-6/DD-7): the RESULT card's
+   * 6-field grid, always exactly 6 cells in this fixed order — Reporting center, Result type,
+   * Primary Science Program, Contributing programs, Submitted by, Phase. Supersedes
+   * `drawerViewFields()`'s `view`-mode-only metadata grid: this grid renders for every row/mode now,
+   * and a missing source value shows `copy.dashValue` (muted) instead of omitting the label
+   * (DD-6 supersedes NOTIF-R-5/NOTIF-AC-7 for THIS grid only — status/requestKind, the two fields
+   * that used to satisfy them here, moved to `chips()`/`detailTitle()` instead).
+   *
+   * Primary SP / Contributing programs read the approval chain (`approvalChain()`, DSP-T-2): the
+   * chain's primary step's `official_code` for Primary SP, falling back to the row's own
+   * `obj_result_by_initiatives[0]` while the chain hasn't resolved to `'ok'`; the chain's
+   * non-declined contributor codes, joined ", ", for Contributing programs — with a skeleton
+   * (`loading: true`) on that one cell while the chain is still `'loading'`.
+   */
+  resultGrid(): NotificationDetailGridField[] {
+    const n = this.notification;
+    const dash = this.copy.dashValue;
+    const labels = this.copy.resultGridLabels;
+
+    const chain = this.approvalChain();
+    const chainData = chain.status === 'ok' ? chain.data : null;
+
+    const reportingCenter = n?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym ?? null;
+    const resultType = n?.obj_result?.obj_result_type?.name ?? null;
+    const phase = n?.obj_result?.obj_version?.phase_name ?? null;
+
+    const actor = this.isUpdateSource ? n?.obj_emitter_user : n?.obj_requested_by;
+    const submittedBy = (actor ? `${actor?.first_name ?? ''} ${actor?.last_name ?? ''}`.trim() : '') || null;
+
+    const fallbackPrimary = n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? null;
+    const primaryStep = chainData?.steps?.find(step => step.role === 'primary');
+    const primaryProgram = primaryStep?.official_code ?? fallbackPrimary;
+
+    const contributingCodes = chainData?.steps?.filter(step => step.role === 'contributor' && step.status !== 'declined').map(step => step.official_code) ?? [];
+    const contributingPrograms = contributingCodes.length ? contributingCodes.join(', ') : null;
+
+    return [
+      { label: labels.reportingCenter, value: reportingCenter ?? dash },
+      { label: labels.resultType, value: resultType ?? dash },
+      { label: labels.primaryProgram, value: primaryProgram ?? dash, mono: true },
+      { label: labels.contributingPrograms, value: contributingPrograms ?? dash, mono: true, loading: chain.status === 'loading' },
+      { label: labels.submittedBy, value: submittedBy ?? dash },
+      { label: labels.phase, value: phase ?? dash }
+    ];
   }
 
   /**
@@ -648,6 +779,8 @@ export class NotificationItemComponent {
     }
 
     this.drawerOpen.set(true);
+    // DSP-T-2 (DSP-R-8, DD-10): one chain fetch per open, every mode — never gated on `mode`.
+    this.fetchApprovalChain();
   }
 
   /** CRD-R-9: closing records nothing — the request stays pending and an in-progress mapping is discarded. */
@@ -657,6 +790,42 @@ export class NotificationItemComponent {
     this.drawerFocusAlign.set(false);
     this.tocHydrated = false;
     this.tocInitiative = null;
+    // DSP-T-2: supersede any in-flight chain request so a late response cannot overwrite the state
+    // after the row has closed (falsifier: "a response arriving after close overwrites the state").
+    this.chainRequestToken++;
+  }
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-2)
+   * Dispatches the approval-chain GET for `obj_result.id`, tagged with a fresh token so an older,
+   * now-superseded in-flight request can never write into `approvalChain` once this one has started
+   * (DSP-R-8 "Loading and failure"; DD-10 "owned by the row, uncached").
+   */
+  private fetchApprovalChain(): void {
+    const resultId = this.notification?.obj_result?.id;
+    const token = ++this.chainRequestToken;
+    this.approvalChain.set({ status: 'loading' });
+
+    if (resultId === undefined || resultId === null) {
+      this.approvalChain.set({ status: 'error' });
+      return;
+    }
+
+    this.api.resultsSE.GET_requestApprovalChain(resultId).subscribe({
+      next: (resp: any) => {
+        if (token !== this.chainRequestToken) return;
+        this.approvalChain.set({ status: 'ok', data: resp?.response });
+      },
+      error: () => {
+        if (token !== this.chainRequestToken) return;
+        this.approvalChain.set({ status: 'error' });
+      }
+    });
+  }
+
+  /** DSP-T-2 (DSP-R-8 "Loading and failure"): the chain section's Retry action. */
+  retryChain(): void {
+    this.fetchApprovalChain();
   }
 
   /**
