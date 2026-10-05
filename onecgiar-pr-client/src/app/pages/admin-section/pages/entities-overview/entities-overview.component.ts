@@ -5,7 +5,11 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowDown, lucideArrowUp, lucideSearch, lucideX } from '@ng-icons/lucide';
 import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import {
+  DONUT_PALETTE_TOKENS,
+  HEATMAP_RAMP_TOKENS,
   RankingMode,
+  STATUS_CHART_TOKEN,
+  STATUS_TILE_TOKEN,
   StatusColumn,
   buildHeatmapOption,
   buildRankingOption,
@@ -24,7 +28,7 @@ import { CentersService } from '../../../../shared/services/global/centers.servi
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { CenterDto } from '../../../../shared/interfaces/center.dto';
-import { RESULT_STATUS_TOKENS, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
+import { resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
 import { ADMIN_ENTITIES_OVERVIEW_COPY } from '../../../../internationalization/admin-entities-overview.copy';
 import {
   CENTER_STATUS_IDS,
@@ -88,8 +92,6 @@ export class EntitiesOverviewComponent {
   readonly copy = ADMIN_ENTITIES_OVERVIEW_COPY;
   readonly programStatusIds = PROGRAM_STATUS_IDS;
   readonly centerStatusIds = CENTER_STATUS_IDS;
-  readonly statusLabel = resultStatusLabel;
-  readonly statusFg = resultStatusFg;
   readonly skeletonRows = [1, 2, 3, 4, 5];
 
   readonly phase = signal<Phases | null>(null);
@@ -125,8 +127,11 @@ export class EntitiesOverviewComponent {
   /** Status columns of the active view, with the colour the charts paint (resolved once per view). */
   readonly columns = computed<StatusColumn[]>(() => {
     const ids = this.view() === 'programs' ? PROGRAM_STATUS_IDS : CENTER_STATUS_IDS;
-    return ids.map(id => ({ id, label: resultStatusLabel(id), color: resolveCssColor(RESULT_STATUS_TOKENS[id]?.fg ?? '') }));
+    return ids.map(id => ({ id, label: resultStatusLabel(id), color: resolveCssColor(`var(${STATUS_CHART_TOKEN[id] ?? '--pr-text-subtle'})`) }));
   });
+  /** Same columns in the tile colours (tiles, dots, pipeline) — the Portfolio overview uses a separate set there. */
+  private readonly tileColumns = computed<StatusColumn[]>(() => this.columns().map(column => ({ ...column, color: resolveCssColor(this.statusDot(column.id)) })));
+  private readonly donutPalette = computed(() => DONUT_PALETTE_TOKENS.map(token => resolveCssColor(`var(${token})`)));
 
   readonly activeState = computed<LoadState>(() =>
     this.view() === 'programs' ? this.programsState() : this.centersListState() === 'ready' && this.centersLoading() && !this.loadedCenterRows().length ? 'loading' : this.centersListState()
@@ -134,7 +139,7 @@ export class EntitiesOverviewComponent {
   readonly loadedCenterRows = computed(() => this.centerRows().map(c => c.row).filter((row): row is EntityOverviewRow => row !== null));
   readonly activeRows = computed(() => (this.view() === 'programs' ? this.programRows() : this.loadedCenterRows()));
   readonly activeTotals = computed(() => (this.view() === 'programs' ? this.programTotals() : this.centerTotals()));
-  readonly segments = computed(() => buildSegments(this.columns(), this.activeTotals()));
+  readonly segments = computed(() => buildSegments(this.tileColumns(), this.activeTotals()));
 
   readonly kpis = computed(() => {
     const programs = this.programTotals();
@@ -154,12 +159,12 @@ export class EntitiesOverviewComponent {
     };
   });
 
-  readonly donutOption = computed(() => buildStatusDonutOption(this.segments(), this.activeTotals().total, this.selectedStatus()));
+  readonly donutOption = computed(() => buildStatusDonutOption(this.segments(), this.activeTotals().total, this.selectedStatus(), this.donutPalette()));
   readonly donutTable = computed(() => buildSegmentsTable(this.copy.statusTitle, this.segments()));
   readonly rankingOption = computed(() => {
     const mode = this.rankingMode();
     if (mode === 'heatmap') {
-      const ramp = ['--pr-color-primary-50', '--pr-color-primary-200', '--pr-color-primary-400', '--pr-color-primary-700'].map(t => resolveCssColor(`var(${t})`));
+      const ramp = HEATMAP_RAMP_TOKENS.map(token => resolveCssColor(`var(${token})`));
       return buildHeatmapOption(this.activeRows(), this.columns(), ramp);
     }
     return buildRankingOption(this.activeRows(), this.columns(), this.selectedStatus(), mode);
@@ -198,6 +203,11 @@ export class EntitiesOverviewComponent {
     const id = this.selectedStatus();
     return id === null ? null : resultStatusLabel(id);
   });
+
+  /** Tile / dot colour of a status: the Portfolio overview's tile set. Bars use STATUS_CHART_TOKEN. */
+  statusDot(statusId: number): string {
+    return `var(${STATUS_TILE_TOKEN[statusId] ?? '--pr-text-subtle'})`;
+  }
 
   setView(view: EntityView): void {
     if (this.view() === view) return;

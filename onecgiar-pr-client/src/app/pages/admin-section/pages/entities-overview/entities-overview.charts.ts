@@ -9,6 +9,41 @@ import { EntityOverviewRow } from './entities-overview.aggregate';
  * page is imported or changed.
  */
 
+/**
+ * Chart colour per status, from the shared chart tokens — the violet family the Portfolio overview paints
+ * its status donut, pipeline and ranking with (Editing light, QA/Pending muted, Submitted primary,
+ * Approved deep, Discontinued grey). Same tokens, no import of that page.
+ */
+export const STATUS_CHART_TOKEN: Readonly<Record<number, string>> = {
+  1: '--pr-chart-4',
+  2: '--pr-chart-2-muted',
+  3: '--pr-color-primary-400',
+  4: '--pr-text-subtle',
+  5: '--pr-chart-2-muted',
+  6: '--pr-chart-1',
+  7: '--pr-chart-3'
+};
+
+/**
+ * Status tile dot / progress / pipeline colour — the Portfolio overview paints its tiles with this set
+ * (Editing violet, QA muted, Submitted primary, Approved deep, Rejected light, Discontinued grey).
+ */
+export const STATUS_TILE_TOKEN: Readonly<Record<number, string>> = {
+  1: '--pr-chart-2',
+  2: '--pr-chart-2-muted',
+  3: '--pr-color-primary-400',
+  4: '--pr-text-subtle',
+  5: '--pr-chart-2-muted',
+  6: '--pr-chart-1',
+  7: '--pr-chart-4'
+};
+
+/** The donut paints its non-empty slices in this order, as the Portfolio overview does (ramp, muted, primary). */
+export const DONUT_PALETTE_TOKENS = ['--pr-chart-1', '--pr-chart-2', '--pr-chart-3', '--pr-chart-4', '--pr-chart-2-muted', '--pr-color-primary-400'] as const;
+
+/** Heatmap scale, light to deep, as on the Portfolio overview. */
+export const HEATMAP_RAMP_TOKENS = ['--pr-color-primary-50', '--pr-color-primary-200', '--pr-chart-3', '--pr-chart-2', '--pr-color-primary-400'] as const;
+
 export interface StatusColumn {
   id: number;
   label: string;
@@ -38,31 +73,43 @@ const TOOLTIP_BASE = { confine: true, textStyle: { fontSize: 12 } };
 const FADED = 0.28;
 
 /** Donut of the status split. With a selected status the other slices fade, as in the Portfolio overview. */
-export function buildStatusDonutOption(segments: readonly StatusSegment[], total: number, selected: number | null): EChartsOption {
+export function buildStatusDonutOption(
+  segments: readonly StatusSegment[],
+  total: number,
+  selected: number | null,
+  palette: readonly string[] = []
+): EChartsOption {
   return {
     tooltip: { ...TOOLTIP_BASE, trigger: 'item', formatter: '{b}: {c} ({d}%)' },
     title: {
       text: String(total),
       subtext: 'results',
       left: 'center',
-      top: '38%',
-      textStyle: { fontSize: 26, fontWeight: 800 },
-      subtextStyle: { fontSize: 12 }
+      top: 'center',
+      textStyle: { fontSize: 22, fontWeight: 800 },
+      subtextStyle: { fontSize: 12, fontWeight: 500 }
     },
     series: [
       {
         type: 'pie',
         id: 'status',
-        radius: ['62%', '84%'],
+        radius: ['52%', '74%'],
+        center: ['50%', '50%'],
         avoidLabelOverlap: true,
-        padAngle: 1.5,
-        itemStyle: { borderRadius: 4 },
-        label: { show: false },
-        data: segments.map(segment => ({
+        minAngle: 12,
+        padAngle: 3,
+        itemStyle: { borderRadius: 4, borderColor: '#ffffff', borderWidth: 2 },
+        label: { show: true, position: 'outside', formatter: '{c}', fontSize: 11, fontWeight: 700, distanceToLabelLine: 4 },
+        labelLine: { show: true, length: 6, length2: 6 },
+        emphasis: { scale: true, scaleSize: 4 },
+        data: segments.filter(segment => segment.count > 0).map((segment, index) => ({
           name: segment.label,
           value: segment.count,
           statusId: segment.id,
-          itemStyle: { color: segment.color, opacity: selected === null || selected === segment.id ? 1 : FADED }
+          itemStyle: {
+            color: palette.length ? palette[index % palette.length] : segment.color,
+            opacity: selected === null || selected === segment.id ? 1 : FADED
+          }
         }))
       }
     ]
@@ -111,8 +158,9 @@ export function buildRankingOption(
         stack: 'status',
         barMaxWidth: 22,
         statusId: column.id,
-        itemStyle: { color: column.color, borderRadius: 2 },
+        itemStyle: { color: column.color },
         emphasis: { focus: 'series' },
+        label: { show: true, position: 'inside', fontSize: 10, fontWeight: 'bold', formatter: (p: any) => (p?.value > 1 ? String(p.value) : '') },
         data: ordered.map(row => valueOf(row, column))
       })),
       {

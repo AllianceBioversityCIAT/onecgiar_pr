@@ -149,7 +149,7 @@
                     : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] hover:-translate-y-0.5 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs'">
                   <div class="mb-[6px] flex w-full items-center justify-between gap-[8px]">
                     <span class="flex min-w-0 items-center gap-[8px]">
-                      <span class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125" [style.background]="statusFg(segment.id)"></span>
+                      <span class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125" [style.background]="statusDot(segment.id)"></span>
                       <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)]">{{ segment.label }}</span>
                     </span>
                     <span class="flex shrink-0 items-baseline gap-[3px]">
@@ -158,7 +158,7 @@
                     </span>
                   </div>
                   <div class="h-[3.5px] w-full overflow-hidden rounded-full bg-[var(--pr-border-divider)]">
-                    <div class="h-full rounded-full transition-all duration-500 ease-out" [style.width.%]="segment.percent" [style.background]="statusFg(segment.id)"></div>
+                    <div class="h-full rounded-full transition-all duration-500 ease-out" [style.width.%]="segment.percent" [style.background]="statusDot(segment.id)"></div>
                   </div>
                 </button>
               }
@@ -294,7 +294,7 @@
                       [class]="selectedStatus() === column.id ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)]' : ''"
                       [attr.aria-sort]="sortKey() === column.id ? (sortDesc() ? 'descending' : 'ascending') : null">
                       <button type="button" (click)="sortBy(column.id)" class="inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-semibold uppercase tracking-[0.04em] text-inherit">
-                        <span class="h-2 w-2 rounded-full" [style.background]="statusFg(column.id)"></span>{{ column.label }}
+                        <span class="h-2 w-2 rounded-full" [style.background]="statusDot(column.id)"></span>{{ column.label }}
                         @if (sortKey() === column.id) { <ng-icon [name]="sortDesc() ? 'lucideArrowDown' : 'lucideArrowUp'" size="12px" /> }
                       </button>
                     </th>

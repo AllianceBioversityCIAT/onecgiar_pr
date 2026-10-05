@@ -5,6 +5,8 @@ import {
   buildSegments,
   buildShareOption,
   buildStatusDonutOption,
+  STATUS_CHART_TOKEN,
+  STATUS_TILE_TOKEN,
   percentOf,
   statusIdFromChartEvent
 } from './entities-overview.charts';
@@ -35,6 +37,8 @@ describe('entities-overview charts (P2-3858 rework)', () => {
 
   it('donut fades the slices that are not the selected status and keeps the status id on each slice', () => {
     const option: any = buildStatusDonutOption(buildSegments(columns, { total: 8, counts: [6, 2] }), 8, 5);
+    // empty slices are left out, as on the Portfolio overview
+    expect((buildStatusDonutOption(buildSegments(columns, { total: 6, counts: [6, 0] }), 6, null) as any).series[0].data).toHaveLength(1);
     const data = option.series[0].data;
     expect(data.map((d: any) => d.statusId)).toEqual([1, 5]);
     expect(data[0].itemStyle.opacity).toBeLessThan(1);
@@ -68,6 +72,18 @@ describe('entities-overview charts (P2-3858 rework)', () => {
     expect(option.series[0].data[alpha] + option.series[1].data[alpha]).toBeCloseTo(100, 0);
     const gamma = option.yAxis.data.indexOf('Gamma');
     expect(option.series[0].data[gamma]).toBe(0);
+  });
+
+  it('every status this page shows has a chart token', () => {
+    [1, 2, 3, 4, 5, 6, 7].forEach(id => {
+      expect(STATUS_CHART_TOKEN[id]).toMatch(/^--pr-/);
+      expect(STATUS_TILE_TOKEN[id]).toMatch(/^--pr-/);
+    });
+  });
+
+  it('donut paints its slices in palette order when a palette is given, as the Portfolio overview does', () => {
+    const option: any = buildStatusDonutOption(buildSegments(columns, { total: 8, counts: [6, 2] }), 8, null, ['deep', 'mid']);
+    expect(option.series[0].data.map((d: any) => d.itemStyle.color)).toEqual(['deep', 'mid']);
   });
 
   it('reads the status of a clicked slice or bar, and nothing from the total label', () => {

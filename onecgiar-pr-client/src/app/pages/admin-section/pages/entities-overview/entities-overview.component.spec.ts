@@ -186,10 +186,11 @@ describe('EntitiesOverviewComponent (P2-3858)', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="programs-error"]')).not.toBeNull();
   });
 
-  it('markup: status columns come from the shared status tokens, never a private colour', () => {
+  it('markup: status colours come from the shared chart tokens, never a private colour', () => {
     const html = readFileSync(join(__dirname, 'entities-overview.component.html'), 'utf8');
-    expect(html).toContain('statusFg(segment.id)');
-    expect(html).toContain('statusFg(column.id)');
+    // Rework: dots, tiles and charts share the chart tokens (the Portfolio overview's violet family).
+    expect(html).toContain('statusDot(segment.id)');
+    expect(html).toContain('statusDot(column.id)');
     expect(html).not.toMatch(/#[0-9a-f]{3,6}\b/i);
   });
 });
