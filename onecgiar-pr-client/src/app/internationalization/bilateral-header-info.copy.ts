@@ -27,7 +27,7 @@ export const BILATERAL_HEADER_INFO_COPY = {
         'View and open all W3/Bilateral results led by this center. Filter by phase, status, and science program, then continue editing or review submitted contributions.'
     },
     drafts: {
-      title: 'AI Draft Results',
+      title: 'My Drafts',
       description:
         'Review AI-generated draft results before they become formal submissions. Inspect extracted fields, refine titles and descriptions, and promote drafts into the reporting workflow.'
     }
