@@ -567,6 +567,21 @@ zoom: var(--pr-font-scale, 1);
 --sidebar-ring: var(--pr-sidebar-accent);
 }
 
+// @akili-spec bugfix/cdk-overlay-root-zoom — CDK overlays vs the root zoom lever above.
+// The CDK measures triggers in VISUAL px (getBoundingClientRect) and writes the result on boxes that live
+// inside the zoomed root, so they get zoomed a second time and drift by (s - 1) x distance from the origin.
+// Counter-zoom the overlay container (net zoom 1: positioning space = visual px) and re-zoom the pane's
+// CONTENT (`.cdk-overlay-pane > *`), NOT the pane itself: the pane carries the connected offset, and zooming it
+// would scale the sideOffset to 6 x s. The content then still scales with the user text size.
+// Dialogs/sheets/backdrops are positioned in the zoom-1 container (viewport-sized, centred/docked). Default scale 1 => both rules are a no-op.
+.cdk-overlay-container {
+  zoom: calc(1 / var(--pr-font-scale, 1));
+}
+
+.cdk-overlay-pane > * {
+  zoom: var(--pr-font-scale, 1);
+}
+
 // NOTE: the `:root.dark` block that used to sit here was REMOVED. It held 30 lines of shadcn
 // slate oklch() defaults and was unreachable: the selector was `:root.dark` (not `.dark`),
 // nothing in the app ever adds that class, and `color-scheme: light` is pinned on :root above.
