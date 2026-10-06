@@ -5,7 +5,7 @@ import type { ColumnMetadataArgs } from 'typeorm/metadata-args/ColumnMetadataArg
 import type { JoinColumnMetadataArgs } from 'typeorm/metadata-args/JoinColumnMetadataArgs';
 import type { TableMetadataArgs } from 'typeorm/metadata-args/TableMetadataArgs';
 import { snakeCase } from 'typeorm/util/StringUtils';
-import { CatalogField, NotForQaEntry } from './types';
+import { CatalogField, NotForQaEntry, PendingCatalogEntry } from './types';
 import type { ExcludedTable } from './excluded-tables';
 import type { EntityClass } from './scope';
 
@@ -22,6 +22,8 @@ export interface CompletenessInput {
   excluded: ExcludedTable[];
   fields: CatalogField[];
   notForQa: NotForQaEntry[];
+  /** DD-11: known-but-not-yet-catalogued columns; subtracted like NOT_FOR_QA but kept distinct. */
+  pending: PendingCatalogEntry[];
 }
 
 /** Rule: tables that must be in scope or excluded (the `result` table plus every `results?_*`). */
@@ -168,7 +170,25 @@ export function checkCompleteness(input: CompletenessInput): string[] {
     if (!n.reason?.trim())
       failures.push(`NOT_FOR_QA ${n.table}.${n.column} has an empty reason`);
   }
-  for (const c of claims) {
+  // DD-11: PENDING_CATALOG entries are validated like NOT_FOR_QA (reason, existing column, in-scope
+  // table) and count as covered. A column may be both bound and pending (a second field shares the
+  // column and is not catalogued yet), but never both pending and NOT_FOR_QA (contradictory).
+  const notForQaKeys = new Set(
+    input.notForQa.map((n) => `${n.table}.${n.column}`),
+  );
+  for (const p of input.pending) {
+    const id = `${p.table}.${p.column}`;
+    if (!p.reason?.trim())
+      failures.push(`PENDING_CATALOG ${id} has an empty reason`);
+    if (notForQaKeys.has(id))
+      failures.push(`${id} is both PENDING_CATALOG and NOT_FOR_QA`);
+  }
+  const pendingClaims: Claim[] = input.pending.map((p) => ({
+    table: p.table,
+    column: p.column,
+    origin: 'PENDING_CATALOG',
+  }));
+  for (const c of [...claims, ...pendingClaims]) {
     const cols = tables.get(c.table);
     if (!cols) {
       failures.push(
@@ -190,7 +210,7 @@ export function checkCompleteness(input: CompletenessInput): string[] {
     for (const column of tables.get(name) ?? []) {
       if (!covered.has(`${name}.${column}`)) {
         failures.push(
-          `uncatalogued column ${name}.${column}: bind it to a field or list it in NOT_FOR_QA with a reason`,
+          `uncatalogued column ${name}.${column}: bind it to a field, or list it in NOT_FOR_QA or PENDING_CATALOG with a reason`,
         );
       }
     }

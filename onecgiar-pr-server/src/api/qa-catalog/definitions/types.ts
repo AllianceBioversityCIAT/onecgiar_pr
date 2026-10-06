@@ -99,6 +99,13 @@ export interface NotForQaEntry {
   reason: string;
 }
 
+/** DD-11: a column of an in-scope table that is for QA but not yet described (stage 2). */
+export interface PendingCatalogEntry {
+  table: string;
+  column: string;
+  reason: string;
+}
+
 export interface CatalogDefinition {
   resultTypes: CatalogResultType[];
   sections: CatalogSection[];

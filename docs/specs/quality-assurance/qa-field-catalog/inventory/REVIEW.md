@@ -172,3 +172,12 @@ Aplicación de esa regla a los defaults que exigían ampliar el modelo ya aproba
 | D15, D27 (sospechas en `validation_innovation_use_P25` / `_dev_P25`) | — | Se sigue la función viva; consultado con Santiago (Slack), sin bloquear |
 
 Los demás defaults (D3–D14, D17–D28) se aplican tal cual. **Las claves quedan congeladas** con los nombres de los inventarios A y B más estos ajustes.
+
+### 7.1 Decisiones del Leader por mandato del owner (2026-10-06)
+
+El owner delegó las decisiones restantes ("Toma decisiones… haz que funcione el endpoint y no te extiendas"). Registradas:
+
+- **D2 ampliado:** de la parte A, `toc.entries.indicator`, `toc.entries.contribution_to_target`, `geo.subnational`, `geo.extra_subnational` (binding de 2 saltos) quedan en `PENDING_CATALOG`; QAC-R-11 exceptúa los diferidos por D1/D2.
+- **`required_when` en subcampos:** no se agrega al modelo ahora; las condiciones de 9 subcampos quedan en el inventario (QAC-R-5 enmendado).
+- **ToC con múltiples mapeos:** un resultado puede mapear a uno o varios ToC results, indicadores y targets. `toc.entries` es una `list` (una fila por mapeo); el indicador y la contribución al target por mapeo quedan en `PENDING_CATALOG` (D2).
+- **Funciones con sospechas confirmadas por Santiago (D15, D27):** fuera del alcance del endpoint; el catálogo sigue la función viva. El owner las ajusta por su lado.

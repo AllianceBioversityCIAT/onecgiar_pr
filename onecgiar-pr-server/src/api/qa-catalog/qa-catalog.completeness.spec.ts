@@ -18,6 +18,7 @@ import {
 } from './definitions/completeness';
 import { EXCLUDED_TABLES } from './definitions/excluded-tables';
 import { NOT_FOR_QA } from './definitions/not-for-qa';
+import { PENDING_CATALOG } from './definitions/pending-catalog';
 import { CATALOG_SCOPE, EntityClass } from './definitions/scope';
 import { CATALOG_FIELDS } from './definitions/sections';
 import { CatalogField } from './definitions/types';
@@ -86,6 +87,7 @@ const run = (over: Partial<Parameters<typeof checkCompleteness>[0]>) =>
     excluded: [{ table: 'results_fixture', reason: 'fixture' }],
     fields: [],
     notForQa: [],
+    pending: [],
     ...over,
   });
 
@@ -114,6 +116,7 @@ describe('QAC-R-7 completeness guard — real scope', () => {
       excluded: EXCLUDED_TABLES,
       fields: CATALOG_FIELDS,
       notForQa: NOT_FOR_QA,
+      pending: PENDING_CATALOG,
     });
     expect(failures).toEqual([]);
   });
@@ -137,6 +140,73 @@ describe('QAC-R-7 completeness guard — fixtures through the same function', ()
       { table: 'fixture_table', column: 'foo_bar', reason: 'internal' },
     ];
     expect(run({ fields: bindAll('id'), notForQa })).toEqual([]);
+  });
+
+  it('DD-11: passes once the column is listed in PENDING_CATALOG with a reason (subtracted, not hidden)', () => {
+    const pending = [
+      {
+        table: 'fixture_table',
+        column: 'foo_bar',
+        reason: 'optional — stage 2',
+      },
+    ];
+    expect(run({ fields: bindAll('id'), notForQa: audit(), pending })).toEqual(
+      [],
+    );
+    // control: the same input without the pending entry is red and names the column
+    expect(
+      run({ fields: bindAll('id'), notForQa: audit() }).join('\n'),
+    ).toContain('fixture_table.foo_bar');
+  });
+
+  it('DD-11: fails on a stale PENDING_CATALOG entry and on an empty reason', () => {
+    const base = { fields: bindAll('id', 'foo_bar'), notForQa: audit() };
+    const stale = run({
+      ...base,
+      pending: [{ table: 'fixture_table', column: 'ghost', reason: 'x' }],
+    });
+    expect(stale.join('\n')).toContain(
+      'stale PENDING_CATALOG: fixture_table.ghost',
+    );
+    const noTable = run({
+      ...base,
+      pending: [{ table: 'no_such_table', column: 'a', reason: 'x' }],
+    });
+    expect(noTable.join('\n')).toContain('no_such_table');
+    const empty = run({
+      ...base,
+      pending: [{ table: 'fixture_table', column: 'foo_bar', reason: ' ' }],
+    });
+    expect(empty.join('\n')).toContain(
+      'PENDING_CATALOG fixture_table.foo_bar has an empty reason',
+    );
+  });
+
+  it('DD-11: a column cannot be both PENDING_CATALOG and NOT_FOR_QA; pending on a bound column is allowed', () => {
+    const both = run({
+      fields: bindAll('id', 'foo_bar'),
+      notForQa: [
+        ...audit(),
+        { table: 'fixture_table', column: 'foo_bar', reason: 'internal' },
+      ],
+      pending: [{ table: 'fixture_table', column: 'foo_bar', reason: 'later' }],
+    });
+    expect(both.join('\n')).toContain(
+      'fixture_table.foo_bar is both PENDING_CATALOG and NOT_FOR_QA',
+    );
+    expect(
+      run({
+        fields: bindAll('id', 'foo_bar'),
+        notForQa: audit(),
+        pending: [
+          {
+            table: 'fixture_table',
+            column: 'foo_bar',
+            reason: 'shared column',
+          },
+        ],
+      }),
+    ).toEqual([]);
   });
 
   it('detects a column inherited from the base class (prototype-chain walk)', () => {

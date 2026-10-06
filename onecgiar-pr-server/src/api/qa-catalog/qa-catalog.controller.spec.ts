@@ -91,13 +91,33 @@ describe('QaCatalogController', () => {
         'No QA catalog available for phase_year 2023',
       );
     });
-    it('2026 against the real code catalog -> 404 until QAC-T-7 loads content, not an empty 200', async () => {
+    it('2026 against the real code catalog -> 200 with the common sections (QAC-T-8)', async () => {
       useRealCatalog.value = true;
       const res = await get('?phase_year=2026');
+      expect(res.status).toBe(200);
+      expect(res.body.catalog_version).toBe('2026.2');
+      const keys = res.body.fields.map((f: { key: string }) => f.key);
+      expect(keys).toEqual(
+        expect.arrayContaining([
+          'general.title',
+          'geo.scope',
+          'evidence.items',
+          'partners.not_applicable',
+        ]),
+      );
+      // QAC-R-4 against the real catalog: no storage binding or table name leaks.
+      const body = JSON.stringify(res.body);
+      expect(body).not.toContain('"storage"');
+      expect(body).not.toContain('fk_to_result');
+      expect(body).not.toContain('results_toc_result');
+    });
+    it('an undeclared year against the real code catalog -> 404, not an empty 200', async () => {
+      useRealCatalog.value = true;
+      const res = await get('?phase_year=2023');
       expect(res.status).toBe(404);
       expect(res.body.fields).toBeUndefined();
       expect(res.body.message).toBe(
-        'No QA catalog available for phase_year 2026',
+        'No QA catalog available for phase_year 2023',
       );
     });
   });

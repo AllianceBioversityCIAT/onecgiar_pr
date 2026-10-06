@@ -128,3 +128,20 @@
 - Verification: every row cites an origin; per-type control counts vs rows recorded in each table; question mapping A 22/22, B 15/15; totals 338 = 139 + 199
 - Closing gate: HITL owner approval (this task's Review = checklist on an artifact the owner reviewed; no code)
 - Requirements: QAC-R-5, QAC-R-11 (as amended), QAC-OQ-4
+
+> **Owner mandate (2026-10-06):** "Toma decisiones ahora… Haz que funcione el endpoint y no te extiendas… con buenas prácticas y toda la burocracia." From here the Leader decides open questions itself (recorded, not asked), keeps scope to the endpoint, and keeps the review gates. Escalations still stop.
+
+### QAC-T-8 — Catalog: common sections — PASS
+
+- Date: 2026-10-06 · Attempts: 1
+- Files: `definitions/pending-catalog.ts` (new), `definitions/sections/{shared,general-information,toc-alignment,contributors-partners,geographic-location,evidence,linked-results}.ts` (new), `definitions/{completeness,types,scope,excluded-tables,not-for-qa,versions}.ts`, `sections/index.ts`, `__snapshots__/qa-catalog.snapshot.json`, specs (completeness, shape, controller, service)
+- Counts: 54 catalogued (43 fields + 11 subfields); 79 common inventory rows = 54 + 24 pending + 1 no-column; 18 tables into scope; `PENDING_CATALOG` 32 column entries; `NOT_FOR_QA` 146 entries; 2026 revision 2 (69 snapshot keys)
+- Implementer verification: 9 suites / 112 tests; tsc + eslint clean
+- Falsifiers: `general.title` → `result.title_x` → stale + uncatalogued red; removing a pending entry → uncatalogued red. Red run: tables in scope, nothing transcribed → 246 failures
+- Evidence re-run (Leader inline): 112/112, tsc OK, snapshot script idempotent (md5 `e68baab7…`) → VERIFIED
+- Reviewer: PASS, conditional on two spec tensions → resolved by the Leader under the owner mandate: (1) QAC-R-11 stage 1 excepts D1/D2-deferred fields (3 function-required + 1 UI-required 2-hop fields); (2) QAC-R-5 — subfield conditions stay in the inventory (no `required_when` on subfields). Execute-time spec edits: `requirements.md` QAC-R-5, QAC-R-11; `inventory/REVIEW.md` §7.1. Owner note recorded: ToC can map to several results/indicators/targets → `toc.entries` is a `list`
+- Decisions: annual-updating `general.*` block owned here (restricted to innovation_development + innovation_use); `required_when` pseudo-fields `result_type`, `is_replicated`; `linked.results` multi_select; invented subfield labels `directory_user`, `toc_result`
+- ADVISORY: `is_replicated` pseudo-field points at a `NOT_FOR_QA` column (QA cannot evaluate that condition); `general.lead_contact_person` required on the text column; pending entries on already-bound columns never go stale — sweep by reason in T-12; `linked_results` with ALL_TYPES vs innovation_use page — check in T-10
+- spawns: implementer 35 calls, 223 035 tokens, ended complete; reviewer 17 calls, 135 142 tokens, ended complete
+- Requirements: QAC-R-1, R-7, R-11 (common part)
+- auto-approved (pre-approved mode)

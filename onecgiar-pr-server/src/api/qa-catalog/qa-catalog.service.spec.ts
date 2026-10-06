@@ -168,8 +168,12 @@ describe('QaCatalogService.getCatalog', () => {
     );
   });
 
-  it('uses the code catalog when no source is injected: 2026 is declared but has no content yet, so 404 like 2023', () => {
-    expect(() => service.getCatalog(2026)).toThrow(NotFoundException);
+  it('uses the code catalog when no source is injected: 2026 has the common sections (200), an undeclared year is 404', () => {
+    const res = service.getCatalog(2026);
+    expect(res.catalog_version).toBe('2026.2');
+    expect(res.fields.map((f) => f.key)).toEqual(
+      expect.arrayContaining(['general.title', 'geo.scope', 'evidence.items']),
+    );
     expect(() => service.getCatalog(2023)).toThrow(NotFoundException);
   });
 });

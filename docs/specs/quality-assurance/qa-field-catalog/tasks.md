@@ -134,7 +134,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 - **Done:** owner approval recorded in the inventory header with date.
 - **Skills:** `nestjs-expert`, `angular-developer` (reading the form)
 
-### QAC-T-8 — Catalog: common sections
+### [x] QAC-T-8 — Catalog: common sections
 
 - **Type:** server · **Estimate:** L · **Review:** checklist — declarative data against an approved inventory
 - **Description:** Transcribe common sections (general information, ToC alignment, contributors/partners, geography, impact areas/tags, evidence, links) from the approved inventory; move their tables from `excluded-tables.ts` to `scope.ts`; add their `NOT_FOR_QA`; create `definitions/pending-catalog.ts` and make the completeness guard subtract it (DD-11) with a fixture test, then list the not-yet-catalogued optional columns there; bump 2026 revision; regenerate snapshot.
