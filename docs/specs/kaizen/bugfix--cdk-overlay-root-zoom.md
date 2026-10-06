@@ -52,7 +52,7 @@
 | Target | `docs/ux-ui/design.md` → DD-11 (append after its rationale) |
 | Edit | **CDK overlays (bugfix/cdk-overlay-root-zoom, 2026-10-06):** root `zoom` must not apply to the CDK overlay positioning space. The CDK measures triggers in visual px and would otherwise apply positions twice. `styles.scss` sets `.cdk-overlay-container { zoom: 1 / s }` and re-applies `zoom: s` to `.cdk-overlay-pane > *`: the content, not the pane, because the pane carries the connected offset. Any new global overlay rule must preserve this pair. |
 | Severity | Medium |
-| Status | pending (apply on `staging`, per COZ-DD-4) |
+| Status | applied (2026-10-06, `866a30b2b` on `staging`) |
 
 ### P2
 
