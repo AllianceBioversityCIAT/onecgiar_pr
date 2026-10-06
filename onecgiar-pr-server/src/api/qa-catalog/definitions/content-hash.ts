@@ -1,0 +1,49 @@
+// @akili-spec quality-assurance/qa-field-catalog
+import { createHash } from 'crypto';
+import { isValidIn } from './validity';
+import { CatalogField, CatalogResultType, CatalogSection } from './types';
+
+/**
+ * JSON.stringify with object keys sorted recursively, so two structurally equal values
+ * always serialise identically (MySQL JSON columns may return keys reordered). `undefined`
+ * object members are dropped, like JSON.stringify does.
+ */
+export function stableStringify(value: unknown): string {
+  if (value === undefined) return 'null';
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => stableStringify(v)).join(',')}]`;
+  }
+  const obj = value as Record<string, unknown>;
+  const members = Object.keys(obj)
+    .filter((k) => obj[k] !== undefined)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`);
+  return `{${members.join(',')}}`;
+}
+
+export interface HashableCatalog {
+  resultTypes: CatalogResultType[];
+  sections: CatalogSection[];
+  fields: CatalogField[];
+}
+
+/**
+ * sha256 (hex, 64 chars) of the stable JSON of the year's effective catalog: entries valid
+ * in `year`, ordered by key. Advisory-grade; T-5 (QAC-R-8) may reuse it.
+ */
+export function computeCatalogContentHash(
+  catalog: HashableCatalog,
+  year: number,
+): string {
+  const byKey = <T extends { key: string }>(a: T, b: T) =>
+    a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+  const effective = {
+    resultTypes: [...catalog.resultTypes].sort(byKey),
+    sections: catalog.sections.filter((s) => isValidIn(s, year)).sort(byKey),
+    fields: catalog.fields.filter((f) => isValidIn(f, year)).sort(byKey),
+  };
+  return createHash('sha256').update(stableStringify(effective)).digest('hex');
+}
