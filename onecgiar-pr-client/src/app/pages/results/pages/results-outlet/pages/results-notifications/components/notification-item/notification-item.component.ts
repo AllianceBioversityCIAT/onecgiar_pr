@@ -5,7 +5,10 @@ import {
   Input,
   Output,
   EventEmitter,
+  OnChanges,
   OnDestroy,
+  OnInit,
+  SimpleChanges,
   TemplateRef,
   ViewContainerRef,
   afterNextRender,
@@ -44,6 +47,9 @@ import { BILATERAL_DECISION_NOTICE_COPY } from '../../../../../../../../internat
 import type { ContributionRequestDrawerMode } from '../notification-detail-content/notification-detail-content.component';
 // DSP-T-2 (notifications/detail-side-panel): the approval-chain contract, mirrored from the server DTO.
 import type { ApprovalChainDto } from '../../../../../../../../shared/services/api/results-api.service';
+// BELL-T-1 (notifications/bell-quick-inbox, BELL-DD-2): the shared decision helper — `acceptOrReject`
+// and `invalidateRequest()` below delegate the body/eligibility logic to it.
+import { acceptLabelFor, buildDecisionBody, classifyAccept, isDecidable } from '../../utils/request-decision';
 // @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2/§6.2): the page-scoped
 // coordinator that decides whether THIS row's detail template renders docked (wide) or in the
 // drawer (narrow), and which row "owns" it when only one may be open at a time.
@@ -159,10 +165,21 @@ export interface DrawerReviewField {
   styleUrls: ['./notification-item.component.scss'],
   standalone: false
 })
-export class NotificationItemComponent implements OnDestroy {
+export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   @Input() notification: any;
   @Input() isSent: boolean;
   @Output() requestEvent = new EventEmitter<any>();
+
+  /**
+   * @akili-spec notifications/bell-quick-inbox (BELL-T-5, BELL-DD-4): set by the inbox on the ONE row a
+   * bell hand-off targets. Once the row is initialized and this is set, it replays the row's own
+   * handler (`onAcceptContribution()` / `onDeclineClick()`) exactly once, then emits
+   * `autoActionConsumed` so the inbox can clear the URL params.
+   */
+  @Input() autoAction: 'accept' | 'decline' | null = null;
+  @Output() autoActionConsumed = new EventEmitter<void>();
+  private autoActionRan = false;
+  private initialized = false;
   requestingAccept = false;
   requestingReject = false;
 
@@ -310,6 +327,50 @@ export class NotificationItemComponent implements OnDestroy {
         this.closeDrawer();
       }
     });
+  }
+
+  ngOnInit(): void {
+    this.initialized = true;
+    this.runAutoAction();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['autoAction'];
+    if (!change) return;
+    // The inbox clears the input once it consumed a hand-off; that re-arms this instance, so a later
+    // hand-off for the same row (cancel the modal, click the bell again) replays. Re-setting the input
+    // WITHOUT it having been cleared in between stays a single run.
+    if (!change.currentValue) {
+      this.autoActionRan = false;
+      return;
+    }
+    if (this.initialized) this.runAutoAction();
+  }
+
+  /**
+   * BELL-T-5: runs at most once per instance. Only a still-pending row opens anything (a request
+   * decided meanwhile must not pop a dialog); either way the param is reported consumed. The emit is
+   * deferred a microtask so the parent clearing its binding does not land inside this change-detection
+   * pass (NG0100).
+   */
+  private runAutoAction(): void {
+    const action = this.autoAction;
+    if (!action || this.autoActionRan) return;
+    this.autoActionRan = true;
+
+    if (this.isPending) {
+      // BELL-T-7: a link never records a decision. Accept replays only when it opens a step (prompt /
+      // legacy modal); a one-click row would PATCH straight away. Decline only ever opens a dialog.
+      if (action === 'accept') {
+        if (classifyAccept(this.notification) === 'step') this.onAcceptContribution();
+        // BELL-T-9: a ToC-carried contribution opens the row's detail drawer, which renders the carried
+        // mapping (`tocReview`) and whose own Accept (`onDrawerAccept`) is the user's click. Opening
+        // never PATCHes. A primary request only consumes the param (T-7).
+        else if (this.notification?.is_map_to_toc && !this.isPrimaryRequest) this.openDrawer('details');
+      } else if (action === 'decline') this.onDeclineClick();
+    }
+
+    queueMicrotask(() => this.autoActionConsumed.emit());
   }
 
   /**
@@ -748,24 +809,21 @@ export class NotificationItemComponent implements OnDestroy {
     return name || sentinel || '—';
   }
 
-  private get isIpsrNotification(): boolean {
-    const typeId = this.notification?.obj_result?.obj_result_type?.id;
-    return typeId === 10 || typeId === 11;
-  }
-
+  /**
+   * BELL-T-1 (BELL-DD-2): delegates the non-busy part of this predicate to `isDecidable()`. Only
+   * `requestingAccept`/`requestingReject` stay here — in-flight UI state, not a row/context property
+   * the shared util should own.
+   */
   invalidateRequest() {
-    const currentPhaseId = this.isIpsrNotification
-      ? this.api.dataControlSE.IPSRCurrentPhase?.phaseId
-      : this.api.dataControlSE.reportingCurrentPhase.phaseId;
-
     return (
       this.requestingAccept ||
       this.requestingReject ||
-      this.api.rolesSE.platformIsClosed ||
-      this.isQAed ||
-      (!this.api.rolesSE.isAdmin &&
-        this.notification?.obj_result?.obj_version?.id != currentPhaseId &&
-        this.notification?.obj_result?.status_id != 3)
+      !isDecidable(this.notification, {
+        isAdmin: this.api.rolesSE.isAdmin,
+        platformIsClosed: this.api.rolesSE.platformIsClosed,
+        currentPhaseId: this.api.dataControlSE.reportingCurrentPhase.phaseId,
+        ipsrCurrentPhaseId: this.api.dataControlSE.IPSRCurrentPhase?.phaseId
+      })
     );
   }
 
@@ -1234,10 +1292,10 @@ export class NotificationItemComponent implements OnDestroy {
    * This is also the row's own Accept button text (`buttonTextConfirm` in the template), single
    * source so the row and drawer can never say a different word for the same action (PSR-R-11).
    */
-  drawerAcceptLabel(): string | null {
-    if (this.isPrimaryRequest) return CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary;
-    if (this.isBilateralContributorRequest) return CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept;
-    return null;
+  drawerAcceptLabel(): string {
+    // BELL-T-11: delegates to the single-source util shared with the bell card. The former `null` for
+    // "everything else" is now the explicit default text the drawer and the row button both fell back to.
+    return acceptLabelFor(this.notification);
   }
 
   /**
@@ -1566,21 +1624,18 @@ export class NotificationItemComponent implements OnDestroy {
     // P2-3187 AC4: when the contributor chose "Map it", the mapping travels WITH this same PATCH —
     // `mapWorkPackagesToInitiative*` writes the contributor's `result_toc_result` rows on approval,
     // so one request records the decision and the optional mapping together (no second accept).
-    const body: Record<string, unknown> = {
-      result_request: this.notification,
-      result_toc_result:
-        withTocMapping && isAccept ? this.buildTocMappingPayload() : { planned_result: null, result_toc_results: [] },
-      request_status_id: isAccept ? 2 : 3
-    };
-
-    // PDR-T-4 (design.md §8.2): `justification` is added to the body only for a primary decline —
-    // never on accept, and never for a contributor/W1W2 decline (`PDR-R-2`, `requesterCode` getter
-    // untouched). `isPrimaryRequest` gates it, not merely "a justification argument was passed", so
-    // a stray caller can never smuggle the key in for the wrong row kind.
-    const isPrimaryDecline = !isAccept && this.isPrimaryRequest;
-    if (isPrimaryDecline) {
-      body['justification'] = justification;
+    //
+    // BELL-T-1 (BELL-DD-2): `buildDecisionBody()` builds the inert body AND the primary-decline
+    // `justification` key (gated on the row's own kind, not on "a justification argument was
+    // passed" — see its docstring). The ToC-MAPPING override below stays here: it reads
+    // `buildTocMappingPayload()`, which depends on this row's interactively-seeded `tocInitiative`
+    // (component state), not a pure function of `this.notification`.
+    const body = buildDecisionBody(this.notification, isAccept, { justification });
+    if (withTocMapping && isAccept) {
+      body['result_toc_result'] = this.buildTocMappingPayload();
     }
+
+    const isPrimaryDecline = !isAccept && this.isPrimaryRequest;
 
     if (isAccept) this.requestingAccept = true;
     else this.requestingReject = true;

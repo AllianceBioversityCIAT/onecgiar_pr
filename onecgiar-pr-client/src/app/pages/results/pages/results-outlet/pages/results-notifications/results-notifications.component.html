@@ -404,7 +404,12 @@
             @for (item of groupedTabList.today; track trackNotificationKey(item)) {
               @switch (activeSource()) {
                 @case ('received') {
-                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                  <app-notification-item
+                    [notification]="item"
+                    [isSent]="isSentRow(item)"
+                    [autoAction]="autoActionFor(item)"
+                    (autoActionConsumed)="onAutoActionConsumed()"
+                    (requestEvent)="refreshAllNotifications()"></app-notification-item>
                 }
                 @case ('sent') {
                   <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
@@ -425,7 +430,12 @@
             @for (item of groupedTabList.thisWeek; track trackNotificationKey(item)) {
               @switch (activeSource()) {
                 @case ('received') {
-                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                  <app-notification-item
+                    [notification]="item"
+                    [isSent]="isSentRow(item)"
+                    [autoAction]="autoActionFor(item)"
+                    (autoActionConsumed)="onAutoActionConsumed()"
+                    (requestEvent)="refreshAllNotifications()"></app-notification-item>
                 }
                 @case ('sent') {
                   <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
@@ -446,7 +456,12 @@
             @for (item of groupedTabList.earlier; track trackNotificationKey(item)) {
               @switch (activeSource()) {
                 @case ('received') {
-                  <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>
+                  <app-notification-item
+                    [notification]="item"
+                    [isSent]="isSentRow(item)"
+                    [autoAction]="autoActionFor(item)"
+                    (autoActionConsumed)="onAutoActionConsumed()"
+                    (requestEvent)="refreshAllNotifications()"></app-notification-item>
                 }
                 @case ('sent') {
                   <app-notification-item [notification]="item" [isSent]="isSentRow(item)" (requestEvent)="refreshAllNotifications()"></app-notification-item>

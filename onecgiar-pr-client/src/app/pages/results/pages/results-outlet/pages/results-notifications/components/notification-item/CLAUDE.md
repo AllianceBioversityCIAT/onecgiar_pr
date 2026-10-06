@@ -118,10 +118,14 @@ Both primary Decline entry points — the row button (`onDeclineClick()`) and th
 `drawerMode.set('confirm-decline')` lines.
 - **Drawer closes first.** `onDrawerDeclineClicked()` calls `closeDrawer()` before opening the
   dialog, so a primary decline never stacks the dialog on top of an open drawer (design.md §8.2).
-- **Confirm → `acceptOrReject(false, false, justification)`.** The method only puts
-  `justification` on the PATCH body when `!isAccept && isPrimaryRequest` — gated on the row kind,
-  not merely "a third argument was passed" — so a stray caller can never smuggle the key into a
-  contributor/W1W2 body.
+- **Confirm → `acceptOrReject(false, false, justification)`.** **BELL-T-1 (`notifications/bell-quick-inbox`):**
+  the body itself — including the `justification` gate — is now built by
+  `../../utils/request-decision.ts::buildDecisionBody(row, isAccept, opts)`, not inline in this
+  method. It only puts `justification` on the body when `!isAccept && isPrimaryRequest(row)` —
+  gated on the row kind, not merely "an `opts.justification` was passed" — so a stray caller can
+  never smuggle the key into a contributor/W1W2 body. `acceptOrReject()` still owns the ToC-mapping
+  override (`withTocMapping && isAccept` → `this.buildTocMappingPayload()`), since that payload reads
+  this row's interactively-seeded `tocInitiative` — component state the pure util cannot see.
 - **A primary decline runs its own pipe (`submitPrimaryDecline()`).** The shared
   `acceptOrReject()` pipeline's `finalize` closes the drawer and every popup unconditionally, which
   would wipe the dialog's typed text on a 400. The dedicated pipe's `finalize` instead checks
@@ -279,6 +283,37 @@ branch needed there):
   `copy.notificationItem.staleRequestMessage` ("This request was already answered") on a 409,
   unconditionally for every row kind including these two new ones — nothing here special-cases it.
 
+## BELL-T-5 (`notifications/bell-quick-inbox`): `autoAction` replays a row handler from the bell
+`@Input() autoAction: 'accept' | 'decline' | null` + `@Output() autoActionConsumed`. The inbox
+(`results-notifications.component`) sets it on the ONE `received` row whose `share_result_request_id`
+matches `?request=` (`autoActionFor(item)`), after resetting program/search/facet filters and forcing
+Received + All. The row (`ngOnInit` + `ngOnChanges`) runs `onAcceptContribution()` / `onDeclineClick()`
+**once per hand-off** (`autoActionRan`, re-armed by `ngOnChanges` when the input goes falsy, i.e. after the inbox cleared it - so a second hand-off for the same surviving row replays; re-setting the input without clearing stays one run), only while `isPending`, then emits `autoActionConsumed` on a
+microtask (emitting synchronously would let the parent clear its binding mid-CD pass: NG0100). The inbox
+then clears `request`/`action` with `replaceUrl`. A no-longer-pending row opens nothing but still consumes.
+Phase for the URL comes from `obj_result.obj_version.id` (the server select has no `obj_result.version_id`),
+built by `../../utils/request-decision.ts::bellHandoffUrl`. jsdom proves wiring only; the real
+dialog/modal after a route transition is BELL-T-6's manual pass.
+
+## BELL-T-7 (amendment 2026-10-06): a deep link NEVER records a decision
+`runAutoAction()` is gated, because a crafted/shared `?request=N&action=accept` must not PATCH anything:
+- **accept** replays `onAcceptContribution()` only when `classifyAccept(row) === 'step'` (bilateral
+  step -> "Map to your Theory of Change?" prompt; legacy modal-first -> `<app-share-request-modal>`;
+  both only OPEN a step, the PATCH needs the user's own click). A `'one-click'` row (ToC-carried or
+  primary) calls `acceptOrReject(true)` straight away, so it is NOT replayed: the param is only consumed.
+- **decline** replays `onDeclineClick()` for every pending row: it only ever opens
+  `showPrimaryDeclineDialog` (primary) or `showConfirmRejectDialog` (all others), never a PATCH.
+- Anything else only emits `autoActionConsumed` (same microtask). Do not widen the accept gate:
+  `classifyAccept` mirrors `onAcceptContribution()`'s first `if` exactly.
+
+### BELL-T-9 (amendment 2026-10-06): ToC-carried contributions open the review step
+The bell now hands off EVERY contribution's Accept (`bellAcceptMode`, only primary is one-click there),
+so the replay has a third branch: `action='accept'` on a pending row with `is_map_to_toc` and not
+primary -> `openDrawer('details')`. That drawer shows the carried mapping (`tocReview`) and its own
+Accept (`onDrawerAccept` -> `acceptOrReject(true)`) is the user's click; opening only does a GET
+(approval chain). `openTocMappingModal()` was NOT used: it seeds an EMPTY mapping for the legacy
+flow, does not hydrate the carried one. Primary -> consume only. `classifyAccept` is unchanged.
+
 ## Wording + chip sizing (NOTIF-T-16, 2026-09-30 — user-driven correction)
 Two small style fixes from the user's reference markup:
 - **Case (3) footer caption is now "Declined by X"**, not "Rejected by X" — matches the "Decline"
@@ -338,7 +373,7 @@ code" without checking design.md CRD-DD-10's consequences note first.
   the standalone `ContributionRequestDrawerComponent` (DSP-T-3: now a thin shell) AND
   `NotificationDetailContentComponent` (DSP-T-3: the extracted body/footer), plus
   `PrimaryDeclineJustificationDialogComponent` and keeps `PrDialogComponent` (CRD-T-7 restored it).
-- Inputs: `notification`, `isSent`. Output: `requestEvent` — emitted in `finalize`, **after** the
+- Inputs: `notification`, `isSent`, `autoAction` (BELL-T-5, below). Outputs: `autoActionConsumed`, `requestEvent` — emitted in `finalize`, **after** the
   `next` handler, and the refetch may rebind this instance to a different notification (see the
   DD-6 trap above).
 - The decision is recorded by `ResultsApiService.PATCH_updateRequest(body, isP25Request)` →
@@ -365,7 +400,13 @@ code" without checking design.md CRD-DD-10's consequences note first.
   is `[hidden]` for bilateral, and completing it fires a second `request_status_id: 2` PATCH.
 - ⚠️ `invalidateRequest()` disables buttons and the drawer's footer alike for non-admins when the
   request's phase differs from the current one. On prtest every pending bilateral request sits in
-  closed phase 34 — needs an admin account or an open-phase request.
+  closed phase 34 — needs an admin account or an open-phase request. **BELL-T-1:** the eligibility
+  predicate itself (phase/admin/QA/platform-closed check) now lives in
+  `../../utils/request-decision.ts::isDecidable(row, ctx)` — `invalidateRequest()` is just
+  `requestingAccept || requestingReject || !isDecidable(this.notification, { isAdmin, platformIsClosed,
+  currentPhaseId, ipsrCurrentPhaseId })`. The busy flags (`requestingAccept`/`requestingReject`) stay
+  component-local; everything else about this trap (prtest phase 34, needs admin/open-phase) is
+  unchanged.
 - ⚠️ **Closing any popup, or the drawer, records NOTHING** (CRD-R-9). Never auto-accept on close.
 - `source_name` is **derived** server-side, not a column; if that mapping changes, `acceptsWithoutToc`
   silently falls back to the legacy flow.
@@ -425,6 +466,22 @@ code" without checking design.md CRD-DD-10's consequences note first.
 ## DSP-T-5 rework attempt 2: `[chain]` narrows via `@let`, not a second `approvalChain()` call
 `[chain]` reads a `@let chainState` local; a second `approvalChain()` call is not narrowed under
 `strictTemplates`, and only `ngc` catches it (see `src/CLAUDE.md` §21.7).
+
+**Verified:** 2026-10-06 · qa-development-2026-ss · BELL-T-11 (`drawerAcceptLabel()` now delegates to `acceptLabelFor(row)` in `utils/request-decision.ts`, the single source shared with the bell card; it returns the explicit string ("Accept contribution" for the old `null` case), and the row template no longer needs its `?? 'Accept contribution'` fallback). Prior: BELL-T-9 (`runAutoAction()` opens the detail drawer for a ToC-carried accept, 0 PATCH; see BELL-T-9 section). Prior: BELL-T-5 attempt 2 (BELL-T-6 D-1): `ngOnChanges` re-arms `autoActionRan` when `autoAction` becomes falsy (re-hand-off on the same instance); the inbox now also reacts to same-route `queryParamMap` changes. Prior: BELL-T-7 (`notifications/bell-quick-inbox`): `runAutoAction()` gated so a link never PATCHes (see the BELL-T-7 section above); no other handler changed.
+
+**Prior verification:** 2026-10-06 · qa-development-2026-ss · BELL-T-5 (`notifications/bell-quick-inbox`): added `autoAction`/`autoActionConsumed` (see the new BELL-T-5 section above); no change to any existing handler. Supersedes nothing below.
+
+**Prior verification:** 2026-10-06 · qa-development-2026-ss · BELL-T-1 attempt 2 (`notifications/bell-quick-inbox`,
+Reviewer FAIL — folder `CLAUDE.md` not updated): body construction and the primary-decline
+`justification` gate moved from `acceptOrReject()` into `../../utils/request-decision.ts::buildDecisionBody()`;
+the `invalidateRequest()` eligibility predicate moved into `isDecidable()` in that same file — see the
+amended bullets under "PDR-T-4" and "Traps" above. `classifyAccept()`, `declineMode()` and `isP25()`
+(also in that util) are not yet consumed here — they exist for the bell (`BELL-T-2`/`BELL-T-3`) and
+are covered by `../../utils/request-decision.spec.ts`'s own table-driven parity spec, not by this
+component's spec. No behavior change: `acceptOrReject`/`invalidateRequest`/`submitPrimaryDecline`/
+`onAcceptContribution`/`onDrawerAccept` are unchanged in outcome, every existing spec in this folder
+and `../contribution-request-drawer/` stayed green and unmodified. Supersedes nothing below — it only
+adds these two bullets and this stamp.
 
 **Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-9 fix round (`notifications/detail-side-panel`,
 HITL browser pass + user decisions): `activityDate` now reads `requested_date ?? created_date` (F-2,

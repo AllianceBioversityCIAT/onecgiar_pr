@@ -4698,5 +4698,277 @@ describe('NotificationItemComponent', () => {
       });
     });
   });
+  // @akili-spec notifications/bell-quick-inbox (BELL-T-5, BELL-DD-4): `autoAction` replays the row's
+  // own Accept/Decline handler exactly once and then reports `autoActionConsumed`. jsdom proves the
+  // wiring only; the real dialog opening after a route transition is BELL-T-6 manual pass.
+  describe('BELL-T-5 - autoAction', () => {
+    const bilateralStepRow = () => ({
+      share_result_request_id: 77,
+      result_id: '7774',
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: false,
+      requested_date: '2026-09-25T01:24:56.104Z',
+      obj_result: {
+        result_code: '5618',
+        title: 'A bilateral result',
+        status_id: '1',
+        source_name: 'W3/Bilaterals',
+        obj_version: { id: '30', obj_portfolio: { acronym: 'P25' } }
+      }
+    });
+    const primaryRow = () => ({ ...bilateralStepRow(), request_type: 'primary' });
+
+    let patchSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.rolesSE.platformIsClosed = false;
+      patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+      component.isSent = false;
+    });
+
+    const flush = () => Promise.resolve();
+
+    it("autoAction='accept' on a bilateral step row -> showTocPromptDialog() true and 0 PATCH", async () => {
+      component.notification = bilateralStepRow();
+      fixture.componentRef.setInput('autoAction', 'accept');
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(component.showTocPromptDialog()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it("autoAction='decline' on a primary row -> showPrimaryDeclineDialog() true", async () => {
+      component.notification = primaryRow();
+      fixture.componentRef.setInput('autoAction', 'decline');
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(component.showPrimaryDeclineDialog()).toBe(true);
+      expect(component.showConfirmRejectDialog()).toBe(false);
+    });
+
+    it("autoAction='decline' on a non-primary row -> the inline reject confirm (showConfirmRejectDialog)", async () => {
+      component.notification = bilateralStepRow();
+      fixture.componentRef.setInput('autoAction', 'decline');
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(component.showConfirmRejectDialog()).toBe(true);
+    });
+
+    it('runs the handler once and emits autoActionConsumed once, even when the input is set twice', async () => {
+      component.notification = bilateralStepRow();
+      const acceptSpy = jest.spyOn(component, 'onAcceptContribution');
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+
+      fixture.componentRef.setInput('autoAction', 'accept');
+      fixture.detectChanges();
+      fixture.componentRef.setInput('autoAction', null);
+      fixture.componentRef.setInput('autoAction', 'accept');
+      fixture.detectChanges();
+      await flush();
+
+      expect(acceptSpy).toHaveBeenCalledTimes(1);
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    // BELL-T-6 D-1 follow-up: the SAME row instance survives between two bell hand-offs for the same
+    // request (cancel the modal, reopen the bell, click Accept again). The inbox clears the input after
+    // the first one, so the second arrival is a new hand-off and must replay; only a re-set WITHOUT the
+    // input having been cleared (previous test) stays a single run.
+    it('a second hand-off after the input was cleared replays on the same instance (runs twice, consumed twice)', async () => {
+      component.notification = bilateralStepRow();
+      const acceptSpy = jest.spyOn(component, 'onAcceptContribution');
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+
+      fixture.componentRef.setInput('autoAction', 'accept');
+      fixture.detectChanges();
+      await flush();
+      expect(acceptSpy).toHaveBeenCalledTimes(1);
+      expect(consumed).toHaveBeenCalledTimes(1);
+
+      // the inbox consumed it: input cleared, change detection ran
+      fixture.componentRef.setInput('autoAction', null);
+      fixture.detectChanges();
+      expect(acceptSpy).toHaveBeenCalledTimes(1);
+
+      // modal cancelled, bell clicked again -> params come back
+      fixture.componentRef.setInput('autoAction', 'accept');
+      fixture.detectChanges();
+      await flush();
+
+      expect(acceptSpy).toHaveBeenCalledTimes(2);
+      expect(consumed).toHaveBeenCalledTimes(2);
+    });
+
+    it('does nothing and emits nothing while autoAction is not set', async () => {
+      component.notification = bilateralStepRow();
+      const acceptSpy = jest.spyOn(component, 'onAcceptContribution');
+      const declineSpy = jest.spyOn(component, 'onDeclineClick');
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(acceptSpy).not.toHaveBeenCalled();
+      expect(declineSpy).not.toHaveBeenCalled();
+      expect(consumed).not.toHaveBeenCalled();
+    });
+
+    it('a row that is no longer pending still consumes the param but opens nothing', async () => {
+      component.notification = { ...bilateralStepRow(), request_status_id: 2 };
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+      fixture.componentRef.setInput('autoAction', 'decline');
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(component.showConfirmRejectDialog()).toBe(false);
+      expect(component.showPrimaryDeclineDialog()).toBe(false);
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // @akili-spec notifications/bell-quick-inbox (BELL-T-7, BELL-R-6 "a link never decides"): a crafted
+  // `?request=N&action=...` link must never record a decision. Every test spies PATCH_updateRequest
+  // (the call that records it) - asserting only "handler not called" would not prove it.
+  describe('BELL-T-7 - a deep link never records a decision', () => {
+    const baseRow = () => ({
+      share_result_request_id: 77,
+      result_id: '7774',
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: false,
+      requested_date: '2026-09-25T01:24:56.104Z',
+      obj_result: {
+        result_code: '5618',
+        title: 'A result',
+        status_id: '1',
+        source_name: 'W3/Bilaterals',
+        obj_version: { id: '30', obj_portfolio: { acronym: 'P25' } }
+      }
+    });
+    const rows: Record<string, () => any> = {
+      primary: () => ({ ...baseRow(), request_type: 'primary' }),
+      'ToC-carried one-click': () => ({ ...baseRow(), is_map_to_toc: true }),
+      'bilateral step': () => baseRow(),
+      'legacy modal-first (W1/W2)': () => ({ ...baseRow(), obj_result: { ...baseRow().obj_result, source_name: 'W1/W2' } }),
+      'P25 W1/W2 ToC-carried': () => ({ ...baseRow(), is_map_to_toc: true, obj_result: { ...baseRow().obj_result, source_name: 'W1/W2' } }),
+      'IPSR ToC-carried': () => ({
+        ...baseRow(),
+        is_map_to_toc: true,
+        obj_result: { ...baseRow().obj_result, source_name: 'W1/W2', obj_result_type: { id: 10 } }
+      })
+    };
+
+    let patchSpy: jest.SpyInstance;
+    const flush = () => Promise.resolve();
+
+    beforeEach(() => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.rolesSE.platformIsClosed = false;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: '30' };
+      mockApiService.dataControlSE.IPSRCurrentPhase = { phaseId: '30' };
+      patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+      component.isSent = false;
+    });
+
+    const run = async (row: any, action: 'accept' | 'decline') => {
+      component.notification = row;
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+      fixture.componentRef.setInput('autoAction', action);
+      fixture.detectChanges();
+      await flush();
+      return consumed;
+    };
+
+    it('primary row + action=accept -> 0 PATCH_updateRequest, no dialog, consumed once', async () => {
+      const consumed = await run(rows['primary'](), 'accept');
+
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(component.showTocPromptDialog()).toBe(false);
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('ToC-carried one-click row + action=accept -> 0 PATCH_updateRequest, consumed once', async () => {
+      const consumed = await run(rows['ToC-carried one-click'](), 'accept');
+
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('BELL-T-9: ToC-carried contribution + action=accept -> the review step (drawer) opens, 0 PATCH, 0 legacy modal', async () => {
+      const consumed = await run(rows['ToC-carried one-click'](), 'accept');
+
+      expect(component.drawerOpen()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(mockApiService.dataControlSE.showShareRequest).not.toBe(true);
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('BELL-T-9: primary + action=accept -> nothing opens (consume only), 0 PATCH', async () => {
+      await run(rows['primary'](), 'accept');
+
+      expect(component.drawerOpen()).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it('BELL-T-9: a not-pending ToC-carried row + action=accept opens nothing', async () => {
+      await run({ ...rows['ToC-carried one-click'](), request_status_id: 2 }, 'accept');
+
+      expect(component.drawerOpen()).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it('a ToC-carried IPSR row + action=accept -> 0 PATCH_updateRequest', async () => {
+      const consumed = await run(rows['IPSR ToC-carried'](), 'accept');
+
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('bilateral step row + action=accept -> the prompt still opens, 0 PATCH_updateRequest, consumed once', async () => {
+      const consumed = await run(rows['bilateral step'](), 'accept');
+
+      expect(component.showTocPromptDialog()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('legacy modal-first row + action=accept -> the modal opens (step), 0 PATCH_updateRequest', async () => {
+      const consumed = await run(rows['legacy modal-first (W1/W2)'](), 'accept');
+
+      expect(mockApiService.dataControlSE.showShareRequest).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('primary row + action=decline -> the justification dialog opens and 0 PATCH_updateRequest', async () => {
+      const consumed = await run(rows['primary'](), 'decline');
+
+      expect(component.showPrimaryDeclineDialog()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(Object.keys(rows))('%s row + action=decline -> 0 PATCH_updateRequest until the user confirms', async kind => {
+      const consumed = await run(rows[kind](), 'decline');
+
+      expect(component.showPrimaryDeclineDialog() || component.showConfirmRejectDialog()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 

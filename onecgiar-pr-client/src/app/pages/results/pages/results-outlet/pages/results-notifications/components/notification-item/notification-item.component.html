@@ -267,7 +267,7 @@
                button text now matches the drawer's `acceptLabel` exactly, per kind — single source
                (`drawerAcceptLabel()`), falling back to the pre-existing "Accept contribution" for
                everything else (W1/W2 unchanged, `PSR-DD-10`). -->
-          @let buttonTextConfirm = drawerAcceptLabel() ?? 'Accept contribution';
+          @let buttonTextConfirm = drawerAcceptLabel();
 
           <div class="notification_content_actions_buttons">
             <app-pr-button

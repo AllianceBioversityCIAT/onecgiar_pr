@@ -1,8 +1,10 @@
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { skip } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ResultsNotificationsService } from './results-notifications.service';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { buildUnifiedList, UnifiedNotification } from './utils/build-unified-list';
 import { FilterNotificationByInitiativePipe } from './pipes/filter-notification-by-initiative.pipe';
 import { FilterNotificationBySearchPipe } from './pipes/filter-notification-by-search.pipe';
@@ -72,6 +74,13 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
    * `results-notifications` -> `.../requests` -> `.../requests/received`). */
   activeSource = signal<NotifSourceView>('received');
 
+  /**
+   * @akili-spec notifications/bell-quick-inbox (BELL-T-5, BELL-DD-4): the `request` + `action` deep
+   * link the bell hands off with. Set once from the query params; the one `received` request row whose
+   * id matches gets it as `[autoAction]` and clears it via `onAutoActionConsumed()`. Null = no deep link.
+   */
+  pendingAutoAction = signal<{ requestId: string; action: 'accept' | 'decline' } | null>(null);
+
   /** NOTIF-T-6 i18n: tab labels come from the same centralized copy `notificationItem.status*`
    * already uses, so the row's own status text and this tab row never say two different things. */
   readonly copy = CONTRIBUTION_REQUEST_DRAWER_COPY;
@@ -127,6 +136,7 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   private readonly filterByFundingPipe = new FilterNotificationByFundingPipe();
   private readonly filterByResultTypePipe = new FilterNotificationByResultTypePipe();
   private readonly groupByRecencyPipe = new GroupNotificationsByRecencyPipe();
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(
     public api: ApiService,
@@ -385,6 +395,10 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     });
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
+    // BELL-T-5 attempt 2 (BELL-T-6 D-1): a bell hand-off while this page is ALREADY open only changes the
+    // query params on the same route, so `setQueryParams()` (init-time snapshot) never sees it. `skip(1)`
+    // drops the replay of the current params (the snapshot above already handled them).
+    this.activatedRoute.queryParamMap.pipe(skip(1), takeUntilDestroyed(this.destroyRef)).subscribe(params => this.onQueryParamMapChange(params));
     this.api.dataControlSE.getCurrentPhases().subscribe();
     this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
   }
@@ -398,6 +412,15 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
       this.resultsNotificationsSE.phaseFilter = this.activatedRoute.snapshot.queryParams['phase'];
     }
 
+    // BELL-T-5: a bell hand-off (`request` + a valid `action`). `init`/`search` are deliberately NOT
+    // applied. Without `request` everything below is unchanged.
+    const request = this.activatedRoute.snapshot.queryParams['request'];
+    const action = this.activatedRoute.snapshot.queryParams['action'];
+    if (request && (action === 'accept' || action === 'decline')) {
+      this.armBellHandoff(String(request), action);
+      return;
+    }
+
     if (this.activatedRoute.snapshot.queryParams['init']) {
       this.resultsNotificationsSE.initiativeIdFilter = this.activatedRoute.snapshot.queryParams['init'];
     }
@@ -405,6 +428,57 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     if (this.activatedRoute.snapshot.queryParams['search']) {
       this.resultsNotificationsSE.searchFilter = this.activatedRoute.snapshot.queryParams['search'];
     }
+  }
+
+  /**
+   * BELL-T-5 attempt 2 (BELL-T-6 D-1): the same hand-off, arriving while the inbox is already open.
+   * Only a `request` + valid `action` does anything; the clearing navigation (`request`/`action` null) and
+   * every other param change fall through untouched, so it cannot re-trigger itself.
+   */
+  private onQueryParamMapChange(params: ParamMap): void {
+    const request = params.get('request');
+    const action = params.get('action');
+    if (!request || (action !== 'accept' && action !== 'decline')) return;
+
+    const phase = params.get('phase');
+    if (phase && phase != this.resultsNotificationsSE.phaseFilter) {
+      this.resultsNotificationsSE.phaseFilter = phase;
+      this.resultsNotificationsSE.onPhaseChange(phase);
+    }
+    this.armBellHandoff(request, action);
+  }
+
+  /** BELL-T-5: shared by init and the live case — program/search/facet filters reset (so the row cannot be
+   * hidden by them), Received view + All tab forced, and the matching row is handed `autoAction`. */
+  private armBellHandoff(requestId: string, action: 'accept' | 'decline'): void {
+    this.resultsNotificationsSE.resetFilters();
+    this.activeSource.set('received');
+    this.activeTab.set('all');
+    this.pendingAutoAction.set({ requestId, action });
+  }
+
+  /**
+   * BELL-T-5: the `autoAction` for one rendered row — only the `received` request row whose
+   * `share_result_request_id` matches (an Updates row's `notification_id` shares the number space).
+   */
+  autoActionFor(item: UnifiedNotification): 'accept' | 'decline' | null {
+    const pending = this.pendingAutoAction();
+    if (!pending) return null;
+    const row = item as any;
+    if (row?.origin !== 'received') return null;
+    return String(row?.share_result_request_id) === pending.requestId ? pending.action : null;
+  }
+
+  /** BELL-T-5: the row ran its handler — drop the pending action and strip `request`/`action` from the
+   * URL (`replaceUrl`, so reload/back do not replay it). */
+  onAutoActionConsumed(): void {
+    this.pendingAutoAction.set(null);
+    this.router.navigate([], {
+      relativeTo: this.activatedRoute,
+      queryParams: { request: null, action: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   clearFilters() {

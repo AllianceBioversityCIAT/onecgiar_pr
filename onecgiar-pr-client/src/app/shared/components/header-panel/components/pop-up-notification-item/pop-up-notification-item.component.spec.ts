@@ -7,6 +7,23 @@ import { PopUpNotificationItemComponent } from './pop-up-notification-item.compo
 import { BilateralApiService } from '../../../../services/api/bilateral-api.service';
 import { ResultsApiService } from '../../../../services/api/results-api.service';
 import { NotificationType } from '../../../../constants/notification-type.constants';
+import { By } from '@angular/platform-browser';
+import { Directive, Input } from '@angular/core';
+import { HlmTooltip } from '@spartan/tooltip';
+import { BrnButton } from '@spartan-ng/brain/button';
+import { ApiService } from '../../../../services/api/api.service';
+import { ResultsNotificationsService } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
+import { acceptLabelFor } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-decision';
+import { BELL_QUICK_INBOX_COPY } from '../../../../../internationalization/bell-quick-inbox.copy';
+import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../internationalization/contribution-request-drawer.copy';
+
+// The shared Jest Brain stub (tests/mocks/spartanBrainMock.ts) declares BrnTooltip with no inputs, so the
+// real HlmTooltip host-directive inputs raise NG0311 under Jest. Swap in a same-selector stub here.
+@Directive({ selector: '[hlmTooltip]', standalone: true })
+class HlmTooltipStub {
+  @Input() hlmTooltip: string | undefined;
+  @Input() tooltipDisabled: boolean | undefined;
+}
 
 describe('PopUpNotificationItemComponent', () => {
   let component: PopUpNotificationItemComponent;
@@ -14,6 +31,8 @@ describe('PopUpNotificationItemComponent', () => {
   let router: { navigate: jest.Mock; navigateByUrl: jest.Mock };
   let bilateralApi: { GET_centersByResultId: jest.Mock };
   let resultsApi: { PATCH_readNotification: jest.Mock };
+  let notificationsSE: { decideRequest: jest.Mock; refreshBell: jest.Mock };
+  let apiMock: any;
 
   beforeEach(async () => {
     router = { navigate: jest.fn(), navigateByUrl: jest.fn() };
@@ -21,15 +40,24 @@ describe('PopUpNotificationItemComponent', () => {
       GET_centersByResultId: jest.fn().mockReturnValue(of({ response: [] }))
     };
     resultsApi = { PATCH_readNotification: jest.fn().mockReturnValue(of({})) };
+    notificationsSE = { decideRequest: jest.fn().mockResolvedValue(undefined), refreshBell: jest.fn() };
+    apiMock = {
+      rolesSE: { isAdmin: false, platformIsClosed: false },
+      dataControlSE: { reportingCurrentPhase: { phaseId: 'v1' }, IPSRCurrentPhase: { phaseId: 'v1' } }
+    };
 
     await TestBed.configureTestingModule({
       imports: [PopUpNotificationItemComponent],
       providers: [
         { provide: Router, useValue: router },
         { provide: BilateralApiService, useValue: bilateralApi },
-        { provide: ResultsApiService, useValue: resultsApi }
+        { provide: ResultsApiService, useValue: resultsApi },
+        { provide: ApiService, useValue: apiMock },
+        { provide: ResultsNotificationsService, useValue: notificationsSE }
       ]
-    }).compileComponents();
+    })
+      .overrideComponent(PopUpNotificationItemComponent, { remove: { imports: [HlmTooltip] }, add: { imports: [HlmTooltipStub] } })
+      .compileComponents();
 
     fixture = TestBed.createComponent(PopUpNotificationItemComponent);
     component = fixture.componentInstance;
@@ -202,22 +230,95 @@ describe('PopUpNotificationItemComponent', () => {
       expect(emitted).toHaveBeenCalled();
     });
 
-    it('leaves a non-bilateral notification on its plain anchor navigation', () => {
-      const emitted = jest.fn();
-      component.itemSelected.subscribe(emitted);
-      component.notification = {
-        notification_id: 1,
-        obj_notification_type: { type: NotificationType.RESULT_SUBMITTED },
-        obj_result: { result_code: 'R1', title: 'T', obj_version: { id: 'v1' }, obj_result_by_initiatives: [] }
-      };
+    // BELL-R-9 / BELL-AC-8 (BELL-T-3 attempt 2): every unread update is marked read on click, not
+    // only the bilateral types. The destination stays the existing merged-inbox link, reached in-app
+    // (SPA) so the read PATCH is not aborted by a full document navigation.
+    describe('plain update types (BELL-R-9)', () => {
+      const plainUpdate = (type: string, overrides: any = {}) => ({
+        notification_id: 41,
+        read: false,
+        obj_notification_type: { type },
+        obj_result: {
+          result_code: 'R1',
+          title: 'T',
+          obj_version: { id: 'v1' },
+          obj_result_by_initiatives: [{ obj_initiative: { id: 'i7', official_code: 'SP7' } }]
+        },
+        ...overrides
+      });
 
-      const event = clickEvent();
-      component.onNotificationClick(event);
+      it.each([
+        ['RESULT_QUALITY_ASSESSED', NotificationType.RESULT_QUALITY_ASSESSED],
+        ['PRIMARY_PROGRAM_REQUEST_ACCEPTED', NotificationType.PRIMARY_PROGRAM_REQUEST_ACCEPTED],
+        ['RESULT_SUBMITTED', NotificationType.RESULT_SUBMITTED]
+      ])('%s: marks read, refreshes the bell once and keeps the existing destination', (_name, type) => {
+        const emitted = jest.fn();
+        component.itemSelected.subscribe(emitted);
+        component.notification = plainUpdate(type);
+        const expectedUrl = '/' + component.generateUrlLink(component.notification);
 
-      expect(event.preventDefault).not.toHaveBeenCalled();
-      expect(router.navigate).not.toHaveBeenCalled();
-      expect(resultsApi.PATCH_readNotification).not.toHaveBeenCalled();
-      expect(emitted).toHaveBeenCalled();
+        const event = clickEvent();
+        component.onNotificationClick(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(resultsApi.PATCH_readNotification).toHaveBeenCalledTimes(1);
+        expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(41);
+        expect(notificationsSE.refreshBell).toHaveBeenCalledTimes(1);
+        expect(router.navigateByUrl).toHaveBeenCalledWith(expectedUrl);
+        expect(expectedUrl).toContain('results-notifications?phase=v1&init=i7');
+        expect(emitted).toHaveBeenCalled();
+      });
+
+      it('legacy id-only rows (notification_type 3) are marked read too', () => {
+        component.notification = {
+          notification_id: 42,
+          read: false,
+          notification_type: 3,
+          obj_result: { result_code: 'R3', title: 'T', obj_version: { id: 'v1' }, obj_result_by_initiatives: [] }
+        };
+
+        component.onNotificationClick(clickEvent());
+
+        expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(42);
+        expect(notificationsSE.refreshBell).toHaveBeenCalledTimes(1);
+      });
+
+      it('an already-read update navigates without a PATCH or a refresh', () => {
+        component.notification = plainUpdate(NotificationType.RESULT_SUBMITTED, { read: true });
+
+        component.onNotificationClick(clickEvent());
+
+        expect(resultsApi.PATCH_readNotification).not.toHaveBeenCalled();
+        expect(notificationsSE.refreshBell).not.toHaveBeenCalled();
+        expect(router.navigateByUrl).toHaveBeenCalled();
+      });
+
+      it('a failed read PATCH still navigates but does not refresh the bell', () => {
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        resultsApi.PATCH_readNotification.mockReturnValue(throwError(() => new Error('x')));
+        component.notification = plainUpdate(NotificationType.RESULT_QUALITY_ASSESSED);
+
+        component.onNotificationClick(clickEvent());
+
+        expect(router.navigateByUrl).toHaveBeenCalled();
+        expect(notificationsSE.refreshBell).not.toHaveBeenCalled();
+      });
+
+      it('a decision row (no notification_id) keeps the plain anchor: no preventDefault, no PATCH, no decide', () => {
+        component.notification = {
+          kind: 'decision',
+          share_result_request_id: 7,
+          obj_result: { result_code: 'R9', title: 'T', obj_version: { id: 'v1' } }
+        };
+
+        const event = clickEvent();
+        component.onNotificationClick(event);
+
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(router.navigateByUrl).not.toHaveBeenCalled();
+        expect(resultsApi.PATCH_readNotification).not.toHaveBeenCalled();
+        expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+      });
     });
 
     // 2026-09-05 — "submitted for your review" goes to the SP's review queue.
@@ -560,6 +661,627 @@ describe('PopUpNotificationItemComponent', () => {
       expect(flat).toBe(
         'The result 9341 - <title> created by SP01 has tagged the B-A1080 of your center (ABC). Click to see the result.'
       );
+    });
+  });
+
+  // @akili-spec notifications/bell-quick-inbox — BELL-T-3
+  describe('BELL-T-3: inline decision actions', () => {
+    const decisionRow = (overrides: any = {}) => ({
+      kind: 'decision',
+      share_result_request_id: 7,
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: true,
+      requested_date: '2026-10-01T00:00:00Z',
+      obj_requested_by: { first_name: 'Ana', last_name: 'Diaz' },
+      obj_owner_initiative: { id: 1, official_code: 'SP01' },
+      obj_shared_inititiative: { id: 2, official_code: 'SP02' },
+      obj_result: { id: 5, result_code: 'R9', title: 'Pending', status_id: 1, obj_version: { id: 'v1' }, obj_result_type: { id: 1 } },
+      ...overrides
+    });
+    const aiJobUpdateRow = () => ({
+      kind: 'update',
+      notification_id: 3,
+      read: false,
+      created_date: '2026-10-01T00:00:00Z',
+      result_id: null,
+      obj_result: null,
+      text: 'AI-assisted processing finished — 1 draft ready for CIP · 2 min https://reporting.cgiar.org/bilateral/CIP/drafts',
+      obj_notification_type: { type: NotificationType.BILATERAL_AI_JOB_FINISHED }
+    });
+
+    // A fresh, not-yet-checked fixture per test: the anchor [href] is computed from the row, so a row set
+    // after the shared fixture first ran detectChanges would trip NG0100 (WCT/WPT suites do the same).
+    beforeEach(() => {
+      fixture = TestBed.createComponent(PopUpNotificationItemComponent);
+      component = fixture.componentInstance;
+    });
+
+    const render = (row: any) => {
+      component.notification = row;
+      fixture.detectChanges();
+    };
+    const q = (id: string): HTMLButtonElement | null => fixture.nativeElement.querySelector(`[data-testid="${id}"]`);
+    const disabledOf = (id: string) => fixture.debugElement.query(By.css(`[data-testid="${id}"]`)).injector.get(BrnButton).disabled;
+    const click = (id: string) => q(id)!.click();
+
+    // BELL-P-9 (Step 0): a received-pending row renders with the existing request text, no adapter.
+    it('Step 0: a received-pending row renders the existing request text', () => {
+      render(decisionRow());
+      const text = fixture.nativeElement.textContent.replace(/\s+/g, ' ');
+      expect(text).toContain('Ana Diaz from SP02 has requested contribution');
+      expect(text).toContain('R9 - Pending');
+    });
+
+    it('an update row renders no Accept/Decline', () => {
+      render(aiJobUpdateRow());
+      expect(q('bell-accept')).toBeNull();
+      expect(q('bell-decline')).toBeNull();
+      expect(q('bell-decision-actions')).toBeNull();
+    });
+
+    it('a decision row renders Accept and Decline', () => {
+      render(decisionRow());
+      expect(q('bell-accept')?.textContent?.trim()).toBe('Accept contribution');
+      expect(q('bell-decline')?.textContent?.trim()).toBe(BELL_QUICK_INBOX_COPY.actions.decline);
+    });
+
+    it('a row with isDecidable=false binds disabled on both buttons (platform closed)', () => {
+      apiMock.rolesSE.platformIsClosed = true;
+      render(decisionRow());
+      expect(disabledOf('bell-accept')).toBe(true);
+      expect(disabledOf('bell-decline')).toBe(true);
+    });
+
+    it('a decidable row binds disabled=false', () => {
+      render(decisionRow());
+      expect(disabledOf('bell-accept')).toBe(false);
+      expect(disabledOf('bell-decline')).toBe(false);
+    });
+
+    it('a not-decidable row never decides nor hands off even if the handlers run', () => {
+      apiMock.rolesSE.platformIsClosed = true;
+      const handoff = jest.fn();
+      component.handoff.subscribe(handoff);
+      render(decisionRow({ is_map_to_toc: false, request_type: 'contributor' }));
+      const event = new Event('click');
+      component.onAcceptClick(event);
+      component.onDeclineClick(event);
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+      expect(handoff).not.toHaveBeenCalled();
+    });
+
+    it('Quality Assessed rows expose the inbox tooltip text; decidable rows expose none', () => {
+      component.notification = decisionRow({ obj_result: { ...decisionRow().obj_result, status_id: 2 } });
+      expect(component.actionTooltip).toBe(BELL_QUICK_INBOX_COPY.qaedTooltip);
+      component.notification = decisionRow();
+      expect(component.actionTooltip).toBe('');
+    });
+
+    it('BELL-T-11: confirming a one-click Accept and double-clicking calls decideRequest ONCE', () => {
+      let resolve!: () => void;
+      notificationsSE.decideRequest.mockReturnValue(new Promise<void>(r => (resolve = r)));
+      const row = decisionRow({ is_map_to_toc: false, request_type: 'primary' });
+      render(row);
+
+      click('bell-accept'); // enters confirm
+      click('bell-accept'); // decides
+      click('bell-accept'); // busy: ignored
+      fixture.detectChanges();
+
+      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(1);
+      expect(notificationsSE.decideRequest).toHaveBeenCalledWith(row, true);
+      expect(disabledOf('bell-accept')).toBe(true);
+      expect(disabledOf('bell-decline')).toBe(true);
+      resolve();
+    });
+
+    it('BELL-T-9: Accept on a ToC-carried contribution hands off and never decides', () => {
+      const handoff = jest.fn();
+      component.handoff.subscribe(handoff);
+      const row = decisionRow({ is_map_to_toc: true, request_type: 'contribution' });
+      render(row);
+
+      click('bell-accept');
+
+      expect(handoff).toHaveBeenCalledTimes(1);
+      expect(handoff).toHaveBeenCalledWith({ row, action: 'accept' });
+      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(0);
+    });
+
+    it('Accept on a primary row decides directly (after its confirm step)', () => {
+      render(decisionRow({ is_map_to_toc: false, request_type: 'primary' }));
+      click('bell-accept');
+      click('bell-accept');
+      expect(notificationsSE.decideRequest).toHaveBeenCalledWith(expect.anything(), true);
+    });
+
+    it('Accept on a bilateral step row emits handoff and never decides', () => {
+      const handoff = jest.fn();
+      component.handoff.subscribe(handoff);
+      const row = decisionRow({ is_map_to_toc: false, request_type: 'contributor' });
+      render(row);
+
+      click('bell-accept');
+
+      expect(handoff).toHaveBeenCalledTimes(1);
+      expect(handoff).toHaveBeenCalledWith({ row, action: 'accept' });
+      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(0);
+    });
+
+    it('Decline on a primary row emits handoff(decline) with no PATCH and no confirm strip', () => {
+      const handoff = jest.fn();
+      component.handoff.subscribe(handoff);
+      const row = decisionRow({ is_map_to_toc: false, request_type: 'primary' });
+      render(row);
+
+      click('bell-decline');
+      fixture.detectChanges();
+
+      expect(handoff).toHaveBeenCalledWith({ row, action: 'decline' });
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+      expect(q('bell-decline-confirm')).toBeNull();
+    });
+
+    it('BELL-T-12: first Decline click on a contribution row arms "Confirm decline" and sends nothing (no strip)', () => {
+      render(decisionRow());
+      click('bell-decline');
+      fixture.detectChanges();
+
+      expect(q('bell-decline')?.textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.confirmDecline);
+      expect(q('bell-accept')).toBeTruthy();
+      expect(q('bell-decline-confirm')).toBeNull();
+      expect(q('bell-decline-cancel')).toBeNull();
+      expect(q('bell-decline-confirm-strip')).toBeNull();
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('BELL-T-12: Decline second click calls decideRequest(row, false) once, even on a click while busy', () => {
+      let resolve!: () => void;
+      notificationsSE.decideRequest.mockReturnValue(new Promise<void>(r => (resolve = r)));
+      const row = decisionRow();
+      render(row);
+      click('bell-decline'); // arms
+      click('bell-decline'); // decides
+      click('bell-decline'); // busy: ignored
+      fixture.detectChanges();
+
+      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(1);
+      expect(notificationsSE.decideRequest).toHaveBeenCalledWith(row, false);
+      resolve();
+    });
+
+    it('on error the error text is visible and the buttons are enabled again', async () => {
+      notificationsSE.decideRequest.mockRejectedValue(new Error('boom'));
+      render(decisionRow({ is_map_to_toc: false, request_type: 'primary' }));
+
+      click('bell-accept');
+      click('bell-accept');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(q('bell-decision-error')?.textContent).toContain(BELL_QUICK_INBOX_COPY.decisionError);
+      expect(disabledOf('bell-accept')).toBe(false);
+      expect(disabledOf('bell-decline')).toBe(false);
+    });
+
+    it('a failed confirmed decline shows the error and re-enables both buttons', async () => {
+      notificationsSE.decideRequest.mockRejectedValue(new Error('boom'));
+      render(decisionRow());
+      click('bell-decline');
+      fixture.detectChanges();
+
+      click('bell-decline');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(q('bell-decision-error')).toBeTruthy();
+      expect(disabledOf('bell-decline')).toBe(false);
+      expect(disabledOf('bell-accept')).toBe(false);
+    });
+
+    it('a retry after an error sends a new request and clears the error', async () => {
+      notificationsSE.decideRequest.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
+      render(decisionRow({ is_map_to_toc: false, request_type: 'primary' }));
+      click('bell-accept');
+      click('bell-accept');
+      await fixture.whenStable();
+      fixture.detectChanges();
+      click('bell-accept');
+      click('bell-accept');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(2);
+      expect(q('bell-decision-error')).toBeNull();
+    });
+
+    it('clicking the row body navigates like today and never decides', () => {
+      render(decisionRow());
+      const itemSelected = jest.fn();
+      component.itemSelected.subscribe(itemSelected);
+
+      (fixture.nativeElement.querySelector('a.notification') as HTMLElement).click();
+
+      expect(itemSelected).toHaveBeenCalled();
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('button clicks do not bubble out of the actions block (no row navigation)', () => {
+      render(decisionRow());
+      const itemSelected = jest.fn();
+      component.itemSelected.subscribe(itemSelected);
+      const hostClick = jest.fn();
+      fixture.nativeElement.addEventListener('click', hostClick);
+
+      click('bell-accept');
+
+      expect(hostClick).not.toHaveBeenCalled();
+      expect(itemSelected).not.toHaveBeenCalled();
+    });
+
+    it('clicking an unread update marks it read and refreshes the bell ONCE after the PATCH succeeds', () => {
+      component.notification = aiJobUpdateRow();
+
+      component.onNotificationClick({ preventDefault: jest.fn() } as unknown as MouseEvent);
+
+      expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(3);
+      expect(notificationsSE.refreshBell).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not refresh the bell when the read PATCH fails', () => {
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      resultsApi.PATCH_readNotification.mockReturnValue(throwError(() => new Error('x')));
+      component.notification = aiJobUpdateRow();
+
+      component.onNotificationClick({ preventDefault: jest.fn() } as unknown as MouseEvent);
+
+      expect(notificationsSE.refreshBell).not.toHaveBeenCalled();
+    });
+  });
+
+  // @akili-spec notifications/bell-quick-inbox — BELL-T-10: card layout (chips, status icon, time)
+  describe('BELL-T-10: popover cards', () => {
+    const copy = BELL_QUICK_INBOX_COPY;
+    const decision = () => ({
+      kind: 'decision',
+      share_result_request_id: 7,
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: true,
+      requested_date: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
+      obj_requested_by: { first_name: 'Ana', last_name: 'Diaz' },
+      obj_owner_initiative: { id: 1, official_code: 'SP01' },
+      obj_shared_inititiative: { id: 2, official_code: 'SP02' },
+      obj_result: { id: 5, result_code: 'R9', title: 'Pending', status_id: 1, obj_version: { id: 'v1' }, obj_result_type: { id: 1 } }
+    });
+    const update = (type: NotificationType | null) => ({
+      kind: 'update',
+      notification_id: 11,
+      read: false,
+      created_date: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+      obj_notification_type: type ? { type } : undefined,
+      obj_emitter_user: { first_name: 'Eva', last_name: 'Ruiz' },
+      obj_result: { result_code: 'R5', title: 'Done', obj_version: { id: 'v1' }, obj_result_by_initiatives: [{ obj_initiative: { id: 3, official_code: 'SP09' } }] }
+    });
+    const render = (row: any) => {
+      fixture = TestBed.createComponent(PopUpNotificationItemComponent);
+      component = fixture.componentInstance;
+      component.notification = row;
+      fixture.detectChanges();
+    };
+    const q = (id: string): HTMLElement | null => fixture.nativeElement.querySelector(`[data-testid="${id}"]`);
+
+    it('a decision card shows the program chip, a REQUIRES DECISION chip and the relative time, and no status icon', () => {
+      render(decision());
+      expect(q('bell-program-chip')?.textContent?.trim()).toBe('SP01');
+      expect(q('bell-status-chip')?.textContent?.trim()).toBe(copy.card.requiresDecision);
+      expect(q('bell-time')?.textContent?.trim()).toBe('4d ago');
+      expect(q('bell-status-icon')).toBeNull();
+      expect(q('bell-accept')).not.toBeNull();
+    });
+
+    it('a decision card keeps the Accept / Decline pair inside one full-width row', () => {
+      render(decision());
+      const row = q('bell-decision-buttons');
+      expect(row?.contains(q('bell-accept'))).toBe(true);
+      expect(row?.contains(q('bell-decline'))).toBe(true);
+    });
+
+    it.each([
+      [NotificationType.BILATERAL_RESULT_APPROVED, 'approved', copy.card.approved],
+      [NotificationType.PRIMARY_PROGRAM_REQUEST_ACCEPTED, 'approved', copy.card.approved],
+      [NotificationType.RESULT_CONTRIBUTION_ACCEPTED, 'approved', copy.card.approved],
+      [NotificationType.BILATERAL_RESULT_REJECTED, 'declined', copy.card.declined],
+      [NotificationType.PRIMARY_PROGRAM_REQUEST_DECLINED, 'declined', copy.card.declined],
+      [NotificationType.RESULT_CONTRIBUTION_DECLINED, 'declined', copy.card.declined],
+      [NotificationType.RESULT_SUBMITTED, 'info', 'Submitted'],
+      [null, 'info', copy.card.updateFallback]
+    ])('an update of type %s renders a %s status icon and the "%s" chip, the program chip and the time', (type, status, label) => {
+      render(update(type as NotificationType | null));
+      expect(q('bell-status-icon')?.getAttribute('data-status')).toBe(status);
+      expect(q('bell-status-chip')?.textContent?.trim()).toBe(label);
+      expect(q('bell-program-chip')?.textContent?.trim()).toBe('SP09');
+      expect(q('bell-time')?.textContent?.trim()).toBe('2h ago');
+    });
+
+    it('an update card has no buttons at all', () => {
+      render(update(NotificationType.BILATERAL_RESULT_APPROVED));
+      expect(fixture.nativeElement.querySelector('button')).toBeNull();
+      expect(q('bell-decision-actions')).toBeNull();
+    });
+  });
+
+  // @akili-spec notifications/bell-quick-inbox — BELL-T-11: inbox-matching labels + two-step Accept
+  describe('BELL-T-11: labels and two-step Accept', () => {
+    const copy = BELL_QUICK_INBOX_COPY;
+    const row = (overrides: any = {}) => ({
+      kind: 'decision',
+      share_result_request_id: 7,
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: false,
+      requested_date: '2026-10-01T00:00:00Z',
+      obj_requested_by: { first_name: 'Ana', last_name: 'Diaz' },
+      obj_owner_initiative: { id: 1, official_code: 'SP01' },
+      obj_shared_inititiative: { id: 2, official_code: 'SP02' },
+      obj_result: { id: 5, result_code: 'R9', title: 'Pending', status_id: 1, source_name: 'W1/W2', obj_version: { id: 'v1' }, obj_result_type: { id: 1 } },
+      ...overrides
+    });
+    const primary = (id = 7) => row({ request_type: 'primary', share_result_request_id: id });
+    const mount = (r: any) => {
+      const f = TestBed.createComponent(PopUpNotificationItemComponent);
+      f.componentInstance.notification = r;
+      f.detectChanges();
+      return f;
+    };
+    type Fx = ComponentFixture<PopUpNotificationItemComponent>;
+    const btn = (f: Fx) => f.nativeElement.querySelector('[data-testid="bell-accept"]') as HTMLButtonElement;
+    const text = (f: Fx) => btn(f).textContent!.trim();
+    const hint = (f: Fx) => f.nativeElement.querySelector('[data-testid="bell-accept-hint"]') as HTMLElement | null;
+
+    afterEach(() => jest.useRealTimers());
+
+    it.each([
+      ['primary', primary(), 'Accept as primary'],
+      ['bilateral contributor', row({ obj_result: { ...row().obj_result, source_name: 'W3/Bilaterals' } }), 'Accept'],
+      ['W1/W2', row(), 'Accept contribution'],
+      ['ToC-carried', row({ is_map_to_toc: true }), 'Accept contribution']
+    ])('the %s card Accept label equals the inbox label', (_k, r, expected) => {
+      const f = mount(r);
+      expect(text(f)).toBe(expected);
+      expect(text(f)).toBe(acceptLabelFor(r));
+      expect(f.nativeElement.querySelector('[data-testid="bell-decline"]').textContent.trim()).toBe(copy.actions.decline);
+    });
+
+    it('primary: first click shows "Confirm accept as primary" and sends nothing', () => {
+      const f = mount(primary());
+      btn(f).click();
+      f.detectChanges();
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+      expect(text(f)).toBe('Confirm accept as primary');
+      expect(hint(f)?.getAttribute('aria-live')).toBe('polite');
+      expect(hint(f)?.textContent?.trim()).toBe(copy.actions.confirmHint);
+    });
+
+    it('primary: second click decides once; a third click while busy sends nothing more', () => {
+      let resolve!: () => void;
+      notificationsSE.decideRequest.mockReturnValue(new Promise<void>(r => (resolve = r)));
+      const r = primary();
+      const f = mount(r);
+      btn(f).click();
+      btn(f).click();
+      btn(f).click();
+      f.detectChanges();
+      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(1);
+      expect(notificationsSE.decideRequest).toHaveBeenCalledWith(r, true);
+      resolve();
+    });
+
+    it('the confirm state reverts after 5 s with 0 decide', () => {
+      jest.useFakeTimers();
+      const f = mount(primary());
+      btn(f).click();
+      f.detectChanges();
+      expect(text(f)).toBe('Confirm accept as primary');
+      jest.advanceTimersByTime(4999);
+      f.detectChanges();
+      expect(text(f)).toBe('Confirm accept as primary');
+      jest.advanceTimersByTime(1);
+      f.detectChanges();
+      expect(text(f)).toBe('Accept as primary');
+      expect(hint(f)?.textContent?.trim()).toBe('');
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('Escape reverts the confirm state with 0 decide', () => {
+      const f = mount(primary());
+      btn(f).click();
+      f.detectChanges();
+      btn(f).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      f.detectChanges();
+      expect(text(f)).toBe('Accept as primary');
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('focus leaving the card reverts the confirm state; focus moving inside it does not', () => {
+      const f = mount(primary());
+      btn(f).click();
+      f.detectChanges();
+      const decline = f.nativeElement.querySelector('[data-testid="bell-decline"]') as HTMLElement;
+      btn(f).dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: decline }));
+      f.detectChanges();
+      expect(text(f)).toBe('Confirm accept as primary');
+      btn(f).dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
+      f.detectChanges();
+      expect(text(f)).toBe('Accept as primary');
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('entering confirm on card B resets card A (only one card in confirm)', () => {
+      const a = mount(primary(1));
+      const b = mount(primary(2));
+      btn(a).click();
+      a.detectChanges();
+      expect(text(a)).toBe('Confirm accept as primary');
+      btn(b).click();
+      a.detectChanges();
+      b.detectChanges();
+      expect(text(a)).toBe('Accept as primary');
+      expect(text(b)).toBe('Confirm accept as primary');
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('a contribution card: one click hands off, with no confirm state', () => {
+      const r = row({ is_map_to_toc: true });
+      const f = mount(r);
+      const handoff = jest.fn();
+      f.componentInstance.handoff.subscribe(handoff);
+      btn(f).click();
+      f.detectChanges();
+      expect(handoff).toHaveBeenCalledTimes(1);
+      expect(handoff).toHaveBeenCalledWith({ row: r, action: 'accept' });
+      expect(text(f)).toBe('Accept contribution');
+      expect(hint(f)?.textContent?.trim() ?? '').toBe('');
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('BELL-T-12: two-step Decline', () => {
+    const copy = BELL_QUICK_INBOX_COPY;
+    const confirmDecline = CONTRIBUTION_REQUEST_DRAWER_COPY.footer.confirmDecline;
+    const row = (overrides: any = {}) => ({
+      kind: 'decision',
+      share_result_request_id: 7,
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: false,
+      requested_date: '2026-10-01T00:00:00Z',
+      obj_requested_by: { first_name: 'Ana', last_name: 'Diaz' },
+      obj_owner_initiative: { id: 1, official_code: 'SP01' },
+      obj_shared_inititiative: { id: 2, official_code: 'SP02' },
+      obj_result: { id: 5, result_code: 'R9', title: 'Pending', status_id: 1, source_name: 'W1/W2', obj_version: { id: 'v1' }, obj_result_type: { id: 1 } },
+      ...overrides
+    });
+    const primary = (id = 7) => row({ request_type: 'primary', share_result_request_id: id });
+    const contribution = (id = 7) => row({ share_result_request_id: id });
+    const mount = (r: any) => {
+      const f = TestBed.createComponent(PopUpNotificationItemComponent);
+      f.componentInstance.notification = r;
+      f.detectChanges();
+      return f;
+    };
+    type Fx = ComponentFixture<PopUpNotificationItemComponent>;
+    const el = (f: Fx, id: string) => f.nativeElement.querySelector(`[data-testid="${id}"]`) as HTMLButtonElement;
+    const dec = (f: Fx) => el(f, 'bell-decline');
+    const acc = (f: Fx) => el(f, 'bell-accept');
+    const text = (b: HTMLElement) => b.textContent!.trim();
+    const hint = (f: Fx) => el(f, 'bell-accept-hint');
+
+    afterEach(() => jest.useRealTimers());
+
+    it('the armed Decline is announced through the aria-live hint and styled as destructive outline', () => {
+      const f = mount(contribution());
+      dec(f).click();
+      f.detectChanges();
+      expect(text(dec(f))).toBe(confirmDecline);
+      expect(hint(f).getAttribute('aria-live')).toBe('polite');
+      expect(text(hint(f))).toBe(copy.actions.confirmHint);
+      expect(dec(f).classList.contains('bell-decline--confirm')).toBe(true);
+    });
+
+    it('reverts after 5 s with 0 decide', () => {
+      jest.useFakeTimers();
+      const f = mount(contribution());
+      dec(f).click();
+      f.detectChanges();
+      jest.advanceTimersByTime(4999);
+      f.detectChanges();
+      expect(text(dec(f))).toBe(confirmDecline);
+      jest.advanceTimersByTime(1);
+      f.detectChanges();
+      expect(text(dec(f))).toBe(copy.actions.decline);
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('Escape reverts with 0 decide', () => {
+      const f = mount(contribution());
+      dec(f).click();
+      f.detectChanges();
+      dec(f).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      f.detectChanges();
+      expect(text(dec(f))).toBe(copy.actions.decline);
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('focus leaving the card reverts; focus moving inside it does not', () => {
+      const f = mount(contribution());
+      dec(f).click();
+      f.detectChanges();
+      dec(f).dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: acc(f) }));
+      f.detectChanges();
+      expect(text(dec(f))).toBe(confirmDecline);
+      dec(f).dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
+      f.detectChanges();
+      expect(text(dec(f))).toBe(copy.actions.decline);
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('on one card, arming Decline disarms an armed Accept and the reverse (one armed slot)', () => {
+      // A real card is never both direct-accept and inline-decline, so drive the shared slot directly.
+      const f = mount(contribution());
+      const comp = f.componentInstance;
+      const slot = (comp as any).acceptConfirm;
+      slot.enter(comp, 'accept');
+      f.detectChanges();
+      expect(comp.isConfirmingAccept()).toBe(true);
+      dec(f).click();
+      f.detectChanges();
+      expect(comp.isConfirmingAccept()).toBe(false);
+      expect(text(dec(f))).toBe(confirmDecline);
+      slot.enter(comp, 'accept');
+      f.detectChanges();
+      expect(text(dec(f))).toBe(copy.actions.decline);
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('arming on card B disarms card A, across Decline and Accept', () => {
+      const a = mount(contribution(1));
+      const b = mount(contribution(2));
+      dec(a).click();
+      a.detectChanges();
+      expect(text(dec(a))).toBe(confirmDecline);
+      dec(b).click();
+      a.detectChanges();
+      b.detectChanges();
+      expect(text(dec(a))).toBe(copy.actions.decline);
+      expect(text(dec(b))).toBe(confirmDecline);
+
+      const p = mount(primary(3));
+      acc(p).click();
+      b.detectChanges();
+      p.detectChanges();
+      expect(text(acc(p))).toBe('Confirm accept as primary');
+      expect(text(dec(b))).toBe(copy.actions.decline);
+
+      dec(a).click();
+      a.detectChanges();
+      p.detectChanges();
+      expect(text(acc(p))).toBe('Accept as primary');
+      expect(text(dec(a))).toBe(confirmDecline);
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+
+    it('primary Decline hands off with no confirm state', () => {
+      const r = primary();
+      const f = mount(r);
+      const handoff = jest.fn();
+      f.componentInstance.handoff.subscribe(handoff);
+      dec(f).click();
+      f.detectChanges();
+      expect(handoff).toHaveBeenCalledWith({ row: r, action: 'decline' });
+      expect(text(dec(f))).toBe(copy.actions.decline);
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
     });
   });
 });

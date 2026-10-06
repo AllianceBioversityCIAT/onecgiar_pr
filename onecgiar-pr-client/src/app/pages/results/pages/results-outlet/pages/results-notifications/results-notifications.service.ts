@@ -1,6 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
+import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../internationalization/contribution-request-drawer.copy';
+import { buildDecisionBody, isP25 } from './utils/request-decision';
 
 type SourceKey = 'received' | 'sent' | 'updates';
 
@@ -146,6 +149,141 @@ export class ResultsNotificationsService {
     }
   };
 
+  // ---------------------------------------------------------------------------------------------
+  // @akili-spec notifications/bell-quick-inbox — BELL-T-2 (BELL-DD-1): the bell's own
+  // phase-agnostic pending snapshot. Deliberately separate from `receivedData`/`updatesData`
+  // (phase-filtered, BELL-P-3): fetched with `versionId` OMITTED so the badge never moves when the
+  // inbox filters change (BELL-R-1, BELL-P-1/P-2).
+  // ---------------------------------------------------------------------------------------------
+
+  readonly bellReceived = signal<any[]>([]);
+  readonly bellUpdates = signal<any[]>([]);
+  readonly bellLoading = signal(false);
+  readonly bellError = signal(false);
+
+  /** Bumped on every `refreshBell()`; a response from an older call is dropped (it must not
+   * overwrite a newer snapshot) and cannot clear `bellLoading` for the newer call. */
+  private bellGen = 0;
+
+  /** Decisions first (even when older than an update), then newest first inside each kind. Rows are
+   * shallow copies tagged with `kind`; `decideRequest` strips the tag before building the body. */
+  readonly bellItems = computed<any[]>(() => {
+    const byDateDesc = (field: string) => (a: any, b: any) => (Date.parse(b?.[field]) || 0) - (Date.parse(a?.[field]) || 0);
+    const decisions = this.bellReceived()
+      .map(row => ({ ...row, kind: 'decision' }))
+      .sort(byDateDesc('requested_date'));
+    const updates = this.bellUpdates()
+      .map(row => ({ ...row, kind: 'update' }))
+      .sort(byDateDesc('created_date'));
+    return [...decisions, ...updates];
+  });
+
+  readonly bellCount = computed(() => this.bellReceived().length + this.bellUpdates().length);
+
+  /**
+   * Reloads the bell snapshot: pending received requests + unread updates, ALL phases (no
+   * `versionId`). Generation-guarded: only the latest call may apply data or settle loading/error.
+   * A failed leg leaves the previous snapshot in place and flags `bellError`.
+   */
+  refreshBell(): void {
+    const gen = ++this.bellGen;
+    this.bellLoading.set(true);
+    this.bellError.set(false);
+
+    let settled = 0;
+    const onSettled = () => {
+      settled++;
+      if (settled === 2 && gen === this.bellGen) this.bellLoading.set(false);
+    };
+    const onError = (err: any) => {
+      this.logPagingError(err);
+      if (gen === this.bellGen) this.bellError.set(true);
+      onSettled();
+    };
+
+    this.api.resultsSE.GET_allRequest({ scope: 'pending' }).subscribe({
+      next: ({ response }: any) => {
+        if (gen !== this.bellGen || !response) return;
+        this.bellReceived.set(response.receivedContributionsPending || []);
+      },
+      error: onError,
+      complete: onSettled
+    });
+
+    this.api.resultsSE.GET_requestUpdates({ scope: 'pending' }).subscribe({
+      next: ({ response }: any) => {
+        if (gen !== this.bellGen || !response) return;
+        this.bellUpdates.set(response.notificationsPending || []);
+      },
+      error: onError,
+      complete: onSettled
+    });
+  }
+
+  /**
+   * BELL-T-10: the popover's "Mark as read". Marks EVERY unread update read through the same
+   * `notification/read-all` endpoint the inbox uses — which takes no `versionId`, so it is
+   * phase-agnostic like the bell snapshot — and then refreshes the bell. Pending decisions are not
+   * touched. Deliberately not `markAllUpdatesNotificationsAsRead()`: that one returns early when the
+   * phase-filtered inbox snapshot (`updatesData`) is empty, which is unrelated to what the bell holds.
+   * Resolves after the refresh was requested; rejects (bell untouched) when the PATCH fails.
+   */
+  async markAllBellUpdatesRead(): Promise<void> {
+    try {
+      await firstValueFrom(this.api.resultsSE.PATCH_readAllNotifications(), { defaultValue: null });
+    } catch (err) {
+      console.error('ResultsNotificationsService: bell mark-all-read failed', (err as any)?.status);
+      throw err;
+    }
+
+    // Keep an already-loaded inbox consistent with what the server just did (all phases).
+    const pending = this.updatesData?.notificationsPending ?? [];
+    if (pending.length) {
+      pending.forEach(notification => (notification.read = true));
+      this.updatesData.notificationsViewed = [...pending, ...(this.updatesData.notificationsViewed ?? [])].sort(
+        (a, b) => Date.parse(b.created_date) - Date.parse(a.created_date)
+      );
+      this.updatesData.notificationsPending = [];
+    }
+    this.refreshBell();
+  }
+
+  /**
+   * BELL-DD-2: records a decision on a bell row with the SAME body the inbox row sends. Resolves
+   * on success and on 409 (stale: message shown, bell refreshed, row gone after the refresh);
+   * rejects with the original error for anything else, leaving bell state untouched (BELL-R-8).
+   */
+  async decideRequest(row: any, isAccept: boolean): Promise<void> {
+    const { kind: _kind, ...raw } = row ?? {};
+
+    try {
+      await firstValueFrom(this.api.resultsSE.PATCH_updateRequest(buildDecisionBody(raw, isAccept), isP25(raw)), { defaultValue: null });
+    } catch (err: any) {
+      console.error('ResultsNotificationsService: bell decision failed', err?.status);
+      if (err?.status === 409) {
+        this.api.alertsFe.show({
+          id: 'noti-error',
+          title: CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.staleRequestMessage,
+          description: '',
+          status: 'information'
+        });
+        this.refreshBell();
+        return;
+      }
+      throw err;
+    }
+
+    this.bellReceived.update(rows => rows.filter(r => !Object.keys(raw).every(key => r?.[key] === raw[key])));
+    this.api.alertsFe.show({
+      id: 'noti',
+      title: isAccept ? 'Request successfully accepted' : 'Request successfully rejected',
+      status: isAccept ? 'success' : 'information'
+    });
+    // `refreshSource` refreshes the bell itself, so only one of the two is needed.
+    if (this.phaseFilter) this.refreshSource('received');
+    else this.refreshBell();
+  }
+
   /** Any source still has a next page — drives "Load more" visibility (PAGE-R-4). */
   get hasMore(): boolean {
     return ALL_SOURCES.some(source => this.paging[source].hasMore);
@@ -270,6 +408,9 @@ export class ResultsNotificationsService {
 
     this.fetchPending(source, versionId, sgen, onLegSettled);
     this.fetchHistory(source, versionId, sgen, undefined, onLegSettled);
+
+    // BELL-R-11: the bell mirrors whatever the inbox just refreshed (received decisions, updates).
+    if (source !== 'sent') this.refreshBell();
   }
 
   /** Pending set only, for callers outside the inbox (boot-time bell/header — design.md §6.2).
@@ -520,7 +661,7 @@ export class ResultsNotificationsService {
     this.updatesData.notificationsPending.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
 
     this.api.resultsSE.PATCH_readNotification(notification.notification_id).subscribe({
-      next: () => {},
+      next: () => this.refreshBell(),
       error: err => {
         this.updatesData.notificationsViewed = initialViewed;
         this.updatesData.notificationsPending = initialPending;
@@ -548,7 +689,7 @@ export class ResultsNotificationsService {
     this.updatesData.notificationsPending = [];
 
     this.api.resultsSE.PATCH_readAllNotifications().subscribe({
-      next: () => {},
+      next: () => this.refreshBell(),
       error: err => {
         console.error(err);
         this.updatesData.notificationsViewed = initialViewed;
