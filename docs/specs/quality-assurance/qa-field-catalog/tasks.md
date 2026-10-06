@@ -101,7 +101,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 - **Done:** rules green; snapshot file for 2026 (empty catalog, revision 1) committed.
 - **Skills:** `nestjs-expert`, `tdd`
 
-### QAC-T-6 — Service, mapper, controller, route, auth
+### [x] QAC-T-6 — Service, mapper, controller, route, auth
 
 - **Type:** server · **Estimate:** M · **Review:** full — auth + external contract
 - **First step:** read `src/shared/guards/throttler-exclude-bilateral.guard.ts` and settle **P-11**; QAC-OQ-1 = CLARISA key (DD-6).

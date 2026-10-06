@@ -59,3 +59,19 @@
 - spawns: implementer 17 calls, 122 236 tokens, ended partial (assumptions only); reviewer 21 calls, 85 339 tokens, ended complete
 - Requirements: QAC-R-7, DD-3
 - auto-approved (pre-approved mode)
+
+### QAC-T-6 — Service, mapper, controller, route, auth — PASS (attempt 3)
+
+- Date: 2026-10-06 · Attempts: 3 · Parallel with T-4 (attempt 1)
+- Files: `src/api/qa-catalog/qa-catalog.{service,mapper,controller,module,fixtures}.ts` + specs (`service`, `mapper`, `controller`, `module`), `dto/qa-catalog-{query,response}.dto.ts`, `src/api/modules.routes.ts` (route `qa`), `src/app.module.ts` (module import + JWT exclude `api/qa/catalog`), `src/app.module.spec.ts`, `src/shared/guards/throttler-exclude-bilateral.guard.ts` (+ new spec)
+- P-11 settled: global throttle 100/min applied to `api/qa` → guard prefix list `['/api/bilateral','/api/qa/']` + `@SkipThrottle()` on the controller (bilateral parity)
+- **Attempt 1** — Implementer: 15 suites/136 tests incl. consumer specs; falsifiers red (mapper spread-then-delete 5/5 red; exclude removed → app.module spec red). Evidence re-run: 7 suites/58 VERIFIED. Reviewers (parallel lenses): security PASS; conformance **FAIL** — declared-but-empty year returned 200 `{[],[],[]}` (requirements.md:176/186/195-198; controller spec locked it in)
+- **Attempt 2** (effort xhigh) — 404 when undeclared or no valid field; controller spec on FIXTURE_SOURCE + real-catalog 2026 → 404 test. Red 4 tests; falsifier same 4. Re-run 61 VERIFIED. Reviewer **FAIL** — check ran before the section filter; field valid 2026 in section retired 2025 → empty 200
+- **Attempt 3** (effort xhigh) — 404 check on the final projected `fields`. Red: new test "did not throw"; falsifier (check moved back) → 1 failed. Re-run 62/62 VERIFIED. Reviewer **PASS** — traced every path; no empty 200 remains
+- Execute-time spec edit: `design.md` §5 line 71 + §6 line 85 widened to "404 when year not declared or the projected response has no fields" (aligns design with R-9; requirement unchanged)
+- Not Done / Assumptions (no owed items): `required_when` not in the response (not in agreed shape); field whose section is invalid that year is dropped; `generated_at` ends `.000Z`; no `ResponseInterceptor` envelope (raw contract body); no 429 test through the real AppModule
+- ADVISORY: anyone sending a non-empty `x-api-key` triggers one CLARISA validate call per request with no rate limit (same exposure as bilateral — cache or keep throttling); `@SkipThrottle` and the prefix list overlap — the **prefix list is the effective mechanism**; never-logged test runs without the global `HttpExceptionFilter`; guard class name `ThrottlerExcludeBilateralGuard` now also covers `/api/qa/` (rename / doc in `src/CLAUDE.md` §7.4 pending for `staging`); fixtures file under `src/`; empty `result_types: []` scope accepted by the shape validator
+- Open with owner: auth mechanism question re-raised 2026-10-06 ("¿Podemos usar APIKey?") — CLARISA key (implemented, DD-6) vs dedicated env key; awaiting answer. A change would be a spec amendment + T-6 rework
+- spawns: implementer 26 calls, 126 488 tokens, ended partial (assumptions); reviewer(conformance) 10 calls, 93 450 tokens; reviewer(security) 13 calls, 94 076 tokens; implementer 8 calls, 87 424 tokens; reviewer 6 calls, 32 134 tokens; implementer 9 calls, 71 109 tokens; reviewer 9 calls, 58 206 tokens — all ended complete
+- Requirements: QAC-R-3, R-4, R-9, R-10, R-12
+- auto-approved (pre-approved mode)

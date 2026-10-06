@@ -68,7 +68,7 @@ docs/specs/quality-assurance/qa-field-catalog/inventory/2026.md (+ 2025.md)  —
 |---|---|
 | OK | 200 `{portfolio, phase, catalog_version, generated_at, result_types[], sections[], fields[]}` |
 | `phase_year` missing / non-integer | 400 (class-validator DTO) |
-| year not in `versions.ts` | 404 |
+| year not in `versions.ts`, or no field in the projected response (amended 2026-10-06 to match R-9) | 404 |
 | no / bad API key | 401 generic body |
 
 - `fields[]` = top-level fields with `subfields[]` nested; storage, `required_confirmed`, DB ids stripped by an explicit response mapper (whitelist, not blacklist).
@@ -82,7 +82,7 @@ docs/specs/quality-assurance/qa-field-catalog/inventory/2026.md (+ 2025.md)  —
 | Unit | Responsibility | Req |
 |---|---|---|
 | `definitions/*` | Typed literals; `versions.ts` declares catalogued years `{2026: {portfolio:'P25', revision:1}}` (2025 added if loaded) | R-1, R-3, R-8, R-11 |
-| `QaCatalogService` | `getCatalog(year)` pure over definitions; 404 when year not declared | R-3, R-9, R-12 |
+| `QaCatalogService` | `getCatalog(year)` pure over definitions; 404 when year not declared or the projected response has no fields (amended 2026-10-06, R-9) | R-3, R-9, R-12 |
 | Response mapper | Whitelist projection; strips storage | R-4 |
 | `QaCatalogController` | `@UseGuards(ClarisaApiKeyGuard)`, `@BilateralClarisaEndpoint('/api/qa/catalog')`, query DTO | R-9, R-10 |
 | `QaCatalogModule` | Provides `ClarisaApiKeyValidationService` + `ClarisaApiKeyGuard` itself (they are not exported by `BilateralModule`) + `HttpModule`; registers route `qa` in `modules.routes.ts`; `app.module.ts` JWT `exclude` gains `api/qa/catalog` | R-10 |
