@@ -778,4 +778,45 @@ describe('ResultsService — reviewBilateralResult owner guard (PNS-T-2)', () =>
       expect.objectContaining({ status_id: ResultStatusData.Approved.value }),
     );
   });
+  // RSB-R-18 — every decision records the deciding SP (the owner) in the history.
+  it('REJECT decision → the history row carries action REJECT, the justification and initiative_id = owner', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+
+    await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.REJECT, justification: 'not relevant' },
+      user,
+    );
+
+    expect(fakeManager.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        result_id: 42,
+        action: 'REJECT',
+        comment: 'not relevant',
+        initiative_id: 9,
+        created_by: 7,
+      }),
+    );
+  });
+
+  it('APPROVE decision with no justification still writes the entry (comment null) with initiative_id = owner', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+
+    await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.APPROVE, justification: null },
+      user,
+    );
+
+    expect(fakeManager.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        action: 'APPROVE',
+        comment: null,
+        initiative_id: 9,
+      }),
+    );
+    expect(fakeManager.save).toHaveBeenCalled();
+  });
 });
