@@ -251,10 +251,17 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
   },
   /** NOTIF-T-6: the migrated filter toolbar (moved here from the retired `requests.component.*`). */
   filterToolbar: {
-    filterButton: 'Filter',
-    searchPlaceholder: 'Search notifications…',
-    phasesLabel: 'Phases',
-    phasesPlaceholder: 'Select phase',
+    // FTD-T-1 (`FTD-R-11`): matches the per-facet toolbar reference image; the search predicate
+    // already covers result, person and code — only the label changed.
+    searchPlaceholder: 'Search result, person or code',
+    // FTD-T-2 (design.md §6.3c): `filterButton`/`phasesLabel`/`phasesPlaceholder` removed — the
+    // single Filter trigger and its `app-pr-select` Phase picker no longer render; `phaseLabel` is
+    // the one surviving Phase label, read by the per-facet toolbar's own trigger/dropdown.
+    phaseLabel: 'Phase',
+    programLabel: 'Program / Accelerator',
+    programSearchPlaceholder: 'Search programs',
+    selectPhaseFirst: 'Select a phase first',
+    noProgramsYet: 'No programs available for this phase.',
     centerLabel: 'Center',
     centerSearchPlaceholder: 'Search centers',
     bilateralProjectLabel: 'Bilateral project',

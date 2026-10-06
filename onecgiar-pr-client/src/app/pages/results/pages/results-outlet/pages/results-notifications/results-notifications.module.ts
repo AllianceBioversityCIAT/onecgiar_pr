@@ -24,6 +24,10 @@ import { UpdateNotificationComponent } from './components/update-notification/up
 // too for the outline "Load more" control (PAGE-R-4).
 import { SkeletonNotificationItemComponent } from './components/notification-item/skeleton-notification-item/skeleton-notification-item.component';
 import { HlmButtonImports } from '@spartan/button';
+// `@akili-spec notifications/filter-toolbar-dropdowns` (FTD-T-2): the per-facet toolbar's seven
+// `hlm-popover`s (design.md §6.1/§6.3) and the trigger's chevron icon.
+import { HlmPopoverImports } from '@spartan/popover';
+import { NgIcon } from '@ng-icons/core';
 // DSP-T-6 (design.md §6.2): the docked `<aside>`'s `cdkPortalOutlet` directive, so it can project
 // whatever `NotificationDetailPanelService.portal()` holds.
 import { PortalModule } from '@angular/cdk/portal';
@@ -40,6 +44,8 @@ import { PortalModule } from '@angular/cdk/portal';
     ...HlmBadgeImports,
     ...HlmCheckboxImports,
     ...HlmButtonImports,
+    ...HlmPopoverImports,
+    NgIcon,
     PortalModule
   ]
 })

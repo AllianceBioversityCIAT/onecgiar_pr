@@ -427,7 +427,9 @@ export const BrnTabsImports = [
 @Directive({ selector: '[brnPopover],brn-popover', standalone: true })
 export class BrnPopover {
   // `HlmPopover` forwards these declaratively (`hlm-popover.ts`); without them Angular raises NG0303
-  // on `<hlm-popover [state]="…">`, the same shape as the `BrnDialog` stub above.
+  // on `<hlm-popover [state]="…">`, the same shape as the `BrnDialog` stub above. The list mirrors the
+  // `inputs` array of the `BrnPopover` hostDirective in `hlm-popover.ts` (a forwarded input missing here
+  // raises NG0311 at validateHostDirective for EVERY `hlm-popover` user under Jest).
   @Input() state: 'open' | 'closed' | null | undefined;
   @Input() align: string | undefined;
   @Input() sideOffset: number | string | undefined;
@@ -435,6 +437,7 @@ export class BrnPopover {
   @Input() attachTo: unknown;
   @Input() autoFocus: boolean | string | undefined;
   @Input() closeOnOutsidePointerEvents: boolean | string | undefined;
+  @Input() role: string | null | undefined;
   @Output() readonly stateChanged = new EventEmitter<'open' | 'closed'>();
   @Output() readonly closed = new EventEmitter<unknown>();
 }

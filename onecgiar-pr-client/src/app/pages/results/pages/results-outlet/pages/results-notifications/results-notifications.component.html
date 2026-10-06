@@ -49,9 +49,11 @@
       </div>
     </div>
 
-    <!-- NOTIF-T-6 (Pivot re-scope): filter toolbar, migrated (in substance) from the retired
-         `requests.component.html` — Search + Filter popover (Phase / Program / Center / Bilateral
-         project) + "Notification settings" entry point. -->
+    <!-- `@akili-spec notifications/filter-toolbar-dropdowns` (FTD-T-2, design.md §6.3): Search
+         input + one `hlm-popover` per facet (Phase · Type · Funding · Result type · Program /
+         Accelerator · Center · Bilateral project), controlled by the single `openFacet` signal
+         (FTD-T-1) so at most one is open (FTD-R-3). Replaces the old single Filter trigger +
+         hand-rolled popover (DD-1). -->
     <div class="flex flex-wrap items-center gap-[12px] mb-[8px]">
       <div class="flex min-w-[220px] w-[320px] flex-col gap-[4px]">
         <input
@@ -62,174 +64,211 @@
           class="w-full" />
       </div>
 
-      <div class="relative">
-        <button
-          #filterTriggerBtn
-          type="button"
-          aria-haspopup="dialog"
-          [attr.aria-expanded]="filterPopoverOpen() ? 'true' : 'false'"
-          (click)="toggleFilterPopover()"
-          class="flex h-[36px] cursor-pointer items-center gap-[8px] rounded-[8px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)] px-[14px] text-[13px] font-semibold text-[var(--pr-color-secondary-400)] outline-none transition-colors duration-150 hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)]">
-          <i class="material-icons-round text-[18px]" aria-hidden="true">filter_list</i>
-          {{ copy.filterToolbar.filterButton }}
-          @if (activeFilterCount > 0) {
-            <span hlmBadge variant="default">{{ activeFilterCount }}</span>
-          }
-        </button>
+      <div class="flex flex-wrap items-center gap-[8px]">
+        @for (facet of filterFacets; track facet.key) {
+          <!-- a11y (FTD-T-3): spartan's popover default puts role="dialog" on the CDK overlay container
+               (unnamed, and brain exposes no aria-label for it). Neutralise it with role="none" so the
+               single named dialog is hlm-popover-content below. -->
+          <hlm-popover
+            role="none"
+            align="start"
+            sideOffset="6"
+            [autoFocus]="false"
+            [attachTo]="facetTrigger"
+            [state]="openFacet() === facet.key ? 'open' : 'closed'"
+            (stateChanged)="onFacetStateChanged(facet.key, $event)">
+            <button
+              #facetTrigger
+              type="button"
+              [attr.data-facet]="facet.key"
+              aria-haspopup="dialog"
+              [attr.aria-expanded]="openFacet() === facet.key ? 'true' : 'false'"
+              (click)="toggleFacet(facet.key)"
+              class="flex h-[36px] cursor-pointer items-center gap-[8px] rounded-[8px] border bg-[var(--pr-color-white)] px-[14px] text-[13px] font-semibold outline-none transition-colors duration-150 hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)]"
+              [class]="(facet.key === 'phase' ? !!this.resultsNotificationsSE.phaseFilter : facetSelectedCount(facet.key) > 0)
+                ? 'border-[var(--pr-color-primary-300)] text-[var(--pr-color-primary-400)]'
+                : 'border-[var(--pr-color-accents-2)] text-[var(--pr-color-secondary-400)]'">
+              <span class="max-w-[160px] truncate">{{ facet.key === 'phase' ? (selectedPhaseLabel || facet.label) : facet.label }}</span>
+              @if (facet.key !== 'phase' && facetSelectedCount(facet.key) > 0) {
+                <span hlmBadge variant="default">{{ facetSelectedCount(facet.key) }}</span>
+              }
+              <ng-icon name="lucideChevronDown" class="shrink-0 text-[13px]" aria-hidden="true" />
+            </button>
 
-        @if (filterPopoverOpen()) {
-          <div
-            #filterPanel
-            role="dialog"
-            aria-label="Filter"
-            class="notifications-filter-popover-content flex-col gap-[16px] p-[16px]"
-            [class.filter-popover--align-end]="filterPopoverAlign() === 'end'">
-            <div>
-              <app-pr-select
-                [label]="copy.filterToolbar.phasesLabel"
-                [required]="false"
-                [options]="this.resultsNotificationsSE.phaseList"
-                optionLabel="phase_name_status"
-                optionValue="id"
-                [placeholder]="copy.filterToolbar.phasesPlaceholder"
-                [overlayToBody]="true"
-                [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
-                (ngModelChange)="this.resultsNotificationsSE.onPhaseChange($event)">
-              </app-pr-select>
-            </div>
-
-            <div
-              [prTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
-              prTooltipPosition="right">
-              <app-pr-select
-                [label]="this.resultsNotificationsSE.entityLabel"
-                [required]="false"
-                [options]="this.resultsNotificationsSE.filteredInitiatives"
-                optionLabel="full_name"
-                optionValue="initiative_id"
-                [placeholder]="!this.resultsNotificationsSE.phaseFilter ? 'Select a phase first' : 'Select ' + this.resultsNotificationsSE.entityLabel"
-                [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
-                [disabled]="!this.resultsNotificationsSE.phaseFilter">
-              </app-pr-select>
-            </div>
-
-            <div class="flex flex-col gap-[6px]">
-              <app-pr-field-header [label]="copy.filterToolbar.centerLabel"></app-pr-field-header>
-              <input
-                type="text"
-                hlmInput
-                [placeholder]="copy.filterToolbar.centerSearchPlaceholder"
-                [ngModel]="centerSearchQuery()"
-                (ngModelChange)="centerSearchQuery.set($event)"
-                class="w-full" />
-              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
-                @for (center of filteredCenterFacetOptions; track center.id) {
-                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
-                    <hlm-checkbox
-                      [checked]="isCenterFilterChecked(center.id)"
-                      (checkedChange)="onCenterFilterChange(center.id, $event)"></hlm-checkbox>
-                    <span class="truncate">{{ center.label }}</span>
-                  </label>
-                } @empty {
-                  @if (centerFacetOptions.length > 0) {
-                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
+            <hlm-popover-content
+              *hlmPopoverPortal
+              role="dialog"
+              [attr.aria-label]="facet.label"
+              (keydown.escape)="closeFacet(true)"
+              class="w-[260px] p-[12px]">
+              @switch (facet.key) {
+                @case ('phase') {
+                  <div class="flex max-h-[220px] flex-col gap-[2px] overflow-y-auto" role="listbox" [attr.aria-label]="facet.label">
+                    @for (phase of this.resultsNotificationsSE.phaseList; track phase.id) {
+                      <button
+                        type="button"
+                        role="option"
+                        [attr.aria-selected]="this.resultsNotificationsSE.phaseFilter == phase.id"
+                        (click)="selectPhase(phase.id)"
+                        class="flex w-full cursor-pointer items-center rounded-[6px] px-[10px] py-[7px] text-left text-[13px] outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                        [class]="this.resultsNotificationsSE.phaseFilter == phase.id
+                          ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)] font-semibold'
+                          : 'text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]'">
+                        {{ phase.phase_name_status }}
+                      </button>
+                    }
+                  </div>
+                }
+                @case ('program') {
+                  @if (!this.resultsNotificationsSE.phaseFilter) {
+                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.selectPhaseFirst }}</p>
                   } @else {
-                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noCentersYet }}</p>
+                    <div class="flex flex-col gap-[6px]">
+                      <input
+                        type="text"
+                        hlmInput
+                        [placeholder]="copy.filterToolbar.programSearchPlaceholder"
+                        [ngModel]="programSearchQuery()"
+                        (ngModelChange)="programSearchQuery.set($event)"
+                        class="w-full" />
+                      <div class="flex max-h-[160px] flex-col gap-[2px] overflow-y-auto" role="listbox" [attr.aria-label]="facet.label">
+                        @for (program of filteredProgramOptions; track program.initiative_id) {
+                          <button
+                            type="button"
+                            role="option"
+                            [attr.aria-selected]="this.resultsNotificationsSE.initiativeIdFilter == program.initiative_id"
+                            (click)="selectProgram(program.initiative_id)"
+                            class="flex w-full cursor-pointer items-center rounded-[6px] px-[10px] py-[7px] text-left text-[13px] outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                            [class]="this.resultsNotificationsSE.initiativeIdFilter == program.initiative_id
+                              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)] font-semibold'
+                              : 'text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]'">
+                            <span class="truncate" [title]="program.full_name">{{ program.full_name }}</span>
+                          </button>
+                        } @empty {
+                          <p class="text-[12px] text-[var(--pr-color-accents-5)]">
+                            {{ this.resultsNotificationsSE.filteredInitiatives?.length > 0 ? copy.filterToolbar.nothingMatchesSearch : copy.filterToolbar.noProgramsYet }}
+                          </p>
+                        }
+                      </div>
+                    </div>
                   }
                 }
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-[6px]">
-              <app-pr-field-header [label]="copy.filterToolbar.bilateralProjectLabel"></app-pr-field-header>
-              <input
-                type="text"
-                hlmInput
-                [placeholder]="copy.filterToolbar.bilateralProjectSearchPlaceholder"
-                [ngModel]="bilateralProjectSearchQuery()"
-                (ngModelChange)="bilateralProjectSearchQuery.set($event)"
-                class="w-full" />
-              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
-                @for (project of filteredBilateralProjectFacetOptions; track project.code) {
-                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
-                    <hlm-checkbox
-                      [checked]="isBilateralProjectFilterChecked(project.code)"
-                      (checkedChange)="onBilateralProjectFilterChange(project.code, $event)"></hlm-checkbox>
-                    <span class="truncate" [title]="project.label">{{ project.label }}</span>
-                  </label>
-                } @empty {
-                  @if (bilateralProjectFacetOptions.length > 0) {
-                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
-                  } @else {
-                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noBilateralProjectsYet }}</p>
-                  }
+                @case ('center') {
+                  <div class="flex flex-col gap-[6px]">
+                    <input
+                      type="text"
+                      hlmInput
+                      [placeholder]="copy.filterToolbar.centerSearchPlaceholder"
+                      [ngModel]="centerSearchQuery()"
+                      (ngModelChange)="centerSearchQuery.set($event)"
+                      class="w-full" />
+                    <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+                      @for (center of filteredCenterFacetOptions; track center.id) {
+                        <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                          <hlm-checkbox
+                            [checked]="isCenterFilterChecked(center.id)"
+                            (checkedChange)="onCenterFilterChange(center.id, $event)"></hlm-checkbox>
+                          <span class="truncate">{{ center.label }}</span>
+                        </label>
+                      } @empty {
+                        @if (centerFacetOptions.length > 0) {
+                          <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
+                        } @else {
+                          <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noCentersYet }}</p>
+                        }
+                      }
+                    </div>
+                  </div>
                 }
-              </div>
-            </div>
-
-            <!-- NOTIF-T-11 (NOTIF-R-16): Type filter — bounded chip taxonomy, no search box (mirrors
-                 the small Funding facet below rather than the searchable Center/Bilateral ones). -->
-            <div class="flex flex-col gap-[6px]">
-              <app-pr-field-header [label]="copy.filterToolbar.typeLabel"></app-pr-field-header>
-              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
-                @for (type of typeFacetOptions; track type) {
-                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
-                    <hlm-checkbox [checked]="isTypeFilterChecked(type)" (checkedChange)="onTypeFilterChange(type, $event)"></hlm-checkbox>
-                    <span class="truncate">{{ type }}</span>
-                  </label>
-                } @empty {
-                  <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noTypesYet }}</p>
+                @case ('bilateral') {
+                  <div class="flex flex-col gap-[6px]">
+                    <input
+                      type="text"
+                      hlmInput
+                      [placeholder]="copy.filterToolbar.bilateralProjectSearchPlaceholder"
+                      [ngModel]="bilateralProjectSearchQuery()"
+                      (ngModelChange)="bilateralProjectSearchQuery.set($event)"
+                      class="w-full" />
+                    <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+                      @for (project of filteredBilateralProjectFacetOptions; track project.code) {
+                        <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                          <hlm-checkbox
+                            [checked]="isBilateralProjectFilterChecked(project.code)"
+                            (checkedChange)="onBilateralProjectFilterChange(project.code, $event)"></hlm-checkbox>
+                          <span class="truncate" [title]="project.label">{{ project.label }}</span>
+                        </label>
+                      } @empty {
+                        @if (bilateralProjectFacetOptions.length > 0) {
+                          <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
+                        } @else {
+                          <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noBilateralProjectsYet }}</p>
+                        }
+                      }
+                    </div>
+                  </div>
                 }
-              </div>
-            </div>
-
-            <!-- NOTIF-T-11 (NOTIF-R-16): Funding filter — W1/W2 vs W3/Bilateral, derived from
-                 obj_result.source_name. -->
-            <div class="flex flex-col gap-[6px]">
-              <app-pr-field-header [label]="copy.filterToolbar.fundingLabel"></app-pr-field-header>
-              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
-                @for (funding of fundingFacetOptions; track funding.value) {
-                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
-                    <hlm-checkbox
-                      [checked]="isFundingFilterChecked(funding.value)"
-                      (checkedChange)="onFundingFilterChange(funding.value, $event)"></hlm-checkbox>
-                    <span class="truncate">{{ funding.label }}</span>
-                  </label>
-                } @empty {
-                  <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noFundingOptionsYet }}</p>
+                @case ('type') {
+                  <!-- NOTIF-T-11 (NOTIF-R-16): bounded chip taxonomy, no search box (mirrors the
+                       small Funding facet rather than the searchable Center/Bilateral ones). -->
+                  <div class="flex max-h-[200px] flex-col gap-[6px] overflow-y-auto">
+                    @for (type of typeFacetOptions; track type) {
+                      <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                        <hlm-checkbox [checked]="isTypeFilterChecked(type)" (checkedChange)="onTypeFilterChange(type, $event)"></hlm-checkbox>
+                        <span class="truncate">{{ type }}</span>
+                      </label>
+                    } @empty {
+                      <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noTypesYet }}</p>
+                    }
+                  </div>
                 }
-              </div>
-            </div>
-
-            <!-- NOTIF-T-11 (NOTIF-R-16): Result type filter — obj_result.obj_result_type.name,
-                 searchable like Center/Bilateral project (an open-ended, potentially longer list). -->
-            <div class="flex flex-col gap-[6px]">
-              <app-pr-field-header [label]="copy.filterToolbar.resultTypeLabel"></app-pr-field-header>
-              <input
-                type="text"
-                hlmInput
-                [placeholder]="copy.filterToolbar.resultTypeSearchPlaceholder"
-                [ngModel]="resultTypeSearchQuery()"
-                (ngModelChange)="resultTypeSearchQuery.set($event)"
-                class="w-full" />
-              <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
-                @for (resultType of filteredResultTypeFacetOptions; track resultType) {
-                  <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
-                    <hlm-checkbox
-                      [checked]="isResultTypeFilterChecked(resultType)"
-                      (checkedChange)="onResultTypeFilterChange(resultType, $event)"></hlm-checkbox>
-                    <span class="truncate">{{ resultType }}</span>
-                  </label>
-                } @empty {
-                  @if (resultTypeFacetOptions.length > 0) {
-                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
-                  } @else {
-                    <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noResultTypesYet }}</p>
-                  }
+                @case ('funding') {
+                  <!-- NOTIF-T-11 (NOTIF-R-16): W1/W2 vs W3/Bilateral, derived from
+                       obj_result.source_name. -->
+                  <div class="flex max-h-[200px] flex-col gap-[6px] overflow-y-auto">
+                    @for (funding of fundingFacetOptions; track funding.value) {
+                      <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                        <hlm-checkbox
+                          [checked]="isFundingFilterChecked(funding.value)"
+                          (checkedChange)="onFundingFilterChange(funding.value, $event)"></hlm-checkbox>
+                        <span class="truncate">{{ funding.label }}</span>
+                      </label>
+                    } @empty {
+                      <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noFundingOptionsYet }}</p>
+                    }
+                  </div>
                 }
-              </div>
-            </div>
-          </div>
+                @case ('resultType') {
+                  <!-- NOTIF-T-11 (NOTIF-R-16): obj_result.obj_result_type.name, searchable like
+                       Center/Bilateral project (an open-ended, potentially longer list). -->
+                  <div class="flex flex-col gap-[6px]">
+                    <input
+                      type="text"
+                      hlmInput
+                      [placeholder]="copy.filterToolbar.resultTypeSearchPlaceholder"
+                      [ngModel]="resultTypeSearchQuery()"
+                      (ngModelChange)="resultTypeSearchQuery.set($event)"
+                      class="w-full" />
+                    <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+                      @for (resultType of filteredResultTypeFacetOptions; track resultType) {
+                        <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                          <hlm-checkbox
+                            [checked]="isResultTypeFilterChecked(resultType)"
+                            (checkedChange)="onResultTypeFilterChange(resultType, $event)"></hlm-checkbox>
+                          <span class="truncate">{{ resultType }}</span>
+                        </label>
+                      } @empty {
+                        @if (resultTypeFacetOptions.length > 0) {
+                          <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.nothingMatchesSearch }}</p>
+                        } @else {
+                          <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.noResultTypesYet }}</p>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+              }
+            </hlm-popover-content>
+          </hlm-popover>
         }
       </div>
 
