@@ -1,6 +1,6 @@
 # bilateral-ai-upload
 
-**Verified:** 2026-09-29 · branch JuanGuzman-io/p2-3853-jira-understanding · P2-3853 (post-execution fix)
+**Verified:** 2026-10-06 · branch JuanGuzman-io/fix-p2-3896-mp4-audio · P2-3896
 
 ## Qué es
 Paso "AI" del creador de resultados bilaterales: el usuario sube documentos,
@@ -92,9 +92,13 @@ Espejo obligatorio de
 | Tamaño por fichero | `:19` `25_000_000` bytes | `MAX_FILE_SIZE` |
 | Nº de fuentes | `:20` `maxSources = 6`, contado en `:28` como `documents + audio + (text ? 1 : 0)` | `MAX_SOURCES` |
 | Longitud del texto | `:59` `> 50_000` chars → 400 | `MAX_TEXT_LENGTH` |
-| Extensiones | `:50-52` | `DOCUMENT_EXTENSIONS` / `AUDIO_EXTENSIONS` |
+| Extensiones | `:60-61` | `DOCUMENT_EXTENSIONS` / `AUDIO_EXTENSIONS` (+ `.mp4`, ver trampa abajo) |
 
 ## Trampas (⚠️ = ya rompió algo)
+- ⚠️ **`.mp4` se acepta en el cliente pero el servidor no lo conoce** (P2-3896): `addFile` lo
+  re-etiqueta `.m4a` (mismos bytes MPEG-4; QA lo verificó renombrando a mano). Si el servidor
+  agrega `mp4`, quitar el re-etiquetado. El drop de un formato no soportado ahora muestra el
+  toast "Invalid format" (antes lo descartaba en silencio).
 - ⚠️ **`25_000_000` es decimal, no `25 * 1024 * 1024`.** Un fichero de 25 MiB
   (26.214.400 B) pasaría el cliente y el servidor lo rechazaría igual.
 - ⚠️ **El texto de contexto cuenta como una fuente.** Antes el cliente contaba
