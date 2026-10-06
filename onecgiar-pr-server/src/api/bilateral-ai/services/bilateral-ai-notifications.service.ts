@@ -239,10 +239,11 @@ export class BilateralAiNotificationsService {
         return 'the AI processing queue was unavailable';
       case 'PROCESSING_ERROR':
         return 'the AI service reported a processing error';
+      // P2-3897: never surface the raw status code (e.g. HTTP_422) in the user-facing notification.
+      case 'HTTP_422':
+        return 'the AI could not find usable content in the sources';
       default:
-        return errorCode
-          ? `the AI service reported an error (${errorCode})`
-          : 'the AI service reported an error';
+        return 'the AI service reported an error';
     }
   }
 

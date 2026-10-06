@@ -220,7 +220,7 @@ describe('bilateral-ai-job.model', () => {
   // ── errorCopy ────────────────────────────────────────────────────────
 
   describe('errorCopy', () => {
-    it.each(['HTTP_413', 'HTTP_415', 'HTTP_502', 'HTTP_503', 'PROCESSING_ERROR', 'TIMED_OUT', 'QUEUE_STALLED', 'QUEUE_NOT_AVAILABLE'])(
+    it.each(['HTTP_413', 'HTTP_415', 'HTTP_422', 'HTTP_502', 'HTTP_503', 'PROCESSING_ERROR', 'TIMED_OUT', 'QUEUE_STALLED', 'QUEUE_NOT_AVAILABLE'])(
       'maps %s to plain-words copy, not the raw code',
       code => {
         const copy = errorCopy(code);
@@ -233,7 +233,9 @@ describe('bilateral-ai-job.model', () => {
     it('renders the default arm for a code the table does not map, without throwing', () => {
       expect(() => errorCopy('HTTP_418')).not.toThrow();
       const copy = errorCopy('HTTP_418');
-      expect(copy.message).toBe('The AI service reported an error (HTTP_418). Try again or contact support.');
+      // P2-3897: the default arm never echoes the raw code to the user.
+      expect(copy.message).toBe('The AI service ran into an unexpected problem. Try again, or create the result manually if it keeps failing.');
+      expect(copy.message).not.toContain('HTTP_418');
     });
 
     it('renders the default arm for a null/undefined code, without throwing', () => {
