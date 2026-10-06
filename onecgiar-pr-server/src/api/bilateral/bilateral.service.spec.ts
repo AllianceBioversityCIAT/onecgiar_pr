@@ -2981,4 +2981,78 @@ describe('BilateralService (unit)', () => {
       },
     );
   });
+
+  describe('buildBilateralProjectsSummary — external_code (BPC-T-1)', () => {
+    const arrange = (rows: any[]) => {
+      const find = jest.fn().mockResolvedValue(rows);
+      const { service } = makeService({
+        _resultsByProjectsRepository: { find },
+      });
+      return { svc: service as any, find };
+    };
+
+    it('S-1.1: emits short_name, organization_code and external_code', async () => {
+      const { svc } = arrange([
+        {
+          obj_clarisa_project: {
+            shortName: 'CSICAP',
+            externalCode: 'A1701',
+            obj_organization: { acronym: 'Bioversity (Alliance)' },
+          },
+        },
+      ]);
+
+      await expect(svc.buildBilateralProjectsSummary(10)).resolves.toEqual([
+        {
+          short_name: 'CSICAP',
+          organization_code: 'Bioversity (Alliance)',
+          external_code: 'A1701',
+        },
+      ]);
+    });
+
+    it('S-1.2: external_code is present and null when the project has no code', async () => {
+      const { svc } = arrange([
+        {
+          obj_clarisa_project: {
+            shortName: 'CSICAP',
+            externalCode: null,
+            obj_organization: { acronym: 'Bioversity (Alliance)' },
+          },
+        },
+      ]);
+
+      const [item] = await svc.buildBilateralProjectsSummary(10);
+
+      expect(Object.keys(item)).toContain('external_code');
+      expect(item.external_code).toBeNull();
+    });
+
+    it('S-1.3: existing fields unchanged, null project filtered, query unchanged', async () => {
+      const { svc, find } = arrange([
+        {
+          obj_clarisa_project: {
+            shortName: 'NOORG',
+            externalCode: 'X1',
+            obj_organization: null,
+          },
+        },
+        { obj_clarisa_project: null },
+      ]);
+
+      const result = await svc.buildBilateralProjectsSummary(10);
+
+      expect(result).toEqual([
+        { short_name: 'NOORG', organization_code: null, external_code: 'X1' },
+      ]);
+      expect(find).toHaveBeenCalledWith({
+        where: {
+          result_id: 10,
+          is_active: true,
+          obj_result_project: { is_active: true },
+        },
+        relations: { obj_clarisa_project: { obj_organization: true } },
+      });
+    });
+  });
 });

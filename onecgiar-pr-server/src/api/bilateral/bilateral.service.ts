@@ -2117,13 +2117,16 @@ export class BilateralService {
   }
 
   /**
-   * Bilateral-only slim project list: Clarisa project short name and institution acronym
-   * (exposed as organization_code in the API payload).
+   * Bilateral-only slim project list: Clarisa project short name, institution acronym
+   * (exposed as organization_code in the API payload) and the project external code
+   * (exposed as external_code).
    */
-  private async buildBilateralProjectsSummary(
-    resultId: number,
-  ): Promise<
-    Array<{ short_name: string | null; organization_code: string | null }>
+  private async buildBilateralProjectsSummary(resultId: number): Promise<
+    Array<{
+      short_name: string | null;
+      organization_code: string | null;
+      external_code: string | null;
+    }>
   > {
     const rows = await this._resultsByProjectsRepository.find({
       where: {
@@ -2146,6 +2149,7 @@ export class BilateralService {
         return {
           short_name: p.shortName ?? null,
           organization_code: org?.acronym ?? null,
+          external_code: p.externalCode ?? null,
         };
       });
   }

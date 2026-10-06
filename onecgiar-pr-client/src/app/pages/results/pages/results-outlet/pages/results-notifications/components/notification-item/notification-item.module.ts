@@ -30,6 +30,9 @@ import { HlmBadgeImports } from '@spartan/badge';
 import { HlmButtonImports } from '@spartan/button';
 // CRD-T-4: the contribution request drawer, a second flow the row body opens (CRD-DD-10).
 import { ContributionRequestDrawerComponent } from '../contribution-request-drawer/contribution-request-drawer.component';
+// DSP-T-3 (notifications/detail-side-panel): the drawer's body/footer, relocated so the same
+// template instance can later be portaled into the wide-screen <aside> (design.md §2.1/§2.2).
+import { NotificationDetailContentComponent } from '../notification-detail-content/notification-detail-content.component';
 // PDR-T-4: the primary-decline justification dialog (PDR-T-3), opened instead of the reject-confirm
 // dialog when `isPrimaryRequest` — standalone, so it's imported here like `ContributionRequestDrawerComponent`.
 import { PrimaryDeclineJustificationDialogComponent } from '../primary-decline-justification-dialog/primary-decline-justification-dialog.component';
@@ -56,6 +59,7 @@ const modules = [
     PrDialogComponent,
     RdContributorsAndPartnersModule,
     ContributionRequestDrawerComponent,
+    NotificationDetailContentComponent,
     PrimaryDeclineJustificationDialogComponent,
     ...HlmBadgeImports,
     ...HlmButtonImports

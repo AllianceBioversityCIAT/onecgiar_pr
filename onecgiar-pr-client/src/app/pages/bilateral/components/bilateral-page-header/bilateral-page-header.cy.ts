@@ -53,7 +53,7 @@ describe('BilateralPageHeaderComponent — CT smoke gate (AIQ-T-9)', () => {
     cy.get('[data-testid="ai-processes-trigger"]').filter(':visible', { timeout: 10000 }).should('exist').and('contain.text', 'AI processes');
     cy.get('[data-testid="ai-processes-trigger-badge"]').filter(':visible').should('contain.text', '1');
 
-    const tabLabels = ['Overview', 'Reporting', 'Results', 'AI Draft Results'];
+    const tabLabels = ['Overview', 'Reporting', 'Results', 'My Drafts'];
     cy.get('nav[aria-label="Center sections"] a').then($links => {
       const texts = Cypress._.map($links.toArray(), el => el.textContent?.replace(/\s+/g, ' ').trim() ?? '');
       tabLabels.forEach(label => {

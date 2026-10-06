@@ -22,6 +22,7 @@ import {
   KEYSET_PAGE_SIZE,
   mergeKeysetLists,
 } from '../../shared/utils/keyset-cursor.util';
+import { BILATERAL_DECISION_NOTICE_COPY } from './constants/bilateral-decision-notice.constants';
 
 /**
  * `PSR-T-7`/`PSR-DD-7` — the 3 Center-notice types (`emitCenterNotice` in
@@ -1134,6 +1135,21 @@ export class NotificationService {
       // a BCT row's own trailing `(ABC).` is never misparsed as this shape (WPT-R-4).
       case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
         const suffix = storedText?.trim();
+        // BPT-T-2 (`bilateral-project-tagged`, design §7.2, §9, DD-3): the Center-reported shape
+        // (BCT project targets, after this change) is self-describing — `text` already carries
+        // the reporter, project code and owner, end-anchored — so it's checked FIRST, before the
+        // composed/bare detection below. A match never falls into `isComposedTaggedText`, because
+        // old composed rows end in `. Click to see the result.` and say "of your center", not
+        // "from your center (...)" (BPT-R-4).
+        const centerReported = suffix
+          ? this.parseCenterReportedProjectText(suffix)
+          : null;
+        if (centerReported) {
+          const identity = [resultCode, resultTitle]
+            .filter(Boolean)
+            .join(' - ');
+          return `${centerReported.reporter} has tagged the bilateral project ${centerReported.code} from your center (${centerReported.owner}) to result${identity ? ` ${identity}` : ''}`;
+        }
         if (suffix && !this.isComposedTaggedText(suffix)) {
           const { code, centerLabel } = this.parseTaggedProjectLabel(suffix);
           const identity = [resultCode, resultTitle]
@@ -1290,6 +1306,45 @@ export class NotificationService {
   }
 
   /**
+   * `BPT-T-2` (`bilateral-project-tagged`, design §7.2, §9, requirements.md BPT-R-3/R-4): parses
+   * a Center-reported `RESULT_BILATERAL_PROJECT_TAGGED` row's `text` — the shape the BCT flow
+   * writes for a project target from now on — into its reporter, project code and owner,
+   * end-anchored: `"<reporter> has tagged the bilateral project <code> from your center
+   * (<owner>)"`. Reporter is the shortest prefix before ` has tagged the bilateral project `;
+   * code is everything up to the LAST ` from your center (` (so a code containing its own
+   * parentheses, e.g. `Seeds (Phase 2)`, stays intact — mirrors `parseTaggedProjectLabel`'s
+   * last-trailing-parens rule, R-3 accepted risk); owner is the non-empty `[^()]+` inside the
+   * final parens. Returns `null` when the pattern doesn't match, or when any part is empty after
+   * trimming (including an empty `()`, which the `[^()]+` requirement already rules out).
+   *
+   * This runs BEFORE `isComposedTaggedText` in the `RESULT_BILATERAL_PROJECT_TAGGED` case (DD-3),
+   * so a legacy/BCT-T-4 composed sentence (ends in `. Click to see the result.`, says "of your
+   * center") and a W1/W2 bare/enriched row (no ` has tagged the bilateral project ` substring)
+   * can never match here (BPT-R-4).
+   *
+   * Keep in sync with the client twin:
+   * `onecgiar-pr-client/src/app/shared/constants/notification-type.constants.ts`
+   * `parseCenterReportedProjectText`. Both pin the identical shape table (design §9, BPT-NFR-2).
+   */
+  private parseCenterReportedProjectText(text: string): {
+    reporter: string;
+    code: string;
+    owner: string;
+  } | null {
+    const match = text.match(
+      /^(.+?) has tagged the bilateral project (.+) from your center \(([^()]+)\)\s*$/,
+    );
+    if (!match) return null;
+
+    const reporter = match[1].trim();
+    const code = match[2].trim();
+    const owner = match[3].trim();
+    if (!reporter || !code || !owner) return null;
+
+    return { reporter, code, owner };
+  }
+
+  /**
    * P2-3157 AC2: standardized copy for a bilateral review decision, e.g.
    * "✅ Your Result 1234 - Some title... has been Approved by the Science Program SP5".
    */
@@ -1304,9 +1359,17 @@ export class NotificationService {
     const identity = [resultCode, this.truncateTitle(resultTitle)]
       .filter((part) => part !== undefined && part !== null && part !== '')
       .join(' - ');
-    // Center recipients: the stored text already names the relationship and the deciding
-    // program, so it replaces the "Your Result ..." sentence (NDCW-R-2/R-3).
     const centerText = storedText?.trim();
+    // SACN-R-3/R-4 (design §7.3): the new-shape center sentence for an Approve decision — stored
+    // text ends in the fixed tail from `BILATERAL_DECISION_NOTICE_COPY`. Detected first so a
+    // legacy row's own trailing wording (checked next) never double-matches. The result identity
+    // is appended directly (no "The result" prefix, no comma) — when missing, the text alone.
+    if (centerText?.endsWith(BILATERAL_DECISION_NOTICE_COPY.tail)) {
+      return identity ? `${centerText} ${identity}` : centerText;
+    }
+    // Legacy center recipients (Reject, and pre-SACN Approve rows): the stored text already
+    // names the relationship and the deciding program, so it replaces the "Your Result ..."
+    // sentence (NDCW-R-2/R-3).
     if (centerText) {
       return identity
         ? `The result ${identity}, ${centerText}`

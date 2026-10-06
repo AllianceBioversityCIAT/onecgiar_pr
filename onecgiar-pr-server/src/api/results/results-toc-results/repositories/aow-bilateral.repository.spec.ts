@@ -1273,6 +1273,67 @@ describe('AoWBilateralRepository', () => {
     });
   });
 
+  // ─── ACS-T-1 (docs/specs/bugfix/achieved-counts-submitted) ─────────────────
+  // Regression test, red before design.md §7's `achieved_progress_percentage` ships on the
+  // indicator (ACS-R-1/ACS-R-2). `achieved_value_sum` itself already leaves the repository
+  // (indicator-achieved-value-per-center) — what's missing is the formatted percentage computed
+  // from it, and the ticket demands it ship WITHOUT disturbing the existing QA pair's own values
+  // (ACS-S-11: `actual_achieved_value_sum` / `progress_percentage` keep their current meaning).
+  describe('ACS — achieved_progress_percentage ships on the indicator, QA pair untouched (ACS-S-11)', () => {
+    const rowFor = (overrides: Record<string, unknown> = {}) => ({
+      toc_result_id: 1,
+      category: 'OUTCOME',
+      result_title: 'Outcome 1',
+      related_node_id: 'node1',
+      indicator_id: 10,
+      indicator_description: 'Indicator 1',
+      toc_result_indicator_id: 'IND1',
+      indicator_related_node_id: 'ind_node1',
+      unit_messurament: 'Number',
+      type_value: 'Count',
+      type_name: 'Counter',
+      location: 'Global',
+      target_value_sum: 1,
+      number_target: '1',
+      target_date: 2025,
+      result_type_id: 1,
+      result_level_id: 3,
+      ...overrides,
+    });
+
+    const contributionFor = (overrides: Record<string, unknown> = {}) => ({
+      indicator_id: 10,
+      toc_result_indicator_id: 'node-10',
+      target_value_sum: 1,
+      actual_achieved_value_sum: 0,
+      preliminary_achieved_value_sum: 1,
+      achieved_value_sum: 1,
+      work_package_acronym: 'AOW01',
+      ...overrides,
+    });
+
+    it('computes achieved_progress_percentage = 100% from achieved_value_sum 1 over target 1, while the QA pair stays at its own (unreported) value', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor()])
+        .mockResolvedValueOnce([contributionFor()])
+        .mockResolvedValueOnce([]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      const indicator = result[0].indicators[0] as any;
+      // Fails today: groupTocRows' explicit field list never names achieved_progress_percentage.
+      expect(indicator.achieved_progress_percentage).toBe('100%');
+      // ACS-S-11: existing QA fields keep their current value/meaning, untouched by the addition.
+      expect(indicator.actual_achieved_value_sum).toBe(0);
+      expect(indicator.progress_percentage).toBe('0%');
+    });
+  });
+
   describe('RRC — exact toc_indicator_target_id match replaces centre-set intersection (reported-results-center-scoping)', () => {
     const IITA = 501;
     const CIMMYT = 502;

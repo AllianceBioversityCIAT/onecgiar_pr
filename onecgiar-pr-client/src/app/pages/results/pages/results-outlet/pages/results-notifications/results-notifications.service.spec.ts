@@ -333,7 +333,9 @@ describe('ResultsNotificationsService', () => {
       expect(mockApiService.resultsSE.GET_allRequest).toHaveBeenCalledWith({ versionId: 3, scope: 'pending' });
       expect(mockApiService.resultsSE.GET_allRequest).toHaveBeenCalledWith({ versionId: 3, scope: 'history', cursor: undefined });
       expect(sentSpy).not.toHaveBeenCalled();
-      expect(updatesSpy).not.toHaveBeenCalled();
+      // BELL-T-2: `refreshSource` also refreshes the bell (phase-agnostic `{ scope: 'pending' }` calls);
+      // what must stay untouched is the OTHER source's phase-scoped inbox fetch.
+      expect(updatesSpy).not.toHaveBeenCalledWith(expect.objectContaining({ versionId: 3 }));
       expect(service.receivedData).toEqual({
         receivedContributionsPending: [{ requested_date: '2023-01-02' }],
         receivedContributionsDone: [{ requested_date: '2023-01-01' }]
@@ -1164,6 +1166,228 @@ describe('ResultsNotificationsService', () => {
         service.filterInitiativesByPhase(999);
 
         expect(service.filteredInitiatives).toEqual([{ initiative_id: 1 }]);
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------------------------
+  // @akili-spec notifications/bell-quick-inbox — BELL-T-2: phase-agnostic bell state
+  // -----------------------------------------------------------------------------------------
+  describe('bell state (BELL-T-2)', () => {
+    const decisionRow = (n: number, date = '2026-01-0' + n) => ({
+      share_result_request_id: n,
+      request_status_id: 1,
+      request_type: 'primary',
+      requested_date: date,
+      obj_result: { obj_version: { obj_portfolio: { acronym: 'P25' } } }
+    });
+    const updateRow = (n: number, date = '2026-02-0' + n) => ({ notification_id: n, read: false, created_date: date });
+
+    const setBellEndpoints = (received: any[], updates: any[]) => {
+      mockApiService.resultsSE.GET_allRequest = jest.fn(() => of({ response: { receivedContributionsPending: received } }));
+      mockApiService.resultsSE.GET_requestUpdates = jest.fn(() => of({ response: { notificationsPending: updates } }));
+    };
+
+    beforeEach(() => {
+      mockApiService.alertsFe = { show: jest.fn() };
+      mockApiService.resultsSE.PATCH_updateRequest = jest.fn(() => of({}));
+    });
+
+    it('bellCount counts 3 received pending + 2 unread updates', () => {
+      setBellEndpoints([decisionRow(1), decisionRow(2), decisionRow(3)], [updateRow(1), updateRow(2)]);
+      service.refreshBell();
+      expect(service.bellCount()).toBe(5);
+      expect(service.bellLoading()).toBe(false);
+      expect(service.bellError()).toBe(false);
+    });
+
+    it('does not send versionId even when phaseFilter is set (BELL-R-1)', () => {
+      service.phaseFilter = '30';
+      setBellEndpoints([], []);
+      service.refreshBell();
+      expect(mockApiService.resultsSE.GET_allRequest).toHaveBeenCalledTimes(1);
+      const allOpts = mockApiService.resultsSE.GET_allRequest.mock.calls[0][0];
+      const updOpts = mockApiService.resultsSE.GET_requestUpdates.mock.calls[0][0];
+      expect(allOpts).toEqual({ scope: 'pending' });
+      expect('versionId' in allOpts).toBe(false);
+      expect(updOpts).toEqual({ scope: 'pending' });
+      expect('versionId' in updOpts).toBe(false);
+    });
+
+    it('bellItems tags kinds, puts decisions first even when older than an update, newest first inside a kind (BELL-R-3)', () => {
+      setBellEndpoints([decisionRow(1, '2020-01-01'), decisionRow(2, '2020-06-01')], [updateRow(1, '2026-01-01'), updateRow(2, '2026-03-01')]);
+      service.refreshBell();
+      const items = service.bellItems();
+      expect(items.map(i => i.kind)).toEqual(['decision', 'decision', 'update', 'update']);
+      expect(items.map(i => i.share_result_request_id ?? i.notification_id)).toEqual([2, 1, 2, 1]);
+    });
+
+    it('an older generation arriving last does not overwrite a newer one', () => {
+      const first$ = new Subject<any>();
+      const second$ = new Subject<any>();
+      const queue = [first$, second$];
+      mockApiService.resultsSE.GET_allRequest = jest.fn(() => queue.shift());
+      mockApiService.resultsSE.GET_requestUpdates = jest.fn(() => of({ response: { notificationsPending: [] } }));
+
+      service.refreshBell();
+      service.refreshBell();
+      second$.next({ response: { receivedContributionsPending: [decisionRow(2)] } });
+      second$.complete();
+      first$.next({ response: { receivedContributionsPending: [decisionRow(1), decisionRow(3)] } });
+      first$.complete();
+
+      expect(service.bellReceived().map(r => r.share_result_request_id)).toEqual([2]);
+      expect(service.bellLoading()).toBe(false);
+    });
+
+    it('a failed refresh keeps the previous snapshot and sets bellError', () => {
+      setBellEndpoints([decisionRow(1)], [updateRow(1)]);
+      service.refreshBell();
+      mockApiService.resultsSE.GET_allRequest = jest.fn(() => throwError(() => ({ status: 500 })));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      service.refreshBell();
+      expect(service.bellCount()).toBe(2);
+      expect(service.bellError()).toBe(true);
+      expect(service.bellLoading()).toBe(false);
+    });
+
+    it('refreshSource("received") and refreshSource("updates") call refreshBell', () => {
+      const spy = jest.spyOn(service, 'refreshBell');
+      service.refreshSource('received');
+      service.refreshSource('updates');
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    it('readUpdatesNotifications calls refreshBell once the PATCH succeeds, not before and not on error', () => {
+      const spy = jest.spyOn(service, 'refreshBell');
+      const pending$ = new Subject<any>();
+      mockApiService.resultsSE.PATCH_readNotification = jest.fn(() => pending$);
+      service.updatesData.notificationsPending = [{ notification_id: 1, created_date: '2026-01-01', read: false }] as any;
+      service.readUpdatesNotifications(service.updatesData.notificationsPending[0]);
+      expect(spy).not.toHaveBeenCalled();
+      pending$.next({});
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      spy.mockClear();
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockApiService.resultsSE.PATCH_readNotification = jest.fn(() => throwError(() => ({ status: 500 })));
+      service.updatesData.notificationsPending = [{ notification_id: 2, created_date: '2026-01-01', read: false }] as any;
+      service.readUpdatesNotifications(service.updatesData.notificationsPending[0]);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('markAllUpdatesNotificationsAsRead calls refreshBell after success', () => {
+      const spy = jest.spyOn(service, 'refreshBell');
+      service.updatesData.notificationsPending = [{ notification_id: 1, created_date: '2026-01-01' }] as any;
+      service.markAllUpdatesNotificationsAsRead();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    // BELL-T-10: the popover's "Mark as read" — phase-agnostic, decisions untouched.
+    describe('markAllBellUpdatesRead() (BELL-T-10)', () => {
+      it('PATCHes read-all with NO arguments (no versionId even with a phase filter), then refreshBell()', async () => {
+        service.phaseFilter = '30';
+        const patch = jest.fn(() => of({}));
+        mockApiService.resultsSE.PATCH_readAllNotifications = patch;
+        const spy = jest.spyOn(service, 'refreshBell');
+        await service.markAllBellUpdatesRead();
+        expect(patch).toHaveBeenCalledTimes(1);
+        expect((patch.mock.calls[0] as any[]).length).toBe(0);
+        expect(spy).toHaveBeenCalledTimes(1);
+      });
+
+      it('works with an empty inbox snapshot (it must not depend on the phase-filtered updatesData)', async () => {
+        service.updatesData.notificationsPending = [];
+        const patch = jest.fn(() => of({}));
+        mockApiService.resultsSE.PATCH_readAllNotifications = patch;
+        await service.markAllBellUpdatesRead();
+        expect(patch).toHaveBeenCalledTimes(1);
+      });
+
+      it('never touches pending decisions (no decision PATCH, bellReceived kept)', async () => {
+        setBellEndpoints([decisionRow(1), decisionRow(2)], [updateRow(1)]);
+        service.refreshBell();
+        mockApiService.resultsSE.PATCH_readAllNotifications = jest.fn(() => of({}));
+        setBellEndpoints([decisionRow(1), decisionRow(2)], []);
+        await service.markAllBellUpdatesRead();
+        expect(mockApiService.resultsSE.PATCH_updateRequest).not.toHaveBeenCalled();
+        expect(service.bellReceived()).toHaveLength(2);
+        expect(service.bellUpdates()).toHaveLength(0);
+      });
+
+      it('rejects and does NOT refresh the bell when the PATCH fails', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        mockApiService.resultsSE.PATCH_readAllNotifications = jest.fn(() => throwError(() => ({ status: 500 })));
+        const spy = jest.spyOn(service, 'refreshBell');
+        await expect(service.markAllBellUpdatesRead()).rejects.toBeTruthy();
+        expect(spy).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('decideRequest()', () => {
+      beforeEach(() => {
+        setBellEndpoints([decisionRow(1), decisionRow(2)], [updateRow(1)]);
+        service.refreshBell();
+      });
+
+      it('sends the shared decision body with the P25 flag using the untagged row', async () => {
+        const tagged = service.bellItems().find(i => i.share_result_request_id === 1)!;
+        await service.decideRequest(tagged, true);
+        const [body, isP25] = mockApiService.resultsSE.PATCH_updateRequest.mock.calls[0];
+        expect(isP25).toBe(true);
+        expect(body.request_status_id).toBe(2);
+        expect(body.result_toc_result).toEqual({ planned_result: null, result_toc_results: [] });
+        expect(body.result_request.share_result_request_id).toBe(1);
+        expect('kind' in body.result_request).toBe(false);
+      });
+
+      it('on success removes the row, toasts, and refreshes the bell without touching the inbox when no phase filter is set', async () => {
+        const refreshSourceSpy = jest.spyOn(service, 'refreshSource');
+        const bellSpy = jest.spyOn(service, 'refreshBell');
+        setBellEndpoints([decisionRow(2)], [updateRow(1)]);
+        await service.decideRequest(service.bellItems().find(i => i.share_result_request_id === 1)!, true);
+        expect(service.bellReceived().map(r => r.share_result_request_id)).toEqual([2]);
+        expect(service.bellCount()).toBe(2);
+        expect(mockApiService.alertsFe.show).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'noti', title: 'Request successfully accepted', status: 'success' })
+        );
+        expect(bellSpy).toHaveBeenCalled();
+        expect(refreshSourceSpy).not.toHaveBeenCalled();
+      });
+
+      it('shows the rejected toast on decline', async () => {
+        await service.decideRequest(service.bellItems()[0], false);
+        expect(mockApiService.alertsFe.show).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'Request successfully rejected', status: 'information' })
+        );
+      });
+
+      it('refreshes the received inbox source only when phaseFilter is set', async () => {
+        service.phaseFilter = 30;
+        const refreshSourceSpy = jest.spyOn(service, 'refreshSource');
+        await service.decideRequest(service.bellItems()[0], true);
+        expect(refreshSourceSpy).toHaveBeenCalledWith('received');
+      });
+
+      it('on 409 shows the stale message, refreshes the bell and does not reject', async () => {
+        mockApiService.resultsSE.PATCH_updateRequest = jest.fn(() => throwError(() => ({ status: 409 })));
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const bellSpy = jest.spyOn(service, 'refreshBell');
+        setBellEndpoints([decisionRow(2)], [updateRow(1)]);
+        await expect(service.decideRequest(service.bellItems()[0], true)).resolves.toBeUndefined();
+        expect(mockApiService.alertsFe.show).toHaveBeenCalledWith(expect.objectContaining({ title: 'This request was already answered' }));
+        expect(bellSpy).toHaveBeenCalled();
+        expect(service.bellCount()).toBe(2);
+      });
+
+      it('on 500 rethrows, leaves the count and row unchanged, and does not refresh', async () => {
+        mockApiService.resultsSE.PATCH_updateRequest = jest.fn(() => throwError(() => ({ status: 500 })));
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const bellSpy = jest.spyOn(service, 'refreshBell');
+        await expect(service.decideRequest(service.bellItems()[0], true)).rejects.toEqual({ status: 500 });
+        expect(service.bellCount()).toBe(3);
+        expect(service.bellReceived().length).toBe(2);
+        expect(bellSpy).not.toHaveBeenCalled();
       });
     });
   });

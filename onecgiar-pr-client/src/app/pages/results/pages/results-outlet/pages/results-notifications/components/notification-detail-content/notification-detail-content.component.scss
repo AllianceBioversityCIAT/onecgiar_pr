@@ -1,0 +1,7 @@
+:host {
+  // DSP-T-3: this component's header/body/footer must behave as direct flex children of whatever
+  // flex-column container renders it (the drawer's `hlm-sheet-content`, and later the wide-screen
+  // `<aside>`) — not as one single block-level flex ITEM wrapping them. Same reasoning as the
+  // drawer shell's own `:host { display: contents; }` (CRD-T-1).
+  display: contents;
+}

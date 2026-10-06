@@ -11,7 +11,7 @@ export const BILATERAL_TAB_LABELS: Record<BilateralTabId, string> = {
   overview: 'Overview',
   reporting: 'Reporting',
   results: 'Results',
-  drafts: 'AI Draft Results'
+  drafts: 'My Drafts'
 };
 
 export const BILATERAL_TAB_ROUTES: Record<BilateralTabId, string> = {
@@ -84,7 +84,7 @@ export class BilateralTourService {
         element: '[data-guide="bilateral-tabs"]',
         popover: {
           title: 'Main Navigation Tabs',
-          description: `${tabBadgeHtml(initialTab)}<span class="pr-guide-step-copy">Switch between Overview (KPIs and burndown charts), Reporting (bilateral projects catalog and indicator targets), Results (reported deliverables registry), and AI Draft Results (AI-extracted candidate results).</span>`,
+          description: `${tabBadgeHtml(initialTab)}<span class="pr-guide-step-copy">Switch between Overview (KPIs and burndown charts), Reporting (bilateral projects catalog and indicator targets), Results (reported deliverables registry), and My Drafts (AI-extracted candidate results).</span>`,
           side: 'bottom',
           align: 'center'
         }
@@ -146,7 +146,7 @@ export class BilateralTourService {
       {
         element: '[data-guide="bilateral-tab-drafts"]',
         popover: {
-          title: 'AI Draft Results',
+          title: 'My Drafts',
           description: `${tabBadgeHtml('drafts')}<span class="pr-guide-step-copy">Explore candidate results extracted by AI from project technical reports, filter by project, and review or promote them into official reporting.</span>`,
           side: 'top',
           align: 'start'

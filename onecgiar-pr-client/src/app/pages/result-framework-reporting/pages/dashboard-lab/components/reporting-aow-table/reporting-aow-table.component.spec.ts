@@ -478,11 +478,25 @@ describe('ReportingAowTableComponent', () => {
       expect(activeBtns.length).toBeGreaterThanOrEqual(2); // "All" for Center and "All Types" for Type
     });
 
-    it('collapses QA/Prel percentages to sr-only on narrow viewports (RAJ-R-6)', async () => {
+    it('collapses the achievement percentage to sr-only on narrow viewports (RAJ-R-6)', async () => {
       const r = row({
         __hloNode: { progress: achievement({ progress_percentage: '50%', preliminary_progress_percentage: '60%' }) }
       });
       await build([group([r])]);
+      openAow();
+
+      const srOnlyEl = (fixture.nativeElement as HTMLElement).querySelector('.max-\\[899px\\]\\:sr-only');
+      expect(srOnlyEl).toBeTruthy();
+      expect(srOnlyEl!.textContent).toContain('50%');
+    });
+
+    // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: the flag restores the QA/Prel pair.
+    it('restores QA/Prel percentages to sr-only on narrow viewports when the split flag is on (ACS-S-10)', async () => {
+      const r = row({
+        __hloNode: { progress: achievement({ progress_percentage: '50%', preliminary_progress_percentage: '60%' }) }
+      });
+      await build([group([r])]);
+      (component as any).showQaPrelSplit = true;
       openAow();
 
       const srOnlyEl = (fixture.nativeElement as HTMLElement).querySelector('.max-\\[899px\\]\\:sr-only');
@@ -1036,7 +1050,21 @@ describe('ReportingAowTableComponent', () => {
       expect(achievementEl).toBeTruthy();
       expect(achievementEl!.className).toContain('max-[1100px]:sr-only');
       expect(achievementEl!.className).not.toContain('hidden');
-      // Its figures are still real text nodes in the DOM — an AT user reading the block gets them.
+      // Its figure is still a real text node in the DOM — an AT user reading the block gets it.
+      // @akili-spec bugfix/achieved-counts-submitted — ACS-S-9: the Preliminary figure is hidden by default.
+      expect(achievementEl!.textContent).toContain('40%');
+    });
+
+    // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: the flag restores both figures.
+    it('restores both QA and Preliminary figures when the split flag is on (ACS-S-10)', async () => {
+      const g = group([row()], { achievement: achievement() });
+      await build([g]);
+      (component as any).showQaPrelSplit = true;
+      openAow();
+
+      const achievementEl = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
+        el.className.includes('w-[168px]')
+      );
       expect(achievementEl!.textContent).toContain('40%');
       expect(achievementEl!.textContent).toContain('55%');
     });
@@ -1052,14 +1080,13 @@ describe('ReportingAowTableComponent', () => {
     // The sighted-hover fallback the ladder promises ("available in the row tooltip"): once the
     // achievement block is sr-only (unreachable by a pointer), its content must still be
     // discoverable by hovering the group that stays visible.
-    it('carries the achievement figures into the group title when the block is present', async () => {
+    it('carries the achievement figure into the group title when the block is present', async () => {
       const g = group([row()], { achievement: achievement() });
       await build([g]);
 
-      expect(component.rowTitle(g)).toContain('QA 40%');
-      expect(component.rowTitle(g)).toContain('Preliminary 55%');
+      expect(component.rowTitle(g)).toContain('ToC achievement — 40%');
       const titled = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[title]')).find(el =>
-        (el.getAttribute('title') || '').includes('QA 40%')
+        (el.getAttribute('title') || '').includes('ToC achievement — 40%')
       );
       expect(titled).toBeTruthy();
     });
@@ -1082,7 +1109,17 @@ describe('ReportingAowTableComponent', () => {
       );
       const title = component.rowTitle(g);
       expect(title).not.toContain('zero-target');
-      expect(title).toContain('QA 40%');
+      expect(title).toContain('ToC achievement — 40%');
+    });
+
+    // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: the flag restores the QA/Prel sentence.
+    it('rowTitle carries the QA/Preliminary sentence when the split flag is on (ACS-S-10)', async () => {
+      const g = group([row()], { achievement: achievement() });
+      await build([g]);
+      (component as any).showQaPrelSplit = true;
+
+      expect(component.rowTitle(g)).toContain('QA 40%');
+      expect(component.rowTitle(g)).toContain('Preliminary 55%');
     });
 
     it('renders an achievement skeleton when group is loading', async () => {

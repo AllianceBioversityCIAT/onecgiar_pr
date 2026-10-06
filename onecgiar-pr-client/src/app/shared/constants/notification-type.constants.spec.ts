@@ -7,6 +7,7 @@ import {
   isBilateralReviewNotification,
   isBilateralSubmittedNotification,
   isResultTaggedNotification,
+  parseCenterReportedProjectText,
   resolveNotificationType
 } from './notification-type.constants';
 
@@ -224,6 +225,80 @@ describe('notification-type constants', () => {
       });
       expect(buildResultNotificationText(notification)).toBe(
         '❌ Your Result 9561 - T has been Rejected by the Science Program SP03.'
+      );
+    });
+  });
+
+  // SACN-T-3 (`notifications/sp-approval-center-notice`, SACN-R-3/R-4/R-5/R-7): new-shape center
+  // sentence for Approve, rendered as bold-SP-code + plain-verb segments.
+  describe('bilateral review decisions — approved center notice (SACN)', () => {
+    const withText = (type: NotificationType, text: string | null) =>
+      notificationOf(type, {
+        text,
+        obj_result: resultOf({ result_code: 9330, title: 'Solar-powered cold storage adoption in Kenyan markets' })
+      });
+
+    it('builds the exact SP-code sentence and bolds only the SP code', () => {
+      const notification = withText(
+        NotificationType.BILATERAL_RESULT_APPROVED,
+        "SP06, as primary Science Program, has approved your center's result"
+      );
+
+      expect(buildResultNotificationText(notification)).toBe(
+        "SP06, as primary Science Program, has approved your center's result 9330 - Solar-powered cold storage adoption in Kenyan markets"
+      );
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments).toEqual([
+        { text: 'SP06', emphasize: true },
+        { text: ", as primary Science Program, has approved your center's result", emphasize: false }
+      ]);
+      expect(parts.linkTrailer).toBeUndefined();
+    });
+
+    it('falls back to the no-code sentence with no emphasized segment', () => {
+      const notification = withText(
+        NotificationType.BILATERAL_RESULT_APPROVED,
+        "The primary Science Program has approved your center's result"
+      );
+
+      expect(buildResultNotificationText(notification)).toBe(
+        "The primary Science Program has approved your center's result 9330 - Solar-powered cold storage adoption in Kenyan markets"
+      );
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments).toEqual([
+        { text: "The primary Science Program has approved your center's result", emphasize: false }
+      ]);
+      expect(parts.segments?.some(segment => segment.emphasize)).toBe(false);
+    });
+
+    it('never applies the new-shape parser to Rejected, even with the same tail', () => {
+      const notification = withText(
+        NotificationType.BILATERAL_RESULT_REJECTED,
+        "SP06, as primary Science Program, has approved your center's result"
+      );
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments).toBeUndefined();
+      expect(parts.prefix).toBe('The result');
+      expect(parts.suffix).toBe("SP06, as primary Science Program, has approved your center's result");
+    });
+
+    it('keeps legacy center wording and the submitter/empty-text cases unchanged (SACN-R-7)', () => {
+      const legacy = withText(
+        NotificationType.BILATERAL_RESULT_APPROVED,
+        'where your center was tagged, has been approved by the Science Program SP03.'
+      );
+      expect(getResultNotificationTextParts(legacy).segments).toBeUndefined();
+      expect(buildResultNotificationText(legacy)).toBe(
+        "The result 9330 - Solar-powered cold storage adoption in Kenyan markets, where your center was tagged, has been approved by the Science Program SP03."
+      );
+
+      const empty = withText(NotificationType.BILATERAL_RESULT_APPROVED, null);
+      expect(getResultNotificationTextParts(empty).segments).toBeUndefined();
+      expect(buildResultNotificationText(empty)).toBe(
+        '✅ Your Result 9330 - Solar-powered cold storage adoption in Kenyan markets has been Approved by the Science Program SP5.'
       );
     });
   });
@@ -506,6 +581,70 @@ describe('notification-type constants', () => {
       const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: 'ABC' });
 
       expect(getResultNotificationTextParts(notification).segments).toBeUndefined();
+    });
+  });
+
+  describe('Center-reported bilateral project tagged (BPT-T-3)', () => {
+    // design.md §9 shape table, pinned identically on the server twin.
+    it.each([
+      ['ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)', { reporter: 'ICRISAT', code: 'B-A1187', owner: 'ABC' }],
+      [
+        'A CGIAR Center has tagged the bilateral project B-A1187 from your center (ABC)',
+        { reporter: 'A CGIAR Center', code: 'B-A1187', owner: 'ABC' }
+      ],
+      [
+        'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC)',
+        { reporter: 'ICRISAT', code: 'Seeds (Phase 2)', owner: 'ABC' }
+      ],
+      ['reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.', null],
+      ['B-A1080 (ABC)', null],
+      ['B-A1080', null],
+      ['', null],
+      ['ICRISAT has tagged the bilateral project B-A1187 from your center ()', null]
+    ])('parses %s', (text, expected) => {
+      expect(parseCenterReportedProjectText(text)).toEqual(expected);
+    });
+
+    it('flattens to the full sentence with the result identity appended', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+        obj_result: resultOf({ result_code: 9322, title: '<title>' })
+      });
+
+      expect(buildResultNotificationText(notification)).toBe(
+        'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 9322 - <title>'
+      );
+    });
+
+    it('emphasizes exactly reporter, code and owner — never "The result"', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['ICRISAT', 'B-A1187', 'ABC']);
+      expect(parts.prefix).not.toContain('The result');
+      expect(parts.suffix).toBeNull();
+      expect(parts.emphasizePrefix).toBe(false);
+    });
+
+    it('keeps the project code intact when it contains its own parentheses', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['ICRISAT', 'Seeds (Phase 2)', 'ABC']);
+    });
+
+    it('never falls into the composed-sentence fallback (order falsifier)', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.prefix).not.toBe('The result');
+      expect(parts.segments).toBeDefined();
     });
   });
 

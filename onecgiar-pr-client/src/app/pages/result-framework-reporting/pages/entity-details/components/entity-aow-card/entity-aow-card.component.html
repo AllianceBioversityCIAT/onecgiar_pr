@@ -38,9 +38,14 @@
       against the targets.
     -->
     @if (progress) {
+      <!-- @akili-spec bugfix/achieved-counts-submitted -->
       <div class="entity-aow-card_progress">
-        <span class="entity-aow-card_progress_item">QA:<span class="font-weight-600">{{ progressLabel }}</span></span>
-        <span class="entity-aow-card_progress_item">Prel.:<span class="font-weight-600">{{ preliminaryLabel }}</span></span>
+        @if (showQaPrelSplit) {
+          <span class="entity-aow-card_progress_item">QA:<span class="font-weight-600">{{ progressLabel }}</span></span>
+          <span class="entity-aow-card_progress_item">Prel.:<span class="font-weight-600">{{ preliminaryLabel }}</span></span>
+        } @else {
+          <span class="entity-aow-card_progress_item">Achieved:<span class="font-weight-600">{{ progressLabel }}</span></span>
+        }
         @if (coverage) {
           <span class="entity-aow-card_progress_coverage">{{ coverage }}</span>
         }

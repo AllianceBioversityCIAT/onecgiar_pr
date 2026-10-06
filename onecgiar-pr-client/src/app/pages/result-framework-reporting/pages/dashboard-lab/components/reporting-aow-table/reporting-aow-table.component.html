@@ -169,7 +169,8 @@
                 [prTooltip]="isOverachievedWithoutTarget(row) ? 'No target was set for this indicator, so a percentage cannot be calculated. Results were still reported against it. It is excluded from the averages above.' : 'No target was set for this indicator, so a percentage cannot be calculated. It is excluded from the averages above.'">
                 {{ isOverachievedWithoutTarget(row) ? 'Overachieved' : 'No target set' }}
               </span>
-            } @else {
+            } @else if (showQaPrelSplit) {
+              <!-- @akili-spec bugfix/achieved-counts-submitted -->
               <div
                 class="flex flex-col items-center justify-center text-center leading-tight"
                 [prTooltip]="progressTracksTooltip(row)"
@@ -179,6 +180,13 @@
                 </span>
                 <span class="text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)] whitespace-nowrap">
                   <span class="text-[9.5px] font-medium uppercase text-[var(--pr-text-subtle)] mr-[2px]">Prel.</span>{{ row.preliminary_progress_percentage || '0%' }}
+                </span>
+              </div>
+            } @else {
+              <!-- @akili-spec bugfix/achieved-counts-submitted — single union ("Achieved") figure -->
+              <div class="flex flex-col items-center justify-center text-center leading-tight" [prTooltip]="progressTracksTooltip(row)" prTooltipPosition="top">
+                <span class="text-[12.5px] font-bold tabular-nums text-[var(--pr-text-heading)] whitespace-nowrap">
+                  {{ row.progress_percentage || '0%' }}
                 </span>
               </div>
             }
@@ -447,24 +455,33 @@
           <!-- Right zone: QA / Prel achievement & By-AOW action -->
           <div class="ml-auto flex items-center gap-[12px] shrink-0">
             @if (group.achievement) {
+              <!-- @akili-spec bugfix/achieved-counts-submitted -->
               <span
                 class="flex w-[168px] shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[12px] leading-tight max-[1100px]:sr-only"
                 [prTooltip]="achievementTooltip(group.achievement)"
                 prTooltipPosition="top">
-                <span class="flex items-baseline gap-[10px] whitespace-nowrap">
-                  <span class="flex items-baseline gap-[4px]">
-                    <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                @if (showQaPrelSplit) {
+                  <span class="flex items-baseline gap-[10px] whitespace-nowrap">
+                    <span class="flex items-baseline gap-[4px]">
+                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                      <span class="text-[13.5px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                        {{ achievementLabel(group.achievement) }}
+                      </span>
+                    </span>
+                    <span class="flex items-baseline gap-[4px]">
+                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                      <span class="text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                        {{ preliminaryAchievementLabel(group.achievement) }}
+                      </span>
+                    </span>
+                  </span>
+                } @else {
+                  <span class="flex items-baseline gap-[10px] whitespace-nowrap">
                     <span class="text-[13.5px] font-bold tabular-nums text-[var(--pr-text-heading)]">
                       {{ achievementLabel(group.achievement) }}
                     </span>
                   </span>
-                  <span class="flex items-baseline gap-[4px]">
-                    <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
-                    <span class="text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
-                      {{ preliminaryAchievementLabel(group.achievement) }}
-                    </span>
-                  </span>
-                </span>
+                }
                 @if (achievementCoverage(group.achievement)) {
                   <span class="whitespace-nowrap text-[10px] font-medium text-[var(--pr-text-muted)]">
                     {{ achievementCoverage(group.achievement) }}
@@ -818,17 +835,24 @@
                           </div>
 
                           @if (hlo.achievement) {
+                            <!-- @akili-spec bugfix/achieved-counts-submitted -->
                             <div
                               class="text-right text-xs max-[899px]:sr-only"
                               [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
                               prTooltipPosition="top">
-                              <span class="font-bold text-slate-900 whitespace-nowrap">
-                                <span class="text-[9px] font-medium uppercase text-slate-600 mr-0.5">QA</span>{{ achievementLabel(hlo.achievement) }}
-                              </span>
-                              <span class="text-slate-400 mx-1">·</span>
-                              <span class="font-medium text-slate-600 whitespace-nowrap">
-                                <span class="text-[9px] font-medium uppercase text-slate-600 mr-0.5">Prel.</span>{{ preliminaryAchievementLabel(hlo.achievement) }}
-                              </span>
+                              @if (showQaPrelSplit) {
+                                <span class="font-bold text-slate-900 whitespace-nowrap">
+                                  <span class="text-[9px] font-medium uppercase text-slate-600 mr-0.5">QA</span>{{ achievementLabel(hlo.achievement) }}
+                                </span>
+                                <span class="text-slate-400 mx-1">·</span>
+                                <span class="font-medium text-slate-600 whitespace-nowrap">
+                                  <span class="text-[9px] font-medium uppercase text-slate-600 mr-0.5">Prel.</span>{{ preliminaryAchievementLabel(hlo.achievement) }}
+                                </span>
+                              } @else {
+                                <span class="font-bold text-slate-900 whitespace-nowrap">
+                                  {{ achievementLabel(hlo.achievement) }}
+                                </span>
+                              }
                             </div>
                           } @else {
                             <div class="text-right text-xs font-medium text-slate-400 max-[899px]:sr-only">—</div>
@@ -1101,7 +1125,8 @@
           ">
           {{ isOverachievedWithoutTarget(row) ? 'Overachieved' : 'No target set' }}
         </span>
-      } @else {
+      } @else if (showQaPrelSplit) {
+        <!-- @akili-spec bugfix/achieved-counts-submitted -->
         <div class="flex flex-col gap-[5px]" [prTooltip]="progressTracksTooltip(row)">
           <span class="flex items-center gap-[6px]">
             <span class="w-[26px] shrink-0 text-[10.5px] font-medium text-[var(--pr-text-subtle)]">QA</span>
@@ -1121,6 +1146,19 @@
             </span>
             <span class="shrink-0 text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
               {{ row.preliminary_progress_percentage || '0%' }}
+            </span>
+          </span>
+        </div>
+      } @else {
+        <!-- @akili-spec bugfix/achieved-counts-submitted — single union ("Achieved") track, the
+             former QA bar's markup/token, no label. -->
+        <div class="flex flex-col gap-[5px]" [prTooltip]="progressTracksTooltip(row)">
+          <span class="flex items-center gap-[6px]">
+            <span class="h-[6px] min-w-0 flex-1 overflow-hidden rounded-[3px] bg-[var(--pr-border)]">
+              <span class="block h-full rounded-[3px] bg-emerald-500" [style.width.%]="barWidth(progressOf(row))"></span>
+            </span>
+            <span class="shrink-0 text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+              {{ row.progress_percentage || '0%' }}
             </span>
           </span>
         </div>

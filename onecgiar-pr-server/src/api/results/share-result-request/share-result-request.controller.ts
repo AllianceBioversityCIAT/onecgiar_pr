@@ -13,6 +13,7 @@ import { ShareResultRequestService } from './share-result-request.service';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
+import { ApprovalChainDto } from './dto/approval-chain.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import {
@@ -243,6 +244,51 @@ export class ShareResultRequestController {
       scope,
       cursor,
     });
+  }
+
+  @Get('get/result/:resultId/approval-chain')
+  @ApiOperation({
+    summary: "Get a result's approval chain",
+    description:
+      '@akili-spec notifications/detail-side-panel (DSP-R-12) — returns the submission step ' +
+      'plus one step per program (primary first, then contributors by code) for one result: ' +
+      'status, actor and date. Authorized when the user is an admin or holds an active role on ' +
+      'an initiative involved in the result (owner, contributor, requester or approver of a ' +
+      'request); otherwise 403 with no data. The response never carries an email or a user id.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: 'number',
+    description: 'ID of the result whose approval chain is requested',
+    example: 9400,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "The result's approval chain",
+    type: ApprovalChainDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - resultId is not a positive integer',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - the user is not involved in this result and is not an admin',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - the result does not exist or is inactive',
+  })
+  getApprovalChain(
+    @Param('resultId') resultId: string,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.shareResultRequestService.getApprovalChain(resultId, user);
   }
 
   @Get('get/all')

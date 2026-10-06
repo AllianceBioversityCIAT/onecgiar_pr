@@ -30,6 +30,9 @@ describe('ShareResultRequestService', () => {
     findOne: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
+    // @akili-spec notifications/detail-side-panel (DSP-T-1)
+    getResultForApprovalChain: jest.fn(),
+    getApprovalChainData: jest.fn(),
   };
   // `PSR-T-4`
   const mockPrimaryProgramRequestService = {
@@ -1951,6 +1954,220 @@ describe('ShareResultRequestService', () => {
       const calls = mockShareResultRequestRepository.find.mock.calls as any[];
       const doneCall = calls.find((call) => Array.isArray(call[0].where));
       expect(doneCall[0].where).toHaveLength(4);
+    });
+  });
+
+  // @akili-spec notifications/detail-side-panel (DSP-T-1)
+  // DSP-R-12, design.md §4.1/§7 — the service wires real authorization (role +
+  // role_by_user-derived initiatives) around the pure `composeApprovalChain`.
+  describe('getApprovalChain (DSP-T-1)', () => {
+    const activeResultRow = {
+      id: 9400,
+      is_active: 1,
+      status_id: 3,
+      result_status_name: 'Submitted',
+    };
+
+    beforeEach(() => {
+      mockShareResultRequestRepository.getResultForApprovalChain.mockReset();
+      mockShareResultRequestRepository.getApprovalChainData.mockReset();
+    });
+
+    it('400s when resultId is not a positive integer', async () => {
+      mockHandlersError.returnErrorRes.mockReturnValue({
+        response: {},
+        message: 'resultId must be a positive integer',
+        status: HttpStatus.BAD_REQUEST,
+      });
+
+      const result = await service.getApprovalChain('abc', user);
+
+      expect(
+        mockShareResultRequestRepository.getResultForApprovalChain,
+      ).not.toHaveBeenCalled();
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ status: HttpStatus.BAD_REQUEST }),
+        }),
+      );
+      expect(result.status).toBe(HttpStatus.BAD_REQUEST);
+    });
+
+    it('404s when the result does not exist', async () => {
+      mockShareResultRequestRepository.getResultForApprovalChain.mockResolvedValue(
+        undefined,
+      );
+      mockHandlersError.returnErrorRes.mockReturnValue({
+        response: {},
+        message: 'The result was not found',
+        status: HttpStatus.NOT_FOUND,
+      });
+
+      const result = await service.getApprovalChain(9400, user);
+
+      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      expect(
+        mockShareResultRequestRepository.getApprovalChainData,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('404s when the result exists but is inactive', async () => {
+      mockShareResultRequestRepository.getResultForApprovalChain.mockResolvedValue(
+        { ...activeResultRow, is_active: 0 },
+      );
+      mockHandlersError.returnErrorRes.mockReturnValue({
+        response: {},
+        message: 'The result was not found',
+        status: HttpStatus.NOT_FOUND,
+      });
+
+      const result = await service.getApprovalChain(9400, user);
+
+      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+    });
+
+    // Falsifier: "a user with no involved initiative and a role ≠ 1 gets 200" — this test proves
+    // the opposite (403), going through the SERVICE's real `$_getMaxRoleByUser` +
+    // role_by_user-derived initiatives (mocked at the repository boundary only), never a stubbed
+    // `isAuthorized`.
+    it('403s a user who is not admin and holds no initiative involved in the result', async () => {
+      mockShareResultRequestRepository.getResultForApprovalChain.mockResolvedValue(
+        activeResultRow,
+      );
+      mockShareResultRequestRepository.getApprovalChainData.mockResolvedValue({
+        submissionRow: undefined,
+        initiativeRoleRows: [
+          { initiative_id: 4, initiative_role_id: 1 /* SP04 owner */ },
+        ],
+        requestRows: [
+          {
+            shared_inititiative_id: 7,
+            owner_initiative_id: 4,
+            requester_initiative_id: 4,
+            approving_inititiative_id: 7,
+            request_type: 'contribution',
+            request_status_id: 2,
+          },
+        ],
+      });
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3); // not admin
+      // The viewer's own initiatives (role_by_user) do not include 4 or 7.
+      mockRoleByUserRepository.find.mockResolvedValue([{ initiative_id: 99 }]);
+      mockHandlersError.returnErrorRes.mockImplementation(({ error }) => ({
+        response: {},
+        message: error.message,
+        status: error.status,
+      }));
+
+      const result = await service.getApprovalChain(9400, user);
+
+      expect(result.status).toBe(HttpStatus.FORBIDDEN);
+    });
+
+    it('200s and composes the chain for an admin, even with no involved initiative', async () => {
+      mockShareResultRequestRepository.getResultForApprovalChain.mockResolvedValue(
+        activeResultRow,
+      );
+      mockShareResultRequestRepository.getApprovalChainData.mockResolvedValue({
+        submissionRow: undefined,
+        initiativeRoleRows: [{ initiative_id: 4, initiative_role_id: 1 }],
+        requestRows: [],
+      });
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(1); // admin
+      mockRoleByUserRepository.find.mockResolvedValue([]);
+
+      const result = await service.getApprovalChain(9400, user);
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect((result.response as any).result_id).toBe(9400);
+    });
+
+    // Reviewer FAIL (attempt 1), issue 2: every prior 200 test used role 1 (admin), so a real
+    // non-admin viewer going through `isViewerInvolvedInApprovalChain` end to end was never
+    // exercised. Here the viewer holds initiative 7 only via `role_by_user` (role 3, not admin),
+    // and initiative 7 appears ONLY as `approving_inititiative_id`/`shared_inititiative_id` on a
+    // request row — never in `initiativeRoleRows` — so a pass requires the service's real
+    // involvement check (not a stub) to treat request-row participation as involvement.
+    it('200s an authorized non-admin viewer involved only through a request row, with is_viewer_program set', async () => {
+      mockShareResultRequestRepository.getResultForApprovalChain.mockResolvedValue(
+        activeResultRow,
+      );
+      mockShareResultRequestRepository.getApprovalChainData.mockResolvedValue({
+        submissionRow: undefined,
+        initiativeRoleRows: [
+          { initiative_id: 4, initiative_role_id: 1 /* SP04 owner */ },
+        ],
+        requestRows: [
+          {
+            shared_inititiative_id: 7,
+            owner_initiative_id: 4,
+            requester_initiative_id: 4,
+            approving_inititiative_id: 7,
+            official_code: 'SP07',
+            short_name: 'SP07',
+            name: 'Science Program 07',
+            request_type: 'contribution',
+            request_status_id: 1,
+            requested_date: new Date('2026-09-24'),
+            aprovaed_date: null,
+            requested_by_first_name: 'Ana',
+            requested_by_last_name: 'Diaz',
+            approved_by_first_name: null,
+            approved_by_last_name: null,
+          },
+        ],
+      });
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3); // not admin
+      // The viewer's own initiative (7) appears only as approving/shared on the request row above.
+      mockRoleByUserRepository.find.mockResolvedValue([{ initiative_id: 7 }]);
+
+      const result = await service.getApprovalChain(9400, user);
+
+      expect(result.status).toBe(HttpStatus.OK);
+      const sp07 = (result.response as any).steps.find(
+        (s: any) => s.official_code === 'SP07',
+      );
+      expect(sp07).toBeDefined();
+      expect(sp07.is_viewer_program).toBe(true);
+    });
+
+    // Falsifier: "the response contains an email or a user id" — the composed response must
+    // never carry a user id or email, only names/codes/dates/statuses.
+    it('never puts a user id or an email in the response', async () => {
+      mockShareResultRequestRepository.getResultForApprovalChain.mockResolvedValue(
+        activeResultRow,
+      );
+      mockShareResultRequestRepository.getApprovalChainData.mockResolvedValue({
+        submissionRow: {
+          status: 1,
+          created_date: new Date('2026-09-25'),
+          actor_first_name: 'Samuel',
+          actor_last_name: 'Otieno',
+        },
+        initiativeRoleRows: [
+          {
+            initiative_id: 4,
+            official_code: 'SP04',
+            short_name: 'SP04',
+            name: 'Science Program 04',
+            initiative_role_id: 1,
+            created_by_first_name: 'Samuel',
+            created_by_last_name: 'Otieno',
+            created_date: new Date('2026-09-20'),
+          },
+        ],
+        requestRows: [],
+      });
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(1);
+      mockRoleByUserRepository.find.mockResolvedValue([]);
+
+      const result = await service.getApprovalChain(9400, user);
+
+      const serialized = JSON.stringify(result.response);
+      expect(serialized).not.toMatch(/email/i);
+      expect(serialized).not.toMatch(/"user_id"/);
+      expect(serialized).not.toMatch(/"requested_by"/);
+      expect(serialized).not.toMatch(/"approved_by"/);
     });
   });
 });

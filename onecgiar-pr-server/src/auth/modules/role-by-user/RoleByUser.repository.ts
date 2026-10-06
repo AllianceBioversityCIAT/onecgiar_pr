@@ -216,26 +216,30 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
         order by rbu.\`role\` asc
 	    	LIMIT 1) = 1) then true
 	    	else CASE 
-	    		WHEN ((
+	    		-- EXISTS, not "= (subquery)": a user can hold several role rows on the same
+	    		-- initiative (e.g. an inactive old role plus the current one), which made the
+	    		-- scalar subquery return more than 1 row and broke submit. Only active rows count.
+	    		WHEN EXISTS (
 	    		SELECT
-	    			rbu.\`role\`
+	    			1
 	    		FROM
 	    			users u
-	    		left join role_by_user rbu on
+	    		inner join role_by_user rbu on
 	    			rbu.\`user\` = u.id
 	    		WHERE
 	    			u.active > 0
 	    			and u.id = ?
-	    			and rbu.initiative_id = (
+	    			and rbu.active > 0
+	    			and rbu.\`role\` in (${rolesToValidate?.toString() || 'NAN'})
+	    			and rbu.initiative_id in (
 	    			SELECT
 	    				rbi.inititiative_id
 	    			from
 	    				results_by_inititiative rbi
 	    			where
 	    				rbi.result_id = ?
-	    				and rbi.initiative_role_id = 1)) in (${
-                rolesToValidate?.toString() || 'NAN'
-              })) THEN TRUE
+	    				and rbi.initiative_role_id = 1
+	    				and rbi.is_active > 0)) THEN TRUE
 	    		else false
 	    	END
 	    END as validation;
@@ -508,6 +512,39 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     try {
       const result: Array<{ user_id: number | string }> =
         await this.query(queryData);
+      return (result ?? [])
+        .map((row) => Number(row.user_id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * `SACN-T-1` / design §7.1 — every user with an ACTIVE role, of ANY kind, on the center.
+   * Mirror of {@link getUserIdsByInitiative} for the center axis: no role predicate. Used only
+   * by the Approve branch of the bilateral review recipients (SACN-R-1) — not a replacement for
+   * {@link getUserIdsByCenter}, which stays scoped to `role = 9` (Center User) for its six other
+   * callers (SACN-R-9, SACN-DD-1).
+   */
+  async getUserIdsByCenterAnyRole(centerCode: string): Promise<number[]> {
+    const queryData = `
+    SELECT DISTINCT
+      rbu.\`user\` AS user_id
+    FROM role_by_user rbu
+    WHERE rbu.center_id = ?
+      AND rbu.active > 0
+      AND rbu.\`user\` IS NOT NULL;
+    `;
+    try {
+      const result: Array<{ user_id: number | string }> = await this.query(
+        queryData,
+        [centerCode],
+      );
       return (result ?? [])
         .map((row) => Number(row.user_id))
         .filter((id) => Number.isFinite(id) && id > 0);

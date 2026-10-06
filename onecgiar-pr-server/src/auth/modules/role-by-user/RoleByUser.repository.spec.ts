@@ -106,6 +106,64 @@ describe('RoleByUserRepository', () => {
 
   // BIL-RTE-T-1 — design §5.1 / DD-3: single-query membership reads that never throw on
   // multiple matching `role_by_user` rows (P-10).
+  // SACN-T-1 — design §7.1: any-role center lookup, used only for the Approve branch
+  // (SACN-R-1). Mirrors getUserIdsByInitiative's "no role predicate" shape; sanitises ids the
+  // same way getUserIdsByCenter does. getUserIdsByCenter itself stays untouched (SACN-R-9).
+  describe('getUserIdsByCenterAnyRole', () => {
+    it('returns the active user ids for the centre, regardless of role', async () => {
+      mockQuery.mockResolvedValue([
+        { user_id: 11 },
+        { user_id: '12' },
+        { user_id: 13 },
+      ]);
+
+      const result = await repository.getUserIdsByCenterAnyRole('CIAT');
+
+      expect(result).toEqual([11, 12, 13]);
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('rbu.center_id = ?'),
+        ['CIAT'],
+      );
+    });
+
+    it('does not filter by role, but does require active > 0 and center_id = ?', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      await repository.getUserIdsByCenterAnyRole('IRRI');
+
+      const [query] = mockQuery.mock.calls.at(-1);
+      expect(query).not.toContain('rbu.`role`');
+      expect(query).not.toMatch(/rbu\.role\b/);
+      expect(query).toContain('rbu.active > 0');
+      expect(query).toContain('rbu.center_id = ?');
+    });
+
+    it('returns an empty array when the centre has no users', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      expect(await repository.getUserIdsByCenterAnyRole('IRRI')).toEqual([]);
+    });
+
+    it('drops rows without a usable user id', async () => {
+      mockQuery.mockResolvedValue([
+        { user_id: null },
+        { user_id: 0 },
+        { user_id: 'not-a-number' },
+        { user_id: 7 },
+      ]);
+
+      expect(await repository.getUserIdsByCenterAnyRole('CIAT')).toEqual([7]);
+    });
+
+    it('propagates repository errors through HandlersError', async () => {
+      mockQuery.mockRejectedValue(new Error('boom'));
+
+      await expect(
+        repository.getUserIdsByCenterAnyRole('CIAT'),
+      ).rejects.toThrow('boom');
+    });
+  });
+
   describe('hasActiveRoleOnInitiative', () => {
     it('returns true when the EXISTS query reports a match', async () => {
       mockQuery.mockResolvedValue([{ has_role: '1' }]);

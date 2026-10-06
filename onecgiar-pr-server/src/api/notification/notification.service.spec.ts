@@ -508,8 +508,38 @@ describe('NotificationService', () => {
       return payload.desc;
     };
 
-    // NDCW-R-2/R-3: the center sentence is stored text; the toast must carry the same words.
-    it('builds the center copy from stored text (approved)', async () => {
+    // SACN-R-3/R-4 (design §7.3): Approve now stores the new-shape lead sentence; the description
+    // builder appends the result identity directly (no "The result" prefix, no comma). This
+    // replaces the old approve-center assertion (`where your center was tagged … approved`) for
+    // NEW rows — the legacy shape is covered separately below (SACN-R-7).
+    it('builds the new-shape approved center copy with the SP code and the result identity appended', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+        {},
+        "SP06, as primary Science Program, has approved your center's result",
+      );
+
+      expect(desc).toBe(
+        "SP06, as primary Science Program, has approved your center's result 4321 - A bilateral result title",
+      );
+      expect(desc).not.toContain('Your Result');
+      expect(desc).not.toContain('where your center was tagged');
+    });
+
+    it('builds the new-shape approved center copy with the no-code fallback lead when the SP code is unknown', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+        {},
+        "The primary Science Program has approved your center's result",
+      );
+
+      expect(desc).toBe(
+        "The primary Science Program has approved your center's result 4321 - A bilateral result title",
+      );
+    });
+
+    // SACN-R-7: a legacy approve-center row (stored before this change) keeps rendering as before.
+    it('keeps the legacy approve-center rendering for a pre-SACN row', async () => {
       const desc = await emitAndReadDescription(
         NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
         {},
@@ -519,9 +549,9 @@ describe('NotificationService', () => {
       expect(desc).toBe(
         'The result 4321 - A bilateral result title, where your center was tagged, has been approved by the Science Program SP03.',
       );
-      expect(desc).not.toContain('Your Result');
     });
 
+    // SACN-R-9 / Reject out of scope: the legacy center copy for Reject is unchanged.
     it('builds the center copy from stored text (rejected, no program code)', async () => {
       const desc = await emitAndReadDescription(
         NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
@@ -711,6 +741,94 @@ describe('NotificationService', () => {
 
       expect(desc).not.toContain('undefined');
       expect(desc).toBe('There is a new update on result 4321');
+    });
+
+    // BPT-T-2 (`bilateral-project-tagged`, design §7.2/§9, DD-3): the Center-reported shape is
+    // checked FIRST, before `isComposedTaggedText` — a server twin of the client's (future)
+    // `parseCenterReportedProjectText` in `notification-type.constants.ts`. Shape table pinned
+    // identically in both specs (BPT-NFR-2).
+    describe('Center-reported shape (BPT-R-3/R-4)', () => {
+      it.each([
+        [
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 4321 - A bilateral result title',
+        ],
+        [
+          'A CGIAR Center has tagged the bilateral project B-A1187 from your center (ABC)',
+          'A CGIAR Center has tagged the bilateral project B-A1187 from your center (ABC) to result 4321 - A bilateral result title',
+        ],
+        [
+          'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC)',
+          'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC) to result 4321 - A bilateral result title',
+        ],
+      ])(
+        'parses %s into the Center-reported sentence',
+        async (text, expected) => {
+          const desc = await emitAndReadDescription(text);
+
+          expect(desc).toBe(expected);
+        },
+      );
+
+      // Non-matches fall through to the existing (unchanged) composed/bare/empty paths.
+      it.each([
+        [
+          'reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.',
+          'The result 4321 - A bilateral result title reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.',
+        ],
+        [
+          'B-A1080 (ABC)',
+          'Jane Doe from SP5 has tagged the bilateral project B-A1080 from your center (ABC) to result 4321 - A bilateral result title',
+        ],
+        [
+          'B-A1080',
+          'Jane Doe from SP5 has tagged the bilateral project B-A1080 from your center to result 4321 - A bilateral result title',
+        ],
+        ['', 'There is a new update on result 4321'],
+        [
+          'ICRISAT has tagged the bilateral project B-A1187 from your center ()',
+          'The result 4321 - A bilateral result title ICRISAT has tagged the bilateral project B-A1187 from your center ()',
+        ],
+      ])(
+        'does NOT match the Center-reported shape for %s',
+        async (text, expected) => {
+          const desc = await emitAndReadDescription(text);
+
+          expect(desc).toBe(expected);
+        },
+      );
+
+      it('includes the full identity when both the result code and title resolve', async () => {
+        const desc = await emitAndReadDescription(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+        );
+
+        expect(desc).toBe(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 4321 - A bilateral result title',
+        );
+      });
+
+      it('drops the title from the identity when only the result code resolves', async () => {
+        const desc = await emitAndReadDescription(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+          { title: undefined },
+        );
+
+        expect(desc).toBe(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 4321',
+        );
+      });
+
+      it('drops the identity entirely when neither the result code nor the title resolve', async () => {
+        const desc = await emitAndReadDescription(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+          { title: undefined, result_code: undefined },
+        );
+
+        expect(desc).toBe(
+          'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result',
+        );
+      });
     });
   });
 

@@ -38,4 +38,20 @@ describe('AppComponent', () => {
       expect(component.copyTokenToClipboard).toBeDefined();
     });
   });
+
+  describe('Session bootstrap (BELL-T-2)', () => {
+    it('loads the bell on boot and no longer calls the last-viewed pop-up feed (BELL-R-12)', () => {
+      const notificationsSE = (component as any).resultsNotificationsSE;
+      const refreshBell = jest.spyOn(notificationsSE, 'refreshBell').mockImplementation(() => {});
+      const popUp = jest.spyOn(notificationsSE, 'get_updates_pop_up_notifications').mockImplementation(() => {});
+      jest.spyOn(component.AuthService, 'localStorageUser', 'get').mockReturnValue({ id: 1 } as any);
+      jest.spyOn(component.api, 'updateUserData').mockImplementation((cb: any) => cb());
+      jest.spyOn(component.api.dataControlSE, 'getCurrentPhases').mockReturnValue({ subscribe: () => {} } as any);
+
+      (component as any).bootstrapUserSession();
+
+      expect(refreshBell).toHaveBeenCalledTimes(1);
+      expect(popUp).not.toHaveBeenCalled();
+    });
+  });
 });

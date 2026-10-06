@@ -2064,6 +2064,140 @@ describe('SectionContributorsComponent', () => {
     });
   });
 
+  /**
+   * LPC (mirror of P2-3864, this time for the lead project): the lead W3/bilateral project is shown
+   * once, read-only, above "Contributing W3/bilateral projects" — and never again as a chip or an
+   * option there. Display only: `selectedProjectIds()` and the PATCH keep carrying it as the lead.
+   */
+  describe('LPC · lead W3/bilateral project shown apart', () => {
+    const LEAD = 501;
+    const A = 502;
+    const B = 503;
+    const IFPRI = 20;
+    const CIP = 21;
+
+    const setup = () => {
+      creation.selectedProject.set({ id: LEAD, shortName: 'LeadShort', fullName: 'Lead Full Name' });
+      creation.resultContributingProjectIds.set([A, B]);
+      build();
+      component.availableProjects.set([
+        { id: LEAD, shortName: 'LeadShort', fullName: 'Lead Full Name', ownerCenterInstitutionId: IFPRI },
+        { id: A, shortName: 'A', fullName: 'Project A', ownerCenterInstitutionId: IFPRI },
+        { id: B, shortName: 'B', fullName: 'Project B', ownerCenterInstitutionId: CIP }
+      ]);
+      // One-shot UI hydrate (no network) — same rule `leadProjectIdSig` uses, so both land on LEAD.
+      component.hydrateLeadAndSelection();
+    };
+
+    it('a. leadProjectLabel() is the lead short name, falling back to the full name', () => {
+      setup();
+      expect(component.leadProjectLabel()).toBe('LeadShort');
+
+      // The catalogue (not `selectedProject`) is what `getProjectDisplayName` reads from.
+      component.availableProjects.set([
+        { id: LEAD, shortName: '', fullName: 'Lead Full Name', ownerCenterInstitutionId: IFPRI },
+        { id: A, shortName: 'A', fullName: 'Project A', ownerCenterInstitutionId: IFPRI },
+        { id: B, shortName: 'B', fullName: 'Project B', ownerCenterInstitutionId: CIP }
+      ]);
+      expect(component.leadProjectLabel()).toBe('Lead Full Name');
+    });
+
+    it('b. leadProjectLabel() is null when there is no selectedProject (result with no lead)', () => {
+      build();
+      component.availableProjects.set([{ id: A, shortName: 'A', fullName: 'Project A' }]);
+      expect(component.leadProjectLabel()).toBeNull();
+    });
+
+    it('c. displayedContributingProjectIds() is [A, B], in that order, with lead L stored', () => {
+      setup();
+      expect(component.selectedProjectIds()).toEqual(expect.arrayContaining([LEAD, A, B]));
+      expect(component.displayedContributingProjectIds()).toEqual([A, B]);
+    });
+
+    it('d. contributingProjectOptions() leaves L out with the page-Center pill and with "All centers", and keeps a selected project from another Center', () => {
+      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', IFPRI);
+      setup();
+
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+      let ids = component.contributingProjectOptions().map(p => p.id);
+      expect(ids).not.toContain(LEAD);
+      expect(ids).toEqual(expect.arrayContaining([A, B])); // B (CIP) kept: selected project from another Center.
+
+      component.setProjectCenterFilter(ALL_PROJECT_CENTERS);
+      ids = component.contributingProjectOptions().map(p => p.id);
+      expect(ids).not.toContain(LEAD);
+      expect(ids).toEqual(expect.arrayContaining([A, B]));
+    });
+
+    it('e. after onProjectsModelChange([A, B]) the payload includes { id: L, is_lead: true } plus A and B', () => {
+      setup();
+      component.contributorsHydrated.set(true);
+      autoSave.saveContributors.mockClear();
+
+      component.onProjectsModelChange([{ id: A }, { id: B }]);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_bilateral_projects).toEqual(
+        expect.arrayContaining([
+          { project_id: LEAD, is_lead: true },
+          { project_id: A, is_lead: false },
+          { project_id: B, is_lead: false }
+        ])
+      );
+    });
+
+    it('f. after removeProject(A) the payload is [L(is_lead)] and the displayed list is []', () => {
+      creation.selectedProject.set({ id: LEAD, shortName: 'LeadShort', fullName: 'Lead Full Name' });
+      creation.resultContributingProjectIds.set([A]);
+      build();
+      component.availableProjects.set([
+        { id: LEAD, shortName: 'LeadShort', fullName: 'Lead Full Name' },
+        { id: A, shortName: 'A', fullName: 'Project A' }
+      ]);
+      component.hydrateLeadAndSelection();
+      component.contributorsHydrated.set(true);
+      autoSave.saveContributors.mockClear();
+
+      component.removeProject(A);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_bilateral_projects).toEqual([{ project_id: LEAD, is_lead: true }]);
+      expect(component.displayedContributingProjectIds()).toEqual([]);
+    });
+
+    it('g. with the lead id not in availableProjects(), the lead-free views equal the old ones', () => {
+      creation.selectedProject.set({ id: LEAD, shortName: 'LeadShort', fullName: 'Lead Full Name' });
+      creation.resultContributingProjectIds.set([A, B]);
+      build();
+      component.availableProjects.set([
+        { id: A, shortName: 'A', fullName: 'Project A' },
+        { id: B, shortName: 'B', fullName: 'Project B' }
+      ]);
+      component.hydrateLeadAndSelection();
+
+      expect(component.leadProjectLabel()).toBeNull();
+      expect(component.contributingProjectOptions()).toEqual(component.filteredProjectOptions());
+      expect(component.displayedContributingProjectIds()).toEqual(component.selectedProjectIds());
+    });
+
+    it('h. markup contract: the block label, @if (leadProjectLabel()), and the picker and chips bound to the lead-free views', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      expect(html).toContain('label="Lead W3/bilateral project"');
+      expect(html).toContain('@if (leadProjectLabel())');
+
+      const picker = html.indexOf('label="Contributing W3/bilateral projects"');
+      const pickerEnd = html.indexOf('</app-pr-multi-select>', picker);
+      const pickerTag = html.slice(picker, pickerEnd);
+      expect(pickerTag).toContain('[options]="contributingProjectOptions()"');
+      expect(pickerTag).toContain('[disableOptions]="contributingProjectDisabledOptions()"');
+      expect(pickerTag).toContain('[ngModel]="displayedContributingProjectIds()"');
+      expect(html).toContain('@for (id of displayedContributingProjectIds(); track id)');
+      // Control negative: the old bindings to the raw lists must be gone.
+      expect(html).not.toContain('[options]="filteredProjectOptions()"');
+      expect(html).not.toContain('[ngModel]="selectedProjectIds()"');
+    });
+  });
+
   /** P2-3865 — the CLARISA definition of "contributor" and the "different entities" reminder. */
   describe('P2-3865 · what a contributor is', () => {
     const DEFINITION =
@@ -2300,7 +2434,7 @@ describe('SectionContributorsComponent', () => {
       const picker = html.indexOf('label="Contributing W3/bilateral projects"');
       const pickerEnd = html.indexOf('</app-pr-multi-select>', picker);
       const pickerTag = html.slice(picker, pickerEnd);
-      expect(pickerTag).toContain('[options]="filteredProjectOptions()"');
+      expect(pickerTag).toContain('[options]="contributingProjectOptions()"');
       expect(pickerTag).toContain('[placeholder]="projectsPickerPlaceholder()"');
       expect(pickerTag).not.toContain('[options]="availableProjectsComputed()"');
       // Projected into the slot under the search box.

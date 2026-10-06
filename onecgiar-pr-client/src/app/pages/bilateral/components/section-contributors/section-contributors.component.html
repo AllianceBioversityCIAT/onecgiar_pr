@@ -155,6 +155,17 @@
     }
   </div>
 
+  <!--
+    LPC-R-1: the lead W3/bilateral project, shown once, read-only — mirrors "Lead center" above.
+    Absent entirely (no empty placeholder) when there is no resolvable lead.
+  -->
+  @if (leadProjectLabel()) {
+    <div class="sc-block">
+      <app-pr-field-header label="Lead W3/bilateral project" [required]="false" [readOnly]="true"></app-pr-field-header>
+      <div class="sc-readonly-value">{{ leadProjectLabel() }}</div>
+    </div>
+  }
+
   <div class="sc-block sc-block--projects">
     <!--
       Night sweep 2026-09-23, W12-6 (P2-3648): the projects catalogue failed, so the read-only lead
@@ -178,9 +189,9 @@
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing W3/bilateral projects"
-      [options]="filteredProjectOptions()"
-      [disableOptions]="disabledProjectOptions()"
-      [ngModel]="selectedProjectIds()"
+      [options]="contributingProjectOptions()"
+      [disableOptions]="contributingProjectDisabledOptions()"
+      [ngModel]="displayedContributingProjectIds()"
       (ngModelChange)="onProjectsModelChange($event)"
       optionLabel="fullName"
       optionValue="id"
@@ -238,14 +249,12 @@
         }
       </div>
     </app-pr-multi-select>
-    @if (selectedProjectIds().length) {
+    @if (displayedContributingProjectIds().length) {
       <div class="sc-selected-chips">
-        @for (id of selectedProjectIds(); track id) {
-          <span class="sc-chip sc-chip--project" [class.sc-chip-readonly]="isLeadProject(id)">
+        @for (id of displayedContributingProjectIds(); track id) {
+          <span class="sc-chip sc-chip--project">
             {{ getProjectDisplayName(id) }}
-            @if (!isLeadProject(id)) {
-              <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removeProject(id)">×</button>
-            }
+            <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removeProject(id)">×</button>
           </span>
         }
       </div>
