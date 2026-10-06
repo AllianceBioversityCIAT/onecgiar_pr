@@ -468,8 +468,42 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.isTocDirty.set(true);
   }
 
+  /**
+   * P2-3885 — the ToC answer as last loaded/saved. `isTocDirty` alone is a latch: one click on
+   * Yes and back to No left "Unsaved ToC changes" and a blocked Approve with nothing to save.
+   * Captured wherever the latch is cleared after a load.
+   */
+  private originalTocSnapshot: string | null = null;
+
+  /**
+   * On No only the answer counts (the save sends no ToC rows for it); on Yes, the rows too.
+   * `null` when the rows cannot be serialised — read as "changed", the old latch behaviour.
+   */
+  private tocComparable(): string | null {
+    const toc = this.tocInitiative;
+    if (!toc) return 'null';
+    if (toc.planned_result === false) return JSON.stringify({ planned_result: false });
+    try {
+      return JSON.stringify({
+        planned_result: toc.planned_result ?? null,
+        result_toc_results: toc.result_toc_results ?? [],
+        toc_progressive_narrative: toc.toc_progressive_narrative ?? null
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private resetTocDirty(): void {
+    this.isTocDirty.set(false);
+    this.originalTocSnapshot = this.tocComparable();
+  }
+
   hasTocUnsavedChanges(): boolean {
-    return this.isTocDirty();
+    if (!this.isTocDirty()) return false;
+    const current = this.tocComparable();
+    if (this.originalTocSnapshot == null || current == null) return true;
+    return current !== this.originalTocSnapshot;
   }
 
   /** Whether the result can be approved (TOC complete, no unsaved changes). */
@@ -1540,7 +1574,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
             this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
             this.validateIsToCCompleted();
-            this.isTocDirty.set(false);
+            this.resetTocDirty();
             setTimeout(() => {
               this.cdr.markForCheck();
             }, 0);
@@ -1589,7 +1623,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             if (finalInitiativeId) {
               setInitiativeIdIfNeeded(finalInitiativeId);
             }
-            this.isTocDirty.set(false);
+            this.resetTocDirty();
             setTimeout(() => {
               this.tocConsumed.set(true);
               this.cdr.markForCheck();
@@ -1629,7 +1663,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           if (finalInitiativeId) {
             setInitiativeIdIfNeeded(finalInitiativeId);
           }
-          this.isTocDirty.set(false);
+          this.resetTocDirty();
           setTimeout(() => {
             this.tocConsumed.set(true);
             this.cdr.markForCheck();
@@ -1771,6 +1805,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.rejectJustification = '';
     this.resultDetail.set(null);
     this.originalDataStandardSnapshot = null;
+    this.originalTocSnapshot = null;
     this.originalContributingInitiatives = null;
     this.originalContributingInstitutions = null;
     this.originalContributingCenters = null;

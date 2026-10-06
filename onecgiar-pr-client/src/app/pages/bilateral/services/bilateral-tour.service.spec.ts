@@ -87,7 +87,7 @@ describe('BilateralTourService', () => {
         overview: 'Overview',
         reporting: 'Reporting',
         results: 'Results',
-        drafts: 'AI Draft Results'
+        drafts: 'My Drafts'
       });
     });
 
@@ -102,7 +102,7 @@ describe('BilateralTourService', () => {
 
     it('tabBadgeHtml generates valid badge markup for tab keys and string labels', () => {
       expect(tabBadgeHtml('overview')).toContain('Current tab: <strong>Overview</strong>');
-      expect(tabBadgeHtml('drafts')).toContain('Current tab: <strong>AI Draft Results</strong>');
+      expect(tabBadgeHtml('drafts')).toContain('Current tab: <strong>My Drafts</strong>');
       expect(tabBadgeHtml('Custom Label')).toContain('Current tab: <strong>Custom Label</strong>');
     });
 
@@ -204,8 +204,8 @@ describe('BilateralTourService', () => {
 
       // Step 8: AI Drafts Hub
       expect(steps[8].element).toBe('[data-guide="bilateral-tab-drafts"]');
-      expect(steps[8].popover.title).toBe('AI Draft Results');
-      expect(steps[8].popover.description).toContain('Current tab: <strong>AI Draft Results</strong>');
+      expect(steps[8].popover.title).toBe('My Drafts');
+      expect(steps[8].popover.description).toContain('Current tab: <strong>My Drafts</strong>');
       expect(steps[8].popover.side).toBe('top');
 
       // Step 9: Bulk CTA

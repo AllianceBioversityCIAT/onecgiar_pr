@@ -86,7 +86,7 @@ describe('BilateralPageHeaderComponent', () => {
       'space_dashboard Overview',
       'track_changes Reporting',
       'table_chart Results',
-      'fact_check AI Draft Results',
+      'fact_check My Drafts',
     ]);
 
     // Verify icons on all four tabs
@@ -189,7 +189,7 @@ describe('BilateralPageHeaderComponent', () => {
     fixture.detectChanges();
 
     popover = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]') as HTMLElement;
-    expect(popover.textContent).toContain('AI Draft Results');
+    expect(popover.textContent).toContain('My Drafts');
     expect(popover.textContent).toContain('AI-generated draft results');
   });
 
@@ -258,7 +258,7 @@ describe('BilateralPageHeaderComponent', () => {
     expect(labels[0]).toContain('Overview');
     expect(labels[1]).toContain('Reporting');
     expect(labels[2]).toContain('Results');
-    expect(labels[3]).toContain('AI Draft Results');
+    expect(labels[3]).toContain('My Drafts');
   });
 
   describe('shared phase on the tab links (COV-R-5 A)', () => {
@@ -663,7 +663,7 @@ describe('BilateralPageHeaderComponent', () => {
     fixture.detectChanges();
 
     const draftsTab = fixture.debugElement.queryAll(By.css('nav a')).find(l =>
-      l.nativeElement.textContent.includes('AI Draft Results'),
+      l.nativeElement.textContent.includes('My Drafts'),
     );
     expect(draftsTab?.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/drafts');
   });
