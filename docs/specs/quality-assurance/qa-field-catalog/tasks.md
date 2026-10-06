@@ -52,7 +52,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 - **Done:** pruned migration committed; owner notified to run it in dev.
 - **Skills:** `nestjs-expert`
 
-### QAC-T-3 — Boot-time sync service
+### [x] QAC-T-3 — Boot-time sync service
 
 - **Type:** server · **Estimate:** M · **Review:** full — writes on every boot
 - **Description:** `QaCatalogSyncService` (`OnApplicationBootstrap`): read existing keys, insert missing, update changed field-by-field, never delete, warn on orphans, wrap in try/catch logging counts only; upsert the `qa_catalog_version` row per declared year.
@@ -85,7 +85,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 - **Done:** guard + fixtures green; real scope green.
 - **Skills:** `nestjs-expert`, `tdd`
 
-### QAC-T-5 — Snapshot and catalog-version integrity
+### [x] QAC-T-5 — Snapshot and catalog-version integrity
 
 - **Type:** tests · **Estimate:** S · **Review:** full — governs key immutability
 - **Description:** Canonical hash per year of the effective catalog; `__snapshots__/qa-catalog.snapshot.json`; `npm run qa-catalog:snapshot`; spec enforcing the three rules.

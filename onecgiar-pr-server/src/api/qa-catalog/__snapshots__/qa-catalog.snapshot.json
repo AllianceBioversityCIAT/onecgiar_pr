@@ -1,0 +1,19 @@
+{
+  "years": {
+    "2026": {
+      "revision": 1,
+      "content_hash": "6010b7c40336799fa26242c6e96cb3ba2a77e1f6d5d7e903f6cef566e15bcac9"
+    }
+  },
+  "keys": [
+    "result_type:capacity_sharing",
+    "result_type:impact_contribution",
+    "result_type:innovation_development",
+    "result_type:innovation_package",
+    "result_type:innovation_use",
+    "result_type:knowledge_product",
+    "result_type:other_outcome",
+    "result_type:other_output",
+    "result_type:policy_change"
+  ]
+}

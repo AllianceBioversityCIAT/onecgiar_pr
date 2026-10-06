@@ -230,7 +230,7 @@ The endpoint MUST return, for a valid year with catalog content:
 | Defect class | Gate |
 |---|---|
 | Uncatalogued column / stale binding | QAC-R-7 guard (Jest) |
-| Key removed or renamed | Snapshot test (QAC-R-2) |
+| Key removed or renamed | Snapshot test (QAC-R-2) + guarded `qa-catalog:snapshot` (refuses to write on violations). **Gap:** the frozen snapshot is a committed file; deleting or hand-editing it is caught only by PR review (CI does not diff against the base branch). Key reuse with a new meaning has no automated gate. (Recorded 2026-10-06, QAC-T-5 review) |
 | Content changed without version bump | Integrity test (QAC-R-8) |
 | Malformed entry (select w/o control list, list w/o subfields, bad years) | Catalog validation test (QAC-R-1) |
 | Wrong year filtering / ordering / status codes | Service + controller Jest tests |

@@ -75,3 +75,31 @@
 - spawns: implementer 26 calls, 126 488 tokens, ended partial (assumptions); reviewer(conformance) 10 calls, 93 450 tokens; reviewer(security) 13 calls, 94 076 tokens; implementer 8 calls, 87 424 tokens; reviewer 6 calls, 32 134 tokens; implementer 9 calls, 71 109 tokens; reviewer 9 calls, 58 206 tokens — all ended complete
 - Requirements: QAC-R-3, R-4, R-9, R-10, R-12
 - auto-approved (pre-approved mode)
+
+### QAC-T-3 — Boot-time sync service — PASS
+
+- Date: 2026-10-06 · Attempts: 1 · continuations: 1 (module wiring — `TypeOrmModule.forFeature` + provider, deferred until T-6 closed because both touch `qa-catalog.module.ts`)
+- Files: `src/api/qa-catalog/qa-catalog-sync.service.ts` + `.spec.ts`, `definitions/content-hash.ts` (`stableStringify`, `computeCatalogContentHash`), `qa-catalog.module.ts` (wiring), `qa-catalog.module.spec.ts`
+- Implementer verification: sync spec 10/10; module/app.module 16/16; tsc + eslint clean
+- Red run: stub `sync()` → (a) "Expected 7 Received 0", (b) log line missing, (d) orphans `[]`, (c),(c2),(c3),(e), version red
+- Falsifiers: delete orphans → (d),(f) "Expected 0 Received 1"; compare always changed → (b) "Expected 0 Received 7"; provider removed → module spec red
+- Evidence re-run (Leader inline): all qa-catalog + app.module + throttler suites 115/115 (twice), tsc OK → VERIFIED
+- Reviewer: PASS — R-6 idempotence via normalized compare, no delete path, failure caught with class + counts only, DD-10 named check holds (`parent_key ''`)
+- Decisions: `synced_at` via SQL `CURRENT_TIMESTAMP`; a field edit also updates the version row hash; subfield rows inherit parent section/result types/validity, `order` = index, `required_confirmed` false, `description` null; no transaction (next boot re-syncs, DD-1)
+- ADVISORY: content hash covers `storage`/`required_confirmed` → a storage-only change forces a revision bump (T-5 accepted as "effective content"); **`onApplicationBootstrap` is awaited before `listen` — a slow-but-reachable DB delays startup (no query timeout); detaching the sync would harden R-6 — raised to owner, not actioned**; concurrent container boots → unique-index error caught; `idOf` dot-joined ids; real MySQL idempotence pending T-12
+- spawns: implementer 15 calls, 104 861 tokens, ended partial (wiring owed); implementer (continuation) 9 calls, 94 489 tokens, ended complete; reviewer 11 calls, 81 849 tokens, ended complete
+- Requirements: QAC-R-6, QAC-R-3
+- auto-approved (pre-approved mode)
+
+### QAC-T-5 — Snapshot and catalog-version integrity — PASS (attempt 2)
+
+- Date: 2026-10-06 · Attempts: 2
+- Files: `definitions/snapshot-check.ts`, `qa-catalog.snapshot.spec.ts`, `scripts/qa-catalog-snapshot.ts`, `__snapshots__/qa-catalog.snapshot.json` (2026 rev 1, 9 `result_type:` keys), `package.json` (`qa-catalog:snapshot`)
+- Consumers: `grep -n '"qa-catalog' package.json` before → 0 hits, after → line 28
+- **Attempt 1** — 10/10; script idempotent (md5 `c2daa009…` twice); red runs for each rule; falsifier (unsorted hash) → 3 red. Re-run VERIFIED. Reviewer **FAIL** — script overwrote the snapshot unconditionally and the freshness message pointed at it, laundering removals/unbumped changes (QAC-R-2, R-8)
+- **Attempt 2** (effort high) — `guardedSnapshotWrite` refuses to write on violations (exit 1); message reworded; advisory-grade extras: `subfield:<parent>/<sub>` namespace, revision decrease rejected, valid_to-only fixture, section/result_type removal fixtures. Falsifier (guard removed) → 2 guarded-write tests red "Expected false Received true" (no pre-guard red: guard written first). Manual: removing `policy_change` → "NOT written", exit 1, file unchanged. Re-run 19/19 VERIFIED. Reviewer **PASS**
+- Execute-time spec edit: `requirements.md` §7 row "Key removed or renamed" — gap recorded (committed snapshot tamper caught only by PR review; key reuse has no gate)
+- ADVISORY: valid_to fixtures use shape-invalid `2026→2025`; corrupt snapshot JSON throws raw parse error (fail-closed); `scripts/` under `src/` counted in coverage
+- spawns: implementer 11 calls, 96 061 tokens; reviewer 7 calls, 35 833 tokens; implementer 10 calls, 78 019 tokens; reviewer 8 calls, 67 741 tokens — all ended complete
+- Requirements: QAC-R-2, QAC-R-8
+- auto-approved (pre-approved mode)
