@@ -231,6 +231,23 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
     expect(text()).toContain('Submit without quality check');
   });
 
+  it('leads with Retry on an unavailable check and keeps submit-without-check as the secondary link', () => {
+    fixture.componentRef.setInput('visible', true);
+    fixture.componentRef.setInput('assessment', { ...view(), status: 'unavailable', degraded_reason: null });
+    fixture.detectChanges();
+    const recheck = jest.fn();
+    const decision = jest.fn();
+    fixture.componentInstance.recheckRequested.subscribe(recheck);
+    fixture.componentInstance.decisionChosen.subscribe(decision);
+
+    (host().querySelector('[data-testid="bqa-dialog-retry"]') as HTMLButtonElement).click();
+    expect(recheck).toHaveBeenCalledTimes(1);
+    expect(decision).not.toHaveBeenCalled();
+
+    (host().querySelector('[data-testid="bqa-dialog-submit-without-check"]') as HTMLButtonElement).click();
+    expect(decision).toHaveBeenCalledWith('submitted_without_check');
+  });
+
   // BIL-QAD-T-3 — D-1 content parity. Each assertion is written against the full BIL-QAD-R-2
   // inventory; dropping, rewording or shortening any one of the strings below fails its assertion.
   describe('content parity — BIL-QAD-R-2 inventory', () => {
@@ -337,7 +354,7 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
       open({ ...view(), status: 'unavailable', degraded_reason: null });
 
       expect(host().querySelector('.pr-dialog-header-title')?.textContent).toBe('Quality check unavailable');
-      expect(text()).toContain('The quality service could not complete this check. You may submit without it.');
+      expect(text()).toContain('The quality check could not be completed. Retry it; if it keeps failing, you can still submit without it.');
     });
 
     it('labels the footer actions exactly — Make adjustments and Submit for review', () => {

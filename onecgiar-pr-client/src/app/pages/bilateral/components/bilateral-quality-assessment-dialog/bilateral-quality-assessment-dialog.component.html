@@ -69,7 +69,7 @@
         <p class="bqa-dialog__tip" aria-live="polite"><i class="material-icons-round" aria-hidden="true">lightbulb</i>{{ tip() }}</p>
       } @else if (assessment(); as assessment) {
       @if (unavailable()) {
-        <p class="pr-dialog-text">{{ assessment.degraded_reason || 'The quality service could not complete this check. You may submit without it.' }}</p>
+        <p class="pr-dialog-text">{{ assessment.degraded_reason || 'The quality check could not be completed. Retry it; if it keeps failing, you can still submit without it.' }}</p>
       } @else {
         @if (stale() && !readOnly()) {
           <p class="bqa-dialog__stale">This assessment predates your latest edits. It remains available as history, but you must run it again before submitting.</p>
@@ -325,7 +325,23 @@
         </div>
       } @else {
         <button hlmBtn variant="outline" type="button" [disabled]="submitting()" (click)="requestClose()">Make adjustments</button>
-        @if (!stale()) {
+        @if (unavailable()) {
+          <!-- Retry is the obvious action on a failed check; submitting without it stays available
+               as a secondary link (P2-3150 AC6: a failed check never prevents a submission). -->
+          <button
+            hlmBtn
+            variant="link"
+            type="button"
+            data-testid="bqa-dialog-submit-without-check"
+            [disabled]="submitting()"
+            [attr.aria-busy]="submitting()"
+            (click)="decisionChosen.emit('submitted_without_check')">
+            {{ submitting() ? 'Submitting…' : 'Submit without quality check' }}
+          </button>
+          <button hlmBtn type="button" [disabled]="submitting()" data-testid="bqa-dialog-retry" (click)="requestRecheck()">
+            Retry quality check
+          </button>
+        } @else if (!stale()) {
           <button
             hlmBtn
             type="button"
