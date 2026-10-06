@@ -42,3 +42,20 @@
 - spawns: implementer 12 calls, 79 914 tokens, ended complete; reviewer 8 calls, 63 175 tokens, ended complete
 - Requirements: QAC-R-6 (tables), QAC-R-3 (`valid_to`)
 - auto-approved (pre-approved mode)
+
+> **Owner instruction (2026-10-06):** the `QaCatalogTables` migration must NOT be run by agents — the owner reviews it first and runs it. Applies to T-12's local run as well.
+
+### QAC-T-4 — Completeness guard — PASS
+
+- Date: 2026-10-06 · Attempts: 1 · Parallel with T-6
+- Files: `onecgiar-pr-server/src/api/qa-catalog/definitions/{completeness,scope,excluded-tables}.ts`, `qa-catalog.completeness.spec.ts`
+- Implementer verification: completeness spec 11/11; 3 qa-catalog suites 41/41; lint clean
+- Falsifier: prototype walk stopped at first class → "detects a column inherited from the base class" red (Expected `fixture_table.updated_by`) + 3 more cases red; restored
+- Red run: stub `[]` → 7 tests failed on message assertions (one exposed a real bug: `@Entity()` without name → fixed with snakeCase resolution)
+- Evidence re-run (Leader inline): 11/11, lint clean → VERIFIED
+- Reviewer: PASS — single code path, not vacuous (asserts >20 result tables + `result`), snakeCase matches default naming (no namingStrategy in repo)
+- Not Done / Assumptions (verbatim gist, no owed items): fixture extends `Auditable` (actual export, not `AuditableEntity`); pattern `^(result|results?_.*)$` matches 72 tables (67 pending, 5 real reasons); relation binding covers `fk_to_result`, `value_column` and `filter` keys; unnamed `@JoinColumn` assumed `<prop>Id`
+- ADVISORY: unnamed `@JoinColumn` guess wrong when referenced PK ≠ `id` (zero occurrences today); owning `@ManyToOne`/`@OneToOne` without `@JoinColumn` invisible (none found); `control_list_table` not stale-checked; DD-8 coupling — binding a field to an out-of-scope table fails by design
+- spawns: implementer 17 calls, 122 236 tokens, ended partial (assumptions only); reviewer 21 calls, 85 339 tokens, ended complete
+- Requirements: QAC-R-7, DD-3
+- auto-approved (pre-approved mode)

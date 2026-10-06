@@ -69,7 +69,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 - **Done:** all six cases green.
 - **Skills:** `nestjs-expert`, `tdd`, `error-handling-patterns`
 
-### QAC-T-4 — Completeness guard
+### [x] QAC-T-4 — Completeness guard
 
 - **Type:** tests · **Estimate:** M · **Review:** full — it is the CI gate
 - **Description:** `scope.ts` (in-scope entity classes; starts with none), `excluded-tables.ts` (every `results?_` table not in scope, with reason — initially all, reason `pending QAC-T-8…11` or a real reason), `not-for-qa.ts`. Guard spec reads `getMetadataArgsStorage()` tables, columns and join columns, walking the prototype chain; subtracts bindings (fields + subfields) and `NOT_FOR_QA`.
