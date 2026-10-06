@@ -18,7 +18,10 @@ interface UploadFileEntry {
 }
 
 const DOCUMENT_EXTENSIONS = ['.pdf', '.docx', '.txt', '.xls', '.xlsx', '.pptx'];
-const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.ogg', '.webm', '.flac'];
+// P2-3896: `.mp4` is the usual voice-note export (WhatsApp, iPhone, Android). The server only
+// allows `m4a` (bilateral-ai-file-storage.service.ts), so `addFile` re-labels it `.m4a` — same
+// MPEG-4 bytes, the path QA verified end to end, and what the recorder already does below.
+const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.ogg', '.webm', '.flac', '.mp4'];
 
 /**
  * P2-3437 #5 - these MUST mirror the server, which is the only authority.
@@ -213,6 +216,7 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     for (const file of Array.from(event.dataTransfer.files)) {
       const type = this.getFileType(file);
       if (type) this.addFile(file, type);
+      else this.showToast('error', 'Invalid format', `${file.name} is not a supported file format.`);
     }
   }
 
@@ -282,6 +286,10 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
         `${file.name} exceeds the ${MAX_FILE_SIZE_LABEL} limit.`,
       );
       return;
+    }
+
+    if (type === 'audio' && ext === '.mp4') {
+      file = new File([file], file.name.replace(/\.mp4$/i, '.m4a'), { type: 'audio/mp4' });
     }
 
     const id = crypto.randomUUID();
