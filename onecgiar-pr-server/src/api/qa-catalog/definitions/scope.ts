@@ -18,6 +18,18 @@ import { ResultCountrySubnational } from '../../results/result-countries-sub-nat
 import { Evidence } from '../../results/evidences/entities/evidence.entity';
 import { EvidenceSharepoint } from '../../results/evidences/entities/evidence-sharepoint.entity';
 import { ResultsInvestmentDiscontinuedOption } from '../../results/results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
+import { ResultsKnowledgeProduct } from '../../results/results-knowledge-products/entities/results-knowledge-product.entity';
+import { ResultsKnowledgeProductMetadata } from '../../results/results-knowledge-products/entities/results-knowledge-product-metadata.entity';
+import { ResultsKnowledgeProductAuthor } from '../../results/results-knowledge-products/entities/results-knowledge-product-authors.entity';
+import { ResultsKnowledgeProductKeyword } from '../../results/results-knowledge-products/entities/results-knowledge-product-keywords.entity';
+import { ResultsKnowledgeProductAltmetric } from '../../results/results-knowledge-products/entities/results-knowledge-product-altmetrics.entity';
+import { ResultsKnowledgeProductFairScore } from '../../results/results-knowledge-products/entities/results-knowledge-product-fair-scores.entity';
+import { ResultInitiativeBudget } from '../../results/result_budget/entities/result_initiative_budget.entity';
+import { NonPooledProjectBudget } from '../../results/result_budget/entities/non_pooled_proyect_budget.entity';
+import { ResultInstitutionsBudget } from '../../results/result_budget/entities/result_institutions_budget.entity';
+import { ResultsCapacityDevelopments } from '../../results/summary/entities/results-capacity-developments.entity';
+import { ResultsInnovationsDev } from '../../results/summary/entities/results-innovations-dev.entity';
+import { ResultAnswer } from '../../results/result-questions/entities/result-answers.entity';
 import { ResultInnovationMergeSplit } from '../../results/result-innovation-merge-split/entities/result-innovation-merge-split.entity';
 
 export type EntityClass = new (...args: any[]) => object;
@@ -42,4 +54,17 @@ export const CATALOG_SCOPE: EntityClass[] = [
   EvidenceSharepoint,
   ResultsInvestmentDiscontinuedOption,
   ResultInnovationMergeSplit,
+  // QAC-T-9 · output types (knowledge product, capacity sharing, innovation development)
+  ResultsKnowledgeProduct,
+  ResultsKnowledgeProductMetadata,
+  ResultsKnowledgeProductAuthor,
+  ResultsKnowledgeProductKeyword,
+  ResultsKnowledgeProductAltmetric,
+  ResultsKnowledgeProductFairScore,
+  ResultInitiativeBudget,
+  ResultInstitutionsBudget,
+  NonPooledProjectBudget,
+  ResultsCapacityDevelopments,
+  ResultsInnovationsDev,
+  ResultAnswer,
 ];

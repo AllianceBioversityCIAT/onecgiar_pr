@@ -9,6 +9,8 @@ const ENVELOPE =
   'result envelope (identity / type / level / status / version): exposed by the catalog result types and phase, not as a field (REVIEW D21)';
 const WORKFLOW = 'bilateral / review / QA workflow state, not form data';
 const LEGACY = 'legacy column, not written by the 2026 (P25) form';
+const FK_PARENT =
+  'foreign key to the parent row, the key that reaches the result through a parent (2-hop); not form data';
 const DISCRIMINATOR =
   'discriminator set by the server; used only as a binding filter, not a field';
 
@@ -330,4 +332,270 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     IDENTITY,
     'result_innovation_merge_split_id',
   ),
+
+  // results_knowledge_product (QAC-T-9)
+  ...nfq(
+    'results_knowledge_product',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_knowledge_product', IDENTITY, 'result_knowledge_product_id'),
+  ...nfq(
+    'results_knowledge_product',
+    'foreign key to the result (one row per result), the binding key of the whole table, not form data',
+    'results_id',
+  ),
+  ...nfq(
+    'results_knowledge_product',
+    'non-P25 picker ("Select MELIA from those included in OST Section 6.3"), hidden in P25',
+    'ost_melia_study_id',
+  ),
+  ...nfq(
+    'results_knowledge_product',
+    'duplicate of result.title / result.description (catalogued as general.title / general.description)',
+    'name',
+    'description',
+  ),
+  ...nfq(
+    'results_knowledge_product',
+    'the page shows results_kp_metadata.doi, not this column (REVIEW A-14)',
+    'doi',
+  ),
+  ...nfq(
+    'results_knowledge_product',
+    'raw repository text, not shown in the form',
+    'cgspace_regions',
+    'cgspace_countries',
+  ),
+
+  // results_capacity_developments (QAC-T-9)
+  ...nfq(
+    'results_capacity_developments',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'results_capacity_developments',
+    IDENTITY,
+    'result_capacity_development_id',
+  ),
+  ...nfq(
+    'results_capacity_developments',
+    'foreign key to the result (one row per result), the binding key of the whole table, not form data',
+    'result_id',
+  ),
+
+  // results_innovations_dev (QAC-T-9)
+  ...nfq(
+    'results_innovations_dev',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_innovations_dev', IDENTITY, 'result_innovation_dev_id'),
+  ...nfq(
+    'results_innovations_dev',
+    'foreign key to the result (one row per result), the binding key of the whole table, not form data',
+    'results_id',
+  ),
+  ...nfq(
+    'results_innovations_dev',
+    'hidden in 2026 (scaling studies, user-demand block) or legacy text / flag no longer written by the 2026 form',
+    'has_scaling_studies',
+    'readiness_level',
+    'innovation_user_to_be_determined',
+    'innovation_acknowledgement',
+    'innovation_pdf',
+  ),
+  ...nfq(
+    'results_innovations_dev',
+    'owned by the links section (linked.has_innovation_link, stored on result) / Innovation use, not an Innovation development control',
+    'has_innovation_link',
+  ),
+  ...nfq(
+    'results_innovations_dev',
+    'system-derived from the lead center, not a form control',
+    'ip_support_center_id',
+  ),
+
+  // results_kp_metadata (QAC-T-9)
+  ...nfq(
+    'results_kp_metadata',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_kp_metadata', IDENTITY, 'result_kp_metadata_id'),
+  ...nfq('results_kp_metadata', FK_PARENT, 'result_knowledge_product_id'),
+
+  // results_kp_authors (QAC-T-9)
+  ...nfq(
+    'results_kp_authors',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_kp_authors', IDENTITY, 'result_kp_author_id'),
+  ...nfq('results_kp_authors', FK_PARENT, 'result_knowledge_product_id'),
+
+  // results_kp_keywords (QAC-T-9)
+  ...nfq(
+    'results_kp_keywords',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_kp_keywords', IDENTITY, 'result_kp_keyword_id'),
+  ...nfq('results_kp_keywords', FK_PARENT, 'result_knowledge_product_id'),
+
+  // results_kp_altmetrics (QAC-T-9)
+  ...nfq(
+    'results_kp_altmetrics',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_kp_altmetrics', IDENTITY, 'result_kp_altmetrics_id'),
+  ...nfq('results_kp_altmetrics', FK_PARENT, 'result_knowledge_product_id'),
+  ...nfq(
+    'results_kp_altmetrics',
+    'Altmetric counters / refresh date, not shown in the 2026 form (inventory 2026-A §7: the numeric score is not displayed)',
+    'cited_by_posts',
+    'cited_by_delicious',
+    'cited_by_facebook_pages',
+    'cited_by_blogs',
+    'cited_by_forum_users',
+    'cited_by_google_plus_users',
+    'cited_by_linkedin_users',
+    'cited_by_news_outlets',
+    'cited_by_peer_review_sites',
+    'cited_by_pinterest_users',
+    'cited_by_policies',
+    'cited_by_stack_exchange_resources',
+    'cited_by_reddit_users',
+    'cited_by_research_highlight_platforms',
+    'cited_by_twitter_users',
+    'cited_by_youtube_channels',
+    'cited_by_weibo_users',
+    'cited_by_wikipedia_pages',
+    'last_updated',
+  ),
+
+  // results_kp_fair_scores (QAC-T-9)
+  ...nfq(
+    'results_kp_fair_scores',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_kp_fair_scores', IDENTITY, 'results_kp_fair_score_id'),
+  ...nfq('results_kp_fair_scores', FK_PARENT, 'result_knowledge_product_id'),
+  ...nfq(
+    'results_kp_fair_scores',
+    'baseline rows (is_baseline = 1) are not shown in the form (inventory 2026-A §7); used only as a binding filter',
+    'is_baseline',
+  ),
+
+  // result_initiative_budget (QAC-T-9)
+  ...nfq(
+    'result_initiative_budget',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('result_initiative_budget', IDENTITY, 'result_initiative_budget_id'),
+  ...nfq('result_initiative_budget', FK_PARENT, 'result_initiative_id'),
+  ...nfq(
+    'result_initiative_budget',
+    'no control in the 2026 form (single total, kind_cash); inventory 2026-A §7',
+    'current_year',
+    'next_year',
+  ),
+
+  // result_institutions_budget (QAC-T-9)
+  ...nfq(
+    'result_institutions_budget',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'result_institutions_budget',
+    IDENTITY,
+    'result_institutions_budget_id',
+  ),
+  ...nfq('result_institutions_budget', FK_PARENT, 'result_institution_id'),
+  ...nfq(
+    'result_institutions_budget',
+    'no control in the 2026 form (single total, kind_cash); inventory 2026-A §7',
+    'in_kind',
+    'in_cash',
+  ),
+
+  // non_pooled_projetct_budget (QAC-T-9; table name does not match the guard's result-table pattern, scope is the only gate)
+  ...nfq(
+    'non_pooled_projetct_budget',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'non_pooled_projetct_budget',
+    IDENTITY,
+    'non_pooled_projetct_budget_id',
+  ),
+  ...nfq('non_pooled_projetct_budget', FK_PARENT, 'result_project_id'),
+  ...nfq('non_pooled_projetct_budget', LEGACY, 'non_pooled_projetct_id'),
+  ...nfq(
+    'non_pooled_projetct_budget',
+    'no control in the 2026 form (single total, kind_cash); inventory 2026-A §7',
+    'in_kind',
+    'in_cash',
+  ),
+
+  // result_answers (QAC-T-9; is_active and answer_boolean are covered as binding filters)
+  ...nfq(
+    'result_answers',
+    AUDIT,
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('result_answers', IDENTITY, 'result_answer_id'),
 ];

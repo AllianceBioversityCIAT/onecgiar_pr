@@ -11,6 +11,10 @@ import { PendingCatalogEntry } from './types';
  * `D2` = the binding needs a hop through a parent row (or an entity-less table), which the current
  * StorageBinding cannot express; deferred by the owner (REVIEW §7), the model is not changed.
  *
+ * T-1 (knowledge product) rows stored in results_kp_* child tables and the estimates_* budget rows
+ * (result_initiative_budget / non_pooled_projetct_budget / result_institutions_budget) are 2-hop: their tables are in scope and every
+ * remaining column is listed here with `twoHop(...)` (or `stage2(...)`), naming the field it serves.
+ *
  * Common-section fields that own no column of their own, so no entry can name them:
  *  - `contributors.other_contributors` (read-only view of other programs' ToC rows).
  */
@@ -155,4 +159,103 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
 
   // C-6 Linked results
   ...stage2('linked_result', 'linked.results.legacy_link', 'legacy_link'),
+
+  // T-1 Knowledge product (QAC-T-9): the FAIR scores are stored per field in results_kp_fair_scores
+  // (reached through results_knowledge_product, D2); these four denormalised columns hold the same values.
+  ...twoHop(
+    'results_knowledge_product',
+    'knowledge_product.fair (FAIR score, read-only; denormalised columns of results_kp_fair_scores)',
+    'findable',
+    'accesible',
+    'interoperable',
+    'reusable',
+  ),
+
+  // T-1 Knowledge product (QAC-T-9): rows stored in results_kp_* child tables, reached through
+  // results_knowledge_product (2-hop, D2).
+  ...twoHop(
+    'results_kp_metadata',
+    'knowledge_product.is_isi_cg|is_isi_wos',
+    'is_isi',
+  ),
+  ...twoHop(
+    'results_kp_metadata',
+    'knowledge_product.accessibility_cg|accessibility_wos',
+    'accesibility',
+    'open_access',
+  ),
+  ...twoHop(
+    'results_kp_metadata',
+    'knowledge_product.issue_date_cg|issue_date_wos',
+    'year',
+  ),
+  ...twoHop(
+    'results_kp_metadata',
+    'knowledge_product.online_date',
+    'online_year',
+  ),
+  ...twoHop('results_kp_metadata', 'knowledge_product.doi', 'doi'),
+  ...twoHop(
+    'results_kp_metadata',
+    'knowledge_product.peer_reviewed_cg|peer_reviewed_wos',
+    'is_peer_reviewed',
+  ),
+  ...stage2(
+    'results_kp_metadata',
+    'knowledge_product.source (repository of the metadata row, inventory 2026-A §7)',
+    'source',
+  ),
+  ...twoHop('results_kp_authors', 'knowledge_product.authors', 'author_name'),
+  ...stage2(
+    'results_kp_authors',
+    'knowledge_product.authors.orcid (inventory 2026-A §7)',
+    'orcid',
+  ),
+  ...twoHop(
+    'results_kp_keywords',
+    'knowledge_product.keywords|agrovoc_keywords',
+    'keyword',
+    'is_agrovoc',
+  ),
+  ...twoHop(
+    'results_kp_altmetrics',
+    'knowledge_product.altmetric (details link and badge images)',
+    'altmetric_id',
+    'image_small',
+    'image_medium',
+    'image_large',
+  ),
+  ...stage2(
+    'results_kp_altmetrics',
+    'knowledge_product.altmetric.score|journal (inventory 2026-A §7)',
+    'score',
+    'journal',
+  ),
+  ...twoHop(
+    'results_kp_fair_scores',
+    'knowledge_product.fair (one row per FAIR field)',
+    'fair_field_id',
+    'fair_value',
+  ),
+
+  // T-3 Innovation development (QAC-T-9): estimates budgets, reached through results_by_inititiative /
+  // results_by_projects / results_by_institution (2-hop, D2).
+  ...twoHop(
+    'result_initiative_budget',
+    'innovation_dev.estimates_pooled (kind_cash / is_determined)',
+    'kind_cash',
+    'is_determined',
+  ),
+  ...twoHop(
+    'non_pooled_projetct_budget',
+    'innovation_dev.estimates_non_pooled (kind_cash / is_determined)',
+    'kind_cash',
+    'is_determined',
+  ),
+  ...twoHop(
+    'result_institutions_budget',
+    'innovation_dev.estimates_partners (kind_cash / is_determined)',
+    'kind_cash',
+    'is_determined',
+  ),
 ];

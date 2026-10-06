@@ -145,3 +145,17 @@
 - spawns: implementer 35 calls, 223 035 tokens, ended complete; reviewer 17 calls, 135 142 tokens, ended complete
 - Requirements: QAC-R-1, R-7, R-11 (common part)
 - auto-approved (pre-approved mode)
+
+### QAC-T-9 — Catalog: output types — PASS (attempt 3)
+
+- Date: 2026-10-06 · Attempts: 3
+- Files: `definitions/sections/{knowledge-product,capacity-sharing,innovation-development}.ts` (new), `definitions/{scope,excluded-tables,not-for-qa,pending-catalog,versions}.ts`, `sections/index.ts`, snapshot (2026 rev 3, 107 keys), specs (controller, service, shape → revision 3)
+- Counts: 60 inventory rows → 35 catalogued (30 fields + 5 subfields), 24 D2-deferred (15 KP child-table rows, 9 budget rows), 1 no-storage (D26); other_output has no type-specific fields
+- **Attempt 1** — 112/112; falsifier `capacity_sharing.male_using` → uncatalogued; red 75 uncatalogued. VERIFIED. Reviewer **FAIL**: D2 tables (5 KP child + 2 budget) left in `excluded-tables.ts` instead of in scope with `twoHop` pending entries (QAC-R-7/R-11, T-8 disqualifier). 2-hop claim confirmed at entity source
+- **Attempt 2** (xhigh) — 7 tables into scope; NOT_FOR_QA + `twoHop`/`stage2` pending. Red 98 uncatalogued; falsifier `results_kp_metadata.is_isi` → exactly that. VERIFIED. Reviewer **FAIL**: `non_pooled_projetct_budget` invisible (name outside `RESULT_TABLE_PATTERN`), header comment false
+- **Attempt 3** (xhigh) — table into scope (10 NOT_FOR_QA, 2 pending); sweep of inventory §6 for non-`result*` names → evidence, evidence_sharepoint, linked_result (already in scope), non_pooled (fixed). Red 12 uncatalogued; falsifier `kind_cash` → exactly that. VERIFIED (112/112). Reviewer **PASS**
+- Decisions (Leader mandate): KP child tables + budgets D2-deferred (so `is_isi_cg`, `accessibility_cg` not in stage 1); D17 read-only KP fields stage 1 with description note; D4 `length_of_training` + `degree` subfield; per-question control lists for question-backed rows (D27 `is_active` filter); D12(b) developers/collaborators optional unconfirmed; `required_when` approximations (`melia_previous_submitted=false`, `is_new_variety=true`, `nature eq 12`)
+- ADVISORY: guard's name pattern misses non-`result*` tables — scope is the only gate for them (sweep each later task); 4 question-backed fields share one binding, split by control list in results-to-QA; `order` conventions differ; melia_type NULL branch
+- spawns: implementer 38/178 367, 14/113 982, 12/84 132; reviewer 20/136 312, 9/71 596, 7/68 931 (calls/tokens) — all ended complete
+- Requirements: QAC-R-1, R-7, R-11 (outputs)
+- auto-approved (pre-approved mode)

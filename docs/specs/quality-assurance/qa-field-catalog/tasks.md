@@ -149,7 +149,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 - **Done:** specs green; key list matches inventory.
 - **Skills:** `nestjs-expert`
 
-### QAC-T-9 — Catalog: output types
+### [x] QAC-T-9 — Catalog: output types
 
 Same shape as T-8 for knowledge product, capacity sharing, innovation development, other output. **Implements:** QAC-R-11, R-1, R-7. **Depends on:** T-8. **Review:** checklist. Falsifier / Red run / Disqualifier as T-8. **Consumers:** none. **Skills:** `nestjs-expert`.
 
