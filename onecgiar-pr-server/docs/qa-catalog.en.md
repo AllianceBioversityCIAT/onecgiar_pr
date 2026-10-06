@@ -233,7 +233,7 @@ These are deliberate and tracked; each one is **additive** when resolved.
 2. **Subfield conditions are not in the model.** Subfields have `required` but no conditional rule; row-level conditions stay in the inventory.
 3. **Conditional requirements are not exposed** (see [what `required` means](#what-required-means)).
 4. **Year coverage.** 2026 only.
-5. **The 200 path has not been exercised by a real QA key.** No CLARISA key registered for QA exists yet, so a real authenticated 200 against a running instance is unverified; the 200 body is covered by unit and controller tests and a committed snapshot of the 2026.5 content. The 401 paths (no key, unknown key, user `auth` header) were exercised live on 2026-10-06.
+5. **Live verification (2026-10-06, local instance, CLARISA test key with permission `/api/qa/catalog`):** `phase_year=2026` → 200 with the 2026.5 content (body identical to the committed catalog, apart from `generated_at`); `phase_year=2023` → 404; `phase_year=abc` → 400; no key, unknown key or user `auth` header → 401. Not yet verified on a deployed environment.
 6. **Control-list contents are not served** by this endpoint.
 
 ---
