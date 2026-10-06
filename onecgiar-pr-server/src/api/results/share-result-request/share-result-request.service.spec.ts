@@ -21,6 +21,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { PrimaryProgramRequestService } from './services/primary-program-request.service';
 import { HttpStatus } from '@nestjs/common';
 import { FindOperator } from 'typeorm';
+import { ShareResultRequestSeenRepository } from './repositories/share-result-request-seen.repository';
 
 describe('ShareResultRequestService', () => {
   let service: ShareResultRequestService;
@@ -60,6 +61,12 @@ describe('ShareResultRequestService', () => {
     $_findActivePhase: jest.fn(),
   };
 
+  // `BRS-T-2`
+  const mockSeenRepository = {
+    findSeenIds: jest.fn(),
+    insertIgnore: jest.fn(),
+  };
+
   const user = { id: 10 } as TokenDto;
 
   // @akili-spec notifications/inbox-paginated-load (PAGE-T-2) — named so paging tests can assert
@@ -69,6 +76,8 @@ describe('ShareResultRequestService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockSeenRepository.findSeenIds.mockResolvedValue(new Set<number>());
+    mockSeenRepository.insertIgnore.mockResolvedValue(0);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -111,6 +120,10 @@ describe('ShareResultRequestService', () => {
         { provide: UserNotificationSettingRepository, useValue: {} },
         { provide: VersioningService, useValue: mockVersioningService },
         { provide: UserRepository, useValue: mockUserRepository },
+        {
+          provide: ShareResultRequestSeenRepository,
+          useValue: mockSeenRepository,
+        },
       ],
     }).compile();
 
@@ -827,8 +840,8 @@ describe('ShareResultRequestService', () => {
         const response: any = await service.getReceivedResultRequest(user);
 
         expect(response.response.receivedContributionsPending).toEqual([
-          mapExpectedRow(sharedKeyRow),
-          mapExpectedRow(ownerKeyRow, tocReviewS1),
+          { ...mapExpectedRow(sharedKeyRow), seen: false },
+          { ...mapExpectedRow(ownerKeyRow, tocReviewS1), seen: false },
         ]);
         expect(response.response.receivedContributionsDone).toEqual([
           mapExpectedRow(doneRow),
@@ -923,7 +936,7 @@ describe('ShareResultRequestService', () => {
         const response: any = await service.getReceivedResultRequest(user);
 
         expect(response.response.receivedContributionsPending).toEqual([
-          mapExpectedRow(adminRow, tocReviewS2),
+          { ...mapExpectedRow(adminRow, tocReviewS2), seen: false },
         ]);
         expect(response.response.receivedContributionsDone).toEqual([
           mapExpectedRow(adminDoneRow),
@@ -1017,7 +1030,7 @@ describe('ShareResultRequestService', () => {
         const response: any = await service.getReceivedResultRequest(user);
 
         expect(response.response.receivedContributionsPending).toEqual([
-          mapExpectedRow(pendingRow, tocReviewS3),
+          { ...mapExpectedRow(pendingRow, tocReviewS3), seen: false },
         ]);
         expect(response.response.receivedContributionsDone).toEqual([
           mapExpectedRow(doneRow, tocReviewS3),
@@ -2168,6 +2181,223 @@ describe('ShareResultRequestService', () => {
       expect(serialized).not.toMatch(/"user_id"/);
       expect(serialized).not.toMatch(/"requested_by"/);
       expect(serialized).not.toMatch(/"approved_by"/);
+    });
+  });
+
+  // `BRS-T-2` (notifications/bell-read-state) - per-user `seen` flag, markSeen, markAllSeen.
+  describe('bell read state (BRS-T-2)', () => {
+    const pendingRow = (id: number) => ({
+      share_result_request_id: id,
+      result_id: 900 + id,
+      shared_inititiative_id: 42,
+      request_status_id: 1,
+      is_map_to_toc: false,
+      obj_result: { source: 'Result', result_code: `R-${id}` },
+    });
+    const doneRow = (id: number) => ({
+      requested_date: new Date('2026-09-01T00:00:00Z'),
+      share_result_request_id: id,
+      result_id: 900 + id,
+      shared_inititiative_id: 42,
+      request_status_id: 2,
+      is_map_to_toc: false,
+      obj_result: { source: 'Result', result_code: `R-${id}` },
+    });
+
+    beforeEach(() => {
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3);
+      mockRoleByUserRepository.find.mockResolvedValue([{ initiative_id: 100 }]);
+    });
+
+    describe('getReceivedResultRequest seen tagging', () => {
+      it('tags pending rows with seen for the caller, one lookup, and leaves done untagged', async () => {
+        mockShareResultRequestRepository.find
+          .mockResolvedValueOnce([pendingRow(1), pendingRow(2), pendingRow(3)])
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([doneRow(9)]);
+        mockSeenRepository.findSeenIds.mockResolvedValue(new Set([2]));
+
+        const res: any = await service.getReceivedResultRequest(user);
+
+        expect(
+          res.response.receivedContributionsPending.map((r: any) => r.seen),
+        ).toEqual([false, true, false]);
+        expect(res.response.receivedContributionsDone).toHaveLength(1);
+        expect(res.response.receivedContributionsDone[0]).not.toHaveProperty(
+          'seen',
+        );
+        expect(mockSeenRepository.findSeenIds).toHaveBeenCalledTimes(1);
+        expect(mockSeenRepository.findSeenIds).toHaveBeenCalledWith(
+          user.id,
+          [1, 2, 3],
+        );
+      });
+
+      it('does not query seen when there are no pending rows', async () => {
+        mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+        await service.getReceivedResultRequest(user);
+
+        expect(mockSeenRepository.findSeenIds).not.toHaveBeenCalled();
+      });
+
+      it('never passes another user id (isolation)', async () => {
+        mockShareResultRequestRepository.find
+          .mockResolvedValueOnce([pendingRow(1)])
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([]);
+
+        await service.getReceivedResultRequest({ id: 77 } as TokenDto);
+
+        expect(mockSeenRepository.findSeenIds.mock.calls[0][0]).toBe(77);
+      });
+    });
+
+    describe('markSeen', () => {
+      it('records the seen row for the caller when the request is active and pending', async () => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue({
+          share_result_request_id: 5,
+        });
+        mockSeenRepository.insertIgnore.mockResolvedValue(1);
+
+        const res: any = await service.markSeen(user, 5);
+
+        expect(mockShareResultRequestRepository.findOne).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              share_result_request_id: 5,
+              is_active: true,
+              request_status_id: 1,
+            },
+          }),
+        );
+        expect(mockSeenRepository.insertIgnore).toHaveBeenCalledWith(10, [5]);
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(res.response).toEqual({ seen: true });
+      });
+
+      it('is still seen: true when the insert reports 0 (already seen)', async () => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue({
+          share_result_request_id: 5,
+        });
+        mockSeenRepository.insertIgnore.mockResolvedValue(0);
+
+        const res: any = await service.markSeen(user, 5);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(res.response).toEqual({ seen: true });
+      });
+
+      it('returns 404 and inserts nothing when the request is missing, inactive or not pending', async () => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue(null);
+
+        const res: any = await service.markSeen(user, 404);
+
+        expect(res.status).toBe(HttpStatus.NOT_FOUND);
+        expect(mockSeenRepository.insertIgnore).not.toHaveBeenCalled();
+      });
+
+      it('routes unexpected failures through the module error handler', async () => {
+        mockShareResultRequestRepository.findOne.mockRejectedValue(
+          new Error('db down'),
+        );
+        mockHandlersError.returnErrorRes.mockReturnValue({ status: 500 });
+
+        const res: any = await service.markSeen(user, 5);
+
+        expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+        expect(res.status).toBe(500);
+      });
+    });
+
+    describe('markAllSeen', () => {
+      it('inserts the callers pending ids once, with no version filter and no request writes', async () => {
+        mockShareResultRequestRepository.find
+          .mockResolvedValueOnce([
+            { share_result_request_id: 1 },
+            { share_result_request_id: 2 },
+          ])
+          .mockResolvedValueOnce([
+            { share_result_request_id: 2 },
+            { share_result_request_id: 3 },
+          ]);
+        mockSeenRepository.insertIgnore.mockResolvedValue(3);
+
+        const res: any = await service.markAllSeen(user);
+
+        expect(mockSeenRepository.insertIgnore).toHaveBeenCalledTimes(1);
+        expect(mockSeenRepository.insertIgnore).toHaveBeenCalledWith(
+          10,
+          [1, 2, 3],
+        );
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(res.response).toEqual({ recorded: 3 });
+
+        for (const [arg] of mockShareResultRequestRepository.find.mock.calls) {
+          expect(arg.relations).toBeUndefined();
+          expect(arg.select).toEqual({ share_result_request_id: true });
+          expect(arg.where.request_status_id).toBe(1);
+          expect(arg.where.is_active).toBe(true);
+          expect(arg.where.obj_result).toEqual({ is_active: true });
+          expect(arg.where.obj_result).not.toHaveProperty('version_id');
+        }
+        expect(mockShareResultRequestRepository.save).not.toHaveBeenCalled();
+        expect(mockShareResultRequestRepository.update).not.toHaveBeenCalled();
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('scopes non-admin buckets to the caller initiatives like the inbox', async () => {
+        mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+        await service.markAllSeen(user);
+
+        const wheres = mockShareResultRequestRepository.find.mock.calls.map(
+          ([arg]) => arg.where,
+        );
+        expect(wheres).toHaveLength(2);
+        expect(wheres[0].is_map_to_toc).toBe(false);
+        expect(wheres[0].shared_inititiative_id).toBeInstanceOf(FindOperator);
+        expect(wheres[1].is_map_to_toc).toBe(true);
+        expect(wheres[1].owner_initiative_id).toBeInstanceOf(FindOperator);
+      });
+
+      it('runs a single query for admins (identical buckets) and still returns recorded', async () => {
+        mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(1);
+        mockShareResultRequestRepository.find.mockResolvedValue([
+          { share_result_request_id: 8 },
+        ]);
+        mockSeenRepository.insertIgnore.mockResolvedValue(1);
+
+        const res: any = await service.markAllSeen(user);
+
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(1);
+        expect(mockSeenRepository.insertIgnore).toHaveBeenCalledWith(10, [8]);
+        expect(res.response).toEqual({ recorded: 1 });
+      });
+
+      it('returns recorded: 0 (not an error) when nothing is pending', async () => {
+        mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+        const res: any = await service.markAllSeen(user);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(res.response).toEqual({ recorded: 0 });
+      });
+
+      it('never uses another user id (isolation)', async () => {
+        mockShareResultRequestRepository.find.mockResolvedValue([
+          { share_result_request_id: 1 },
+        ]);
+
+        await service.markAllSeen({ id: 77 } as TokenDto);
+
+        expect(
+          mockRoleByUserRepository.$_getMaxRoleByUser,
+        ).toHaveBeenCalledWith(77);
+        expect(mockSeenRepository.insertIgnore.mock.calls[0][0]).toBe(77);
+      });
     });
   });
 });

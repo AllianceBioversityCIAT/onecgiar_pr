@@ -56,6 +56,8 @@ export interface GetAllNotificationsOptions {
   scope?: 'pending' | 'history';
   /** Opaque keyset cursor for the next history page (PAGE-DD-2). */
   cursor?: string;
+  /** BRS-T-3: history page size, integer 1..200 (validated by the controller); absent -> `KEYSET_PAGE_SIZE`. Never applies to pending. */
+  limit?: number;
 }
 
 @Injectable()
@@ -280,6 +282,8 @@ export class NotificationService {
        * (P-7, PAGE-OQ-5) — a job-finished row has no linked result to scope on.
        */
       paged?: boolean;
+      /** BRS-T-3: history page size when `paged`; absent -> `KEYSET_PAGE_SIZE`. */
+      pageSize?: number;
     } = {},
   ): Promise<Notification[]> {
     const where = {
@@ -298,7 +302,7 @@ export class NotificationService {
         : where,
       ...(options.paged
         ? {
-            take: KEYSET_PAGE_SIZE + 1,
+            take: (options.pageSize ?? KEYSET_PAGE_SIZE) + 1,
             order: { created_date: 'DESC', notification_id: 'DESC' },
           }
         : {}),
@@ -324,6 +328,8 @@ export class NotificationService {
       cursor?: string;
       /** PAGE-T-3: see {@link findBilateralAiJobFinishedNotifications}'s `paged`. */
       paged?: boolean;
+      /** BRS-T-3: history page size when `paged`; absent -> `KEYSET_PAGE_SIZE`. */
+      pageSize?: number;
     } = {},
   ): Promise<Notification[]> {
     const where = {
@@ -346,7 +352,7 @@ export class NotificationService {
         : where,
       ...(options.paged
         ? {
-            take: KEYSET_PAGE_SIZE + 1,
+            take: (options.pageSize ?? KEYSET_PAGE_SIZE) + 1,
             order: { created_date: 'DESC', notification_id: 'DESC' },
           }
         : {}),
@@ -713,8 +719,9 @@ export class NotificationService {
    *   AI-job finder stays unfiltered (PAGE-P-7, PAGE-OQ-5 — phase-less, always shown).
    * - `scope=pending` skips every history query entirely (not "run and discard" — PAGE-R-2);
    *   `scope=history` skips every pending query the same way.
-   * - The 3 history (viewed) sources are each fetched `KEYSET_PAGE_SIZE + 1` rows at a time and
-   *   merged/sorted/cut to `KEYSET_PAGE_SIZE` by `mergeKeysetLists` (PAGE-R-3).
+   * - The 3 history (viewed) sources are each fetched `pageSize + 1` rows at a time and
+   *   merged/sorted/cut to `pageSize` by `mergeKeysetLists` (PAGE-R-3). `pageSize` is
+   *   `options.limit` (BRS-T-3, 1..200) or `KEYSET_PAGE_SIZE` (200) when absent; pending is never limited.
    * - No inner `await` — every element of the `Promise.all` array is a promise started
    *   synchronously when the array literal is evaluated; `Promise.all` is what waits (PAGE-R-7).
    */
@@ -726,7 +733,8 @@ export class NotificationService {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const { versionId, scope, cursor } = options;
+      const { versionId, scope, cursor, limit } = options;
+      const pageSize = limit ?? KEYSET_PAGE_SIZE;
       const runPending = scope !== 'history';
       const runHistory = scope !== 'pending';
 
@@ -764,7 +772,7 @@ export class NotificationService {
                 cursor,
                 NOTIFICATION_KEYSET_FIELDS,
               ),
-              take: KEYSET_PAGE_SIZE + 1,
+              take: pageSize + 1,
               order: { created_date: 'DESC', notification_id: 'DESC' },
             })
           : Promise.resolve([]),
@@ -823,6 +831,7 @@ export class NotificationService {
               read: true,
               cursor,
               paged: true,
+              pageSize,
             })
           : Promise.resolve([]),
         runPending
@@ -839,6 +848,7 @@ export class NotificationService {
               versionId,
               cursor,
               paged: true,
+              pageSize,
             })
           : Promise.resolve([]),
         runPending
@@ -853,6 +863,7 @@ export class NotificationService {
         ? mergeKeysetLists(
             [viewedResultScoped, jobFinishedViewed, centerNoticeViewed],
             NOTIFICATION_KEYSET_FIELDS,
+            pageSize,
           )
         : { rows: [] as Notification[], hasMore: false, nextCursor: null };
 

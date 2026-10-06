@@ -1935,5 +1935,96 @@ describe('NotificationService', () => {
       expect(calls[1][0].where).toHaveLength(2); // call 2: AI-job viewed
       expect(calls[2][0].where).toHaveLength(2); // call 3: Center-notice viewed
     });
+
+    // BRS-T-3 (notifications/bell-read-state, BRS-R-8 / BRS-DD-5): optional `limit` on the
+    // history page only.
+    describe('BRS-T-3 limit', () => {
+      it('limit=10, scope=history: every history find() takes 11 and the page holds 10 rows with hasMore', async () => {
+        const base = new Date('2026-09-30T00:00:00Z').getTime();
+        const resultScoped = Array.from({ length: 11 }, (_, i) =>
+          viewedRow(`${1000 + i}`, new Date(base - i * 60000).toISOString()),
+        );
+        mockNotificationRepository.find
+          .mockResolvedValueOnce(resultScoped)
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+          limit: 10,
+        });
+
+        const calls = mockNotificationRepository.find.mock.calls;
+        expect(calls).toHaveLength(3);
+        calls.forEach((call) => expect(call[0].take).toBe(11));
+        expect(result.response.notificationsViewed).toHaveLength(10);
+        expect(result.response.viewedMeta.hasMore).toBe(true);
+        expect(result.response.viewedMeta.nextCursor).toEqual(
+          expect.any(String),
+        );
+      });
+
+      it('limit=10 with 3 rows in total: hasMore is false', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([
+            viewedRow('1', '2026-09-29T00:00:00Z'),
+            viewedRow('2', '2026-09-28T00:00:00Z'),
+            viewedRow('3', '2026-09-27T00:00:00Z'),
+          ])
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+          limit: 10,
+        });
+
+        expect(result.response.notificationsViewed).toHaveLength(3);
+        expect(result.response.viewedMeta.hasMore).toBe(false);
+      });
+
+      it('no limit: history take stays 201 (unchanged default)', async () => {
+        mockNotificationRepository.find.mockResolvedValue([]);
+
+        await service.getAllNotifications(user, { scope: 'history' });
+
+        mockNotificationRepository.find.mock.calls.forEach((call) =>
+          expect(call[0].take).toBe(201),
+        );
+      });
+
+      it('scope=pending with limit: pending queries are unchanged (no take)', async () => {
+        mockNotificationRepository.find.mockResolvedValue([]);
+
+        await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 10,
+        });
+
+        const calls = mockNotificationRepository.find.mock.calls;
+        expect(calls).toHaveLength(4);
+        calls.forEach((call) => expect(call[0].take).toBeUndefined());
+      });
+
+      it('legacy scope (both) with limit: only the 3 history queries get take 11, pending ones none', async () => {
+        mockNotificationRepository.find.mockResolvedValue([]);
+
+        await service.getAllNotifications(user, { limit: 10 });
+
+        const takes = mockNotificationRepository.find.mock.calls.map(
+          (call) => call[0].take,
+        );
+        // order: viewed, pending, announcement, job-viewed, job-pending, center-viewed, center-pending
+        expect(takes).toEqual([
+          11,
+          undefined,
+          undefined,
+          11,
+          undefined,
+          11,
+          undefined,
+        ]);
+      });
+    });
   });
 });

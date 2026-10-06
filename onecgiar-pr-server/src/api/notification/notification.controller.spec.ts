@@ -157,6 +157,64 @@ describe('NotificationController', () => {
       },
     );
 
+    // BRS-T-3 (notifications/bell-read-state, BRS-R-8 / BRS-DD-5): optional `limit` 1..200.
+    it('parses a valid limit through to the service as a number (BRS-T-3)', async () => {
+      jest.spyOn(service, 'getAllNotifications').mockResolvedValue(result);
+
+      await controller.getAllNotifications(
+        user,
+        undefined,
+        'history',
+        undefined,
+        '10',
+      );
+
+      expect(service.getAllNotifications).toHaveBeenCalledWith(user, {
+        versionId: undefined,
+        scope: 'history',
+        cursor: undefined,
+        limit: 10,
+      });
+    });
+
+    it.each(['1', '200'])(
+      'accepts the limit boundary %s (BRS-T-3)',
+      (value) => {
+        jest.spyOn(service, 'getAllNotifications').mockResolvedValue(result);
+
+        controller.getAllNotifications(
+          user,
+          undefined,
+          'history',
+          undefined,
+          value,
+        );
+
+        expect(service.getAllNotifications).toHaveBeenCalledWith(
+          user,
+          expect.objectContaining({ limit: Number(value) }),
+        );
+      },
+    );
+
+    it.each(['0', '201', '-5', 'abc', '1.5', ''])(
+      'rejects an invalid limit (%p) with 400, regardless of scope (BRS-T-3)',
+      (badLimit) => {
+        jest.spyOn(service, 'getAllNotifications');
+
+        expect(() =>
+          controller.getAllNotifications(
+            user,
+            undefined,
+            'pending',
+            undefined,
+            badLimit,
+          ),
+        ).toThrow(BadRequestException);
+        expect(service.getAllNotifications).not.toHaveBeenCalled();
+      },
+    );
+
     it('rejects a malformed cursor with 400, even when scope is "pending" (which would otherwise skip history)', () => {
       jest.spyOn(service, 'getAllNotifications');
 
