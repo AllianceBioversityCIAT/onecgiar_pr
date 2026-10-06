@@ -94,7 +94,7 @@ COZ-T-1 → COZ-T-2. Linear, with no parallelism.
 
 ## 6. Rollout & verification
 
-- [ ] Commit only on the user's go-ahead. Subject: `🔧 fix(styles) [SPEC:bugfix/cdk-overlay-root-zoom]: …`, with no apostrophes or quotes (Jenkins)
+- [x] Commit only on the user's go-ahead (a2b8f2d50, 2026-10-06). Subject: `🔧 fix(styles) [SPEC:bugfix/cdk-overlay-root-zoom]: …`, with no apostrophes or quotes (Jenkins)
 - [ ] Tell the `bell-quick-inbox` session (its bell overlay is affected)
 - [ ] Manual QA on test env at text size Large
 
