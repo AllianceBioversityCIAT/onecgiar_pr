@@ -1,7 +1,7 @@
 // @akili-spec quality-assurance/qa-field-catalog
 // QAC-T-9 · inventory 2026-A §5 T-1 (`knowledge_product`, page KPI). Keys frozen as written in the inventory.
 // Stage 1 per DD-11 + D17 (read-only fields enter stage 1 as read-only values). The model has no read-only
-// flag, so each read-only row says so in its description. Only rows stored in `results_knowledge_product`
+// flag; the read-only nature is recorded in comments only (a `description` is form help text, QAC-R-11). Only rows stored in `results_knowledge_product`
 // (one row per result, keyed by `results_id`) are catalogued here.
 // Deferred by D2 (binding through a parent row, the model is not changed): every row stored in
 // `results_kp_metadata` / `_authors` / `_keywords` / `_altmetrics` / `_fair_scores` (they reach the result
@@ -26,10 +26,8 @@ const SECTION = KNOWLEDGE_PRODUCT_SECTION.key;
 const TABLE = 'results_knowledge_product';
 const TYPES = ['knowledge_product'];
 
-const READ_ONLY =
-  'Read-only: synced from the repository, not typed by the reporter.';
-
-// Read-only display: no live rule, optional, not confirmed (REVIEW D12 b, D17).
+// Read-only display (synced from the repository, not typed by the reporter; the form has no help text for these,
+// so they carry no `description` and the read-only nature stays here): no live rule, optional, not confirmed (REVIEW D12 b, D17).
 const readOnlyText = (
   key: string,
   label: string,
@@ -38,7 +36,6 @@ const readOnlyText = (
 ): CatalogField => ({
   key,
   label,
-  description: READ_ONLY,
   type: 'text',
   section: SECTION,
   order,

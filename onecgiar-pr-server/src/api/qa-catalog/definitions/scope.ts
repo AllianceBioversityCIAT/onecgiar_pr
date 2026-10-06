@@ -31,6 +31,12 @@ import { ResultsCapacityDevelopments } from '../../results/summary/entities/resu
 import { ResultsInnovationsDev } from '../../results/summary/entities/results-innovations-dev.entity';
 import { ResultAnswer } from '../../results/result-questions/entities/result-answers.entity';
 import { ResultInnovationMergeSplit } from '../../results/result-innovation-merge-split/entities/result-innovation-merge-split.entity';
+import { ResultsPolicyChanges } from '../../results/summary/entities/results-policy-changes.entity';
+import { ResultsInnovationsUse } from '../../results/summary/entities/results-innovations-use.entity';
+import { ResultActor } from '../../results/result-actors/entities/result-actor.entity';
+import { ResultsByInstitutionType } from '../../results/results_by_institution_types/entities/results_by_institution_type.entity';
+import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
+import { ResultScalingStudyUrl } from '../../results-framework-reporting/result_scaling_study_urls/entities/result_scaling_study_url.entity';
 
 export type EntityClass = new (...args: any[]) => object;
 
@@ -67,4 +73,11 @@ export const CATALOG_SCOPE: EntityClass[] = [
   ResultsCapacityDevelopments,
   ResultsInnovationsDev,
   ResultAnswer,
+  // QAC-T-10 · outcome and impact types (policy change, innovation use; other outcome and impact contribution own no table)
+  ResultsPolicyChanges,
+  ResultsInnovationsUse,
+  ResultActor,
+  ResultsByInstitutionType,
+  ResultIpMeasure,
+  ResultScalingStudyUrl,
 ];

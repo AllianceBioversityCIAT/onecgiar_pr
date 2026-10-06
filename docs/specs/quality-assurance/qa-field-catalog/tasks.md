@@ -153,7 +153,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 
 Same shape as T-8 for knowledge product, capacity sharing, innovation development, other output. **Implements:** QAC-R-11, R-1, R-7. **Depends on:** T-8. **Review:** checklist. Falsifier / Red run / Disqualifier as T-8. **Consumers:** none. **Skills:** `nestjs-expert`.
 
-### QAC-T-10 — Catalog: outcome and impact types
+### [x] QAC-T-10 — Catalog: outcome and impact types
 
 Same shape as T-8 for policy change, innovation use, other outcome, impact contribution. **Implements:** QAC-R-11, R-1, R-7. **Depends on:** T-8. **Review:** checklist. Falsifier / Red run / Disqualifier as T-8. **Consumers:** none. **Skills:** `nestjs-expert`.
 

@@ -95,7 +95,7 @@ describe('QaCatalogController', () => {
       useRealCatalog.value = true;
       const res = await get('?phase_year=2026');
       expect(res.status).toBe(200);
-      expect(res.body.catalog_version).toBe('2026.3');
+      expect(res.body.catalog_version).toBe('2026.4');
       const keys = res.body.fields.map((f: { key: string }) => f.key);
       expect(keys).toEqual(
         expect.arrayContaining([

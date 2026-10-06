@@ -40,6 +40,18 @@ const twoHop = (
     reason: `${field} — required/for QA but 2-hop binding (through a parent row), deferred (REVIEW D2)`,
   }));
 
+/** Retired from the 2026 form but kept for QA of earlier phases: catalogued in a 2025 load. */
+const legacy2025 = (
+  table: string,
+  field: string,
+  ...columns: string[]
+): PendingCatalogEntry[] =>
+  columns.map((column) => ({
+    table,
+    column,
+    reason: `${field} — not on the 2026 form, for a 2025 load — stage 2`,
+  }));
+
 export const PENDING_CATALOG: PendingCatalogEntry[] = [
   // C-2 ToC alignment
   ...twoHop(
@@ -242,20 +254,96 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   // results_by_projects / results_by_institution (2-hop, D2).
   ...twoHop(
     'result_initiative_budget',
-    'innovation_dev.estimates_pooled (kind_cash / is_determined)',
+    'innovation_dev.estimates_pooled and innovation_use.investment.programs (kind_cash / is_determined)',
     'kind_cash',
     'is_determined',
   ),
   ...twoHop(
     'non_pooled_projetct_budget',
-    'innovation_dev.estimates_non_pooled (kind_cash / is_determined)',
+    'innovation_dev.estimates_non_pooled and innovation_use.investment.bilateral (kind_cash / is_determined)',
     'kind_cash',
     'is_determined',
   ),
   ...twoHop(
     'result_institutions_budget',
-    'innovation_dev.estimates_partners (kind_cash / is_determined)',
+    'innovation_dev.estimates_partners and innovation_use.investment.partners (kind_cash / is_determined)',
     'kind_cash',
     'is_determined',
+  ),
+
+  // Policy change (QAC-T-10): optional rows (UI [required]=false, no live rule)
+  ...stage2('results_policy_changes', 'policy_change.usd_amount', 'amount'),
+  ...stage2(
+    'results_policy_changes',
+    'policy_change.amount_status (hard-coded options, no FK)',
+    'status_amount',
+  ),
+  ...stage2(
+    'results_policy_changes',
+    'policy_change.actors_influenced',
+    'actors_influenced',
+  ),
+
+  // Innovation use (QAC-T-10)
+  ...stage2(
+    'results_innovations_use',
+    'innovation_use.linked_result.has_innovation_link (same answer as linked.has_innovation_link; live function has the check commented out, REVIEW D15)',
+    'has_innovation_link',
+  ),
+  ...legacy2025(
+    'results_innovations_use',
+    'scaling studies question (hidden for non-IPSR from 2026) and legacy male/female counters',
+    'has_scaling_studies',
+    'male_using',
+    'female_using',
+  ),
+  ...stage2(
+    'result_actors',
+    'innovation_use.*.actors.age_disaggregation_not_available and youth_split_applied_by_system (2026-only, optional)',
+    'age_disaggregation_not_available',
+    'youth_split_applied_by_system',
+  ),
+  ...legacy2025(
+    'result_actors',
+    'legacy / other-type flags of the actors block (not on the 2026 form)',
+    'has_women',
+    'has_women_youth',
+    'has_men',
+    'has_men_youth',
+    'addressing_demands',
+  ),
+  ...stage2(
+    'results_by_institution_type',
+    'innovation_use.*.organizations.graduate_students (shown only for institution type 50, optional)',
+    'graduate_students',
+  ),
+  ...legacy2025(
+    'results_by_institution_type',
+    'legacy demand text (not on the 2026 form)',
+    'addressing_demands',
+  ),
+  ...legacy2025(
+    'result_ip_measure',
+    'legacy demand text (not on the 2026 form)',
+    'addressing_demands',
+  ),
+  ...stage2(
+    'result_ip_measure',
+    'IPSR step 1 / 3 measures (link to the innovation package row; QAC-T-11)',
+    'result_ip_id',
+  ),
+  ...legacy2025(
+    'result_scaling_study_urls',
+    'scaling study URL list (retired in 2026, IUFT:682-690; REVIEW §4.2: every column pending)',
+    'id',
+    'result_innov_use_id',
+    'result_innov_dev_id',
+    'result_innov_package_id',
+    'study_url',
+    'is_active',
+    'created_date',
+    'created_by',
+    'last_updated_by',
+    'last_updated_date',
   ),
 ];

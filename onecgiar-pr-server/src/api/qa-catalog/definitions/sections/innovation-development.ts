@@ -115,8 +115,7 @@ export const INNOVATION_DEVELOPMENT_FIELDS: CatalogField[] = [
   {
     key: 'innovation_dev.number_of_varieties',
     label: 'Indicate the number of individual new or improved lines/ varieties',
-    description:
-      'Required, and greater than 0, when the innovation is a new or improved variety or breed. The form shows no required marker (REVIEW D12).',
+    // D12: required (> 0) when the innovation is a new or improved variety or breed; the form shows no required marker.
     type: 'number',
     section: SECTION,
     order: 5,

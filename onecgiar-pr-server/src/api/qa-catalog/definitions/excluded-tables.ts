@@ -10,7 +10,6 @@ const PENDING =
   'pending QAC-T-8…11 (inventory review decides scope vs. real exclusion)';
 
 export const EXCLUDED_TABLES: ExcludedTable[] = [
-  { table: 'result_actors', reason: PENDING },
   { table: 'result_by_innovation_package', reason: PENDING },
   { table: 'result_by_level', reason: PENDING },
   { table: 'result_countries_sub_national', reason: PENDING },
@@ -27,7 +26,6 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
   { table: 'result_ip_expert_workshop_organized', reason: PENDING },
   { table: 'result_ip_expertises', reason: PENDING },
   { table: 'result_ip_impact_area_target', reason: PENDING },
-  { table: 'result_ip_measure', reason: PENDING },
   { table: 'result_ip_result_actors', reason: PENDING },
   { table: 'result_ip_result_institution_types', reason: PENDING },
   { table: 'result_ip_result_measures', reason: PENDING },
@@ -46,7 +44,6 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
   },
   { table: 'result_questions', reason: PENDING },
   { table: 'result_review_history', reason: PENDING },
-  { table: 'result_scaling_study_urls', reason: PENDING },
   { table: 'result_sdg_targets', reason: PENDING },
   {
     table: 'result_status',
@@ -60,13 +57,11 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
     reason: 'control list of result types (not result data)',
   },
   { table: 'results_by_evidence', reason: PENDING },
-  { table: 'results_by_institution_type', reason: PENDING },
   { table: 'results_complementary_innovation', reason: PENDING },
   { table: 'results_complementary_innovations_function', reason: PENDING },
   { table: 'results_impact_area_indicators', reason: PENDING },
   { table: 'results_impact_area_target', reason: PENDING },
   { table: 'results_innovatio_packages_enabler_type', reason: PENDING },
-  { table: 'results_innovations_use', reason: PENDING },
   { table: 'results_innovations_use_measures', reason: PENDING },
   {
     table: 'results_kp_fair_baseline',
@@ -77,5 +72,4 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
     reason:
       'knowledge product matching helper; its content surfaces through partners.kp_additional_partners (inventory 2026-A §6)',
   },
-  { table: 'results_policy_changes', reason: PENDING },
 ];

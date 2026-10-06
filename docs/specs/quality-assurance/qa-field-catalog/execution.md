@@ -159,3 +159,22 @@
 - spawns: implementer 38/178 367, 14/113 982, 12/84 132; reviewer 20/136 312, 9/71 596, 7/68 931 (calls/tokens) — all ended complete
 - Requirements: QAC-R-1, R-7, R-11 (outputs)
 - auto-approved (pre-approved mode)
+
+### QAC-T-10 — Catalog: outcome and impact types — PASS (attempt 2)
+
+- Date: 2026-10-06 · Attempts: 2
+- Files: `definitions/sections/{policy-change,innovation-use}.ts` (new), `definitions/{scope,excluded-tables,not-for-qa,pending-catalog,versions}.ts`, `sections/index.ts`, snapshot (2026 rev 4, 154 keys), specs (real-catalog revision → 2026.4; fixture-pinned stay 2026.3), **sweep of all section files** (`innovation-development.ts`, `knowledge-product.ts` descriptions), new `qa-catalog.description-provenance.spec.ts`
+- Counts: PC 4 catalogued / 3 pending; IU 13 fields + 26 subfields catalogued, 5 + 12 pending; other outcome / impact contribution own no fields (D18); 6 tables into scope; sweep for non-`result*` names → none new
+- **Attempt 1** — 112/112; falsifier `result_ip_measure.quantity` → uncatalogued; red: tables neither in scope nor excluded. VERIFIED. Reviewer **FAIL**: authored notes in `description` (QAC-R-11 last bullet), same drift already in T-9
+- **Attempt 2** (high) — descriptions restricted to verbatim form help text across all section files (IU rows 3/26/27/28 and PC implementing_organizations from client source; KP read-only notes and D12 note moved to comments); provenance spec (red: 42 offenders on attempt-1 content; falsifier "live function" → red). 114/114 VERIFIED. Reviewer **PASS** (5 spot-checks verbatim)
+- Decisions (Leader mandate): IU reuses T-8 `linked.*`; D15 follows live function; D12(b) rows stage 1 optional unconfirmed; D3(a) single `institution_type`; D13 group rule approximated as `required_when` on each list (comment); D28 id-vs-level unverified (comment)
+- ADVISORY: provenance guard is pattern-based (does not prove form origin); its `>20` minimum is close to the current ~30
+- spawns: implementer 46/180 032, 30/107 301; reviewer 23/126 778, 8/86 406 (calls/tokens) — all ended complete
+- Requirements: QAC-R-1, R-7, R-11 (outcomes)
+- auto-approved (pre-approved mode)
+
+## Budget tripwire — 2026-10-06 (after QAC-T-10)
+
+- Budget (design §12): 12 tasks · ~4 000–4 500 LOC · ~15 review rounds. Actual: 10 of 12 tasks closed; **16 review rounds** (T-6 4, T-9 3, T-5 2, T-10 2, others 1); remaining T-11 (IPSR), T-12 (close-out).
+- Cause: data tasks needed reworks on guard-coverage conventions (D2 tables, non-`result*` names) and description provenance; each lesson is now carried into the next brief.
+- Escalated to the owner; execution paused before T-11.

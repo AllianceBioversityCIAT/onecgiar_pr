@@ -598,4 +598,81 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'last_updated_date',
   ),
   ...nfq('result_answers', IDENTITY, 'result_answer_id'),
+
+  // results_policy_changes (QAC-T-10)
+  ...nfq(
+    'results_policy_changes',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_policy_changes', IDENTITY, 'result_policy_change_id'),
+  ...nfq(
+    'results_policy_changes',
+    'foreign key to the result (one row per result), the binding key of the whole table, not form data',
+    'result_id',
+  ),
+  ...nfq(
+    'results_policy_changes',
+    "legacy P22 'Links to results' flags; the section is absent from the P25 form",
+    'linked_innovation_dev',
+    'linked_innovation_use',
+  ),
+  ...nfq(
+    'results_policy_changes',
+    "control commented out of the 2026 form (PC:70-74, 'engagement activity or event'; kept for future use)",
+    'result_related_engagement',
+  ),
+
+  // results_innovations_use (QAC-T-10)
+  ...nfq(
+    'results_innovations_use',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_innovations_use', IDENTITY, 'result_innovation_use_id'),
+  ...nfq(
+    'results_innovations_use',
+    'foreign key to the result (one row per result), the binding key of the whole table, not form data',
+    'results_id',
+  ),
+
+  // result_actors (QAC-T-10; is_active and section_id are covered as binding filters, result_actors_id as the list value)
+  ...nfq(
+    'result_actors',
+    AUDIT,
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+
+  // results_by_institution_type (QAC-T-10; is_active, section_id and institution_roles_id are covered as binding filters)
+  ...nfq(
+    'results_by_institution_type',
+    AUDIT,
+    'created_by',
+    'creation_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('results_by_institution_type', IDENTITY, 'id'),
+
+  // result_ip_measure (QAC-T-10; is_active and section_id are covered as binding filters)
+  ...nfq(
+    'result_ip_measure',
+    AUDIT,
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('result_ip_measure', IDENTITY, 'result_ip_measure_id'),
 ];
