@@ -1004,6 +1004,39 @@ describe('PrimaryProgramRequestService', () => {
       );
     });
 
+    // RSB-P-13 (bilateral/resubmit-rejected-result, RSB-T-5). An ownerless resubmission writes the
+    // payload's ToC row for the REQUESTED primary before that SP accepts (`handleTocMapping` keys it
+    // on `initiative_ids`), and it retires the old owner's role 1 first (DD-5). Accepting must then
+    // find that row (no second stub) and, because there is no previous owner, retire no ToC at all.
+    it('RSB-P-13: accepting finds the ToC row the resubmission already wrote for the new primary: no second stub, no ToC retired', async () => {
+      mockRequestRepoTx.findOne.mockResolvedValueOnce({
+        share_result_request_id: 1,
+        request_status_id: 1,
+        shared_inititiative_id: 9,
+        result_id: 100,
+      });
+      mockInitiativeRepoTx.find.mockResolvedValueOnce([]); // DD-5: the old owner was retired
+      mockInitiativeRepoTx.findOne.mockResolvedValueOnce(null);
+      mockTocRepoTx.findOne.mockResolvedValueOnce({
+        result_toc_result_id: 55,
+        result_id: 100,
+        initiative_id: 9,
+        initiative_ids: 9,
+        is_active: true,
+      });
+      mockInitiativeCodes({ 9: 'SP09' });
+
+      const outcome = await service.accept(1, user);
+
+      expect(outcome.ok).toBe(true);
+      // The lookup is exactly the one the bilateral writer's row satisfies.
+      expect(mockTocRepoTx.findOne).toHaveBeenCalledWith({
+        where: { result_id: 100, initiative_ids: 9, is_active: true },
+      });
+      expect(mockTocRepoTx.save).not.toHaveBeenCalled();
+      expect(mockTocRepoTx.update).not.toHaveBeenCalled();
+    });
+
     it('accepts a swap: deactivates the old owner, clears its ToC and its old ACCEPTED primary row', async () => {
       mockRequestRepoTx.findOne.mockResolvedValueOnce({
         share_result_request_id: 2,

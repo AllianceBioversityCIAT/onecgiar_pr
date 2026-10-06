@@ -310,3 +310,114 @@ describe('PolicyChangeBilateralHandler', () => {
     );
   });
 });
+
+// @akili-spec bilateral/resubmit-rejected-result — RSB-T-3 / RSB-DD-1. `resolveAndValidate` is the
+// pure (no row, no write) half of `afterCreate`: the resubmission preflight calls it BEFORE the
+// first write, `afterCreate` consumes it unchanged. Messages are the ones the no-code create has
+// always raised (RSB-R-1).
+describe('PolicyChangeBilateralHandler.resolveAndValidate (RSB-T-3)', () => {
+  const dto = (policyChange?: any): any => ({
+    result_type_id: ResultTypeEnum.POLICY_CHANGE,
+    policy_change: policyChange,
+  });
+  const valid = () => ({
+    policy_type: { id: 2 },
+    policy_stage: { id: 1 },
+    implementing_organization: [{ institutions_id: 123 }],
+  });
+
+  let handler: PolicyChangeBilateralHandler;
+  let repoStub: any;
+  let institutionsRepoStub: any;
+  let policyTypeRepoStub: any;
+
+  beforeEach(() => {
+    repoStub = {
+      findOne: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn(),
+      create: jest.fn((payload) => payload),
+    };
+    policyTypeRepoStub = {
+      findOne: jest.fn().mockResolvedValue({ id: 2 }),
+      createQueryBuilder: jest.fn(),
+    };
+    institutionsRepoStub = {
+      updateInstitutions: jest.fn(),
+      getResultByInstitutionExists: jest.fn(),
+      save: jest.fn(),
+    };
+    handler = new PolicyChangeBilateralHandler(
+      repoStub,
+      policyTypeRepoStub,
+      { findOne: jest.fn().mockResolvedValue({ id: 6 }) } as any,
+      institutionsRepoStub,
+      { findOne: jest.fn(), find: jest.fn() } as any,
+    );
+  });
+
+  const writers = () => [
+    repoStub.save,
+    repoStub.create,
+    institutionsRepoStub.updateInstitutions,
+    institutionsRepoStub.save,
+  ];
+
+  it.each([
+    [undefined, 'policy_change object is required for POLICY_CHANGE results.'],
+    [
+      { ...valid(), policy_type: undefined },
+      'policy_type is required for POLICY_CHANGE results.',
+    ],
+    [
+      { ...valid(), implementing_organization: [] },
+      'implementing_organization array is required and must have at least one item for POLICY_CHANGE results.',
+    ],
+  ])(
+    'rejects case %# with the create message and writes nothing',
+    async (pc, message) => {
+      await expect(
+        handler.resolveAndValidate({ bilateralDto: dto(pc) }),
+      ).rejects.toThrow(message);
+      writers().forEach((writer) => expect(writer).not.toHaveBeenCalled());
+    },
+  );
+
+  it('an unknown policy_type id is a 400 from the lookup, before any write', async () => {
+    policyTypeRepoStub.findOne.mockResolvedValue(null);
+    await expect(
+      handler.resolveAndValidate({
+        bilateralDto: dto({ ...valid(), policy_type: { id: 999 } }),
+      }),
+    ).rejects.toThrow('Invalid policy_type id: 999');
+    writers().forEach((writer) => expect(writer).not.toHaveBeenCalled());
+  });
+
+  it('a valid payload resolves without a single write or row lookup', async () => {
+    await expect(
+      handler.resolveAndValidate({ bilateralDto: dto(valid()) }),
+    ).resolves.toEqual(
+      expect.objectContaining({ policyTypeId: 2, policyStageId: 6 }),
+    );
+    writers().forEach((writer) => expect(writer).not.toHaveBeenCalled());
+    expect(repoStub.findOne).not.toHaveBeenCalled();
+  });
+
+  it('a payload of another result type is not its business (null)', async () => {
+    await expect(
+      handler.resolveAndValidate({
+        bilateralDto: { result_type_id: ResultTypeEnum.INNOVATION_USE } as any,
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('afterCreate raises the same message the preflight raises (DD-1 parity)', async () => {
+    const invalid = dto({ ...valid(), policy_stage: undefined });
+    await expect(
+      handler.resolveAndValidate({ bilateralDto: invalid }),
+    ).rejects.toThrow('policy_stage is required for POLICY_CHANGE results.');
+    await expect(
+      handler.afterCreate({ bilateralDto: invalid, resultId: 5, userId: 2 }),
+    ).rejects.toThrow('policy_stage is required for POLICY_CHANGE results.');
+    expect(repoStub.save).not.toHaveBeenCalled();
+  });
+});

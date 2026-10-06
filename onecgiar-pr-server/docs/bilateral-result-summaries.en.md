@@ -445,7 +445,7 @@ Send `data.result_code` — either a string of digits (`"28565"`) or a JSON inte
 |---|---|---|
 | absent | `created` | Ships — unchanged behaviour |
 | matches a result **Approved** in an earlier phase, with no row for it in the open phase | `versioned` | **Ships.** A brand-new row is created in the open phase from this payload, then stamped with the source's code. |
-| matches a result that already has a row in the **open phase**, and that row is eligible | `updated` | **Not available yet.** Rejected with `409` until the update-in-place change ships. Do not build against "update" semantics yet. |
+| matches a result that already has a row in the **open phase**, and that row is **Rejected** | `updated` | **Ships** (resubmission). Replaces the data on the same record and returns it to review. See "Resubmitting a rejected result" below. Any other status in the open phase is `409`. |
 
 A `versioned` result is **not** a copy of the earlier-phase row — it is a fresh result built entirely from this payload, which then inherits the old `result_code`. See "What a version does not carry" below.
 
@@ -462,8 +462,7 @@ A `result_code` is checked against two different candidate rows depending on whe
 | `403` | The result has no originating platform recorded, and the caller's platform has no centre scope configured to claim it. | `Result {code} has no originating platform, and {platform} has no centre scope configured to claim it.` |
 | `409` | The code belongs to a **Knowledge Product** — checked on both paths. | `Result {code} is a Knowledge Product. Knowledge Products cannot be carried into a new phase; report the new knowledge product with its own CGSpace handle instead.` |
 | `409` | **(version path)** Rows for this code are looked at most-recent-phase-first, and the first one found outside the open phase is not **Approved**. An Approved row sitting in an *older* phase does not help if a more recent, non-open phase holds a later, non-Approved row for the same code. | `Result {code} is not approved (status_id {n}). Only an approved result from a previous phase can be carried forward.` |
-| `409` | **(update path)** The open-phase row's status is something other than Editing, Draft, Pending Review or Rejected. | `Result {code} is {status name} and cannot be updated through create.` |
-| `409` | **(update path)** The open-phase row clears ownership, the KP check and the status check above — i.e. it is an otherwise-eligible update target. Update-in-place is not shipped yet. | `Updating an existing result through create is not available yet.` |
+| `409` | **(update path)** The open-phase row's status is not Rejected. The full resubmission rules and errors are in "Resubmitting a rejected result" below. | `Result {code} cannot be resubmitted: its status is {status name}. Only rejected results can be resubmitted.` |
 | `400` | **(version path only — this check does not run on the update path)** The most-recent non-open-phase row for this code is not a W3/Bilateral result (e.g. a pool-funded result). | `Result {code} is not a W3/Bilateral result, so it cannot be carried forward through this flow.` |
 
 **Per-result write guarantee (amended 2026-09-30):** a rejected result never writes its own row. The guarantee is **per result** — in a request carrying several results, results processed before the rejected one stay written. But the request as a whole still fails on the first rejection: later results in the same request are never attempted, and — see below — the response for a failed request carries no `outcomes[]` at all, so a producer cannot read back the codes of the earlier, already-written results from that response.
@@ -475,7 +474,7 @@ A `result_code` is checked against two different candidate rows depending on whe
 | Field | Meaning |
 |---|---|
 | `result_code` | The result's code (numeric). |
-| `operation` | `created`, `versioned`, or `updated` (the last is not reachable yet — see above). |
+| `operation` | `created`, `versioned`, or `updated` (a resubmission of a Rejected result, see below). |
 | `status_id` / `status` | The resulting workflow status. |
 | `external_reference` | Echoed from the request when the producer sent one. |
 
@@ -493,7 +492,120 @@ Only the `result_code` itself is inherited automatically; everything else must b
 ### Known limitations
 
 - Two concurrent `create` requests versioning the same code can both pass the "no row in the open phase yet" check before either one writes — the same race `POST /version` already has. A producer that cannot tolerate a duplicate open-phase row should serialize retries of the same code.
-- If a request fails partway through, **after** the open-phase row has been created but before the request completes, that row is left in place. Retrying with the same `result_code` then resolves to the (not yet available) update path rather than creating a second version — it does not create a duplicate, but it also will not retry the version until the update path ships.
+- If a request fails partway through, **after** the open-phase row has been created but before the request completes, that row is left in place. Retrying with the same `result_code` then resolves to that open-phase row. Unless the row is Rejected, it gets the status `409` of "Resubmitting a rejected result"; it does not create a duplicate, and it does not retry the version.
+
+---
+
+## Resubmitting a rejected result
+
+**Answer first.** Send the same `POST /create` with `data.result_code` set to the code of a result that a Science Program **rejected**. PRMS replaces the result's data **on the same record** (same `id`, same `result_code`) and returns it to review. The outcome row says `operation: "updated"`. A result in any other status is refused with `409` and nothing changes.
+
+### Quick path
+
+1. Resend the corrected `create` body with `data.result_code` of the rejected result. The result must be in the open phase and reported by your platform.
+2. Read `response.outcomes[]`: your row has `operation: "updated"`, `status_id: 5`, `status: "pending review"`.
+3. On a `5xx` or a timeout, read "Retrying safely" below before you resend.
+
+### What happens by status
+
+The open-phase row for the code decides. In the message, the status name is lower case, with spaces instead of hyphens.
+
+| Status of the result | Outcome |
+|---|---|
+| **Rejected** (7) | Resubmitted. Ends in **Pending Review** (5), whatever `keep_editing` says. |
+| Editing (1), Quality assessed (2), Submitted (3), Discontinued (4), Pending review (5), Approved (6), Draft (8) | `409` naming the code and the status. Nothing is written. |
+
+Other rules, all checked before anything is written:
+
+- **Same platform.** A result reported by another platform is refused (`403`, see the Rejections table above).
+- **Not a Knowledge Product.** Refused with the `409` of the Rejections table above.
+- **Same type.** `result_type_id` in the payload must equal the stored type (`409`, below). A different type means a new result.
+- **Open phase only.** A Rejected result whose only row is in an earlier phase is not an update target. It follows the `versioned` path and gets that path's `409` ("is not approved").
+- **`keep_editing` is ignored.** A resubmission always ends in Pending Review.
+- **A title equal to the result's own title is accepted.** A title equal to **another** result's title in the phase is still refused.
+
+### Errors specific to a resubmission
+
+Every other refusal reuses the Rejections table above (`404` code not found, `403` platform, `409` Knowledge Product, `409` no open phase) and the payload messages of a regular `create` (geography, evidence, Science Program codes, projects, type-specific blocks). Every `4xx` below is raised **before the first write** to the result: the stored result stays as it was.
+
+| Status | When | Message |
+|---|---|---|
+| `409` | The result is not Rejected. | `Result {code} cannot be resubmitted: its status is {status name}. Only rejected results can be resubmitted.` |
+| `409` | The payload's type differs from the stored type. | `Result {code} is a {stored type}; the payload is a {payload type}.` Type names are lower case with spaces, for example `policy change`, `other output`. |
+| `400` | No primary Science Program: `toc_mapping.science_program_id` is missing or blank. | `Result {code} cannot be resubmitted without a primary Science Program (toc_mapping.science_program_id).` |
+| `400` | The payload names no lead project: no project, or several with none flagged `is_lead`. A single project is the lead without the flag. | `Result {code} cannot be resubmitted without a lead bilateral project (one project, or one flagged is_lead).` |
+| `400` | The primary Science Program is not allocated to the payload's lead project, or CLARISA does not know it. | `{SP code} is not allocated to the lead project of result {code}.` |
+| `409` | Another resubmission of the same result holds the lock. | `Result {code} is already being resubmitted.` |
+| `409` | The result left Rejected between the check and the final write. | `Result {code} cannot be resubmitted: its status changed while the resubmission was being processed.` |
+| `404` | The result disappeared between the check and the lock. | `Result {code} was not found.` |
+| `503` | The lock could not be taken because of a fault (not a concurrent attempt). | `Result {code} could not be locked for resubmission. Retry the request.` |
+| `503` | The primary request step failed with an internal error. | `Result {code} could not be resubmitted: the primary Science Program request failed. The result stays rejected; resend the same request to retry.` |
+| `500` | The primary request step answered `not_aligned` after the preflight had passed (the allocation changed underneath the request). | The same message as the `503` row above. |
+
+The allocation rule is the one the Reporting Tool applies: the Science Program needs a confirmed mapping with allocation above zero on the lead project. A Science Program that exists only in CLARISA is refused.
+
+### Retrying safely
+
+The data writes are not one database transaction. The **status flips last**, in one transaction with the history entry (and with the primary request, when there is one). A failure therefore leaves the result in a known state.
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `400`, `403`, `404`, or `409` (not Rejected, type, Knowledge Product) | Refused before any write. | Fix the payload or the target. Do not resend unchanged. |
+| `5xx`, or a timeout, and no later `409` | Failed before the commit. The result is still **Rejected**, may hold partial data, and is **retryable**. | **Resend the same request.** The reset cleans up the partial data and the writers rewrite it. |
+| `409` with `its status is pending review`, after a timeout | Your earlier attempt **committed**. | **Do not resend.** The resubmission is done. Any other status in the message means someone moved the result afterwards. |
+| `409` with `is already being resubmitted` | A concurrent attempt holds the lock. | Wait, then send again. If that attempt succeeded you get the `pending review` `409`. If it failed, the resend goes through. |
+| `503` (lock or primary request) | A transient fault. The result stays Rejected. | Resend after a short wait. |
+| `500` with `the primary Science Program request failed` | The allocation moved under the request. The result stays Rejected. | Check the allocation of the lead project, then resend. |
+
+**The outcome row is authoritative.** After the commit, the usual result body is read back from the database. If that read fails, the request still returns `201` with a valid `outcomes[]`, and `response` can be `{}`. Do not treat an empty `response` as a failure and do not resend.
+
+**Two status spellings exist, as they do today.** `updated` rows carry `status: "pending review"` (with a space). `created` and `versioned` rows carry `status: "pending-review"` (with a hyphen). Match on `status_id` (`5`) when you need a stable value.
+
+### What a resubmission replaces
+
+The payload is the new truth. A section you send replaces the previous one. A section you leave out is **not kept**.
+
+| Part of the result | When sent | When omitted |
+|---|---|---|
+| `title`, `result_level_id` | Replaced. | Not specified here. |
+| `description` | Replaced. | **Cleared** (`NULL`). |
+| `submitted_by.submitted_date`, `submitted_by.comment` | Replaced. | **Cleared** (`NULL`). |
+| `external_reference` | Replaced. | Not specified here. |
+| `lead_contact_person` | Resolved as in a regular create. | **Stored value kept.** The columns are not sent. |
+| Evidence, contributing bilateral projects with their budgets, non-lead contributing centres, Theory of Change mapping with its indicators and targets, subnational areas | Previous rows deactivated, then the payload's rows written. | Previous rows stay deactivated: **none remains active**. |
+| Contributing partners | Replaced by the partners that resolve in CLARISA (`{A, B}` then `{C}` leaves exactly `{C}`). | **None remain active.** The same holds when you send partners but none resolves. |
+| Innovation Use actors, organisation types and measures (Innovation Use only) | Previous rows deactivated, then rewritten. | **None remain active.** |
+| Lead centre | The previous lead is demoted and the payload's lead is written. | The stored lead row is not reset. |
+| Lead program investment (`toc_mapping.usd_budget`, Innovation types) | Written on the lead program's row. | Innovation Use: recorded as **to be determined**. |
+| Contributing programs (`contributing_programs`) | Written as draft contribution requests (`request_status_id = 4`), exactly as `create` does. | Earlier draft, pending and declined requests are deactivated. Accepted contributors are not removed. |
+
+Never changed by a resubmission: the result's `id`, `result_code`, `created_by`, creation date, phase, `source`, `creation_method`, result type, and the review history. Earlier history entries are never edited or deleted.
+
+### Primary and contributing Science Programs
+
+The primary named in `toc_mapping.science_program_id` is the one that persists, **once it accepts**. It never becomes owner without accepting.
+
+| Payload's primary | What PRMS does |
+|---|---|
+| **The current owner** | It stays owner. The result goes straight back into **its** queue, and the "result submitted" announcement is sent once, after the commit. |
+| **A different allocated Science Program**, or the result has **no owner** (for example after an ownerless decline) | The result goes to Pending Review **with no owner**. The old owner's role and its accepted primary request are retired. A primary request is **sent** (pending) to the payload's Science Program. Nobody is announced yet. |
+
+For the second row:
+
+- The result is **hidden from review queues** until the requested Science Program accepts. Approve and reject decisions are refused with `This result is awaiting the primary Science Program's acceptance.`
+- **Accept:** that Science Program becomes owner, the result enters its queue, and the lead program investment you sent becomes visible (it was kept on an inactive row of that Science Program until then).
+- **Decline:** the result is **Rejected again**, the decline is recorded in the history with that Science Program, and you can resubmit it once more.
+- The request, the status change and the history entry commit together. If the request fails, the result stays Rejected (`503` or `500` above).
+
+Contributing programs are written as draft contribution requests owned by the requested primary. The existing flow releases them (primary accept or Science Program approval), as for any API-created result.
+
+### History
+
+A successful resubmission adds one `RESUBMIT` entry to the result's review history. Its Science Program is the **requested primary** and its user is the external submitter. The earlier rejection stays, so three cycles read `REJECT`, `RESUBMIT`, `REJECT`, `RESUBMIT`, `REJECT`, `RESUBMIT` in order.
+
+### Known limitations of a resubmission
+
+- A fault in the middle of the data writes (not a validation) leaves the result **Rejected with partial data**. It is retryable, but anyone who opens it in PRMS before the retry sees that partial data.
 
 ---
 
@@ -501,10 +613,11 @@ Only the `result_code` itself is inherited automatically; everything else must b
 
 | Date (approx.) | Change |
 |----------------|--------|
+| 2026-10-06 | **`POST /create` resubmits a Rejected result when `data.result_code` matches a Rejected open-phase result (spec `bilateral/resubmit-rejected-result`, RSB-T-2..T-6, PR 2 of 2; supersedes the placeholder `409` of 2026-09-30).** The data is replaced **on the same record** (same `id` and `result_code`) and the result returns to Pending Review, whatever `keep_editing` says. `response.outcomes[]` gains `operation: "updated"` with `status_id: 5` and `status: "pending review"` (with a space; `created` and `versioned` rows keep `"pending-review"` with a hyphen). **Only Rejected is accepted:** Editing, Quality assessed, Submitted, Discontinued, Pending review, Approved and Draft get `409 "Result {code} cannot be resubmitted: its status is {status name}. Only rejected results can be resubmitted."` (this narrows the editable statuses of the 2026-09-30 row to Rejected only). **New refusals, all before the first write:** `409` type differs from the stored type; `400` no primary Science Program (`toc_mapping.science_program_id`); `400` no lead bilateral project in the payload (one project, or one flagged `is_lead`); `400` primary not allocated to the payload's lead project; `409` already being resubmitted; `409` status changed during processing; `503` lock fault or primary-request internal error; `500` primary request answered `not_aligned`. **Replace semantics:** a section the payload sends replaces the previous one, and a section it omits is not kept (a missing `description`, `submitted_by.submitted_date` or `submitted_by.comment` is cleared; a missing `lead_contact_person` keeps the stored value). **Primary:** the current owner stays owner and the result returns to its queue; a different allocated Science Program (or no owner) receives a pending primary request and the result is Pending Review with no owner, hidden from queues until that Science Program accepts; a decline rejects it again and it can be resubmitted. **Retry:** a `5xx` or timeout before the commit leaves the result Rejected and retryable (resend); a `409` "status is pending review" after a timeout means the earlier attempt committed (do not resend); the outcome row is authoritative and `response` can be `{}` if the read-back fails after the commit. Review history gains a `RESUBMIT` entry with the requested primary. Additive: no field removed or renamed; the no-code `create` and `versioned` paths are unchanged. See "Resubmitting a rejected result" above. |
 | 2026-10-06 | **`bilateral_projects[]` items now carry `external_code`** (spec `docs/specs/bugfix/bilateral-project-codes/`, ticket #INC-164536). Each item is `{ short_name, organization_code, external_code }`; `organization_code` remains the owning institution acronym. `external_code` is the linked CLARISA project external code and is `null` when the project has none. Additive; `short_name` and `organization_code` are unchanged; applies to every phase. |
 | 2026-10-01 | **`data.result_code` on `POST /create` accepts a JSON integer as well as a string of digits** (spec `changes/bilateral-create-upsert-by-code`, UBC-R-11). `28565` and `"28565"` (surrounding whitespace trimmed) are normalised to the same code before resolution, so a producer is not rejected for sending the code as a number. A decimal, a negative, a boolean, an object or a non-digit string still fails validation with `400`. Input-only and additive; nothing else changes. |
 | 2026-09-30 | **`PATCH /api/bilateral/center/primary-assignment/:resultId` response: `tocCleared` (boolean) replaced by `primary_request` (object) — `PSR-T-5`, spec `notifications/bilateral-primary-sp-request`, DD-2/DD-4.** The chosen primary Science Program is no longer written as the result's owner (role 1) by this endpoint, or by `POST /center/create-header` / `POST /center/ai/drafts/:id/promote` — all three now send that SP a pending **primary request** instead (`share_result_request`, `request_type='primary'`); role 1 is written only when that SP accepts (a later task). On a result that already has an owner (swap), the current owner is left untouched here and stays the primary SP until the new SP accepts. Response shape: `primary_request: { state: 'none' \| 'pending' \| 'sent_back' \| 'accepted', program_code: string \| null, declined_by_codes: string[] }` — `state` combines the request lifecycle with a pre-existing (legacy) role-1 owner, so a result owned before this feature shipped still reports `accepted`, never `none`. A primary Science Program not aligned to the selected project still gets **400** with the same message as before. `POST /center/create-header` and `POST /center/ai/drafts/:id/promote` response shapes are **unchanged** — neither ever returned a primary-ownership field, so there is nothing to replace on those two; a failed primary request there is logged and swallowed, and result creation still succeeds (ownerless, retryable). |
-| 2026-09-30 | **`POST /create` accepts optional `data.result_code` to continue an existing result instead of always creating a new one (UBC-T-1/T-2, spec `changes/bilateral-create-upsert-by-code`, PR 1 of 2).** Resolution runs before any user, contact or header write: a row for the code **in the open phase** makes it an **update** candidate; otherwise, the most recent row for the code outside the open phase (if any) makes it a **version** candidate. Rejections differ by candidate — see the new "`data.result_code` on `POST /create`" section above for the full `400`/`403`/`404`/`409` table, including which checks run only on one path (the non-Bilateral-result 400, for one, is never reached on the update path). Nothing is written for a rejected result. **Live in this PR:** `versioned` — an eligible earlier-phase code runs the normal create path in the open phase and is stamped with the source's code right after the header insert; the earlier-phase row is never touched; status follows `keep_editing`; links to other results (e.g. Innovation Use `linked_results`) are not carried and cannot be sent through `create` at all. **Not live yet:** an eligible **update** target (code already in the open phase) is rejected with `409 "Updating an existing result through create is not available yet."` — update-in-place lands in PR 2. **Additive — `response.outcomes[]`**, present only on a successful response, one row per result in the request: `{ result_code, operation, status_id, status, external_reference }`, named `outcomes` (not `results`) so the Fetcher's own response-counting logic (`external-api.mjs:139-157`) is unaffected. A request that rejects any one result fails as a whole and carries no `outcomes[]`; the no-write guarantee on the rejected result itself is **per result** (earlier results in the same request stay written), but their codes are not reported back in that failed response. Ownership (`assertCallerMayVersion`) is now a single shared rule used by both `POST /version` and this resolution step; its behaviour and existing specs are unchanged. |
+| 2026-09-30 | **`POST /create` accepts optional `data.result_code` to continue an existing result instead of always creating a new one (UBC-T-1/T-2, spec `changes/bilateral-create-upsert-by-code`, PR 1 of 2).** Resolution runs before any user, contact or header write: a row for the code **in the open phase** makes it an **update** candidate; otherwise, the most recent row for the code outside the open phase (if any) makes it a **version** candidate. Rejections differ by candidate — see the new "`data.result_code` on `POST /create`" section above for the full `400`/`403`/`404`/`409` table, including which checks run only on one path (the non-Bilateral-result 400, for one, is never reached on the update path). Nothing is written for a rejected result. **Live in this PR:** `versioned` — an eligible earlier-phase code runs the normal create path in the open phase and is stamped with the source's code right after the header insert; the earlier-phase row is never touched; status follows `keep_editing`; links to other results (e.g. Innovation Use `linked_results`) are not carried and cannot be sent through `create` at all. **Superseded 2026-10-06:** an eligible **update** target (code already in the open phase) was rejected with a placeholder `409` in this PR; the 2026-10-06 row below replaces it with the resubmission of Rejected results. **Additive — `response.outcomes[]`**, present only on a successful response, one row per result in the request: `{ result_code, operation, status_id, status, external_reference }`, named `outcomes` (not `results`) so the Fetcher's own response-counting logic (`external-api.mjs:139-157`) is unaffected. A request that rejects any one result fails as a whole and carries no `outcomes[]`; the no-write guarantee on the rejected result itself is **per result** (earlier results in the same request stay written), but their codes are not reported back in that failed response. Ownership (`assertCallerMayVersion`) is now a single shared rule used by both `POST /version` and this resolution step; its behaviour and existing specs are unchanged. |
 | 2026-09-29 | **New endpoint — `GET /api/bilateral/center/ai/jobs` (list), and `GET .../jobs/:jobId` gains `jobs_ahead`/`wait_reason`, with `queue_position` redefined (`AIQ-T-4`, spec `bilateral/ai-processing-queue`, `AIQ-D-15`).** **List:** the caller's active AI jobs (`PENDING`/`PROCESSING`) plus jobs finished in the last 24 h (max 10, newest first), scoped to `user_id = caller` — never another user's job. Each item: `job_id`, `status`, `stage`, `stage_updated_date`, `project_id`, `project_name` (joined from `clarisa_projects`), `program_code`, `center_id`, `center_acronym` (joined from `clarisa_institutions`), `document_count`, `audio_count`, `has_text`, `queue_entry_date`, `started_date`, `completed_date`, `result_count`, `error_code`, `attempts`, `max_attempts`, `retrying`, `jobs_ahead` and `wait_reason` (`PENDING` only, else `null`). Deliberately excluded from every item: `bucket_name`, `document_keys`, `audio_keys`, `text_context`, `response_snapshot`, `error_message`, `user_id`. Also carries a `summary`: `lanes_total` (global concurrency cap), `lanes_busy` (count of jobs `PROCESSING` across all users), `others_waiting` (count of `PENDING` jobs owned by users other than the caller). **`GET jobs/:jobId`, additive:** `jobs_ahead` (count of `PENDING` jobs — only `PENDING`, never `PROCESSING` — whose queue-entry clock is older than this job's) and `wait_reason` (`own_job_running` when the caller is already at the per-user concurrency cap, `no_free_lane` when the global cap is full, else `starting`), both `PENDING`-only, `null` otherwise. **`queue_position` is redefined** (kept, unchanged key) to equal `jobs_ahead` — it previously also counted older `PROCESSING` rows, which are never "ahead" in the two-lane dispatch model, so a `PENDING` job whose count used to include running jobs may now report a lower `queue_position` than before. One shared server-side computation feeds both the list and the single-job read, so they cannot disagree. The 24 h list cutoff is computed in SQL (`DATE_SUB(NOW(), INTERVAL 24 HOUR)`), never in Node, per the existing mysql2 timezone-skew rule for this table. |
 | 2026-09-28 | **Additive — `toc_mappings[].indicators[]` on the webhook, `POST /create` response, and `GET` detail; new optional input `toc_mapping.target_contribution` (`BTC-T-1`/`BTC-T-2`, spec `bilateral/toc-indicator-target-contribution`).** Each ToC mapping now carries `indicators[]`, one element per active indicator × active target row of that mapping: `toc_results_indicator_id`, `indicator_description`, `indicator_type`, `number_target`, `target_date`, `target_contribution` (each absent as `null`; no active indicator on the mapping → `indicators: []`). Built by a correlated sub-select, so `toc_mappings[]` row count and its existing keys are untouched; `indicators[]` element order is not guaranteed (the aggregation has no `ORDER BY`). On the push, `toc_mapping.target_contribution` is optional, non-negative, at most 2 decimals: when the ToC match resolves an indicator with a target it is stored as that target's `contributing_indicator` (**default `1`**, unchanged, when the field is absent); when sent but the match has no indicator or the matched indicator has no target, the value is dropped — logged as a warning (result id only, never the payload) — without failing the push. A value that fails validation (negative, non-numeric, or more than 2 decimals) now gets **400**, where it was previously silently stripped by the whitelist. `contributing_programs[]` is unaffected — it never resolves a ToC indicator. **Fetcher note:** its `toc_mapping` schema already declares `target_contribution` as `integer`, so a producer sending through the Fetcher can only ever deliver a whole number here; sending directly to `POST /create` allows up to 2 decimals. |
 | 2026-09-24 | **P2-3819 — Innovation Use budgets are optional on bilateral create, update, and submit.** Lead-program, bilateral-project, and partner amounts omitted or sent as zero are persisted as null with `is_determined: true`; positive values are retained. The MDS still requires at least one identified bilateral project, but no longer blocks submission for a missing project budget. This applies only to the bilateral API's Innovation Use flow; other result types and Reporting budget endpoints retain their existing behavior. |

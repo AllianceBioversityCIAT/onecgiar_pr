@@ -239,3 +239,112 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     );
   });
 });
+
+// @akili-spec bilateral/resubmit-rejected-result — RSB-T-3 / RSB-DD-1 (see the policy-change spec).
+describe('InnovationDevelopmentBilateralHandler.resolveAndValidate (RSB-T-3)', () => {
+  const dto = (innovation?: any): any => ({
+    result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+    innovation_development: innovation,
+  });
+  const valid = () => ({
+    innovation_typology: { code: 12 },
+    innovation_developers: 'Person A',
+    innovation_readiness_level: { level: 3 },
+  });
+
+  let handler: InnovationDevelopmentBilateralHandler;
+  let repoStub: any;
+  let readinessRepo: any;
+
+  beforeEach(() => {
+    repoStub = {
+      findOne: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn(),
+      create: jest.fn((payload) => payload),
+    };
+    readinessRepo = {
+      findOne: jest.fn().mockResolvedValue({ id: 14, level: 3 }),
+      createQueryBuilder: jest.fn(),
+    };
+    handler = new InnovationDevelopmentBilateralHandler(
+      repoStub,
+      readinessRepo,
+    );
+  });
+
+  const expectNoWrites = () => {
+    expect(repoStub.save).not.toHaveBeenCalled();
+    expect(repoStub.create).not.toHaveBeenCalled();
+  };
+
+  it.each([
+    [
+      undefined,
+      'innovation_development object is required for INNOVATION_DEVELOPMENT results.',
+    ],
+    [
+      { ...valid(), innovation_typology: undefined },
+      'innovation_typology code or name must be provided.',
+    ],
+    [
+      { ...valid(), innovation_typology: { code: 99 } },
+      'Unsupported innovation typology code "99".',
+    ],
+    [
+      { ...valid(), innovation_readiness_level: undefined },
+      'innovation_readiness_level is required for INNOVATION_DEVELOPMENT results.',
+    ],
+  ])(
+    'rejects case %# with the create message and writes nothing',
+    async (innovation, message) => {
+      await expect(
+        handler.resolveAndValidate({ bilateralDto: dto(innovation) }),
+      ).rejects.toThrow(message);
+      expectNoWrites();
+    },
+  );
+
+  it('an unknown readiness level is a 400 from the lookup, before any write', async () => {
+    readinessRepo.findOne.mockResolvedValue(null);
+    await expect(
+      handler.resolveAndValidate({
+        bilateralDto: dto({
+          ...valid(),
+          innovation_readiness_level: { level: 42 },
+        }),
+      }),
+    ).rejects.toThrow('Invalid innovation readiness level: 42.');
+    expectNoWrites();
+  });
+
+  it('a valid payload resolves ids and developers with no write and no row lookup', async () => {
+    await expect(
+      handler.resolveAndValidate({ bilateralDto: dto(valid()) }),
+    ).resolves.toEqual({
+      innovationNatureId: 12,
+      readinessLevelId: 14,
+      innovationDevelopers: 'Person A',
+    });
+    expectNoWrites();
+    expect(repoStub.findOne).not.toHaveBeenCalled();
+  });
+
+  it('another result type resolves to null', async () => {
+    await expect(
+      handler.resolveAndValidate({
+        bilateralDto: { result_type_id: ResultTypeEnum.POLICY_CHANGE } as any,
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('afterCreate raises the same message the preflight raises (DD-1 parity)', async () => {
+    const invalid = dto({ ...valid(), innovation_typology: { code: 99 } });
+    await expect(
+      handler.resolveAndValidate({ bilateralDto: invalid }),
+    ).rejects.toThrow('Unsupported innovation typology code "99".');
+    await expect(
+      handler.afterCreate({ bilateralDto: invalid, resultId: 5, userId: 2 }),
+    ).rejects.toThrow('Unsupported innovation typology code "99".');
+    expectNoWrites();
+  });
+});
