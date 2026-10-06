@@ -10,7 +10,6 @@ const PENDING =
   'pending QAC-T-8…11 (inventory review decides scope vs. real exclusion)';
 
 export const EXCLUDED_TABLES: ExcludedTable[] = [
-  { table: 'result_by_innovation_package', reason: PENDING },
   { table: 'result_by_level', reason: PENDING },
   { table: 'result_countries_sub_national', reason: PENDING },
   { table: 'result_deletion_audit', reason: PENDING },
@@ -18,18 +17,36 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
   { table: 'result_field_revision', reason: PENDING },
   { table: 'result_folders', reason: PENDING },
   { table: 'result_folders_type', reason: PENDING },
-  { table: 'result_innov_section', reason: PENDING },
-  { table: 'result_innovation_package', reason: PENDING },
-  { table: 'result_ip_action_area_outcome', reason: PENDING },
-  { table: 'result_ip_eoi_outcomes', reason: PENDING },
-  { table: 'result_ip_expert', reason: PENDING },
-  { table: 'result_ip_expert_workshop_organized', reason: PENDING },
-  { table: 'result_ip_expertises', reason: PENDING },
-  { table: 'result_ip_impact_area_target', reason: PENDING },
-  { table: 'result_ip_result_actors', reason: PENDING },
-  { table: 'result_ip_result_institution_types', reason: PENDING },
-  { table: 'result_ip_result_measures', reason: PENDING },
-  { table: 'result_ip_sdg_targets', reason: PENDING },
+  {
+    table: 'result_innov_section',
+    reason:
+      'control list of the innovation-use `section_id` (not result data; inventory 2026-B §7.2)',
+  },
+  {
+    table: 'result_ip_action_area_outcome',
+    reason:
+      'IPSR step 1 component not rendered on the 2026 form (S1; inventory 2026-B §7.2)',
+  },
+  {
+    table: 'result_ip_expert',
+    reason:
+      'IPSR experts section removed from step 1 (innovation-pathway-step-one.service.ts:166; inventory 2026-B §7.2)',
+  },
+  {
+    table: 'result_ip_expertises',
+    reason:
+      'IPSR experts section removed from step 1 (innovation-pathway-step-one.service.ts:166; inventory 2026-B §7.2)',
+  },
+  {
+    table: 'result_ip_impact_area_target',
+    reason:
+      'IPSR step 1 component not rendered on the 2026 form (S1; inventory 2026-B §7.2)',
+  },
+  {
+    table: 'result_ip_sdg_targets',
+    reason:
+      'IPSR step 1 component not rendered on the 2026 form (S1; inventory 2026-B §7.2)',
+  },
   {
     table: 'result_level',
     reason: 'control list of result levels (not result data)',
@@ -57,11 +74,8 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
     reason: 'control list of result types (not result data)',
   },
   { table: 'results_by_evidence', reason: PENDING },
-  { table: 'results_complementary_innovation', reason: PENDING },
-  { table: 'results_complementary_innovations_function', reason: PENDING },
   { table: 'results_impact_area_indicators', reason: PENDING },
   { table: 'results_impact_area_target', reason: PENDING },
-  { table: 'results_innovatio_packages_enabler_type', reason: PENDING },
   { table: 'results_innovations_use_measures', reason: PENDING },
   {
     table: 'results_kp_fair_baseline',

@@ -37,6 +37,16 @@ import { ResultActor } from '../../results/result-actors/entities/result-actor.e
 import { ResultsByInstitutionType } from '../../results/results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultScalingStudyUrl } from '../../results-framework-reporting/result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { ResultInnovationPackage } from '../../ipsr/result-innovation-package/entities/result-innovation-package.entity';
+import { Ipsr } from '../../ipsr/entities/ipsr.entity';
+import { ResultIpEoiOutcome } from '../../ipsr/innovation-pathway/entities/result-ip-eoi-outcome.entity';
+import { ResultIpExpertWorkshopOrganized } from '../../ipsr/innovation-pathway/entities/result-ip-expert-workshop-organized.entity';
+import { ResultsIpActor } from '../../ipsr/results-ip-actors/entities/results-ip-actor.entity';
+import { ResultsIpInstitutionType } from '../../ipsr/results-ip-institution-type/entities/results-ip-institution-type.entity';
+import { ResultsByIpInnovationUseMeasure } from '../../ipsr/results-by-ip-innovation-use-measures/entities/results-by-ip-innovation-use-measure.entity';
+import { ResultsComplementaryInnovation } from '../../ipsr/results-complementary-innovations/entities/results-complementary-innovation.entity';
+import { ResultsComplementaryInnovationsFunction } from '../../ipsr/results-complementary-innovations-functions/entities/results-complementary-innovations-function.entity';
+import { ResultsInnovationPackagesEnablerType } from '../../ipsr/results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
 
 export type EntityClass = new (...args: any[]) => object;
 
@@ -80,4 +90,16 @@ export const CATALOG_SCOPE: EntityClass[] = [
   ResultsByInstitutionType,
   ResultIpMeasure,
   ResultScalingStudyUrl,
+  // QAC-T-11 · innovation package (IPSR). `result_ip_step_three_evidence` has no entity, so it cannot be listed here
+  // (known gap, see the header of pending-catalog.ts).
+  ResultInnovationPackage,
+  Ipsr,
+  ResultIpEoiOutcome,
+  ResultIpExpertWorkshopOrganized,
+  ResultsIpActor,
+  ResultsIpInstitutionType,
+  ResultsByIpInnovationUseMeasure,
+  ResultsComplementaryInnovation,
+  ResultsComplementaryInnovationsFunction,
+  ResultsInnovationPackagesEnablerType,
 ];

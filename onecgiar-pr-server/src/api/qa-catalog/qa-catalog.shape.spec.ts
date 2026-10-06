@@ -322,6 +322,38 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 4 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 5 });
+  });
+
+  it('QAC-R-5: the IPSR step-1 geography is unconfirmed and optional (the live step-1 function does not test it), and innovation_package carries no common geo.* key', () => {
+    const byKey = (k: string) => CATALOG_FIELDS.find((f) => f.key === k);
+    for (const key of [
+      'ipsr_step_1.geo_scope',
+      'ipsr_step_1.regions',
+      'ipsr_step_1.countries',
+    ]) {
+      const field = byKey(key);
+      expect(field).toBeDefined();
+      expect(field.result_types).toEqual(['innovation_package']);
+      expect(field.required).toBe(false);
+      expect(field.required_confirmed).toBe(false);
+    }
+    // The IPSR step-1 writer leaves result_region/result_country.geo_scope_role_id NULL: a role filter finds nothing.
+    for (const key of ['ipsr_step_1.regions', 'ipsr_step_1.countries']) {
+      const storage = byKey(key).storage as {
+        filter?: Record<string, unknown>;
+      };
+      expect(storage.filter).toEqual({ is_active: 1 });
+      expect(storage.filter).not.toHaveProperty('geo_scope_role_id');
+    }
+    const geoSection = CATALOG_SECTIONS.find(
+      (s) => s.key === 'geographic_location',
+    );
+    const commonGeo = CATALOG_FIELDS.filter((f) => f.key.startsWith('geo.'));
+    expect(commonGeo.length).toBeGreaterThan(0);
+    for (const f of [geoSection, ...commonGeo]) {
+      expect(f.result_types).not.toContain('*');
+      expect(f.result_types).not.toContain('innovation_package');
+    }
   });
 });

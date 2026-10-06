@@ -20,6 +20,22 @@ export const NON_KP_TYPES = [
   'innovation_package',
 ];
 
+/**
+ * Every result type except innovation package. Explicit list on purpose: the IPSR step-1 geography has its own
+ * keys (`ipsr_step_1.geo_scope` / `.regions` / `.countries`, QAC-T-11) because the live IPSR function applies none of
+ * the common `geo.*` required rules, so those keys must not use `ALL_TYPES` (QAC-R-5).
+ */
+export const NON_IPSR_TYPES = [
+  'policy_change',
+  'innovation_use',
+  'other_outcome',
+  'capacity_sharing',
+  'knowledge_product',
+  'innovation_development',
+  'other_output',
+  'impact_contribution',
+];
+
 /** Types with the innovation-only blocks (annual updating, extra geographic scope). */
 export const INNOVATION_TYPES = ['innovation_development', 'innovation_use'];
 

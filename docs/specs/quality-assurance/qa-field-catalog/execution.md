@@ -178,3 +178,18 @@
 - Budget (design §12): 12 tasks · ~4 000–4 500 LOC · ~15 review rounds. Actual: 10 of 12 tasks closed; **16 review rounds** (T-6 4, T-9 3, T-5 2, T-10 2, others 1); remaining T-11 (IPSR), T-12 (close-out).
 - Cause: data tasks needed reworks on guard-coverage conventions (D2 tables, non-`result*` names) and description provenance; each lesson is now carried into the next brief.
 - Escalated to the owner; execution paused before T-11.
+- Owner answer (2026-10-06): "Si" — continue with T-11 and T-12 past the budget, no further stop unless something breaks; `.env` of this worktree points to the DB where the migration ran (owner confirmation).
+
+### QAC-T-11 — Catalog: innovation package (IPSR) — PASS (attempt 3)
+
+- Date: 2026-10-06 · Attempts: 3
+- Files: `definitions/sections/{ipsr-shared,ipsr-step-1,ipsr-step-2,ipsr-step-3,ipsr-step-4}.ts` (new), `definitions/sections/{shared,geographic-location,index}.ts`, `definitions/{scope,excluded-tables,not-for-qa,pending-catalog,versions}.ts`, snapshot (2026 rev 5, 197 keys), specs (controller, service, shape)
+- Counts: 136 IPSR inventory rows → 35 catalogued keys incl. own geo (13 + 3 fields, 19 subfields), 98 pending/deferred (D1/D2/D16/D19), 2 merged into `institution_type` (D3a); 10 tables into scope; 6 tables excluded with real reasons (§7.2); entity-less `result_ip_step_three_evidence` recorded as a known gap
+- **Attempt 1** — 114/114; falsifier facilitators `first_name` → uncatalogued; red 133. VERIFIED. Reviewer **FAIL**: IPSR geography covered by common `geo.*` keys carrying required/confirmed rules no IPSR function applies (QAC-R-5)
+- **Attempt 2** (xhigh) — common geo keys restricted to `NON_IPSR_TYPES`; own `ipsr_step_1.geo_scope/regions/countries` (optional, unconfirmed). 116/116 VERIFIED. Reviewer **FAIL**: copied `geo_scope_role_id: 1` filter — IPSR writer never sets it (binding pointed at no data)
+- **Attempt 3** (xhigh) — filters `{ is_active: 1 }` per inventory; shape assertion (red on attempt-2 content; falsifier → red). 116/116 VERIFIED. Reviewer **PASS**
+- Decisions (Leader mandate): `eoi_outcomes` (function-required, 2-hop) deferred under amended R-11; `complementary_innovations` multi_select (type change when D2 lands — comment); step 2.2 fully pending (D19); D12(b) facilitators/reference materials optional unconfirmed; group rules in comments; mirror evidence columns PENDING instead of §7.3's NOT_FOR_QA (conservative)
+- Not Done (carried to T-12): `results_innovations_use_measures` still `PENDING` in `excluded-tables.ts` (T-10 leftover)
+- spawns: implementer 49/214 115, 26/106 672, 10/67 940; reviewer 30/142 582, 13/77 855, 5/60 060 (calls/tokens) — all ended complete
+- Requirements: QAC-R-1, R-5, R-7, R-11 (IPSR)
+- auto-approved (pre-approved mode)

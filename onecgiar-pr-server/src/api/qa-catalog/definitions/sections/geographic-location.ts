@@ -2,13 +2,16 @@
 // QAC-T-8 · inventory 2026-A §4 C-4 (`geographic_location`). Keys frozen as written in the inventory.
 // The `geo.extra_*` rows follow the UI intent (Santiago, 2026-10-06): conditionally required,
 // `required_confirmed: false` because the live function did not enforce them when the inventory was written.
+// Not for `innovation_package` (QAC-T-11 rework): the live IPSR step-1 function applies none of these rules (scope not
+// tested; the "specified" questions are not rendered for module `ipsr`), so the package has its own unconfirmed
+// `ipsr_step_1.geo_scope|regions|countries` keys (ipsr-step-1.ts). Every type is listed explicitly, never `ALL_TYPES`.
 // Deferred to PENDING_CATALOG: `geo.subnational`, `geo.extra_subnational` (2-hop through
 // `result_country`, REVIEW D2).
 import { CatalogField, CatalogSection, RequiredWhen } from '../types';
 import {
-  ALL_TYPES,
   FROM_2026,
   INNOVATION_TYPES,
+  NON_IPSR_TYPES,
   whenEq,
   whenIn,
 } from './shared';
@@ -17,7 +20,7 @@ export const GEOGRAPHIC_LOCATION_SECTION: CatalogSection = {
   key: 'geographic_location',
   label: 'Geographic location',
   order: 40,
-  result_types: ALL_TYPES,
+  result_types: NON_IPSR_TYPES,
   ...FROM_2026,
 };
 
@@ -71,7 +74,7 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
     control_list: 'geographic_scopes',
     section: SECTION,
     order: 1,
-    result_types: ALL_TYPES,
+    result_types: NON_IPSR_TYPES,
     required: true,
     required_confirmed: true,
     ...FROM_2026,
@@ -87,7 +90,7 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
     type: 'boolean',
     section: SECTION,
     order: 2,
-    result_types: ALL_TYPES,
+    result_types: NON_IPSR_TYPES,
     required: false,
     required_confirmed: true,
     required_when: whenIn('geo.scope', [1, 2]),
@@ -101,7 +104,7 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
     control_list: 'regions',
     section: SECTION,
     order: 3,
-    result_types: ALL_TYPES,
+    result_types: NON_IPSR_TYPES,
     required: false,
     required_confirmed: true,
     required_when: WHEN_REGIONS,
@@ -120,7 +123,7 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
     type: 'boolean',
     section: SECTION,
     order: 4,
-    result_types: ALL_TYPES,
+    result_types: NON_IPSR_TYPES,
     required: false,
     required_confirmed: true,
     required_when: whenIn('geo.scope', [1, 2]),
@@ -134,7 +137,7 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
     control_list: 'countries',
     section: SECTION,
     order: 5,
-    result_types: ALL_TYPES,
+    result_types: NON_IPSR_TYPES,
     required: false,
     required_confirmed: true,
     required_when: WHEN_COUNTRIES,

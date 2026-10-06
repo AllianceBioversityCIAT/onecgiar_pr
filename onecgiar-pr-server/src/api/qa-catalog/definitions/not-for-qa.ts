@@ -675,4 +675,169 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'last_updated_date',
   ),
   ...nfq('result_ip_measure', IDENTITY, 'result_ip_measure_id'),
+
+  // result_innovation_package (QAC-T-11; is_active is not in a filter here, so it is listed)
+  ...nfq(
+    'result_innovation_package',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'result_innovation_package',
+    'primary key = the package result id (one row per result), the binding key of the whole table, not form data',
+    'result_innovation_package_id',
+  ),
+
+  // result_by_innovation_package (QAC-T-11; is_active, ipsr_role_id, result_innovation_package_id, result_id and
+  // result_by_innovation_package_id are covered as binding filter / fk / values)
+  ...nfq(
+    'result_by_innovation_package',
+    AUDIT,
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+
+  // result_ip_eoi_outcomes (QAC-T-11)
+  ...nfq(
+    'result_ip_eoi_outcomes',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('result_ip_eoi_outcomes', IDENTITY, 'result_ip_eoi_outcome_id'),
+  ...nfq(
+    'result_ip_eoi_outcomes',
+    FK_PARENT,
+    'result_by_innovation_package_id',
+  ),
+
+  // result_ip_expert_workshop_organized (QAC-T-11; is_active and result_ip_expert_workshop_organized_id are covered)
+  ...nfq(
+    'result_ip_expert_workshop_organized',
+    AUDIT,
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+
+  // results_complementary_innovation (QAC-T-11)
+  ...nfq(
+    'results_complementary_innovation',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'results_complementary_innovation',
+    IDENTITY,
+    'result_complementary_innovation_id',
+  ),
+  ...nfq(
+    'results_complementary_innovation',
+    'foreign key to the child complementary result (2-hop through result_by_innovation_package); not form data',
+    'result_id',
+  ),
+
+  // results_complementary_innovations_function (QAC-T-11)
+  ...nfq(
+    'results_complementary_innovations_function',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'results_complementary_innovations_function',
+    IDENTITY,
+    'results_complementary_innovations_function_id',
+  ),
+  ...nfq(
+    'results_complementary_innovations_function',
+    FK_PARENT,
+    'result_complementary_innovation_id',
+  ),
+
+  // results_innovatio_packages_enabler_type (QAC-T-11)
+  ...nfq(
+    'results_innovatio_packages_enabler_type',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'results_innovatio_packages_enabler_type',
+    IDENTITY,
+    'results_innovatio_packages_enabler_type_id',
+  ),
+  ...nfq(
+    'results_innovatio_packages_enabler_type',
+    FK_PARENT,
+    'result_by_innovation_package_id',
+  ),
+
+  // result_ip_result_actors (QAC-T-11)
+  ...nfq(
+    'result_ip_result_actors',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('result_ip_result_actors', IDENTITY, 'result_ip_actors_id'),
+  ...nfq('result_ip_result_actors', FK_PARENT, 'result_ip_result_id'),
+
+  // result_ip_result_institution_types (QAC-T-11)
+  ...nfq(
+    'result_ip_result_institution_types',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('result_ip_result_institution_types', IDENTITY, 'id'),
+  ...nfq(
+    'result_ip_result_institution_types',
+    FK_PARENT,
+    'result_ip_results_id',
+  ),
+  ...nfq(
+    'result_ip_result_institution_types',
+    DISCRIMINATOR,
+    'institution_roles_id',
+  ),
+
+  // result_ip_result_measures (QAC-T-11)
+  ...nfq(
+    'result_ip_result_measures',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq('result_ip_result_measures', IDENTITY, 'result_ip_result_measures_id'),
+  ...nfq('result_ip_result_measures', FK_PARENT, 'result_ip_result_id'),
 ];

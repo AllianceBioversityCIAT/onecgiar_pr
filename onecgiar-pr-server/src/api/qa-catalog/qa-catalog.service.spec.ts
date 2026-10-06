@@ -170,10 +170,31 @@ describe('QaCatalogService.getCatalog', () => {
 
   it('uses the code catalog when no source is injected: 2026 has the common sections (200), an undeclared year is 404', () => {
     const res = service.getCatalog(2026);
-    expect(res.catalog_version).toBe('2026.4');
+    expect(res.catalog_version).toBe('2026.5');
     expect(res.fields.map((f) => f.key)).toEqual(
       expect.arrayContaining(['general.title', 'geo.scope', 'evidence.items']),
     );
     expect(() => service.getCatalog(2023)).toThrow(NotFoundException);
+  });
+
+  it('QAC-R-5 (QAC-T-11 rework): innovation_package gets its own unconfirmed IPSR geography keys, never the common geo.* rules the live IPSR function does not apply', () => {
+    const res = service.getCatalog(2026);
+    const forIpsr = res.fields.filter(
+      (f) =>
+        f.result_types.includes('*') ||
+        f.result_types.includes('innovation_package'),
+    );
+    const ipsrKeys = forIpsr.map((f) => f.key);
+    const geoScope = forIpsr.find((f) => f.key === 'ipsr_step_1.geo_scope');
+    expect(geoScope).toBeDefined();
+    expect(geoScope.required).toBe(false);
+    expect(ipsrKeys).toEqual(
+      expect.arrayContaining(['ipsr_step_1.regions', 'ipsr_step_1.countries']),
+    );
+    expect(ipsrKeys.filter((k) => k.startsWith('geo.'))).toEqual([]);
+    // the common geography is still catalogued for the other types
+    const common = res.fields.find((f) => f.key === 'geo.scope');
+    expect(common.result_types).not.toContain('innovation_package');
+    expect(common.result_types).toContain('policy_change');
   });
 });

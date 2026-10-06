@@ -36,9 +36,23 @@ import {
   IU_USE_LEVEL_SECTION,
 } from './innovation-use';
 import { POLICY_CHANGE_FIELDS, POLICY_CHANGE_SECTION } from './policy-change';
+import {
+  IPSR_S1_EXPERTS_SECTION,
+  IPSR_S1_GEOSCOPE_SECTION,
+  IPSR_S1_TARGETED_USE_SECTION,
+  IPSR_STEP_1_FIELDS,
+} from './ipsr-step-1';
+import { IPSR_S21_BUNDLE_SECTION, IPSR_STEP_2_FIELDS } from './ipsr-step-2';
+import {
+  IPSR_S3_COMPLEMENTARY_SECTION,
+  IPSR_S3_CORE_SECTION,
+  IPSR_S3_WORKSHOP_SECTION,
+  IPSR_STEP_3_FIELDS,
+} from './ipsr-step-3';
+import { IPSR_S4_MATERIALS_SECTION, IPSR_STEP_4_FIELDS } from './ipsr-step-4';
 import { TOC_ALIGNMENT_FIELDS, TOC_ALIGNMENT_SECTION } from './toc-alignment';
 
-// One file per section; per-type tasks (QAC-T-11 still to come) add theirs here.
+// One file per section; per-type tasks add theirs here.
 export const CATALOG_SECTIONS: CatalogSection[] = [
   GENERAL_INFORMATION_SECTION,
   TOC_ALIGNMENT_SECTION,
@@ -55,6 +69,15 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   IU_CURRENT_USE_SECTION,
   IU_USE_LEVEL_SECTION,
   IU_PROJECTION_2030_SECTION,
+  // QAC-T-11 · innovation package (IPSR): steps 1, 2.1, 3 and 4 (step 2.2 is admin-only and fully PENDING_CATALOG)
+  IPSR_S1_GEOSCOPE_SECTION,
+  IPSR_S1_TARGETED_USE_SECTION,
+  IPSR_S1_EXPERTS_SECTION,
+  IPSR_S21_BUNDLE_SECTION,
+  IPSR_S3_WORKSHOP_SECTION,
+  IPSR_S3_CORE_SECTION,
+  IPSR_S3_COMPLEMENTARY_SECTION,
+  IPSR_S4_MATERIALS_SECTION,
 ];
 
 export const CATALOG_FIELDS: CatalogField[] = [
@@ -69,4 +92,8 @@ export const CATALOG_FIELDS: CatalogField[] = [
   ...INNOVATION_DEVELOPMENT_FIELDS,
   ...POLICY_CHANGE_FIELDS,
   ...INNOVATION_USE_FIELDS,
+  ...IPSR_STEP_1_FIELDS,
+  ...IPSR_STEP_2_FIELDS,
+  ...IPSR_STEP_3_FIELDS,
+  ...IPSR_STEP_4_FIELDS,
 ];

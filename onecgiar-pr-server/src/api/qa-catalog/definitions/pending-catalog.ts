@@ -17,6 +17,16 @@ import { PendingCatalogEntry } from './types';
  *
  * Common-section fields that own no column of their own, so no entry can name them:
  *  - `contributors.other_contributors` (read-only view of other programs' ToC rows).
+ *
+ * Known gap (QAC-T-11, REVIEW D1 + D2): the IPSR step 3 evidence lists live in `result_ip_step_three_evidence`, a table
+ * created by migration 1790347604000-IpsrStepThreeEvidence and used with raw SQL (evidences.repository.ts); it has NO
+ * TypeORM entity, so the completeness guard cannot see it and no entry here can name its columns. An entity is not
+ * created (D2: the approved model is not changed). The deferred keys are `ipsr_step_3.core.readiness_evidences`,
+ * `ipsr_step_3.core.use_evidences`, `ipsr_step_3.complementary_components.readiness_evidences` and
+ * `ipsr_step_3.complementary_components.use_evidences`, each with its 11 sub-keys (4 lists + 44 sub-keys; the 22
+ * sub-keys of the core lists plus the 22 of the complementary lists, which need two levels of nesting, D1).
+ * `evidence` and `evidence_sharepoint` (in scope since QAC-T-8) hold the shared columns of those items.
+ * The step 2.2 rows (`ipsr_step_2_2.*`, admin-only tab) are deferred by REVIEW D19.
  */
 const stage2 = (
   table: string,
@@ -38,6 +48,18 @@ const twoHop = (
     table,
     column,
     reason: `${field} — required/for QA but 2-hop binding (through a parent row), deferred (REVIEW D2)`,
+  }));
+
+/** Required/for QA but stored behind the entity-less step 3 evidence table and two nesting levels (REVIEW D1 + D2). */
+const evidenceD1D2 = (
+  table: string,
+  field: string,
+  ...columns: string[]
+): PendingCatalogEntry[] =>
+  columns.map((column) => ({
+    table,
+    column,
+    reason: `${field} — for QA but the step 3 evidence list is deferred (REVIEW D1 + D2: entity-less table, two nesting levels)`,
   }));
 
 /** Retired from the 2026 form but kept for QA of earlier phases: catalogued in a 2025 load. */
@@ -76,7 +98,7 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   ),
   ...stage2(
     'results_by_projects',
-    'contributors.bilateral_projects',
+    'contributors.bilateral_projects and ipsr_step_4.bilateral_investment.project (IPSR add-project dialog)',
     'result_id',
     'project_id',
   ),
@@ -107,7 +129,7 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   ),
   ...twoHop(
     'result_by_institutions_by_deliveries_type',
-    'partners.external_partners.roles and partners.kp_author_affiliations.roles',
+    'partners.external_partners.roles, partners.kp_author_affiliations.roles and ipsr_step_1.scaling_partners.partner_role',
     'partner_delivery_type_id',
     'result_by_institution_id',
   ),
@@ -115,7 +137,7 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   // C-4 Geographic location
   ...twoHop(
     'result_country_subnational',
-    'geo.subnational and geo.extra_subnational',
+    'geo.subnational, geo.extra_subnational and ipsr_step_1.countries.sub_national',
     'result_country_id',
     'clarisa_subnational_scope_code',
   ),
@@ -254,19 +276,19 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   // results_by_projects / results_by_institution (2-hop, D2).
   ...twoHop(
     'result_initiative_budget',
-    'innovation_dev.estimates_pooled and innovation_use.investment.programs (kind_cash / is_determined)',
+    'innovation_dev.estimates_pooled, innovation_use.investment.programs and ipsr_step_4.initiative_investment (kind_cash / is_determined)',
     'kind_cash',
     'is_determined',
   ),
   ...twoHop(
     'non_pooled_projetct_budget',
-    'innovation_dev.estimates_non_pooled and innovation_use.investment.bilateral (kind_cash / is_determined)',
+    'innovation_dev.estimates_non_pooled, innovation_use.investment.bilateral and ipsr_step_4.bilateral_investment (kind_cash / is_determined)',
     'kind_cash',
     'is_determined',
   ),
   ...twoHop(
     'result_institutions_budget',
-    'innovation_dev.estimates_partners and innovation_use.investment.partners (kind_cash / is_determined)',
+    'innovation_dev.estimates_partners, innovation_use.investment.partners and ipsr_step_4.partner_investment (kind_cash / is_determined)',
     'kind_cash',
     'is_determined',
   ),
@@ -345,5 +367,139 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'created_by',
     'last_updated_by',
     'last_updated_date',
+  ),
+
+  // IPSR (QAC-T-11) · result_innovation_package
+  ...stage2(
+    'result_innovation_package',
+    'ipsr_step_1.scaling_ambition_blurb (generated read-only text) and ipsr_step_1.participants_consent',
+    'scaling_ambition_blurb',
+    'participants_consent',
+  ),
+  ...stage2(
+    'result_innovation_package',
+    'IPSR publication state and PDF report (system columns, not on the 2026 form; inventory 2026-B §7.4)',
+    'is_result_ip_published',
+    'ipsr_pdf_report',
+  ),
+  ...legacy2025(
+    'result_innovation_package',
+    'IPSR step 1 experts / consensus / consultation, package-level evidence twins, step 4 expected-time and scaling studies (not on the 2026 form)',
+    'experts_is_diverse',
+    'is_not_diverse_justification',
+    'consensus_initiative_work_package_id',
+    'relevant_country_id',
+    'regional_leadership_id',
+    'regional_integrated_id',
+    'active_backstopping_id',
+    'use_level_evidence_based',
+    'readiness_level_evidence_based',
+    'initiative_expected_time',
+    'initiative_unit_time_id',
+    'bilateral_expected_time',
+    'bilateral_unit_time_id',
+    'partner_expected_time',
+    'partner_unit_time_id',
+    'has_scaling_studies',
+  ),
+
+  // IPSR (QAC-T-11) · result_by_innovation_package
+  ...stage2(
+    'result_by_innovation_package',
+    'ipsr_step_3.complementary_components.readiness_level and .use_level (role 2 rows share the column with the core fields)',
+    'readiness_level_evidence_based',
+    'use_level_evidence_based',
+  ),
+  ...legacy2025(
+    'result_by_innovation_package',
+    "IPSR step 3 'Potential situation (12 months later)' (hidden from 2026, values still sent)",
+    'potential_innovation_readiness_level',
+    'potential_innovation_use_level',
+  ),
+  ...evidenceD1D2(
+    'result_by_innovation_package',
+    'ipsr_step_3.*.readiness_evidences / use_evidences (dual-written mirror of the first evidence item; the live validation_ipsr_step_three_P25 still tests it; inventory 2026-B §7.3 proposed NOT_FOR_QA, kept pending because the evidence list it mirrors is deferred)',
+    'readinees_evidence_link',
+    'use_evidence_link',
+    'readiness_details_of_evidence',
+    'use_details_of_evidence',
+  ),
+
+  // IPSR (QAC-T-11) · step 1 tables
+  ...twoHop(
+    'result_ip_eoi_outcomes',
+    'ipsr_step_1.eoi_outcomes (required by the live function; reaches the package through result_by_innovation_package)',
+    'toc_result_id',
+  ),
+  ...stage2(
+    'result_ip_eoi_outcomes',
+    'contributing_toc flag (not on the 2026 form)',
+    'contributing_toc',
+  ),
+  ...stage2(
+    'result_ip_expert_workshop_organized',
+    'ipsr_step_1.workshop_facilitators.email',
+    'email',
+  ),
+  ...stage2(
+    'results_by_institution',
+    'ipsr_step_1.scaling_partners (role 5; shares the external partners binding, optional)',
+    'institutions_id',
+  ),
+  ...stage2(
+    'evidence',
+    'ipsr_step_1.workshop_participants_link (evidence type 5, optional; shares the evidence binding)',
+    'link',
+  ),
+
+  // IPSR (QAC-T-11) · step 2.1 / 2.2 tables (child complementary result: 2-hop; step 2.2: admin-only, REVIEW D19)
+  ...twoHop(
+    'results_complementary_innovation',
+    'ipsr_step_2_1.complementary_innovations.short_title|other_functions|projects_organizations_working_on_innovation|specify_projects_organizations (the child result hangs off result_by_innovation_package; title/description are columns of `result`)',
+    'short_title',
+    'other_funcions',
+    'projects_organizations_working_on_innovation',
+    'specify_projects_organizations',
+  ),
+  ...twoHop(
+    'results_complementary_innovations_function',
+    'ipsr_step_2_1.complementary_innovations.functions',
+    'complementary_innovation_function_id',
+  ),
+  ...stage2(
+    'results_innovatio_packages_enabler_type',
+    'ipsr_step_2_2.enabler_elements.enabler_type_level_1 and .enabler_type_level_2 (admin-only tab deferred by REVIEW D19, stage 2; no live rule; also 2-hop, REVIEW D2)',
+    'complementary_innovation_enable_type_id',
+  ),
+
+  // IPSR (QAC-T-11) · step 3 current use of the core innovation (reaches the package through result_by_innovation_package)
+  ...twoHop(
+    'result_ip_result_actors',
+    'ipsr_step_3.core.current_use.actors and its sub-keys',
+    'women',
+    'women_youth',
+    'men',
+    'men_youth',
+    'actor_type_id',
+    'other_actor_type',
+    'evidence_link',
+    'sex_and_age_disaggregation',
+    'how_many',
+  ),
+  ...twoHop(
+    'result_ip_result_institution_types',
+    'ipsr_step_3.core.current_use.organizations and its sub-keys',
+    'how_many',
+    'institution_types_id',
+    'evidence_link',
+    'other_institution',
+    'graduate_students',
+  ),
+  ...twoHop(
+    'result_ip_result_measures',
+    'ipsr_step_3.core.current_use.measures and its sub-keys',
+    'unit_of_measure',
+    'quantity',
+    'evidence_link',
   ),
 ];
