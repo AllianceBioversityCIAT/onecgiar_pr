@@ -140,7 +140,7 @@ Each bell row SHALL show its state:
 - **Seen / read:** regular-weight, secondary-colour text, no dot, slightly dimmed status chip and icon.
 
 - **Scenario** — GIVEN one unread update and one read update, THEN the first renders bold with a dot AND the second renders light without a dot.
-- AND IT MUST NOT use colour alone: weight and the dot both change (`docs/ux-ui/design.md` §10).
+- AND IT MUST NOT use colour alone: weight and the dot both change (WCAG 2.1 SC 1.4.1 Use of Color, under the `docs/ux-ui/design.md` §10 WCAG 2.1 AA baseline; citation corrected at validate, W7).
 - AND IT MUST expose the state to assistive tech (each fresh row announces "unread" / "new").
 - BUT the "Requires decision" chip and Accept/Decline MUST look the same on fresh and seen requests: being seen never makes a request look less actionable.
 

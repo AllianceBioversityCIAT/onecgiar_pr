@@ -120,7 +120,7 @@ All routes are JWT-protected (default `/api/*`) and wrapped in the standard enve
 | `NotificationService.getAllNotifications` | Honours `options.limit` for the history `take` (`limit + 1`) and the keyset slice. Pending is untouched. | `R-8` |
 
 - **No write to `share_result_request`** anywhere in this spec (`D4`).
-- **Logging:** Nest `Logger` on failures only, with the user id and count. No payloads, no tokens (`.cursorrules`).
+- **Logging:** Nest `Logger` on failures only, with the user id (failures happen before a count exists; corrected at validate, W5). No payloads, no tokens (`.cursorrules`).
 - **Error posture:** follows the module (`_handlersError.returnErrorRes`). `markSeen` returns 404 as a `returnFormatService`, so the client can treat it as "not recorded".
 
 ## 8. Frontend / UX Component Architecture
@@ -201,7 +201,7 @@ New keys: `earlier` ("Earlier"), `unreadRowPrefix` ("Unread"), `decideCount(n)` 
 ## 11. Rollout, Observability, Rollback
 
 - **Order:** server first (migration + endpoints are additive; old clients ignore `seen`), then client. On `qa-development-2026-ss` both ship together; the order matters only if they are split into PRs.
-- **Observability:** logger lines on `markAllSeen` failures with the user id and count. Timing for `D8` is measured at the validate HITL pause (3 runs).
+- **Observability:** logger lines on `markAllSeen` failures with the user id (no count: the failure precedes it; corrected at validate, W5). Timing for `D8` is measured at the validate HITL pause (3 runs).
 - **Rollback:** revert the client commit → the old badge returns (seen ignored). Revert the server commit + migration `down` → table dropped. No data in other tables depends on it.
 
 ## 12. Budget (Step 2.4 tripwire)

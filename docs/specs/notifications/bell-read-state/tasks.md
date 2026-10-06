@@ -221,7 +221,7 @@ BRS-T-3 ──────────────┴──► BRS-T-4 ──┬
 | `BRS-TEST-7` | unit client | `R-3`, `R-5` | `results-notifications.component.spec.ts`, `notification-item.component.spec.ts` (T-7) |
 | `BRS-HITL-1` | **manual, TEST, two accounts** | `D2`, `D3`, `R-2`, `R-4` only-me | At validate: account A opens request X and presses "Mark as read" twice; account B (same SP) still sees X bold and counted. **Fails if** B's badge changes. |
 | `BRS-HITL-2` | **manual, browser vs mockup** | `D5`, `R-7`, `R-8` layout | At validate: compare against `mockup/bell-read-state.html` at 400px and desktop. |
-| `BRS-HITL-3` | **manual timing, TEST** | `D8` | At validate: "Mark as read" with ≥ 100 pending, 3 runs, server time from the network panel. **If the runs vary by more than 2×, report the spread, not a number.** |
+| `BRS-HITL-3` | **manual timing, TEST** | `D8` | At validate: "Mark as read" with ≥ 150 pending (the NFR load; corrected at validate, W6), 3 runs, server time from the network panel. **If the runs vary by more than 2×, report the spread, not a number.** |
 | `BRS-HITL-4` | manual, Angel's account / profile | `OQ-1` | Confirm his pending requests are ≥ 10 before and his badge is 0 after "Mark as read". |
 
 ⚠️ The browser checks use the local stack, which writes to the shared DB and the production mailer (memory: browser checks hit shared prdb). Clicking "Mark as read" or opening requests **writes seen rows for that user**. That is harmless (it only affects that user's own state), but it is a write: do it in TEST with test accounts, and never press Accept/Decline.

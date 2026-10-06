@@ -254,6 +254,30 @@
 | BRS-T-7 | PASS | 1 (+ in-task continuation) | checklist |
 
 - **Budget (design §12):** 7 tasks as estimated; 8 Implementer review rounds total (≤ 10), max 2 per task. Within budget.
-- **Open for `/akili-validate` (HITL):** `BRS-HITL-1` two-account isolation (D2/D3), `BRS-HITL-2` browser vs mockup (D5: weight, 0.7 opacity, dot 16 vs 18 px, 400px popover layout), `BRS-HITL-3` "Mark as read" timing with ≥ 100 pending (D8), `BRS-HITL-4` Angel's account (`OQ-1`).
+- **Open for `/akili-validate` (HITL):** `BRS-HITL-1` two-account isolation (D2/D3), `BRS-HITL-2` browser vs mockup (D5: weight, 0.7 opacity, dot 16 vs 18 px, 400px popover layout), `BRS-HITL-3` "Mark as read" timing with ≥ 150 pending (D8; was ≥ 100, corrected at validate W6), `BRS-HITL-4` Angel's account (`OQ-1`).
 - **Spec gaps / kaizen candidates (not fixed here):** design §10.1 premise that update rows already guard modifier/middle clicks is false; `markSeen` has no recipient scoping (200 vs 404 reveals pending ids) — needs a §6/§7 amendment if product wants it closed; `@Optional()` seen repository fails at request time rather than boot.
 - **Constitution impact:** no new module; `ShareResultRequestModule` gained a repository + entity (internal). Folder guides updated in-task (`shell-topbar/CLAUDE.md`, `notification-item/CLAUDE.md`). CodeGraph re-index pending (`codegraph sync`).
+
+## Validation follow-up (2026-10-06)
+
+Recorded after `/akili-validate` (`validation-report.md`). The Leader owns W3 and W4.
+
+- **W3: Budget tripwire missed.** Design §12 estimated about 330 prod LOC and about 450 test LOC. The actual totals (`git diff --numstat 9824c44b5 ae48b0bec`) are:
+
+  | Side | Prod LOC | Test LOC |
+  |---|---|---|
+  | Server | +381 | +535 |
+  | Client | +240 | +646 |
+  | **Total** | **+621 (1.9×)** | **+1181 (2.6×)** |
+
+  The server is the larger side, which is the opposite of the estimate. The Leader tracked tasks and review rounds against budget but never LOC. The Step 2.4 tripwire should have stopped the run to escalate, and it did not. This is a **kaizen candidate**: check LOC (numstat) at every task close, not only at the end. Likely causes of the overrun:
+  - The server work needed two extra service paths: the `@Optional()` wiring and `tagPendingWithSeen`.
+  - Swagger plus `parseLimit` validation.
+  - Inbox sync in the client.
+  - Thorough red/green specs, roughly 2:1 tests to prod.
+- **W4: Padding drift not explained in T-5.** BRS-T-5 changed `.notification-row` padding from `12px` to `12px 12px 12px 18px` so the unread dot has room. The mockup uses `10px 10px 10px 18px`. The base 12px is pre-existing, and only the left inset follows the mockup. Whether to align it to 10px is decided at `BRS-HITL-2`, together with the dot's 16 vs 18 px.
+- **W5, W6, W7: Spec documents corrected, with sweeps run.**
+  - W5: design §7/§11 logging now reads "user id", without "count".
+  - W6: HITL-3 load changed from ≥ 100 to ≥ 150, in tasks §6 and in this file's §3.
+  - W7: R-7's citation now points to WCAG SC 1.4.1 under the ux-ui §10 baseline.
+- **HITL-1: PASS at DB level** (`validation-report.md` §9).

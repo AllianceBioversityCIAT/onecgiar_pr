@@ -1350,6 +1350,20 @@ describe('ResultsNotificationsService', () => {
           expect(mockApiService.resultsSE.PATCH_updateRequest).not.toHaveBeenCalled();
         });
 
+        it('(d) read leg ok: unread inbox rows move to notificationsViewed as read, merged newest-first (R-9)', async () => {
+          const unreadOld: any = { notification_id: 1, created_date: '2026-01-01', read: false };
+          const unreadNew: any = { notification_id: 2, created_date: '2026-03-01', read: false };
+          const viewedMid: any = { notification_id: 3, created_date: '2026-02-01', read: true };
+          service.updatesData.notificationsPending = [unreadOld, unreadNew];
+          service.updatesData.notificationsViewed = [viewedMid];
+
+          await service.markAllBellRead();
+
+          expect(service.updatesData.notificationsPending).toEqual([]);
+          expect(service.updatesData.notificationsViewed.map((n: any) => n.notification_id)).toEqual([2, 3, 1]);
+          expect(service.updatesData.notificationsViewed.every((n: any) => n.read === true)).toBe(true);
+        });
+
         it('works with an empty inbox snapshot (does not depend on the phase-filtered updatesData)', async () => {
           service.updatesData.notificationsPending = [];
           await service.markAllBellRead();

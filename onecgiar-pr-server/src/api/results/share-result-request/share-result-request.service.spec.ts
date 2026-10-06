@@ -31,6 +31,9 @@ describe('ShareResultRequestService', () => {
     findOne: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
+    delete: jest.fn(),
+    softDelete: jest.fn(),
+    remove: jest.fn(),
     // @akili-spec notifications/detail-side-panel (DSP-T-1)
     getResultForApprovalChain: jest.fn(),
     getApprovalChainData: jest.fn(),
@@ -2253,6 +2256,16 @@ describe('ShareResultRequestService', () => {
       });
     });
 
+    // BRS-R-2 / BRS-R-4 / D4: the seen flag never writes to the request itself.
+    const expectNoRequestWrites = () => {
+      const repo = mockShareResultRequestRepository;
+      expect(repo.save).not.toHaveBeenCalled();
+      expect(repo.update).not.toHaveBeenCalled();
+      expect(repo.delete).not.toHaveBeenCalled();
+      expect(repo.softDelete).not.toHaveBeenCalled();
+      expect(repo.remove).not.toHaveBeenCalled();
+    };
+
     describe('markSeen', () => {
       it('records the seen row for the caller when the request is active and pending', async () => {
         mockShareResultRequestRepository.findOne.mockResolvedValue({
@@ -2274,6 +2287,7 @@ describe('ShareResultRequestService', () => {
         expect(mockSeenRepository.insertIgnore).toHaveBeenCalledWith(10, [5]);
         expect(res.status).toBe(HttpStatus.OK);
         expect(res.response).toEqual({ seen: true });
+        expectNoRequestWrites();
       });
 
       it('is still seen: true when the insert reports 0 (already seen)', async () => {
@@ -2295,6 +2309,7 @@ describe('ShareResultRequestService', () => {
 
         expect(res.status).toBe(HttpStatus.NOT_FOUND);
         expect(mockSeenRepository.insertIgnore).not.toHaveBeenCalled();
+        expectNoRequestWrites();
       });
 
       it('routes unexpected failures through the module error handler', async () => {
@@ -2341,8 +2356,7 @@ describe('ShareResultRequestService', () => {
           expect(arg.where.obj_result).toEqual({ is_active: true });
           expect(arg.where.obj_result).not.toHaveProperty('version_id');
         }
-        expect(mockShareResultRequestRepository.save).not.toHaveBeenCalled();
-        expect(mockShareResultRequestRepository.update).not.toHaveBeenCalled();
+        expectNoRequestWrites();
         expect(
           mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
         ).not.toHaveBeenCalled();
