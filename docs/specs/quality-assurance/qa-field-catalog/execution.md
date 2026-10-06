@@ -103,3 +103,10 @@
 - spawns: implementer 11 calls, 96 061 tokens; reviewer 7 calls, 35 833 tokens; implementer 10 calls, 78 019 tokens; reviewer 8 calls, 67 741 tokens — all ended complete
 - Requirements: QAC-R-2, QAC-R-8
 - auto-approved (pre-approved mode)
+
+## Spec amendment — 2026-10-06 (owner decision, before T-7)
+
+- Owner: "tener los procedimientos no indica que tengamos todos los campos… es un buen inicio al menos mostrar estos campos obligatorios mientras se terminan de añadir los demás campos".
+- Edits: `requirements.md` QAC-R-11 (validation functions define required-ness, not the field set; staged load — stage 1 = at least every required field; `PENDING_CATALOG` list) + index row; `design.md` new **DD-11**; `tasks.md` T-7 (inventory lists every field, marks required vs optional), T-8 (create `definitions/pending-catalog.ts`, guard subtracts it), T-12 (`PENDING_CATALOG` allowed, count reported). Forward sweep: `grep -n "every field\|all fields\|no \`pending\`"` → remaining hits consistent.
+- Inputs received in `tmp/` (git-excluded locally): 14 `validation_*_P25` definitions. Not received: `validation_link_result_P25`, `validation_partners_P25`, `validation_toc_P25`; portfolio query output.
+- Migration `QaCatalogTables` run by the owner (2026-10-06).

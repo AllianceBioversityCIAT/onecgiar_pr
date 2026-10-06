@@ -204,7 +204,9 @@ The endpoint MUST return, for a valid year with catalog content:
 
 ### QAC-R-11 — Initial content
 
-- 2026 MUST cover every result type in the current P25 form: policy change, innovation use, other outcome, capacity sharing, knowledge product, innovation development, other output, impact contribution, innovation package (IPSR).
+- **The validation functions say which fields are required, not which fields exist.** The complete field set comes from the 2026 form and the result entities; a field absent from every `validation_*` is still a field (clarified by the owner, 2026-10-06).
+- **Staged load (owner decision, 2026-10-06):** stage 1 (this spec) MUST cover, for every result type in the current P25 form (policy change, innovation use, other outcome, capacity sharing, knowledge product, innovation development, other output, impact contribution, innovation package / IPSR), at least every field the P25 validation functions require. Optional fields MAY be added in the same load and SHOULD follow in later loads until the catalog is complete; each addition is a new entry plus a revision bump, never a key change.
+- Columns of in-scope tables that are known but not yet catalogued MUST be listed in a visible `PENDING_CATALOG` list (separate from `NOT_FOR_QA`, each with a reason), so the gap is explicit and the CI guard still fails on a column nobody listed.
 - 2025 MAY be loaded after 2026, from the 9 `QA_RESULTS_2025` queries; their HTML formatting is ignored — only which fields exist.
 - Before catalog files are written, a draft inventory per result type MUST be reviewed by the owner (HITL pause); keys freeze at that review.
 - `description` MUST only come from existing help text in the form; it is omitted otherwise.
@@ -254,7 +256,7 @@ The endpoint MUST return, for a valid year with catalog content:
 | QAC-R-8 | Catalog version integrity | proposal Recommended §4 |
 | QAC-R-9 | Catalog endpoint | proposal Scope item 5 |
 | QAC-R-10 | Service authentication | proposal Scope item 5 |
-| QAC-R-11 | Initial content | proposal Scope item 6 + user, 2026-10-06 |
+| QAC-R-11 | Initial content (staged: required fields first, `PENDING_CATALOG` for the rest) | proposal Scope item 6 + user, 2026-10-06 (twice) |
 | QAC-R-12 | Only catalogued data reaches QA | proposal Rules |
 
 ## 9. Dependencies & Assumptions

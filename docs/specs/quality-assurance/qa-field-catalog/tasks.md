@@ -122,7 +122,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 
 - **Type:** docs · **Estimate:** L · **Review:** checklist — artifact reviewed by the owner
 - **First steps:** settle **P-5** (query `version` + `clarisa_portfolios` in the env, owner runs or supplies output), **P-12** (Explore the client result-detail + P25 framework-reporting forms), **P-6** (owner supplies each P25 `validation_*` via `SHOW CREATE FUNCTION`).
-- **Description:** `inventory/2026.md`: one table per result type + one for common sections — key, label, type, section, order, control list, storage binding, required, `required_when`, confirmed?, origin (`file:line` of the form control / validation function). Proposed `NOT_FOR_QA` list with reasons and in-scope table list. `description` only from existing help text.
+- **Description (amended 2026-10-06, DD-11):** list every field of the 2026 form per type, marking which are required by a `validation_*` (stage 1) and which are optional (stage 1 if cheap, else `PENDING_CATALOG`). `inventory/2026.md`: one table per result type + one for common sections — key, label, type, section, order, control list, storage binding, required, `required_when`, confirmed?, origin (`file:line` of the form control / validation function). Proposed `NOT_FOR_QA` list with reasons and in-scope table list. `description` only from existing help text.
 - **Implements:** QAC-R-5 (rules from live definitions; unconfirmed marked, never silent `false`), QAC-R-11 (HITL review; keys freeze at review; description rule), QAC-OQ-4
 - **Design:** §3 inventory, DD-7, P-5, P-6, P-12
 - **Depends on:** — (parallel with T-1…T-6) · **Blocks:** T-8…T-11
@@ -137,7 +137,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 ### QAC-T-8 — Catalog: common sections
 
 - **Type:** server · **Estimate:** L · **Review:** checklist — declarative data against an approved inventory
-- **Description:** Transcribe common sections (general information, ToC alignment, contributors/partners, geography, impact areas/tags, evidence, links) from the approved inventory; move their tables from `excluded-tables.ts` to `scope.ts`; add their `NOT_FOR_QA`; bump 2026 revision; regenerate snapshot.
+- **Description:** Transcribe common sections (general information, ToC alignment, contributors/partners, geography, impact areas/tags, evidence, links) from the approved inventory; move their tables from `excluded-tables.ts` to `scope.ts`; add their `NOT_FOR_QA`; create `definitions/pending-catalog.ts` and make the completeness guard subtract it (DD-11) with a fixture test, then list the not-yet-catalogued optional columns there; bump 2026 revision; regenerate snapshot.
 - **Implements:** QAC-R-11 (common part), QAC-R-1, QAC-R-7 (real scope grows)
 - **Design:** DD-8
 - **Depends on:** T-4, T-5, T-7 · **Blocks:** T-12
@@ -164,7 +164,7 @@ Same shape as T-8 for IPSR. **Implements:** QAC-R-11, R-1, R-7. **Depends on:** 
 ### QAC-T-12 — Close-out: pending list, contract doc, local sync run
 
 - **Type:** rollout · **Estimate:** M · **Review:** full
-- **Description:** Assert `excluded-tables.ts` has no `pending` reasons left (test); write `onecgiar-pr-server/docs/qa-catalog.en.md` (contract, status codes, change log v1); local run: owner runs the migration in dev, app boots twice — first boot inserts, second logs 0/0; `curl` 2026 → 200, 2023 → 404. Record TRD §7 QA row as pending (applied on `staging`).
+- **Description:** Assert `excluded-tables.ts` has no `pending` reasons left (test) — `PENDING_CATALOG` entries are allowed (DD-11) and are reported as a count in the contract doc; write `onecgiar-pr-server/docs/qa-catalog.en.md` (contract, status codes, change log v1); local run: owner runs the migration in dev, app boots twice — first boot inserts, second logs 0/0; `curl` 2026 → 200, 2023 → 404. Record TRD §7 QA row as pending (applied on `staging`).
 - **Implements:** QAC-R-6 (real DB idempotence — closes T-3 gap), QAC-R-7 (complete scope), QAC-R-9 (live check), QAC-R-11 (all 9 types present), NFR compatibility/observability
 - **Depends on:** T-3, T-6, T-9, T-10, T-11 · **Blocks:** —
 - **Verification:** scoped Jest + `tsc` + eslint; boot logs; `curl` outputs (no key in transcript); type list in response = 9.
