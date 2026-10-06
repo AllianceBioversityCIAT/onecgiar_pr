@@ -20,7 +20,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 
 ## 3. Task list
 
-### QAC-T-1 — Catalog types, shape validator, skeleton definitions
+### [x] QAC-T-1 — Catalog types, shape validator, skeleton definitions
 
 - **Type:** server · **Estimate:** M · **Review:** checklist — new isolated files, no shared consumer
 - **Description:** Define `CatalogResultType`, `CatalogSection`, `CatalogField`, `CatalogSubField`, `StorageBinding`, `RequiredWhen`, `NotForQaEntry` types; `result-types.ts` (9 types, keys + labels + level); `versions.ts` (`2026 → {portfolio:'P25', revision:1}`); empty `sections/`; a pure `isValidIn(entry, year)` helper; shape-validator spec.
