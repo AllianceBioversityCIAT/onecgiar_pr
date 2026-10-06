@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NotificationItemComponent } from './notification-item.component';
+import { ResultsNotificationsService } from '../../results-notifications.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
@@ -1296,6 +1297,36 @@ describe('NotificationItemComponent', () => {
     });
 
     describe('openDrawer() / closeDrawer()', () => {
+      // BRS-T-7 (BRS-R-3/R-9): opening the drawer on a received PENDING request records it as seen.
+      describe('marks the request seen (BRS-T-7)', () => {
+        let seenSpy: jest.SpyInstance;
+        beforeEach(() => {
+          seenSpy = jest.spyOn(TestBed.inject(ResultsNotificationsService), 'markRequestSeen').mockResolvedValue(true);
+        });
+
+        it('calls markRequestSeen(row) once on a received pending row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 1 };
+          component.isSent = false;
+          component.openDrawer('details');
+          expect(seenSpy).toHaveBeenCalledTimes(1);
+          expect(seenSpy).toHaveBeenCalledWith(component.notification);
+        });
+
+        it('does nothing on a sent pending row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 1 };
+          component.isSent = true;
+          component.openDrawer('details');
+          expect(seenSpy).not.toHaveBeenCalled();
+        });
+
+        it('does nothing on a done (resolved) received row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 2 };
+          component.isSent = false;
+          component.openDrawer('details');
+          expect(seenSpy).not.toHaveBeenCalled();
+        });
+      });
+
       it('seeds an untouched tocInitiative locally, with NO global hydration, for a bilateral request', () => {
         component.notification = buildBilateral();
         const hydrateSpy = jest.spyOn(component as any, 'hydrateGlobalTocState');

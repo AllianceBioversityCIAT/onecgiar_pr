@@ -1358,7 +1358,7 @@ describe('PrimaryProgramRequestService', () => {
 
       // (a)/(b) — SP09 declines result 9391, SP12 was saved as a contributor (requirements.md
       // PDR-R-4 worked example).
-      it('(a)/(b) rejects the result, writes the REJECTED history row, drops the contributor draft — no new primary row for SP12', async () => {
+      it('(a)/(b) rejects the result, writes the REJECT history row, drops the contributor draft — no new primary row for SP12', async () => {
         mockRequestRepoTx.findOne.mockResolvedValueOnce(pendingRow());
 
         const outcome = await service.decline(
@@ -1390,7 +1390,7 @@ describe('PrimaryProgramRequestService', () => {
             reviewed_by: 99,
           }),
         );
-        // One REJECTED history row, trimmed justification, prefixed with the decliner's code.
+        // One REJECT history row, trimmed justification, prefixed with the decliner's code.
         expect(mockHistoryRepoTx.save).toHaveBeenCalledWith(
           expect.objectContaining({
             result_id: 100,
@@ -1400,6 +1400,11 @@ describe('PrimaryProgramRequestService', () => {
             created_by: 99,
           }),
         );
+        // RSB-R-20 / RSB-R-18: literal value the DB enum accepts (never 'REJECTED'), plus the
+        // declining SP (shared_inititiative_id 9) as the entry's Science Program.
+        const savedHistory = mockHistoryRepoTx.save.mock.calls.at(-1)[0];
+        expect(savedHistory.action).toBe('REJECT');
+        expect(savedHistory.initiative_id).toBe(9);
         // (e) the contributor draft is dropped — no insert, and the contribution rows deactivated.
         expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
         expect(mockRequestRepoTx.update).toHaveBeenCalledWith(

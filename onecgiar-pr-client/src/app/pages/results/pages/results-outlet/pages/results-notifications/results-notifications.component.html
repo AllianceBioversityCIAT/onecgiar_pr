@@ -274,10 +274,10 @@
 
       <div class="flex-1 min-w-[16px]"></div>
 
-      @if (this.resultsNotificationsSE?.updatesData?.notificationsPending?.length > 0) {
+      @if (this.resultsNotificationsSE?.bellCount() > 0) {
         <button
           type="button"
-          (click)="this.resultsNotificationsSE.markAllUpdatesNotificationsAsRead()"
+          (click)="onMarkAllRead()"
           class="flex h-[36px] flex-none cursor-pointer items-center gap-[7px] rounded-[8px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)] px-[12px] text-[14px] font-medium text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]">
           <i class="material-icons-outlined" style="font-size: 16px">drafts</i>
           {{ copy.filterToolbar.markAllAsRead }}

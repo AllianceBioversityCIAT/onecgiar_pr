@@ -788,7 +788,7 @@ export class ResultsApiService {
   // §4.1 — "no new method names needed"). The only caller of these 3 methods is
   // ResultsNotificationsService, so this is not a breaking change for any other consumer.
   // Cursor is opaque and MUST NOT be logged (.cursorrules) — it is only ever forwarded verbatim.
-  private buildPagingQueryParams(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }): string {
+  private buildPagingQueryParams(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number }): string {
     if (!options) return '';
     const params = new URLSearchParams();
     // PAGE-T-4 rework (Reviewer L3): a plain truthy check — `0` is not a real phase id either, same
@@ -802,6 +802,10 @@ export class ResultsApiService {
     }
     if (options.cursor) {
       params.set('cursor', options.cursor);
+    }
+    // BRS-T-4: only the updates endpoint honours `limit` (history page size); the inbox never sets it.
+    if (options.limit) {
+      params.set('limit', String(options.limit));
     }
     const qs = params.toString();
     return qs ? `?${qs}` : '';
@@ -825,7 +829,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/result/${resultId}/approval-chain`);
   }
 
-  GET_requestUpdates(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) {
+  GET_requestUpdates(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number }) {
     return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates${this.buildPagingQueryParams(options)}`);
   }
 
@@ -835,6 +839,16 @@ export class ResultsApiService {
 
   PATCH_readNotification(notificationId) {
     return this.http.patch<any>(`${this.baseApiBaseUrl}notification/read/${notificationId}`, {});
+  }
+
+  /** BRS-T-4: records that the caller has seen one pending request. `response: { seen: true }`; 404 when not pending. */
+  PATCH_markRequestSeen(shareResultRequestId: number | string) {
+    return this.http.patch<any>(`${this.apiBaseUrl}request/seen/${shareResultRequestId}`, {});
+  }
+
+  /** BRS-T-4: records every request currently pending for the caller as seen. `response: { recorded: n }`. */
+  PATCH_markAllRequestsSeen() {
+    return this.http.patch<any>(`${this.apiBaseUrl}request/seen-all`, {});
   }
 
   PATCH_readAllNotifications() {

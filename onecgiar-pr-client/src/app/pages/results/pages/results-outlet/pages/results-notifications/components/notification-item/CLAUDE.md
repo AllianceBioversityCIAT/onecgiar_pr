@@ -467,7 +467,14 @@ code" without checking design.md CRD-DD-10's consequences note first.
 `[chain]` reads a `@let chainState` local; a second `approvalChain()` call is not narrowed under
 `strictTemplates`, and only `ngc` catches it (see `src/CLAUDE.md` §21.7).
 
-**Verified:** 2026-10-06 · qa-development-2026-ss · BELL-T-11 (`drawerAcceptLabel()` now delegates to `acceptLabelFor(row)` in `utils/request-decision.ts`, the single source shared with the bell card; it returns the explicit string ("Accept contribution" for the old `null` case), and the row template no longer needs its `?? 'Accept contribution'` fallback). Prior: BELL-T-9 (`runAutoAction()` opens the detail drawer for a ToC-carried accept, 0 PATCH; see BELL-T-9 section). Prior: BELL-T-5 attempt 2 (BELL-T-6 D-1): `ngOnChanges` re-arms `autoActionRan` when `autoAction` becomes falsy (re-hand-off on the same instance); the inbox now also reacts to same-route `queryParamMap` changes. Prior: BELL-T-7 (`notifications/bell-quick-inbox`): `runAutoAction()` gated so a link never PATCHes (see the BELL-T-7 section above); no other handler changed.
+## BRS-T-7: opening the drawer marks a received pending request seen
+`openDrawer()` calls `ResultsNotificationsService.markRequestSeen(this.notification)` (fire-and-forget,
+never blocks, never rejects) only when `isPending` (status 1 AND `!isSent`). Sent rows and done rows do
+nothing. All entry points (row click, ToC step, `runAutoAction()` ToC accept) go through `openDrawer()`,
+so the gate lives there. The inbox page's "Mark all as read" is the page's job (`onMarkAllRead()` ->
+`markAllBellRead()`, shown on `bellCount() > 0`), not this row's.
+
+**Verified:** 2026-10-06 · qa-development-2026-ss · BRS-T-7 (`notifications/bell-read-state`): `openDrawer()` marks a received pending request seen via `markRequestSeen`. Prior: BELL-T-11 (`drawerAcceptLabel()` now delegates to `acceptLabelFor(row)` in `utils/request-decision.ts`, the single source shared with the bell card; it returns the explicit string ("Accept contribution" for the old `null` case), and the row template no longer needs its `?? 'Accept contribution'` fallback). Prior: BELL-T-9 (`runAutoAction()` opens the detail drawer for a ToC-carried accept, 0 PATCH; see BELL-T-9 section). Prior: BELL-T-5 attempt 2 (BELL-T-6 D-1): `ngOnChanges` re-arms `autoActionRan` when `autoAction` becomes falsy (re-hand-off on the same instance); the inbox now also reacts to same-route `queryParamMap` changes. Prior: BELL-T-7 (`notifications/bell-quick-inbox`): `runAutoAction()` gated so a link never PATCHes (see the BELL-T-7 section above); no other handler changed.
 
 **Prior verification:** 2026-10-06 · qa-development-2026-ss · BELL-T-5 (`notifications/bell-quick-inbox`): added `autoAction`/`autoActionConsumed` (see the new BELL-T-5 section above); no change to any existing handler. Supersedes nothing below.
 

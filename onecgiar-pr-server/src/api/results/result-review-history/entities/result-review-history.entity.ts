@@ -8,11 +8,13 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
+import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 export enum ReviewActionEnum {
-  APPROVE = 'APPROVED',
-  REJECT = 'REJECTED',
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
   UPDATE = 'UPDATE',
+  RESUBMIT = 'RESUBMIT',
 }
 
 @Entity('result_review_history')
@@ -43,6 +45,23 @@ export class ResultReviewHistory {
     nullable: false,
   })
   action: ReviewActionEnum;
+
+  /**
+   * Science Program involved in the entry (RSB-R-18): the deciding owner, the declining SP or the
+   * requested primary. NULL for entries written before that spec.
+   */
+  @Column({
+    name: 'initiative_id',
+    type: 'int',
+    nullable: true,
+  })
+  initiative_id: number | null;
+
+  @ManyToOne(() => ClarisaInitiative, (i) => i.id, { nullable: true })
+  @JoinColumn({
+    name: 'initiative_id',
+  })
+  obj_initiative: ClarisaInitiative;
 
   @Column({
     name: 'comment',

@@ -82,11 +82,15 @@ describe('ShellTopbarComponent', () => {
       updatesPopUpData: [] as any[],
       handlePopUpNotificationLastViewed: jest.fn(),
       bellItems: bellRows,
-      bellCount: computed(() => bellRows().length),
+      // BRS: the badge counts fresh rows only (a row without `fresh` counts as fresh); Decide counts every request.
+      bellCount: computed(() => bellRows().filter(row => row?.fresh !== false).length),
+      bellUpdates: computed(() => bellRows().filter(row => row?.kind === 'update' && row?.fresh !== false)),
+      bellPendingRequestCount: computed(() => bellRows().filter(row => row?.kind === 'decision').length),
       bellLoading: signal(false),
       bellError: signal(false),
       refreshBell: jest.fn(),
-      markAllBellUpdatesRead: jest.fn().mockResolvedValue(undefined)
+      loadBellReadUpdates: jest.fn(),
+      markAllBellRead: jest.fn().mockResolvedValue(undefined)
     };
     filterMock = { text_to_search: signal('') };
     fontScaleMock = { scale: signal('default'), set: jest.fn(), reset: jest.fn() };
@@ -814,6 +818,16 @@ describe('ShellTopbarComponent', () => {
       expect(notificationsMock.refreshBell).toHaveBeenCalledTimes(1);
     });
 
+    it('BRS-R-8: opening also calls loadBellReadUpdates exactly once; closing does not', async () => {
+      await buildRendered();
+      flush();
+      expect(notificationsMock.loadBellReadUpdates).not.toHaveBeenCalled();
+      openBell();
+      expect(notificationsMock.loadBellReadUpdates).toHaveBeenCalledTimes(1);
+      closeByBackdrop();
+      expect(notificationsMock.loadBellReadUpdates).toHaveBeenCalledTimes(1);
+    });
+
     it('BELL-R-1: the button label carries the count', async () => {
       bellRows.set(rows(5));
       await buildRendered();
@@ -884,7 +898,7 @@ describe('ShellTopbarComponent', () => {
       const markRead = () => document.body.querySelector('[data-bell-mark-read]') as HTMLButtonElement | null;
       const mixed = () => [...rows(2, 'decision'), ...rows(3)];
 
-      it('"To decide" shows only decision rows, "Updates" only updates, "All" both - and the badge never moves', async () => {
+      it('"Decide" shows only decision rows, "Updates" only updates, "All" both - and the badge never moves', async () => {
         bellRows.set(mixed());
         await buildRendered();
         flush();
@@ -908,17 +922,127 @@ describe('ShellTopbarComponent', () => {
         expect(component.bellCount()).toBe(5);
       });
 
-      it('the All tab carries the bell count and "To decide" a dot only while decisions are pending', async () => {
+      it('BRS-R-6: All = listed rows, Decide = "N to decide" (hidden at 0), Updates = unread updates (hidden at 0)', async () => {
+        bellRows.set([...mixed(), { kind: 'update', notification_id: 99, fresh: false }]);
+        await buildRendered();
+        flush();
+        openBell();
+        expect(tab('all').textContent).toContain('6');
+        expect(tab('decide').textContent).toContain(copy.popover.decideCount(2));
+        expect(tab('decide').querySelector('[data-bell-decide-count]')?.className).toContain('--pr-color-orange-500');
+        expect(tab('updates').textContent?.replace(/\s+/g, ' ').trim()).toBe(`${copy.popover.tabs.updates} 3`);
+
+        bellRows.set(rows(3));
+        flush();
+        expect(tab('decide').querySelector('[data-bell-decide-count]')).toBeNull();
+        expect(tab('decide').textContent?.trim()).toBe(copy.popover.tabs.decide);
+
+        bellRows.set([{ kind: 'update', notification_id: 1, fresh: false }, ...rows(2, 'decision').map(r => ({ ...r, fresh: false }))]);
+        flush();
+        expect(tab('updates').querySelector('[data-bell-tab-count]')).toBeNull();
+        expect(tab('decide').textContent).toContain(copy.popover.decideCount(2));
+      });
+
+      it('BRS-R-6 (a11y): every count sits inside its tab button, so it is part of the accessible name', async () => {
         bellRows.set(mixed());
         await buildRendered();
         flush();
         openBell();
-        expect(tab('all').textContent).toContain('5');
-        expect(document.body.querySelector('[data-bell-decide-dot]')).not.toBeNull();
+        for (const key of ['all', 'decide', 'updates']) {
+          const counts = tab(key).querySelectorAll('[data-bell-tab-count]');
+          expect(counts.length).toBe(1);
+          expect(counts[0].closest('[aria-hidden="true"]')).toBeNull();
+          expect(tab(key).tagName).toBe('BUTTON');
+        }
+      });
 
-        bellRows.set(rows(3));
+      it('BRS-R-1: badge 0 with 40 pending requests -> no badge, but Decide still shows "40 to decide"', async () => {
+        bellRows.set(rows(40, 'decision').map(r => ({ ...r, fresh: false })));
+        await buildRendered();
         flush();
-        expect(document.body.querySelector('[data-bell-decide-dot]')).toBeNull();
+        expect(badge()).toBeNull();
+        openBell();
+        expect(newChip()).toBeNull();
+        expect(markRead()).toBeNull();
+        expect(tab('decide').textContent).toContain(copy.popover.decideCount(40));
+      });
+
+      it('BRS-R-1: 120 fresh items -> badge reads 99+', async () => {
+        bellRows.set(rows(120));
+        await buildRendered();
+        flush();
+        expect(badge()?.textContent?.trim()).toBe('99+');
+      });
+
+      it('BRS-R-4: after Mark as read resolves with a count of 0, badge, chip and button go and Decide is unchanged', async () => {
+        bellRows.set(mixed());
+        notificationsMock.markAllBellRead.mockImplementation(async () => {
+          bellRows.update(list => list.map(row => ({ ...row, fresh: false })));
+        });
+        await buildRendered();
+        flush();
+        openBell();
+        expect(tab('decide').textContent).toContain(copy.popover.decideCount(2));
+        markRead()!.click();
+        await Promise.resolve();
+        await Promise.resolve();
+        flush();
+        expect(badge()).toBeNull();
+        expect(newChip()).toBeNull();
+        expect(markRead()).toBeNull();
+        expect(tab('decide').textContent).toContain(copy.popover.decideCount(2));
+        expect(rowEls()).toHaveLength(5);
+      });
+
+      it('BRS-R-8: the "Earlier" separator renders once, before the first non-fresh row', async () => {
+        bellRows.set([
+          { kind: 'update', notification_id: 1, fresh: true },
+          { kind: 'update', notification_id: 2, fresh: true },
+          { kind: 'update', notification_id: 3, fresh: false },
+          { kind: 'update', notification_id: 4, fresh: false }
+        ]);
+        await buildRendered();
+        flush();
+        openBell();
+        const seps = document.body.querySelectorAll('[data-bell-earlier]');
+        expect(seps).toHaveLength(1);
+        expect(seps[0].textContent?.trim()).toBe(copy.popover.earlier);
+        const list = document.body.querySelector('.pr-topbar-notif-list') as HTMLElement;
+        const order = Array.from(list.children).map(el => (el.hasAttribute('data-bell-earlier') ? 'sep' : 'row'));
+        expect(order).toEqual(['row', 'row', 'sep', 'row', 'row']);
+      });
+
+      it('BRS-R-8: no separator when every row is fresh, or when every row is read (light rows, no empty state)', async () => {
+        bellRows.set(rows(3));
+        await buildRendered();
+        flush();
+        openBell();
+        expect(document.body.querySelector('[data-bell-earlier]')).toBeNull();
+
+        bellRows.set(rows(3).map(r => ({ ...r, fresh: false })));
+        flush();
+        expect(document.body.querySelector('[data-bell-earlier]')).toBeNull();
+        expect(rowEls()).toHaveLength(3);
+        expect(panel()?.textContent).not.toContain(copy.popover.empty);
+        expect(badge()).toBeNull();
+      });
+
+      it('BRS-R-8: the separator follows the active tab (Decide tab with only seen requests shows none)', async () => {
+        bellRows.set([
+          { kind: 'update', notification_id: 1, fresh: true },
+          { kind: 'decision', share_result_request_id: 1, fresh: false },
+          { kind: 'update', notification_id: 2, fresh: false }
+        ]);
+        await buildRendered();
+        flush();
+        openBell();
+        expect(document.body.querySelectorAll('[data-bell-earlier]')).toHaveLength(1);
+        tab('decide').click();
+        flush();
+        expect(document.body.querySelector('[data-bell-earlier]')).toBeNull();
+        tab('updates').click();
+        flush();
+        expect(document.body.querySelectorAll('[data-bell-earlier]')).toHaveLength(1);
       });
 
       it('the cap and "+N more" apply to the ACTIVE tab', async () => {
@@ -957,29 +1081,33 @@ describe('ShellTopbarComponent', () => {
         expect(panel()?.textContent).toContain(copy.popover.tabEmpty.updates);
       });
 
-      it('"N new" = unread updates, decisions are not counted, and the chip is hidden at 0', async () => {
+      it('"N new" = the bell badge count (decisions included), and the chip is hidden at 0', async () => {
         bellRows.set(mixed());
         await buildRendered();
         flush();
         openBell();
-        expect(newChip()?.textContent?.trim()).toBe(copy.popover.newChip(3));
+        expect(newChip()?.textContent?.trim()).toBe(copy.popover.newChip(5));
 
-        bellRows.set(rows(2, 'decision'));
+        bellRows.set(rows(2, 'decision').map(r => ({ ...r, fresh: false })));
         flush();
         expect(newChip()).toBeNull();
       });
 
-      it('"Mark as read" is hidden when there are no unread updates', async () => {
+      it('"Mark as read" is visible while the badge is above 0 (even for requests only) and hidden at 0', async () => {
         bellRows.set(rows(2, 'decision'));
         await buildRendered();
         flush();
         openBell();
+        expect(markRead()).not.toBeNull();
+
+        bellRows.set(rows(2, 'decision').map(r => ({ ...r, fresh: false })));
+        flush();
         expect(markRead()).toBeNull();
       });
 
       it('"Mark as read" calls the bell mark-all wrapper once (no args), guards a double click, and decides nothing', async () => {
         let resolve!: () => void;
-        notificationsMock.markAllBellUpdatesRead.mockReturnValue(new Promise<void>(r => (resolve = r)));
+        notificationsMock.markAllBellRead.mockReturnValue(new Promise<void>(r => (resolve = r)));
         notificationsMock.decideRequest = jest.fn();
         bellRows.set(mixed());
         await buildRendered();
@@ -989,8 +1117,8 @@ describe('ShellTopbarComponent', () => {
         markRead()!.click();
         markRead()!.click();
         flush();
-        expect(notificationsMock.markAllBellUpdatesRead).toHaveBeenCalledTimes(1);
-        expect(notificationsMock.markAllBellUpdatesRead.mock.calls[0]).toHaveLength(0);
+        expect(notificationsMock.markAllBellRead).toHaveBeenCalledTimes(1);
+        expect(notificationsMock.markAllBellRead.mock.calls[0]).toHaveLength(0);
         expect(markRead()!.disabled).toBe(true);
         expect(notificationsMock.decideRequest).not.toHaveBeenCalled();
         expect(panel()).not.toBeNull();
@@ -1003,7 +1131,7 @@ describe('ShellTopbarComponent', () => {
       });
 
       it('a failed "Mark as read" leaves the rows in place and re-enables the control', async () => {
-        notificationsMock.markAllBellUpdatesRead.mockRejectedValue(new Error('boom'));
+        notificationsMock.markAllBellRead.mockRejectedValue(new Error('boom'));
         bellRows.set(mixed());
         await buildRendered();
         flush();
