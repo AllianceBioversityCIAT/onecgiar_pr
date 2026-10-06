@@ -7,6 +7,7 @@ import {
   Logger,
   Optional,
 } from '@nestjs/common';
+import { ShareResultRequestSeenRepository } from './repositories/share-result-request-seen.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import {
   ApprovalChainInitiativeRoleRow,
@@ -144,6 +145,10 @@ export class ShareResultRequestService {
     @Optional()
     @Inject(forwardRef(() => NotificationService))
     private readonly _notificationService?: NotificationService,
+    // `BRS-T-2`. @Optional() for the same reason as above: other modules re-provide this service
+    // locally (they only call `resultRequest()`) and do not register the seen repository.
+    @Optional()
+    private readonly _shareResultRequestSeenRepository?: ShareResultRequestSeenRepository,
   ) {}
 
   async resultRequest(
@@ -545,12 +550,16 @@ export class ShareResultRequestService {
         cursor,
       });
 
+      const receivedContributionsPending = this.combineAndDistinct(
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+      );
+      // `BRS-T-2` / BRS-DD-2: one per-user lookup for the whole pending set; `done` is untouched.
+      await this.tagPendingWithSeen(user.id, receivedContributionsPending);
+
       return {
         response: {
-          receivedContributionsPending: this.combineAndDistinct(
-            receivedContributionsPendingOwner,
-            receivedContributionsPendingShared,
-          ),
+          receivedContributionsPending,
           receivedContributionsDone,
           doneMeta,
         },
@@ -558,6 +567,105 @@ export class ShareResultRequestService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /** `BRS-T-2`: adds `seen` (this user only) to each pending row, with a single query. */
+  private async tagPendingWithSeen(userId: number, pending: any[]) {
+    if (!pending.length) {
+      return;
+    }
+    const seenIds = await this._shareResultRequestSeenRepository.findSeenIds(
+      userId,
+      pending.map((row) => row.share_result_request_id),
+    );
+    for (const row of pending) {
+      row.seen = seenIds.has(Number(row.share_result_request_id));
+    }
+  }
+
+  /**
+   * `BRS-T-2` / BRS-DD-3: records that the caller has seen one PENDING request. 404 comes from the
+   * pre-check (missing, inactive or already decided), never from the insert: `insertIgnore`
+   * returning 0 (already seen) is a normal result. Never writes `share_result_request` (D4).
+   */
+  async markSeen(user: TokenDto, shareResultRequestId: number) {
+    try {
+      const request = await this._shareResultRequestRepository.findOne({
+        select: { share_result_request_id: true },
+        where: {
+          share_result_request_id: shareResultRequestId,
+          is_active: true,
+          request_status_id: 1,
+        },
+      });
+      if (!request) {
+        return {
+          response: {},
+          message: 'The request was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      await this._shareResultRequestSeenRepository.insertIgnore(user.id, [
+        shareResultRequestId,
+      ]);
+
+      return {
+        response: { seen: true },
+        message: 'Request marked as seen',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(`markSeen failed for user ${user.id}`);
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * `BRS-T-2` / BRS-DD-3: marks every request the bell lists as pending for the caller. The pending
+   * set is resolved server-side with the SAME role + initiatives + `buildWhereReceivedConditions`
+   * as `getReceivedResultRequest`, minus the version filter (all phases, `BRS-R-5`), selecting ids
+   * only (no relations, no enrichment). One bulk `insertIgnore`; `recorded: 0` is not an error.
+   */
+  async markAllSeen(user: TokenDto) {
+    try {
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+      const inits = await this.getUserInitiatives(user);
+      const { pendingOwner, pendingShared } = this.buildWhereReceivedConditions(
+        inits,
+        role,
+      );
+
+      const whereList =
+        pendingOwner === pendingShared
+          ? [pendingOwner]
+          : [pendingOwner, pendingShared];
+      const rowSets = await Promise.all(
+        whereList.map((where) =>
+          this._shareResultRequestRepository.find({
+            select: { share_result_request_id: true },
+            where,
+          }),
+        ),
+      );
+      const ids = Array.from(
+        new Set(
+          rowSets.flat().map((row) => Number(row.share_result_request_id)),
+        ),
+      );
+
+      const recorded =
+        await this._shareResultRequestSeenRepository.insertIgnore(user.id, ids);
+
+      return {
+        response: { recorded },
+        message: 'Requests marked as seen',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(`markAllSeen failed for user ${user.id}`);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }

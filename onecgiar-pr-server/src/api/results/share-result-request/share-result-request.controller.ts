@@ -5,6 +5,7 @@ import {
   Body,
   Patch,
   Param,
+  ParseIntPipe,
   Query,
   UseInterceptors,
   Version,
@@ -167,6 +168,75 @@ export class ShareResultRequestController {
       scope,
       cursor,
     });
+  }
+
+  // `BRS-T-2`: `seen-all` is declared before `seen/:shareResultRequestId`. The paths differ in
+  // shape (`seen-all` vs `seen/<id>`), so neither can capture the other; the order is kept anyway.
+  @Patch('seen-all')
+  @ApiOperation({
+    summary: 'Mark every pending received request as seen by the caller',
+    description:
+      'Records, for the calling user only, that all requests listed as pending in the bell (all phases) were seen. The set is resolved server-side; the client sends no ids. Idempotent. Never changes the requests themselves.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Number of seen rows newly recorded (0 when already seen)',
+    schema: {
+      example: {
+        response: { recorded: 12 },
+        message: 'Requests marked as seen',
+        status: 200,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  markAllSeen(@UserToken() user: TokenDto) {
+    return this.shareResultRequestService.markAllSeen(user);
+  }
+
+  @Patch('seen/:shareResultRequestId')
+  @ApiOperation({
+    summary: 'Mark one pending received request as seen by the caller',
+    description:
+      'Records, for the calling user only, that the request was seen. Idempotent. Never changes the request itself.',
+  })
+  @ApiParam({
+    name: 'shareResultRequestId',
+    type: 'number',
+    description: 'ID of the share result request',
+    example: 123,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The request is recorded as seen by the caller',
+    schema: {
+      example: {
+        response: { seen: true },
+        message: 'Request marked as seen',
+        status: 200,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - the id is not an integer',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - the request does not exist or is not pending',
+  })
+  markSeen(
+    @UserToken() user: TokenDto,
+    @Param('shareResultRequestId', ParseIntPipe) shareResultRequestId: number,
+  ) {
+    return this.shareResultRequestService.markSeen(user, shareResultRequestId);
   }
 
   @Get('get/sent')

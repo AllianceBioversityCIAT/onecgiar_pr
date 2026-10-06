@@ -857,7 +857,7 @@ export class PrimaryProgramRequestService {
    * - **Ownerless** (`PDR-R-4`, `DD-1`/`DD-2`): in the SAME transaction `manager` — mirroring the
    *   review-reject data shape (`results.service.ts` `reviewBilateralResult`, design.md §2) —
    *   `Result.status_id` → Rejected (7) with `reviewed_by`/`reviewed_at`; one `ResultReviewHistory`
-   *   row (`REJECTED`, comment prefixed with the declining SP's code, `created_by` the decliner);
+   *   row (`REJECT`, `initiative_id` = the declining SP, comment prefixed with the declining SP's code, `created_by` the decliner);
    *   every active pending/draft **contribution** row of the result is deactivated (`PDR-R-4`
    *   item 4, `PDR-R-6`). The primary row itself is NOT deactivated (`DD-2`) — only contribution
    *   rows. Outcome `rejected`.
@@ -984,6 +984,7 @@ export class PrimaryProgramRequestService {
               historyRepo.create({
                 result_id: resultId,
                 action: ReviewActionEnum.REJECT,
+                initiative_id: declinedInitiativeId,
                 comment: `${declinedSpCode ?? 'The Science Program'} declined to be the primary Science Program of this result: ${trimmedJustification}`,
                 created_by: user.id,
               }),

@@ -19,7 +19,10 @@ import {
   ApiOkResponse,
   ApiQuery,
 } from '@nestjs/swagger';
-import { decodeCursor } from '../../shared/utils/keyset-cursor.util';
+import {
+  decodeCursor,
+  KEYSET_PAGE_SIZE,
+} from '../../shared/utils/keyset-cursor.util';
 
 @ApiTags('Notifications')
 @Controller()
@@ -101,13 +104,20 @@ export class NotificationController {
     description:
       "Opaque keyset cursor from a previous response's viewedMeta.nextCursor, to fetch the next history page. Never logged (.cursorrules).",
   })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description:
+      'History page size (BRS-DD-5). Integer 1..200; omitted -> 200. Applies only to the history (viewed) page; pending is never limited.',
+  })
   @ApiResponse({
     status: 200,
     description: 'List of all notifications retrieved successfully.',
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid version_id or cursor.',
+    description: 'Invalid version_id, cursor or limit.',
   })
   @ApiResponse({
     status: 500,
@@ -119,11 +129,13 @@ export class NotificationController {
     @Query('version_id') versionId?: string,
     @Query('scope') scope?: string,
     @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
   ) {
     // PAGE-R-1/PAGE-T-3: validate up front so bad input is a 400 regardless of `scope`
     // (design.md §4.1) — validating only inside a scope branch would let `scope=pending`
     // skip the check entirely.
     const parsedVersionId = this.parseVersionId(versionId);
+    const parsedLimit = this.parseLimit(limit);
     if (cursor !== undefined) {
       decodeCursor(cursor);
     }
@@ -134,7 +146,21 @@ export class NotificationController {
       versionId: parsedVersionId,
       scope: parsedScope,
       cursor,
+      // Spread keeps the no-`limit` call shape identical to before (BRS-T-3 consumers).
+      ...(parsedLimit !== undefined ? { limit: parsedLimit } : {}),
     });
+  }
+
+  /** BRS-T-3: absent -> undefined (service default 200); otherwise an integer in 1..200. */
+  private parseLimit(limit?: string): number | undefined {
+    if (limit === undefined || limit === null) {
+      return undefined;
+    }
+    const parsed = limit.trim() === '' ? NaN : Number(limit);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > KEYSET_PAGE_SIZE) {
+      throw new BadRequestException('Invalid limit');
+    }
+    return parsed;
   }
 
   private parseVersionId(versionId?: string): number | undefined {

@@ -5,8 +5,8 @@ user menu. Rendered by `app.component.html:38`, and hidden entirely when `dataCo
 or `focusMode()` is on — so nothing in here exists in QA full-screen or focus mode, **including the
 `Cmd/Ctrl+K` listener**.
 
-**Release notes (`/whats-new`)** lives here now, as a plain `routerLink` icon button (`pr-topbar-icon-btn`,
-`lucideRocket`) placed between Support and the notifications bell — it used to be a link inside the
+**Release notes (`/whats-new`)** lives here now, as a plain `routerLink` button (`pr-topbar-icon-btn`,
+`lucideRocket` + visible "Release notes" label — `quick/topbar-labelled-actions`) placed between Support and the notifications bell — it used to be a link inside the
 sidebar's EXTRAS group (`reporting-nav-sidebar`) but was moved up to the toolbar, next to the bell, per
 user request. Active state via `isInWhatsNewRoute()` (checks `router.url.includes('/whats-new')`), same
 pattern as `isInNotificationsRoute()`.
@@ -56,13 +56,20 @@ service any more.
   `min()`/vh values are only the first-frame fallback. Only `.pr-topbar-notif-list` scrolls. Check in a 400x472 frame.
   Support and user menus untouched.
 
-- **Popover redesign (BELL-T-10).** Header = title + `N new` chip (`bellUnreadUpdates` = bell rows of kind `update`;
-  hidden at 0) + `Mark as read` (hidden at 0; `markAllRead()` -> `ResultsNotificationsService.markAllBellUpdatesRead()`,
-  phase-agnostic `PATCH notification/read-all`, then `refreshBell()`; `markingRead` blocks a double click, decisions
-  untouched). Spartan tabs (`hlm-tabs`, `bellTab` signal: all / decide / updates) filter `bellItems` on the client
-  only; the badge always reads `bellCount`. Cap 10 and `+N more` count against the ACTIVE tab (`bellTabItems`); a tab
-  with no rows shows `tabEmpty` copy. Tab triggers also call `setBellTab` directly (the Jest Brain mock does not
-  wire clicks). Cards live in `pop-up-notification-item`.
+- **Popover redesign (BELL-T-10, counts reworked by BRS-T-6).** Badge, button label (`bellButtonLabel`) and header
+  `N new` chip all read `bellCount` (fresh items only: unseen requests + unread updates; `99+` above 99; hidden at 0).
+  `Mark as read` shows while `bellCount > 0` and calls `markAllRead()` -> `ResultsNotificationsService.markAllBellRead()`
+  (requests seen + updates read; rejects only when both legs fail); `markingRead` blocks a double click and a rejection
+  re-enables the button. Spartan tabs (`hlm-tabs`, `bellTab` signal: all / decide / updates) filter `bellItems` on the
+  client only. Tab counts are plain text inside each trigger, so they are part of its accessible name: All = listed rows
+  (`bellAllCount`), Decide = `bellPendingRequestCount` as `N to decide` in `--pr-color-orange-500` (independent of the
+  badge: shows at count 0, unchanged by Mark as read; hidden at 0), Updates = unread updates (`bellUpdates().length`,
+  hidden at 0). `bellState` stays `list` while any row exists, even at badge 0 (read rows render light); empty copy only
+  when there is nothing at all. `bellEarlierIndex` = index of the first `fresh === false` row among the rendered rows
+  (only when > 0) and renders the `Earlier` separator (`data-bell-earlier`) before it. Opening the popover calls
+  `refreshBell()` and `loadBellReadUpdates()` (both un-awaited). Cap 10 and `+N more` count against the ACTIVE tab
+  (`bellTabItems`); a tab with no rows shows `tabEmpty` copy. Tab triggers also call `setBellTab` directly (the Jest
+  Brain mock does not wire clicks). Cards live in `pop-up-notification-item`.
 
 - **Support is the single entry point for getting help** (P2-3683): `Start a support chat`,
   `Give feedback`, and `Contact us` (mailto:prmstechsupport@cgiar.org). It replaced the standalone bug button, and Tawk's floating bubble in the
@@ -100,10 +107,10 @@ service any more.
   accepts either modifier regardless.
 - The search control keeps `cursor: text` even though it is a button — the design specifies it
   (`cursor:text` at snapshot line 232) because it opens a search surface.
-- `NOTIF-T-8`: the bell/badge (`.pr-topbar-badge-wrap`/`.pr-topbar-badge`) already matched the
-  `notifications-revamp` mockup pixel-for-pixel (32px button, 16px badge, 2px border) — resist
-  re-tweaking its sizing again without a fresh measured diff against the mockup. Its border/digit
-  color now reads `var(--pr-color-white, #fff)` instead of a bare `#fff` literal.
+- `quick/topbar-labelled-actions` (2026-10-06): the bell is now a labelled button — icon + "Notifications"
+  + an INLINE 18px `.pr-topbar-badge` pill after the text (no longer absolute over the icon; the
+  `.pr-topbar-badge-wrap` wrapper is gone). Release notes got the same icon + text treatment. Both
+  override the 32px square with `!w-auto px-2.5`. Supersedes the NOTIF-T-8 icon-only bell sizing.
 
 ## Children
 
@@ -112,4 +119,4 @@ service any more.
 | `app-global-search-palette` | the palette overlay | has its own `CLAUDE.md` — read it before touching the trigger |
 | `app-pop-up-notification-item` | one bell row (decision or update), emits `handoff` | lives under `header-panel/components/`; has inline Accept/Decline (BELL-T-3) |
 
-**Verified:** 2026-10-06 · qa-development-2026-ss · `BELL-T-10` (tabs, N new, Mark as read, cards; also fixed a `viewChild` read typing error) on top of `BELL-T-8` (bell popover: 16px viewport margin + push + start-aligned fallback, width min(360, 100vw-32), max-height from space below the bell, list scrolls) on top of `BELL-T-4`
+**Verified:** 2026-10-06 · qa-development-2026-ss · `notifications/bell-read-state` BRS-T-6 (tab counts, Earlier separator, bellCount chip/Mark as read, loadBellReadUpdates on open) on top of `quick/topbar-labelled-actions` (labelled Release notes + Notifications, inline badge) on top of `BELL-T-10` (tabs, N new, Mark as read, cards; also fixed a `viewChild` read typing error) on top of `BELL-T-8` (bell popover: 16px viewport margin + push + start-aligned fallback, width min(360, 100vw-32), max-height from space below the bell, list scrolls) on top of `BELL-T-4`

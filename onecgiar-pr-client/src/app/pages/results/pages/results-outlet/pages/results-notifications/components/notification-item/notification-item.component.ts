@@ -26,6 +26,7 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 import { ResultLevelService } from '../../../../../result-creator/services/result-level.service';
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { ResultsNotificationsService } from '../../results-notifications.service';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import { NotificationNavigationService } from '../../../../../../../../shared/services/notification-navigation.service';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
@@ -259,6 +260,7 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   private chainRequestToken = 0;
 
   private readonly notificationNavigation = inject(NotificationNavigationService);
+  private readonly resultsNotificationsSE = inject(ResultsNotificationsService);
 
   /**
    * @akili-spec notifications/detail-side-panel (DSP-T-7)
@@ -988,6 +990,10 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     if (mode === 'decide' && this.isBilateralResult && !this.isPrimaryRequest) {
       this.seedTocInitiative();
     }
+
+    // BRS-T-7 (BRS-R-3/R-9): opening a received PENDING request's drawer records it as seen
+    // (`isPending` = status 1 AND not Sent). Fire-and-forget: never blocks opening; never rejects.
+    if (this.isPending) void this.resultsNotificationsSE.markRequestSeen(this.notification);
 
     this.drawerOpen.set(true);
     // DSP-T-2 (DSP-R-8, DD-10): one chain fetch per open, every mode — never gated on `mode`.

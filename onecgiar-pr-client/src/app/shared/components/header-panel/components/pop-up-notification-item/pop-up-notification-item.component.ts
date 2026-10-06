@@ -77,6 +77,11 @@ export class PopUpNotificationItemComponent implements OnDestroy {
   private readonly api = inject(ApiService);
   private readonly notificationsSE = inject(ResultsNotificationsService);
 
+  /** BRS-T-5: unread / unseen row. Rows without the tag (legacy callers) read as fresh. */
+  get fresh(): boolean {
+    return this.notification?.fresh !== false;
+  }
+
   /** Bell rows are tagged `kind` by `ResultsNotificationsService.bellItems`; only decisions get actions. */
   get isDecisionRow(): boolean {
     return this.notification?.kind === 'decision';
@@ -309,6 +314,20 @@ export class PopUpNotificationItemComponent implements OnDestroy {
    */
   onNotificationClick(event: MouseEvent): void {
     const notification = this.notification;
+
+    // BRS-T-5 (BRS-DD-7, BRS-R-3): a decision row body click records "seen" and navigates in-app, so a
+    // full document navigation cannot abort the PATCH. Modifier / non-primary clicks keep the native
+    // anchor (new tab). `markRequestSeen` never rejects and is NOT awaited: a failure must not block
+    // navigation. The destination is the same link the anchor carries (relative app path).
+    if (this.isDecisionRow && !notification?.notification_id) {
+      if ((event.button ?? 0) !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      void this.notificationsSE.markRequestSeen(notification);
+      this.itemSelected.emit();
+      const url = this.generateUrlLink(notification);
+      this.router.navigateByUrl(url.startsWith('/') ? url : `/${url}`);
+      return;
+    }
 
     // A finished AI job goes to its drafts (or the failed job) inside the app.
     if (isAiJobFinishedNotification(notification)) {

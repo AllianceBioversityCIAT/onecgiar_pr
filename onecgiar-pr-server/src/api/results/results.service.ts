@@ -4351,6 +4351,7 @@ export class ResultsService {
           result_id: parsedResultId,
           action: reviewDecisionDto.decision as any,
           comment: reviewDecisionDto.justification || null,
+          initiative_id: owner.id,
           created_by: user.id,
         });
         await manager.save(ResultReviewHistory, reviewHistory);

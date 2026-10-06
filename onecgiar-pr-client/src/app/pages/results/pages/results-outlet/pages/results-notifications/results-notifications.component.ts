@@ -148,6 +148,26 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     public readonly panel: NotificationDetailPanelService
   ) {}
 
+  /** BRS-T-7: double-click guard for the shared "Mark all as read". */
+  private markingAllRead = false;
+
+  /**
+   * BRS-T-7 (BRS-R-3/R-5): same action as the bell popover, all phases (the button is gated on
+   * `bellCount()`, not the phase-filtered list). `markAllBellRead()` rejects only when both legs
+   * failed; it already logged, so the rejection is swallowed here.
+   */
+  async onMarkAllRead(): Promise<void> {
+    if (this.markingAllRead) return;
+    this.markingAllRead = true;
+    try {
+      await this.resultsNotificationsSE.markAllBellRead();
+    } catch {
+      // both legs failed: state untouched, already logged by the service
+    } finally {
+      this.markingAllRead = false;
+    }
+  }
+
   setActiveTab(tab: NotifDecisionTab): void {
     this.activeTab.set(tab);
   }

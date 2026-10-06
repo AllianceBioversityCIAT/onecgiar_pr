@@ -165,20 +165,48 @@ export class ResultsNotificationsService {
    * overwrite a newer snapshot) and cannot clear `bellLoading` for the newer call. */
   private bellGen = 0;
 
-  /** Decisions first (even when older than an update), then newest first inside each kind. Rows are
-   * shallow copies tagged with `kind`; `decideRequest` strips the tag before building the body. */
+  /**
+   * @akili-spec notifications/bell-read-state — BRS-T-4 (design §8.1). Up to 10 most recent READ
+   * updates (first history page, `limit=10`), loaded on popover open only (BRS-DD-5). Never part of
+   * the badge.
+   */
+  readonly bellReadUpdates = signal<any[]>([]);
+
+  /** Bumped on every `loadBellReadUpdates()`; a response from an older call is dropped. */
+  private bellReadGen = 0;
+
+  /** Pending requests the caller has not seen yet (`seen` is server truth; absent counts as unseen). */
+  readonly bellUnseenRequests = computed<any[]>(() => this.bellReceived().filter(row => row?.seen !== true));
+
+  /**
+   * Rows tagged `kind` + `fresh`. Order (BRS-R-8): fresh requests, fresh updates, then (the "Earlier"
+   * group) seen requests, read updates; newest first inside each group. `decideRequest` strips the
+   * tags before building the body.
+   */
   readonly bellItems = computed<any[]>(() => {
     const byDateDesc = (field: string) => (a: any, b: any) => (Date.parse(b?.[field]) || 0) - (Date.parse(a?.[field]) || 0);
-    const decisions = this.bellReceived()
-      .map(row => ({ ...row, kind: 'decision' }))
-      .sort(byDateDesc('requested_date'));
-    const updates = this.bellUpdates()
-      .map(row => ({ ...row, kind: 'update' }))
-      .sort(byDateDesc('created_date'));
-    return [...decisions, ...updates];
+    const requests = this.bellReceived().map(row => ({ ...row, kind: 'decision', fresh: row?.seen !== true }));
+    const unreadIds = new Set(this.bellUpdates().map(row => row?.notification_id));
+    const updates = [
+      ...this.bellUpdates().map(row => ({ ...row, kind: 'update', fresh: true })),
+      ...this.bellReadUpdates()
+        .filter(row => !unreadIds.has(row?.notification_id))
+        .map(row => ({ ...row, kind: 'update', fresh: false }))
+    ];
+    const group = (rows: any[], fresh: boolean, field: string) => rows.filter(row => row.fresh === fresh).sort(byDateDesc(field));
+    return [
+      ...group(requests, true, 'requested_date'),
+      ...group(updates, true, 'created_date'),
+      ...group(requests, false, 'requested_date'),
+      ...group(updates, false, 'created_date')
+    ];
   });
 
-  readonly bellCount = computed(() => this.bellReceived().length + this.bellUpdates().length);
+  /** BRS-DD-6: the badge counts fresh items only (unseen requests + unread updates). Server truth only. */
+  readonly bellCount = computed(() => this.bellUnseenRequests().length + this.bellUpdates().length);
+
+  /** BRS-R-6: the Decide tab counts every pending request, fresh or seen. */
+  readonly bellPendingRequestCount = computed(() => this.bellReceived().length);
 
   /**
    * Reloads the bell snapshot: pending received requests + unread updates, ALL phases (no
@@ -221,31 +249,89 @@ export class ResultsNotificationsService {
   }
 
   /**
-   * BELL-T-10: the popover's "Mark as read". Marks EVERY unread update read through the same
-   * `notification/read-all` endpoint the inbox uses — which takes no `versionId`, so it is
-   * phase-agnostic like the bell snapshot — and then refreshes the bell. Pending decisions are not
-   * touched. Deliberately not `markAllUpdatesNotificationsAsRead()`: that one returns early when the
-   * phase-filtered inbox snapshot (`updatesData`) is empty, which is unrelated to what the bell holds.
-   * Resolves after the refresh was requested; rejects (bell untouched) when the PATCH fails.
+   * BRS-T-4: loads the most recent read updates (`scope=history&limit=10`, all phases) for the
+   * popover's "Earlier" group. Generation-guarded; a failure keeps the previous rows.
    */
-  async markAllBellUpdatesRead(): Promise<void> {
+  loadBellReadUpdates(): void {
+    const gen = ++this.bellReadGen;
+    this.api.resultsSE.GET_requestUpdates({ scope: 'history', limit: 10 }).subscribe({
+      next: ({ response }: any) => {
+        if (gen !== this.bellReadGen || !response) return;
+        const rows = (response.notificationsViewed || [])
+          .slice()
+          .sort((a: any, b: any) => (Date.parse(b?.created_date) || 0) - (Date.parse(a?.created_date) || 0));
+        this.bellReadUpdates.set(rows.slice(0, 10));
+      },
+      error: err => this.logPagingError(err)
+    });
+  }
+
+  /**
+   * BRS-T-4: records that the user saw one pending request. Nothing is optimistic: only when the
+   * server confirms (`response.seen === true`) are the bell row and the inbox `receivedData` row
+   * flipped (matched by `share_result_request_id`), so the badge never drops for an unrecorded item
+   * (BRS-R-3 BUT). Never rejects: a failure is logged and resolves `false`, so callers can keep
+   * navigating. Resolves `true` when recorded (or already seen).
+   */
+  async markRequestSeen(row: any): Promise<boolean> {
+    const id = row?.share_result_request_id;
+    if (id === undefined || id === null) return false;
+    if (row?.seen === true) return true;
+
     try {
-      await firstValueFrom(this.api.resultsSE.PATCH_readAllNotifications(), { defaultValue: null });
+      const res: any = await firstValueFrom(this.api.resultsSE.PATCH_markRequestSeen(id), { defaultValue: null });
+      if (res?.response?.seen !== true) return false;
     } catch (err) {
-      console.error('ResultsNotificationsService: bell mark-all-read failed', (err as any)?.status);
-      throw err;
+      console.error('ResultsNotificationsService: mark request seen failed', (err as any)?.status);
+      return false;
     }
 
+    this.applySeen(id);
+    return true;
+  }
+
+  /** Flips `seen` on the bell row and on the inbox's pending received row with the same id. */
+  private applySeen(id: number | string): void {
+    this.bellReceived.update(rows => rows.map(r => (r?.share_result_request_id === id ? { ...r, seen: true } : r)));
+    (this.receivedData?.receivedContributionsPending ?? []).forEach((r: any) => {
+      if (r?.share_result_request_id === id) r.seen = true;
+    });
+  }
+
+  /**
+   * BRS-T-4 (BRS-DD-4): the "Mark as read" of the popover and the inbox. Fires read-all (updates) and
+   * seen-all (requests) in parallel, both phase-agnostic and for the current user only. The inbox is
+   * synced locally only for the leg that succeeded; then the bell is recomputed from server truth
+   * (`refreshBell()` + `loadBellReadUpdates()`). Rejects only when BOTH legs failed (state untouched);
+   * a single failed leg leaves its items counted, honestly.
+   */
+  async markAllBellRead(): Promise<void> {
+    const [readLeg, seenLeg] = await Promise.allSettled([
+      firstValueFrom(this.api.resultsSE.PATCH_readAllNotifications(), { defaultValue: null }),
+      firstValueFrom(this.api.resultsSE.PATCH_markAllRequestsSeen(), { defaultValue: null })
+    ]);
+
+    if (readLeg.status === 'rejected') console.error('ResultsNotificationsService: bell mark-all-read failed', (readLeg.reason as any)?.status);
+    if (seenLeg.status === 'rejected') console.error('ResultsNotificationsService: bell mark-all-seen failed', (seenLeg.reason as any)?.status);
+    if (readLeg.status === 'rejected' && seenLeg.status === 'rejected') throw readLeg.reason;
+
     // Keep an already-loaded inbox consistent with what the server just did (all phases).
-    const pending = this.updatesData?.notificationsPending ?? [];
-    if (pending.length) {
-      pending.forEach(notification => (notification.read = true));
-      this.updatesData.notificationsViewed = [...pending, ...(this.updatesData.notificationsViewed ?? [])].sort(
-        (a, b) => Date.parse(b.created_date) - Date.parse(a.created_date)
-      );
-      this.updatesData.notificationsPending = [];
+    if (readLeg.status === 'fulfilled') {
+      const pending = this.updatesData?.notificationsPending ?? [];
+      if (pending.length) {
+        pending.forEach(notification => (notification.read = true));
+        this.updatesData.notificationsViewed = [...pending, ...(this.updatesData.notificationsViewed ?? [])].sort(
+          (a, b) => Date.parse(b.created_date) - Date.parse(a.created_date)
+        );
+        this.updatesData.notificationsPending = [];
+      }
     }
+    if (seenLeg.status === 'fulfilled') {
+      (this.receivedData?.receivedContributionsPending ?? []).forEach((r: any) => (r.seen = true));
+    }
+
     this.refreshBell();
+    this.loadBellReadUpdates();
   }
 
   /**
@@ -254,7 +340,7 @@ export class ResultsNotificationsService {
    * rejects with the original error for anything else, leaving bell state untouched (BELL-R-8).
    */
   async decideRequest(row: any, isAccept: boolean): Promise<void> {
-    const { kind: _kind, ...raw } = row ?? {};
+    const { kind: _kind, fresh: _fresh, seen: _seen, ...raw } = row ?? {};
 
     try {
       await firstValueFrom(this.api.resultsSE.PATCH_updateRequest(buildDecisionBody(raw, isAccept), isP25(raw)), { defaultValue: null });
@@ -273,7 +359,7 @@ export class ResultsNotificationsService {
       throw err;
     }
 
-    this.bellReceived.update(rows => rows.filter(r => !Object.keys(raw).every(key => r?.[key] === raw[key])));
+    this.bellReceived.update(rows => rows.filter(r => r?.share_result_request_id !== raw.share_result_request_id));
     this.api.alertsFe.show({
       id: 'noti',
       title: isAccept ? 'Request successfully accepted' : 'Request successfully rejected',
@@ -666,34 +752,6 @@ export class ResultsNotificationsService {
         this.updatesData.notificationsViewed = initialViewed;
         this.updatesData.notificationsPending = initialPending;
         console.error(err);
-      }
-    });
-  }
-
-  markAllUpdatesNotificationsAsRead() {
-    if (this.updatesData.notificationsPending.length === 0) return;
-
-    const initialViewed = this.updatesData.notificationsViewed.map(notification => ({ ...notification }));
-    const initialPending = this.updatesData.notificationsPending.map(notification => ({ ...notification }));
-
-    this.updatesData.notificationsPending.forEach(notification => {
-      notification.read = true;
-      this.updatesData.notificationsViewed.push(notification);
-    });
-
-    // NOTIF-T-6 rework (Reviewer's remediation item 1 — "Mark all as read" was itself broken by
-    // the deleted `.../updates` route this used to navigate through). Same reasoning as
-    // `readUpdatesNotifications()` above: the mutation is the update, no navigation needed.
-
-    this.updatesData.notificationsViewed.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
-    this.updatesData.notificationsPending = [];
-
-    this.api.resultsSE.PATCH_readAllNotifications().subscribe({
-      next: () => this.refreshBell(),
-      error: err => {
-        console.error(err);
-        this.updatesData.notificationsViewed = initialViewed;
-        this.updatesData.notificationsPending = initialPending;
       }
     });
   }

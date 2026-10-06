@@ -47,7 +47,8 @@ describe('ResultsNotificationsComponent', () => {
       get_section_information: jest.fn(),
       get_sent_notifications: jest.fn(),
       get_updates_notifications: jest.fn(),
-      markAllUpdatesNotificationsAsRead: jest.fn(),
+      markAllBellRead: jest.fn().mockResolvedValue(undefined),
+      bellCount: signal(0),
       resetNotificationInformation: jest.fn(),
       resetFilters: jest.fn(),
       getAllPhases: jest.fn(),
@@ -1144,31 +1145,55 @@ describe('ResultsNotificationsComponent', () => {
       expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Announcements');
     });
 
-    it('renders "Mark all as read" only when there is at least one unread Update, and it delegates to the service', () => {
+    const findMarkAll = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
+        b.textContent?.includes('Mark all as read')
+      ) as HTMLButtonElement | undefined;
+
+    // BRS-T-7 (BRS-R-3/R-5): the button follows the bell badge (all phases), not the phase-filtered
+    // `notificationsPending`, and delegates to the shared `markAllBellRead()`.
+    it('shows "Mark all as read" while the bell has a badge even if the filtered view has 0 unread updates, and delegates to markAllBellRead', () => {
+      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+      resultsNotificationsServiceMock.bellCount.set(3);
+      fixture.detectChanges();
+
+      const button = findMarkAll();
+      expect(button).toBeTruthy();
+
+      button.click();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render "Mark all as read" when the bell count is 0, even with unread updates in the filtered view', () => {
       resultsNotificationsServiceMock.updatesData = {
         notificationAnnouncements: [],
         notificationsPending: [{ notification_id: 1 }],
         notificationsViewed: []
       };
+      resultsNotificationsServiceMock.bellCount.set(0);
       fixture.detectChanges();
 
-      const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
-        b.textContent?.includes('Mark all as read')
-      ) as HTMLButtonElement;
-      expect(button).toBeTruthy();
-
-      button.click();
-      expect(resultsNotificationsServiceMock.markAllUpdatesNotificationsAsRead).toHaveBeenCalled();
+      expect(findMarkAll()).toBeFalsy();
     });
 
-    it('does not render "Mark all as read" when there is nothing pending', () => {
-      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+    it('ignores a second click while the first markAllBellRead() is still in flight', async () => {
+      let resolve: () => void;
+      resultsNotificationsServiceMock.markAllBellRead.mockReturnValue(new Promise<void>(r => (resolve = r)));
+      resultsNotificationsServiceMock.bellCount.set(2);
       fixture.detectChanges();
 
-      const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
-        b.textContent?.includes('Mark all as read')
-      );
-      expect(button).toBeFalsy();
+      const p1 = component.onMarkAllRead();
+      const p2 = component.onMarkAllRead();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(1);
+      resolve();
+      await Promise.all([p1, p2]);
+      await component.onMarkAllRead();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(2);
+    });
+
+    it('swallows a markAllBellRead() rejection (both legs failed) without an unhandled error', async () => {
+      resultsNotificationsServiceMock.markAllBellRead.mockRejectedValue(new Error('x'));
+      await expect(component.onMarkAllRead()).resolves.toBeUndefined();
     });
   });
 

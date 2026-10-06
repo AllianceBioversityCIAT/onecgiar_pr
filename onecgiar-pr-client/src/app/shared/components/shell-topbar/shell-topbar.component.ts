@@ -203,9 +203,12 @@ export class ShellTopbarComponent {
   readonly bellCount = computed(() => this.resultsNotificationsSE.bellCount());
   /** BELL-T-10: the active tab. The cap (R-3) and "+N more" below count against it. */
   readonly bellTab = signal<BellTab>('all');
-  readonly bellDecisionCount = computed(() => this.resultsNotificationsSE.bellItems().filter(row => row?.kind === 'decision').length);
-  /** BELL-T-10: unread updates (the bell only ever holds unread ones) -> the "N new" chip. */
-  readonly bellUnreadUpdates = computed(() => this.resultsNotificationsSE.bellItems().filter(row => row?.kind === 'update').length);
+  /** BRS-R-6: the Decide tab counts every pending request (fresh or seen), so it ignores the badge. */
+  readonly bellDecisionCount = computed(() => this.resultsNotificationsSE.bellPendingRequestCount());
+  /** BRS-R-6: the Updates tab counts unread updates (the read ones listed under "Earlier" do not count). */
+  readonly bellUpdatesCount = computed(() => this.resultsNotificationsSE.bellUpdates().length);
+  /** BRS-R-6: the All tab counts the rows it lists. */
+  readonly bellAllCount = computed(() => this.resultsNotificationsSE.bellItems().length);
   readonly bellTabItems = computed(() => {
     const items = this.resultsNotificationsSE.bellItems();
     const tab = this.bellTab();
@@ -214,6 +217,11 @@ export class ShellTopbarComponent {
     return items;
   });
   readonly bellVisibleItems = computed(() => this.bellTabItems().slice(0, BELL_MAX_ROWS));
+  /** BRS-R-8: index (within the rendered rows) of the first non-fresh row, where "Earlier" goes; -1 = none. */
+  readonly bellEarlierIndex = computed(() => {
+    const index = this.bellVisibleItems().findIndex(row => row?.fresh === false);
+    return index > 0 ? index : -1;
+  });
   readonly bellOverflow = computed(() => Math.max(0, this.bellTabItems().length - BELL_MAX_ROWS));
   /** BELL-T-10: in-flight "Mark as read" (blocks a double click). */
   readonly markingRead = signal(false);
@@ -226,8 +234,8 @@ export class ShellTopbarComponent {
    * template, which renders the line above the list in that case.
    */
   readonly bellState = computed<'loading' | 'error' | 'empty' | 'list'>(() => {
-    const count = this.bellCount();
-    if (count > 0) return 'list';
+    // BRS-R-8: read/seen rows keep the list on screen even when the badge is 0.
+    if (this.bellCount() > 0 || this.resultsNotificationsSE.bellItems().length > 0) return 'list';
     if (this.resultsNotificationsSE.bellError()) return 'error';
     if (this.resultsNotificationsSE.bellLoading()) return 'loading';
     return 'empty';
@@ -266,6 +274,7 @@ export class ShellTopbarComponent {
         { injector: this.injector }
       );
       this.resultsNotificationsSE.refreshBell();
+      this.resultsNotificationsSE.loadBellReadUpdates();
     }
   }
 
@@ -339,7 +348,7 @@ export class ShellTopbarComponent {
     if (this.markingRead()) return;
     this.markingRead.set(true);
     try {
-      await this.resultsNotificationsSE.markAllBellUpdatesRead();
+      await this.resultsNotificationsSE.markAllBellRead();
     } catch {
       // The service already logged it; rows stay as they were and the control is re-enabled below.
     } finally {
