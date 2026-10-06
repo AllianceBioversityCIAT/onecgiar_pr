@@ -7,6 +7,8 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { AI_REVIEW_COPY } from '../../../../../../internationalization/ai-review.copy';
 
 @Component({
   selector: 'app-ai-review',
@@ -19,6 +21,16 @@ export class AiReviewComponent {
   scoreSE = inject(ScoreService);
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
   alertsFe = inject(CustomizedAlertsFeService);
+  private readonly rolesSE = inject(RolesService);
+  readonly copy = AI_REVIEW_COPY;
+
+  /**
+   * P2-3110 (Santiago, 5-Oct-2026): view-only users and closed phases cannot edit or save here, the
+   * same as in Section 1. `rolesSE.readOnly` already folds in role, phase, status and AVISA.
+   */
+  get readOnly(): boolean {
+    return this.rolesSE.readOnly;
+  }
 
   // Field values
   titleCurrentVersion = 'Small-scale Fisheries and Aquaculture Ontology';
@@ -27,11 +39,13 @@ export class AiReviewComponent {
   innovationShortTitleCurrentVersion = '';
 
   moveTextToInput(field: any) {
+    if (this.readOnly) return;
     field.canSave = true;
     field.original_text = field.proposed_text;
   }
 
   onResultVersionChange(dacScore: DacScores, value: string | number) {
+    if (this.readOnly) return;
     // Actualizar el tag_id del dacScore
     dacScore.tag_id = value;
     dacScore.canSave = true;
@@ -43,6 +57,7 @@ export class AiReviewComponent {
   }
 
   onComponentChange(dacScore: DacScores, value: string | number) {
+    if (this.readOnly) return;
     // Alternar el componente en la lista: se agrega si no está, se quita si ya estaba
     const currentIds = dacScore.impact_area_id ?? [];
 
@@ -127,7 +142,13 @@ export class AiReviewComponent {
     this.alertsFe.show({ id, title, description, status, hideCancelButton: true });
   }
 
+  onApplyProposal(field: any, index: number) {
+    if (this.readOnly) return;
+    this.aiReviewSE.onApplyProposal(field, index);
+  }
+
   async onSaveDacScore(dacScore: DacScores) {
+    if (this.readOnly) return;
     if (this.isIncomplete(dacScore)) {
       this.showAlert(
         'ai-review-component-required',

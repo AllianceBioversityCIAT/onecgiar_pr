@@ -9,6 +9,10 @@
       <img src="assets/icons/stars.png" alt="" srcset="" /> The AI analyzed your information and identified the following:
     </div>
 
+    @if (readOnly) {
+      <app-alert-status status="info" class="ai-review-readonly-notice" [description]="copy.readOnlyNotice"></app-alert-status>
+    }
+
     @for (field of aiReviewSE.currnetFieldsList(); track $index) {
       <!-- Title Section -->
       <div class="field-section">
@@ -29,7 +33,7 @@
 
           @if (field.original_text == field.proposed_text) {
             <div class="applied-badge"><i class="pi pi-check-circle"></i> Applied</div>
-          } @else {
+          } @else if (!readOnly) {
             <div class="apply-proposal-button" (click)="moveTextToInput(field)">Apply proposal</div>
           }
         </div>
@@ -40,7 +44,7 @@
           <p class="version-label">Result version</p>
           @if ($index === 1) {
             <app-pr-textarea
-              [readOnly]="false"
+              [readOnly]="readOnly"
               [(ngModel)]="field.original_text"
               (ngModelChange)="field.canSave = true"
               placeholder="">
@@ -48,7 +52,7 @@
           } @else {
             <app-pr-input
               type="text"
-              [readOnly]="false"
+              [readOnly]="readOnly"
               [(ngModel)]="field.original_text"
               (ngModelChange)="field.canSave = true"
               placeholder="">
@@ -64,15 +68,17 @@
           </app-alert-status>
         }
 
-        <app-pr-button
-          [ngClass]="{ globalDisabled: !field.canSave }"
-          text="Save changes"
-          icon="save"
-          [showBackground]="true"
-          class="save-button-custom"
-          onkeypress="aiReviewSE.onApplyProposal(field, $index)"
-          (click)="aiReviewSE.onApplyProposal(field, $index)">
-        </app-pr-button>
+        @if (!readOnly) {
+          <app-pr-button
+            [ngClass]="{ globalDisabled: !field.canSave }"
+            text="Save changes"
+            icon="save"
+            [showBackground]="true"
+            class="save-button-custom"
+            onkeypress="onApplyProposal(field, $index)"
+            (click)="onApplyProposal(field, $index)">
+          </app-pr-button>
+        }
       </div>
     }
 
@@ -107,7 +113,7 @@
           <div class="current-version">
             <div class="radio-button-group">
               @for (option of scoreSE.genderTagScoreList; track option.id) {
-                <div class="radio-button-item" (click)="onResultVersionChange(dacScore, option.id)">
+                <div class="radio-button-item" [class.is-readonly]="readOnly" [attr.aria-disabled]="readOnly" (click)="onResultVersionChange(dacScore, option.id)">
                   <div class="radio-circle" [class.selected]="dacScore.tag_id === option.id">
                     @if (dacScore.tag_id === option.id) {
                       <div class="radio-dot"></div>
@@ -124,7 +130,7 @@
               <label class="version-label">Component</label>
               <div class="radio-button-group">
                 @for (component of getComponentListByFieldName(dacScore.field_name); track component.id) {
-                  <div class="radio-button-item" (click)="onComponentChange(dacScore, component.id)">
+                  <div class="radio-button-item" [class.is-readonly]="readOnly" [attr.aria-disabled]="readOnly" (click)="onComponentChange(dacScore, component.id)">
                     <div class="checkbox-square" [class.selected]="isComponentSelected(dacScore, component.id)">
                       @if (isComponentSelected(dacScore, component.id)) {
                         <i class="material-icons-round checkbox-check">check</i>
@@ -137,14 +143,16 @@
             </div>
           }
 
-          <app-pr-button
-            [ngClass]="{ globalDisabled: !dacScore.canSave }"
-            text="Save changes"
-            icon="save"
-            [showBackground]="true"
-            class="save-button-custom"
-            (click)="onSaveDacScore(dacScore)">
-          </app-pr-button>
+          @if (!readOnly) {
+            <app-pr-button
+              [ngClass]="{ globalDisabled: !dacScore.canSave }"
+              text="Save changes"
+              icon="save"
+              [showBackground]="true"
+              class="save-button-custom"
+              (click)="onSaveDacScore(dacScore)">
+            </app-pr-button>
+          }
           </div>
         }
       </div>
