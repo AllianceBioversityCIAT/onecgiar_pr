@@ -9,7 +9,8 @@
 // whole row still reads as one card.
 .notification-row {
   position: relative;
-  padding: 12px;
+  // BRS-T-5: extra left room for the 7px unread dot (mockup: 18px).
+  padding: 12px 12px 12px 18px;
   overflow: hidden;
   background-color: var(--pr-surface-card);
   border: 1px solid var(--pr-border);

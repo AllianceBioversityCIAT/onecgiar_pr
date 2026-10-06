@@ -2,10 +2,17 @@
 
 <!-- BELL-T-10: one card per row. Decision cards get a left accent bar; update cards a status icon. -->
 <div class="notification-row" [class.notification-row--decision]="isDecisionRow" [attr.data-kind]="notification?.kind" (keydown.escape)="onCardKeydown($event)" (focusout)="onCardFocusout($event)">
+@if (fresh) {
+  <span
+    class="absolute left-[7px] top-[16px] size-[7px] rounded-full bg-[var(--pr-color-primary-300)]"
+    data-testid="bell-unread-dot"
+    aria-hidden="true"></span>
+}
 <div class="flex items-start gap-2.5">
 @if (!isDecisionRow && !!notification?.notification_id) {
   <span
     class="mt-[2px] inline-flex size-[26px] shrink-0 items-center justify-center rounded-full"
+    [class.opacity-70]="!fresh"
     [class]="updateStatus.status === 'approved' ? 'bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)]' : updateStatus.status === 'declined' ? 'bg-[var(--pr-status-rejected-bg)] text-[var(--pr-status-rejected-fg)]' : 'bg-[var(--pr-surface-sunken)] text-[var(--pr-text-secondary)]'"
     data-testid="bell-status-icon"
     [attr.data-status]="updateStatus.status"
@@ -15,6 +22,9 @@
 }
 <div class="min-w-0 flex-1">
 <a class="notification" [href]="resultUrl" (click)="onNotificationClick($event)">
+  @if (fresh) {
+    <span class="sr-only" data-testid="bell-unread-label">{{ copy.card.unreadRowPrefix }}: </span>
+  }
   @if (!!notification?.notification_id) {
     @let officialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
     @let textParts = textPartsOf(notification);
@@ -25,14 +35,17 @@
         variant="secondary"
         data-testid="bell-status-chip"
         class="!text-[10px] !font-semibold"
+        [class.opacity-70]="!fresh"
         [class]="updateStatus.status === 'approved' ? '!bg-[var(--pr-status-approved-bg)] !text-[var(--pr-status-approved-fg)]' : updateStatus.status === 'declined' ? '!bg-[var(--pr-status-rejected-bg)] !text-[var(--pr-status-rejected-fg)]' : ''">{{ updateStatus.label }}</span>
       @if (programCode) {
-        <span hlmBadge variant="outline" data-testid="bell-program-chip" class="!text-[10px] !font-semibold">{{ programCode }}</span>
+        <span hlmBadge variant="outline" data-testid="bell-program-chip" class="!text-[10px] !font-semibold" [class.opacity-70]="!fresh">{{ programCode }}</span>
       }
       <span class="ml-auto text-[11px] text-[var(--pr-text-subtle)]" data-testid="bell-time">{{ shortAge(notification.created_date) }}</span>
     </div>
 
-    <p class="m-0 line-clamp-2 text-[12px] font-medium leading-[1.45]">
+    <p
+      class="m-0 line-clamp-2 text-[12px] leading-[1.45]"
+      [class]="fresh ? 'font-bold text-[var(--pr-text-heading)]' : 'font-normal text-[var(--pr-text-secondary)] [&_b]:font-normal'">
       @if (isAiJob(notification)) {
         {{ textParts.prefix }}
       } @else {
@@ -55,7 +68,7 @@
       }
 
       <!-- Attached comma (NDCW-R-2): no whitespace inside the span's tail nor between </span> and the trailer. -->
-      <span style="text-decoration: underline; color: var(--pr-color-black)">{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</span
+      <span data-testid="bell-result-ref" [class]="fresh ? 'underline text-[var(--pr-color-black)]' : 'underline'">{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</span
       >{{ textParts.linkTrailer }}
 
       @if (textParts.suffix) {
@@ -67,7 +80,7 @@
   } @else {
     <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
       @if (programCode) {
-        <span hlmBadge variant="outline" data-testid="bell-program-chip" class="!text-[10px] !font-semibold">{{ programCode }}</span>
+        <span hlmBadge variant="outline" data-testid="bell-program-chip" class="!text-[10px] !font-semibold" [class.opacity-70]="!fresh">{{ programCode }}</span>
       }
       <span
         hlmBadge
@@ -77,7 +90,9 @@
       <span class="ml-auto text-[11px] text-[var(--pr-text-subtle)]" data-testid="bell-time">{{ shortAge(notification?.requested_date) }}</span>
     </div>
 
-    <p class="m-0 line-clamp-2 text-[12px] font-medium leading-[1.45]">
+    <p
+      class="m-0 line-clamp-2 text-[12px] leading-[1.45]"
+      [class]="fresh ? 'font-bold text-[var(--pr-text-heading)]' : 'font-normal text-[var(--pr-text-secondary)] [&_b]:font-normal'">
       <b>
         {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
         {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
@@ -92,7 +107,7 @@
 
       to result
 
-      <span style="text-decoration: underline; color: var(--pr-color-black)">
+      <span data-testid="bell-result-ref" [class]="fresh ? 'underline text-[var(--pr-color-black)]' : 'underline'">
         {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
       </span>
 

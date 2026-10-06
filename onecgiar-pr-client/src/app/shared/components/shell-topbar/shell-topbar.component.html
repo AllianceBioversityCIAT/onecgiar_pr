@@ -188,16 +188,16 @@
       [style.max-height.px]="notificationsMaxHeight()"
       role="dialog"
       [attr.aria-label]="bellCopy.title">
-      <!-- BELL-T-10: header = title + "N new" (unread updates) + "Mark as read"; then the segmented tabs. -->
+      <!-- BRS-T-6: header = title + "N new" (= bell badge) + "Mark as read"; then the segmented tabs. -->
       <div class="flex items-center gap-2 px-4 pt-3 pb-2" data-bell-head>
         <h2 class="pr-topbar-panel__title m-0">{{ bellCopy.title }}</h2>
-        @if (bellUnreadUpdates() > 0) {
+        @if (bellCount() > 0) {
           <span
             hlmBadge
             variant="secondary"
             data-bell-new
             class="!bg-[var(--pr-surface-band)] !text-[11px] !font-semibold !text-[var(--pr-color-primary-400)]">
-            {{ bellCopy.newChip(bellUnreadUpdates()) }}
+            {{ bellCopy.newChip(bellCount()) }}
           </span>
           <button
             hlmBtn
@@ -214,20 +214,25 @@
         }
       </div>
 
+      <!-- BRS-R-6 / NFR a11y: each count is plain text inside its tab button, so it is part of the
+           tab's accessible name ("All 5", "Decide 40 to decide", "Updates 3"). -->
       <hlm-tabs [tab]="bellTab()" class="px-3 pb-2">
         <hlm-tabs-list class="w-full" [attr.aria-label]="bellCopy.tabsAriaLabel">
           <button hlmTabsTrigger="all" type="button" data-bell-tab="all" class="!text-[12px]" (click)="setBellTab('all')">
             {{ bellCopy.tabs.all }}
-            <span class="text-[11px] font-normal text-[var(--pr-text-subtle)]" data-bell-tab-count>{{ bellCount() }}</span>
+            <span class="text-[11px] font-medium text-[var(--pr-text-subtle)]" data-bell-tab-count>{{ bellAllCount() }}</span>
           </button>
           <button hlmTabsTrigger="decide" type="button" data-bell-tab="decide" class="!text-[12px]" (click)="setBellTab('decide')">
             {{ bellCopy.tabs.decide }}
             @if (bellDecisionCount() > 0) {
-              <span class="size-[6px] rounded-full bg-[var(--pr-color-orange-500)]" data-bell-decide-dot aria-hidden="true"></span>
+              <span class="text-[11px] font-bold text-[var(--pr-color-orange-500)]" data-bell-tab-count data-bell-decide-count>{{ bellCopy.decideCount(bellDecisionCount()) }}</span>
             }
           </button>
           <button hlmTabsTrigger="updates" type="button" data-bell-tab="updates" class="!text-[12px]" (click)="setBellTab('updates')">
             {{ bellCopy.tabs.updates }}
+            @if (bellUpdatesCount() > 0) {
+              <span class="text-[11px] font-medium text-[var(--pr-text-subtle)]" data-bell-tab-count>{{ bellUpdatesCount() }}</span>
+            }
           </button>
         </hlm-tabs-list>
       </hlm-tabs>
@@ -264,6 +269,11 @@
               </p>
             }
             @for (notification of bellVisibleItems(); track notification.kind + '-' + (notification.share_result_request_id ?? notification.notification_id ?? $index); let i = $index) {
+              @if (i === bellEarlierIndex()) {
+                <p class="m-0 px-[2px] pt-[6px] text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]" data-bell-earlier>
+                  {{ bellCopy.earlier }}
+                </p>
+              }
               <app-pop-up-notification-item
                 [attr.data-bell-row]="i"
                 [notification]="notification"

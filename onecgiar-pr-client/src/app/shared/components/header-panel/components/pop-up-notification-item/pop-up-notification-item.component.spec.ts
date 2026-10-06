@@ -31,7 +31,7 @@ describe('PopUpNotificationItemComponent', () => {
   let router: { navigate: jest.Mock; navigateByUrl: jest.Mock };
   let bilateralApi: { GET_centersByResultId: jest.Mock };
   let resultsApi: { PATCH_readNotification: jest.Mock };
-  let notificationsSE: { decideRequest: jest.Mock; refreshBell: jest.Mock };
+  let notificationsSE: { decideRequest: jest.Mock; refreshBell: jest.Mock; markRequestSeen: jest.Mock };
   let apiMock: any;
 
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe('PopUpNotificationItemComponent', () => {
       GET_centersByResultId: jest.fn().mockReturnValue(of({ response: [] }))
     };
     resultsApi = { PATCH_readNotification: jest.fn().mockReturnValue(of({})) };
-    notificationsSE = { decideRequest: jest.fn().mockResolvedValue(undefined), refreshBell: jest.fn() };
+    notificationsSE = { decideRequest: jest.fn().mockResolvedValue(undefined), refreshBell: jest.fn(), markRequestSeen: jest.fn().mockResolvedValue(true) };
     apiMock = {
       rolesSE: { isAdmin: false, platformIsClosed: false },
       dataControlSE: { reportingCurrentPhase: { phaseId: 'v1' }, IPSRCurrentPhase: { phaseId: 'v1' } }
@@ -304,18 +304,15 @@ describe('PopUpNotificationItemComponent', () => {
         expect(notificationsSE.refreshBell).not.toHaveBeenCalled();
       });
 
-      it('a decision row (no notification_id) keeps the plain anchor: no preventDefault, no PATCH, no decide', () => {
+      it('a decision row body click never decides (BRS-T-5 replaces the plain-anchor behaviour)', () => {
         component.notification = {
           kind: 'decision',
           share_result_request_id: 7,
           obj_result: { result_code: 'R9', title: 'T', obj_version: { id: 'v1' } }
         };
 
-        const event = clickEvent();
-        component.onNotificationClick(event);
+        component.onNotificationClick(clickEvent());
 
-        expect(event.preventDefault).not.toHaveBeenCalled();
-        expect(router.navigateByUrl).not.toHaveBeenCalled();
         expect(resultsApi.PATCH_readNotification).not.toHaveBeenCalled();
         expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
       });
@@ -1282,6 +1279,170 @@ describe('PopUpNotificationItemComponent', () => {
       expect(handoff).toHaveBeenCalledWith({ row: r, action: 'decline' });
       expect(text(dec(f))).toBe(copy.actions.decline);
       expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    });
+  });
+  // @akili-spec notifications/bell-read-state — BRS-T-5: fresh / read look + request body click marks seen
+  describe('BRS-T-5: read state', () => {
+    const copy = BELL_QUICK_INBOX_COPY;
+    const decision = (overrides: any = {}) => ({
+      kind: 'decision',
+      fresh: true,
+      share_result_request_id: 7,
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: true,
+      requested_date: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
+      obj_requested_by: { first_name: 'Ana', last_name: 'Diaz' },
+      obj_owner_initiative: { id: 1, official_code: 'SP01' },
+      obj_shared_inititiative: { id: 2, official_code: 'SP02' },
+      obj_result: { id: 5, result_code: 'R9', title: 'Pending', status_id: 1, obj_version: { id: 'v1' }, obj_result_type: { id: 1 } },
+      ...overrides
+    });
+    const update = (overrides: any = {}) => ({
+      kind: 'update',
+      fresh: true,
+      notification_id: 11,
+      read: false,
+      created_date: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+      obj_notification_type: { type: NotificationType.RESULT_SUBMITTED },
+      obj_emitter_user: { first_name: 'Eva', last_name: 'Ruiz' },
+      obj_result: { result_code: 'R5', title: 'Done', obj_version: { id: 'v1' }, obj_result_by_initiatives: [{ obj_initiative: { id: 3, official_code: 'SP09' } }] },
+      ...overrides
+    });
+    const render = (row: any) => {
+      fixture = TestBed.createComponent(PopUpNotificationItemComponent);
+      component = fixture.componentInstance;
+      component.notification = row;
+      fixture.detectChanges();
+    };
+    const q = (id: string): HTMLElement | null => fixture.nativeElement.querySelector(`[data-testid="${id}"]`);
+    const body = (): HTMLElement => fixture.nativeElement.querySelector('p.m-0');
+    const mouse = (init: MouseEventInit = {}) => new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
+
+    describe('look', () => {
+      it('a fresh row shows the dot, bold text and "Unread" in its accessible name', () => {
+        render(decision());
+        expect(q('bell-unread-dot')).toBeTruthy();
+        expect(q('bell-unread-dot')!.getAttribute('aria-hidden')).toBe('true');
+        expect(body().className).toContain('font-bold');
+        expect(body().className).not.toContain('font-normal');
+        expect(q('bell-unread-label')!.textContent).toContain(copy.card.unreadRowPrefix);
+        expect(fixture.nativeElement.querySelector('a.notification').textContent).toContain(copy.card.unreadRowPrefix);
+      });
+
+      it('a read row shows no dot, regular secondary text and no "Unread" label', () => {
+        render(decision({ fresh: false }));
+        expect(q('bell-unread-dot')).toBeNull();
+        expect(q('bell-unread-label')).toBeNull();
+        expect(body().className).toContain('font-normal');
+        expect(body().className).toContain('text-[var(--pr-text-secondary)]');
+        expect(body().className).not.toContain('font-bold');
+      });
+
+      it('the underlined result reference is black on fresh rows and inherits the dimmed colour on read rows', () => {
+        for (const row of [decision(), update()]) {
+          render(row);
+          expect(q('bell-result-ref')!.className).toContain('underline');
+          expect(q('bell-result-ref')!.className).toContain('text-[var(--pr-color-black)]');
+          expect(q('bell-result-ref')!.getAttribute('style')).toBeNull();
+          render({ ...row, fresh: false });
+          expect(q('bell-result-ref')!.className).toContain('underline');
+          expect(q('bell-result-ref')!.className).not.toContain('pr-color-black');
+          expect(q('bell-result-ref')!.getAttribute('style')).toBeNull();
+        }
+      });
+
+      it('the unread dot is positioned in px, not rem', () => {
+        render(decision());
+        expect(q('bell-unread-dot')!.className).toContain('top-[16px]');
+      });
+
+      it('a row with no `fresh` tag is treated as fresh', () => {
+        render(decision({ fresh: undefined }));
+        expect(q('bell-unread-dot')).toBeTruthy();
+      });
+
+      it('a read update row dims its status icon and chip; a fresh one does not', () => {
+        render(update({ fresh: false }));
+        expect(q('bell-status-icon')!.className).toContain('opacity-70');
+        expect(q('bell-status-chip')!.className).toContain('opacity-70');
+        render(update());
+        expect(q('bell-status-icon')!.className).not.toContain('opacity-70');
+        expect(q('bell-status-chip')!.className).not.toContain('opacity-70');
+      });
+
+      it('Requires decision chip, Accept and Decline carry identical classes in fresh and read rows, and never the read-state dimming', () => {
+        const classesOf = (row: any) => {
+          render(row);
+          const chips = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="bell-status-chip"]')) as HTMLElement[];
+          const decide = chips.find(c => c.textContent!.includes(copy.card.requiresDecision))!;
+          return [decide.className, q('bell-accept')!.className, q('bell-decline')!.className];
+        };
+        const fresh = classesOf(decision());
+        const read = classesOf(decision({ fresh: false }));
+        expect(read).toEqual(fresh);
+        read.forEach(c => expect(c).not.toContain('opacity-70'));
+      });
+    });
+
+    describe('decision body click', () => {
+      it('a plain click marks the request seen, closes the popover and navigates in-app, without deciding', () => {
+        render(decision());
+        const emitted = jest.fn();
+        component.itemSelected.subscribe(emitted);
+        const event = mouse();
+
+        fixture.nativeElement.querySelector('a.notification').dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(notificationsSE.markRequestSeen).toHaveBeenCalledWith(component.notification);
+        expect(emitted).toHaveBeenCalledTimes(1);
+        const expected = component.generateUrlLink(component.notification);
+        expect(router.navigateByUrl).toHaveBeenCalledWith(`/${expected}`);
+        expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+        expect(resultsApi.PATCH_readNotification).not.toHaveBeenCalled();
+      });
+
+      it('does not wait for markRequestSeen before navigating', () => {
+        notificationsSE.markRequestSeen.mockReturnValue(new Promise(() => undefined));
+        render(decision());
+        component.onNotificationClick(mouse());
+        expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
+      });
+
+      it('a failed markRequestSeen (resolves false) still navigates', () => {
+        notificationsSE.markRequestSeen.mockResolvedValue(false);
+        render(decision());
+        component.onNotificationClick(mouse());
+        expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
+      });
+
+      it.each([
+        ['ctrl', { ctrlKey: true }],
+        ['meta', { metaKey: true }],
+        ['shift', { shiftKey: true }],
+        ['alt', { altKey: true }],
+        ['middle button', { button: 1 }]
+      ])('a %s click keeps native behaviour: no preventDefault, no seen, no navigation', (_label, init) => {
+        render(decision());
+        const emitted = jest.fn();
+        component.itemSelected.subscribe(emitted);
+        const event = mouse(init as MouseEventInit);
+
+        component.onNotificationClick(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(notificationsSE.markRequestSeen).not.toHaveBeenCalled();
+        expect(router.navigateByUrl).not.toHaveBeenCalled();
+        expect(emitted).not.toHaveBeenCalled();
+      });
+
+      it('Accept and Decline clicks never mark the request seen', () => {
+        render(decision({ is_map_to_toc: false, request_type: 'primary' }));
+        q('bell-accept')!.click();
+        q('bell-decline')!.click();
+        expect(notificationsSE.markRequestSeen).not.toHaveBeenCalled();
+      });
     });
   });
 });
