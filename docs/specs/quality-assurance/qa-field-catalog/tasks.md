@@ -36,7 +36,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 - **Done:** all shape rules covered one-fixture-per-rule; `tsc` green.
 - **Skills:** `nestjs-expert`, `tdd`
 
-### QAC-T-2 — Catalog entities and migration
+### [x] QAC-T-2 — Catalog entities and migration
 
 - **Type:** db · **Estimate:** M · **Review:** full — migration
 - **Description:** Entities `qa_catalog_result_type`, `qa_catalog_section`, `qa_catalog_field` (incl. `parent_key`, `required_confirmed`, `storage` JSON, `required_when` JSON), `qa_catalog_version` per design §4. Generate the migration with `npm run migration:generate --name=QaCatalogTables`, **prune** every statement not about these 4 tables. Do not run it — the owner runs migrations.

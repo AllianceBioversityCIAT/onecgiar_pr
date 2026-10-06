@@ -52,7 +52,7 @@ docs/specs/quality-assurance/qa-field-catalog/inventory/2026.md (+ 2025.md)  —
 |---|---|---|
 | `qa_catalog_result_type` | `key` (PK), `label`, `level` | |
 | `qa_catalog_section` | `key` (PK), `label`, `order`, `result_types` JSON, `valid_from`, `valid_to` | |
-| `qa_catalog_field` | `id` (PK), `key` (unique with `parent_key`), `parent_key` (null for top-level; set for subfields), `label`, `description`, `type`, `control_list`, `section_key`, `order`, `result_types` JSON, `required`, `required_confirmed` bool, `required_when` JSON, `valid_from`, `valid_to`, `storage` JSON, `created_at`, `updated_at` | Subfields are rows with `parent_key` — one table, no second hierarchy |
+| `qa_catalog_field` | `id` (PK), `key` (unique with `parent_key`), `parent_key` (NOT NULL DEFAULT `''`; `''` = top-level, parent's key for subfields — amended 2026-10-06, DD-10), `label`, `description`, `type`, `control_list`, `section_key`, `order`, `result_types` JSON, `required`, `required_confirmed` bool, `required_when` JSON, `valid_from`, `valid_to`, `storage` JSON, `created_at`, `updated_at` | Subfields are rows with `parent_key` — one table, no second hierarchy |
 | `qa_catalog_version` | `phase_year` (PK), `portfolio`, `revision`, `content_hash`, `synced_at` | |
 
 - **Storage binding** (JSON): `{kind:'column', table, column}` or `{kind:'relation', table, fk_to_result, value_column, control_list_table?, filter?}`. Subfields bind to columns of their parent's relation table.
@@ -115,6 +115,7 @@ n/a — no client change.
 | DD-7 | `required` is accompanied by `required_confirmed`; `required_when` is data only | Implement conditional validation now | Matches R-5; validation engine is the future vision | R-5 |
 | DD-8 | Guard lands with the **common** sections; each per-type task adds its tables to `scope.ts` together with its fields | Enable full scope at the end | CI stays green between tasks without a "report-only" mode | R-7, R-11 |
 | DD-9 | Catalog years are integers; no FK to `version` | FK to `version.id` | Phase IDs differ per environment | R-3 |
+| DD-10 | `qa_catalog_field.parent_key` is NOT NULL DEFAULT `''`; `''` means top-level. Catalog entities do not extend `BaseEntity` (retirement is `valid_to`, not `is_active`) | `parent_key` NULL for top-level | MySQL unique indexes accept many NULLs, so duplicate top-level keys would pass and R-6 idempotence could not rely on the schema. Sync writes `''`; readers filter `parent_key = ''`, never `IS NULL` (amended at execute time, QAC-T-2 review) | R-6 |
 
 Step 2.3 reversion challenge: **n/a** — no DD removes or disables shipped behavior (the JWT `exclude` adds one path; existing paths untouched).
 
