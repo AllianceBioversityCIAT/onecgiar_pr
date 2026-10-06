@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 5,
-      "content_hash": "8d2f04041c324d86c2ba9e7a1df30e56de0865253157129145b8d862cf277f9b"
+      "revision": 6,
+      "content_hash": "54e075b53f6865a2f66609774c6d732dd13c902efadee707219432ad3f664284"
     }
   },
   "keys": [
@@ -20,6 +20,8 @@
     "field:evidence.items",
     "field:general.climate_impact_areas",
     "field:general.climate_tag",
+    "field:general.created_by",
+    "field:general.created_date",
     "field:general.description",
     "field:general.discontinued_reasons",
     "field:general.environment_impact_areas",
@@ -33,7 +35,11 @@
     "field:general.nutrition_tag",
     "field:general.poverty_impact_areas",
     "field:general.poverty_tag",
+    "field:general.result_code",
+    "field:general.result_level",
+    "field:general.result_type",
     "field:general.split_targets",
+    "field:general.status",
     "field:general.title",
     "field:geo.countries",
     "field:geo.countries_specified",
@@ -139,9 +145,7 @@
     "section:iu_projection_2030",
     "section:iu_use_level",
     "section:knowledge_product",
-    "section:linked_results",
     "section:policy_change_info",
-    "section:toc_alignment",
     "subfield:capacity_sharing.length_of_training/degree",
     "subfield:evidence.items/climate_related",
     "subfield:evidence.items/environment_related",

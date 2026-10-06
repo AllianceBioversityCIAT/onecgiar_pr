@@ -322,7 +322,59 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 5 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 6 });
+  });
+
+  it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
+    expect(CATALOG_SECTIONS.map((x) => x.key)).not.toContain('toc_alignment');
+    expect(CATALOG_SECTIONS.map((x) => x.key)).not.toContain('linked_results');
+    for (const key of ['linked.has_innovation_link', 'linked.results']) {
+      expect(CATALOG_FIELDS.find((f) => f.key === key)?.section).toBe(
+        'contributors_partners',
+      );
+    }
+    const toc = CATALOG_FIELDS.filter((f) => f.key.startsWith('toc.'));
+    expect(toc.length).toBeGreaterThan(0);
+    expect(toc.map((f) => f.section)).toEqual(
+      toc.map(() => 'contributors_partners'),
+    );
+    expect(
+      CATALOG_FIELDS.some((f) =>
+        ['toc_alignment', 'linked_results'].includes(f.section),
+      ),
+    ).toBe(false);
+    const merged = CATALOG_FIELDS.filter(
+      (f) => f.section === 'contributors_partners',
+    );
+    expect(new Set(merged.map((f) => f.order)).size).toBe(merged.length);
+  });
+
+  it('2026-10-06 amendment: the result envelope fields are catalogued in general_information for every result type', () => {
+    const expected: Record<string, string> = {
+      'general.result_code': 'result_code',
+      'general.result_type': 'result_type_id',
+      'general.result_level': 'result_level_id',
+      'general.created_by': 'created_by',
+      'general.created_date': 'created_date',
+      'general.status': 'status_id',
+    };
+    for (const [key, column] of Object.entries(expected)) {
+      const field = CATALOG_FIELDS.find((f) => f.key === key);
+      expect(field).toBeDefined();
+      expect(field?.section).toBe('general_information');
+      expect(field?.result_types).toEqual(['*']);
+      expect(field?.required_confirmed).toBe(false);
+      expect(field?.storage).toEqual({
+        kind: 'column',
+        table: 'result',
+        column,
+      });
+    }
+    const gi = CATALOG_FIELDS.filter(
+      (f) => f.section === 'general_information',
+    );
+    expect(gi.slice(0, 6).map((f) => f.key)).toEqual(Object.keys(expected));
+    expect(new Set(gi.map((f) => f.order)).size).toBe(gi.length);
   });
 
   it('QAC-R-5: the IPSR step-1 geography is unconfirmed and optional (the live step-1 function does not test it), and innovation_package carries no common geo.* key', () => {

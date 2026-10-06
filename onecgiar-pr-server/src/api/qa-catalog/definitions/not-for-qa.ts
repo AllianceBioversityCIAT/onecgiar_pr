@@ -6,7 +6,7 @@ import { NotForQaEntry } from './types';
 const AUDIT = 'audit / soft-delete column, not form data';
 const IDENTITY = 'surrogate primary key (identity), not form data';
 const ENVELOPE =
-  'result envelope (identity / type / level / status / version): exposed by the catalog result types and phase, not as a field (REVIEW D21)';
+  'result envelope (version / legacy status flag / reported year): exposed by the catalog phase, not as a field (code, type, level, creator, creation date and status are catalogued under general_information since 2026.6)';
 const WORKFLOW = 'bilateral / review / QA workflow state, not form data';
 const LEGACY = 'legacy column, not written by the 2026 (P25) form';
 const FK_PARENT =
@@ -22,27 +22,9 @@ const nfq = (
 
 export const NOT_FOR_QA: NotForQaEntry[] = [
   // result
-  ...nfq(
-    'result',
-    AUDIT,
-    'is_active',
-    'created_by',
-    'created_date',
-    'last_updated_by',
-    'last_updated_date',
-  ),
+  ...nfq('result', AUDIT, 'is_active', 'last_updated_by', 'last_updated_date'),
   ...nfq('result', IDENTITY, 'id'),
-  ...nfq(
-    'result',
-    ENVELOPE,
-    'result_code',
-    'result_type_id',
-    'result_level_id',
-    'version_id',
-    'status',
-    'status_id',
-    'reported_year_id',
-  ),
+  ...nfq('result', ENVELOPE, 'version_id', 'status', 'reported_year_id'),
   ...nfq(
     'result',
     WORKFLOW,

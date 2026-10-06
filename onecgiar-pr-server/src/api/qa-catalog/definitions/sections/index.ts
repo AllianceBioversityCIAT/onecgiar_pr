@@ -26,10 +26,6 @@ import {
   KNOWLEDGE_PRODUCT_SECTION,
 } from './knowledge-product';
 import {
-  LINKED_RESULTS_FIELDS,
-  LINKED_RESULTS_SECTION,
-} from './linked-results';
-import {
   INNOVATION_USE_FIELDS,
   IU_CURRENT_USE_SECTION,
   IU_PROJECTION_2030_SECTION,
@@ -50,16 +46,13 @@ import {
   IPSR_STEP_3_FIELDS,
 } from './ipsr-step-3';
 import { IPSR_S4_MATERIALS_SECTION, IPSR_STEP_4_FIELDS } from './ipsr-step-4';
-import { TOC_ALIGNMENT_FIELDS, TOC_ALIGNMENT_SECTION } from './toc-alignment';
 
 // One file per section; per-type tasks add theirs here.
 export const CATALOG_SECTIONS: CatalogSection[] = [
   GENERAL_INFORMATION_SECTION,
-  TOC_ALIGNMENT_SECTION,
   CONTRIBUTORS_PARTNERS_SECTION,
   GEOGRAPHIC_LOCATION_SECTION,
   EVIDENCE_SECTION,
-  LINKED_RESULTS_SECTION,
   // QAC-T-9 · output types (`other_output` has no type page, so no section)
   KNOWLEDGE_PRODUCT_SECTION,
   CAPACITY_SHARING_SECTION,
@@ -82,11 +75,9 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
 
 export const CATALOG_FIELDS: CatalogField[] = [
   ...GENERAL_INFORMATION_FIELDS,
-  ...TOC_ALIGNMENT_FIELDS,
   ...CONTRIBUTORS_PARTNERS_FIELDS,
   ...GEOGRAPHIC_LOCATION_FIELDS,
   ...EVIDENCE_FIELDS,
-  ...LINKED_RESULTS_FIELDS,
   ...KNOWLEDGE_PRODUCT_FIELDS,
   ...CAPACITY_SHARING_FIELDS,
   ...INNOVATION_DEVELOPMENT_FIELDS,
