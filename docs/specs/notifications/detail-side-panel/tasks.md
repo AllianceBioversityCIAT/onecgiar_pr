@@ -91,7 +91,7 @@
   - **Consumers:** `notification-item` (sole user of `app-contribution-request-drawer`; confirm with grep)
 - **DoD:** suites green; `npm run build` (client) green; lint on the touched files is clean; both CLAUDE.md files updated.
 
-### `DSP-T-4` — Content: header, chips row, sentence, RESULT card + 6-field grid `[ ]`
+### `DSP-T-4` — Content: header, chips row, sentence, RESULT card + 6-field grid `[x]`
 - **Type:** `client`
 - **Description:** Restyle per design §6.3 metrics and tokens:
   - title = request kind / update type label
@@ -115,7 +115,7 @@
   - **Consumers:** none beyond notification-item
 - **DoD:** tests green; lint on the touched files is clean.
 
-### `DSP-T-5` — Content: APPROVAL CHAIN section `[ ]`
+### `DSP-T-5` — Content: APPROVAL CHAIN section `[x]`
 - **Type:** `client`
 - **Description:** Render `chain` input:
   - **Submission step:** submitted = filled check + "Submitted" pill + "Submitted by {actor} · {date}"; not_submitted = ring + result status pill, no actor.
@@ -136,11 +136,11 @@
   - **Consumers:** none
 - **DoD:** tests green; lint on the touched files is clean.
 
-### `DSP-T-6` — Panel service + page two-column layout + docked aside `[ ]`
+### `DSP-T-6` — Panel service + page two-column layout + docked aside `[x]`
 - **Type:** `client`
 - **Description:** New `services/notification-detail-panel.service.ts` (design §6.2: `isWide` via `BreakpointObserver('(min-width: 1280px)')`, `activeKey`, `portal`, `open/close/closeAll`), provided in `ResultsNotificationsComponent`. Page layout:
   - list wrapper `flex items-start gap-[16px]`, list `flex-1 min-w-0`
-  - `@if (panel.isWide() && panel.portal())` → `<aside role="complementary">` with `cdkPortalOutlet`, `sticky top-[24px] h-[calc(100vh-140px)] w-[380px] min-[1600px]:w-[440px] shrink-0`, radius 12, border, card surface, `overflow-hidden flex flex-col`, `motion-reduce` safe
+  - `@if (panel.isWide() && panel.portal())` → `<aside role="complementary">` with `cdkPortalOutlet`, `sticky top-[24px] h-[calc(100vh-140px)] w-[380px] min-[1600px]:w-[440px] shrink-0`, radius 12, border, card surface, `overflow-hidden flex flex-col`, `motion-reduce` safe *(superseded by DSP-T-9 F-1: offset from `--pr-shell-header-height`; see design.md §6.3 Panel)*
   - `setActiveSource()` calls `panel.closeAll()`
 - **Implements:** DSP-R-1 (wide scenario incl. widths and the BUT clause), DSP-R-3 (Received/Sent trigger), DSP-R-14; DD-2
 - **Files:** new service (+spec); `results-notifications.component.{html,ts,spec.ts}`
@@ -156,7 +156,7 @@
   - **Consumers:** none (new)
 - **DoD:** tests green; lint on the touched files is clean.
 
-### `DSP-T-7` — Row routing: portal vs drawer, takeover, destroy, resize, focus, Escape `[ ]`
+### `DSP-T-7` — Row routing: portal vs drawer, takeover, destroy, resize, focus, Escape `[x]`
 - **Type:** `client`
 - **Description:** In `notification-item`:
   - `openDrawer` → `panel.open(key, TemplatePortal(detailTpl))`
@@ -183,7 +183,7 @@
   - **Consumers:** `NotificationDetailPanelService`
 - **DoD:** tests green; the existing notification-item suite is green; lint on the touched files is clean.
 
-### `DSP-T-8` — Content: Where it contributes, ToC section frame, pinned footer restyle `[ ]`
+### `DSP-T-8` — Content: Where it contributes, ToC section frame, pinned footer restyle `[x]`
 - **Type:** `client`
 - **Description:**
   - Order the body: chain → "Where it contributes" (unchanged behavior: CRD-R-4 in decide, hidden-when-empty in view) → "MAP TO YOUR THEORY OF CHANGE" heading + helper copy wrapping `[crdAlign]` (only when `showAlignSlot` and decide/confirm-decline).
@@ -203,7 +203,7 @@
   - **Consumers:** none
 - **DoD:** tests green; lint on the touched files is clean.
 
-### `DSP-T-9` — HITL browser pass (visual fidelity, layout, focus) `[ ]`
+### `DSP-T-9` — HITL browser pass (visual fidelity, layout, focus) `[x]`
 - **Type:** `rollout`
 - **Description:** Run the local stack (`docs/infrastructure.md` §6) and compare against `mockup/` at 1280, 1440, 1600, 1024, 390 px:
   - docked width 380/440
@@ -227,6 +227,7 @@
   - **Disqualifier:** screenshots taken with mocked data that does not include a pending + accepted + viewer program mix do not prove DSP-AC-6. Use a real QA/local result that has one, or record the gap.
   - **Consumers:** none
 - **DoD:** user sign-off recorded.
+- **T-9 fix round (DSP-T-9, user-approved 2026-10-05):** F-1 sticky offset from `--pr-shell-header-height`; F-2 `activityDate` = `requested_date ?? created_date`; F-3 the "Contributing program" subtitle only for a pending contributor step (otherwise actor · date); Q-1 grid "Submitted by" = chain submission actor; Q-2 level·type and date as plain text chips; Q-3 RESULT link on one inline run; Q-4 ToC helper = the mockup text "Choose the area of work this result contributes to. You can do this later." (user decision, overriding the T-8 accurate-wording choice). Files: `notification-item.component.ts` (+spec), `notification-detail-content.*`, `results-notifications.component.html` (aside only), the copy file.
 
 ## 4. Dependency graph
 

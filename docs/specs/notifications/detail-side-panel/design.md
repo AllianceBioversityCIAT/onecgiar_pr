@@ -123,13 +123,13 @@ No route changes. `notification-detail-content` is standalone and imported by `n
 | Page | `flex items-start gap-[16px]`: list `flex-1 min-w-0`; `@if (panel.isWide() && panel.portal())` → `<aside role="complementary" [attr.aria-labelledby]>` sticky | `setActiveSource()` → `panel.closeAll()` |
 
 **Field sources** (reused from today's builders, scout §9):
-- **Chips:** `rowStatusLabel`, `fundingWindowBadge` (`'W3/Bilaterals'` shown as is), `resultLevelTypeBadge`, and the date `activityDate` formatted `dd MMM yyyy`.
+- **Chips:** `rowStatusLabel`, `fundingWindowBadge` (`'W3/Bilaterals'` shown as is), `resultLevelTypeBadge`, and the date `activityDate` formatted `dd MMM yyyy`. `activityDate` reads `requested_date ?? created_date` (request rows carry `requested_date`, update rows `created_date`) (DSP-T-9, user-approved 2026-10-05).
 - **Grid:**
   - Reporting center: the `result_center_array[0]` acronym.
   - Result type: level · type.
   - Primary SP: the chain's primary `official_code`, falling back to `obj_result_by_initiatives[0]` while loading.
   - Contributing programs: the chain's contributor codes with status ≠ declined, joined with ", " (skeleton while loading).
-  - Submitted by: today's `submittedBy`.
+  - Submitted by: the chain's submission `actor_name` (who submitted the result), so the grid and the APPROVAL CHAIN never name different people; `–` when `not_submitted`; skeleton while the chain loads (DSP-T-9, user-approved 2026-10-05). (Was: the row's `submittedBy`, the request's requester.)
   - Phase: `obj_version.phase_name`.
   - An empty value → `copy.dashValue` (muted).
 
@@ -163,12 +163,12 @@ No route changes. `notification-detail-content` is standalone and imported by `n
 
 | Element | Value |
 |---|---|
-| Panel | radius 12, 1 px border, no shadow, `sticky top-[24px] h-[calc(100vh-140px)]` (to verify against the real top bar, R4), `w-[380px] min-[1600px]:w-[440px]` |
+| Panel | radius 12, 1 px border, no shadow, sticky below the app's live header: `top: calc(var(--pr-shell-header-height, 56px) + 24px)` and `height: calc(100vh - var(--pr-shell-header-height, 56px) - 48px)` (DSP-T-9, user-approved 2026-10-05) (was `top-[24px] h-[calc(100vh-140px)]`, which sat under the 124 px header incl. the test banner), `w-[380px] min-[1600px]:w-[440px]` |
 | Header | `pt-[14px] px-[20px]`, title 15/700 |
-| Chips row | `px-[20px] pt-[8px] pb-[14px]`, bottom border divider. Pills are 11/600 `rounded-full px-2 py-[2px]`; the funding pill is outlined |
+| Chips row | `px-[20px] pt-[8px] pb-[14px]`, bottom border divider. Only status (filled pill) and funding (outlined pill) are pills, 11/600 `rounded-full px-2 py-[2px]`; level · type and the date are plain muted text (`ink-subtle`), as in the mockup (DSP-T-9, user-approved 2026-10-05) |
 | Body | `p-[20px] gap-[20px]`, independent scroll |
 | Sentence | 15/400, line-height 1.5 |
-| RESULT card | radius 10, `p-4`, label 11/600 uppercase tracking .08em, link 14/600, grid `grid-cols-2 gap-x-5 gap-y-[14px]`, labels 11/500 muted, values 13 |
+| RESULT card | radius 10, `p-4`, label 11/600 uppercase tracking .08em, link 14/600 as **one inline run** `code – title` (the code never sits alone on its own line) (DSP-T-9, user-approved 2026-10-05), grid `grid-cols-2 gap-x-5 gap-y-[14px]`, labels 11/500 muted, values 13 |
 | Chain step | `py-[10px]`, divider between steps, 18 px icon (filled check = approved fg; ring 2 px = in-progress fg; declined = rejected fg with ✕), name 13/600, sub 12 `ink-subtle`, "Your program" 11/600 brand, pill at the right |
 | Footer | `px-[20px] py-[14px]`, top divider, buttons `min-h-[36px]` |
 
@@ -283,5 +283,5 @@ The existing `_handlersError` path only.
 ## 14. Open Gaps & Follow-ups
 
 - DSP-P-9 and DSP-P-10 confirmed in T-3 (§1A updated with evidence); neither changed the plan.
-- `h-[calc(100vh-140px)]`: verify against the real header in T-9.
+- `h-[calc(100vh-140px)]`: verified in T-9 — it overlapped the 124 px header; resolved by F-1 (offset from `--pr-shell-header-height`, §6.3 Panel).
 - Phone landscape below 1280 uses the drawer — this is intended.

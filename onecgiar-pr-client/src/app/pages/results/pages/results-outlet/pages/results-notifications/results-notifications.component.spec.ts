@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterOutlet, RouterModule } from '@angular/router';
 import { of, Subject } from 'rxjs';
@@ -7,6 +7,8 @@ import { ResultsNotificationsComponent } from './results-notifications.component
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ResultsNotificationsService } from './results-notifications.service';
+// @akili-spec notifications/detail-side-panel (DSP-T-6)
+import { NotificationDetailPanelService } from './services/notification-detail-panel.service';
 
 describe('ResultsNotificationsComponent', () => {
   let component: ResultsNotificationsComponent;
@@ -634,6 +636,125 @@ describe('ResultsNotificationsComponent', () => {
 
       expect(component.isSentRow(resolvedReceivedTagged)).toBe(false);
       expect(component.isSentRow(sentTagged)).toBe(true);
+    });
+  });
+
+  // @akili-spec notifications/detail-side-panel (DSP-T-6, design.md §2.1/§6.2): the page's docked
+  // panel layout. A mock `NotificationDetailPanelService` (writable signals) is swapped in via
+  // `TestBed.overrideComponent` so `isWide()`/`portal()` are deterministic here — the service's OWN
+  // isWide/BreakpointObserver wiring is covered independently in
+  // `notification-detail-panel.service.spec.ts`.
+  describe('DSP-T-6 — docked panel layout (page side)', () => {
+    let panelIsWide: ReturnType<typeof signal<boolean>>;
+    let panelPortal: ReturnType<typeof signal<unknown>>;
+    let panelLabelledBy: ReturnType<typeof signal<string | null>>;
+    let panelMock: any;
+    let dspFixture: any;
+    let dspComponent: ResultsNotificationsComponent;
+
+    beforeEach(async () => {
+      panelIsWide = signal(false);
+      panelPortal = signal<unknown>(null);
+      panelLabelledBy = signal<string | null>(null);
+      panelMock = {
+        isWide: panelIsWide,
+        portal: panelPortal,
+        labelledBy: panelLabelledBy,
+        activeKey: signal<string | null>(null),
+        open: jest.fn(),
+        close: jest.fn(),
+        closeAll: jest.fn()
+      };
+
+      // The outer `beforeEach` already configured + compiled + created a component instance from
+      // the shared TestBed — `overrideComponent` cannot run after that, so this block gets its own
+      // fresh TestBed, reusing the same service mocks the outer block built.
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        declarations: [ResultsNotificationsComponent],
+        imports: [RouterOutlet, RouterModule, CommonModule],
+        providers: [
+          { provide: ApiService, useValue: apiServiceMock },
+          { provide: ShareRequestModalService, useValue: shareRequestModalServiceMock },
+          { provide: ResultsNotificationsService, useValue: resultsNotificationsServiceMock },
+          { provide: Router, useValue: routerMock },
+          { provide: ActivatedRoute, useValue: activatedRouteMock }
+        ],
+        schemas: [NO_ERRORS_SCHEMA]
+      })
+        .overrideComponent(ResultsNotificationsComponent, {
+          add: { providers: [{ provide: NotificationDetailPanelService, useValue: panelMock }] }
+        })
+        .compileComponents();
+
+      dspFixture = TestBed.createComponent(ResultsNotificationsComponent);
+      dspComponent = dspFixture.componentInstance;
+    });
+
+    it('FALSIFIER: with isWide=false the aside must NOT be in the DOM, even with a non-null portal', () => {
+      panelIsWide.set(false);
+      panelPortal.set({ kind: 'stub-portal' });
+      dspFixture.detectChanges();
+
+      // Broken-code check performed manually (see task report): rendering the aside off
+      // `panel.portal()` alone (dropping the `panel.isWide() &&` guard) makes this assertion fail —
+      // restored before this run.
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      expect(aside).toBeNull();
+    });
+
+    it('renders the aside when BOTH isWide=true and a portal are present', () => {
+      panelIsWide.set(true);
+      panelPortal.set({ kind: 'stub-portal' });
+      dspFixture.detectChanges();
+
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      expect(aside).not.toBeNull();
+    });
+
+    it('does not render the aside when isWide=true but no portal is open', () => {
+      panelIsWide.set(true);
+      panelPortal.set(null);
+      dspFixture.detectChanges();
+
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      expect(aside).toBeNull();
+    });
+
+    it('binds the aside\'s aria-labelledby to panel.labelledBy()', () => {
+      panelIsWide.set(true);
+      panelPortal.set({ kind: 'stub-portal' });
+      panelLabelledBy.set('detail-heading-123');
+      dspFixture.detectChanges();
+
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      expect(aside?.getAttribute('aria-labelledby')).toBe('detail-heading-123');
+    });
+
+    it('DSP-T-9 F-1: the aside offsets its sticky top/height from --pr-shell-header-height, not a static 24px/140px', () => {
+      panelIsWide.set(true);
+      panelPortal.set({ kind: 'stub-portal' });
+      dspFixture.detectChanges();
+
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]') as HTMLElement;
+      // FALSIFIER: reverting to the old static `top-[24px] h-[calc(100vh-140px)]` classes (no
+      // `--pr-shell-header-height` reference) fails this assertion — observed red before the fix.
+      // Asserted on the raw `style` attribute string, not `el.style.top/.height`: jsdom's CSSOM does
+      // not parse a `calc(var(...))` value back into those properties (verified empty in this suite).
+      const styleAttr = aside.getAttribute('style') ?? '';
+      expect(styleAttr).toContain('--pr-shell-header-height');
+      expect(styleAttr.replace(/\s+/g, ' ')).toContain('top: calc(var(--pr-shell-header-height, 56px) + 24px)');
+      expect(styleAttr.replace(/\s+/g, ' ')).toContain('height: calc(100vh - var(--pr-shell-header-height, 56px) - 48px)');
+    });
+
+    it('FALSIFIER: switching Received -> Sent must leave portal() non-null false — setActiveSource must call panel.closeAll()', () => {
+      dspFixture.detectChanges();
+
+      dspComponent.setActiveSource('sent');
+
+      // Broken-code check performed manually: removing the `this.panel.closeAll();` line from
+      // `setActiveSource()` makes `panelMock.closeAll` never get called — restored before this run.
+      expect(panelMock.closeAll).toHaveBeenCalled();
     });
   });
 

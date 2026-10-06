@@ -16,6 +16,9 @@ import { FilterNotificationByResultTypePipe } from './pipes/filter-notification-
 import { resolveNotificationType } from '../../../../../../shared/constants/notification-type.constants';
 import { GroupNotificationsByRecencyPipe, TGroupedNotificationsByRecency } from './pipes/group-notifications-by-recency.pipe';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../internationalization/contribution-request-drawer.copy';
+// @akili-spec notifications/detail-side-panel (DSP-T-6): page-scoped coordinator for the docked
+// panel vs drawer decision (design.md §6.2). Provided below so this page gets its own instance.
+import { NotificationDetailPanelService } from './services/notification-detail-panel.service';
 
 /** NOTIF-T-6: the three decision-state tabs (`NOTIF-R-1`/`NOTIF-US-1`). */
 export type NotifDecisionTab = 'all' | 'decision' | 'info';
@@ -39,7 +42,11 @@ interface ActiveFilterChip {
   selector: 'app-results-notifications',
   templateUrl: './results-notifications.component.html',
   styleUrls: ['./results-notifications.component.scss'],
-  standalone: false
+  standalone: false,
+  // DSP-T-6: component-scoped, not root — each `ResultsNotificationsComponent` instance (one per
+  // page visit) gets its own panel coordinator (design.md §6.1 "nothing is shared with the header
+  // bell").
+  providers: [NotificationDetailPanelService]
 })
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   // ---------------------------------------------------------------------
@@ -93,7 +100,9 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     private readonly shareRequestModalSE: ShareRequestModalService,
     public resultsNotificationsSE: ResultsNotificationsService,
     public router: Router,
-    private readonly activatedRoute: ActivatedRoute
+    private readonly activatedRoute: ActivatedRoute,
+    /** DSP-T-6: public so the page template can read `panel.isWide()` / `panel.portal()` directly. */
+    public readonly panel: NotificationDetailPanelService
   ) {}
 
   setActiveTab(tab: NotifDecisionTab): void {
@@ -117,6 +126,10 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
    */
   setActiveSource(source: NotifSourceView): void {
     this.activeSource.set(source);
+    // DSP-T-6 / DSP-R-3: a Received<->Sent switch must close any open detail panel regardless of
+    // which row key owns it — `closeAll()` (not `close(key)`) is the unconditional form for exactly
+    // this page-level event (design.md §2.2 step 6 / §6.2).
+    this.panel.closeAll();
   }
 
   // ---------------------------------------------------------------------------------------------

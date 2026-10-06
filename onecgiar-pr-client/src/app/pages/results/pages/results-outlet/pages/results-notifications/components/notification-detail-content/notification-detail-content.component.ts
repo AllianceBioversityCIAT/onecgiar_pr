@@ -1,11 +1,13 @@
-// @akili-spec notifications/detail-side-panel (DSP-T-3, DSP-T-4)
+// @akili-spec notifications/detail-side-panel (DSP-T-3, DSP-T-4, DSP-T-5)
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal } from '@angular/core';
+import { formatDate } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideLoaderCircle, lucideX } from '@ng-icons/lucide';
+import { lucideLoaderCircle, lucideX, lucideCheck } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan/button';
 import { HlmBadgeImports } from '@spartan/badge';
 import { HlmSkeletonImports } from '@spartan/skeleton';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
+import type { ApprovalChainDto, ApprovalChainStepDto } from '../../../../../../../../shared/services/api/results-api.service';
 
 /** design.md §6.2 `headerParts`: pre-built sentence pieces, reusing the row's own requester/responder resolution. */
 export interface ContributionRequestDrawerHeaderParts {
@@ -49,6 +51,11 @@ export type ContributionRequestDrawerMode = 'decide' | 'confirm-decline' | 'view
 export interface ContributionRequestDrawerChip {
   text: string;
   outlined?: boolean;
+  /**
+   * DSP-T-9 Q-2 (design.md §6.3 "Chips row", user-approved 2026-10-05): only status/funding chips
+   * are pills; level · type and the date render as plain muted text when this is falsy.
+   */
+  pill?: boolean;
 }
 
 /**
@@ -70,6 +77,45 @@ export interface ContributionRequestDrawerGridField {
 const CLAMP_THRESHOLD_CHARS = 180;
 
 /**
+ * DSP-T-5 (design.md §6.2 `chain` input, DSP-R-8): the APPROVAL CHAIN section's loading/ok/error
+ * state, mirroring the row's own `status`-keyed `ApprovalChainState` (DSP-T-2) under the `state` key
+ * the design doc names. `data` can be `undefined` even in the `'ok'` state — a recorded T-2 advisory:
+ * the server can answer an empty body — so this component renders that as the error state visually
+ * (see `chainHasError`) rather than indexing into an absent `ApprovalChainDto`.
+ */
+export type ContributionRequestDrawerChainState =
+  | { state: 'loading' }
+  | { state: 'ok'; data: ApprovalChainDto | undefined }
+  | { state: 'error' };
+
+/** DSP-T-5: one rendered row of the APPROVAL CHAIN list — the submission step or a program step. */
+interface ChainDisplayStep {
+  /** `'check'` = filled check (approved fg); `'ring'` = 2px open ring; `'x'` = declined fg with ✕. */
+  icon: 'check' | 'ring' | 'x';
+  /**
+   * The icon wrapper's full class string (base shape + the icon-specific color), built once here
+   * so the template never has to concatenate Tailwind arbitrary-value classes (`bg-[var(...)]`)
+   * through `[class.*]` bindings, which can't host bracket/paren characters as a binding key.
+   */
+  iconClass: string;
+  /**
+   * DSP-T-5 rework attempt 2 (Reviewer FAIL issue 2, tasks.md DSP-T-5 "Program steps: mono code +
+   * name"): split from the single `name` string so the template can render ONLY the code in
+   * `font-mono` — the program/project name must stay in the regular typeface (design.md §6.3,
+   * mockup). `null` for the submission step (it has no code at all); a program step always has one
+   * (`step.official_code`, non-empty per the server contract).
+   */
+  code: string | null;
+  name: string;
+  isViewerProgram: boolean;
+  subtitle: string | null;
+  pillText: string;
+  pillClass: string;
+}
+
+const CHAIN_ICON_BASE_CLASS = 'flex size-[18px] shrink-0 items-center justify-center rounded-full';
+
+/**
  * DSP-T-3 (design.md §2.1/§6.2, DD-3): the drawer's presentational BODY — header sentence, RESULT
  * card, "Where it contributes"/`view`-mode metadata, the `[crdAlign]` projection slot, and the
  * `decide`/`confirm-decline` footer. Relocated out of `contribution-request-drawer` (now a thin
@@ -89,7 +135,7 @@ const CLAMP_THRESHOLD_CHARS = 180;
 @Component({
   selector: 'app-notification-detail-content',
   imports: [HlmButton, NgIcon, ...HlmBadgeImports, ...HlmSkeletonImports],
-  providers: [provideIcons({ lucideLoaderCircle, lucideX })],
+  providers: [provideIcons({ lucideLoaderCircle, lucideX, lucideCheck })],
   templateUrl: './notification-detail-content.component.html',
   styleUrl: './notification-detail-content.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -179,6 +225,29 @@ export class NotificationDetailContentComponent {
   readonly focusAlign = input(false);
 
   /**
+   * DSP-T-8 (design.md "Order in the body", DSP-R-10): gates the "MAP TO YOUR THEORY OF CHANGE"
+   * heading + helper copy that now wraps the projected `[crdAlign]` slot — defense in depth on top
+   * of the caller's own `showAlignSlot`/mode guards (`notification-item`'s `[crdAlign]` `@if`):
+   * shown only when `showAlignSlot()` is true AND `mode()` is `decide` or `confirm-decline`, so a
+   * primary request (`showAlignSlot=false`) or a `view`-mode row never renders the heading even if
+   * something is projected into the slot.
+   */
+  showTocSection(): boolean {
+    return this.showAlignSlot() && (this.mode() === 'decide' || this.mode() === 'confirm-decline');
+  }
+
+  /**
+   * DSP-T-5 (design.md §6.2 "`chain`", DSP-R-8/AC-6/AC-7): the APPROVAL CHAIN section's state —
+   * `notification-item` maps its own `status`-keyed `ApprovalChainState` (DSP-T-2) onto this
+   * `state`-keyed shape. Defaults to `loading` so a caller that hasn't wired it yet renders the
+   * skeleton rather than an empty section.
+   */
+  readonly chain = input<ContributionRequestDrawerChainState>({ state: 'loading' });
+
+  /** DSP-T-5 (DSP-R-8 "Loading and failure"): the chain section's Retry action. */
+  readonly retryChain = output<void>();
+
+  /**
    * DSP-T-3: fires on the component's own ✕ close button. The shell (`contribution-request-drawer`)
    * keeps its own, separate `closed` output for the sheet's native scrim/Escape/outside-click
    * dismissal — the caller (`notification-item`) wires BOTH to the same handler. This component
@@ -215,6 +284,126 @@ export class NotificationDetailContentComponent {
     // changing behaviour. Fixed here only because CRD-T-4's DoD requires a clean `npm run build`.
     const align = this.elementRef.nativeElement.querySelector('[crdAlign]') as HTMLElement | null;
     align?.scrollIntoView({ block: 'nearest' });
+  }
+
+  /** DSP-T-5 (DSP-R-8): the section shows the skeleton only while the chain is actually loading. */
+  chainLoading(): boolean {
+    return this.chain().state === 'loading';
+  }
+
+  /**
+   * DSP-T-5: true for the `'error'` state AND for an `'ok'` state whose `data` is empty (the T-2
+   * advisory: the server can answer with `response: undefined`) — both render the same inline
+   * error + Retry, never a template that indexes into an absent `ApprovalChainDto` (falsifier:
+   * the template must not throw).
+   */
+  chainHasError(): boolean {
+    const c = this.chain();
+    return c.state === 'error' || (c.state === 'ok' && !c.data);
+  }
+
+  /**
+   * DSP-T-5 (DSP-R-8 "Mixed statuses (mockup case)"): submission step first, then every program
+   * step in the order the server already returns them (design.md §4.1 "primary first, then
+   * contributors by official_code") — no client-side resort. Empty while loading/error so the
+   * template's `@if`/`@for` never race the chain state.
+   */
+  chainSteps(): ChainDisplayStep[] {
+    const c = this.chain();
+    if (c.state !== 'ok' || !c.data) return [];
+    const data = c.data;
+    return [this.buildSubmissionStep(data), ...data.steps.map(step => this.buildProgramStep(step))];
+  }
+
+  private buildSubmissionStep(data: ApprovalChainDto): ChainDisplayStep {
+    const copy = this.copy.chain;
+    const { submission } = data;
+    if (submission.state === 'submitted') {
+      return {
+        icon: 'check',
+        iconClass: `${CHAIN_ICON_BASE_CLASS} bg-[var(--pr-status-approved-fg)]`,
+        code: null,
+        name: copy.programSubmission,
+        isViewerProgram: false,
+        subtitle:
+          submission.actor_name && submission.date ? copy.submittedBy(submission.actor_name, this.formatChainDate(submission.date)) : null,
+        pillText: copy.submittedPill,
+        pillClass: 'bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)]'
+      };
+    }
+    // DSP-R-8 "Result not yet submitted": the result's current status, a pending ring, no actor/date.
+    return {
+      icon: 'ring',
+      iconClass: `${CHAIN_ICON_BASE_CLASS} border-2 border-[var(--pr-status-not-started-fg)]`,
+      code: null,
+      name: copy.programSubmission,
+      isViewerProgram: false,
+      subtitle: null,
+      pillText: submission.result_status_name,
+      pillClass: 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]'
+    };
+  }
+
+  private buildProgramStep(step: ApprovalChainStepDto): ChainDisplayStep {
+    const copy = this.copy.chain;
+    // DSP-T-5 rework attempt 2 (Reviewer FAIL issue 2): `code`/`name` kept separate instead of
+    // joined into one string — the template renders only `code` in `font-mono` (design.md §6.3
+    // "Chain step": mono code + name), never the program/project name.
+    const code = step.official_code;
+    const name = step.short_name;
+    const actorDate = step.actor_name && step.date ? copy.actorAndDate(step.actor_name, this.formatChainDate(step.date)) : null;
+    // DSP-T-9 F-3 (user-approved 2026-10-05): "Contributing program" is the PENDING-contributor
+    // subtitle only (the mockup's SP01 case) — gating it on `is_viewer_program` alone mislabeled the
+    // viewer's primary/decided step (T-9 real data, result 9637: SP01 was the viewer's primary,
+    // Accepted, yet showed "Contributing program" and hid its actor/date). Every other step —
+    // including every OTHER viewer step — shows actor · date when known, same as a non-viewer step.
+    // "Your program" (the brand label) still renders whenever `is_viewer_program`, unaffected.
+    const subtitle = step.role === 'contributor' && step.status === 'pending' ? copy.contributingProgram : actorDate;
+
+    if (step.status === 'accepted') {
+      return {
+        icon: 'check',
+        iconClass: `${CHAIN_ICON_BASE_CLASS} bg-[var(--pr-status-approved-fg)]`,
+        code,
+        name,
+        isViewerProgram: step.is_viewer_program,
+        subtitle,
+        pillText: copy.acceptedPill,
+        pillClass: 'bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)]'
+      };
+    }
+    if (step.status === 'declined') {
+      return {
+        icon: 'x',
+        iconClass: `${CHAIN_ICON_BASE_CLASS} bg-[var(--pr-status-rejected-fg)]`,
+        code,
+        name,
+        isViewerProgram: step.is_viewer_program,
+        subtitle,
+        pillText: copy.declinedPill,
+        pillClass: 'bg-[var(--pr-status-rejected-bg)] text-[var(--pr-status-rejected-fg)]'
+      };
+    }
+    // 'pending'
+    return {
+      icon: 'ring',
+      iconClass: `${CHAIN_ICON_BASE_CLASS} border-2 border-[var(--pr-status-in-progress-fg)]`,
+      code,
+      name,
+      isViewerProgram: step.is_viewer_program,
+      subtitle,
+      pillText: copy.awaitingDecisionPill,
+      pillClass: 'bg-[var(--pr-status-in-progress-bg)] text-[var(--pr-status-in-progress-fg)]'
+    };
+  }
+
+  /** DSP-T-5: `dd MMM yyyy`, same formatter T-4 already uses for the chips row's `activityDate`. */
+  private formatChainDate(value: string): string {
+    return formatDate(value, 'dd MMM yyyy', 'en-US');
+  }
+
+  onRetryChainActivate(): void {
+    this.retryChain.emit();
   }
 
   private buildDashReviewRow(): ContributionRequestDrawerReviewField[] {

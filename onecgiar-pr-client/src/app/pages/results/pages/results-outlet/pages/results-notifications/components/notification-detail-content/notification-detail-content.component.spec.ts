@@ -12,6 +12,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   NotificationDetailContentComponent,
+  ContributionRequestDrawerChainState,
   ContributionRequestDrawerChip,
   ContributionRequestDrawerGridField,
   ContributionRequestDrawerHeaderParts,
@@ -19,6 +20,7 @@ import {
   ContributionRequestDrawerReviewField
 } from './notification-detail-content.component';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
+import type { ApprovalChainDto } from '../../../../../../../../shared/services/api/results-api.service';
 
 @Component({
   standalone: true,
@@ -33,6 +35,7 @@ import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../intern
       [resultCode]="resultCode()"
       [resultTitle]="resultTitle()"
       [resultGrid]="resultGrid()"
+      [chain]="chain()"
       [reviewRows]="reviewRows()"
       [acceptDisabled]="acceptDisabled()"
       [declineDisabled]="declineDisabled()"
@@ -49,6 +52,7 @@ import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../intern
       (declineClicked)="onDeclineClicked()"
       (declineConfirmed)="onDeclineConfirmed()"
       (declineCancelled)="onDeclineCancelled()"
+      (retryChain)="onRetryChain()"
     >
       <div crdAlign data-testid="align-slot">align content</div>
     </app-notification-detail-content>
@@ -63,6 +67,7 @@ class HostComponent {
   readonly resultCode = signal('');
   readonly resultTitle = signal('');
   readonly resultGrid = signal<ContributionRequestDrawerGridField[]>([]);
+  readonly chain = signal<ContributionRequestDrawerChainState>({ state: 'loading' });
   readonly reviewRows = signal<ContributionRequestDrawerReviewField[][]>([]);
   readonly acceptDisabled = signal(false);
   readonly declineDisabled = signal(false);
@@ -80,6 +85,7 @@ class HostComponent {
   declineClickedCount = 0;
   declineConfirmedCount = 0;
   declineCancelledCount = 0;
+  retryChainCount = 0;
 
   onClosed(): void {
     this.closedCount++;
@@ -103,6 +109,10 @@ class HostComponent {
 
   onDeclineCancelled(): void {
     this.declineCancelledCount++;
+  }
+
+  onRetryChain(): void {
+    this.retryChainCount++;
   }
 }
 
@@ -311,6 +321,42 @@ describe('NotificationDetailContentComponent', () => {
 
       card?.click();
       expect(host.resultActivatedCount).toBe(1);
+    });
+
+    // DSP-T-9 Q-3 (design.md §6.3 RESULT card "one inline run", user-approved 2026-10-05): the code
+    // must not sit alone on its own line — structurally, that means the button has no `flex`/
+    // `flex-wrap` display (which would let the code and title wrap as separate flex items) and the
+    // code stays `.font-mono` inline inside the same text run as the title. This is a structural
+    // proxy, not visual proof — real wrapping fidelity is the Leader's browser recheck (T-9).
+    it('DSP-T-9 Q-3: the RESULT link renders code + title as one inline run, not separate flex items', async () => {
+      host.resultCode.set('9674');
+      host.resultTitle.set('Influencing a long policy title that could wrap onto multiple lines');
+      await render();
+
+      const card = query('[data-testid="crd-result-card"]') as HTMLButtonElement | null;
+      expect(card).toBeTruthy();
+      // FALSIFIER: the pre-fix markup had `flex flex-wrap items-baseline` on this button — that
+      // class combination is exactly what let the code wrap onto its own line, observed red before
+      // the fix.
+      expect(card?.className).not.toContain('flex');
+      expect(card?.className).not.toContain('flex-wrap');
+
+      const mono = card?.querySelector('.font-mono');
+      expect(mono?.textContent?.trim()).toBe('9674');
+      expect(card?.textContent?.replace(/\s+/g, ' ').trim()).toBe('9674 – Influencing a long policy title that could wrap onto multiple lines');
+    });
+
+    // Reviewer FAIL issue 3 (design.md §6.3 Metrics, "RESULT card"): the mockup shows the "RESULT"
+    // label INSIDE the bordered card, above the link — not above/outside the card.
+    it('Reviewer FAIL issue 3: the RESULT section h3 is a descendant of the card container', async () => {
+      await render();
+
+      const cardContainer = query('[data-testid="crd-result-card-container"]');
+      const heading = Array.from(cardContainer?.querySelectorAll('h3') ?? []).find(h => h.textContent?.trim() === copy.sections.result);
+
+      expect(cardContainer).toBeTruthy();
+      expect(heading).toBeTruthy();
+      expect(cardContainer?.contains(heading as Node)).toBe(true);
     });
   });
 
@@ -607,8 +653,8 @@ describe('NotificationDetailContentComponent', () => {
     describe('chips row', () => {
       it('renders every chip passed, in order, with only the funding chip outlined', async () => {
         host.chips.set([
-          { text: 'Needs your decision' },
-          { text: 'W1/W2', outlined: true },
+          { text: 'Needs your decision', pill: true },
+          { text: 'W1/W2', outlined: true, pill: true },
           { text: 'Output · Innovation Development' },
           { text: '25 Sep 2026' }
         ]);
@@ -626,7 +672,7 @@ describe('NotificationDetailContentComponent', () => {
       });
 
       it('Falsifier: no outlined chip renders at all when the caller never includes a funding chip (e.g. a row with no funding window)', async () => {
-        host.chips.set([{ text: 'Needs your decision' }]);
+        host.chips.set([{ text: 'Needs your decision', pill: true }]);
         await render();
 
         const chipEls = queryAll('[data-testid="crd-chip"]');
@@ -638,6 +684,30 @@ describe('NotificationDetailContentComponent', () => {
         await render();
 
         expect(query('[data-testid="crd-chips-row"]')).toBeNull();
+      });
+
+      // DSP-T-9 Q-2 (design.md §6.3 "Chips row", user-approved 2026-10-05): only status/funding are
+      // pills; level · type and the date render as plain muted text, same font size. FALSIFIER:
+      // rendering every chip through the pill branch (dropping the `chip.pill` check) makes every
+      // `data-chip-kind` read "pill" — observed red before the fix.
+      it('DSP-T-9 Q-2: only pill chips (status, funding) render as hlmBadge pills; level·type and date render as plain text', async () => {
+        host.chips.set([
+          { text: 'Needs your decision', pill: true },
+          { text: 'W1/W2', outlined: true, pill: true },
+          { text: 'Output · Innovation Development' },
+          { text: '25 Sep 2026' }
+        ]);
+        await render();
+
+        const chipEls = queryAll('[data-testid="crd-chip"]');
+        const kinds = chipEls.map(el => el.getAttribute('data-chip-kind'));
+        expect(kinds).toEqual(['pill', 'pill', 'text', 'text']);
+
+        // The plain-text chips carry no pill chrome (no hlmBadge host, no rounded-pill class).
+        expect(chipEls[2].getAttribute('data-variant')).toBeNull();
+        expect(chipEls[3].getAttribute('data-variant')).toBeNull();
+        expect(chipEls[2].className).not.toContain('rounded-full');
+        expect(chipEls[3].className).not.toContain('rounded-full');
       });
     });
 
@@ -784,6 +854,289 @@ describe('NotificationDetailContentComponent', () => {
       closeBtn?.click();
 
       expect(host.closedCount).toBe(1);
+    });
+  });
+
+  // DSP-T-5 (design.md §6.2 "chain", §6.3 "Chain step", DSP-R-8/AC-6/AC-7): the APPROVAL CHAIN
+  // section. Fixture = the mockup data (result 9400) verbatim from DSP-R-8's "Mixed statuses"
+  // scenario / DSP-AC-6: Samuel Otieno submitted 25 Sep 2026; primary SP04 accepted; SP01 pending
+  // + the viewer's own program; SP07 accepted by Marta Kowalski.
+  describe('DSP-T-5: APPROVAL CHAIN', () => {
+    function buildMockupChain(): ApprovalChainDto {
+      return {
+        result_id: 9400,
+        submission: {
+          state: 'submitted',
+          result_status_id: 6,
+          result_status_name: 'Approved',
+          actor_name: 'Samuel Otieno',
+          date: '2026-09-25T10:00:00.000Z'
+        },
+        steps: [
+          {
+            initiative_id: 4,
+            official_code: 'SP04',
+            short_name: 'Multifunctional Landscapes',
+            name: 'Multifunctional Landscapes',
+            role: 'primary',
+            status: 'accepted',
+            actor_name: 'Samuel Otieno',
+            date: '2026-09-25T10:00:00.000Z',
+            is_viewer_program: false
+          },
+          {
+            initiative_id: 1,
+            official_code: 'SP01',
+            short_name: 'Breeding for Tomorrow',
+            name: 'Breeding for Tomorrow',
+            role: 'contributor',
+            status: 'pending',
+            actor_name: null,
+            date: null,
+            is_viewer_program: true
+          },
+          {
+            initiative_id: 7,
+            official_code: 'SP07',
+            short_name: 'Policy Innovations',
+            name: 'Policy Innovations',
+            role: 'contributor',
+            status: 'accepted',
+            actor_name: 'Marta Kowalski',
+            date: '2026-09-25T10:00:00.000Z',
+            is_viewer_program: false
+          }
+        ]
+      };
+    }
+
+    it('renders a skeleton (never the steps or the error UI) while loading', async () => {
+      host.chain.set({ state: 'loading' });
+      await render();
+
+      expect(query('[data-testid="crd-chain-skeleton"]')).toBeTruthy();
+      expect(query('[data-testid="crd-chain-error"]')).toBeNull();
+      expect(queryAll('[data-testid="crd-chain-step"]').length).toBe(0);
+    });
+
+    describe('mockup fixture (DSP-AC-6, result 9400)', () => {
+      it('Falsifier: renders the 4 steps in order, with the exact step texts/pills from DSP-R-8\'s main scenario', async () => {
+        host.chain.set({ state: 'ok', data: buildMockupChain() });
+        await render();
+
+        const steps = queryAll('[data-testid="crd-chain-step"]');
+        expect(steps.length).toBe(4);
+
+        const names = steps.map(s => s.querySelector('[data-testid="crd-chain-step-name"]')?.textContent?.trim());
+        expect(names).toEqual([copy.chain.programSubmission, 'SP04 Multifunctional Landscapes', 'SP01 Breeding for Tomorrow', 'SP07 Policy Innovations']);
+
+        const pills = steps.map(s => s.querySelector('[data-testid="crd-chain-step-pill"]')?.textContent?.trim());
+        expect(pills).toEqual([copy.chain.submittedPill, copy.chain.acceptedPill, copy.chain.awaitingDecisionPill, copy.chain.acceptedPill]);
+
+        const subtitles = steps.map(s => s.querySelector('[data-testid="crd-chain-step-subtitle"]')?.textContent?.trim() ?? null);
+        expect(subtitles).toEqual([
+          copy.chain.submittedBy('Samuel Otieno', '25 Sep 2026'),
+          copy.chain.actorAndDate('Samuel Otieno', '25 Sep 2026'),
+          copy.chain.contributingProgram,
+          copy.chain.actorAndDate('Marta Kowalski', '25 Sep 2026')
+        ]);
+      });
+
+      it('Falsifier: "Your program" renders ONLY on SP01 (the viewer\'s own step), never on SP04 (the primary)', async () => {
+        host.chain.set({ state: 'ok', data: buildMockupChain() });
+        await render();
+
+        const steps = queryAll('[data-testid="crd-chain-step"]');
+        const yourProgramFlags = steps.map(s => !!s.querySelector('[data-testid="crd-chain-step-your-program"]'));
+        expect(yourProgramFlags).toEqual([false, false, true, false]);
+      });
+
+      // DSP-T-9 F-3 (user-approved 2026-10-05): real data (result 9637) showed the viewer's own
+      // PRIMARY, ACCEPTED step mislabeled "Contributing program" (hiding its actor/date), because
+      // the old gate was `is_viewer_program` alone. FALSIFIER: reverting the gate back to
+      // `is_viewer_program` fails this — observed red before the fix.
+      it('DSP-T-9 F-3: the viewer\'s own step shows actor · date, not "Contributing program", when it is accepted (not a pending contributor)', async () => {
+        const chain = buildMockupChain();
+        // SP04 is role:'primary', status:'accepted' — make it ALSO the viewer's own program.
+        chain.steps[0] = { ...chain.steps[0], is_viewer_program: true };
+        host.chain.set({ state: 'ok', data: chain });
+        await render();
+
+        const steps = queryAll('[data-testid="crd-chain-step"]');
+        const sp04Subtitle = steps[1].querySelector('[data-testid="crd-chain-step-subtitle"]')?.textContent?.trim();
+        expect(sp04Subtitle).toBe(copy.chain.actorAndDate('Samuel Otieno', '25 Sep 2026'));
+        expect(sp04Subtitle).not.toBe(copy.chain.contributingProgram);
+
+        // "Your program" (the brand label) still renders for SP04 — only the subtitle gate changed.
+        expect(steps[1].querySelector('[data-testid="crd-chain-step-your-program"]')).toBeTruthy();
+      });
+
+      it('DSP-T-5 rework attempt 2 (Reviewer FAIL issue 2): only the program CODE is mono, never the name — the submission step has no mono element at all', async () => {
+        host.chain.set({ state: 'ok', data: buildMockupChain() });
+        await render();
+
+        const steps = queryAll('[data-testid="crd-chain-step"]');
+
+        // Submission step: no code at all, so no `.font-mono` element — the whole name stays plain.
+        const submissionMono = steps[0].querySelectorAll('[data-testid="crd-chain-step-name"] .font-mono');
+        expect(submissionMono.length).toBe(0);
+        expect(steps[0].querySelector('[data-testid="crd-chain-step-name"]')?.textContent?.trim()).toBe(copy.chain.programSubmission);
+
+        // Program steps: exactly one mono element, containing ONLY the code — never the program name.
+        const programMono = steps[1].querySelectorAll('[data-testid="crd-chain-step-name"] .font-mono');
+        expect(programMono.length).toBe(1);
+        expect(programMono[0].textContent?.trim()).toBe('SP04');
+        expect(programMono[0].textContent?.trim()).not.toContain('Multifunctional Landscapes');
+
+        const fullName = steps[1].querySelector('[data-testid="crd-chain-step-name"]')?.textContent?.replace(/\s+/g, ' ').trim();
+        expect(fullName).toBe('SP04 Multifunctional Landscapes');
+      });
+
+      it('completed/pending/declined steps show a distinct icon each — a declined step never renders the same icon as a pending one', async () => {
+        const chain = buildMockupChain();
+        chain.steps[1] = { ...chain.steps[1], status: 'declined', actor_name: 'Priya Raghavan', date: '2026-09-25T10:00:00.000Z' };
+        host.chain.set({ state: 'ok', data: chain });
+        await render();
+
+        const steps = queryAll('[data-testid="crd-chain-step"]');
+        const icons = steps.map(s => s.querySelector('[data-testid="crd-chain-step-icon"]')?.getAttribute('data-icon'));
+        // Submission (submitted) = check, SP04 (accepted) = check, SP01 (now declined) = x, SP07 (accepted) = check.
+        expect(icons).toEqual(['check', 'check', 'x', 'check']);
+
+        const declinedPill = steps[2].querySelector('[data-testid="crd-chain-step-pill"]')?.textContent?.trim();
+        expect(declinedPill).toBe(copy.chain.declinedPill);
+
+        // Falsifier: a declined step's icon is never the same shape as a pending (ring) one.
+        const pendingChain = buildMockupChain();
+        host.chain.set({ state: 'ok', data: pendingChain });
+        await render();
+        const pendingIcons = queryAll('[data-testid="crd-chain-step-icon"]').map(el => el.getAttribute('data-icon'));
+        expect(pendingIcons[2]).toBe('ring');
+        expect(icons[2]).not.toBe(pendingIcons[2]);
+      });
+    });
+
+    it('"Result not yet submitted": the submission step shows the result status with a pending ring and no actor/date', async () => {
+      const chain = buildMockupChain();
+      chain.submission = { state: 'not_submitted', result_status_id: 1, result_status_name: 'Editing', actor_name: null, date: null };
+      host.chain.set({ state: 'ok', data: chain });
+      await render();
+
+      const steps = queryAll('[data-testid="crd-chain-step"]');
+      expect(steps[0].querySelector('[data-testid="crd-chain-step-pill"]')?.textContent?.trim()).toBe('Editing');
+      expect(steps[0].querySelector('[data-testid="crd-chain-step-icon"]')?.getAttribute('data-icon')).toBe('ring');
+      expect(steps[0].querySelector('[data-testid="crd-chain-step-subtitle"]')).toBeNull();
+    });
+
+    describe('Falsifier: error state never disables/hides the footer', () => {
+      it('renders the inline error + Retry, and Accept stays present and enabled', async () => {
+        host.chain.set({ state: 'error' });
+        await render();
+
+        const errorEl = query('[data-testid="crd-chain-error"]');
+        expect(errorEl?.textContent).toContain(copy.chain.errorMessage);
+        expect(queryAll('[data-testid="crd-chain-step"]').length).toBe(0);
+
+        const acceptBtn = query('[data-testid="crd-accept-btn"]') as HTMLButtonElement | null;
+        expect(acceptBtn).toBeTruthy();
+        acceptBtn?.click();
+        expect(host.acceptClickedCount).toBe(1);
+      });
+
+      it('Retry emits retryChain', async () => {
+        host.chain.set({ state: 'error' });
+        await render();
+
+        (query('[data-testid="crd-chain-retry-btn"]') as HTMLButtonElement)?.click();
+        expect(host.retryChainCount).toBe(1);
+      });
+
+      it('an "ok" state with no data (T-2 advisory: an empty server body) renders the same inline error, never throwing', async () => {
+        host.chain.set({ state: 'ok', data: undefined });
+        expect(() => fixture.detectChanges()).not.toThrow();
+        await fixture.whenStable();
+
+        expect(query('[data-testid="crd-chain-error"]')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('DSP-T-8: MAP TO YOUR THEORY OF CHANGE heading/helper + footer restyle', () => {
+    it('decide mode (bilateral, showAlignSlot=true) shows the ToC heading/helper wrapping [crdAlign]', async () => {
+      host.mode.set('decide');
+      host.showAlignSlot.set(true);
+      await render();
+
+      const section = query('[data-testid="crd-toc-section"]');
+      expect(section).toBeTruthy();
+      expect(section?.querySelector('h3')?.textContent?.trim()).toBe(copy.sections.mapToToc);
+      expect(section?.textContent).toContain(copy.toc.helper);
+      expect(section?.querySelector('[data-testid="align-slot"]')).toBeTruthy();
+    });
+
+    // DSP-T-9 Q-4 (user-approved 2026-10-05): the user chose the mockup's literal wording over the
+    // T-8 "accurate indicator" wording. FALSIFIER: the old T-8 string ("Pick the indicator…") fails
+    // this exact-string assertion — observed red before the fix.
+    it('DSP-T-9 Q-4: the ToC helper is the exact mockup copy, not the T-8 accurate-indicator wording', async () => {
+      host.mode.set('decide');
+      host.showAlignSlot.set(true);
+      await render();
+
+      expect(copy.toc.helper).toBe('Choose the area of work this result contributes to. You can do this later.');
+      const section = query('[data-testid="crd-toc-section"]');
+      expect(section?.textContent).toContain('Choose the area of work this result contributes to. You can do this later.');
+    });
+
+    it('confirm-decline mode (bilateral, showAlignSlot=true) also shows the ToC section', async () => {
+      host.mode.set('confirm-decline');
+      host.showAlignSlot.set(true);
+      await render();
+
+      expect(query('[data-testid="crd-toc-section"]')).toBeTruthy();
+    });
+
+    it('Falsifier: a primary request (showAlignSlot=false) in decide mode never shows the ToC heading', async () => {
+      host.mode.set('decide');
+      host.showAlignSlot.set(false);
+      await render();
+
+      expect(query('[data-testid="crd-toc-section"]')).toBeNull();
+      // Defense in depth, same as the pre-existing showAlignSlot falsifier above.
+      expect(query('[data-testid="align-slot"]')).toBeNull();
+    });
+
+    it('Falsifier: a view-mode row shows neither the footer nor the ToC section', async () => {
+      host.mode.set('view');
+      host.showAlignSlot.set(true);
+      await render();
+
+      expect(query('[data-testid="crd-footer"]')).toBeNull();
+      expect(query('[data-testid="crd-toc-section"]')).toBeNull();
+    });
+
+    it('Falsifier: "Where it contributes" renders before the APPROVAL CHAIN would be a defect — chain must come first', async () => {
+      host.mode.set('decide');
+      host.reviewRows.set([buildReviewRow()]);
+      host.chain.set({ state: 'ok', data: undefined });
+      await render();
+
+      const body = query('[data-testid="crd-body"]') as HTMLElement;
+      const chainIdx = Array.from(body.children).findIndex(el => el.getAttribute('data-testid') === 'crd-chain-section');
+      const reviewIdx = Array.from(body.children).findIndex(el => el.getAttribute('data-testid') === 'crd-review-section');
+      expect(chainIdx).toBeGreaterThanOrEqual(0);
+      expect(reviewIdx).toBeGreaterThan(chainIdx);
+    });
+
+    it('footer uses the restyled px-[20px] py-[14px] padding with a top divider, pinned outside crd-body', async () => {
+      host.mode.set('decide');
+      await render();
+
+      const footer = query('[data-testid="crd-footer"]') as HTMLElement;
+      expect(footer.className).toContain('px-[20px]');
+      expect(footer.className).toContain('py-[14px]');
+      expect(footer.className).toContain('border-t');
+      // Sibling of crd-body, not a descendant — i.e. outside the scrolling area.
+      expect(query('[data-testid="crd-body"] [data-testid="crd-footer"]')).toBeNull();
     });
   });
 });

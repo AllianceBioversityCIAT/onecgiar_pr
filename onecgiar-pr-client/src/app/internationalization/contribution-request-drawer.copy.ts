@@ -20,9 +20,18 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
   sections: {
     result: 'RESULT',
     whereItContributes: 'WHERE IT CONTRIBUTES',
-    align: 'ALIGN TO YOUR THEORY OF CHANGE',
     /** NOTIF-T-4: `view` mode's metadata grid section (design.md §6.2 field-adapter table). */
-    details: 'DETAILS'
+    details: 'DETAILS',
+    /** DSP-T-5 (design.md §6.2/§6.3 "APPROVAL CHAIN"): the chain section's own h3 heading. */
+    approvalChain: 'APPROVAL CHAIN',
+    /**
+     * DSP-T-8 (design.md "Order in the body", mockup `docked-panel-detail.png`): the heading that
+     * now wraps the existing `[crdAlign]` Align step — framing only, no new AOW checklist (DD-8).
+     * Rework attempt 2: this heading REPLACES the slot's own inner heading (the former
+     * `sections.align`/`align.hint` pair, deleted below) rather than stacking above it — see
+     * `toc.helper`'s docstring for where that inner hint's wording went.
+     */
+    mapToToc: 'MAP TO YOUR THEORY OF CHANGE'
   },
   /** CRD-R-4: the 7 field labels, in order. */
   fieldLabels: {
@@ -52,6 +61,28 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
   dashValue: '–',
   showMore: 'Show more',
   showLess: 'Show less',
+  /**
+   * DSP-T-5 (design.md §6.2 "Program steps" / §6.3 "Chain step", DSP-R-8): the APPROVAL CHAIN
+   * section's own strings — the fixed "Program submission" step name, its two pill texts
+   * (`submitted`/`notSubmitted` reuses the result's own `result_status_name`, not a copy key),
+   * the "Your program"/"Contributing program" pair (DSP-AC-6 "SP01 ... marked 'Your program',
+   * subtitle 'Contributing program'"), the three program-step pills, and the loading/error state.
+   */
+  chain: {
+    programSubmission: 'Program submission',
+    submittedPill: 'Submitted',
+    /** DSP-R-8 "Submitted by {actor} · {date}" — date already formatted `dd MMM yyyy` by the caller. */
+    submittedBy: (actor: string, date: string): string => `Submitted by ${actor} · ${date}`,
+    /** `{actor} · {date}` subtitle for an accepted/declined/pending program step (not the viewer's own). */
+    actorAndDate: (actor: string, date: string): string => `${actor} · ${date}`,
+    yourProgram: 'Your program',
+    contributingProgram: 'Contributing program',
+    acceptedPill: 'Accepted',
+    awaitingDecisionPill: 'Awaiting decision',
+    declinedPill: 'Declined',
+    errorMessage: "Couldn't load the approval chain.",
+    retry: 'Retry'
+  },
   /**
    * CRD-R-2: header sentence words. `notification-item`'s `drawerHeader()` (CRD-T-4) reads these
    * directly — there is no longer a separate local copy of them.
@@ -91,8 +122,24 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
     primaryTail: 'as the primary Science Program of result'
   },
   align: {
-    hint: 'Pick the indicator this result contributes to in your own theory of change. You can do this later.',
     clearMapping: 'Clear mapping'
+  },
+  /**
+   * DSP-T-8 (design.md "Order in the body", DSP-R-10/DD-8): the single helper line under the
+   * "MAP TO YOUR THEORY OF CHANGE" heading in `notification-detail-content`. Rework attempt 2
+   * (Reviewer FAIL — requirements.md:34/L202, design.md DD-8: there is no AOW checklist, the real
+   * control is the indicator picker): replaces the former `align.hint` string that used to render
+   * BY `notification-item`, inside the projected `[crdAlign]` block's own now-deleted inner
+   * heading — that inner `h3`/`p` is gone (no spec/CT reference to `sections.align`/`align.hint`
+   * existed outside it), so this is now the ONLY guidance line in the ToC area.
+   *
+   * DSP-T-9 Q-4 (user-approved 2026-10-05): reverted to the mockup's literal wording — a user
+   * decision, overriding the T-8 "accurate indicator wording" choice recorded above. The T-8
+   * rationale (no AOW checklist exists) still stands as background; the user chose the mockup copy
+   * anyway.
+   */
+  toc: {
+    helper: 'Choose the area of work this result contributes to. You can do this later.'
   },
   footer: {
     acceptContribution: 'Accept contribution',

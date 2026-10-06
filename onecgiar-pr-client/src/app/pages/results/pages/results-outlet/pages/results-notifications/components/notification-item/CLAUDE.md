@@ -62,17 +62,18 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   resolved rows never reach this getter's rendering path, they show the pre-existing
   Accepted/Declined chip instead). **No longer rendered at the row level** — `NOTIF-T-12` (rework
   attempt 1) removed the `.notification_badges` status chip because it didn't match the reference
-  image; the template has no status element any more. `rowStatusLabel` now only feeds
-  `drawerViewFields()`'s `status` field, which `NOTIF-T-14` (a parallel task this same rework round)
-  renders inside the drawer's `view`-mode metadata grid instead (first row, "the most important
-  thing to know at a glance" — see `../notification-detail-content/notification-detail-content.component.ts`'s
-  `ContributionRequestDrawerViewFields.status` / `viewMetadataRows` (DSP-T-3 moved both out of
-  `contribution-request-drawer`, now a thin shell). See the copy file's docstring
-  (`contribution-request-drawer.copy.ts`, `notificationItem` section) for the same history.
+  image; the template has no status element any more. `rowStatusLabel` now feeds `chips()`'s first
+  entry (`DSP-T-4`, design.md §6.2 — moved from the retired `drawerViewFields()`'s `status` field /
+  `view`-mode metadata grid, which `DSP-T-4` removed outright; see the copy file's docstring and
+  `../notification-detail-content/CLAUDE.md`'s "Header title, chips row, RESULT grid" section).
 - **`[crdAlign]` gate:** the projected Align block now also requires
   `drawerMode() === 'decide' || drawerMode() === 'confirm-decline'`, on top of the pre-existing
   `isBilateralResult && tocInitiative` check — defense in depth, since `tocInitiative` is already
   never seeded outside `decide` mode by the rewritten `openDrawer()`.
+- **DSP-T-8 rework attempt 2:** the `[crdAlign]` slot's own inner `h3`/`p` (the former
+  `copy.sections.align`/`copy.align.hint`) is deleted — `notification-detail-content`'s "MAP TO YOUR
+  THEORY OF CHANGE" heading (its own `CLAUDE.md`) now frames the slot alone, not on top of a second
+  heading. `copy.align.hint`'s wording moved to `copy.toc.helper`, which that heading renders.
 - **`drawerReviewRowsForMode()` (rework, attempt 2):** the method actually bound to the drawer's
   `[reviewRows]` input — NOT `drawerReviewTables()` directly. `drawerReviewTables()` still returns a
   single all-dash 7-field table when `tocReview` is empty (`CRD-R-4`, unchanged, still needed by
@@ -162,6 +163,29 @@ wide-screen `<aside>` (a later task) without touching this row's template again.
 - **`[crdAlign]` projection is unchanged**: still a child of the content component in this row's
   template (not the shell), still gated the same way (`isBilateralResult && tocInitiative && mode
   in {decide, confirm-decline}`).
+
+## DSP-T-4 (`notifications/detail-side-panel`): header restyle — `detailTitle()`, `chips()`, `resultGrid()`
+Three new builders feed the content's new inputs, all read by the template in place of the retired
+`drawerViewFields()`/the `view`-mode-only metadata grid (DD-6):
+- **`detailTitle()`** — the panel's `h2` text. Returns `rowTypeChipLabel` (the SAME getter the row's
+  own type chip reads — single source, PSR-R-11), falling back to `copy.title` when it resolves to
+  `null` (an Updates row whose type can't be resolved).
+- **`chips()`** — status (always present, `rowStatusLabel`), funding (`fundingWindowBadge`,
+  `outlined: true`), level · type (`resultLevelTypeBadge`), date (`activityDate`, a getter: a pure
+  `dd MMM yyyy` formatter over `requested_date ?? created_date` — DSP-T-9 F-2, request rows carry
+  `requested_date` only — no `DatePipe`/DI). Each of the last three is omitted — never a blank chip —
+  exactly like the row's own badges already do.
+- **`resultGrid()`** — the RESULT card's 6 cells, always in the fixed order Reporting center → Result
+  type → Primary Science Program → Contributing programs → Submitted by → Phase; a missing source
+  value is `copy.dashValue`, the label is never dropped (DD-6 supersedes NOTIF-R-5/NOTIF-AC-7 for
+  THIS grid only). Primary SP reads `approvalChain()`'s primary step `official_code`, falling back to
+  `obj_result_by_initiatives[0]` while the chain hasn't resolved to `'ok'`; Contributing programs
+  joins the chain's non-declined contributor codes with `", "` and sets `loading: true` on that one
+  cell while the chain is still `'loading'` (DSP-T-2's signal, read here, not re-fetched). **Submitted
+  by (DSP-T-9 Q-1, user-approved):** the chain's `submission.actor_name` when `submission.state ===
+  'submitted'` — NOT the row's requester/emitter — so this cell and the APPROVAL CHAIN section never
+  name different people; `dash` for `not_submitted` or a chain error; `loading: true` (same skeleton
+  mechanism) while the chain is still `'loading'`.
 
 ## DD-6 trap: close-before-refetch, twice
 - **Instance reuse — updated post-`NOTIF-T-6`.** The retired `received-requests`/`sent-requests`
@@ -391,8 +415,50 @@ code" without checking design.md CRD-DD-10's consequences note first.
   checks the CLASS CHOICE only; it matches the design.md §8.3 class contract, but the actual visual
   match to the mockup is still the HITL manual check, not something a unit test can verify.
 - **Drawer `requestKind` is unaffected** — it was already `null` for every `isUpdateSource` row
-  before this task (see `drawerViewFields()`'s own comment), so neither chip override feeds it; the
-  drawer shows no "type" field at all for Updates rows, Approved/Rejected included.
+  before this task (see the retired `drawerViewFields()`'s own comment, since replaced by
+  `detailTitle()`/`DSP-T-4`), so neither chip override feeds it; the panel shows no separate "type"
+  field at all for Updates rows, Approved/Rejected included — only whatever `detailTitle()` resolves.
+
+## DSP-T-7: routing to the panel service, lifecycle, focus
+`notificationKey` (a getter, not the component instance) is the panel's key — `${notification.origin}-${share_result_request_id ?? notification_id}`, byte-identical to the page's own `trackNotificationKey()`. `openDrawer()` builds `TemplatePortal(detailTemplateRef(), vcr)` and calls `panel.open(key, portal, drawerHeadingId)` AFTER `drawerOpen.set(true)`. An `activeKey` effect resets THIS row (`resetForTakeover()`, never `closeDrawer()` — no focus move, no `panel.close()`) when another row takes over while open. `closeDrawer()` is the single seam (`finalize`, ✕/Escape, NOTIF-R-11 toggle all already flow through it) — it now also calls `panel.close(key)` and, **only when `drawerOpen()` was still `true` on entry** (never for a popup-path call where nothing was open, `CRD-DD-10`/DSP-R-13 scope), focuses `#rowInteractive`. `ngOnDestroy` calls `panel.close(key)` (no-op unless still active). The drawer's `[open]` is `drawerOpen() && !panel.isWide()` so the aside/drawer can never both show; the SHELL's own `(closed)` (narrow dismissal + the real `BrnDialog`'s post-exit-animation event) goes through `onDrawerShellClosedSignal()`, which no-ops when `panel.isWide()` is true at arrival (a resize-driven container swap, not a user close) — the content's own ✕ `(closed)` stays wired straight to `onDrawerClosedSignal()`/`closeDrawer()` unconditionally, so the docked ✕ still closes. Docked-open heading focus goes through `afterNextRender` (content `h2[id]` now has `tabindex="-1"`, `notification-detail-content`). Escape inside the aside calls `panel.requestClose()` (page template); the row's own `closedByUser$` subscription is what actually closes, via `closeDrawer()`.
+
+## DSP-T-5 rework attempt 2: `[chain]` narrows via `@let`, not a second `approvalChain()` call
+`[chain]` reads a `@let chainState` local; a second `approvalChain()` call is not narrowed under
+`strictTemplates`, and only `ngc` catches it (see `src/CLAUDE.md` §21.7).
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-9 fix round (`notifications/detail-side-panel`,
+HITL browser pass + user decisions): `activityDate` now reads `requested_date ?? created_date` (F-2,
+request rows carry `requested_date` only); `resultGrid()`'s "Submitted by" now reads the chain's
+`submission.actor_name` instead of the row's requester/emitter (Q-1, see the `resultGrid()` bullet
+above); `chips()` marks only status/funding `pill: true` (Q-2, rendering decided in
+`notification-detail-content`). **`copy.toc.helper` reverts to the mockup's literal wording** (Q-4,
+user decision overriding the DSP-T-8 stamp below's "accurate wording" choice — that stamp's
+reasoning still stands as background, the user chose the mockup copy anyway). Supersedes nothing
+below except the `toc.helper` string; every other fact in the DSP-T-8 stamp still holds.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-8 rework attempt 2 (`notifications/detail-side-panel`,
+Reviewer FAIL): deleted the `[crdAlign]` slot's own inner `h3`/`p` (`copy.sections.align`/
+`copy.align.hint`) — see the new bullet under "`[crdAlign]` gate" above. `copy.toc.helper` (rendered
+by `notification-detail-content`'s own heading) carries the accurate wording forward; `sections.align`
+and `align.hint` are removed from the copy file (no other reference existed). Supersedes nothing
+below — it only fixes the stacked-heading regression attempt 1 introduced.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-7 (`notifications/detail-side-panel`): routed
+to `NotificationDetailPanelService` (open/close/destroy/takeover/focus) — see the new section above.
+Supersedes nothing below.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-5 rework attempt 2 (`notifications/detail-side-panel`):
+`[chain]` binding fixed to type-check under `ngc` (see the section above); `notification-detail-content`'s
+chain step also split `name` into `code`/`name` so only the program code renders `font-mono` (design.md
+§6.3 "Chain step") — see that component's own `CLAUDE.md` for the `ChainDisplayStep` contract.
+Supersedes nothing below — it only fixes the `[chain]` binding attempt 1 left broken and documents it.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-4 (`notifications/detail-side-panel`):
+`drawerViewFields()` removed outright; `detailTitle()`/`chips()`/`resultGrid()` added (see the new
+"DSP-T-4" section above) and wired into `notification-detail-content`'s `title`/`chips`/`resultGrid`
+inputs. `rowTypeChipLabel`/`rowStatusLabel`/`fundingWindowBadge`/`resultLevelTypeBadge` are reused,
+not reimplemented. Supersedes nothing below — it only retires `drawerViewFields()` and the pointers
+to it, fixed in place above.
 
 **Verified:** 2026-10-05 · qa-development-2026-ss · cb27be98b · DSP-T-3 attempt 2 (`notifications/detail-side-panel`):
 the drawer split into a shell + `notification-detail-content` (see the "DSP-T-3" section above) —

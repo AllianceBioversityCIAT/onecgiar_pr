@@ -32,7 +32,7 @@ On wide screens, clicking a notification opens its detail **in a panel docked to
 
 | Viewport | Behavior |
 |---|---|
-| **≥ 1280 px (`lg`)** | The list narrows and a sticky panel (380 px wide at `lg`, 440 px at `xl` ≥ 1600, `top: 24px`, `height: calc(100vh - 140px)`, rounded 12 px, bordered, no shadow) docks on the right. Clicking another row swaps its content. ✕ closes it and the list goes back to full width. No scrim, no focus trap, and the page stays interactive. |
+| **≥ 1280 px (`lg`)** | The list narrows and a sticky panel (380 px wide at `lg`, 440 px at `xl` ≥ 1600, `top: 24px`, `height: calc(100vh - 140px)`, rounded 12 px, bordered, no shadow) docks on the right. Clicking another row swaps its content. ✕ closes it and the list goes back to full width. No scrim, no focus trap, and the page stays interactive. | *(superseded by DSP-T-9 F-1: offset from `--pr-shell-header-height`; see design.md §6.3 Panel)*
 | **< 1280 px** | Today's `hlm-sheet` drawer, with the same new content. Below `sm` it is full-screen, as it already is. |
 | **Resize across 1280 px while open** | The open notification moves between the two containers. Its in-progress state (mode, ToC selection) is kept. |
 
@@ -127,7 +127,7 @@ Why B: smallest safe path — the accept/decline state stays in the row, the dra
 | R1 | Row destroyed while docked (filter, Received↔Sent, tab change, "load more") | The service clears the outlet in the row's `ngOnDestroy`; the panel closes. |
 | R2 | Non-modal panel accessibility | No focus trap. Focus the panel heading on open, return it to the row on close; Escape closes only when focus is inside. CRD-P-3 changes for `lg`+. |
 | R3 | Spec churn | `notification-item.component.spec.ts` (3.8k lines) asserts on drawer inputs; keep input names on the shell. Run affected specs before commit. |
-| R4 | Sticky height `calc(100vh - 140px)` | Verify against the real top bar. |
+| R4 | Sticky height `calc(100vh - 140px)` | Verify against the real top bar. | *(superseded by DSP-T-9 F-1: offset from `--pr-shell-header-height`; see design.md §6.3 Panel)*
 | R5 | Chain endpoint permissions | Must only return chains for results the viewer can see (same role gate as `get/received`). |
 | R6 | Chain after a decision | After Accept/Decline the chain must refresh. **Resolved by pivot DSP-T-2 (2026-10-05):** the panel closes on decision (`CRD-R-8`); the next open fetches a fresh chain. |
 | D1 | Approval chain | **In scope, same delivery.** |

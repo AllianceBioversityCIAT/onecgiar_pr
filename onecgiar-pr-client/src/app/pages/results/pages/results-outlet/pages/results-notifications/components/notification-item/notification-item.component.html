@@ -8,6 +8,7 @@
      Updates row). Decided/Sent/Updates rows render through the very same `.notification` wrapper
      below, so the bindings are unconditional now instead of gated on `isPending`. -->
 <div
+  #rowInteractive
   class="notification notification_interactive"
   role="button"
   tabindex="0"
@@ -811,6 +812,8 @@
      template instance the (future) wide-screen `<aside>` portal will reuse without touching this
      markup again. -->
 <ng-template #detailTpl>
+  <!-- DSP-T-5 rework attempt 2: `@let` narrows `chainState.status` across the ternary below; a second `approvalChain()` call would not narrow under strictTemplates (see notification-item CLAUDE.md). -->
+  @let chainState = approvalChain();
   <app-notification-detail-content
     [headingId]="drawerHeadingId"
     [mode]="drawerMode()"
@@ -820,6 +823,7 @@
     [resultCode]="notification?.obj_result?.result_code"
     [resultTitle]="notification?.obj_result?.title"
     [resultGrid]="resultGrid()"
+    [chain]="chainState.status === 'ok' ? { state: 'ok', data: chainState.data } : { state: chainState.status }"
     [reviewRows]="drawerReviewRowsForMode()"
     [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
     [declineDisabled]="requestingAccept || requestingReject"
@@ -835,7 +839,8 @@
     (acceptClicked)="onDrawerAccept()"
     (declineClicked)="onDrawerDeclineClicked()"
     (declineConfirmed)="acceptOrReject(false)"
-    (declineCancelled)="drawerMode.set('decide')">
+    (declineCancelled)="drawerMode.set('decide')"
+    (retryChain)="retryChain()">
     <!-- NOTIF-T-5 item 1: `[crdAlign]` is the Align/ToC-mapping block (CRD-DD-3) — per design.md
          §6.2's `view`-mode table ("no footer — result card + metadata grid only"), it must never
          project in `view` mode, only `decide`/`confirm-decline` (CRD-DD-10, unchanged). `tocInitiative`
@@ -847,9 +852,6 @@
       <!-- PSR-T-8: `data-testid="align-slot"` lets a rendered-DOM assertion confirm the slot never
            projects for a primary request (belt-and-suspenders with `showAlignSlot`/the guards above). -->
       <div crdAlign data-testid="align-slot" style="position: relative; z-index: 1" class="flex flex-col gap-3">
-        <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.align }}</h3>
-        <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.align.hint }}</p>
-
         <app-pr-yes-or-not
           label="Does this result align with the Program's planned TOC indicators?"
           [required]="false"
@@ -894,10 +896,15 @@
   </app-notification-detail-content>
 </ng-template>
 
+<!-- @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2 step 2/4): the drawer is
+     only ever open when narrow — docked (`panel.isWide()`) means the SAME `#detailTpl` instance is
+     portaled into the page's `<aside>` instead (DSP-R-4 "AND IT MUST NOT show both containers at
+     the same time"). The row's own state survives the swap because it lives here, not in either
+     container. -->
 <app-contribution-request-drawer
-  [open]="drawerOpen()"
+  [open]="drawerOpen() && !panel.isWide()"
   [labelledBy]="drawerHeadingId"
   [describedBy]="drawerHeadingId + '-desc'"
-  (closed)="onDrawerClosedSignal()">
+  (closed)="onDrawerShellClosedSignal()">
   <ng-container *ngTemplateOutlet="detailTpl"></ng-container>
 </app-contribution-request-drawer>

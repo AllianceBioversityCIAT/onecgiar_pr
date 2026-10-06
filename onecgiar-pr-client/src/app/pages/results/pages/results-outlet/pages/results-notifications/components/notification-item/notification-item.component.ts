@@ -1,4 +1,22 @@
-import { Component, Input, Output, EventEmitter, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  Input,
+  Output,
+  EventEmitter,
+  OnDestroy,
+  TemplateRef,
+  ViewContainerRef,
+  afterNextRender,
+  effect,
+  inject,
+  signal,
+  viewChild
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TemplatePortal } from '@angular/cdk/portal';
+import { formatDate } from '@angular/common';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
@@ -26,6 +44,10 @@ import { BILATERAL_DECISION_NOTICE_COPY } from '../../../../../../../../internat
 import type { ContributionRequestDrawerMode } from '../notification-detail-content/notification-detail-content.component';
 // DSP-T-2 (notifications/detail-side-panel): the approval-chain contract, mirrored from the server DTO.
 import type { ApprovalChainDto } from '../../../../../../../../shared/services/api/results-api.service';
+// @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2/§6.2): the page-scoped
+// coordinator that decides whether THIS row's detail template renders docked (wide) or in the
+// drawer (narrow), and which row "owns" it when only one may be open at a time.
+import { NotificationDetailPanelService } from '../../services/notification-detail-panel.service';
 
 /**
  * DSP-T-4 (design.md §6.2 "chips"): mirrors `ContributionRequestDrawerChip` structurally (same
@@ -35,6 +57,12 @@ import type { ApprovalChainDto } from '../../../../../../../../shared/services/a
 export interface NotificationDetailChip {
   text: string;
   outlined?: boolean;
+  /**
+   * DSP-T-9 Q-2 (design.md §6.3 "Chips row", user-approved 2026-10-05): only the status and funding
+   * chips render as pills; level · type and the date render as plain muted text. `true` for status
+   * and funding only — set at the one place chips are built, below.
+   */
+  pill?: boolean;
 }
 
 /**
@@ -47,21 +75,22 @@ export interface NotificationDetailGridField {
   loading?: boolean;
 }
 
-const MONTH_ABBREVIATIONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 /**
  * DSP-T-4 (design.md §6.2 "the date `activityDate` formatted `dd MMM yyyy`"): a pure formatter —
- * no `DatePipe`/DI, since this feeds a plain string into `chips()`, not a template binding. Returns
- * `null` for anything that doesn't parse to a valid date, so a malformed/missing `created_date`
- * omits the chip entirely instead of rendering "Invalid Date".
+ * no DI (Angular's `formatDate` is a plain function, not the `DatePipe` service), since this feeds
+ * a plain string into `chips()`, not a template binding. Returns `null` for anything that doesn't
+ * parse to a valid date, so a malformed/missing `created_date` omits the chip entirely instead of
+ * rendering "Invalid Date".
+ *
+ * Leader addition (attempt 2): replaces a hand-rolled `MONTH_ABBREVIATIONS` table — new English
+ * strings do not belong outside `contribution-request-drawer.copy.ts`, and `formatDate` already
+ * owns this formatting job.
  */
 function formatActivityDate(raw: unknown): string | null {
   if (!raw) return null;
   const date = new Date(raw as string | number | Date);
   if (Number.isNaN(date.getTime())) return null;
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = MONTH_ABBREVIATIONS[date.getMonth()];
-  return `${day} ${month} ${date.getFullYear()}`;
+  return formatDate(date, 'dd MMM yyyy', 'en-US');
 }
 
 /**
@@ -130,7 +159,7 @@ export interface DrawerReviewField {
   styleUrls: ['./notification-item.component.scss'],
   standalone: false
 })
-export class NotificationItemComponent {
+export class NotificationItemComponent implements OnDestroy {
   @Input() notification: any;
   @Input() isSent: boolean;
   @Output() requestEvent = new EventEmitter<any>();
@@ -214,6 +243,35 @@ export class NotificationItemComponent {
 
   private readonly notificationNavigation = inject(NotificationNavigationService);
 
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-7)
+   * `panel` is read from the template (`[open]="drawerOpen() && !panel.isWide()"`) so it is not
+   * `private` — a private member fails `ng build`'s strict template type-checking. `vcr`/`injector`
+   * are implementation details only this class needs.
+   */
+  readonly panel = inject(NotificationDetailPanelService);
+  private readonly vcr = inject(ViewContainerRef);
+  private readonly injector = inject(Injector);
+
+  /** DSP-T-7 (design.md §2.1 "Create the portal at open time"): this row's own `#detailTpl`. */
+  private readonly detailTemplateRef = viewChild<TemplateRef<unknown>>('detailTpl');
+  /** DSP-T-7 (design.md §6.2 Focus "On close, the row focuses its own host row element"). */
+  private readonly rowInteractiveRef = viewChild<ElementRef<HTMLElement>>('rowInteractive');
+
+  /**
+   * DSP-T-7 (design.md §2.1 "Pick a key from the notification's own id fields"): identifies the
+   * NOTIFICATION, not this component instance — rows are reused under `track $index`/the same
+   * instance can be rebound to a different notification (CRD-P-6, the DD-6 trap). Mirrors the
+   * page's own `trackNotificationKey()` exactly (`results-notifications.component.ts`) so the same
+   * notification always resolves to the same key whether the page or the row computes it — `origin`
+   * disambiguates id spaces that otherwise collide (`share_result_request_id` vs `notification_id`).
+   */
+  get notificationKey(): string {
+    const n = this.notification;
+    const id = n?.share_result_request_id ?? n?.notification_id;
+    return `${n?.origin ?? ''}-${id ?? ''}`;
+  }
+
   constructor(
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
@@ -221,7 +279,75 @@ export class NotificationItemComponent {
     private retrieveModalSE: RetrieveModalService,
     private router: Router,
     private bilateralResultsService: BilateralResultsService
-  ) {}
+  ) {
+    // DSP-T-7 (design.md §2.2 step 5, DSP-R-2): another row took over the panel while this one was
+    // still open — discard this row's in-progress state. Never fires for the row that JUST opened
+    // itself: by the time this runs, `panel.open()` has already set `activeKey` to THIS row's own
+    // key (see `openDrawer()`), so the two reads below agree and the condition is false.
+    effect(() => {
+      const activeKey = this.panel.activeKey();
+      if (this.drawerOpen() && activeKey !== this.notificationKey) {
+        this.resetForTakeover();
+      }
+    });
+
+    // DSP-T-7 (design.md §6.2 Focus "docked open -> focus the content heading"): deferred to the
+    // render that follows the portal's own insertion into the aside's `cdkPortalOutlet` (same
+    // one-render deferral `notification-detail-content`'s `focusAlign` effect already relies on).
+    effect(() => {
+      const isActiveAndOpen = this.drawerOpen() && this.panel.activeKey() === this.notificationKey;
+      if (isActiveAndOpen && this.panel.isWide()) {
+        afterNextRender(() => this.focusContentHeading(), { injector: this.injector });
+      }
+    });
+
+    // DSP-T-7 (forward pointer from DSP-T-6, design.md §6.2 "closedByUser$"): a close that did not
+    // go through this row's own ✕/toggle (today: the docked aside's Escape handler). Routed through
+    // `closeDrawer()` so the row still resets state and restores focus to itself, exactly like a ✕
+    // click — only the row that currently owns the panel reacts.
+    this.panel.closedByUser$.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (this.drawerOpen() && this.panel.activeKey() === this.notificationKey) {
+        this.closeDrawer();
+      }
+    });
+  }
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-7)
+   * Falsifier "opening B leaves A's drawerMode === 'confirm-decline'": mirrors `closeDrawer()`'s
+   * state reset but never calls `panel.close(key)` (the active key has already moved to the row
+   * that took over — a stale `close()` would be a safe no-op anyway, see the service's own guard)
+   * and never moves focus (this row did not choose to close; only a user-initiated close/toggle
+   * restores focus — see `closeDrawer()`).
+   */
+  private resetForTakeover(): void {
+    this.drawerOpen.set(false);
+    this.drawerMode.set('decide');
+    this.drawerFocusAlign.set(false);
+    this.tocHydrated = false;
+    this.tocInitiative = null;
+    // DSP-T-2/T-7: invalidate any in-flight chain fetch for the row that just lost ownership.
+    this.chainRequestToken++;
+  }
+
+  private focusContentHeading(): void {
+    document.getElementById(this.drawerHeadingId)?.focus({ preventScroll: true });
+  }
+
+  private focusRowInteractive(): void {
+    this.rowInteractiveRef()?.nativeElement?.focus({ preventScroll: true });
+  }
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-7)
+   * Falsifier "destroying A's component while it is active leaves panel.portal() non-null": a row
+   * can be torn down (filtered/tab-switched/paged away, `DSP-P-8`) without ever calling
+   * `closeDrawer()` first — `panel.close()` is a no-op unless THIS row's key is still the active one,
+   * so an already-superseded row's destroy never clears a different, now-active row.
+   */
+  ngOnDestroy(): void {
+    this.panel.close(this.notificationKey);
+  }
 
   get isBilateralResult() {
     return this.notification?.obj_result?.source_name === 'W3/Bilaterals';
@@ -276,10 +402,11 @@ export class NotificationItemComponent {
 
   /**
    * PSR-T-8 (PSR-R-11 "showing the request kind"): single source for the row's own type chip
-   * (`rowTypeChipLabel` below) AND the drawer's `view`-mode `requestKind` metadata field
-   * (`drawerViewFields()`), so the two can never say something different about the same request
-   * (the task brief's own wording). Only meaningful for a `source:'request'` row — an
-   * `isUpdateSource` row's chip/requestKind never reads this getter (see the callers).
+   * (`rowTypeChipLabel` below) AND the detail panel's title (`detailTitle()`, DSP-T-4 — moved from
+   * the retired `drawerViewFields()`'s `requestKind` metadata field), so the two can never say
+   * something different about the same request (the task brief's own wording). Only meaningful for
+   * a `source:'request'` row — an `isUpdateSource` row's chip/title never reads this getter (see
+   * the callers).
    */
   get requestKindLabel(): string {
     const labels = this.copy.notificationItem;
@@ -359,9 +486,10 @@ export class NotificationItemComponent {
    * NOTIF-T-12 (rework attempt 1) removed the row-level status badge that used to consume this
    * getter directly (it didn't match the reference image) — the template no longer renders a
    * `.notification_status_chip` anywhere; `rowStatusLabel` is no longer read from `notification-item.component.html`
-   * at all. It now feeds the drawer's `view`-mode metadata grid instead, via `drawerViewFields()`'s
-   * `status` field (`NOTIF-T-14`, closing the `NOTIF-R-5` gap this removal reopened — see the copy
-   * file's docstring for the same history).
+   * at all. It now feeds the detail panel's chips row instead, via `chips()`'s first entry
+   * (`NOTIF-T-14`, closing the `NOTIF-R-5` gap this removal reopened; moved from the retired
+   * `drawerViewFields()`'s `status` field by `DSP-T-4` — see the copy file's docstring for the same
+   * history).
    *
    * NOTIF-T-5 (rework, attempt 2): a resolved (status 2/3) row never actually reaches this getter
    * from the template — the resolved-row branches (`@case (2)`/`@case (3)`) render the existing
@@ -452,13 +580,14 @@ export class NotificationItemComponent {
 
   /**
    * DSP-T-4 (design.md §6.2 "the date `activityDate` formatted `dd MMM yyyy`"): the notification's
-   * own date, for the chips row — `notification.created_date`, the same field the row's own
-   * `.notification_date` line formats with `appFormatTimeAgo` (a relative string); this is the
-   * chips row's absolute counterpart. `null` when missing/unparseable (chip omitted, never a
-   * fabricated/invalid date).
+   * own date, for the chips row — `requested_date ?? created_date` (DSP-T-9 F-2, user-approved
+   * 2026-10-05). Request rows carry `requested_date` only (the row's own `.notification_date` line
+   * formats the same field with `appFormatTimeAgo`, a relative string; this is the chips row's
+   * absolute counterpart); update rows carry `created_date`. `null` when neither parses (chip
+   * omitted, never a fabricated/invalid date).
    */
   get activityDate(): string | null {
-    return formatActivityDate(this.notification?.created_date);
+    return formatActivityDate(this.notification?.requested_date ?? this.notification?.created_date);
   }
 
   /**
@@ -468,8 +597,8 @@ export class NotificationItemComponent {
    * like `fundingWindowBadge`/`resultLevelTypeBadge` already do for the row itself.
    */
   chips(): NotificationDetailChip[] {
-    const chips: NotificationDetailChip[] = [{ text: this.rowStatusLabel }];
-    if (this.fundingWindowBadge) chips.push({ text: this.fundingWindowBadge, outlined: true });
+    const chips: NotificationDetailChip[] = [{ text: this.rowStatusLabel, pill: true }];
+    if (this.fundingWindowBadge) chips.push({ text: this.fundingWindowBadge, outlined: true, pill: true });
     if (this.resultLevelTypeBadge) chips.push({ text: this.resultLevelTypeBadge });
     if (this.activityDate) chips.push({ text: this.activityDate });
     return chips;
@@ -489,27 +618,51 @@ export class NotificationItemComponent {
    * `obj_result_by_initiatives[0]` while the chain hasn't resolved to `'ok'`; the chain's
    * non-declined contributor codes, joined ", ", for Contributing programs — with a skeleton
    * (`loading: true`) on that one cell while the chain is still `'loading'`.
+   *
+   * Reviewer FAIL (attempt 1), fixed here:
+   * - **Result type** now reuses `resultLevelTypeBadge` ("level · type"), the same getter the
+   *   row's own badge renders, instead of `obj_result_type.name` alone — the grid used to drop the
+   *   level half the spec/mockup both show.
+   * - **Every cell is normalized** through `blankToNull()` — an empty or whitespace-only source
+   *   string (acronym, phase name, a contributing code) now falls through to `dash` instead of
+   *   rendering a label next to a blank cell. Only `?? dash` (null/undefined only) used to guard
+   *   this, which a whitespace string slips straight through.
    */
   resultGrid(): NotificationDetailGridField[] {
     const n = this.notification;
     const dash = this.copy.dashValue;
     const labels = this.copy.resultGridLabels;
 
+    // Reviewer FAIL issue 2: trims and discards a whitespace-only value — `?? dash` alone only
+    // catches null/undefined, not `''`/`'   '`.
+    const blankToNull = (s?: string | null): string | null => {
+      const trimmed = s?.trim();
+      return trimmed ? trimmed : null;
+    };
+
     const chain = this.approvalChain();
     const chainData = chain.status === 'ok' ? chain.data : null;
 
-    const reportingCenter = n?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym ?? null;
-    const resultType = n?.obj_result?.obj_result_type?.name ?? null;
-    const phase = n?.obj_result?.obj_version?.phase_name ?? null;
+    const reportingCenter = blankToNull(n?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym);
+    const resultType = this.resultLevelTypeBadge;
+    const phase = blankToNull(n?.obj_result?.obj_version?.phase_name);
 
-    const actor = this.isUpdateSource ? n?.obj_emitter_user : n?.obj_requested_by;
-    const submittedBy = (actor ? `${actor?.first_name ?? ''} ${actor?.last_name ?? ''}`.trim() : '') || null;
+    // DSP-T-9 Q-1 (user-approved 2026-10-05, design.md §6.2 "Submitted by"): the chain's SUBMISSION
+    // actor (who actually submitted the RESULT), not the request's requester — so the grid and the
+    // APPROVAL CHAIN section never name different people for the same panel (T-9 real data, result
+    // 9674: Santiago Sanchez (requester) vs Nicoleta Trifa (submission actor)). `–` for
+    // `not_submitted` or a chain error; a skeleton (same mechanism as Contributing programs) while
+    // the chain is still loading.
+    const submittedBy = chainData?.submission.state === 'submitted' ? blankToNull(chainData.submission.actor_name) : null;
 
-    const fallbackPrimary = n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? null;
+    const fallbackPrimary = blankToNull(n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code);
     const primaryStep = chainData?.steps?.find(step => step.role === 'primary');
-    const primaryProgram = primaryStep?.official_code ?? fallbackPrimary;
+    const primaryProgram = blankToNull(primaryStep?.official_code) ?? fallbackPrimary;
 
-    const contributingCodes = chainData?.steps?.filter(step => step.role === 'contributor' && step.status !== 'declined').map(step => step.official_code) ?? [];
+    const contributingCodes = (chainData?.steps ?? [])
+      .filter(step => step.role === 'contributor' && step.status !== 'declined')
+      .map(step => blankToNull(step.official_code))
+      .filter((code): code is string => code !== null);
     const contributingPrograms = contributingCodes.length ? contributingCodes.join(', ') : null;
 
     return [
@@ -517,7 +670,7 @@ export class NotificationItemComponent {
       { label: labels.resultType, value: resultType ?? dash },
       { label: labels.primaryProgram, value: primaryProgram ?? dash, mono: true },
       { label: labels.contributingPrograms, value: contributingPrograms ?? dash, mono: true, loading: chain.status === 'loading' },
-      { label: labels.submittedBy, value: submittedBy ?? dash },
+      { label: labels.submittedBy, value: submittedBy ?? dash, loading: chain.status === 'loading' },
       { label: labels.phase, value: phase ?? dash }
     ];
   }
@@ -781,10 +934,38 @@ export class NotificationItemComponent {
     this.drawerOpen.set(true);
     // DSP-T-2 (DSP-R-8, DD-10): one chain fetch per open, every mode — never gated on `mode`.
     this.fetchApprovalChain();
+
+    // @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2 step 1, DSP-P-10):
+    // `openDrawer()` -> `panel.open(key, TemplatePortal(detailTpl))`. The portal is created HERE, at
+    // open time — not stored eagerly — because the row's own `#detailTpl`/`ViewContainerRef` only
+    // exist once this component has rendered. `labelledBy` is the content heading id (`drawerHeadingId`,
+    // DSP-T-3) so the docked `<aside>`'s `aria-labelledby` resolves the same way the drawer's own
+    // `labelledBy` input already does.
+    const templateRef = this.detailTemplateRef();
+    if (templateRef) {
+      this.panel.open(this.notificationKey, new TemplatePortal(templateRef, this.vcr), this.drawerHeadingId);
+    }
   }
 
-  /** CRD-R-9: closing records nothing — the request stays pending and an in-progress mapping is discarded. */
+  /**
+   * CRD-R-9: closing records nothing — the request stays pending and an in-progress mapping is
+   * discarded.
+   * @akili-spec notifications/detail-side-panel (DSP-T-7): the single seam every existing close path
+   * (✕/Escape, NOTIF-R-11 toggle, `finalize` after a decision — CRD-R-8) already runs through, so
+   * every one of them now also releases this row's panel slot and restores focus to the row — no
+   * caller above this method changed.
+   *
+   * DSP-T-7 rework attempt 2 (Leader conformance addition): `finalize`'s unconditional
+   * `closeDrawer()` call also runs for a POPUP-path decision (`acceptOrReject`'s own ✕/Decline
+   * popups, `onDrawerDeclineClicked`'s close-before-dialog) where this row's drawer/panel was never
+   * open at all — requirements.md §4 "Out of scope" keeps the row's own popup focus behavior
+   * unchanged (`CRD-DD-10`), and DSP-R-13 only scopes focus-return to closing the PANEL. `wasOpen`
+   * is read BEFORE `drawerOpen` is reset to `false` below, so `focusRowInteractive()` only runs when
+   * this call is actually closing an open panel/drawer — never for a no-op popup-path `closeDrawer()`
+   * where `drawerOpen()` was already `false` on entry.
+   */
   closeDrawer() {
+    const wasOpen = this.drawerOpen();
     this.drawerOpen.set(false);
     this.drawerMode.set('decide');
     this.drawerFocusAlign.set(false);
@@ -793,6 +974,12 @@ export class NotificationItemComponent {
     // DSP-T-2: supersede any in-flight chain request so a late response cannot overwrite the state
     // after the row has closed (falsifier: "a response arriving after close overwrites the state").
     this.chainRequestToken++;
+    // DSP-T-7: release this row's slot (no-op unless this row is still the active one — the service's
+    // own guard).
+    this.panel.close(this.notificationKey);
+    // DSP-T-7 rework attempt 2: only move focus to the row when a panel/drawer was actually open —
+    // never for a popup-path call where nothing was open to close (see the docstring above).
+    if (wasOpen) this.focusRowInteractive();
   }
 
   /**
@@ -839,6 +1026,35 @@ export class NotificationItemComponent {
   onDrawerClosedSignal(): void {
     if (!this.drawerOpen()) return;
     this.closeDrawer();
+  }
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-7 rework attempt 2)
+   * Reviewer FAIL issue 1: the SHELL's own `closed` output (narrow-mode scrim/Escape/outside-click
+   * dismissal, AND the real `BrnDialog`'s asynchronous post-exit-animation `closed` that a
+   * `[open]=false` binding also triggers) must NOT be treated as a user close when that `[open]=false`
+   * was caused by `isWide` flipping true mid-open (design.md §2.2 step 4, DSP-R-4 "preserve its
+   * in-progress state"/"applies in both directions") — the container swap is not a close.
+   *
+   * Guard: `panel.isWide()` AT THE TIME `closed` ARRIVES. When true, this is read as the container
+   * swap and ignored — the row stays open, the aside takes over the SAME template instance.
+   *
+   * Trade-off (named in the task brief): a genuine narrow-mode Escape/scrim close that races a
+   * resize to wide — the user closes at < 1280px, then the viewport crosses 1280px before the real
+   * sheet's exit-animation `closed` event lands — reads `isWide()` as already `true` by the time
+   * this runs, so it is swallowed as a swap instead of closing. This is the same
+   * `isWide()`-as-proxy trade the task names; closing it fully would need the real close path to
+   * tag ITS OWN `closed` event (e.g. a reason) rather than reading ambient state at arrival time,
+   * which is out of this task's scope (CRD-T-6/T-9 own the real-browser timing pass).
+   *
+   * The content's own ✕ button (`notification-detail-content`'s `(closed)`, L837) is NOT routed
+   * through this guard — it stays wired straight to `onDrawerClosedSignal()`/`closeDrawer()`,
+   * because the ✕ must still close the panel when DOCKED (wide): a single shared guard on both
+   * bindings would make the docked ✕ a no-op (Reviewer FAIL remediation note).
+   */
+  onDrawerShellClosedSignal(): void {
+    if (this.panel.isWide()) return;
+    this.onDrawerClosedSignal();
   }
 
   // @akili-spec changes/contribution-request-drawer

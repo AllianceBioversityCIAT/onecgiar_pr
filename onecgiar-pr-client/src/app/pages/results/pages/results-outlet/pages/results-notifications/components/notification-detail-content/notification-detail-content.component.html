@@ -2,7 +2,10 @@
      into the scrolling body (below) — the header itself no longer carries it. -->
 <div class="flex flex-col gap-2 border-b border-[var(--pr-border-divider)] px-5 pt-[14px] pb-[14px]" data-testid="crd-header">
   <div class="flex items-start justify-between gap-4">
-    <h2 [id]="headingId()" class="text-[15px] font-bold tracking-[-0.01em] text-ink-heading">{{ title() || copy.title }}</h2>
+    <!-- @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §6.2 Focus "docked open"):
+         `tabindex="-1"` makes this heading a valid programmatic focus target (never a tab stop) for
+         `notification-item`'s `afterNextRender` focus-on-docked-open — it was missing until now. -->
+    <h2 [id]="headingId()" tabindex="-1" class="text-[15px] font-bold tracking-[-0.01em] text-ink-heading">{{ title() || copy.title }}</h2>
     <button
       type="button"
       class="rounded-md p-1 text-ink-muted hover:text-ink-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
@@ -17,13 +20,18 @@
   @if (chips().length) {
     <div class="flex flex-wrap items-center gap-2" data-testid="crd-chips-row">
       @for (chip of chips(); track $index) {
-        <span
-          hlmBadge
-          [variant]="chip.outlined ? 'outline' : 'secondary'"
-          class="rounded-full px-2 py-[2px] text-[11px] font-semibold"
-          data-testid="crd-chip"
-          >{{ chip.text }}</span
-        >
+        @if (chip.pill) {
+          <span
+            hlmBadge
+            [variant]="chip.outlined ? 'outline' : 'secondary'"
+            class="rounded-full px-2 py-[2px] text-[11px] font-semibold"
+            data-testid="crd-chip"
+            data-chip-kind="pill"
+            >{{ chip.text }}</span
+          >
+        } @else {
+          <span class="text-[11px] font-semibold text-ink-subtle" data-testid="crd-chip" data-chip-kind="text">{{ chip.text }}</span>
+        }
       }
     </div>
   }
@@ -61,17 +69,26 @@
   </p>
 
   <section class="flex flex-col gap-2" data-testid="crd-result-section">
-    <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.result }}</h3>
-    <div class="flex flex-col gap-3 rounded-[10px] border border-[var(--pr-border)] bg-surface-subtle p-4">
+    <!-- Reviewer FAIL issue 3 (design.md §6.3 Metrics, RESULT card): the label lives INSIDE the
+         bordered card, as its first child, above the link — not above/outside it.
+         `crd-result-card` stays on the link button (own testid, unchanged — asserted as an
+         HTMLButtonElement elsewhere in this spec); the card CONTAINER carries the new
+         `crd-result-card-container` testid so a DOM test can assert the h3 is its descendant. -->
+    <div
+      class="flex flex-col gap-3 rounded-[10px] border border-[var(--pr-border)] bg-surface-subtle p-4"
+      data-testid="crd-result-card-container"
+    >
+      <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.result }}</h3>
+      <!-- DSP-T-9 Q-3 (design.md §6.3 RESULT card "one inline run", user-approved 2026-10-05): the
+           button renders as a single inline text run (no `flex`/`flex-wrap`) so the code can never
+           sit alone on its own line — it wraps together with the title like ordinary text, with
+           the code staying `.font-mono` inline inside the run. -->
       <button
         type="button"
-        class="flex flex-wrap items-baseline gap-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
+        class="text-left text-[14px] font-semibold leading-[1.5] text-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
         data-testid="crd-result-card"
         (click)="resultActivated.emit()"
-      >
-        <span class="font-mono font-semibold text-[14px] text-brand-300">{{ resultCode() }}</span>
-        <span class="text-[14px] font-semibold leading-[1.5] text-brand-300">– {{ resultTitle() }}</span>
-      </button>
+      ><span class="font-mono">{{ resultCode() }}</span> – {{ resultTitle() }}</button>
 
       <!-- DSP-T-4 (design.md §6.2 "Field sources", DD-6/DD-7): the 6-field grid, always exactly 6
            cells in this fixed order — supersedes the removed `view`-mode-only metadata grid. An
@@ -99,6 +116,63 @@
         }
       </div>
     </div>
+  </section>
+
+  <!-- @akili-spec notifications/detail-side-panel (DSP-T-5)
+       design.md "Order in the body": sentence → RESULT card → APPROVAL CHAIN → Where it
+       contributes → ToC align. Never hidden: a loading/error state still renders here, and
+       neither state disables the footer (DSP-R-8 "Loading and failure" BUT clause). -->
+  <section class="flex flex-col" data-testid="crd-chain-section">
+    <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted mb-2">{{ copy.sections.approvalChain }}</h3>
+    @if (chainLoading()) {
+      <div class="flex flex-col gap-3" data-testid="crd-chain-skeleton">
+        <hlm-skeleton class="h-[40px] w-full" />
+        <hlm-skeleton class="h-[40px] w-full" />
+        <hlm-skeleton class="h-[40px] w-full" />
+      </div>
+    } @else if (chainHasError()) {
+      <div class="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--pr-border)] bg-surface-subtle p-3" data-testid="crd-chain-error">
+        <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.chain.errorMessage }}</p>
+        <button hlmBtn variant="outline" type="button" class="min-h-[36px] text-[13px]" data-testid="crd-chain-retry-btn" (click)="onRetryChainActivate()">
+          {{ copy.chain.retry }}
+        </button>
+      </div>
+    } @else {
+      @for (step of chainSteps(); track $index; let last = $last) {
+        <div class="flex items-center gap-3 py-[10px]" [class.border-b]="!last" [class.border-[var(--pr-border-divider)]]="!last" data-testid="crd-chain-step">
+          <span
+            [class]="step.iconClass"
+            aria-hidden="true"
+            data-testid="crd-chain-step-icon"
+            [attr.data-icon]="step.icon"
+          >
+            @if (step.icon === 'check') {
+              <ng-icon name="lucideCheck" size="12" class="text-white" />
+            } @else if (step.icon === 'x') {
+              <ng-icon name="lucideX" size="12" class="text-white" />
+            }
+          </span>
+          <div class="flex min-w-0 flex-1 flex-col">
+            <span class="text-[13px] font-semibold leading-[1.4] text-ink-heading" data-testid="crd-chain-step-name">
+              @if (step.code) {
+                <span class="font-mono">{{ step.code }}</span> {{ step.name }}
+              } @else {
+                {{ step.name }}
+              }
+            </span>
+            @if (step.isViewerProgram) {
+              <span class="text-[11px] font-semibold text-brand-300" data-testid="crd-chain-step-your-program">{{ copy.chain.yourProgram }}</span>
+            }
+            @if (step.subtitle) {
+              <span class="text-[12px] text-ink-subtle" data-testid="crd-chain-step-subtitle">{{ step.subtitle }}</span>
+            }
+          </div>
+          <span [class]="step.pillClass" class="shrink-0 rounded-full px-2 py-[2px] text-[11px] font-semibold" data-testid="crd-chain-step-pill">{{
+            step.pillText
+          }}</span>
+        </div>
+      }
+    }
   </section>
 
   @if (mode() !== 'view' || reviewRows().length) {
@@ -141,13 +215,24 @@
   </section>
   }
 
-  @if (showAlignSlot()) {
-    <ng-content select="[crdAlign]" />
+  <!-- @akili-spec notifications/detail-side-panel (DSP-T-8, design.md "Order in the body", DSP-R-10):
+       the existing [crdAlign] Align step, now framed under a "MAP TO YOUR THEORY OF CHANGE" heading
+       + helper text — shown only for a bilateral request (showAlignSlot) in decide/confirm-decline
+       (never view mode, never a primary request). No change to the Align controls' own logic. -->
+  @if (showTocSection()) {
+    <section class="flex flex-col gap-2" data-testid="crd-toc-section">
+      <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.mapToToc }}</h3>
+      <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.toc.helper }}</p>
+      <ng-content select="[crdAlign]" />
+    </section>
   }
 </div>
 
 @if (mode() !== 'view') {
-<div class="flex flex-col gap-2 mt-auto border-t border-[var(--pr-border-divider)] px-6 py-4" data-testid="crd-footer">
+<!-- DSP-T-8 (design.md §6.3 Metrics "Footer"): `px-[20px] py-[14px]`, top divider, pinned outside the
+     scrolling body (a sibling of `crd-body` above, `mt-auto` keeps it bottom-pinned in the shell's
+     flex column — see this component's own CLAUDE.md "Width / motion ... :host { display: contents }"). -->
+<div class="flex flex-col gap-2 mt-auto border-t border-[var(--pr-border-divider)] px-[20px] py-[14px]" data-testid="crd-footer">
   @if (mode() === 'decide') {
     <div class="flex w-full flex-col gap-2">
       @if (blockedReason()) {

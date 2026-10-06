@@ -281,6 +281,13 @@
 
     <div class="line"></div>
 
+    <!-- @akili-spec notifications/detail-side-panel (DSP-T-6, design.md §6.2/§2.1): list + docked
+         panel, side by side at >= 1280px. `list` is `flex-1 min-w-0` so it keeps shrinking/growing
+         with the viewport instead of pushing the aside off-screen; the aside only renders at all when
+         both `isWide()` and a portal are present (DSP-R-1 wide scenario / DSP-R-3 no-detail-open
+         case), so the plain-list layout here is pixel-identical to before T-6 when no panel is open. -->
+    <div class="flex items-start gap-[16px]">
+    <div class="flex-1 min-w-0">
     <!-- NOTIF-T-6: the three decision-state tabs over the source-scoped, filtered, grouped list. -->
     <div
       class="unified_notifications_tabs inline-flex w-fit items-center justify-center gap-[2px] rounded-[10px] bg-[var(--pr-color-accents-1)] p-[3px] my-[16px]"
@@ -456,6 +463,30 @@
         </button>
       </div>
     }
+    </div>
+
+    <!-- DSP-T-6 (design.md §6.2, DSP-DD-2): docked panel — non-modal (no scrim, no focus trap, no
+         page-scroll block, DSP-R-1 BUT clause), sticky beside the list, independent body scroll
+         (DSP-R-14). Rendered only when BOTH `isWide()` and a portal are set, so the drawer (T-7) and
+         this aside can never show the same detail together (DSP-R-4 AND IT MUST). The sticky offset
+         (`style=""` below) is computed from the app's live `--pr-shell-header-height` (design.md
+         §6.3 Panel; DSP-T-9 F-1) — the earlier static `top-[24px] h-[calc(100vh-140px)]` sat under
+         the real top bar (124 px incl. the test-environment banner). -->
+    @if (panel.isWide() && panel.portal()) {
+      <!-- @akili-spec notifications/detail-side-panel (DSP-T-7, DSP-R-3 "Escape with focus inside the
+           panel"): this aside is not a dialog (no scrim, no focus trap), so there is no CDK dialog
+           Escape handler to rely on — `panel.requestClose()` only notifies; the active row's own
+           subscription (notification-item) is what actually closes via `closeDrawer()`. -->
+      <aside
+        role="complementary"
+        [attr.aria-labelledby]="panel.labelledBy()"
+        (keydown.escape)="panel.requestClose()"
+        class="sticky w-[380px] min-[1600px]:w-[440px] shrink-0 overflow-hidden flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-surface-card motion-reduce:transition-none"
+        style="top: calc(var(--pr-shell-header-height, 56px) + 24px); height: calc(100vh - var(--pr-shell-header-height, 56px) - 48px);">
+        <ng-template [cdkPortalOutlet]="panel.portal()"></ng-template>
+      </aside>
+    }
+    </div>
   }
 
   <!-- Only `settings` (SettingsComponent) is ever routed here now (NOTIF-T-6 Pivot re-scope). Always
