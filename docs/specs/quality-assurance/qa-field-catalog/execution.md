@@ -193,3 +193,33 @@
 - spawns: implementer 49/214 115, 26/106 672, 10/67 940; reviewer 30/142 582, 13/77 855, 5/60 060 (calls/tokens) — all ended complete
 - Requirements: QAC-R-1, R-5, R-7, R-11 (IPSR)
 - auto-approved (pre-approved mode)
+
+### QAC-T-12 — Close-out: pending list, contract doc, local sync run — PASS
+
+- Date: 2026-10-06 · Attempts: 1
+- Files: `definitions/excluded-tables.ts` (17 placeholder reasons → real reasons; `results_innovations_use_measures` excluded — inventory binds IU measures to `result_ip_measure`), `qa-catalog.excluded-tables.spec.ts` (new), `onecgiar-pr-server/docs/qa-catalog.en.md` (new contract + change log v1)
+- Verification: 11 suites / 119 tests; tsc + eslint clean; red 2/3 on old reasons (falsifier = leftover pending reason)
+- Local run (node v22.23.2 vs contract 20.x — booted fine; port 3400 from `.env`; migration NOT run by agents): before boot 0 rows; boot #1 `qa-catalog sync: inserted=198 updated=0 orphans=[]` → result_type 9, section 21, field 167 (106 + 61), version 1 (2026, P25, rev 5) = 198; boot #2 `inserted=0 updated=0 orphans=[]` (closes the T-3 real-MySQL gap); curl: no key 401, bogus key 401 (CLARISA reached, 0.67 s), JWT-only 401, abc/2023 without key 401 (guard before validation); server stopped
+- Evidence re-run (Leader inline): 119/119, tsc OK, nothing listening on 3400 → VERIFIED
+- Reviewer: PASS (full) — doc matches controller/DTO/guard/mapper/service; no table/column leakage; no secrets; counts consistent
+- Gap: no live 200/400/404 — no QA CLARISA key yet (unit/controller tests only). Run a live check and add a change-log row when the key exists
+- ADVISORY: 11 exclusion reasons rest on inventory silence (impact-area/SDG legacy tables still read by `results-toc-results.service.ts:397-413` for level-1 results) — **owner to ratify**; `LEGACY_MAPPING` citation too broad; doc cites REVIEW D# IDs QA cannot look up; `/pending/i` test pattern could flag a legit reason
+- spawns: implementer 42 calls, 155 699 tokens, ended complete; reviewer 31 calls, 98 545 tokens, ended complete
+- Requirements: QAC-R-6, R-7, R-9, R-10, R-11
+- auto-approved (pre-approved mode)
+
+## Constitution Impact: QAC-T-1…T-12
+
+- New backend module `onecgiar-pr-server/src/api/qa-catalog/` (route `qa`, `GET /api/qa/catalog`), new tables `qa_catalog_*`, new contract doc `onecgiar-pr-server/docs/qa-catalog.en.md`, JWT exclude + throttler prefix `/api/qa/` in shared surfaces.
+- Child guide: not required now; `onecgiar-pr-server/src/CLAUDE.md` module index should gain a `qa-catalog` row, and §7.4 (throttling) should note that `ThrottlerExcludeBilateralGuard` also exempts `/api/qa/`.
+- Pending (apply on `staging`, shared-file discipline): TRD §7 Integration Points row —
+  `| QA platform (service consumer) | GET /api/qa/catalog?phase_year= — read-only field catalog (result types, sections, fields) per phase year | Inbound, CLARISA API key (x-api-key, permission /api/qa/catalog), JWT-excluded, throttle-skipped | Contract + change log: onecgiar-pr-server/docs/qa-catalog.en.md; catalog defined in code, mirrored to qa_catalog_* at boot (idempotent, never deletes); additive-only (ADR-004); 404 for uncatalogued years (never an empty 200); spec quality-assurance/qa-field-catalog |`
+- CodeGraph re-index pending.
+
+## Summary — 2026-10-06
+
+- **Status:** all 12 tasks `[x]` (T-13, 2025 load, optional — not started).
+- **Delivered:** `GET /api/qa/catalog?phase_year=2026` → 9 result types, 21 sections, 106 fields + 61 subfields (catalog_version 2026.5); 2023/2025 → 404; CLARISA key required.
+- **Budget:** 12 tasks (as planned); review rounds 21 vs ~15 (tripwire hit after T-10, owner approved continuing); LOC dominated by catalog data as estimated.
+- **Deferred to stage 2 (`PENDING_CATALOG`, 146 column entries):** D1 (2-level nesting), D2 (2-hop bindings — ToC indicators/targets per mapping, subnational, KP metadata, budgets, IPSR evidence), D16 (IPSR inline-SQL sections), D19 (step 2.2); subfield `required_when`; `required_when` not exposed in the response (agreed shape).
+- **Open for the owner:** ratify the 11 inference-based table exclusions; register QA's CLARISA client and run a live 200 check; paste `tmp/validation_geo_location_P25.FIXED.sql` (geo extra-scope bug) after the impact query; D15/D27 function fixes (owner's own track); client accepting contribution 0 (out of scope).

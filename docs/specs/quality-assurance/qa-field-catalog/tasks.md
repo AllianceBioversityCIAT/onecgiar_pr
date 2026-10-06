@@ -161,7 +161,7 @@ Same shape as T-8 for policy change, innovation use, other outcome, impact contr
 
 Same shape as T-8 for IPSR. **Implements:** QAC-R-11, R-1, R-7. **Depends on:** T-8. **Review:** checklist. Falsifier / Red run / Disqualifier as T-8. **Consumers:** none. **Skills:** `nestjs-expert`.
 
-### QAC-T-12 — Close-out: pending list, contract doc, local sync run
+### [x] QAC-T-12 — Close-out: pending list, contract doc, local sync run
 
 - **Type:** rollout · **Estimate:** M · **Review:** full
 - **Description:** Assert `excluded-tables.ts` has no `pending` reasons left (test) — `PENDING_CATALOG` entries are allowed (DD-11) and are reported as a count in the contract doc; write `onecgiar-pr-server/docs/qa-catalog.en.md` (contract, status codes, change log v1); local run: owner runs the migration in dev, app boots twice — first boot inserts, second logs 0/0; `curl` 2026 → 200, 2023 → 404. Record TRD §7 QA row as pending (applied on `staging`).
