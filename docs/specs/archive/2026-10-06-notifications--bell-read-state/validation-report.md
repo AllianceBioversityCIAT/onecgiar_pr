@@ -1,6 +1,6 @@
 # Validation Report — notifications/bell-read-state
 
-> **Verdict (updated 2026-10-06 after remediation): 0 FAIL · 3 WARN open (W8 backlog, W9 user, W10 process) · 3 manual checks pending in TEST (HITL-2/3/4). HITL-1 passed at DB level.**
+> **Verdict (final, 2026-10-06): ✅ ARCHIVE-READY — 0 FAIL · 2 WARN accepted (W8 backlog, W10 process note) · HITL-1..4 PASS (HITL-4 after-screenshot waived by the user).**
 > Original verdict: 1 FAIL, 10 WARN — F1, W1–W7 fixed in commit after `0b5206e8a`.
 > No code violates the spec. The one FAIL is a folder guide over its line cap. The manual
 > checks (two accounts, browser vs mockup, timing, Angel) need a person with TEST accounts.
@@ -128,9 +128,9 @@ Still open from `execution.md`: FK constraint names not on the entity; `?limit=1
 | Server: seen repository, share-request service/controller/repository, primary-program, notification service/controller | 308/308 |
 | Client: results-api, results-notifications service/page, notification-item, pop-up item, shell-topbar | 1000/1000 |
 | `BRS-HITL-1` two accounts (D2/D3) | ✅ **PASS at DB level (2026-10-06, user)**. `share_result_request_seen` in TEST: user 575 → 274 rows / 274 distinct requests (no duplicates → real `INSERT IGNORE` dedupe, D3); user 829 (Angel, shares pending requests with 575) → 0 rows after 575's opens + "Mark as read" (no cross-user write, D2). Because `seen` is resolved per caller, 829's pending rows stay unseen and his badge cannot drop from 575's actions. Optional UI confirmation of 829's badge folds into HITL-4 |
-| `BRS-HITL-2` browser vs mockup (D5) | ⛔ BLOCKED — Chrome extension not connected; probe confirmed `ng serve` serves the new bundle. Also watch for A-e (badge bounce) |
-| `BRS-HITL-3` timing ≥ 150 pending (D8) | ⛔ BLOCKED — it is a write ("Mark as read"); agents don't click write buttons on the shared DB |
-| `BRS-HITL-4` Angel (OQ-1) | ⛔ BLOCKED — needs his account / profile |
+| `BRS-HITL-2` browser vs mockup (D5) | ✅ **PASS (2026-10-06, TEST, user screenshots)**. Fresh state on 307 (99+, `115 new`, All 125, Updates 115, Decide hidden) and 829 (99+, `182 new`, Decide `182 to decide` orange); read state on 575 after its 274 seen: no badge, no `N new` chip, no "Mark as read", Decide `274 to decide`, All 284 = 274 + 10 read, regular grey text, no dot, SP chip dimmed, decide chip + Accept/Decline full emphasis, no separator (no fresh rows above), no empty state. Narrow widths 464 px and 392 px: popover fits, no clipping. 829's 182 still fresh after 575's marks → HITL-1 confirmed in the UI. Not observed: A-e badge bounce (optional). Open question outside this spec: admin 307 has 0 requests to decide (role vs `BELL-OQ-1`) |
+| `BRS-HITL-3` timing ≥ 150 pending (D8) | ✅ **PASS (2026-10-06, TEST, user 829 Angel, No throttling)**. `PATCH /api/results/request/seen-all` → 200, `{ recorded: 182 }`, **86 ms total** (network included; preflight 12 ms separate) for 182 pending — above the 150 NFR load, < 1 s. **Single run**: the account's pending set can only be marked once at full load, so the 3-run spread rule could not apply; margin (~12×) makes the spread moot. `recorded: 182` = the 182 the bell showed → real-data proof that `markAllSeen`'s pending set equals the bell's (T-2 disqualifier) |
+| `BRS-HITL-4` Angel (OQ-1) | ✅ **PASS by evidence, after-screenshot waived by the user (2026-10-06)**. Before: 829 had badge 99+, `182 new`, Decide `182 to decide` (OQ-1 confirmed: ≥ 10 pending). After "Mark as read": server `{ recorded: 182 }` (HITL-3). The after-state rendering (no badge, Decide unchanged, light rows) was verified on 575 in the same state (HITL-2). The user chose to archive without 829's after-screenshot |
 
 ## 10. Agent Guide / Constitution Impact
 
@@ -155,13 +155,15 @@ Still open from `execution.md`: FK constraint names not on the entity; `?limit=1
 | W6 | WARN → ✅ | tasks §6 HITL-3 and execution §3 now ≥ 150; sweep clean | done |
 | W7 | WARN → ✅ | R-7 now cites WCAG 2.1 SC 1.4.1 under the ux-ui §10 baseline | done |
 | W8 | WARN | `notification-item/CLAUDE.md` size — follow-up, not this spec | backlog |
-| W9 | WARN | Run `npm run migration:check:ci` once and paste the line | user, 1 min |
+| W9 | WARN → ✅ | `migration:check:ci` → `PENDING_MIGRATIONS=0` (TEST DB has 498 executed vs 488 files on this branch: other branches' migrations, not this spec) | done |
 | W10 | WARN | T-6 had no red run — process note only | none |
 | H1–H4 | BLOCKED | Run `BRS-HITL-1..4` in TEST | user |
 
 Follow-ups outside this spec (decide later): A-a recipient scoping, A-c update-row guard (§10.1), A-e race fix, A-d URL encoding.
 
 ## 12. Archive Readiness Recommendation
+
+**Ready (final, 2026-10-06).** All conditions below are met; W8 (old `notification-item/CLAUDE.md` size) goes to backlog, W10 is a process note. Original text kept for traceability:
 
 **Not yet.** Ready for `/akili-archive notifications/bell-read-state` once:
 
