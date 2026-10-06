@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -1749,5 +1751,41 @@ describe('RdGeneralInformationComponent', () => {
       expect(result).toBe(false);
       expect(reloadSpy).not.toHaveBeenCalled();
     }));
+  });
+  /**
+   * P2-3884 — a Science Program reviewer reached this form by direct URL while the result was in
+   * Pending Review and got an active `Save draft` on a read-only form. The Innovation development
+   * exception (Annual updating needs the button) must not apply in Pending Review (`status_id` 5).
+   */
+  describe('saveEditableOnReadOnly (P2-3884)', () => {
+    const withResult = (result: any, canDdit = true) => {
+      component.dataControlSE.currentResult = { status: 0, ...result };
+      component.api.rolesSE.access.canDdit = canDdit;
+    };
+
+    it('keeps Save draft for an Innovation development member outside Pending Review', () => {
+      withResult({ result_type_id: 7, status_id: '3' });
+      expect(component.saveEditableOnReadOnly).toBe(true);
+    });
+
+    it('hides Save draft for Innovation development while the result is in Pending Review', () => {
+      withResult({ result_type_id: 7, status_id: '5' });
+      expect(component.saveEditableOnReadOnly).toBe(false);
+    });
+
+    it('never applies to other result types', () => {
+      withResult({ result_type_id: 1, status_id: '1' });
+      expect(component.saveEditableOnReadOnly).toBe(false);
+    });
+
+    it('needs a role on the result initiative', () => {
+      withResult({ result_type_id: 7, status_id: '3' }, false);
+      expect(component.saveEditableOnReadOnly).toBe(false);
+    });
+
+    it('binds the bottom bar to the getter, not to an inline rule', () => {
+      const html = readFileSync(join(__dirname, 'rd-general-information.component.html'), 'utf8');
+      expect(html).toContain('[editable]="saveEditableOnReadOnly"');
+    });
   });
 });
