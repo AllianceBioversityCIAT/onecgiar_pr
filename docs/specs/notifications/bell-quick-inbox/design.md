@@ -37,8 +37,8 @@ The main trade-off is one extra pending fetch per source, to get a count that do
 | `BELL-P-6` | No existing deep link opens a specific request's drawer/dialog in the inbox; `openDrawer()` is per-row and only called internally | `results-notifications.component.ts:350-386`; `notification-item.component.ts:441-453, 675-695` | Scout: query params read are only `phase`, `init`, `search` | verified | Hand-off would reuse an existing link instead of `BELL-DD-4` |
 | `BELL-P-7` | `header-panel` is not rendered anywhere; `shell-topbar` is the only live bell (`app.component.html:40`) | template grep | Scout: no `<app-header-panel` in any `.html`; not declared in `app.module.ts` | verified | Would need R-11 parity in a second component |
 | `BELL-P-8` | Inbox row decisions end in `requestEvent` → `refreshAllNotifications()` → `refreshSource('received'/'sent'/'updates')` | `results-notifications.component.html:361-406`, `.ts:307-312`; service `:438-448` | Scout quoted bindings | verified | Bell would need its own hook on the row |
-| `BELL-P-9` | Received pending rows from the inbox endpoint have the shape `pop-up-notification-item` already renders for requests (`obj_requested_by`, `obj_shared_inititiative`, `obj_owner_initiative`, `obj_result`, `is_map_to_toc`) — the old pop-up endpoint used the same `getRequest` relations | `share-result-request.service.ts` `getReceivedResultRequestPopUp` vs received path | Not verified field-by-field | **assumed** | `BELL-T-3` adds an adapter; see §13 |
-| `BELL-P-10` | Request rows carry a stable id usable in a URL (`share_result_request_id` or `id`) | entity / payload | Not verified | **assumed** | `BELL-T-5` picks whichever id field the payload carries; see §13 |
+| `BELL-P-9` | Received pending rows from the inbox endpoint have the shape `pop-up-notification-item` already renders for requests (`obj_requested_by`, `obj_shared_inititiative`, `obj_owner_initiative`, `obj_result`, `is_map_to_toc`) — the old pop-up endpoint used the same `getRequest` relations | `share-result-request.service.ts` `getReceivedResultRequestPopUp` vs received path | `BELL-T-3` (2026-10-06): received-pending rows render with the existing request text with no adapter | **verified** | n/a |
+| `BELL-P-10` | Request rows carry a stable id usable in a URL (`share_result_request_id` or `id`) | entity / payload | `BELL-T-5` Step 0, 2026-10-06: `getRequestSelectFields()` (`share-result-request.service.ts:1071-1075`) selects `share_result_request_id` (the entity's `idField`, line 71) and no bare `id`; the client already keys rows on it (`trackNotificationKey`, `notificationKey`). **Correction:** the same select has NO `obj_result.version_id`, only `obj_result.obj_version.id`, so `bellHandoffUrl` reads the phase from `obj_version.id` and falls back to `version_id` | **verified** (id = `share_result_request_id`; phase = `obj_result.obj_version.id`) | n/a |
 
 ## 2. Architecture Overview
 
@@ -159,7 +159,7 @@ No new logging. Errors use the existing `console.error`/toast patterns; no token
 | `pop-up-notification-item` | Buttons only on decision rows; disabled when not decidable; double click → 1 PATCH; confirm/cancel; hand-off emits with correct action; body click doesn't decide. |
 | `shell-topbar` | Badge `5`, `99+`, hidden at 0, aria label; open/close keeps rows & count; open calls `refreshBell`; no `PATCH_handlePopUpViewed`; loading/error/empty states. |
 | Inbox hand-off | Query params → matching row gets `autoAction`; params cleared; unknown id no-op. |
-| `notification-item` | `autoAction` runs `onAcceptContribution`/`onDeclineClick` exactly once; existing specs green (body parity). |
+| `notification-item` | `autoAction` runs `onAcceptContribution`/`onDeclineClick` exactly once, **only on step paths**; one-click accept via link → 0 PATCH (`BELL-T-7`); existing specs green (body parity). |
 | Manual (HITL at `/akili-validate`) | Popover visual in light/dark, 400px wrapping, hand-off opening the right prompt/dialog in the real app. |
 
 ## 11. Backwards Compatibility & Migration Plan
@@ -202,6 +202,7 @@ No new logging. Errors use the existing `console.error`/toast patterns; no token
   - The row calls `onAcceptContribution()` or `onDeclineClick()` once.
   - The bell also passes `phase=<row's version id>`, so the row is inside the inbox's phase filter.
   - The params are cleared afterwards.
+  - **Guard (amended 2026-10-06, user, `BELL-T-7`):** `autoAction` only replays a handler that opens a step (accept: `classifyAccept(row) === 'step'`; decline: a path that opens the inline confirm or the justification dialog). Amended again by `BELL-T-9` (2026-10-06): a ToC-carried contribution + accept opens the row's detail drawer (carried mapping review, user's own Accept, 0 PATCH on open). Any other combination (primary + accept) only emits `autoActionConsumed`. A link never records a decision by itself (`BELL-R-6` "a link never decides").
 - **Alternatives.** A service signal: rejected, because it does not survive navigation timing and is not reload-safe.
 - **Consequences.**
   - If filters hide the row (search, init), nothing happens. The bell sends no `init`/`search`, so only the stored service filters could interfere, and the hand-off resets them.
@@ -225,7 +226,7 @@ No new logging. Errors use the existing `console.error`/toast patterns; no token
 
 | Metric | Expected |
 |---|---|
-| Tasks | 6 |
+| Tasks | 6 (+1 amendment `BELL-T-7`, 2026-10-06) |
 | LOC (prod + tests) | ~650 (prod ~280, tests ~370) |
 | Review rounds | 1–2 per task; `BELL-T-1` and `BELL-T-5` most likely 2 |
 

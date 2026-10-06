@@ -27,7 +27,7 @@ The bell becomes a **quick inbox**. Its badge counts **what is waiting for the u
 | **Pending decision** | A received request the user can Accept/Decline today — the same rows the inbox shows under "Needs your decision" (`NOTIF-R-1`). |
 | **Unread update** | An informational notification not yet marked read — the inbox's pending Updates set. |
 | **Attention count** | Pending decisions + unread updates. |
-| **One-click request** | A pending request whose Accept needs no extra step: the ToC mapping travelled with it (`is_map_to_toc`), or a primary request. |
+| **One-click request** | *(amended 2026-10-06, user)* A pending **primary** request; only these accept from the bell in one click. Contribution requests (Science Program contributions) always need the ToC step, so they are step requests even when a mapping travelled with them (`is_map_to_toc`). |
 | **Step request** | A pending request whose Accept needs a step the popover does not host: bilateral contributor without carried mapping ("Map to ToC?" prompt, P2-3187) or the legacy modal-first flow. |
 | **Hand-off** | Close the popover and open the inbox page with that request's existing drawer/dialog already open. |
 
@@ -99,7 +99,7 @@ The bell data MUST load at session start, MUST refresh each time the popover ope
 
 A one-click request row MUST offer **Accept** in the popover; one click records the decision with the same server outcome as accepting it in the inbox.
 
-- **Scenario** — GIVEN a pending request with carried ToC mapping, WHEN the user clicks Accept, THEN the request is accepted AND the row leaves the popover AND the badge decrements.
+- **Scenario** *(amended 2026-10-06: one-click = primary only, see glossary)* — GIVEN a pending **primary** request, WHEN the user clicks Accept, THEN the request is accepted AND the row leaves the popover AND the badge decrements. A contribution request (with or without carried ToC mapping) hands off instead (`BELL-R-6`).
 - BUT it must NOT send a second request on a double click (buttons busy/disabled while in flight).
 - AND IT MUST offer Accept/Decline only on rows where the inbox row offers them (same eligibility).
 
@@ -109,12 +109,14 @@ A step request row MUST offer Accept that **hands off** to the inbox page with t
 
 - **Scenario** — GIVEN a bilateral contributor request without carried mapping, WHEN the user clicks Accept in the bell, THEN the popover closes AND the inbox page opens with that request's "Map to your Theory of Change?" step active.
 - BUT it must NOT record any decision before the user completes the step there.
+- **Scenario: ToC-carried contribution (amended 2026-10-06, user)** — GIVEN a pending contribution request whose ToC mapping travelled with it (`is_map_to_toc`), WHEN the user clicks Accept in the bell, THEN the popover closes AND the inbox page opens that request's ToC mapping step for review, where the user accepts — BUT the bell must NOT accept it in one click. Only primary requests are one-click.
+- **Scenario: a link never decides (amended 2026-10-06, user)** — GIVEN an inbox URL carrying `request=<id>&action=accept|decline` for a pending request whose handler would record the decision without a further user step (an Accept that would PATCH directly: primary, or a ToC-carried contribution via the inbox row's direct-accept branch; or any Decline path that sends the PATCH without a confirm/justification), WHEN the inbox opens it, THEN no decision is recorded AND the params are cleared — the link only ever opens an existing step, prompt or dialog that still requires the user's own click. A crafted or shared link MUST NOT accept or decline a request on anyone's behalf.
 
 #### BELL-R-7 — Decline
 
 A non-primary request row MUST offer **Decline** with an inline confirmation inside the popover; confirming records the decline. A **primary** request's Decline MUST hand off to the existing justification dialog (`PDR-T-4`) for that request.
 
-- **Scenario: inline confirm** — GIVEN a pending contribution request, WHEN the user clicks Decline, THEN a confirm/cancel prompt appears on that row; WHEN they confirm, THEN the request is declined AND the row leaves AND the badge decrements; WHEN they cancel, nothing is sent.
+- **Scenario: inline confirm** *(amended 2026-10-06, `BELL-T-12`)* — GIVEN a pending contribution request, WHEN the user clicks Decline, THEN that button turns into "Confirm decline" (nothing is sent); WHEN they click it again, THEN the request is declined AND the row leaves AND the badge decrements; WHEN they press Escape, move focus out of the card, arm another button, or wait 5 s, THEN it reverts and nothing is sent.
 - **Scenario: primary** — GIVEN a pending primary request, WHEN the user clicks Decline, THEN the inbox page opens with the justification dialog for that request — BUT it must NOT decline without a justification.
 
 #### BELL-R-8 — Decision failure
