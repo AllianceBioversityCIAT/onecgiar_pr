@@ -118,7 +118,7 @@ Common verification for every server task: scoped Jest above · `npx tsc --noEmi
 - **Done:** all cases green; manual `curl` against local server with and without key (key never echoed).
 - **Skills:** `nestjs-expert`, `api-design-principles`, `tdd`
 
-### [~] QAC-T-7 — 2026 inventory draft (HITL pause)
+### [x] QAC-T-7 — 2026 inventory draft (HITL pause)
 
 - **Type:** docs · **Estimate:** L · **Review:** checklist — artifact reviewed by the owner
 - **First steps:** settle **P-5** (query `version` + `clarisa_portfolios` in the env, owner runs or supplies output), **P-12** (Explore the client result-detail + P25 framework-reporting forms), **P-6** (owner supplies each P25 `validation_*` via `SHOW CREATE FUNCTION`).

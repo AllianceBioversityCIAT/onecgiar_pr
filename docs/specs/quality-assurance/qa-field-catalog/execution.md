@@ -117,3 +117,14 @@
 - 2026-10-06: Santiago Sanchez answered: (1) geo extra scope — bug, it should be validated → catalog follows the intended rule (conditionally required; function bug recorded as lateral finding); (2) contribution value must be > 0 → required_when value > 0 (client accepting 0 = lateral finding); (3) impact areas → one control list per area (no join filter needed). Relayed to the T-7 consolidation worker.
 - 2026-10-06: owner chose to fix the geo extra-scope bug themselves. Corrected function written to `tmp/validation_geo_location_P25.FIXED.sql` (not in the repo; applied manually by the owner in test and prod): reads `result.extra_geo_scope_id`, fails when `has_extra_geo_scope = TRUE` and no extra scope is chosen, and branches on the extra scope id instead of the boolean (old lines 142, 144, 187, 204). No DEFINER clause. Contribution > 0 needs no function change (the function already enforces it); the client accepting 0 is a client-side fix, not done here.
 - 2026-10-06: T-7 consolidated for HITL — `inventory/REVIEW.md` (28 decisions D1–D28 from 31 open questions; 11 change or define keys: D1–D8, D12, D17, D19; stage 1 = 169 fields, PENDING_CATALOG = 168, NOT_FOR_QA = 1; 47 in-scope tables). Mapping A 22/22, B 15/15; totals 338 = 139 + 199. **HITL pause: awaiting owner review — keys not frozen.** T-7 stays `[~]`.
+- 2026-10-06: D15 and D27 suspicions sent to Santiago Sanchez by Slack on the owner's instruction (owner leans to "it's fine"): https://cgiar-ibd.slack.com/archives/D040EAE8Z71/p1791315422008899 — awaiting answer; no function changed.
+- 2026-10-06: **HITL — inventory approved** by the owner with defaults and a progress rule ("avancemos tal como está todo… no quedarnos atascados"). Model-extending defaults D1, D2, D16 deferred → affected fields to `PENDING_CATALOG` (no change to the approved model); D15/D27 follow the live functions. Recorded in `inventory/REVIEW.md` §7. Keys frozen.
+
+### QAC-T-7 — 2026 inventory draft (HITL) — PASS (owner approval)
+
+- Date: 2026-10-06 · Workers: part A (70 calls, 361 621 tokens), part B (132 calls, 478 059 tokens), consolidation (26 calls, 114 484 tokens) — all ended complete
+- Files: `inventory/2026-A-common-and-outputs.md`, `inventory/2026-B-outcomes-impact-ipsr.md`, `inventory/REVIEW.md`
+- Premises settled: P-6 (live definitions supplied in `tmp/`, 14 functions; 3 declared unnecessary by the owner), P-12 (2026 form = client result-detail routed by `resultDetailRouting`, gated by phase year). P-5 still open (portfolio query) — does not affect the inventory
+- Verification: every row cites an origin; per-type control counts vs rows recorded in each table; question mapping A 22/22, B 15/15; totals 338 = 139 + 199
+- Closing gate: HITL owner approval (this task's Review = checklist on an artifact the owner reviewed; no code)
+- Requirements: QAC-R-5, QAC-R-11 (as amended), QAC-OQ-4

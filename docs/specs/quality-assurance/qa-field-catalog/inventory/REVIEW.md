@@ -155,3 +155,20 @@ Para el dueño de cada módulo; no se arreglan en esta spec.
 |---|---|---|
 | `validation_geo_location_P25` compara `has_extra_geo_scope` (booleano) con ids de scope 1–5 (`V-GEO:142,144,187,204`): las ramas de extra scope 3/4/5 nunca corren y el sub-nacional extra y `extra_geo_scope_id` nunca se exigen. Confirmado como bug por Santiago | función viva de P25 | Un resultado con geografía extra incompleta aparece como válido |
 | El cliente trata el valor de contribución `0` como completo (`MWC.html:138-142`) mientras la función exige `> 0` (`V-CP:57`). Defecto de UI confirmado por Santiago | `MWC.html` | Un resultado que parece completo en pantalla queda en rojo al validar |
+
+---
+
+## 7. Aprobación (2026-10-06, Juan David)
+
+**Aprobado con los defaults**, con una regla de avance: *no bloquear el desarrollo por hallazgos; lo que hoy funciona se cataloga tal como funciona, y los hallazgos quedan registrados para resolverlos después*.
+
+Aplicación de esa regla a los defaults que exigían ampliar el modelo ya aprobado:
+
+| Decisión | Default original | Cómo queda |
+|---|---|---|
+| D1 (subcampos de 2 niveles) | Permitir profundidad 2 | **Diferido**: las 22 claves de evidencia del paso 3 de IPSR van a `PENDING_CATALOG`; el modelo no cambia ahora |
+| D2 (binding de 2 saltos, tabla sin entidad) | Permitir salto por padre + crear entidad | **Diferido**: presupuestos (6), subcampos de complementarias y evidencia del paso 3 van a `PENDING_CATALOG` |
+| D16 (IPSR general / contributors / links con SQL embebido) | Segunda pasada de inventario antes de T-11 | **Diferido**: se cataloga lo inventariado; esas secciones IPSR van a `PENDING_CATALOG` |
+| D15, D27 (sospechas en `validation_innovation_use_P25` / `_dev_P25`) | — | Se sigue la función viva; consultado con Santiago (Slack), sin bloquear |
+
+Los demás defaults (D3–D14, D17–D28) se aplican tal cual. **Las claves quedan congeladas** con los nombres de los inventarios A y B más estos ajustes.
