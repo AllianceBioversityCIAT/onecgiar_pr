@@ -5,8 +5,8 @@ user menu. Rendered by `app.component.html:38`, and hidden entirely when `dataCo
 or `focusMode()` is on — so nothing in here exists in QA full-screen or focus mode, **including the
 `Cmd/Ctrl+K` listener**.
 
-**Release notes (`/whats-new`)** lives here now, as a plain `routerLink` icon button (`pr-topbar-icon-btn`,
-`lucideRocket`) placed between Support and the notifications bell — it used to be a link inside the
+**Release notes (`/whats-new`)** lives here now, as a plain `routerLink` button (`pr-topbar-icon-btn`,
+`lucideRocket` + visible "Release notes" label — `quick/topbar-labelled-actions`) placed between Support and the notifications bell — it used to be a link inside the
 sidebar's EXTRAS group (`reporting-nav-sidebar`) but was moved up to the toolbar, next to the bell, per
 user request. Active state via `isInWhatsNewRoute()` (checks `router.url.includes('/whats-new')`), same
 pattern as `isInNotificationsRoute()`.
@@ -100,10 +100,10 @@ service any more.
   accepts either modifier regardless.
 - The search control keeps `cursor: text` even though it is a button — the design specifies it
   (`cursor:text` at snapshot line 232) because it opens a search surface.
-- `NOTIF-T-8`: the bell/badge (`.pr-topbar-badge-wrap`/`.pr-topbar-badge`) already matched the
-  `notifications-revamp` mockup pixel-for-pixel (32px button, 16px badge, 2px border) — resist
-  re-tweaking its sizing again without a fresh measured diff against the mockup. Its border/digit
-  color now reads `var(--pr-color-white, #fff)` instead of a bare `#fff` literal.
+- `quick/topbar-labelled-actions` (2026-10-06): the bell is now a labelled button — icon + "Notifications"
+  + an INLINE 18px `.pr-topbar-badge` pill after the text (no longer absolute over the icon; the
+  `.pr-topbar-badge-wrap` wrapper is gone). Release notes got the same icon + text treatment. Both
+  override the 32px square with `!w-auto px-2.5`. Supersedes the NOTIF-T-8 icon-only bell sizing.
 
 ## Children
 
@@ -112,4 +112,4 @@ service any more.
 | `app-global-search-palette` | the palette overlay | has its own `CLAUDE.md` — read it before touching the trigger |
 | `app-pop-up-notification-item` | one bell row (decision or update), emits `handoff` | lives under `header-panel/components/`; has inline Accept/Decline (BELL-T-3) |
 
-**Verified:** 2026-10-06 · qa-development-2026-ss · `BELL-T-10` (tabs, N new, Mark as read, cards; also fixed a `viewChild` read typing error) on top of `BELL-T-8` (bell popover: 16px viewport margin + push + start-aligned fallback, width min(360, 100vw-32), max-height from space below the bell, list scrolls) on top of `BELL-T-4`
+**Verified:** 2026-10-06 · qa-development-2026-ss · `quick/topbar-labelled-actions` (labelled Release notes + Notifications, inline badge) on top of `BELL-T-10` (tabs, N new, Mark as read, cards; also fixed a `viewChild` read typing error) on top of `BELL-T-8` (bell popover: 16px viewport margin + push + start-aligned fallback, width min(360, 100vw-32), max-height from space below the bell, list scrolls) on top of `BELL-T-4`

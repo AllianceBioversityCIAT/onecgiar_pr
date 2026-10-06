@@ -52,18 +52,18 @@
       <!-- Release notes ("What's new") — moved here from the sidebar EXTRAS group so it sits
            right beside the notifications bell in the toolbar, next to Support. -->
       <a
-        class="pr-topbar-icon-btn"
+        class="pr-topbar-icon-btn !w-auto gap-1.5 px-2.5 text-[13px] font-medium leading-none"
         [class.pr-topbar-icon-btn--active]="isInWhatsNewRoute()"
         routerLink="/whats-new"
-        aria-label="Release notes"
-        title="Release notes">
-        <ng-icon name="lucideRocket" class="text-[20px]" />
+        aria-label="Release notes">
+        <ng-icon name="lucideRocket" class="text-[16px]" />
+        <span>Release notes</span>
       </a>
 
       <div class="pr-topbar-actions">
         <button
           type="button"
-          class="pr-topbar-icon-btn"
+          class="pr-topbar-icon-btn !w-auto gap-1.5 px-2.5 text-[13px] font-medium leading-none"
           cdkOverlayOrigin
           #notifTrigger="cdkOverlayOrigin"
           [attr.aria-label]="bellButtonLabel()"
@@ -71,13 +71,10 @@
           [attr.aria-expanded]="notificationsOpen()"
           [class.pr-topbar-icon-btn--active]="notificationsOpen() || isInNotificationsRoute()"
           (click)="toggleNotifications()">
-          @if (bellCount() === 0) {
-            <ng-icon name="lucideBell" class="text-[20px]" />
-          } @else {
-            <span class="pr-topbar-badge-wrap">
-              <ng-icon name="lucideBell" class="text-[20px]" />
-              <span class="pr-topbar-badge" aria-hidden="true">{{ notificationBadgeLength() }}</span>
-            </span>
+          <ng-icon name="lucideBell" class="text-[16px]" />
+          <span>Notifications</span>
+          @if (bellCount() > 0) {
+            <span class="pr-topbar-badge" aria-hidden="true">{{ notificationBadgeLength() }}</span>
           }
         </button>
       </div>
