@@ -762,7 +762,7 @@ describe('ResultsNotificationsComponent', () => {
     });
 
     // a11y regression (FTD-T-2 -> FTD-T-3 browser run): spartan's popover default puts role="dialog" on the
-    // CDK overlay container; ours must be neutralised (role="none" on hlm-popover) so exactly ONE named dialog
+    // CDK overlay container; ours must be neutralised (role="presentation" on hlm-popover) so exactly ONE named dialog
     // exists per facet (hlm-popover-content). Under Jest the brain mock renders no overlay container, so the
     // container's real ARIA is only provable in the browser; this asserts the template wiring only.
     it('each facet has exactly one named dialog: hlm-popover-content carries role=dialog + facet label, and its hlm-popover host neutralises the overlay container role with role=none', () => {
@@ -771,7 +771,7 @@ describe('ResultsNotificationsComponent', () => {
       const popovers = Array.from(root.querySelectorAll('hlm-popover'));
       expect(popovers.length).toBeGreaterThan(0);
       for (const popover of popovers) {
-        expect(popover.getAttribute('role')).toBe('none');
+        expect(popover.getAttribute('role')).toBe('presentation');
         const contents = popover.querySelectorAll('hlm-popover-content');
         expect(contents.length).toBe(1);
         expect(contents[0].getAttribute('role')).toBe('dialog');
@@ -781,7 +781,7 @@ describe('ResultsNotificationsComponent', () => {
       // Wiring proof: the template attribute alone survives a revert of the helm edit, but the BrnPopover
       // instance only receives `role` if 'role' is forwarded in hlm-popover.ts hostDirectives.inputs.
       for (const facet of ftdComponent.filterFacets) {
-        expect(brnPopoverFor(facet.key).role).toBe('none');
+        expect(brnPopoverFor(facet.key).role).toBe('presentation');
       }
     });
 
@@ -1065,7 +1065,7 @@ describe('ResultsNotificationsComponent', () => {
       // Broken-code check performed manually (see task report): rendering the aside off
       // `panel.portal()` alone (dropping the `panel.isWide() &&` guard) makes this assertion fail —
       // restored before this run.
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
       expect(aside).toBeNull();
     });
 
@@ -1074,7 +1074,7 @@ describe('ResultsNotificationsComponent', () => {
       panelPortal.set({ kind: 'stub-portal' });
       dspFixture.detectChanges();
 
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
       expect(aside).not.toBeNull();
     });
 
@@ -1083,7 +1083,7 @@ describe('ResultsNotificationsComponent', () => {
       panelPortal.set(null);
       dspFixture.detectChanges();
 
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
       expect(aside).toBeNull();
     });
 
@@ -1093,7 +1093,7 @@ describe('ResultsNotificationsComponent', () => {
       panelLabelledBy.set('detail-heading-123');
       dspFixture.detectChanges();
 
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
       expect(aside?.getAttribute('aria-labelledby')).toBe('detail-heading-123');
     });
 
@@ -1102,7 +1102,7 @@ describe('ResultsNotificationsComponent', () => {
       panelPortal.set({ kind: 'stub-portal' });
       dspFixture.detectChanges();
 
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]') as HTMLElement;
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside') as HTMLElement;
       // FALSIFIER: reverting to the old static `top-[24px] h-[calc(100vh-140px)]` classes (no
       // `--pr-shell-header-height` reference) fails this assertion — observed red before the fix.
       // Asserted on the raw `style` attribute string, not `el.style.top/.height`: jsdom's CSSOM does

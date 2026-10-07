@@ -68,9 +68,9 @@
         @for (facet of filterFacets; track facet.key) {
           <!-- a11y (FTD-T-3): spartan's popover default puts role="dialog" on the CDK overlay container
                (unnamed, and brain exposes no aria-label for it). Neutralise it with role="none" so the
-               single named dialog is hlm-popover-content below. -->
+               single named dialog is hlm-popover-content below. ("presentation" = "none"; Sonar Web:S6821 only accepts this name.) -->
           <hlm-popover
-            role="none"
+            role="presentation"
             align="start"
             sideOffset="6"
             [autoFocus]="false"
@@ -124,7 +124,9 @@
                     <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.selectPhaseFirst }}</p>
                   } @else {
                     <div class="flex flex-col gap-[6px]">
+                      <label for="notifications-program-search" class="sr-only">{{ copy.filterToolbar.programSearchPlaceholder }}</label>
                       <input
+                        id="notifications-program-search"
                         type="text"
                         hlmInput
                         [placeholder]="copy.filterToolbar.programSearchPlaceholder"
@@ -532,7 +534,6 @@
            Escape handler to rely on — `panel.requestClose()` only notifies; the active row's own
            subscription (notification-item) is what actually closes via `closeDrawer()`. -->
       <aside
-        role="complementary"
         [attr.aria-labelledby]="panel.labelledBy()"
         (keydown.escape)="panel.requestClose()"
         class="sticky w-[380px] min-[1600px]:w-[440px] shrink-0 overflow-hidden flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-surface-card motion-reduce:transition-none"
