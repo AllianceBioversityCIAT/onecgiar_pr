@@ -98,3 +98,16 @@ The Reviewer confirmed all 7 brief checks otherwise: call counts, order and URL 
 
 **Final status:** PASS (attempt 2 of 3; 2 review rounds = design budget max). Requirements covered: PRA-R-3, PRA-R-5. Final verification green.
 
+## 3. Release Record (2026-10-07)
+
+| Step | Result |
+|---|---|
+| Commits on `qa-development-2026-ss` | `b7c75fd25` (server, PRA-T-1) · `874184a85` (client, PRA-T-2) · `c7b995ee3` (spec + execution log) |
+| Merge `origin/performance-refactor` → branch | Already up to date (no new commits) |
+| Scoped Jest after commit | server `bilateral-center.service.spec` + `primary-program-request.service.spec`: 2 suites / 308 tests green · client 7-pattern scope: 9 suites / 690 tests green (`--maxWorkers=2`, run one after the other) |
+| Push | `qa-development-2026-ss` → origin (05c9f625f..c7b995ee3) · `qa-development-2026-ss` → `performance-refactor` (f2107be5c..c7b995ee3), 12:54 |
+| Wait for PRTest deploy | ~25 min, until about 13:20 |
+| PRTest deploy | Jenkins #2508 aborted in Build Frontend (16m57s, Jenkins side; the local `ng build` passed in 77 s, exit 0). Rebuild #2509 deployed |
+| `performance-refactor` → `staging` | The first commit attempt was denied by the auto-mode classifier and handed to the user. The user authorized it ("ahora si podemos hacer el paso a staging"). Merge commit `09c7abe4a` (conflict in the `bilateral-result-summaries.en.md` change log, both sides kept), pushed 06f01e35e..09c7abe4a |
+| PRA-T-3 (HITL) | Pending: the user runs the manual checks on PRTest after the deploy |
+
