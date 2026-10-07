@@ -2602,6 +2602,98 @@ describe('NotificationItemComponent', () => {
     // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
     // badge) — DSP-T-4 moves the status from `drawerViewFields()`'s retired grid into `chips()`
     // (first chip, always present) instead, same `rowStatusLabel` source, for all three row-status cases.
+    describe('Updates row BILATERAL_RESULT_SUBMITTED: link + CTA open the review drawer', () => {
+      let navigate: jest.SpyInstance;
+      const drawerUrl = '/result-framework-reporting/entity-details/SP11/bilateral-review?reviewResult=9762&reviewResultId=9762';
+      const submittedRow = (overrides: any = {}) =>
+        buildUpdateFixture({
+          result_id: 9762,
+          obj_notification_type: { type: NotificationType.BILATERAL_RESULT_SUBMITTED },
+          ...overrides,
+          obj_result: {
+            result_code: 9762,
+            title: 'Submitted result',
+            source_name: 'W3/Bilaterals',
+            obj_version: { id: 36 },
+            obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP11' } }],
+            ...(overrides.obj_result ?? {})
+          }
+        });
+      const link = () => fixture.nativeElement.querySelector('.notification_content_body_text a.font-mono, .notification_content_body_text a') as HTMLAnchorElement;
+      const cta = () => fixture.nativeElement.querySelector('[data-testid="validate-bilateral-cta"]') as HTMLAnchorElement | null;
+      const fire = (el: Element, init: MouseEventInit = {}) => {
+        const e = new MouseEvent('click', { button: 0, bubbles: true, cancelable: true, ...init });
+        el.dispatchEvent(e);
+        return e;
+      };
+
+      beforeEach(() => {
+        navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      });
+
+      it('the link href is the drawer URL, never /result/result-detail, and a plain click navigates once', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+        expect(link().getAttribute('href')).toBe(drawerUrl);
+        expect(link().getAttribute('href')).not.toContain('/result/result-detail');
+        const e = fire(link());
+
+        expect(e.defaultPrevented).toBe(true);
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+        expect(openCenterSpy).not.toHaveBeenCalled();
+      });
+
+      it('Ctrl-click on the link keeps the href (not prevented, no navigation)', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+
+        expect(fire(link(), { ctrlKey: true }).defaultPrevented).toBe(false);
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('the CTA renders and navigates once', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+
+        expect(cta()?.textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta);
+        expect(cta()?.getAttribute('href')).toBe(drawerUrl);
+        fire(cta()!);
+
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+      });
+
+      it('the detail drawer result card navigates to the drawer URL', () => {
+        component.notification = submittedRow();
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+        component.onDrawerResult();
+
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+        expect(openCenterSpy).not.toHaveBeenCalled();
+      });
+
+      it('no SP code: no CTA and the old href', () => {
+        component.notification = submittedRow({ obj_result: { obj_result_by_initiatives: [] } });
+        fixture.detectChanges();
+
+        expect(cta()).toBeNull();
+        expect(link().getAttribute('href')).toContain('/result/result-detail/9762');
+      });
+
+      it('another update type (RESULT_CONTRIBUTION_ACCEPTED) keeps its old target and has no CTA', () => {
+        component.notification = submittedRow({ obj_notification_type: { type: NotificationType.RESULT_CONTRIBUTION_ACCEPTED } });
+        fixture.detectChanges();
+
+        expect(cta()).toBeNull();
+        expect(link().getAttribute('href')).toContain('/result/result-detail/9762');
+      });
+    });
+
     describe('chips() status (NOTIF-T-14, moved by DSP-T-4)', () => {
       it('a pending Received row (needs your decision)', () => {
         component.notification = buildRequestFixture({ request_status_id: 1 });

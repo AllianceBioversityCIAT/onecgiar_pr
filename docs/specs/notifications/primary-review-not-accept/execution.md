@@ -126,3 +126,11 @@ The Reviewer confirmed all 7 brief checks otherwise: call counts, order and URL 
 **ADVISORY (non-gating):** the bell Ctrl-click spec title says "no read" but does not assert it · `ml-[4px]` on the bell CTA (own line) only indents it; check it in the visual pass · `notification-item/CLAUDE.md` is over the 120-line folder-doc cap (pre-existing).
 **Leader verification:** local production `ng build` exit 0 (69 s; warnings only, pre-existing).
 **Not verified:** visual check in a real browser (HITL).
+
+**User check after aa0ad4bc7 (localhost):** inbox "Bilateral Result Submitted" rows still opened the form. In the inbox, `app-update-notification` renders only announcements; every regular row, `BILATERAL_RESULT_SUBMITTED` included, is rendered by `notification-item`'s `isUpdateSource` branch. Its link had `resultUrl()` as the href, and a click went through `onResultLinkClick()` → `isBilateralResult` → `openCenterEditorInNewTab()`.
+
+| Attempt | Implementer | Reviewer |
+|---|---|---|
+| 3 | `submittedReviewUrl` / `reviewLinkUrl` getters; `onResultLinkClick()` checks the review URL before the center-editor path; update-branch href, CTA and `onDrawerResult()` go to `reviewRequestUrl()`; no SP code gives the old behaviour; 6 specs. Jest 516/516, eslint, tsc clean | **PASS**: plain click in-app, modifiers keep the href, primary rows unchanged, other update types unchanged |
+
+**ADVISORY (attempt 3):** the folder-doc bullet that named `update-notification` as the inbox surface was fixed by the Leader (one line in `notification-item/CLAUDE.md`) · the `update-notification` CTA is inert in the inbox (kept, harmless) · the spec `link()` selector could be just `a.font-mono`.

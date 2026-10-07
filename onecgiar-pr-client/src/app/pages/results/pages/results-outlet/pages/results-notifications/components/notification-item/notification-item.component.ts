@@ -36,6 +36,7 @@ import {
   getResultNotificationTextParts,
   resolveNotificationType,
   isBilateralReviewNotification,
+  isBilateralSubmittedNotification,
   parseCenterReportedProjectText,
   NotificationType,
   getRejectionReasonLine,
@@ -1215,7 +1216,7 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
    * (`primaryReviewUrl`) instead; the "MUST NOT appear" reasoning above holds only before that.
    */
   onDrawerResult() {
-    const reviewUrl = this.primaryReviewUrl;
+    const reviewUrl = this.reviewLinkUrl;
     if (reviewUrl) {
       this.closeDrawer();
       void this.router.navigateByUrl(reviewUrl);
@@ -1246,9 +1247,23 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     return this.notificationNavigation.reviewRequestUrl(this.notification);
   }
 
-  /** `href` of a primary row's result link: the review drawer when Pending Review, else Result Detail. */
+  /**
+   * Review-drawer URL for an update row of type BILATERAL_RESULT_SUBMITTED ("was submitted for your
+   * review"); null for any other row, or when the payload names no SP code (old behaviour stays).
+   */
+  get submittedReviewUrl(): string | null {
+    if (!this.isUpdateSource || !isBilateralSubmittedNotification(this.notification)) return null;
+    return this.notificationNavigation.reviewRequestUrl(this.notification);
+  }
+
+  /** The review drawer URL for whichever row kind has one (primary Pending Review, or submitted update). */
+  get reviewLinkUrl(): string | null {
+    return this.primaryReviewUrl ?? this.submittedReviewUrl;
+  }
+
+  /** `href` of a row's result link: the review drawer when the row has one, else Result Detail. */
   primaryResultHref(notification: any): string {
-    return this.primaryReviewUrl ?? this.resultUrl(notification);
+    return this.reviewLinkUrl ?? this.resultUrl(notification);
   }
 
   /** "Click here to validate the bilateral result": in-app to the review drawer, middle-click keeps the href. */
@@ -1256,7 +1271,7 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     event.stopPropagation();
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    const url = this.primaryReviewUrl;
+    const url = this.reviewLinkUrl;
     if (url) void this.router.navigateByUrl(url);
   }
 
@@ -1270,15 +1285,18 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
    */
   onResultLinkClick(event: MouseEvent): void {
     event.stopPropagation();
+    // The review drawer wins over the decision / center-editor path (primary Pending Review, or a
+    // "submitted for your review" update row); modifier and non-primary clicks keep the href.
+    const reviewUrl = this.reviewLinkUrl;
+    if (reviewUrl && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      void this.router.navigateByUrl(reviewUrl);
+      return;
+    }
     if (!this.isBilateralResult) return;
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
 
     event.preventDefault();
-    const reviewUrl = this.primaryReviewUrl;
-    if (reviewUrl) {
-      void this.router.navigateByUrl(reviewUrl);
-      return;
-    }
     this.notificationNavigation.openCenterEditorInNewTab(this.notification);
   }
 

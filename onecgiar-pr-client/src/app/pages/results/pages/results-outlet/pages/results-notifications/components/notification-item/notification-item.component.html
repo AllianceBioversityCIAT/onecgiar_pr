@@ -69,7 +69,7 @@
           }
 
           <a
-            [href]="resultUrl(notification)"
+            [href]="primaryResultHref(notification)"
             target="_blank"
             rel="noopener noreferrer"
             class="font-mono"
@@ -80,6 +80,15 @@
 
           @if (parts.suffix) {
             <b> {{ parts.suffix }} </b>
+          }
+          @if (submittedReviewUrl; as reviewUrl) {
+            <a
+              [href]="reviewUrl"
+              class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+              data-testid="validate-bilateral-cta"
+              (click)="onValidateCtaClick($event)"
+              >{{ copy.notificationItem.validateBilateralCta }}</a
+            >
           }
           }
         </p>
