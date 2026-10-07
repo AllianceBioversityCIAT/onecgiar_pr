@@ -197,6 +197,14 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Depends on:** QAC-T-14
 - **Verification:** qa-catalog suites; a test asserting each owner-listed field and its rule; live endpoint response saved to `tmp/qa-catalog-2026.json`.
 
+### QAC-T-16 — Geographic location (Results) fully parametrized (amendment 2026-10-07)
+
+- **Type:** server · **Review:** full
+- **Description:** Results only (IPSR geography out of scope for now — owner, 2026-10-07). From the 2026 client form (rd-geographic-location and its children): `visible_when` / `required_when` for every field; `geo.countries` and `geo.extra_countries` become `list` (country → its subnational areas via path on `result_country_subnational`), replacing the D2-pending subnational keys; `geographic_scopes` as a CLOSED list with ids from an authoritative source (client `GeoScopeEnum` 1/2/3/5/50, DB/CLARISA for 4 — verify, D24). Remove now-bound columns from PENDING_CATALOG.
+- **Implements:** QAC-R-13, QAC-R-14 for Geo
+- **Depends on:** QAC-T-14, QAC-T-15
+- **Verification:** qa-catalog suites; a test for each conditional field's rules; live/service response saved to `tmp/qa-catalog-2026.json`.
+
 ## 4. Dependency graph
 
 ```

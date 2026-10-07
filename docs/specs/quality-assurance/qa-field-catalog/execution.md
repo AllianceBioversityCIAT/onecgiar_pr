@@ -283,3 +283,4 @@
 - Open points closed: `general.is_discontinued` stores the inverse of the form question (client `rd-annual-updating.component.ts:672-673`) → label "Is this innovation discontinued?" + note; `general.primary_program` = `contributors.submitter` (same value, edited in C&P, identity in GI) documented.
 - Pre-release breaking rename (`result_type` → `$result_type`) authorized by the owner; recorded in the change log.
 - Reviews: FAIL (spec triplet not amended; change-log justification missing) → Leader doc fixes → PASS. Tests 252/252; falsifiers red.
+- 2026-10-07: owner — focus is Results, not IPSR; IPSR geography alignment deferred. Added QAC-T-16 (Geo, Results). Owner's CLARISA test key now returns 401 (rejected by CLARISA); live checks wait for a valid key.
