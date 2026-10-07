@@ -277,6 +277,12 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'last_updated_date',
   ),
   ...nfq('evidence_sharepoint', IDENTITY, 'id'),
+  ...nfq(
+    'evidence_sharepoint',
+    'SharePoint storage internals (document id, folder path), not on the form; QA gets the file name, the file link and its visibility',
+    'document_id',
+    'folder_path',
+  ),
 
   // results_investment_discontinued_options
   ...nfq(

@@ -205,7 +205,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Depends on:** QAC-T-14, QAC-T-15
 - **Verification:** qa-catalog suites; a test for each conditional field's rules; live/service response saved to `tmp/qa-catalog-2026.json`.
 
-### QAC-T-17 — Evidence (Results) fully parametrized (amendment 2026-10-07)
+### [x] QAC-T-17 — Evidence (Results) fully parametrized (amendment 2026-10-07)
 
 - **Type:** server · **Review:** full
 - **Description:** Owner: QA must receive ALL evidence data, not only what the green-check function requires (validations only drive `required`). Each `evidence.items` element: source (link / upload), link URL (when link), uploaded file: is_public, file name, file URL (when upload; URL delivered even when private — `is_public` tells QA how to treat it), description (verbatim help text), impact-area flags (each visible when its GI tag is Principal = id 3), other-output / innovation-readiness flags per result type as the form shows. Bindings on `evidence` and `evidence_sharepoint` (path). Remove now-bound columns from PENDING_CATALOG. Results only.

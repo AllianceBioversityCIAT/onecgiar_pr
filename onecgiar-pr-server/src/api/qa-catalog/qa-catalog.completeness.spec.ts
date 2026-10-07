@@ -338,6 +338,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
       value_column: string;
       filter: Record<string, number>;
       columns: string[];
+      pick: { order_by: string; direction: 'asc' | 'desc' };
     }> = {},
   ): CatalogField => {
     const { value_column, columns, ...step } = over;
@@ -366,6 +367,28 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
     expect(runPath({ fields: [pathField()], notForQa: onlyUpdatedBy })).toEqual(
       [],
     );
+  });
+
+  it('DD-13: the column a step pick orders by counts as touched; a ghost one is stale', () => {
+    // `updated_by` is claimed only by the pick: it needs no NOT_FOR_QA entry.
+    expect(
+      runPath({
+        fields: [
+          pathField({ pick: { order_by: 'updated_by', direction: 'desc' } }),
+        ],
+        notForQa: [],
+      }),
+    ).toEqual([]);
+    // without the pick the same column is uncatalogued again
+    expect(
+      runPath({ fields: [pathField()], notForQa: [] }).join('\n'),
+    ).toContain('uncatalogued column fixture_table.updated_by');
+    expect(
+      runPath({
+        fields: [pathField({ pick: { order_by: 'ghost', direction: 'asc' } })],
+        notForQa: onlyUpdatedBy,
+      }).join('\n'),
+    ).toContain('stale field p: fixture_table.ghost');
   });
 
   it.each([

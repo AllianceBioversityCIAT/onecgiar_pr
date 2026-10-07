@@ -754,6 +754,32 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
       },
     ],
     ['no value_column', { kind: 'path', steps: [pathStep] }],
+    [
+      'a step pick without order_by',
+      {
+        kind: 'path',
+        steps: [{ ...pathStep, pick: { direction: 'desc' } }],
+        value_column: 'v',
+      },
+    ],
+    [
+      'a step pick with an unknown direction',
+      {
+        kind: 'path',
+        steps: [
+          { ...pathStep, pick: { order_by: 'created_date', direction: 'up' } },
+        ],
+        value_column: 'v',
+      },
+    ],
+    [
+      'a step pick that is not an object',
+      {
+        kind: 'path',
+        steps: [{ ...pathStep, pick: 'created_date' }],
+        value_column: 'v',
+      },
+    ],
   ])('QAC-R-14: rejects a malformed path binding (%s)', (_name, storage) => {
     const errors = validateCatalogShape(withPath(storage));
     expect(errors).toEqual([
@@ -765,6 +791,18 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
     expect(
       validateCatalogShape(withPath(storage, true)).map((e) => e.rule),
     ).toEqual(['MALFORMED_PATH_BINDING']);
+  });
+
+  it('QAC-R-14 / DD-13: accepts a path step with a well-formed pick', () => {
+    const storage = {
+      kind: 'path',
+      steps: [
+        { ...pathStep, pick: { order_by: 'created_date', direction: 'desc' } },
+      ],
+      value_column: 'v',
+    };
+    expect(validateCatalogShape(withPath(storage))).toEqual([]);
+    expect(validateCatalogShape(withPath(storage, true))).toEqual([]);
   });
 
   it('QAC-R-14: accepts a lookup binding; rejects one missing source, keys or value_column', () => {
@@ -988,7 +1026,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 15 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 16 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {

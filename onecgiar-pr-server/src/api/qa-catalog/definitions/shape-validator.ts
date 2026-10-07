@@ -188,6 +188,25 @@ function conditionProblems(condition: unknown): string[] {
   return problems;
 }
 
+/** Why a `pick` (lookup or path step) is malformed; `prefix` locates it in the message. */
+function pickProblems(pickValue: unknown, prefix: string): string[] {
+  if (pickValue === undefined) return [];
+  if (
+    typeof pickValue !== 'object' ||
+    pickValue === null ||
+    Array.isArray(pickValue)
+  ) {
+    return [`${prefix}pick must be an object`];
+  }
+  const problems: string[] = [];
+  const { order_by, direction } = pickValue as Record<string, unknown>;
+  if (isBlank(order_by)) problems.push(`${prefix}pick: order_by missing`);
+  if (direction !== 'asc' && direction !== 'desc') {
+    problems.push(`${prefix}pick: direction must be "asc" or "desc"`);
+  }
+  return problems;
+}
+
 /** Why a path/lookup binding is malformed, or null; column and relation bindings are not checked here. */
 function bindingProblem(
   storage: StorageBinding | SubFieldStorageBinding,
@@ -211,6 +230,7 @@ function bindingProblem(
             }
           }
         });
+        problems.push(...pickProblems(step.pick, `step ${i}: `));
       });
     }
     if (isBlank(b.value_column)) problems.push('value_column missing');
@@ -255,18 +275,7 @@ function bindingProblem(
         });
       }
     }
-    if (b.pick !== undefined) {
-      const pick = b.pick as unknown;
-      if (typeof pick !== 'object' || pick === null || Array.isArray(pick)) {
-        problems.push('pick must be an object');
-      } else {
-        const { order_by, direction } = pick as Record<string, unknown>;
-        if (isBlank(order_by)) problems.push('pick: order_by missing');
-        if (direction !== 'asc' && direction !== 'desc') {
-          problems.push('pick: direction must be "asc" or "desc"');
-        }
-      }
-    }
+    problems.push(...pickProblems(b.pick, ''));
     return problems.length
       ? { rule: 'MALFORMED_LOOKUP_BINDING', problem: problems.join('; ') }
       : null;

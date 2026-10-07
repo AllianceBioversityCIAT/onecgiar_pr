@@ -46,4 +46,10 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      *    `result.geographic_scope_id -> clarisa_geographic_scope.id` implies the row exists wherever those writes succeed. Inventory D24.
      */
     geographic_scopes: [1, 2, 3, 4, 5, 50],
+    /**
+     * `evidence.is_sharepoint` (QAC-T-17): 0 Link, 1 Upload file. Source: the stored tinyint (evidence.entity.ts) and the form's two
+     * hard-coded radio options (evidence-item.component.ts `evidencesType`, booleans there; the server stores `Number(!!is_sharepoint)`,
+     * evidences.service.ts:842,894).
+     */
+    evidence_sources: [0, 1],
   };

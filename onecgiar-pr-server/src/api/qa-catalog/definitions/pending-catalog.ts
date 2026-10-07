@@ -113,54 +113,14 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'clarisa_subnational_scope_code',
   ),
 
-  // C-5 Evidence
-  ...stage2('evidence', 'evidence.items.description', 'description'),
-  ...stage2('evidence', 'evidence.items.source', 'is_sharepoint'),
-  ...stage2(
-    'evidence',
-    'evidence.items.innovation_use_related',
-    'innovation_use_related',
-  ),
-  ...stage2(
-    'evidence',
-    'evidence.items.policy_change_related',
-    'policy_change_related',
-  ),
-  ...stage2(
-    'evidence',
-    'evidence.items.capacity_sharing_related',
-    'capacity_sharing_related',
-  ),
-  ...stage2(
-    'evidence',
-    'evidence.items.other_output_related',
-    'other_output_related',
-  ),
-  ...stage2(
-    'evidence',
-    'evidence.items.other_outcome_related',
-    'other_outcome_related',
-  ),
-  ...stage2(
-    'evidence',
-    'evidence.items.knowledge_product_related_flag',
-    'knowledge_product_metadata_related',
-  ),
+  // C-5 Evidence (QAC-T-17: description, source, the file fields and every flag column are bound by `evidence.items`;
+  // evidence_sharepoint.document_id / folder_path moved to NOT_FOR_QA)
   {
     table: 'evidence',
     column: 'is_supplementary',
     reason:
       'evidence.is_supplementary — validated by the live function but no control in the form; for QA, not yet described (REVIEW D22); currently a binding filter',
   },
-  ...twoHop(
-    'evidence_sharepoint',
-    'evidence.items.is_public_file and evidence.items.file',
-    'evidence_id',
-    'document_id',
-    'file_name',
-    'folder_path',
-    'is_public_file',
-  ),
 
   // C-6 Linked results
   ...stage2('linked_result', 'linked.results.legacy_link', 'legacy_link'),

@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 15,
-      "content_hash": "f0f3f45fda86feb80f641ad7d7720b731a2882d76e14632135ad7d150b411d0b"
+      "revision": 16,
+      "content_hash": "6c325b809c32a08cd644be813638395ea89fcdf8274e4b0868cf8ecbf37ab9af"
     }
   },
   "keys": [
@@ -165,13 +165,24 @@
     "subfield:contributors.science_programs/toc_entries/target",
     "subfield:contributors.science_programs/toc_entries/toc_result",
     "subfield:contributors.science_programs/toc_entries/unit_of_measurement",
+    "subfield:evidence.items/capacity_sharing_related",
     "subfield:evidence.items/climate_related",
+    "subfield:evidence.items/description",
     "subfield:evidence.items/environment_related",
+    "subfield:evidence.items/file_name",
+    "subfield:evidence.items/file_url",
     "subfield:evidence.items/gender_related",
     "subfield:evidence.items/innovation_readiness_related",
+    "subfield:evidence.items/innovation_use_related",
+    "subfield:evidence.items/is_public_file",
+    "subfield:evidence.items/knowledge_product_related_flag",
     "subfield:evidence.items/link",
     "subfield:evidence.items/nutrition_related",
+    "subfield:evidence.items/other_outcome_related",
+    "subfield:evidence.items/other_output_related",
+    "subfield:evidence.items/policy_change_related",
     "subfield:evidence.items/poverty_related",
+    "subfield:evidence.items/source",
     "subfield:general.discontinued_reasons/description",
     "subfield:general.lead_contact_person/directory_user",
     "subfield:geo.countries/country",

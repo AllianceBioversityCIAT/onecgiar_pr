@@ -70,6 +70,12 @@ export interface PathStep {
   join: JoinPair[];
   /** Equality filters on columns of this step's table (stale-checked like a relation filter). */
   filter?: Record<string, string | number | boolean | null>;
+  /**
+   * Declared when the step can still match several rows per parent row (e.g. `evidence_sharepoint` keeps older
+   * rows of a re-uploaded file): the first row in this order is the one the binding reads. Same shape and meaning
+   * as a lookup's `pick`; `order_by` is a column of this step's table.
+   */
+  pick?: LookupPick;
 }
 
 /** DD-13: value reached by following `steps` from the parent element's row (`result` for a top-level field); `value_column` lives on the last step's table. */

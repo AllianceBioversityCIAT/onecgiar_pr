@@ -292,3 +292,10 @@
 - Evidence: 274/274; falsifiers red. Leader re-run: one intermittent failure in `QaCatalogController` "user JWT in the auth header is not a substitute -> 401" (outside this diff; 5 isolated runs green) — flake to investigate separately. Reviewer PASS.
 - ADVISORY: subnational required_when stricter than the function for countries without CLARISA areas (documented); wrong citation on WHEN_EXTRA_QUESTION (should be V-GEO:136-138 / V-FIX:143-145); verify id 4 in `clarisa_geographic_scope` when the DB is reachable.
 - 2026-10-07: Jira User Story **P2-3925** "[QA Platform - Fields] Reporting Tool field parameterization" (epic P2-3902; basis for P2-3907) linked to this spec. ACs: all Reporting Tool fields, every result type, by phase, enough for the QA Admin to mark core / hidden. Commits from here carry P2-3925.
+
+### QAC-T-17 — Evidence (Results) — PASS (attempt 2) · P2-3925
+
+- Date: 2026-10-07 · catalog 2026.16
+- Delivered: `evidence.items` with 18 subfields — source (closed list `evidence_sources` 0 Link / 1 Upload from `evidence.is_sharepoint`), link, is_public_file, file_name (path to newest active `evidence_sharepoint` row: `pick created_date desc`), file_url, description, 5 impact-area flags (visible when the GI tag = 3 Principal; owner instruction — the form always shows them), per-type flags (innovation dev/use, policy change, capacity sharing, KP, other output, other outcome). `PathStep.pick` added (DD-13 amended 968b38c0c). `document_id` / `folder_path` → NOT_FOR_QA. Pending 135 → 122.
+- Attempt 1 → FAIL (sharepoint path not one row per evidence). Attempt 2 → PASS. 310/310; falsifiers red.
+- Owner clarification recorded: QA receives ALL evidence data; validations only drive `required`.
