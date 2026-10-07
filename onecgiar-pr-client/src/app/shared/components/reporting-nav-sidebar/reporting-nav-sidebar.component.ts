@@ -18,7 +18,6 @@ import {
   lucideClipboardCheck,
   lucideWrench,
   lucideTicket,
-  lucideTable2,
   lucideLayers,
   lucideBookOpen,
   lucideUserCog,
@@ -99,7 +98,6 @@ interface IconFlyout {
       lucideClipboardCheck,
       lucideWrench,
       lucideTicket,
-      lucideTable2,
       lucideLayers,
       lucideBookOpen,
       lucideUserCog,
@@ -181,7 +179,6 @@ export class ReportingNavSidebarComponent {
   /** Sentence case throughout, matching the reference and the two siblings already spelled that way. */
   readonly adminModuleLinks: NavSubLink[] = [
     { name: 'Tickets dashboard', path: '/admin-module/tickets-dashboard', icon: 'lucideTicket' },
-    { name: 'All P/As and Centers', path: '/admin-module/entities-overview', icon: 'lucideTable2' },
     { name: 'Phase management', path: '/admin-module/phase-management', icon: 'lucideLayers' },
     { name: 'Knowledge products', path: '/admin-module/knowledge-products', icon: 'lucideBookOpen' },
     { name: 'User management', path: '/admin-module/user-management', icon: 'lucideUserCog' },
