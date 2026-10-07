@@ -114,7 +114,7 @@
 
 - **Type:** `server`
 - **Description:**
-  - `resetSectionsForResubmission(resultId, {primaryChanged})` deactivates: evidence; `results_by_projects` + `non_pooled_project_budget`; non-lead contributing centres; ToC (`results_toc_result`, indicators, targets); the result's active share requests; subnationals; innovation-use actors, orgs and measures (enumerate tables from `innovation-use.service.ts:399-486`); PARTNER institutions when the payload sends none; role 1 of the old owner **only** if `primaryChanged`.
+  - `resetSectionsForResubmission(resultId, {primaryChanged})` deactivates: evidence; `results_by_projects` + `non_pooled_project_budget`; non-lead contributing centres; ToC (`results_toc_result`, indicators, targets); the result's active share requests; subnationals; innovation-use actors, orgs and measures (enumerate tables from `innovation-use.service.ts:399-486`); PARTNER institutions when the payload sends none; ~~role 1 of the old owner **only** if `primaryChanged`~~ **amended by `RRC-T-6` (pivot, NFR §7): the reset never retires the old owner's role 1 or accepted `primary` row; `ppr.transferPrimary` does it in the final transaction.**
   - `persistLeadCenter`: reactivate the existing row and demote the previous lead.
   - Subnationals written for **all** of the payload's countries on this branch.
   - The reset runs after the preflight and before the writers.
@@ -126,7 +126,7 @@
 - **Estimate:** `L` · **Review:** `lenses`
 - **Verification:**
   - **Falsifier:** the partners scenario from `R-4`: before {A,B}, payload {C} → active rows = {C}, no duplicate C. The same for evidence (two links before, one in the payload → one active), projects, countries with subnationals (an existing country with new subnationals → written), and innovation-use actors.
-    - Same primary → the owner's role 1 **is not** deactivated.
+    - Same primary → the owner's role 1 **is not** deactivated. *(Amended by `RRC-T-6`: a changed primary does not deactivate it here either; the direct transfer does, in the final transaction.)*
     - New create with `persistLeadCenter` → same calls as today (regression).
   - **Red run:** scoped `bilateral-resubmission.service.spec` + `bilateral.service.spec`. The duplicate-evidence case fails without the reset.
   - **Disqualifier:** if `ShareResultRequestRepository.logicalDelete` (deactivates **everything**) is the only option and there are active rows that must survive (an accepted primary on the same-owner branch), use a filtered update. If not even that is possible, go back to design.
@@ -142,12 +142,12 @@
 - **Description:**
   - Header updated in place (same `id`/`result_code`).
   - Writers with role 1 suppressed when the primary changes.
-  - **Same owner:** nothing extra. **Changed / no owner:** `ppr.request(…,{asDraft:false})` after the writers. `ok:false` → no flip, error 5xx, result **Rejected** (`DD-3`, `DD-5`).
+  - **Same owner:** nothing extra. **Changed / no owner:** ~~`ppr.request(…,{asDraft:false})` after the writers~~ **amended by `RRC-T-6` (`RRC-R-17`):** `ppr.transferPrimary(…, { releaseContributors: true })` inside the final transaction, after the CAS. A throw → no flip, error 5xx (503), result **Rejected** (`DD-3`, `DD-5`).
   - Contributors CONTRIBUTION status 4 with `owner_initiative_id` = requested primary (`DD-6`).
   - Final `manager.transaction`: CAS `status 7→5` (0 rows → 409) + `RESUBMIT` row with `initiative_id` = requested primary and `created_by` = `external_submitter`.
-  - Post-commit: `announcePendingReview` only if there is an owner. `outcomes[]` with `operation:'updated'`, status 5. Log `RSB-R-21`. `keep_editing` ignored.
+  - Post-commit: `announcePendingReview` always (amended by `RRC-T-6`: after a transfer an owner always exists; it used to run only if there was an owner). `outcomes[]` with `operation:'updated'`, status 5. Log `RSB-R-21`. `keep_editing` ignored.
   - Verify `RSB-P-13` (does `accept` duplicate the ToC?) and apply the alternative from design §13 if it does.
-  - **Amendment (T-5 review, Juan David Delgado 2026-10-06, DD-5 amended):** changed/ownerless branch → an inactive role-1 row for the requested SP carries the lead-program investment; the budget rows stay **active**; `accept` reactivates the row so the amount appears; decline → that inactive row and its amount appear nowhere. `ppr.request` runs inside the final transaction before the CAS (NFR §7). A committed resubmission always returns its `updated` outcome even if post-commit response enrichment fails (`R-17`).
+  - **Amendment (T-5 review, Juan David Delgado 2026-10-06, DD-5 amended):** changed/ownerless branch → an inactive role-1 row for the requested SP carries the lead-program investment; the budget rows stay **active**; the transfer core reactivates the row so the amount appears (amended by `RRC-T-6`; it was `accept` + decline). `ppr.transferPrimary` runs inside the final transaction, after the CAS that locks the row (NFR §7). A committed resubmission always returns its `updated` outcome even if post-commit response enrichment fails (`R-17`).
 - **Implements:** `RSB-R-1` (regression), `R-3`, `R-5`, `R-9`, `R-14`, `R-15`, `R-17`, `R-18` (RESUBMIT), `R-21`; `DD-3`, `DD-5`, `DD-6`, `DD-10`
 - **Files (expected):** `api/bilateral/services/bilateral-resubmission.service.ts` + spec; `api/bilateral/bilateral.service.ts` (header update, suppress role 1) + spec
 - **Depends on:** `RSB-T-1`, `RSB-T-3`, `RSB-T-4` · **Blocks:** `RSB-T-6`
@@ -164,8 +164,9 @@
     - (h) Decline after a resubmission → Rejected via `PDR-R-4` and resubmittable again.
     - (i) A no-code create: identical call sequence and response (snapshot).
   - **Red run:** scoped `bilateral-resubmission.service.spec`; case (c) fails if the flip happens before `request`.
+  - > **Amended 2026-10-06 by `RRC-T-6` (`RRC-R-17`, pivot).** The falsifiers (b), (c), (h) and the red run above describe the superseded request/accept flow and are kept as history. Their replacements, all in `bilateral-resubmission.service.spec.ts`: **(b)** SP06 ≠ SP01 → `transferPrimary` called once in the commit transaction, `ppr.request` never called, SP06 the active owner with ONE accepted `primary` row, `announce` called once (a test that skips the announce fails), the previous owner still active while the reset, the writers and the start of the transfer run · **(c)** the core throws → 503, status 7, no `RESUBMIT` row, SP01 still the active role 1 with its accepted row · **(h)** a review rejection after the transfer, then the same payload resubmits with no second transfer and is announced again · **red run:** the CAS runs before the transfer (the transfer sees status 5 with 0 history rows), and a lost CAS never reaches the transfer, so SP01 is intact.
   - **Disqualifier:** if `RSB-P-13` is refuted and the alternative needs to change `ppr.accept` beyond a find-or-create, stop and go back to design (it touches the PSR spec).
-  - **Consumers:** `ppr.request` (no change); `announcePendingReview` (no change); `create()` response (additive).
+  - **Consumers:** `ppr.request` (no longer called by this branch, `RRC-T-6`); `announcePendingReview` (no change); `create()` response (additive).
 - **Definition of done:** [ ] scoped Jest (bilateral + `--testPathPattern=primary-program-request`) · [ ] `P-13` resolved in `execution.md` · [ ] eslint/tsc.
 
 ### `RSB-T-6` — Contract and specs record what was built
@@ -190,12 +191,14 @@
 
 ### `RSB-T-7` — Real run in the test environment (manual, user)
 
+- **Status:** `[x]`: PASS on PRTest 2026-10-06, user-run (see `execution.md`).
+
 - **Type:** `rollout`
 - **Description:**
   - Migration `up`/`down`/`up` on test.
   - Real cycle: create through the API → reject with A → resubmit with different partners, evidence and countries → compare active rows.
   - Refusal (SP not allocated) after a valid payload → `COUNT(*)` of every section table **identical** before and after.
-  - Change of primary to an allocated SP → hidden until accept → accept → in the queue.
+  - Change of primary to an allocated SP → owner at once, in its queue, no ownership request (amended by `RRC-T-6`; it was hidden until accept).
   - Three cycles → history in order with SP.
 - **Implements:** the behavioural proof of `RSB-R-4`, `R-8` (the `T-4` gap and §9 of requirements), migration
 - **Depends on:** PR 2 deployed to test · **Estimate:** `S` · **Review:** `checklist`
@@ -204,7 +207,7 @@
   - **Red run:** `n/a (no test gate)`.
   - **Disqualifier:** if test has no project mapped to ≥2 SPs, prepare the data first; never run against production.
   - **Consumers:** `none (no shared symbol changed)`.
-- **Definition of done:** [ ] SQL queries and results recorded in `execution.md` (queries given in chat, never as a file).
+- **Definition of done:** [x] SQL queries and results recorded in `execution.md` (queries given in chat, never as a file).
 
 ## 4. Dependency Graph
 
@@ -239,9 +242,9 @@ RSB-T-2 ─┬─ RSB-T-3 ─┐                  │
 | `R-12` scenario "single SP" | T-3 |
 | `R-13` no primary | T-3 |
 | `R-14` table row "same owner" (queue + notifications) | T-5 (a) |
-| `R-14` table row "changed / no owner" (ownerless + request) | T-5 (b) |
-| `R-14` scenario "not ours" · "SP01 does not see it" · "after accept, SP06's queue" · BUT "neither approve nor reject before accept" | T-5 (b) + T-7 (real accept) |
-| `R-14` "Declining rejects again and can be resubmitted" | T-5 (h) |
+| `R-14` table row "changed / no owner" (direct transfer + announce; was ownerless + request, amended `RRC-T-6`) | T-5 (b) |
+| `R-14` scenario "not ours" · "SP01 does not see it" · "SP06's queue at once" · BUT "no ownership request, never ownerless" (amended `RRC-T-6`) | T-5 (b) + T-7 (real run) |
+| `R-14` "rejects again and can be resubmitted" (after the transfer, a review rejection; the API-path decline is gone, amended `RRC-T-6`) | T-5 (h) |
 | `R-15` scenario "SP06 contributor" · "no request to an SP not in the payload" | T-4 (deactivation) + T-5 (drafts) |
 | `R-16` same title as itself passes / another result is refused | T-3 |
 | `R-17` `operation:"updated"`, code, status | T-5 (f) |

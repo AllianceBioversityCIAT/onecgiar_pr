@@ -380,6 +380,8 @@ Deliberately not reset: `result_review_history` (`R-18`), `result_initiative_bud
 
 ### `RSB-T-5` — Orchestration: header, primary, contributors, status flip last
 
+> **Amended 2026-10-06 by `RRC-T-6` (`bilateral/rejected-result-correction`, `RRC-R-17`).** This entry is the historical record of what T-5 built: the `requestPrimary` port member, the ownerless pending-acceptance branch and the "announce only with an owner" rule below were **superseded** — the writers port now has `transferPrimary` (direct assignment inside the commit transaction, CAS first), and the resubmission is always announced. The section reset (`RSB-T-4`) no longer retires the old owner's role 1 or its accepted `primary` row either (`RRC-T-6` pivot, NFR §7: it commits in its own earlier transaction, so a failure left the result ownerless); the transfer retires both inside the final transaction, so a failure keeps the previous primary. The accepted/ownerless/decline text in this entry describes the superseded behaviour. See `RSB-R-14` (amended) and `RRC-T-6` in `bilateral/rejected-result-correction/execution.md`.
+
 **Pre-flight:** another session (`notifications/bell-read-state`) is active in this checkout, editing the `share-result-request.{service,controller,module}` files, a `-seen` entity, `repositories/` and migration `1790600000000`. T-5 was briefed with a hard boundary (do not touch them; stop if needed). None were touched.
 
 **Attempt 1** (2026-10-06 · `nestjs-expert`, `tdd`, `error-handling-patterns`, `api-design-principles` · `xhigh`)
@@ -604,4 +606,172 @@ Deliberately not reset: `result_review_history` (`R-18`), `result_initiative_bud
 - T-7 should confirm that a 409 "pending review" after a timeout really means the earlier attempt committed.
 
 **Commit:** none yet. PR 2 (T-2..T-6) is pending the user's go-ahead.
+
+**Commit + integration (user go-ahead, 2026-10-06):**
+- Final combined check before the commit: `npx jest --maxWorkers=2 --testPathPattern="api/bilateral/|primary-program-request|result-review-history|results.service.spec|webhook-dispatch|shared/test/"` gave **39 suites / 1,212 tests passed**. `tsc --noEmit` exit 0.
+- `67485c922` ✨ feat(bilateral.service) (PR 2 = T-2..T-6, 26 files including this spec folder) was pushed to `qa-development-2026-ss`.
+- The other session's files (`notification`, `share-result-request.{service,controller,module}`, the `-seen` entity, migration `1790600000000`) and the untracked `docs/specs/bilateral/rejected-result-correction/` were excluded.
+- Merge `origin/performance-refactor` into `qa-development-2026-ss`: **Already up to date** (0 commits behind). The validated tree is therefore unchanged.
+- `qa-development-2026-ss` was pushed to `performance-refactor` as a fast-forward `b89759039..67485c922`. Verified: `origin/performance-refactor` = HEAD = `67485c922`.
+
+### `RSB-T-7` — Real run in the test environment (manual, user) · in progress
+
+- **Candidate search** (PRTest, user, 2026-10-06). 10 open-phase API results with a lead project allocated to at least 2 SPs. Chosen: **result 11475 / code 9007**, "TEST SUBMISSION 2026-09-03 (W3 uploader QA - please ignore)". It is Innovation Use (type 2), status 5, `external_platform_id` 43, lead project 1, and allocated SPs **SP09, SP10**. The backup is 11368 / 8900 (type 7, already Rejected, platform 42, SP01/SP10).
+- **Ownership** before testing:
+  - The owner is **SP02**: role 1 is active. SP02 is **not** allocated to the lead project, so a resubmission naming SP02 must be refused 400 (`R-12`).
+  - There are no share requests.
+  - Plan: resubmit to SP09 to exercise the ownerless/changed branch. After SP09 accepts, a second cycle with SP09 exercises the same-owner branch.
+- **Baseline photo** (11475):
+
+  | Field | Value |
+  |---|---|
+  | status | 5 |
+  | evidence | 1 |
+  | projects | 1 |
+  | partners (role 2) | 0 |
+  | centres | 1 |
+  | countries | 2 |
+  | subnationals | 0 |
+  | primary_active | 1 |
+  | requests_active | 0 |
+  | history | 1 |
+
+- **Pending:** confirm which platform `external_platform_id` 43 is, get its `x-api-key`, and get the result JSON (the original payload, or `GET /api/bilateral/results`).
+
+- **Live probes on PRTest** (user via Postman, 2026-10-06). All of these are refusals raised before any write.
+  - `scope_code: 3` → 400 DTO validation (`must be one of 1, 2, 4, 5, 50`). This was a Leader payload error, not product behaviour. Use 4 (National) for several countries.
+  - `result_code` 9007 (platform 43, W3RU) with a key from another platform → **403** "Result 9007 was reported by a different platform…". **`RSB-R-6` verified live.**
+  - 8900 (platform 42) → 403 again. `R-6` again.
+  - PRTest answered one HTML 503 from the proxy (maintenance or deploy window). It did not reach the app.
+  - 9550 (platform 34, policy change, Rejected) with an Innovation Use payload → **409** "Result 9550 is a policy change; the payload is a innovation use." **`RSB-R-22` verified live**, before any write, and it confirms the user's key belongs to **platform 34**.
+- **Re-plan:** the test result becomes **12018 / 9550**: policy change, already Rejected, lead project 1420, allocated SPs SP09, SP11 and SP12, platform 34. The investment-amount checks (JD decision, DD-5 amended) need an innovation from platform 34, and none is among the candidates. Those checks stay open until such a result exists or a platform 43/42 key is obtained.
+- **Security finding** (pre-existing, outside this spec): the bilateral `GET` result payload includes `obj_created.password` and `obj_external_submitter.password` (bcrypt hashes). These are exposed to any API-key holder. Reported to the user for its own ticket.
+
+- **Step 2: same-owner resubmission of 12018/9550** (status 7, owner SP09 role 1 active; SP12 contribution request inactive after the rejection). PASS.
+  - Response: **201**, `outcomes[0]` = `{result_code:"9550", operation:"updated", status_id:5, status:"pending review", external_reference:"20006"}`. Same `id` 12018 (`R-3`, `R-17`).
+  - Photo before → after:
+    | Field | Before | After |
+    |---|---|---|
+    | status | 7 | 5 |
+    | evidence | 1 | 1 (the new link) |
+    | projects | 1 | 1 |
+    | partners | 2 (CORRB, DAF) | 1 (IRRI) |
+    | centres | 1 | 1 |
+    | regions | 2 | 0 |
+    | countries | 0 | 1 (Colombia) |
+    | subnationals | 0 | 0 |
+    | primary_active | 1 | 1 |
+    | requests_active | 0 | 1 |
+    | history | 1 | 2 |
+  - **Replace semantics verified on real rows** (`R-4`): partners {A,B}→{C}, evidence replaced, regions→country, no duplicates.
+  - Owner: SP09 role 1 still active. A NEW SP12 contribution request was written (`st=4` draft, active), and the old SP12 row stays inactive (`R-15`, DD-6).
+  - UI (PRTest): 9550 appears in SP09's Bilateral review queue as **Pending Review** with the new description, which confirms `R-14` same-owner.
+  - **Observation:** the payload sent no `aow_compose_code`, so the stored SP09 ToC mapping (AOW01 / I-OC 1.3, toc_result 6645) was replaced by an unaligned stub, and the SP must re-align before approving. This is replace semantics (`R-4`), not a defect. Platforms should send their ToC fields when resubmitting.
+
+- **Step 3: refusals after a valid payload** (9550 rejected again by SP09; before photo: status 7, evidence 1, projects 1, partners 1, centres 1, regions 0, countries 1, subnationals 0, primary_active 1, requests_active 0, history 3). PASS.
+  - Primary SP02 (not allocated) → **400** "SP02 is not allocated to the lead project of result 9550." (`R-12`).
+  - Two projects, neither flagged lead → **400** "Result 9550 cannot be resubmitted without a lead bilateral project (one project, or one flagged is_lead)." (`R-23`).
+  - Title of another open-phase result (9007) → **400** "A result with the title … already exists." (`R-16`).
+  - **After photo identical to the before photo on all 11 rows** (`R-8`, verified on real rows). The T-4 Gap and the requirements §9 "real rollback" substitute are closed for these refusal classes.
+
+- **Step 4: changed primary SP09 → SP11** (9550 Rejected, owner SP09). PASS.
+  - Response: **201**, `outcomes[0]` = `{operation:"updated", status_id:5, status:"pending review"}`.
+  - Photo before → after:
+    | Field | Before | After |
+    |---|---|---|
+    | status | 7 | 5 |
+    | primary_active | 1 | 0 |
+    | requests_active | 0 | 2 |
+    | history | 3 | 4 |
+    | all other rows | — | unchanged |
+  - The GET shows SP09 role-1 `is_active:false` (retired, DD-5) and a NEW SP11 role-1 row (id 14162) `is_active:false`. This is the inactive pending-primary row of the amended DD-5.
+  - UI: 9550 is in neither SP09's nor SP11's queue, nor in the result centre module. That is ownerless, hidden until acceptance (`R-14` / `PNS-R-2`).
+  - **Finding (same class as the design §13 notification follow-up, NOT the amount):** the bilateral GET `obj_results_toc_result` lists BOTH SP09 and SP11 as `initiative_role: "Primary submitter"` while the result is ownerless. Its source does not filter the parent role-1 `is_active`. The neighbouring `obj_result_by_initiatives` does carry `is_active:false` for both. Retired former owners already surfaced the same way before this spec. Follow-up: add this reader to the §13 row.
+
+- **Step 5: SP11 accepts.** PASS.
+  - Photo: status 5, primary_active 1, requests_active 2, history 4.
+  - 9550 appears in SP11's Bilateral review queue (Pending Review) and in the Results Center with program SP11.
+  - The SP12 contribution request was released to SP12's inbox ("Manuel Almanzar from SP11 has requested inclusion of SP12…"), confirming `R-14` and DD-6.
+- **T-7 status: `[~]`.** Steps 1–5 PASS on real rows (`R-3`, `R-4`, `R-6`, `R-8`, `R-12`, `R-14`, `R-15`, `R-16`, `R-17`, `R-22`, `R-23`).
+  - **Still open:**
+    - SP decline after a resubmission (`PDR-R-4`).
+    - The history readout over 3 cycles.
+    - The investment-amount checks of the amended DD-5, which need a platform-34 innovation or a key for platform 42 or 43.
+    - The 9 review-carried checks.
+  - The user paused at their token limit.
+
+- **Step 6: same-owner cycle + history** (SP11 rejected 9550 "RSB T7 reject 3", then it was resubmitted with SP11 as primary). PASS.
+  - The response was **201** `updated`, status 5, and SP11 role 1 stayed **active**. Same-owner branch (`R-14` row 1).
+  - History in order (`R-9`, `R-18`; readout `R-19`, pre-spec row keeps SP NULL):
+    1. REJECT (NULL, pre-spec "test-P2-3166")
+    2. RESUBMIT SP09
+    3. REJECT SP09 "reject purposes"
+    4. RESUBMIT SP11
+    5. REJECT SP11 "RSB T7 reject 3"
+    6. RESUBMIT SP11
+- **T-7 still `[~]`.** Two items remain open: the SP **decline** after a resubmission (`PDR-R-4` live), and the investment-amount checks (they need a platform-34 innovation or a key for platform 42 or 43). The user chose to defer the decline test.
+
+- **Investment-amount run (amended DD-5, JD conditions)** on a new platform-34 Innovation Use, **12230 / 9762**, lead project B-A1734 (SP09/SP11/SP12).
+  - **Create:** 201 `created`, owner SP09, `initiative_budget` = SP09 `kind_cash` 1000.
+  - **Reject → resubmit to SP11** (`usd_budget` 1000, as sent at 21:46): 201 `updated`.
+    - SP09 role 1 is inactive.
+    - A NEW SP11 role-1 row is **inactive**.
+    - The GET `initiative_budget` is **[]** while the result is ownerless. The amount is hidden.
+  - **Amount query:** SP11 role inactive, `kind_cash` 1000, budget row **active**. **JD condition 1 verified on real rows.**
+  - **SP11 accepts:** SP11 role 1 becomes **active** with `kind_cash` 1000. 9762 appears in SP11's queue. **The amount survives acceptance (`R-14` + DD-5 amended), verified live.**
+  - Note: the retired SP09 row keeps its budget row active under an inactive parent. This is invisible to readers that filter on the parent (it matches the reader audit carried to follow-up).
+  - A resubmit attempt while the result was Pending Review → 409 "its status is pending review" (`R-2`, live).
+
+- **Decline after a resubmission** (`PDR-R-4` live, JD condition 2). PASS.
+  - SP11 rejected 9762. It was then resubmitted to SP12 with `usd_budget` 2000: 201 `updated`, and the GET `initiative_budget` was `[]`.
+  - SP12 **declined** the primary request. `status_id` went back to **7**.
+  - Amount query: SP09, SP11 and SP12 all have role-1 **`is_active` 0**. SP12's `kind_cash` 2000 sits on an active budget row under an inactive parent.
+  - The GET `/api/bilateral/12230` returns `initiative_budget: []`, so **the declined SP's amount surfaces nowhere** in the bilateral reader.
+  - Still open: the final resubmission after the decline, to show it can be resubmitted again. The user was asked to run it.
+- **UI finding (follow-up, outside this spec, notifications):** the primary-request card shown to SP12 reads "Manuel Almanzar from SP12 has requested inclusion of SP12 **as a contributor** to result 9762", while its button reads "**Accept as primary**". The primary-request card copy is wrong or misleading, and the requester label shows the requested SP itself. The user asked for it to be recorded for review.
+
+- **Resubmission after a decline.** 9762 (Rejected after the SP12 decline) was resubmitted to SP11: **201** `updated`, status 5, ownerless.
+  - The existing SP11 role-1 row (id 14164) was **reused**, not duplicated (`findOrCreatePendingPrimaryRow`).
+  - `initiative_budget` is `[]` while the result is ownerless.
+  - **`R-14` "declining rejects it again and it can be resubmitted": verified live.**
+
+**`RSB-T-7` final status: PASS → `[x]`** (2026-10-06, PRTest, user-run, Leader-guided; all queries were given in chat).
+
+All of the tasks.md T-7 description is covered:
+
+| Check | Evidence |
+|---|---|
+| Migration `up`/`down`/`up` | T-1 entry |
+| Real cycle with replaced partners, evidence and geography | 9550 step 2 |
+| Refusal leaves row counts identical | 9550 step 3 |
+| Primary change: hidden until accept, then in the queue | 9550 steps 4–5 |
+| Three cycles with the SP in history | 9550 step 6 |
+| Investment amount, both JD conditions | 9762 |
+| Decline after a resubmission, then resubmit again | 9762 |
+
+Also verified live: `R-2` (409 while pending), `R-6` (403), `R-22` (409).
+
+**Residual checks NOT run live.** These are advisories carried from the T-4/T-5 reviews, not part of the T-7 DoD. They go to follow-up:
+- duplicate subnational history;
+- an unresolvable `lead_center`;
+- several `is_lead` flags;
+- role-2 contributors the payload drops;
+- export/reporting readers of a budget under an inactive parent;
+- p95 versus a regular `create`;
+- the timeout-then-409 retry inference.
+
+**Test data left on PRTest** (safe to purge): 12018/9550 (now SP11-owned, Pending Review) and 12230/9762 (ownerless, Pending Review, pending SP11 request).
+
+## Summary
+
+All tasks `RSB-T-1..T-7` are `[x]`.
+- **Commits:** `7f11bdbb2` (PR 1, T-1) and `67485c922` (PR 2, T-2..T-6). Both are on `qa-development-2026-ss` and `performance-refactor`.
+- **Budget:** 7 tasks. Review rounds: T-4 and T-5 used 2 each (as budgeted); T-1, T-2, T-3 and T-6 used 1 each.
+- **Spec amendments, user-approved:** `RSB-R-23` (lead project required) and DD-5 (an inactive role-1 row carries the lead investment, decided by Juan David Delgado).
+- **Follow-ups** (design.md §13):
+  - notification readers and `obj_results_toc_result` show inactive SPs as primary;
+  - the primary-request card copy says "contributor";
+  - **the bilateral GET exposes password hashes (urgent)**;
+  - `api/bilateral/CLAUDE.md` §4 claims a "single ACID transaction" that does not exist (for `/akili-archive` on `staging`).
+- **Next step:** `/akili-archive`.
 

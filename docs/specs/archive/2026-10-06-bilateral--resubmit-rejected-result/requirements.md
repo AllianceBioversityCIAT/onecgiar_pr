@@ -18,7 +18,7 @@
 
 ## 2. Executive Summary
 
-A producer platform (STAR, MEL, TIP) resends **the same `create`** with the `result_code` of a result that a Science Program **rejected**. PRMS replaces its data **on the same record** and returns it to review. If the payload names a different primary, PRMS sends it to that SP through the existing acceptance flow.
+A producer platform (STAR, MEL, TIP) resends **the same `create`** with the `result_code` of a result that a Science Program **rejected**. PRMS replaces its data **on the same record** and returns it to review. If the payload names a different primary, PRMS assigns that SP as primary at once, with no ownership request and no acceptance round (`RRC-R-17`, amended 2026-10-06; it was an acceptance round before).
 
 | What the platform sends | What PRMS does |
 |---|---|
@@ -35,7 +35,7 @@ Every review decision and every resubmission is added to the history **with its 
 | **Resubmission** | A `create` carrying the `result_code` of a Rejected open-phase result. It replaces the result's data and returns it to review |
 | **Open phase** | The active reporting phase (`getActiveReportingPhase`) |
 | **Owner / primary SP** | The SP with role 1 accepted on the result. It reviews the result |
-| **Primary request** | The PSR flow: the SP must **accept** before becoming owner |
+| **Primary request** | The PSR flow: the SP must **accept** before becoming owner. A resubmission through `create` no longer uses it (`RRC-R-17`: direct assignment) |
 | **Allocated SP** | An SP with a `Confirmed` mapping and `allocation > 0` on the result's lead bilateral project (P-7 rule, the same one the Reporting Tool applies) |
 | **Refusal** | Any 4xx response to a resubmission |
 | **Review history** | Rows in `result_review_history` per result, ordered by date |
@@ -66,7 +66,7 @@ Every review decision and every resubmission is added to the history **with its 
 |---|---|
 | **Producer platform** (STAR, MEL, TIP; downstream consumer, US-D1) | Can close the rejected → corrected → reviewed loop without retyping |
 | **SP reviewer** | Gets the corrected result back in its queue, and sees the history of rejections and resubmissions |
-| **New SP named as primary** | Receives a primary request. It sees the result only once it accepts |
+| **New SP named as primary** | Becomes primary at once (`RRC-R-17`) and sees the result in its queue with the ordinary notice. It is never asked to accept |
 | **Centre user in PRMS** | Sees the updated data when reloading. Last write wins |
 | **Platform admin** | Can audit the full sequence |
 
@@ -176,22 +176,24 @@ If the payload does not name a primary SP, the resubmission MUST be refused, bec
 
 #### Requirement `RSB-R-14`: The primary the centre sends is the one that persists
 
-The primary named in the payload MUST become the result's primary **once that SP accepts**, through the existing primary-request flow (PSR). It MUST NOT become owner without accepting.
+> **Amended 2026-10-06 by `bilateral/rejected-result-correction` (`RRC-R-17`, `RRC-DD-7`, task `RRC-T-6`).** This requirement used to make the payload's primary become owner only after that SP accepted a primary request (PSR / `PNS-R-2`). It no longer does: a resubmission that changes the primary assigns it directly; no acceptance round.
+
+The primary named in the payload MUST become the result's primary **at once**, by the direct transfer (`PrimaryProgramRequestService.transferPrimary`, in the same transaction that returns the result to Pending Review). The named SP MUST NOT receive an ownership request, and nothing waits for its acceptance.
 
 | Case | Expected behaviour |
 |---|---|
 | The payload's primary **is the current owner** | It stays owner. The result enters **its queue** immediately, and the "result submitted" notification and contributor tagging fire, the same as a first submission (AC3, AC11) |
-| The payload's primary is **different** from the owner, or **there is no owner** (for example, after an ownerless decline, `PDR-R-4`) | The result goes to Pending Review **with no owner**, and a primary request is sent to the payload's SP. The rejecting SP is no longer primary |
+| The payload's primary is **different** from the owner, or **there is no owner** (for example, after an ownerless decline, `PDR-R-4`) | The named SP becomes owner (role 1) and the result goes to Pending Review **in its queue**, with the same "result submitted" notice and contributor tagging as the row above. The rejecting SP is no longer primary. No primary request is sent; the contributor drafts of the payload are released at once |
 
-The second row follows the `PNS-R-2` rules: the result does not appear in any list or queue until the SP accepts. Every review decision is refused with *"This result is awaiting the primary Science Program's acceptance."* Accepting makes the SP owner, and the result enters its queue. Declining rejects the result again (`PDR-R-4`), and the platform can resubmit it once more.
+Both rows end the same way: the result has an owner and is announced. The ownerless state, the *"This result is awaiting the primary Science Program's acceptance."* refusal and the decline of an API-created request no longer arise on this path (they remain for the in-app first-pick flow, `PNS-R-2`, and for rows created before this amendment). If the final transaction fails (the status change, the transfer or the history entry), all of it rolls back: the result stays Rejected with its **previous primary** and the platform can retry. The earlier data writes are not part of that transaction (`RSB-DD-3`); a retry rewrites them.
 
 ##### Scenario: correction "this result is not ours"
 - GIVEN result `28565` rejected by its owner SP01 with the justification "belongs to SP06"
 - WHEN the platform resubmits with SP06 as primary (allocated)
-- THEN the result is in Pending Review, with no owner and a pending primary request to SP06
+- THEN the result is in Pending Review and SP06 is its owner, in SP06's queue, with the ordinary notice
 - AND SP01 does not see it in its queue
-- AND once SP06 accepts, the result appears in SP06's queue
-- BUT it must NOT allow SP01 or SP06 to approve or reject it before acceptance
+- AND SP06 received no ownership request
+- BUT it must NOT stay without an owner or wait for an acceptance
 
 #### Requirement `RSB-R-15`: Contributors as sent
 
@@ -236,6 +238,7 @@ The existing review history read (the one the centre uses to see what the SP ask
 A primary decline of a result with no owner (`PDR-R-4`) MUST record its rejection in the history with the `REJECT` action. Today, the history write uses an action value the database does not accept (`'REJECTED'`, proposal `R-1`). Under `STRICT_TRANS_TABLES` the decline fails and rolls back. Without strict mode it would store `''`, and none appear in the count from 2026-10-06. **The SQL mode in production has not been verified.** It is confirmed with `SELECT @@GLOBAL.sql_mode;`.
 
 ##### Scenario: SP06 declines being primary of an ownerless result
+(The ownerless result no longer comes from an API resubmission, `RRC-R-17` / `RSB-R-14` amended; it still comes from the in-app first-pick request, so the decline keeps its rule.)
 - GIVEN a result with no owner and a pending primary request to SP06
 - WHEN SP06 declines with a justification
 - THEN the result is Rejected
@@ -290,7 +293,7 @@ A resubmission whose result type differs from the stored result's type MUST be r
 | Sections duplicated or orphaned on replace (`R-4`) | Jest per type handler: deactivate-then-write over the existing rows | **Partial.** Same as above: a real run with a result that has partners/evidence/regions, comparing active rows |
 | A DB fault (not a validation) in the middle of the writers | No gate can make it atomic (the create is not transactional, `RSB-DD-2`) | **Accepted risk, mitigated:** the status flips last (`RSB-DD-3`), so the result stays **Rejected and retryable**. It never stays Pending Review half-written |
 | Wrong status guard (`R-2`) | Jest table with all 8 statuses | — |
-| Primary becomes owner without accepting, or the old owner keeps reviewing (`R-14`) | Jest on resubmission + existing `results.service` review-decision tests | — |
+| The changed primary is not owner at once, an ownership request is sent, the announce is skipped, or the old owner keeps reviewing (`R-14` as amended by `RRC-R-17`) | Jest on resubmission: `transferPrimary` called in the commit transaction, `request` never called, announce called once | — |
 | SP not allocated slips through (`R-12`) | Jest: an SP present in CLARISA but without a mapping → 4xx, no writes | — |
 | Regression without a code (`R-1`) | The existing `api/bilateral` create Jest suite, scoped, green, unchanged | — |
 | Enum/entity/migration drift (`R-18`, `R-20`) | `npm run migration:check` + Jest that pins the entity enum values to `'APPROVE'/'REJECT'/'UPDATE'/'RESUBMIT'` | **Partial.** Applying the migration against MySQL is not tested locally. The user runs `up`/`down` on a test DB |
@@ -332,7 +335,7 @@ A resubmission whose result type differs from the stored result's type MUST be r
 | `RSB-R-11` | Closed phase | MUST | Edge case |
 | `RSB-R-12` | Primary allocated to the project | MUST | BR8, AC17, AC18 |
 | `RSB-R-13` | No primary → refused | MUST | Edge case |
-| `RSB-R-14` | Primary by acceptance | MUST | AC3, AC11, user 2026-10-06 |
+| `RSB-R-14` | Primary by direct assignment (amended `RRC-R-17`; was by acceptance) | MUST | AC3, AC11, user 2026-10-06 |
 | `RSB-R-15` | Contributors as sent | MUST | User 2026-10-06 |
 | `RSB-R-16` | Duplicate title | MUST | AC13 |
 | `RSB-R-17` | Response `updated` | MUST | AC12 |
