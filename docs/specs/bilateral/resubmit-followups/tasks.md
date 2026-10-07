@@ -147,7 +147,7 @@
 - **Type:** `server`
 - **Description:** in the `rsv` reset, after the role-1 step, deactivate `results_by_inititiative` role-2 rows whose `initiative_id` is not in the ids from T-4 step 3. Role-2 rows for listed SPs are untouched. No role-2 row is created (`DD-7`).
 - **Implements:** `RSF-R-7` (incl. "BUT a contributor still in the payload must NOT lose…", "IT MUST leave the primary's role-1 row untouched"); `DD-7`
-- **Files (expected):** `onecgiar-pr-server/src/api/bilateral/services/bilateral-resubmission.service.ts` + spec
+- **Files (expected):** `onecgiar-pr-server/src/api/bilateral/services/bilateral-resubmission.service.ts` + spec; `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (resubmission table row + change-log row; added 2026-10-06 by user-approved spec amendment, see `execution.md`)
 - **Depends on:** `T-4` · **Blocks:** `T-7`
 - **Estimate:** `S` · **Review:** standard
 - **Verification:**

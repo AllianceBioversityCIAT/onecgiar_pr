@@ -234,3 +234,13 @@ Unverified side findings from the scout (not acted on): `result_initiative_budge
   - RISK: retired role-2 rows keep their `result_initiative_budget` children. Every reader filters the parent (`R-8` table), so nothing surfaces.
   - VERIFICATION STRENGTH: only the in-memory DB was used. T-7 should include one live resubmission that drops a contributor.
 - **Requirements covered:** `RSF-R-7` (all clauses); `DD-7`.
+
+## Spec amendment: `RSF-T-6` contract doc (user-approved, 2026-10-06)
+
+- **Gap:** raised by the T-6 Reviewer as an advisory. `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (resubmission table, "Contributing programs" row) said "Accepted contributors are not removed". After `RSF-R-7` that is false. The spec named change-log rows only for the GET correction and the two 400s.
+- **Decision:** the user said "corrige lo que tengas que corregir" after the run summary. `T-6` Files now include the contract doc.
+- **Change (Leader inline, a 1-file doc text fix):**
+  - The row now reads "Replaced by the payload: an accepted contributor (active role 2) the payload no longer lists is deactivated; one still listed keeps its row. No contributor is created here…; the primary is not affected".
+  - New change-log row, 2026-10-06, `RSF-T-6` / `RSF-R-7`, amends `RSB-R-15`. It states that the no-code `create` and `versioned` paths are unchanged.
+- **Verified against the code:** `resolveContributorInitiativeIds` (`bs:5080`) yields `[]` for an absent or empty `contributing_programs`, and the T-6 step then retires every active role-2 row (T-6 `[]` test).
+- **Review:** no separate Reviewer spawn. The text restates behaviour the T-6 Reviewer already audited, and the Reviewer proposed this wording.
