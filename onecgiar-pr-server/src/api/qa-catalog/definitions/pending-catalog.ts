@@ -16,7 +16,13 @@ import { PendingCatalogEntry } from './types';
  * remaining column is listed here with `twoHop(...)` (or `stage2(...)`), naming the field it serves.
  *
  * Common-section fields that own no column of their own, so no entry can name them:
- *  - `contributors.other_contributors` (read-only view of other programs' ToC rows).
+ *  - `contributors.other_contributors` (read-only view of other programs' ToC rows): described by the subfields of
+ *    `contributors.science_programs` since QAC-T-15 (each program carries its own planned answer and ToC mappings).
+ *
+ * QAC-T-15 (2026-10-07) bound the columns of the ToC mappings (`results_toc_result_indicators`, `result_indicators_targets`),
+ * the centers and science-programs `from_toc` flags, and `result_by_institutions_by_deliveries_type` (partner roles) and
+ * removed their entries. Still uncatalogued fields that read the partner-role rows: `partners.kp_author_affiliations.roles`
+ * and `ipsr_step_1.scaling_partners.partner_role` (their columns are covered by the external partners role path).
  *
  * Known gap (QAC-T-11, REVIEW D1 + D2): the IPSR step 3 evidence lists live in `result_ip_step_three_evidence`, a table
  * created by migration 1790347604000-IpsrStepThreeEvidence and used with raw SQL (evidences.repository.ts); it has NO
@@ -75,22 +81,7 @@ const legacy2025 = (
   }));
 
 export const PENDING_CATALOG: PendingCatalogEntry[] = [
-  // C-2 ToC alignment
-  ...twoHop(
-    'results_toc_result_indicators',
-    'toc.entries.indicator',
-    'toc_results_indicator_id',
-    'results_toc_results_id',
-  ),
-  ...twoHop(
-    'result_indicators_targets',
-    'toc.entries.contribution_to_target',
-    'result_toc_result_indicator_id',
-    'contributing_indicator',
-  ),
-
   // C-3 Contributors & partners
-  ...stage2('results_center', 'contributors.centers.from_toc', 'from_toc'),
   ...stage2(
     'results_center',
     'results_center.from_cgspace (KP lock tooltip)',
@@ -102,16 +93,6 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'contribution_percentage',
   ),
   ...stage2(
-    'results_by_inititiative',
-    'contributors.science_programs.from_toc',
-    'from_toc',
-  ),
-  ...stage2(
-    'results_by_inititiative',
-    'contributors.science_programs (shares the submitter binding, role 2)',
-    'inititiative_id',
-  ),
-  ...stage2(
     'results_by_institution',
     'partners.external_partners.from_toc',
     'from_toc',
@@ -120,12 +101,6 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'results_by_institution',
     'partners.kp_author_affiliations and partners.kp_author_affiliations.clarisa_partner (KP only; shares the external partners binding)',
     'institutions_id',
-  ),
-  ...twoHop(
-    'result_by_institutions_by_deliveries_type',
-    'partners.external_partners.roles, partners.kp_author_affiliations.roles and ipsr_step_1.scaling_partners.partner_role',
-    'partner_delivery_type_id',
-    'result_by_institution_id',
   ),
 
   // C-4 Geographic location

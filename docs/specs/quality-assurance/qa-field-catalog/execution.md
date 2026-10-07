@@ -263,3 +263,12 @@
 - Attempt 1 → FAIL (doc caveat dropped; response changed w/o version; `is_replicated` pseudo-key). Attempt 2 → FAIL (pinned fixture missed field-level description/control_list). Attempt 3 → PASS. Final: 183/183, tsc/eslint clean; falsifiers red for each guard.
 - Spec edits by the Leader (2a2fba021): DD-12 and QAC-R-13 (only pseudo-key `result_type`; response change ⇒ version change; subfield paths from parent).
 - Requirements: QAC-R-13, QAC-R-14 (mechanics)
+
+### QAC-T-15 — Contributors & partners fully parametrized — PASS (attempt 3)
+
+- Date: 2026-10-07 · Attempts: 3
+- Delivered (catalog 2026.12): 17 fields in owner order with `visible_when` / `required_when` from the client (citations in code): Submitter; ToC KPI yes/no; Multiple WPs (`toc.entries`: level, output/outcome, HLO statement [lookup], KPI [path], typology / unit [lookup, any-of keys], target [lookup, `target_date` year match, latest pick], contribution [path]); program invested; why reported; lead center; contributing centers (from ToC) + `contributors.other_centers` (new); `contributors.science_programs` (depth 2, own ToC mapping per program, joins on result + initiative); bilateral projects; external partners applicability → list (institution, partner type [lookup], partner role [path]); led by partner → lead partner; linked/bundled → results; KP partners.
+- Model additions: multi-column path joins, keyed lookups (`keys` any-of, `qualifiers` with `match: 'year'`, `pick`); `toc.*` scoped to the submitter's active role-1 row; Submitter / Primary Program filter `is_active = 1`.
+- Attempt 1 → FAIL (science-program path not scoped to the result; `toc.entries` duplicated contributors; single-key lookups; client-only required on subfields; stale tmp). Attempt 2 → FAIL (year stored as YYYY and YYYY-MM-DD; no single-row pick; change-log cell). Attempt 3 → PASS. Final 238/238; falsifiers red. Spec edits by the Leader: DD-13 (b3cb06afb, b125a53e4).
+- Known gaps recorded in the contract doc: initiative-41 narrative exemption, "Other(s)" centers UI state, `not_applicable` NULL vs `eq false`, typology/unit active-row preference, repeated values per mapping (consumer takes distinct), `visible_when` not persisted (migration pending).
+- Requirements: QAC-R-13, QAC-R-14 (C&P)

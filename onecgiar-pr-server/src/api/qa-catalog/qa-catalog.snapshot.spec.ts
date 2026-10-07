@@ -207,7 +207,7 @@ describe('qa-catalog snapshot integrity (fixtures)', () => {
               storage: {
                 kind: 'lookup',
                 source: 'toc',
-                key_from: 'id',
+                keys: [{ from: 'id', to: 'id' }],
                 value_column: 'name',
               },
               ...over,
@@ -246,7 +246,33 @@ describe('qa-catalog snapshot integrity (fixtures)', () => {
         storage: {
           kind: 'lookup' as const,
           source: 'toc2',
-          key_from: 'id',
+          keys: [{ from: 'id', to: 'id' }],
+          value_column: 'name',
+        },
+      },
+    ],
+    [
+      'an added lookup qualifier',
+      {
+        storage: {
+          kind: 'lookup' as const,
+          source: 'toc',
+          keys: [{ from: 'id', to: 'id' }],
+          qualifiers: [{ column: 'target_date', equals: 'phase_year' }],
+          value_column: 'name',
+        },
+      },
+    ],
+    [
+      'an added alternative lookup key',
+      {
+        storage: {
+          kind: 'lookup' as const,
+          source: 'toc',
+          keys: [
+            { from: 'id', to: 'id' },
+            { from: 'id', to: 'related_node_id' },
+          ],
           value_column: 'name',
         },
       },

@@ -52,16 +52,22 @@ export interface RelationBinding {
   filter?: Record<string, string | number | boolean | null>;
 }
 
+/** One column pair of a path step's join: `from` on the previous table, `to` on the step's table. */
+export interface JoinPair {
+  from: string;
+  to: string;
+}
+
 /**
  * DD-13: one hop of a parent -> child table path. The path starts at the PARENT element's row (DD-12):
- * `result` for a top-level field, the parent binding's last table for a subfield:
- *  - `join_from` is a column of the previous table (for the first step, of that start table);
- *  - `join_to` is a column of this step's `table`.
+ * `result` for a top-level field, the parent binding's last table for a subfield. `join` lists the column
+ * pairs the hop matches on, ALL of which must hold (e.g. `result_id -> results_id` AND
+ * `inititiative_id -> initiative_id`); each `from` is a column of the previous table (for the first step, of
+ * that start table) and each `to` a column of this step's `table`.
  */
 export interface PathStep {
   table: string;
-  join_from: string;
-  join_to: string;
+  join: JoinPair[];
   /** Equality filters on columns of this step's table (stale-checked like a relation filter). */
   filter?: Record<string, string | number | boolean | null>;
 }
@@ -75,16 +81,47 @@ export interface PathBinding {
   columns?: string[];
 }
 
+/** One column of a lookup source the key matches: `from` is a catalog key (sibling subfield or top-level), `to` a column of `source`. */
+export interface LookupKey {
+  from: string;
+  to: string;
+}
+
+/** Qualifier value that means "the result's phase year" (the `version.phase_year` of the result being read). */
+export const PHASE_YEAR = 'phase_year';
+
 /**
- * DD-13: read-only reference value Reporting does not store (ToC `integration_information.*`,
- * CLARISA). `key_from` is the catalog key that holds the id: a sibling subfield key (subfield lookup) or a
- * top-level field key (CI-validated, DD-13). No table is checked by the
- * completeness guard because `source` is not a result table.
+ * A source column that must match `equals`: a literal, or `PHASE_YEAR` for the result's phase year.
+ * `match` defaults to `'equals'` (plain equality); `'year'` compares the YEAR PART of the column, for a date
+ * stored both as `YYYY` and as `YYYY-MM-DD` (the repository's canonical read: `REGEXP '^[0-9]{4}-'` -> `YEAR()`, else `CAST`).
+ */
+export interface LookupQualifier {
+  column: string;
+  equals: string | number | boolean;
+  match?: 'equals' | 'year';
+}
+
+/** How ONE row is chosen when the keys and qualifiers can still match several: order by `order_by`, take the first. */
+export interface LookupPick {
+  order_by: string;
+  direction: 'asc' | 'desc';
+}
+
+/**
+ * DD-13: read-only reference value Reporting does not store (ToC `integration_information.*`, CLARISA).
+ * `keys` are ALTERNATIVES (any-of): the source row matches when ANY `from -> to` pair matches, e.g. a KPI id
+ * stored as the node's `related_node_id` for some rows and as its numeric `id` for others (P2-2932).
+ * Each `from` is a catalog key: a sibling subfield key (subfield lookup) or a top-level field key
+ * (CI-validated). `qualifiers` further restrict the source row (ALL must hold), e.g. `target_date = phase_year`.
+ * No table is checked by the completeness guard because `source` is not a result table.
  */
 export interface LookupBinding {
   kind: 'lookup';
   source: string;
-  key_from: string;
+  keys: LookupKey[];
+  qualifiers?: LookupQualifier[];
+  /** Declared when the source can still hold several matching rows; the first row in this order is the value. */
+  pick?: LookupPick;
   value_column: string;
 }
 

@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 10,
-      "content_hash": "a63d580ee8f299e7b690b303172d6a3861a9eef6ddaefcd20ab28ecbc0149871"
+      "revision": 12,
+      "content_hash": "7761e1cbf73b0fe2f076156a997d9451134e92522a6e91734e88d2ccd9200eb0"
     }
   },
   "keys": [
@@ -17,6 +17,8 @@
     "field:contributors.bilateral_projects",
     "field:contributors.centers",
     "field:contributors.lead_center",
+    "field:contributors.other_centers",
+    "field:contributors.science_programs",
     "field:contributors.submitter",
     "field:evidence.items",
     "field:general.climate_impact_areas",
@@ -150,6 +152,18 @@
     "section:knowledge_product",
     "section:policy_change_info",
     "subfield:capacity_sharing.length_of_training/degree",
+    "subfield:contributors.science_programs/from_toc",
+    "subfield:contributors.science_programs/planned_result",
+    "subfield:contributors.science_programs/program",
+    "subfield:contributors.science_programs/toc_entries",
+    "subfield:contributors.science_programs/toc_entries/contribution_to_target",
+    "subfield:contributors.science_programs/toc_entries/hlo_statement",
+    "subfield:contributors.science_programs/toc_entries/indicator_typology",
+    "subfield:contributors.science_programs/toc_entries/kpi",
+    "subfield:contributors.science_programs/toc_entries/level",
+    "subfield:contributors.science_programs/toc_entries/target",
+    "subfield:contributors.science_programs/toc_entries/toc_result",
+    "subfield:contributors.science_programs/toc_entries/unit_of_measurement",
     "subfield:evidence.items/climate_related",
     "subfield:evidence.items/environment_related",
     "subfield:evidence.items/gender_related",
@@ -208,7 +222,16 @@
     "subfield:ipsr_step_3.complementary_components/current_readiness_level",
     "subfield:ipsr_step_3.complementary_components/current_use_level",
     "subfield:ipsr_step_4.reference_materials/link",
+    "subfield:partners.external_partners/institution",
+    "subfield:partners.external_partners/partner_role",
+    "subfield:partners.external_partners/partner_type",
+    "subfield:toc.entries/contribution_to_target",
+    "subfield:toc.entries/hlo_statement",
+    "subfield:toc.entries/indicator_typology",
+    "subfield:toc.entries/kpi",
     "subfield:toc.entries/level",
-    "subfield:toc.entries/toc_result"
+    "subfield:toc.entries/target",
+    "subfield:toc.entries/toc_result",
+    "subfield:toc.entries/unit_of_measurement"
   ]
 }

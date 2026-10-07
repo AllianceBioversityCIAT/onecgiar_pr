@@ -334,8 +334,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
   // One distinct column per role, so removing a role from the binding must surface exactly that column.
   const pathField = (
     over: Partial<{
-      join_from: string;
-      join_to: string;
+      join: { from: string; to: string }[];
       value_column: string;
       filter: Record<string, number>;
       columns: string[];
@@ -349,8 +348,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
         steps: [
           {
             table: 'fixture_table',
-            join_from: 'id',
-            join_to: 'id',
+            join: [{ from: 'id', to: 'id' }],
             filter: { created_at: 1 },
             ...step,
           },
@@ -371,7 +369,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
   });
 
   it.each([
-    ['join_to', { join_to: 'updated_by' }, 'fixture_table.id'],
+    ['join', { join: [{ from: 'id', to: 'updated_by' }] }, 'fixture_table.id'],
     ['value_column', { value_column: 'id' }, 'fixture_table.foo_bar'],
     ['filter', { filter: {} }, 'fixture_table.created_at'],
     ['columns', { columns: [] }, 'fixture_table.updated_at'],
@@ -380,7 +378,9 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
     (_role, over, expected) => {
       const failures = runPath({
         fields: [pathField(over)],
-        notForQa: onlyUpdatedBy.filter((e) => e.column !== over['join_to']),
+        notForQa: onlyUpdatedBy.filter(
+          (e) => e.column !== ('join' in over ? over.join[0].to : undefined),
+        ),
       });
       expect(failures.join('\n')).toContain(`uncatalogued column ${expected}`);
     },
@@ -388,7 +388,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
 
   it('the first step join_from is a column of `result`: a ghost one is stale, a real one is covered', () => {
     const failures = runPath({
-      fields: [pathField({ join_from: 'ghost' }), anchor],
+      fields: [pathField({ join: [{ from: 'ghost', to: 'id' }] }), anchor],
       notForQa: onlyUpdatedBy,
     });
     expect(failures.join('\n')).toContain('stale field p: result.ghost');
@@ -400,8 +400,11 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
       storage: {
         kind: 'path',
         steps: [
-          { table: 'fixture_table', join_from: 'id', join_to: 'id' },
-          { table: 'fixture_table', join_from: 'created_at', join_to: 'ghost' },
+          { table: 'fixture_table', join: [{ from: 'id', to: 'id' }] },
+          {
+            table: 'fixture_table',
+            join: [{ from: 'created_at', to: 'ghost' }],
+          },
         ],
         value_column: 'foo_bar',
         columns: ['updated_at'],
@@ -433,7 +436,8 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
       storage: {
         kind: 'lookup',
         source: 'toc_not_a_table',
-        key_from: 'ghost_column',
+        keys: [{ from: 'ghost_column', to: 'ghost_source_column' }],
+        qualifiers: [{ column: 'ghost_qualifier', equals: 'phase_year' }],
         value_column: 'statement',
       },
     } as unknown as CatalogField;
@@ -477,7 +481,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
               storage: {
                 kind: 'lookup',
                 source: 's',
-                key_from: 'k',
+                keys: [{ from: 'k', to: 'id' }],
                 value_column: 'v',
               },
             },
@@ -500,13 +504,71 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
       runPath({ fields: [shallow, anchor], notForQa }).join('\n'),
     ).toContain('uncatalogued column fixture_table.created_at');
   });
+  it('DD-13 multi-column join: every pair of a step is claimed on both tables (a ghost second pair is stale on either side)', () => {
+    const multi = (join: { from: string; to: string }[]) =>
+      ({
+        key: 'm',
+        storage: {
+          kind: 'path',
+          steps: [{ table: 'fixture_table', join }],
+          value_column: 'foo_bar',
+          columns: ['updated_at'],
+        },
+      }) as unknown as CatalogField;
+    // `created_at` is only covered through the second pair: removing the pair would report it uncatalogued
+    const notForQa = [
+      { table: 'fixture_table', column: 'created_at', reason: 'audit' },
+    ];
+    const ok = runPath({
+      fields: [
+        multi([
+          { from: 'id', to: 'id' },
+          { from: 'id', to: 'created_at' },
+        ]),
+        anchor,
+      ],
+      notForQa: [],
+    });
+    expect(ok.join('\n')).not.toContain('stale');
+    expect(ok.join('\n')).not.toContain('fixture_table.created_at');
+    expect(
+      runPath({
+        fields: [
+          multi([
+            { from: 'id', to: 'id' },
+            { from: 'id', to: 'ghost_to' },
+          ]),
+          anchor,
+        ],
+        notForQa,
+      }).join('\n'),
+    ).toContain('stale field m: fixture_table.ghost_to does not exist');
+    expect(
+      runPath({
+        fields: [
+          multi([
+            { from: 'id', to: 'id' },
+            { from: 'ghost_from', to: 'created_at' },
+          ]),
+          anchor,
+        ],
+        notForQa,
+      }).join('\n'),
+    ).toContain('stale field m: result.ghost_from does not exist');
+  });
+
   // DD-13 (T-14 review): a subfield path starts from the PARENT element's row, not from `result`.
   const pathSub = (
     join_from: string,
     extra: Partial<{ columns: string[] }> = {},
   ) => ({
     kind: 'path',
-    steps: [{ table: 'child_fixture', join_from, join_to: 'parent_id' }],
+    steps: [
+      {
+        table: 'child_fixture',
+        join: [{ from: join_from, to: 'parent_id' }],
+      },
+    ],
     value_column: 'label',
     columns: ['id'],
     ...extra,
@@ -551,7 +613,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
     const grandchild = {
       kind: 'path',
       steps: [
-        { table: 'fixture_table', join_from: 'parent_id', join_to: 'id' },
+        { table: 'fixture_table', join: [{ from: 'parent_id', to: 'id' }] },
       ],
       value_column: 'foo_bar',
     };
@@ -573,7 +635,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
     ).toEqual([]);
     // control: a column that is on fixture_table only is stale when the depth-2 path joins from child_fixture
     const wrong = JSON.parse(JSON.stringify(nested));
-    wrong.subfields[0].subfields[0].storage.steps[0].join_from = 'foo_bar';
+    wrong.subfields[0].subfields[0].storage.steps[0].join[0].from = 'foo_bar';
     expect(
       runPath({ scope: childScope, fields: [wrong, anchor], notForQa }),
     ).toEqual(['stale subfield n.a.b: child_fixture.foo_bar does not exist']);
@@ -592,7 +654,7 @@ describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfi
       key: 'n',
       storage: {
         kind: 'path',
-        steps: [{ table: 'fixture_table', join_from: 'id', join_to: 'id' }],
+        steps: [{ table: 'fixture_table', join: [{ from: 'id', to: 'id' }] }],
         value_column: 'id',
       },
       subfields: [{ key: 's', storage: pathSub('foo_bar') }],

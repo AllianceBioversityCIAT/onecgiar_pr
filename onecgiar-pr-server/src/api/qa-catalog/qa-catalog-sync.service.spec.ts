@@ -399,7 +399,12 @@ describe('QaCatalogSyncService (QAC-R-6, QAC-R-3)', () => {
         visible_when: { field: 'title', operator: 'not_null' },
         storage: {
           kind: 'path',
-          steps: [{ table: 'child', join_from: 'id', join_to: 'parent_id' }],
+          steps: [
+            {
+              table: 'child',
+              join: [{ from: 'id', to: 'parent_id' }],
+            },
+          ],
           value_column: 'v',
         },
         subfields: [
@@ -410,7 +415,7 @@ describe('QaCatalogSyncService (QAC-R-6, QAC-R-3)', () => {
             storage: {
               kind: 'lookup',
               source: 'toc',
-              key_from: 'indicator_id',
+              keys: [{ from: 'indicator_id', to: 'id' }],
               value_column: 'name',
             },
           },

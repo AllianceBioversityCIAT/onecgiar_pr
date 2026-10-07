@@ -180,7 +180,7 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
       table: 'results_by_inititiative',
       fk_to_result: 'result_id',
       value_column: 'inititiative_id',
-      filter: { initiative_role_id: 1 },
+      filter: { initiative_role_id: 1, is_active: 1 },
     },
   },
   {

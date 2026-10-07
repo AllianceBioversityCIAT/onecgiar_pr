@@ -114,11 +114,11 @@ function lastTableOf(
 /**
  * Columns a binding claims. A relation binding covers `fk_to_result` and `value_column` of its table;
  * its `filter` keys also count as covered (they are columns the binding itself names and must exist),
- * and are stale-checked like the rest. A path binding (DD-13) claims, per step, `join_to` and the
- * filter keys on the step's table and `join_from` on the previous table, plus `value_column` and
+ * and are stale-checked like the rest. A path binding (DD-13) claims, per step and per `join` pair, `to` and the
+ * filter keys on the step's table and `from` on the previous table, plus `value_column` and
  * `columns` on the last step's table. The first step starts from `startTable`: `result` for a
  * top-level field, the PARENT binding's last table for a subfield (DD-12), so the parent table must
- * be in scope too; with no start table (the parent is a lookup) the first `join_from` is unchecked.
+ * be in scope too; with no start table (the parent is a lookup) the first `from` columns are unchecked.
  * A lookup claims nothing: its source is reference data, not a result table.
  */
 function claimsOfBinding(
@@ -143,10 +143,12 @@ function claimsOfBinding(
       const claims: Claim[] = [];
       let previous = startTable;
       for (const step of s.steps ?? []) {
-        if (previous !== undefined) {
-          claims.push({ table: previous, column: step.join_from, origin });
+        for (const pair of step.join ?? []) {
+          if (previous !== undefined) {
+            claims.push({ table: previous, column: pair.from, origin });
+          }
+          claims.push({ table: step.table, column: pair.to, origin });
         }
-        claims.push({ table: step.table, column: step.join_to, origin });
         for (const column of Object.keys(step.filter ?? {})) {
           claims.push({ table: step.table, column, origin });
         }

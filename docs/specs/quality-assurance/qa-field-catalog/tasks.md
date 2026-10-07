@@ -189,7 +189,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Falsifier:** remove the condition-key check → the "unknown key" fixture stays green → red required.
 - **Consumers:** response shape (QA) — additive; contract doc change log.
 
-### QAC-T-15 — Contributors & partners fully parametrized (amendment 2026-10-07)
+### [x] QAC-T-15 — Contributors & partners fully parametrized (amendment 2026-10-07)
 
 - **Type:** server · **Review:** full
 - **Description:** from the 2026 client form (`rd-contributors-and-partners.component.*` and its child components) transcribe every field with its `visible_when` / `required_when`: submitter; planned result; Multiple WPs (`toc.entries`: level, output/outcome, HLO statement [lookup], KPI [path], indicator typology / unit / target [lookup], contribution to target [path]); program invested; narrative; lead center before contributing centers; contributing centers (from ToC) and other(s) centers; Contributing Science Program/Accelerator (list depth 2: program, from ToC/other, planned result, its own ToC mappings); bilateral projects; external partners applicability; partners list (institution, partner type [lookup], partner role [path]); led by external partner; lead partner; linked/bundled + results. Remove the now-bound columns from `PENDING_CATALOG`. Form order.

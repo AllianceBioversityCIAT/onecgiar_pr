@@ -175,6 +175,11 @@ export const FIXTURE_NESTED_SECRET_NAMES = [
   'secret_path_table_b',
   'secret_join_from',
   'secret_join_to',
+  'secret_join_from_2',
+  'secret_join_to_2',
+  'secret_qualifier_column',
+  'secret_key_to_alt',
+  'secret_key_to',
   'secret_path_value',
   'secret_extra_column',
   'secret_filter_column',
@@ -235,8 +240,10 @@ export const FIXTURE_NESTED_SOURCE: QaCatalogSource = {
         steps: [
           {
             table: 'secret_path_table_a',
-            join_from: 'secret_join_from',
-            join_to: 'secret_join_to',
+            join: [
+              { from: 'secret_join_from', to: 'secret_join_to' },
+              { from: 'secret_join_from_2', to: 'secret_join_to_2' },
+            ],
             filter: { secret_filter_column: 1 },
           },
         ],
@@ -269,8 +276,7 @@ export const FIXTURE_NESTED_SOURCE: QaCatalogSource = {
             steps: [
               {
                 table: 'secret_path_table_b',
-                join_from: 'secret_join_from',
-                join_to: 'secret_join_to',
+                join: [{ from: 'secret_join_from', to: 'secret_join_to' }],
               },
             ],
             value_column: 'secret_path_value',
@@ -283,7 +289,13 @@ export const FIXTURE_NESTED_SOURCE: QaCatalogSource = {
               storage: {
                 kind: 'lookup',
                 source: 'secret_lookup_source',
-                key_from: 'secret_key_from',
+                keys: [
+                  { from: 'secret_key_from', to: 'secret_key_to' },
+                  { from: 'secret_key_from', to: 'secret_key_to_alt' },
+                ],
+                qualifiers: [
+                  { column: 'secret_qualifier_column', equals: 'phase_year' },
+                ],
                 value_column: 'secret_lookup_value',
               },
             },

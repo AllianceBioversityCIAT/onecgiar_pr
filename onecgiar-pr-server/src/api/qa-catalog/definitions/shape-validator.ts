@@ -114,10 +114,18 @@ function bindingProblem(
       problems.push('steps must be a non-empty array');
     } else {
       b.steps.forEach((step, i) => {
-        for (const prop of ['table', 'join_from', 'join_to'] as const) {
-          if (isBlank(step?.[prop]))
-            problems.push(`step ${i}: ${prop} missing`);
+        if (isBlank(step?.table)) problems.push(`step ${i}: table missing`);
+        if (!Array.isArray(step?.join) || step.join.length === 0) {
+          problems.push(`step ${i}: join must be a non-empty array`);
+          return;
         }
+        step.join.forEach((pair, j) => {
+          for (const prop of ['from', 'to'] as const) {
+            if (isBlank(pair?.[prop])) {
+              problems.push(`step ${i}: join ${j} ${prop} missing`);
+            }
+          }
+        });
       });
     }
     if (isBlank(b.value_column)) problems.push('value_column missing');
@@ -127,9 +135,53 @@ function bindingProblem(
   }
   if (storage.kind === 'lookup') {
     const b = storage as LookupBinding;
-    const problems = (['source', 'key_from', 'value_column'] as const)
+    const problems = (['source', 'value_column'] as const)
       .filter((prop) => isBlank(b[prop]))
       .map((prop) => `${prop} missing`);
+    if (!Array.isArray(b.keys) || b.keys.length === 0) {
+      problems.push('keys must be a non-empty array');
+    } else {
+      b.keys.forEach((key, i) => {
+        for (const prop of ['from', 'to'] as const) {
+          if (isBlank(key?.[prop])) problems.push(`key ${i}: ${prop} missing`);
+        }
+      });
+    }
+    if (b.qualifiers !== undefined) {
+      if (!Array.isArray(b.qualifiers)) {
+        problems.push('qualifiers must be an array');
+      } else {
+        b.qualifiers.forEach((q, i) => {
+          if (isBlank(q?.column))
+            problems.push(`qualifier ${i}: column missing`);
+          if (
+            !['string', 'number', 'boolean'].includes(typeof q?.equals) ||
+            (typeof q?.equals === 'string' && q.equals.trim() === '')
+          ) {
+            problems.push(`qualifier ${i}: equals needs a scalar value`);
+          }
+          if (
+            q?.match !== undefined &&
+            q.match !== 'equals' &&
+            q.match !== 'year'
+          ) {
+            problems.push(`qualifier ${i}: match must be "equals" or "year"`);
+          }
+        });
+      }
+    }
+    if (b.pick !== undefined) {
+      const pick = b.pick as unknown;
+      if (typeof pick !== 'object' || pick === null || Array.isArray(pick)) {
+        problems.push('pick must be an object');
+      } else {
+        const { order_by, direction } = pick as Record<string, unknown>;
+        if (isBlank(order_by)) problems.push('pick: order_by missing');
+        if (direction !== 'asc' && direction !== 'desc') {
+          problems.push('pick: direction must be "asc" or "desc"');
+        }
+      }
+    }
     return problems.length
       ? { rule: 'MALFORMED_LOOKUP_BINDING', problem: problems.join('; ') }
       : null;
@@ -284,30 +336,30 @@ export function validateCatalogShape(
     }
   }
 
-  /** DD-13: a lookup's `key_from` names a sibling subfield key (subfield lookup) or a top-level key. */
+  /** DD-13: every lookup key's `from` names a sibling subfield key (subfield lookup) or a top-level key. */
   function checkLookupKey(
     storage: StorageBinding | SubFieldStorageBinding,
     path: string,
     siblings: Set<string> | undefined,
     ownKey?: string,
   ): void {
-    if (storage.kind !== 'lookup' || isBlank(storage.key_from)) return;
-    if (ownKey !== undefined && storage.key_from === ownKey) {
-      errors.push({
-        rule: 'UNKNOWN_LOOKUP_KEY',
-        path,
-        message: `${path}: lookup key_from "${storage.key_from}" names the subfield itself; it must name a sibling subfield or a top-level catalog key`,
-      });
-      return;
+    if (storage.kind !== 'lookup' || !Array.isArray(storage.keys)) return;
+    for (const { from } of storage.keys) {
+      if (isBlank(from)) continue;
+      if (ownKey !== undefined && from === ownKey) {
+        errors.push({
+          rule: 'UNKNOWN_LOOKUP_KEY',
+          path,
+          message: `${path}: lookup key from "${from}" names the subfield itself; it must name a sibling subfield or a top-level catalog key`,
+        });
+      } else if (!siblings?.has(from) && !topLevel.has(from)) {
+        errors.push({
+          rule: 'UNKNOWN_LOOKUP_KEY',
+          path,
+          message: `${path}: lookup key from "${from}" is neither a sibling subfield key nor a top-level catalog key`,
+        });
+      }
     }
-    if (siblings?.has(storage.key_from) || topLevel.has(storage.key_from)) {
-      return;
-    }
-    errors.push({
-      rule: 'UNKNOWN_LOOKUP_KEY',
-      path,
-      message: `${path}: lookup key_from "${storage.key_from}" is neither a sibling subfield key nor a top-level catalog key`,
-    });
   }
 
   // Persisted rows are keyed (parent_key, key); a depth-2 parent_key is '<field>.<sub>' (sync

@@ -659,7 +659,10 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
     ]);
   });
 
-  const pathStep = { table: 'child', join_from: 'id', join_to: 'parent_id' };
+  const pathStep = {
+    table: 'child',
+    join: [{ from: 'id', to: 'parent_id' }],
+  };
   const withPath = (storage: unknown, asSub = false) =>
     asSub
       ? catalog({
@@ -676,7 +679,17 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
   it('QAC-R-14: accepts a well-formed path binding on a field and on a subfield', () => {
     const ok = {
       kind: 'path',
-      steps: [pathStep, { ...pathStep, filter: { is_active: 1 } }],
+      steps: [
+        pathStep,
+        {
+          ...pathStep,
+          join: [
+            { from: 'id', to: 'parent_id' },
+            { from: 'result_id', to: 'results_id' },
+          ],
+          filter: { is_active: 1 },
+        },
+      ],
       value_column: 'value',
       columns: ['extra'],
     };
@@ -695,10 +708,46 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
       },
     ],
     [
-      'a step without join_to',
+      'a step without join',
+      { kind: 'path', steps: [{ table: 't' }], value_column: 'v' },
+    ],
+    [
+      'a step with an empty join',
       {
         kind: 'path',
-        steps: [{ table: 't', join_from: 'id' }],
+        steps: [{ table: 't', join: [] }],
+        value_column: 'v',
+      },
+    ],
+    [
+      'a join pair without `to`',
+      {
+        kind: 'path',
+        steps: [{ table: 't', join: [{ from: 'id' }] }],
+        value_column: 'v',
+      },
+    ],
+    [
+      'a blank second join pair',
+      {
+        kind: 'path',
+        steps: [
+          {
+            table: 't',
+            join: [
+              { from: 'id', to: 'x' },
+              { from: ' ', to: 'y' },
+            ],
+          },
+        ],
+        value_column: 'v',
+      },
+    ],
+    [
+      'the legacy single-pair join_from / join_to',
+      {
+        kind: 'path',
+        steps: [{ table: 't', join_from: 'id', join_to: 'x' }],
         value_column: 'v',
       },
     ],
@@ -716,18 +765,19 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
     ).toEqual(['MALFORMED_PATH_BINDING']);
   });
 
-  it('QAC-R-14: accepts a lookup binding; rejects one missing source, key_from or value_column', () => {
-    // key_from must name a real key: a top-level key (a subfield may not name itself)
+  it('QAC-R-14: accepts a lookup binding; rejects one missing source, keys or value_column', () => {
+    // each key `from` must name a real key: a top-level key (a subfield may not name itself)
     const ok = (asSub: boolean) => ({
       kind: 'lookup',
       source: 'toc_hlo',
-      key_from: asSub ? 'general.group' : 'general.title',
+      keys: [{ from: asSub ? 'general.group' : 'general.title', to: 'id' }],
       value_column: 'statement',
     });
     expect(validateCatalogShape(withPath(ok(false)))).toEqual([]);
     expect(validateCatalogShape(withPath(ok(true), true))).toEqual([]);
-    for (const missing of ['source', 'key_from', 'value_column']) {
-      const bad = (asSub: boolean) => ({ ...ok(asSub), [missing]: '' });
+    for (const missing of ['source', 'keys', 'value_column']) {
+      const blank = missing === 'keys' ? [] : '';
+      const bad = (asSub: boolean) => ({ ...ok(asSub), [missing]: blank });
       expect(validateCatalogShape(withPath(bad(false)))).toEqual([
         expect.objectContaining({
           rule: 'MALFORMED_LOOKUP_BINDING',
@@ -739,13 +789,76 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
       ).toEqual(['MALFORMED_LOOKUP_BINDING']);
     }
   });
+
+  it('QAC-R-14: a lookup accepts alternative keys and qualifiers (literal or phase_year); rejects malformed ones', () => {
+    const base = {
+      kind: 'lookup',
+      source: 'toc_target',
+      value_column: 'target_value',
+    };
+    const good = {
+      ...base,
+      keys: [
+        { from: 'general.title', to: 'toc_result_indicator_id' },
+        { from: 'general.title', to: 'id_indicator' },
+      ],
+      qualifiers: [
+        { column: 'target_date', equals: 'phase_year', match: 'year' },
+        { column: 'is_active', equals: 1, match: 'equals' },
+      ],
+      pick: { order_by: 'target_date', direction: 'desc' },
+    };
+    expect(validateCatalogShape(withPath(good))).toEqual([]);
+    const k = good.keys;
+    for (const [name, bad] of [
+      ['a key without `to`', { ...good, keys: [{ from: 'general.title' }] }],
+      ['a blank key `from`', { ...good, keys: [{ from: '', to: 'id' }] }],
+      [
+        'a second key blank',
+        { ...good, keys: [k[0], { from: 'general.title', to: '' }] },
+      ],
+      ['the legacy key_from', { ...base, key_from: 'general.title' }],
+      [
+        'qualifiers not an array',
+        { ...good, qualifiers: { column: 'a', equals: 1 } },
+      ],
+      ['a qualifier without column', { ...good, qualifiers: [{ equals: 1 }] }],
+      [
+        'a qualifier without equals',
+        { ...good, qualifiers: [{ column: 'target_date' }] },
+      ],
+      [
+        'a qualifier with an object equals',
+        { ...good, qualifiers: [{ column: 'a', equals: {} }] },
+      ],
+      [
+        'a qualifier with an unknown match',
+        { ...good, qualifiers: [{ column: 'a', equals: 1, match: 'month' }] },
+      ],
+      ['a pick without order_by', { ...good, pick: { direction: 'desc' } }],
+      [
+        'a pick with a blank order_by',
+        { ...good, pick: { order_by: ' ', direction: 'desc' } },
+      ],
+      [
+        'a pick with an unknown direction',
+        { ...good, pick: { order_by: 'target_date', direction: 'up' } },
+      ],
+      ['a pick that is not an object', { ...good, pick: 'target_date' }],
+    ] as [string, unknown][]) {
+      expect({
+        name,
+        rules: validateCatalogShape(withPath(bad)).map((e) => e.rule),
+      }).toEqual({ name, rules: ['MALFORMED_LOOKUP_BINDING'] });
+    }
+  });
 });
 
 describe('validateCatalogShape: lookup key_from (DD-13)', () => {
-  const lookup = (key_from: string) => ({
+  const lookup = (from: string, ...alternatives: string[]) => ({
     kind: 'lookup' as const,
     source: 'toc_hlo',
-    key_from,
+    keys: [from, ...alternatives].map((f) => ({ from: f, to: 'id' })),
     value_column: 'statement',
   });
   const holder = (over: Partial<CatalogField>): CatalogDefinition =>
@@ -822,6 +935,14 @@ describe('validateCatalogShape: lookup key_from (DD-13)', () => {
     expect(errors[0].message).toContain('itself');
   });
 
+  it('every alternative key `from` is checked, not only the first', () => {
+    const errors = validateCatalogShape(
+      holder({ storage: lookup('general.anchor_id', 'ghost_id') }),
+    );
+    expect(errors.map((e) => e.rule)).toEqual(['UNKNOWN_LOOKUP_KEY']);
+    expect(errors[0].message).toContain('ghost_id');
+  });
+
   it('a sibling key is not enough for a top-level lookup (siblings only exist among subfields)', () => {
     const errors = validateCatalogShape(holder({ storage: lookup('hlo_id') }));
     expect(errors.map((e) => e.rule)).toEqual(['UNKNOWN_LOOKUP_KEY']);
@@ -865,7 +986,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 10 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 12 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
