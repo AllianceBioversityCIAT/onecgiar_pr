@@ -1558,8 +1558,9 @@ export class BilateralService {
     resultId,
     resultTypeId?: number,
     // RSB-T-5 / DD-5: the resubmission passes `suppressPrimaryRole` when the payload's primary is
-    // not the current owner. Role 1 is then written by `PrimaryProgramRequestService.accept` (once
-    // the requested SP accepts), never here. Everything else about the mapping is unchanged: the
+    // not the current owner. Role 1 is then written by `PrimaryProgramRequestService.transferPrimary`
+    // in the resubmission's final transaction (`RRC-R-17`), never here, so the previous owner stays
+    // active until that transaction commits. Everything else about the mapping is unchanged: the
     // ToC row is still written for the requested primary, and the contributor drafts still hang off
     // it (DD-6). The create path never passes it.
     options?: { suppressPrimaryRole?: boolean },
@@ -1769,9 +1770,9 @@ export class BilateralService {
         );
         try {
           if (options?.suppressPrimaryRole) {
-            // DD-5 (amended): no ACTIVE role 1 (that is ownership, and `accept` writes it). The
-            // lead-program investment still needs a row to hang off, so it goes on an INACTIVE
-            // role-1 row that `accept` reactivates (`ppr:~718-731`).
+            // DD-5 (amended): no new ACTIVE role 1 here (that is ownership, and the direct transfer
+            // writes it, `RRC-R-17`). The lead-program investment still needs a row to hang off, so
+            // it goes on an INACTIVE role-1 row that the transfer reactivates in its ownership write.
             const pendingRowId = await this.findOrCreatePendingPrimaryRow(
               resultId,
               init.id,
@@ -4805,16 +4806,18 @@ export class BilateralService {
         return owner?.id ?? null;
       },
       writeResult: (args) => this.writeResubmittedResult(args),
-      // `PNS-R-2`: a primary request is SENT (PENDING), not saved as a draft: the result goes to
-      // Pending Review ownerless and the requested SP decides.
-      // The manager is the one of the resubmission's final transaction (NFR §7).
-      requestPrimary: (resultId, initiativeId, userId, manager) =>
-        this._primaryProgramRequestService.request(
+      // `RRC-R-17` / `RRC-DD-7` (supersedes `RSB-R-14` / `PNS-R-2`): a resubmission that changes the
+      // primary SP assigns it DIRECTLY, with no ownership request and no acceptance round. The
+      // manager is the one of the resubmission's final transaction (NFR §7), where the `Result` row
+      // is already locked by the CAS. `releaseContributors: true`: the result is sent at once, so
+      // the contributor drafts go out now. The id is a number (the core compares strictly).
+      transferPrimary: (resultId, initiativeId, userId, manager) =>
+        this._primaryProgramRequestService.transferPrimary(
           resultId,
-          initiativeId,
+          Number(initiativeId),
           { id: userId } as TokenDto,
           manager,
-          { asDraft: false },
+          { releaseContributors: true },
         ),
       announcePendingReview: (resultId, emitterUserId) =>
         this.announcePendingReview(resultId, emitterUserId),
@@ -5903,13 +5906,14 @@ export class BilateralService {
 
   /**
    * RSB-T-5 attempt 2 / DD-5 (amended): find-or-create ONE role-1 row for the requested primary and
-   * leave it INACTIVE. An inactive row is not ownership (queues, review decisions and `PNS-R-2` read
-   * active role 1), but it is where `ppr.accept` looks for the SP's row (no `is_active` filter,
-   * `ppr:~718`) and reactivates it, so the lead-program budget saved ACTIVE on it surfaces at accept.
+   * leave it INACTIVE. An inactive row is not ownership (queues and review decisions read active
+   * role 1), but it is where `PrimaryProgramRequestService.transferPrimary` looks for the SP's row
+   * (no `is_active` filter, the same ownership write `accept()` runs) and reactivates it, so the
+   * lead-program budget saved ACTIVE on it surfaces when the transfer commits (`RRC-R-17`).
    *
    * Only a ROLE-1 row is ever reused: an existing role-2 row of the same SP (an accepted
    * contributor) is never converted, a separate role-1 row is written next to it. An existing role-1
-   * row is returned as it is (it is inactive: the reset retired it, or accept never reactivated it).
+   * row is returned as it is (it is inactive: a former owner's, or an earlier attempt's).
    */
   private async findOrCreatePendingPrimaryRow(
     resultId: number,

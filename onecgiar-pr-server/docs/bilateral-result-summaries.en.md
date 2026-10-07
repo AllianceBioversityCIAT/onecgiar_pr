@@ -541,23 +541,21 @@ Every other refusal reuses the Rejections table above (`404` code not found, `40
 | `409` | The result left Rejected between the check and the final write. | `Result {code} cannot be resubmitted: its status changed while the resubmission was being processed.` |
 | `404` | The result disappeared between the check and the lock. | `Result {code} was not found.` |
 | `503` | The lock could not be taken because of a fault (not a concurrent attempt). | `Result {code} could not be locked for resubmission. Retry the request.` |
-| `503` | The primary request step failed with an internal error. | `Result {code} could not be resubmitted: the primary Science Program request failed. The result stays rejected; resend the same request to retry.` |
-| `500` | The primary request step answered `not_aligned` after the preflight had passed (the allocation changed underneath the request). | The same message as the `503` row above. |
+| `503` | The primary assignment step failed with an internal error (a changed primary is assigned directly, inside the final transaction). | `Result {code} could not be resubmitted: the primary Science Program could not be assigned. The result stays rejected; resend the same request to retry.` |
 
 The allocation rule is the one the Reporting Tool applies: the Science Program needs a confirmed mapping with allocation above zero on the lead project. A Science Program that exists only in CLARISA is refused.
 
 ### Retrying safely
 
-The data writes are not one database transaction. The **status flips last**, in one transaction with the history entry (and with the primary request, when there is one). A failure therefore leaves the result in a known state.
+The data writes are not one database transaction. The **status flips last**, in one transaction with the history entry (and with the primary assignment, when the primary changes). A failure therefore leaves the result in a known state.
 
 | What you see | What it means | What to do |
 |---|---|---|
 | `400`, `403`, `404`, or `409` (not Rejected, type, Knowledge Product) | Refused before any write. | Fix the payload or the target. Do not resend unchanged. |
-| `5xx`, or a timeout, and no later `409` | Failed before the commit. The result is still **Rejected**, may hold partial data, and is **retryable**. | **Resend the same request.** The reset cleans up the partial data and the writers rewrite it. |
+| `5xx`, or a timeout, and no later `409` | Failed before the commit. The result is still **Rejected**, keeps its **previous primary**, may hold partial data, and is **retryable**. | **Resend the same request.** The reset cleans up the partial data and the writers rewrite it. |
 | `409` with `its status is pending review`, after a timeout | Your earlier attempt **committed**. | **Do not resend.** The resubmission is done. Any other status in the message means someone moved the result afterwards. |
 | `409` with `is already being resubmitted` | A concurrent attempt holds the lock. | Wait, then send again. If that attempt succeeded you get the `pending review` `409`. If it failed, the resend goes through. |
-| `503` (lock or primary request) | A transient fault. The result stays Rejected. | Resend after a short wait. |
-| `500` with `the primary Science Program request failed` | The allocation moved under the request. The result stays Rejected. | Check the allocation of the lead project, then resend. |
+| `503` (lock or primary assignment) | A transient fault. The result stays Rejected, with its previous primary. | Resend after a short wait. |
 
 **The outcome row is authoritative.** After the commit, the usual result body is read back from the database. If that read fails, the request still returns `201` with a valid `outcomes[]`, and `response` can be `{}`. Do not treat an empty `response` as a failure and do not resend.
 
@@ -585,21 +583,20 @@ Never changed by a resubmission: the result's `id`, `result_code`, `created_by`,
 
 ### Primary and contributing Science Programs
 
-The primary named in `toc_mapping.science_program_id` is the one that persists, **once it accepts**. It never becomes owner without accepting.
+The primary named in `toc_mapping.science_program_id` is the one that persists, **at once**. A resubmission that changes the primary assigns it directly; there is no acceptance round and the named Science Program is never sent an ownership request.
 
 | Payload's primary | What PRMS does |
 |---|---|
 | **The current owner** | It stays owner. The result goes straight back into **its** queue, and the "result submitted" announcement is sent once, after the commit. |
-| **A different allocated Science Program**, or the result has **no owner** (for example after an ownerless decline) | The result goes to Pending Review **with no owner**. The old owner's role and its accepted primary request are retired. A primary request is **sent** (pending) to the payload's Science Program. Nobody is announced yet. |
+| **A different allocated Science Program**, or the result has **no owner** (for example after an ownerless decline) | The named Science Program becomes owner and the result goes to Pending Review **in its queue**. The old owner's role and its accepted primary request are retired. The "result submitted" announcement is sent once, after the commit, exactly as for the current owner. |
 
 For the second row:
 
-- The result is **hidden from review queues** until the requested Science Program accepts. Approve and reject decisions are refused with `This result is awaiting the primary Science Program's acceptance.`
-- **Accept:** that Science Program becomes owner, the result enters its queue, and the lead program investment you sent becomes visible (it was kept on an inactive row of that Science Program until then).
-- **Decline:** the result is **Rejected again**, the decline is recorded in the history with that Science Program, and you can resubmit it once more.
-- The request, the status change and the history entry commit together. If the request fails, the result stays Rejected (`503` or `500` above).
+- The result is **not hidden** from review queues and is never ownerless: review decisions work as soon as the response returns. The `This result is awaiting the primary Science Program's acceptance.` refusal no longer applies to a resubmission.
+- The lead program investment you sent is visible at once, and the draft contribution requests you sent are released (sent to their Science Programs) in the same step.
+- The assignment, the status change and the history entry commit together. If the assignment fails, the result stays Rejected with its previous primary (`503` above) and you can resend.
 
-Contributing programs are written as draft contribution requests owned by the requested primary. The existing flow releases them (primary accept or Science Program approval), as for any API-created result.
+Contributing programs are written as draft contribution requests owned by the requested primary. When the primary changes they are released at once, together with the assignment; when the primary stays the same, Science Program approval releases them, as for any API-created result.
 
 ### History
 
@@ -615,6 +612,7 @@ A successful resubmission adds one `RESUBMIT` entry to the result's review histo
 
 | Date (approx.) | Change |
 |----------------|--------|
+| 2026-10-06 | **`POST /create` resubmission: a changed primary Science Program is assigned directly (spec `bilateral/rejected-result-correction`, RRC-T-6, `RRC-R-17`; amends `RSB-R-14`).** A resubmission that changes the primary SP assigns it directly; no acceptance round. When `toc_mapping.science_program_id` differs from the current owner (or the result has no owner), the named Science Program becomes owner inside the same transaction that returns the result to Pending Review, and the result is announced to it once after the commit, like a result whose primary did not change. It is no longer sent an ownership request, the result is no longer left ownerless and hidden from review queues, and `This result is awaiting the primary Science Program's acceptance.` no longer follows a resubmission. The draft contribution requests of the payload are released in the same step. A failure anywhere in that final transaction (the status change, the assignment or the history entry) rolls all of it back, so the result stays Rejected with its previous primary. The `503` for a failed primary step now reads `Result {code} could not be resubmitted: the primary Science Program could not be assigned. The result stays rejected; resend the same request to retry.`; the `500` answered for `not_aligned` is gone (the allocation is still refused with `400` before any write). Endpoint, payload and response shape are unchanged. A resubmission with the same primary behaves as before. |
 | 2026-10-06 | **`POST /create` resubmission: accepted contributors follow the payload (spec `bilateral/resubmit-followups`, RSF-T-6, `RSF-R-7`; amends `RSB-R-15`).** An accepted contributor Science Program (active role 2) that `contributing_programs` no longer lists is deactivated during the resubmission; a contributor still listed keeps its row, and an empty or absent `contributing_programs` retires every accepted contributor. No contributor row is created (new ones still arrive as draft requests) and the primary (role 1) is untouched. The no-code `create` and `versioned` paths are unchanged. |
 | 2026-10-06 | **`POST /create` resubmission: two new `400` refusals, both before the first write (spec `bilateral/resubmit-followups`, RSF-T-4).** (1) `lead_center` sent but matching no CGIAR center: `400 "Result {code} cannot be resubmitted: lead_center {value} does not match a CGIAR center."` (before, the resubmission silently kept the previous lead). (2) More than one project flagged `is_lead`: `400 "Result {code} cannot be resubmitted: {n} bilateral projects are flagged is_lead; flag exactly one."` (before, the last flagged project won). A single project, one flagged project among several, and a payload with no `lead_center` object are still accepted. **The no-code `create` and `versioned` paths are unchanged:** an unknown `lead_center` is still logged and the result is still created; several `is_lead` flags are still resolved last-wins. Additive for payloads that were already well-formed; no field removed or renamed. See "Errors specific to a resubmission". |
 | 2026-10-06 | **Fix — `obj_results_toc_result` lists only the active primary (spec `bilateral/resubmit-followups`, RSF-T-2).** On `GET /api/bilateral/:id`, `GET /api/bilateral/results` and the list, a retired (inactive) role-1 row, for example a former owner after the primary changed, is no longer returned as the `Owner` entry, so the Science Program that now owns the result is the only `Owner`. A result with no active primary (pending primary request, or after a decline) has no `Owner` entry, and the result itself is still returned. The former owner remains visible in `obj_result_by_initiatives` with `is_active: false`. Contributor entries (role 2) are unchanged. The quality-assessment `primary_science_program` follows the same rule. Content correction only: no field added, removed or renamed. |

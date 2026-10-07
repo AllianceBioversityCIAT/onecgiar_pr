@@ -214,6 +214,11 @@ describe('BilateralService (unit)', () => {
       request: jest
         .fn()
         .mockResolvedValue({ ok: true, shareResultRequestId: 1 }),
+      // `RRC-T-6`: the API resubmission assigns a changed primary directly.
+      transferPrimary: jest.fn().mockResolvedValue({
+        outcome: 'transferred',
+        previousInitiativeId: null,
+      }),
       stateFor: jest.fn().mockResolvedValue({
         state: 'none',
         program_code: null,
@@ -3053,7 +3058,8 @@ describe('BilateralService (unit)', () => {
             countResolvablePartners: expect.any(Function),
             readOwnerInitiativeId: expect.any(Function),
             writeResult: expect.any(Function),
-            requestPrimary: expect.any(Function),
+            // RRC-T-6: the direct transfer replaced the ownership request on this port.
+            transferPrimary: expect.any(Function),
             announcePendingReview: expect.any(Function),
           }),
         });
@@ -5889,25 +5895,30 @@ describe('BilateralService (unit)', () => {
         ).toHaveBeenCalledWith(501);
       });
 
-      it('requestPrimary asks ppr for a PENDING request (asDraft:false) THROUGH THE GIVEN TRANSACTION MANAGER, in the name of the audit user, and returns its outcome untouched', async () => {
+      it('RRC-T-6: transferPrimary assigns the primary DIRECTLY (releaseContributors:true) THROUGH THE GIVEN TRANSACTION MANAGER, in the name of the audit user, with a NUMERIC id, and returns its outcome untouched; it never sends a request', async () => {
         const { service, stubs } = makeService();
         const svc: any = service;
-        const failure = { ok: false, reason: 'internal_error' };
-        stubs.primaryProgramRequestService.request.mockResolvedValue(failure);
+        const outcome = { outcome: 'transferred', previousInitiativeId: null };
+        stubs.primaryProgramRequestService.transferPrimary.mockResolvedValue(
+          outcome,
+        );
+        stubs.primaryProgramRequestService.request.mockClear();
         const port = svc.buildResubmissionWritersPort();
 
         const manager = { marker: 'tx' };
-        await expect(port.requestPrimary(501, 6, USER, manager)).resolves.toBe(
-          failure,
-        );
+        // A string id (as an unconverted CLARISA id could be) must reach the core as a number.
+        await expect(
+          port.transferPrimary(501, '6', USER, manager),
+        ).resolves.toBe(outcome);
 
-        expect(stubs.primaryProgramRequestService.request).toHaveBeenCalledWith(
-          501,
-          6,
-          { id: USER },
-          manager,
-          { asDraft: false },
-        );
+        expect(
+          stubs.primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledWith(501, 6, { id: USER }, manager, {
+          releaseContributors: true,
+        });
+        expect(
+          stubs.primaryProgramRequestService.request,
+        ).not.toHaveBeenCalled();
       });
 
       it('announcePendingReview delegates to the shared orchestrator (never the emitter directly)', async () => {

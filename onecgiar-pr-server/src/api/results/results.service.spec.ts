@@ -670,6 +670,82 @@ describe('ResultsService — emitBilateralReviewNotification per-recipient wordi
     expect(calls).toHaveLength(1);
     expect(calls[0][2]).toEqual([submitter]);
   });
+
+  // RRC-T-5 / RRC-R-13 — the rejection notification is linked to ITS history row (arg index 6 of
+  // `emitResultNotification`, after `renderedText`), on BOTH the submitter and the centre row.
+  it('reject with a history id: both the submitter and the centre emit carry it', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.REJECT,
+      emitter,
+      77,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][2]).toEqual([submitter]);
+    expect(calls[0][6]).toBe(77);
+    expect(calls[1][2]).toEqual([centerUser]);
+    expect(calls[1][6]).toBe(77);
+  });
+
+  // RRC-R-16 — the stored wording is the same one the existing reject test pins.
+  it('reject with a history id: the centre text stays the legacy rejected sentence', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.REJECT,
+      emitter,
+      77,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls[0][5]).toBeUndefined();
+    expect(calls[1][5]).toBe(
+      'where your center was tagged, has been rejected by the Science Program SP03.',
+    );
+  });
+
+  // Falsifier: Approve must never store the link, even if a caller hands an id over.
+  it('approve: neither emit carries a history id, even when one is passed', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+      77,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(2);
+    for (const call of calls) {
+      expect(call[6]).toBeUndefined();
+    }
+  });
+
+  it('reject without a history id (older callers): emits as before, no link', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.REJECT,
+      emitter,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(2);
+    for (const call of calls) {
+      expect(call[6]).toBeUndefined();
+    }
+  });
 });
 
 /**
@@ -818,5 +894,91 @@ describe('ResultsService — reviewBilateralResult owner guard (PNS-T-2)', () =>
       }),
     );
     expect(fakeManager.save).toHaveBeenCalled();
+  });
+
+  // RRC-T-5 / RRC-R-13 — the id of the history row saved INSIDE the transaction is handed to the
+  // post-commit emit. The bigint PK may come back from the driver as a string -> a number is passed.
+  it('REJECT decision → the emit receives the saved history row id (as a number), after the commit', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+    fakeManager.save.mockImplementation(async (_entity: unknown, row: any) => ({
+      ...row,
+      id: '501',
+    }));
+    const order: string[] = [];
+    service._dataSource.transaction = jest.fn(async (cb: any) => {
+      const out = await cb(fakeManager);
+      order.push('commit');
+      return out;
+    });
+    service.emitBilateralReviewNotification = jest.fn(async () => {
+      order.push('emit');
+    });
+
+    await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.REJECT, justification: 'not relevant' },
+      user,
+    );
+
+    expect(service.emitBilateralReviewNotification).toHaveBeenCalledWith(
+      42,
+      ReviewDecisionEnum.REJECT,
+      user,
+      501,
+    );
+    expect(order).toEqual(['commit', 'emit']);
+  });
+
+  it('APPROVE decision → the emit gets no history id', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+    fakeManager.save.mockImplementation(async (_entity: unknown, row: any) => ({
+      ...row,
+      id: 502,
+    }));
+
+    await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.APPROVE },
+      user,
+    );
+
+    expect(service.emitBilateralReviewNotification).toHaveBeenCalledTimes(1);
+    const args = service.emitBilateralReviewNotification.mock.calls[0];
+    expect(args[1]).toBe(ReviewDecisionEnum.APPROVE);
+    expect(args[3]).toBeUndefined();
+  });
+});
+
+describe('ResultsService — _loadBilateralRelatedData draft-visible statuses (RRC-T-3, RRC-P-13)', () => {
+  it('passes getDraftInit a status list containing Rejected plus Editing, Draft and Pending Review', async () => {
+    const service: any = Object.create(ResultsService.prototype);
+    const getDraftInit = jest.fn().mockResolvedValue([]);
+    service._resultsByProjectsRepository = {
+      findResultsByProjectsByResultId: jest.fn().mockResolvedValue([]),
+    };
+    service._resultRepository = {
+      getEvidenceBilateralResult: jest.fn().mockResolvedValue([]),
+    };
+    service._resultByInitiativesRepository = {
+      getContributorInitiativeByResult: jest.fn().mockResolvedValue([]),
+      getDraftInit,
+      getContributorInitiativeAndPrimaryByResult: jest
+        .fn()
+        .mockResolvedValue([]),
+    };
+
+    await service._loadBilateralRelatedData(42);
+
+    expect(getDraftInit).toHaveBeenCalledTimes(1);
+    const [calledResultId, statuses] = getDraftInit.mock.calls[0];
+    expect(calledResultId).toBe(42);
+    expect(statuses).toEqual(
+      expect.arrayContaining([
+        ResultStatusData.Rejected.value,
+        ResultStatusData.Editing.value,
+        ResultStatusData.Draft.value,
+        ResultStatusData.PendingReview.value,
+      ]),
+    );
   });
 });

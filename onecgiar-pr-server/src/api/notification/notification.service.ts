@@ -82,6 +82,10 @@ export class NotificationService {
    *   to tell which link the row is about. Storing only the suffix keeps it usable by the client,
    *   which composes `[prefix, identity, suffix]` on its own. Every other type leaves it
    *   undefined and keeps building its copy at read time.
+   * @param reviewHistoryId `RRC-R-13`/`RRC-DD-6`: the `result_review_history` row this notification
+   *   is about (a bilateral Reject). Stored as `review_history_id` on every row written here so the
+   *   readout can join THAT decision's justification. It never reaches the text builders — the
+   *   wording of every type is unchanged (`RRC-R-16`). Omitted -> the column stays NULL.
    */
   async emitResultNotification(
     notificationLevel: NotificationLevelEnum,
@@ -90,6 +94,7 @@ export class NotificationService {
     emmiterUser: number,
     resultId: number,
     renderedText?: string,
+    reviewHistoryId?: number,
   ) {
     try {
       const notificationLevelData =
@@ -124,6 +129,7 @@ export class NotificationService {
         notification_level: notificationLevelData.notifications_level_id,
         notification_type: notificationTypeData.notifications_type_id,
         ...(renderedText ? { text: renderedText } : {}),
+        ...(reviewHistoryId ? { review_history_id: reviewHistoryId } : {}),
       }));
 
       if (notificationsToPersist.length) {
@@ -755,8 +761,8 @@ export class NotificationService {
       ] = await Promise.all([
         runHistory
           ? this._notificationRepository.find({
-              select: this.getNotificattionSelect(),
-              relations: this.getNotificationRelations(),
+              select: this.getNotificationReadoutSelect(),
+              relations: this.getNotificationReadoutRelations(),
               where: applyKeysetCursor(
                 {
                   target_user: user.id,
@@ -779,8 +785,8 @@ export class NotificationService {
 
         runPending
           ? this._notificationRepository.find({
-              select: this.getNotificattionSelect(),
-              relations: this.getNotificationRelations(),
+              select: this.getNotificationReadoutSelect(),
+              relations: this.getNotificationReadoutRelations(),
               where: {
                 target_user: user.id,
                 read: false,
@@ -922,8 +928,8 @@ export class NotificationService {
 
       const notificationsUpdates = this.mapNotificationResultFields(
         await this._notificationRepository.find({
-          select: this.getNotificattionSelect(),
-          relations: this.getNotificationRelations(),
+          select: this.getNotificationReadoutSelect(),
+          relations: this.getNotificationReadoutRelations(),
           where: whereConditions,
         }),
       );
@@ -1019,8 +1025,48 @@ export class NotificationService {
             : {}),
         };
       }
-      return notification;
+      return this.withReviewEntryFields(notification);
     });
+  }
+
+  /**
+   * `RRC-R-13`/`RRC-DD-6` — a Rejected row gains `has_review_entry` and `review_comment`, read from
+   * the `result_review_history` row its own `review_history_id` points at (the LEFT JOIN requested
+   * through {@link getNotificationReadoutRelations}). `review_history_id` NULL (a notification sent
+   * before the link existed, or whose history row was deleted) -> no joined row -> `false` / `null`,
+   * which the client reads as "show no reason line", never as "no justification was recorded".
+   * Every other type is returned untouched (`RRC-R-16`). The joined object is not passed on.
+   */
+  private withReviewEntryFields<T>(notification: T): T {
+    const row = notification as any;
+    if (
+      row?.obj_notification_type?.type !==
+      NotificationTypeEnum.BILATERAL_RESULT_REJECTED
+    ) {
+      return notification;
+    }
+    const { obj_review_history: linkedEntry, ...rest } = row;
+    return {
+      ...rest,
+      has_review_entry: Boolean(linkedEntry),
+      review_comment: linkedEntry?.comment ?? null,
+    } as T;
+  }
+
+  /**
+   * `getNotificattionSelect()` plus the linked `result_review_history` row (id + comment only), for
+   * the readouts that return Rejected rows. Kept apart from the base shape so the socket push in
+   * `emitResultNotification` does not pay for a join it never uses.
+   */
+  private getNotificationReadoutSelect() {
+    return {
+      ...this.getNotificattionSelect(),
+      obj_review_history: { id: true, comment: true },
+    };
+  }
+
+  private getNotificationReadoutRelations() {
+    return { ...this.getNotificationRelations(), obj_review_history: true };
   }
 
   private getNotificattionSelect() {

@@ -45,9 +45,9 @@ const passingWriters = (): ResubmissionWritersPort => ({
   countResolvablePartners: jest.fn().mockResolvedValue(1),
   readOwnerInitiativeId: jest.fn().mockResolvedValue(6),
   writeResult: jest.fn().mockResolvedValue(undefined),
-  requestPrimary: jest
+  transferPrimary: jest
     .fn()
-    .mockResolvedValue({ ok: true, shareResultRequestId: 1 }),
+    .mockResolvedValue({ outcome: 'transferred', previousInitiativeId: null }),
   announcePendingReview: jest.fn().mockResolvedValue(undefined),
 });
 
@@ -1159,11 +1159,12 @@ describe('BilateralResubmissionService.resetSectionsForResubmission (RSB-T-4)', 
     });
   });
 
-  // RSB-T-4 forward pointer 4 (delivered in T-5). The accepted PRIMARY row is the record of the
-  // CURRENT owner. A same-owner resubmission keeps it; when the primary CHANGES the old owner is
-  // retired (its role 1 goes too), so that row must go with it: `ppr.stateFor` would otherwise report
-  // an ACCEPTED primary for an SP whose role 1 is deactivated.
-  describe('the accepted primary row follows the owner (T-4 pointer 4)', () => {
+  // RSB-T-4 forward pointer 4 (delivered in T-5), amended by `RRC-T-6`. The accepted PRIMARY row is
+  // the record of the CURRENT owner, and it stays with the owner's role 1: the reset keeps both
+  // whether or not the primary changes. When the primary CHANGES, `ppr.transferPrimary` retires the
+  // row together with the role 1, in the final transaction (NFR §7: a failure before it must leave
+  // the previous primary intact, and this reset commits in its own, earlier transaction).
+  describe('the accepted primary row follows the owner (T-4 pointer 4; RRC-T-6)', () => {
     const seed = (): Array<[EntityClass, Row[]]> => [
       [
         ShareResultRequest,
@@ -1194,7 +1195,9 @@ describe('BilateralResubmissionService.resetSectionsForResubmission (RSB-T-4)', 
       expect(isActive(ShareResultRequest, 4)).toBe(false);
     });
 
-    it('primary CHANGED: the accepted primary row of the old owner is deactivated too', async () => {
+    // RRC-T-6 (was: "the accepted primary row of the old owner is deactivated too"). Superseded:
+    // the old owner and its accepted row go together, but in the final transaction, by the core.
+    it('primary CHANGED: the accepted primary row of the old owner is KEPT too (the direct transfer retires it); only the pending round goes', async () => {
       const { service, isActive } = arrange(seed());
 
       await service.resetSectionsForResubmission(RESULT, {
@@ -1202,7 +1205,7 @@ describe('BilateralResubmissionService.resetSectionsForResubmission (RSB-T-4)', 
         primaryChanged: true,
       });
 
-      expect(isActive(ShareResultRequest, 3)).toBe(false);
+      expect(isActive(ShareResultRequest, 3)).toBe(true);
       expect(isActive(ShareResultRequest, 4)).toBe(false);
     });
   });
@@ -1360,8 +1363,11 @@ describe('BilateralResubmissionService.resetSectionsForResubmission (RSB-T-4)', 
       expect(isActive(ResultsByInititiative, 2)).toBe(true);
     });
 
-    it('primary changed: role 1 is deactivated; role 2 (an accepted contributor) is not', async () => {
-      const { service, isActive } = arrange([
+    // RRC-T-6 (was: "primary changed: role 1 is deactivated"). Superseded: the reset runs in its
+    // own earlier transaction, so retiring the owner here would leave an ownerless Rejected result
+    // after a later failure (NFR §7). The direct transfer retires it in the final transaction.
+    it('primary changed: role 1 is NOT deactivated by the reset (the transfer does it in the final transaction); role 2 is not either', async () => {
+      const { service, isActive, updated } = arrange([
         [ResultsByInititiative, initiatives()],
       ]);
 
@@ -1370,8 +1376,12 @@ describe('BilateralResubmissionService.resetSectionsForResubmission (RSB-T-4)', 
         primaryChanged: true,
       });
 
-      expect(isActive(ResultsByInititiative, 1)).toBe(false);
+      expect(isActive(ResultsByInititiative, 1)).toBe(true);
       expect(isActive(ResultsByInititiative, 2)).toBe(true);
+      // Not a single write to the role rows: the owner is not "retired and restored" either.
+      expect(
+        updated.filter((u) => u.entity === 'ResultsByInititiative'),
+      ).toEqual([]);
     });
   });
 
@@ -1595,6 +1605,7 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
   const REJECTED = ResultStatusData.Rejected.value;
   const PK = new Map<EntityClass, string>([
     [ShareResultRequest, 'share_result_request_id'],
+    [ResultsTocResult, 'result_toc_result_id'],
   ]);
   const initiativeIds: Record<string, number> = { SP01, SP06 };
   const codeOf = (id: number) => (id === SP01 ? 'SP01' : 'SP06');
@@ -1606,13 +1617,17 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
     primary?: 'SP01' | 'SP06';
     /** Seed rows of the result's share requests (e.g. an accepted primary). */
     requests?: Row[];
+    /** Seed rows of the result's ToC mapping (`results_toc_result`). */
+    toc?: Row[];
+    /** The writers' ToC row for the payload's primary (what `handleTocMapping` leaves behind). */
+    writesToc?: boolean;
     history?: Row[];
     /** Seed rows of the result's `results_by_institution`. */
     partners?: Row[];
     partnersResolved?: number;
     keepEditing?: boolean;
-    /** Replaces the port's `requestPrimary` (default: the REAL `ppr.request` over the model). */
-    requestPrimary?: ResubmissionWritersPort['requestPrimary'];
+    /** Replaces the port's `transferPrimary` (default: the REAL `ppr.transferPrimary` over the model). */
+    transferPrimary?: ResubmissionWritersPort['transferPrimary'];
     /** Runs inside `writeResult`, after the snapshot (to simulate a fault or a concurrent change). */
     onWrite?: (db: ReturnType<typeof createInMemoryDb>) => void | Promise<void>;
     failOnInsertInto?: EntityClass;
@@ -1698,10 +1713,11 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
           ],
         ],
         [ShareResultRequest, setup.requests ?? []],
+        [ResultsTocResult, setup.toc ?? []],
         [ResultReviewHistory, setup.history ?? []],
         [ResultsByInstitution, setup.partners ?? []],
-        // What `ppr.request` reads THROUGH THE TRANSACTION MANAGER (T-5 attempt 2: the request runs
-        // inside the final transaction).
+        // What `ppr.transferPrimary` reads THROUGH THE TRANSACTION MANAGER (`RRC-T-6`: the transfer
+        // runs inside the final transaction).
         [
           ClarisaProjectMapping,
           [
@@ -1803,9 +1819,14 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
         .spyOn((ppr as any).logger, level)
         .mockImplementation(() => undefined),
     );
+    // RRC-T-6: a resubmission never asks the requested SP for ownership.
+    const requestSpy = jest.spyOn(ppr, 'request');
 
     // What the model looked like when each collaborator was called (the order falsifiers).
     const seen: Record<string, { status: number; history: number }> = {};
+    // RRC-T-6: the active role-1 owner at the moment a collaborator runs (the previous primary must
+    // still be the owner until the final transaction).
+    const ownerAt: Record<string, number | null> = {};
     const snapshot = (label: string) =>
       (seen[label] = { status: statusOf(), history: history().length });
     const calls: string[] = [];
@@ -1816,16 +1837,26 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
         .mockResolvedValue(setup.partnersResolved ?? 1),
       readOwnerInitiativeId: jest.fn(async () => activeOwner()),
       // What the REAL writers leave behind that the rest of the pipeline relies on (the real ones are
-      // proven in bilateral.service.spec.ts): the payload's lead project row (`ppr.request` re-reads
-      // it) and, unless the primary changes, role 1 of the requested primary.
+      // proven in bilateral.service.spec.ts): the payload's lead project row and, unless the primary
+      // changes, role 1 of the requested primary (when it changes, the direct transfer writes it).
       writeResult: jest.fn(async (args) => {
         calls.push('writeResult');
+        ownerAt.writeResult = activeOwner();
         snapshot('writeResult');
         await db.repositoryOf(ResultsByProjects).insert({
           result_id: RESULT,
           project_id: 77,
           is_lead: 1,
         });
+        if (setup.writesToc) {
+          // `handleTocMapping` writes the ToC row of the payload's PRIMARY (never of a contributor).
+          await db.repositoryOf(ResultsTocResult).insert({
+            result_toc_result_id: 90,
+            result_id: RESULT,
+            initiative_ids:
+              initiativeIds[args.bilateralDto.toc_mapping.science_program_id],
+          });
+        }
         if (!args.suppressPrimaryRole) {
           // `upsertResultInitiative`: reactivate the primary's row, or insert it.
           const primary =
@@ -1845,20 +1876,21 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
         }
         await setup.onWrite?.(db);
       }),
-      requestPrimary: jest.fn(
+      // RRC-T-6: the REAL direct transfer, wired exactly like `BilateralService` wires it. The spy on
+      // `ppr.request` is the falsifier of "no ownership request is ever sent".
+      transferPrimary: jest.fn(
         async (resultId, initiativeId, userId, manager) => {
-          calls.push('requestPrimary');
-          snapshot('requestPrimary');
-          return setup.requestPrimary
-            ? setup.requestPrimary(resultId, initiativeId, userId, manager)
-            : ppr.request(
+          calls.push('transferPrimary');
+          ownerAt.transferPrimary = activeOwner();
+          snapshot('transferPrimary');
+          return setup.transferPrimary
+            ? setup.transferPrimary(resultId, initiativeId, userId, manager)
+            : ppr.transferPrimary(
                 resultId,
                 initiativeId,
                 { id: userId } as any,
                 manager,
-                {
-                  asDraft: false,
-                },
+                { releaseContributors: true },
               );
         },
       ),
@@ -1925,6 +1957,7 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
     return {
       db,
       ppr,
+      requestSpy,
       service,
       writers,
       preflight,
@@ -1934,6 +1967,7 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       logSpy,
       calls,
       seen,
+      ownerAt,
       statusOf,
       history,
       activeOwner,
@@ -1969,7 +2003,7 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       }));
 
   describe('(a) same owner: nothing extra, announce once, owner intact', () => {
-    it('keeps the owner and its accepted primary row, asks for no primary request, flips 7 -> 5 and announces ONCE, after the commit', async () => {
+    it('keeps the owner and its accepted primary row, transfers nothing, flips 7 -> 5 and announces ONCE, after the commit', async () => {
       const t = arrange({ requests: [acceptedPrimary()] });
 
       const outcome = await t.run();
@@ -1979,7 +2013,8 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       // The owner is untouched: role 1 still SP01, its accepted primary row still active.
       expect(t.activeOwner()).toBe(SP01);
       expect(activePrimaryRows(t.db)).toEqual([{ sp: SP01, status: 2 }]);
-      expect(t.writers.requestPrimary).not.toHaveBeenCalled();
+      expect(t.writers.transferPrimary).not.toHaveBeenCalled();
+      expect(t.requestSpy).not.toHaveBeenCalled();
       expect(t.resetSpy).toHaveBeenCalledWith(
         RESULT,
         expect.objectContaining({ primaryChanged: false }),
@@ -2024,8 +2059,8 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
     });
   });
 
-  describe('(b) a different primary (SP06 != SP01): the old owner is retired, SP06 is asked, nobody is announced', () => {
-    it('deactivates SP01 role 1 and its accepted primary, suppresses the writers role 1, requests SP06 PENDING, does NOT announce, and leaves the result ownerless', async () => {
+  describe('(b) a different primary (SP06 != SP01): RRC-R-17, SP06 is assigned DIRECTLY and announced', () => {
+    it('retires SP01, writes SP06 role 1 and ONE accepted SP06 primary row through the direct transfer, sends no request, and announces ONCE after the commit', async () => {
       const t = arrange({ primary: 'SP06', requests: [acceptedPrimary()] });
 
       await t.run(t.dto());
@@ -2037,29 +2072,104 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       expect(t.writers.writeResult).toHaveBeenCalledWith(
         expect.objectContaining({ suppressPrimaryRole: true }),
       );
-      expect(t.writers.requestPrimary).toHaveBeenCalledWith(
+      expect(t.writers.transferPrimary).toHaveBeenCalledTimes(1);
+      expect(t.writers.transferPrimary).toHaveBeenCalledWith(
         RESULT,
         SP06,
         USER,
         expect.anything(),
       );
-      // The REAL ppr.request: the only active primary row is SP06's PENDING one (owner = SP06); the
-      // accepted SP01 row went with its owner (T-4 pointer 4).
-      expect(activePrimaryRows(t.db)).toEqual([{ sp: SP06, status: 1 }]);
+      // The REAL transfer core: SP06 owns the result, its ACCEPTED primary row is the only active
+      // one (the accepted SP01 row went with its owner in the transfer), and NOBODY was asked.
+      expect(t.activeOwner()).toBe(SP06);
+      expect(activePrimaryRows(t.db)).toEqual([{ sp: SP06, status: 2 }]);
+      expect(t.requestSpy).not.toHaveBeenCalled();
       expect(
         t.db
           .rowsOf(ShareResultRequest)
-          .find((row) => row.shared_inititiative_id === SP06),
-      ).toMatchObject({ owner_initiative_id: SP06, request_type: 'primary' });
-      expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
+          .some((row) => row.request_status_id === 1),
+      ).toBe(false);
       expect(t.statusOf()).toBe(PENDING_REVIEW);
-      // No active owner: the review decision refuses "awaiting the primary Science Program's
-      // acceptance" exactly on this condition (results.service.ts:4323-4331; its own message is
-      // asserted in results.service.spec.ts).
-      expect(t.activeOwner()).toBeNull();
+      // FALSIFIER (RRC-DD-7): a pipeline that skipped the announce for a changed primary fails here.
+      expect(t.writers.announcePendingReview).toHaveBeenCalledTimes(1);
+      expect(t.writers.announcePendingReview).toHaveBeenCalledWith(
+        RESULT,
+        SUBMITTER,
+      );
+      expect(t.seen.announce).toEqual({ status: PENDING_REVIEW, history: 1 });
     });
 
-    it('an ownerless result (after an ownerless decline) counts as CHANGED even when the payload names the old SP (DD-5)', async () => {
+    it('the role-1 write is the core only: the writers suppress theirs, so exactly one active role-1 row exists and it is SP06 (no double write, no fight)', async () => {
+      const t = arrange({ primary: 'SP06' });
+
+      await t.run(t.dto());
+
+      const activeRoleOne = t.db
+        .rowsOf(ResultsByInititiative)
+        .filter(
+          (row) =>
+            row.initiative_role_id === 1 &&
+            t.db.isActive(ResultsByInititiative, row.id),
+        );
+      expect(activeRoleOne.map((row) => row.initiative_id)).toEqual([SP06]);
+      expect(t.seen.transferPrimary.status).toBe(PENDING_REVIEW);
+      expect(t.activeOwner()).toBe(SP06);
+    });
+
+    // RRC-T-6 pivot (NFR §7): the reset and the writers run BEFORE the final transaction and commit
+    // on their own, so neither may retire the previous owner.
+    it('the previous owner (SP01 role 1 and its accepted primary row) is still active while the reset, the writers and the start of the transfer run; only the core replaces it', async () => {
+      const t = arrange({ primary: 'SP06', requests: [acceptedPrimary()] });
+
+      await t.run(t.dto());
+
+      expect(t.ownerAt.writeResult).toBe(SP01);
+      expect(t.ownerAt.transferPrimary).toBe(SP01);
+      // The core's own `previousInitiativeId` is therefore the REAL previous owner (not null).
+      const transfer = await (t.writers.transferPrimary as jest.Mock).mock
+        .results[0].value;
+      expect(transfer).toEqual({
+        outcome: 'transferred',
+        previousInitiativeId: SP01,
+      });
+      expect(t.activeOwner()).toBe(SP06);
+    });
+
+    // RRC-T-6 (design §8.6, ToC check). The old owner's ToC mapping ends inactive and the mapping
+    // the writers just wrote for the NEW primary stays active, with no second stub: the core retires
+    // by `initiative_ids = previous owner` only, and `seedTocStub` is idempotent.
+    it('the old owner ToC mapping is retired and the ToC the payload wrote for the new SP survives the transfer (no duplicate stub)', async () => {
+      const t = arrange({
+        primary: 'SP06',
+        requests: [acceptedPrimary()],
+        toc: [
+          {
+            result_toc_result_id: 1,
+            result_id: RESULT,
+            initiative_ids: SP01,
+            is_active: 1,
+          },
+        ],
+        writesToc: true,
+      });
+
+      await t.run(t.dto());
+
+      const activeToc = t.db
+        .rowsOf(ResultsTocResult)
+        .filter((row) =>
+          t.db.isActive(
+            ResultsTocResult,
+            row.result_toc_result_id,
+            'result_toc_result_id',
+          ),
+        )
+        .map((row) => row.initiative_ids);
+      expect(activeToc).toEqual([SP06]);
+      expect(t.activeOwner()).toBe(SP06);
+    });
+
+    it('an ownerless result (after an ownerless decline) counts as CHANGED even when the payload names the old SP (DD-5): the transfer assigns it and it is announced', async () => {
       const t = arrange({ owner: null, primary: 'SP01' });
 
       await t.run(t.dto());
@@ -2068,66 +2178,96 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
         RESULT,
         expect.objectContaining({ primaryChanged: true }),
       );
-      expect(t.writers.requestPrimary).toHaveBeenCalledWith(
+      expect(t.writers.transferPrimary).toHaveBeenCalledWith(
         RESULT,
         SP01,
         USER,
         expect.anything(),
       );
-      expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
+      expect(t.activeOwner()).toBe(SP01);
+      expect(t.requestSpy).not.toHaveBeenCalled();
+      expect(t.writers.announcePendingReview).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('(c) the primary request fails: the status does NOT flip, the result stays Rejected and retryable', () => {
-    it.each([
-      ['internal_error', { ok: false, reason: 'internal_error' }, 503],
-      [
-        'not_aligned',
-        { ok: false, reason: 'not_aligned', message: 'not allocated' },
-        500,
-      ],
-    ])(
-      'request() answers %s: 5xx, status still 7, no RESUBMIT row, no announce, lock released',
-      async (_reason, outcome, httpStatus) => {
-        const t = arrange({
-          primary: 'SP06',
-          requestPrimary: async () => outcome as any,
-        });
+  describe('(c) the direct transfer fails: the status does NOT flip, the result stays Rejected and retryable', () => {
+    it('the core throws: 503 with the retry message, status still 7, no RESUBMIT row, the PREVIOUS primary intact, no announce, lock released', async () => {
+      const t = arrange({
+        primary: 'SP06',
+        requests: [acceptedPrimary()],
+        // The real core wrote through the manager before it failed.
+        transferPrimary: async (resultId, initiativeId, userId, manager) => {
+          await t.ppr.transferPrimary(
+            resultId,
+            initiativeId,
+            { id: userId } as any,
+            manager,
+            { releaseContributors: true },
+          );
+          throw new Error('deadlock found');
+        },
+      });
 
-        const attempt = t.run(t.dto());
-        await expect(attempt).rejects.toMatchObject({ status: httpStatus });
-        // The message says what happened and how to recover; it never carries the payload.
-        await expect(attempt).rejects.toThrow(
-          'Result 28565 could not be resubmitted: the primary Science Program request failed. The result stays rejected; resend the same request to retry.',
-        );
+      const attempt = t.run(t.dto());
+      await expect(attempt).rejects.toMatchObject({ status: 503 });
+      // The message says what happened and how to recover; it never carries the payload.
+      await expect(attempt).rejects.toThrow(
+        'Result 28565 could not be resubmitted: the primary Science Program could not be assigned. The result stays rejected; resend the same request to retry.',
+      );
 
-        expect(t.statusOf()).toBe(REJECTED);
-        expect(t.history()).toEqual([]);
-        expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
-        expect(t.runner.query).toHaveBeenLastCalledWith(
-          expect.stringContaining('RELEASE_LOCK'),
-          ['rsb:501'],
-        );
-      },
-    );
+      expect(t.statusOf()).toBe(REJECTED);
+      expect(t.history()).toEqual([]);
+      // NFR §7 (RRC-T-6 pivot): the core retired SP01 and wrote SP06 through the manager, and all of
+      // it rolled back with the flip. Nothing earlier retired SP01, so it is still the owner, with
+      // its accepted primary row, and the platform retries from a Rejected result that still has
+      // its previous primary.
+      expect(t.activeOwner()).toBe(SP01);
+      expect(activePrimaryRows(t.db)).toEqual([{ sp: SP01, status: 2 }]);
+      expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
+      expect(t.runner.query).toHaveBeenLastCalledWith(
+        expect.stringContaining('RELEASE_LOCK'),
+        ['rsb:501'],
+      );
+    });
 
-    // FALSIFIER of the order (DD-3): a pipeline that flipped BEFORE asking would show 5 here.
-    it('ORDER: when the primary is requested the result is still Rejected and no RESUBMIT row exists; the flip comes after', async () => {
+    it('an HTTP exception from the core keeps its own status (it is not turned into a 503)', async () => {
+      const t = arrange({
+        primary: 'SP06',
+        transferPrimary: async () => {
+          throw new ConflictException('moved');
+        },
+      });
+
+      await expect(t.run(t.dto())).rejects.toMatchObject({ status: 409 });
+
+      expect(t.statusOf()).toBe(REJECTED);
+    });
+
+    // The CAS runs FIRST (RRC-T-1 pointer: its UPDATE is the Result row lock the core relies on).
+    it('ORDER: the CAS has already locked the row when the primary is transferred, and the RESUBMIT row comes after it', async () => {
       const t = arrange({ primary: 'SP06' });
 
       await t.run(t.dto());
 
-      expect(t.seen.requestPrimary).toEqual({ status: REJECTED, history: 0 });
+      expect(t.seen.transferPrimary).toEqual({
+        status: PENDING_REVIEW,
+        history: 0,
+      });
       expect(t.statusOf()).toBe(PENDING_REVIEW);
       expect(t.history()).toHaveLength(1);
     });
 
-    it('ORDER: lock -> preflight -> reset -> writers -> request -> flip (the result is Rejected until the flip)', async () => {
+    it('ORDER: lock -> preflight -> reset -> writers -> transfer (Rejected until the final transaction), then the announce', async () => {
       const t = arrange({ primary: 'SP06' });
 
       await t.run(t.dto());
 
-      expect(t.calls).toEqual(['reset', 'writeResult', 'requestPrimary']);
+      expect(t.calls).toEqual([
+        'reset',
+        'writeResult',
+        'transferPrimary',
+        'announce',
+      ]);
       expect(t.seen.reset.status).toBe(REJECTED);
       expect(t.seen.writeResult.status).toBe(REJECTED);
       // The preflight (users last) finished before the first write.
@@ -2139,9 +2279,10 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       );
     });
 
-    it('a failed writer (for example a lead-centre demotion that throws, T-4 pointer 3) keeps the result Rejected: no request, no flip, no history, lock released', async () => {
+    it('a failed writer (for example a lead-centre demotion that throws, T-4 pointer 3) keeps the result Rejected with its previous primary: no transfer, no flip, no history, lock released', async () => {
       const t = arrange({
         primary: 'SP06',
+        requests: [acceptedPrimary()],
         onWrite: () => {
           throw new Error('demotion failed');
         },
@@ -2151,7 +2292,9 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
 
       expect(t.statusOf()).toBe(REJECTED);
       expect(t.history()).toEqual([]);
-      expect(t.writers.requestPrimary).not.toHaveBeenCalled();
+      expect(t.activeOwner()).toBe(SP01);
+      expect(activePrimaryRows(t.db)).toEqual([{ sp: SP01, status: 2 }]);
+      expect(t.writers.transferPrimary).not.toHaveBeenCalled();
       expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
       expect(t.runner.query).toHaveBeenLastCalledWith(
         expect.stringContaining('RELEASE_LOCK'),
@@ -2212,26 +2355,29 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
     });
 
-    // NFR §7 Atomicity (T-5 attempt 2): "status, history and requests either complete together or
-    // roll back together". The primary request runs INSIDE the final transaction, before the CAS.
-    describe('the primary request is part of the final transaction (NFR §7)', () => {
-      it('the request goes through the transaction MANAGER, at a moment the result is still Rejected', async () => {
+    // NFR §7 Atomicity: "status, history and the primary either complete together or roll back
+    // together". The direct transfer runs INSIDE the final transaction, after the CAS.
+    describe('the primary transfer is part of the final transaction (NFR §7)', () => {
+      it('the transfer goes through the transaction MANAGER, after the CAS and before the history row', async () => {
         const t = arrange({ primary: 'SP06' });
 
         await t.run(t.dto());
 
-        expect(t.writers.requestPrimary).toHaveBeenCalledWith(
+        expect(t.writers.transferPrimary).toHaveBeenCalledWith(
           RESULT,
           SP06,
           USER,
           expect.anything(),
         );
-        expect(t.seen.requestPrimary).toEqual({ status: REJECTED, history: 0 });
-        // reset + the final write: two transactions, the request is inside the second one.
+        expect(t.seen.transferPrimary).toEqual({
+          status: PENDING_REVIEW,
+          history: 0,
+        });
+        // reset + the final write: two transactions, the transfer is inside the second one.
         expect(t.db.transactions).toBe(2);
       });
 
-      it('the CAS hits 0 rows (409): NO pending primary request remains (it rolled back with the flip)', async () => {
+      it('the CAS hits 0 rows (409): the transfer never runs and the PREVIOUS primary (SP01 role 1 and its accepted row) is intact', async () => {
         const t = arrange({
           primary: 'SP06',
           requests: [acceptedPrimary()],
@@ -2242,49 +2388,35 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
 
         await expect(t.run(t.dto())).rejects.toMatchObject({ status: 409 });
 
-        // The request had been inserted; the rollback took it out, and the cancellation the request
-        // makes of the open round with it. The reset's own work (the accepted SP01 row retired) was
-        // a separate, earlier transaction and stays: that is the retryable Rejected state.
-        expect(
-          t.db.inserted.some(
-            (i) =>
-              i.entity === 'ShareResultRequest' &&
-              i.row.request_type === 'primary' &&
-              i.row.shared_inititiative_id === SP06,
-          ),
-        ).toBe(true);
-        expect(activePrimaryRows(t.db)).toEqual([]);
+        // A lost CAS refuses BEFORE a single ownership write, and nothing earlier retired the owner
+        // (RRC-T-6 pivot): SP01 is still the active role 1 and its accepted row is still active.
+        expect(t.writers.transferPrimary).not.toHaveBeenCalled();
+        expect(t.activeOwner()).toBe(SP01);
+        expect(activePrimaryRows(t.db)).toEqual([{ sp: SP01, status: 2 }]);
         expect(t.history()).toEqual([]);
+        expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
       });
 
-      it('the history insert fails: neither the flip nor the primary request survive', async () => {
+      it('the history insert fails: neither the flip nor the transfer survive, and the PREVIOUS primary (SP01 role 1 and its accepted row) is back', async () => {
         const t = arrange({
           primary: 'SP06',
+          requests: [acceptedPrimary()],
           failOnInsertInto: ResultReviewHistory,
         });
 
         await expect(t.run(t.dto())).rejects.toThrow('injected fault');
 
         expect(t.statusOf()).toBe(REJECTED);
-        expect(activePrimaryRows(t.db)).toEqual([]);
-      });
-
-      it('request() answers ok:false: the 5xx keeps its mapping and nothing of the request or the flip is left', async () => {
-        const t = arrange({
-          primary: 'SP06',
-          requestPrimary: async (_r, _i, _u, manager) => {
-            // The real request wrote its row through the manager before it failed.
-            await t.ppr.request(RESULT, SP06, { id: USER } as any, manager, {
-              asDraft: false,
-            });
-            return { ok: false, reason: 'internal_error' };
-          },
-        });
-
-        await expect(t.run(t.dto())).rejects.toMatchObject({ status: 503 });
-
-        expect(activePrimaryRows(t.db)).toEqual([]);
-        expect(t.statusOf()).toBe(REJECTED);
+        // The core had already retired SP01 and written SP06 inside the transaction; the rollback
+        // restored the previous owner (NFR §7).
+        expect(
+          t.db.updated.some(
+            (u) =>
+              u.entity === 'ResultsByInititiative' && u.set.is_active === false,
+          ),
+        ).toBe(true);
+        expect(t.activeOwner()).toBe(SP01);
+        expect(activePrimaryRows(t.db)).toEqual([{ sp: SP01, status: 2 }]);
       });
     });
 
@@ -2411,34 +2543,34 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
     });
   });
 
-  describe('(h) a decline after a resubmission rejects the result again (PDR-R-4) and it is resubmittable again', () => {
-    it('SP06 declines the ownerless result through the REAL ppr.decline -> Rejected + REJECT(SP06); the same payload resubmits again and gets a fresh PENDING request', async () => {
+  describe('(h) a review rejection after a transferred resubmission leaves the result resubmittable again', () => {
+    it('SP06 owns it after the direct transfer, rejects it in review (status 7, requests deactivated); the same payload resubmits again with no second transfer, no request, SP06 still the owner and announced again', async () => {
       const t = arrange({ primary: 'SP06' });
       await t.run(t.dto());
-      const pending = t.db
-        .rowsOf(ShareResultRequest)
-        .find((row) => row.shared_inititiative_id === SP06);
+      expect(t.activeOwner()).toBe(SP06);
 
-      const decline = await t.ppr.decline(
-        pending.share_result_request_id,
-        { id: 55 } as any,
-        'We are not the right program',
-      );
+      // The data shape of a review rejection (results.service.ts REJECT branch): status 7, a REJECT
+      // row and every active share request of the result deactivated; role 1 stays.
+      t.db.rowsOf(Result)[0].status_id = REJECTED;
+      t.db.rowsOf(ResultReviewHistory).push({
+        id: 50,
+        result_id: RESULT,
+        action: 'REJECT',
+        initiative_id: SP06,
+        created_by: 55,
+        is_active: 1,
+      });
+      t.db.rowsOf(ShareResultRequest).forEach((row) => (row.is_active = 0));
 
-      expect(decline).toMatchObject({ ok: true, state: 'rejected' });
-      expect(t.statusOf()).toBe(REJECTED);
-      expect(t.history()).toEqual([
-        { action: 'RESUBMIT', initiative_id: SP06, created_by: SUBMITTER },
-        { action: 'REJECT', initiative_id: SP06, created_by: 55 },
-      ]);
-
-      // Resubmittable again: the lock re-read sees Rejected, the reset retires the DECLINED row.
       await expect(t.run(t.dto())).resolves.toMatchObject({
         status_id: PENDING_REVIEW,
       });
 
-      expect(t.statusOf()).toBe(PENDING_REVIEW);
-      expect(activePrimaryRows(t.db)).toEqual([{ sp: SP06, status: 1 }]);
+      // Same primary: nothing transferred the second time, the owner stayed, nobody was asked.
+      expect(t.writers.transferPrimary).toHaveBeenCalledTimes(1);
+      expect(t.requestSpy).not.toHaveBeenCalled();
+      expect(t.activeOwner()).toBe(SP06);
+      expect(t.writers.announcePendingReview).toHaveBeenCalledTimes(2);
       expect(t.history().map((h) => h.action)).toEqual([
         'RESUBMIT',
         'REJECT',
@@ -2573,7 +2705,9 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
     it('a pipeline failure leaves exactly one `outcome=rejected(<status>)` line and no `accepted` line', async () => {
       const t = arrange({
         primary: 'SP06',
-        requestPrimary: async () => ({ ok: false, reason: 'internal_error' }),
+        transferPrimary: async () => {
+          throw new Error('transfer fault');
+        },
       });
 
       await expect(t.run(t.dto())).rejects.toMatchObject({ status: 503 });
@@ -2581,6 +2715,94 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       expect(t.logSpy.mock.calls.map((call) => String(call[0]))).toEqual([
         'result_code=28565 operation=updated platform=STAR outcome=rejected(503)',
       ]);
+    });
+  });
+
+  describe('RRC-R-18: one line per direct transfer, post-commit, ids only', () => {
+    it('a changed primary logs the result id, the PREVIOUS owner (as the core reports it), the new initiative and the audit user', async () => {
+      const t = arrange({ primary: 'SP06' });
+
+      await t.run(t.dto({ description: 'a secret description' }));
+
+      const lines = t.logSpy.mock.calls.map((call) => String(call[0]));
+      expect(lines).toEqual([
+        'result_code=28565 operation=updated platform=STAR outcome=accepted',
+        `Bilateral resubmission: direct primary transfer on result ${RESULT} (previous initiative ${SP01}, new initiative ${SP06}, user ${USER}).`,
+      ]);
+      expect(lines.join('\n')).not.toContain('secret');
+    });
+
+    it("the previous initiative is the CORE's own `previousInitiativeId` (no side channel from the pipeline)", async () => {
+      const t = arrange({
+        primary: 'SP06',
+        transferPrimary: async () => ({
+          outcome: 'transferred',
+          previousInitiativeId: 99,
+        }),
+      });
+
+      await t.run(t.dto());
+
+      expect(
+        t.logSpy.mock.calls.map((call) => String(call[0])).slice(-1)[0],
+      ).toContain('previous initiative 99, new initiative 6');
+    });
+
+    it('an ownerless result logs "previous initiative none"', async () => {
+      const t = arrange({ owner: null, primary: 'SP01' });
+
+      await t.run(t.dto());
+
+      expect(
+        t.logSpy.mock.calls.map((call) => String(call[0])).slice(-1)[0],
+      ).toContain('previous initiative none, new initiative 1');
+    });
+
+    it('the same primary logs no transfer line (nothing was transferred)', async () => {
+      const t = arrange();
+
+      await t.run();
+
+      expect(
+        t.logSpy.mock.calls
+          .map((call) => String(call[0]))
+          .filter((line) => line.includes('direct primary transfer')),
+      ).toEqual([]);
+    });
+
+    it('a core that answers "unchanged" logs no transfer line', async () => {
+      const t = arrange({
+        primary: 'SP06',
+        transferPrimary: async () => ({
+          outcome: 'unchanged',
+          previousInitiativeId: SP06,
+        }),
+      });
+
+      await t.run(t.dto());
+
+      expect(
+        t.logSpy.mock.calls
+          .map((call) => String(call[0]))
+          .filter((line) => line.includes('direct primary transfer')),
+      ).toEqual([]);
+    });
+
+    it('a transfer that fails and rolls back logs no transfer line', async () => {
+      const t = arrange({
+        primary: 'SP06',
+        transferPrimary: async () => {
+          throw new Error('boom');
+        },
+      });
+
+      await expect(t.run(t.dto())).rejects.toMatchObject({ status: 503 });
+
+      expect(
+        t.logSpy.mock.calls
+          .map((call) => String(call[0]))
+          .filter((line) => line.includes('direct primary transfer')),
+      ).toEqual([]);
     });
   });
 });

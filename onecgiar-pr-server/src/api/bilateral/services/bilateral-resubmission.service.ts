@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
   ServiceUnavailableException,
@@ -36,7 +35,7 @@ import {
   ResultReviewHistory,
   ReviewActionEnum,
 } from '../../results/result-review-history/entities/result-review-history.entity';
-import type { PrimaryRequestOutcome } from '../../results/share-result-request/services/primary-program-request.service';
+import type { PrimaryTransferResult } from '../../results/share-result-request/services/primary-program-request.service';
 import { ResultsByInstitutionType } from '../../results/results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ClarisaApiKeyValidationMis } from '../interfaces/clarisa-api-key-validation.interface';
@@ -138,8 +137,10 @@ export interface ResubmissionWriteArgs {
   resolvedProjects: Map<string, any>;
   /**
    * `DD-5`: the payload's primary differs from the current owner (or there is no owner). The
-   * writers then do NOT write role 1 for the requested primary: `ppr.accept` writes it once the SP
-   * accepts. The contributors still hang off the requested primary (`DD-6`).
+   * writers then do NOT write role 1 for the requested primary: the direct transfer writes it in the
+   * final transaction (`RRC-R-17`, `RRC-DD-7`), where it also retires the old owner's role 1, so the
+   * result keeps its previous primary until that transaction commits. The contributors still hang
+   * off the requested primary (`DD-6`).
    */
   suppressPrimaryRole: boolean;
 }
@@ -168,16 +169,18 @@ export interface ResubmissionWritersPort {
    */
   writeResult(args: ResubmissionWriteArgs): Promise<void>;
   /**
-   * `ppr.request(resultId, initiativeId, { id: userId }, manager, { asDraft: false })`. It receives
-   * the manager of the FINAL transaction (NFR §7: the request, the flip and the history roll back
-   * together).
+   * `RRC-T-6` (`RRC-R-17`, `RRC-DD-7`): `ppr.transferPrimary(resultId, initiativeId, { id: userId },
+   * manager, { releaseContributors: true })` — the DIRECT transfer, no ownership request, no
+   * acceptance round. It receives the manager of the FINAL transaction (NFR §7: the transfer, the
+   * flip and the history roll back together) and THROWS on failure (the core never answers
+   * `ok: false`). Replaces `requestPrimary` (`RSB-R-14`, superseded).
    */
-  requestPrimary(
+  transferPrimary(
     resultId: number,
     initiativeId: number,
     userId: number,
     manager: EntityManager,
-  ): Promise<PrimaryRequestOutcome>;
+  ): Promise<PrimaryTransferResult>;
   /** `BilateralService.announcePendingReview`: never throws, runs only after the commit. */
   announcePendingReview(resultId: number, emitterUserId: number): Promise<void>;
 }
@@ -217,7 +220,12 @@ export interface ResubmissionResetOptions {
   userId: number;
   /** The result's type: the Innovation Use tables are only reset for Innovation Use. */
   resultTypeId: number;
-  /** `DD-5`: the payload's primary differs from the current owner (or there is no owner). */
+  /**
+   * `DD-5`: the payload's primary differs from the current owner (or there is no owner). The
+   * pipeline decides on it (writers' role-1 suppression, the direct transfer). The reset itself no
+   * longer reads it (`RRC-T-6` pivot): it never retires the old owner, so a failure before the
+   * final transaction leaves the previous primary intact.
+   */
   primaryChanged: boolean;
   /** `R-4`: the payload carries partners (then `updateInstitutions` replaces them itself). */
   payloadSendsPartners: boolean;
@@ -248,12 +256,13 @@ export interface ResubmissionOutcome {
  * The pipeline (design §4; there is NO real transaction over the writers, `RSB-P-1`/`RSB-DD-2`, so
  * the ORDER is the guarantee):
  *
- *   lock -> re-read status -> preflight (no writes) -> reset -> writers -> primary request (only
- *   when the primary changes) -> final atomic write (CAS 7 -> 5 + `RESUBMIT` history) -> post-commit
+ *   lock -> re-read status -> preflight (no writes) -> reset -> writers -> final atomic write (CAS
+ *   7 -> 5, which also locks the `Result` row; the direct primary transfer, only when the primary
+ *   changes; `RESUBMIT` history) -> post-commit
  *
  * The status flips LAST (`RSB-DD-3`): if anything before the final write fails, the result stays
  * **Rejected** with partial data and the platform can retry (the reset cleans up and the writers
- * rewrite). It never ends up in Pending Review half-written, or without a primary request.
+ * rewrite). It never ends up in Pending Review half-written, or without its primary.
  *
  * The lock is `GET_LOCK('rsb:<resultId>', 0)` — non-blocking, so a concurrent attempt is a 409
  * immediately instead of a queue. MySQL named locks are session-scoped, hence the dedicated
@@ -273,8 +282,7 @@ export class BilateralResubmissionService {
   private static readonly REQUEST_ACCEPTED = 2;
   /** `institution_roles_id` of an Innovation Use organisation (`innovation-use.service.ts:404`). */
   private static readonly INNOVATION_USE_ORGANIZATION_ROLE = 5;
-  /** `results_by_inititiative.initiative_role_id` of the primary owner (`bs.handleTocMapping`). */
-  private static readonly PRIMARY_INITIATIVE_ROLE = 1;
+  /** `results_by_inititiative.initiative_role_id` of an accepted contributor. */
   private static readonly CONTRIBUTOR_INITIATIVE_ROLE = 2;
 
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
@@ -340,14 +348,18 @@ export class BilateralResubmissionService {
    *  1. preflight (`runPreflight`): every refusal that needs no saved row
    *  2. the inputs of the reset, both reads: the stored owner (`primaryChanged`, `DD-5`) and the
    *     partners that RESOLVE in CLARISA (`payloadSendsPartners`)
-   *  3. `resetSectionsForResubmission`
+   *  3. `resetSectionsForResubmission` (it leaves the old owner's role 1 and accepted `primary`
+   *     row alone, `RRC-T-6`)
    *  4. `writers.writeResult`: the header in place + every section writer (role 1 suppressed when
    *     the primary changes)
-   *  5. `commitResubmission`: ONE transaction. Only when the primary changed (or there was no
-   *     owner) it first runs `writers.requestPrimary` with the transaction manager; an `ok:false`
-   *     answer throws a 5xx and rolls the request back (`DD-3`, `DD-5`, NFR §7). Then the CAS
-   *     7 -> 5 and the `RESUBMIT` history row
-   *  6. post-commit: the `RSB-R-21` line, and `announcePendingReview` only when there is an owner
+   *  5. `commitResubmission`: ONE transaction. The CAS 7 -> 5 first (its UPDATE takes the `Result`
+   *     row lock the direct transfer relies on, `RRC-T-1` pointer); then, only when the primary
+   *     changed (or there was no owner), `writers.transferPrimary` with the transaction manager: it
+   *     retires the old owner and writes the new one. A throw becomes a 5xx and rolls everything
+   *     back, so the result keeps its previous primary and stays Rejected (`RRC-R-17`, NFR §7);
+   *     then the `RESUBMIT` history row
+   *  6. post-commit: the `RSB-R-21` line, the `RRC-R-18` transfer line, and `announcePendingReview`
+   *     ALWAYS (after a transfer an owner always exists, `RRC-DD-7`)
    */
   protected async runResubmissionPipeline(
     params: ResubmissionParams,
@@ -389,34 +401,42 @@ export class BilateralResubmissionService {
       suppressPrimaryRole: primaryChanged,
     });
 
-    // The lead project row exists now (`RSB-P-7`: `ppr.request` re-reads it) and the result is still
-    // Rejected. The primary request, the CAS and the history row are ONE transaction (NFR §7): a
-    // failed request, a lost CAS or a failed history insert leaves the result Rejected with no
-    // request behind it, and the platform retries.
-    await this.commitResubmission(target, preflight, {
-      requestPrimary: primaryChanged ? writers.requestPrimary : undefined,
+    // The lead project row exists now and the result is still Rejected, with its previous primary
+    // (the reset and the writers never retire it). The CAS, the direct primary transfer (only when
+    // the primary changed) and the history row are ONE transaction (NFR §7): a failed transfer, a
+    // lost CAS or a failed history insert rolls all of it back, so the result stays Rejected with
+    // its previous primary and the platform retries.
+    const transfer = await this.commitResubmission(target, preflight, {
+      transferPrimary: primaryChanged ? writers.transferPrimary : undefined,
       resultCode,
     });
 
     // RSB-R-21: the committed outcome. Never the payload, never a key.
     this.logAccepted(resultCode, params.platform);
 
-    // Only a result that HAS an owner is announced. An ownerless one is announced by
-    // `ppr.accept` once the requested SP accepts (`PNS-R-3`).
-    if (!primaryChanged) {
-      try {
-        await writers.announcePendingReview(
-          target.id,
-          preflight.submittedUserId ?? preflight.userId,
-        );
-      } catch (error) {
-        // `announcePendingReview` never throws; this keeps a faulty double from turning a
-        // COMMITTED resubmission into an error response.
-        this.logger.error(
-          `Bilateral resubmission: the Pending Review announcement failed for result ${resultCode}.`,
-          error as Error,
-        );
-      }
+    // RRC-R-18: one line per direct transfer, post-commit, ids only (`.cursorrules`). The previous
+    // owner is the core's own `previousInitiativeId` (the reset no longer retires it).
+    if (transfer?.outcome === 'transferred') {
+      this.logger.log(
+        `Bilateral resubmission: direct primary transfer on result ${target.id} (previous initiative ${transfer.previousInitiativeId ?? 'none'}, new initiative ${preflight.primary.initiativeId}, user ${preflight.userId}).`,
+      );
+    }
+
+    // RRC-R-17 / RRC-DD-7: ALWAYS announced. With the same primary the owner never moved; with a
+    // different one the direct transfer has just made it the owner, so the review queue of that
+    // Science Program gets the ordinary notice (no acceptance round is left to defer it to).
+    try {
+      await writers.announcePendingReview(
+        target.id,
+        preflight.submittedUserId ?? preflight.userId,
+      );
+    } catch (error) {
+      // `announcePendingReview` never throws; this keeps a faulty double from turning a
+      // COMMITTED resubmission into an error response.
+      this.logger.error(
+        `Bilateral resubmission: the Pending Review announcement failed for result ${resultCode}.`,
+        error as Error,
+      );
     }
 
     return {
@@ -429,9 +449,14 @@ export class BilateralResubmissionService {
 
   /**
    * `RSB-DD-3` — the ONLY write that moves the result out of Rejected, and it is one real
-   * `transaction`: the compare-and-swap `status 7 -> 5` and the `RESUBMIT` history row either both
-   * happen or neither does. Zero rows affected means somebody else moved the result since the lock
-   * re-read: a 409, and no history row (the transaction throws before the insert).
+   * `transaction`: the compare-and-swap `status 7 -> 5`, the direct primary transfer (only when the
+   * primary changed, `RRC-R-17`) and the `RESUBMIT` history row either all happen or none does.
+   * Zero rows affected means somebody else moved the result since the lock re-read: a 409, and no
+   * transfer or history row (the transaction throws before them).
+   *
+   * The CAS runs FIRST on purpose (`RRC-T-1` forward pointer): its UPDATE is the `Result` row lock
+   * the core relies on (the same lock `updatePrimaryAssignment` takes), and a lost CAS refuses
+   * before a single ownership write. It is reused, not repeated with a second locking read.
    *
    * The history row (`RSB-R-18`): `initiative_id` is the REQUESTED primary (what the platform asked
    * for, which for an ownerless result is the only SP there is) and `created_by` the external
@@ -443,27 +468,12 @@ export class BilateralResubmissionService {
     target: Result,
     preflight: ResubmissionPreflightResult,
     request: {
-      requestPrimary?: ResubmissionWritersPort['requestPrimary'];
+      transferPrimary?: ResubmissionWritersPort['transferPrimary'];
       resultCode: string;
     },
-  ): Promise<void> {
+  ): Promise<PrimaryTransferResult | null> {
     const resultCode = request.resultCode;
-    await this.dataSource.transaction(async (manager) => {
-      // NFR §7 / DD-5: the primary request rides in this transaction, BEFORE the CAS. `request`
-      // never throws (it answers `ok:false`), so a failure is turned into a throw HERE; that is what
-      // rolls its row back.
-      if (request.requestPrimary) {
-        const requested = await request.requestPrimary(
-          target.id,
-          preflight.primary.initiativeId,
-          preflight.userId,
-          manager,
-        );
-        if (requested.ok === false) {
-          throw this.primaryRequestFailure(resultCode, requested);
-        }
-      }
-
+    return this.dataSource.transaction(async (manager) => {
       const flipped = await manager.update(
         Result,
         { id: target.id, status_id: ResultStatusData.Rejected.value },
@@ -478,6 +488,23 @@ export class BilateralResubmissionService {
         );
       }
 
+      // NFR §7 / `RRC-R-17`: the direct transfer rides in this transaction, after the CAS locked the
+      // row. The core THROWS on failure (it has no `ok:false`), which rolls the transaction back;
+      // it is turned into a retryable 5xx HERE (a non-HTTP fault is a 503 with a retry message).
+      let transfer: PrimaryTransferResult | null = null;
+      if (request.transferPrimary) {
+        try {
+          transfer = await request.transferPrimary(
+            target.id,
+            preflight.primary.initiativeId,
+            preflight.userId,
+            manager,
+          );
+        } catch (error) {
+          throw this.primaryTransferFailure(resultCode, error);
+        }
+      }
+
       await manager.save(
         ResultReviewHistory,
         manager.create(ResultReviewHistory, {
@@ -488,23 +515,25 @@ export class BilateralResubmissionService {
           created_by: preflight.submittedUserId,
         }),
       );
+      return transfer;
     });
   }
 
   /**
-   * `ppr.request` never throws (`RSB-P-11`); an `ok:false` outcome is the failure signal. It maps to
-   * a 5xx so the platform retries: `internal_error` is a transient fault (503), `not_aligned` cannot
-   * happen after the preflight unless the data moved underneath us, so it is an unexpected failure
-   * (500). Neither message carries the payload.
+   * The direct transfer throws on any failure (`RRC-T-1`). An HTTP exception keeps its status; any
+   * other fault is a transient 503 so the platform retries. The message never carries the payload,
+   * and the cause is logged (its message only, never the payload).
    */
-  private primaryRequestFailure(
-    resultCode: string,
-    outcome: Exclude<PrimaryRequestOutcome, { ok: true }>,
-  ): Error {
-    const message = `Result ${resultCode} could not be resubmitted: the primary Science Program request failed. The result stays rejected; resend the same request to retry.`;
-    return outcome.reason === 'internal_error'
-      ? new ServiceUnavailableException(message)
-      : new InternalServerErrorException(message);
+  private primaryTransferFailure(resultCode: string, error: unknown): Error {
+    if ((error as any)?.getStatus) return error as Error;
+    this.logger.error(
+      `Bilateral resubmission: the primary transfer failed for result ${resultCode}: ${
+        (error as Error)?.message ?? 'unknown error'
+      }`,
+    );
+    return new ServiceUnavailableException(
+      `Result ${resultCode} could not be resubmitted: the primary Science Program could not be assigned. The result stays rejected; resend the same request to retry.`,
+    );
   }
 
   /**
@@ -665,8 +694,9 @@ export class BilateralResubmissionService {
    *   mapping and its five child tables. DRD: `ResultsTocResultRepository.logicalDelete`
    *   (`results/results-toc-results/repositories/results-toc-results.repository.ts:73`); the child
    *   list is `deactivateChildrenForParents` (same file, `:94-135`).
-   * - `share_result_request`: active rows, EXCEPT an accepted PRIMARY when the primary does not
-   *   change (when it does, the old owner and its accepted row both go). DRD:
+   * - `share_result_request`: active rows, EXCEPT an accepted PRIMARY (the record of the current
+   *   owner; when the primary changes, the direct transfer retires it in the final transaction,
+   *   `RRC-T-6`). DRD:
    *   `ShareResultRequestRepository.logicalDelete`
    *   (`results/share-result-request/share-result-request.repository.ts:384`) is unfiltered, so a
    *   filtered update is used instead (tasks.md T-4 Disqualifier).
@@ -680,10 +710,12 @@ export class BilateralResubmissionService {
    * - Innovation Use only (`results-framework-reporting/innovation-use/innovation-use.service.ts:399-486`,
    *   `saveAnticipatedInnoUser`, which only adds or matches): `result_actors` (every section),
    *   `results_by_institution_type` (`institution_roles_id = 5`), `result_ip_measure`.
-   * - `results_by_inititiative` (role 1): only when `primaryChanged` (`DD-5`). Writer
-   *   `bs.upsertResultInitiative` (`:5602`).
    *
-   * Not reset on purpose: `result_review_history` (`RSB-R-18`), `result_initiative_budget` and
+   * Not reset on purpose: the old owner's role 1 and accepted `primary` row, even when the primary
+   * changes (`RRC-T-6` pivot, NFR §7): this reset runs in its OWN transaction, before the final one,
+   * so retiring the owner here would leave the result Rejected and ownerless after a later failure.
+   * `PrimaryProgramRequestService.transferPrimary` retires both inside the final transaction.
+   * `result_review_history` (`RSB-R-18`), `result_initiative_budget` and
    * `result_institutions_budget` (they hang off rows that are kept or replaced above).
    */
   async resetSectionsForResubmission(
@@ -785,13 +817,13 @@ export class BilateralResubmissionService {
         );
       }
 
-      // ---- share requests: everything active EXCEPT an accepted PRIMARY (same owner only) --
-      // The accepted primary row is the record of the current owner; `PrimaryProgramRequest-
-      // Service` replaces it only at accept-time (DD-4 swap rule). The blanket
-      // `ShareResultRequestRepository.logicalDelete` would take it down too, hence the filter.
-      // When the primary CHANGES the old owner is retired (its role 1 goes below), so its accepted
-      // row goes with it: `stateFor` would otherwise report ACCEPTED for an SP whose role 1 is
-      // deactivated (T-4 forward pointer 4).
+      // ---- share requests: everything active EXCEPT an accepted PRIMARY -------------------
+      // The accepted primary row is the record of the current owner. It stays whether or not the
+      // primary changes (`RRC-T-6` pivot): this reset runs in its own transaction, so retiring it
+      // here would leave the owner's role 1 without its row, or the result ownerless, after a later
+      // failure. When the primary CHANGES, `transferPrimary` retires every active primary row in the
+      // final transaction. The blanket `ShareResultRequestRepository.logicalDelete` would take it
+      // down too, hence the filter.
       // `share_result_request` has no `last_updated_by` column: only the flag is written.
       const requests = await activeRows(ShareResultRequest, {
         result_id: resultId,
@@ -802,7 +834,6 @@ export class BilateralResubmissionService {
         requests
           .filter(
             (request) =>
-              options.primaryChanged ||
               !(
                 request.request_type === RequestTypeEnum.PRIMARY &&
                 Number(request.request_status_id) ===
@@ -845,16 +876,12 @@ export class BilateralResubmissionService {
         await deactivate(ResultIpMeasure, { result_id: resultId });
       }
 
-      // ---- the OLD OWNER's role 1, only when the primary changes (DD-5) --------------------
-      // A same-primary resubmission keeps it (the writer upserts it back anyway), and role 2 (an
-      // accepted contributor) is never touched.
-      if (options.primaryChanged) {
-        await deactivate(ResultsByInititiative, {
-          result_id: resultId,
-          initiative_role_id:
-            BilateralResubmissionService.PRIMARY_INITIATIVE_ROLE,
-        });
-      }
+      // ---- the OLD OWNER's role 1 is NOT touched here (`RRC-T-6` pivot, `DD-5` amended) -------
+      // Not even when the primary changes: this transaction commits BEFORE the final one, so a later
+      // failure would leave the result Rejected and ownerless. `transferPrimary` deactivates it in
+      // the final transaction (CAS -> transfer -> `RESUBMIT`). The writers still do not write role 1
+      // for a changed primary (`suppressPrimaryRole`), and role 2 (an accepted contributor) follows
+      // the payload below.
 
       // ---- accepted contributors the payload no longer lists (RSF-R-7, DD-7) ---------------
       // Role 2 follows the payload (replace): an active role-2 row whose initiative is not in the

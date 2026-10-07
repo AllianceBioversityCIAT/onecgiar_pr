@@ -47,7 +47,22 @@ import {
   PrimaryProgramRequestService,
   PrimaryRequestStateEnum,
 } from '../../results/share-result-request/services/primary-program-request.service';
-import { RequestTypeEnum } from '../../results/share-result-request/entities/share-result-request.entity';
+import {
+  RequestTypeEnum,
+  ShareResultRequest,
+} from '../../results/share-result-request/entities/share-result-request.entity';
+import { ResultsByInititiative } from '../../results/results_by_inititiatives/entities/results_by_inititiative.entity';
+import { ResultsByProjects } from '../../results/results_by_projects/entities/results_by_projects.entity';
+import { ResultsTocResult } from '../../results/results-toc-results/entities/results-toc-result.entity';
+import {
+  ResultReviewHistory,
+  ReviewActionEnum,
+} from '../../results/result-review-history/entities/result-review-history.entity';
+import {
+  createInMemoryDb,
+  EntityClass,
+  Row,
+} from '../../../shared/test/in-memory-db.test-helper';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -1569,6 +1584,108 @@ describe('BilateralCenterService', () => {
           primaryProgramRequestService.releaseContributors,
         ).not.toHaveBeenCalled();
       });
+
+      // `RRC-T-3` (`RRC-R-8`, `RRC-DD-5`) — while the result stays Rejected the contributors are
+      // HELD: the drafts are written exactly as today, nothing is released (so no request and no
+      // email reaches the Science Program) until the resubmission releases them.
+      describe('RRC-T-3: at Rejected the contributors are held until Submit', () => {
+        const arrangeAt = (statusId: number) => {
+          const arranged = arrange();
+          jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+            id: 10,
+            source: SourceEnum.Bilateral,
+            status_id: statusId,
+          } as any);
+          return {
+            ...arranged,
+            primaryProgramRequestService:
+              module.get<PrimaryProgramRequestService>(
+                PrimaryProgramRequestService,
+              ) as any,
+          };
+        };
+
+        // Falsifier: a contributor save at 7 that calls `releaseContributors` must fail this.
+        it('writes the draft but does NOT release it while the result is Rejected, even with an owner', async () => {
+          const { shareRepo, primaryProgramRequestService } = arrangeAt(
+            ResultStatusData.Rejected.value,
+          );
+
+          const response = await service.saveContributors(
+            10,
+            { contributing_programs: [{ science_program_id: 'SP02' }] },
+            user2,
+          );
+
+          expect(response.message).toBe('Contributors saved successfully');
+          expect(shareRepo.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+              owner_initiative_id: 1,
+              shared_inititiative_id: 2,
+              request_status_id: 4,
+            }),
+          );
+          expect(
+            primaryProgramRequestService.releaseContributors,
+          ).not.toHaveBeenCalled();
+        });
+
+        it('reactivates a dormant draft at Rejected without releasing it', async () => {
+          const { shareRepo, primaryProgramRequestService } = arrangeAt(
+            ResultStatusData.Rejected.value,
+          );
+          shareRepo.findOne = jest
+            .fn()
+            .mockResolvedValue({ share_result_request_id: 88 });
+
+          await service.saveContributors(
+            10,
+            { contributing_programs: [{ science_program_id: 'SP02' }] },
+            user2,
+          );
+
+          expect(shareRepo.update).toHaveBeenCalledWith(
+            { share_result_request_id: 88 },
+            { is_active: true, requested_by: user2.id },
+          );
+          expect(
+            primaryProgramRequestService.releaseContributors,
+          ).not.toHaveBeenCalled();
+        });
+
+        it('sends nothing to the contributor: no email path, no announcement', async () => {
+          arrangeAt(ResultStatusData.Rejected.value);
+
+          await service.saveContributors(
+            10,
+            { contributing_programs: [{ science_program_id: 'SP02' }] },
+            user2,
+          );
+
+          expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
+        });
+
+        // Unchanged paths: with an owner, Editing (1) and Draft (8) still release on every save.
+        it.each([
+          [ResultStatusData.Editing.value, 'Editing'],
+          [ResultStatusData.Draft.value, 'Draft'],
+        ])(
+          'at %i (%s) with an owner the save still releases (unchanged)',
+          async (statusId) => {
+            const { primaryProgramRequestService } = arrangeAt(statusId);
+
+            await service.saveContributors(
+              10,
+              { contributing_programs: [{ science_program_id: 'SP02' }] },
+              user2,
+            );
+
+            expect(
+              primaryProgramRequestService.releaseContributors,
+            ).toHaveBeenCalledWith(10);
+          },
+        );
+      });
     });
 
     it('keeps the lead centre active even when the payload lists no centres at all', async () => {
@@ -2820,6 +2937,535 @@ describe('BilateralCenterService', () => {
         });
       });
     });
+
+    // `RRC-T-2` (bilateral/rejected-result-correction; `RRC-R-9` / `R-10` / `R-12` / `R-18`,
+    // `RRC-DD-3` / `DD-4`). On a Rejected result (status 7) a change of primary SP is a DIRECT
+    // transfer — `transferPrimary` (T-1) inside the same transaction, never an ownership request.
+    // Editing (1) and Draft (8) keep the request flow, which the `PSR-T-5` tests above pin.
+    describe('RRC-T-2: a Rejected result changes its primary SP by direct transfer', () => {
+      const GATE_MESSAGE =
+        'The lead project and primary Science Program can only be changed while the result is in Editing, Draft or Rejected.';
+      const RESULT = 11513;
+      let primaryProgramRequestService: any;
+
+      const arrange = (
+        statusId: number,
+        options: { programs?: any[]; clarisaId?: number | string } = {},
+      ) => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue({
+          ...editingResult,
+          status_id: statusId,
+        });
+        (
+          bilateralProjectsService.getProjectsByCenter as jest.Mock
+        ).mockResolvedValue({
+          projects: [
+            {
+              id: 20,
+              sciencePrograms: options.programs ?? [primaryProgram],
+            },
+          ],
+        });
+        (
+          module.get<ClarisaInitiativesRepository>(
+            ClarisaInitiativesRepository,
+          ) as any
+        ).findOne.mockResolvedValue({
+          id: options.clarisaId ?? 404,
+          official_code: 'SP04',
+          active: true,
+        });
+      };
+
+      const pick = () =>
+        service.updatePrimaryAssignment(user, RESULT, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+      beforeEach(() => {
+        primaryProgramRequestService = module.get<PrimaryProgramRequestService>(
+          PrimaryProgramRequestService,
+        );
+        // `RRC-T-1`'s core. Default: the SP changed (the configured owner is initiative 100).
+        primaryProgramRequestService.transferPrimary = jest
+          .fn()
+          .mockResolvedValue({
+            outcome: 'transferred',
+            previousInitiativeId: 100,
+          });
+      });
+
+      // The status gate, all eight statuses: only Editing (1), Draft (8) and Rejected (7) pass.
+      it.each([
+        [ResultStatusData.Editing.value, 'Editing', true],
+        [ResultStatusData.QualityAssessed.value, 'QualityAssessed', false],
+        [ResultStatusData.Submitted.value, 'Submitted', false],
+        [ResultStatusData.Discontinued.value, 'Discontinued', false],
+        [ResultStatusData.PendingReview.value, 'PendingReview', false],
+        [ResultStatusData.Approved.value, 'Approved', false],
+        [ResultStatusData.Rejected.value, 'Rejected', true],
+        [ResultStatusData.Draft.value, 'Draft', true],
+      ])(
+        'status gate: %i (%s) passes = %s',
+        async (statusId, _name, passes) => {
+          arrange(statusId);
+          if (passes) configureTransaction();
+
+          if (passes) {
+            await expect(pick()).resolves.toEqual(
+              expect.objectContaining({ status: 200 }),
+            );
+            expect(resultRepository.manager.transaction).toHaveBeenCalled();
+          } else {
+            await expect(pick()).rejects.toThrow(GATE_MESSAGE);
+            expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+          }
+          if (!passes) {
+            expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
+            expect(
+              primaryProgramRequestService.transferPrimary,
+            ).not.toHaveBeenCalled();
+          }
+        },
+      );
+
+      // `RRC-R-10` falsifier: at 7 the change must NOT go through the request flow.
+      it('at Rejected, a changed primary SP is transferred directly and no ownership request is sent', async () => {
+        arrange(ResultStatusData.Rejected.value);
+        const { fakeManager, initiativeRepository } = configureTransaction();
+
+        const response = await pick();
+
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledWith(RESULT, 404, user, fakeManager, {
+          releaseContributors: false,
+        });
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
+        // role 1 is written by the core, never here
+        expect(initiativeRepository.save).not.toHaveBeenCalled();
+        expect(initiativeRepository.update).not.toHaveBeenCalled();
+        expect(response.response).toEqual(
+          expect.objectContaining({
+            resultId: RESULT,
+            primaryScienceProgramId: 701,
+          }),
+        );
+      });
+
+      // T-1 forward pointer: a string id would look like a change to the core's strict compare
+      // and silently retire the SP's real ToC mapping.
+      it('at Rejected, passes the CLARISA initiative id to the core as a number', async () => {
+        arrange(ResultStatusData.Rejected.value, { clarisaId: '404' });
+        configureTransaction();
+
+        await pick();
+
+        const [, newInitiativeId] =
+          primaryProgramRequestService.transferPrimary.mock.calls[0];
+        expect(newInitiativeId).toBe(404);
+      });
+
+      // T-1 forward pointer: the core does not lock — the Result row lock is the transaction's
+      // first statement and happens before the transfer.
+      it('at Rejected, locks the Result row before calling the core', async () => {
+        arrange(ResultStatusData.Rejected.value);
+        const { fakeManager } = configureTransaction();
+
+        await pick();
+
+        expect(fakeManager.findOne).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            where: { id: RESULT },
+            lock: { mode: 'pessimistic_write' },
+          }),
+        );
+        const lockOrder = (fakeManager.findOne as jest.Mock).mock
+          .invocationCallOrder[0];
+        const firstRepositoryOrder = (fakeManager.getRepository as jest.Mock)
+          .mock.invocationCallOrder[0];
+        const transferOrder =
+          primaryProgramRequestService.transferPrimary.mock
+            .invocationCallOrder[0];
+        expect(lockOrder).toBeLessThan(firstRepositoryOrder);
+        expect(lockOrder).toBeLessThan(transferOrder);
+      });
+
+      it('at Rejected, still saves the lead project and writes the review-history row', async () => {
+        arrange(ResultStatusData.Rejected.value);
+        const { projectRepository, fakeManager } = configureTransaction();
+        const historyRepository = (fakeManager.getRepository as jest.Mock)({
+          name: 'ResultReviewHistory',
+        });
+
+        await pick();
+
+        expect(projectRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_id: RESULT,
+            project_id: 20,
+            is_lead: true,
+          }),
+        );
+        expect(historyRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_id: RESULT,
+            comment: 'Updated lead project and primary Science Program',
+          }),
+        );
+      });
+
+      // `RRC-R-9`: the catalogue allocation check is unchanged and runs before anything is written.
+      it('at Rejected, refuses an SP not allocated to the project: existing message, no transfer, no writes', async () => {
+        arrange(ResultStatusData.Rejected.value, {
+          programs: [{ ...primaryProgram, programId: 999 }],
+        });
+
+        await expect(pick()).rejects.toThrow(
+          'The selected primary Science Program is not allocated to the selected project.',
+        );
+
+        expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).not.toHaveBeenCalled();
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
+      });
+
+      // `RRC-R-10` change of mind: SP12 then SP09 again — the core answers `unchanged` for the
+      // second pick; nothing is sent, and the Editing/Draft "re-pick starts a new round" branch
+      // (which cancels open rounds) does not run on a Rejected result.
+      it('at Rejected, re-picking the current SP sends nothing and cancels no round', async () => {
+        arrange(ResultStatusData.Rejected.value);
+        primaryProgramRequestService.transferPrimary.mockResolvedValue({
+          outcome: 'unchanged',
+          previousInitiativeId: 404,
+        });
+        const { requestRepository } = configureTransaction();
+
+        const response = await pick();
+
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
+        expect(requestRepository.find).not.toHaveBeenCalled();
+        expect(requestRepository.update).not.toHaveBeenCalled();
+        expect(response.status).toBe(200);
+      });
+
+      // `RRC-R-18`: one log line per transfer — ids only (`.cursorrules`).
+      it('at Rejected, logs one line per transfer with the result, old and new initiative and user ids', async () => {
+        arrange(ResultStatusData.Rejected.value);
+        configureTransaction();
+        const log = jest
+          .spyOn((service as any).logger, 'log')
+          .mockImplementation(() => undefined);
+
+        await pick();
+
+        expect(log).toHaveBeenCalledTimes(1);
+        const line = String(log.mock.calls[0][0]);
+        expect(line).toContain('11513');
+        expect(line).toContain('100');
+        expect(line).toContain('404');
+        expect(line).toContain('42');
+        expect(line).not.toContain(user.email);
+      });
+
+      it('at Rejected, logs nothing when the core reports the SP unchanged', async () => {
+        arrange(ResultStatusData.Rejected.value);
+        primaryProgramRequestService.transferPrimary.mockResolvedValue({
+          outcome: 'unchanged',
+          previousInitiativeId: 404,
+        });
+        configureTransaction();
+        const log = jest
+          .spyOn((service as any).logger, 'log')
+          .mockImplementation(() => undefined);
+
+        await pick();
+
+        expect(log).not.toHaveBeenCalled();
+      });
+
+      it('at Rejected, a failing transfer propagates so the transaction rolls back, and no history row is written', async () => {
+        arrange(ResultStatusData.Rejected.value);
+        primaryProgramRequestService.transferPrimary.mockRejectedValue(
+          new Error('insert failed'),
+        );
+        const { fakeManager } = configureTransaction();
+        const historyRepository = (fakeManager.getRepository as jest.Mock)({
+          name: 'ResultReviewHistory',
+        });
+
+        await expect(pick()).rejects.toThrow('insert failed');
+
+        expect(historyRepository.save).not.toHaveBeenCalled();
+      });
+
+      // `RRC-R-12` / `RRC-DD-4`: Editing and Draft keep the request flow and never transfer.
+      it.each([
+        [ResultStatusData.Editing.value, 'Editing'],
+        [ResultStatusData.Draft.value, 'Draft'],
+      ])(
+        'at %i (%s), a changed primary SP still goes through the request flow, never the transfer',
+        async (statusId) => {
+          arrange(statusId);
+          const { fakeManager } = configureTransaction();
+
+          await pick();
+
+          expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
+            RESULT,
+            404,
+            user,
+            fakeManager,
+            { asDraft: false },
+          );
+          expect(
+            primaryProgramRequestService.transferPrimary,
+          ).not.toHaveBeenCalled();
+        },
+      );
+
+      // Does the pending-primary block of `assertSubmittable` fire after a transfer at 7?
+      // `assertSubmittable` still rejects status 7 by status (`RRC-T-3` widens that set), so the
+      // method cannot be driven AT 7 yet. What it reads for the pending block is the real
+      // `findPendingPrimaryInitiativeId`, so these tests run the REAL core and the real finder over
+      // one in-memory model of the tables (the model of `RRC-T-1`: it proves the code targets the
+      // right rows, not that MySQL agrees — `RRC-T-10` checks the real rows) and then call
+      // `assertSubmittable` with the result row presented as Editing, i.e. past the status gate it
+      // does not own, on exactly the rows the transfer left behind. That stays valid after T-3.
+      describe('the pending-primary block of assertSubmittable is not hit after the save', () => {
+        const PK = new Map<EntityClass, string>([
+          [ShareResultRequest, 'share_result_request_id'],
+          [ResultsTocResult, 'result_toc_result_id'],
+        ]);
+        // A result rejected by review: the rejection deactivated every share request (the accepted
+        // `primary` row included — `RRC-P-6`) and left role 1 of the old SP untouched (`RRC-P-10`).
+        const rejectedByReview = (): Array<[EntityClass, Row[]]> => [
+          [
+            ResultsByProjects,
+            [
+              {
+                id: 1,
+                result_id: RESULT,
+                project_id: 20,
+                is_lead: true,
+                is_active: 1,
+              },
+            ],
+          ],
+          [
+            ResultsByInititiative,
+            [
+              {
+                id: 2,
+                result_id: RESULT,
+                initiative_id: 100,
+                initiative_role_id: 1,
+                is_active: 1,
+              },
+            ],
+          ],
+          [
+            ShareResultRequest,
+            [
+              {
+                share_result_request_id: 10,
+                result_id: RESULT,
+                request_type: 'primary',
+                shared_inititiative_id: 100,
+                request_status_id: 2,
+                is_active: 0,
+              },
+            ],
+          ],
+          [
+            ResultsTocResult,
+            [
+              {
+                result_toc_result_id: 1,
+                result_id: RESULT,
+                initiative_ids: 100,
+                toc_result_id: 555,
+                is_active: 1,
+              },
+            ],
+          ],
+          [ResultReviewHistory, []],
+        ];
+
+        const arrangeRealCore = (ownerAfterSave: number) => {
+          const db = createInMemoryDb(rejectedByReview(), {
+            writes: true,
+            pk: PK,
+          });
+          const requests = db.repositoryOf(ShareResultRequest);
+          const real = new (PrimaryProgramRequestService as any)(requests, {
+            findOne: async ({ where }: any) => ({
+              id: where.id,
+              official_code: `SP-${where.id}`,
+            }),
+          }) as PrimaryProgramRequestService;
+          (service as any).primaryProgramRequestService = real;
+          (
+            resultRepository.manager.transaction as jest.Mock
+          ).mockImplementationOnce(async (callback: any) =>
+            db.dataSource.transaction((manager: any) =>
+              callback(
+                new Proxy(manager, {
+                  get: (target, prop) =>
+                    prop === 'findOne'
+                      ? jest.fn().mockResolvedValue({ id: RESULT })
+                      : target[prop],
+                }),
+              ),
+            ),
+          );
+          (
+            module.get<ResultByInitiativesRepository>(
+              ResultByInitiativesRepository,
+            ).getOwnerInitiativeByResult as jest.Mock
+          ).mockResolvedValue({ id: ownerAfterSave, official_code: 'SP04' });
+          (
+            module.get<RoleByUserRepository>(RoleByUserRepository)
+              .isUserAdmin as jest.Mock
+          ).mockResolvedValue(true);
+          return { db, real };
+        };
+
+        const activePrimaryRequests = (
+          db: ReturnType<typeof createInMemoryDb>,
+        ) =>
+          db
+            .rowsOf(ShareResultRequest)
+            .filter(
+              (row) => row.request_type === 'primary' && row.is_active === 1,
+            )
+            .map((row) => ({
+              sp: row.shared_inititiative_id,
+              status: row.request_status_id,
+            }));
+
+        const submitGateAsEditing = () => {
+          (resultRepository.findOne as jest.Mock).mockResolvedValue({
+            ...editingResult,
+            id: RESULT,
+            status_id: ResultStatusData.Editing.value,
+          });
+          return (service as any).assertSubmittable(user, RESULT);
+        };
+
+        it('after a transfer: one ACCEPTED primary row, no pending round, and the owner is the new SP', async () => {
+          arrange(ResultStatusData.Rejected.value, { clarisaId: 404 });
+          const { db, real } = arrangeRealCore(404);
+
+          await pick();
+
+          expect(
+            db
+              .rowsOf(ResultsByInititiative)
+              .filter(
+                (row) => row.initiative_role_id === 1 && row.is_active === 1,
+              )
+              .map((row) => row.initiative_id),
+          ).toEqual([404]);
+          expect(activePrimaryRequests(db)).toEqual([{ sp: 404, status: 2 }]);
+          await expect(
+            real.findPendingPrimaryInitiativeId(RESULT),
+          ).resolves.toBeNull();
+          await expect(submitGateAsEditing()).resolves.toEqual(
+            expect.objectContaining({ id: RESULT }),
+          );
+          expect(db.rowsOf(ResultReviewHistory)).toHaveLength(1);
+          expect(db.world.violations).toEqual([]);
+        });
+
+        it('after a re-pick of the current SP (stateFor none, role-1 owner present): nothing written to requests, no pending round', async () => {
+          arrange(ResultStatusData.Rejected.value, { clarisaId: 100 });
+          const { db, real } = arrangeRealCore(100);
+
+          await pick();
+
+          expect(
+            db.updated.filter((u) => u.entity === 'ShareResultRequest'),
+          ).toEqual([]);
+          expect(
+            db.inserted.filter((i) => i.entity === 'ShareResultRequest'),
+          ).toEqual([]);
+          expect(activePrimaryRequests(db)).toEqual([]);
+          await expect(real.stateFor(RESULT)).resolves.toEqual({
+            state: PrimaryRequestStateEnum.NONE,
+            program_code: null,
+            declined_by_codes: [],
+          });
+          await expect(
+            real.findPendingPrimaryInitiativeId(RESULT),
+          ).resolves.toBeNull();
+          await expect(submitGateAsEditing()).resolves.toEqual(
+            expect.objectContaining({ id: RESULT }),
+          );
+          expect(db.world.violations).toEqual([]);
+        });
+
+        // `RRC-T-3` forward pointer (from T-2): `assertSubmittable` now admits status 7, so the
+        // same two scenarios run with the row at a REAL status 7 — the status gate is exercised,
+        // not presented as Editing — and the pending-primary block must still not fire.
+        const submitGateAtRejected = () => {
+          (resultRepository.findOne as jest.Mock).mockResolvedValue({
+            ...editingResult,
+            id: RESULT,
+            status_id: ResultStatusData.Rejected.value,
+          });
+          return (service as any).assertSubmittable(user, RESULT);
+        };
+
+        it('at a real status 7, after a transfer: the pending-primary block does not fire', async () => {
+          arrange(ResultStatusData.Rejected.value, { clarisaId: 404 });
+          const { db, real } = arrangeRealCore(404);
+
+          await pick();
+
+          await expect(
+            real.findPendingPrimaryInitiativeId(RESULT),
+          ).resolves.toBeNull();
+          await expect(submitGateAtRejected()).resolves.toEqual(
+            expect.objectContaining({
+              id: RESULT,
+              status_id: ResultStatusData.Rejected.value,
+            }),
+          );
+          expect(db.world.violations).toEqual([]);
+        });
+
+        it('at a real status 7, after a re-pick of the current SP (stateFor none, role-1 owner present): the pending-primary block does not fire', async () => {
+          arrange(ResultStatusData.Rejected.value, { clarisaId: 100 });
+          const { db, real } = arrangeRealCore(100);
+
+          await pick();
+
+          await expect(real.stateFor(RESULT)).resolves.toEqual({
+            state: PrimaryRequestStateEnum.NONE,
+            program_code: null,
+            declined_by_codes: [],
+          });
+          await expect(
+            real.findPendingPrimaryInitiativeId(RESULT),
+          ).resolves.toBeNull();
+          await expect(submitGateAtRejected()).resolves.toEqual(
+            expect.objectContaining({
+              id: RESULT,
+              status_id: ResultStatusData.Rejected.value,
+            }),
+          );
+          expect(db.world.violations).toEqual([]);
+        });
+      });
+    });
   });
 
   // `PSR-T-6` (design.md §4 "Bilateral center result initiative/header read … Gains
@@ -3073,7 +3719,7 @@ describe('BilateralCenterService', () => {
 
       await expect(
         service.submitForReview(user, 77, decisionDto),
-      ).rejects.toThrow(/Editing or Draft/);
+      ).rejects.toThrow(/Editing, Draft or Rejected/);
     });
 
     it('rejects an unknown bilateral result', async () => {
@@ -3152,7 +3798,7 @@ describe('BilateralCenterService', () => {
       }
       expect(caught).toBeInstanceOf(BadRequestException);
       expect((caught as BadRequestException).message).toMatch(
-        /Editing or Draft/,
+        /Editing, Draft or Rejected/,
       );
     });
 
@@ -3318,6 +3964,411 @@ describe('BilateralCenterService', () => {
     });
   });
 
+  // `RRC-T-3` (bilateral/rejected-result-correction; `RRC-R-5` / `R-6` / `R-7` / `R-8` / `R-18`,
+  // `RRC-DD-5`). A Rejected result (7) is submittable: the flip to Pending Review is a
+  // `RESUBMIT` history row naming the owner SP, and the contributors held while at 7 are released
+  // in the same transaction. Editing (1) and Draft (8) keep today's ordinary submit.
+  describe('RRC-T-3: Submit from Rejected', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+    const RESULT = 77;
+    const OWNER_SP = 9;
+    const decisionDto = {
+      assessment_id: 1,
+      decision: 'submitted_anyway' as const,
+    };
+    const GATE = /Editing, Draft or Rejected/;
+    const ALL_STATUSES: Array<[number, string, boolean]> = [
+      [ResultStatusData.Editing.value, 'Editing', true],
+      [ResultStatusData.QualityAssessed.value, 'QualityAssessed', false],
+      [ResultStatusData.Submitted.value, 'Submitted', false],
+      [ResultStatusData.Discontinued.value, 'Discontinued', false],
+      [ResultStatusData.PendingReview.value, 'PendingReview', false],
+      [ResultStatusData.Approved.value, 'Approved', false],
+      [ResultStatusData.Rejected.value, 'Rejected', true],
+      [ResultStatusData.Draft.value, 'Draft', true],
+    ];
+
+    let primaryProgramRequestService: any;
+    let bilateral: any;
+    let resultByInitiativesRepository: any;
+
+    const resultAt = (statusId: number) => ({
+      id: RESULT,
+      source: SourceEnum.Bilateral,
+      is_active: true,
+      status_id: statusId,
+      result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+    });
+
+    /** One manager for the whole transaction, plus a marker that fires once it has COMMITTED. */
+    const arrangeTransaction = () => {
+      const manager = {
+        update: jest.fn().mockResolvedValue({}),
+        create: jest.fn((_entity, payload) => payload),
+        save: jest.fn().mockResolvedValue({}),
+        query: jest.fn().mockResolvedValue({}),
+      };
+      const committed = jest.fn();
+      (
+        resultRepository.manager.transaction as jest.Mock
+      ).mockImplementationOnce(async (callback: any) => {
+        const outcome = await callback(manager);
+        committed();
+        return outcome;
+      });
+      return { manager, committed };
+    };
+
+    const historyRowsOf = (manager: { save: jest.Mock }) =>
+      manager.save.mock.calls
+        .filter(([entity]) => entity === ResultReviewHistory)
+        .map(([, row]) => row);
+
+    beforeEach(() => {
+      (
+        module.get<BilateralQualityAssessmentService>(
+          BilateralQualityAssessmentService,
+        ) as any
+      ).getLatest.mockResolvedValue({ id: 1, is_current: true });
+      primaryProgramRequestService = module.get<PrimaryProgramRequestService>(
+        PrimaryProgramRequestService,
+      );
+      bilateral = module.get<BilateralService>(BilateralService);
+      resultByInitiativesRepository = module.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: OWNER_SP },
+      );
+    });
+
+    // The status gate, all eight statuses, on the three callers that share `assertSubmittable`.
+    describe('the status gate: only Editing (1), Draft (8) and Rejected (7) pass', () => {
+      it.each(ALL_STATUSES)(
+        'submitForReview at %i (%s) passes = %s',
+        async (statusId, _name, passes) => {
+          (resultRepository.findOne as jest.Mock).mockResolvedValue(
+            resultAt(statusId),
+          );
+
+          if (passes) {
+            const outcome = await service.submitForReview(
+              user,
+              RESULT,
+              decisionDto,
+            );
+            expect((outcome.response as any).status).toBe(
+              ResultStatusData.PendingReview.value,
+            );
+          } else {
+            await expect(
+              service.submitForReview(user, RESULT, decisionDto),
+            ).rejects.toThrow(GATE);
+            expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+          }
+        },
+      );
+
+      it.each(ALL_STATUSES)(
+        'assess at %i (%s) passes = %s',
+        async (statusId, _name, passes) => {
+          (resultRepository.findOne as jest.Mock).mockResolvedValue(
+            resultAt(statusId),
+          );
+
+          if (passes) {
+            await expect(service.assess(user, RESULT)).resolves.toEqual(
+              expect.objectContaining({ status: 200 }),
+            );
+          } else {
+            await expect(service.assess(user, RESULT)).rejects.toThrow(GATE);
+          }
+        },
+      );
+
+      it.each(ALL_STATUSES)(
+        'recordFieldRevision at %i (%s) passes = %s',
+        async (statusId, _name, passes) => {
+          (resultRepository.findOne as jest.Mock).mockResolvedValue({
+            ...resultAt(statusId),
+            title: 'A perfectly good title',
+          });
+          (
+            module.get<BilateralQualityAssessmentRepository>(
+              BilateralQualityAssessmentRepository,
+            ).findOne as jest.Mock
+          ).mockResolvedValueOnce({
+            id: 5,
+            result_id: RESULT,
+            sections: {
+              general_information: {
+                verdict: 'amber',
+                suggestions: { title: 'A different suggested title' },
+              },
+            },
+          });
+          const revise = () =>
+            service.recordFieldRevision(user, RESULT, {
+              field: ResultFieldRevisionFieldName.TITLE,
+              assessment_id: 5,
+              old_value: 'An old title',
+            });
+
+          if (passes) {
+            await expect(revise()).resolves.toBeDefined();
+          } else {
+            await expect(revise()).rejects.toThrow(GATE);
+          }
+        },
+      );
+
+      it('the refusal names the status, with the three admitted statuses in the message', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.PendingReview.value),
+        );
+
+        await expect(
+          service.submitForReview(user, RESULT, decisionDto),
+        ).rejects.toThrow(
+          'Only a result in Editing, Draft or Rejected can be submitted for review (status_id: 5)',
+        );
+      });
+    });
+
+    describe('Submit from Rejected (RRC-R-5, R-8, R-18)', () => {
+      const submitFromRejected = async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Rejected.value),
+        );
+        const tx = arrangeTransaction();
+        const outcome = await service.submitForReview(
+          user,
+          RESULT,
+          decisionDto,
+        );
+        return { ...tx, outcome };
+      };
+
+      it('writes Pending Review (5), never Editing (1), and answers with status 5', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Rejected.value),
+        );
+        const { manager } = arrangeTransaction();
+
+        const outcome = await service.submitForReview(
+          user,
+          RESULT,
+          decisionDto,
+        );
+
+        expect(manager.update).toHaveBeenCalledWith(
+          expect.anything(),
+          { id: RESULT },
+          expect.objectContaining({
+            status_id: ResultStatusData.PendingReview.value,
+            last_updated_by: user.id,
+          }),
+        );
+        for (const [, , patch] of manager.update.mock.calls) {
+          expect(patch.status_id).not.toBe(ResultStatusData.Editing.value);
+        }
+        expect((outcome.response as any).status).toBe(
+          ResultStatusData.PendingReview.value,
+        );
+      });
+
+      it('writes ONE RESUBMIT history row naming the owner SP, and not the ordinary submit row', async () => {
+        const { manager } = await submitFromRejected();
+
+        const rows = historyRowsOf(manager);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toEqual(
+          expect.objectContaining({
+            result_id: RESULT,
+            action: ReviewActionEnum.RESUBMIT,
+            initiative_id: OWNER_SP,
+            created_by: user.id,
+          }),
+        );
+        expect(rows.some((row) => row.action === ReviewActionEnum.UPDATE)).toBe(
+          false,
+        );
+      });
+
+      it('releases the held contributors inside the same transaction, with the same manager', async () => {
+        const { manager, committed } = await submitFromRejected();
+
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).toHaveBeenCalledWith(RESULT, manager);
+        const releaseOrder =
+          primaryProgramRequestService.releaseContributors.mock
+            .invocationCallOrder[0];
+        expect(releaseOrder).toBeLessThan(
+          committed.mock.invocationCallOrder[0],
+        );
+      });
+
+      it('announces Pending Review exactly once, after the commit', async () => {
+        const { committed } = await submitFromRejected();
+
+        expect(bilateral.announcePendingReview).toHaveBeenCalledTimes(1);
+        expect(bilateral.announcePendingReview).toHaveBeenCalledWith(
+          RESULT,
+          user.id,
+        );
+        expect(
+          bilateral.announcePendingReview.mock.invocationCallOrder[0],
+        ).toBeGreaterThan(committed.mock.invocationCallOrder[0]);
+      });
+
+      it('never takes the ownerless branch (the owner exists at 7): no sendDraft', async () => {
+        await submitFromRejected();
+
+        expect(primaryProgramRequestService.sendDraft).not.toHaveBeenCalled();
+      });
+
+      // `RRC-R-18`: one line, AFTER the transaction resolved, ids only (`.cursorrules`).
+      it('logs one resubmission line after the commit: result, owner initiative and user ids only', async () => {
+        const log = jest
+          .spyOn((service as any).logger, 'log')
+          .mockImplementation(() => undefined);
+
+        const { committed } = await submitFromRejected();
+
+        expect(log).toHaveBeenCalledTimes(1);
+        const line = String(log.mock.calls[0][0]);
+        expect(line).toContain(String(RESULT));
+        expect(line).toContain(String(OWNER_SP));
+        expect(line).toContain(String(user.id));
+        expect(line).not.toContain(user.email);
+        expect(log.mock.invocationCallOrder[0]).toBeGreaterThan(
+          committed.mock.invocationCallOrder[0],
+        );
+      });
+
+      it('a failing release rolls the submit back: no announcement, no log line', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Rejected.value),
+        );
+        arrangeTransaction();
+        primaryProgramRequestService.releaseContributors.mockRejectedValueOnce(
+          new Error('release failed'),
+        );
+        const log = jest
+          .spyOn((service as any).logger, 'log')
+          .mockImplementation(() => undefined);
+
+        await expect(
+          service.submitForReview(user, RESULT, decisionDto),
+        ).rejects.toThrow('release failed');
+
+        expect(bilateral.announcePendingReview).not.toHaveBeenCalled();
+        expect(log).not.toHaveBeenCalled();
+      });
+
+      // `RRC-R-7` — today's refusal, and before any write.
+      it("a Rejected result with no primary SP is refused with today's message and nothing is written", async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Rejected.value),
+        );
+        resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+          null,
+        );
+
+        await expect(
+          service.submitForReview(user, RESULT, decisionDto),
+        ).rejects.toThrow(
+          'The result has no Science Program assigned. Select a Science Program before submitting for review.',
+        );
+        expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).not.toHaveBeenCalled();
+      });
+
+      // `RRC-R-6` — the stale guard is untouched: a check run before the latest edit is refused.
+      it("a Rejected result with a stale quality check is refused with today's stale message and nothing is written", async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Rejected.value),
+        );
+        (
+          module.get<BilateralQualityAssessmentService>(
+            BilateralQualityAssessmentService,
+          ) as any
+        ).getLatest.mockResolvedValue({ id: 1, is_current: false });
+
+        await expect(
+          service.submitForReview(user, RESULT, decisionDto),
+        ).rejects.toThrow(
+          'The quality assessment is stale. Run it again after changing the result.',
+        );
+        expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('a pending primary round still blocks the submit at Rejected', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Rejected.value),
+        );
+        primaryProgramRequestService.findPendingPrimaryInitiativeId.mockResolvedValue(
+          12,
+        );
+
+        await expect(
+          service.submitForReview(user, RESULT, decisionDto),
+        ).rejects.toThrow(/pending/i);
+        expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+      });
+    });
+
+    // `RRC-R-3` / AC30 — Editing and Draft are untouched: the ordinary history row, no RESUBMIT,
+    // and the release is not this path's job (a contributor save with an owner already sent them).
+    describe.each([
+      [ResultStatusData.Editing.value, 'Editing'],
+      [ResultStatusData.Draft.value, 'Draft'],
+    ])('Submit from %i (%s) is unchanged', (statusId) => {
+      it('writes the ordinary UPDATE history row, no RESUBMIT, no release, no resubmission log', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(statusId),
+        );
+        const { manager } = arrangeTransaction();
+        const log = jest
+          .spyOn((service as any).logger, 'log')
+          .mockImplementation(() => undefined);
+
+        await service.submitForReview(user, RESULT, decisionDto);
+
+        const rows = historyRowsOf(manager);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toEqual(
+          expect.objectContaining({
+            result_id: RESULT,
+            action: ReviewActionEnum.UPDATE,
+            comment: 'Submitted for review by the reporting center',
+            created_by: user.id,
+          }),
+        );
+        expect(rows[0].action).not.toBe(ReviewActionEnum.RESUBMIT);
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).not.toHaveBeenCalled();
+        expect(log).not.toHaveBeenCalled();
+        expect(bilateral.announcePendingReview).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
   // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
   describe('assess', () => {
     const user: TokenDto = {
@@ -3400,7 +4451,7 @@ describe('BilateralCenterService', () => {
       });
 
       await expect(service.assess(user, 77)).rejects.toThrow(
-        /Editing or Draft/,
+        /Editing, Draft or Rejected/,
       );
     });
 

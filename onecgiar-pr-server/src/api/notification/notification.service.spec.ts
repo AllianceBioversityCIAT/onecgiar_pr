@@ -2238,4 +2238,380 @@ describe('NotificationService', () => {
       });
     });
   });
+
+  // RRC-T-5 (bilateral/rejected-result-correction): RRC-R-13 — the rejection notification is linked
+  // to its own `result_review_history` row (`notifications.review_history_id`) and the panel/bell
+  // readout returns that row's comment; RRC-R-16 — the other types keep their wording.
+  describe('RRC-T-5 — the rejection notification carries its history row', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center-user@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    // The two rejections of ONE result (same `result_id`), each with its own reason. A readout that
+    // looked up "the latest REJECT of the result" would answer B for the first notification.
+    const HISTORY_TABLE = [
+      { id: '101', action: 'REJECT', comment: 'A - add evidence' },
+      { id: '102', action: 'REJECT', comment: 'B - wrong Science Program' },
+      { id: '103', action: 'REJECT', comment: null },
+    ];
+
+    const rejectedRow = (
+      id: string,
+      reviewHistoryId: string | null,
+      overrides: Record<string, any> = {},
+    ) => ({
+      notification_id: id,
+      target_user: 42,
+      result_id: 10,
+      read: true,
+      review_history_id: reviewHistoryId,
+      text: 'where your center was tagged, has been rejected by the Science Program SP09.',
+      created_date: new Date('2026-10-06T10:00:00Z'),
+      obj_notification_type: {
+        type: NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+      },
+      obj_result: {
+        result_code: 10,
+        title: 'A bilateral result',
+        source: 'API',
+        obj_result_by_initiatives: [],
+        obj_result_by_project: [],
+      },
+      ...overrides,
+    });
+
+    /**
+     * Stands in for the database on the result-scoped queries: a LEFT JOIN of
+     * `result_review_history` ON `notifications.review_history_id = result_review_history.id`,
+     * performed ONLY when the query asks for the `obj_review_history` relation. Every other query
+     * (job-finished, Center notices, announcements) matches nothing.
+     */
+    const stubResultScopedFind = (rows: Record<string, any>[]) => {
+      mockNotificationRepository.find.mockImplementation(async (opts: any) => {
+        const where = Array.isArray(opts.where) ? opts.where[0] : opts.where;
+        if (where?.obj_result?.obj_result_by_initiatives === undefined) {
+          return [];
+        }
+        return rows
+          .filter((row) => row.read === where.read)
+          .map((row) => ({
+            ...row,
+            ...(opts.relations?.obj_review_history
+              ? {
+                  obj_review_history:
+                    HISTORY_TABLE.find(
+                      (history) =>
+                        String(history.id) === String(row.review_history_id),
+                    ) ?? null,
+                }
+              : {}),
+          }));
+      });
+    };
+
+    describe('emitResultNotification (write path)', () => {
+      beforeEach(() => {
+        mockNotificationLevelRepository.findOne.mockResolvedValue({
+          notifications_level_id: 2,
+        });
+        mockNotificationTypeRepository.findOne.mockResolvedValue({
+          notifications_type_id: 6,
+        });
+        mockNotificationRepository.save.mockResolvedValue(null);
+        mockSocketManagementService.getActiveUsers.mockResolvedValue({
+          response: [],
+          status: 200,
+        });
+      });
+
+      it('stores review_history_id on every row it writes when one is given', async () => {
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+          [2, 3],
+          9,
+          10,
+          'where your center was tagged, has been rejected by the Science Program SP09.',
+          101,
+        );
+
+        expect(mockNotificationRepository.save).toHaveBeenCalledWith([
+          expect.objectContaining({ target_user: 2, review_history_id: 101 }),
+          expect.objectContaining({ target_user: 3, review_history_id: 101 }),
+        ]);
+      });
+
+      it('writes no review_history_id key at all when none is given', async () => {
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+          [2],
+          9,
+          10,
+        );
+
+        const [rows] = mockNotificationRepository.save.mock.calls[0];
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).not.toHaveProperty('review_history_id');
+      });
+    });
+
+    describe('getAllNotifications (panel readout)', () => {
+      it('asks the repository for the linked history row (relation + comment selected)', async () => {
+        stubResultScopedFind([]);
+
+        await service.getAllNotifications(user);
+
+        const resultScopedCalls = mockNotificationRepository.find.mock.calls
+          .map(([opts]) => opts)
+          .filter((opts) => {
+            const where = Array.isArray(opts.where)
+              ? opts.where[0]
+              : opts.where;
+            return where?.obj_result?.obj_result_by_initiatives !== undefined;
+          });
+        expect(resultScopedCalls).toHaveLength(2); // viewed + pending
+        for (const opts of resultScopedCalls) {
+          expect(opts.relations).toEqual(
+            expect.objectContaining({ obj_review_history: true }),
+          );
+          expect(opts.select).toEqual(
+            expect.objectContaining({
+              obj_review_history: expect.objectContaining({ comment: true }),
+            }),
+          );
+        }
+      });
+
+      // RRC-R-13 "Older rejection keeps its own reason" — the falsifier of this task.
+      it('two rejections of the same result: each notification returns its OWN comment', async () => {
+        stubResultScopedFind([
+          rejectedRow('2002', '102', {
+            created_date: new Date('2026-10-06T12:00:00Z'),
+          }),
+          rejectedRow('2001', '101'),
+        ]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+        });
+
+        const byId = Object.fromEntries(
+          result.response.notificationsViewed.map((row: any) => [
+            row.notification_id,
+            row,
+          ]),
+        );
+        expect(byId['2001']).toMatchObject({
+          has_review_entry: true,
+          review_comment: 'A - add evidence',
+        });
+        expect(byId['2002']).toMatchObject({
+          has_review_entry: true,
+          review_comment: 'B - wrong Science Program',
+        });
+      });
+
+      it('a pending rejection also carries its comment (bigint FK arriving as a string)', async () => {
+        stubResultScopedFind([rejectedRow('2003', '102', { read: false })]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'pending',
+        });
+
+        expect(result.response.notificationsPending).toEqual([
+          expect.objectContaining({
+            notification_id: '2003',
+            has_review_entry: true,
+            review_comment: 'B - wrong Science Program',
+          }),
+        ]);
+      });
+
+      // RRC-R-13 "Notifications sent before this change" — must NOT read as "no justification".
+      it('legacy rejection (review_history_id NULL): has_review_entry false and review_comment null', async () => {
+        stubResultScopedFind([rejectedRow('2004', null)]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+        });
+
+        const [row] = result.response.notificationsViewed;
+        expect(row.has_review_entry).toBe(false);
+        expect(row.review_comment).toBeNull();
+        // ...and the row still reads exactly as before.
+        expect(row.text).toBe(
+          'where your center was tagged, has been rejected by the Science Program SP09.',
+        );
+      });
+
+      it('a linked history row with no comment: has_review_entry true, review_comment null (client shows the fallback)', async () => {
+        stubResultScopedFind([rejectedRow('2005', '103')]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+        });
+
+        const [row] = result.response.notificationsViewed;
+        expect(row.has_review_entry).toBe(true);
+        expect(row.review_comment).toBeNull();
+      });
+
+      it('does not leak the joined history object, and only Rejected rows gain the two fields', async () => {
+        stubResultScopedFind([
+          rejectedRow('2006', '101'),
+          rejectedRow('2007', null, {
+            obj_notification_type: {
+              type: NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+            },
+            text: undefined,
+          }),
+        ]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+        });
+
+        const byId = Object.fromEntries(
+          result.response.notificationsViewed.map((row: any) => [
+            row.notification_id,
+            row,
+          ]),
+        );
+        expect(byId['2006']).not.toHaveProperty('obj_review_history');
+        expect(byId['2007']).not.toHaveProperty('review_comment');
+        expect(byId['2007']).not.toHaveProperty('has_review_entry');
+      });
+    });
+
+    describe('getPopUpNotifications (bell readout)', () => {
+      it('returns the linked comment for a rejection and the legacy flags for an older one', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+        stubResultScopedFind([
+          rejectedRow('2008', '101', { read: false }),
+          rejectedRow('2009', null, { read: false }),
+        ]);
+
+        const result = await service.getPopUpNotifications(user);
+
+        const byId = Object.fromEntries(
+          (result.response as any[]).map((row) => [row.notification_id, row]),
+        );
+        expect(byId['2008']).toMatchObject({
+          has_review_entry: true,
+          review_comment: 'A - add evidence',
+        });
+        expect(byId['2009']).toMatchObject({
+          has_review_entry: false,
+          review_comment: null,
+        });
+      });
+    });
+
+    // RRC-R-16 — expected strings are the pre-change builder's literals (that code is untouched by
+    // this task), not output captured from a run. They pin the socket description for every type
+    // whose wording must not move, alongside the Approved/Rejected strings pinned further up.
+    describe('wording of the other notification types is unchanged (RRC-R-16)', () => {
+      const describeFor = async (
+        notificationType: NotificationTypeEnum,
+        reviewHistoryId?: number,
+      ): Promise<string> => {
+        mockNotificationLevelRepository.findOne.mockResolvedValue({
+          notifications_level_id: 2,
+        });
+        mockNotificationTypeRepository.findOne.mockResolvedValue({
+          notifications_type_id: 6,
+        });
+        mockNotificationRepository.save.mockResolvedValue(null);
+        mockNotificationRepository.findOne.mockResolvedValue({
+          obj_emitter_user: {
+            id: 9,
+            first_name: 'Ana',
+            last_name: 'Reviewer',
+            email: 'ana@example.com',
+          },
+          obj_result: {
+            result_code: 4321,
+            title: 'A bilateral result title',
+            obj_result_by_initiatives: [
+              {
+                initiative_role_id: 1,
+                is_active: true,
+                obj_initiative: { id: 5, official_code: 'SP5' },
+              },
+            ],
+          },
+        });
+        mockSocketManagementService.getActiveUsers.mockResolvedValue({
+          response: [{ userId: 2 }],
+          status: 200,
+        });
+        mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+          status: 200,
+        });
+
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          notificationType,
+          [2],
+          9,
+          4321,
+          undefined,
+          reviewHistoryId,
+        );
+
+        const [, payload] =
+          mockSocketManagementService.sendNotificationToUsers.mock.calls.at(-1);
+        return payload.desc;
+      };
+
+      it.each([
+        [
+          NotificationTypeEnum.RESULT_CREATED,
+          'The result 4321 has been created by Ana Reviewer',
+        ],
+        [
+          NotificationTypeEnum.RESULT_SUBMITTED,
+          'The result 4321 has been submitted by Ana Reviewer',
+        ],
+        [
+          NotificationTypeEnum.RESULT_UNSUBMITTED,
+          'The result 4321 has been unsubmitted by Ana Reviewer',
+        ],
+        [
+          NotificationTypeEnum.RESULT_QUALITY_ASSESED,
+          'The result 4321 has been quality assessed by Ana Reviewer',
+        ],
+        [
+          NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+          '✅ Your Result 4321 - A bilateral result title has been Approved by the Science Program SP5.',
+        ],
+        [
+          NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+          '❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program SP5.',
+        ],
+      ])('%s keeps its exact description', async (type, expected) => {
+        expect(await describeFor(type)).toBe(expected);
+      });
+
+      it('a linked rejection keeps the same description (the reason is a separate field, not text)', async () => {
+        expect(
+          await describeFor(
+            NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+            101,
+          ),
+        ).toBe(
+          '❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program SP5.',
+        );
+      });
+    });
+  });
 });
