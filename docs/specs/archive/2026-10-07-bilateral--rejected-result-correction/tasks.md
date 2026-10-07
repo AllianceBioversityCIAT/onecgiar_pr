@@ -7,7 +7,7 @@
 | Spec Path | `bilateral/rejected-result-correction` (`RRC`) |
 | Linked spec | `requirements.md` + `design.md`, same folder |
 | Jira | P2-3895 |
-| Status | `in-progress` (T-1..T-9 done; T-10 in progress (finding F1 being fixed), 2026-10-06) |
+| Status | `complete` (T-1..T-10 + F1 done, 2026-10-07) |
 | Budget (design §13) | 10 tasks · ~1,300 LOC · 1 review round each, 2 for T-1 and T-6 |
 
 ## 2. Pre-flight checklist
@@ -185,14 +185,14 @@
 
 ### `RRC-T-10` — Real run on PRTest + visual check (manual, user)
 
-- **Status:** `[ ]`
+- **Status:** `[x]`: PASS on PRTest 2026-10-07 (scenario `R-17` API path accepted as covered by T-6 automated evidence, user decision; findings F1 fixed, F2 deferred) — see `execution.md`.
 - **Type:** rollout
 - **Description:** The ticket's *How to test*, on PRTest after PR A and PR B are deployed: main cycle; stale check; no justification; three rejections + approval; SP move on a 2+ SP project (lands in the new SP's queue, ordinary notice, no ToC asked); single-SP project; another centre vs admin; status regression (5, 6, 4 admin exemption, 1/8 submit); notification regression; already resubmitted; contributor kept vs removed (`R-8`); API resubmission with a changed primary (`R-17`). Visual: the notice, long-text clamp, the modal, the single-SP note, the panel line (layout + contrast), read-only in the browser.
 - **Implements:** every requirement's end-to-end evidence; the visual defect class in requirements §9
 - **Depends on:** T-1..T-9
 - **Verification:** SQL given in chat (history rows, role-1 rows, `share_result_request` rows, notification links); results recorded in `execution.md`.
 - **Disqualifier:** a check run on the local stack instead of PRTest is not evidence for this task.
-- **Done:** [ ] every scenario above recorded with its outcome.
+- **Done:** [x] every scenario above recorded with its outcome.
 
 ### `RRC-T-10-F1` — Rejection notification names the SP that rejected (finding from T-10)
 

@@ -472,3 +472,26 @@ Another session is working in this checkout (uncommitted, not RRC): RSB spec arc
 - **Reviewer: PASS** — "Rejected notifications now name the SP from the linked result_review_history row (initiative_id → official_code). If the row has no linked entry or no SP, they fall back to today's current-primary code, so legacy rows are unchanged and R-16 holds for Approved and other types. The nested relation is a nullable ManyToOne resolved with a LEFT JOIN and no where filter on it, so no notification row is dropped; the one edited assertion follows from the relation shape change, and a new test pins the exact nested shape."
 - **ADVISORY:** record the bell-chip addition in the task Files line (done below); confirm on PRTest that rows 805/807/812 render SP02/SP02/SP10 in the bell and the page.
 - **Cycle close (9640), 2026-10-07:** resubmitted to SP10 (Pending Review; Program selector read-only at 5 ✅ `R-3`); SP10 approved from its "Bilateral review" tab (the earlier "SAVE CHANGES" dialog is the reviewer's edit-save with reason, which writes an `UPDATE` history row — explains row 804 "accepted"). Results list: **Approved** + history icon in **neutral** colour ✅ (T-8 attempt 3, `R-15` reachable after approval).
+- **`RRC-T-10-F1` confirmed on PRTest (after the `31d24d2ee` deploy), 2026-10-07:** notifications page filtered by 9640 — rejections 805 and 807 now read "Rejected by the Science Program **SP02**" ("Reason: Motivo A"), 812 reads **SP10** (long reason) ✅ (`R-13` "by which SP").
+- **Block 5 · permissions (9642), 2026-10-07:** 9642 submitted (Pending Review ✅), rejected by SP01 "Prueba permisos". User 606 (not an IITA centre user: `role_by_user` role 9 for CENTER-01..17 except CENTER-11 = IITA; app role GUEST; SP01 Coordinator, SP02/SP11 Lead, SP09 Member) sees **9642 (Rejected)** editable (Save draft + Submit) **and 9751 (Editing)** editable too → **parity with Editing holds** ✅ (`R-1` "must NOT be more permissive than Editing", `RRC-OQ-1` default). Observation (pre-existing, not RRC): a non-member of the lead centre can edit an IITA result in Editing — likely through her Science Program roles on the result's primary SP; tracked under `RRC-K-5` (server ownership check on section writes) as a separate change.
+- **Block 5 cont. · admin (9642, Rejected "Prueba permisos" by SP01), 2026-10-07:** user 575 with Admin role (also IITA Center User, CENTER-11) → result editable at Rejected (title field writable, Save draft + Submit for review offered) ✅ (`R-1` admin). Edit not saved.
+- **Block B · single allocation (9715, Bioversity (Alliance), project B-A1080, only SP13 allocated, status 7), 2026-10-07:** centre editor → Overview → PROGRAM shows the chip "SP13 – Genebank", no dropdown, and the note "This project is allocated to a single Science Program, so there is no alternative to choose." ✅ (`R-11`, T-7 on real data). Reached via MY CGIAR CENTERS → Bioversity (Alliance) → Results (the SP review drawer's "Go to result center" lands on the global Results Center, not the centre editor — pre-existing navigation).
+- **Test roles restored (2026-10-07):** the user confirmed the temporary Admin role was removed from users 575 and 606.
+- **Block C · API resubmission with a changed primary (`R-17`):** **not run on PRTest** — requires a CLARISA platform API key. **User decision (2026-10-07): accepted as covered** by the automated evidence of `RRC-T-6` (342/342 scoped tests incl. changed-primary transfer in the commit transaction, `request` never called, announce once, previous primary intact on every failure; 2 lens Reviewers PASS on attempt 2). Recorded as the one T-10 scenario without real-run evidence.
+
+#### `RRC-T-10` — closed: PASS (2026-10-07)
+
+| Scenario | Evidence | Result |
+|---|---|---|
+| Main cycle: reject → correct → resubmit (`R-1`, `R-2`, `R-5`, `R-6`) | 9640: history 803–811, status 1→5→7→5→7→5 | ✅ |
+| Contributors held at 7, released at resubmission (`R-8`, `P-13`) | 9640: SP09 4577 status 4 → 1 at 811 | ✅ |
+| Direct SP transfer at 7, change of mind, new SP's queue (`R-9`, `R-10`) | 9640: SP02 → SP10, one role 1, one ACCEPTED primary, no notifications | ✅ |
+| Reason in notification / notice / history (`R-13`, `R-14`, `R-15`) | 9640: 805/807/812 linked; notice; modal oldest first | ✅ |
+| Finding F1 (rejecting SP named) | fixed `2f84ce5a4`, confirmed after deploy | ✅ |
+| Approval keeps the history reachable, neutral trigger (`R-15`) | 9640 Approved | ✅ |
+| Single allocation (`R-11`) | 9715 SP13 chip + note | ✅ |
+| Permissions parity + admin (`R-1`, `RRC-OQ-1`) | 9642 / 9751 | ✅ |
+| API resubmission with changed primary (`R-17`) | automated only (T-6) | ✅ accepted by user |
+| Finding F2 (Resubmitted rows show the fallback) | user: leave as is | ➖ follow-up |
+
+**Follow-ups out of this spec:** F2 (history modal Resubmitted rows); `RRC-K-5` server centre-ownership check on section writes (a non-member edits via SP roles, also in Editing); review-drawer "Go to result center" lands on the global Results Center; advisories recorded per task (post-commit release emails, allocation re-check at API write time, `has review history` list flag, `loadedFor` reset, dead `primaryChanged` option).
