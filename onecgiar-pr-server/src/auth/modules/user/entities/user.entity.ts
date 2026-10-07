@@ -45,6 +45,7 @@ export class User {
     name: 'password',
     type: 'text',
     nullable: true,
+    select: false,
   })
   password!: string;
 
