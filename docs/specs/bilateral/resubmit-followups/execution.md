@@ -366,3 +366,41 @@ Unverified side findings from the scout (not acted on): `result_initiative_budge
   - The repo test is presence-only; the live GET of 12018 is the proof.
   - `requirements.md` §7 Backwards-compat still said "only inactive role-1 entries disappear". **Fixed by the Leader** in the spec sync (now cites `R-3` + `R-12`).
 - **Requirements covered:** `RSF-R-12`; `DD-9`.
+
+#### Step 5: `RSF-T-8` live GET (2026-10-07, after `performance-refactor` was fast-forwarded to `1c1f1fde2`)
+
+- **Lesson:** PRTest deploys from **`performance-refactor`**, not `qa-development-2026-ss`. The first GET after the `1c1f1fde2` push still showed SP06 because that branch was one commit behind. The Leader fast-forwarded it on the user's explicit request ("haz tu el push"): `d9073be80..1c1f1fde2`, no merge.
+- **`GET /api/bilateral/12018`** returned `obj_results_toc_result` = `SP07 "Contributor"` and `SP11 "Primary submitter"`. **SP06 is absent.** ✅ **`RSF-R-12` proven live.**
+
+#### `RSF-T-7` result: PASS (2026-10-07)
+
+| Check | Live result |
+|---|---|
+| GET, owner changed / ownerless / contributors untouched (`R-3`, T-2) | ✅ 12018, 12230, 11513 |
+| Bell sentence, clamp, deep link, ownerless card (`R-1`, `R-2`, `R-3`, T-1/T-3) | ✅ screenshots |
+| Two new 400s, result unchanged (`R-5`, `R-6`, T-4) | ✅ |
+| One active subnational per code (`R-4`, T-5) | ✅ after the rework (attempt 1 failed live: `Unknown column 'id'`) |
+| Dropped contributor retired, kept one untouched, role 1 untouched (`R-7`, T-6) | ✅ |
+| Retired contributor absent from `obj_results_toc_result` (`R-12`, T-8) | ✅ |
+| `R-10` wording | ✅ `outcomes[].status: "pending review"` |
+| `RSF-OQ-4` live role label | ✅ "Primary submitter" (doc example correct) |
+| `RSF-P-4` `creating_center` on bell rows | ✅ present |
+| p95 (`R-9`) | **Not measured** (user decision; SHOULD) |
+
+- **Data left on PRTest by the test:** 12018 (9550) is now Pending Review, Sub-national CO-ANT, SP11 primary, SP07 contributor. It has inserted rows rbi 14167/14168 and rcs 971/972. 12018 no longer serves as a "Rejected" fixture.
+- **Observed and recorded (not fixed here):** the resubmission is non-atomic. A 500 left the result row partially updated (`RSB-DD-2`, known).
+
+## Summary (all tasks complete, 2026-10-07)
+
+- **Tasks:** `RSF-T-1..T-8` are `[x]`. T-1 took 2 attempts. T-5 took 2: Reviewer PASS, then a live FAIL, reopened, then PASS. T-8 was added by a user-approved amendment.
+- **Commits on `qa-development-2026-ss`:** `fe9f0eedd` (T-1), `bc42f5554` (T-2..T-6), `443e214ce` (contract doc R-7), `d9073be80` (T-5 PK fix), `1c1f1fde2` (T-8). All are also on `performance-refactor` (PRTest).
+- **Budget:** 7 tasks budgeted. 8 were executed, plus 1 live-failure rework. Review rounds: T-1 +1, T-5 +1.
+- **Open for `/akili-archive`:**
+  - p95 not measured.
+  - R-8 reader #3 (admin export) inconclusive.
+  - Advisories listed per task.
+  - Kaizen lesson: raw-SQL repository specs must check identifiers against the entity/DDL, not just mocked `query()` shape.
+- **Before production:**
+  - Notify STAR/MEL/TIP of the two new 400s and of the GET content changes (`R-3`, `R-12`, `R-7`).
+  - `RRC-T-5`/`RRC-T-6` must build on this spec's changes.
+  - `staging → master` promotion is owned by Cristian Gamboa.

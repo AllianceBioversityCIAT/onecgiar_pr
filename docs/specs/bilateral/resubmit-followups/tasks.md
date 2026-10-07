@@ -7,7 +7,7 @@
 | Module / feature | `bilateral` / resubmission follow-ups (`RSF`) |
 | Linked spec | `requirements.md` (`RSF-R-1..R-11`) + `design.md` (`RSF-DD-1..DD-8`, `RSF-P-1..P-16`), same folder |
 | Baseline | `docs/prd.md` G3/US-D1/`AC-4`, `AC-8`; `docs/ux-ui/design.md` DD-9, DD-10; `docs/trd/trd.md` W4, W6, QAS-9; `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` |
-| Status | `not-started` (spec approved 2026-10-06, Phase 3 gate: Continue) |
+| Status | `complete` 2026-10-07 (T-1..T-8 `[x]`; T-8 by amendment) |
 | Skills (Skill Map) | `angular-developer` (T-1), `nestjs-expert` (T-2..T-6), `tdd` (T-1, T-3..T-6), `systematic-debugging` (Bug Mode tasks T-1..T-3: confirm red before fixing), `api-design-principles` (T-2, T-4: contract rows) |
 | PR strategy | **PR 1** = `T-1` (client, no `RRC` dependency). **PR 2** = `T-2..T-6` (server, after `RRC-T-5`/`RRC-T-6` or rebased on them). `T-7` after PR 2 is on PRTest |
 
@@ -163,7 +163,7 @@
 
 ### `RSF-T-7` — Live checks on PRTest (manual, user)
 
-- **Status:** `[ ]`
+- **Status:** `[x]`: live checks PASS on PRTest, 2026-10-07; p95 not measured (user decision) (see `execution.md`).
 - **Type:** `manual`
 - **Description:** after PR 2 is deployed to PRTest:
   1. `GET /api/bilateral/9550` and `/9762`, before and after the deploy: only the active primary is listed as role 1 in `obj_results_toc_result`. Note the live role label (`RSF-OQ-4`).
