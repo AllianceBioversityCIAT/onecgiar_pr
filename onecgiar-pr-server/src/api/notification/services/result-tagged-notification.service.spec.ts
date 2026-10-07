@@ -25,8 +25,16 @@ describe('ResultTaggedNotificationService', () => {
     result_code: 4321,
     title: 'A pooled funding result',
     obj_result_by_initiatives: [
-      { initiative_role_id: 2, obj_initiative: { official_code: 'SP99' } },
-      { initiative_role_id: 1, obj_initiative: { official_code: 'SP04' } },
+      {
+        initiative_role_id: 2,
+        is_active: true,
+        obj_initiative: { official_code: 'SP99' },
+      },
+      {
+        initiative_role_id: 1,
+        is_active: true,
+        obj_initiative: { official_code: 'SP04' },
+      },
     ],
   };
 
@@ -127,6 +135,50 @@ describe('ResultTaggedNotificationService', () => {
       resultRepo.findOne.mockResolvedValueOnce(null);
       await service.notifyTaggedCenters(RESULT_ID, EMITTER, ['C1']);
       expect(notificationService.emitResultNotification).not.toHaveBeenCalled();
+    });
+  });
+
+  // RSF-T-3 / RSF-R-3 — the owner named in "created by {code} has tagged…" is the ACTIVE role-1
+  // Science Program only, with no fallback to another row. The composed lead-in is not reachable
+  // through the public flows today (the direct flows store a bare label for their types and the
+  // BCT flow passes its own `leadIn`), so the resolver is exercised directly; the caller's
+  // `?? 'a Science Program'` is what renders its `undefined`.
+  describe('owner program in the tagged lead-in (RSF-R-3)', () => {
+    const row = (
+      code: string,
+      overrides: Record<string, any> = {},
+    ): Record<string, any> => ({
+      initiative_role_id: 1,
+      is_active: true,
+      obj_initiative: { official_code: code },
+      ...overrides,
+    });
+
+    const resolve = (initiatives: Record<string, any>[]) =>
+      (service as any).resolveOwnerProgramCode({
+        id: RESULT_ID,
+        obj_result_by_initiatives: initiatives,
+      });
+
+    it('returns the active role-1 SP when a retired role-1 SP comes first in the array', () => {
+      expect(resolve([row('SP09', { is_active: false }), row('SP11')])).toBe(
+        'SP11',
+      );
+    });
+
+    // Tagged-text falsifier: the old `?? initiatives[0]` fallback returned the contributor's
+    // code (or the retired owner's), so the text printed it instead of "a Science Program".
+    it('returns undefined when the only role-1 row is inactive and an active role-2 contributor exists', () => {
+      expect(
+        resolve([
+          row('SP09', { is_active: false }),
+          row('SP22', { initiative_role_id: 2 }),
+        ]),
+      ).toBeUndefined();
+    });
+
+    it('returns undefined when the result has only an active role-2 contributor', () => {
+      expect(resolve([row('SP22', { initiative_role_id: 2 })])).toBeUndefined();
     });
   });
 

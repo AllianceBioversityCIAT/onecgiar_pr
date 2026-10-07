@@ -5,11 +5,16 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { In, Not } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { BilateralService } from './bilateral.service';
-import { BilateralResubmissionService } from './services/bilateral-resubmission.service';
+import {
+  BilateralResubmissionService,
+  describeResultStatus,
+} from './services/bilateral-resubmission.service';
 import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
 import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
 import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
@@ -1629,6 +1634,25 @@ describe('BilateralService (unit)', () => {
 
       // No alias entry, and the stubs match no institution, so nothing is stored —
       // proving the alias table did not claim it.
+      expect(saved).toEqual([]);
+    });
+
+    // @akili-spec bilateral/resubmit-followups — RSF-R-5 "BUT the no-code create must NOT change":
+    // the lookup lifted into `findLeadCenter` is shared with the resubmission preflight, but
+    // `handleLeadCenter` itself still only warns on an unknown centre and never throws or stores.
+    it('RSF-R-5: the no-code path with an unknown lead_center still logs a warn and writes nothing', async () => {
+      const { service, saved } = makeCenterService();
+      const warn = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      await expect(
+        service.handleLeadCenter(1, { acronym: 'NOWHERE' }, 9),
+      ).resolves.toBeUndefined();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('No institutions matched lead_center input'),
+      );
       expect(saved).toEqual([]);
     });
 
@@ -4145,6 +4169,207 @@ describe('BilateralService (unit)', () => {
       });
     });
 
+    // @akili-spec bilateral/resubmit-followups — RSF-T-4 (RSF-R-5, R-6, DD-6, P-13). The lead centre
+    // is resolved with the lookup `handleLeadCenter` uses, through a CLOSED WORLD: `_clarisaCenters`,
+    // `_clarisaInstitutionsRepository` and `_resultsCenterRepository` answer only reads, so a
+    // lookup that wrote (a cache row, a `save`) is a recorded violation.
+    describe('RSF-T-4: lead centre, one lead project, contributor ids (resubmission branch only)', () => {
+      const arrange = () => {
+        const base = arrangeResubmission();
+        const { svc, world } = base;
+        const centers = {
+          findOne: jest.fn().mockResolvedValue(null),
+          find: jest.fn().mockResolvedValue([]),
+        };
+        const institutions = {
+          findOne: jest.fn().mockResolvedValue(null),
+          find: jest.fn().mockResolvedValue([]),
+        };
+        svc._clarisaCenters = world.fake('clarisaCenters', centers);
+        svc._clarisaInstitutionsRepository = world.fake(
+          'clarisaInstitutions',
+          institutions,
+        );
+        const persist = jest.spyOn(svc, 'persistLeadCenter');
+        return { ...base, centers, institutions, persist };
+      };
+      const LEAD_CENTER_400 = (value: string) =>
+        `Result 28565 cannot be resubmitted: lead_center ${value} does not match a CGIAR center.`;
+      const threeProjects = (svc: any) =>
+        svc._clarisaProjectsRepository.find.mockImplementation(
+          async ({ where }: any) =>
+            ({
+              P1: [{ id: 77, isActive: true }],
+              P2: [{ id: 78, isActive: true }],
+              P3: [{ id: 79, isActive: true }],
+            })[where.externalCode] ?? [],
+        );
+
+      it('an unknown lead_center -> 400 naming the result and the value sent; zero writes, users and reset never reached', async () => {
+        const { svc, payload, expectNothingWritten, persist } = arrange();
+
+        const attempt = svc.create(
+          payload({ lead_center: { acronym: 'NOWHERE' } }),
+          STAR as any,
+        );
+        await expect(attempt).rejects.toMatchObject({
+          status: 400,
+          message: LEAD_CENTER_400('NOWHERE'),
+        });
+
+        expect(svc.findOrCreateUser).not.toHaveBeenCalled();
+        expect(persist).not.toHaveBeenCalled();
+        expectNothingWritten();
+      });
+
+      it('an institution that matches but owns no clarisa_center -> the same 400', async () => {
+        const { svc, payload, expectNothingWritten, institutions } = arrange();
+        institutions.find.mockResolvedValue([{ id: 5 }]);
+
+        await expect(
+          svc.create(
+            payload({ lead_center: { name: 'Some Institute' } }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({
+          status: 400,
+          message: LEAD_CENTER_400('Some Institute'),
+        });
+        expectNothingWritten();
+      });
+
+      it('a lead_center that resolves through institutions passes, and the lookup wrote nothing', async () => {
+        const { svc, payload, expectNothingWritten, institutions, centers } =
+          arrange();
+        institutions.find.mockResolvedValue([{ id: 5 }]);
+        centers.find.mockResolvedValue([
+          { code: 'CENTER-09', institutionId: 5 },
+        ]);
+
+        await expect(
+          svc.create(
+            payload({ lead_center: { acronym: 'IITA' } }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+
+        // Read-only: the closed world holds `_resultsCenterRepository` (no save / update / query).
+        expectNothingWritten({ resetReached: true });
+      });
+
+      it('an Alliance alias resolves from the alias table and passes', async () => {
+        const { svc, payload, expectNothingWritten, centers } = arrange();
+        centers.findOne.mockResolvedValue({ code: 'CENTER-03' });
+
+        await expect(
+          svc.create(
+            payload({ lead_center: { acronym: 'CIAT (Alliance)' } }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+        expectNothingWritten({ resetReached: true });
+      });
+
+      it('a payload without a lead_center object is not refused (nothing to resolve, as before)', async () => {
+        const { svc, payload, expectNothingWritten } = arrange();
+
+        await expect(svc.create(payload(), STAR as any)).rejects.toMatchObject({
+          status: 409,
+          message: PLACEHOLDER,
+        });
+        expectNothingWritten({ resetReached: true });
+      });
+
+      it('two projects flagged is_lead -> 400 naming the result and the count; alignment, users and writers never reached', async () => {
+        const { svc, payload, expectNothingWritten } = arrange();
+        threeProjects(svc);
+
+        const attempt = svc.create(
+          payload({
+            contributing_bilateral_projects: [
+              { grant_title: 'P1', is_lead: true },
+              { grant_title: 'P2', is_lead: 1 },
+              { grant_title: 'P3' },
+            ],
+          }),
+          STAR as any,
+        );
+        await expect(attempt).rejects.toMatchObject({
+          status: 400,
+          message:
+            'Result 28565 cannot be resubmitted: 2 bilateral projects are flagged is_lead; flag exactly one.',
+        });
+
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).not.toHaveBeenCalled();
+        expect(svc.findOrCreateUser).not.toHaveBeenCalled();
+        expectNothingWritten();
+      });
+
+      it('one flagged project among three passes; a lone project passes without the flag', async () => {
+        const { svc, payload, expectNothingWritten } = arrange();
+        threeProjects(svc);
+
+        await expect(
+          svc.create(
+            payload({
+              contributing_bilateral_projects: [
+                { grant_title: 'P1' },
+                { grant_title: 'P2', is_lead: true },
+                { grant_title: 'P3', is_lead: false },
+              ],
+            }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).toHaveBeenCalledWith(78, 6);
+        expectNothingWritten({ resetReached: true });
+      });
+
+      // RSF-R-10: the contract doc tells platforms that a 409 "its status is pending review" after a
+      // timeout means the attempt committed. The server must produce exactly that wording for 5.
+      it('R-10: describeResultStatus(5) is the literal "pending review", the wording the contract doc promises', () => {
+        expect(describeResultStatus(5)).toBe('pending review');
+        expect(describeResultStatus('5')).toBe('pending review');
+
+        const doc = readFileSync(
+          join(__dirname, '../../../docs/bilateral-result-summaries.en.md'),
+          'utf8',
+        );
+        expect(doc).toContain('`409` with `its status is pending review`');
+        expect(doc).toContain('`status: "pending review"` (with a space)');
+      });
+
+      it('the preflight result carries the contributor initiative ids, deduped (read-only CLARISA lookup, P-13)', async () => {
+        const { svc, payload, expectNothingWritten } = arrange();
+        const preflight = jest.spyOn(
+          svc._bilateralResubmissionService,
+          'runPreflight',
+        );
+
+        await expect(
+          svc.create(
+            payload({
+              contributing_programs: [
+                { science_program_id: ' sp03 ' },
+                { science_program_id: 'SP04' },
+                { science_program_id: 'SP03' },
+              ],
+            }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+
+        await expect(preflight.mock.results[0].value).resolves.toMatchObject({
+          contributorInitiativeIds: [3, 4],
+        });
+        expectNothingWritten({ resetReached: true });
+      });
+    });
+
     // T-3 review carry-over: the users are resolved in the preflight, before any result write.
     describe('users are resolved in the preflight (T-3 review, forward pointer to T-4)', () => {
       it('a valid payload resolves both users AFTER every validation (title check included)', async () => {
@@ -5525,6 +5750,45 @@ describe('BilateralService (unit)', () => {
         expect(
           t.db.rowsOf(ResultInitiativeBudget)[0].result_initiative_id,
         ).toBe(8);
+      });
+
+      // @akili-spec bilateral/resubmit-followups RSF-T-2 (RSF-R-8): the consumer-facing budget reader
+      // must keep filtering the PARENT row. Falsifier: a reader that drops the parent `is_active`
+      // filter would surface 777 from the retired owner row.
+      it('RSF-R-8: an ACTIVE budget under an INACTIVE parent row never surfaces; the active role-2 row keeps its own', async () => {
+        const t = arrange([
+          {
+            id: 8,
+            result_id: RESULT,
+            initiative_id: SP06,
+            initiative_role_id: 1,
+            is_active: 0,
+          },
+          {
+            id: 9,
+            result_id: RESULT,
+            initiative_id: 11,
+            initiative_role_id: 2,
+            is_active: 1,
+          },
+        ]);
+        const budgets = t.db.repositoryOf(ResultInitiativeBudget);
+        await budgets.save({
+          result_initiative_id: 8,
+          kind_cash: 777,
+          is_active: 1,
+        });
+        await budgets.save({
+          result_initiative_id: 9,
+          kind_cash: 55,
+          is_active: 1,
+        });
+
+        const readback = await t.readBudgets();
+
+        expect(readback).toHaveLength(1);
+        expect(readback[0]).toMatchObject({ kind_cash: 55 });
+        expect(JSON.stringify(readback)).not.toContain('777');
       });
 
       it('(c) the REAL accept reactivates that row and the amount appears (usd_budget 1500 on the reactivated owner row)', async () => {

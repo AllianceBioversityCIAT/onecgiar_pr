@@ -71,6 +71,8 @@ describe('BilateralResubmissionService (RSB-T-2)', () => {
     resolveInitiative: jest.fn().mockResolvedValue({ id: 6, code: 'SP06' }),
     isAligned: jest.fn().mockResolvedValue(true),
     ensureUniqueTitle: jest.fn().mockResolvedValue(undefined),
+    isLeadCenterResolvable: jest.fn().mockResolvedValue(true),
+    resolveContributorInitiativeIds: jest.fn().mockResolvedValue([]),
     resolveUsers: jest
       .fn()
       .mockResolvedValue({ userId: 9, submittedUserId: 9 }),
@@ -350,6 +352,8 @@ describe('BilateralResubmissionService preflight (RSB-T-3)', () => {
     resolveInitiative: 'initiative',
     isAligned: 'aligned',
     ensureUniqueTitle: 'title',
+    isLeadCenterResolvable: 'leadCenter',
+    resolveContributorInitiativeIds: 'contributors',
     resolveUsers: 'users',
   };
 
@@ -371,10 +375,13 @@ describe('BilateralResubmissionService preflight (RSB-T-3)', () => {
       resolveContributingProjects: async () => ({
         resolvedProjects: new Map(),
         payloadLeadProjectId: 77,
+        leadProjectCount: 1,
       }),
       resolveInitiative: async () => ({ id: 6, code: 'SP06' }),
       isAligned: async () => true,
       ensureUniqueTitle: async () => undefined,
+      isLeadCenterResolvable: async () => true,
+      resolveContributorInitiativeIds: async () => [3, 4],
       resolveUsers: async () => ({ userId: 9, submittedUserId: 10 }),
     };
     const port = Object.fromEntries(
@@ -459,6 +466,8 @@ describe('BilateralResubmissionService preflight (RSB-T-3)', () => {
       'initiative',
       'aligned',
       'title',
+      'leadCenter',
+      'contributors',
       'users',
     ]);
     // Zero writes, in a closed world: no manager, no transaction, no repository, no write SQL.
@@ -520,6 +529,8 @@ describe('BilateralResubmissionService preflight (RSB-T-3)', () => {
       leadProjectId: 77,
       userId: 9,
       submittedUserId: 10,
+      // RSF-P-13: handed to the role-2 reset (RSF-T-6).
+      contributorInitiativeIds: [3, 4],
     });
   });
 
@@ -749,6 +760,161 @@ describe('BilateralResubmissionService preflight (RSB-T-3)', () => {
     });
   });
 
+  // @akili-spec bilateral/resubmit-followups — RSF-T-4 (RSF-R-5, R-6, R-11; DD-6; P-13). Same layout
+  // as the refusals above, plus every writer of the pipeline as a spy: one call before the throw is
+  // a failure.
+  describe('RSF-T-4: one lead project, a resolvable lead centre, the contributor ids', () => {
+    const LEADS_400 =
+      'Result 28565 cannot be resubmitted: 2 bilateral projects are flagged is_lead; flag exactly one.';
+    const centre400 = (value: string) =>
+      `Result 28565 cannot be resubmitted: lead_center ${value} does not match a CGIAR center.`;
+
+    /** Runs the real service with EVERY writer a spy (not the sentinel-throwing set of `arrange`). */
+    const runWithWriterSpies = (
+      impls: Parameters<typeof arrange>[0],
+      dto: any,
+    ) => {
+      const harness = arrange(impls);
+      const writers = passingWriters();
+      const attempt = harness.service.resubmit({
+        target,
+        bilateralDto: dto,
+        platform: { id: 12, acronym: 'STAR' } as any,
+        preflight: harness.port as unknown as ResubmissionPreflightPort,
+        writers,
+      });
+      const expectNoWriterCalled = () => {
+        Object.entries(writers).forEach(([name, fn]) =>
+          expect([name, (fn as jest.Mock).mock.calls.length]).toEqual([
+            name,
+            0,
+          ]),
+        );
+        expectNothingWritten(harness.query, harness.world);
+      };
+      return { ...harness, attempt, writers, expectNoWriterCalled };
+    };
+
+    it('two flagged lead projects -> 400 naming the result and the count, right after the lead-project check; no writer, no later step', async () => {
+      const { attempt, calls, port, expectNoWriterCalled, logSpy } =
+        runWithWriterSpies(
+          {
+            resolveContributingProjects: async () => ({
+              resolvedProjects: new Map(),
+              payloadLeadProjectId: 78,
+              leadProjectCount: 2,
+            }),
+          },
+          dtoWith(),
+        );
+
+      await expect(attempt).rejects.toMatchObject({
+        status: 400,
+        message: LEADS_400,
+      });
+
+      expect(calls).toEqual([
+        'type',
+        'geo',
+        'evidence',
+        'tocInitiatives',
+        'projects',
+      ]);
+      expect(port.isAligned).not.toHaveBeenCalled();
+      expect(port.ensureUniqueTitle).not.toHaveBeenCalled();
+      expect(port.isLeadCenterResolvable).not.toHaveBeenCalled();
+      expect(port.resolveUsers).not.toHaveBeenCalled();
+      expectNoWriterCalled();
+      // R-11: the existing RSB-R-21 line, the status only; never the payload.
+      expect(logSpy.mock.calls.map((call) => String(call[0]))).toEqual([
+        'result_code=28565 operation=updated platform=STAR outcome=rejected(400)',
+      ]);
+    });
+
+    it.each([
+      ['a lone project (count 1)', 1],
+      ['one flagged among three (count 1)', 1],
+    ])(
+      '%s passes the lead count and reaches the owner read',
+      async (_label, count) => {
+        const { run, calls } = arrange({
+          resolveContributingProjects: async () => ({
+            resolvedProjects: new Map(),
+            payloadLeadProjectId: 77,
+            leadProjectCount: count,
+          }),
+        });
+
+        await expect(run()).rejects.toMatchObject({
+          status: 409,
+          message: PLACEHOLDER,
+        });
+        expect(calls).toContain('users');
+      },
+    );
+
+    it.each([
+      ['acronym wins', { acronym: 'ZZ', name: 'Zed Institute' }, 'ZZ'],
+      ['then the name', { name: 'Zed Institute' }, 'Zed Institute'],
+      ['then the institution id', { institution_id: 9 }, '9'],
+      ['an empty object', {}, '(empty)'],
+    ])(
+      'an unresolvable lead_center (%s) -> 400 with the value sent, never the object; no writer, users never reached',
+      async (_label, leadCenter, value) => {
+        const dto = dtoWith({ lead_center: leadCenter });
+        const { attempt, calls, port, expectNoWriterCalled } =
+          runWithWriterSpies(
+            { isLeadCenterResolvable: async () => false },
+            dto,
+          );
+
+        await expect(attempt).rejects.toMatchObject({
+          status: 400,
+          message: centre400(value),
+        });
+
+        expect(port.isLeadCenterResolvable).toHaveBeenCalledWith(leadCenter);
+        // Everything up to the lead centre ran; the contributors and the users did not.
+        expect(calls[calls.length - 1]).toBe('leadCenter');
+        expect(port.resolveContributorInitiativeIds).not.toHaveBeenCalled();
+        expect(port.resolveUsers).not.toHaveBeenCalled();
+        expectNoWriterCalled();
+      },
+    );
+
+    it('the unresolvable lead_center leaves one RSB-R-21 line (rejected(400)), without the payload', async () => {
+      const { attempt, logSpy } = runWithWriterSpies(
+        { isLeadCenterResolvable: async () => false },
+        dtoWith({ lead_center: { acronym: 'ZZ' } }),
+      );
+
+      await expect(attempt).rejects.toMatchObject({ status: 400 });
+
+      const lines = logSpy.mock.calls.map((call) => String(call[0]));
+      expect(lines).toEqual([
+        'result_code=28565 operation=updated platform=STAR outcome=rejected(400)',
+      ]);
+      expect(lines.join(' | ')).not.toContain('ZZ');
+    });
+
+    it('a resolvable lead_center passes, and the contributor ids come from the payload programs', async () => {
+      const { run, port } = arrange();
+      const dto = dtoWith({ lead_center: { acronym: 'IITA' } });
+
+      await expect(run(dto)).rejects.toMatchObject({
+        status: 409,
+        message: PLACEHOLDER,
+      });
+
+      expect(port.isLeadCenterResolvable).toHaveBeenCalledWith({
+        acronym: 'IITA',
+      });
+      expect(port.resolveContributorInitiativeIds).toHaveBeenCalledWith(
+        dto.contributing_programs,
+      );
+    });
+  });
+
   it('a preflight refusal leaves one RSB-R-21 line (outcome=rejected(status)) and never the payload', async () => {
     const { run, logSpy } = arrange({ isAligned: async () => false });
 
@@ -811,6 +977,8 @@ describe('BilateralResubmissionService.resetSectionsForResubmission (RSB-T-4)', 
     resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
     primaryChanged: false,
     payloadSendsPartners: true,
+    // RSF-T-6: the SP ids the payload lists; 7 is the accepted contributor the role-2 fixtures keep.
+    contributorInitiativeIds: [7],
   };
   const row = (id: number, extra: Row = {}): Row => ({
     id,
@@ -1204,6 +1372,101 @@ describe('BilateralResubmissionService.resetSectionsForResubmission (RSB-T-4)', 
 
       expect(isActive(ResultsByInititiative, 1)).toBe(false);
       expect(isActive(ResultsByInititiative, 2)).toBe(true);
+    });
+  });
+
+  // RSF-T-6 / RSF-R-7: role-2 rows follow the payload (replace). SP06 = initiative 6 (also the
+  // primary in the first fixture), SP07 = initiative 7, SP08 = initiative 8.
+  describe('accepted contributors follow the payload (RSF-R-7)', () => {
+    const roleRows = (): Row[] => [
+      row(1, { initiative_role_id: 1, initiative_id: 1 }),
+      row(2, { initiative_role_id: 2, initiative_id: 6 }),
+      row(3, { initiative_role_id: 2, initiative_id: 7 }),
+      row(4, {
+        initiative_role_id: 2,
+        initiative_id: 8,
+        result_id: OTHER_RESULT,
+      }),
+    ];
+    const roleUpdates = (updated: Array<{ entity: string; where: Row }>) =>
+      updated.filter((u) => u.entity === 'ResultsByInititiative');
+
+    it('a contributor the payload no longer lists is deactivated; one still listed gets NO update call', async () => {
+      const { service, isActive, updated } = arrange([
+        [ResultsByInititiative, roleRows()],
+      ]);
+
+      await service.resetSectionsForResubmission(RESULT, {
+        ...defaults,
+        contributorInitiativeIds: [7],
+      });
+
+      expect(isActive(ResultsByInititiative, 2)).toBe(false); // SP06 dropped
+      expect(isActive(ResultsByInititiative, 3)).toBe(true); // SP07 kept
+      expect(isActive(ResultsByInititiative, 4)).toBe(true); // another result
+      // Only the dropped row is written: the kept SP07 row is never named by any update.
+      expect(roleUpdates(updated)).toHaveLength(1);
+      expect((roleUpdates(updated)[0].where as Row).id.value).toEqual([2]);
+    });
+
+    it('an empty contributor list retires every role-2 row and makes no role-1 call', async () => {
+      const { service, isActive, updated, world } = arrange([
+        [ResultsByInititiative, roleRows()],
+      ]);
+
+      await service.resetSectionsForResubmission(RESULT, {
+        ...defaults,
+        primaryChanged: false,
+        contributorInitiativeIds: [],
+      });
+
+      expect(isActive(ResultsByInititiative, 2)).toBe(false);
+      expect(isActive(ResultsByInititiative, 3)).toBe(false);
+      expect(isActive(ResultsByInititiative, 1)).toBe(true);
+      expect(isActive(ResultsByInititiative, 4)).toBe(true);
+      expect(
+        roleUpdates(updated).every(
+          (u) => (u.where as Row).initiative_role_id !== 1,
+        ),
+      ).toBe(true);
+      expect(world.violations).toEqual([]);
+    });
+
+    it('the primary listed in contributing_programs too: this step never touches role 1', async () => {
+      const { service, isActive, updated } = arrange([
+        [ResultsByInititiative, roleRows()],
+      ]);
+
+      // Initiative 1 is the primary (role 1) AND appears in the list; no active role-2 row for it.
+      await service.resetSectionsForResubmission(RESULT, {
+        ...defaults,
+        primaryChanged: false,
+        contributorInitiativeIds: [1],
+      });
+
+      expect(isActive(ResultsByInititiative, 1)).toBe(true);
+      expect(
+        roleUpdates(updated).map((u) => (u.where as Row).initiative_role_id),
+      ).not.toContain(1);
+      // The other two active role-2 rows of the result are retired.
+      expect(isActive(ResultsByInititiative, 2)).toBe(false);
+      expect(isActive(ResultsByInititiative, 3)).toBe(false);
+    });
+
+    it('an already inactive role-2 row is not touched again', async () => {
+      const { service, updated } = arrange([
+        [
+          ResultsByInititiative,
+          [row(2, { initiative_role_id: 2, initiative_id: 6, is_active: 0 })],
+        ],
+      ]);
+
+      await service.resetSectionsForResubmission(RESULT, {
+        ...defaults,
+        contributorInitiativeIds: [],
+      });
+
+      expect(roleUpdates(updated)).toHaveLength(0);
     });
   });
 
@@ -1619,6 +1882,8 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
       })),
       isAligned: jest.fn().mockResolvedValue(true),
       ensureUniqueTitle: jest.fn().mockResolvedValue(undefined),
+      isLeadCenterResolvable: jest.fn().mockResolvedValue(true),
+      resolveContributorInitiativeIds: jest.fn().mockResolvedValue([]),
       resolveUsers: jest
         .fn()
         .mockResolvedValue({ userId: USER, submittedUserId: SUBMITTER }),
@@ -1729,6 +1994,20 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
         SUBMITTER,
       );
       expect(t.seen.announce).toEqual({ status: PENDING_REVIEW, history: 1 });
+    });
+
+    it('RSF-T-6: the contributor ids the preflight resolved reach the reset', async () => {
+      const t = arrange();
+      (
+        t.preflight.resolveContributorInitiativeIds as jest.Mock
+      ).mockResolvedValue([3, 4]);
+
+      await t.run();
+
+      expect(t.resetSpy).toHaveBeenCalledWith(
+        RESULT,
+        expect.objectContaining({ contributorInitiativeIds: [3, 4] }),
+      );
     });
 
     it('an announce that throws never fails a resubmission that is already committed', async () => {
@@ -2204,6 +2483,8 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
         resultTypeId: 8,
         primaryChanged: false,
         payloadSendsPartners: true,
+        // The preflight double resolves no contributor (RSF-T-6).
+        contributorInitiativeIds: [],
       });
     });
 

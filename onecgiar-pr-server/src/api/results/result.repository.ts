@@ -4073,6 +4073,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
       LEFT JOIN Integration_information.toc_work_packages twp ON twp.toc_id = tr.wp_id
       WHERE rbi.result_id = ?
+        -- RSF-R-3 / RSF-DD-4: a retired (inactive) role-1 row is a former owner, never the primary.
+        -- Scoped to role 1 on purpose: inactive role-2 rows behave exactly as before.
+        AND (rbi.initiative_role_id <> 1 OR rbi.is_active = 1)
       GROUP BY ci.official_code, ci.name, ir.name;
     `;
     try {

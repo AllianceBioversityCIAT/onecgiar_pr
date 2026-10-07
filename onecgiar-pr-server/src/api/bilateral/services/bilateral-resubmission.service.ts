@@ -78,6 +78,11 @@ export interface ResubmissionPreflightPort {
     resolvedProjects: Map<string, any>;
     /** The payload's lead project id, or `null` when it names none. */
     payloadLeadProjectId: number | null;
+    /**
+     * `RSF-R-6`: how many projects the writers will flag as lead (`determineIsLead`: a single
+     * project always counts as one, otherwise the ones flagged `is_lead`). More than 1 is refused.
+     */
+    leadProjectCount: number;
   }>;
   /** Step 6: the CLARISA initiative behind an official code (already upper-cased). */
   resolveInitiative(
@@ -94,6 +99,21 @@ export interface ResubmissionPreflightPort {
     versionId: number,
     excludeResultId: number,
   ): Promise<void>;
+  /**
+   * Step 7b (`RSF-R-5`, after the title check): does `lead_center` resolve to a CGIAR centre? The
+   * SAME read-only lookup `handleLeadCenter` runs (alias table, CLARISA institutions,
+   * `clarisa_center`), without persisting. A payload with no `lead_center` object has nothing to resolve and answers `true`
+   * (`handleLeadCenter` skips it the same way): only an object that matches nothing is refused.
+   */
+  isLeadCenterResolvable(leadCenter: unknown): Promise<boolean>;
+  /**
+   * Step 7c (`RSF-P-13`): the CLARISA initiative ids behind the payload's `contributing_programs`
+   * codes (read-only, upper-cased like every SP lookup, deduplicated, in payload order). Codes that
+   * CLARISA does not know were already refused by step 4a. Consumed by the role-2 reset (`RSF-T-6`).
+   */
+  resolveContributorInitiativeIds(
+    contributingPrograms: any[] | undefined,
+  ): Promise<number[]>;
   /**
    * Step 8 (T-4, carried from the T-3 review): `findOrCreateUser` for `created_by` and the
    * submitter, the same two calls the create path makes. It can REFUSE (400 "User email is
@@ -183,6 +203,12 @@ export interface ResubmissionPreflightResult {
   userId: number;
   /** The resolved submitter (falls back to `created_by` in the payload, like the create path). */
   submittedUserId: number;
+  /**
+   * `RSF-P-13`: the CLARISA initiative ids of the payload's `contributing_programs`, resolved
+   * read-only here so the role-2 reset (`RSF-T-6`) can keep exactly these and retire the rest.
+   * Nothing consumes it yet.
+   */
+  contributorInitiativeIds: number[];
 }
 
 /** What `resetSectionsForResubmission` needs besides the result id (`RSB-T-4`). */
@@ -195,6 +221,11 @@ export interface ResubmissionResetOptions {
   primaryChanged: boolean;
   /** `R-4`: the payload carries partners (then `updateInstitutions` replaces them itself). */
   payloadSendsPartners: boolean;
+  /**
+   * `RSF-R-7`: the CLARISA initiative ids of the payload's `contributing_programs` (from the
+   * preflight). Active role-2 rows of any other initiative are deactivated. `[]` retires them all.
+   */
+  contributorInitiativeIds: number[];
 }
 
 /** One `outcomes[]` row's worth of data once a resubmission has been accepted (RSB-R-5). */
@@ -244,6 +275,7 @@ export class BilateralResubmissionService {
   private static readonly INNOVATION_USE_ORGANIZATION_ROLE = 5;
   /** `results_by_inititiative.initiative_role_id` of the primary owner (`bs.handleTocMapping`). */
   private static readonly PRIMARY_INITIATIVE_ROLE = 1;
+  private static readonly CONTRIBUTOR_INITIATIVE_ROLE = 2;
 
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
@@ -344,6 +376,7 @@ export class BilateralResubmissionService {
       resultTypeId: target.result_type_id,
       primaryChanged,
       payloadSendsPartners,
+      contributorInitiativeIds: preflight.contributorInitiativeIds,
     });
 
     await writers.writeResult({
@@ -488,7 +521,10 @@ export class BilateralResubmissionService {
    *  5. a primary Science Program is present (`RSB-R-13`)
    *  6. the payload names a lead project (`RSB-R-23`), and the primary is allocated to it
    *     (`RSB-R-12`, `RSB-DD-7`)
+   *  6b. at most one project is flagged lead (`RSF-R-6`), straight after the lead-project check
    *  7. the title is not another result (`RSB-R-16`)
+   *  7b. `lead_center` resolves to a centre (`RSF-R-5`)
+   *  7c. the contributor initiative ids are resolved for the reset (`RSF-P-13`)
    *  8. the users resolve (`findOrCreateUser`; it may refuse, and may create a user row)
    *
    * The users come LAST on purpose: it is the only step that writes anything (a user row, the same
@@ -508,7 +544,7 @@ export class BilateralResubmissionService {
       dto.toc_mapping,
       dto.contributing_programs,
     );
-    const { resolvedProjects, payloadLeadProjectId } =
+    const { resolvedProjects, payloadLeadProjectId, leadProjectCount } =
       await port.resolveContributingProjects(
         dto.contributing_bilateral_projects,
       );
@@ -531,6 +567,15 @@ export class BilateralResubmissionService {
     }
     const leadProjectId = payloadLeadProjectId;
 
+    // RSF-R-6 / RSF-DD-6 (resubmission branch only; the no-code create keeps last-wins): the writers
+    // would store every flagged project as lead, so two flags are refused instead of guessed.
+    // A single project is always the lead (`leadProjectCount` is 1), so it still passes.
+    if (leadProjectCount > 1) {
+      throw new BadRequestException(
+        `Result ${resultCode} cannot be resubmitted: ${leadProjectCount} bilateral projects are flagged is_lead; flag exactly one.`,
+      );
+    }
+
     // RSB-R-12 / RSB-DD-7: only the payload lead project counts.
     const initiative = await port.resolveInitiative(primaryCode);
     const aligned = initiative
@@ -545,6 +590,20 @@ export class BilateralResubmissionService {
     // RSB-R-16: the result own title is not a duplicate; another result title is.
     await port.ensureUniqueTitle(dto.title ?? '', target.version_id, target.id);
 
+    // RSF-R-5 / RSF-DD-6 (resubmission branch only; the no-code create warns and continues): a
+    // `lead_center` object that matches no centre is refused, because `handleLeadCenter` would
+    // silently skip it and the result would keep a lead the platform did not send. Read-only.
+    if (!(await port.isLeadCenterResolvable(dto.lead_center))) {
+      throw new BadRequestException(
+        `Result ${resultCode} cannot be resubmitted: lead_center ${this.describeLeadCenter(dto.lead_center)} does not match a CGIAR center.`,
+      );
+    }
+
+    // RSF-P-13: the contributor ids the role-2 reset (RSF-T-6) will keep. A read.
+    const contributorInitiativeIds = await port.resolveContributorInitiativeIds(
+      dto.contributing_programs,
+    );
+
     // T-4 (T-3 review): the users, last. It can refuse (400 "User email is required.").
     const { userId, submittedUserId } = await port.resolveUsers(dto);
 
@@ -554,7 +613,20 @@ export class BilateralResubmissionService {
       leadProjectId,
       userId,
       submittedUserId,
+      contributorInitiativeIds,
     };
+  }
+
+  /**
+   * `{value}` of the `RSF-R-5` message: the identifier the platform sent (acronym, then name, then
+   * institution id), never the whole object (`RSF-DD` §6).
+   */
+  private describeLeadCenter(leadCenter: unknown): string {
+    const sent = (leadCenter ?? {}) as Record<string, unknown>;
+    const value = [sent.acronym, sent.name, sent.institution_id].find(
+      (candidate) => candidate != null && String(candidate).trim() !== '',
+    );
+    return value == null ? '(empty)' : String(value).trim();
   }
 
   /**
@@ -783,6 +855,26 @@ export class BilateralResubmissionService {
             BilateralResubmissionService.PRIMARY_INITIATIVE_ROLE,
         });
       }
+
+      // ---- accepted contributors the payload no longer lists (RSF-R-7, DD-7) ---------------
+      // Role 2 follows the payload (replace): an active role-2 row whose initiative is not in the
+      // payload's `contributing_programs` goes; one still listed is not touched, and no role-2 row
+      // is created here. Strictly role 2: the primary's role 1 is never named, even when the
+      // primary is also listed. Filtered in code and keyed by row id (like the centres), so an empty
+      // list needs no `NOT IN ()` and simply retires every role-2 row.
+      const keep = new Set(options.contributorInitiativeIds.map(Number));
+      const contributors = await activeRows(ResultsByInititiative, {
+        result_id: resultId,
+        initiative_role_id:
+          BilateralResubmissionService.CONTRIBUTOR_INITIATIVE_ROLE,
+      });
+      await deactivateByKeys(
+        ResultsByInititiative,
+        'id',
+        contributors
+          .filter((contributor) => !keep.has(Number(contributor.initiative_id)))
+          .map((contributor) => contributor.id),
+      );
     });
   }
 

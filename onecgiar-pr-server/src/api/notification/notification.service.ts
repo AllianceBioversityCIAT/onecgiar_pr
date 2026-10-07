@@ -1005,6 +1005,18 @@ export class NotificationService {
           obj_result_by_project: (
             notification.obj_result.obj_result_by_project ?? []
           ).filter((link: any) => link.is_active),
+          // `RSF-DD-3`: the relation `where` stays as is (it is also the existence condition, so
+          // adding `is_active` there would hide every notification of an ownerless result); the
+          // inactive rows are dropped here, on the loaded rows. An ownerless result keeps its
+          // notification, with an empty list.
+          ...(Array.isArray(notification.obj_result.obj_result_by_initiatives)
+            ? {
+                obj_result_by_initiatives:
+                  notification.obj_result.obj_result_by_initiatives.filter(
+                    (initiative: any) => initiative?.is_active,
+                  ),
+              }
+            : {}),
         };
       }
       return notification;
@@ -1040,6 +1052,10 @@ export class NotificationService {
         source: true,
         obj_result_by_initiatives: {
           initiative_id: true,
+          // `RSF-DD-3`: selected so the loaded rows can be filtered after loading
+          // (`mapNotificationResultFields`) and so `resolveOwnerProgramCode` can tell the owner.
+          initiative_role_id: true,
+          is_active: true,
           obj_initiative: {
             id: true,
             official_code: true,
@@ -1412,12 +1428,14 @@ export class NotificationService {
     const initiatives = notification?.obj_result?.obj_result_by_initiatives;
     if (!Array.isArray(initiatives)) return undefined;
 
-    for (const initiative of initiatives) {
-      const officialCode = initiative?.obj_initiative?.official_code;
-      if (officialCode) return officialCode;
-    }
+    // `RSF-R-3`: only an ACTIVE role-1 row is the owner. This query loads every initiative of the
+    // result (no relation `where`), so the role and the activity flag are both checked here.
+    const owner = initiatives.find(
+      (initiative) =>
+        Number(initiative?.initiative_role_id) === 1 && initiative?.is_active,
+    );
 
-    return undefined;
+    return owner?.obj_initiative?.official_code || undefined;
   }
 }
 

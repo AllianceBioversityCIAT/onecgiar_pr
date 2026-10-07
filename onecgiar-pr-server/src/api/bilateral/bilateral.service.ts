@@ -4753,6 +4753,10 @@ export class BilateralService {
             projects,
             resolvedProjects,
           ),
+          leadProjectCount: this.countPayloadLeadProjects(
+            projects,
+            resolvedProjects,
+          ),
         };
       },
       resolveInitiative: async (officialCode) => {
@@ -4770,6 +4774,13 @@ export class BilateralService {
         ),
       ensureUniqueTitle: (title, versionId, excludeResultId) =>
         this.ensureUniqueTitle(title, versionId, excludeResultId),
+      // RSF-T-4: both are reads. `findLeadCenter` is the lookup `handleLeadCenter` persists from.
+      isLeadCenterResolvable: async (leadCenter) =>
+        !leadCenter ||
+        typeof leadCenter !== 'object' ||
+        (await this.findLeadCenter(leadCenter)) !== null,
+      resolveContributorInitiativeIds: (contributingPrograms) =>
+        this.resolveContributorInitiativeIds(contributingPrograms),
       resolveUsers: (dto) => this.resolveResubmissionUsers(dto),
     };
   }
@@ -5042,6 +5053,46 @@ export class BilateralService {
   }
 
   /**
+   * `RSF-R-6`: how many projects `handleNonPooledProject` will flag as lead for this payload (the
+   * same `determineIsLead` rule and the same skips as `findPayloadLeadProjectId`). The no-code
+   * create does not use it: several flags stay last-wins there.
+   */
+  private countPayloadLeadProjects(
+    bilateralProjects: any[] | undefined,
+    resolvedProjects: Map<string, any>,
+  ): number {
+    if (!Array.isArray(bilateralProjects)) return 0;
+    const isSingleProject = bilateralProjects.length === 1;
+    let leads = 0;
+    for (const nonpp of bilateralProjects) {
+      if (!nonpp?.grant_title) continue;
+      if (!resolvedProjects.get(nonpp.grant_title)) continue;
+      if (this.determineIsLead(isSingleProject, nonpp)) leads += 1;
+    }
+    return leads;
+  }
+
+  /**
+   * `RSF-P-13`: the CLARISA initiative ids of the `contributing_programs` codes, by the same
+   * normalised `official_code` lookup `handleTocMapping` uses. Read-only; a code CLARISA does not
+   * know is skipped (`validateTocMappingInitiatives` already refused it earlier in the preflight).
+   */
+  private async resolveContributorInitiativeIds(
+    contributingPrograms: any[] | undefined,
+  ): Promise<number[]> {
+    const ids: number[] = [];
+    for (const code of this.extractProgramIdsFromContributing(
+      contributingPrograms,
+    )) {
+      const init = await this._clarisaInitiatives.findOne({
+        where: { official_code: code.trim().toUpperCase() },
+      });
+      if (init && !ids.includes(init.id)) ids.push(init.id);
+    }
+    return ids;
+  }
+
+  /**
    * `excludeResultId` (`RSB-R-16`, pattern of `results.service.ts:5558-5571`): a resubmission
    * keeps its own title, so the lookup must not match the result being resubmitted. The no-code
    * create passes nothing and the query is unchanged.
@@ -5174,6 +5225,24 @@ export class BilateralService {
       return;
     }
 
+    const selectedCenter = await this.findLeadCenter(leadCenter);
+    if (!selectedCenter) return;
+
+    await this.persistLeadCenter(resultId, selectedCenter, userId, options);
+  }
+
+  /**
+   * `RSF-T-4` / `RSF-DD-6`: the READ-ONLY half of `handleLeadCenter`, lifted out unchanged so the
+   * resubmission preflight resolves the lead centre with the very lookup the writer uses (alias
+   * table, then CLARISA institutions, then `clarisa_center`). It only calls `findOne` / `find`; the
+   * persisting stays in `persistLeadCenter`. `null` when nothing matches (the warn lines are the
+   * ones the no-code create has always logged: that path still warns and continues).
+   */
+  private async findLeadCenter(leadCenter: {
+    name?: string;
+    acronym?: string;
+    institution_id?: number;
+  }): Promise<ClarisaCenter | null> {
     // Alliance-descended centres resolve from the alias table before anything else: both
     // of their institution names contain "Bioversity", so institution matching cannot
     // tell CENTER-02 from CENTER-03.
@@ -5181,10 +5250,7 @@ export class BilateralService {
       leadCenter.name,
       leadCenter.acronym,
     );
-    if (aliasedCenter) {
-      await this.persistLeadCenter(resultId, aliasedCenter, userId, options);
-      return;
-    }
+    if (aliasedCenter) return aliasedCenter;
 
     const normalizedName = this.normalizeInstitutionValue(leadCenter.name);
     const normalizedAcronym = this.normalizeInstitutionValue(
@@ -5197,7 +5263,7 @@ export class BilateralService {
       this.logger.warn(
         'lead_center must include at least one of name, acronym, institution_id',
       );
-      return;
+      return null;
     }
 
     const institutionCandidates = [];
@@ -5241,7 +5307,7 @@ export class BilateralService {
       this.logger.warn(
         `No institutions matched lead_center input (name='${name || ''}', acronym='${acronym || ''}', institution_id='${institution_id || ''}')`,
       );
-      return;
+      return null;
     }
 
     let selectedCenter: ClarisaCenter | null = null;
@@ -5259,10 +5325,10 @@ export class BilateralService {
       this.logger.warn(
         'Institutions matched but none have associated clarisa_center records',
       );
-      return;
+      return null;
     }
 
-    await this.persistLeadCenter(resultId, selectedCenter, userId, options);
+    return selectedCenter;
   }
 
   /**

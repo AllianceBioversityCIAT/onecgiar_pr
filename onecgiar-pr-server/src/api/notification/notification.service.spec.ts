@@ -481,7 +481,11 @@ describe('NotificationService', () => {
           result_code: 4321,
           title: 'A bilateral result title',
           obj_result_by_initiatives: [
-            { obj_initiative: { id: 5, official_code: 'SP5' } },
+            {
+              initiative_role_id: 1,
+              is_active: true,
+              obj_initiative: { id: 5, official_code: 'SP5' },
+            },
           ],
           ...resultOverrides,
         },
@@ -638,7 +642,11 @@ describe('NotificationService', () => {
           result_code: 4321,
           title: 'A bilateral result title',
           obj_result_by_initiatives: [
-            { obj_initiative: { id: 5, official_code: 'SP5' } },
+            {
+              initiative_role_id: 1,
+              is_active: true,
+              obj_initiative: { id: 5, official_code: 'SP5' },
+            },
           ],
           ...resultOverrides,
         },
@@ -859,7 +867,11 @@ describe('NotificationService', () => {
           result_code: 9398,
           title: 'A pooled funding result',
           obj_result_by_initiatives: [
-            { obj_initiative: { id: 1, official_code: 'SP01' } },
+            {
+              initiative_role_id: 1,
+              is_active: true,
+              obj_initiative: { id: 1, official_code: 'SP01' },
+            },
           ],
           ...resultOverrides,
         },
@@ -1597,6 +1609,205 @@ describe('NotificationService', () => {
             }),
           }),
         );
+      });
+    });
+  });
+
+  // `RSF-T-3` / `RSF-R-3` — only an ACTIVE role-1 row is the owner/primary in the notification
+  // readers, but the filter runs on the loaded rows, never on the relation `where` (`DD-3`): an
+  // `is_active` in that `where` would also hide every notification of an ownerless result.
+  describe('RSF-T-3 — active role-1 only; the notification is never hidden', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'sp-user@cgiar.org',
+      first_name: 'Sp',
+      last_name: 'User',
+    };
+
+    const initiativeRow = (
+      code: string,
+      overrides: Record<string, any> = {},
+    ) => ({
+      initiative_id: 1,
+      initiative_role_id: 1,
+      is_active: true,
+      obj_initiative: { id: 1, official_code: code },
+      ...overrides,
+    });
+
+    const notificationRow = (initiatives: Record<string, any>[]) => ({
+      notification_id: '3001',
+      target_user: 42,
+      result_id: 9550,
+      read: false,
+      obj_result: {
+        result_code: 9550,
+        title: 'Owner changed result',
+        source: 'API',
+        obj_result_by_initiatives: initiatives,
+        obj_result_by_project: [],
+      },
+      obj_notification_type: { type: NotificationTypeEnum.RESULT_SUBMITTED },
+      created_date: new Date('2026-10-01T10:00:00Z'),
+    });
+
+    // SP09 (retired) FIRST, SP11 (active) second — the order that makes `[0]` wrong.
+    const ownerChanged = () => [
+      initiativeRow('SP09', { is_active: false }),
+      initiativeRow('SP11'),
+    ];
+    const ownerless = () => [initiativeRow('SP09', { is_active: false })];
+
+    const codesOf = (row: any) =>
+      row.obj_result.obj_result_by_initiatives.map(
+        (i: any) => i.obj_initiative.official_code,
+      );
+
+    const ROLE_1_WHERE = {
+      is_active: true,
+      obj_result_by_initiatives: { initiative_role_id: 1 },
+    };
+
+    describe('getAllNotifications', () => {
+      it('drops the inactive role-1 row from pending and viewed payloads (owner changed)', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([notificationRow(ownerChanged())]) // viewed
+          .mockResolvedValueOnce([notificationRow(ownerChanged())]); // pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(codesOf(result.response.notificationsPending[0])).toEqual([
+          'SP11',
+        ]);
+        expect(codesOf(result.response.notificationsViewed[0])).toEqual([
+          'SP11',
+        ]);
+      });
+
+      // Ownerless falsifier: the notification must NOT disappear, and the `find` options keep the
+      // ORIGINAL relation `where` (no `is_active` on `obj_result_by_initiatives`).
+      it('still returns the notification of an ownerless result, with an empty initiatives list', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // viewed
+          .mockResolvedValueOnce([notificationRow(ownerless())]); // pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(result.response.notificationsPending).toHaveLength(1);
+        expect(
+          result.response.notificationsPending[0].obj_result
+            .obj_result_by_initiatives,
+        ).toEqual([]);
+
+        const viewedCall = mockNotificationRepository.find.mock.calls[0][0];
+        const pendingCall = mockNotificationRepository.find.mock.calls[1][0];
+        expect(pendingCall.where.obj_result).toEqual(ROLE_1_WHERE);
+        expect(viewedCall.where[0].obj_result).toEqual(ROLE_1_WHERE);
+        // The activity flag is selected so the loaded rows can be filtered.
+        expect(pendingCall.select.obj_result.obj_result_by_initiatives).toEqual(
+          expect.objectContaining({ is_active: true }),
+        );
+      });
+    });
+
+    describe('getPopUpNotifications', () => {
+      beforeEach(() => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+      });
+
+      it('drops the inactive role-1 row from the payload (owner changed)', async () => {
+        mockNotificationRepository.find.mockResolvedValueOnce([
+          notificationRow(ownerChanged()),
+        ]);
+
+        const result = await service.getPopUpNotifications(user);
+
+        expect(codesOf((result.response as any[])[0])).toEqual(['SP11']);
+      });
+
+      it('still returns the notification of an ownerless result, with an empty initiatives list', async () => {
+        mockNotificationRepository.find.mockResolvedValueOnce([
+          notificationRow(ownerless()),
+        ]);
+
+        const result = await service.getPopUpNotifications(user);
+
+        expect(result.response as any[]).toHaveLength(1);
+        expect(
+          (result.response as any[])[0].obj_result.obj_result_by_initiatives,
+        ).toEqual([]);
+
+        const findOptions = mockNotificationRepository.find.mock.calls[0][0];
+        expect(findOptions.where.obj_result).toEqual(ROLE_1_WHERE);
+        expect(findOptions.select.obj_result.obj_result_by_initiatives).toEqual(
+          expect.objectContaining({ is_active: true }),
+        );
+      });
+    });
+
+    // The emit path loads EVERY initiative of the result (no relation `where`), so the role and
+    // the activity flag both have to be selected and checked.
+    describe('resolveOwnerProgramCode (emit path)', () => {
+      const emitAndReadDescription = async (
+        initiatives: Record<string, any>[],
+      ): Promise<string> => {
+        mockNotificationLevelRepository.findOne.mockResolvedValue({
+          notifications_level_id: 2,
+        });
+        mockNotificationTypeRepository.findOne.mockResolvedValue({
+          notifications_type_id: 6,
+        });
+        mockNotificationRepository.save.mockResolvedValue(null);
+        mockNotificationRepository.findOne.mockResolvedValue({
+          obj_emitter_user: { id: 9, first_name: 'Ana', last_name: 'R' },
+          obj_result: {
+            result_code: 4321,
+            title: 'A bilateral result title',
+            obj_result_by_initiatives: initiatives,
+          },
+        });
+        mockSocketManagementService.getActiveUsers.mockResolvedValue({
+          response: [{ userId: 2 }],
+          status: 200,
+        });
+        mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+          status: 200,
+        });
+
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+          [2],
+          9,
+          4321,
+        );
+
+        return mockSocketManagementService.sendNotificationToUsers.mock.calls.at(
+          -1,
+        )[1].desc;
+      };
+
+      it('names the active role-1 SP even when a retired role-1 SP comes first', async () => {
+        const desc = await emitAndReadDescription(ownerChanged());
+
+        expect(desc).toContain('Science Program SP11.');
+        expect(desc).not.toContain('SP09');
+      });
+
+      it('names no SP when the only role-1 row is inactive and a role-2 contributor is active', async () => {
+        const desc = await emitAndReadDescription([
+          initiativeRow('SP09', { is_active: false }),
+          initiativeRow('SP22', { initiative_role_id: 2 }),
+        ]);
+
+        expect(desc).toContain('by the Science Program.');
+        expect(desc).not.toContain('SP22');
+        expect(desc).not.toContain('SP09');
       });
     });
   });
