@@ -213,6 +213,14 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Depends on:** QAC-T-16
 - **Verification:** qa-catalog suites; a test per conditional subfield; service response saved to `tmp/qa-catalog-2026.json`.
 
+### QAC-T-18 — Innovation development (Results) fully parametrized (amendment 2026-10-07) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** Every field of the 2026 Innovation Dev info form (owner listed from prtest result 9765, phase 36): short name; characterization; typology; new/improved variety (+ number of varieties); GESI stage (+ Why? when Not applicable); risk stage (+ Why?); IPR consideration and its follow-ups (entry points text, formal IPR, IP expert support); innovation developers (list); collaborators; team diversity (+ actions 116–121 when 113, + Other text); readiness level; readiness justification; readiness-diminished notice (if stored); the three investment tables (SP/A pooled, W3/bilateral projects, partners) with "yet to be determined". Question-tree rule: each question = a field; its options = a CLOSED control list of `result_questions` ids (ids equal in test and prod, verified 2026-10-07); sub-questions = fields/subfields with `visible_when` on the chosen id; free texts tied to an option = text fields with their rule. Phase-gated 2026 removals (user-need evidence, anticipated users, scaling studies, reference materials) stay out (or PENDING with reason). Results only.
+- **Implements:** QAC-R-13, QAC-R-14 for Innovation development
+- **Depends on:** QAC-T-17
+- **Verification:** qa-catalog suites; a test per conditional field; closed-list ids checked; service response saved to `tmp/qa-catalog-2026.json`.
+
 ## 4. Dependency graph
 
 ```
