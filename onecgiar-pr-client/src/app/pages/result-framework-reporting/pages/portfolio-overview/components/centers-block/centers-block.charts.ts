@@ -1,5 +1,5 @@
-import { EChartsOption, VizChartTableModel } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
-import { EntityOverviewRow } from './entities-overview.aggregate';
+import { EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
+import { EntityOverviewRow } from './centers-block.aggregate';
 
 /**
  * P2-3858 (rework 5-Oct-2026, Cami + Ángel: "que se vea en charts, muy parecida al Portfolio overview") —

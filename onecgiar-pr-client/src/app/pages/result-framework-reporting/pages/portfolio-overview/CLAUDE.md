@@ -24,6 +24,24 @@ a science-program × category matrix. Ticket **P2-3304**; design block `showPort
   `canActivate: [CheckAdminGuard]`. **Guarded, not merely hidden** — the design gates it on
   `isAdmin`, and hiding a nav entry is never enough (client CLAUDE.md §7).
 
+## CGIAR Centers block (P2-3928, 7-Oct-2026)
+
+- `components/centers-block/` — `PortfolioCentersBlockComponent` (`app-portfolio-centers-block`), rendered
+  last in `portfolio-overview.component.html`, **outside** the `hasFigures()` branch: it has its own data and
+  its own loading / error / empty states, so it shows even when the programme payload is empty or fails.
+- Moved as-is from Admin › All P/As and Centers (P2-3858 + P2-3893). Ángel, #dev-prms-pr 7-Oct-2026: the
+  separate page was a duplicated module — Centers block into the Portfolio overview, rest unchanged, page
+  removed ("La respuesta son las 3"). The old route `admin-module/entities-overview` redirects to
+  `/portfolio-overview` (`shared/routing/routing-data.ts`, `adminModuleRouting`).
+- Data path is **its own**, not this page's service: `CentersService.getData()` then **one**
+  `GET_bilateralCenterResults(code, versionId)` per Center, for the open **P25** phase picked from
+  `PhasesService` (`resolvePhase()`). Copy: `internationalization/portfolio-centers-block.copy.ts`.
+- ⚠️ Its W3/Bilateral total is NOT the same number as the page's "W3/Bilateral results" KPI tile: the
+  tile counts results whose `source_name` is W3/Bilaterals; the block sums each Center Overview, where a
+  result counts for every Center that leads **or** contributes to it. Two questions, two numbers.
+- The old dead centre code of this page (`centerDistributionRows`, `centerBilateralOption`…) is untouched
+  and still unused; the block does not read it.
+
 ## Where it is used
 
 - `shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component.ts:218` — `sections()`
