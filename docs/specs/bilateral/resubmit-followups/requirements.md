@@ -32,7 +32,7 @@ The resubmission shipped with three kinds of loose end. This spec closes all of 
 | Term | Meaning |
 |---|---|
 | **Role-1 row** | A `results_by_inititiative` row with `initiative_role_id = 1`. When active, it makes that SP the result's primary (owner) |
-| **Inactive role-1 row** | A role-1 row with `is_active = false`: a retired former owner, or (`RSB-DD-5` amended) the requested SP's pending row. **Not** ownership |
+| **Inactive role-1 row** | A role-1 row with `is_active = false`: a retired former owner, or (`RSB-DD-5` amended) the requested SP's row that the writers leave inactive until the direct transfer reactivates it in the same transaction (`RRC-R-17`; it no longer waits for an acceptance). **Not** ownership |
 | **Primary request** | A `share_result_request` with `request_type = 'primary'`, asking an SP to become the primary |
 | **Bell** | The header popover of notifications (`pop-up-notification-item`) |
 | **Inbox** | The results-notifications page and its drawer |
