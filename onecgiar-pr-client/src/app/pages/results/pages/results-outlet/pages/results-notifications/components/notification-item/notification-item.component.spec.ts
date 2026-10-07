@@ -3218,6 +3218,84 @@ describe('NotificationItemComponent', () => {
         expect(fixture.nativeElement.textContent).not.toContain('Accept as primary');
       });
 
+      describe('result link + CTA validate the bilateral result (follow-up of PRA)', () => {
+        let navigate: jest.SpyInstance;
+        const reviewPrefix = '/result-framework-reporting/entity-details/SP12/bilateral-review';
+        const row = (statusId: string, overrides: any = {}) =>
+          buildPsrFixture({ request_type: 'primary', ...overrides, obj_result: { status_id: statusId, result_code: 'RC-10001' } });
+        const link = () => fixture.nativeElement.querySelector('.notification_content_body_text a.font-mono') as HTMLAnchorElement;
+        const cta = () => fixture.nativeElement.querySelector('[data-testid="validate-bilateral-cta"]') as HTMLAnchorElement | null;
+
+        beforeEach(() => {
+          navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        });
+
+        it('status 5: the result link navigates once to the review drawer URL, never to /result/result-detail', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+
+          expect(link().getAttribute('href')).toContain(reviewPrefix);
+          link().dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          const url = navigate.mock.calls[0][0] as string;
+          expect(url).toContain(reviewPrefix);
+          expect(url).toContain('reviewResult=RC-10001');
+          expect(url).not.toContain('/result/result-detail');
+        });
+
+        it('status 5: the CTA renders with the drawer URL and navigates once on click', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+
+          expect(cta()?.textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta);
+          expect(cta()?.getAttribute('href')).toContain(reviewPrefix);
+          cta()!.dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(navigate.mock.calls[0][0]).toContain(reviewPrefix);
+        });
+
+        it('status 5: Ctrl-click on the CTA keeps the href (not prevented, no navigation)', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+          const e = new MouseEvent('click', { button: 0, ctrlKey: true, bubbles: true, cancelable: true });
+          cta()!.dispatchEvent(e);
+          expect(e.defaultPrevented).toBe(false);
+          expect(navigate).not.toHaveBeenCalled();
+        });
+
+        it('status 5: the drawer result card navigates to the review drawer URL', () => {
+          component.notification = row('5');
+          const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+          component.onDrawerResult();
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(navigate.mock.calls[0][0]).toContain(reviewPrefix);
+          expect(openCenterSpy).not.toHaveBeenCalled();
+        });
+
+        it('status 1: keeps the Result Detail href and shows no CTA', () => {
+          component.notification = row('1');
+          fixture.detectChanges();
+
+          expect(link().getAttribute('href')).toBe(component.resultUrl(component.notification));
+          expect(link().getAttribute('href')).toContain('/result/result-detail');
+          expect(cta()).toBeNull();
+          expect(component.primaryReviewUrl).toBeNull();
+        });
+
+        it('status 5 without any SP code: no CTA and the link keeps its old target', () => {
+          component.notification = row('5', { obj_shared_inititiative: null, obj_owner_initiative: null });
+          fixture.detectChanges();
+
+          expect(component.primaryReviewUrl).toBeNull();
+          expect(cta()).toBeNull();
+          expect(link().getAttribute('href')).toContain('/result/result-detail');
+        });
+      });
+
       describe('PRA-R-3 Review result click (accept PATCH, then drawer or notify-later)', () => {
         let navigate: jest.SpyInstance;
         let alertSpy: jest.SpyInstance;

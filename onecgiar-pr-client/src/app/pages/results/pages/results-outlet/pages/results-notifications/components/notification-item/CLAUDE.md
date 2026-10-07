@@ -602,3 +602,10 @@ shared fallback; legacy/other types render no line. Copy in `bilateral-rejection
 - SP code for the URL comes from `obj_shared_inititiative` on a primary row (an ownerless legacy result has no initiative yet).
 
 **Verified:** 2026-10-07 · qa-development-2026-ss · PRA-T-2 attempt 2 (`notifications/primary-review-not-accept`): `reviewPrimaryResult()`, Decline removed for primary (row, drawer, deep link), chip "Needs your review". Supersedes the primary bullets of PSR-T-8 and PDR-T-4 above.
+
+## Primary Pending Review: result link and CTA open the review drawer (follow-up of PRA, 2026-10-07)
+- `primaryReviewUrl` (getter): for `isPrimaryRequest` with `obj_result.status_id == 5` (`primaryReviewTarget()`), `NotificationNavigationService.reviewRequestUrl(row)`; else `null` (also `null` with no SP code).
+- The primary row's result `<a>` (all three status cases) uses `primaryResultHref()` as `href`; `onResultLinkClick()` and `onDrawerResult()` navigate in-app with `router.navigateByUrl(primaryReviewUrl)` when it is set, otherwise keep the center-editor-in-new-tab path. The old "a primary request is never in the requested SP's review queue" comment was stale after PRA-R-1/PRA-R-3 and was fixed.
+- CTA `copy.notificationItem.validateBilateralCta` ("Click here to validate the bilateral result", `data-testid="validate-bilateral-cta"`) renders next to the link only when `primaryReviewUrl` is non-null; click goes through `onValidateCtaClick()` (in-app, modifier clicks keep the `href`). The same copy key feeds the inbox update row (`update-notification`) and the bell card (`pop-up-notification-item`) for `BILATERAL_RESULT_SUBMITTED`.
+
+**Verified:** 2026-10-07 · qa-development-2026-ss · primary Pending Review link + validate CTA (follow-up of `notifications/primary-review-not-accept`): `primaryReviewUrl`, `primaryResultHref()`, `onValidateCtaClick()`.

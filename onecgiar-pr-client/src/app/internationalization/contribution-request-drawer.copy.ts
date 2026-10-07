@@ -180,6 +180,8 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
    * grid — same strings, new destination.
    */
   notificationItem: {
+    /** Call to action next to the result link: opens the bilateral review drawer (inbox row, update row, bell card). */
+    validateBilateralCta: 'Click here to validate the bilateral result',
     /** `NOTIF-DD-3`: single chip for every `source:'request'` row — no sub-typing. */
     contributionRequestChip: 'Contribution request',
     /**

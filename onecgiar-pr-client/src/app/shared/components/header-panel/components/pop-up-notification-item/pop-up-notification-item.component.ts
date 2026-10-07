@@ -360,6 +360,23 @@ export class PopUpNotificationItemComponent implements OnDestroy {
     }
   }
 
+  /** Review-drawer URL for the "validate the bilateral result" call to action; null hides it. */
+  get validateCtaUrl(): string | null {
+    const n = this.notification;
+    if (!n?.notification_id || !isBilateralSubmittedNotification(n)) return null;
+    return this.navigation.reviewRequestUrl(n);
+  }
+
+  readonly validateCtaLabel = CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta;
+
+  /** The CTA sits outside the card anchor (no nested links), so it reuses the submitted path exactly once. */
+  onValidateCtaClick(event: MouseEvent): void {
+    event.stopPropagation();
+    // Modifier / non-primary clicks keep the native href (new tab), like the inbox CTAs.
+    if ((event.button ?? 0) !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    this.onNotificationClick(event);
+  }
+
   /**
    * P2-3157 AC3 + AC5. A bilateral review notification takes the centre user to their bilateral
    * dashboard with the decided result in focus, and is marked read on the way out. Every other

@@ -111,3 +111,18 @@ The Reviewer confirmed all 7 brief checks otherwise: call counts, order and URL 
 | `performance-refactor` → `staging` | The first commit attempt was denied by the auto-mode classifier and handed to the user. The user authorized it ("ahora si podemos hacer el paso a staging"). Merge commit `09c7abe4a` (conflict in the `bilateral-result-summaries.en.md` change log, both sides kept), pushed 06f01e35e..09c7abe4a |
 | PRA-T-3 (HITL) | Pending: the user runs the manual checks on PRTest after the deploy |
 
+
+## 4. Follow-up: notification links open the review drawer (2026-10-07, user request)
+
+**Request:** when an SP member opens a Center-submitted bilateral result from the notifications, it must open the review drawer, not the result form, and show "Click here to validate the bilateral result". Not a task in `tasks.md`: user-requested follow-up, run through the same Implementer → Reviewer gate.
+
+**Cause found (Leader):** primary request rows linked the result identity to `resultUrl()` (Result Detail form). The comment assumed "a primary request is never in the requested SP's review queue", which PRA-R-1 made false. `BILATERAL_RESULT_SUBMITTED` already routed to the drawer but had no visible CTA.
+
+| Attempt | Implementer | Reviewer |
+|---|---|---|
+| 1 | Primary rows with status 5: link and new CTA go to `reviewRequestUrl()` (in-app; Ctrl/middle-click keep the href); other statuses unchanged. CTA on `BILATERAL_RESULT_SUBMITTED` in the inbox update row and the bell card, hidden when `reviewRequestUrl()` is null. Copy key `notificationItem.validateBilateralCta`. Jest 507/507, eslint, tsc clean | **FAIL**: (1) stale JSDocs on `onDrawerResult()`/`onResultLinkClick()`, and the P2-3157 JSDoc displaced in the bell; (2) inline `style` on 4 CTAs (client CLAUDE.md §5 Tailwind-first, src §21.2); (3) the bell CTA did not keep the href on Ctrl/Cmd/Shift-click |
+| 2 | JSDocs updated and moved; Tailwind classes `ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]`; modifier guard in the bell `onValidateCtaClick()`; one Ctrl-click spec per surface. Jest 510/510, eslint, tsc clean | **PASS**: all three resolved, functional cases untouched |
+
+**ADVISORY (non-gating):** the bell Ctrl-click spec title says "no read" but does not assert it · `ml-[4px]` on the bell CTA (own line) only indents it; check it in the visual pass · `notification-item/CLAUDE.md` is over the 120-line folder-doc cap (pre-existing).
+**Leader verification:** local production `ng build` exit 0 (69 s; warnings only, pre-existing).
+**Not verified:** visual check in a real browser (HITL).
