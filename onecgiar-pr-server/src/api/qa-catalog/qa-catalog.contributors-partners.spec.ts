@@ -50,6 +50,7 @@ describe('QAC-T-15 contributors & partners: owner field list', () => {
       'linked.has_innovation_link',
       'linked.results',
       'partners.kp_additional_partners',
+      'partners.kp_author_affiliations',
     ]);
     expect(section.map((f) => f.order)).toEqual(section.map((_, i) => i + 1));
   });

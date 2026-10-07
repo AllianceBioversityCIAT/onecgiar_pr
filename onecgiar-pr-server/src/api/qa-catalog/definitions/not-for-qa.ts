@@ -166,11 +166,28 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'last_updated_date',
   ),
   ...nfq('results_by_institution', IDENTITY, 'id'),
+  // QAC-T-22: `is_predicted` (the "Predicted by M-QAP AI" / "Manual match" badge) and `result_kp_mqap_institution_id` (the element value of
+  // `partners.kp_author_affiliations` and the join key of its subfield paths) are bound; they are no longer NOT_FOR_QA.
+
+  // results_kp_mqap_institutions (QAC-T-22: in scope; its content is the author-affiliation block of the KP form)
   ...nfq(
-    'results_by_institution',
-    'knowledge product matching helper, not form data',
-    'is_predicted',
-    'result_kp_mqap_institution_id',
+    'results_kp_mqap_institutions',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'results_kp_mqap_institutions',
+    FK_PARENT,
+    'result_knowledge_product_id',
+  ),
+  ...nfq(
+    'results_kp_mqap_institutions',
+    "id of the institution M-QAP suggested; the form never shows it (it shows the 'Predicted by M-QAP AI' badge and the confidence, and the chosen partner in clarisa_partner). Stored `is_predicted` = chosen partner equals this id AND confidence >= threshold",
+    'predicted_institution_id',
   ),
 
   // result_by_institutions_by_deliveries_type
@@ -462,6 +479,12 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'last_updated_date',
   ),
   ...nfq('results_kp_altmetrics', IDENTITY, 'result_kp_altmetrics_id'),
+  ...nfq(
+    'results_kp_altmetrics',
+    'the smaller badge sizes (the form shows the first of image_large / image_medium / image_small as ONE badge, knowledge-product-metadata.mapper.ts:106-107; catalogued as the large image)',
+    'image_medium',
+    'image_small',
+  ),
   ...nfq('results_kp_altmetrics', FK_PARENT, 'result_knowledge_product_id'),
   ...nfq(
     'results_kp_altmetrics',
@@ -485,6 +508,16 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'cited_by_weibo_users',
     'cited_by_wikipedia_pages',
     'last_updated',
+  ),
+
+  // results_knowledge_product FAIR copies (QAC-T-22)
+  ...nfq(
+    'results_knowledge_product',
+    'denormalised copy of the FAIR dimension scores kept in results_kp_fair_scores; the form draws the FAIR rings and checks from the scores rows (knowledge-product-metadata.mapper.ts:116, results-knowledge-products.mapper.ts:482-), which are catalogued under knowledge_product.fair',
+    'findable',
+    'accesible',
+    'interoperable',
+    'reusable',
   ),
 
   // results_kp_fair_scores (QAC-T-9)

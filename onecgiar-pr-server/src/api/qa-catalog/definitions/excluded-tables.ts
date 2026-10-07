@@ -124,9 +124,4 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
     table: 'results_kp_fair_baseline',
     reason: 'FAIR baseline, not shown in the 2026 form (inventory 2026-A §6)',
   },
-  {
-    table: 'results_kp_mqap_institutions',
-    reason:
-      'knowledge product matching helper; its content surfaces through partners.kp_additional_partners (inventory 2026-A §6)',
-  },
 ];

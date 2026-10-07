@@ -10,7 +10,7 @@
 // list (not the client's DOM order, which puts the lead center after the centers dropdowns and "invested resources"
 // before "Multiple WPs"): submitter, planned result, Multiple WPs, invested resources, narrative, lead center,
 // contributing centers (ToC), other(s) centers, Science Program/Accelerator, bilateral projects, partners block,
-// linked block, KP-only partners. Orders run 1..17.
+// linked block, KP-only partners, KP author affiliations (QAC-T-22). Orders run 1..18.
 //
 // Citation legend (all paths under onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/):
 //   CP.html  = rd-contributors-and-partners.component.html     CP.ts  = rd-contributors-and-partners.component.ts
@@ -43,6 +43,7 @@ import {
   CatalogSection,
   CatalogSubField,
   PHASE_YEAR,
+  PathBinding,
   PathStep,
   StorageBinding,
 } from '../types';
@@ -92,6 +93,94 @@ const tocRowsOfInitiative = (
     { from: 'inititiative_id', to: 'initiative_id' },
   ],
   filter,
+});
+
+/**
+ * Subfields of one partner chosen in a normal selector (NS.html:53-304): the partner, its CLARISA type and its role(s). Shared by
+ * `partners.external_partners` (role 2) and, since QAC-T-22, `partners.kp_additional_partners` (role 8): the KP picker renders the same
+ * chips (NS.html:105-179 for the roles, `[isComplete]="!!option?.delivery?.length"`).
+ */
+const PARTNER_SUBFIELDS: CatalogSubField[] = [
+  {
+    key: 'institution',
+    label: 'Partner',
+    type: 'single_select',
+    control_list: 'institutions',
+    // identity of the element: a partner row always has its institution
+    required: true,
+    storage: {
+      kind: 'column',
+      table: 'results_by_institution',
+      column: 'institutions_id',
+    },
+  },
+  {
+    // read-only "Institution type: <name>" of the chosen partner (NS.html:111): CLARISA `institution_type_code` of the institution
+    key: 'partner_type',
+    label: 'Partner type',
+    type: 'single_select',
+    control_list: 'institution_types',
+    storage: {
+      kind: 'lookup',
+      source: 'clarisa.institutions',
+      keys: [{ from: 'institution', to: 'id' }],
+      value_column: 'institution_type_code',
+    },
+  },
+  {
+    // toggles Scaling / Demand / Innovation / Other per partner (NS.html:113-179), stored one row per role. QAC-T-19, form-only:
+    // each chosen partner must have at least one role (mandatory marker `[isComplete]="!!option?.delivery?.length"`, NS.html:105-108,
+    // :219-221); the function's delivery check is commented out (V-CP:134-139).
+    key: 'partner_role',
+    label: 'Partner role',
+    type: 'multi_select',
+    control_list: 'partner_delivery_types',
+    required: true,
+    storage: {
+      kind: 'path',
+      steps: [
+        {
+          table: 'result_by_institutions_by_deliveries_type',
+          join: [{ from: 'id', to: 'result_by_institution_id' }],
+          filter: { is_active: 1 },
+        },
+      ],
+      value_column: 'partner_delivery_type_id',
+    },
+  },
+];
+
+/**
+ * QAC-T-22: `results_center.from_cgspace`, the stored flag that locks a center the CGSpace sync brought into a knowledge product:
+ * its chip carries the tooltip "To remove this center, please contact your librarian" and no remove icon (CP.html:158,162; CP.ts:130
+ * `disabledText`) and its option is disabled in the dropdown (CP.html:113,138; rd-contributors-and-partners.service.ts:686
+ * `getDisabledCentersForKP`). The form has NO label for the flag (only that tooltip, which is help text and so not a subfield description),
+ * so the label is a plain "From CGSpace". Only a knowledge product has the flag set. A select carries extra data as subfields (QAC-R-1).
+ */
+const FROM_CGSPACE_SUBFIELD: CatalogSubField = {
+  key: 'from_cgspace',
+  label: 'From CGSpace',
+  type: 'boolean',
+  visible_when: whenEq(RESULT_TYPE_FIELD, 'knowledge_product'),
+  storage: { kind: 'column', table: 'results_center', column: 'from_cgspace' },
+};
+
+/** A column of the M-QAP match row (`results_kp_mqap_institutions`) of a `results_by_institution` element (QAC-T-22). */
+const kpMqapColumn = (value_column: string): PathBinding => ({
+  kind: 'path',
+  steps: [
+    {
+      table: 'results_kp_mqap_institutions',
+      filter: { is_active: 1 },
+      join: [
+        {
+          from: 'result_kp_mqap_institution_id',
+          to: 'result_kp_mqap_institution_id',
+        },
+      ],
+    },
+  ],
+  value_column,
 });
 
 /** A column of the submitter's `results_toc_result` row: one value per result (not one per ToC row of the portfolio). */
@@ -433,6 +522,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       value_column: 'center_id',
       filter: { is_active: 1, from_toc: 1 },
     },
+    subfields: [FROM_CGSPACE_SUBFIELD],
   },
   {
     key: 'contributors.other_centers',
@@ -455,6 +545,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       value_column: 'center_id',
       filter: { is_active: 1, from_toc: 0 },
     },
+    subfields: [FROM_CGSPACE_SUBFIELD],
   },
   {
     // Contributing Science Program/Accelerator (CP.html:435-508, 2026). Each element is a program that contributes (accepted rows,
@@ -598,55 +689,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       value_column: 'institutions_id',
       filter: { institution_roles_id: 2, is_active: 1 },
     },
-    subfields: [
-      {
-        key: 'institution',
-        label: 'Partner',
-        type: 'single_select',
-        control_list: 'institutions',
-        // identity of the element: a partner row always has its institution
-        required: true,
-        storage: {
-          kind: 'column',
-          table: 'results_by_institution',
-          column: 'institutions_id',
-        },
-      },
-      {
-        // read-only "Institution type: <name>" of the chosen partner (NS.html:111): CLARISA `institution_type_code` of the institution
-        key: 'partner_type',
-        label: 'Partner type',
-        type: 'single_select',
-        control_list: 'institution_types',
-        storage: {
-          kind: 'lookup',
-          source: 'clarisa.institutions',
-          keys: [{ from: 'institution', to: 'id' }],
-          value_column: 'institution_type_code',
-        },
-      },
-      {
-        // toggles Scaling / Demand / Innovation / Other per partner (NS.html:113-179), stored one row per role. QAC-T-19, form-only:
-        // each chosen partner must have at least one role (mandatory marker `[isComplete]="!!option?.delivery?.length"`, NS.html:105-108,
-        // :219-221); the function's delivery check is commented out (V-CP:134-139).
-        key: 'partner_role',
-        label: 'Partner role',
-        type: 'multi_select',
-        control_list: 'partner_delivery_types',
-        required: true,
-        storage: {
-          kind: 'path',
-          steps: [
-            {
-              table: 'result_by_institutions_by_deliveries_type',
-              join: [{ from: 'id', to: 'result_by_institution_id' }],
-              filter: { is_active: 1 },
-            },
-          ],
-          value_column: 'partner_delivery_type_id',
-        },
-      },
-    ],
+    subfields: PARTNER_SUBFIELDS,
   },
   {
     // CP.html:563-570 (always shown, `[required]="true"`, read-only while "Not applicable" is on EXCEPT for a knowledge product, :569);
@@ -748,10 +791,12 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
   {
     // KP only ("Additional partners"). Kept as it was, with its rule (owner 2026-10-07); only the display rule is added: the picker
     // container is hidden while "Not applicable" is on (NS.html:53). V-CP:98-112 role 8 rows for a KP, V-CP:169
+    // QAC-T-22 (Leader decision, pre-release, same authorization as the owner's 2026-10-07 `partners.external_partners` change): type
+    // multi_select -> list, key unchanged. The KP picker shows each chosen partner with its institution type and its roles and marks the
+    // roles mandatory (NS.html:105-179); V-CP does not check the roles.
     key: 'partners.kp_additional_partners',
     label: 'Partners',
-    type: 'multi_select',
-    control_list: 'institutions',
+    type: 'list',
     section: SECTION,
     order: 17,
     result_types: ['knowledge_product'],
@@ -767,5 +812,115 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       value_column: 'institutions_id',
       filter: { institution_roles_id: 8, is_active: 1 },
     },
+    subfields: PARTNER_SUBFIELDS,
+  },
+  {
+    // QAC-T-22. KP only: the "Author affiliations" block (KPS.html:14-123, rendered by CP.html:559 when `isKnowledgeProduct`; the heading
+    // and its sub-title are KPS.html:15-16). One element per author affiliation M-QAP matched at CGSpace: the ACTIVE role 2 rows of
+    // `results_by_institution` that carry a `result_kp_mqap_institution_id` (server list: results_by_institutions.service.ts:155-180
+    // `mqap_institutions`, which also needs `is_predicted` not null). The "carries an M-QAP id" part is not an equality filter, so the
+    // field BINDS that id as its element value (it is the key of every subfield path below) and the filter keeps the role/active part;
+    // a row whose `value_column` is NULL is not an element (types.ts `RelationBinding`), so the other role 2 rows of a KP (none are
+    // written for a KP, V-CP:98-103 counts role 8) have a NULL id and are no element. The server's extra `is_predicted IS NOT NULL` clause
+    // is equivalent today: every writer sets it (results-knowledge-products.mapper.ts:665, results_by_institutions.service.ts:1015-1020,
+    // results-knowledge-products.service.ts:1562) and the column is NOT NULL.
+    // Not hidden by "Not applicable" (the block sits outside the switch, CP.html:559 vs NS.html:53). `[required]="false"` on the select
+    // (KPS.html:51) and the function does not check the block (V-CP counts role 8 for a KP, role 2 otherwise): optional, unconfirmed.
+    key: 'partners.kp_author_affiliations',
+    label: 'Author affiliations',
+    description: 'Please match each author affiliation with a CLARISA partner.',
+    type: 'list',
+    section: SECTION,
+    order: 18,
+    result_types: ['knowledge_product'],
+    required: false,
+    required_confirmed: false,
+    ...FROM_2026,
+    storage: {
+      kind: 'relation',
+      table: 'results_by_institution',
+      fk_to_result: 'result_id',
+      value_column: 'result_kp_mqap_institution_id',
+      filter: { institution_roles_id: 2, is_active: 1 },
+    },
+    subfields: [
+      {
+        // KPS.html:24-27 "CGSpace author affiliation: <name>", the affiliation string CGSpace holds (read-only, never edited here)
+        key: 'cgspace_affiliation',
+        label: 'CGSpace author affiliation',
+        type: 'text',
+        storage: kpMqapColumn('intitution_name'),
+      },
+      {
+        // KPS.html:36-45 badge "Predicted by M-QAP AI" (true) / "Manual match" (false). Recomputed on every save: true only when the chosen
+        // partner equals M-QAP's predicted institution AND its confidence reaches the global threshold `kp_mqap_institutions_confidence`
+        // (results_by_institutions.service.ts:1015-1020); a partner the reporter picks by hand is false. Stored, not derived at read time.
+        key: 'is_predicted',
+        label: 'Predicted by M-QAP AI',
+        type: 'boolean',
+        storage: {
+          kind: 'column',
+          table: 'results_by_institution',
+          column: 'is_predicted',
+        },
+      },
+      {
+        // KPS.html:47-60 app-pr-select "CLARISA partner", `[required]="false"`. M-QAP prefills it only when its confidence reaches the
+        // threshold (results-knowledge-products.mapper.ts:651-665); otherwise it starts empty (`institutions_id` NULL) for the reporter to pick.
+        key: 'clarisa_partner',
+        label: 'CLARISA partner',
+        type: 'single_select',
+        control_list: 'institutions',
+        required: false,
+        storage: {
+          kind: 'column',
+          table: 'results_by_institution',
+          column: 'institutions_id',
+        },
+      },
+      {
+        // read-only "Institution type: <name>" of the chosen partner (KPS.html:63-69, 'No partner selected' when empty): CLARISA type of the partner
+        key: 'partner_type',
+        label: 'Institution type',
+        type: 'single_select',
+        control_list: 'institution_types',
+        storage: {
+          kind: 'lookup',
+          source: 'clarisa.institutions',
+          keys: [{ from: 'clarisa_partner', to: 'id' }],
+          value_column: 'institution_type_code',
+        },
+      },
+      {
+        // The "confidence level for the predicted match is <n>%" sentence (KPS.ts generateDescription, shown in the select's description
+        // KPS.html:54) exists only for a predicted match; a manual match shows the "couldn't find a matching partner" text instead.
+        key: 'confidence',
+        label: 'Confidence level of the predicted match (%)',
+        type: 'number',
+        visible_when: whenEq('is_predicted', true),
+        storage: kpMqapColumn('confidant'),
+      },
+      {
+        // KPS.html:86-104 "Partner role:" toggles Scaling / Demand / Innovation / Other, one stored row per role (same rows as
+        // `partners.external_partners` > `partner_role`). Unlike the normal selector, the KP selector carries NO mandatory marker for the roles
+        // (no `[isComplete]`, no `appFeedbackValidation` in KPS.html) and V-CP does not check them: optional.
+        key: 'roles',
+        label: 'Partner role',
+        type: 'multi_select',
+        control_list: 'partner_delivery_types',
+        required: false,
+        storage: {
+          kind: 'path',
+          steps: [
+            {
+              table: 'result_by_institutions_by_deliveries_type',
+              join: [{ from: 'id', to: 'result_by_institution_id' }],
+              filter: { is_active: 1 },
+            },
+          ],
+          value_column: 'partner_delivery_type_id',
+        },
+      },
+    ],
   },
 ];

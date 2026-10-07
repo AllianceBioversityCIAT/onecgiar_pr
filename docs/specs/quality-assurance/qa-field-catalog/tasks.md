@@ -242,7 +242,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Implements:** QAC-R-13, QAC-R-14, QAC-R-5 for Policy change
 - **Depends on:** QAC-T-19
 
-### QAC-T-22 — Knowledge product (Results) completed: M-QAP author affiliations + CGSpace metadata (amendment 2026-10-07) · P2-3925
+### [x] QAC-T-22 — Knowledge product (Results) completed: M-QAP author affiliations + CGSpace metadata (amendment 2026-10-07) · P2-3925
 
 - **Type:** server · **Review:** full
 - **Description:** From prtest result 9532 (phase 36). (a) `partners.kp_author_affiliations` (KP only, list, `required: false` — form `[required]="false"`, not checked by validation_contributor_partner_P25): one element per role-2 `results_by_institution` row linked to `results_kp_mqap_institutions` (`result_kp_mqap_institution_id` not null). Subfields: CGSpace affiliation name (`intitution_name`), CLARISA partner (`institutions_id`, prefilled by M-QAP only when `confidant` ≥ global `kp_mqap_institutions_confidence`), match type (`is_predicted`: "Predicted by M-QAP AI" / "Manual match"; recomputed on save — true only when the chosen partner equals the prediction and confidence passes the threshold), confidence %, partner type (CLARISA lookup), partner role (deliveries). Move `is_predicted` out of NOT_FOR_QA (it is displayed); bring `results_kp_mqap_institutions` into scope or correct its exclusion reason (it surfaces through author affiliations, not role 8). (b) Read-only CGSpace/WoS metadata of KP info now in PENDING: online date, issue date, authors, peer reviewed, WoS/ISI, DOI, accessibility, keywords, AGROVOC, Altmetric, FAIR (score + F1…R1), reference to other knowledge products (locate storage). (c) `results_center.from_cgspace` lock flag. Results only.

@@ -43,6 +43,12 @@ export interface ColumnBinding {
   column: string;
 }
 
+/**
+ * A relation's elements are the rows of `table` whose `fk_to_result` is the result and that match `filter` (equality only).
+ * A row whose `value_column` is NULL is NOT an element: a relation field has one value per element, so a row with no value is not
+ * part of the answer (QAC-T-22: this is how `partners.kp_author_affiliations`, keyed by `result_kp_mqap_institution_id`, leaves out
+ * the partner rows that have no M-QAP match, which no equality `filter` can express).
+ */
 export interface RelationBinding {
   kind: 'relation';
   table: string;

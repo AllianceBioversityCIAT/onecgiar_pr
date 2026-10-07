@@ -23,6 +23,7 @@ import { ResultsKnowledgeProductMetadata } from '../../results/results-knowledge
 import { ResultsKnowledgeProductAuthor } from '../../results/results-knowledge-products/entities/results-knowledge-product-authors.entity';
 import { ResultsKnowledgeProductKeyword } from '../../results/results-knowledge-products/entities/results-knowledge-product-keywords.entity';
 import { ResultsKnowledgeProductAltmetric } from '../../results/results-knowledge-products/entities/results-knowledge-product-altmetrics.entity';
+import { ResultsKnowledgeProductInstitution } from '../../results/results-knowledge-products/entities/results-knowledge-product-institution.entity';
 import { ResultsKnowledgeProductFairScore } from '../../results/results-knowledge-products/entities/results-knowledge-product-fair-scores.entity';
 import { ResultInitiativeBudget } from '../../results/result_budget/entities/result_initiative_budget.entity';
 import { NonPooledProjectBudget } from '../../results/result_budget/entities/non_pooled_proyect_budget.entity';
@@ -77,6 +78,8 @@ export const CATALOG_SCOPE: EntityClass[] = [
   ResultsKnowledgeProductKeyword,
   ResultsKnowledgeProductAltmetric,
   ResultsKnowledgeProductFairScore,
+  // QAC-T-22: the M-QAP author-affiliation matches behind `partners.kp_author_affiliations`
+  ResultsKnowledgeProductInstitution,
   ResultInitiativeBudget,
   ResultInstitutionsBudget,
   NonPooledProjectBudget,
