@@ -221,6 +221,20 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Depends on:** QAC-T-17
 - **Verification:** qa-catalog suites; a test per conditional field; closed-list ids checked; service response saved to `tmp/qa-catalog-2026.json`.
 
+### QAC-T-19 — `required` follows the form in all Results sections (amendment 2026-10-07, option B) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** Sweep GI, Contributors & partners, Geo, Evidence, Policy change, Capacity sharing, Knowledge product and the existing Innovation use fields: every field/subfield the 2026 form marks required (incl. conditional) gets `required: true` / `required_when`, citing the form; `required_confirmed` stays true only where the live function also states it. Contract doc updated (what `required` means).
+- **Implements:** QAC-R-5 (amended)
+- **Depends on:** QAC-T-18
+
+### QAC-T-20 — Innovation use (Results) completed (amendment 2026-10-07) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** From prtest result 9755 (phase 36): the three investment tables (programs, W3/bilateral projects, partners) shared with innovation development; 2026 flags age_disaggregation_not_available, youth_split_applied, graduate_students; a mirror field for "Are you reporting the use of an innovation that has already been reported and quality assessed?" (+ ID result picker) in the innovation-use section, same stored value as `linked.*`; visible_when / required_when for every field per the form (option B) and validation_innovation_use_P25.
+- **Implements:** QAC-R-13, QAC-R-14, QAC-R-5 for Innovation use
+- **Depends on:** QAC-T-19
+
 ## 4. Dependency graph
 
 ```

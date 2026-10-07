@@ -125,7 +125,7 @@ The catalog MUST describe, per entry:
 
 ### QAC-R-5 — Required rules from the live validation
 
-- `required` MUST reflect the live P25 `validation_*` function definitions supplied by the user.
+- `required` MUST reflect what the 2026 **form** requires (owner decision 2026-10-07, option B: QA must show what the user had to fill in). A rule the live P25 `validation_*` function also states is marked `required_confirmed: true` (internal, not exposed); a form-only rule keeps `required_confirmed: false` and cites the form. (Was: `required` reflects only the live functions.)
 - A conditional requirement MUST be recorded as `required_when` data, not dropped and not reimplemented as code. Exception: subfields have no `required_when` in the approved model; their conditions stay recorded in the inventory until that is added (deferred with D1/D2; amended 2026-10-06, QAC-T-8 review).
 - A field whose rule was not confirmed against a supplied definition MUST be recorded as unconfirmed in the inventory, never silently `false`.
 
