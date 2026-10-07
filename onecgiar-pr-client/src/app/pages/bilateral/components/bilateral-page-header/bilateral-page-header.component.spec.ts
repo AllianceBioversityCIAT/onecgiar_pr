@@ -1035,4 +1035,28 @@ describe('BilateralPageHeaderComponent', () => {
       expect(navTabsEl).toBeTruthy();
     });
   });
+
+  describe('RRC-R-14 — rejection notice under the identity strip', () => {
+    beforeEach(() => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('variant', 'detail');
+    });
+
+    it('hosts the notice and requests the history when the result is Rejected', () => {
+      const http = TestBed.inject(HttpTestingController);
+      fixture.componentRef.setInput('noticeResultId', 9);
+      fixture.componentRef.setInput('noticeStatusId', 7);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="bilateral-rejection-notice"]')).toBeTruthy();
+      http.expectOne(req => req.url.endsWith('api/results/bilateral/9/review-history')).flush({ response: [] });
+    });
+
+    it('renders no notice at another status, and no header status pill is switched on by it', () => {
+      fixture.componentRef.setInput('noticeResultId', 9);
+      fixture.componentRef.setInput('noticeStatusId', 5);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="bilateral-rejection-notice"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="bilateral-status-badge"]')).toBeNull();
+    });
+  });
 });

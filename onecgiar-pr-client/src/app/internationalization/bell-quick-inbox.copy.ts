@@ -41,6 +41,8 @@ export const BELL_QUICK_INBOX_COPY = {
   /** BELL-T-10: card chips. */
   card: {
     requiresDecision: 'Requires decision',
+    /** `notifications/primary-review-not-accept` PRA-R-3: chip of a primary request card. */
+    needsYourReview: 'Needs your review',
     approved: 'Approved',
     declined: 'Declined',
     updateFallback: 'Update',

@@ -147,6 +147,12 @@ export class ShellTopbarComponent {
   /** Shown on the trigger. Mac reports `macOS`/`MacIntel`; everything else gets Ctrl. */
   readonly shortcutHint = /mac/i.test(navigator?.platform ?? navigator?.userAgent ?? '') ? '⌘K' : 'Ctrl K';
   notificationsOpen = signal(false);
+  /**
+   * quick/bell-popover-hidden: the bell popover is switched off — the button goes straight to the
+   * notifications inbox. The popover (template, tabs, inline decisions) is kept intact so a redesigned
+   * version can reuse it: set this to `true` to bring it back.
+   */
+  bellPopoverEnabled = false;
 
   readonly userMenuPositions: ConnectedPosition[] = [
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
@@ -260,6 +266,12 @@ export class ShellTopbarComponent {
   }
 
   /** BELL-R-4: refresh on every open, never awaited — the cached rows render meanwhile. */
+  /** Bell click: the inbox while the popover is hidden (`bellPopoverEnabled`), else the popover. */
+  onNotificationsClick(): void {
+    if (this.bellPopoverEnabled) this.toggleNotifications();
+    else this.goToNotifications();
+  }
+
   toggleNotifications(): void {
     const opening = !this.notificationsOpen();
     this.notificationsOpen.set(opening);

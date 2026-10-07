@@ -7,7 +7,7 @@ export const BILATERAL_PRIMARY_ASSIGNMENT_COPY = {
   banner: {
     /** PSR-R-15: "Awaiting {SP code} acceptance as primary Science Program". */
     pending: (programCode: string): string =>
-      `Awaiting ${programCode} acceptance as primary Science Program`,
+      `${programCode} will review this result when you submit it for review`,
     /** PSR-R-15: "Declined by {SP code}. Pick another primary Science Program". */
     sentBack: (programCode: string): string =>
       `Declined by ${programCode}. Pick another primary Science Program`,
@@ -30,11 +30,17 @@ export const BILATERAL_PRIMARY_ASSIGNMENT_COPY = {
      * but not yet sent (create / Project Information save). Submit is what sends it.
      */
     draft: (programCode: string): string =>
-      `${programCode} will be asked to be the primary Science Program when you submit for review`,
+      `${programCode} will review this result when you submit it for review`,
   },
   /** design.md §6.3 — shown next to the banner while the result has no owner. */
   submitBlockedReason:
     'Submit for review is unavailable until a primary Science Program accepts.',
+  /**
+   * `bilateral/rejected-result-correction` RRC-R-11 (AC21): a Rejected result whose lead project is
+   * allocated to a single SP has no alternative to pick — say so instead of an empty selector.
+   */
+  singleAllocationNote:
+    'This project is allocated to a single Science Program, so there is no alternative to choose.',
   /** Marks a declined SP in the picker; it stays selectable (DD-8 — re-picking starts a new round). */
   declinedOptionSuffix: '(declined)',
   /** design.md §6.3 — the ToC section's notice while the result has no owner. */

@@ -41,6 +41,17 @@ describe('NotificationNavigationService', () => {
     );
   });
 
+  it('PRA-R-3: a primary request row resolves the requested SP code even when the result has no owner yet', () => {
+    expect(
+      service.reviewRequestUrl({
+        request_type: 'primary',
+        result_id: 91,
+        obj_shared_inititiative: { official_code: 'SP12' },
+        obj_result: { result_code: 9737, obj_result_by_initiatives: [] }
+      })
+    ).toBe('/result-framework-reporting/entity-details/SP12/bilateral-review?reviewResult=9737&reviewResultId=91');
+  });
+
   it('returns null for a review request without an SP code', () => {
     expect(service.reviewRequestUrl({ result_id: 91, obj_result: { result_code: 9544 } })).toBeNull();
   });

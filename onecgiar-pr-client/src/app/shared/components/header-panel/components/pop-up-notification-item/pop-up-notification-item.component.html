@@ -26,7 +26,7 @@
     <span class="sr-only" data-testid="bell-unread-label">{{ copy.card.unreadRowPrefix }}: </span>
   }
   @if (!!notification?.notification_id) {
-    @let officialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
+    @let officialCode = notification?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code;
     @let textParts = textPartsOf(notification);
 
     <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
@@ -77,6 +77,16 @@
       }
     </p>
 
+    <!-- RRC-T-9 (RRC-R-13): reason of a rejection; null for every other type and for legacy rows. -->
+    @let rejectionReason = rejectionReasonOf(notification);
+    @if (rejectionReason) {
+      <p
+        class="m-0 mt-1 line-clamp-2 break-words text-[12px] leading-[1.45] text-[var(--pr-text-secondary)]"
+        data-testid="bell-rejection-reason">
+        <span class="font-semibold">{{ rejectionReasonLabel }}</span> {{ rejectionReason }}
+      </p>
+    }
+
   } @else {
     <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
       @if (programCode) {
@@ -86,13 +96,18 @@
         hlmBadge
         variant="secondary"
         data-testid="bell-status-chip"
-        class="!bg-[var(--pr-status-in-progress-bg)] !text-[10px] !font-semibold !uppercase !text-[var(--pr-status-in-progress-fg)]">{{ copy.card.requiresDecision }}</span>
+        class="!bg-[var(--pr-status-in-progress-bg)] !text-[10px] !font-semibold !uppercase !text-[var(--pr-status-in-progress-fg)]">{{ statusChipLabel }}</span>
       <span class="ml-auto text-[11px] text-[var(--pr-text-subtle)]" data-testid="bell-time">{{ shortAge(notification?.requested_date) }}</span>
     </div>
 
     <p
       class="m-0 line-clamp-2 text-[12px] leading-[1.45]"
       [class]="fresh ? 'font-bold text-[var(--pr-text-heading)]' : 'font-normal text-[var(--pr-text-secondary)] [&_b]:font-normal'">
+      @if (notification?.request_type === 'primary') {
+        @let primary = primaryRequestParts(notification);
+        <b>{{ primary.center }}</b> {{ primary.verb }} <b>{{ primary.code }}</b> {{ primary.tail }}
+        <span data-testid="bell-result-ref" [class]="fresh ? 'underline text-[var(--pr-color-black)]' : 'underline'">{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</span>
+      } @else {
       <b>
         {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
         {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
@@ -112,13 +127,14 @@
       </span>
 
       <b *ngIf="notification?.is_map_to_toc"> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+      }
     </p>
   }
 </a>
 
   @if (isDecisionRow) {
     <div class="mt-2 flex flex-col gap-2" data-testid="bell-decision-actions" role="group" [attr.aria-label]="copy.actions.groupAriaLabel">
-      <div class="grid grid-cols-2 gap-2" data-testid="bell-decision-buttons">
+      <div class="grid gap-2" [class.grid-cols-2]="!isPrimaryRow" data-testid="bell-decision-buttons">
         <span class="flex" [hlmTooltip]="actionTooltip" [tooltipDisabled]="!actionTooltip">
           <button
             hlmBtn
@@ -134,6 +150,7 @@
             {{ acceptButtonText }}
           </button>
         </span>
+        @if (!isPrimaryRow) {
         <span class="flex" [hlmTooltip]="actionTooltip" [tooltipDisabled]="!actionTooltip">
           <button
             hlmBtn
@@ -148,6 +165,7 @@
             {{ declineButtonText }}
           </button>
         </span>
+        }
       </div>
 
       <p class="m-0 text-[11px] text-[var(--pr-text-subtle)]" aria-live="polite" data-testid="bell-accept-hint">

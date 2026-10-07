@@ -82,6 +82,10 @@ export class NotificationService {
    *   to tell which link the row is about. Storing only the suffix keeps it usable by the client,
    *   which composes `[prefix, identity, suffix]` on its own. Every other type leaves it
    *   undefined and keeps building its copy at read time.
+   * @param reviewHistoryId `RRC-R-13`/`RRC-DD-6`: the `result_review_history` row this notification
+   *   is about (a bilateral Reject). Stored as `review_history_id` on every row written here so the
+   *   readout can join THAT decision's justification. It never reaches the text builders — the
+   *   wording of every type is unchanged (`RRC-R-16`). Omitted -> the column stays NULL.
    */
   async emitResultNotification(
     notificationLevel: NotificationLevelEnum,
@@ -90,6 +94,7 @@ export class NotificationService {
     emmiterUser: number,
     resultId: number,
     renderedText?: string,
+    reviewHistoryId?: number,
   ) {
     try {
       const notificationLevelData =
@@ -124,6 +129,7 @@ export class NotificationService {
         notification_level: notificationLevelData.notifications_level_id,
         notification_type: notificationTypeData.notifications_type_id,
         ...(renderedText ? { text: renderedText } : {}),
+        ...(reviewHistoryId ? { review_history_id: reviewHistoryId } : {}),
       }));
 
       if (notificationsToPersist.length) {
@@ -755,8 +761,8 @@ export class NotificationService {
       ] = await Promise.all([
         runHistory
           ? this._notificationRepository.find({
-              select: this.getNotificattionSelect(),
-              relations: this.getNotificationRelations(),
+              select: this.getNotificationReadoutSelect(),
+              relations: this.getNotificationReadoutRelations(),
               where: applyKeysetCursor(
                 {
                   target_user: user.id,
@@ -779,8 +785,8 @@ export class NotificationService {
 
         runPending
           ? this._notificationRepository.find({
-              select: this.getNotificattionSelect(),
-              relations: this.getNotificationRelations(),
+              select: this.getNotificationReadoutSelect(),
+              relations: this.getNotificationReadoutRelations(),
               where: {
                 target_user: user.id,
                 read: false,
@@ -922,8 +928,8 @@ export class NotificationService {
 
       const notificationsUpdates = this.mapNotificationResultFields(
         await this._notificationRepository.find({
-          select: this.getNotificattionSelect(),
-          relations: this.getNotificationRelations(),
+          select: this.getNotificationReadoutSelect(),
+          relations: this.getNotificationReadoutRelations(),
           where: whereConditions,
         }),
       );
@@ -1005,10 +1011,73 @@ export class NotificationService {
           obj_result_by_project: (
             notification.obj_result.obj_result_by_project ?? []
           ).filter((link: any) => link.is_active),
+          // `RSF-DD-3`: the relation `where` stays as is (it is also the existence condition, so
+          // adding `is_active` there would hide every notification of an ownerless result); the
+          // inactive rows are dropped here, on the loaded rows. An ownerless result keeps its
+          // notification, with an empty list.
+          ...(Array.isArray(notification.obj_result.obj_result_by_initiatives)
+            ? {
+                obj_result_by_initiatives:
+                  notification.obj_result.obj_result_by_initiatives.filter(
+                    (initiative: any) => initiative?.is_active,
+                  ),
+              }
+            : {}),
         };
       }
-      return notification;
+      return this.withReviewEntryFields(notification);
     });
+  }
+
+  /**
+   * `RRC-R-13`/`RRC-DD-6` — a Rejected row gains `has_review_entry` and `review_comment`, read from
+   * the `result_review_history` row its own `review_history_id` points at (the LEFT JOIN requested
+   * through {@link getNotificationReadoutRelations}). `review_history_id` NULL (a notification sent
+   * before the link existed, or whose history row was deleted) -> no joined row -> `false` / `null`,
+   * which the client reads as "show no reason line", never as "no justification was recorded".
+   * `review_program_code` (`RRC-T-10-F1`) is the official code of that row's `initiative_id` (the SP that
+   * recorded the rejection), or `null` when there is no linked row or the row has no SP.
+   * Every other type is returned untouched (`RRC-R-16`). The joined object is not passed on.
+   */
+  private withReviewEntryFields<T>(notification: T): T {
+    const row = notification as any;
+    if (
+      row?.obj_notification_type?.type !==
+      NotificationTypeEnum.BILATERAL_RESULT_REJECTED
+    ) {
+      return notification;
+    }
+    const { obj_review_history: linkedEntry, ...rest } = row;
+    return {
+      ...rest,
+      has_review_entry: Boolean(linkedEntry),
+      review_comment: linkedEntry?.comment ?? null,
+      // `RRC-T-10-F1`: the SP that recorded THIS rejection, not the result's current primary.
+      review_program_code: linkedEntry?.obj_initiative?.official_code ?? null,
+    } as T;
+  }
+
+  /**
+   * `getNotificattionSelect()` plus the linked `result_review_history` row (id + comment only), for
+   * the readouts that return Rejected rows. Kept apart from the base shape so the socket push in
+   * `emitResultNotification` does not pay for a join it never uses.
+   */
+  private getNotificationReadoutSelect() {
+    return {
+      ...this.getNotificattionSelect(),
+      obj_review_history: {
+        id: true,
+        comment: true,
+        obj_initiative: { id: true, official_code: true },
+      },
+    };
+  }
+
+  private getNotificationReadoutRelations() {
+    return {
+      ...this.getNotificationRelations(),
+      obj_review_history: { obj_initiative: true },
+    };
   }
 
   private getNotificattionSelect() {
@@ -1040,6 +1109,10 @@ export class NotificationService {
         source: true,
         obj_result_by_initiatives: {
           initiative_id: true,
+          // `RSF-DD-3`: selected so the loaded rows can be filtered after loading
+          // (`mapNotificationResultFields`) and so `resolveOwnerProgramCode` can tell the owner.
+          initiative_role_id: true,
+          is_active: true,
           obj_initiative: {
             id: true,
             official_code: true,
@@ -1412,12 +1485,14 @@ export class NotificationService {
     const initiatives = notification?.obj_result?.obj_result_by_initiatives;
     if (!Array.isArray(initiatives)) return undefined;
 
-    for (const initiative of initiatives) {
-      const officialCode = initiative?.obj_initiative?.official_code;
-      if (officialCode) return officialCode;
-    }
+    // `RSF-R-3`: only an ACTIVE role-1 row is the owner. This query loads every initiative of the
+    // result (no relation `where`), so the role and the activity flag are both checked here.
+    const owner = initiatives.find(
+      (initiative) =>
+        Number(initiative?.initiative_role_id) === 1 && initiative?.is_active,
+    );
 
-    return undefined;
+    return owner?.obj_initiative?.official_code || undefined;
   }
 }
 

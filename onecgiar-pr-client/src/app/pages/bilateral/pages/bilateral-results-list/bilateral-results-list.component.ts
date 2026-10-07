@@ -23,6 +23,12 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ResultDeletionService } from '../../../result-framework-reporting/services/result-deletion.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import {
+  ReviewHistoryEntry,
+  isRejectAction,
+  sortReviewHistoryNewestFirst,
+} from '../../services/bilateral-review-history.interface';
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../internationalization/bilateral-rejection-notice.copy';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
@@ -1528,16 +1534,23 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     return Number(result?.status_id) === REJECTED_STATUS_ID;
   }
 
+  /**
+   * `RRC-R-14` / `RRC-R-15` — the history stays reachable after the rejection: a Rejected (7) result
+   * that was resubmitted is Pending review (5), and an approved one is Approved (6). The list payload
+   * carries no "was ever rejected" flag, so the trigger is offered at those three statuses and the
+   * modal's empty state covers a result that never was. One history request, only on click.
+   */
+  hasReviewHistory(result: BilateralCenterResult): boolean {
+    return REVIEW_HISTORY_STATUS_IDS.includes(Number(result?.status_id));
+  }
+
   /** P2-3157 AC3 — the row deep-linked from the notification. */
   isFocused(result: BilateralCenterResult): boolean {
     const focused = this.focusedResultCode();
     return !!focused && String(result?.result_code) === focused;
   }
 
-  /**
-   * P2-3157 AC4 — opens the review trail for a rejected result. The Science Program's justification
-   * is the `comment` of the most recent REJECTED entry.
-   */
+  /** P2-3157 AC4 / RRC-R-15 — opens the full rejection + resubmission trail of a result. */
   openJustification(result: BilateralCenterResult): void {
     this.justificationResultCode.set(String(result?.result_code ?? ''));
     this.justificationEntries.set([]);
@@ -1562,10 +1575,21 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.justificationEntries.set([]);
   }
 
-  /** Most recent rejection entry, which is what the centre needs to act on. */
-  readonly rejectionEntry = computed(() =>
-    this.justificationEntries().find(entry => entry?.action === 'REJECTED' || entry?.action === 'REJECT'),
+  /**
+   * `RRC-R-15` — every rejection and resubmission of the result, oldest first. `UPDATE` rows are
+   * hidden; `REJECT` and the legacy `REJECTED` both count as a rejection.
+   */
+  readonly historyEntries = computed(() =>
+    sortReviewHistoryNewestFirst(this.justificationEntries())
+      .filter(entry => isRejectAction(entry?.action) || entry?.action === 'RESUBMIT')
+      .reverse(),
   );
+
+  readonly historyCopy = BILATERAL_REJECTION_NOTICE_COPY;
+
+  isResubmit(entry: ReviewHistoryEntry): boolean {
+    return entry?.action === 'RESUBMIT';
+  }
 
   reviewerName(entry: ReviewHistoryEntry): string {
     return `${entry?.first_name ?? ''} ${entry?.last_name ?? ''}`.trim() || entry?.email || 'the Science Program';
@@ -1574,16 +1598,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
 
 /** `result_status.result_status_id` for Rejected — see shared/constants/result-status.enum.ts on the server. */
 const REJECTED_STATUS_ID = 7;
+/** Pending review (5) and Approved (6) — where a previously rejected result can sit. */
+const REVIEW_HISTORY_STATUS_IDS: readonly number[] = [5, 6, REJECTED_STATUS_ID];
 
-/** One row of `result_review_history`, as returned by GET /api/results/bilateral/:id/review-history. */
-export interface ReviewHistoryEntry {
-  id: number;
-  result_id: number;
-  action: string;
-  comment: string | null;
-  created_at: string;
-  created_by: number;
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-}
+export type { ReviewHistoryEntry };

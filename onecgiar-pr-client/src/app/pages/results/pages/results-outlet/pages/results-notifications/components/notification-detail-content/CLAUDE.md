@@ -116,3 +116,7 @@ condensed): APPROVAL CHAIN section (`chain`/`retryChain`); header restyle (`titl
 alongside `h2[id]` NAME (closes attempt-1's wrong-element FAIL). Extracted from
 `contribution-request-drawer` (CRD-T-1..T-4, PSR-T-8/T-9, NOTIF-T-4/T-5/T-14, PDR-T-4 history
 preserved in the shell's own `CLAUDE.md`); this file is the sole owner of the body/footer contract.
+
+- `showDecline` input (default `true`, `PRA-R-3`): `false` hides the `decide`-footer Decline button. `notification-item` passes `!isPrimaryRequest`; the confirm-decline footer is unchanged.
+
+**Verified:** 2026-10-07 · qa-development-2026-ss · PRA-T-2 (`notifications/primary-review-not-accept`): added the `showDecline` input.

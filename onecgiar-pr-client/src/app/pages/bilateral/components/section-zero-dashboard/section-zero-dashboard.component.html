@@ -96,7 +96,15 @@
         @if (assignmentPrimary(); as primarySp) {
           <div class="bp-meta-field">
             <dt class="bp-meta-field-label">Program</dt>
-            @if (canEditAssignment()) {
+            @if (singleAllocationLocked()) {
+              <!-- RRC-R-11: one allocated SP at Rejected — read-only chip + note, no empty dropdown. -->
+              <dd class="bp-meta-field-value flex flex-col items-start gap-1" data-testid="bp-single-allocation">
+                <span hlmBadge variant="secondary" data-testid="bp-single-allocation-chip" [title]="primarySp.spName">
+                  {{ primarySp.programCode }} — {{ primarySp.spName || primarySp.spShortName }}
+                </span>
+                <p class="bp-primary-help" data-testid="bp-single-allocation-note" role="note">{{ singleAllocationNote }}</p>
+              </dd>
+            } @else if (canEditAssignment()) {
               <dd class="bp-meta-field-value bp-primary-selector-wrap">
                 <button
                   type="button"

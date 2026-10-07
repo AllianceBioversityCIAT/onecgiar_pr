@@ -110,6 +110,8 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   PATCH (`justification` only for a primary decline, `PDR-T-4`).
 
 ## PDR-T-4: primary Decline asks for a justification (`notifications/primary-decline-rejects-result`)
+
+> **SUPERSEDED for the UI by `PRA-T-2`: no primary Decline entry point is reachable any more (row button hidden, drawer `[showDecline]=false`, `?action=decline` link only consumed). `showPrimaryDeclineDialog`, `onDeclineClick()`'s primary branch and `onPrimaryDeclineConfirm()` stay as dead code (design §8.1). Kept for history.**
 Both primary Decline entry points — the row button (`onDeclineClick()`) and the drawer footer
 (`onDrawerDeclineClicked()`) — open `app-primary-decline-justification-dialog`
 (`showPrimaryDeclineDialog`, PDR-T-3) instead of today's yes/no popups, **only** when
@@ -220,6 +222,8 @@ Three new builders feed the content's new inputs, all read by the template in pl
   side effects.
 
 ## PSR-T-8: primary / bilateral contributor rows + Center notices (`bilateral-primary-sp-request`)
+
+> **Primary-row bullets below are SUPERSEDED by `PRA-T-2` (see that section at the end): the primary row button is now "Review result", there is no primary Decline, and the chip reads "Needs your review". Kept for history.**
 Two new `source:'request'` row variants, on top of the pre-existing "Contribution request"
 (W1/W2 + everything else, unchanged, `PSR-DD-10`) and the 3 new Center-facing notices (plain
 `Notification` rows, rendered through the existing `isUpdateSource` branch — no new template
@@ -583,3 +587,18 @@ contract: `acceptLabel`, `showAlignSlot`, `requestKind`, `leadCode`/`suffix`), a
 below, which still stands for the wording/chip-sizing fixes.
 
 **Prior verification:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-16 ("Declined by" wording + chip font-size/weight/gap fixes, ad-hoc user style feedback; supersedes NOTIF-T-15's stamp above which still stands, just re-stamped here)
+
+## RRC-T-9: reason line on rejection update rows
+`rejectionReasonLine` (getter) delegates to `getRejectionReasonLine()` in `notification-type.constants.ts`
+for `isUpdateSource` rows only: Rejected + `has_review_entry` shows "Reason: <comment>" (2-line clamp) or the
+shared fallback; legacy/other types render no line. Copy in `bilateral-rejection-notice.copy.ts`.
+
+**Verified:** 2026-10-06 · qa-development-2026-ss · RRC-T-9 (`bilateral/rejected-result-correction`): reason line added under the update-row sentence; no other row behaviour changed.
+
+## PRA-T-2: primary rows say "Review result", never Decline (`notifications/primary-review-not-accept`)
+- `onAcceptContribution()` / `onDrawerAccept()` call `reviewPrimaryResult()` for a primary row (no more `acceptOrReject(true)` for it): the existing accept PATCH, then on success **or HTTP 409** `NotificationNavigationService.completePrimaryReview(row, notifyLater)` - status 5 navigates to `reviewRequestUrl(row)` (review drawer), anything else shows `copy.notificationItem.primaryNotifyLater` and does NOT navigate. Other errors keep the generic "Error when requesting" toast. No confirm step, no "already answered" toast.
+- Decline is gone for primary: the row's Decline button is not rendered (`@if (!isPrimaryRequest)`), the drawer gets `[showDecline]="!isPrimaryRequest"`, and `runAutoAction()` ignores `?action=decline` for a primary row (consumes the param only, like accept under BELL-T-7).
+- Chip and `detailTitle()` read "Needs your review" (`primaryRequestChip`); the Accept label is `footer.reviewResult` via `acceptLabelFor`.
+- SP code for the URL comes from `obj_shared_inititiative` on a primary row (an ownerless legacy result has no initiative yet).
+
+**Verified:** 2026-10-07 · qa-development-2026-ss · PRA-T-2 attempt 2 (`notifications/primary-review-not-accept`): `reviewPrimaryResult()`, Decline removed for primary (row, drawer, deep link), chip "Needs your review". Supersedes the primary bullets of PSR-T-8 and PDR-T-4 above.

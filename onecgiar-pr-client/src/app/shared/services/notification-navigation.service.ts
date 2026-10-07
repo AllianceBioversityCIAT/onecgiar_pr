@@ -4,6 +4,7 @@ import { Observable, catchError, map, of, timeout } from 'rxjs';
 import { getProgramCode } from '../constants/notification-type.constants';
 import { bilateralRouteToUrl, buildCenterEditorRoute, buildReviewDrawerRoute } from '../routing/bilateral-result-open-route.util';
 import { BilateralApiService } from './api/bilateral-api.service';
+import { primaryReviewTarget } from '../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-decision';
 import { CentersService } from './global/centers.service';
 
 /** Navigation side (bell, list) gives up on the lead-center lookup after this and uses the fallback URL. */
@@ -21,10 +22,24 @@ export class NotificationNavigationService {
 
   /** Review drawer URL for "submitted for your review"; null when the payload has no SP code. */
   reviewRequestUrl(notification: any): string | null {
-    const programCode = getProgramCode(notification);
+    // A primary request row (PRA-R-3) names the requested SP on the row itself; a legacy ownerless
+    // result has no `obj_result_by_initiatives` yet, so `getProgramCode` alone would find nothing.
+    const requestedCode = notification?.request_type === 'primary' ? notification?.obj_shared_inititiative?.official_code : null;
+    const programCode = requestedCode || getProgramCode(notification);
     if (!programCode) return null;
     const resultCode = notification?.obj_result?.result_code;
-    return bilateralRouteToUrl(buildReviewDrawerRoute(programCode, resultCode, notification?.result_id));
+    return bilateralRouteToUrl(buildReviewDrawerRoute(programCode, resultCode, notification?.result_id ?? notification?.obj_result?.id));
+  }
+
+  /**
+   * PRA-R-3 / design §8.3: what happens once a primary row's accept settled (success or 409), shared by
+   * the inbox and the bell. Pending Review opens the review drawer; otherwise `notifyLater` runs
+   * (the "you will be notified" toast) and nothing navigates.
+   */
+  completePrimaryReview(notification: any, notifyLater: () => void): void {
+    const url = primaryReviewTarget(notification) === 'review-drawer' ? this.reviewRequestUrl(notification) : null;
+    if (url) void this.router.navigateByUrl(url);
+    else if (primaryReviewTarget(notification) !== 'review-drawer') notifyLater();
   }
 
   /**

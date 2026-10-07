@@ -1522,6 +1522,32 @@ describe('ResultsNotificationsService', () => {
         expect(service.bellCount()).toBe(2);
       });
 
+      it('PRA-R-3 acceptPrimaryForReview: sends the accept body, removes the row, refreshes the bell and never toasts', async () => {
+        const bellSpy = jest.spyOn(service, 'refreshBell');
+        setBellEndpoints([decisionRow(2)], [updateRow(1)]);
+        await service.acceptPrimaryForReview(service.bellItems().find(i => i.share_result_request_id === 1)!);
+        const [body] = mockApiService.resultsSE.PATCH_updateRequest.mock.calls[0];
+        expect(body.request_status_id).toBe(2);
+        expect('kind' in body.result_request).toBe(false);
+        expect(service.bellReceived().map(r => r.share_result_request_id)).toEqual([2]);
+        expect(bellSpy).toHaveBeenCalled();
+        expect(mockApiService.alertsFe.show).not.toHaveBeenCalled();
+      });
+
+      it('PRA-R-3 acceptPrimaryForReview: a 409 resolves as success with NO already-answered toast', async () => {
+        mockApiService.resultsSE.PATCH_updateRequest = jest.fn(() => throwError(() => ({ status: 409 })));
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        await expect(service.acceptPrimaryForReview(service.bellItems()[0])).resolves.toBeUndefined();
+        expect(mockApiService.alertsFe.show).not.toHaveBeenCalled();
+      });
+
+      it('PRA-R-3 acceptPrimaryForReview: a 500 rejects and leaves the row in place', async () => {
+        mockApiService.resultsSE.PATCH_updateRequest = jest.fn(() => throwError(() => ({ status: 500 })));
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        await expect(service.acceptPrimaryForReview(service.bellItems()[0])).rejects.toEqual({ status: 500 });
+        expect(service.bellReceived().length).toBe(2);
+      });
+
       it('on 500 rethrows, leaves the count and row unchanged, and does not refresh', async () => {
         mockApiService.resultsSE.PATCH_updateRequest = jest.fn(() => throwError(() => ({ status: 500 })));
         jest.spyOn(console, 'error').mockImplementation(() => {});

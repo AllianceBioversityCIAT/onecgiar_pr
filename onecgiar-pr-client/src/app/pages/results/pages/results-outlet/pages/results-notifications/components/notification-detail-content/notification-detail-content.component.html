@@ -242,6 +242,7 @@
         <p id="crd-accept-helper" data-testid="crd-accept-helper" class="text-[13px] leading-[1.5] text-ink-secondary">{{ acceptHelper() }}</p>
       }
       <div class="flex justify-end gap-3">
+        @if (showDecline()) {
         <button
           hlmBtn
           variant="outline"
@@ -257,6 +258,7 @@
           }
           {{ copy.footer.decline }}
         </button>
+        }
         <button
           hlmBtn
           variant="brand"

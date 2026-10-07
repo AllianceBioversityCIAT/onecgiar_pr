@@ -41,6 +41,8 @@
           }
         </div>
       }
+      <!-- RRC-R-14: current rejection reason, only at status 7. -->
+      <app-bilateral-rejection-notice [statusId]="noticeStatusId()" [resultId]="noticeResultId()" />
     </header>
   } @else {
   <div

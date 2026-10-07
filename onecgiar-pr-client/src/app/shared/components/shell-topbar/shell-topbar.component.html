@@ -67,10 +67,10 @@
           cdkOverlayOrigin
           #notifTrigger="cdkOverlayOrigin"
           [attr.aria-label]="bellButtonLabel()"
-          aria-haspopup="true"
-          [attr.aria-expanded]="notificationsOpen()"
+          [attr.aria-haspopup]="bellPopoverEnabled ? 'true' : null"
+          [attr.aria-expanded]="bellPopoverEnabled ? notificationsOpen() : null"
           [class.pr-topbar-icon-btn--active]="notificationsOpen() || isInNotificationsRoute()"
-          (click)="toggleNotifications()">
+          (click)="onNotificationsClick()">
           <ng-icon name="lucideBell" class="text-[16px]" />
           <span>Notifications</span>
           @if (bellCount() > 0) {
@@ -167,7 +167,7 @@
     </div>
   </ng-template>
 
-  <!-- Notifications popover -->
+  <!-- Notifications popover — hidden (quick/bell-popover-hidden): unreachable while `bellPopoverEnabled` is false; kept for reuse. -->
   <ng-template
     cdkConnectedOverlay
     #bellOverlay="cdkConnectedOverlay"

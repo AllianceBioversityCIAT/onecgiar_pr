@@ -84,6 +84,13 @@
           }
         </p>
 
+        <!-- RRC-T-9 (RRC-R-13): reason of a rejection; null for every other type and legacy rows. -->
+        @if (rejectionReasonLine) {
+          <p class="m-0 mt-1 line-clamp-2 break-words text-[12px] leading-[1.45] text-[var(--pr-text-secondary)]" data-testid="notification-rejection-reason">
+            <span class="font-semibold">{{ rejectionReasonLabel }}</span> {{ rejectionReasonLine }}
+          </p>
+        }
+
         <!-- NOTIF-T-15: line 2 — badges + timestamp, stacked BELOW the message (previously siblings
              of `.notification_content_body` at the `.notification_content` row level, laid out
              inline with the avatar instead of below the message). -->
@@ -285,6 +292,7 @@
               [style]="{ whiteSpace: 'nowrap' }"
               tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
+            @if (!isPrimaryRequest) {
             <app-pr-button
               data-testid="decline-contribution-btn"
               class="notification_decline_btn"
@@ -295,6 +303,7 @@
               [verticalMargin]="0"
               [style]="{ whiteSpace: 'nowrap' }"
               [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+            }
           </div>
         }
       </div>
@@ -826,6 +835,7 @@
     [chain]="chainState.status === 'ok' ? { state: 'ok', data: chainState.data } : { state: chainState.status }"
     [reviewRows]="drawerReviewRowsForMode()"
     [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
+    [showDecline]="!isPrimaryRequest"
     [declineDisabled]="requestingAccept || requestingReject"
     [acceptBusy]="requestingAccept"
     [declineBusy]="requestingReject"

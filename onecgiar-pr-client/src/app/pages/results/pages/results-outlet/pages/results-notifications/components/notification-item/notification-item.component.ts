@@ -1,3 +1,4 @@
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-rejection-notice.copy';
 import {
   Component,
   ElementRef,
@@ -37,6 +38,7 @@ import {
   isBilateralReviewNotification,
   parseCenterReportedProjectText,
   NotificationType,
+  getRejectionReasonLine,
   type AiJobNotificationParts,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
@@ -369,7 +371,8 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
         // mapping (`tocReview`) and whose own Accept (`onDrawerAccept`) is the user's click. Opening
         // never PATCHes. A primary request only consumes the param (T-7).
         else if (this.notification?.is_map_to_toc && !this.isPrimaryRequest) this.openDrawer('details');
-      } else if (action === 'decline') this.onDeclineClick();
+      } else if (action === 'decline' && !this.isPrimaryRequest) this.onDeclineClick();
+      // PRA-R-3: a primary request has no Decline, so a `?action=decline` link only consumes the param.
     }
 
     queueMicrotask(() => this.autoActionConsumed.emit());
@@ -571,6 +574,13 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   get updateTextParts(): NotificationTextParts {
     return getResultNotificationTextParts(this.notification);
   }
+
+  /** RRC-T-9 (RRC-R-13): the "Reason" line of a rejection update row; null for every other row. */
+  get rejectionReasonLine(): string | null {
+    return this.isUpdateSource ? getRejectionReasonLine(this.notification) : null;
+  }
+
+  readonly rejectionReasonLabel = BILATERAL_REJECTION_NOTICE_COPY.notificationReasonLabel;
 
   /** A finished AI job has no result behind it: no result link, no drawer, just its sentence. */
   get aiJobParts(): AiJobNotificationParts | null {
@@ -871,7 +881,12 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     // no prompt, no mapping step, no `tocInitiative` seed. It is `is_map_to_toc: false` on the
     // server (design.md §3.1), so without this branch it would fall into `acceptsWithoutToc` (today
     // false for it) or, worse, the legacy modal-first flow via `mapAndAccept()`.
-    if (this.notification?.is_map_to_toc || this.isPrimaryRequest) {
+    if (this.isPrimaryRequest) {
+      this.reviewPrimaryResult();
+      return;
+    }
+
+    if (this.notification?.is_map_to_toc) {
       this.acceptOrReject(true);
       return;
     }
@@ -1134,7 +1149,12 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     // PSR-T-8 (carried forward-pointer, PSR-T-9): a primary request's drawer Accept sends the same
     // inert ToC payload as the ToC-carried path — never `acceptOrReject(true, true)`, and never the
     // legacy `mapAndAccept()` fallback at the bottom of this method.
-    if (this.notification?.is_map_to_toc || this.isPrimaryRequest) {
+    if (this.isPrimaryRequest) {
+      this.reviewPrimaryResult();
+      return;
+    }
+
+    if (this.notification?.is_map_to_toc) {
       this.acceptOrReject(true);
       return;
     }
@@ -1613,6 +1633,52 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
+  }
+
+  /**
+   * `notifications/primary-review-not-accept` PRA-R-3 / PRA-DD-5: a primary row's single "Review result"
+   * action. It still sends the existing accept PATCH (a legacy ownerless result cannot be reviewed
+   * without an owner), then — on success OR a 409 (the Center already submitted and closed the row) —
+   * opens the review drawer (Pending Review) or tells the SP it will be notified (Editing). Any other
+   * error keeps the generic error toast. Never shows a confirm step or the "already answered" toast.
+   */
+  private reviewPrimaryResult() {
+    if (this.invalidateRequest()) return;
+
+    const body = buildDecisionBody(this.notification, true);
+    const row = this.notification;
+    this.requestingAccept = true;
+
+    const settle = () =>
+      this.notificationNavigation.completePrimaryReview(row, () =>
+        this.api.alertsFe.show({
+          id: 'noti',
+          title: this.copy.notificationItem.primaryNotifyLater,
+          status: 'success'
+        })
+      );
+
+    this.api.resultsSE
+      .PATCH_updateRequest(body, this.isP25Request)
+      .pipe(
+        finalize(() => {
+          this.closeDrawer();
+          this.requestingAccept = false;
+          this.requestingReject = false;
+          this.requestEvent.emit();
+        })
+      )
+      .subscribe({
+        next: () => settle(),
+        error: err => {
+          console.error(err);
+          if (err?.status === 409) {
+            settle();
+            return;
+          }
+          this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+        }
+      });
   }
 
   acceptOrReject(isAccept: boolean, withTocMapping = false, justification?: string) {

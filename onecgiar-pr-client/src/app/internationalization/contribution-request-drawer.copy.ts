@@ -151,6 +151,8 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
      * pre-existing caller that never sets `acceptLabel` keeps seeing `acceptContribution`).
      */
     acceptAsPrimary: 'Accept as primary',
+    /** `notifications/primary-review-not-accept` PRA-R-3: the primary request row's one action (replaces `acceptAsPrimary` at runtime). */
+    reviewResult: 'Review result',
     /**
      * PSR-T-9 (design.md §6.1 "Bilateral contributor request"): the plain "Accept" label for a
      * bilateral contributor request row — distinct from `acceptContribution`'s "Accept contribution"
@@ -187,7 +189,9 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
      * the row and the drawer can never say something different about the same request (PSR-T-8
      * task brief).
      */
-    primaryRequestChip: 'Primary program request',
+    primaryRequestChip: 'Needs your review',
+    /** PRA-R-3: toast when the SP answers a primary request while the result is still Editing. */
+    primaryNotifyLater: 'You are now the primary Science Program. You will be notified when the Center submits it for review.',
     /**
      * PSR-T-8 (design.md §6.1 "Bilateral contributor request" row, PSR-R-10): chip text for a
      * bilateral (`source_name: 'W3/Bilaterals'`) contribution request — distinct from the plain

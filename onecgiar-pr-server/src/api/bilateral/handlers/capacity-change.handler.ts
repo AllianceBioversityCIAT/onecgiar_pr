@@ -7,11 +7,24 @@ import {
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
+  HandlerResolveContext,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultsCapacityDevelopmentsRepository } from '../../results/summary/repositories/results-capacity-developments.repository';
 import { CapdevsTermRepository } from '../../results/capdevs-terms/capdevs-terms.repository';
 import { CapdevsDeliveryMethodRepository } from '../../results/capdevs-delivery-methods/capdevs-delivery-methods.repository';
+
+/** What `resolveAndValidate` hands `afterCreate` (RSB-T-3). */
+interface ResolvedCapacityChange {
+  capacityData: {
+    male_using: number | null;
+    female_using: number | null;
+    non_binary_using: number | null;
+    has_unkown_using: number | null;
+    capdev_term_id: number;
+    capdev_delivery_method_id: number;
+  };
+}
 
 @Injectable()
 export class CapacityChangeBilateralHandler
@@ -49,16 +62,19 @@ export class CapacityChangeBilateralHandler
     private readonly _capdevsDeliveryMethodRepository: CapdevsDeliveryMethodRepository,
   ) {}
 
-  async afterCreate({
+  /**
+   * @akili-spec bilateral/resubmit-rejected-result — RSB-T-3. The checks and catalogue lookups
+   * `afterCreate` used to make inline, moved verbatim (same order, same messages): they need no
+   * saved row, so the resubmission preflight runs them before the first write. No write here.
+   */
+  async resolveAndValidate({
     bilateralDto,
-    resultId,
-    userId,
-  }: HandlerAfterCreateContext): Promise<void> {
+  }: HandlerResolveContext): Promise<ResolvedCapacityChange | null> {
     if (
       bilateralDto.result_type_id !==
       ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT
     )
-      return;
+      return null;
 
     const capacitySharing = bilateralDto.capacity_sharing;
     if (!capacitySharing) {
@@ -88,6 +104,18 @@ export class CapacityChangeBilateralHandler
       capdev_term_id: capdevTermId,
       capdev_delivery_method_id: deliveryMethodId,
     };
+
+    return { capacityData };
+  }
+
+  async afterCreate({
+    bilateralDto,
+    resultId,
+    userId,
+  }: HandlerAfterCreateContext): Promise<void> {
+    const resolved = await this.resolveAndValidate({ bilateralDto });
+    if (!resolved) return;
+    const { capacityData } = resolved;
 
     const existing =
       await this._resultsCapacityDevelopmentsRepository.capDevExists(resultId);
