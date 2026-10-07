@@ -64,4 +64,9 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      */
     question_options_team_diversity: [113, 114, 115],
     question_options_team_diversity_actions: [116, 117, 118, 119, 120, 121],
+    /**
+     * `capdevs_term` rows (QAC-T-19): 1 PhD, 2 Master (migration 1668784095214-addCapDevMethodsAndTerm.ts, three inserts into a fresh
+     * table: PhD, Master, Short-term = 1, 2, 3) and 4 Long-term (migration 1668806452093-migrationCaptDev.ts, one later insert).
+     */
+    capdev_terms: [1, 2, 3, 4],
   };

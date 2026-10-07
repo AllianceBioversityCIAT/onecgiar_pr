@@ -188,8 +188,11 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 3,
     result_types: ALL_TYPES,
-    // no live rule (owner: function not needed); the client requires it by default
-    required: false,
+    // no live rule (owner: function not needed). QAC-T-19 (option B): required follows the form. The same stored value is
+    // edited by the Submitter select of Contributors & partners, a `pr-select` with no `[required]="false"` (so its default
+    // `required = true`; rd-contributors-and-partners.component.html:9-25, custom-fields/pr-select.component.ts:33).
+    // Form-only, hence not confirmed.
+    required: true,
     required_confirmed: false,
     ...FROM_2026,
     storage: {
@@ -361,12 +364,31 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
       value_column: 'investment_discontinued_option_id',
     },
     subfields: [
+      // Identity of the row (QAC-T-19 attempt 2): which reason this description belongs to, so a rule can name the id-6 row only.
+      {
+        key: 'reason',
+        label: 'What are the main reasons this innovation is inactive?',
+        type: 'single_select',
+        control_list: 'discontinued_reasons',
+        required: true,
+        storage: {
+          kind: 'column',
+          table: 'results_investment_discontinued_options',
+          column: 'investment_discontinued_option_id',
+        },
+      },
       {
         key: 'description',
         label: 'Enter text',
         type: 'text',
-        // required only when the chosen reason is "Other" (subfields carry no required_when)
+        // QAC-T-19: FUNCTION-STATED, not in the form. The live function requires a non-empty description when the
+        // chosen reason is id 6, the legacy "Other" row (validation_general_information_P25:149-151). The form's free-text
+        // input is `[required]="false"` (annual-updating/rd-annual-updating.component.html:80-88) and shows for any reason the
+        // catalogue flags `requires_description`. The 2026 "Other (please specify)" reason has a different id: the form marks its
+        // text optional and the function does not read it, so no rule applies to it (not a gap). In 2026 a reason-6 row only
+        // appears on rows carried over from an earlier phase.
         required: false,
+        required_when: whenEq('reason', 6),
         storage: {
           kind: 'column',
           table: 'results_investment_discontinued_options',
@@ -384,6 +406,10 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 24,
     result_types: ['innovation_development'],
+    // QAC-T-19 documented gap: the form reports a merge as incomplete when the reason "Discontinued: merging..." is ticked and
+    // no target is chosen (rd-annual-updating.component.html:159-161, .ts:481-486, `showsMergeTargets` .ts:245). The reason is
+    // matched by TEXT in the client and `discontinued_reasons` ids are not a closed list, so no `required_when` can name it
+    // without inventing an id. The control itself is `[required]="false"` (html:115). Stays optional until the ids are verified.
     required: false,
     required_confirmed: false,
     ...FROM_2026,
@@ -404,6 +430,8 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 25,
     result_types: ['innovation_development'],
+    // QAC-T-19 documented gap: same as `general.merge_targets` for the reason "Discontinued: splitting..."
+    // (rd-annual-updating.component.html:159-161, .ts:481-486, `showsSplitTargets` .ts:249; control `[required]="false"` html:135).
     required: false,
     required_confirmed: false,
     ...FROM_2026,

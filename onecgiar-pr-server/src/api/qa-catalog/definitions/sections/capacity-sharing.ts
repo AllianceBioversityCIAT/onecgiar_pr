@@ -3,7 +3,7 @@
 // Decision D4 (owner mandate 2026-10-06): the two radio groups over `capdev_term_id` are ONE field
 // `capacity_sharing.length_of_training` plus the subfield `degree` on the same column (R-2: one key, one binding).
 import { CatalogField, CatalogSection } from '../types';
-import { FROM_2026, whenEq } from './shared';
+import { FROM_2026, whenEq, whenIn } from './shared';
 
 export const CAPACITY_SHARING_SECTION: CatalogSection = {
   key: 'capacity_sharing',
@@ -56,7 +56,7 @@ export const CAPACITY_SHARING_FIELDS: CatalogField[] = [
     key: 'capacity_sharing.length_of_training',
     label: 'Length of training',
     description:
-      'Long-term training refers to training that goes for 3 or more months. Short-term training refers to training that goes for less than 3 months. Both long-term and short-term training programs must be completed before reporting.',
+      'Long-term training refers to training that goes for 3 or more months. Short-term training refers to training that goes for less than 3 months. Both long-term and short-term training programs must be completed before reporting (to avoid reporting the same trainee multiple times across years).',
     type: 'single_select',
     control_list: 'capdev_terms',
     section: SECTION,
@@ -66,8 +66,12 @@ export const CAPACITY_SHARING_FIELDS: CatalogField[] = [
     required_confirmed: true,
     ...FROM_2026,
     storage: { kind: 'column', table: TABLE, column: 'capdev_term_id' },
-    // "Degree" (PhD / Master) writes the same column (`term_2 ?? term_1`); shown for long-term in practice.
-    // No live rule and no subfield `required_when` in the model: optional (REVIEW D12 b, D4).
+    // "Degree" (PhD / Master) writes the same column (`term_2 ?? term_1`). Optional: the form passes `[required]="false"`
+    // (cap-dev-info.component.html:61) and the live function has no rule for it (REVIEW D12 b, D4).
+    // QAC-T-19 display rule: shown only while the stored term is 1 PhD, 2 Master or 4 Long-term, because the form renders it when
+    // `capdev_term_id_1` is 4, 1 or 2 (cap-dev-info.component.html:56) and derives `capdev_term_id_1` from the stored term
+    // (a stored 1 or 2 means long-term, cap-dev-info.component.ts:200-209). Ids 1..4 are the seeded `capdevs_term` rows
+    // (closed list `capdev_terms`).
     subfields: [
       {
         key: 'degree',
@@ -75,6 +79,7 @@ export const CAPACITY_SHARING_FIELDS: CatalogField[] = [
         type: 'single_select',
         control_list: 'capdev_terms',
         required: false,
+        visible_when: whenIn('capacity_sharing.length_of_training', [1, 2, 4]),
         storage: { kind: 'column', table: TABLE, column: 'capdev_term_id' },
       },
     ],
@@ -122,9 +127,15 @@ export const CAPACITY_SHARING_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 8,
     result_types: TYPES,
+    // Form: the multi-select renders only when the answer is Yes and is `[required]="true"`
+    // (cap-dev-info.component.html:91-101); function: validation_capacity_dev_P25 (organization count when attending = TRUE).
     required: false,
     required_confirmed: true,
     required_when: whenEq(
+      'capacity_sharing.is_attending_for_organization',
+      true,
+    ),
+    visible_when: whenEq(
       'capacity_sharing.is_attending_for_organization',
       true,
     ),

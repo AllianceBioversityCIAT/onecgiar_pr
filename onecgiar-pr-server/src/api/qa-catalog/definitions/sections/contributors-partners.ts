@@ -29,11 +29,12 @@
 //  - "Why is the result being reported?" is hidden for initiative 41 in P25 (CP.ts:415-418). A condition cannot negate an
 //    equality or name a program id, so only `planned_result = false` is stated; the live function still requires the narrative
 //    (V-CP:30-32), which is what `required_when` records.
-//  - Subfields have no `required_confirmed` flag. A subfield `required: true` therefore means "the live function states it"
-//    (cited V-CP lines). A rule only the client enforces (`client-only` in a comment) is NOT `required` (top-level convention:
-//    client-only = `required: false`, `required_confirmed: false`). The one exception is the identity of an element
-//    (the program of a Science Program row, the institution of a partner row): `required: true` because the element
-//    cannot exist without it, i.e. it is always present, not because the client form asks for it.
+//  - QAC-T-19 (option B, catalog 2026.18): `required` / `required_when` = what the 2026 FORM requires UNION what the live function
+//    states. `required_confirmed: true` (top-level only; subfields have no flag) only where V-CP also states the rule; a form-only rule
+//    keeps `required_confirmed: false` and cites the form; a rule stated only by the function is kept and marked "function-stated".
+//    Control defaults checked in the client: pr-select / pr-multi-select / pr-yes-or-not / pr-radio-button / pr-textarea / pr-input
+//    default `required = true` (`[required]="false"` opts out); the identity of an element (program of a Science Program row,
+//    institution of a partner row) is `required: true` because the element cannot exist without it.
 // QAC-T-15 rework (catalog 2026.12): path steps join on column PAIRS (result AND initiative), so `toc.*` and the Science Program ToC
 //    rows are scoped to one initiative; lookups declare their key columns (alternatives) and qualifiers (target year).
 import {
@@ -51,6 +52,7 @@ import {
   NON_KP_TYPES,
   RESULT_TYPE_FIELD,
   whenEq,
+  whenIn,
 } from './shared';
 
 export const CONTRIBUTORS_PARTNERS_SECTION: CatalogSection = {
@@ -111,14 +113,28 @@ const INDICATOR_KEYS = [
  * `results_toc_result` row (the parent element's row, DD-12), so both parents use the identical bindings.
  * Conditions name only sibling subfield keys (a depth-2 condition cannot name its parent's siblings).
  */
+/** Every result type except impact contribution (result level 1, whose ToC level is not asked, MWC.html:3). */
+const LEVEL_ASKED_TYPES = [
+  'policy_change',
+  'innovation_use',
+  'other_outcome',
+  'capacity_sharing',
+  'knowledge_product',
+  'innovation_development',
+  'other_output',
+  'innovation_package',
+];
+
 const tocMappingSubfields = (): CatalogSubField[] => [
   {
     key: 'level',
     label: 'Level',
     type: 'single_select',
     control_list: 'toc_levels',
-    // client-only requirement (MWC.html:4-17 `[required]="!isUnplanned"`): V-CP has no rule for the level (owner: validation_toc_P25
-    // not needed), so it is not `required` here (a subfield `required` means the live function states it)
+    // QAC-T-19, form-only (V-CP has no rule for the level): MWC.html:3-17 `[required]="!isUnplanned"`; the select is hidden for an
+    // impact-level result that is mapped (MWC.html:3 `resultLevelId === 1 ? !planned_result : true`), so it is asked for every
+    // result type except impact_contribution. The elements exist only when the answer is Yes (see toc.entries / toc_entries).
+    required_when: whenIn(RESULT_TYPE_FIELD, LEVEL_ASKED_TYPES),
     storage: {
       kind: 'column',
       table: 'results_toc_result',
@@ -130,7 +146,7 @@ const tocMappingSubfields = (): CatalogSubField[] => [
     label: 'Output/Outcome',
     type: 'single_select',
     control_list: 'toc_results',
-    // shown once a level is chosen (MWC.html:20, `secondFieldLabel() && toc_level_id`); V-CP:52 `toc_result_id IS NOT NULL`
+    // shown once a level is chosen (MWC.html:20, `secondFieldLabel() && toc_level_id`); form MWC.html:28,43,59 `[required]="!isUnplanned"`; V-CP:52 `toc_result_id IS NOT NULL`
     visible_when: notNull('level'),
     required: true,
     storage: {
@@ -159,7 +175,7 @@ const tocMappingSubfields = (): CatalogSubField[] => [
     label: 'KPI Statement/description',
     type: 'single_select',
     control_list: 'toc_results_indicators',
-    // MWC.html:85-101: the KPI select appears once a node with indicators is selected; V-CP:54,62-64 requires >= 1 active, applicable indicator per mapping
+    // MWC.html:85-101: the KPI select appears once a node with indicators is selected (pr-select default required, no `[required]`); V-CP:54,62-64 requires >= 1 active, applicable indicator per mapping
     visible_when: notNull('toc_result'),
     required: true,
     storage: {
@@ -263,6 +279,17 @@ const tocMappingSubfields = (): CatalogSubField[] => [
   },
 ];
 
+/** Types whose form requires the linked/bundled answer: every type except innovation use (optional on its own page) and innovation package. */
+const LINK_REQUIRED_TYPES = [
+  'policy_change',
+  'other_outcome',
+  'capacity_sharing',
+  'knowledge_product',
+  'innovation_development',
+  'other_output',
+  'impact_contribution',
+];
+
 export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
   {
     key: 'contributors.submitter',
@@ -272,8 +299,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 1,
     result_types: ALL_TYPES,
-    // no live rule (owner: function not needed); the client requires it by default (CP.html:9-25, shown in every phase)
-    required: false,
+    // QAC-T-19, form-only: no live rule (V-CP never reads it); pr-select default required (CP.html:9-25, no `[required]`, shown in every
+    // phase; the select is only disabled when the result has a single program)
+    required: true,
     required_confirmed: false,
     ...FROM_2026,
     storage: {
@@ -293,7 +321,8 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 2,
     result_types: ALL_TYPES,
-    // CP.html:38-46 (always shown). V-CP:11-27: a NULL answer falls into the "mapped" branch, so the function effectively requires it
+    // CP.html:38-46 (always shown). FUNCTION-STATED in 2026: the form marks it required only before 2026 (`[required]="!isAvisaInitiative() && !isCP2026()"`,
+    // CP.html:41), but V-CP:11-27 a NULL answer falls into the "mapped" branch, so the function effectively requires it. Kept (never weakened).
     required: true,
     required_confirmed: true,
     ...FROM_2026,
@@ -364,9 +393,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 6,
     result_types: ALL_TYPES,
-    // CP.html:250-267 (always shown, `[required]="true"`); the live function has the lead-center check commented out (V-CP:121-132,176).
-    // Placed BEFORE the contributing centers by the owner (2026-10-07).
-    required: false,
+    // QAC-T-19, form-only: CP.html:250-267 (always shown, `[required]="true"` at :255); the live function has the lead-center check commented out
+    // (V-CP:121-132,176). Placed BEFORE the contributing centers by the owner (2026-10-07).
+    required: true,
     required_confirmed: false,
     ...FROM_2026,
     storage: {
@@ -390,8 +419,11 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     result_types: ALL_TYPES,
     // CP.html:98-116 (dropdown 1, `[required]="true"`; at least one center must stay from the ToC when the ToC brings centers, CP.ts:549-551).
     // No live rule: the function has the center check commented out (V-CP:124-132). Always shown: when the answer is No the client
-    // paints a flat dropdown with the same label (CP.html:128-141).
-    required: false,
+    // paints a flat dropdown with the same label (CP.html:128-141, `[required]="true"` at :135).
+    // QAC-T-19, form-only: `required: true`. Documented gap: when the ToC returned NO centers the form moves the requirement to
+    // `contributors.other_centers` (CP.html:192, CP.ts:549-559 `requiresTocCenter` / `contributingCentersComplete`), which is ToC
+    // reference data and cannot be a catalog condition.
+    required: true,
     required_confirmed: false,
     ...FROM_2026,
     storage: {
@@ -412,6 +444,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     result_types: ALL_TYPES,
     // CP.html:179-209 (`[required]="!hasReferenceCenters()"`: required only when the ToC brought no centers, which is ToC reference
     // data, not a catalog key). No live rule (V-CP:124-132). Visibility is UI state, see the header.
+    // QAC-T-19: stays `required: false`: the form requires it only in that ToC-reference case (documented gap, see contributors.centers).
     required: false,
     required_confirmed: false,
     ...FROM_2026,
@@ -593,13 +626,14 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
         },
       },
       {
-        // toggles Scaling / Demand / Innovation / Other per partner (NS.html:113-179), stored one row per role. Client-only requirement
-        // (`[isComplete]="!!option?.delivery?.length"`, NS.html:105-108): the function's delivery check is commented out (V-CP:134-139),
-        // so it is not `required` here.
+        // toggles Scaling / Demand / Innovation / Other per partner (NS.html:113-179), stored one row per role. QAC-T-19, form-only:
+        // each chosen partner must have at least one role (mandatory marker `[isComplete]="!!option?.delivery?.length"`, NS.html:105-108,
+        // :219-221); the function's delivery check is commented out (V-CP:134-139).
         key: 'partner_role',
         label: 'Partner role',
         type: 'multi_select',
         control_list: 'partner_delivery_types',
+        required: true,
         storage: {
           kind: 'path',
           steps: [
@@ -615,7 +649,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     ],
   },
   {
-    // CP.html:563-570 (always shown, read-only while "Not applicable" is on, `[required]="true"`); V-CP:168 NULL fails when not applicable = false
+    // CP.html:563-570 (always shown, `[required]="true"`, read-only while "Not applicable" is on EXCEPT for a knowledge product, :569);
+    // V-CP:168 NULL fails when not applicable = false (V-CP:167 TRUE short-circuits). QAC-T-19: form UNION function = required when not
+    // applicable is false, or always for a knowledge product (its control stays editable); confirmed because V-CP states the first branch.
     key: 'partners.is_lead_by_partner',
     label: 'Is this result being led by an external partner?',
     type: 'boolean',
@@ -624,7 +660,12 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
-    required_when: whenEq('partners.not_applicable', false),
+    required_when: {
+      any: [
+        whenEq('partners.not_applicable', false),
+        whenEq(RESULT_TYPE_FIELD, 'knowledge_product'),
+      ],
+    },
     ...FROM_2026,
     storage: {
       kind: 'column',
@@ -668,15 +709,22 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     section: SECTION,
     order: 15,
     result_types: ALL_TYPES,
-    // Live rule only for innovation_development; other types have no live rule (client-only required, CP.html:620-631).
+    // QAC-T-19, form-only: V-CP:135-152 never requires the ANSWER (only the linked rows when it is Yes), so `required_confirmed` is false
+    // (was true). The form requires the answer for innovation development (fieldRef config `required: true`, fields-manager.service.ts
+    // `[innovation-use-form]-has-innovation-link`; CP.html:606-616) and, from 2026, for every other type (generic radio
+    // `[required]="true"`, CP.html:620-623). It is optional for innovation use, where the question lives on the Innovation Use page
+    // (`[required]="false"`, innovation-use-info.component.html:22) and is hidden here (CP.ts:439-445 `showsQaInnovationLink`).
+    // Required for every type except innovation use AND innovation package (the package has no such question).
     required: false,
-    required_confirmed: true,
-    required_when: whenEq(RESULT_TYPE_FIELD, 'innovation_development'),
+    required_confirmed: false,
+    required_when: whenIn(RESULT_TYPE_FIELD, LINK_REQUIRED_TYPES),
     ...FROM_2026,
     storage: { kind: 'column', table: 'result', column: 'has_innovation_link' },
   },
   {
-    // CP.html:634-751 (`has_innovation_link && isP25()`), mandatory marker CP.html:751; V-CP:150-166 at least one active linked row when the answer is Yes
+    // CP.html:634-751 (`has_innovation_link && isP25()`), mandatory marker CP.html:751 (header `[required]="true"` :636); V-CP:150-166 at least one active
+    // linked row when the answer is Yes. For innovation use the form makes it optional (innovation-use-info.component.html:34-45 `[required]="false"`)
+    // but V-CP:143-166 still requires it: that part is FUNCTION-STATED and kept.
     key: 'linked.results',
     label: 'Please select a result:',
     type: 'multi_select',

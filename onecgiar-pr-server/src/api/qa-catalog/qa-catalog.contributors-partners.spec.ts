@@ -99,7 +99,16 @@ describe('QAC-T-15 contributors & partners: owner field list', () => {
       ['toc.entries', eq('toc.planned_result', true)],
       ['toc.narrative', eq('toc.planned_result', false)],
       ['partners.external_partners', eq('partners.not_applicable', false)],
-      ['partners.is_lead_by_partner', eq('partners.not_applicable', false)],
+      // QAC-T-19: KP also requires it (form: read-only only for non-KP when not applicable); the function states the first branch
+      [
+        'partners.is_lead_by_partner',
+        {
+          any: [
+            eq('partners.not_applicable', false),
+            eq('$result_type', 'knowledge_product'),
+          ],
+        },
+      ],
       ['partners.lead_partner', eq('partners.is_lead_by_partner', true)],
       ['linked.results', eq('linked.has_innovation_link', true)],
       ['partners.kp_additional_partners', eq('partners.not_applicable', false)],
@@ -395,8 +404,8 @@ describe('QAC-T-15 contributors & partners: owner field list', () => {
         kind: 'path',
         value_column: 'partner_delivery_type_id',
       });
-      // client-only (the function's delivery check is commented out): not required
-      expect(sub(partners.subfields, 'partner_role').required).toBeUndefined();
+      // QAC-T-19: the function's delivery check is commented out, but the form's multi-select is required (option B)
+      expect(sub(partners.subfields, 'partner_role').required).toBe(true);
     });
   });
 

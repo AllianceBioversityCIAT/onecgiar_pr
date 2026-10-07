@@ -122,7 +122,7 @@ describe('QAC-T-16 geographic location (Results)', () => {
       expect(f.required_when).toEqual(inn('geo.scope', [1, 2]));
     });
 
-    it('geo.countries: shown for 3/4/5 or Yes on 1/2; required for 3/4 or Yes on 1/2 (scope 5 with no country passes, D25)', () => {
+    it('geo.countries: shown for 3/4/5 or Yes on 1/2; required whenever shown (QAC-T-19: the form requires it for scope 5 too; the function does not, D25)', () => {
       const f = get('geo.countries');
       expect(f.visible_when).toEqual({
         any: [
@@ -135,18 +135,9 @@ describe('QAC-T-16 geographic location (Results)', () => {
           },
         ],
       });
-      expect(f.required_when).toEqual({
-        any: [
-          inn('geo.scope', [3, 4]),
-          {
-            all: [
-              inn('geo.scope', [1, 2]),
-              eq('geo.countries_specified', true),
-            ],
-          },
-        ],
-      });
-      expect(f.required_confirmed).toBe(true);
+      expect(f.required_when).toEqual(f.visible_when);
+      // scope 5 is form-only: the live function does not require a country there (D25)
+      expect(f.required_confirmed).toBe(false);
     });
   });
 
@@ -296,7 +287,7 @@ describe('QAC-T-16 geographic location (Results)', () => {
       expect(get('geo.extra_countries_specified').required_when).toEqual(want);
     });
 
-    it('geo.extra_countries: shown for 3/4/5 or Yes on 1/2; required for 3/4 or Yes on 1/2', () => {
+    it('geo.extra_countries: shown for 3/4/5 or Yes on 1/2; required whenever shown (QAC-T-19)', () => {
       const f = get('geo.extra_countries');
       const yes: Condition = {
         all: [
@@ -308,7 +299,7 @@ describe('QAC-T-16 geographic location (Results)', () => {
         all: [EXTRA_BLOCK, { any: [inn('geo.extra_scope', [3, 4, 5]), yes] }],
       });
       expect(f.required_when).toEqual({
-        all: [EXTRA_BLOCK, { any: [inn('geo.extra_scope', [3, 4]), yes] }],
+        all: [EXTRA_BLOCK, { any: [inn('geo.extra_scope', [3, 4, 5]), yes] }],
       });
       expect(f.required_confirmed).toBe(false);
     });

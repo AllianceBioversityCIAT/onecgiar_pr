@@ -28,8 +28,9 @@
 //  - The sub-national picker only shows for a country that HAS sub-national areas (SG.html:24-27, `subNationList` comes from CLARISA per
 //    country); V-GEO:112-127 likewise requires >= 1 area only for such a country. Reference data, not a catalog key, so `subnational`
 //    carries `required_when` "scope = 5" and a consumer must skip countries whose CLARISA list is empty.
-//  - Scope 5 with zero countries PASSES the live function (V-GEO:112-127, REVIEW D25: follow the function), so `geo.countries` is not
-//    required for scope 5 (it is shown, GM.html:63). T-8 listed 5 in the required rule; QAC-T-16 aligns it with D25.
+//  - Scope 5 with zero countries PASSES the live function (V-GEO:112-127, REVIEW D25), but the FORM requires >= 1 country for scope 5
+//    (GM.html:63-76), so since QAC-T-19 (option B, `required` = form + live function) `geo.countries` / `geo.extra_countries` are required
+//    for scope 5 as form-only rules (`required_confirmed: false`; was: not required for 5 under QAC-T-16).
 //  - Scope 2 (Regional) hides the regions Yes-No (GM.html:28 `hideOptions`; the answer is forced to Yes by `resetHasScope`, GM.ts:99-103),
 //    so `regions_specified` is visible only for scope 1; the countries Yes-No shows for scope 1 and 2 (GM.html:60).
 import {
@@ -75,12 +76,11 @@ const WHEN_COUNTRIES_VISIBLE: Condition = any(
   whenIn('geo.scope', [3, 4, 5]),
   all(whenIn('geo.scope', [1, 2]), whenEq('geo.countries_specified', true)),
 );
-// ... and REQUIRED (>= 1 active role-1 country) for scope 3, 4 (V-GEO:93-106) or scope 1, 2 with "Yes" (V-GEO:69-80). Scope 5 with no
-// country passes the function (V-GEO:110-131, REVIEW D25), so it is not listed.
-const WHEN_COUNTRIES_REQUIRED: Condition = any(
-  whenIn('geo.scope', [3, 4]),
-  all(whenIn('geo.scope', [1, 2]), whenEq('geo.countries_specified', true)),
-);
+// ... and REQUIRED (>= 1 active role-1 country) whenever the picker is shown (QAC-T-19, option B: required follows the form): GM.html:63-76
+// (`app-pr-multi-select` default required + `appFeedbackValidation` `countries.length > 0`, for scope 3, 5 and scope 1/2 after "Yes").
+// V-GEO:93-106 states it for scope 3, 4 and V-GEO:69-80 for scope 1, 2 with "Yes"; scope 5 with no country PASSES the live function
+// (V-GEO:110-131, REVIEW D25), so the scope 5 part is FORM-ONLY (before T-19 scope 5 was not required) and `required_confirmed` is false.
+const WHEN_COUNTRIES_REQUIRED: Condition = WHEN_COUNTRIES_VISIBLE;
 // sub-national areas: SG.html (one picker per selected country) only for scope 5 (GM.html:78); V-GEO:110-131 (per country that has areas).
 const WHEN_SUBNATIONAL: Condition = whenEq('geo.scope', 5);
 
@@ -120,16 +120,8 @@ const WHEN_EXTRA_COUNTRIES_VISIBLE: Condition = all(
     ),
   ),
 );
-const WHEN_EXTRA_COUNTRIES_REQUIRED: Condition = all(
-  EXTRA_BLOCK,
-  any(
-    whenIn('geo.extra_scope', [3, 4]),
-    all(
-      whenIn('geo.extra_scope', [1, 2]),
-      whenEq('geo.extra_countries_specified', true),
-    ),
-  ),
-);
+// Same widening as the main block (QAC-T-19): required whenever the picker is shown, incl. extra scope 5 (GM.html:63-76).
+const WHEN_EXTRA_COUNTRIES_REQUIRED: Condition = WHEN_EXTRA_COUNTRIES_VISIBLE;
 const WHEN_EXTRA_SUBNATIONAL: Condition = all(
   EXTRA_BLOCK,
   whenEq('geo.extra_scope', 5),
@@ -253,7 +245,8 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
     order: 5,
     result_types: NON_IPSR_TYPES,
     required: false,
-    required_confirmed: true,
+    // partly function-stated (scope 1, 2, 3, 4); scope 5 is form-only (see WHEN_COUNTRIES_REQUIRED)
+    required_confirmed: false,
     visible_when: WHEN_COUNTRIES_VISIBLE,
     required_when: WHEN_COUNTRIES_REQUIRED,
     ...FROM_2026,

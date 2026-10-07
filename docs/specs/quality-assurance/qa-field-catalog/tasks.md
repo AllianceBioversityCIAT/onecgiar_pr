@@ -221,7 +221,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Depends on:** QAC-T-17
 - **Verification:** qa-catalog suites; a test per conditional field; closed-list ids checked; service response saved to `tmp/qa-catalog-2026.json`.
 
-### QAC-T-19 — `required` follows the form in all Results sections (amendment 2026-10-07, option B) · P2-3925
+### [x] QAC-T-19 — `required` follows the form in all Results sections (amendment 2026-10-07, option B) · P2-3925
 
 - **Type:** server · **Review:** full
 - **Description:** Sweep GI, Contributors & partners, Geo, Evidence, Policy change, Capacity sharing, Knowledge product and the existing Innovation use fields: every field/subfield the 2026 form marks required (incl. conditional) gets `required: true` / `required_when`, citing the form; `required_confirmed` stays true only where the live function also states it. Contract doc updated (what `required` means).

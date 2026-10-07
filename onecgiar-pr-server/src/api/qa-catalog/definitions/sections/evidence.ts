@@ -135,12 +135,14 @@ export const EVIDENCE_FIELDS: CatalogField[] = [
         // single_select over the closed list `evidence_sources` because the stored tinyint is 0/1 and the labels are not
         // "true/false"; the client sends booleans, the column holds 0/1 (EI.ts:23-50). The form marks the radio mandatory
         // (`pr-radio-button` defaults `required = true`, pr-radio-button.component.ts:34, and EI.html:4-12 does not
-        // override it), but V-EV does not read it; `required` stays false because only the live functions decide (QAC-R-5).
+        // override it); V-EV does not read it, so this is a FORM-ONLY rule (QAC-T-19, option B: `required` follows the form;
+        // was `required: false`). Required whenever it is shown (hidden for KP, EI.html:5).
         key: SOURCE_FIELD,
         label: 'Source of the evidence',
         type: 'single_select',
         control_list: 'evidence_sources',
         required: false,
+        required_when: whenIn(RESULT_TYPE_FIELD, NON_KP_TYPES),
         visible_when: whenIn(RESULT_TYPE_FIELD, NON_KP_TYPES),
         storage: { kind: 'column', table: 'evidence', column: 'is_sharepoint' },
       },
@@ -159,27 +161,32 @@ export const EVIDENCE_FIELDS: CatalogField[] = [
       {
         // EI.html:43-50 (inside the `upload_file` template, shown when `is_sharepoint`). The form marks the radio mandatory
         // (`pr-radio-button` defaults `required = true`, pr-radio-button.component.ts:34) and the server refuses an upload
-        // without an answer (evidences.service.ts:600-618), but no live green-check rule reads it, so `required` stays false
-        // (QAC-R-5: only the live functions decide). Stored 0/1.
+        // without an answer (evidences.service.ts:600-618), but no live green-check rule reads it: FORM-ONLY rule (QAC-T-19, option B;
+        // was `required: false`), required when the upload source is chosen (EI.html:43-50, no `[required]` override). Stored 0/1.
         key: 'is_public_file',
         label: 'Can this evidence be shared publicly?',
         type: 'boolean',
         required: false,
+        required_when: whenSourceUpload,
         visible_when: whenSourceUpload,
         storage: fileRow('is_public_file'),
       },
       {
-        // EI.html:54-86 file field (`sp_file_name`), upload source only. Owner: QA receives the name.
+        // EI.html:54-86 file field (`sp_file_name`), upload source only. Owner: QA receives the name. FORM-ONLY rule (QAC-T-19,
+        // option B; was `required: false`): the card is `[required]="true"` (EI.html:56); V-EV never reads the name (it reads the link,
+        // see `file_url`).
         key: 'file_name',
         label: 'File to be uploaded to the repository',
         type: 'text',
         required: false,
+        required_when: whenSourceUpload,
         visible_when: whenSourceUpload,
         storage: fileRow('file_name'),
       },
       {
         // EI.html:64 (`evidence.link` is the file's repository URL once uploaded). Delivered even when the file is private;
-        // `is_public_file` tells QA how to treat it (owner). Same column as `link`; V-EV requires it non-empty for an upload.
+        // `is_public_file` tells QA how to treat it (owner). Same column as `link`; V-EV requires it non-empty for an upload
+        // (function-stated, V-EV:65-71; not a form control: the link is produced by the upload, EI.html:64).
         key: 'file_url',
         label: 'Link to the uploaded file',
         type: 'text',
