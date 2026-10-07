@@ -4,6 +4,8 @@ import { CATALOG_FIELDS, CATALOG_SECTIONS } from './definitions/sections';
 import { NOT_FOR_QA } from './definitions/not-for-qa';
 import { CATALOG_VERSIONS } from './definitions/versions';
 import { validateCatalogShape } from './definitions/shape-validator';
+import { CLOSED_CONTROL_LISTS } from './definitions/closed-control-lists';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { isValidIn } from './definitions/validity';
 import {
   CatalogDefinition,
@@ -306,7 +308,7 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
               visible_when: {
                 all: [
                   eq('general.gate', true),
-                  { any: [eq('result_type', 'policy_change')] },
+                  { any: [eq('$result_type', 'policy_change')] },
                 ],
               },
               required_when: eq('general.gate', true),
@@ -317,7 +319,7 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
     ).toEqual([]);
   });
 
-  it('DD-12: `result_type` is the only pseudo-key; `is_replicated` is not (it is the catalog field `general.is_replicated`)', () => {
+  it('DD-12 (v1.9): `$result_type` is the only header pseudo-key; `is_replicated` is not (it is the catalog field `general.is_replicated`)', () => {
     const errors = validateCatalogShape(
       catalog({
         fields: [
@@ -325,7 +327,7 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
           field({
             key: 'general.other',
             order: 2,
-            required_when: eq('result_type', 'policy_change'),
+            required_when: eq('$result_type', 'policy_change'),
           }),
         ],
       }),
@@ -426,7 +428,7 @@ describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14,
             field({
               visible_when: { field: 'general.gate', operator: 'not_null' },
               required_when: {
-                field: 'result_type',
+                field: '$result_type',
                 operator: 'in',
                 value: ['policy_change', 'other_output'],
               },
@@ -986,7 +988,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 13 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 14 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -1156,7 +1158,7 @@ describe('the real catalog definitions', () => {
       ...conditionKeys(x.visible_when),
     ]);
     expect(used).not.toContain('is_replicated');
-    // the discontinued-reasons rule (ANNUAL_UPDATING_ACTIVE) and the is_discontinued rule
+    // the discontinued-reasons rule (ANNUAL_UPDATING_DISCONTINUED) and the is_discontinued rule
     expect(used.filter((k) => k === 'general.is_replicated')).toHaveLength(2);
   });
 
@@ -1190,5 +1192,327 @@ describe('the real catalog definitions', () => {
       expect(f.result_types).not.toContain('*');
       expect(f.result_types).not.toContain('innovation_package');
     }
+  });
+});
+
+describe('validateCatalogShape: v1.9 condition semantics (header pseudo-keys, comparison by type, closed lists)', () => {
+  const leaf = (
+    key: string,
+    operator: 'eq' | 'in' | 'not_null',
+    value?: string | number | boolean | Array<string | number>,
+  ) => ({ field: key, operator, ...(value === undefined ? {} : { value }) });
+  const ruleOf = (errors: { rule: string }[]) => errors.map((e) => e.rule);
+  const withCondition = (
+    target: CatalogField[],
+    condition: ReturnType<typeof leaf>,
+  ) =>
+    catalog({
+      fields: [
+        ...target,
+        field({
+          key: 'general.subject',
+          order: 9,
+          required_when: condition,
+        }),
+      ],
+    });
+  const multi = field({
+    key: 'general.many',
+    type: 'multi_select',
+    control_list: 'countries',
+    order: 2,
+  });
+  const single = field({
+    key: 'general.one',
+    type: 'single_select',
+    control_list: 'countries',
+    order: 3,
+  });
+  const tag = field({
+    key: 'general.gender_tag',
+    type: 'single_select',
+    control_list: 'tag_levels',
+    order: 4,
+  });
+  const flag = field({ key: 'general.flag', type: 'boolean', order: 5 });
+
+  it('A: an unknown `$...` key is rejected; `$result_type` is the only known header key', () => {
+    const errors = validateCatalogShape(
+      withCondition([], leaf('$phase', 'eq', 2026)),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'UNKNOWN_HEADER_KEY',
+        path: 'field:general.subject/required_when',
+      }),
+    ]);
+    expect(errors[0].message).toContain('$phase');
+    expect(
+      validateCatalogShape(
+        withCondition([], leaf('$result_type', 'eq', 'policy_change')),
+      ),
+    ).toEqual([]);
+  });
+
+  it('A: the bare `result_type` (pre-v1.9 spelling) is now an ordinary key and is unknown', () => {
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          withCondition([], leaf('result_type', 'eq', 'policy_change')),
+        ),
+      ),
+    ).toEqual(['UNKNOWN_CONDITION_KEY']);
+  });
+
+  it('B: `eq` on a multi_select is rejected; `in` and `not_null` are accepted', () => {
+    const errors = validateCatalogShape(
+      withCondition([multi], leaf('general.many', 'eq', 5)),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'CONDITION_OPERATOR_NOT_ALLOWED',
+        path: 'field:general.subject/required_when',
+      }),
+    ]);
+    expect(
+      validateCatalogShape(
+        withCondition([multi], leaf('general.many', 'in', [5, 6])),
+      ),
+    ).toEqual([]);
+    expect(
+      validateCatalogShape(
+        withCondition([multi], leaf('general.many', 'not_null')),
+      ),
+    ).toEqual([]);
+  });
+
+  it('B: a non-numeric value on a single_select is rejected (eq and in); numeric ids pass', () => {
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          withCondition([single], leaf('general.one', 'eq', 'Global')),
+        ),
+      ),
+    ).toEqual(['CONDITION_VALUE_TYPE']);
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          withCondition([single], leaf('general.one', 'in', [1, '2'])),
+        ),
+      ),
+    ).toEqual(['CONDITION_VALUE_TYPE']);
+    expect(
+      validateCatalogShape(
+        withCondition([single], leaf('general.one', 'in', [1, 2])),
+      ),
+    ).toEqual([]);
+  });
+
+  it('B: boolean / number / text / date compare the value as is (no id rule applies)', () => {
+    expect(
+      validateCatalogShape(
+        withCondition([flag], leaf('general.flag', 'eq', true)),
+      ),
+    ).toEqual([]);
+  });
+
+  it('B: `$result_type` takes a string key (eq) or an array of keys (in), each existing in result_types[]', () => {
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          withCondition([], leaf('$result_type', 'eq', 'ghost')),
+        ),
+      ),
+    ).toEqual(['CONDITION_VALUE_NOT_IN_LIST']);
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          withCondition(
+            [],
+            leaf('$result_type', 'in', ['policy_change', 'ghost']),
+          ),
+        ),
+      ),
+    ).toEqual(['CONDITION_VALUE_NOT_IN_LIST']);
+    expect(
+      ruleOf(
+        validateCatalogShape(withCondition([], leaf('$result_type', 'eq', 5))),
+      ),
+    ).toEqual(['CONDITION_VALUE_TYPE']);
+    expect(
+      validateCatalogShape(
+        withCondition(
+          [],
+          leaf('$result_type', 'in', ['policy_change', 'other_output']),
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+  it('D: an id outside a CLOSED control list is rejected (eq and in); ids inside pass; a reference list is not checked', () => {
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          withCondition([tag], leaf('general.gender_tag', 'eq', 9)),
+        ),
+      ),
+    ).toEqual(['CONDITION_VALUE_NOT_IN_LIST']);
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          withCondition([tag], leaf('general.gender_tag', 'in', [1, 9])),
+        ),
+      ),
+    ).toEqual(['CONDITION_VALUE_NOT_IN_LIST']);
+    expect(
+      validateCatalogShape(
+        withCondition([tag], leaf('general.gender_tag', 'eq', 3)),
+      ),
+    ).toEqual([]);
+    // `countries` is a reference list: any numeric id is accepted.
+    expect(
+      validateCatalogShape(
+        withCondition([single], leaf('general.one', 'eq', 99999)),
+      ),
+    ).toEqual([]);
+  });
+
+  it('D: the closed-list check also applies to a multi_select over a closed list (`in`)', () => {
+    const closedMulti = field({
+      key: 'general.many_tags',
+      type: 'multi_select',
+      control_list: 'tag_levels',
+      order: 6,
+    });
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          withCondition([closedMulti], leaf('general.many_tags', 'in', [2, 7])),
+        ),
+      ),
+    ).toEqual(['CONDITION_VALUE_NOT_IN_LIST']);
+  });
+
+  it('E: inside subfields a condition field resolves to the SIBLING subfield first (its type governs), not to a same-named top-level key', () => {
+    const topStatus = field({ key: 'status', type: 'boolean', order: 2 });
+    const list = (siblingType: 'multi_select' | 'boolean') =>
+      field({
+        key: 'general.people',
+        type: 'list',
+        order: 3,
+        subfields: [
+          {
+            ...subfield,
+            key: 'status',
+            type: siblingType,
+            ...(siblingType === 'multi_select'
+              ? { control_list: 'countries' }
+              : {}),
+          },
+          { ...subfield, key: 'org', visible_when: leaf('status', 'eq', 1) },
+        ],
+      });
+    // sibling is a multi_select -> `eq` rejected even though the top-level `status` is a boolean
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          catalog({ fields: [topStatus, list('multi_select')] }),
+        ),
+      ),
+    ).toEqual(['CONDITION_OPERATOR_NOT_ALLOWED']);
+    expect(
+      validateCatalogShape(catalog({ fields: [topStatus, list('boolean')] })),
+    ).toEqual([]);
+  });
+
+  it('E: outside subfields only top-level keys resolve; a subfield key is unknown there', () => {
+    const list = field({
+      key: 'general.people',
+      type: 'list',
+      order: 3,
+      subfields: [{ ...subfield, key: 'is_external', type: 'boolean' }],
+    });
+    expect(
+      ruleOf(
+        validateCatalogShape(
+          catalog({
+            fields: [
+              list,
+              field({
+                order: 4,
+                visible_when: leaf('is_external', 'eq', true),
+              }),
+            ],
+          }),
+        ),
+      ),
+    ).toEqual(['UNKNOWN_CONDITION_KEY']);
+  });
+
+  it('closed lists: result_types ids equal ResultTypeEnum (the server enum of result_type ids); tag_levels are 1 Not Targeted, 2 Significant, 3 Principal', () => {
+    const enumIds = Object.values(ResultTypeEnum).filter(
+      (v): v is number => typeof v === 'number',
+    );
+    expect(
+      [...CLOSED_CONTROL_LISTS.result_types].sort((a, b) => a - b),
+    ).toEqual(enumIds.sort((a, b) => a - b));
+    expect([...CLOSED_CONTROL_LISTS.tag_levels]).toEqual([1, 2, 3]);
+    expect([...CLOSED_CONTROL_LISTS.assessed_workshop_options]).toEqual([
+      1, 2, 3,
+    ]);
+  });
+
+  it('F: `general.is_discontinued` describes the STORED value (inverse of the 2026 form question); its dependants compare against true = discontinued', () => {
+    const f = CATALOG_FIELDS.find((x) => x.key === 'general.is_discontinued');
+    expect(f.label).toBe('Is this innovation discontinued?');
+    const reasons = CATALOG_FIELDS.find(
+      (x) => x.key === 'general.discontinued_reasons',
+    );
+    expect(JSON.stringify(reasons.required_when)).toContain(
+      '{"field":"general.is_discontinued","operator":"eq","value":true}',
+    );
+  });
+
+  it('real catalog: every condition (fields and subfields) passes the v1.9 semantic rules', () => {
+    const semantic = new Set([
+      'MALFORMED_CONDITION',
+      'UNKNOWN_CONDITION_KEY',
+      'CONDITION_KEY_NOT_VALID',
+      'UNKNOWN_HEADER_KEY',
+      'CONDITION_OPERATOR_NOT_ALLOWED',
+      'CONDITION_VALUE_TYPE',
+      'CONDITION_VALUE_NOT_IN_LIST',
+    ]);
+    const errors = validateCatalogShape({
+      resultTypes: CATALOG_RESULT_TYPES,
+      sections: CATALOG_SECTIONS,
+      fields: CATALOG_FIELDS,
+      notForQa: NOT_FOR_QA,
+    }).filter((e) => semantic.has(e.rule));
+    expect(errors).toEqual([]);
+  });
+
+  it('real catalog: the only `$` key any condition names is `$result_type`', () => {
+    const keys = new Set<string>();
+    const walk = (c: any): void => {
+      if (!c) return;
+      if (c.all) c.all.forEach(walk);
+      else if (c.any) c.any.forEach(walk);
+      else keys.add(c.field);
+    };
+    const subs = (list: any[] | undefined): void =>
+      list?.forEach((x) => {
+        walk(x.visible_when);
+        walk(x.required_when);
+        subs(x.subfields);
+      });
+    CATALOG_FIELDS.forEach((f) => {
+      walk(f.visible_when);
+      walk(f.required_when);
+      subs(f.subfields);
+    });
+    expect([...keys].filter((k) => k.startsWith('$'))).toEqual([
+      '$result_type',
+    ]);
   });
 });

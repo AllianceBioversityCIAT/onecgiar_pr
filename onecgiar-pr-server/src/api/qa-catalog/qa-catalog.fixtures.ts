@@ -229,7 +229,7 @@ export const FIXTURE_NESTED_SOURCE: QaCatalogSource = {
       required_when: {
         all: [
           { field: 'general.gate', operator: 'eq', value: true },
-          { field: 'result_type', operator: 'in', value: ['policy_change'] },
+          { field: '$result_type', operator: 'in', value: ['policy_change'] },
         ],
       },
       visible_when: { field: 'general.gate', operator: 'not_null' },
@@ -321,7 +321,7 @@ export const FIXTURE_NESTED_SOURCE: QaCatalogSource = {
       visible_when: {
         any: [
           { field: 'general.gate', operator: 'eq', value: true },
-          { field: 'result_type', operator: 'in', value: ['policy_change'] },
+          { field: '$result_type', operator: 'in', value: ['policy_change'] },
         ],
       },
       valid_from: 2026,

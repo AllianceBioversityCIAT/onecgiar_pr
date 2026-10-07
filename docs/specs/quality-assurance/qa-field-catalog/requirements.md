@@ -223,7 +223,8 @@ The catalog MUST state, for every field and subfield, **when it is shown** and *
 - `visible_when` — condition(s) over other catalog keys (same vocabulary as `required_when`: `eq`, `in`, `not_null`, combined with `all` / `any`), transcribed from the 2026 client form. Absent = always shown for its `result_types`.
 - `required_when` — as QAC-R-5; subfields MAY carry it too (lifts the QAC-R-5 exception).
 - Both MUST be returned by `GET /api/qa/catalog` (additive to the agreed shape, ADR-004).
-- A condition MUST only reference keys that exist in the same year's catalog, or the pseudo-key `result_type` (validated in CI). Any value a condition needs (e.g. the replicated-innovation flag) MUST itself be a catalog field.
+- A condition MUST only reference keys that exist in the same year's catalog, or a result-header key in the reserved `$` namespace — today only `$result_type` (validated in CI; unknown `$x` rejected) (amended 2026-10-07, v1.9; was bare `result_type`).
+- Comparison semantics by the referenced field's type (owner, 2026-10-07, v1.9): boolean / number / text / date → value as is; single_select → option `id` (numeric); multi_select → only `in` (at least one selected id in `value`), `eq` rejected; `$result_type` → the type key of `result_types[]`. `not_null`: `""` and `[]` are null, `false` and `0` are not. Ids compared against a CLOSED control list must exist in it (checked in CI); reference lists are not checked. Inside `subfields`, `field` names a sibling subfield of the same element (sibling wins), else a top-level key. Any value a condition needs (e.g. the replicated-innovation flag) MUST itself be a catalog field.
 - A change in what the endpoint returns MUST change `catalog_version` (consumers cache by it).
 
 #### Scenario: Linked results only when the answer is yes

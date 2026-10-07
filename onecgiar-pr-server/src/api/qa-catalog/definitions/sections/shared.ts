@@ -41,13 +41,14 @@ export const INNOVATION_TYPES = ['innovation_development', 'innovation_use'];
 
 /**
  * Convention for `required_when` (DD-7, data only, never evaluated here):
- *  - `field` is the catalog key of another field, except the single pseudo key `result_type` (DD-12);
- *  - `result_type` is the catalog result type key of the result;
+ *  - `field` is the catalog key of another field (inside a subfield: a sibling subfield first), except the
+ *    header pseudo keys, which start with `$` (v1.9); the only one today is `$result_type` (DD-12);
+ *  - `$result_type` is the catalog result type key of the result;
  *  - any other value a condition needs is itself a catalog field (e.g. `general.is_replicated`).
  * `required` is true only when the rule has no condition; a conditional rule sets `required: false`
  * plus `required_when`.
  */
-export const RESULT_TYPE_FIELD = 'result_type';
+export const RESULT_TYPE_FIELD = '$result_type';
 export const IS_REPLICATED_FIELD = 'general.is_replicated';
 
 export const whenEq = (

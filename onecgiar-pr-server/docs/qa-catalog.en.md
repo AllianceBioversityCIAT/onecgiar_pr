@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.13",
+  "catalog_version": "2026.14",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -169,7 +169,7 @@ A condition is plain data, never evaluated by PRMS:
 ```json
 { "field": "linked.has_innovation_link", "operator": "eq", "value": true }
 { "all": [ { "field": "geo.scope", "operator": "in", "value": [3, 4, 5] },
-           { "any": [ { "field": "result_type", "operator": "eq", "value": "policy_change" } ] } ] }
+           { "any": [ { "field": "$result_type", "operator": "eq", "value": "policy_change" } ] } ] }
 ```
 
 | Form | Meaning |
@@ -179,9 +179,28 @@ A condition is plain data, never evaluated by PRMS:
 | `{ "field", "operator": "not_null" }` | `field` has an answer. |
 | `{ "all": [condition, ...] }` / `{ "any": [condition, ...] }` | Every / at least one nested condition holds. |
 
-- `field` is the **key of another catalog entry that exists in the same year's catalog**: a top-level field key, or, inside a subfield, a sibling subfield key or a top-level field key. One pseudo key is also used: `result_type` (the `key` of the result's type, as in `result_types[]`). Any other value a condition needs is itself a catalog field; for example the replicated-innovation flag is the field `general.is_replicated`.
+- `field` is the **key of another catalog entry that exists in the same year's catalog**, or a **result-header key** (see below). **Scope:** inside a `subfield`, `field` names a **sibling subfield of the same list element** (for example `kpi` inside `toc.entries`); a sibling wins over a top-level key of the same name, and a top-level key is also accepted there. Outside subfields, `field` is a top-level key. Any other value a condition needs is itself a catalog field; for example the replicated-innovation flag is the field `general.is_replicated`.
+- **Scope limit:** a depth-2 subfield (e.g. inside a Science Program's ToC mapping) can reference its siblings or a top-level key, but not its parent element's subfields (e.g. the program's `from_toc`). No current condition needs it.
+- **`$` = result header data, not a field.** The `$` prefix is reserved for data of the result's header. Today there is one: `$result_type`, the `key` of the result's type, as in `result_types[].key`. Future header keys (for example `$phase`) follow the same syntax. A condition naming any other `$...` key is invalid. (Before v1.9 this key was spelled `result_type`.)
+
+**How a condition compares, by the type of the referenced field** (v1.9):
+
+| Referenced field | `eq` | `in` (`value` is an array) |
+|---|---|---|
+| `boolean`, `number`, `text`, `date` | the stored value equals `value` (compared as is) | the stored value is one of the listed values |
+| `single_select` | the selected option **id** equals `value` (a number) | the selected option id is one of the listed ids (numbers) |
+| `multi_select` | **not allowed** (invalid; a future explicit `contains` operator may cover it) | true when **at least one** selected id is in `value` (numbers) |
+| `$result_type` | the type key equals `value` (a string) | the type key is one of the listed keys (each must exist in `result_types[]`) |
+
+- `not_null` (any type) is true when the field has an answer. An empty string `""` counts as **null**; an empty list `[]` (a `multi_select` or a `list`) counts as **null**; `false` and `0` are **not** null.
+- When a `single_select` / `multi_select` is over a **closed control list** (a fixed set of ids defined by PRMS: `tag_levels` 1 Not Targeted, 2 Significant, 3 Principal; `result_types`; `assessed_workshop_options`), every id in `value` must exist in that list. Reference lists (results, projects, directory users, institutions, initiatives, centers, countries, regions, CLARISA lists, ...) change at runtime and are not checked.
 - `visible_when` absent means always shown for the entry's `result_types`.
 - When both a `required_when` and `required: false` are present, the entry is required only while the condition holds.
+
+### Stored values and shared values
+
+- **`general.is_discontinued` describes the STORED value**, which is the **inverse** of the 2026 form question "Is this innovation active and receiving investment?": answering *Yes* stores `is_discontinued = false`, answering *No* stores `true`. The catalog label is therefore "Is this innovation discontinued?", and conditions that depend on it (for example `general.discontinued_reasons`) compare against the stored value (`eq true` = discontinued / inactive).
+- **`general.primary_program` and `contributors.submitter` are the same stored value** (`results_by_inititiative`, role 1, active). It is edited only in Contributors & partners; in General information it is a read-only identity.
 
 ### Nested data, lookups and the unit of selection
 
@@ -230,7 +249,7 @@ Notes:
 
 ---
 
-## Catalog at revision 13 (2026.13)
+## Catalog at revision 14 (2026.14)
 
 Counts measured on the code catalog on 2026-10-07 (the same data the endpoint returns):
 
@@ -288,3 +307,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-07 | **v1.6 — 2026-10-07: contributors & partners fully parametrized (owner field list); catalog_version 2026.11.** `contributors_partners` is renumbered 1–17 in the owner's form order: submitter, `toc.planned_result`, `toc.entries`, `toc.program_invested_financial_resources`, `toc.narrative`, `contributors.lead_center` (now before the centers), `contributors.centers`, `contributors.other_centers`, `contributors.science_programs`, `contributors.bilateral_projects`, `partners.not_applicable`, `partners.external_partners`, `partners.is_lead_by_partner`, `partners.lead_partner`, `linked.has_innovation_link`, `linked.results`, `partners.kp_additional_partners`. New keys: `contributors.other_centers` (label "Other(s) Contributing CGIAR Centers", `multi_select`, control list `centers`) and `contributors.science_programs` (`list`, depth 2: program, `from_toc`, the program's own "Can this result be mapped to a ToC KPI?" and its own ToC mappings). Pre-release meaning/type changes authorized by the owner: `contributors.centers` now holds only the centers that came from the ToC (the others are `contributors.other_centers`), and `partners.external_partners` changes from `multi_select` to `list` with subfields `institution`, `partner_type` and `partner_role`. `toc.entries` grows from 2 to 8 subfields (`level`, `toc_result` (label "Output/Outcome"), `hlo_statement`, `kpi`, `indicator_typology`, `unit_of_measurement`, `target`, `contribution_to_target`); the same 8 describe each science program's mappings. `visible_when` is returned for `toc.entries` (planned = true), `toc.program_invested_financial_resources` and `toc.narrative` (planned = false), `partners.external_partners` and `partners.kp_additional_partners` (not applicable = false), `partners.lead_partner` (led by a partner = true) and `linked.results` (linked = true), and on the subfields that depend on a previous choice (output/outcome after level, KPI after output/outcome, typology, unit, target and contribution after KPI). Subfield `required: true` marks the rules the live validation states (output/outcome, KPI, contribution > 0) and, for the program of a science program and the partner of an external partner, the identity of the element (always present); a rule only the client enforces (the level of a ToC mapping, the role of a partner) is not marked required. Top-level fields 115 → 117 (`multi_select` 22 → 22, `list` 14 → 16, fields applying to every type 34 → 36); subfields 61 → 82; `PENDING_CATALOG` 144 → 135 columns across 32 tables. Spec `quality-assurance/qa-field-catalog`, QAC-T-15. |
 | 2026-10-07 | **v1.7 — 2026-10-07: review rework of the v1.6 contributors & partners content (QAC-T-15); catalog_version 2026.12.** the Science Program ToC answer and mappings now match the program's rows of THIS result only (they previously matched that program's rows in every result); `toc.entries`, `toc.planned_result`, `toc.narrative` and `toc.program_invested_financial_resources` read the submitter's ToC rows only, so the contributors' mappings are no longer repeated in `toc.entries`; the ToC target is chosen for the reporting year (the year part of the target date, which the ToC stores both as `YYYY` and as `YYYY-MM-DD`; when several target rows remain, the latest target date is taken) and the KPI-derived values (typology, unit, target) accept either identifier the ToC stores for a KPI; `level` and `partner_role` are no longer marked `required` (client-only rules); `contributors.submitter` and `general.primary_program` read the active submitter row only. The response shape is unchanged (no new properties); the only visible differences are the missing `required` flag on those two subfields (and the same two copies under each science program) and the new `catalog_version`. Storage bindings stay internal. |
 | 2026-10-07 | **v1.8 — 2026-10-07: `general.reported_year` added to `general_information`; catalog_version 2026.13.** New `number` field "Reporting year" (applies to every result type, `required: true`, set by the system; value is the year itself, e.g. 2026) right after `general.status`; the following `general_information` fields move one position (orders stay contiguous 1–26). Pure addition: no key removed or changed, response shape unchanged. |
+| 2026-10-07 | **v1.9 — 2026-10-07: condition semantics (owner amendment); catalog_version 2026.14.** The result-header condition key `result_type` is renamed `$result_type` (the `$` prefix is reserved for result header data; any other `$...` key is invalid); every condition `field` is documented by scope (sibling subfield inside subfields, top-level key outside); comparison is defined by the referenced field's type (`single_select` against the option id, `multi_select` only with `in`, `$result_type` against the type key) and `not_null` by type (`""` and `[]` are null, `false` and `0` are not); ids compared against a closed control list must exist in it; `general.is_discontinued` is relabelled to describe the stored value ("Is this innovation discontinued?", the inverse of the form question) and `general.primary_program` is documented as the same stored value as `contributors.submitter`. **Breaking for consumers that read `result_type` conditions:** the key is now `$result_type`. Pre-release change authorized by the owner (2026-10-07): the catalog has not been deployed or consumed by QA yet. Response shape unchanged; no field added or removed. |

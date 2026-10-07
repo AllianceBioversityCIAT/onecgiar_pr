@@ -276,3 +276,10 @@
 ## Amendment v1.8 — catalog 2026.13 (owner, 2026-10-07) — PASS
 
 - Owner: "En GI debemos retornar el year también". New key `general.reported_year` ("Reporting year", number — `result.reported_year_id` is a MySQL YEAR column, result.entity.ts:342-347), all types, required true / unconfirmed, order 21 after `general.status`; removed from NOT_FOR_QA. Revision 12 → 13. 238/238; falsifier → completeness red. Reviewer PASS.
+
+## Amendment v1.9 — condition semantics, catalog 2026.14, CONTRACT_VERSION 2 (owner, 2026-10-07) — PASS
+
+- Rules: `$` namespace for result-header keys (`$result_type`; unknown `$x` rejected); comparison by referenced type (single_select by id; multi_select `in` only, `eq` rejected; `$result_type` by type key); `not_null` ("" and [] null, false/0 not); closed-list id checks (`tag_levels` {1,2,3} — Principal = 3, migration 1666187001104; `result_types` 1..11 — ResultTypeEnum; `assessed_workshop_options` {1,2,3} — migration 1684849314892); UNVERIFIED and excluded: geographic scopes, innovation use levels, innovation types (CLARISA), discontinued reasons; subfield scope documented (sibling first, then top-level; depth-2 cannot reach parent's subfields).
+- Open points closed: `general.is_discontinued` stores the inverse of the form question (client `rd-annual-updating.component.ts:672-673`) → label "Is this innovation discontinued?" + note; `general.primary_program` = `contributors.submitter` (same value, edited in C&P, identity in GI) documented.
+- Pre-release breaking rename (`result_type` → `$result_type`) authorized by the owner; recorded in the change log.
+- Reviews: FAIL (spec triplet not amended; change-log justification missing) → Leader doc fixes → PASS. Tests 252/252; falsifiers red.

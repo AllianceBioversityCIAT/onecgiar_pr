@@ -45,7 +45,13 @@ import {
   PathStep,
   StorageBinding,
 } from '../types';
-import { ALL_TYPES, FROM_2026, NON_KP_TYPES, whenEq } from './shared';
+import {
+  ALL_TYPES,
+  FROM_2026,
+  NON_KP_TYPES,
+  RESULT_TYPE_FIELD,
+  whenEq,
+} from './shared';
 
 export const CONTRIBUTORS_PARTNERS_SECTION: CatalogSection = {
   key: 'contributors_partners',
@@ -665,7 +671,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     // Live rule only for innovation_development; other types have no live rule (client-only required, CP.html:620-631).
     required: false,
     required_confirmed: true,
-    required_when: whenEq('result_type', 'innovation_development'),
+    required_when: whenEq(RESULT_TYPE_FIELD, 'innovation_development'),
     ...FROM_2026,
     storage: { kind: 'column', table: 'result', column: 'has_innovation_link' },
   },

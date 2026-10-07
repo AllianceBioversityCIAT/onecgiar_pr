@@ -32,8 +32,10 @@ export function stableStringify(value: unknown): string {
  * change; the pinned fingerprint in `qa-catalog.mapper.spec.ts` fails until you do.
  *
  * History: 1 = visible_when / required_when (fields and subfields), nested subfields (T-14).
+ *          2 = v1.9 condition semantics: header pseudo-keys are `$`-prefixed (`result_type` -> `$result_type`),
+ *              comparison by the referenced field's type (single_select by option id, multi_select only `in`).
  */
-export const CONTRACT_VERSION = 1;
+export const CONTRACT_VERSION = 2;
 
 export interface HashableCatalog {
   resultTypes: CatalogResultType[];

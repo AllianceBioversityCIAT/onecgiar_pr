@@ -1,8 +1,11 @@
 // @akili-spec quality-assurance/qa-field-catalog
+import { CLOSED_CONTROL_LISTS } from './closed-control-lists';
 import {
   CatalogDefinition,
+  CatalogField,
   CatalogSubField,
   Condition,
+  ConditionLeaf,
   LookupBinding,
   PathBinding,
   StorageBinding,
@@ -19,6 +22,10 @@ export type CatalogShapeRule =
   | 'UNKNOWN_RESULT_TYPE'
   | 'EMPTY_NOT_FOR_QA_REASON'
   | 'UNKNOWN_CONDITION_KEY'
+  | 'UNKNOWN_HEADER_KEY'
+  | 'CONDITION_OPERATOR_NOT_ALLOWED'
+  | 'CONDITION_VALUE_TYPE'
+  | 'CONDITION_VALUE_NOT_IN_LIST'
   | 'MALFORMED_CONDITION'
   | 'UNKNOWN_LOOKUP_KEY'
   | 'CONDITION_KEY_NOT_VALID'
@@ -39,10 +46,13 @@ const STRUCTURED_TYPES = ['list', 'object'];
 export const MAX_SUBFIELD_DEPTH = 2;
 
 /**
- * The ONLY condition key that is not a catalog field (DD-12): the result's catalog type key,
- * matching `result_types[]`. Any other value a condition needs is itself a catalog field.
+ * v1.9: the `$` prefix is reserved for RESULT HEADER data (not catalog fields). A condition key that starts with `$`
+ * must be one of CONDITION_PSEUDO_KEYS; any other `$...` key is rejected. Today only `$result_type` exists: the
+ * result's catalog type key, matching `result_types[].key`. Future header keys (e.g. `$phase`) follow the same syntax.
+ * Every other value a condition needs is itself a catalog field.
  */
-export const CONDITION_PSEUDO_KEYS: readonly string[] = ['result_type'];
+export const HEADER_KEY_PREFIX = '$';
+export const CONDITION_PSEUDO_KEYS: readonly string[] = ['$result_type'];
 
 /** Closed operator vocabulary of `required_when` / `visible_when` (DD-12). */
 export const CONDITION_OPERATORS: readonly string[] = ['eq', 'in', 'not_null'];
@@ -50,12 +60,87 @@ export const CONDITION_OPERATORS: readonly string[] = ['eq', 'in', 'not_null'];
 const isBlank = (v: unknown): boolean =>
   typeof v !== 'string' || v.trim() === '';
 
-/** Every `field` named by a condition tree (leaves under all/any). */
-function conditionKeys(condition: Condition | undefined): string[] {
+/** Every leaf of a condition tree (under all/any). */
+function conditionLeaves(condition: Condition | undefined): ConditionLeaf[] {
   if (!condition) return [];
-  if ('all' in condition) return condition.all.flatMap(conditionKeys);
-  if ('any' in condition) return condition.any.flatMap(conditionKeys);
-  return [condition.field];
+  if ('all' in condition) return condition.all.flatMap(conditionLeaves);
+  if ('any' in condition) return condition.any.flatMap(conditionLeaves);
+  return [condition];
+}
+
+/** The compared value(s) of a leaf, as a list (`eq` -> one, `in` -> many, `not_null` -> none). */
+function comparedValues(leaf: ConditionLeaf): unknown[] {
+  if (leaf.operator === 'not_null') return [];
+  return Array.isArray(leaf.value) ? leaf.value : [leaf.value];
+}
+
+/**
+ * v1.9 comparison semantics by the referenced field's type. Returns the violations of one well-formed leaf:
+ *  - boolean / number / text / date: compared as is, nothing to check;
+ *  - single_select: compared against the option id, so every value must be numeric;
+ *  - multi_select: only `in` (true when at least one selected id is in `value`) or `not_null`; `eq` is rejected;
+ *  - a select over a CLOSED control list: every compared id must exist in that list;
+ *  - `$result_type`: compared against the type key (string); every key must exist in result_types[].
+ */
+function leafSemanticProblems(
+  leaf: ConditionLeaf,
+  target: { type: string; control_list?: string } | undefined,
+  typeKeys: Set<string>,
+): Array<{ rule: CatalogShapeRule; problem: string }> {
+  const out: Array<{ rule: CatalogShapeRule; problem: string }> = [];
+  const values = comparedValues(leaf);
+  if (leaf.field.startsWith(HEADER_KEY_PREFIX)) {
+    if (leaf.field === '$result_type') {
+      for (const v of values) {
+        if (typeof v !== 'string') {
+          out.push({
+            rule: 'CONDITION_VALUE_TYPE',
+            problem: `"$result_type" is compared against a result type key (string), got ${JSON.stringify(v)}`,
+          });
+        } else if (!typeKeys.has(v)) {
+          out.push({
+            rule: 'CONDITION_VALUE_NOT_IN_LIST',
+            problem: `"$result_type" value "${v}" is not a result type key`,
+          });
+        }
+      }
+    }
+    return out;
+  }
+  if (!target) return out;
+  if (target.type === 'multi_select' && leaf.operator === 'eq') {
+    out.push({
+      rule: 'CONDITION_OPERATOR_NOT_ALLOWED',
+      problem: `"${leaf.field}" is a multi_select: \`eq\` is not allowed, use \`in\` (true when at least one selected id is in value)`,
+    });
+    return out;
+  }
+  if (target.type !== 'single_select' && target.type !== 'multi_select') {
+    return out;
+  }
+  const nonNumeric = values.filter(
+    (v) => typeof v !== 'number' || !Number.isFinite(v),
+  );
+  if (nonNumeric.length > 0) {
+    out.push({
+      rule: 'CONDITION_VALUE_TYPE',
+      problem: `"${leaf.field}" is a ${target.type}: it is compared against option ids, so every value must be numeric (got ${JSON.stringify(nonNumeric)})`,
+    });
+    return out;
+  }
+  const closed = target.control_list
+    ? CLOSED_CONTROL_LISTS[target.control_list]
+    : undefined;
+  if (closed) {
+    const missing = values.filter((v) => !closed.includes(v as number));
+    if (missing.length > 0) {
+      out.push({
+        rule: 'CONDITION_VALUE_NOT_IN_LIST',
+        problem: `"${leaf.field}" compares ids ${JSON.stringify(missing)} that are not in the closed control list "${target.control_list}" (${closed.join(', ')})`,
+      });
+    }
+  }
+  return out;
 }
 
 /**
@@ -293,8 +378,21 @@ export function validateCatalogShape(
   }
 
   const topLevel = new Map<string, Validity>();
+  const topLevelField = new Map<string, CatalogField>();
   for (const f of catalog.fields) {
-    if (!topLevel.has(f.key)) topLevel.set(f.key, f);
+    if (!topLevel.has(f.key)) {
+      topLevel.set(f.key, f);
+      topLevelField.set(f.key, f);
+    }
+  }
+
+  function pushSemantic(
+    found: Array<{ rule: CatalogShapeRule; problem: string }>,
+    path: string,
+  ): void {
+    for (const { rule, problem } of found) {
+      errors.push({ rule, path, message: `${path}: ${problem}` });
+    }
   }
 
   /**
@@ -305,7 +403,7 @@ export function validateCatalogShape(
     condition: Condition | undefined,
     path: string,
     owner: Validity,
-    siblings: Set<string> | undefined,
+    siblings: Map<string, CatalogSubField> | undefined,
   ): void {
     if (!condition) return;
     const problems = conditionProblems(condition);
@@ -317,22 +415,40 @@ export function validateCatalogShape(
       });
       return;
     }
-    for (const key of conditionKeys(condition)) {
-      if (CONDITION_PSEUDO_KEYS.includes(key) || siblings?.has(key)) continue;
-      const target = topLevel.get(key);
+    for (const leaf of conditionLeaves(condition)) {
+      const key = leaf.field;
+      if (key.startsWith(HEADER_KEY_PREFIX)) {
+        if (!CONDITION_PSEUDO_KEYS.includes(key)) {
+          errors.push({
+            rule: 'UNKNOWN_HEADER_KEY',
+            path,
+            message: `${path}: condition names "${key}"; the "$" prefix is reserved for result header keys and only ${CONDITION_PSEUDO_KEYS.join(', ')} exists`,
+          });
+        } else {
+          pushSemantic(leafSemanticProblems(leaf, undefined, typeKeys), path);
+        }
+        continue;
+      }
+      // Scope: inside subfields the sibling of the same list element wins; a top-level key is the fallback.
+      const sibling = siblings?.get(key);
+      const target = sibling ?? topLevelField.get(key);
       if (!target) {
         errors.push({
           rule: 'UNKNOWN_CONDITION_KEY',
           path,
           message: `${path}: condition names "${key}", which is not a catalog key`,
         });
-      } else if (!covers(target, owner)) {
+        continue;
+      }
+      if (!sibling && !covers(topLevel.get(key) as Validity, owner)) {
         errors.push({
           rule: 'CONDITION_KEY_NOT_VALID',
           path,
           message: `${path}: condition key "${key}" is not valid in every year its owner is`,
         });
+        continue;
       }
+      pushSemantic(leafSemanticProblems(leaf, target, typeKeys), path);
     }
   }
 
@@ -340,7 +456,7 @@ export function validateCatalogShape(
   function checkLookupKey(
     storage: StorageBinding | SubFieldStorageBinding,
     path: string,
-    siblings: Set<string> | undefined,
+    siblings: Pick<Set<string>, 'has'> | undefined,
     ownKey?: string,
   ): void {
     if (storage.kind !== 'lookup' || !Array.isArray(storage.keys)) return;
@@ -387,8 +503,8 @@ export function validateCatalogShape(
       `${parentPath}/subfield`,
       errors,
     );
-    const siblings = new Set(subs.map((sub) => sub.key));
-    for (const key of siblings) {
+    const siblings = new Map(subs.map((sub) => [sub.key, sub]));
+    for (const key of siblings.keys()) {
       const rowId = `${rowParent}|${key}`;
       if (subRows.has(rowId)) {
         errors.push({

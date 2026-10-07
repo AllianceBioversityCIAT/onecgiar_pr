@@ -119,7 +119,7 @@ describe('QA catalog response mapper — display rules and nested data (QAC-R-13
     expect(programs().required_when).toEqual({
       all: [
         { field: 'general.gate', operator: 'eq', value: true },
-        { field: 'result_type', operator: 'in', value: ['policy_change'] },
+        { field: '$result_type', operator: 'in', value: ['policy_change'] },
       ],
     });
   });
@@ -298,6 +298,7 @@ const PINNED_KEY_PATHS = [
  */
 const PROJECTION_FINGERPRINTS: Record<number, string> = {
   1: '27c7de817cdbbf136da2cb2b0417d6b9d082be9deb4beb9e128f71392a8a4780',
+  2: 'eb74269cb43c37a0440d8158f3c41f31832a42f2889f3e95f4f682d97868d284',
 };
 
 describe('response projection pin (DD-12: a projection change forces a catalog_version bump)', () => {

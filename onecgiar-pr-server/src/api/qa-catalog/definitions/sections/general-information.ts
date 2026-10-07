@@ -71,7 +71,8 @@ const impactAreaField = (
   },
 });
 
-const ANNUAL_UPDATING_ACTIVE = {
+// Conditions compare the STORED `result.is_discontinued` (true = discontinued), never the answer to the form question.
+const ANNUAL_UPDATING_DISCONTINUED = {
   all: [
     whenEq('general.is_discontinued', true),
     whenEq(IS_REPLICATED_FIELD, true),
@@ -177,6 +178,8 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
   },
   // Mirrors `contributors.submitter` (same stored value, same binding). GI shows it as identity, like
   // result_type / level; the form edits it in Contributors & partners. Added 2026-10-07 (owner, v1.4).
+  // v1.9: `general.primary_program` and `contributors.submitter` are the SAME stored value (results_by_inititiative,
+  // initiative_role_id 1, is_active 1); it is edited only in Contributors & partners; here it is a read-only identity.
   {
     key: 'general.primary_program',
     label: 'Primary Program',
@@ -322,8 +325,13 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
   // Annual-updating block (inventory C-1 rows 14-17). The inventory names C-1 as the single owner of
   // these keys (REVIEW D7) and applies them per result type through `result_types`.
   {
+    // POLARITY (v1.9): the form asks "Is this innovation active and receiving investment?" (2026 wording) but the
+    // STORED value is the INVERSE: Yes -> is_discontinued = false, No -> is_discontinued = true
+    // (rd-annual-updating.component.ts buildOptions: { Yes, value: false } / { No, value: true }; header label
+    // STATUS_TRIGGER_HEADER_LABEL). The catalog describes the stored value, hence this label and the conditions
+    // `general.is_discontinued eq true` meaning "discontinued / inactive".
     key: 'general.is_discontinued',
-    label: 'Is this innovation active and receiving investment?',
+    label: 'Is this innovation discontinued?',
     type: 'boolean',
     section: SECTION,
     order: 22,
@@ -344,7 +352,7 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     result_types: INNOVATION_TYPES,
     required: false,
     required_confirmed: true,
-    required_when: ANNUAL_UPDATING_ACTIVE,
+    required_when: ANNUAL_UPDATING_DISCONTINUED,
     ...FROM_2026,
     storage: {
       kind: 'relation',
