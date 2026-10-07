@@ -38,106 +38,114 @@
     class="relative flex flex-col justify-center gap-[4px] px-[16px] sm:px-[32px] transition-[height,opacity] duration-[180ms] ease-out"
     [class]="bandCollapsed() ? 'h-0 overflow-hidden opacity-0' : 'h-[64px] opacity-100'"
     [attr.inert]="bandCollapsed() ? '' : null">
-    <!-- Eyebrow: dot + SP01 · REPORTING CYCLE 2026 · P25 -->
-    <div class="group/copy flex items-center gap-[7px]">
-      <app-sp-marker [code]="programCode()" [size]="15" [dotSize]="7" [fallbackColor]="programDotColor()" />
-      @if (programCode()) {
-        <!-- `font-mono` (not the global `.pr-code`): that class is UNLAYERED SCSS, so its 12px/500
-             beat the layered Tailwind utilities next to it and the code rendered a notch bigger and
-             lighter than the rest of the eyebrow. Same metric both spans now — 11px/600/0.88px
-             (reference :338-339), only the family differs. -->
-        <span
-          class="font-mono text-[11px] font-semibold leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
-          {{ programCode() }}
-        </span>
-        <app-copy-button [value]="programCode()" what="programme code" />
-      }
-      <span
-        class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
-        {{ eyebrowCycle() }}
-      </span>
-      <!-- `48 DAYS LEFT` chip intentionally absent — no cycle end date in the client. -->
-    </div>
-
-    <!-- Title row + ⓘ popover (reference :343-358). Click, not hover. -->
-    <div class="relative flex min-w-0 items-center gap-[8px] pr-[140px] sm:pr-[240px] min-[900px]:pr-[380px]" data-guide="sp-identity">
-      <h1
-        class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
-        {{ programName() }}
-      </h1>
-
-      <button
-        type="button"
-        class="flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-all hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
-        aria-label="About this program and view"
-        [attr.aria-expanded]="infoOpen()"
-        [attr.aria-controls]="'pr-band-info-popover'"
-        (click)="toggleInfo($event)">
-        <ng-icon name="lucideInfo" class="text-[13px]" />
-      </button>
-
-      @if (infoOpen()) {
-        <!--
-          460×auto, radius 14, border #E3E3E8, shadow, pad 18.
-          left:0 top:32 under the title row.
-          stopPropagation so document:click does not close it mid-interaction.
-        -->
-        <div
-          id="pr-band-info-popover"
-          role="dialog"
-          aria-label="About this program and view"
-          class="absolute left-0 top-[32px] z-50 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
-          data-testid="reporting-program-band-info-popover"
-          (click)="$event.stopPropagation()">
-          <div class="mb-[12px] flex items-center justify-between gap-[8px]">
-            <div class="flex items-center gap-[8px] min-w-0">
-              <span class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
-                <ng-icon name="lucideInfo" class="text-[14px]" />
-              </span>
-              <span class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)]">
-                {{ programName() }}
-              </span>
-            </div>
-            <button
-              type="button"
-              class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] transition-colors hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)]"
-              aria-label="Close"
-              (click)="closeInfo()">
-              <ng-icon name="lucideX" class="text-[14px]" />
-            </button>
-          </div>
-
-          <!-- Active view context -->
-          <div class="mb-[14px] rounded-[10px] bg-[var(--pr-color-primary-25)] border border-[var(--pr-color-primary-100)] p-[12px]">
-            <div class="mb-[4px] flex items-center gap-[6px]">
-              <span class="inline-block rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-color-primary-700)]">
-                {{ activeTabInfo().title }}
-              </span>
-              <span class="text-[11.5px] font-medium text-[var(--pr-text-subtle)]">Active view</span>
-            </div>
-            <p class="m-0 text-[12.5px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
-              {{ activeTabInfo().description }}
-            </p>
-          </div>
-
-          <!-- Program overview -->
-          <div>
-            <span class="block mb-[4px] text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
-              Program overview
+    <!-- Programme logo spans the eyebrow + title block (Yeck, 7-oct-2026). No artwork → the dot. -->
+    <div class="flex min-w-0 items-center gap-[12px]">
+      <app-sp-marker [code]="programCode()" [size]="44" [dotSize]="10" [fallbackColor]="programDotColor()" />
+      <div class="flex min-w-0 flex-1 flex-col gap-[4px]">
+        <!-- Eyebrow: dot + SP01 · REPORTING CYCLE 2026 · P25 -->
+        <div class="group/copy flex items-center gap-[7px]">
+          @if (programCode()) {
+            <!-- `font-mono` (not the global `.pr-code`): that class is UNLAYERED SCSS, so its 12px/500
+                 beat the layered Tailwind utilities next to it and the code rendered a notch bigger and
+                 lighter than the rest of the eyebrow. Same metric both spans now — 11px/600/0.88px
+                 (reference :338-339), only the family differs. -->
+            <span
+              class="font-mono text-[11px] font-semibold leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+              {{ programCode() }}
             </span>
-            <div
-              class="max-h-[140px] overflow-y-auto text-[13px] font-normal leading-[1.55] text-[var(--pr-text)] [text-wrap:pretty]">
-              {{ resolvedDescription() }}
-            </div>
-          </div>
-
-          <div
-            class="mt-[14px] border-t border-[var(--pr-border-divider)] pt-[10px] text-[12px] font-medium text-[var(--pr-text-secondary)] flex items-center justify-between">
-            <span>{{ programMeta() }}</span>
-            <span class="font-mono text-[11px] text-[var(--pr-text-subtle)]">{{ programCode() }}</span>
-          </div>
+            <!-- Hidden copy button takes no room until hover, so "SP10 · REPORTING…" reads as one line. -->
+            <span class="-ml-[7px] inline-flex w-0 overflow-hidden transition-all duration-150 group-hover/copy:ml-0 group-hover/copy:w-[22px] group-focus-within/copy:ml-0 group-focus-within/copy:w-[22px]">
+              <app-copy-button [value]="programCode()" what="programme code" />
+            </span>
+          }
+          <span
+            class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+            {{ eyebrowCycle() }}
+          </span>
+          <!-- `48 DAYS LEFT` chip intentionally absent — no cycle end date in the client. -->
         </div>
-      }
+
+        <!-- Title row + ⓘ popover (reference :343-358). Click, not hover. -->
+        <div class="relative flex min-w-0 items-center gap-[8px] pr-[140px] sm:pr-[240px] min-[900px]:pr-[380px]" data-guide="sp-identity">
+          <h1
+            class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
+            {{ programName() }}
+          </h1>
+
+          <button
+            type="button"
+            class="flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-all hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+            aria-label="About this program and view"
+            [attr.aria-expanded]="infoOpen()"
+            [attr.aria-controls]="'pr-band-info-popover'"
+            (click)="toggleInfo($event)">
+            <ng-icon name="lucideInfo" class="text-[13px]" />
+          </button>
+
+          @if (infoOpen()) {
+            <!--
+              460×auto, radius 14, border #E3E3E8, shadow, pad 18.
+              left:0 top:32 under the title row.
+              stopPropagation so document:click does not close it mid-interaction.
+            -->
+            <div
+              id="pr-band-info-popover"
+              role="dialog"
+              aria-label="About this program and view"
+              class="absolute left-0 top-[32px] z-50 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+              data-testid="reporting-program-band-info-popover"
+              (click)="$event.stopPropagation()">
+              <div class="mb-[12px] flex items-center justify-between gap-[8px]">
+                <div class="flex items-center gap-[8px] min-w-0">
+                  <span class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+                    <ng-icon name="lucideInfo" class="text-[14px]" />
+                  </span>
+                  <span class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)]">
+                    {{ programName() }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] transition-colors hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)]"
+                  aria-label="Close"
+                  (click)="closeInfo()">
+                  <ng-icon name="lucideX" class="text-[14px]" />
+                </button>
+              </div>
+
+              <!-- Active view context -->
+              <div class="mb-[14px] rounded-[10px] bg-[var(--pr-color-primary-25)] border border-[var(--pr-color-primary-100)] p-[12px]">
+                <div class="mb-[4px] flex items-center gap-[6px]">
+                  <span class="inline-block rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-color-primary-700)]">
+                    {{ activeTabInfo().title }}
+                  </span>
+                  <span class="text-[11.5px] font-medium text-[var(--pr-text-subtle)]">Active view</span>
+                </div>
+                <p class="m-0 text-[12.5px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
+                  {{ activeTabInfo().description }}
+                </p>
+              </div>
+
+              <!-- Program overview -->
+              <div>
+                <span class="block mb-[4px] text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+                  Program overview
+                </span>
+                <div
+                  class="max-h-[140px] overflow-y-auto text-[13px] font-normal leading-[1.55] text-[var(--pr-text)] [text-wrap:pretty]">
+                  {{ resolvedDescription() }}
+                </div>
+              </div>
+
+              <div
+                class="mt-[14px] border-t border-[var(--pr-border-divider)] pt-[10px] text-[12px] font-medium text-[var(--pr-text-secondary)] flex items-center justify-between">
+                <span>{{ programMeta() }}</span>
+                <span class="font-mono text-[11px] text-[var(--pr-text-subtle)]">{{ programCode() }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
     </div>
 
     <!-- Top-right action: Where to report. Smart Back was removed — after sibling-skip

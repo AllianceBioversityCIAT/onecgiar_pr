@@ -15,10 +15,12 @@ import { AiProcessesTriggerComponent } from '../ai-processes-trigger/ai-processe
 import { BilateralTourService } from '../../services/bilateral-tour.service';
 import { resultStatusLabel, resultStatusToken } from '../../../../shared/constants/result-status-tokens';
 
+import { CenterMarkerComponent } from '../../../../shared/components/center-marker/center-marker.component';
+import { centerLogoSrc } from '../../../result-framework-reporting/pages/result-framework-reporting-home/components/result-framework-reporting-center-card-item/center-logos';
 @Component({
   selector: 'app-bilateral-page-header',
   standalone: true,
-  imports: [RouterLink, AiProvenanceNoticeComponent, AiProcessesTriggerComponent, NgIcon],
+  imports: [RouterLink, AiProvenanceNoticeComponent, AiProcessesTriggerComponent, NgIcon, CenterMarkerComponent],
   providers: [provideIcons({ lucideInfo, lucideX })],
   templateUrl: './bilateral-page-header.component.html',
   styleUrl: './bilateral-page-header.component.scss',
@@ -166,6 +168,9 @@ export class BilateralPageHeaderComponent {
     const acronym = this.ctx.centerAcronym();
     return name ? `${name} (${acronym})` : acronym;
   });
+
+  /** Logo of the current Center; when present it replaces the eyebrow dot as the identity marker. */
+  readonly centerLogoSrc = computed(() => centerLogoSrc(this.ctx.centerAcronym()));
 
   readonly headerTitle = computed(() => this.ctx.centerName() || this.ctx.centerAcronym() || '');
 

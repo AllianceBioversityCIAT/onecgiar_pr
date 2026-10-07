@@ -21,9 +21,8 @@ const CENTER_LOGO_FILES: Readonly<Record<string, string>> = {
   IITA: 'IITA.png',
   ILRI: 'ILRI.png',
   IRRI: 'IRRI.png',
-  IWMI: 'IWMI.png',
-  WorldFish: 'WorldFish.png',
-  SO: 'SO.png'
+  IWMI: 'IWMI.png'
+  // WorldFish and System Office (SO): logos still pending from Communications (P2-3857).
 };
 
 export function centerLogoSrc(acronym: string | null | undefined): string | null {

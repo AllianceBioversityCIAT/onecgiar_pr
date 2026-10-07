@@ -49,6 +49,7 @@ import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
 import { CentersService } from '../../services/global/centers.service';
 import { SpMarkerComponent } from '../sp-marker/sp-marker.component';
+import { CenterMarkerComponent } from '../center-marker/center-marker.component';
 import { REPORTING_NAV_SIDEBAR_COPY } from '../../../internationalization/reporting-nav-sidebar.copy';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
@@ -80,7 +81,7 @@ interface IconFlyout {
 @Component({
   selector: 'app-reporting-nav-sidebar',
   standalone: true,
-  imports: [RouterModule, NgIcon, SpMarkerComponent, ...HlmSidebarImports],
+  imports: [RouterModule, NgIcon, SpMarkerComponent, CenterMarkerComponent, ...HlmSidebarImports],
   templateUrl: './reporting-nav-sidebar.component.html',
   styleUrls: ['./reporting-nav-sidebar.component.scss'],
   providers: [

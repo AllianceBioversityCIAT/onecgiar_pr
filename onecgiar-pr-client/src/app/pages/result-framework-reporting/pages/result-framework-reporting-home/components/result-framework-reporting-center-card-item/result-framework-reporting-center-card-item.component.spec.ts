@@ -51,7 +51,7 @@ describe('ResultFrameworkReportingCenterCardItemComponent', () => {
     });
 
     it('tolerates surrounding spaces and returns null for empty or unknown acronyms', () => {
-      expect(centerLogoSrc(' WorldFish ')).toBe('/assets/result-framework-reporting/Centers-Logos/WorldFish.png');
+      expect(centerLogoSrc(' IWMI ')).toBe('/assets/result-framework-reporting/Centers-Logos/IWMI.png');
       expect(centerLogoSrc('')).toBeNull();
       expect(centerLogoSrc(null)).toBeNull();
       expect(centerLogoSrc(undefined)).toBeNull();
