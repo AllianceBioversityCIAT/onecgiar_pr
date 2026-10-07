@@ -161,9 +161,10 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     ...FROM_2026,
     storage: { kind: 'column', table: 'result', column: 'status_id' },
   },
-  // Moved here from contributors_partners 2026-10-07 (owner): form order puts the Primary Program right after the result level/type.
+  // Mirrors `contributors.submitter` (same stored value, same binding). GI shows it as identity, like
+  // result_type / level; the form edits it in Contributors & partners. Added 2026-10-07 (owner, v1.4).
   {
-    key: 'contributors.submitter',
+    key: 'general.primary_program',
     label: 'Primary Program',
     type: 'single_select',
     control_list: 'initiatives',

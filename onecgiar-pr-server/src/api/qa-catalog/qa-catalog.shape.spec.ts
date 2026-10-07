@@ -322,7 +322,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 8 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 9 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -401,14 +401,23 @@ describe('the real catalog definitions', () => {
     expect(new Set(gi.map((f) => f.order)).size).toBe(gi.length);
   });
 
-  it('2026-10-07 amendment: `contributors.submitter` lives in general_information as "Primary Program"; general_information follows the owner form order; contributors_partners orders are contiguous from 1', () => {
-    const submitter = CATALOG_FIELDS.find(
-      (f) => f.key === 'contributors.submitter',
-    );
-    expect(submitter?.section).toBe('general_information');
-    expect(submitter?.label).toBe('Primary Program');
-    expect(submitter?.control_list).toBe('initiatives');
-    expect(submitter?.type).toBe('single_select');
+  it('2026-10-07 amendment (v1.4): `contributors.submitter` is "Submitter" first in contributors_partners; `general.primary_program` mirrors it in general_information; both orders are contiguous', () => {
+    const find = (k: string) => CATALOG_FIELDS.find((f) => f.key === k);
+    const submitter = find('contributors.submitter');
+    const primary = find('general.primary_program');
+    expect(submitter?.section).toBe('contributors_partners');
+    expect(submitter?.label).toBe('Submitter');
+    expect(submitter?.order).toBe(1);
+    expect(primary?.section).toBe('general_information');
+    expect(primary?.label).toBe('Primary Program');
+    expect(primary?.order).toBe(3);
+    for (const f of [submitter, primary]) {
+      expect(f?.control_list).toBe('initiatives');
+      expect(f?.type).toBe('single_select');
+    }
+    expect(primary?.storage).toEqual(submitter?.storage);
+    expect(primary?.required).toBe(submitter?.required);
+    expect(primary?.required_confirmed).toBe(submitter?.required_confirmed);
     const sorted = (section: string) =>
       CATALOG_FIELDS.filter((f) => f.section === section).sort(
         (a, b) => a.order - b.order,
@@ -417,7 +426,7 @@ describe('the real catalog definitions', () => {
     expect(gi.map((f) => f.key)).toEqual([
       'general.result_level',
       'general.result_type',
-      'contributors.submitter',
+      'general.primary_program',
       'general.title',
       'general.description',
       'general.lead_contact_person',
@@ -443,6 +452,7 @@ describe('the real catalog definitions', () => {
     expect(gi.map((f) => f.order)).toEqual(gi.map((_, i) => i + 1));
     const cp = sorted('contributors_partners');
     expect(cp.map((f) => f.order)).toEqual(cp.map((_, i) => i + 1));
+    expect(cp[0].key).toBe('contributors.submitter');
   });
 
   it('QAC-R-5: the IPSR step-1 geography is unconfirmed and optional (the live step-1 function does not test it), and innovation_package carries no common geo.* key', () => {

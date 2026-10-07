@@ -6,7 +6,7 @@
 // `toc_alignment` section (QAC-T-8 · inventory C-2, keys `toc.*` frozen) now lives here. Deferred to
 // PENDING_CATALOG (see pending-catalog.ts): `toc.entries.indicator` and `toc.entries.contribution_to_target`
 // (2-hop bindings, REVIEW D2).
-// 2026-10-07 (owner): `contributors.submitter` moved to `general_information` (label "Primary Program"); orders here start at 1.
+// 2026-10-07 (owner, v1.4): `contributors.submitter` is back here (form label "Submitter", first on the page); `general.primary_program` mirrors it in `general_information`. Orders here run 1..15.
 // `order` follows the client page (rd-contributors-and-partners.component.html, "CP.html"): submitter :9-13,
 // ToC block :38-95 (planned_result :38, invested resources :51, entries :67, narrative :83), centers :98+,
 // lead center :251, bilateral projects :270-325, partners/lead partner :556-575. The former `linked_results` section (QAC-T-8 · C-6) is merged here too, after the partners block (:586-634).
@@ -25,13 +25,33 @@ const SECTION = CONTRIBUTORS_PARTNERS_SECTION.key;
 
 export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
   {
+    key: 'contributors.submitter',
+    label: 'Submitter',
+    type: 'single_select',
+    control_list: 'initiatives',
+    section: SECTION,
+    order: 1,
+    result_types: ALL_TYPES,
+    // no live rule (owner: function not needed); the client requires it by default
+    required: false,
+    required_confirmed: false,
+    ...FROM_2026,
+    storage: {
+      kind: 'relation',
+      table: 'results_by_inititiative',
+      fk_to_result: 'result_id',
+      value_column: 'inititiative_id',
+      filter: { initiative_role_id: 1 },
+    },
+  },
+  {
     key: 'toc.planned_result',
     label: 'Can this result be mapped to a ToC KPI?',
     description:
       "If Yes, please select the relevant level, KPI, and indicate the result contribution to the target. If No, please provide a short justification explaining why this result is being reported outside the 2026 ToC KPI. No-mapped results will be shared with the Program team for consideration as part of the adaptive management process, and may feed into updates to the Program's 2027 ToC.",
     type: 'boolean',
     section: SECTION,
-    order: 1,
+    order: 2,
     result_types: ALL_TYPES,
     required: true,
     required_confirmed: true,
@@ -50,7 +70,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       "Select 'Yes' if direct program funds were utilized to achieve this result. Select 'No' if the result was achieved organically (e.g., policy influence) without financial investment from the program.",
     type: 'boolean',
     section: SECTION,
-    order: 2,
+    order: 3,
     result_types: ALL_TYPES,
     // No live rule (client-only): the client requires it when the result is not mapped to a ToC KPI.
     required: false,
@@ -68,7 +88,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     label: 'Why is the result being reported?',
     type: 'text',
     section: SECTION,
-    order: 4,
+    order: 5,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
@@ -85,7 +105,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     label: 'ToC contributions',
     type: 'list',
     section: SECTION,
-    order: 3,
+    order: 4,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
@@ -134,7 +154,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'centers',
     section: SECTION,
-    order: 5,
+    order: 6,
     result_types: ALL_TYPES,
     // no live rule: the live function has the center check commented out (V-CP:124-132)
     required: false,
@@ -155,7 +175,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'single_select',
     control_list: 'centers',
     section: SECTION,
-    order: 6,
+    order: 7,
     result_types: ALL_TYPES,
     // no live rule: the live function has the lead-center check commented out (V-CP:121-132,176)
     required: false,
@@ -174,7 +194,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'projects',
     section: SECTION,
-    order: 7,
+    order: 8,
     result_types: ALL_TYPES,
     // no live rule (validation_contributor_partner_P25 never reads results_by_projects); the client marks it
     // optional ([required]="false", CP.html:274) and disables it until a ToC result is mapped (CP.html:327-355).
@@ -197,7 +217,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     description: 'Select this option if the partner section is not applicable',
     type: 'boolean',
     section: SECTION,
-    order: 8,
+    order: 9,
     result_types: ALL_TYPES,
     required: true,
     required_confirmed: true,
@@ -216,7 +236,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'institutions',
     section: SECTION,
-    order: 9,
+    order: 10,
     result_types: NON_KP_TYPES,
     required: false,
     required_confirmed: true,
@@ -235,7 +255,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     label: 'Is this result being led by an external partner?',
     type: 'boolean',
     section: SECTION,
-    order: 10,
+    order: 11,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
@@ -255,7 +275,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'single_select',
     control_list: 'institutions',
     section: SECTION,
-    order: 11,
+    order: 12,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
@@ -274,7 +294,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'institutions',
     section: SECTION,
-    order: 12,
+    order: 13,
     result_types: ['knowledge_product'],
     required: false,
     required_confirmed: true,
@@ -299,7 +319,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?',
     type: 'boolean',
     section: SECTION,
-    order: 13,
+    order: 14,
     result_types: ALL_TYPES,
     // Live rule only for innovation_development; other types have no live rule (client-only required).
     required: false,
@@ -314,7 +334,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'results',
     section: SECTION,
-    order: 14,
+    order: 15,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,

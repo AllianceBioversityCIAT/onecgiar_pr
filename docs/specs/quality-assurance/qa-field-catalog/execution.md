@@ -245,3 +245,8 @@
 - Form walk-through, General information: `contributors.submitter` (key unchanged) moved to `general_information` as "Primary Program"; section reordered to the form: level, type, Primary Program, title, description, lead contact, each tag followed by its impact-area component, then code, created by, created date, status, annual-updating block. `contributors_partners` renumbered 1–14.
 - Revision 7 → 8 (no key removed; guarded snapshot accepted). Tests 123/123; falsifier (title/description swapped) → red. Reviewer PASS.
 - Owner Q&A: conditional fields (impact-area components when tag = Principal) are delivered; only the condition (`required_when`) is internal, so they read `required: false`. Owner: not needed in the response for now; values will arrive with the future results endpoint regardless.
+
+## Amendment v1.4 — catalog 2026.9 (owner, 2026-10-07) — PASS
+
+- Correction of v1.3 (Leader misread "también" as "move"): the primary program appears in BOTH sections. `contributors.submitter` back in `contributors_partners` as "Submitter", order 1 (client `rd-contributors-and-partners.component.html:9-24`); new key `general.primary_program` ("Primary Program", order 3 in `general_information`) mirroring the same stored value (`results_by_inititiative`, role 1).
+- Revision 8 → 9 (pure addition; no key removed). 114 fields. Tests 123/123; falsifier → red. Reviewer PASS (advisory: share the storage literal as a constant).
