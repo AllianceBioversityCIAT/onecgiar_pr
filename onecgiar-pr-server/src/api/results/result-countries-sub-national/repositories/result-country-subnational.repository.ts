@@ -176,7 +176,7 @@ export class ResultCountrySubnationalRepository
     // then update by id) instead of a subquery on the same table, which MySQL rejects with
     // error 1093 ("can't specify target table for update in FROM clause").
     const selectIdsToReactivate = `
-      select max(id) as id
+      select max(result_country_subnational_id) as result_country_subnational_id
       from result_country_subnational
       where result_country_id = ?
         and geo_scope_role_id = ?
@@ -203,11 +203,16 @@ export class ResultCountrySubnationalRepository
           ...subnationals,
         ]);
 
-        const rowsToReactivate: { id: number | string }[] = await this.query(
-          selectIdsToReactivate,
-          [rcId, geoScopeRoleId, ...subnationals],
+        const rowsToReactivate: {
+          result_country_subnational_id: number | string;
+        }[] = await this.query(selectIdsToReactivate, [
+          rcId,
+          geoScopeRoleId,
+          ...subnationals,
+        ]);
+        const ids = (rowsToReactivate ?? []).map(
+          (row) => row.result_country_subnational_id,
         );
-        const ids = (rowsToReactivate ?? []).map((row) => row.id);
         if (!ids.length) return rowsToReactivate;
 
         const idPlaceholders = ids.map(() => '?').join(', ');
@@ -217,7 +222,7 @@ export class ResultCountrySubnationalRepository
       set is_active = 1,
         last_updated_date = NOW(),
         last_updated_by = ?
-      where id in (${idPlaceholders});
+      where result_country_subnational_id in (${idPlaceholders});
     `,
           [userId, ...ids],
         );

@@ -244,3 +244,80 @@ Unverified side findings from the scout (not acted on): `result_initiative_budge
   - New change-log row, 2026-10-06, `RSF-T-6` / `RSF-R-7`, amends `RSB-R-15`. It states that the no-code `create` and `versioned` paths are unchanged.
 - **Verified against the code:** `resolveContributorInitiativeIds` (`bs:5080`) yields `[]` for an absent or empty `contributing_programs`, and the T-6 step then retires every active role-2 row (T-6 `[]` test).
 - **Review:** no separate Reviewer spawn. The text restates behaviour the T-6 Reviewer already audited, and the Reviewer proposed this wording.
+
+### `RSF-T-7` — Live checks (manual, user) — in progress
+
+#### Step 1: bilateral GET (2026-10-07; user confirmed the environment has the deploy through `443e214ce`)
+
+- **Lesson:** `GET /api/bilateral/:id` takes the result **id**. The "9550/9762" of the spec are **result codes** (ids 12018 / 12230). The first attempt used `/9550` (not found) and `/9762` (a different result, code 7296).
+- **Candidates:** from a read-only query of API results that have an inactive role-1 row.
+
+| id (code) | DB rows (`results_by_inititiative`) | `obj_results_toc_result` live | Verdict |
+|---|---|---|---|
+| 12018 (9550), Rejected | SP11 r1 active · SP09 r1 inactive | only `SP11` "Primary submitter"; SP09 absent (still listed in `obj_result_by_initiatives` with `is_active:false`) | ✅ **PASS**: the "owner changed" scenario, incl. "IT MUST NOT list SP09" |
+| 12230 (9762), Pending Review | SP09, SP11, SP12 r1, all inactive | `[]`; the result is still returned (200) | ✅ **PASS**: the "ownerless" scenario for the GET, incl. "BUT must NOT drop the result" |
+| 11513 (9045) | SP06 r1 active · SP07 r1 inactive · SGP-02, SP01, SP02 r2 active | `SP06` "Primary submitter" + `SGP-02`, `SP01`, `SP02` "Contributor"; SP07 absent | ✅ **PASS**: "owner changed" + "contributors untouched" (all 3 role-2 entries present) |
+
+- **Step 1 result:** ✅ all three cases pass. `T-2`'s live half and `RSF-R-3`'s GET rows are closed.
+- **`RSF-OQ-4`:** the live label is `"Primary submitter"`, which matches the contract doc example. No doc fix is needed. **Closed.**
+- **Side observation:** on 12230, `innovation_use_summary.initiative_budget` is `[]` with all parents inactive. This is consistent with `R-8`.
+
+#### Step 4 (run second): bell, read-only glance on PRTest (2026-10-07, user screenshots)
+
+- **Primary request card, result 9762:** the card reads "**Bioversity (Alliance)** has tagged **SP11** as the primary Science Program of result 9762 - RSB T7…". It has the SP11 chip, "REQUIRES DECISION", and Accept as primary / Decline.
+  - No "as a contributor", "has requested inclusion" or "from SPxx" anywhere.
+  - The sentence takes two lines and the result title truncates with an ellipsis, so the clamp holds.
+  - ✅ `RSF-R-1` live, and the layout gap is closed.
+- **`RSF-P-4`:** `creating_center` is present on bell rows: the label is the centre acronym "Bioversity (Alliance)", not the "the Center" fallback. ✅ Closed.
+- **Deep link (mouse hover):** `https://prtest.ciat.cgiar.org/result/results-outlet/results-notifications?phase=36&init=60&search=Bioversity (Alliance) has tagged SP11 as the primary Science Program of result 9762 - RSB T7 innovation amount test 2026-10-07`.
+  - `search` carries the new sentence.
+  - `init=60` (SP11) is present because the request row has an initiative.
+  - There is no `init=undefined`.
+  - ✅ `RSF-R-2` link half.
+- **Ownerless result 9762, "Pending review" update card:** the card is still shown ("The result 9762 - … was submitted for your…") and shows **no** SP chip, so no retired SP09/SP11/SP12 is presented as owner. ✅ `RSF-R-3` "ownerless … BUT must NOT hide the notification" live.
+- **No clicks** were made on Accept or Decline.
+- **Not observed:** the optional "Declined" Center notice chip (advisory from T-3). None was visible in the bell.
+
+#### Step 2a: the two new 400s, live on PRTest (2026-10-07, `POST https://prtest-back.ciat.cgiar.org/api/bilateral/create`, result 9550 = id 12018, Rejected)
+
+- **Test 1:** payload with `lead_center: {"acronym":"ZZZ"}` returned `400 "Result 9550 cannot be resubmitted: lead_center ZZZ does not match a CGIAR center."` (03:46:42Z). ✅ `RSF-R-5` live. The message matches design §6 exactly.
+- **Test 2:** the same payload with `lead_center: {"institution_id":49}` and two `contributing_bilateral_projects` flagged `is_lead` returned `400 "Result 9550 cannot be resubmitted: 2 bilateral projects are flagged is_lead; flag exactly one."` (03:47:46Z). ✅ `RSF-R-6` live.
+- **Lesson:** a resubmission test needs a **Rejected** result. 9762 is Pending Review and would answer 409 before reaching the new checks.
+- **"IT MUST leave R unchanged":** the follow-up `GET /api/bilateral/12018` (03:55:03Z) shows the result unchanged: still `Rejected` (status 7), `CENTER-02` lead, `last_updated_date` 2026-10-06T21:57:23, description "Description RSB-T7 resubmission 3 to SP12", SP11 active primary. ✅ Both refusals wrote nothing.
+
+#### Step 2b: resubmission with a subnational duplicate and a dropped contributor. ❌ **FAIL: reopens `RSF-T-5`** (2026-10-07)
+
+- **Setup (user, PRTest DB, result 12018):**
+  - 2 inactive `CO-ANT` rows (ids 971, 972, geo_scope_role 1).
+  - SP06 and SP07 role 2 active (rbi 14167, 14168).
+  - "Before": SP09 r1 inactive · SP11 r1 active · SP06/SP07 r2 active; CO-ANT 971 = 0, 972 = 0.
+- **POST:** `/api/bilateral/create` (9550, scope 5, CO + subnational id 867, `contributing_programs: [SP07]`) returned `500 "[ResultCountrySubnationalRepository] => error: updateSubnational QueryFailedError: Unknown column 'id' in 'field list'"` (11:59:07Z).
+- **Root cause:** `bulkUpdateSubnational` (RSF-T-5) reads `select max(id) as id` and updates `where id in (…)`. The table's primary key is `result_country_subnational_id` (entity `result-country-subnational.entity.ts`). The unit specs mock `query()`, so the wrong column passed every test, and the Reviewer did not catch it either. tasks.md T-5 "Cannot prove … If MySQL rejects the query, that is a FAIL, not a gap": **FAIL**.
+- **Blast radius:** the method is shared, so the in-app geo save (`result-countries.service.ts:291`) and the bilateral create fail the same way whenever subnational codes are sent. This is live on PRTest; fix before promotion.
+- **Data state after the 500 (user queries, 2026-10-07):**
+  - `result` 12018 is still `status_id = 7` (Rejected), so it can be retried. But `description` = "RSF-T7 test 3 - subnational duplicate + dropped contributor", `last_updated_date` = 11:59:07, and `geographic_scope_id` is still 4. The result-row writer ran before the failure. This is the known non-atomic resubmission (`RSB-DD-2`, `RSB` §9 "real rollback is not proven by mocks"), and here it is observed live: a partial write on a 500.
+  - **C1:** SP06 r2 → `is_active = 0` at 11:59:00 · SP07 r2 still active, `last_updated_date` unchanged (11:57:47, the insert) · SP11 r1 active · SP09 r1 inactive. ✅ **`RSF-R-7` (T-6) proven live:** SP06 was dropped, SP07 kept its row untouched, and role 1 was untouched. The reset runs before the writers.
+  - **C2:** CO-ANT 971 and 972 are both still `0`. The subnational step failed, so nothing was reactivated.
+  - `share_result_request`: no new request rows. The contributor-request writer did not run (it comes after the failing geo writer).
+- **Action:** `RSF-T-5` goes back to `[~]`. Rework attempt 2 (effort xhigh) uses the real primary key and adds a spec that pins the column names against the entity.
+
+#### `RSF-T-5` rework attempt 2 — PASS (2026-10-07)
+
+- **Effort:** xhigh. **Skills:** `nestjs-expert`, `systematic-debugging`, `tdd`.
+- **Attempt history in the brief:** attempt 1 assumed `id`; never assume a column name, check it against the entity.
+- **Fix:**
+  - Read: `select max(result_country_subnational_id) as result_country_subnational_id … group by clarisa_subnational_scope_code having sum(is_active > 0) = 0`.
+  - Update: `… where result_country_subnational_id in (…)`.
+  - Rows are mapped through `row.result_country_subnational_id`. Everything else from attempt 1 is unchanged.
+- **New spec "column names match the entity" (4 tests):**
+  - The PK comes from `getMetadataArgsStorage()`.
+  - The read and the update use that PK.
+  - No `max(id)` / `where id in` / `select id`.
+  - Every listed column exists in the entity or BaseEntity metadata.
+- **Red:** 5 of 17 failed on the old code. **Green:** `--testPathPattern="result-country-subnational.repository|result-countries.service"` → 3 suites, **23 passed** (`--maxWorkers=1`, free RAM 2.8 GB). eslint → exit 0.
+- **Reviewer verdict: PASS.** The Reviewer checked each identifier independently against the entity, BaseEntity **and the migration DDL** (`1701202511335-createSubnationalScopeTables.ts`: PK `result_country_subnational_id`; `geo_scope_role_id` from `1761222250119-…`). `sum(is_active > 0)` is valid (`tinyint NOT NULL DEFAULT 1`). There is no ONLY_FULL_GROUP_BY issue and no self-referencing UPDATE.
+- **ADVISORY:**
+  - RELIABILITY: test 4's regex only lists known names plus `id`, so a misspelt column (e.g. `last_update_by`) would pass. Extracting every snake_case identifier would make it fully falsifiable. The PK, which was the live defect, *is* falsified by tests 1–2.
+  - RISK: the metadata tests trust the entity. Entity-vs-DB drift is covered only by T-7.
+- **Lesson (Leader):** for raw SQL in a repository, a mocked `query()` spec proves the shape, not the schema. Future briefs should require a column check against the entity/DDL, and the Reviewer should check identifiers against the DDL, not only the spec.
+- **Still owed:** the live re-run of Step 2b on PRTest after this fix is deployed.

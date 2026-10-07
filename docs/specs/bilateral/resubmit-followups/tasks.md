@@ -125,7 +125,7 @@
 
 ### `RSF-T-5` — Subnationals: reactivate one row per code
 
-- **Status:** `[x]`: Reviewer PASS, attempt 1, 2026-10-06 (see `execution.md`).
+- **Status:** `[x]`: Reviewer PASS, attempt 2 (after live FAIL of attempt 1), 2026-10-07 (see `execution.md`); live re-run owed in `T-7`.
 - **Type:** `server`
 - **Description:** `bulkUpdateSubnational` reactivates only the newest row (highest id) per (`result_country_id`, `geo_scope_role_id`, code). Rows already active are untouched.
 - **Implements:** `RSF-R-4` (incl. "BUT it must NOT reactivate both"); `DD-5`
