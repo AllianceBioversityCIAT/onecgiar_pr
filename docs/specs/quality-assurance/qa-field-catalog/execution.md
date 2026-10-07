@@ -272,3 +272,7 @@
 - Attempt 1 → FAIL (science-program path not scoped to the result; `toc.entries` duplicated contributors; single-key lookups; client-only required on subfields; stale tmp). Attempt 2 → FAIL (year stored as YYYY and YYYY-MM-DD; no single-row pick; change-log cell). Attempt 3 → PASS. Final 238/238; falsifiers red. Spec edits by the Leader: DD-13 (b3cb06afb, b125a53e4).
 - Known gaps recorded in the contract doc: initiative-41 narrative exemption, "Other(s)" centers UI state, `not_applicable` NULL vs `eq false`, typology/unit active-row preference, repeated values per mapping (consumer takes distinct), `visible_when` not persisted (migration pending).
 - Requirements: QAC-R-13, QAC-R-14 (C&P)
+
+## Amendment v1.8 — catalog 2026.13 (owner, 2026-10-07) — PASS
+
+- Owner: "En GI debemos retornar el year también". New key `general.reported_year` ("Reporting year", number — `result.reported_year_id` is a MySQL YEAR column, result.entity.ts:342-347), all types, required true / unconfirmed, order 21 after `general.status`; removed from NOT_FOR_QA. Revision 12 → 13. 238/238; falsifier → completeness red. Reviewer PASS.

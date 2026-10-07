@@ -986,7 +986,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 12 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 13 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -1043,6 +1043,7 @@ describe('the real catalog definitions', () => {
       'general.created_by': 'created_by',
       'general.created_date': 'created_date',
       'general.status': 'status_id',
+      'general.reported_year': 'reported_year_id',
     };
     for (const [key, column] of Object.entries(expected)) {
       const field = CATALOG_FIELDS.find((f) => f.key === key);
@@ -1108,6 +1109,7 @@ describe('the real catalog definitions', () => {
       'general.created_by',
       'general.created_date',
       'general.status',
+      'general.reported_year',
       'general.is_discontinued',
       'general.discontinued_reasons',
       'general.merge_targets',

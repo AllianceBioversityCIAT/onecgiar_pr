@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 12,
-      "content_hash": "7761e1cbf73b0fe2f076156a997d9451134e92522a6e91734e88d2ccd9200eb0"
+      "revision": 13,
+      "content_hash": "b92e2223cccbbbd99c0d6d15d98e2e01f9d7ee9776b768a4992c9c45f3e3452c"
     }
   },
   "keys": [
@@ -40,6 +40,7 @@
     "field:general.poverty_impact_areas",
     "field:general.poverty_tag",
     "field:general.primary_program",
+    "field:general.reported_year",
     "field:general.result_code",
     "field:general.result_level",
     "field:general.result_type",
