@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ModuleRef } from '@nestjs/core';
+import { EntityManager, FindOperator } from 'typeorm';
+import {
+  createInMemoryDb,
+  EntityClass,
+  Row,
+} from '../../../../shared/test/in-memory-db.test-helper';
 import {
   PrimaryProgramRequestService,
   PrimaryRequestStateEnum,
@@ -1004,6 +1010,39 @@ describe('PrimaryProgramRequestService', () => {
       );
     });
 
+    // RSB-P-13 (bilateral/resubmit-rejected-result, RSB-T-5). An ownerless resubmission writes the
+    // payload's ToC row for the REQUESTED primary before that SP accepts (`handleTocMapping` keys it
+    // on `initiative_ids`), and it retires the old owner's role 1 first (DD-5). Accepting must then
+    // find that row (no second stub) and, because there is no previous owner, retire no ToC at all.
+    it('RSB-P-13: accepting finds the ToC row the resubmission already wrote for the new primary: no second stub, no ToC retired', async () => {
+      mockRequestRepoTx.findOne.mockResolvedValueOnce({
+        share_result_request_id: 1,
+        request_status_id: 1,
+        shared_inititiative_id: 9,
+        result_id: 100,
+      });
+      mockInitiativeRepoTx.find.mockResolvedValueOnce([]); // DD-5: the old owner was retired
+      mockInitiativeRepoTx.findOne.mockResolvedValueOnce(null);
+      mockTocRepoTx.findOne.mockResolvedValueOnce({
+        result_toc_result_id: 55,
+        result_id: 100,
+        initiative_id: 9,
+        initiative_ids: 9,
+        is_active: true,
+      });
+      mockInitiativeCodes({ 9: 'SP09' });
+
+      const outcome = await service.accept(1, user);
+
+      expect(outcome.ok).toBe(true);
+      // The lookup is exactly the one the bilateral writer's row satisfies.
+      expect(mockTocRepoTx.findOne).toHaveBeenCalledWith({
+        where: { result_id: 100, initiative_ids: 9, is_active: true },
+      });
+      expect(mockTocRepoTx.save).not.toHaveBeenCalled();
+      expect(mockTocRepoTx.update).not.toHaveBeenCalled();
+    });
+
     it('accepts a swap: deactivates the old owner, clears its ToC and its old ACCEPTED primary row', async () => {
       mockRequestRepoTx.findOne.mockResolvedValueOnce({
         share_result_request_id: 2,
@@ -1042,6 +1081,132 @@ describe('PrimaryProgramRequestService', () => {
         }),
         { is_active: false },
       );
+    });
+
+    // `RRC-T-1` / `RRC-K-1` — golden master of `accept()`'s transactional writes, in order. The write
+    // block was extracted into helpers shared with `transferPrimary`; these three pin that `accept()`
+    // still issues exactly the same repository calls, with the same arguments, in the same order
+    // (the swap, the ordinary first accept, and a re-accept by the current owner). The expected lists
+    // were recorded against the code BEFORE the extraction and must not be edited to make a run pass.
+    describe('RRC-K-1 — the write sequence of accept() is unchanged by the extraction', () => {
+      const describeArg = (arg: unknown): string =>
+        JSON.stringify(arg, function (this: any, key: string, value: unknown) {
+          if (this[key] instanceof Date) return '<date>';
+          if (this[key] instanceof FindOperator) {
+            return `${this[key].type}(${JSON.stringify(this[key].value)})`;
+          }
+          return value;
+        });
+
+      /** Every call made on the three transactional repositories, in the order it happened. */
+      function transactionalCallLog(): string[] {
+        const repos: Record<string, Record<string, jest.Mock>> = {
+          request: mockRequestRepoTx,
+          initiative: mockInitiativeRepoTx,
+          toc: mockTocRepoTx,
+        };
+        return Object.entries(repos)
+          .flatMap(([repoName, methods]) =>
+            Object.entries(methods).flatMap(([method, fn]) =>
+              fn.mock.invocationCallOrder.map((order, index) => ({
+                order,
+                label: `${repoName}.${method}(${fn.mock.calls[index]
+                  .map(describeArg)
+                  .join(', ')})`,
+              })),
+            ),
+          )
+          .sort((a, b) => a.order - b.order)
+          .map((entry) => entry.label);
+      }
+
+      it('swap (owner SP09 -> accepted SP12): the full ordered write list', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce({
+          share_result_request_id: 2,
+          request_status_id: 1,
+          shared_inititiative_id: 12,
+          result_id: 100,
+        });
+        mockInitiativeRepoTx.find.mockResolvedValueOnce([
+          { id: 55, result_id: 100, initiative_id: 9, initiative_role_id: 1 },
+        ]);
+        mockInitiativeRepoTx.findOne.mockResolvedValueOnce(null);
+        mockTocRepoTx.findOne.mockResolvedValueOnce(null);
+        mockInitiativeCodes({ 12: 'SP12' });
+
+        await service.accept(2, user);
+
+        expect(transactionalCallLog()).toEqual([
+          'request.findOne({"where":{"share_result_request_id":2,"request_type":"primary","is_active":true},"lock":{"mode":"pessimistic_write"}})',
+          'initiative.find({"where":{"result_id":100,"initiative_role_id":1,"is_active":true}})',
+          'initiative.update(55, {"is_active":false,"last_updated_by":99})',
+          'initiative.update({"result_id":100,"initiative_id":12,"initiative_role_id":2,"is_active":true}, {"is_active":false,"last_updated_by":99})',
+          'request.update({"result_id":100,"request_type":"contribution","shared_inititiative_id":12,"is_active":true,"is_map_to_toc":false,"request_status_id":"in([1,4])"}, {"is_active":false})',
+          'initiative.findOne({"where":{"result_id":100,"initiative_id":12,"initiative_role_id":1}})',
+          'initiative.save({"result_id":100,"initiative_id":12,"initiative_role_id":1,"is_active":true,"from_toc":false,"created_by":99})',
+          'toc.update({"result_id":100,"initiative_ids":9,"is_active":true}, {"is_active":false,"last_updated_by":99})',
+          'request.update({"result_id":100,"request_type":"primary","shared_inititiative_id":9,"request_status_id":2,"is_active":true}, {"is_active":false})',
+          'request.update({"share_result_request_id":2}, {"request_status_id":2,"approved_by":99,"aprovaed_date":"<date>"})',
+          'toc.findOne({"where":{"result_id":100,"initiative_ids":12,"is_active":true}})',
+          'toc.save({"created_by":99,"toc_result_id":null,"initiative_ids":12,"result_id":100,"toc_level_id":null,"planned_result":true,"is_active":true})',
+          'initiative.findOne({"where":{"result_id":100,"initiative_role_id":1,"is_active":true}})',
+        ]);
+      });
+
+      it('first accept (no previous owner): no old-owner, old-ToC or old-primary-row writes', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce({
+          share_result_request_id: 1,
+          request_status_id: 1,
+          shared_inititiative_id: 9,
+          result_id: 100,
+        });
+        mockInitiativeRepoTx.find.mockResolvedValueOnce([]);
+        mockInitiativeRepoTx.findOne.mockResolvedValueOnce(null);
+        mockTocRepoTx.findOne.mockResolvedValueOnce(null);
+        mockInitiativeCodes({ 9: 'SP09' });
+
+        await service.accept(1, user);
+
+        expect(transactionalCallLog()).toEqual([
+          'request.findOne({"where":{"share_result_request_id":1,"request_type":"primary","is_active":true},"lock":{"mode":"pessimistic_write"}})',
+          'initiative.find({"where":{"result_id":100,"initiative_role_id":1,"is_active":true}})',
+          'initiative.update({"result_id":100,"initiative_id":9,"initiative_role_id":2,"is_active":true}, {"is_active":false,"last_updated_by":99})',
+          'request.update({"result_id":100,"request_type":"contribution","shared_inititiative_id":9,"is_active":true,"is_map_to_toc":false,"request_status_id":"in([1,4])"}, {"is_active":false})',
+          'initiative.findOne({"where":{"result_id":100,"initiative_id":9,"initiative_role_id":1}})',
+          'initiative.save({"result_id":100,"initiative_id":9,"initiative_role_id":1,"is_active":true,"from_toc":false,"created_by":99})',
+          'request.update({"share_result_request_id":1}, {"request_status_id":2,"approved_by":99,"aprovaed_date":"<date>"})',
+          'toc.findOne({"where":{"result_id":100,"initiative_ids":9,"is_active":true}})',
+          'toc.save({"created_by":99,"toc_result_id":null,"initiative_ids":9,"result_id":100,"toc_level_id":null,"planned_result":true,"is_active":true})',
+          'initiative.findOne({"where":{"result_id":100,"initiative_role_id":1,"is_active":true}})',
+        ]);
+      });
+
+      it('re-accept by the current owner (SP09 already role 1): no ownership writes, only the request row, the ToC check and the release', async () => {
+        mockRequestRepoTx.findOne.mockResolvedValueOnce({
+          share_result_request_id: 3,
+          request_status_id: 1,
+          shared_inititiative_id: 9,
+          result_id: 100,
+        });
+        mockInitiativeRepoTx.find.mockResolvedValueOnce([
+          { id: 55, result_id: 100, initiative_id: 9, initiative_role_id: 1 },
+        ]);
+        mockTocRepoTx.findOne.mockResolvedValueOnce({
+          result_toc_result_id: 8,
+          initiative_ids: 9,
+        });
+        mockInitiativeCodes({ 9: 'SP09' });
+
+        await service.accept(3, user);
+
+        expect(transactionalCallLog()).toEqual([
+          'request.findOne({"where":{"share_result_request_id":3,"request_type":"primary","is_active":true},"lock":{"mode":"pessimistic_write"}})',
+          'initiative.find({"where":{"result_id":100,"initiative_role_id":1,"is_active":true}})',
+          'request.update({"share_result_request_id":3}, {"request_status_id":2,"approved_by":99,"aprovaed_date":"<date>"})',
+          'toc.findOne({"where":{"result_id":100,"initiative_ids":9,"is_active":true}})',
+          'initiative.findOne({"where":{"result_id":100,"initiative_role_id":1,"is_active":true}})',
+        ]);
+      });
     });
 
     // Falsifier: a notice-emit failure rolls back the accept → FAIL. The accept must stay
@@ -1215,6 +1380,410 @@ describe('PrimaryProgramRequestService', () => {
     });
   });
 
+  // `RRC-T-1` (bilateral/rejected-result-correction, `RRC-R-10` / `RRC-R-17`, `RRC-DD-3`). The core
+  // runs inside the caller's transaction, so these tests give it the manager of an in-memory model of
+  // the tables (`createInMemoryDb`): the assertions read the rows that are left ACTIVE, not which
+  // calls were made. It is a MODEL of the database (it proves the code targets the right rows, not
+  // that MySQL agrees); the real rows are checked in the PRTest run (`RRC-T-10`).
+  describe('transferPrimary() — RRC-T-1 (RRC-R-10 / RRC-R-17, DD-3)', () => {
+    const RESULT = 100;
+    const SP05 = 5;
+    const SP06 = 6;
+    const SP09 = 9;
+    const SP12 = 12;
+    const ACCEPTED = 2;
+    const PK = new Map<EntityClass, string>([
+      [ShareResultRequest, 'share_result_request_id'],
+      [ResultsTocResult, 'result_toc_result_id'],
+    ]);
+
+    // `arrange` points `stateFor`'s repository at the model; give the shared mock back untouched.
+    afterEach(() => {
+      mockShareResultRequestRepository.find.mockReset();
+    });
+
+    const role = (
+      id: number,
+      initiative: number,
+      roleId: number,
+      isActive = 1,
+    ): Row => ({
+      id,
+      result_id: RESULT,
+      initiative_id: initiative,
+      initiative_role_id: roleId,
+      is_active: isActive,
+    });
+    const request = (
+      id: number,
+      type: 'primary' | 'contribution',
+      sp: number,
+      status: number,
+      extra: Row = {},
+    ): Row => ({
+      share_result_request_id: id,
+      result_id: RESULT,
+      request_type: type,
+      shared_inititiative_id: sp,
+      owner_initiative_id: sp,
+      request_status_id: status,
+      is_map_to_toc: 0,
+      is_active: 1,
+      ...extra,
+    });
+    const tocRow = (id: number, initiative: number, isActive = 1): Row => ({
+      result_toc_result_id: id,
+      result_id: RESULT,
+      initiative_ids: initiative,
+      toc_result_id: 555,
+      is_active: isActive,
+    });
+
+    /** A bilateral result owned by SP09, as the transfer finds it. */
+    const ownedBySp09 = (): Array<[EntityClass, Row[]]> => [
+      [
+        ResultsByInititiative,
+        [
+          role(1, SP09, 1),
+          role(2, SP12, 2), // SP12 is an accepted contributor today
+          role(3, SP06, 2), // an unrelated contributor, must stay
+        ],
+      ],
+      [
+        ShareResultRequest,
+        [
+          request(10, 'primary', SP09, ACCEPTED), // the old owner's accepted row
+          request(11, 'contribution', SP12, 1), // a stale request to the incoming SP
+          request(12, 'contribution', SP06, 1), // an unrelated request, must stay
+        ],
+      ],
+      [ResultsTocResult, [tocRow(1, SP09)]],
+    ];
+
+    function arrange(seed: Array<[EntityClass, Row[]]> = ownedBySp09()) {
+      const db = createInMemoryDb(seed, { writes: true, pk: PK });
+      // `stateFor` reads through the injected repository: point it at the same model.
+      mockShareResultRequestRepository.find.mockImplementation((options: any) =>
+        db.repositoryOf(ShareResultRequest).find(options),
+      );
+      const run = (
+        newInitiativeId: number,
+        opts = { releaseContributors: false },
+      ) =>
+        db.dataSource.transaction((manager: EntityManager) =>
+          service.transferPrimary(RESULT, newInitiativeId, user, manager, opts),
+        );
+      const owners = () =>
+        db
+          .rowsOf(ResultsByInititiative)
+          .filter((row) => row.initiative_role_id === 1 && row.is_active === 1)
+          .map((row) => row.initiative_id);
+      const activeRows = (entity: EntityClass) =>
+        db.rowsOf(entity).filter((row) => row.is_active === 1);
+      const activePrimaryRequests = () =>
+        activeRows(ShareResultRequest)
+          .filter((row) => row.request_type === 'primary')
+          .map((row) => ({
+            sp: row.shared_inititiative_id,
+            status: row.request_status_id,
+          }));
+      return { db, run, owners, activeRows, activePrimaryRequests };
+    }
+
+    it('RRC-P-10: for a result rejected by review, whose requests the rejection deactivated, stateFor says none before the transfer and accepted (new SP) after it', async () => {
+      // `results.service.ts` `reviewBilateralResult` deactivates EVERY active share_result_request
+      // of the result, the accepted `primary` row included (`RRC-P-6`): role 1 stays, no request is active.
+      const t = arrange([
+        [ResultsByInititiative, [role(1, SP09, 1)]],
+        [
+          ShareResultRequest,
+          [
+            request(10, 'primary', SP09, ACCEPTED, { is_active: 0 }),
+            request(12, 'contribution', SP06, 1, { is_active: 0 }),
+          ],
+        ],
+        [ResultsTocResult, [tocRow(1, SP09)]],
+      ]);
+      mockInitiativeCodes({ [SP12]: 'SP12' });
+
+      await expect(service.stateFor(RESULT)).resolves.toEqual({
+        state: PrimaryRequestStateEnum.NONE,
+        program_code: null,
+        declined_by_codes: [],
+      });
+
+      await t.run(SP12);
+
+      await expect(service.stateFor(RESULT)).resolves.toEqual({
+        state: PrimaryRequestStateEnum.ACCEPTED,
+        program_code: 'SP12',
+        declined_by_codes: [],
+      });
+    });
+
+    it('a change of primary reports `transferred` and the previous owner', async () => {
+      const t = arrange();
+
+      await expect(t.run(SP12)).resolves.toEqual({
+        outcome: 'transferred',
+        previousInitiativeId: SP09,
+      });
+    });
+
+    it('the old owner loses role 1 and the new SP gets it: exactly one active role-1 row', async () => {
+      const t = arrange();
+
+      await t.run(SP12);
+
+      expect(t.owners()).toEqual([SP12]);
+      // the unrelated contributor is untouched
+      expect(
+        t.activeRows(ResultsByInititiative).map((row) => row.initiative_id),
+      ).toEqual(expect.arrayContaining([SP06]));
+    });
+
+    it('the incoming SP stops being an accepted contributor and its stale contribution request is dropped (it cannot be owner and contributor)', async () => {
+      const t = arrange();
+
+      await t.run(SP12);
+
+      expect(
+        t
+          .activeRows(ResultsByInititiative)
+          .filter((row) => row.initiative_role_id === 2)
+          .map((row) => row.initiative_id),
+      ).toEqual([SP06]);
+      expect(
+        t
+          .activeRows(ShareResultRequest)
+          .filter((row) => row.request_type === 'contribution')
+          .map((row) => row.shared_inititiative_id),
+      ).toEqual([SP06]);
+    });
+
+    it('the old owner ToC mapping is retired and a stub ToC row is seeded for the new SP', async () => {
+      const t = arrange();
+
+      await t.run(SP12);
+
+      expect(
+        t.activeRows(ResultsTocResult).map((row) => row.initiative_ids),
+      ).toEqual([SP12]);
+      const stub = t
+        .activeRows(ResultsTocResult)
+        .find((row) => row.initiative_ids === SP12);
+      expect(stub).toMatchObject({
+        result_id: RESULT,
+        toc_result_id: null,
+        toc_level_id: null,
+        planned_result: true,
+        created_by: user.id,
+      });
+    });
+
+    it('does not seed a second stub when the new SP already has an active ToC row', async () => {
+      const t = arrange([
+        ...ownedBySp09().filter(([entity]) => entity !== ResultsTocResult),
+        [ResultsTocResult, [tocRow(1, SP09), tocRow(2, SP12)]],
+      ]);
+
+      await t.run(SP12);
+
+      expect(
+        t.activeRows(ResultsTocResult).map((row) => row.initiative_ids),
+      ).toEqual([SP12]);
+      expect(t.db.inserted.map((entry) => entry.entity)).not.toContain(
+        ResultsTocResult.name,
+      );
+    });
+
+    it('leaves exactly one active ACCEPTED primary row, for the new SP, requested and decided by the actor (DD-3)', async () => {
+      const t = arrange();
+
+      await t.run(SP12);
+
+      // Falsifier (tasks.md): the old owner's accepted row must not stay active beside the new one.
+      expect(t.activePrimaryRequests()).toEqual([
+        { sp: SP12, status: ACCEPTED },
+      ]);
+      const accepted = t
+        .activeRows(ShareResultRequest)
+        .find((row) => row.request_type === 'primary');
+      expect(accepted).toMatchObject({
+        result_id: RESULT,
+        shared_inititiative_id: SP12,
+        owner_initiative_id: SP12,
+        approving_inititiative_id: SP12,
+        request_status_id: ACCEPTED,
+        requested_by: user.id,
+        approved_by: user.id,
+        is_active: 1,
+      });
+      expect(accepted?.aprovaed_date).toBeInstanceOf(Date);
+    });
+
+    it('retires every other active primary row too: a declined round and a pending request are gone', async () => {
+      const t = arrange([
+        ...ownedBySp09().filter(([entity]) => entity !== ShareResultRequest),
+        [
+          ShareResultRequest,
+          [
+            request(10, 'primary', SP09, ACCEPTED),
+            request(13, 'primary', SP05, 3), // DECLINED, left active by a primary decline
+            request(14, 'primary', SP06, 1), // PENDING
+          ],
+        ],
+      ]);
+
+      await t.run(SP12);
+
+      expect(t.activePrimaryRequests()).toEqual([
+        { sp: SP12, status: ACCEPTED },
+      ]);
+    });
+
+    it('a result with no owner (rejected by a primary decline): SP12 becomes the owner and the declined round is retired', async () => {
+      const t = arrange([
+        [ResultsByInititiative, [role(1, SP09, 1, 0)]], // the declining SP never owned it
+        [ShareResultRequest, [request(13, 'primary', SP09, 3)]], // DECLINED, active
+        [ResultsTocResult, []],
+      ]);
+
+      await expect(t.run(SP12)).resolves.toEqual({
+        outcome: 'transferred',
+        previousInitiativeId: null,
+      });
+
+      expect(t.owners()).toEqual([SP12]);
+      expect(t.activePrimaryRequests()).toEqual([
+        { sp: SP12, status: ACCEPTED },
+      ]);
+      // no previous owner, so no ToC mapping was retired
+      expect(
+        t.db.updated.filter((entry) => entry.entity === ResultsTocResult.name),
+      ).toEqual([]);
+    });
+
+    it('change of mind: SP12 and then SP09 again leaves SP09 as the only owner and one accepted row, no duplicate role-1 row', async () => {
+      const t = arrange();
+
+      await t.run(SP12);
+      await t.run(SP09);
+
+      expect(t.owners()).toEqual([SP09]);
+      expect(t.activePrimaryRequests()).toEqual([
+        { sp: SP09, status: ACCEPTED },
+      ]);
+      expect(
+        t.db
+          .rowsOf(ResultsByInititiative)
+          .filter(
+            (row) => row.initiative_id === SP09 && row.initiative_role_id === 1,
+          ),
+      ).toHaveLength(1);
+    });
+
+    it('the same SP: reports `unchanged` and writes nothing at all', async () => {
+      const t = arrange();
+
+      await expect(t.run(SP09)).resolves.toEqual({
+        outcome: 'unchanged',
+        previousInitiativeId: SP09,
+      });
+
+      expect(t.db.updated).toEqual([]);
+      expect(t.db.inserted).toEqual([]);
+      expect(t.db.world.violations).toEqual([]);
+      expect(t.owners()).toEqual([SP09]);
+    });
+
+    it('releaseContributors: false leaves the contributor drafts waiting and never calls the release', async () => {
+      const t = arrange([
+        ...ownedBySp09().filter(([entity]) => entity !== ShareResultRequest),
+        [
+          ShareResultRequest,
+          [
+            request(10, 'primary', SP09, ACCEPTED),
+            request(15, 'contribution', SP06, 4, { owner_initiative_id: null }),
+          ],
+        ],
+      ]);
+      const releaseSpy = jest.spyOn(service, 'releaseContributors');
+
+      await t.run(SP12, { releaseContributors: false });
+
+      expect(releaseSpy).not.toHaveBeenCalled();
+      expect(
+        t.db
+          .rowsOf(ShareResultRequest)
+          .find((row) => row.share_result_request_id === 15),
+      ).toMatchObject({ request_status_id: 4, owner_initiative_id: null });
+    });
+
+    it('releaseContributors: true releases the drafts to the NEW owner, after role 1 was written', async () => {
+      const t = arrange([
+        ...ownedBySp09().filter(([entity]) => entity !== ShareResultRequest),
+        [
+          ShareResultRequest,
+          [
+            request(10, 'primary', SP09, ACCEPTED),
+            request(15, 'contribution', SP06, 4, { owner_initiative_id: null }),
+          ],
+        ],
+      ]);
+
+      await t.run(SP12, { releaseContributors: true });
+
+      expect(
+        t.db
+          .rowsOf(ShareResultRequest)
+          .find((row) => row.share_result_request_id === 15),
+      ).toMatchObject({ request_status_id: 1, owner_initiative_id: SP12 });
+    });
+
+    it('sends no notice and announces nothing: the caller does that', async () => {
+      const t = arrange();
+      mockResultRepository.findOne.mockClear();
+
+      await t.run(SP12, { releaseContributors: true });
+
+      // `emitCenterNotice` reads the lead centre and then emits...
+      expect(
+        mockResultsCenterRepository.getAllResultsCenterByResultId,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockNotificationService.emitResultNotification,
+      ).not.toHaveBeenCalled();
+      // ...and `announceIfPendingReview` reads the result's status and resolves `BilateralService`.
+      expect(mockResultRepository.findOne).not.toHaveBeenCalled();
+      expect(mockModuleRef.get).not.toHaveBeenCalled();
+    });
+
+    it('a failed write throws, so the caller transaction restores the previous owner', async () => {
+      // the model fails the insert of the accepted row, the LAST write of the core
+      const failing = createInMemoryDb(ownedBySp09(), {
+        writes: true,
+        pk: PK,
+        failOnInsertInto: ShareResultRequest,
+      });
+
+      await expect(
+        failing.dataSource.transaction((manager: EntityManager) =>
+          service.transferPrimary(RESULT, SP12, user, manager, {
+            releaseContributors: false,
+          }),
+        ),
+      ).rejects.toThrow('injected fault');
+
+      expect(
+        failing
+          .rowsOf(ResultsByInititiative)
+          .filter((row) => row.initiative_role_id === 1 && row.is_active === 1)
+          .map((row) => row.initiative_id),
+      ).toEqual([SP09]);
+    });
+  });
+
   describe('decline() — PDR-R-3 / PDR-R-4 / PDR-R-5 / PDR-R-6 / PDR-R-7 / PDR-R-10 / PDR-R-11 (table-driven)', () => {
     const pendingRow = (overrides: Partial<ShareResultRequest> = {}) => ({
       share_result_request_id: 1,
@@ -1358,7 +1927,7 @@ describe('PrimaryProgramRequestService', () => {
 
       // (a)/(b) — SP09 declines result 9391, SP12 was saved as a contributor (requirements.md
       // PDR-R-4 worked example).
-      it('(a)/(b) rejects the result, writes the REJECTED history row, drops the contributor draft — no new primary row for SP12', async () => {
+      it('(a)/(b) rejects the result, writes the REJECT history row, drops the contributor draft — no new primary row for SP12', async () => {
         mockRequestRepoTx.findOne.mockResolvedValueOnce(pendingRow());
 
         const outcome = await service.decline(
@@ -1390,7 +1959,7 @@ describe('PrimaryProgramRequestService', () => {
             reviewed_by: 99,
           }),
         );
-        // One REJECTED history row, trimmed justification, prefixed with the decliner's code.
+        // One REJECT history row, trimmed justification, prefixed with the decliner's code.
         expect(mockHistoryRepoTx.save).toHaveBeenCalledWith(
           expect.objectContaining({
             result_id: 100,
@@ -1400,6 +1969,11 @@ describe('PrimaryProgramRequestService', () => {
             created_by: 99,
           }),
         );
+        // RSB-R-20 / RSB-R-18: literal value the DB enum accepts (never 'REJECTED'), plus the
+        // declining SP (shared_inititiative_id 9) as the entry's Science Program.
+        const savedHistory = mockHistoryRepoTx.save.mock.calls.at(-1)[0];
+        expect(savedHistory.action).toBe('REJECT');
+        expect(savedHistory.initiative_id).toBe(9);
         // (e) the contributor draft is dropped — no insert, and the contribution rows deactivated.
         expect(mockRequestRepoTx.insert).not.toHaveBeenCalled();
         expect(mockRequestRepoTx.update).toHaveBeenCalledWith(

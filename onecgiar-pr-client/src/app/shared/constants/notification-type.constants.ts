@@ -1,3 +1,5 @@
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../internationalization/bilateral-rejection-notice.copy';
+import { BILATERAL_DECISION_NOTICE_COPY } from '../../internationalization/bilateral-decision-notice.copy';
 import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../internationalization/notification-center-tagged.copy';
 import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../internationalization/notification-project-tagged.copy';
 
@@ -189,8 +191,55 @@ function parseTaggedProjectLabel(text: string): { code: string; centerLabel: str
   return { code: match[1].trim(), centerLabel };
 }
 
+/**
+ * BPT-T-3 (`bilateral-project-tagged`, design §8.1, §9, requirements.md BPT-R-2/R-4): parses a
+ * Center-reported `RESULT_BILATERAL_PROJECT_TAGGED` row's `text` — the shape the BCT flow writes
+ * for a project target from now on — into its reporter, project code and owner, end-anchored:
+ * `"<reporter> has tagged the bilateral project <code> from your center (<owner>)"`. Reporter is
+ * the shortest prefix before ` has tagged the bilateral project `; code is everything up to the
+ * LAST ` from your center (` (so a code containing its own parentheses, e.g. `Seeds (Phase 2)`,
+ * stays intact — mirrors `parseTaggedProjectLabel`'s last-trailing-parens rule); owner is the
+ * non-empty `[^()]+` inside the final parens. Returns `null` when the pattern doesn't match, or
+ * when any part is empty after trimming (including an empty `()`, which `[^()]+` already rules out).
+ *
+ * This runs BEFORE `isComposedTaggedText` in the `RESULT_BILATERAL_PROJECT_TAGGED` case (design
+ * DD-3), so a legacy/BCT-T-4 composed sentence (ends in `. Click to see the result.`, says "of
+ * your center") and a W1/W2 bare/enriched row (no ` has tagged the bilateral project ` substring)
+ * can never match here (BPT-R-4) — and a Center-reported row itself contains the substring
+ * ` has tagged the `, so without this ordering it would be misdetected as composed.
+ *
+ * Keep in sync with the server twin:
+ * `onecgiar-pr-server/src/api/notification/notification.service.ts`'s
+ * `parseCenterReportedProjectText`. Both pin the identical shape table (design §9, BPT-NFR-2).
+ */
+export function parseCenterReportedProjectText(text: string): { reporter: string; code: string; owner: string } | null {
+  const match = text.match(/^(.+?) has tagged the bilateral project (.+) from your center \(([^()]+)\)\s*$/);
+  if (!match) return null;
+
+  const reporter = match[1].trim();
+  const code = match[2].trim();
+  const owner = match[3].trim();
+  if (!reporter || !code || !owner) return null;
+
+  return { reporter, code, owner };
+}
+
+/**
+ * RRC-T-10-F1 (RRC-R-13 "by which SP"): the Science Program that recorded THIS rejection, as returned
+ * by the server (`review_program_code`, from the linked history row). Only a `BILATERAL_RESULT_REJECTED`
+ * row with a linked entry (`has_review_entry === true`) and a non-blank string code qualifies; anything
+ * else returns null so the caller keeps today's `getProgramCode` (legacy rows, history rows without SP).
+ */
+export function getReviewProgramCode(notification: any): string | null {
+  if (resolveNotificationType(notification) !== NotificationType.BILATERAL_RESULT_REJECTED) return null;
+  if (notification?.has_review_entry !== true) return null;
+
+  const code = notification?.review_program_code;
+  return typeof code === 'string' && code.trim() ? code.trim() : null;
+}
+
 function buildBilateralReviewSuffix(decisionLabel: string, notification: any): string {
-  const programCode = getProgramCode(notification);
+  const programCode = getReviewProgramCode(notification) ?? getProgramCode(notification);
   const programText = programCode ? `the Science Program ${programCode}` : 'the Science Program';
   return `has been ${decisionLabel} by ${programText}.`;
 }
@@ -205,6 +254,49 @@ function buildCenterDecisionParts(notification: any): NotificationTextParts | nu
   const text = notification?.text?.trim();
   if (!text) return null;
   return { prefix: 'The result', linkTrailer: ',', suffix: text, emphasizePrefix: false };
+}
+
+/**
+ * SACN-T-3 (`notifications/sp-approval-center-notice`, design §8.2, SACN-R-3/R-4/R-5/R-7): a center
+ * recipient's Approve row stores one of two exact sentences on `text` — `"<SPXX>${verb}"` or the
+ * whole `fallbackLead` — both ending in the fixed `tail`. Detected by that tail FIRST, since the
+ * legacy center sentence (`buildCenterDecisionParts`, "where your center was tagged … approved by
+ * the Science Program SPXX.") never ends in it. Returns `segments` (bold SP code + plain verb, or
+ * the unbolded fallback lead alone) so the template renders the WPT-style mid-sentence bold — and
+ * `prefix` set to the same joined text, purely so `buildResultNotificationText` (search/plain-text)
+ * flattens to the identical string without needing its own segments-aware branch (same trick as the
+ * `RESULT_BILATERAL_PROJECT_TAGGED` case below). Never applied outside `BILATERAL_RESULT_APPROVED`
+ * (SACN-R-7's Rejected cases, and any other type, fall straight through to today's logic) — the
+ * caller gates that, not this function.
+ */
+function buildApprovedCenterNoticeParts(notification: any): NotificationTextParts | null {
+  const text = notification?.text?.trim();
+  if (!text || !text.endsWith(BILATERAL_DECISION_NOTICE_COPY.tail)) return null;
+
+  if (text === BILATERAL_DECISION_NOTICE_COPY.fallbackLead) {
+    return {
+      prefix: BILATERAL_DECISION_NOTICE_COPY.fallbackLead,
+      suffix: null,
+      emphasizePrefix: false,
+      segments: [{ text: BILATERAL_DECISION_NOTICE_COPY.fallbackLead, emphasize: false }]
+    };
+  }
+
+  const { verb } = BILATERAL_DECISION_NOTICE_COPY;
+  if (!text.endsWith(verb)) return null;
+
+  const code = text.slice(0, text.length - verb.length);
+  if (!code) return null;
+
+  return {
+    prefix: `${code}${verb}`,
+    suffix: null,
+    emphasizePrefix: false,
+    segments: [
+      { text: code, emphasize: true },
+      { text: verb, emphasize: false }
+    ]
+  };
 }
 
 /** A finished AI job notification, split into its sentence and its in-app destination. */
@@ -266,9 +358,11 @@ export function getResultNotificationTextParts(notification: any): NotificationT
     case NotificationType.RESULT_QUALITY_ASSESSED:
       return { prefix: 'The result', suffix: 'was successfully Quality Assessed.', emphasizePrefix: false };
 
-    // P2-3157 AC2
+    // P2-3157 AC2. SACN-T-3: the new-shape center notice is tried FIRST (Approve only) — it falls
+    // through to the legacy center/submitter rendering for anything it doesn't recognise.
     case NotificationType.BILATERAL_RESULT_APPROVED:
       return (
+        buildApprovedCenterNoticeParts(notification) ??
         buildCenterDecisionParts(notification) ?? {
           prefix: '✅ Your Result',
           suffix: buildBilateralReviewSuffix('Approved', notification),
@@ -300,6 +394,31 @@ export function getResultNotificationTextParts(notification: any): NotificationT
     // `segments` are set on that fallback path.
     case NotificationType.RESULT_BILATERAL_PROJECT_TAGGED: {
       const text = notification?.text?.trim();
+
+      // BPT-T-3 (design §8.1, DD-3): the Center-reported shape (new BCT project rows, BPT-R-1)
+      // is self-describing — reporter, project code and owner are already on `text`, end-anchored
+      // — so it's checked FIRST, before the composed/bare detection below. Its own text contains
+      // " has tagged the ", so without this ordering it would be misdetected as a composed
+      // sentence by `isComposedTaggedText` (BPT-R-4, the order falsifier).
+      const centerReported = text ? parseCenterReportedProjectText(text) : null;
+      if (centerReported) {
+        const segments: { text: string; emphasize: boolean }[] = [
+          { text: centerReported.reporter, emphasize: true },
+          { text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.verb} `, emphasize: false },
+          { text: centerReported.code, emphasize: true },
+          { text: ` ${NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseWithLabel.before}`, emphasize: false },
+          { text: centerReported.owner, emphasize: true },
+          { text: NOTIFICATION_PROJECT_TAGGED_COPY.centerClauseWithLabel.after, emphasize: false }
+        ];
+
+        return {
+          prefix: segments.map(segment => segment.text).join(''),
+          suffix: null,
+          emphasizePrefix: false,
+          segments
+        };
+      }
+
       if (!text || isComposedTaggedText(text)) {
         return { prefix: 'The result', suffix: text || null, emphasizePrefix: false };
       }
@@ -441,4 +560,18 @@ export function isContributionDecisionNotification(notification: any): boolean {
 export function isResultTaggedNotification(notification: any): boolean {
   const type = resolveNotificationType(notification);
   return type === NotificationType.RESULT_CENTER_TAGGED || type === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED;
+}
+
+/**
+ * RRC-T-9 (`bilateral/rejected-result-correction`, RRC-R-13): the justification line of a rejection
+ * notification. Only `BILATERAL_RESULT_REJECTED` rows carrying `has_review_entry` get one — a legacy
+ * row (no entry) returns null, never the "no justification" fallback. A null/empty/blank
+ * `review_comment` on a row WITH an entry yields the fallback copy (the server keeps `''` as `''`).
+ */
+export function getRejectionReasonLine(notification: any): string | null {
+  if (resolveNotificationType(notification) !== NotificationType.BILATERAL_RESULT_REJECTED) return null;
+  if (notification?.has_review_entry !== true) return null;
+
+  const comment = typeof notification?.review_comment === 'string' ? notification.review_comment.trim() : '';
+  return comment || BILATERAL_REJECTION_NOTICE_COPY.noJustification;
 }

@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-09-09 · feat/P2-3336-io-without-aow (P2-3336 regla 1: los IO sin AoW ya no entran a un bundle de AoW — ver "IO sin AoW" abajo) · prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the viewport-lock layout contract below — host class keyed on `isProgramShell()`, `#workArea` scroller, band `frameLocked`/`scrollHost`; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: merge `performance-refactor` → `qa-development-2026` · qa 6a9a45b5e (adds `onOverviewLink` scope stamping note, spec `changes/results-aow-column-filter` RAC-T-5) + perf f38c13161 (P2-3569: el modal emergente vivo ahora pasa `showInnovationLinkQuestion`); before that fa3f06a90 fixes stale `manageIndicator` tab union — now `'report' | 'info' | 'results'`, spec `changes/indicator-reported-results`; before that 2026-09-03 f0c0f68ba adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; before that 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296
+**Verified:** 2026-10-02 · qa-development-2026-ss · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair in the By-AOW banner and HLO row behind `showQaPrelSplit` — see "QA/Prel split hidden" below) · prior: 2026-09-09 · feat/P2-3336-io-without-aow (P2-3336 regla 1: los IO sin AoW ya no entran a un bundle de AoW — ver "IO sin AoW" abajo) · prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the viewport-lock layout contract below — host class keyed on `isProgramShell()`, `#workArea` scroller, band `frameLocked`/`scrollHost`; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: merge `performance-refactor` → `qa-development-2026` · qa 6a9a45b5e (adds `onOverviewLink` scope stamping note, spec `changes/results-aow-column-filter` RAC-T-5) + perf f38c13161 (P2-3569: el modal emergente vivo ahora pasa `showInnovationLinkQuestion`); before that fa3f06a90 fixes stale `manageIndicator` tab union — now `'report' | 'info' | 'results'`, spec `changes/indicator-reported-results`; before that 2026-09-03 f0c0f68ba adds `partitionProgramKpis` / `summarisePartition` note, spec `bugfix/kpi-count-reconciliation`; before that 52ddf00af merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -128,9 +128,26 @@ El árbol de contenido en la vista "By AOW" (`plannedBrowseView() === 'byAow'`) 
   - Columna 3: Cifra pura tabular de meta (sin etiqueta redundante "TARGET").
   - Columna 4: Cifra pura tabular alcanzada (verde esmeralda si > 0, sin etiqueta redundante "ACHIEVED").
   - Columna 5: Píldora con recuento de KPIs.
-  - Columna 6: Porcentajes de avance QA y PREL.
+  - Columna 6: por defecto una sola cifra de avance (unión "Achieved"); con `showQaPrelSplit` encendido, los porcentajes QA y PREL por separado — ver "QA/Prel split hidden" abajo.
 - **Level 3: Indented Indicator Scaffolding:** Sub-tabla interna de indicadores con sangría de 24px (`pl-4 sm:pl-6`), guía visual de árbol (`border-l-4 border-indigo-500/40 bg-indigo-50/10`) y sub-cabecera contextual de columnas (`INDICATOR TITLE & TAXONOMY | Target | Achieved | Status | Progress | Action`). Cada fila de indicador (`.pr-by-aow-indicator-row`) cuenta con accesibilidad completa (`role="button"`, `tabindex="0"`, `aria-expanded`, teclas `Enter`/`Space`), franjas JIRA de estado (`border-l-[3px]`), bullseye concéntrico (18px) y botones de acción interactivos (*Report*, *Copy link*) con aislamiento de eventos (`$event.stopPropagation()` per Kaizen `KZ-changes--reporting-aow-jira-hierarchy-2`). Preserva anclaje de deeplink `[id]="kpiDomId(ind)"` y resaltado `highlightedKpiId`.
 
+
+## QA/Prel split hidden behind `showQaPrelSplit` (ACS-R-5, spec `bugfix/achieved-counts-submitted`)
+- `showQaPrelSplit = SHOW_QA_PREL_SPLIT` (imported from `shared/constants/achieved-display-basis.ts`,
+  default `false`). `@if (showQaPrelSplit) … @else …` hides the QA/Prel. two-track markup — kept
+  verbatim, not deleted — in favour of a single union ("Achieved") figure on the By-AOW banner
+  (`achievement` block, `:~1610`) and the By-AOW HLO row's Progress column (`:~1823`, Columna 6
+  above). Flip the constant to restore the pair with zero server change (ACS-S-10).
+- `achievementTooltip()` (this component's own copy of the P2-3296 helper) branches the same way:
+  with the flag off it states a single "ToC achievement — x% …" sentence instead of "QA x% and
+  Preliminary y% …" (ACS-S-9).
+- **T-3 re-pointed the underlying `TocAchievement`/indicator fields, not this task** — `progress_value`/
+  `progress_percentage` already read the union ("Achieved") basis via `achieved-display-basis.ts`'s
+  `toDisplayBasis` at the `ResultsApiService` choke point; QA originals survive under
+  `qa_progress_value`/`qa_progress_percentage` (client-only). `achievementLabel()`/
+  `preliminaryAchievementLabel()` were not touched by T-4 — they already read the correct field.
+- Grep gate convention for this spec: a visible `>QA<` / `>Prel.<` / `>PREL<` in this file's template
+  must sit inside an `@if (showQaPrelSplit)` block.
 
 ## Añadido 2026-09-01 (spec overview-aow-progress-hero)
 - `program-overview`'s "Progress by area of work" is now the Overview HERO (moved right after "About

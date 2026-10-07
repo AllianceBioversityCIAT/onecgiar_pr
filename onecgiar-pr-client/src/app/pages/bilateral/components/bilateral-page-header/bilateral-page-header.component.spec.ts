@@ -86,7 +86,7 @@ describe('BilateralPageHeaderComponent', () => {
       'space_dashboard Overview',
       'track_changes Reporting',
       'table_chart Results',
-      'fact_check AI Draft Results',
+      'fact_check My Drafts',
     ]);
 
     // Verify icons on all four tabs
@@ -189,7 +189,7 @@ describe('BilateralPageHeaderComponent', () => {
     fixture.detectChanges();
 
     popover = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]') as HTMLElement;
-    expect(popover.textContent).toContain('AI Draft Results');
+    expect(popover.textContent).toContain('My Drafts');
     expect(popover.textContent).toContain('AI-generated draft results');
   });
 
@@ -258,7 +258,7 @@ describe('BilateralPageHeaderComponent', () => {
     expect(labels[0]).toContain('Overview');
     expect(labels[1]).toContain('Reporting');
     expect(labels[2]).toContain('Results');
-    expect(labels[3]).toContain('AI Draft Results');
+    expect(labels[3]).toContain('My Drafts');
   });
 
   describe('shared phase on the tab links (COV-R-5 A)', () => {
@@ -663,7 +663,7 @@ describe('BilateralPageHeaderComponent', () => {
     fixture.detectChanges();
 
     const draftsTab = fixture.debugElement.queryAll(By.css('nav a')).find(l =>
-      l.nativeElement.textContent.includes('AI Draft Results'),
+      l.nativeElement.textContent.includes('My Drafts'),
     );
     expect(draftsTab?.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/drafts');
   });
@@ -1033,6 +1033,30 @@ describe('BilateralPageHeaderComponent', () => {
 
       const navTabsEl = fixture.nativeElement.querySelector('nav[data-guide="bilateral-tabs"]');
       expect(navTabsEl).toBeTruthy();
+    });
+  });
+
+  describe('RRC-R-14 — rejection notice under the identity strip', () => {
+    beforeEach(() => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('variant', 'detail');
+    });
+
+    it('hosts the notice and requests the history when the result is Rejected', () => {
+      const http = TestBed.inject(HttpTestingController);
+      fixture.componentRef.setInput('noticeResultId', 9);
+      fixture.componentRef.setInput('noticeStatusId', 7);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="bilateral-rejection-notice"]')).toBeTruthy();
+      http.expectOne(req => req.url.endsWith('api/results/bilateral/9/review-history')).flush({ response: [] });
+    });
+
+    it('renders no notice at another status, and no header status pill is switched on by it', () => {
+      fixture.componentRef.setInput('noticeResultId', 9);
+      fixture.componentRef.setInput('noticeStatusId', 5);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="bilateral-rejection-notice"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="bilateral-status-badge"]')).toBeNull();
     });
   });
 });

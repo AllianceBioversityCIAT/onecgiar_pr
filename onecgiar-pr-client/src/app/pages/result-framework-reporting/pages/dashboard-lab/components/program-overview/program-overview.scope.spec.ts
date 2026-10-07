@@ -878,11 +878,21 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     const achievementCell = row.querySelector('.leading-tight') as HTMLElement;
     expect(achievementCell.className).toContain('@max-[630px]:hidden');
 
-    const qaPrelRow = row.querySelector('.leading-tight .items-baseline.whitespace-nowrap') as HTMLElement;
-    expect(qaPrelRow.className).toContain('@max-[700px]:flex-col');
-
     const coverageLine = row.querySelector('.leading-tight span.text-\\[10px\\].text-\\[var\\(--pr-text-muted\\)\\]') as HTMLElement;
     expect(coverageLine.className).toContain('@max-[700px]:hidden');
+  });
+
+  // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: the flag restores the QA/Prel row,
+  // which is the one that carries the `@max-[700px]:flex-col` restack class. Re-setting `richRows`
+  // (same data) after flipping the flag forces OnPush to re-check the row view — toggling a plain,
+  // non-signal field alone does not mark an OnPush + signal-input view dirty.
+  it('the QA/Prel row restacks below Q=700 when the split flag is on (ACS-S-10)', () => {
+    (fixture.componentInstance as any).showQaPrelSplit = true;
+    fixture.componentRef.setInput('richRows', [makeRichRow({ achievement })]);
+    fixture.detectChanges();
+    const row = realRow();
+    const qaPrelRow = row.querySelector('.leading-tight .items-baseline.whitespace-nowrap') as HTMLElement;
+    expect(qaPrelRow.className).toContain('@max-[700px]:flex-col');
   });
 
   it('tracks 3, 4, and 5 carry fixed widths across rows to guarantee table-like vertical column alignment', () => {
@@ -913,9 +923,9 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     expect(fallback).toBeTruthy();
     expect(fallback.tagName).toBe('BUTTON'); // focusable — a <span> is not (Reviewer finding)
     expect(fallback.getAttribute('type')).toBe('button');
-    // The accessible name IS the achievement figures, not a placeholder label.
-    expect(fallback.getAttribute('aria-label')).toContain('QA 19.4');
-    expect(fallback.getAttribute('aria-label')).toContain('Preliminary');
+    // The accessible name IS the achievement figure, not a placeholder label.
+    // @akili-spec bugfix/achieved-counts-submitted — ACS-S-9: single union figure, no QA/Preliminary split.
+    expect(fallback.getAttribute('aria-label')).toContain('19.4');
     expect(fallback.getAttribute('aria-label')).not.toBe('Achievement against targets');
     // width-gating: mutually exclusive with the achievement cell's own tooltip (test above).
     // `@max-[630px]:inline-flex` is not re-asserted — the selector above already required it

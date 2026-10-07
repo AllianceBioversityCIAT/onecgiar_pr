@@ -2090,10 +2090,14 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
      * deciding whether to auto-create — a real microtask boundary a synchronous test must flush
      * before asserting on `POST_createResult`, or the assertion passes on EITHER side of the
      * `ptDraft()` guard purely from timing (the continuation simply hasn't run yet). */
-    async function flushAsync(fix: ComponentFixture<LabReportFormComponent>): Promise<void> {
+    async function flushAsync(_fix: ComponentFixture<LabReportFormComponent>): Promise<void> {
+      // Not `fix.whenStable()`: it waits on every zone task, and under a loaded full-suite run it
+      // hung past Jest's 5 s timeout (the test takes ~150 ms alone). The continuation under test is
+      // promise-only (mocked `GET_mqapValidation` + `preselectCentersP`), so draining microtasks and
+      // one macrotask turn is a bounded flush that cannot hang.
       await Promise.resolve();
       await Promise.resolve();
-      await fix.whenStable();
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
     }
 
     // Test 1 (ruling's list) — the banner must travel with the pick across every tab.

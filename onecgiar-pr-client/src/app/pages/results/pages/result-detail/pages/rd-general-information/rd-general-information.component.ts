@@ -60,6 +60,20 @@ export class RdGeneralInformationComponent implements OnInit, CanComponentDeacti
   toggle = 0;
   isPhaseOpen = false;
 
+  /**
+   * Shows `Save draft` on a read-only form. Only Innovation development (7) keeps that exception,
+   * for an initiative member on a result that is not submitted: the Annual updating block above
+   * stays editable for them (`isPhaseOpen && canDdit`) and needs the button to save.
+   * P2-3884 — never while the result is in Pending Review (`status_id` 5): that is the Science
+   * Program review lock, the reviewer works in the review drawer and the form must not offer a save.
+   */
+  get saveEditableOnReadOnly(): boolean {
+    const result = this.dataControlSE?.currentResult;
+    if (result?.result_type_id != 7) return false;
+    if (result?.status_id == 5) return false;
+    return !!this.api.rolesSE.access.canDdit && !result?.status;
+  }
+
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
   isP25 = computed(() => this.dataControlSE.currentResultSignal()?.portfolio === 'P25');
   fieldsManagerSE = inject(FieldsManagerService);

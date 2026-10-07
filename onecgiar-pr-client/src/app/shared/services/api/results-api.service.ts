@@ -20,6 +20,43 @@ import { EntityDetails } from '../../../pages/result-framework-reporting/pages/e
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
 import { BilateralApiService } from './bilateral-api.service';
 import { BilateralOverviewService } from '../../../pages/bilateral/services/bilateral-overview.service';
+import { toDisplayBasis } from '../../constants/achieved-display-basis';
+
+/**
+ * @akili-spec notifications/detail-side-panel (DSP-T-2)
+ * Client mirror of the server `ApprovalChainDto` (design.md §4.1,
+ * `onecgiar-pr-server/src/api/results/share-result-request/dto/approval-chain.dto.ts`). Carries
+ * only names, codes, dates, statuses and initiative ids — never an email or a user id.
+ */
+export type ApprovalChainSubmissionState = 'submitted' | 'not_submitted';
+export type ApprovalChainStepRole = 'primary' | 'contributor';
+export type ApprovalChainStepStatus = 'accepted' | 'pending' | 'declined';
+
+export interface ApprovalChainSubmissionDto {
+  state: ApprovalChainSubmissionState;
+  result_status_id: number;
+  result_status_name: string;
+  actor_name: string | null;
+  date: string | null;
+}
+
+export interface ApprovalChainStepDto {
+  initiative_id: number;
+  official_code: string;
+  short_name: string;
+  name: string;
+  role: ApprovalChainStepRole;
+  status: ApprovalChainStepStatus;
+  actor_name: string | null;
+  date: string | null;
+  is_viewer_program: boolean;
+}
+
+export interface ApprovalChainDto {
+  result_id: number;
+  submission: ApprovalChainSubmissionDto;
+  steps: ApprovalChainStepDto[];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -751,7 +788,7 @@ export class ResultsApiService {
   // §4.1 — "no new method names needed"). The only caller of these 3 methods is
   // ResultsNotificationsService, so this is not a breaking change for any other consumer.
   // Cursor is opaque and MUST NOT be logged (.cursorrules) — it is only ever forwarded verbatim.
-  private buildPagingQueryParams(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }): string {
+  private buildPagingQueryParams(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number }): string {
     if (!options) return '';
     const params = new URLSearchParams();
     // PAGE-T-4 rework (Reviewer L3): a plain truthy check — `0` is not a real phase id either, same
@@ -766,6 +803,10 @@ export class ResultsApiService {
     if (options.cursor) {
       params.set('cursor', options.cursor);
     }
+    // BRS-T-4: only the updates endpoint honours `limit` (history page size); the inbox never sets it.
+    if (options.limit) {
+      params.set('limit', String(options.limit));
+    }
     const qs = params.toString();
     return qs ? `?${qs}` : '';
   }
@@ -778,7 +819,17 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/sent${this.buildPagingQueryParams(options)}`);
   }
 
-  GET_requestUpdates(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) {
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-2, DSP-R-12)
+   * `GET /api/results/request/get/result/:resultId/approval-chain` (design.md §4.1). Mirrors the
+   * server `ApprovalChainDto` 1:1 — see `onecgiar-pr-server/src/api/results/share-result-request/dto/approval-chain.dto.ts`.
+   * Additive, read-only; the envelope's `response` is an `ApprovalChainDto`.
+   */
+  GET_requestApprovalChain(resultId: number | string) {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/result/${resultId}/approval-chain`);
+  }
+
+  GET_requestUpdates(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number }) {
     return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates${this.buildPagingQueryParams(options)}`);
   }
 
@@ -788,6 +839,16 @@ export class ResultsApiService {
 
   PATCH_readNotification(notificationId) {
     return this.http.patch<any>(`${this.baseApiBaseUrl}notification/read/${notificationId}`, {});
+  }
+
+  /** BRS-T-4: records that the caller has seen one pending request. `response: { seen: true }`; 404 when not pending. */
+  PATCH_markRequestSeen(shareResultRequestId: number | string) {
+    return this.http.patch<any>(`${this.apiBaseUrl}request/seen/${shareResultRequestId}`, {});
+  }
+
+  /** BRS-T-4: records every request currently pending for the caller as seen. `response: { recorded: n }`. */
+  PATCH_markAllRequestsSeen() {
+    return this.http.patch<any>(`${this.apiBaseUrl}request/seen-all`, {});
   }
 
   PATCH_readAllNotifications() {
@@ -1567,6 +1628,8 @@ export class ResultsApiService {
     );
   }
 
+  // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
+  // normaliser so every ToC-progress consumer reads the union ("Achieved") basis by default.
   GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string, versionId?: number) {
     const queryParams: string[] = [`program=${entityId}`];
 
@@ -1577,9 +1640,11 @@ export class ResultsApiService {
     }
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-    return this.http.get<{ message: string; response: any; status: boolean }>(
-      `${environment.apiBaseUrl}api/results-framework-reporting/toc-results${queryString}`
-    );
+    return this.http
+      .get<{ message: string; response: any; status: boolean }>(
+        `${environment.apiBaseUrl}api/results-framework-reporting/toc-results${queryString}`
+      )
+      .pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
   GET_IndicatorContributionSummary(entityId: string, versionId?: number) {
@@ -1596,28 +1661,34 @@ export class ResultsApiService {
    * Not the same as the science-program progress endpoint used elsewhere, which counts
    * reported results by status. This one answers how far along the ToC commitments are.
    */
+  // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
+  // normaliser (re-points `progress` and every `areas[].progress`).
   GET_ScienceProgramTocProgress(entityId: string, versionId?: number) {
     let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/program-progress?programId=${entityId}`;
     if (typeof versionId === 'number' && Number.isFinite(versionId)) {
       url += `&versionId=${encodeURIComponent(String(versionId))}`;
     }
-    return this.http.get<any>(url);
+    return this.http.get<any>(url).pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
+  // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
+  // normaliser (re-points every node's `progress` and `indicators[]` inside `tocResults[]`).
   GET_2030Outcomes(entityId: string, versionId?: number) {
     let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`;
     if (typeof versionId === 'number' && Number.isFinite(versionId)) {
       url += `&versionId=${encodeURIComponent(String(versionId))}`;
     }
-    return this.http.get<any>(url);
+    return this.http.get<any>(url).pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
+  // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
+  // normaliser (re-points every node's `progress` and `indicators[]` inside `tocResults[]`).
   GET_IntermediateOutcomes(entityId: string, versionId?: number) {
     let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=${entityId}`;
     if (typeof versionId === 'number' && Number.isFinite(versionId)) {
       url += `&versionId=${encodeURIComponent(String(versionId))}`;
     }
-    return this.http.get<any>(url);
+    return this.http.get<any>(url).pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
   GET_W3BilateralProjects(tocResultId: string) {

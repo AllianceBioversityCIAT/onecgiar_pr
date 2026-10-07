@@ -302,12 +302,17 @@ describe('ProgramOverviewComponent — AoW row container-width sweep (AIS-T-1, B
     });
   });
 
+  // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: this measurement is specifically about
+  // the QA/Prel split's own restack geometry (`A_narrow`), so both mounts below opt INTO the split
+  // (`showQaPrelSplit: true`) — the one flag-on case this suite keeps (design §10.1). With the flag
+  // at its ACS-R-5 default (off) the achievement cell renders a single, non-restacking figure and
+  // the `A_narrow` guard below has nothing to measure.
   it('[log only, fails only on harness assumptions] max-content maxima at Q=1000 (A_wide, A_narrow) + overflow-locator on the row that actually overflows — inputs to AIS-T-2 / AIS-DD-3 thresholds', () => {
     // --- figures / actions / A_wide, and the overflow-locator: viewport 1500 (today's ladder never
     // sheds here — see the describe-level docblock), same fixture/mount as the other two `it`s. ---
     cy.mount(ProgramOverviewComponent, {
       ...MOUNT_CONFIG,
-      componentProperties: { richRows: FIXTURE_ROWS, richLoading: false }
+      componentProperties: { richRows: FIXTURE_ROWS, richLoading: false, showQaPrelSplit: true }
     });
 
     cy.get('[data-testid="aow-rows"]').then($wrapper => {
@@ -364,7 +369,7 @@ describe('ProgramOverviewComponent — AoW row container-width sweep (AIS-T-1, B
     // `max-[1280px]` — a viewport variant. Updated in lockstep with the ladder it measures.) ---
     cy.mount(ProgramOverviewComponent, {
       ...MOUNT_CONFIG,
-      componentProperties: { richRows: FIXTURE_ROWS, richLoading: false }
+      componentProperties: { richRows: FIXTURE_ROWS, richLoading: false, showQaPrelSplit: true }
     });
     cy.get('[data-testid="aow-rows"]').then($wrapper => {
       const wrapperEl = $wrapper[0] as HTMLElement;

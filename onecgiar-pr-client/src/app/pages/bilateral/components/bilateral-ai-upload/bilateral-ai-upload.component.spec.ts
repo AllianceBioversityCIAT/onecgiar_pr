@@ -128,6 +128,30 @@ describe('BilateralAiUploadComponent', () => {
     expect(component.canSubmit()).toBe(false);
   });
 
+  it('P2-3896: accepts an .mp4 voice note and uploads it re-labelled as .m4a', () => {
+    const mp4 = new File([new Uint8Array(16)], 'Audio 2026-10-05 at 2.10.17 PM.mp4', { type: 'video/mp4' });
+    component.onAudioSelected({ target: { files: [mp4], value: '' } } as unknown as Event);
+
+    const added = component.fileList();
+    expect(added.length).toBe(1);
+    expect(added[0].type).toBe('audio');
+    expect(added[0].file.name).toBe('Audio 2026-10-05 at 2.10.17 PM.m4a');
+    expect(added[0].file.size).toBe(16);
+  });
+
+  it('P2-3896: a dropped file in an unsupported format shows the Invalid format toast instead of vanishing', () => {
+    const toast = jest.spyOn(component, 'showToast');
+    const exe = new File([new Uint8Array(4)], 'setup.exe');
+    component.onDrop({
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      dataTransfer: { files: [exe] },
+    } as unknown as DragEvent);
+
+    expect(component.fileList().length).toBe(0);
+    expect(toast).toHaveBeenCalledWith('error', 'Invalid format', 'setup.exe is not a supported file format.');
+  });
+
   it('P2-3103 AC2: should show the reporting-on-behalf-of note with the center full name', () => {
     const creationService = TestBed.inject(BilateralCreationService);
     creationService.selectProject({

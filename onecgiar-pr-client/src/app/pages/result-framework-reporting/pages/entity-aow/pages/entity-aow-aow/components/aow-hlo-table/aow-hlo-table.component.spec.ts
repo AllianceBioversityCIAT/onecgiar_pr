@@ -1142,7 +1142,18 @@ describe('AowHloTableComponent', () => {
       expect(component.barWidth(NaN)).toBe(0);
     });
 
-    it('names both figures in the tooltip, and says Approved counts twice', () => {
+    it('states the single union figure in the tooltip by default (ACS-S-9)', () => {
+      const tooltip = component.progressTooltip({
+        progress_percentage: '40%',
+        preliminary_progress_percentage: '75%'
+      });
+
+      expect(tooltip).toBe('ToC achievement — 40% of the target.');
+    });
+
+    // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: the flag restores both figures.
+    it('names both figures in the tooltip, and says Approved counts twice, when the split flag is on (ACS-S-10)', () => {
+      (component as any).showQaPrelSplit = true;
       const tooltip = component.progressTooltip({
         progress_percentage: '40%',
         preliminary_progress_percentage: '75%'

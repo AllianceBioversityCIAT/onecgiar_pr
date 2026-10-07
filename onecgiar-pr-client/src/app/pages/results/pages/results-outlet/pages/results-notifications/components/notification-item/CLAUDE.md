@@ -62,22 +62,25 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   resolved rows never reach this getter's rendering path, they show the pre-existing
   Accepted/Declined chip instead). **No longer rendered at the row level** — `NOTIF-T-12` (rework
   attempt 1) removed the `.notification_badges` status chip because it didn't match the reference
-  image; the template has no status element any more. `rowStatusLabel` now only feeds
-  `drawerViewFields()`'s `status` field, which `NOTIF-T-14` (a parallel task this same rework round)
-  renders inside the drawer's `view`-mode metadata grid instead (first row, "the most important
-  thing to know at a glance" — see `contribution-request-drawer.component.ts`'s
-  `ContributionRequestDrawerViewFields.status` / `viewMetadataRows`). See the copy file's docstring
-  (`contribution-request-drawer.copy.ts`, `notificationItem` section) for the same history.
+  image; the template has no status element any more. `rowStatusLabel` now feeds `chips()`'s first
+  entry (`DSP-T-4`, design.md §6.2 — moved from the retired `drawerViewFields()`'s `status` field /
+  `view`-mode metadata grid, which `DSP-T-4` removed outright; see the copy file's docstring and
+  `../notification-detail-content/CLAUDE.md`'s "Header title, chips row, RESULT grid" section).
 - **`[crdAlign]` gate:** the projected Align block now also requires
   `drawerMode() === 'decide' || drawerMode() === 'confirm-decline'`, on top of the pre-existing
   `isBilateralResult && tocInitiative` check — defense in depth, since `tocInitiative` is already
   never seeded outside `decide` mode by the rewritten `openDrawer()`.
+- **DSP-T-8 rework attempt 2:** the `[crdAlign]` slot's own inner `h3`/`p` (the former
+  `copy.sections.align`/`copy.align.hint`) is deleted — `notification-detail-content`'s "MAP TO YOUR
+  THEORY OF CHANGE" heading (its own `CLAUDE.md`) now frames the slot alone, not on top of a second
+  heading. `copy.align.hint`'s wording moved to `copy.toc.helper`, which that heading renders.
 - **`drawerReviewRowsForMode()` (rework, attempt 2):** the method actually bound to the drawer's
   `[reviewRows]` input — NOT `drawerReviewTables()` directly. `drawerReviewTables()` still returns a
   single all-dash 7-field table when `tocReview` is empty (`CRD-R-4`, unchanged, still needed by
   `decide`/`confirm-decline` so the footer always has something to show). `drawerReviewRowsForMode()`
-  wraps it: in `view` mode with no real `tocReview` data it returns `[]` instead, so the drawer's own
-  `@if (mode() !== 'view' || reviewRows().length)` guard (`NOTIF-T-4`) hides the whole "Where it
+  wraps it: in `view` mode with no real `tocReview` data it returns `[]` instead, so the content
+  component's own `@if (mode() !== 'view' || reviewRows().length)` guard (`NOTIF-T-4`, moved to
+  `notification-detail-content` by DSP-T-3) hides the whole "Where it
   contributes" section rather than rendering a fabricated-looking dash table for every Updates row
   and every resolved/Sent request without a ToC mapping (`NOTIF-R-5`/`NOTIF-AC-7`).
 - **Click-target correctness (`NOTIF-AC-2`/`NOTIF-AC-3`):** the result-title `<a>` in the resolved-row
@@ -107,6 +110,8 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   PATCH (`justification` only for a primary decline, `PDR-T-4`).
 
 ## PDR-T-4: primary Decline asks for a justification (`notifications/primary-decline-rejects-result`)
+
+> **SUPERSEDED for the UI by `PRA-T-2`: no primary Decline entry point is reachable any more (row button hidden, drawer `[showDecline]=false`, `?action=decline` link only consumed). `showPrimaryDeclineDialog`, `onDeclineClick()`'s primary branch and `onPrimaryDeclineConfirm()` stay as dead code (design §8.1). Kept for history.**
 Both primary Decline entry points — the row button (`onDeclineClick()`) and the drawer footer
 (`onDrawerDeclineClicked()`) — open `app-primary-decline-justification-dialog`
 (`showPrimaryDeclineDialog`, PDR-T-3) instead of today's yes/no popups, **only** when
@@ -115,10 +120,14 @@ Both primary Decline entry points — the row button (`onDeclineClick()`) and th
 `drawerMode.set('confirm-decline')` lines.
 - **Drawer closes first.** `onDrawerDeclineClicked()` calls `closeDrawer()` before opening the
   dialog, so a primary decline never stacks the dialog on top of an open drawer (design.md §8.2).
-- **Confirm → `acceptOrReject(false, false, justification)`.** The method only puts
-  `justification` on the PATCH body when `!isAccept && isPrimaryRequest` — gated on the row kind,
-  not merely "a third argument was passed" — so a stray caller can never smuggle the key into a
-  contributor/W1W2 body.
+- **Confirm → `acceptOrReject(false, false, justification)`.** **BELL-T-1 (`notifications/bell-quick-inbox`):**
+  the body itself — including the `justification` gate — is now built by
+  `../../utils/request-decision.ts::buildDecisionBody(row, isAccept, opts)`, not inline in this
+  method. It only puts `justification` on the body when `!isAccept && isPrimaryRequest(row)` —
+  gated on the row kind, not merely "an `opts.justification` was passed" — so a stray caller can
+  never smuggle the key into a contributor/W1W2 body. `acceptOrReject()` still owns the ToC-mapping
+  override (`withTocMapping && isAccept` → `this.buildTocMappingPayload()`), since that payload reads
+  this row's interactively-seeded `tocInitiative` — component state the pure util cannot see.
 - **A primary decline runs its own pipe (`submitPrimaryDecline()`).** The shared
   `acceptOrReject()` pipeline's `finalize` closes the drawer and every popup unconditionally, which
   would wipe the dialog's typed text on a 400. The dedicated pipe's `finalize` instead checks
@@ -133,9 +142,56 @@ Both primary Decline entry points — the row button (`onDeclineClick()`) and th
 
 ## Drawer ownership
 `notification-item` owns **all** decision state for the drawer path: `drawerOpen`, `drawerMode`,
-`drawerFocusAlign`, `tocInitiative`, `tocMappingConsumed`, busy/blocked derivations. The drawer
-component is purely presentational — it renders inputs and emits outputs, makes no API calls, and
-has `[crdAlign]` content projected into it. Do not move decision logic into the drawer component.
+`drawerFocusAlign`, `drawerHeadingId` (DSP-T-3, below), `tocInitiative`, `tocMappingConsumed`,
+busy/blocked derivations. Neither the drawer nor the content component is anything but
+presentational — they render inputs and emit outputs, make no API calls, and have `[crdAlign]`
+content projected into the content component. Do not move decision logic into either one.
+
+## DSP-T-3 (`notifications/detail-side-panel`): the drawer split into a shell + a content component
+`app-contribution-request-drawer` (now a thin sheet shell — see its own `CLAUDE.md`) no longer
+renders the header sentence/RESULT card/review tables/footer itself; that markup and logic moved to
+`app-notification-detail-content` (own `CLAUDE.md`). This row wraps the content component in
+`<ng-template #detailTpl>` and renders it inside the shell via `ngTemplateOutlet` (design.md §2.2) —
+not as the shell's own body — so the SAME template instance can later be portaled to the
+wide-screen `<aside>` (a later task) without touching this row's template again.
+- **`drawerHeadingId`**: a per-instance id (`crd-heading-<n>`, a module-scoped counter — NOT derived
+  from the notification key, so it never collides even across unrelated instances) passed to BOTH
+  the content's `headingId` input (its own `h2[id]`) and the shell's `labelledBy` input, which the
+  shell forwards onto `<hlm-sheet>`'s own `aria-labelledby` (attempt 2 fix: NOT `hlm-sheet-content`,
+  a role-less element AT ignores — see the shell's `CLAUDE.md`) — the two must always receive the
+  SAME value or the sheet panel loses its accessible name (DSP falsifier). `drawerHeadingId +
+  '-desc'` is passed the same way as the shell's `describedBy` input (→ `aria-describedby`),
+  matched against the content's header-sentence `p[id]`.
+- **Two `closed` outputs, one handler.** The content's own ✕ button and the shell's native
+  scrim/Escape/outside-click dismissal are now separate outputs on separate components — both are
+  wired to `onDrawerClosedSignal()` here, so from the row's point of view nothing changed: either
+  close path still reaches the same guard (see "DD-6 trap" below).
+- **`[crdAlign]` projection is unchanged**: still a child of the content component in this row's
+  template (not the shell), still gated the same way (`isBilateralResult && tocInitiative && mode
+  in {decide, confirm-decline}`).
+
+## DSP-T-4 (`notifications/detail-side-panel`): header restyle — `detailTitle()`, `chips()`, `resultGrid()`
+Three new builders feed the content's new inputs, all read by the template in place of the retired
+`drawerViewFields()`/the `view`-mode-only metadata grid (DD-6):
+- **`detailTitle()`** — the panel's `h2` text. Returns `rowTypeChipLabel` (the SAME getter the row's
+  own type chip reads — single source, PSR-R-11), falling back to `copy.title` when it resolves to
+  `null` (an Updates row whose type can't be resolved).
+- **`chips()`** — status (always present, `rowStatusLabel`), funding (`fundingWindowBadge`,
+  `outlined: true`), level · type (`resultLevelTypeBadge`), date (`activityDate`, a getter: a pure
+  `dd MMM yyyy` formatter over `requested_date ?? created_date` — DSP-T-9 F-2, request rows carry
+  `requested_date` only — no `DatePipe`/DI). Each of the last three is omitted — never a blank chip —
+  exactly like the row's own badges already do.
+- **`resultGrid()`** — the RESULT card's 6 cells, always in the fixed order Reporting center → Result
+  type → Primary Science Program → Contributing programs → Submitted by → Phase; a missing source
+  value is `copy.dashValue`, the label is never dropped (DD-6 supersedes NOTIF-R-5/NOTIF-AC-7 for
+  THIS grid only). Primary SP reads `approvalChain()`'s primary step `official_code`, falling back to
+  `obj_result_by_initiatives[0]` while the chain hasn't resolved to `'ok'`; Contributing programs
+  joins the chain's non-declined contributor codes with `", "` and sets `loading: true` on that one
+  cell while the chain is still `'loading'` (DSP-T-2's signal, read here, not re-fetched). **Submitted
+  by (DSP-T-9 Q-1, user-approved):** the chain's `submission.actor_name` when `submission.state ===
+  'submitted'` — NOT the row's requester/emitter — so this cell and the APPROVAL CHAIN section never
+  name different people; `dash` for `not_submitted` or a chain error; `loading: true` (same skeleton
+  mechanism) while the chain is still `'loading'`.
 
 ## DD-6 trap: close-before-refetch, twice
 - **Instance reuse — updated post-`NOTIF-T-6`.** The retired `received-requests`/`sent-requests`
@@ -166,6 +222,8 @@ has `[crdAlign]` content projected into it. Do not move decision logic into the 
   side effects.
 
 ## PSR-T-8: primary / bilateral contributor rows + Center notices (`bilateral-primary-sp-request`)
+
+> **Primary-row bullets below are SUPERSEDED by `PRA-T-2` (see that section at the end): the primary row button is now "Review result", there is no primary Decline, and the chip reads "Needs your review". Kept for history.**
 Two new `source:'request'` row variants, on top of the pre-existing "Contribution request"
 (W1/W2 + everything else, unchanged, `PSR-DD-10`) and the 3 new Center-facing notices (plain
 `Notification` rows, rendered through the existing `isUpdateSource` branch — no new template
@@ -229,6 +287,37 @@ branch needed there):
   `copy.notificationItem.staleRequestMessage` ("This request was already answered") on a 409,
   unconditionally for every row kind including these two new ones — nothing here special-cases it.
 
+## BELL-T-5 (`notifications/bell-quick-inbox`): `autoAction` replays a row handler from the bell
+`@Input() autoAction: 'accept' | 'decline' | null` + `@Output() autoActionConsumed`. The inbox
+(`results-notifications.component`) sets it on the ONE `received` row whose `share_result_request_id`
+matches `?request=` (`autoActionFor(item)`), after resetting program/search/facet filters and forcing
+Received + All. The row (`ngOnInit` + `ngOnChanges`) runs `onAcceptContribution()` / `onDeclineClick()`
+**once per hand-off** (`autoActionRan`, re-armed by `ngOnChanges` when the input goes falsy, i.e. after the inbox cleared it - so a second hand-off for the same surviving row replays; re-setting the input without clearing stays one run), only while `isPending`, then emits `autoActionConsumed` on a
+microtask (emitting synchronously would let the parent clear its binding mid-CD pass: NG0100). The inbox
+then clears `request`/`action` with `replaceUrl`. A no-longer-pending row opens nothing but still consumes.
+Phase for the URL comes from `obj_result.obj_version.id` (the server select has no `obj_result.version_id`),
+built by `../../utils/request-decision.ts::bellHandoffUrl`. jsdom proves wiring only; the real
+dialog/modal after a route transition is BELL-T-6's manual pass.
+
+## BELL-T-7 (amendment 2026-10-06): a deep link NEVER records a decision
+`runAutoAction()` is gated, because a crafted/shared `?request=N&action=accept` must not PATCH anything:
+- **accept** replays `onAcceptContribution()` only when `classifyAccept(row) === 'step'` (bilateral
+  step -> "Map to your Theory of Change?" prompt; legacy modal-first -> `<app-share-request-modal>`;
+  both only OPEN a step, the PATCH needs the user's own click). A `'one-click'` row (ToC-carried or
+  primary) calls `acceptOrReject(true)` straight away, so it is NOT replayed: the param is only consumed.
+- **decline** replays `onDeclineClick()` for every pending row: it only ever opens
+  `showPrimaryDeclineDialog` (primary) or `showConfirmRejectDialog` (all others), never a PATCH.
+- Anything else only emits `autoActionConsumed` (same microtask). Do not widen the accept gate:
+  `classifyAccept` mirrors `onAcceptContribution()`'s first `if` exactly.
+
+### BELL-T-9 (amendment 2026-10-06): ToC-carried contributions open the review step
+The bell now hands off EVERY contribution's Accept (`bellAcceptMode`, only primary is one-click there),
+so the replay has a third branch: `action='accept'` on a pending row with `is_map_to_toc` and not
+primary -> `openDrawer('details')`. That drawer shows the carried mapping (`tocReview`) and its own
+Accept (`onDrawerAccept` -> `acceptOrReject(true)`) is the user's click; opening only does a GET
+(approval chain). `openTocMappingModal()` was NOT used: it seeds an EMPTY mapping for the legacy
+flow, does not hydrate the carried one. Primary -> consume only. `classifyAccept` is unchanged.
+
 ## Wording + chip sizing (NOTIF-T-16, 2026-09-30 — user-driven correction)
 Two small style fixes from the user's reference markup:
 - **Case (3) footer caption is now "Declined by X"**, not "Rejected by X" — matches the "Decline"
@@ -285,9 +374,10 @@ code" without checking design.md CRD-DD-10's consequences note first.
 - `notification-item.module.ts` registers this folder's sibling filter pipes
   (`FilterNotificationBy*Pipe`, `GroupNotificationsByRecencyPipe`) — imported by
   `results-notifications.module.ts` (the sole surviving consumer post-`NOTIF-T-6`). It also imports
-  the standalone `ContributionRequestDrawerComponent` and keeps `PrDialogComponent` (CRD-T-7 restored
-  it).
-- Inputs: `notification`, `isSent`. Output: `requestEvent` — emitted in `finalize`, **after** the
+  the standalone `ContributionRequestDrawerComponent` (DSP-T-3: now a thin shell) AND
+  `NotificationDetailContentComponent` (DSP-T-3: the extracted body/footer), plus
+  `PrimaryDeclineJustificationDialogComponent` and keeps `PrDialogComponent` (CRD-T-7 restored it).
+- Inputs: `notification`, `isSent`, `autoAction` (BELL-T-5, below). Outputs: `autoActionConsumed`, `requestEvent` — emitted in `finalize`, **after** the
   `next` handler, and the refetch may rebind this instance to a different notification (see the
   DD-6 trap above).
 - The decision is recorded by `ResultsApiService.PATCH_updateRequest(body, isP25Request)` →
@@ -314,7 +404,13 @@ code" without checking design.md CRD-DD-10's consequences note first.
   is `[hidden]` for bilateral, and completing it fires a second `request_status_id: 2` PATCH.
 - ⚠️ `invalidateRequest()` disables buttons and the drawer's footer alike for non-admins when the
   request's phase differs from the current one. On prtest every pending bilateral request sits in
-  closed phase 34 — needs an admin account or an open-phase request.
+  closed phase 34 — needs an admin account or an open-phase request. **BELL-T-1:** the eligibility
+  predicate itself (phase/admin/QA/platform-closed check) now lives in
+  `../../utils/request-decision.ts::isDecidable(row, ctx)` — `invalidateRequest()` is just
+  `requestingAccept || requestingReject || !isDecidable(this.notification, { isAdmin, platformIsClosed,
+  currentPhaseId, ipsrCurrentPhaseId })`. The busy flags (`requestingAccept`/`requestingReject`) stay
+  component-local; everything else about this trap (prtest phase 34, needs admin/open-phase) is
+  unchanged.
 - ⚠️ **Closing any popup, or the drawer, records NOTHING** (CRD-R-9). Never auto-accept on close.
 - `source_name` is **derived** server-side, not a column; if that mapping changes, `acceptsWithoutToc`
   silently falls back to the legacy flow.
@@ -328,6 +424,128 @@ code" without checking design.md CRD-DD-10's consequences note first.
 ## Not verified
 - CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
   browser pass, not this doc.
+
+## SACN-T-4: approve row gets a check icon, Approved + Rejected share "Decision update" chip (`sp-approval-center-notice`)
+- **Avatar:** a NEW `isApprovedDecisionUpdateRow` getter (`resolveNotificationType(...) ===
+  NotificationType.BILATERAL_RESULT_APPROVED`) adds a third branch to the Updates-row avatar box,
+  between `aiJob` and the initials fallback — `<i class="pi pi-check-circle">` for Approved only.
+  Rejected rows fall through to the pre-existing initials branch unchanged (SACN-R-6 "Rejected row
+  chip" scenario: chip changes, icon doesn't).
+- **Chip:** `rowTypeChipLabel` gains a third override (same `isUpdateSource` branch as the WCT/WPT
+  overrides above), checked AFTER those two: `isBilateralReviewNotification(this.notification)`
+  (from `notification-type.constants.ts`, already existed — true for Approved OR Rejected) →
+  `BILATERAL_DECISION_NOTICE_COPY.chipLabel` ("Decision update", reused from
+  `internationalization/bilateral-decision-notice.copy.ts` — not redeclared, per SACN-T-3's forward
+  pointer). Applies to BOTH Approved and Rejected rows, and to legacy rows (no new-shape `text`) —
+  the chip override reads only the resolved `NotificationType`, never the sentence shape, so
+  SACN-R-7 "legacy rows keep rendering" holds for the chip even though the sentence itself is
+  unparsed for a legacy row.
+- **Color class — explicit neutral surface-sunken pair (rework attempt 3, design.md §8.3 AMENDED
+  2026-10-02, Pivot):** attempt 1 left `rowTypeChipColorClass` unbranched for Approved/Rejected, so
+  they fell into the violet `--pr-color-primary-50/-400` fallback every other unlisted update type
+  gets (Reviewer finding 1: chip rendered violet, not grey). Attempt 2 fixed that by returning `''`
+  — no `!important` override, so the badge's own `bg-secondary text-secondary-foreground`
+  (hlm-badge.ts) would win. But in this app's theme bridge `--secondary` resolves to
+  `--pr-color-primary-25` (#faf9fe, near-white), which does not read grey — design.md §8.3 was
+  amended to drop the "let `--secondary` show through" approach and instead specify an explicit
+  neutral pair. Fix (attempt 3): `isUpdateSource` branch's `isBilateralReviewNotification(...)`
+  check (Approved OR Rejected) now returns `'!bg-[var(--pr-surface-sunken)]
+  !text-[var(--pr-text)]'` — same literal-arbitrary-value pattern the WCT/WPT pairs above already
+  use, pointed at `--pr-surface-sunken` (#f3f2f7, `colors.scss` L273) / `--pr-text` (dark ink). The
+  global `--secondary` mapping in `styles.scss` is NOT touched. Funding chip, meta line
+  (`<level> · <type> · <time ago>`), and result-link styling are still untouched (SACN-DD-5).
+  Regression: `rowTypeChipColorClass (SACN-T-4 rework attempt 3, design.md §8.3 amendment)` asserts
+  Approved/Rejected return the exact `!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]` string
+  (not `--pr-color-primary-50`, not `''`) while WCT/WPT keep their own distinct pairs — the spec
+  checks the CLASS CHOICE only; it matches the design.md §8.3 class contract, but the actual visual
+  match to the mockup is still the HITL manual check, not something a unit test can verify.
+- **Drawer `requestKind` is unaffected** — it was already `null` for every `isUpdateSource` row
+  before this task (see the retired `drawerViewFields()`'s own comment, since replaced by
+  `detailTitle()`/`DSP-T-4`), so neither chip override feeds it; the panel shows no separate "type"
+  field at all for Updates rows, Approved/Rejected included — only whatever `detailTitle()` resolves.
+
+## DSP-T-7: routing to the panel service, lifecycle, focus
+`notificationKey` (a getter, not the component instance) is the panel's key — `${notification.origin}-${share_result_request_id ?? notification_id}`, byte-identical to the page's own `trackNotificationKey()`. `openDrawer()` builds `TemplatePortal(detailTemplateRef(), vcr)` and calls `panel.open(key, portal, drawerHeadingId)` AFTER `drawerOpen.set(true)`. An `activeKey` effect resets THIS row (`resetForTakeover()`, never `closeDrawer()` — no focus move, no `panel.close()`) when another row takes over while open. `closeDrawer()` is the single seam (`finalize`, ✕/Escape, NOTIF-R-11 toggle all already flow through it) — it now also calls `panel.close(key)` and, **only when `drawerOpen()` was still `true` on entry** (never for a popup-path call where nothing was open, `CRD-DD-10`/DSP-R-13 scope), focuses `#rowInteractive`. `ngOnDestroy` calls `panel.close(key)` (no-op unless still active). The drawer's `[open]` is `drawerOpen() && !panel.isWide()` so the aside/drawer can never both show; the SHELL's own `(closed)` (narrow dismissal + the real `BrnDialog`'s post-exit-animation event) goes through `onDrawerShellClosedSignal()`, which no-ops when `panel.isWide()` is true at arrival (a resize-driven container swap, not a user close) — the content's own ✕ `(closed)` stays wired straight to `onDrawerClosedSignal()`/`closeDrawer()` unconditionally, so the docked ✕ still closes. Docked-open heading focus goes through `afterNextRender` (content `h2[id]` now has `tabindex="-1"`, `notification-detail-content`). Escape inside the aside calls `panel.requestClose()` (page template); the row's own `closedByUser$` subscription is what actually closes, via `closeDrawer()`.
+
+## DSP-T-5 rework attempt 2: `[chain]` narrows via `@let`, not a second `approvalChain()` call
+`[chain]` reads a `@let chainState` local; a second `approvalChain()` call is not narrowed under
+`strictTemplates`, and only `ngc` catches it (see `src/CLAUDE.md` §21.7).
+
+## BRS-T-7: opening the drawer marks a received pending request seen
+`openDrawer()` calls `ResultsNotificationsService.markRequestSeen(this.notification)` (fire-and-forget,
+never blocks, never rejects) only when `isPending` (status 1 AND `!isSent`). Sent rows and done rows do
+nothing. All entry points (row click, ToC step, `runAutoAction()` ToC accept) go through `openDrawer()`,
+so the gate lives there. The inbox page's "Mark all as read" is the page's job (`onMarkAllRead()` ->
+`markAllBellRead()`, shown on `bellCount() > 0`), not this row's.
+
+**Verified:** 2026-10-06 · qa-development-2026-ss · BRS-T-7 (`notifications/bell-read-state`): `openDrawer()` marks a received pending request seen via `markRequestSeen`. Prior: BELL-T-11 (`drawerAcceptLabel()` now delegates to `acceptLabelFor(row)` in `utils/request-decision.ts`, the single source shared with the bell card; it returns the explicit string ("Accept contribution" for the old `null` case), and the row template no longer needs its `?? 'Accept contribution'` fallback). Prior: BELL-T-9 (`runAutoAction()` opens the detail drawer for a ToC-carried accept, 0 PATCH; see BELL-T-9 section). Prior: BELL-T-5 attempt 2 (BELL-T-6 D-1): `ngOnChanges` re-arms `autoActionRan` when `autoAction` becomes falsy (re-hand-off on the same instance); the inbox now also reacts to same-route `queryParamMap` changes. Prior: BELL-T-7 (`notifications/bell-quick-inbox`): `runAutoAction()` gated so a link never PATCHes (see the BELL-T-7 section above); no other handler changed.
+
+**Prior verification:** 2026-10-06 · qa-development-2026-ss · BELL-T-5 (`notifications/bell-quick-inbox`): added `autoAction`/`autoActionConsumed` (see the new BELL-T-5 section above); no change to any existing handler. Supersedes nothing below.
+
+**Prior verification:** 2026-10-06 · qa-development-2026-ss · BELL-T-1 attempt 2 (`notifications/bell-quick-inbox`,
+Reviewer FAIL — folder `CLAUDE.md` not updated): body construction and the primary-decline
+`justification` gate moved from `acceptOrReject()` into `../../utils/request-decision.ts::buildDecisionBody()`;
+the `invalidateRequest()` eligibility predicate moved into `isDecidable()` in that same file — see the
+amended bullets under "PDR-T-4" and "Traps" above. `classifyAccept()`, `declineMode()` and `isP25()`
+(also in that util) are not yet consumed here — they exist for the bell (`BELL-T-2`/`BELL-T-3`) and
+are covered by `../../utils/request-decision.spec.ts`'s own table-driven parity spec, not by this
+component's spec. No behavior change: `acceptOrReject`/`invalidateRequest`/`submitPrimaryDecline`/
+`onAcceptContribution`/`onDrawerAccept` are unchanged in outcome, every existing spec in this folder
+and `../contribution-request-drawer/` stayed green and unmodified. Supersedes nothing below — it only
+adds these two bullets and this stamp.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-9 fix round (`notifications/detail-side-panel`,
+HITL browser pass + user decisions): `activityDate` now reads `requested_date ?? created_date` (F-2,
+request rows carry `requested_date` only); `resultGrid()`'s "Submitted by" now reads the chain's
+`submission.actor_name` instead of the row's requester/emitter (Q-1, see the `resultGrid()` bullet
+above); `chips()` marks only status/funding `pill: true` (Q-2, rendering decided in
+`notification-detail-content`). **`copy.toc.helper` reverts to the mockup's literal wording** (Q-4,
+user decision overriding the DSP-T-8 stamp below's "accurate wording" choice — that stamp's
+reasoning still stands as background, the user chose the mockup copy anyway). Supersedes nothing
+below except the `toc.helper` string; every other fact in the DSP-T-8 stamp still holds.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-8 rework attempt 2 (`notifications/detail-side-panel`,
+Reviewer FAIL): deleted the `[crdAlign]` slot's own inner `h3`/`p` (`copy.sections.align`/
+`copy.align.hint`) — see the new bullet under "`[crdAlign]` gate" above. `copy.toc.helper` (rendered
+by `notification-detail-content`'s own heading) carries the accurate wording forward; `sections.align`
+and `align.hint` are removed from the copy file (no other reference existed). Supersedes nothing
+below — it only fixes the stacked-heading regression attempt 1 introduced.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-7 (`notifications/detail-side-panel`): routed
+to `NotificationDetailPanelService` (open/close/destroy/takeover/focus) — see the new section above.
+Supersedes nothing below.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-5 rework attempt 2 (`notifications/detail-side-panel`):
+`[chain]` binding fixed to type-check under `ngc` (see the section above); `notification-detail-content`'s
+chain step also split `name` into `code`/`name` so only the program code renders `font-mono` (design.md
+§6.3 "Chain step") — see that component's own `CLAUDE.md` for the `ChainDisplayStep` contract.
+Supersedes nothing below — it only fixes the `[chain]` binding attempt 1 left broken and documents it.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · DSP-T-4 (`notifications/detail-side-panel`):
+`drawerViewFields()` removed outright; `detailTitle()`/`chips()`/`resultGrid()` added (see the new
+"DSP-T-4" section above) and wired into `notification-detail-content`'s `title`/`chips`/`resultGrid`
+inputs. `rowTypeChipLabel`/`rowStatusLabel`/`fundingWindowBadge`/`resultLevelTypeBadge` are reused,
+not reimplemented. Supersedes nothing below — it only retires `drawerViewFields()` and the pointers
+to it, fixed in place above.
+
+**Verified:** 2026-10-05 · qa-development-2026-ss · cb27be98b · DSP-T-3 attempt 2 (`notifications/detail-side-panel`):
+the drawer split into a shell + `notification-detail-content` (see the "DSP-T-3" section above) —
+this stamp closes the Reviewer's attempt-1 advisory that the re-stamp and 3 stale pointers (the
+`viewMetadataRows` location, the `drawerReviewRowsForMode()` mode guard, the module-imports
+contract line) were missing. All three are now fixed in place, above. `drawerHeadingId` also feeds
+a second id, `drawerHeadingId + '-desc'`, passed as the shell's `describedBy` input (paired with the
+content's header-sentence `p[id]`) — the accessible-DESCRIPTION counterpart to `labelledBy`, same
+one-id-per-row contract. Supersedes nothing below — it only adds this stamp and fixes the 3
+pointers; every prior stamp still stands for what it describes.
+
+**Verified:** 2026-10-02 · qa-development-2026-ss · SACN-T-4 rework attempt 3 (post-Pivot): Approved/
+Rejected chips return the neutral pair `!bg-[var(--pr-surface-sunken)] !text-[var(--pr-text)]`
+(amended design §8.3) instead of the violet fallback — class contract met; visual match pending
+HITL. Supersedes attempt 1's stamp below only for the color bullet; check-icon/chip-label/avatar
+behavior unchanged.
+
+**Prior verification:** 2026-10-02 · qa-development-2026-ss · SACN-T-4 (`sp-approval-center-notice`):
+approve row check icon + "Decision update" chip (Approved + Rejected) — see the section above.
 
 **Verified:** 2026-10-01 · qa-development-2026-ss · bilateral result links → center editor (see "Result-link routing per kind"). Before that: PDR-T-4 (`notifications/primary-decline-rejects-result`):
 both primary Decline entry points (row `onDeclineClick()`, drawer `onDrawerDeclineClicked()`) now
@@ -369,3 +587,18 @@ contract: `acceptLabel`, `showAlignSlot`, `requestKind`, `leadCode`/`suffix`), a
 below, which still stands for the wording/chip-sizing fixes.
 
 **Prior verification:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-16 ("Declined by" wording + chip font-size/weight/gap fixes, ad-hoc user style feedback; supersedes NOTIF-T-15's stamp above which still stands, just re-stamped here)
+
+## RRC-T-9: reason line on rejection update rows
+`rejectionReasonLine` (getter) delegates to `getRejectionReasonLine()` in `notification-type.constants.ts`
+for `isUpdateSource` rows only: Rejected + `has_review_entry` shows "Reason: <comment>" (2-line clamp) or the
+shared fallback; legacy/other types render no line. Copy in `bilateral-rejection-notice.copy.ts`.
+
+**Verified:** 2026-10-06 · qa-development-2026-ss · RRC-T-9 (`bilateral/rejected-result-correction`): reason line added under the update-row sentence; no other row behaviour changed.
+
+## PRA-T-2: primary rows say "Review result", never Decline (`notifications/primary-review-not-accept`)
+- `onAcceptContribution()` / `onDrawerAccept()` call `reviewPrimaryResult()` for a primary row (no more `acceptOrReject(true)` for it): the existing accept PATCH, then on success **or HTTP 409** `NotificationNavigationService.completePrimaryReview(row, notifyLater)` - status 5 navigates to `reviewRequestUrl(row)` (review drawer), anything else shows `copy.notificationItem.primaryNotifyLater` and does NOT navigate. Other errors keep the generic "Error when requesting" toast. No confirm step, no "already answered" toast.
+- Decline is gone for primary: the row's Decline button is not rendered (`@if (!isPrimaryRequest)`), the drawer gets `[showDecline]="!isPrimaryRequest"`, and `runAutoAction()` ignores `?action=decline` for a primary row (consumes the param only, like accept under BELL-T-7).
+- Chip and `detailTitle()` read "Needs your review" (`primaryRequestChip`); the Accept label is `footer.reviewResult` via `acceptLabelFor`.
+- SP code for the URL comes from `obj_shared_inititiative` on a primary row (an ownerless legacy result has no initiative yet).
+
+**Verified:** 2026-10-07 · qa-development-2026-ss · PRA-T-2 attempt 2 (`notifications/primary-review-not-accept`): `reviewPrimaryResult()`, Decline removed for primary (row, drawer, deep link), chip "Needs your review". Supersedes the primary bullets of PSR-T-8 and PDR-T-4 above.

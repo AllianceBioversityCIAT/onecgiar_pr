@@ -3,10 +3,13 @@ import {
   buildResultNotificationText,
   getAiJobNotificationParts,
   getNotificationActionVerb,
+  getRejectionReasonLine,
   getResultNotificationTextParts,
+  getReviewProgramCode,
   isBilateralReviewNotification,
   isBilateralSubmittedNotification,
   isResultTaggedNotification,
+  parseCenterReportedProjectText,
   resolveNotificationType
 } from './notification-type.constants';
 
@@ -224,6 +227,80 @@ describe('notification-type constants', () => {
       });
       expect(buildResultNotificationText(notification)).toBe(
         '❌ Your Result 9561 - T has been Rejected by the Science Program SP03.'
+      );
+    });
+  });
+
+  // SACN-T-3 (`notifications/sp-approval-center-notice`, SACN-R-3/R-4/R-5/R-7): new-shape center
+  // sentence for Approve, rendered as bold-SP-code + plain-verb segments.
+  describe('bilateral review decisions — approved center notice (SACN)', () => {
+    const withText = (type: NotificationType, text: string | null) =>
+      notificationOf(type, {
+        text,
+        obj_result: resultOf({ result_code: 9330, title: 'Solar-powered cold storage adoption in Kenyan markets' })
+      });
+
+    it('builds the exact SP-code sentence and bolds only the SP code', () => {
+      const notification = withText(
+        NotificationType.BILATERAL_RESULT_APPROVED,
+        "SP06, as primary Science Program, has approved your center's result"
+      );
+
+      expect(buildResultNotificationText(notification)).toBe(
+        "SP06, as primary Science Program, has approved your center's result 9330 - Solar-powered cold storage adoption in Kenyan markets"
+      );
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments).toEqual([
+        { text: 'SP06', emphasize: true },
+        { text: ", as primary Science Program, has approved your center's result", emphasize: false }
+      ]);
+      expect(parts.linkTrailer).toBeUndefined();
+    });
+
+    it('falls back to the no-code sentence with no emphasized segment', () => {
+      const notification = withText(
+        NotificationType.BILATERAL_RESULT_APPROVED,
+        "The primary Science Program has approved your center's result"
+      );
+
+      expect(buildResultNotificationText(notification)).toBe(
+        "The primary Science Program has approved your center's result 9330 - Solar-powered cold storage adoption in Kenyan markets"
+      );
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments).toEqual([
+        { text: "The primary Science Program has approved your center's result", emphasize: false }
+      ]);
+      expect(parts.segments?.some(segment => segment.emphasize)).toBe(false);
+    });
+
+    it('never applies the new-shape parser to Rejected, even with the same tail', () => {
+      const notification = withText(
+        NotificationType.BILATERAL_RESULT_REJECTED,
+        "SP06, as primary Science Program, has approved your center's result"
+      );
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments).toBeUndefined();
+      expect(parts.prefix).toBe('The result');
+      expect(parts.suffix).toBe("SP06, as primary Science Program, has approved your center's result");
+    });
+
+    it('keeps legacy center wording and the submitter/empty-text cases unchanged (SACN-R-7)', () => {
+      const legacy = withText(
+        NotificationType.BILATERAL_RESULT_APPROVED,
+        'where your center was tagged, has been approved by the Science Program SP03.'
+      );
+      expect(getResultNotificationTextParts(legacy).segments).toBeUndefined();
+      expect(buildResultNotificationText(legacy)).toBe(
+        "The result 9330 - Solar-powered cold storage adoption in Kenyan markets, where your center was tagged, has been approved by the Science Program SP03."
+      );
+
+      const empty = withText(NotificationType.BILATERAL_RESULT_APPROVED, null);
+      expect(getResultNotificationTextParts(empty).segments).toBeUndefined();
+      expect(buildResultNotificationText(empty)).toBe(
+        '✅ Your Result 9330 - Solar-powered cold storage adoption in Kenyan markets has been Approved by the Science Program SP5.'
       );
     });
   });
@@ -509,6 +586,70 @@ describe('notification-type constants', () => {
     });
   });
 
+  describe('Center-reported bilateral project tagged (BPT-T-3)', () => {
+    // design.md §9 shape table, pinned identically on the server twin.
+    it.each([
+      ['ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)', { reporter: 'ICRISAT', code: 'B-A1187', owner: 'ABC' }],
+      [
+        'A CGIAR Center has tagged the bilateral project B-A1187 from your center (ABC)',
+        { reporter: 'A CGIAR Center', code: 'B-A1187', owner: 'ABC' }
+      ],
+      [
+        'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC)',
+        { reporter: 'ICRISAT', code: 'Seeds (Phase 2)', owner: 'ABC' }
+      ],
+      ['reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.', null],
+      ['B-A1080 (ABC)', null],
+      ['B-A1080', null],
+      ['', null],
+      ['ICRISAT has tagged the bilateral project B-A1187 from your center ()', null]
+    ])('parses %s', (text, expected) => {
+      expect(parseCenterReportedProjectText(text)).toEqual(expected);
+    });
+
+    it('flattens to the full sentence with the result identity appended', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+        obj_result: resultOf({ result_code: 9322, title: '<title>' })
+      });
+
+      expect(buildResultNotificationText(notification)).toBe(
+        'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC) to result 9322 - <title>'
+      );
+    });
+
+    it('emphasizes exactly reporter, code and owner — never "The result"', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['ICRISAT', 'B-A1187', 'ABC']);
+      expect(parts.prefix).not.toContain('The result');
+      expect(parts.suffix).toBeNull();
+      expect(parts.emphasizePrefix).toBe(false);
+    });
+
+    it('keeps the project code intact when it contains its own parentheses', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project Seeds (Phase 2) from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.segments?.filter(s => s.emphasize).map(s => s.text)).toEqual(['ICRISAT', 'Seeds (Phase 2)', 'ABC']);
+    });
+
+    it('never falls into the composed-sentence fallback (order falsifier)', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)'
+      });
+
+      const parts = getResultNotificationTextParts(notification);
+      expect(parts.prefix).not.toBe('The result');
+      expect(parts.segments).toBeDefined();
+    });
+  });
+
   describe('isResultTaggedNotification', () => {
     it('is true only for the two tagged types', () => {
       expect(isResultTaggedNotification(notificationOf(NotificationType.RESULT_CENTER_TAGGED))).toBe(true);
@@ -545,6 +686,94 @@ describe('notification-type constants', () => {
 
       expect(parts.prefix).toBe('The result');
       expect(parts.suffix).toBe('was submitted for your review by AfricaRice.');
+    });
+  });
+
+  describe('getRejectionReasonLine (RRC-T-9, RRC-R-13)', () => {
+    const rejected = (extra: any) => ({ obj_notification_type: { type: NotificationType.BILATERAL_RESULT_REJECTED }, ...extra });
+
+    it('returns the trimmed comment when the row has an entry', () => {
+      expect(getRejectionReasonLine(rejected({ has_review_entry: true, review_comment: '  Belongs to SP12 ' }))).toBe('Belongs to SP12');
+    });
+
+    it.each([null, '', '   ', undefined])('returns the fallback for an entry with comment %p', comment => {
+      expect(getRejectionReasonLine(rejected({ has_review_entry: true, review_comment: comment }))).toBe('No justification was recorded.');
+    });
+
+    it.each([false, undefined])('returns null for a legacy row (has_review_entry %p), never the fallback', flag => {
+      expect(getRejectionReasonLine(rejected({ has_review_entry: flag, review_comment: null }))).toBeNull();
+      expect(getRejectionReasonLine(rejected({ has_review_entry: flag, review_comment: 'x' }))).toBeNull();
+    });
+
+    it('returns null for other types even if the fields are present', () => {
+      const approved = { obj_notification_type: { type: NotificationType.BILATERAL_RESULT_APPROVED }, has_review_entry: true, review_comment: 'x' };
+      expect(getRejectionReasonLine(approved)).toBeNull();
+    });
+
+    it('leaves the rejection sentence unchanged (RRC-R-16)', () => {
+      const parts = getResultNotificationTextParts(rejected({ has_review_entry: true, review_comment: 'x' }));
+      expect(parts.prefix).toBe('❌ Your Result');
+      expect(parts.suffix).toBe('has been Rejected by the Science Program.');
+    });
+  });
+
+  // RRC-T-10-F1 (RRC-R-13 "by which SP", RRC-R-16): the Rejected sentence names the SP that recorded
+  // THAT rejection (server `review_program_code`), not the result's current primary.
+  describe('Rejected sentence names the rejecting SP (RRC-T-10-F1)', () => {
+    // The result's CURRENT primary is SP10 (after a direct transfer SP02 -> SP10).
+    const currentPrimarySp10 = resultOf({ obj_result_by_initiatives: [{ obj_initiative: { id: 10, official_code: 'SP10' } }] });
+    const rejected = (extra: any = {}) => notificationOf(NotificationType.BILATERAL_RESULT_REJECTED, { obj_result: currentPrimarySp10, ...extra });
+
+    // FALSIFIER: fails if the sentence says SP10.
+    it('says SP02 (the rejecting SP) while the current primary is SP10', () => {
+      const n = rejected({ has_review_entry: true, review_program_code: 'SP02' });
+
+      expect(getResultNotificationTextParts(n).suffix).toBe('has been Rejected by the Science Program SP02.');
+      expect(buildResultNotificationText(n)).toBe('❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program SP02.');
+    });
+
+    it('falls back to the current primary code when the entry carries no code (pre-RSB-T-1 history row)', () => {
+      const n = rejected({ has_review_entry: true, review_program_code: null });
+
+      expect(getResultNotificationTextParts(n).suffix).toBe('has been Rejected by the Science Program SP10.');
+    });
+
+    it.each(['', '   ', undefined, 7])('treats review_program_code %p as absent', code => {
+      const n = rejected({ has_review_entry: true, review_program_code: code });
+
+      expect(getResultNotificationTextParts(n).suffix).toBe('has been Rejected by the Science Program SP10.');
+    });
+
+    it('a legacy row (no entry) reads exactly as today, even if a code were present', () => {
+      expect(getResultNotificationTextParts(rejected({ has_review_entry: false, review_program_code: 'SP02' })).suffix).toBe(
+        'has been Rejected by the Science Program SP10.'
+      );
+      expect(getResultNotificationTextParts(rejected()).suffix).toBe('has been Rejected by the Science Program SP10.');
+    });
+
+    it('Approved keeps using the current primary, ignoring review_program_code (RRC-R-16)', () => {
+      const approved = notificationOf(NotificationType.BILATERAL_RESULT_APPROVED, {
+        obj_result: currentPrimarySp10,
+        has_review_entry: true,
+        review_program_code: 'SP02'
+      });
+
+      expect(getResultNotificationTextParts(approved).suffix).toBe('has been Approved by the Science Program SP10.');
+    });
+
+    it('a server-composed centre sentence (text) still wins for Rejected', () => {
+      const n = rejected({ has_review_entry: true, review_program_code: 'SP02', text: 'where your center was tagged, has been rejected by the Science Program SP02.' });
+
+      expect(getResultNotificationTextParts(n).suffix).toBe('where your center was tagged, has been rejected by the Science Program SP02.');
+    });
+
+    it('getReviewProgramCode exposes the same rule to the bell chip', () => {
+      expect(getReviewProgramCode(rejected({ has_review_entry: true, review_program_code: 'SP02' }))).toBe('SP02');
+      expect(getReviewProgramCode(rejected({ has_review_entry: true, review_program_code: null }))).toBeNull();
+      expect(getReviewProgramCode(rejected({ has_review_entry: false, review_program_code: 'SP02' }))).toBeNull();
+      expect(
+        getReviewProgramCode(notificationOf(NotificationType.BILATERAL_RESULT_APPROVED, { has_review_entry: true, review_program_code: 'SP02' }))
+      ).toBeNull();
     });
   });
 });

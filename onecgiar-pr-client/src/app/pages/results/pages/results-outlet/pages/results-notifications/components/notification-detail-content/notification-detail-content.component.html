@@ -1,0 +1,306 @@
+<!-- DSP-T-4 (design.md §6.2/§6.3): header = title + close, then the chips row. The sentence moved
+     into the scrolling body (below) — the header itself no longer carries it. -->
+<div class="flex flex-col gap-2 border-b border-[var(--pr-border-divider)] px-5 pt-[14px] pb-[14px]" data-testid="crd-header">
+  <div class="flex items-start justify-between gap-4">
+    <!-- @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §6.2 Focus "docked open"):
+         `tabindex="-1"` makes this heading a valid programmatic focus target (never a tab stop) for
+         `notification-item`'s `afterNextRender` focus-on-docked-open — it was missing until now. -->
+    <h2 [id]="headingId()" tabindex="-1" class="text-[15px] font-bold tracking-[-0.01em] text-ink-heading">{{ title() || copy.title }}</h2>
+    <button
+      type="button"
+      class="rounded-md p-1 text-ink-muted hover:text-ink-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
+      [attr.aria-label]="copy.closeAriaLabel"
+      data-testid="crd-close-btn"
+      (click)="closed.emit()"
+    >
+      <ng-icon name="lucideX" aria-hidden="true" />
+    </button>
+  </div>
+
+  @if (chips().length) {
+    <div class="flex flex-wrap items-center gap-2" data-testid="crd-chips-row">
+      @for (chip of chips(); track $index) {
+        @if (chip.pill) {
+          <span
+            hlmBadge
+            [variant]="chip.outlined ? 'outline' : 'secondary'"
+            class="rounded-full px-2 py-[2px] text-[11px] font-semibold"
+            data-testid="crd-chip"
+            data-chip-kind="pill"
+            >{{ chip.text }}</span
+          >
+        } @else {
+          <span class="text-[11px] font-semibold text-ink-subtle" data-testid="crd-chip" data-chip-kind="text">{{ chip.text }}</span>
+        }
+      }
+    </div>
+  }
+</div>
+
+<div class="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-5" data-testid="crd-body">
+  <p [id]="headingId() + '-desc'" class="text-[15px] leading-[1.5] text-ink-secondary" data-testid="crd-header-sentence">
+    @if (headerParts(); as h) {
+      {{ h.lead }}
+      <!-- PSR-T-9 (design.md §6.1 "Bilateral contributor request"): the bold leading {owner sp}
+           code, immediately abutting the verb with no separating space — the copy's verb
+           carries its own leading comma (", as primary Science Program, has tagged"). Absent
+           for every pre-existing caller, which takes the untouched `@else` branch below
+           (CRD zero-touch: byte-identical markup/whitespace to before this task). -->
+      @if (h.leadCode) {
+        <span class="font-mono font-semibold">{{ h.leadCode }}</span>{{ h.verb }}
+      } @else {
+        <!-- CRD-R-2 "Bilateral sentence" (CRD-T-4): no invented requester name — omit "from X"
+             entirely when the caller (notification-item's drawerHeader()) leaves requesterCode empty. -->
+        @if (h.requesterCode) {
+          {{ copy.header.from }} <span class="font-mono font-semibold">{{ h.requesterCode }}</span>
+        }
+        {{ h.verb }}
+      }
+      @if (h.responderCode) {
+        <span class="font-mono font-semibold">{{ h.responderCode }}</span>
+      }
+      {{ h.tail }} <span class="font-mono font-semibold">{{ h.resultCode }}</span> – {{ h.resultTitle }}
+      <!-- PSR-T-9 (design.md §6.2, PSR-R-11 "showing … the Creating Center"): the "on behalf of
+           {center}" tail — absent for every pre-existing caller (CRD zero-touch). -->
+      @if (h.suffix) {
+        {{ h.suffix }}
+      }
+    }
+  </p>
+
+  <section class="flex flex-col gap-2" data-testid="crd-result-section">
+    <!-- Reviewer FAIL issue 3 (design.md §6.3 Metrics, RESULT card): the label lives INSIDE the
+         bordered card, as its first child, above the link — not above/outside it.
+         `crd-result-card` stays on the link button (own testid, unchanged — asserted as an
+         HTMLButtonElement elsewhere in this spec); the card CONTAINER carries the new
+         `crd-result-card-container` testid so a DOM test can assert the h3 is its descendant. -->
+    <div
+      class="flex flex-col gap-3 rounded-[10px] border border-[var(--pr-border)] bg-surface-subtle p-4"
+      data-testid="crd-result-card-container"
+    >
+      <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.result }}</h3>
+      <!-- DSP-T-9 Q-3 (design.md §6.3 RESULT card "one inline run", user-approved 2026-10-05): the
+           button renders as a single inline text run (no `flex`/`flex-wrap`) so the code can never
+           sit alone on its own line — it wraps together with the title like ordinary text, with
+           the code staying `.font-mono` inline inside the run. -->
+      <button
+        type="button"
+        class="text-left text-[14px] font-semibold leading-[1.5] text-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
+        data-testid="crd-result-card"
+        (click)="resultActivated.emit()"
+      ><span class="font-mono">{{ resultCode() }}</span> – {{ resultTitle() }}</button>
+
+      <!-- DSP-T-4 (design.md §6.2 "Field sources", DD-6/DD-7): the 6-field grid, always exactly 6
+           cells in this fixed order — supersedes the removed `view`-mode-only metadata grid. An
+           empty source value is `copy.dashValue`, muted, never an omitted label (DD-6). The
+           Contributing-programs cell shows a skeleton while `field.loading` is true. -->
+      <div class="grid grid-cols-2 gap-x-5 gap-y-[14px]" data-testid="crd-result-grid">
+        @for (field of resultGrid(); track field.label) {
+          <div class="flex flex-col items-start gap-1">
+            <span class="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted" data-testid="crd-result-grid-label">{{
+              field.label
+            }}</span>
+            @if (field.loading) {
+              <hlm-skeleton class="h-[16px] w-20" data-testid="crd-result-grid-skeleton" />
+            } @else {
+              <span
+                class="text-[13px] leading-[1.4]"
+                [class.font-mono]="field.mono"
+                [class.tabular-nums]="field.mono"
+                [class.text-ink-muted]="field.value === copy.dashValue"
+                data-testid="crd-result-grid-value"
+                >{{ field.value }}</span
+              >
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- @akili-spec notifications/detail-side-panel (DSP-T-5)
+       design.md "Order in the body": sentence → RESULT card → APPROVAL CHAIN → Where it
+       contributes → ToC align. Never hidden: a loading/error state still renders here, and
+       neither state disables the footer (DSP-R-8 "Loading and failure" BUT clause). -->
+  <section class="flex flex-col" data-testid="crd-chain-section">
+    <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted mb-2">{{ copy.sections.approvalChain }}</h3>
+    @if (chainLoading()) {
+      <div class="flex flex-col gap-3" data-testid="crd-chain-skeleton">
+        <hlm-skeleton class="h-[40px] w-full" />
+        <hlm-skeleton class="h-[40px] w-full" />
+        <hlm-skeleton class="h-[40px] w-full" />
+      </div>
+    } @else if (chainHasError()) {
+      <div class="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--pr-border)] bg-surface-subtle p-3" data-testid="crd-chain-error">
+        <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.chain.errorMessage }}</p>
+        <button hlmBtn variant="outline" type="button" class="min-h-[36px] text-[13px]" data-testid="crd-chain-retry-btn" (click)="onRetryChainActivate()">
+          {{ copy.chain.retry }}
+        </button>
+      </div>
+    } @else {
+      @for (step of chainSteps(); track $index; let last = $last) {
+        <div class="flex items-center gap-3 py-[10px]" [class.border-b]="!last" [class.border-[var(--pr-border-divider)]]="!last" data-testid="crd-chain-step">
+          <span
+            [class]="step.iconClass"
+            aria-hidden="true"
+            data-testid="crd-chain-step-icon"
+            [attr.data-icon]="step.icon"
+          >
+            @if (step.icon === 'check') {
+              <ng-icon name="lucideCheck" size="12" class="text-white" />
+            } @else if (step.icon === 'x') {
+              <ng-icon name="lucideX" size="12" class="text-white" />
+            }
+          </span>
+          <div class="flex min-w-0 flex-1 flex-col">
+            <span class="text-[13px] font-semibold leading-[1.4] text-ink-heading" data-testid="crd-chain-step-name">
+              @if (step.code) {
+                <span class="font-mono">{{ step.code }}</span> {{ step.name }}
+              } @else {
+                {{ step.name }}
+              }
+            </span>
+            @if (step.isViewerProgram) {
+              <span class="text-[11px] font-semibold text-brand-300" data-testid="crd-chain-step-your-program">{{ copy.chain.yourProgram }}</span>
+            }
+            @if (step.subtitle) {
+              <span class="text-[12px] text-ink-subtle" data-testid="crd-chain-step-subtitle">{{ step.subtitle }}</span>
+            }
+          </div>
+          <span [class]="step.pillClass" class="shrink-0 rounded-full px-2 py-[2px] text-[11px] font-semibold" data-testid="crd-chain-step-pill">{{
+            step.pillText
+          }}</span>
+        </div>
+      }
+    }
+  </section>
+
+  @if (mode() !== 'view' || reviewRows().length) {
+  <section class="flex flex-col gap-3" data-testid="crd-review-section">
+    <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.whereItContributes }}</h3>
+    @for (table of displayReviewRows(); track $index; let tableIndex = $index) {
+      <div class="grid grid-cols-1 min-[640px]:grid-cols-[200px_minmax(0,1fr)] rounded-lg border border-[var(--pr-border)]" data-testid="crd-review-table">
+        @for (field of table; track field.label; let rowIndex = $index) {
+          <span
+            class="px-[18px] py-3 text-[13px] font-medium text-ink-secondary"
+            [class.border-t]="rowIndex > 0"
+            [class.border-[var(--pr-border)]]="rowIndex > 0"
+            data-testid="crd-review-label"
+            >{{ field.label }}</span
+          >
+          <div class="px-[18px] py-3 flex flex-col items-start gap-1" [class.border-t]="rowIndex > 0" [class.border-[var(--pr-border)]]="rowIndex > 0">
+            <span
+              class="text-[14px] leading-[1.5] text-ink-body"
+              [class.font-mono]="field.mono"
+              [class.tabular-nums]="field.mono"
+              [class.text-ink-muted]="field.value === copy.dashValue"
+              [class.line-clamp-3]="needsMore(field.value) && !isExpanded(tableIndex, rowIndex)"
+              data-testid="crd-review-value"
+              >{{ field.value }}</span
+            >
+            @if (needsMore(field.value)) {
+              <button
+                type="button"
+                class="self-start text-[12px] font-medium text-brand-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
+                data-testid="crd-review-toggle"
+                (click)="toggleExpand(tableIndex, rowIndex)"
+              >
+                {{ isExpanded(tableIndex, rowIndex) ? copy.showLess : copy.showMore }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </section>
+  }
+
+  <!-- @akili-spec notifications/detail-side-panel (DSP-T-8, design.md "Order in the body", DSP-R-10):
+       the existing [crdAlign] Align step, now framed under a "MAP TO YOUR THEORY OF CHANGE" heading
+       + helper text — shown only for a bilateral request (showAlignSlot) in decide/confirm-decline
+       (never view mode, never a primary request). No change to the Align controls' own logic. -->
+  @if (showTocSection()) {
+    <section class="flex flex-col gap-2" data-testid="crd-toc-section">
+      <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.mapToToc }}</h3>
+      <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.toc.helper }}</p>
+      <ng-content select="[crdAlign]" />
+    </section>
+  }
+</div>
+
+@if (mode() !== 'view') {
+<!-- DSP-T-8 (design.md §6.3 Metrics "Footer"): `px-[20px] py-[14px]`, top divider, pinned outside the
+     scrolling body (a sibling of `crd-body` above, `mt-auto` keeps it bottom-pinned in the shell's
+     flex column — see this component's own CLAUDE.md "Width / motion ... :host { display: contents }"). -->
+<div class="flex flex-col gap-2 mt-auto border-t border-[var(--pr-border-divider)] px-[20px] py-[14px]" data-testid="crd-footer">
+  @if (mode() === 'decide') {
+    <div class="flex w-full flex-col gap-2">
+      @if (blockedReason()) {
+        <p id="crd-blocked-reason" data-testid="crd-blocked-reason" class="text-[13px] leading-[1.5] text-ink-secondary">{{ blockedReason() }}</p>
+      }
+      @if (acceptHelper()) {
+        <p id="crd-accept-helper" data-testid="crd-accept-helper" class="text-[13px] leading-[1.5] text-ink-secondary">{{ acceptHelper() }}</p>
+      }
+      <div class="flex justify-end gap-3">
+        @if (showDecline()) {
+        <button
+          hlmBtn
+          variant="outline"
+          type="button"
+          class="min-h-[36px] text-[14px]"
+          data-testid="crd-decline-btn"
+          [disabled]="isDeclineDisabled()"
+          [attr.aria-describedby]="declineDescribedBy()"
+          (click)="onDeclineActivate()"
+        >
+          @if (declineBusy()) {
+            <ng-icon name="lucideLoaderCircle" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          }
+          {{ copy.footer.decline }}
+        </button>
+        }
+        <button
+          hlmBtn
+          variant="brand"
+          type="button"
+          class="min-h-[36px] text-[14px]"
+          data-testid="crd-accept-btn"
+          [disabled]="isAcceptDisabled()"
+          [attr.aria-describedby]="acceptDescribedBy()"
+          (click)="onAcceptActivate()"
+        >
+          @if (acceptBusy()) {
+            <ng-icon name="lucideLoaderCircle" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          }
+          {{ acceptLabel() ?? copy.footer.acceptContribution }}
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div class="flex w-full flex-col gap-3">
+      <p class="text-[13px] leading-[1.5] font-medium text-ink-heading" data-testid="crd-decline-confirm-title">
+        {{ copy.footer.declineConfirmTitle }}
+      </p>
+      <div class="flex justify-end gap-3">
+        <button hlmBtn variant="outline" type="button" class="min-h-[36px] text-[14px]" data-testid="crd-cancel-btn" (click)="declineCancelled.emit()">
+          {{ copy.footer.cancel }}
+        </button>
+        <button
+          hlmBtn
+          variant="brand"
+          type="button"
+          class="min-h-[36px] text-[14px]"
+          data-testid="crd-confirm-decline-btn"
+          [disabled]="declineDisabled()"
+          (click)="onConfirmDeclineActivate()"
+        >
+          @if (declineBusy()) {
+            <ng-icon name="lucideLoaderCircle" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          }
+          {{ copy.footer.confirmDecline }}
+        </button>
+      </div>
+    </div>
+  }
+</div>
+}

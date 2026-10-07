@@ -797,7 +797,8 @@ $phase-color-border:  #cbd5e1;
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--pr-color-red-300);
+  /* Neutral by default (Pending review / Approved history). Red is opt-in, Rejected only. */
+  color: var(--pr-text-secondary);
   cursor: pointer;
   line-height: 1;
 
@@ -806,7 +807,15 @@ $phase-color-border:  #cbd5e1;
   }
 
   &:hover i {
-    color: var(--pr-color-red-400);
+    color: var(--pr-color-primary-400);
+  }
+
+  &--rejected {
+    color: var(--pr-color-red-300);
+
+    &:hover i {
+      color: var(--pr-color-red-400);
+    }
   }
 
   &:focus-visible {

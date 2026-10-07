@@ -47,6 +47,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ActorTypeRepository } from '../results/result-actors/repositories/actors-type.repository';
 import { BilateralVersioningService } from './services/bilateral-versioning.service';
+import { BilateralResubmissionService } from './services/bilateral-resubmission.service';
 import { BilateralVersioningRulesModule } from './versioning-rules/bilateral-versioning-rules.module';
 import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
 import { ClarisaApiKeyValidationService } from './services/clarisa-api-key-validation.service';
@@ -207,6 +208,9 @@ import { ResultFieldRevision } from '../ai/entities/result-field-revision.entity
     ActorTypeRepository,
     TemplateRepository,
     BilateralVersioningService,
+    // @akili-spec bilateral/resubmit-rejected-result — RSB-T-2: lock + status re-read + pipeline
+    // placeholder for resubmitting a Rejected result. Needs only the DataSource.
+    BilateralResubmissionService,
     BilateralAiService,
     // `AIQ-T-2`: claim-or-redirect under `GET_LOCK('prms_bilateral_ai_dispatch')`. Consumed by
     // `BilateralAiConsumer` (`decide`) and `BilateralAiSweeperCron`/terminal paths (`wake`,

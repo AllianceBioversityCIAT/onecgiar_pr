@@ -1669,4 +1669,126 @@ describe('BilateralResultsListComponent', () => {
       expect(dockedEl).toBeTruthy();
     });
   });
+
+  describe('RRC-R-15 — full rejection history in the justification modal', () => {
+    const row = (id: number, action: string, comment: string | null, day: number, initiative_code: string | null = 'SP09') => ({
+      id,
+      result_id: 9,
+      action,
+      comment,
+      created_at: `2026-10-0${day}T10:00:00Z`,
+      created_by: 1,
+      initiative_code,
+      first_name: 'Ana',
+      last_name: 'Reviewer',
+    });
+
+    const open = (response: unknown[]) => {
+      bilateralApiService.GET_bilateralReviewHistory = jest.fn().mockReturnValue(of({ response }));
+      component.openJustification({ id: 9, result_code: 9330 } as any);
+      fixture.detectChanges();
+      return Array.from(document.body.querySelectorAll('[data-testid="brl-history-entry"]')) as HTMLElement[];
+    };
+
+    it('lists every REJECT and RESUBMIT oldest first, with SP, reviewer, date and comment', () => {
+      const entries = open([
+        row(5, 'UPDATE', 'edit', 5),
+        row(4, 'REJECT', 'Reason C', 4, 'SP12'),
+        row(3, 'RESUBMIT', null, 3),
+        row(2, 'REJECT', 'Reason B', 2),
+        row(1, 'REJECTED', 'Reason A', 1),
+      ]);
+      expect(entries).toHaveLength(4);
+      const texts = entries.map(e => e.textContent ?? '');
+      expect(texts[0]).toContain('Reason A');
+      expect(texts[1]).toContain('Reason B');
+      expect(texts[2]).toContain('Resubmitted');
+      expect(texts[2]).toContain('No justification was recorded.');
+      expect(texts[3]).toContain('Reason C');
+      expect(texts[3]).toContain('SP12');
+      expect(texts[3]).toContain('Ana Reviewer');
+      expect(texts[3]).toContain('04 Oct 2026');
+      expect(document.body.textContent).not.toContain('edit');
+    });
+
+    it('shows no SP code for a legacy row without initiative_code', () => {
+      const entries = open([row(1, 'REJECT', 'Old reason', 1, null)]);
+      expect(entries[0].querySelector('[data-testid="brl-history-sp"]')).toBeNull();
+      expect(entries[0].textContent).toContain('Old reason');
+    });
+
+    describe('reachability after the rejection (RRC-R-14 After resubmission, RRC-R-15 After approval)', () => {
+      const rows = [
+        result({ id: 1, result_code: '101', status_id: 1, status_name: 'Editing' }),
+        result({ id: 5, result_code: '105', status_id: 5, status_name: 'Pending review' }),
+        result({ id: 6, result_code: '106', status_id: 6, status_name: 'Approved' }),
+        result({ id: 7, result_code: '107', status_id: 7, status_name: 'Rejected' }),
+        result({ id: 8, result_code: '108', status_id: 8, status_name: 'Draft' }),
+      ];
+
+      beforeEach(() => {
+        component.initializing.set(false);
+        component.loading.set(false);
+        component.results.set(rows);
+        fixture.detectChanges();
+      });
+
+      /** The trigger inside the row that shows this result code (row order is the table's, not the fixture's). */
+      const triggerOf = (code: string): HTMLButtonElement | null => {
+        const triggers = Array.from(
+          fixture.nativeElement.querySelectorAll('[data-testid="brl-history-trigger"]') as NodeListOf<HTMLButtonElement>,
+        );
+        return triggers.find(t => (t.closest('.rc-row')?.textContent ?? '').includes(code)) ?? null;
+      };
+
+      const triggerCount = () => fixture.nativeElement.querySelectorAll('[data-testid="brl-history-trigger"]').length;
+
+      it('offers the history at Pending review, Approved and Rejected, and nowhere else', () => {
+        expect(component.hasReviewHistory(rows[0])).toBe(false);
+        expect(component.hasReviewHistory(rows[1])).toBe(true);
+        expect(component.hasReviewHistory(rows[2])).toBe(true);
+        expect(component.hasReviewHistory(rows[3])).toBe(true);
+        expect(component.hasReviewHistory(rows[4])).toBe(false);
+        expect(triggerCount()).toBe(3);
+      });
+
+      it('uses the warning label at Rejected and a neutral one at Pending review and Approved', () => {
+        const labelOf = (code: string) => triggerOf(code)?.getAttribute('aria-label');
+        expect(labelOf('105')).toBe('Review history');
+        expect(labelOf('106')).toBe('Review history');
+        expect(labelOf('107')).toBe('View rejection justification');
+        expect(triggerOf('101')).toBeNull();
+        expect(triggerOf('108')).toBeNull();
+      });
+
+      it('paints the danger modifier only on the Rejected trigger, never at Pending review or Approved', () => {
+        const isRed = (code: string) => triggerOf(code)!.classList.contains('brl_justification_trigger--rejected');
+        expect(isRed('105')).toBe(false);
+        expect(isRed('106')).toBe(false);
+        expect(isRed('107')).toBe(true);
+      });
+
+      it.each([5, 6])('opens the full history from a status %s row, with no request until the click', status => {
+        bilateralApiService.GET_bilateralReviewHistory = jest.fn().mockReturnValue(
+          of({
+            response: [
+              { id: 2, result_id: status, action: 'REJECT', comment: 'Reason', created_at: '2026-10-02T10:00:00Z', created_by: 1, initiative_code: 'SP09' },
+            ],
+          }),
+        );
+        expect(bilateralApiService.GET_bilateralReviewHistory).not.toHaveBeenCalled();
+        triggerOf(status === 5 ? '105' : '106')!.click();
+        fixture.detectChanges();
+        expect(bilateralApiService.GET_bilateralReviewHistory).toHaveBeenCalledTimes(1);
+        expect(bilateralApiService.GET_bilateralReviewHistory).toHaveBeenCalledWith(status);
+        expect(document.body.querySelectorAll('[data-testid="brl-history-entry"]')).toHaveLength(1);
+      });
+    });
+
+    it('falls back to the empty message when there is no rejection or resubmission', () => {
+      const entries = open([row(1, 'UPDATE', 'edit', 1)]);
+      expect(entries).toHaveLength(0);
+      expect(document.body.textContent).toContain('No rejections have been recorded for this result.');
+    });
+  });
 });

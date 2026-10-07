@@ -10,6 +10,7 @@ import { NotificationLevel } from './notification_level.entity';
 import { NotificationType } from './notification_type.entity';
 import { User } from '../../../auth/modules/user/entities/user.entity';
 import { Result } from '../../results/entities/result.entity';
+import { ResultReviewHistory } from '../../results/result-review-history/entities/result-review-history.entity';
 
 @Entity('notifications')
 export class Notification {
@@ -72,6 +73,23 @@ export class Notification {
   @ManyToOne(() => Result, (r) => r.obj_result_notification)
   @JoinColumn({ name: 'result_id' })
   obj_result: Result;
+
+  @Column({
+    type: 'bigint',
+    name: 'review_history_id',
+    nullable: true,
+  })
+  review_history_id: number | null;
+
+  @ManyToOne(() => ResultReviewHistory, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({
+    name: 'review_history_id',
+    foreignKeyConstraintName: 'FK_notifications_review_history',
+  })
+  obj_review_history: ResultReviewHistory;
 
   @Column({
     type: 'text',

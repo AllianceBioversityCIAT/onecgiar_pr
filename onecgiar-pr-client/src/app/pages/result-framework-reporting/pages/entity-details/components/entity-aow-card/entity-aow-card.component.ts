@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, Input } from '@angular/core
 import { RouterLink } from '@angular/router';
 import { Unit } from '../../interfaces/entity-details.interface';
 import { EntityAowService } from '../../../entity-aow/services/entity-aow.service';
+import { SHOW_QA_PREL_SPLIT } from '../../../../../../shared/constants/achieved-display-basis';
 
 @Component({
   selector: 'app-entity-aow-card',
@@ -11,6 +12,13 @@ import { EntityAowService } from '../../../entity-aow/services/entity-aow.servic
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityAowCardComponent {
+  /**
+   * ACS-R-5 / ACS-S-9 — @akili-spec bugfix/achieved-counts-submitted. Flag read by the template to
+   * hide the QA/Prel pair in favour of a single union ("Achieved") figure. Flip
+   * `SHOW_QA_PREL_SPLIT` to restore the two-track display with no server change (ACS-S-10).
+   */
+  readonly showQaPrelSplit = SHOW_QA_PREL_SPLIT;
+
   @Input() item: Unit;
   readonly entityAowService = inject(EntityAowService);
 

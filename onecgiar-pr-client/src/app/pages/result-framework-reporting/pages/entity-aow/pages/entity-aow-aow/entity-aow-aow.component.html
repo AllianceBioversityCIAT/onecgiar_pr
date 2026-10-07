@@ -42,15 +42,22 @@
             percentage over 2 of 10 indicators is indistinguishable from one over all 10.
           -->
           @if (entityAowService.aowProgress()) {
+            <!-- @akili-spec bugfix/achieved-counts-submitted -->
             <div class="aow-progress" [prTooltip]="aowProgressTooltip()">
-              <span class="aow-progress_pair">
-                <span class="aow-progress_label">QA</span>
-                <span class="aow-progress_value">{{ aowProgressLabel() }}</span>
-              </span>
-              <span class="aow-progress_pair">
-                <span class="aow-progress_label">Prel.</span>
-                <span class="aow-progress_value">{{ aowPreliminaryLabel() }}</span>
-              </span>
+              @if (showQaPrelSplit) {
+                <span class="aow-progress_pair">
+                  <span class="aow-progress_label">QA</span>
+                  <span class="aow-progress_value">{{ aowProgressLabel() }}</span>
+                </span>
+                <span class="aow-progress_pair">
+                  <span class="aow-progress_label">Prel.</span>
+                  <span class="aow-progress_value">{{ aowPreliminaryLabel() }}</span>
+                </span>
+              } @else {
+                <span class="aow-progress_pair">
+                  <span class="aow-progress_value">{{ aowProgressLabel() }}</span>
+                </span>
+              }
               @if (aowCoverage()) {
                 <span class="aow-progress_coverage">{{ aowCoverage() }}</span>
               }

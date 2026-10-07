@@ -121,26 +121,18 @@
   margin-left: auto;
 }
 
-.pr-topbar-badge-wrap {
-  position: relative;
-  display: inline-flex;
-}
-
+// Inline count pill after the "Notifications" label (quick/topbar-labelled-actions).
 .pr-topbar-badge {
-  position: absolute;
-  top: -6px;
-  right: -8px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   border-radius: 999px;
   background: var(--pr-color-primary-300, #6b46e5);
   color: var(--pr-color-white, #fff);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 18px;
   text-align: center;
-  border: 2px solid var(--pr-color-white, #fff);
 }
 
 .pr-topbar-user {
@@ -209,8 +201,18 @@
   box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
   overflow: hidden;
 
+  // BELL-T-8: never wider than the viewport minus a 16px margin per side; column layout so the
+  // row list is the only thing that scrolls (head, "+N more" and "See all" stay visible). The
+  // max-height is bound from the component (space below the bell); the vh value is the fallback.
   &--notif {
-    width: 360px;
+    display: flex;
+    flex-direction: column;
+    width: min(360px, calc(100vw - 32px));
+    max-height: calc(100vh - 96px);
+
+    > * {
+      flex-shrink: 0;
+    }
   }
 
   &--user {
@@ -387,6 +389,13 @@
 .pr-topbar-notif-list {
   max-height: 360px;
   overflow: auto;
+  overscroll-behavior: contain;
+}
+
+// Inside the flex column of the notifications panel the list is the one flexible child.
+.pr-topbar-panel--notif > .pr-topbar-notif-list {
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 .pr-topbar-link {

@@ -22,6 +22,7 @@ import {
   KEYSET_PAGE_SIZE,
   mergeKeysetLists,
 } from '../../shared/utils/keyset-cursor.util';
+import { BILATERAL_DECISION_NOTICE_COPY } from './constants/bilateral-decision-notice.constants';
 
 /**
  * `PSR-T-7`/`PSR-DD-7` — the 3 Center-notice types (`emitCenterNotice` in
@@ -55,6 +56,8 @@ export interface GetAllNotificationsOptions {
   scope?: 'pending' | 'history';
   /** Opaque keyset cursor for the next history page (PAGE-DD-2). */
   cursor?: string;
+  /** BRS-T-3: history page size, integer 1..200 (validated by the controller); absent -> `KEYSET_PAGE_SIZE`. Never applies to pending. */
+  limit?: number;
 }
 
 @Injectable()
@@ -79,6 +82,10 @@ export class NotificationService {
    *   to tell which link the row is about. Storing only the suffix keeps it usable by the client,
    *   which composes `[prefix, identity, suffix]` on its own. Every other type leaves it
    *   undefined and keeps building its copy at read time.
+   * @param reviewHistoryId `RRC-R-13`/`RRC-DD-6`: the `result_review_history` row this notification
+   *   is about (a bilateral Reject). Stored as `review_history_id` on every row written here so the
+   *   readout can join THAT decision's justification. It never reaches the text builders — the
+   *   wording of every type is unchanged (`RRC-R-16`). Omitted -> the column stays NULL.
    */
   async emitResultNotification(
     notificationLevel: NotificationLevelEnum,
@@ -87,6 +94,7 @@ export class NotificationService {
     emmiterUser: number,
     resultId: number,
     renderedText?: string,
+    reviewHistoryId?: number,
   ) {
     try {
       const notificationLevelData =
@@ -121,6 +129,7 @@ export class NotificationService {
         notification_level: notificationLevelData.notifications_level_id,
         notification_type: notificationTypeData.notifications_type_id,
         ...(renderedText ? { text: renderedText } : {}),
+        ...(reviewHistoryId ? { review_history_id: reviewHistoryId } : {}),
       }));
 
       if (notificationsToPersist.length) {
@@ -279,6 +288,8 @@ export class NotificationService {
        * (P-7, PAGE-OQ-5) — a job-finished row has no linked result to scope on.
        */
       paged?: boolean;
+      /** BRS-T-3: history page size when `paged`; absent -> `KEYSET_PAGE_SIZE`. */
+      pageSize?: number;
     } = {},
   ): Promise<Notification[]> {
     const where = {
@@ -297,7 +308,7 @@ export class NotificationService {
         : where,
       ...(options.paged
         ? {
-            take: KEYSET_PAGE_SIZE + 1,
+            take: (options.pageSize ?? KEYSET_PAGE_SIZE) + 1,
             order: { created_date: 'DESC', notification_id: 'DESC' },
           }
         : {}),
@@ -323,6 +334,8 @@ export class NotificationService {
       cursor?: string;
       /** PAGE-T-3: see {@link findBilateralAiJobFinishedNotifications}'s `paged`. */
       paged?: boolean;
+      /** BRS-T-3: history page size when `paged`; absent -> `KEYSET_PAGE_SIZE`. */
+      pageSize?: number;
     } = {},
   ): Promise<Notification[]> {
     const where = {
@@ -345,7 +358,7 @@ export class NotificationService {
         : where,
       ...(options.paged
         ? {
-            take: KEYSET_PAGE_SIZE + 1,
+            take: (options.pageSize ?? KEYSET_PAGE_SIZE) + 1,
             order: { created_date: 'DESC', notification_id: 'DESC' },
           }
         : {}),
@@ -712,8 +725,9 @@ export class NotificationService {
    *   AI-job finder stays unfiltered (PAGE-P-7, PAGE-OQ-5 — phase-less, always shown).
    * - `scope=pending` skips every history query entirely (not "run and discard" — PAGE-R-2);
    *   `scope=history` skips every pending query the same way.
-   * - The 3 history (viewed) sources are each fetched `KEYSET_PAGE_SIZE + 1` rows at a time and
-   *   merged/sorted/cut to `KEYSET_PAGE_SIZE` by `mergeKeysetLists` (PAGE-R-3).
+   * - The 3 history (viewed) sources are each fetched `pageSize + 1` rows at a time and
+   *   merged/sorted/cut to `pageSize` by `mergeKeysetLists` (PAGE-R-3). `pageSize` is
+   *   `options.limit` (BRS-T-3, 1..200) or `KEYSET_PAGE_SIZE` (200) when absent; pending is never limited.
    * - No inner `await` — every element of the `Promise.all` array is a promise started
    *   synchronously when the array literal is evaluated; `Promise.all` is what waits (PAGE-R-7).
    */
@@ -725,7 +739,8 @@ export class NotificationService {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const { versionId, scope, cursor } = options;
+      const { versionId, scope, cursor, limit } = options;
+      const pageSize = limit ?? KEYSET_PAGE_SIZE;
       const runPending = scope !== 'history';
       const runHistory = scope !== 'pending';
 
@@ -746,8 +761,8 @@ export class NotificationService {
       ] = await Promise.all([
         runHistory
           ? this._notificationRepository.find({
-              select: this.getNotificattionSelect(),
-              relations: this.getNotificationRelations(),
+              select: this.getNotificationReadoutSelect(),
+              relations: this.getNotificationReadoutRelations(),
               where: applyKeysetCursor(
                 {
                   target_user: user.id,
@@ -763,15 +778,15 @@ export class NotificationService {
                 cursor,
                 NOTIFICATION_KEYSET_FIELDS,
               ),
-              take: KEYSET_PAGE_SIZE + 1,
+              take: pageSize + 1,
               order: { created_date: 'DESC', notification_id: 'DESC' },
             })
           : Promise.resolve([]),
 
         runPending
           ? this._notificationRepository.find({
-              select: this.getNotificattionSelect(),
-              relations: this.getNotificationRelations(),
+              select: this.getNotificationReadoutSelect(),
+              relations: this.getNotificationReadoutRelations(),
               where: {
                 target_user: user.id,
                 read: false,
@@ -822,6 +837,7 @@ export class NotificationService {
               read: true,
               cursor,
               paged: true,
+              pageSize,
             })
           : Promise.resolve([]),
         runPending
@@ -838,6 +854,7 @@ export class NotificationService {
               versionId,
               cursor,
               paged: true,
+              pageSize,
             })
           : Promise.resolve([]),
         runPending
@@ -852,6 +869,7 @@ export class NotificationService {
         ? mergeKeysetLists(
             [viewedResultScoped, jobFinishedViewed, centerNoticeViewed],
             NOTIFICATION_KEYSET_FIELDS,
+            pageSize,
           )
         : { rows: [] as Notification[], hasMore: false, nextCursor: null };
 
@@ -910,8 +928,8 @@ export class NotificationService {
 
       const notificationsUpdates = this.mapNotificationResultFields(
         await this._notificationRepository.find({
-          select: this.getNotificattionSelect(),
-          relations: this.getNotificationRelations(),
+          select: this.getNotificationReadoutSelect(),
+          relations: this.getNotificationReadoutRelations(),
           where: whereConditions,
         }),
       );
@@ -993,10 +1011,73 @@ export class NotificationService {
           obj_result_by_project: (
             notification.obj_result.obj_result_by_project ?? []
           ).filter((link: any) => link.is_active),
+          // `RSF-DD-3`: the relation `where` stays as is (it is also the existence condition, so
+          // adding `is_active` there would hide every notification of an ownerless result); the
+          // inactive rows are dropped here, on the loaded rows. An ownerless result keeps its
+          // notification, with an empty list.
+          ...(Array.isArray(notification.obj_result.obj_result_by_initiatives)
+            ? {
+                obj_result_by_initiatives:
+                  notification.obj_result.obj_result_by_initiatives.filter(
+                    (initiative: any) => initiative?.is_active,
+                  ),
+              }
+            : {}),
         };
       }
-      return notification;
+      return this.withReviewEntryFields(notification);
     });
+  }
+
+  /**
+   * `RRC-R-13`/`RRC-DD-6` — a Rejected row gains `has_review_entry` and `review_comment`, read from
+   * the `result_review_history` row its own `review_history_id` points at (the LEFT JOIN requested
+   * through {@link getNotificationReadoutRelations}). `review_history_id` NULL (a notification sent
+   * before the link existed, or whose history row was deleted) -> no joined row -> `false` / `null`,
+   * which the client reads as "show no reason line", never as "no justification was recorded".
+   * `review_program_code` (`RRC-T-10-F1`) is the official code of that row's `initiative_id` (the SP that
+   * recorded the rejection), or `null` when there is no linked row or the row has no SP.
+   * Every other type is returned untouched (`RRC-R-16`). The joined object is not passed on.
+   */
+  private withReviewEntryFields<T>(notification: T): T {
+    const row = notification as any;
+    if (
+      row?.obj_notification_type?.type !==
+      NotificationTypeEnum.BILATERAL_RESULT_REJECTED
+    ) {
+      return notification;
+    }
+    const { obj_review_history: linkedEntry, ...rest } = row;
+    return {
+      ...rest,
+      has_review_entry: Boolean(linkedEntry),
+      review_comment: linkedEntry?.comment ?? null,
+      // `RRC-T-10-F1`: the SP that recorded THIS rejection, not the result's current primary.
+      review_program_code: linkedEntry?.obj_initiative?.official_code ?? null,
+    } as T;
+  }
+
+  /**
+   * `getNotificattionSelect()` plus the linked `result_review_history` row (id + comment only), for
+   * the readouts that return Rejected rows. Kept apart from the base shape so the socket push in
+   * `emitResultNotification` does not pay for a join it never uses.
+   */
+  private getNotificationReadoutSelect() {
+    return {
+      ...this.getNotificattionSelect(),
+      obj_review_history: {
+        id: true,
+        comment: true,
+        obj_initiative: { id: true, official_code: true },
+      },
+    };
+  }
+
+  private getNotificationReadoutRelations() {
+    return {
+      ...this.getNotificationRelations(),
+      obj_review_history: { obj_initiative: true },
+    };
   }
 
   private getNotificattionSelect() {
@@ -1028,6 +1109,10 @@ export class NotificationService {
         source: true,
         obj_result_by_initiatives: {
           initiative_id: true,
+          // `RSF-DD-3`: selected so the loaded rows can be filtered after loading
+          // (`mapNotificationResultFields`) and so `resolveOwnerProgramCode` can tell the owner.
+          initiative_role_id: true,
+          is_active: true,
           obj_initiative: {
             id: true,
             official_code: true,
@@ -1134,6 +1219,21 @@ export class NotificationService {
       // a BCT row's own trailing `(ABC).` is never misparsed as this shape (WPT-R-4).
       case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
         const suffix = storedText?.trim();
+        // BPT-T-2 (`bilateral-project-tagged`, design §7.2, §9, DD-3): the Center-reported shape
+        // (BCT project targets, after this change) is self-describing — `text` already carries
+        // the reporter, project code and owner, end-anchored — so it's checked FIRST, before the
+        // composed/bare detection below. A match never falls into `isComposedTaggedText`, because
+        // old composed rows end in `. Click to see the result.` and say "of your center", not
+        // "from your center (...)" (BPT-R-4).
+        const centerReported = suffix
+          ? this.parseCenterReportedProjectText(suffix)
+          : null;
+        if (centerReported) {
+          const identity = [resultCode, resultTitle]
+            .filter(Boolean)
+            .join(' - ');
+          return `${centerReported.reporter} has tagged the bilateral project ${centerReported.code} from your center (${centerReported.owner}) to result${identity ? ` ${identity}` : ''}`;
+        }
         if (suffix && !this.isComposedTaggedText(suffix)) {
           const { code, centerLabel } = this.parseTaggedProjectLabel(suffix);
           const identity = [resultCode, resultTitle]
@@ -1290,6 +1390,45 @@ export class NotificationService {
   }
 
   /**
+   * `BPT-T-2` (`bilateral-project-tagged`, design §7.2, §9, requirements.md BPT-R-3/R-4): parses
+   * a Center-reported `RESULT_BILATERAL_PROJECT_TAGGED` row's `text` — the shape the BCT flow
+   * writes for a project target from now on — into its reporter, project code and owner,
+   * end-anchored: `"<reporter> has tagged the bilateral project <code> from your center
+   * (<owner>)"`. Reporter is the shortest prefix before ` has tagged the bilateral project `;
+   * code is everything up to the LAST ` from your center (` (so a code containing its own
+   * parentheses, e.g. `Seeds (Phase 2)`, stays intact — mirrors `parseTaggedProjectLabel`'s
+   * last-trailing-parens rule, R-3 accepted risk); owner is the non-empty `[^()]+` inside the
+   * final parens. Returns `null` when the pattern doesn't match, or when any part is empty after
+   * trimming (including an empty `()`, which the `[^()]+` requirement already rules out).
+   *
+   * This runs BEFORE `isComposedTaggedText` in the `RESULT_BILATERAL_PROJECT_TAGGED` case (DD-3),
+   * so a legacy/BCT-T-4 composed sentence (ends in `. Click to see the result.`, says "of your
+   * center") and a W1/W2 bare/enriched row (no ` has tagged the bilateral project ` substring)
+   * can never match here (BPT-R-4).
+   *
+   * Keep in sync with the client twin:
+   * `onecgiar-pr-client/src/app/shared/constants/notification-type.constants.ts`
+   * `parseCenterReportedProjectText`. Both pin the identical shape table (design §9, BPT-NFR-2).
+   */
+  private parseCenterReportedProjectText(text: string): {
+    reporter: string;
+    code: string;
+    owner: string;
+  } | null {
+    const match = text.match(
+      /^(.+?) has tagged the bilateral project (.+) from your center \(([^()]+)\)\s*$/,
+    );
+    if (!match) return null;
+
+    const reporter = match[1].trim();
+    const code = match[2].trim();
+    const owner = match[3].trim();
+    if (!reporter || !code || !owner) return null;
+
+    return { reporter, code, owner };
+  }
+
+  /**
    * P2-3157 AC2: standardized copy for a bilateral review decision, e.g.
    * "✅ Your Result 1234 - Some title... has been Approved by the Science Program SP5".
    */
@@ -1304,9 +1443,17 @@ export class NotificationService {
     const identity = [resultCode, this.truncateTitle(resultTitle)]
       .filter((part) => part !== undefined && part !== null && part !== '')
       .join(' - ');
-    // Center recipients: the stored text already names the relationship and the deciding
-    // program, so it replaces the "Your Result ..." sentence (NDCW-R-2/R-3).
     const centerText = storedText?.trim();
+    // SACN-R-3/R-4 (design §7.3): the new-shape center sentence for an Approve decision — stored
+    // text ends in the fixed tail from `BILATERAL_DECISION_NOTICE_COPY`. Detected first so a
+    // legacy row's own trailing wording (checked next) never double-matches. The result identity
+    // is appended directly (no "The result" prefix, no comma) — when missing, the text alone.
+    if (centerText?.endsWith(BILATERAL_DECISION_NOTICE_COPY.tail)) {
+      return identity ? `${centerText} ${identity}` : centerText;
+    }
+    // Legacy center recipients (Reject, and pre-SACN Approve rows): the stored text already
+    // names the relationship and the deciding program, so it replaces the "Your Result ..."
+    // sentence (NDCW-R-2/R-3).
     if (centerText) {
       return identity
         ? `The result ${identity}, ${centerText}`
@@ -1338,12 +1485,14 @@ export class NotificationService {
     const initiatives = notification?.obj_result?.obj_result_by_initiatives;
     if (!Array.isArray(initiatives)) return undefined;
 
-    for (const initiative of initiatives) {
-      const officialCode = initiative?.obj_initiative?.official_code;
-      if (officialCode) return officialCode;
-    }
+    // `RSF-R-3`: only an ACTIVE role-1 row is the owner. This query loads every initiative of the
+    // result (no relation `where`), so the role and the activity flag are both checked here.
+    const owner = initiatives.find(
+      (initiative) =>
+        Number(initiative?.initiative_role_id) === 1 && initiative?.is_active,
+    );
 
-    return undefined;
+    return owner?.obj_initiative?.official_code || undefined;
   }
 }
 

@@ -45,6 +45,8 @@ export class ResultReviewHistoryRepository extends Repository<ResultReviewHistor
    */
   async getReviewHistoryByResultId(resultId: number): Promise<
     (ResultReviewHistory & {
+      initiative_id: number | null;
+      initiative_code: string | null;
       first_name: string | null;
       last_name: string | null;
       email: string | null;
@@ -58,11 +60,14 @@ export class ResultReviewHistoryRepository extends Repository<ResultReviewHistor
       rrh.comment,
       rrh.created_at,
       rrh.created_by,
+      rrh.initiative_id,
+      ci.official_code AS initiative_code,
       u.first_name,
       u.last_name,
       u.email
     FROM result_review_history rrh
       LEFT JOIN users u ON u.id = rrh.created_by
+      LEFT JOIN clarisa_initiatives ci ON ci.id = rrh.initiative_id
     WHERE rrh.result_id = ?
     ORDER BY rrh.created_at DESC, rrh.id DESC;
     `;

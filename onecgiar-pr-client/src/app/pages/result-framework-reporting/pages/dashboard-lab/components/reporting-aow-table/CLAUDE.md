@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
+**Verified:** 2026-10-02 · qa-development-2026-ss · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit`, branches the QA/Preliminary tooltip sentences — see "QA/Prel split hidden" below) · prior: 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -39,6 +39,28 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
   `bugfix/reported-results-center-scoping` RRC-T-3): the row's combination-group id rides the row
   spread into the create payload and the drawer's existing-contributors call. Presentation-inert
   here — this component never reads it.
+
+## QA/Prel split hidden behind `showQaPrelSplit` (ACS-R-5, spec `bugfix/achieved-counts-submitted`)
+
+- `showQaPrelSplit = SHOW_QA_PREL_SPLIT` (imported from `shared/constants/achieved-display-basis.ts`,
+  default `false`). Every `@if (showQaPrelSplit) … @else …` pair in the template hides the QA/Prel.
+  two-track markup in favour of a single union ("Achieved") figure — the row cell (both the flat and
+  grouped layouts), the AoW header's achievement block, and the HLO header's achievement block. The
+  two-track markup is kept verbatim inside the `@if` branch, not deleted — flip the constant to
+  restore it with zero server change (ACS-S-10).
+- `achievementTooltip()` and `progressTracksTooltip()` branch the same way: with the flag off they
+  state a single "ToC achievement — x% …" sentence instead of "QA x% and Preliminary y% …", so the
+  accessible name/tooltip never claims a split that isn't on screen (ACS-S-9).
+- **T-3 re-pointed the underlying fields, not this task.** `actual_achieved_value_sum` /
+  `progress_percentage` (indicator) and `progress_value` / `progress_percentage` (`TocAchievement`
+  roll-up) already read the union ("Achieved" = Submitted + QA'd + Approved) basis by the time they
+  reach this component, via `achieved-display-basis.ts`'s `toDisplayBasis` at the `ResultsApiService`
+  choke point — the pre-normalisation QA values survive under `qa_actual_achieved_value_sum` /
+  `qa_progress_value` / `qa_progress_percentage` (client-only). This component's `achievementLabel()`
+  / `progressOf()` / `achievedText()` etc. were NOT edited for T-4 — they already read the correct
+  (re-pointed) field; T-4 only hides the second track and its label.
+- Grep gate convention for this spec: a visible `>QA<` / `>Prel.<` in this template must sit inside an
+  `@if (showQaPrelSplit)` block — if you add a new achievement surface, follow the same pattern.
 
 ## Dónde se usa
 - `dashboard-lab.component.html:1286` — único consumidor, rama `showPlanned()` (pestaña Reporting),

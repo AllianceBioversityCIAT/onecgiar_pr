@@ -105,6 +105,7 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
 import { buildInitiativeEntityMapPayload } from '../initiative_entity_map/initiative-entity-map.util';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { NotificationService } from '../notification/notification.service';
+import { BILATERAL_DECISION_NOTICE_COPY } from '../notification/constants/bilateral-decision-notice.constants';
 import {
   NotificationLevelEnum,
   NotificationTypeEnum,
@@ -2918,11 +2919,17 @@ export class ResultsService {
    * silently suppress the in-app notification too.
    *
    * Never throws: the review decision is already committed by the time this runs.
+   *
+   * `reviewHistoryId` (RRC-R-13, RRC-DD-6): the `result_review_history` row saved for this decision.
+   * Reject only — it is stored on BOTH the submitter and the centre notification so the panel can
+   * read back THAT rejection's justification. Approve ignores it (its rows stay unlinked).
+   * Omitted by older callers -> the rows are written exactly as before.
    */
   private async emitBilateralReviewNotification(
     resultId: number,
     decision: ReviewDecisionEnum,
     user: TokenDto,
+    reviewHistoryId?: number,
   ): Promise<void> {
     try {
       if (!this._notificationService) {
@@ -2933,7 +2940,7 @@ export class ResultsService {
       }
 
       const { submitterIds, centerIds } =
-        await this.getBilateralReviewRecipientIds(resultId, user.id);
+        await this.getBilateralReviewRecipientIds(resultId, user.id, decision);
 
       if (!submitterIds.length && !centerIds.length) {
         this._logger.warn(
@@ -2946,6 +2953,7 @@ export class ResultsService {
       const notificationType = isApprove
         ? NotificationTypeEnum.BILATERAL_RESULT_APPROVED
         : NotificationTypeEnum.BILATERAL_RESULT_REJECTED;
+      const linkedHistoryId = isApprove ? undefined : reviewHistoryId;
 
       // Submitter: no stored text, so the legacy "Your Result ..." wording applies.
       if (submitterIds.length) {
@@ -2955,19 +2963,28 @@ export class ResultsService {
           submitterIds,
           user.id,
           resultId,
+          undefined,
+          linkedHistoryId,
         );
       }
 
-      // Center Users who did not submit: the stored text names the center relationship.
+      // Center recipients (any active role on the lead center for Approve — SACN-R-1; existing
+      // Center-User-only set for Reject, unchanged): the stored text names the relationship.
       if (centerIds.length) {
         const programCode =
           await this.resolveOwnerProgramCodeForResult(resultId);
-        const programText = programCode
-          ? ` by the Science Program ${programCode}`
-          : ' by the Science Program';
-        const renderedText = `where your center was tagged, has been ${
-          isApprove ? 'approved' : 'rejected'
-        }${programText}.`;
+        // SACN-R-3/DD-2: Approve stores the new lead sentence recognised by its fixed tail
+        // (`buildBilateralReviewDescription`); Reject keeps the legacy center wording (NDCW,
+        // out of scope for this spec — SACN disqualifier).
+        const renderedText = isApprove
+          ? programCode
+            ? `${programCode}${BILATERAL_DECISION_NOTICE_COPY.verb}`
+            : BILATERAL_DECISION_NOTICE_COPY.fallbackLead
+          : `where your center was tagged, has been rejected${
+              programCode
+                ? ` by the Science Program ${programCode}`
+                : ' by the Science Program'
+            }.`;
 
         await this._notificationService.emitResultNotification(
           NotificationLevelEnum.RESULT,
@@ -2976,6 +2993,7 @@ export class ResultsService {
           user.id,
           resultId,
           renderedText,
+          linkedHistoryId,
         );
       }
     } catch (error) {
@@ -3016,13 +3034,18 @@ export class ResultsService {
   }
 
   /**
-   * Submitter and the other recipients (every active Center User of the result's lead centre),
-   * kept separate because their wording differs. Overall de-duplicated: a submitter who is also
-   * a Center User appears only in `submitterIds`. The emitter is removed from both.
+   * Submitter and the other recipients, kept separate because their wording differs. Overall
+   * de-duplicated: a submitter who is also a center recipient appears only in `submitterIds`. The
+   * emitter is removed from both.
+   *
+   * SACN-R-1/DD-1: the center recipient set depends on the decision. Approve uses
+   * `getUserIdsByCenterAnyRole` (every active role on the lead center, widened from Center User
+   * only) — Reject keeps `getUserIdsByCenter` (Center User only, SACN-R-9) exactly as before.
    */
   private async getBilateralReviewRecipientIds(
     resultId: number,
     emitterUserId: number,
+    decision: ReviewDecisionEnum,
   ): Promise<{ submitterIds: number[]; centerIds: number[] }> {
     const recipientIds = new Set<number>();
     const submitterIds = new Set<number>();
@@ -3046,7 +3069,13 @@ export class ResultsService {
     if (leadCenterCode && this._roleByUserRepository) {
       try {
         const centerUserIds =
-          await this._roleByUserRepository.getUserIdsByCenter(leadCenterCode);
+          decision === ReviewDecisionEnum.APPROVE
+            ? await this._roleByUserRepository.getUserIdsByCenterAnyRole(
+                leadCenterCode,
+              )
+            : await this._roleByUserRepository.getUserIdsByCenter(
+                leadCenterCode,
+              );
         centerUserIds.forEach((id) => recipientIds.add(id));
       } catch (error) {
         this._logger.warn(
@@ -4120,10 +4149,12 @@ export class ResultsService {
         // Editing/Draft included (2026-09-04): the centre form stages its contributing programs as
         // DRAFT requests (status 4), so the form must see them again on reload — not only once the
         // result reaches Pending Review, which is all the default covers.
+        // Rejected included (RRC-P-13): the centre re-stages contributors at 7 and holds them until resubmission.
         this._resultByInitiativesRepository.getDraftInit(resultId, [
           ResultStatusData.Editing.value,
           ResultStatusData.Draft.value,
           ResultStatusData.PendingReview.value,
+          ResultStatusData.Rejected.value,
         ]),
         this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
@@ -4257,6 +4288,9 @@ export class ResultsService {
         };
       }
 
+      // RRC-T-5: id of the history row saved below, carried to the post-commit notification.
+      let savedHistoryId: number | undefined;
+
       await this._dataSource.transaction(async (manager) => {
         const result = await manager.findOne(Result, {
           where: {
@@ -4332,9 +4366,16 @@ export class ResultsService {
           result_id: parsedResultId,
           action: reviewDecisionDto.decision as any,
           comment: reviewDecisionDto.justification || null,
+          initiative_id: owner.id,
           created_by: user.id,
         });
-        await manager.save(ResultReviewHistory, reviewHistory);
+        const savedHistory = await manager.save(
+          ResultReviewHistory,
+          reviewHistory,
+        );
+        // The mysql driver may hand a bigint PK back as a string (typed `number`): normalise.
+        const historyId = Number(savedHistory?.id);
+        savedHistoryId = historyId > 0 ? historyId : undefined;
       });
 
       const decisionVerb =
@@ -4389,10 +4430,14 @@ export class ResultsService {
 
       // P2-3157: notify the centre in-app. Post-commit and non-blocking on purpose — the
       // decision is already persisted, so a notification failure must never fail the request.
+      // RRC-T-5: a Reject links its history row so the notification can show THAT justification.
       await this.emitBilateralReviewNotification(
         parsedResultId,
         reviewDecisionDto.decision,
         user,
+        reviewDecisionDto.decision === ReviewDecisionEnum.REJECT
+          ? savedHistoryId
+          : undefined,
       );
 
       // P2-3166 AC1: queue the outbound webhook. Same posture, and for a stronger reason — this one

@@ -429,6 +429,46 @@ describe('ResultsApiService', () => {
     });
   });
 
+  // ── ACS-TEST-1 (docs/specs/bugfix/achieved-counts-submitted, ACS-T-1) ─────────────────────
+  // Regression test: `GET_TocResultsByAowId` must pipe its response through the (not-yet-wired)
+  // achieved display-basis normaliser (design.md §8.1, ACS-DD-1) so a Submitted-not-yet-QA'd
+  // indicator reads `actual_achieved_value_sum` 1, not 0, once the pipe is in place. The fixture
+  // is inlined here rather than importing the not-yet-existing `achieved-display-basis` helper
+  // (per the Leader's brief) so this file's other, already-passing cases keep compiling.
+  describe('GET_TocResultsByAowId', () => {
+    it('emits actual_achieved_value_sum 1 for a submitted-only indicator once the display-basis pipe is wired', done => {
+      const fixture = {
+        response: {
+          tocResults: [
+            {
+              toc_result_id: 1,
+              indicators: [
+                {
+                  indicator_id: 1,
+                  actual_achieved_value_sum: 0,
+                  achieved_value_sum: 1,
+                  progress_percentage: '0%',
+                  achieved_progress_percentage: '100%',
+                },
+              ],
+            },
+          ],
+        },
+      };
+
+      service.GET_TocResultsByAowId('SP01').subscribe((response: any) => {
+        // Fails today: the method returns the raw HTTP response untouched, so this stays 0.
+        expect(response.response.tocResults[0].indicators[0].actual_achieved_value_sum).toBe(1);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results?program=SP01`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(fixture);
+    });
+  });
+
   describe('GET_depthSearch', () => {
     it('should call GET_depthSearch and unwrap the response array', done => {
       const title = 'title';
@@ -4377,6 +4417,20 @@ describe('ResultsApiService', () => {
     });
   });
 
+  // @akili-spec notifications/detail-side-panel (DSP-T-2)
+  describe('GET_requestApprovalChain', () => {
+    it('should GET the approval chain for a result id', done => {
+      service.GET_requestApprovalChain(9400).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/result/9400/approval-chain`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
   describe('GET_requestUpdates', () => {
     it('should call GET_requestUpdates without versionId', done => {
       service.GET_requestUpdates().subscribe(response => {
@@ -4409,6 +4463,18 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates?version_id=v4&scope=history&cursor=xyz`);
       req.flush(mockResponse);
     });
+
+    // BRS-T-4: the bell loads its read rows with a small page; the inbox never passes `limit`.
+    it('should serialize limit on GET_requestUpdates (BRS-T-4)', done => {
+      service.GET_requestUpdates({ scope: 'history', limit: 10 }).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates?scope=history&limit=10`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_notificationsPopUp', () => {
@@ -4433,6 +4499,32 @@ describe('ResultsApiService', () => {
       });
 
       const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/read/${notificationId}`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_markRequestSeen (BRS-T-4)', () => {
+    it('PATCHes request/seen/:id on the results API base', done => {
+      service.PATCH_markRequestSeen(9821).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrl']}request/seen/9821`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_markAllRequestsSeen (BRS-T-4)', () => {
+    it('PATCHes request/seen-all on the results API base', done => {
+      service.PATCH_markAllRequestsSeen().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrl']}request/seen-all`);
       expect(req.request.method).toBe('PATCH');
       req.flush(mockResponse);
     });

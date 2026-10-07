@@ -22,6 +22,14 @@ export class BrnButton {
 export class BrnSheet {
   @Input() side: 'top' | 'bottom' | 'left' | 'right' | undefined;
 
+  // DSP-T-3 (`notifications/detail-side-panel`, Reviewer FAIL issue 1): the real `BrnDialog` (which
+  // `BrnSheet`/`HlmSheet` extend) exposes these as `aria-labelledby`/`aria-describedby`-aliased
+  // inputs that flow into the CDK dialog's own config (`spartan-ng-brain-dialog.mjs` `_options()`).
+  // Purely additive stub fields (no behavior) so `<hlm-sheet [aria-labelledby]="…">` compiles under
+  // Jest and a spec can assert the forwarded value via `By.directive(HlmSheet)`.
+  @Input('aria-labelledby') ariaLabelledBy: string | null | undefined;
+  @Input('aria-describedby') ariaDescribedBy: string | null | undefined;
+
   // Mirrors the `BrnDialog` stub below (the real `BrnSheet extends BrnDialog`): `HlmSheet extends
   // BrnSheet`, so `[state]` / `(closed)` / `(stateChanged)` on `<hlm-sheet>` resolve against THIS
   // class under Jest.
@@ -419,7 +427,9 @@ export const BrnTabsImports = [
 @Directive({ selector: '[brnPopover],brn-popover', standalone: true })
 export class BrnPopover {
   // `HlmPopover` forwards these declaratively (`hlm-popover.ts`); without them Angular raises NG0303
-  // on `<hlm-popover [state]="…">`, the same shape as the `BrnDialog` stub above.
+  // on `<hlm-popover [state]="…">`, the same shape as the `BrnDialog` stub above. The list mirrors the
+  // `inputs` array of the `BrnPopover` hostDirective in `hlm-popover.ts` (a forwarded input missing here
+  // raises NG0311 at validateHostDirective for EVERY `hlm-popover` user under Jest).
   @Input() state: 'open' | 'closed' | null | undefined;
   @Input() align: string | undefined;
   @Input() sideOffset: number | string | undefined;
@@ -427,6 +437,7 @@ export class BrnPopover {
   @Input() attachTo: unknown;
   @Input() autoFocus: boolean | string | undefined;
   @Input() closeOnOutsidePointerEvents: boolean | string | undefined;
+  @Input() role: string | null | undefined;
   @Output() readonly stateChanged = new EventEmitter<'open' | 'closed'>();
   @Output() readonly closed = new EventEmitter<unknown>();
 }

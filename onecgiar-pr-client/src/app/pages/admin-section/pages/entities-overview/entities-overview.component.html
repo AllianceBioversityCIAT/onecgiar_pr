@@ -1,0 +1,367 @@
+<!--
+  P2-3858 — Admin › All P/As and Centers. Rework 5-Oct-2026 (Cami + Ángel, after Nicoleta and María Julia):
+  "que se vea en charts, muy parecida al Portfolio overview". Same visual language as that page (KPI deck,
+  status donut + tiles, ranking with three modes, detail table with a chart view), built only on the figures
+  this page already loads. Nothing of the Portfolio overview is imported or changed.
+-->
+<section class="min-h-screen bg-[var(--pr-surface-app)] p-4 sm:p-6 lg:p-[32px]">
+  <div class="mx-auto flex w-full max-w-[1360px] flex-col gap-[20px]">
+    <!-- ── Title block ──────────────────────────────────────────────────────────────────── -->
+    <header class="flex flex-col gap-[12px] md:flex-row md:items-end md:justify-between">
+      <div class="flex flex-col">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">{{ copy.eyebrow }}</span>
+        <h1 class="m-0 mt-[4px] text-[24px] font-extrabold tracking-[-0.02em] text-[var(--pr-text)] sm:text-[30px]">{{ copy.title }}</h1>
+        <p class="m-0 mt-[4px] max-w-[680px] text-[13px] text-[var(--pr-text-muted)] sm:text-[14px]">{{ copy.subtitle }}</p>
+      </div>
+      <span
+        class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-3 py-1 text-[12px] text-[var(--pr-text-muted)]"
+        data-testid="entities-overview-phase">
+        <span class="font-medium">{{ copy.phaseLabel }}</span>
+        @if (!phaseResolved()) {
+          <span class="pr-skeleton h-3 w-24 rounded"></span>
+        } @else {
+          <span class="font-semibold text-[var(--pr-text)]">{{ phase()?.phase_name ?? copy.noPhase }}</span>
+        }
+      </span>
+    </header>
+
+    <!-- ── KPI deck ─────────────────────────────────────────────────────────────────────── -->
+    <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 xl:grid-cols-4" data-testid="entities-kpis">
+      <div
+        class="relative flex min-h-[124px] flex-col justify-between gap-[12px] overflow-hidden rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[var(--pr-color-primary-800)] via-[var(--pr-color-primary-600)] to-[var(--pr-color-primary-400)] p-[18px] shadow-md">
+        <div class="pointer-events-none absolute -right-[24px] -top-[24px] h-[110px] w-[110px] rounded-full bg-white/15 blur-[20px]"></div>
+        <div class="relative z-10 flex flex-wrap items-center justify-between gap-[8px]">
+          <span class="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-purple-200">{{ copy.kpiTotal }}</span>
+          @if (phase()) {
+            <span class="inline-flex h-[24px] max-w-[150px] items-center truncate rounded-full border border-white/20 bg-white/15 px-[9px] text-[11px] font-semibold text-white">
+              {{ phase()!.phase_name }}
+            </span>
+          }
+        </div>
+        <div class="relative z-10 flex items-baseline gap-[8px]">
+          <span class="pr-figure text-[30px] font-extrabold leading-none text-white tabular-nums" data-testid="kpi-total">{{ kpis().total }}</span>
+          <span class="text-[13px] font-medium text-purple-200">{{ copy.resultsWord }}</span>
+        </div>
+        <span class="relative z-10 text-[12px] font-medium text-purple-100">{{ copy.kpiTotalBreakdown(kpis().w1w2, kpis().bilateral) }}</span>
+      </div>
+
+      <button
+        type="button"
+        (click)="setView('programs')"
+        class="group flex min-h-[124px] flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+        [class]="view() === 'programs' ? 'border-[var(--pr-color-primary-400)] ring-2 ring-[var(--pr-color-primary-500)]/20' : 'border-[var(--pr-border)] hover:border-[var(--pr-color-primary-400)]'"
+        [attr.aria-pressed]="view() === 'programs'">
+        <span class="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.kpiW1w2 }}</span>
+        <div class="flex flex-wrap items-baseline justify-between gap-[8px]">
+          <span class="flex items-baseline gap-[8px]">
+            <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">{{ kpis().w1w2 }}</span>
+            <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">{{ copy.resultsWord }}</span>
+          </span>
+          <span class="inline-flex h-[24px] shrink-0 items-center whitespace-nowrap rounded-full bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">{{ copy.kpiW1w2Chip(kpis().w1w2Submitted) }}</span>
+        </div>
+        <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ copy.kpiW1w2Hint }}</span>
+      </button>
+
+      <button
+        type="button"
+        (click)="setView('centers')"
+        class="group flex min-h-[124px] flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+        [class]="view() === 'centers' ? 'border-[var(--pr-color-primary-400)] ring-2 ring-[var(--pr-color-primary-500)]/20' : 'border-[var(--pr-border)] hover:border-[var(--pr-color-primary-400)]'"
+        [attr.aria-pressed]="view() === 'centers'">
+        <span class="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.kpiBilateral }}</span>
+        <div class="flex flex-wrap items-baseline justify-between gap-[8px]">
+          <span class="flex items-baseline gap-[8px]">
+            <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">{{ kpis().bilateral }}</span>
+            <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">{{ copy.resultsWord }}</span>
+          </span>
+          <span class="inline-flex h-[24px] shrink-0 items-center whitespace-nowrap rounded-full bg-purple-50 px-[8px] text-[11px] font-semibold text-purple-700">{{ copy.kpiBilateralChip(kpis().bilateralApproved) }}</span>
+        </div>
+        <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ copy.kpiBilateralHint }}</span>
+      </button>
+
+      <div class="flex min-h-[124px] flex-col justify-between gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px]">
+        <div class="flex items-center justify-between gap-[8px]">
+          <span class="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.kpiProgramsReporting }}</span>
+          <span class="pr-figure-sm text-[16px] font-bold text-[var(--pr-text-heading)] tabular-nums">{{ kpis().programsReporting }} / {{ kpis().programsCount }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-[8px]">
+          <span class="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.kpiCentersReporting }}</span>
+          <span class="pr-figure-sm text-[16px] font-bold text-[var(--pr-text-heading)] tabular-nums">{{ kpis().centersReporting }} / {{ kpis().centersCount }}</span>
+        </div>
+        <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ copy.kpiReportingHint }}</span>
+      </div>
+    </div>
+
+    <!-- ── View switch (Programs | Centers) ─────────────────────────────────────────────── -->
+    <div class="inline-flex w-fit max-w-full items-center overflow-x-auto rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" data-testid="entities-view-switch">
+      @for (option of [{ key: 'programs', label: copy.viewPrograms }, { key: 'centers', label: copy.viewCenters }]; track option.key) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="view() === option.key"
+          (click)="setView($any(option.key))"
+          class="cursor-pointer rounded-[6px] border-0 px-[14px] py-[6px] text-[12.5px] font-semibold transition-all"
+          [class]="view() === option.key ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+          {{ option.label }}
+        </button>
+      }
+    </div>
+
+    @if (activeState() === 'error') {
+      <div class="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-5 py-6 text-[13px] text-[var(--pr-text-muted)]" role="alert" [attr.data-testid]="view() + '-error'">
+        <span>{{ view() === 'programs' ? copy.programsError : copy.centersError }}</span>
+        <button type="button" class="rounded-md border border-[var(--pr-border)] px-3 py-1.5 text-[12px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-surface-ground)]" (click)="view() === 'programs' ? retryPrograms() : retryCentersList()">
+          {{ copy.retry }}
+        </button>
+      </div>
+    } @else {
+      <!-- ── Reporting status: donut + tiles ─────────────────────────────────────────────── -->
+      <div class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+        <h2 class="m-0 text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">{{ copy.statusTitle }}</h2>
+        <p class="m-0 mt-[2px] text-[13px] text-[var(--pr-text-muted)]">{{ view() === 'programs' ? copy.statusProgramsHint : copy.statusCentersHint }}</p>
+
+        <div class="mt-[16px] grid grid-cols-1 items-center gap-[24px] lg:grid-cols-12">
+          <div class="flex items-center justify-center lg:col-span-4">
+            @if (activeState() === 'loading') {
+              <div class="pr-skeleton h-[200px] w-[200px] rounded-full"></div>
+            } @else {
+              <app-pr-viz-chart
+                class="block w-full max-w-[260px] cursor-pointer"
+                [options]="donutOption()"
+                [tableModel]="donutTable()"
+                (chartClick)="onChartClick($event)"
+                [chartTitle]="copy.statusTitle"
+                height="220px" />
+            }
+          </div>
+
+          <div class="flex flex-col gap-[14px] lg:col-span-8">
+            <div class="grid grid-cols-1 gap-[10px] min-[440px]:grid-cols-2" data-testid="status-tiles">
+              @for (segment of segments(); track segment.id) {
+                <button
+                  type="button"
+                  (click)="toggleStatus(segment.id)"
+                  [attr.aria-pressed]="selectedStatus() === segment.id"
+                  [attr.data-testid]="'status-tile-' + segment.id"
+                  class="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-[10px] border px-[12px] py-[9px] text-left transition-all duration-200"
+                  [class]="selectedStatus() === segment.id
+                    ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-50)] shadow-xs ring-2 ring-[var(--pr-color-primary-500)]/30'
+                    : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] hover:-translate-y-0.5 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs'">
+                  <div class="mb-[6px] flex w-full items-center justify-between gap-[8px]">
+                    <span class="flex min-w-0 items-center gap-[8px]">
+                      <span class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125" [style.background]="statusDot(segment.id)"></span>
+                      <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)]">{{ segment.label }}</span>
+                    </span>
+                    <span class="flex shrink-0 items-baseline gap-[3px]">
+                      <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums">{{ segment.count }}</span>
+                      <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">({{ segment.percent }}%)</span>
+                    </span>
+                  </div>
+                  <div class="h-[3.5px] w-full overflow-hidden rounded-full bg-[var(--pr-border-divider)]">
+                    <div class="h-full rounded-full transition-all duration-500 ease-out" [style.width.%]="segment.percent" [style.background]="statusDot(segment.id)"></div>
+                  </div>
+                </button>
+              }
+            </div>
+
+            @if (selectedLabel(); as label) {
+              <div class="flex flex-col items-start justify-between gap-[8px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-[14px] py-[8px] sm:flex-row sm:items-center" data-testid="active-filter">
+                <span class="text-[12px] font-medium text-[var(--pr-color-primary-800)]">{{ copy.activeFilter }} <strong class="font-bold">{{ label }}</strong></span>
+                <div class="flex flex-wrap items-center gap-[12px] self-end sm:self-auto">
+                  <a
+                    routerLink="/result/results-outlet/results-list"
+                    [queryParams]="resultsCenterParams()"
+                    class="text-[12px] font-bold text-[var(--pr-color-primary-700)] no-underline hover:underline">
+                    {{ copy.viewInResultsCenter }} &rarr;
+                  </a>
+                  <button type="button" (click)="toggleStatus(selectedStatus()!)" class="cursor-pointer border-0 bg-transparent text-[11.5px] font-semibold text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]">
+                    {{ copy.clearFilter }} &times;
+                  </button>
+                </div>
+              </div>
+            }
+            @if (view() === 'centers' && centersLoading()) {
+              <p class="m-0 text-[11.5px] text-[var(--pr-text-muted)]" data-testid="centers-loading-note">{{ copy.centersStillLoading }}</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Ranking ─────────────────────────────────────────────────────────────────────── -->
+      <div class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+        <div class="mb-[20px] flex flex-wrap items-center justify-between gap-[16px]">
+          <div>
+            <h2 class="m-0 text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">{{ rankingTitle() }}</h2>
+            <p class="m-0 mt-[2px] text-[13px] text-[var(--pr-text-muted)]">{{ copy.rankingHint }}</p>
+          </div>
+          <div class="inline-flex max-w-full items-center overflow-x-auto rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" data-testid="ranking-modes">
+            @for (mode of [{ key: 'horizontal', label: copy.modeHorizontal }, { key: 'vertical', label: copy.modeVertical }, { key: 'heatmap', label: copy.modeHeatmap }]; track mode.key) {
+              <button
+                type="button"
+                (click)="rankingMode.set($any(mode.key))"
+                [attr.aria-pressed]="rankingMode() === mode.key"
+                class="cursor-pointer rounded-[6px] border-0 px-[12px] py-[5px] text-[12px] font-semibold transition-all"
+                [class]="rankingMode() === mode.key ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+                {{ mode.label }}
+              </button>
+            }
+          </div>
+        </div>
+        @if (activeState() === 'loading') {
+          <div class="pr-skeleton h-[300px] w-full rounded-[8px]"></div>
+        } @else {
+          <app-pr-viz-chart
+            class="cursor-pointer"
+            [options]="rankingOption()"
+            [tableModel]="rankingTable()"
+            (chartClick)="onChartClick($event)"
+            [chartTitle]="rankingTitle()"
+            [height]="rankingMode() === 'vertical' ? '380px' : rankingHeight()" />
+        }
+      </div>
+
+      <!-- ── Detail: table | chart ───────────────────────────────────────────────────────── -->
+      <div class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[20px]">
+        <div class="mx-[20px] mb-[16px] flex flex-wrap items-center justify-between gap-[12px]">
+          <div>
+            <h2 class="m-0 text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">{{ view() === 'programs' ? copy.detailProgramsTitle : copy.detailCentersTitle }}</h2>
+            <p class="m-0 mt-[2px] text-[13px] text-[var(--pr-text-muted)]">{{ copy.detailHint }}</p>
+          </div>
+          <div class="inline-flex items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" data-testid="detail-modes">
+            @for (mode of [{ key: 'table', label: copy.tableView }, { key: 'chart', label: copy.chartView }]; track mode.key) {
+              <button
+                type="button"
+                (click)="detailMode.set($any(mode.key))"
+                [attr.aria-pressed]="detailMode() === mode.key"
+                class="cursor-pointer rounded-[6px] border-0 px-[12px] py-[5px] text-[12px] font-semibold transition-all"
+                [class]="detailMode() === mode.key ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+                {{ mode.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-[12px] px-[20px] pb-[16px]">
+          <div class="relative w-full sm:w-[240px]">
+            <ng-icon name="lucideSearch" size="15px" class="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-[var(--pr-text-muted)]" />
+            <label for="entities-overview-detail-search" class="sr-only">{{ view() === 'programs' ? copy.searchPrograms : copy.searchCenters }}</label>
+            <input
+              id="entities-overview-detail-search"
+              type="text"
+              [value]="search()"
+              (input)="onSearch($event)"
+              [placeholder]="view() === 'programs' ? copy.searchPrograms : copy.searchCenters"
+              data-testid="detail-search"
+              class="h-[34px] w-full rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] pl-[34px] pr-[30px] text-[12.5px] text-[var(--pr-text-heading)] placeholder:text-[var(--pr-text-muted)] focus:border-[var(--pr-color-primary-500)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)]" />
+            @if (search()) {
+              <button type="button" (click)="search.set('')" class="absolute right-[8px] top-1/2 -translate-y-1/2 cursor-pointer border-0 bg-transparent p-[3px] text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]" [attr.aria-label]="copy.clearSearch">
+                <ng-icon name="lucideX" size="13px" />
+              </button>
+            }
+          </div>
+          <span class="inline-flex h-[28px] items-center rounded-full bg-[var(--pr-color-primary-50)] px-[10px] text-[11.5px] font-semibold text-[var(--pr-color-primary-700)]" data-testid="detail-count">
+            {{ copy.shownCount(filteredDetail().length, detailRows().length) }}
+          </span>
+        </div>
+
+        @if (detailMode() === 'chart') {
+          <div class="px-[20px]">
+            <app-pr-viz-chart
+              [options]="shareOption()"
+              [tableModel]="rankingTable()"
+              [chartTitle]="view() === 'programs' ? copy.detailProgramsTitle : copy.detailCentersTitle"
+              [height]="rankingHeight()" />
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[680px] border-collapse text-[13px]" [attr.data-testid]="view() + '-table'">
+              <thead>
+                <tr class="border-y border-[var(--pr-border)] bg-[var(--pr-surface-ground)] text-left text-[11px] uppercase tracking-[0.04em] text-[var(--pr-text-muted)]">
+                  <th scope="col" class="px-5 py-2.5 font-semibold" [attr.aria-sort]="sortKey() === 'name' ? (sortDesc() ? 'descending' : 'ascending') : null">
+                    <button type="button" (click)="sortBy('name')" class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-semibold uppercase tracking-[0.04em] text-inherit">
+                      {{ copy.nameColumn }}
+                      @if (sortKey() === 'name') { <ng-icon [name]="sortDesc() ? 'lucideArrowDown' : 'lucideArrowUp'" size="12px" /> }
+                    </button>
+                  </th>
+                  <th scope="col" class="px-3 py-2.5 text-right font-semibold" [attr.aria-sort]="sortKey() === 'total' ? (sortDesc() ? 'descending' : 'ascending') : null">
+                    <button type="button" (click)="sortBy('total')" class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-semibold uppercase tracking-[0.04em] text-inherit">
+                      {{ copy.totalColumn }}
+                      @if (sortKey() === 'total') { <ng-icon [name]="sortDesc() ? 'lucideArrowDown' : 'lucideArrowUp'" size="12px" /> }
+                    </button>
+                  </th>
+                  @for (column of columns(); track column.id) {
+                    <th
+                      scope="col"
+                      class="px-3 py-2.5 text-right font-semibold"
+                      [class]="selectedStatus() === column.id ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)]' : ''"
+                      [attr.aria-sort]="sortKey() === column.id ? (sortDesc() ? 'descending' : 'ascending') : null">
+                      <button type="button" (click)="sortBy(column.id)" class="inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-semibold uppercase tracking-[0.04em] text-inherit">
+                        <span class="h-2 w-2 rounded-full" [style.background]="statusDot(column.id)"></span>{{ column.label }}
+                        @if (sortKey() === column.id) { <ng-icon [name]="sortDesc() ? 'lucideArrowDown' : 'lucideArrowUp'" size="12px" /> }
+                      </button>
+                    </th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @if (activeState() === 'loading') {
+                  @for (slot of skeletonRows; track slot) {
+                    <tr class="border-t border-[var(--pr-border-divider)]">
+                      <td class="px-5 py-3" [attr.colspan]="columns().length + 2"><span class="pr-skeleton block h-3 w-full rounded"></span></td>
+                    </tr>
+                  }
+                } @else {
+                  @for (item of filteredDetail(); track item.code) {
+                    <tr class="border-t border-[var(--pr-border-divider)] hover:bg-[var(--pr-surface-ground)]">
+                      <th scope="row" class="px-5 py-2.5 text-left font-normal">
+                        <a [routerLink]="item.link" class="group inline-flex items-center gap-2 no-underline" [attr.title]="item.title" [attr.aria-label]="copy.openOverview(item.badge ?? item.title)">
+                          @if (item.badge) {
+                            <span class="rounded bg-[var(--pr-surface-ground)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--pr-text-muted)]">{{ item.badge }}</span>
+                          }
+                          <span class="text-[var(--pr-text)] group-hover:text-[var(--pr-color-primary-500)] group-hover:underline">{{ item.name }}</span>
+                        </a>
+                      </th>
+                      @if (item.state === 'loading') {
+                        <td class="px-3 py-2.5" [attr.colspan]="columns().length + 1"><span class="pr-skeleton block h-3 w-full rounded"></span></td>
+                      } @else if (item.state === 'error' || !item.row) {
+                        <td class="px-3 py-2.5 text-right text-[12px] text-[var(--pr-text-muted)]" [attr.colspan]="columns().length + 1">
+                          {{ copy.loadError }}
+                          <button type="button" class="ml-2 font-medium text-[var(--pr-color-primary-500)] underline" (click)="retryCenter(item.code)">{{ copy.retry }}</button>
+                        </td>
+                      } @else {
+                        <td class="px-3 py-2.5 text-right font-semibold tabular-nums text-[var(--pr-text-heading)]">{{ item.row.total }}</td>
+                        @for (count of item.row.counts; track $index) {
+                          <td
+                            class="px-3 py-2.5 text-right tabular-nums"
+                            [class]="(selectedStatus() === columns()[$index].id ? 'bg-[var(--pr-color-primary-50)] ' : '') + (count === 0 ? 'text-[var(--pr-text-disabled)]' : 'text-[var(--pr-text)]')">
+                            {{ count }}
+                          </td>
+                        }
+                      }
+                    </tr>
+                  } @empty {
+                    <tr><td class="px-5 py-6 text-center text-[var(--pr-text-muted)]" [attr.colspan]="columns().length + 2">{{ copy.empty }}</td></tr>
+                  }
+                }
+              </tbody>
+              @if (activeState() === 'ready' && detailRows().length && !search()) {
+                <tfoot>
+                  <tr class="border-t-2 border-[var(--pr-border)] bg-[var(--pr-surface-ground)] font-semibold text-[var(--pr-text-heading)]">
+                    <th scope="row" class="px-5 py-2.5 text-left">{{ copy.totalRow }}</th>
+                    <td class="px-3 py-2.5 text-right tabular-nums">{{ activeTotals().total }}</td>
+                    @for (count of activeTotals().counts; track $index) {
+                      <td class="px-3 py-2.5 text-right tabular-nums">{{ count }}</td>
+                    }
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+          @if (view() === 'centers' && centersPartial() && centersListState() === 'ready') {
+            <p class="m-0 border-t border-[var(--pr-border-divider)] px-5 py-2 text-[11px] text-[var(--pr-text-muted)]" data-testid="centers-partial">{{ copy.partialTotal }}</p>
+          }
+        }
+      </div>
+    }
+  </div>
+</section>

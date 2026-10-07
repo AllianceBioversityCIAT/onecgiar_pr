@@ -114,7 +114,8 @@ describe('BilateralResultCreatorComponent', () => {
       // resultStatusId there) so a component-level test can assert the read-only gate really flips.
       setResultStatus: jest.fn((id: number) => {
         creationService.resultStatusId.set(id);
-        creationService.isEditableByCenterUser.set(id == null || id === 1 || id === 8);
+        // RRC-R-1: Rejected (7) is editable too.
+        creationService.isEditableByCenterUser.set(id == null || id === 1 || id === 8 || id === 7);
       }),
       // P2-3520: the read-only gate the editor now consumes. Writable here so a test can flip the
       // result out of Editing and assert the lock.
@@ -790,6 +791,18 @@ describe('BilateralResultCreatorComponent', () => {
 
       expect(component.isFormReadOnly()).toBe(false);
       expect(dialogInstance().readOnly()).toBe(false);
+    });
+
+    // RRC-R-6: the drawer is interactive at Rejected (7) and read-only at Pending review (5, QSG-R-5).
+    it('RRC-R-6: interactive at status 7, read-only at status 5', () => {
+      component.isCreating.set(false);
+      creationService.setResultStatus(7);
+      fixture.detectChanges();
+      expect(dialogInstance().readOnly()).toBe(false);
+
+      creationService.setResultStatus(5);
+      fixture.detectChanges();
+      expect(dialogInstance().readOnly()).toBe(true);
     });
   });
 
@@ -1728,6 +1741,30 @@ describe('BilateralResultCreatorComponent', () => {
       rolesService.getMyCenters.mockReturnValue([ILRI]);
       creationService.resultLeadCenterCode.set('CENTER-12');
       creationService.isEditableByCenterUser.set(false);
+      enterEditor();
+      TestBed.flushEffects();
+
+      expect(rolesService.readOnly).toBe(true);
+    });
+
+    // RRC-R-1 (both scenarios): Rejected (7) unlocks the form for the lead centre user ...
+    it('RRC-R-1: unlocks the form for the lead centre user while the result is Rejected (7)', () => {
+      rolesService.getMyCenters.mockReturnValue([ILRI]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
+      creationService.setResultStatus(7);
+      enterEditor();
+      TestBed.flushEffects();
+
+      expect(component.isFormReadOnly()).toBe(false);
+      expect(rolesService.readOnly).toBe(false);
+    });
+
+    // ... and AC4: not a member of the lead centre and not an admin stays read-only at 7.
+    it('RRC-R-1 AC4: a user outside the lead centre (not admin) stays read-only at Rejected (7)', () => {
+      rolesService.isAdmin = false;
+      rolesService.getMyCenters.mockReturnValue([OTHER_CENTER]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
+      creationService.setResultStatus(7);
       enterEditor();
       TestBed.flushEffects();
 

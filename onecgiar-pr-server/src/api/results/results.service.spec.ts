@@ -409,16 +409,19 @@ describe('ResultsService — getScienceProgramProgress plannedKpis & results bre
   });
 });
 
-describe('ResultsService — emitBilateralReviewNotification per-recipient wording (NDCW-T-1)', () => {
+describe('ResultsService — emitBilateralReviewNotification per-recipient wording (NDCW-T-1, SACN-T-2)', () => {
   const submitter = 11;
   const centerUser = 22;
+  const nonRole9CenterUser = 33;
   const emitter = { id: 99 } as TokenDto;
 
   function makeService(opts: {
-    centerUserIds?: number[];
+    anyRoleCenterUserIds?: number[];
+    role9CenterUserIds?: number[];
     ownerLookup?: jest.Mock;
     external?: number | null;
     createdBy?: number;
+    officialCode?: string | null;
   }) {
     const service: any = Object.create(ResultsService.prototype);
     service._logger = { warn: jest.fn(), error: jest.fn(), log: jest.fn() };
@@ -438,22 +441,32 @@ describe('ResultsService — emitBilateralReviewNotification per-recipient wordi
         .mockResolvedValue([{ is_leading_result: 1, code: 'CIMMYT' }]),
     };
     service._roleByUserRepository = {
+      // SACN-R-1/DD-1 — Approve uses the any-role lookup, Reject keeps the Center-User-only one.
+      getUserIdsByCenterAnyRole: jest
+        .fn()
+        .mockResolvedValue(opts.anyRoleCenterUserIds ?? [centerUser]),
       getUserIdsByCenter: jest
         .fn()
-        .mockResolvedValue(opts.centerUserIds ?? [centerUser]),
+        .mockResolvedValue(opts.role9CenterUserIds ?? [centerUser]),
     };
     service._resultByInitiativesRepository = {
       getResultByInitiativeOwnerFull:
         opts.ownerLookup ?? jest.fn().mockResolvedValue({ inititiative_id: 3 }),
     };
     service._clarisaInitiativesRepository = {
-      findOne: jest.fn().mockResolvedValue({ id: 3, official_code: 'SP03' }),
+      findOne: jest
+        .fn()
+        .mockResolvedValue(
+          opts.officialCode === null
+            ? null
+            : { id: 3, official_code: opts.officialCode ?? 'SP03' },
+        ),
     };
     service.getLeadCenterCode = jest.fn().mockResolvedValue('CIMMYT');
     return service;
   }
 
-  it('emits to the submitter without text and to center users with the center sentence (approve)', async () => {
+  it('approve: emits to the submitter without text and to center (any-role) users with the new SP sentence', async () => {
     const service = makeService({});
 
     await service.emitBilateralReviewNotification(
@@ -469,11 +482,39 @@ describe('ResultsService — emitBilateralReviewNotification per-recipient wordi
     expect(calls[0][5]).toBeUndefined();
     expect(calls[1][2]).toEqual([centerUser]);
     expect(calls[1][5]).toBe(
-      'where your center was tagged, has been approved by the Science Program SP03.',
+      "SP03, as primary Science Program, has approved your center's result",
     );
   });
 
-  it('uses "rejected" for a Reject decision', async () => {
+  // Falsifier: a non-role-9 user mocked only from the any-role lookup must still be in the
+  // Approve center emit, and the any-role lookup (not `getUserIdsByCenter`) is the one used.
+  it('approve: includes a non-role-9 center user returned only by the any-role lookup, and calls the any-role lookup with the lead center code only', async () => {
+    const service = makeService({
+      anyRoleCenterUserIds: [nonRole9CenterUser],
+      role9CenterUserIds: [],
+    });
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+    );
+
+    expect(
+      service._roleByUserRepository.getUserIdsByCenterAnyRole,
+    ).toHaveBeenCalledWith('CIMMYT');
+    expect(
+      service._roleByUserRepository.getUserIdsByCenter,
+    ).not.toHaveBeenCalled();
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls[1][2]).toEqual([nonRole9CenterUser]);
+  });
+
+  // Falsifier: Reject must keep the legacy wording and the Center-User-only lookup — the
+  // any-role lookup must NOT be called.
+  it('reject: keeps the legacy center wording and calls only the Center-User-only lookup', async () => {
     const service = makeService({});
 
     await service.emitBilateralReviewNotification(
@@ -482,6 +523,13 @@ describe('ResultsService — emitBilateralReviewNotification per-recipient wordi
       emitter,
     );
 
+    expect(
+      service._roleByUserRepository.getUserIdsByCenter,
+    ).toHaveBeenCalledWith('CIMMYT');
+    expect(
+      service._roleByUserRepository.getUserIdsByCenterAnyRole,
+    ).not.toHaveBeenCalled();
+
     const calls =
       service._notificationService.emitResultNotification.mock.calls;
     expect(calls[1][5]).toBe(
@@ -489,8 +537,8 @@ describe('ResultsService — emitBilateralReviewNotification per-recipient wordi
     );
   });
 
-  it('emits once, to the submitter without text, when the submitter is also a Center User', async () => {
-    const service = makeService({ centerUserIds: [submitter] });
+  it('emits once, to the submitter without text, when the submitter is also returned by the any-role lookup', async () => {
+    const service = makeService({ anyRoleCenterUserIds: [submitter] });
 
     await service.emitBilateralReviewNotification(
       1,
@@ -505,7 +553,62 @@ describe('ResultsService — emitBilateralReviewNotification per-recipient wordi
     expect(calls[0][5]).toBeUndefined();
   });
 
-  it('degrades to the no-code sentence and does not throw when the owner lookup fails', async () => {
+  // Falsifier: the approver, even if returned by the any-role lookup, must appear in neither emit.
+  it('approve: the approver returned by the any-role lookup appears in neither the submitter nor the center emit', async () => {
+    const service = makeService({
+      anyRoleCenterUserIds: [centerUser, emitter.id],
+    });
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    for (const call of calls) {
+      expect(call[2]).not.toContain(emitter.id);
+    }
+  });
+
+  // SACN-R-3 scenario: primary SP code known.
+  it('approve: owner code SP06 → stored center text is exactly the SP06 sentence', async () => {
+    const service = makeService({ officialCode: 'SP06' });
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls[1][5]).toBe(
+      "SP06, as primary Science Program, has approved your center's result",
+    );
+  });
+
+  // SACN-R-3 scenario: primary SP code unknown → the no-code fallback, exactly.
+  it('approve: owner code unresolved → stored center text is exactly the fallback sentence', async () => {
+    const service = makeService({
+      ownerLookup: jest.fn().mockResolvedValue({ inititiative_id: null }),
+    });
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls[1][5]).toBe(
+      "The primary Science Program has approved your center's result",
+    );
+  });
+
+  it('degrades to the no-code fallback sentence and does not throw when the owner lookup fails', async () => {
     const service = makeService({
       ownerLookup: jest.fn().mockRejectedValue(new Error('db down')),
     });
@@ -522,8 +625,126 @@ describe('ResultsService — emitBilateralReviewNotification per-recipient wordi
       service._notificationService.emitResultNotification.mock.calls;
     expect(calls).toHaveLength(2);
     expect(calls[1][5]).toBe(
-      'where your center was tagged, has been approved by the Science Program.',
+      "The primary Science Program has approved your center's result",
     );
+  });
+
+  // SACN-R-8 scenario: the center-roles lookup throws → the submitter is still notified, no throw.
+  it('approve: the any-role lookup throwing still lets the submitter emit happen, and does not throw', async () => {
+    const service = makeService({});
+    service._roleByUserRepository.getUserIdsByCenterAnyRole = jest
+      .fn()
+      .mockRejectedValue(new Error('db down'));
+
+    await expect(
+      service.emitBilateralReviewNotification(
+        1,
+        ReviewDecisionEnum.APPROVE,
+        emitter,
+      ),
+    ).resolves.toBeUndefined();
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0][2]).toEqual([submitter]);
+    expect(calls[0][5]).toBeUndefined();
+  });
+
+  // SACN-R-1 scenario: no lead center flagged → only the submitter is notified.
+  it('no lead center → only the submitter is notified, approval unaffected', async () => {
+    const service = makeService({});
+    service.getLeadCenterCode = jest.fn().mockResolvedValue(null);
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+    );
+
+    expect(
+      service._roleByUserRepository.getUserIdsByCenterAnyRole,
+    ).not.toHaveBeenCalled();
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0][2]).toEqual([submitter]);
+  });
+
+  // RRC-T-5 / RRC-R-13 — the rejection notification is linked to ITS history row (arg index 6 of
+  // `emitResultNotification`, after `renderedText`), on BOTH the submitter and the centre row.
+  it('reject with a history id: both the submitter and the centre emit carry it', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.REJECT,
+      emitter,
+      77,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][2]).toEqual([submitter]);
+    expect(calls[0][6]).toBe(77);
+    expect(calls[1][2]).toEqual([centerUser]);
+    expect(calls[1][6]).toBe(77);
+  });
+
+  // RRC-R-16 — the stored wording is the same one the existing reject test pins.
+  it('reject with a history id: the centre text stays the legacy rejected sentence', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.REJECT,
+      emitter,
+      77,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls[0][5]).toBeUndefined();
+    expect(calls[1][5]).toBe(
+      'where your center was tagged, has been rejected by the Science Program SP03.',
+    );
+  });
+
+  // Falsifier: Approve must never store the link, even if a caller hands an id over.
+  it('approve: neither emit carries a history id, even when one is passed', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+      77,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(2);
+    for (const call of calls) {
+      expect(call[6]).toBeUndefined();
+    }
+  });
+
+  it('reject without a history id (older callers): emits as before, no link', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.REJECT,
+      emitter,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(2);
+    for (const call of calls) {
+      expect(call[6]).toBeUndefined();
+    }
   });
 });
 
@@ -631,6 +852,133 @@ describe('ResultsService — reviewBilateralResult owner guard (PNS-T-2)', () =>
       expect.anything(),
       { id: 42 },
       expect.objectContaining({ status_id: ResultStatusData.Approved.value }),
+    );
+  });
+  // RSB-R-18 — every decision records the deciding SP (the owner) in the history.
+  it('REJECT decision → the history row carries action REJECT, the justification and initiative_id = owner', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+
+    await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.REJECT, justification: 'not relevant' },
+      user,
+    );
+
+    expect(fakeManager.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        result_id: 42,
+        action: 'REJECT',
+        comment: 'not relevant',
+        initiative_id: 9,
+        created_by: 7,
+      }),
+    );
+  });
+
+  it('APPROVE decision with no justification still writes the entry (comment null) with initiative_id = owner', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+
+    await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.APPROVE, justification: null },
+      user,
+    );
+
+    expect(fakeManager.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        action: 'APPROVE',
+        comment: null,
+        initiative_id: 9,
+      }),
+    );
+    expect(fakeManager.save).toHaveBeenCalled();
+  });
+
+  // RRC-T-5 / RRC-R-13 — the id of the history row saved INSIDE the transaction is handed to the
+  // post-commit emit. The bigint PK may come back from the driver as a string -> a number is passed.
+  it('REJECT decision → the emit receives the saved history row id (as a number), after the commit', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+    fakeManager.save.mockImplementation(async (_entity: unknown, row: any) => ({
+      ...row,
+      id: '501',
+    }));
+    const order: string[] = [];
+    service._dataSource.transaction = jest.fn(async (cb: any) => {
+      const out = await cb(fakeManager);
+      order.push('commit');
+      return out;
+    });
+    service.emitBilateralReviewNotification = jest.fn(async () => {
+      order.push('emit');
+    });
+
+    await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.REJECT, justification: 'not relevant' },
+      user,
+    );
+
+    expect(service.emitBilateralReviewNotification).toHaveBeenCalledWith(
+      42,
+      ReviewDecisionEnum.REJECT,
+      user,
+      501,
+    );
+    expect(order).toEqual(['commit', 'emit']);
+  });
+
+  it('APPROVE decision → the emit gets no history id', async () => {
+    const { service, fakeManager } = makeService({ owner: { id: 9 } });
+    fakeManager.save.mockImplementation(async (_entity: unknown, row: any) => ({
+      ...row,
+      id: 502,
+    }));
+
+    await service.reviewBilateralResult(
+      42,
+      { decision: ReviewDecisionEnum.APPROVE },
+      user,
+    );
+
+    expect(service.emitBilateralReviewNotification).toHaveBeenCalledTimes(1);
+    const args = service.emitBilateralReviewNotification.mock.calls[0];
+    expect(args[1]).toBe(ReviewDecisionEnum.APPROVE);
+    expect(args[3]).toBeUndefined();
+  });
+});
+
+describe('ResultsService — _loadBilateralRelatedData draft-visible statuses (RRC-T-3, RRC-P-13)', () => {
+  it('passes getDraftInit a status list containing Rejected plus Editing, Draft and Pending Review', async () => {
+    const service: any = Object.create(ResultsService.prototype);
+    const getDraftInit = jest.fn().mockResolvedValue([]);
+    service._resultsByProjectsRepository = {
+      findResultsByProjectsByResultId: jest.fn().mockResolvedValue([]),
+    };
+    service._resultRepository = {
+      getEvidenceBilateralResult: jest.fn().mockResolvedValue([]),
+    };
+    service._resultByInitiativesRepository = {
+      getContributorInitiativeByResult: jest.fn().mockResolvedValue([]),
+      getDraftInit,
+      getContributorInitiativeAndPrimaryByResult: jest
+        .fn()
+        .mockResolvedValue([]),
+    };
+
+    await service._loadBilateralRelatedData(42);
+
+    expect(getDraftInit).toHaveBeenCalledTimes(1);
+    const [calledResultId, statuses] = getDraftInit.mock.calls[0];
+    expect(calledResultId).toBe(42);
+    expect(statuses).toEqual(
+      expect.arrayContaining([
+        ResultStatusData.Rejected.value,
+        ResultStatusData.Editing.value,
+        ResultStatusData.Draft.value,
+        ResultStatusData.PendingReview.value,
+      ]),
     );
   });
 });

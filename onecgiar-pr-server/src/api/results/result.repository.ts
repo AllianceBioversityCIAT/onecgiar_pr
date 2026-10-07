@@ -4073,6 +4073,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
       LEFT JOIN Integration_information.toc_work_packages twp ON twp.toc_id = tr.wp_id
       WHERE rbi.result_id = ?
+        -- RSF-R-12 / RSF-DD-9 (supersedes RSF-R-3 / DD-4): only ACTIVE rows of any role are listed.
+        -- A retired former owner (role 1) or a contributor retired by a resubmission or declined (role 2)
+        -- is not returned here; the history stays in obj_result_by_initiatives with is_active:false.
+        AND rbi.is_active = 1
       GROUP BY ci.official_code, ci.name, ir.name;
     `;
     try {

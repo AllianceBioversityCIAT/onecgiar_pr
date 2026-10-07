@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { HlmButton } from '@spartan/button';
 import { AowHloTableComponent } from './components/aow-hlo-table/aow-hlo-table.component';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
+import { SHOW_QA_PREL_SPLIT } from '../../../../../../shared/constants/achieved-display-basis';
 
 export interface Tab {
   id: string;
@@ -21,6 +22,13 @@ export interface Tab {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityAowAowComponent implements OnInit, OnDestroy {
+  /**
+   * ACS-R-5 / ACS-S-9 — @akili-spec bugfix/achieved-counts-submitted. Flag read by the template to
+   * hide the QA/Prel pair in favour of a single union ("Achieved") figure. Flip
+   * `SHOW_QA_PREL_SPLIT` to restore the two-track display with no server change (ACS-S-10).
+   */
+  readonly showQaPrelSplit = SHOW_QA_PREL_SPLIT;
+
   route = inject(ActivatedRoute);
   entityAowService = inject(EntityAowService);
 

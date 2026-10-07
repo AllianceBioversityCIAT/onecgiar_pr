@@ -2,10 +2,18 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
+  HandlerResolveContext,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { ClarisaInnovationReadinessLevelRepository } from '../../../clarisa/clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.repository';
+
+/** What `resolveAndValidate` hands `afterCreate` (RSB-T-3). */
+interface ResolvedInnovationDevelopment {
+  innovationNatureId: number;
+  readinessLevelId: number;
+  innovationDevelopers: string | null;
+}
 
 @Injectable()
 export class InnovationDevelopmentBilateralHandler
@@ -28,13 +36,16 @@ export class InnovationDevelopmentBilateralHandler
     private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository,
   ) {}
 
-  async afterCreate({
+  /**
+   * @akili-spec bilateral/resubmit-rejected-result — RSB-T-3. The checks and catalogue lookups
+   * `afterCreate` used to make inline, moved verbatim (same order, same messages): they need no
+   * saved row, so the resubmission preflight runs them before the first write. No write here.
+   */
+  async resolveAndValidate({
     bilateralDto,
-    resultId,
-    userId,
-  }: HandlerAfterCreateContext): Promise<void> {
+  }: HandlerResolveContext): Promise<ResolvedInnovationDevelopment | null> {
     if (bilateralDto.result_type_id !== ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-      return;
+      return null;
     }
 
     const innovation = bilateralDto.innovation_development;
@@ -60,6 +71,21 @@ export class InnovationDevelopmentBilateralHandler
       innovation.innovation_developers?.trim() ||
       bilateralDto.lead_contact_person?.name?.trim() ||
       null;
+
+    return { innovationNatureId, readinessLevelId, innovationDevelopers };
+  }
+
+  async afterCreate({
+    bilateralDto,
+    resultId,
+    userId,
+  }: HandlerAfterCreateContext): Promise<void> {
+    const resolved = await this.resolveAndValidate({ bilateralDto });
+    if (!resolved) {
+      return;
+    }
+    const { innovationNatureId, readinessLevelId, innovationDevelopers } =
+      resolved;
 
     const existing = await this._resultsInnovationsDevRepository.findOne({
       where: { result_object: { id: resultId } },

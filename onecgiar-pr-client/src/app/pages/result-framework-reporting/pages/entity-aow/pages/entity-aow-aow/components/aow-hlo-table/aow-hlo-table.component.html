@@ -75,15 +75,22 @@
             like a 45% over 10 of 10, and it points at the indicators still missing a target.
           -->
           @if (item.progress) {
+            <!-- @akili-spec bugfix/achieved-counts-submitted -->
             <div class="hlo-progress" [prTooltip]="levelTooltip(item)">
-              <span class="hlo-progress_pair">
-                <span class="hlo-progress_label">QA</span>
-                <span class="hlo-progress_value">{{ levelProgress(item) }}</span>
-              </span>
-              <span class="hlo-progress_pair">
-                <span class="hlo-progress_label">Prel.</span>
-                <span class="hlo-progress_value">{{ levelPreliminaryProgress(item) }}</span>
-              </span>
+              @if (showQaPrelSplit) {
+                <span class="hlo-progress_pair">
+                  <span class="hlo-progress_label">QA</span>
+                  <span class="hlo-progress_value">{{ levelProgress(item) }}</span>
+                </span>
+                <span class="hlo-progress_pair">
+                  <span class="hlo-progress_label">Prel.</span>
+                  <span class="hlo-progress_value">{{ levelPreliminaryProgress(item) }}</span>
+                </span>
+              } @else {
+                <span class="hlo-progress_pair">
+                  <span class="hlo-progress_value">{{ levelProgress(item) }}</span>
+                </span>
+              }
               @if (levelCoverage(item)) {
                 <span class="hlo-progress_coverage">{{ levelCoverage(item) }}</span>
               }
@@ -150,7 +157,8 @@
                 ">
                 <span class="progress-cell_no-target">{{ isOverachievedWithoutTarget(result) ? 'Overachieved' : 'No target set' }}</span>
               </div>
-            } @else {
+            } @else if (showQaPrelSplit) {
+            <!-- @akili-spec bugfix/achieved-counts-submitted -->
             <div class="progress-cell" [prTooltip]="progressTooltip(result)">
               <div class="progress-cell_row">
                 <span class="progress-cell_label">QA</span>
@@ -167,6 +175,16 @@
                     [style.width.%]="barWidth(getPreliminaryProgress(result))"></span>
                 </span>
                 <span class="progress-cell_value">{{ result.preliminary_progress_percentage || '0%' }}</span>
+              </div>
+            </div>
+            } @else {
+            <!-- @akili-spec bugfix/achieved-counts-submitted — single union ("Achieved") track -->
+            <div class="progress-cell" [prTooltip]="progressTooltip(result)">
+              <div class="progress-cell_row">
+                <span class="progress-cell_track">
+                  <span class="progress-cell_fill progress-cell_fill--qa" [style.width.%]="barWidth(getProgress(result.progress_percentage))"></span>
+                </span>
+                <span class="progress-cell_value">{{ result.progress_percentage || '0%' }}</span>
               </div>
             </div>
             }

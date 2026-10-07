@@ -1,6 +1,6 @@
 # program-overview
 
-**Verified:** 2026-09-04 · branch qa-development-2026 · 6a9a45b5e
+**Verified:** 2026-10-02 · qa-development-2026-ss · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit` on the hero and AoW rows — see "QA/Prel split hidden" below) · prior: 2026-09-04 · branch qa-development-2026 · 6a9a45b5e
 
 **What this owns:** the **Overview** tab of the programme shell — the six cards under
 `entity-details/:entityId/overview`. Purely presentational: every figure arrives as a signal input.
@@ -127,3 +127,25 @@ Every input is a `computed()` on the parent (`dashboard-lab.component.ts`):
   `section` reconciles against the Results tab's `?section=<key>&origin=W1/W2` count for every
   breakdown key on SP01 and SP12 (owner population; contributor-only deltas reported per key in
   `pages/programme-results/CLAUDE.md`).
+
+## QA/Prel split hidden behind `showQaPrelSplit` (ACS-R-5, spec `bugfix/achieved-counts-submitted`)
+
+- `showQaPrelSplit = SHOW_QA_PREL_SPLIT` (imported from `shared/constants/achieved-display-basis.ts`,
+  default `false`). `@if (showQaPrelSplit) … @else …` hides the QA/Prel. two-track markup on the hero
+  rail's program-achievement block and on each AoW row's achievement cell, replacing it with a single
+  union ("Achieved") figure. The two-track markup is kept verbatim, not deleted — flip the constant
+  to restore it with zero server change (ACS-S-10).
+- `achievementTooltip()` branches the same way: with the flag off it states a single
+  "ToC achievement — x% …" sentence instead of "QA x% and Preliminary y% …" (ACS-S-9).
+- **T-3 re-pointed the underlying `TocAchievement` fields, not this task** — `progress_percentage`/
+  `progress_value` already read the union ("Achieved") basis via `achieved-display-basis.ts`'s
+  `toDisplayBasis` at the `ResultsApiService` choke point, QA originals surviving under
+  `qa_progress_percentage`/`qa_progress_value` (client-only). `achievementLabel()`/`preliminaryLabel()`
+  were not touched by T-4 — they already read the correct field; T-4 only hides the second track.
+- ⚠️ **`program-overview.row-layout.cy.ts`'s `A_wide`/`A_narrow` CT measurement is the one flag-on
+  case for this suite** (design §10.1): it mounts with `showQaPrelSplit: true` via
+  `componentProperties`, because the restack geometry it measures (`@max-[700px]:flex-col`) only
+  exists on the two-track markup. Don't "fix" it back to the default — the default renders a
+  single, non-restacking line and the guard it asserts would throw.
+- Grep gate convention for this spec: a visible `>QA<` / `>Prel.<` in this template must sit inside an
+  `@if (showQaPrelSplit)` block.
