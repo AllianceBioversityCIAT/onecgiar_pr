@@ -145,6 +145,38 @@ describe('PopUpNotificationItemComponent', () => {
       );
     });
 
+    // @akili-spec bilateral/resubmit-followups — RSF-T-1 (RSF-P-8, DD-3): ownerless result -> empty rbi array.
+    it.each([['an empty obj_result_by_initiatives', []], ['no obj_result_by_initiatives', undefined]])(
+      'update row with %s: link omits init and still carries phase and search',
+      (_label, rbi) => {
+        const notification = {
+          notification_id: 123,
+          obj_result: { result_code: 'R001', title: 'Result Title', obj_version: { id: 'v1' }, obj_result_by_initiatives: rbi },
+          notification_type: 1,
+          obj_emitter_user: { first_name: 'John', last_name: 'Doe' }
+        };
+        const url = component.generateUrlLink(notification);
+        expect(url).not.toContain('init=');
+        expect(url).not.toContain('undefined');
+        expect(url).toBe('result/results-outlet/results-notifications?phase=v1&search=John Doe has submitted the result R001 - Result Title');
+      }
+    );
+
+    it('update row with an empty obj_result_by_initiatives renders without a program chip and no "undefined"', () => {
+      fixture = TestBed.createComponent(PopUpNotificationItemComponent);
+      component = fixture.componentInstance;
+      component.notification = {
+        notification_id: 123,
+        read: false,
+        created_date: '2026-10-01T00:00:00Z',
+        obj_result: { result_code: 'R001', title: 'Result Title', obj_version: { id: 'v1' }, obj_result_by_initiatives: [] },
+        notification_type: 1,
+        obj_emitter_user: { first_name: 'John', last_name: 'Doe' }
+      };
+      expect(() => fixture.detectChanges()).not.toThrow();
+      expect(fixture.nativeElement.textContent).not.toContain('undefined');
+    });
+
     it('should return correct URL for notification without notification_id and is_map_to_toc is true', () => {
       const notification = {
         is_map_to_toc: true,
@@ -708,6 +740,66 @@ describe('PopUpNotificationItemComponent', () => {
       const text = fixture.nativeElement.textContent.replace(/\s+/g, ' ');
       expect(text).toContain('Ana Diaz from SP02 has requested contribution');
       expect(text).toContain('R9 - Pending');
+    });
+
+    // @akili-spec bilateral/resubmit-followups — RSF-T-1 (RSF-R-1, RSF-R-2): the T-7 case.
+    describe('RSF-T-1: primary request sentence', () => {
+      const t7Row = (overrides: any = {}) =>
+        decisionRow({
+          is_map_to_toc: false,
+          request_type: 'primary',
+          creating_center: { acronym: 'CIAT', name: 'International Center for Tropical Agriculture' },
+          obj_owner_initiative: { id: 12, official_code: 'SP12' },
+          obj_shared_inititiative: { id: 12, official_code: 'SP12' },
+          obj_result: { id: 9762, result_code: 9762, title: 'Some title', status_id: 1, obj_version: { id: 'v1' }, obj_result_type: { id: 1 } },
+          ...overrides
+        });
+      const flatText = () => fixture.nativeElement.querySelector('p').textContent.replace(/\s+/g, ' ').trim();
+
+      it('renders "CIAT has tagged SP12 as the primary Science Program of result 9762 - title" and not the contributor copy', () => {
+        render(t7Row());
+        const text = flatText();
+        expect(text).toBe('CIAT has tagged SP12 as the primary Science Program of result 9762 - Some title');
+        expect(text).not.toContain('as a contributor');
+        expect(text).not.toContain('has requested inclusion');
+        expect(text).not.toContain('from SP12');
+      });
+
+      it('bolds the centre and the SP code', () => {
+        render(t7Row());
+        const bold = Array.from(fixture.nativeElement.querySelectorAll('p b')).map((b: any) => b.textContent.trim());
+        expect(bold).toEqual(['CIAT', 'SP12']);
+      });
+
+      it('falls back to the unknown-centre label, never "undefined" or "()"', () => {
+        render(t7Row({ creating_center: null }));
+        const text = flatText();
+        expect(text).toBe('the Center has tagged SP12 as the primary Science Program of result 9762 - Some title');
+        expect(text).not.toContain('undefined');
+        expect(text).not.toContain('()');
+      });
+
+      it('uses the centre name when there is no acronym', () => {
+        render(t7Row({ creating_center: { name: 'Some Centre' } }));
+        expect(flatText()).toContain('Some Centre has tagged SP12');
+      });
+
+      it('a contribution row keeps today text (non-map)', () => {
+        render(decisionRow({ is_map_to_toc: false, request_type: 'contribution' }));
+        expect(flatText()).toBe('Ana Diaz from SP01 has requested inclusion of SP02 as a contributor to result R9 - Pending');
+      });
+
+      it('the deep link search text for a primary row is the primary sentence', () => {
+        const row = t7Row();
+        expect(component.generateNotificationTextRequest(row)).toBe('CIAT has tagged SP12 as the primary Science Program of result 9762 - Some title');
+        expect(component.generateUrlLink(row)).toContain('&search=CIAT has tagged SP12 as the primary Science Program of result 9762 - Some title');
+      });
+
+      it('omits init when the row has no initiative', () => {
+        const url = component.generateUrlLink(t7Row({ obj_shared_inititiative: null }));
+        expect(url).not.toContain('init=');
+        expect(url).toContain('?phase=v1&search=');
+      });
     });
 
     it('an update row renders no Accept/Decline', () => {

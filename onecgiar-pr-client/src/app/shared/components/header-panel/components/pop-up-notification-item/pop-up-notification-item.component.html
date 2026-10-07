@@ -26,7 +26,7 @@
     <span class="sr-only" data-testid="bell-unread-label">{{ copy.card.unreadRowPrefix }}: </span>
   }
   @if (!!notification?.notification_id) {
-    @let officialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
+    @let officialCode = notification?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code;
     @let textParts = textPartsOf(notification);
 
     <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
@@ -93,6 +93,11 @@
     <p
       class="m-0 line-clamp-2 text-[12px] leading-[1.45]"
       [class]="fresh ? 'font-bold text-[var(--pr-text-heading)]' : 'font-normal text-[var(--pr-text-secondary)] [&_b]:font-normal'">
+      @if (notification?.request_type === 'primary') {
+        @let primary = primaryRequestParts(notification);
+        <b>{{ primary.center }}</b> {{ primary.verb }} <b>{{ primary.code }}</b> {{ primary.tail }}
+        <span data-testid="bell-result-ref" [class]="fresh ? 'underline text-[var(--pr-color-black)]' : 'underline'">{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</span>
+      } @else {
       <b>
         {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
         {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
@@ -112,6 +117,7 @@
       </span>
 
       <b *ngIf="notification?.is_map_to_toc"> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+      }
     </p>
   }
 </a>

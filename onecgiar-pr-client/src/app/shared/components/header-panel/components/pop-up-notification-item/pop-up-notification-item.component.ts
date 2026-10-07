@@ -21,6 +21,8 @@ import {
   declineMode,
   isDecidable
 } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-decision';
+import { buildRequestNotificationText, creatingCenterLabelOf } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-notification-text';
+import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../internationalization/contribution-request-drawer.copy';
 import { BELL_QUICK_INBOX_COPY } from '../../../../../internationalization/bell-quick-inbox.copy';
 import {
   buildResultNotificationText,
@@ -299,11 +301,15 @@ export class PopUpNotificationItemComponent implements OnDestroy {
     const versionId = notification?.obj_result?.obj_version?.id;
 
     if (notification?.notification_id) {
-      const updateInitId = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.id;
-      return `${baseUrl}?phase=${versionId}&init=${updateInitId}&search=${this.generateNotificationTextUpdates(notification)}`;
+      const updateInitId = notification?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.id;
+      // RSF-T-1 (RSF-P-8, DD-3): an ownerless result has no active rbi row -> no `init` param.
+      const updateInitParam = updateInitId == null ? '' : `&init=${updateInitId}`;
+      return `${baseUrl}?phase=${versionId}${updateInitParam}&search=${this.generateNotificationTextUpdates(notification)}`;
     } else {
       const requestInitId = notification?.is_map_to_toc ? notification?.obj_owner_initiative?.id : notification?.obj_shared_inititiative?.id;
-      return `${baseUrl}?phase=${versionId}&init=${requestInitId}&search=${this.generateNotificationTextRequest(notification)}`;
+      // RSF-T-1 (design §9, DD-3 reversion outcome): no initiative on the row -> no `init` param.
+      const initParam = requestInitId == null ? '' : `&init=${requestInitId}`;
+      return `${baseUrl}?phase=${versionId}${initParam}&search=${this.generateNotificationTextRequest(notification)}`;
     }
   }
 
@@ -423,11 +429,20 @@ export class PopUpNotificationItemComponent implements OnDestroy {
   }
 
   generateNotificationTextRequest(notification) {
-    if (notification?.is_map_to_toc) {
-      return `${notification?.obj_requested_by?.first_name} ${notification?.obj_requested_by?.last_name} from ${notification?.obj_shared_inititiative?.official_code} has requested contribution to result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title} submitted by ${notification?.obj_owner_initiative?.official_code}`;
-    }
+    return buildRequestNotificationText(notification);
+  }
 
-    return `${notification?.obj_requested_by?.first_name} ${notification?.obj_requested_by?.last_name} from ${notification?.obj_owner_initiative?.official_code} has requested inclusion of ${notification?.obj_shared_inititiative?.official_code} as a contributor to result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title}`;
+  /**
+   * RSF-T-1 (RSF-R-1): pieces of the primary-request sentence for the template —
+   * "**{centre}** has tagged **{SP}** as the primary Science Program of result ...".
+   */
+  primaryRequestParts(notification) {
+    return {
+      center: creatingCenterLabelOf(notification),
+      verb: CONTRIBUTION_REQUEST_DRAWER_COPY.header.primaryVerb,
+      code: notification?.obj_shared_inititiative?.official_code,
+      tail: CONTRIBUTION_REQUEST_DRAWER_COPY.header.primaryTail
+    };
   }
 
   getNotificationAction(notificationType: number) {
