@@ -19,6 +19,10 @@ import {
   isIpsrP25ResultType,
   type P25PdfGenerateUrlLayout,
 } from './platform-report.constants';
+import {
+  buildContributorsExtras,
+  type ContributorsExtras,
+} from './platform-report-contributors';
 import type {
   PdfGenerateUrlPayload,
   PdfGenerateUrlResponse,
@@ -287,9 +291,14 @@ export class PlatformReportService implements OnModuleInit {
       const bucketName = env.AWS_BUCKET_NAME;
 
       if (this.isP25Portfolio(portfolioAcronym)) {
+        const contributorsExtras = await this.getContributorsExtras(
+          cleanResultCodeInput,
+          cleanPhaseInput,
+          resultToCheck?.result_type_id,
+        );
         const p25Payload: PdfGenerateUrlPayload = {
           ...this.buildP25Payload(
-            data,
+            { ...data, ...contributorsExtras },
             resultToCheck.source,
             fileName,
             bucketName,
@@ -403,6 +412,30 @@ export class PlatformReportService implements OnModuleInit {
     });
     const acronym = version?.obj_portfolio?.acronym;
     return acronym?.trim() ?? null;
+  }
+
+  /**
+   * P2-3095 — extra Contributors and Partners keys for the P25 result PDF (phase 2026+ only, see
+   * `buildContributorsExtras`). Never blocks the PDF: on failure the report keeps today's data.
+   */
+  async getContributorsExtras(
+    resultCode: number,
+    versionId: number,
+    resultTypeId?: number | null,
+  ): Promise<Partial<ContributorsExtras>> {
+    if (isIpsrP25ResultType(resultTypeId)) return {};
+    try {
+      const rows = await this._platformReportRepository.getContributorsRawRows(
+        resultCode,
+        versionId,
+      );
+      return buildContributorsExtras(rows);
+    } catch (error) {
+      this._logger.warn(
+        `Contributors extras skipped for result ${resultCode} (phase ${versionId}): ${error?.message ?? error}`,
+      );
+      return {};
+    }
   }
 
   /** Returns true if the portfolio should use the P25 (pdf.generateUrl) flow. */
