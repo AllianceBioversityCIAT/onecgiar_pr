@@ -213,7 +213,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Depends on:** QAC-T-16
 - **Verification:** qa-catalog suites; a test per conditional subfield; service response saved to `tmp/qa-catalog-2026.json`.
 
-### QAC-T-18 — Innovation development (Results) fully parametrized (amendment 2026-10-07) · P2-3925
+### [x] QAC-T-18 — Innovation development (Results) fully parametrized (amendment 2026-10-07) · P2-3925
 
 - **Type:** server · **Review:** full
 - **Description:** Every field of the 2026 Innovation Dev info form (owner listed from prtest result 9765, phase 36): short name; characterization; typology; new/improved variety (+ number of varieties); GESI stage (+ Why? when Not applicable); risk stage (+ Why?); IPR consideration and its follow-ups (entry points text, formal IPR, IP expert support); innovation developers (list); collaborators; team diversity (+ actions 116–121 when 113, + Other text); readiness level; readiness justification; readiness-diminished notice (if stored); the three investment tables (SP/A pooled, W3/bilateral projects, partners) with "yet to be determined". Question-tree rule: each question = a field; its options = a CLOSED control list of `result_questions` ids (ids equal in test and prod, verified 2026-10-07); sub-questions = fields/subfields with `visible_when` on the chosen id; free texts tied to an option = text fields with their rule. Phase-gated 2026 removals (user-need evidence, anticipated users, scaling studies, reference materials) stay out (or PENDING with reason). Results only.
@@ -233,6 +233,20 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Type:** server · **Review:** full
 - **Description:** From prtest result 9755 (phase 36): the three investment tables (programs, W3/bilateral projects, partners) shared with innovation development; 2026 flags age_disaggregation_not_available, youth_split_applied, graduate_students; a mirror field for "Are you reporting the use of an innovation that has already been reported and quality assessed?" (+ ID result picker) in the innovation-use section, same stored value as `linked.*`; visible_when / required_when for every field per the form (option B) and validation_innovation_use_P25.
 - **Implements:** QAC-R-13, QAC-R-14, QAC-R-5 for Innovation use
+- **Depends on:** QAC-T-19
+
+### QAC-T-21 — Policy change (Results) completed (amendment 2026-10-07) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** From prtest result 9674 (phase 36): USD amount and its status visible (and required per the form) when `policy_type_id` = 1; actors influenced per the form's `showActorsInfluenced()` rule; status as a closed list; policy-type guidance as verbatim description. Option B for `required`.
+- **Implements:** QAC-R-13, QAC-R-14, QAC-R-5 for Policy change
+- **Depends on:** QAC-T-19
+
+### QAC-T-22 — Knowledge product (Results) completed: M-QAP author affiliations + CGSpace metadata (amendment 2026-10-07) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** From prtest result 9532 (phase 36). (a) `partners.kp_author_affiliations` (KP only, list, `required: false` — form `[required]="false"`, not checked by validation_contributor_partner_P25): one element per role-2 `results_by_institution` row linked to `results_kp_mqap_institutions` (`result_kp_mqap_institution_id` not null). Subfields: CGSpace affiliation name (`intitution_name`), CLARISA partner (`institutions_id`, prefilled by M-QAP only when `confidant` ≥ global `kp_mqap_institutions_confidence`), match type (`is_predicted`: "Predicted by M-QAP AI" / "Manual match"; recomputed on save — true only when the chosen partner equals the prediction and confidence passes the threshold), confidence %, partner type (CLARISA lookup), partner role (deliveries). Move `is_predicted` out of NOT_FOR_QA (it is displayed); bring `results_kp_mqap_institutions` into scope or correct its exclusion reason (it surfaces through author affiliations, not role 8). (b) Read-only CGSpace/WoS metadata of KP info now in PENDING: online date, issue date, authors, peer reviewed, WoS/ISI, DOI, accessibility, keywords, AGROVOC, Altmetric, FAIR (score + F1…R1), reference to other knowledge products (locate storage). (c) `results_center.from_cgspace` lock flag. Results only.
+- **Implements:** QAC-R-13, QAC-R-14, QAC-R-5 for Knowledge product
 - **Depends on:** QAC-T-19
 
 ## 4. Dependency graph

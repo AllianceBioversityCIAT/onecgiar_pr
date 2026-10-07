@@ -300,3 +300,12 @@
 - Attempt 1 → FAIL (sharepoint path not one row per evidence). Attempt 2 → PASS. 310/310; falsifiers red.
 - Owner clarification recorded: QA receives ALL evidence data; validations only drive `required`.
 - 2026-10-07: owner decision (option B) — `required` follows what the form requires so QA shows what the user had to fill; QAC-R-5 amended; tasks QAC-T-19 (sweep done sections) and QAC-T-20 (innovation use) added; T-18 instructed to apply B.
+
+### QAC-T-18 — Innovation development (Results) · P2-3925 — PASS (attempt 2)
+
+- Date: 2026-10-07 · catalog 2026.17
+- Attempt 1 (Implementer): 16 top-level fields, 3 investment lists (`estimates_pooled|non_pooled|partners`), closed lists `question_options_team_diversity` [113,114,115] and `…_actions` [116..121]; GESI / risk / IPR bound by option label (AUTO_INCREMENT ids, not owner-verified). Evidence re-run by Leader: 339/339, tsc and eslint clean; snapshot keys 243 → 258, none removed.
+- Reviewer → **FAIL**: (1) frozen inventory key `estimates_*.kind_cash` renamed to `total_usd`; (2) wrong EST.html / IDI.html line citations; (3) four descriptions not verbatim; (4) contract doc stale (pending count 122 vs 116, budget gap) and missing the form's value-or-"to be determined" rule. Declared deviations 1, 2, 4, 5 accepted; 3 accepted pending owner sign-off.
+- Leader decisions: `required` = form ∪ live function for now (`number_of_varieties`, `team_diversity.actions` are function-stated, documented as such). Owner decision 2026-10-07: no `depends_on` field — contract rule "selecting a field includes the fields named in its `visible_when` (transitively); subfields travel with their parent", added to the contract doc in attempt 2.
+- 2026-10-07: tasks QAC-T-21 (policy change) and QAC-T-22 (knowledge product: M-QAP author affiliations, CGSpace metadata, `from_cgspace`) added from the owner's walk-through of results 9674 and 9532.
+- Attempt 2 (same Implementer, resumed): `kind_cash` restored; citations corrected; four descriptions verbatim; contract doc fixed (116 pending, investment either-or rule, function-stated rules, question-row attribution note, selection rule in Display rules). Leader re-run: 339/339, tsc and eslint clean; snapshot 243 → 258 keys, none removed, no `total_usd`. Reviewer → **PASS**. ADVISORY: v1.12 cites an internal client file in a QA-facing doc (to tidy in T-19).

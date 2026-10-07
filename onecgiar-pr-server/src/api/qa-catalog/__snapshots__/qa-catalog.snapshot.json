@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 16,
-      "content_hash": "6c325b809c32a08cd644be813638395ea89fcdf8274e4b0868cf8ecbf37ab9af"
+      "revision": 17,
+      "content_hash": "c106f1cace12ef97c607cc321c30dc5e1baf90b7e44c41585ffabd9b3ec8a27c"
     }
   },
   "keys": [
@@ -61,6 +61,9 @@
     "field:innovation_dev.characterization",
     "field:innovation_dev.collaborators",
     "field:innovation_dev.developers",
+    "field:innovation_dev.estimates_non_pooled",
+    "field:innovation_dev.estimates_partners",
+    "field:innovation_dev.estimates_pooled",
     "field:innovation_dev.gesi_stage",
     "field:innovation_dev.ipr_consideration",
     "field:innovation_dev.is_new_variety",
@@ -189,8 +192,20 @@
     "subfield:geo.countries/subnational",
     "subfield:geo.extra_countries/country",
     "subfield:geo.extra_countries/subnational",
+    "subfield:innovation_dev.estimates_non_pooled/is_determined",
+    "subfield:innovation_dev.estimates_non_pooled/kind_cash",
+    "subfield:innovation_dev.estimates_non_pooled/project",
+    "subfield:innovation_dev.estimates_partners/institution",
+    "subfield:innovation_dev.estimates_partners/is_determined",
+    "subfield:innovation_dev.estimates_partners/kind_cash",
+    "subfield:innovation_dev.estimates_partners/partner_type",
+    "subfield:innovation_dev.estimates_pooled/is_determined",
+    "subfield:innovation_dev.estimates_pooled/kind_cash",
+    "subfield:innovation_dev.estimates_pooled/program",
     "subfield:innovation_dev.gesi_stage/not_applicable_reason",
+    "subfield:innovation_dev.gesi_stage/option_label",
     "subfield:innovation_dev.risk_stage/not_applicable_reason",
+    "subfield:innovation_dev.risk_stage/option_label",
     "subfield:innovation_dev.team_diversity/actions",
     "subfield:innovation_dev.team_diversity/other_text",
     "subfield:innovation_use.current_use.actors/actor_type",

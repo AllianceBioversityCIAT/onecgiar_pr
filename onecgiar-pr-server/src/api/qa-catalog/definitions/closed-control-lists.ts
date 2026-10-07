@@ -52,4 +52,16 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      * evidences.service.ts:842,894).
      */
     evidence_sources: [0, 1],
+    /**
+     * Innovation team diversity (QAC-T-18): options of question 112 (113 "Yes, concrete actions...", 114, 115) and, under 113, the
+     * action checkboxes 116..121 (121 = "Other"). Source: `result_questions` ids of Innovation P25 questions 101-121, 138, 147-149 are
+     * identical in test and prod (owner check, docs/specs/quality-assurance/qa-field-catalog/execution.md "result_questions check run
+     * by the owner in test and prod"); no migration in this repository seeds them (cloned from P22 rows by 1762398554711). Structure
+     * from innovationTeamDiversityV2 (result-questions.service.ts:761-808: level-2 children of 112, level-3 children of each) and
+     * validation_innovation_dev_P25 (parent 112 at :531, parent 113 at :585, ids 113/114/115/121 at :540-602).
+     * The GESI / risk stage and consolidated IPR options are NOT here: their ids come from AUTO_INCREMENT (migrations 1787842155469 and
+     * 1788441000000) and the client, server and live function resolve them by text.
+     */
+    question_options_team_diversity: [113, 114, 115],
+    question_options_team_diversity_actions: [116, 117, 118, 119, 120, 121],
   };

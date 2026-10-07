@@ -11,9 +11,9 @@ import { PendingCatalogEntry } from './types';
  * `D2` = the binding needs a hop through a parent row (or an entity-less table), which the current
  * StorageBinding cannot express; deferred by the owner (REVIEW §7), the model is not changed.
  *
- * T-1 (knowledge product) rows stored in results_kp_* child tables and the estimates_* budget rows
- * (result_initiative_budget / non_pooled_projetct_budget / result_institutions_budget) are 2-hop: their tables are in scope and every
- * remaining column is listed here with `twoHop(...)` (or `stage2(...)`), naming the field it serves.
+ * T-1 (knowledge product) rows stored in results_kp_* child tables are 2-hop: their tables are in scope and every
+ * remaining column is listed here with `twoHop(...)` (or `stage2(...)`), naming the field it serves. The estimates_* budget columns were
+ * bound by QAC-T-18 and removed.
  *
  * Common-section fields that own no column of their own, so no entry can name them:
  *  - `contributors.other_contributors` (read-only view of other programs' ToC rows): described by the subfields of
@@ -203,26 +203,10 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'fair_value',
   ),
 
-  // T-3 Innovation development (QAC-T-9): estimates budgets, reached through results_by_inititiative /
-  // results_by_projects / results_by_institution (2-hop, D2).
-  ...twoHop(
-    'result_initiative_budget',
-    'innovation_dev.estimates_pooled, innovation_use.investment.programs and ipsr_step_4.initiative_investment (kind_cash / is_determined)',
-    'kind_cash',
-    'is_determined',
-  ),
-  ...twoHop(
-    'non_pooled_projetct_budget',
-    'innovation_dev.estimates_non_pooled, innovation_use.investment.bilateral and ipsr_step_4.bilateral_investment (kind_cash / is_determined; the IPSR project picker `ipsr_step_4.bilateral_investment.project` also waits on D2)',
-    'kind_cash',
-    'is_determined',
-  ),
-  ...twoHop(
-    'result_institutions_budget',
-    'innovation_dev.estimates_partners, innovation_use.investment.partners and ipsr_step_4.partner_investment (kind_cash / is_determined)',
-    'kind_cash',
-    'is_determined',
-  ),
+  // Innovation development estimates budgets (result_initiative_budget / non_pooled_projetct_budget / result_institutions_budget):
+  // `kind_cash` / `is_determined` were bound by QAC-T-18 (innovation_dev.estimates_pooled|non_pooled|partners, path bindings) and left
+  // this list. The same columns still serve innovation_use.investment.* and ipsr_step_4.*_investment (not catalogued yet); they are covered
+  // by the innovation development bindings until those fields are described.
 
   // Policy change (QAC-T-10): optional rows (UI [required]=false, no live rule)
   ...stage2('results_policy_changes', 'policy_change.usd_amount', 'amount'),
