@@ -11,7 +11,7 @@
 | Status | **approved 2026-10-06** by Juan David (gated) — proceed to `/akili-specify` |
 | Owner | Juan David Delgado |
 | Date | 2026-10-06 |
-| Ticket(s) | none yet — requirement pasted directly by the user |
+| Ticket(s) | [P2-3925](https://cgiarmel.atlassian.net/browse/P2-3925) — "[QA Platform - Fields] Reporting Tool field parameterization", User Story under epic P2-3902; basis for P2-3907 (QA field configuration screen). Linked 2026-10-07 |
 | Baseline | `docs/trd/trd.md` — **ADR-001** (LITE tier, no new always-on compute), **ADR-002** (MySQL + TypeORM migrations as the only schema path — the CI guard leans on this), ADR-004 (additive-only external payloads, applied here to `/qa/catalog`), QAS-9 (compatibility), QAS-10 (no secrets in logs) · `.cursorrules` (service credential never logged) |
 | Related specs | bilateral API-key work (service-to-service auth precedent: `ClarisaApiKeyGuard`) · `bilateral/qa-ai-*` (QA-adjacent, no overlap) |
 | Depends on | none in-repo |

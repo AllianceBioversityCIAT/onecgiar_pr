@@ -10,7 +10,7 @@
 | Approval Mode | pre-approved (Juan David, 2026-10-06 — "Continue everything") for routine gates; HITL pauses (T-7 inventory review), escalations and destructive actions still stop |
 | Owner | Juan David Delgado |
 | Status | approved 2026-10-06 (Juan David) |
-| Ticket(s) | none yet |
+| Ticket(s) | [P2-3925](https://cgiarmel.atlassian.net/browse/P2-3925) (User Story, epic P2-3902) |
 | Requirement prefix | `QAC-R-n` (catalog) — `QA-` is left to the existing QA review module |
 | Baseline | `docs/prd.md` US-Q1 (QA reviewer sees all submitted fields — this catalog is what "all fields" means to the rebuilt QA), AC-5 (phase/versioning correctness), AC-9 (secrets) · `docs/trd/trd.md` ADR-001, ADR-002, ADR-004, QAS-9, QAS-10 · `docs/ux-ui/design.md` — n/a (no UI) |
 
