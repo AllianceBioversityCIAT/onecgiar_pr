@@ -228,7 +228,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Implements:** QAC-R-5 (amended)
 - **Depends on:** QAC-T-18
 
-### QAC-T-20 — Innovation use (Results) completed (amendment 2026-10-07) · P2-3925
+### [x] QAC-T-20 — Innovation use (Results) completed (amendment 2026-10-07) · P2-3925
 
 - **Type:** server · **Review:** full
 - **Description:** From prtest result 9755 (phase 36): the three investment tables (programs, W3/bilateral projects, partners) shared with innovation development; 2026 flags age_disaggregation_not_available, youth_split_applied, graduate_students; a mirror field for "Are you reporting the use of an innovation that has already been reported and quality assessed?" (+ ID result picker) in the innovation-use section, same stored value as `linked.*`; visible_when / required_when for every field per the form (option B) and validation_innovation_use_P25.

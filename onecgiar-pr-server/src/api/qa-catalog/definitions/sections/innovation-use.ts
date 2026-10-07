@@ -4,12 +4,10 @@
 //
 // Decisions (owner mandate 2026-10-06, no model change):
 //  - Annual-updating `general.*` block: owned by C-1 (QAC-T-8), not repeated here.
-//  - Link to an already reported innovation (`innovation_use.linked_result.*`, section iu_linked_result): NOT catalogued
-//    here. The question and its result picker are `linked.has_innovation_link` / `linked.results` (QAC-T-8, ALL_TYPES,
-//    which includes `innovation_use`). D15: the live function has the check commented out (VIU:53,62-74), so the function
-//    does not require the answer for this type; the form does not either (optional on the Innovation Use page), so
-//    `linked.has_innovation_link.required_when` names every type EXCEPT `innovation_use` and `innovation_package` (QAC-T-19). `results_innovations_use.has_innovation_link` is PENDING_CATALOG (it
-//    stores the same answer as `result.has_innovation_link`).
+//  - Link to an already reported innovation (`innovation_use.linked_result.*`, section iu_linked_result): catalogued since QAC-T-20 as a
+//    mirror of `linked.has_innovation_link` / `linked.results` (see the QAC-T-20 note (a) below). `linked.has_innovation_link.required_when`
+//    names every type EXCEPT `innovation_use` and `innovation_package` (QAC-T-19); for `innovation_use` the authoritative answer is the
+//    mirror key. `results_innovations_use.has_innovation_link` is bound by the mirror (it left PENDING_CATALOG).
 //  - REVIEW D12 (b), as of QAC-T-19: rows that are mandatory in the form but silent in the live function are `required` /
 //    `required_when` with `required_confirmed: false` (youth columns, organizations `how_many`, `yet_to_be_determined`); the
 //    exceptions that stay optional because no condition can express the form's gate are `new_users_added`,
@@ -32,6 +30,35 @@
 //    field config of FieldsManagerService (FM = shared/services/fields-manager.service.ts). Every list row control is
 //    `[required]="!!item.id"`: required as soon as the row exists, hence `required: true` / `required_when` on the subfields.
 //    Rules stated only by VIU are kept and called "function-stated" in the comment.
+//  - QAC-T-20 (owner walk-through of the 2026 form, prtest result 9755 phase 36; catalog 2026.19): the section is completed for RESULTS.
+//    Citation legend: IUI = pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info/innovation-use-info.component.html;
+//    EST = shared/components/innovation-use-form/components/estimates/estimates.component.html (+ .ts); VIU = tmp/validation_innovation_use_P25.
+//    (a) MIRROR of the link question (section iu_linked_result): `innovation_use.linked_result.has_innovation_link` and
+//        `innovation_use.linked_result.linked_result` (inventory 2026-B §3.3 names). The Innovation Use page asks this question for
+//        phase_year >= 2026 (P2-3424, IUI:19-45) and it is the authoritative answer for an Innovation use result.
+//        Storage: the linked rows are SHARED (`linked_result`, same relation as `linked.results`, so the picker is a `multi_select`: several
+//        active rows can exist, the page edits only the first). The yes/no answer is stored in TWO columns: `results_innovations_use.has_innovation_link`
+//        (what the Innovation Use page reads and writes, innovation-use.service.ts:179,225; bound here) and `result.has_innovation_link` (bound by
+//        `linked.has_innovation_link`). The Innovation Use page does not update the result-level copy (contributors-partners.service.ts writes both
+//        but is hidden for these results, CP.ts:439-445), so for this type `linked.has_innovation_link` and the `visible_when` of `linked.results`
+//        may be stale.
+//        Rules: the question is optional (IUI:19-31 `[required]="false"`, PO decision P2-3424; VIU:53 NULL check commented out, D15). The picker is
+//        optional in the form (IUI:33-45 `[required]="false"`) but the live validation V-CP (tmp/validation_contributor_partner_P25:143-162) reads
+//        `results_innovations_use.has_innovation_link` and requires at least one active `linked_result` row when it is true: `required_when` the
+//        answer is true, function-stated (`required_confirmed: true`).
+//    (b) INVESTMENT tables (section iu_investment): the form renders `<app-estimates-cgiar>` (innovation-use-form.component.html:788-789, inside the
+//        P25 block, no gate), the shared component of the three tables; Innovation development renders its own `app-estimates` (IDI.html:228). Both
+//        read the SAME rows: one per active parent row of the result (`results_by_inititiative`, `results_by_projects`, `results_by_institution`)
+//        with the budget row `result_initiative_budget` / `non_pooled_projetct_budget` / `result_institutions_budget` reached by the parent id
+//        (result-investment.service.ts getInvestmentPrograms|Bilateral|Partners), hence the same path bindings as innovation_dev.estimates_*.
+//        The USD input is optional in the form (`requiredSections = []`, EST `[required]="isRequired(..)"`), but a row without a value or "yet to be
+//        determined" is flagged (`checkValueAlert`, estimates.component.ts) and VIU:429-481 requires `kind_cash` NOT NULL for every active budget row
+//        whose `is_determined` is NULL or 0 (unlike V-ID, a NULL value does not count as 0): `kind_cash` is `required_when is_determined = false`
+//        (NULL read as false, as for the gates above), function-stated. `is_determined` stays optional: its half of the either-or cannot be written (no
+//        negation of `eq`).
+//    (c) 2026 flags: `age_disaggregation_not_available` and `youth_split_applied_by_system` (result_actors) are subfields of the CURRENT-USE actors
+//        only (IUF:135-150; the 2030 block has no such control); `graduate_students` (results_by_institution_type) is a subfield of the organizations
+//        of both blocks (IUF:321 / :713). Not required by the form or by VIU.
 //  - Scaling studies (retired in 2026, IUFT:682-690) and the legacy male/female counters: PENDING_CATALOG for a 2025 load.
 import {
   CatalogField,
@@ -40,7 +67,18 @@ import {
   Condition,
 } from '../types';
 import { FROM_2026, whenEq, whenIn } from './shared';
+import { budgetValue } from './innovation-development';
 
+/** IUF:321 / :713: "# of graduate students" is rendered only for the institution type 50. */
+const GRADUATE_STUDENTS_TYPE = 50;
+
+export const IU_LINKED_RESULT_SECTION: CatalogSection = {
+  key: 'iu_linked_result',
+  label: 'Linked innovation development result',
+  order: 49,
+  result_types: ['innovation_use'],
+  ...FROM_2026,
+};
 export const IU_CURRENT_USE_SECTION: CatalogSection = {
   key: 'iu_current_use',
   label: 'Current use',
@@ -59,6 +97,14 @@ export const IU_PROJECTION_2030_SECTION: CatalogSection = {
   key: 'iu_projection_2030',
   label: '2030 use projection',
   order: 52,
+  result_types: ['innovation_use'],
+  ...FROM_2026,
+};
+
+export const IU_INVESTMENT_SECTION: CatalogSection = {
+  key: 'iu_investment',
+  label: 'Investment',
+  order: 53,
   result_types: ['innovation_use'],
   ...FROM_2026,
 };
@@ -107,6 +153,32 @@ const WHEN_DISAGGREGATED: SubRule = {
 // gate as false, and it models only "the gate is not ticked"; the live function's "at least one of the three lists
 // has a row" is evaluated across the three lists and is not expressible per list, so each list is conditional
 // on the gate alone.
+
+/** QAC-T-20: the two 2026 age-fallback subfields of the current-use actors (sibling conditions). */
+const currentUseActorFlags = (): CatalogSubField[] => [
+  // IUF:135-141 (2026 only, `showAgeFallback()`: rendered while the tick above is off); optional checkbox, no rule in the form or in VIU.
+  {
+    ...sub(
+      'result_actors',
+      'age_disaggregation_not_available',
+      'Age disaggregation not available',
+      'boolean',
+    ),
+    visible_when: whenEq('sex_and_age_disaggregation', false),
+  },
+  // IUF:145-150 (inventory 2026-B row 120): system flag, set when the 50/50 youth split is applied and never typed by the reporter; the form note
+  // (IUF:147-148) is shown only while it is stored true, which only happens with the fallback ticked (cleanActor / applyAgeDisaggregationFallback
+  // clear it, innovation-use-form.component.ts:162-163,317).
+  {
+    ...sub(
+      'result_actors',
+      'youth_split_applied_by_system',
+      'Youth and Non-youth were split 50/50 by the system',
+      'boolean',
+    ),
+    visible_when: whenEq('age_disaggregation_not_available', true),
+  },
+];
 
 /** Actors / organizations / measures lists of one block (section_id 1 = current use, 2 = 2030 projection). */
 function usageLists(
@@ -170,6 +242,8 @@ function usageLists(
           'Sex and age disaggregation does not apply',
           'boolean',
         ),
+        // CURRENT USE ONLY (IUF:135-150; the 2030 block, IUF:502-640, has neither control).
+        ...(sectionId === 1 ? currentUseActorFlags() : []),
         // IUF:159 / :553 and :193 / :586 (`[required]="!!result_actors_id"`, shown while the disaggregation tick is off);
         // VIU:148-153 also requires them, but only for types other than 5 — the form's wider rule (every type) is used.
         sub(
@@ -272,6 +346,16 @@ function usageLists(
           undefined,
           ALWAYS,
         ),
+        // IUF:319-327 / :712-720 (`institution_types_id == 50`, `[required]="false"`); no rule in VIU.
+        {
+          ...sub(
+            'results_by_institution_type',
+            'graduate_students',
+            '# of graduate students',
+            'number',
+          ),
+          visible_when: whenEq('institution_type', GRADUATE_STUDENTS_TYPE),
+        },
       ],
     },
     {
@@ -313,7 +397,86 @@ function usageLists(
   ];
 }
 
+// ---- investment tables (EST; same rows as innovation_dev.estimates_*, see the header) ------------------------------------------------
+const budgetSubfields = (
+  budgetTable: string,
+  parentFk: string,
+): CatalogSubField[] => [
+  {
+    // EST:25-28 "Total USD Value (in-cash + in-kind)", optional input; VIU:429-481 needs it for every active budget row not "yet to be determined".
+    key: 'kind_cash',
+    label: 'Total USD Value (in-cash + in-kind)',
+    type: 'number',
+    required: false,
+    required_when: whenEq('is_determined', false),
+    storage: budgetValue(budgetTable, parentFk, 'kind_cash'),
+  },
+  {
+    // EST:32-35 single-option radio "This is yet to be determined"
+    key: 'is_determined',
+    label: 'This is yet to be determined',
+    type: 'boolean',
+    required: false,
+    storage: budgetValue(budgetTable, parentFk, 'is_determined'),
+  },
+];
+
+const investmentBase = {
+  section: IU_INVESTMENT_SECTION.key,
+  result_types: TYPES,
+  // The rows are system-provided (one per linked entity) and the tables are optional in the form; VIU states the row rule (above).
+  required: false,
+  required_confirmed: true,
+  ...FROM_2026,
+};
+
 export const INNOVATION_USE_FIELDS: CatalogField[] = [
+  {
+    // Mirror of `linked.has_innovation_link` (see the header, (a)). IUI:19-31 radio, `[required]="false"`; verbatim question
+    // (INNOVATION_LINK_QUESTION, qa-innovation-development-results.service.ts:16). Shown for phase_year >= 2026 only (IUI showsInnovationLink).
+    key: 'innovation_use.linked_result.has_innovation_link',
+    label:
+      'Are you reporting the use of an innovation that has already been reported and quality assessed?',
+    type: 'boolean',
+    section: IU_LINKED_RESULT_SECTION.key,
+    order: 1,
+    result_types: TYPES,
+    required: false,
+    required_confirmed: false,
+    ...FROM_2026,
+    storage: col(USE_TABLE, 'has_innovation_link'),
+  },
+  {
+    // Mirror of `linked.results` (same `linked_result` relation, so `multi_select` like it: several active rows can exist; the page edits only the
+    // first, innovation-use-info.component.ts:157-186). IUI:33-45 (`@if has_innovation_link`, `[required]="false"`), but V-CP:143-162 (tmp/
+    // validation_contributor_partner_P25) reads `results_innovations_use.has_innovation_link` and requires at least one active linked_result row
+    // when it is true: FUNCTION-STATED, so `required_when` the answer is true, `required_confirmed: true`.
+    key: 'innovation_use.linked_result.linked_result',
+    label: 'Please select an Innovation Development result',
+    type: 'multi_select',
+    control_list: 'qa_innovation_dev_results',
+    section: IU_LINKED_RESULT_SECTION.key,
+    order: 2,
+    result_types: TYPES,
+    required: false,
+    required_confirmed: true,
+    visible_when: whenEq(
+      'innovation_use.linked_result.has_innovation_link',
+      true,
+    ),
+    required_when: whenEq(
+      'innovation_use.linked_result.has_innovation_link',
+      true,
+    ),
+    ...FROM_2026,
+    storage: {
+      kind: 'relation',
+      table: 'linked_result',
+      fk_to_result: 'origin_result_id',
+      value_column: 'linked_results_id',
+      filter: { is_active: 1 },
+    },
+  },
   {
     // When ticked it lifts the any-of group rule of the three lists of this block (D13). QAC-T-19: the form marks the
     // radio required (FM:318-322, `required: true`; IUF:9), and `false` is an answer (the control's `hasValue` is
@@ -458,4 +621,117 @@ export const INNOVATION_USE_FIELDS: CatalogField[] = [
     [30, 39, 45],
     'innovation_use.projection_2030.yet_to_be_determined',
   ),
+  {
+    ...investmentBase,
+    // EST:1-37 (one row per active initiative row, any role); VIU:429-444. Help text: estimates.component.ts headerDescriptions().n1 (HTML stripped).
+    key: 'innovation_use.investment.programs',
+    label:
+      'Estimation of total USD-value of investment by CGIAR Programs during the reporting period',
+    description:
+      'Innovation use team estimates the total investment (in-cash + in-kind) in innovation use made by the leading Science Program/Accelerator and the contributing Science Program/Accelerator during the reporting period. Includes Science Program/Accelerator funds allocated to CGIAR and/or partners. Innovation use team works with contributing Science Program/Accelerator to estimate the total (co-) investment (in-cash + in-kind) in innovation use made by each of the contributing Science Program/Accelerator during the reporting period',
+    type: 'list',
+    order: 46,
+    storage: {
+      kind: 'relation',
+      table: 'results_by_inititiative',
+      fk_to_result: 'result_id',
+      value_column: 'inititiative_id',
+      filter: { is_active: 1 },
+    },
+    subfields: [
+      {
+        key: 'program',
+        label: 'Science Program/Accelerator',
+        type: 'single_select',
+        control_list: 'initiatives',
+        required: true,
+        storage: {
+          kind: 'column',
+          table: 'results_by_inititiative',
+          column: 'inititiative_id',
+        },
+      },
+      ...budgetSubfields('result_initiative_budget', 'result_initiative_id'),
+    ],
+  },
+  {
+    ...investmentBase,
+    // EST:57-96 (one row per active project row; projects are added in Contributors & partners); VIU:446-460. Help text: headerDescriptions().n2.
+    key: 'innovation_use.investment.bilateral',
+    label:
+      'Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period',
+    description:
+      'Innovation use team works with W3/ bilateral projects to estimate the total (co-) investment (in-cash + in-kind) in innovation development made by each of the contributing W3/ Bilaterals during the reporting period Includes W3/ Bilateral funds allocated to CGIAR and/or partners',
+    type: 'list',
+    order: 47,
+    storage: {
+      kind: 'relation',
+      table: 'results_by_projects',
+      fk_to_result: 'result_id',
+      value_column: 'project_id',
+      filter: { is_active: 1 },
+    },
+    subfields: [
+      {
+        key: 'project',
+        label: 'Non-pooled project',
+        type: 'single_select',
+        control_list: 'projects',
+        required: true,
+        storage: {
+          kind: 'column',
+          table: 'results_by_projects',
+          column: 'project_id',
+        },
+      },
+      ...budgetSubfields('non_pooled_projetct_budget', 'result_project_id'),
+    ],
+  },
+  {
+    ...investmentBase,
+    // EST:132-198 (one row per active institution row, any role); VIU:462-479. Help text: headerDescriptions().n3.
+    key: 'innovation_use.investment.partners',
+    label:
+      'Estimated total USD-value of (co-)investment by partners during the reporting period',
+    description:
+      'Innovation use team works with partnersprojects to estimate the total (co-) investment (in-cash + in-kind) in innovation development made by each partner during the reporting period This concerns the investment of partner resources (in-cash and/or in-kind) that were not provided by CGIAR Science Program/Accelerator or projects',
+    type: 'list',
+    order: 48,
+    storage: {
+      kind: 'relation',
+      table: 'results_by_institution',
+      fk_to_result: 'result_id',
+      value_column: 'institutions_id',
+      filter: { is_active: 1 },
+    },
+    subfields: [
+      {
+        key: 'institution',
+        label: 'Partner',
+        type: 'single_select',
+        control_list: 'institutions',
+        required: true,
+        storage: {
+          kind: 'column',
+          table: 'results_by_institution',
+          column: 'institutions_id',
+        },
+      },
+      {
+        // read-only "Institution type" under the partner name (EST partners table, as innovation_dev.estimates_partners)
+        key: 'partner_type',
+        label: 'Institution type',
+        type: 'single_select',
+        control_list: 'institution_types',
+        required: false,
+        storage: {
+          kind: 'lookup',
+          source: 'clarisa.institutions',
+          keys: [{ from: 'institution', to: 'id' }],
+          value_column: 'institution_type_code',
+        },
+      },
+      ...budgetSubfields('result_institutions_budget', 'result_institution_id'),
+    ],
+  },
 ];

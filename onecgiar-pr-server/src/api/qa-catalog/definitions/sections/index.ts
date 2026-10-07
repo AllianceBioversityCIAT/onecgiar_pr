@@ -28,6 +28,8 @@ import {
 import {
   INNOVATION_USE_FIELDS,
   IU_CURRENT_USE_SECTION,
+  IU_INVESTMENT_SECTION,
+  IU_LINKED_RESULT_SECTION,
   IU_PROJECTION_2030_SECTION,
   IU_USE_LEVEL_SECTION,
 } from './innovation-use';
@@ -59,9 +61,11 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   INNOVATION_DEVELOPMENT_SECTION,
   // QAC-T-10 · outcome types (`other_outcome` and `impact_contribution` have no type page, so no section)
   POLICY_CHANGE_SECTION,
+  IU_LINKED_RESULT_SECTION,
   IU_CURRENT_USE_SECTION,
   IU_USE_LEVEL_SECTION,
   IU_PROJECTION_2030_SECTION,
+  IU_INVESTMENT_SECTION,
   // QAC-T-11 · innovation package (IPSR): steps 1, 2.1, 3 and 4 (step 2.2 is admin-only and fully PENDING_CATALOG)
   IPSR_S1_GEOSCOPE_SECTION,
   IPSR_S1_TARGETED_USE_SECTION,

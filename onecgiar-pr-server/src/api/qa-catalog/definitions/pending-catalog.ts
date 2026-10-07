@@ -205,8 +205,8 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
 
   // Innovation development estimates budgets (result_initiative_budget / non_pooled_projetct_budget / result_institutions_budget):
   // `kind_cash` / `is_determined` were bound by QAC-T-18 (innovation_dev.estimates_pooled|non_pooled|partners, path bindings) and left
-  // this list. The same columns still serve innovation_use.investment.* and ipsr_step_4.*_investment (not catalogued yet); they are covered
-  // by the innovation development bindings until those fields are described.
+  // this list; QAC-T-20 binds the same columns again for innovation_use.investment.*. They still serve ipsr_step_4.*_investment (not
+  // catalogued yet), covered by those bindings until that field is described.
 
   // Policy change (QAC-T-10): optional rows (UI [required]=false, no live rule)
   ...stage2('results_policy_changes', 'policy_change.usd_amount', 'amount'),
@@ -222,11 +222,7 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   ),
 
   // Innovation use (QAC-T-10)
-  ...stage2(
-    'results_innovations_use',
-    'innovation_use.linked_result.has_innovation_link (same answer as linked.has_innovation_link; live function has the check commented out, REVIEW D15)',
-    'has_innovation_link',
-  ),
+  // QAC-T-20: `results_innovations_use.has_innovation_link` is bound by `innovation_use.linked_result.has_innovation_link` and left this list.
   ...legacy2025(
     'results_innovations_use',
     'scaling studies question (hidden for non-IPSR from 2026) and legacy male/female counters',
@@ -234,12 +230,8 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'male_using',
     'female_using',
   ),
-  ...stage2(
-    'result_actors',
-    'innovation_use.*.actors.age_disaggregation_not_available and youth_split_applied_by_system (2026-only, optional)',
-    'age_disaggregation_not_available',
-    'youth_split_applied_by_system',
-  ),
+  // QAC-T-20: `result_actors.age_disaggregation_not_available` / `youth_split_applied_by_system` are bound as subfields of
+  // `innovation_use.*.actors` and left this list.
   ...legacy2025(
     'result_actors',
     'legacy / other-type flags of the actors block (not on the 2026 form)',
@@ -249,11 +241,7 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'has_men_youth',
     'addressing_demands',
   ),
-  ...stage2(
-    'results_by_institution_type',
-    'innovation_use.*.organizations.graduate_students (shown only for institution type 50, optional)',
-    'graduate_students',
-  ),
+  // QAC-T-20: `results_by_institution_type.graduate_students` is bound as a subfield of `innovation_use.*.organizations` and left this list.
   ...legacy2025(
     'results_by_institution_type',
     'legacy demand text (not on the 2026 form)',

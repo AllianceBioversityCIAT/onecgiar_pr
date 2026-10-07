@@ -145,7 +145,7 @@ const notApplicableReason = (label: string): CatalogSubField => ({
 // negation of `eq`, NULL vs false), so `kind_cash` stays `required: false`. The "yet to be determined" control is a one-option radio whose
 // only meaning is the either-or above (EST.html:43-48), so it is `required: false` too: the component's default marker is not a
 // requirement to tick it.
-const budgetValue = (
+export const budgetValue = (
   budgetTable: string,
   parentFk: string,
   valueColumn: string,
