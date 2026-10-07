@@ -295,6 +295,14 @@ describe('ShellTopbarComponent', () => {
     expect(routerMock.navigate).toHaveBeenCalledWith(['/result/results-outlet/results-notifications']);
   });
 
+  it('quick/bell-popover-hidden: by default the bell goes to the inbox and opens no popover', async () => {
+    await build();
+    expect(component.bellPopoverEnabled).toBe(false);
+    component.onNotificationsClick();
+    expect(component.notificationsOpen()).toBe(false);
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/result/results-outlet/results-notifications']);
+  });
+
   // BELL-DD-5 (reversion): closing the popover no longer consumes the bell. The old contract
   // ("handleClosePopUp clears updatesPopUpData and PATCHes last-viewed once") is retired - the
   // method is gone, and neither open nor close may touch the list or the last-viewed PATCH.
@@ -687,6 +695,8 @@ describe('ShellTopbarComponent', () => {
         .compileComponents();
       fixture = TestBed.createComponent(ShellTopbarComponent);
       component = fixture.componentInstance;
+      // quick/bell-popover-hidden: the popover is off by default but kept; these specs keep covering it.
+      component.bellPopoverEnabled = true;
       fixture.detectChanges();
     };
 

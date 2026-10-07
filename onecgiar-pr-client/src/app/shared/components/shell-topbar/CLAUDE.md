@@ -32,6 +32,10 @@ service any more.
 - `goToNotifications()` — "See all the notifications", "+N more" and the error link inside the popover —
   targets the merged `results-notifications` route (`/result/results-outlet/results-notifications`, no
   `/requests` suffix; `NOTIF-T-6` / `NOTIF-DD-6`).
+- ⚠️ **The bell popover is HIDDEN, not deleted (`quick/bell-popover-hidden`, 2026-10-07).** `bellPopoverEnabled = false`
+  -> the button's `onNotificationsClick()` calls `goToNotifications()` and the overlay never opens (`aria-haspopup` /
+  `aria-expanded` dropped while off). Everything below about the popover still describes the kept code; flip the flag to
+  `true` to bring it back (the BELL-T-4 spec suite sets it `true` so the popover stays covered).
 - **The bell is the quick inbox (`SPEC:notifications/bell-quick-inbox`, BELL-T-4).** Badge, label and rows read
   `ResultsNotificationsService.bellCount()/bellItems()` (phase-agnostic, BELL-T-2) — NOT `updatesPopUpData`.
   Badge hidden at 0, `99+` above 99, button `aria-label` = `Notifications, N waiting`. The popover lists
@@ -116,4 +120,4 @@ service any more.
 | `app-global-search-palette` | the palette overlay | has its own `CLAUDE.md` — read it before touching the trigger |
 | `app-pop-up-notification-item` | one bell row (decision or update), emits `handoff` | lives under `header-panel/components/`; has inline Accept/Decline (BELL-T-3) |
 
-**Verified:** 2026-10-06 · qa-development-2026-ss · `notifications/bell-read-state` BRS-T-6 on top of `quick/topbar-labelled-actions`, `BELL-T-10`, `BELL-T-8`, `BELL-T-4`
+**Verified:** 2026-10-07 · qa-development-2026-ss · `quick/bell-popover-hidden` on top of `notifications/bell-read-state` BRS-T-6, `quick/topbar-labelled-actions`, `BELL-T-10`, `BELL-T-8`, `BELL-T-4`
