@@ -1537,4 +1537,43 @@ describe('PopUpNotificationItemComponent', () => {
       });
     });
   });
+
+  describe('rejection reason line (RRC-T-9, RRC-R-13)', () => {
+    const render = (extra: any) => {
+      // Fresh fixture per render: re-binding `notification` on the already-checked one trips NG0100 on data-kind.
+      fixture = TestBed.createComponent(PopUpNotificationItemComponent);
+      component = fixture.componentInstance;
+      component.notification = {
+        notification_id: 77,
+        notification_type: 6,
+        obj_notification_type: { type: NotificationType.BILATERAL_RESULT_REJECTED },
+        obj_result: { result_code: 'R9', title: 'T' },
+        created_date: new Date().toISOString(),
+        ...extra
+      };
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('[data-testid="bell-rejection-reason"]') as HTMLElement | null;
+    };
+
+    it('shows the comment for an entry with a comment', () => {
+      const el = render({ has_review_entry: true, review_comment: 'Belongs to SP12' });
+      expect(el?.textContent).toContain('Reason:');
+      expect(el?.textContent).toContain('Belongs to SP12');
+      expect(el?.className).toContain('line-clamp-2');
+    });
+
+    it('shows the fallback for an entry with an empty comment', () => {
+      const el = render({ has_review_entry: true, review_comment: '' });
+      expect(el?.textContent).toContain('No justification was recorded.');
+    });
+
+    it('shows no line for a legacy row', () => {
+      expect(render({ has_review_entry: false, review_comment: null })).toBeNull();
+      expect(render({})).toBeNull();
+    });
+
+    it('shows no line for another type', () => {
+      expect(render({ obj_notification_type: { type: NotificationType.BILATERAL_RESULT_APPROVED }, has_review_entry: true, review_comment: 'x' })).toBeNull();
+    });
+  });
 });

@@ -77,6 +77,16 @@
       }
     </p>
 
+    <!-- RRC-T-9 (RRC-R-13): reason of a rejection; null for every other type and for legacy rows. -->
+    @let rejectionReason = rejectionReasonOf(notification);
+    @if (rejectionReason) {
+      <p
+        class="m-0 mt-1 line-clamp-2 break-words text-[12px] leading-[1.45] text-[var(--pr-text-secondary)]"
+        data-testid="bell-rejection-reason">
+        <span class="font-semibold">{{ rejectionReasonLabel }}</span> {{ rejectionReason }}
+      </p>
+    }
+
   } @else {
     <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
       @if (programCode) {

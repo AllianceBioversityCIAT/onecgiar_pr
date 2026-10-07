@@ -3,6 +3,7 @@ import {
   buildResultNotificationText,
   getAiJobNotificationParts,
   getNotificationActionVerb,
+  getRejectionReasonLine,
   getResultNotificationTextParts,
   isBilateralReviewNotification,
   isBilateralSubmittedNotification,
@@ -684,6 +685,34 @@ describe('notification-type constants', () => {
 
       expect(parts.prefix).toBe('The result');
       expect(parts.suffix).toBe('was submitted for your review by AfricaRice.');
+    });
+  });
+
+  describe('getRejectionReasonLine (RRC-T-9, RRC-R-13)', () => {
+    const rejected = (extra: any) => ({ obj_notification_type: { type: NotificationType.BILATERAL_RESULT_REJECTED }, ...extra });
+
+    it('returns the trimmed comment when the row has an entry', () => {
+      expect(getRejectionReasonLine(rejected({ has_review_entry: true, review_comment: '  Belongs to SP12 ' }))).toBe('Belongs to SP12');
+    });
+
+    it.each([null, '', '   ', undefined])('returns the fallback for an entry with comment %p', comment => {
+      expect(getRejectionReasonLine(rejected({ has_review_entry: true, review_comment: comment }))).toBe('No justification was recorded.');
+    });
+
+    it.each([false, undefined])('returns null for a legacy row (has_review_entry %p), never the fallback', flag => {
+      expect(getRejectionReasonLine(rejected({ has_review_entry: flag, review_comment: null }))).toBeNull();
+      expect(getRejectionReasonLine(rejected({ has_review_entry: flag, review_comment: 'x' }))).toBeNull();
+    });
+
+    it('returns null for other types even if the fields are present', () => {
+      const approved = { obj_notification_type: { type: NotificationType.BILATERAL_RESULT_APPROVED }, has_review_entry: true, review_comment: 'x' };
+      expect(getRejectionReasonLine(approved)).toBeNull();
+    });
+
+    it('leaves the rejection sentence unchanged (RRC-R-16)', () => {
+      const parts = getResultNotificationTextParts(rejected({ has_review_entry: true, review_comment: 'x' }));
+      expect(parts.prefix).toBe('❌ Your Result');
+      expect(parts.suffix).toBe('has been Rejected by the Science Program.');
     });
   });
 });

@@ -1,3 +1,4 @@
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-rejection-notice.copy';
 import {
   Component,
   ElementRef,
@@ -37,6 +38,7 @@ import {
   isBilateralReviewNotification,
   parseCenterReportedProjectText,
   NotificationType,
+  getRejectionReasonLine,
   type AiJobNotificationParts,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
@@ -571,6 +573,13 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   get updateTextParts(): NotificationTextParts {
     return getResultNotificationTextParts(this.notification);
   }
+
+  /** RRC-T-9 (RRC-R-13): the "Reason" line of a rejection update row; null for every other row. */
+  get rejectionReasonLine(): string | null {
+    return this.isUpdateSource ? getRejectionReasonLine(this.notification) : null;
+  }
+
+  readonly rejectionReasonLabel = BILATERAL_REJECTION_NOTICE_COPY.notificationReasonLabel;
 
   /** A finished AI job has no result behind it: no result link, no drawer, just its sentence. */
   get aiJobParts(): AiJobNotificationParts | null {

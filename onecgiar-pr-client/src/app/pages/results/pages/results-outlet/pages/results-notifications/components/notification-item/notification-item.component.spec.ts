@@ -5000,6 +5000,46 @@ describe('NotificationItemComponent', () => {
       expect(patchSpy).not.toHaveBeenCalled();
       expect(consumed).toHaveBeenCalledTimes(1);
     });
+
+    // RRC-T-9 (`bilateral/rejected-result-correction`, RRC-R-13): reason line on a rejection update row.
+    describe('rejection reason line (RRC-T-9)', () => {
+      const buildRejection = (type: string, extra: any) => ({
+        notification_id: 6001,
+        source: 'update',
+        created_date: '2026-09-30T10:00:00.000Z',
+        text: '',
+        obj_notification_type: { type },
+        obj_emitter_user: { first_name: 'System', last_name: '' },
+        obj_result: { result_code: '601', title: 'A rejected result' },
+        ...extra
+      });
+      const lineOf = () => fixture.nativeElement.querySelector('[data-testid="notification-rejection-reason"]') as HTMLElement | null;
+
+      it('shows the comment for an entry with a comment', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: true, review_comment: 'Belongs to SP12' });
+        fixture.detectChanges();
+        expect(lineOf()?.textContent).toContain('Reason:');
+        expect(lineOf()?.textContent).toContain('Belongs to SP12');
+        expect(lineOf()?.className).toContain('line-clamp-2');
+      });
+
+      it('shows the fallback for an entry with an empty comment', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: true, review_comment: '' });
+        fixture.detectChanges();
+        expect(lineOf()?.textContent).toContain('No justification was recorded.');
+      });
+
+      it('shows no line for a legacy row', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: false, review_comment: null });
+        fixture.detectChanges();
+        expect(lineOf()).toBeNull();
+      });
+
+      it('shows no line for another type', () => {
+        component.notification = buildRejection('Bilateral Result Approved', { has_review_entry: true, review_comment: 'x' });
+        fixture.detectChanges();
+        expect(lineOf()).toBeNull();
+      });
+    });
   });
 });
-

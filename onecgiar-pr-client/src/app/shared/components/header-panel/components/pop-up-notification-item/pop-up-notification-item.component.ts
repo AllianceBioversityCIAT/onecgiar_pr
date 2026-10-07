@@ -23,12 +23,14 @@ import {
 } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-decision';
 import { buildRequestNotificationText, creatingCenterLabelOf } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-notification-text';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../internationalization/contribution-request-drawer.copy';
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../../internationalization/bilateral-rejection-notice.copy';
 import { BELL_QUICK_INBOX_COPY } from '../../../../../internationalization/bell-quick-inbox.copy';
 import {
   buildResultNotificationText,
   getNotificationActionVerb,
   getAiJobNotificationParts,
   getProgramCode,
+  getRejectionReasonLine,
   getResultNotificationTextParts,
   NotificationType,
   resolveNotificationType,
@@ -260,6 +262,13 @@ export class PopUpNotificationItemComponent implements OnDestroy {
   textPartsOf(notification) {
     return getResultNotificationTextParts(notification);
   }
+
+  /** RRC-T-9: the "Reason" line of a rejection row, or null when the row has none (RRC-R-13). */
+  rejectionReasonOf(notification): string | null {
+    return getRejectionReasonLine(notification);
+  }
+
+  readonly rejectionReasonLabel = BILATERAL_REJECTION_NOTICE_COPY.notificationReasonLabel;
 
   /** A finished AI job: no result behind it, so the row shows only the server sentence. */
   isAiJob(notification): boolean {

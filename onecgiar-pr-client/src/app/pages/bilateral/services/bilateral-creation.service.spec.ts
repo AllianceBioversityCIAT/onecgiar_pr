@@ -167,10 +167,29 @@ describe('BilateralCreationService', () => {
       expect(service.isEditableByCenterUser()).toBe(true);
     });
 
-    it('is read-only once the result left Editing', () => {
-      for (const status of [BILATERAL_STATUS.PendingReview, BILATERAL_STATUS.Approved, BILATERAL_STATUS.Rejected]) {
+    it('is read-only once the result left Editing for Pending review or Approved', () => {
+      for (const status of [BILATERAL_STATUS.PendingReview, BILATERAL_STATUS.Approved]) {
         service.resultStatusId.set(status);
         expect(service.isEditableByCenterUser()).toBe(false);
+      }
+    });
+
+    // RRC-R-1 / RRC-R-3 — the full table. Falsifier: 5 (or any locked status) returning editable fails it.
+    it('RRC editability table: null/1/8/7 editable; 2/3/4/5/6 locked', () => {
+      const table: Array<[number | null, boolean]> = [
+        [null, true],
+        [1, true],
+        [8, true],
+        [7, true],
+        [2, false],
+        [3, false],
+        [4, false],
+        [5, false],
+        [6, false]
+      ];
+      for (const [status, expected] of table) {
+        service.resultStatusId.set(status as any);
+        expect({ status, editable: service.isEditableByCenterUser() }).toEqual({ status, editable: expected });
       }
     });
 

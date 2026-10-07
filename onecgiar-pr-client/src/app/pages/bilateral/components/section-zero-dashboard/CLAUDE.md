@@ -1,6 +1,6 @@
 # section-zero-dashboard (bilateral)
 
-**Verified:** 2026-10-01 · spec `notifications/primary-decline-rejects-result` PDR-R-9 / PDR-DD-8
+**Verified:** 2026-10-06 · spec `bilateral/rejected-result-correction` RRC-R-11 / RRC-T-7; prior: 2026-10-01 · spec `notifications/primary-decline-rejects-result` PDR-R-9 / PDR-DD-8
 
 ## What it is
 Section 0 of the bilateral form: the read-mostly card that identifies the result (code, type,
@@ -40,6 +40,16 @@ card; bring it back only when one of those actions actually ships.
   also `true` for PendingReview/Approved results; a `sent_back` result in one of those states would
   hit this same rejected branch, but that combination is believed unreachable — a DB check to confirm
   it never occurs is pending at PDR-T-6.
+
+- **RRC-R-1 / RRC-R-11 / RRC-T-7 (2026-10-06):** Rejected (7) is editable (`isEditableByCenterUser`), so
+  `readOnly()` no longer tells a rejected result apart; `isRejected()` (`resultStatusId() === 7`) does.
+  The rejected banner now shows when `readOnly() || isRejected()`. At 7 with exactly one allocated SP
+  (`singleAllocationLocked()`: `isRejected && canEditAssignment && sciencePrograms.length === 1`) the
+  picker is replaced by an `hlmBadge` chip with the owner plus the note
+  (`BILATERAL_PRIMARY_ASSIGNMENT_COPY.singleAllocationNote`) — no empty dropdown. At 7 with an owner
+  (`selectedPrimarySp()`), request state `none` is the deactivated-requests artefact after a review
+  rejection: no "Pick a primary…" banner and no `submitBlockedReason`. The owner always comes from
+  `selectedPrimarySp()`, never from the request state.
 
 ## Where it is used
 - `pages/bilateral-result-creator/bilateral-result-creator.component.html:210` — the only host.

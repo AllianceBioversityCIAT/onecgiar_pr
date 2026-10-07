@@ -583,3 +583,10 @@ contract: `acceptLabel`, `showAlignSlot`, `requestKind`, `leadCode`/`suffix`), a
 below, which still stands for the wording/chip-sizing fixes.
 
 **Prior verification:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-16 ("Declined by" wording + chip font-size/weight/gap fixes, ad-hoc user style feedback; supersedes NOTIF-T-15's stamp above which still stands, just re-stamped here)
+
+## RRC-T-9: reason line on rejection update rows
+`rejectionReasonLine` (getter) delegates to `getRejectionReasonLine()` in `notification-type.constants.ts`
+for `isUpdateSource` rows only: Rejected + `has_review_entry` shows "Reason: <comment>" (2-line clamp) or the
+shared fallback; legacy/other types render no line. Copy in `bilateral-rejection-notice.copy.ts`.
+
+**Verified:** 2026-10-06 · qa-development-2026-ss · RRC-T-9 (`bilateral/rejected-result-correction`): reason line added under the update-row sentence; no other row behaviour changed.

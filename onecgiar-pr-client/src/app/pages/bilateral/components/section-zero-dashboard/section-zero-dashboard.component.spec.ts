@@ -600,4 +600,73 @@ describe('SectionZeroDashboardComponent', () => {
       expect(component.primaryPickerDisabled()).toBe(true);
     });
   });
+  // RRC-T-7 (bilateral/rejected-result-correction) — RRC-R-11 + T-1 forward pointer: at Rejected (7)
+  // the owner shown comes from the role-1 initiative, not from the (deactivated -> "none") request.
+  describe('RRC-T-7 — Rejected (7): owner chip and single-allocation note', () => {
+    const SP = (programId: number, programCode: string) => ({
+      programId,
+      programCode,
+      allocation: '100',
+      spName: `Program ${programCode}`,
+      spShortName: programCode,
+    });
+
+    const openRejected = (programs: any[], status: number | null = 7, requestState: any = 'none') => {
+      const api = TestBed.inject(BilateralApiService) as any;
+      api.GET_resultInitiativeId.mockReturnValue(primaryRequestResponse(requestState, null, []));
+      const current = project(12, 'OLDPROJ');
+      current.sciencePrograms = programs;
+      (creationService.selectedProject as any).set(current);
+      (creationService.selectedPrimarySp as any).set({ programId: 1, programCode: 'SP09', allocation: '100' });
+      (creationService.resultStatusId as any).set(status);
+      (creationService.currentResultId as any).set(60);
+      fixture.detectChanges();
+    };
+
+    it('one allocated SP at 7: read-only chip with the owner + the note, and no empty dropdown', () => {
+      openRejected([SP(1, 'SP09')]);
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-testid="bp-single-allocation-chip"]')?.textContent).toContain('SP09');
+      expect(el.querySelector('[data-testid="bp-single-allocation-note"]')?.textContent?.trim()).toBe(
+        'This project is allocated to a single Science Program, so there is no alternative to choose.',
+      );
+      expect(el.querySelector('.bp-primary-selector')).toBeNull();
+    });
+
+    it('T-1 pointer: request state "none" at 7 with an owner still shows the owner, no "pick" banner, Submit not blocked', () => {
+      openRejected([SP(1, 'SP09')], 7, 'none');
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('SP09');
+      expect(el.textContent).not.toContain('Pick a primary Science Program');
+      expect(component.primaryAssignmentBanner()).toBeNull();
+      expect(component.submitBlockedReason()).toBeNull();
+    });
+
+    it('two allocated SPs at 7: the picker is interactive and there is no single-allocation note', () => {
+      openRejected([SP(1, 'SP09'), SP(2, 'SP12')]);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const toggle = el.querySelector('.bp-primary-selector') as HTMLButtonElement;
+      expect(toggle).not.toBeNull();
+      expect(toggle.disabled).toBe(false);
+      expect(el.querySelector('[data-testid="bp-single-allocation-note"]')).toBeNull();
+    });
+
+    it('falsifier: one allocated SP in Editing (1) keeps the picker, no note', () => {
+      openRejected([SP(1, 'SP09')], 1, 'accepted');
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-testid="bp-single-allocation-note"]')).toBeNull();
+      expect(el.querySelector('.bp-primary-selector')).not.toBeNull();
+    });
+
+    it('sent_back at 7 (editable, not readOnly) shows the rejected banner, not "Pick another"', () => {
+      openRejected([SP(1, 'SP09'), SP(2, 'SP12')], 7, 'sent_back');
+
+      expect(component.primaryAssignmentBanner()?.tone).toBe('error');
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Pick another');
+    });
+  });
 });

@@ -1,3 +1,4 @@
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../internationalization/bilateral-rejection-notice.copy';
 import { BILATERAL_DECISION_NOTICE_COPY } from '../../internationalization/bilateral-decision-notice.copy';
 import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../internationalization/notification-center-tagged.copy';
 import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../internationalization/notification-project-tagged.copy';
@@ -545,4 +546,18 @@ export function isContributionDecisionNotification(notification: any): boolean {
 export function isResultTaggedNotification(notification: any): boolean {
   const type = resolveNotificationType(notification);
   return type === NotificationType.RESULT_CENTER_TAGGED || type === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED;
+}
+
+/**
+ * RRC-T-9 (`bilateral/rejected-result-correction`, RRC-R-13): the justification line of a rejection
+ * notification. Only `BILATERAL_RESULT_REJECTED` rows carrying `has_review_entry` get one — a legacy
+ * row (no entry) returns null, never the "no justification" fallback. A null/empty/blank
+ * `review_comment` on a row WITH an entry yields the fallback copy (the server keeps `''` as `''`).
+ */
+export function getRejectionReasonLine(notification: any): string | null {
+  if (resolveNotificationType(notification) !== NotificationType.BILATERAL_RESULT_REJECTED) return null;
+  if (notification?.has_review_entry !== true) return null;
+
+  const comment = typeof notification?.review_comment === 'string' ? notification.review_comment.trim() : '';
+  return comment || BILATERAL_REJECTION_NOTICE_COPY.noJustification;
 }

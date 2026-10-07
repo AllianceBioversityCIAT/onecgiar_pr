@@ -448,14 +448,16 @@
                       <span [class]="statusClass(result.status_id)">{{ result.status_name }}</span>
 
                       <!-- P2-3157 AC4: read back the Science Program's rejection justification -->
-                      @if (isRejected(result)) {
+                      @if (hasReviewHistory(result)) {
                         <button
                           type="button"
                           class="brl_justification_trigger"
-                          title="View rejection justification"
-                          aria-label="View rejection justification"
+                          [class.brl_justification_trigger--rejected]="isRejected(result)"
+                          [attr.title]="isRejected(result) ? historyCopy.trigger.rejected : historyCopy.trigger.history"
+                          [attr.aria-label]="isRejected(result) ? historyCopy.trigger.rejected : historyCopy.trigger.history"
+                          data-testid="brl-history-trigger"
                           (click)="$event.stopPropagation(); openJustification(result)">
-                          <i class="material-icons-round">warning_amber</i>
+                          <i class="material-icons-round">{{ isRejected(result) ? 'warning_amber' : 'history' }}</i>
                         </button>
                       }
                     </span>
@@ -627,7 +629,7 @@
   styleClass="brl_justification_modal"
   (onHide)="closeJustification()">
   <div class="brl_justification_body">
-    <h2 class="brl_justification_title">Rejection justification — {{ justificationResultCode() }}</h2>
+    <h2 class="brl_justification_title">{{ historyCopy.history.title }} — {{ justificationResultCode() }}</h2>
 
     @if (justificationLoading()) {
       <p class="brl_justification_state">Loading the review history…</p>
@@ -635,13 +637,29 @@
       <p class="brl_justification_state brl_justification_state--error">
         The review history could not be loaded. Please try again.
       </p>
-    } @else if (rejectionEntry(); as entry) {
-      <p class="brl_justification_meta">
-        Rejected by {{ reviewerName(entry) }} on {{ entry.created_at | date: 'dd MMM yyyy' }}
-      </p>
-      <p class="brl_justification_comment">{{ entry.comment || 'No justification was recorded.' }}</p>
+    } @else if (historyEntries().length) {
+      <ol class="m-0 flex list-none flex-col gap-[10px] p-0" data-testid="brl-history-list">
+        @for (entry of historyEntries(); track entry.id; let last = $last) {
+          <li class="flex flex-col gap-[4px]" data-testid="brl-history-entry">
+            <p class="brl_justification_meta m-0 flex flex-wrap items-center gap-x-[8px]">
+              <span class="font-semibold" data-testid="brl-history-action">
+                {{ isResubmit(entry) ? historyCopy.history.actionResubmit : historyCopy.history.actionReject }}
+              </span>
+              @if (entry.initiative_code) {
+                <span class="font-mono" data-testid="brl-history-sp">{{ entry.initiative_code }}</span>
+              }
+              <span>{{ reviewerName(entry) }}</span>
+              <span>{{ entry.created_at | date: 'dd MMM yyyy' }}</span>
+            </p>
+            <p class="brl_justification_comment">{{ entry.comment || historyCopy.noJustification }}</p>
+            @if (!last) {
+              <hr class="m-0 mt-[6px] border-0 border-t border-solid border-[var(--pr-border)]" />
+            }
+          </li>
+        }
+      </ol>
     } @else {
-      <p class="brl_justification_state">No rejection justification was recorded for this result.</p>
+      <p class="brl_justification_state">{{ historyCopy.history.empty }}</p>
     }
   </div>
 

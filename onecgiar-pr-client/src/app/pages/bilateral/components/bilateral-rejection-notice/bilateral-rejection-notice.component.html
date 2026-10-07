@@ -1,0 +1,40 @@
+@if (visible()) {
+  <div
+    role="status"
+    class="flex w-full flex-col gap-[4px] rounded-[8px] border px-[12px] py-[10px] text-[12px] leading-[1.45] border-[var(--pr-status-rejected-fg)] bg-[var(--pr-status-rejected-bg)] text-[var(--pr-status-rejected-fg)]"
+    data-testid="bilateral-rejection-notice">
+    @if (loading()) {
+      <p class="m-0" data-testid="bilateral-rejection-notice-loading">{{ copy.loading }}</p>
+    } @else if (error()) {
+      <p class="m-0 font-medium" data-testid="bilateral-rejection-notice-error">{{ copy.loadError }}</p>
+    } @else {
+      <p class="m-0 flex flex-wrap items-center gap-x-[8px] font-semibold" data-testid="bilateral-rejection-notice-meta">
+        <span>{{ copy.title }}</span>
+        @if (entry(); as e) {
+          @if (e.initiative_code) {
+            <span class="font-mono font-medium">{{ e.initiative_code }}</span>
+          }
+          <span class="font-normal">{{ e.created_at | date: 'dd MMM yyyy' }}</span>
+        }
+      </p>
+      <p
+        class="m-0 whitespace-pre-wrap"
+        [class.line-clamp-3]="!expanded()"
+        data-testid="bilateral-rejection-notice-comment">
+        {{ comment() || copy.noJustification }}
+      </p>
+      @if (isLong()) {
+        <button
+          hlmBtn
+          variant="link"
+          type="button"
+          class="h-auto w-fit self-start p-0 text-[12px] text-inherit"
+          [attr.aria-expanded]="expanded()"
+          data-testid="bilateral-rejection-notice-toggle"
+          (click)="toggle()">
+          {{ expanded() ? copy.showLess : copy.showMore }}
+        </button>
+      }
+    }
+  </div>
+}

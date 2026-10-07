@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { BilateralCreationService } from '../../services/bilateral-creation.service';
+import { BILATERAL_STATUS, BilateralCreationService } from '../../services/bilateral-creation.service';
+import { HlmBadgeImports } from '@spartan/badge';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BilateralProjectSelectorComponent } from '../bilateral-project-selector/bilateral-project-selector.component';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -31,6 +32,7 @@ interface PrimaryRequestState {
     CommonModule,
     CustomFieldsModule,
     BilateralProjectSelectorComponent,
+    ...HlmBadgeImports,
   ],
   templateUrl: './section-zero-dashboard.component.html',
   styleUrl: './section-zero-dashboard.component.scss'
@@ -63,6 +65,19 @@ export class SectionZeroDashboardComponent {
 
   readonly primaryPickerDisabled = computed(() => this.primaryRequest()?.state === 'pending');
 
+  /**
+   * RRC-R-1 — Rejected (7) is editable now (`isEditableByCenterUser`), so `readOnly()` no longer
+   * tells a rejected result apart from an Editing one; the status does.
+   */
+  readonly isRejected = computed(() => this.creationService.resultStatusId() === BILATERAL_STATUS.Rejected);
+
+  /**
+   * T-1 forward pointer: after a review rejection every primary request is deactivated, so the
+   * request state reads `none` while the role-1 owner still exists. The owner comes from
+   * `selectedPrimarySp()` (the role-1 initiative), never from the request state.
+   */
+  private readonly hasOwner = computed(() => !!this.creationService.selectedPrimarySp());
+
   private readonly declinedProgramCodes = computed(
     () => new Set((this.primaryRequest()?.declined_by_codes ?? []).map((code) => code.toUpperCase())),
   );
@@ -89,12 +104,14 @@ export class SectionZeroDashboardComponent {
       // not an awaiting-re-pick round — old sent-back results (not read-only) keep today's banner.
       // Spec tone "danger" maps to `app-alert-status`'s `'error'` (its most severe status; the
       // component has no `danger` value — see `alert-status.component.ts`).
-      if (this.readOnly()) {
+      if (this.readOnly() || this.isRejected()) {
         return { tone: 'error' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.rejected(codes) };
       }
       return { tone: 'warning' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.sentBack(codes) };
     }
     if (request.state === 'none') {
+      // Rejected with an owner: `none` is the deactivated-requests artefact, not "never picked".
+      if (this.isRejected() && this.hasOwner()) return null;
       return { tone: 'warning' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.noneUnpicked };
     }
     if (request.state === 'draft') {
@@ -111,8 +128,18 @@ export class SectionZeroDashboardComponent {
   readonly submitBlockedReason = computed(() => {
     const request = this.primaryRequest();
     if (!request || request.state === 'accepted' || request.state === 'draft') return null;
+    if (request.state === 'none' && this.isRejected() && this.hasOwner()) return null;
     return BILATERAL_PRIMARY_ASSIGNMENT_COPY.submitBlockedReason;
   });
+
+  /**
+   * RRC-R-11 — Rejected, editable, and the lead project is allocated to exactly one SP: the picker
+   * would be empty, so a read-only chip plus the explanatory note replace it.
+   */
+  readonly singleAllocationLocked = computed(
+    () => this.isRejected() && this.canEditAssignment() && this.availablePrimaryPrograms().length === 1,
+  );
+  readonly singleAllocationNote = BILATERAL_PRIMARY_ASSIGNMENT_COPY.singleAllocationNote;
 
   readonly declinedOptionSuffix = BILATERAL_PRIMARY_ASSIGNMENT_COPY.declinedOptionSuffix;
 
