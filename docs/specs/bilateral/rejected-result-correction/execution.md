@@ -424,3 +424,50 @@ Another session is working in this checkout (uncommitted, not RRC): RSB spec arc
 - **→ T-10:** long reason + unbroken URL in the bell and the page row (clamp, wrap, layout); legacy rejection notification shows no reason line; a new rejection shows its own reason in both views.
 
 **Final verification:** scoped Jest 502/502 · lint clean.
+
+### `RRC-T-10` — Real run on PRTest (manual, user) — in progress
+
+- **Test data (2026-10-07, from the user's catalogue query on `prdb`):** A = result `9640` (id 12108, "W3U TEST DEMO … C2-INNODEV", lead project 2134, allocated SP02/SP09/SP10, primary SP02); A2 (API path) = `9642` (id 12110, project 2131, SP01/SP07/SP11, primary SP01); B (single SP) = pending selection.
+- **Baseline 9640:** `status_id 1`; Q1 history empty; Q2 role 1 SP02 active; Q3 no share requests; Q4 no notifications.
+- **Block 1 (9640), user-run on `prdb`, 2026-10-07:**
+  - Contributor SP06 added in Editing with owner → `share_result_request` 4576 `contribution`, status 1, active (unchanged behaviour ✅). A teammate declined it from the notifications (status 3, inactive) — a contribution-request decline, not a review rejection; no justification asked, result status unchanged (expected).
+  - Submit → `status_id 5` ✅; history 803 `UPDATE` "Submitted for review by the reporting center" (ordinary row, not RESUBMIT) ✅; submit notifications type 12, `review_history_id` NULL ✅.
+  - Review rejection by SP02 from the QA review module, justification "Motivo A" → `status_id 7` ✅; history 805 `REJECT` "Motivo A" SP02 ✅; 3 rejection notifications (type 7, targets 606/1131/575) all with `review_history_id = 805` ✅ (`RRC-R-13` storage); SP02 still role 1 active ✅.
+  - Open question: history 804 `UPDATE` "accepted" (user 829, 20 s before the REJECT) — to confirm it comes from the existing review flow, not RRC.
+- **Block 1 cont. / Block 2 (9640), 2026-10-07:**
+  - Edit + save at 7 → `status_id` stays 7, no new notification (MAX 49659) ✅ (`R-2`). Notice on the result: "Rejected by the Science Program · SP02 · 07 Oct 2026 · Motivo A", no controls; rail badge REJECTED ✅ (`R-14`). Stale QA message shown ✅.
+  - Resubmit: Submit re-ran the AI check on the current version; the AI service was unavailable → existing BIL-QAI rule allows `submitted_without_check` on a current run (stale guard not relaxed ✅ `R-6`). Status → Pending Review ✅; history 806 `RESUBMIT` SP02 ✅ (`R-5`).
+  - Second rejection 807 `REJECT` "Motivo A" (same text re-entered) → notice shows the latest reason ✅.
+  - Contributor SP09 added at 7 → `share_result_request` 4577 `contribution`, status 4 (draft), active — held, not sent ✅ (`R-8`, `P-13` storage). Notification baseline MAX = 49686.
+- **Block 3 (9640), 2026-10-07 — direct transfer + resubmission to the new SP:**
+  - Selector at 7 offers only SP02/SP09/SP10 (allocated; rejecting SP02 still pickable) ✅ (`R-9`).
+  - Save SP10 → role 1 SP10 active, SP02 inactive; one active `primary` row SP10 (4578) status 2; SP09 draft stays 4; no notification (MAX 49686) ✅ (`R-10`, T-1/T-2 on real rows; no pending banner, no ToC asked).
+  - Change of mind SP02 → SP10: one active role 1 after each save; no notifications ✅ (`R-10` change of mind).
+  - Submit → status 5; history 811 `RESUBMIT` SP10 ✅; SP09 contribution 4577 → status 1 (released only at resubmission) ✅ (`R-8`); new notifications only type 12 (submit), `review_history_id` NULL, no ownership request ✅ (`R-10` submit after the move). History 808–810 `UPDATE` "Updated lead project and primary Science Program" = existing per-save audit rows.
+
+## Finding `RRC-T-10-F1` (2026-10-07) — rejection notifications name the CURRENT primary, not the rejecting SP
+
+- **Observed on PRTest (9640):** after the direct transfer SP02 → SP10, both rejection notifications (history 805 and 807, rejected by **SP02**) read "has been Rejected by the Science Program **SP10**" on the notifications page (and the bell uses the same builder).
+- **Cause:** the client builds the program in the sentence with `getProgramCode(notification)` (`onecgiar-pr-client/src/app/shared/constants/notification-type.constants.ts:134`), which reads the result's **current** role-1 initiative at render time. Before RRC a rejected result could not change primary, so the sentence was always right; `RRC-R-10` (direct transfer at 7) makes it wrong for every earlier rejection.
+- **Violates:** `RRC-R-13` ("in addition to saying the result was rejected and **by which SP**").
+- **Fix (user-approved "corrígelo ahora mismo", 2026-10-07):** server readout also returns the rejecting SP's code from the linked `result_review_history` row (`initiative_id`) for Rejected rows (`review_program_code`, additive); client uses it for Rejected rows with a linked entry, falls back to today's `getProgramCode` otherwise (legacy rows unchanged). Reopens T-5 (server readout) and T-9 (client sentence) under this finding; tracked as `RRC-T-10-F1` in `tasks.md`.
+- **Block 4 (9640), 2026-10-07:** third rejection by **SP10** from the review module with a long justification (starts with `www.google.com` + lorem ipsum) → history 812 `REJECT` SP10 ✅; rejection notifications linked per row: 805 ×3, 807 ×3, 812 ×3 ✅ (`R-13` "older rejection keeps its own reason"); notifications page renders "Reason: …" clamped to 2 lines with ellipsis, no overflow ✅ (`R-13` long text, page row). Bell / result notice / history modal checks pending. Unbroken long-token case not yet exercised (URL was space-separated).
+- **Block 4 cont. (9640), 2026-10-07:** bell — "Declined" chip SP10 + "Reason: www.google.com …" clamped to 2 lines, no overflow ✅; result notice — "Rejected by the Science Program · SP10 · 07 Oct 2026", long text clamped with "Show more" ✅ (`R-14`); results list — Rejected + red warning icon ✅; history modal — oldest first: Rejected SP02 (Angel Jarrin) "Motivo A" → Resubmitted SP02 → Rejected SP02 (Admin PRMS) "Motivo A" → Resubmitted SP10 → Rejected SP10 long text, each with SP, reviewer, date; no UPDATE rows; full text unclamped; closes with Escape ✅ (`R-15`).
+- **Finding `RRC-T-10-F2` (minor, UX):** in the history modal, **Resubmitted** rows render the fallback "No justification was recorded." in the same pink box as a rejection — misleading (a resubmission carries no justification). Proposed: RESUBMIT rows show no comment box (or a neutral line). Pending user decision.
+- **`RRC-T-10-F2` decision:** user chose to **leave it as is** (2026-10-07) — recorded as a minor UX follow-up, out of this spec.
+
+### `RRC-T-10-F1` — Rejection notification names the SP that rejected
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 1 of 3) — code; real-row confirmation pending on PRTest after deploy |
+| Date | 2026-10-07 |
+| Attempts | 1 Implementer (`akili-implementer`, effort `high`) · 1 Reviewer (lens checklist) |
+| Skills | `nestjs-expert`, `angular-developer`, `tdd` |
+| Requirements | `RRC-R-13` ("by which SP"), `RRC-R-16` |
+
+- **Files changed:** `onecgiar-pr-server/src/api/notification/notification.service.ts` (+ spec): readout relations `obj_review_history: { obj_initiative: true }`, select adds `obj_initiative { id, official_code }`; `withReviewEntryFields` adds `review_program_code` (official code or `null`) to Rejected rows only; joined object stripped; socket push untouched. Existing `ResultReviewHistory.obj_initiative` (nullable ManyToOne) reused — no entity/schema change. · `onecgiar-pr-client/src/app/shared/constants/notification-type.constants.ts` (+ spec): `getReviewProgramCode(n)` (Rejected + `has_review_entry === true` + non-blank string) and `buildBilateralReviewSuffix` uses `getReviewProgramCode(n) ?? getProgramCode(n)`. · **Declared scope addition (Reviewer: needed for R-13 consistency):** `pop-up-notification-item.component.ts` bell chip getter `programCode` uses `getReviewProgramCode(n) ?? <old>` so the chip does not contradict the sentence (+ 2 bell spec cases).
+- **Existing assertion edited (Reviewer: legitimate, relation shape changed):** `notification.service.spec.ts` "asks the repository for the linked history row (relation + comment selected)": `objectContaining({ obj_review_history: true })` → `objectContaining({ obj_review_history: expect.anything() })`; a new test pins the exact nested relation + select.
+- **Verification:** server red first (5 failed) → `npx jest --maxWorkers=2 --testPathPattern="notification.service" --silent --reporters=summary` → `Test Suites: 2 passed, 2 total` · `Tests: 154 passed, 154 total`; client falsifier proven by manual revert (1 failed) → `npx jest --maxWorkers=2 --no-coverage --testPathPattern="notification-type.constants|pop-up-notification-item|notification-item"` → `Test Suites: 5 passed, 5 total` · `Tests: 514 passed, 514 total`. eslint / `ng lint` clean; tsc server + client app exit 0.
+- **Reviewer: PASS** — "Rejected notifications now name the SP from the linked result_review_history row (initiative_id → official_code). If the row has no linked entry or no SP, they fall back to today's current-primary code, so legacy rows are unchanged and R-16 holds for Approved and other types. The nested relation is a nullable ManyToOne resolved with a LEFT JOIN and no where filter on it, so no notification row is dropped; the one edited assertion follows from the relation shape change, and a new test pins the exact nested shape."
+- **ADVISORY:** record the bell-chip addition in the task Files line (done below); confirm on PRTest that rows 805/807/812 render SP02/SP02/SP10 in the bell and the page.

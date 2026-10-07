@@ -7,7 +7,7 @@
 | Spec Path | `bilateral/rejected-result-correction` (`RRC`) |
 | Linked spec | `requirements.md` + `design.md`, same folder |
 | Jira | P2-3895 |
-| Status | `in-progress` (T-1..T-9 done; T-10 (manual, user) pending, 2026-10-06) |
+| Status | `in-progress` (T-1..T-9 done; T-10 in progress (finding F1 being fixed), 2026-10-06) |
 | Budget (design §13) | 10 tasks · ~1,300 LOC · 1 review round each, 2 for T-1 and T-6 |
 
 ## 2. Pre-flight checklist
@@ -193,6 +193,22 @@
 - **Verification:** SQL given in chat (history rows, role-1 rows, `share_result_request` rows, notification links); results recorded in `execution.md`.
 - **Disqualifier:** a check run on the local stack instead of PRTest is not evidence for this task.
 - **Done:** [ ] every scenario above recorded with its outcome.
+
+### `RRC-T-10-F1` — Rejection notification names the SP that rejected (finding from T-10)
+
+- **Status:** `[x]`: Reviewer PASS, attempt 1, 2026-10-07 (code); PRTest confirmation folded into T-10 (see `execution.md`).
+- **Type:** server + client (fix, user-approved 2026-10-07)
+- **Description:** Rejected notifications must name the SP that recorded **that** rejection, not the result's current primary. Server: the panel and bell readouts add `review_program_code` (official code of the linked `result_review_history.initiative_id`, or `null`) to Rejected rows, next to `review_comment` / `has_review_entry`. Client: the Rejected sentence (bell + notifications page) uses `review_program_code` when the row has a linked entry and a code; otherwise today's `getProgramCode` (legacy rows and history rows without SP unchanged).
+- **Implements:** `RRC-R-13` ("by which SP"), `RRC-R-16` (other types unchanged)
+- **Files:** `onecgiar-pr-server/src/api/notification/notification.service.ts` + spec (and the `ResultReviewHistory` relation only if needed); `onecgiar-pr-client/src/app/shared/constants/notification-type.constants.ts` + spec + `shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component.ts` + spec (bell chip, declared addition)
+- **Depends on:** T-5, T-9 · **Blocks:** T-10
+- **Review:** `full`
+- **Verification:** server `npx jest --maxWorkers=2 --testPathPattern="notification.service" --silent --reporters=summary`; client `npx jest --maxWorkers=2 --no-coverage --testPathPattern="notification-type.constants|pop-up-notification-item|notification-item"`.
+  - Two rejections by SP02, then primary moved to SP10 → both sentences say SP02.
+  - Linked history row without SP (pre-`RSB-T-1`) → falls back to today's code, never a wrong SP.
+  - Legacy row (no entry) → sentence exactly as today. Other types' sentences unchanged.
+- **Falsifier:** a test where the current primary is SP10 and the linked rejection is SP02 must fail if the sentence says SP10.
+- **Done:** [x] scoped Jest green (server + client) · [x] lint/tsc clean.
 
 ## 4. Dependency Graph
 

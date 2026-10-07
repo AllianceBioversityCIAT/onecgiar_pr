@@ -32,6 +32,7 @@ import {
   getProgramCode,
   getRejectionReasonLine,
   getResultNotificationTextParts,
+  getReviewProgramCode,
   NotificationType,
   resolveNotificationType,
   isAiJobFinishedNotification,
@@ -97,7 +98,8 @@ export class PopUpNotificationItemComponent implements OnDestroy {
    */
   get programCode(): string {
     const n = this.notification;
-    if (n?.notification_id) return n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? getProgramCode(n) ?? '';
+    // RRC-T-10-F1: a rejection's chip names the SP that rejected it, not the result's current primary.
+    if (n?.notification_id) return getReviewProgramCode(n) ?? n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? getProgramCode(n) ?? '';
     return (n?.is_map_to_toc ? n?.obj_owner_initiative?.official_code : n?.obj_shared_inititiative?.official_code) ?? '';
   }
 

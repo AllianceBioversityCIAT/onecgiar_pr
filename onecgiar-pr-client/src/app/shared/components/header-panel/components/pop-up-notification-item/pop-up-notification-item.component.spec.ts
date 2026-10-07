@@ -1094,6 +1094,24 @@ describe('PopUpNotificationItemComponent', () => {
       expect(q('bell-time')?.textContent?.trim()).toBe('2h ago');
     });
 
+    // RRC-T-10-F1: the bell names the SP that rejected, not the result's current primary (SP09 here).
+    it('a rejection with a linked entry shows the rejecting SP in its chip and sentence, not the current primary', () => {
+      render({ ...update(NotificationType.BILATERAL_RESULT_REJECTED), has_review_entry: true, review_comment: 'x', review_program_code: 'SP02' });
+
+      expect(q('bell-program-chip')?.textContent?.trim()).toBe('SP02');
+      expect(fixture.nativeElement.textContent).toContain('Science Program SP02');
+      expect(fixture.nativeElement.textContent).not.toContain('Science Program SP09');
+    });
+
+    it('a rejection whose entry has no code, or a legacy rejection, keeps the current primary', () => {
+      render({ ...update(NotificationType.BILATERAL_RESULT_REJECTED), has_review_entry: true, review_program_code: null });
+      expect(q('bell-program-chip')?.textContent?.trim()).toBe('SP09');
+      expect(fixture.nativeElement.textContent).toContain('Science Program SP09');
+
+      render({ ...update(NotificationType.BILATERAL_RESULT_REJECTED), has_review_entry: false });
+      expect(q('bell-program-chip')?.textContent?.trim()).toBe('SP09');
+    });
+
     it('an update card has no buttons at all', () => {
       render(update(NotificationType.BILATERAL_RESULT_APPROVED));
       expect(fixture.nativeElement.querySelector('button')).toBeNull();

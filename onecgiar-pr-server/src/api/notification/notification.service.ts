@@ -1035,6 +1035,8 @@ export class NotificationService {
    * through {@link getNotificationReadoutRelations}). `review_history_id` NULL (a notification sent
    * before the link existed, or whose history row was deleted) -> no joined row -> `false` / `null`,
    * which the client reads as "show no reason line", never as "no justification was recorded".
+   * `review_program_code` (`RRC-T-10-F1`) is the official code of that row's `initiative_id` (the SP that
+   * recorded the rejection), or `null` when there is no linked row or the row has no SP.
    * Every other type is returned untouched (`RRC-R-16`). The joined object is not passed on.
    */
   private withReviewEntryFields<T>(notification: T): T {
@@ -1050,6 +1052,8 @@ export class NotificationService {
       ...rest,
       has_review_entry: Boolean(linkedEntry),
       review_comment: linkedEntry?.comment ?? null,
+      // `RRC-T-10-F1`: the SP that recorded THIS rejection, not the result's current primary.
+      review_program_code: linkedEntry?.obj_initiative?.official_code ?? null,
     } as T;
   }
 
@@ -1061,12 +1065,19 @@ export class NotificationService {
   private getNotificationReadoutSelect() {
     return {
       ...this.getNotificattionSelect(),
-      obj_review_history: { id: true, comment: true },
+      obj_review_history: {
+        id: true,
+        comment: true,
+        obj_initiative: { id: true, official_code: true },
+      },
     };
   }
 
   private getNotificationReadoutRelations() {
-    return { ...this.getNotificationRelations(), obj_review_history: true };
+    return {
+      ...this.getNotificationRelations(),
+      obj_review_history: { obj_initiative: true },
+    };
   }
 
   private getNotificattionSelect() {

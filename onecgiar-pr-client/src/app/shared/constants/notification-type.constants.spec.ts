@@ -5,6 +5,7 @@ import {
   getNotificationActionVerb,
   getRejectionReasonLine,
   getResultNotificationTextParts,
+  getReviewProgramCode,
   isBilateralReviewNotification,
   isBilateralSubmittedNotification,
   isResultTaggedNotification,
@@ -713,6 +714,66 @@ describe('notification-type constants', () => {
       const parts = getResultNotificationTextParts(rejected({ has_review_entry: true, review_comment: 'x' }));
       expect(parts.prefix).toBe('❌ Your Result');
       expect(parts.suffix).toBe('has been Rejected by the Science Program.');
+    });
+  });
+
+  // RRC-T-10-F1 (RRC-R-13 "by which SP", RRC-R-16): the Rejected sentence names the SP that recorded
+  // THAT rejection (server `review_program_code`), not the result's current primary.
+  describe('Rejected sentence names the rejecting SP (RRC-T-10-F1)', () => {
+    // The result's CURRENT primary is SP10 (after a direct transfer SP02 -> SP10).
+    const currentPrimarySp10 = resultOf({ obj_result_by_initiatives: [{ obj_initiative: { id: 10, official_code: 'SP10' } }] });
+    const rejected = (extra: any = {}) => notificationOf(NotificationType.BILATERAL_RESULT_REJECTED, { obj_result: currentPrimarySp10, ...extra });
+
+    // FALSIFIER: fails if the sentence says SP10.
+    it('says SP02 (the rejecting SP) while the current primary is SP10', () => {
+      const n = rejected({ has_review_entry: true, review_program_code: 'SP02' });
+
+      expect(getResultNotificationTextParts(n).suffix).toBe('has been Rejected by the Science Program SP02.');
+      expect(buildResultNotificationText(n)).toBe('❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program SP02.');
+    });
+
+    it('falls back to the current primary code when the entry carries no code (pre-RSB-T-1 history row)', () => {
+      const n = rejected({ has_review_entry: true, review_program_code: null });
+
+      expect(getResultNotificationTextParts(n).suffix).toBe('has been Rejected by the Science Program SP10.');
+    });
+
+    it.each(['', '   ', undefined, 7])('treats review_program_code %p as absent', code => {
+      const n = rejected({ has_review_entry: true, review_program_code: code });
+
+      expect(getResultNotificationTextParts(n).suffix).toBe('has been Rejected by the Science Program SP10.');
+    });
+
+    it('a legacy row (no entry) reads exactly as today, even if a code were present', () => {
+      expect(getResultNotificationTextParts(rejected({ has_review_entry: false, review_program_code: 'SP02' })).suffix).toBe(
+        'has been Rejected by the Science Program SP10.'
+      );
+      expect(getResultNotificationTextParts(rejected()).suffix).toBe('has been Rejected by the Science Program SP10.');
+    });
+
+    it('Approved keeps using the current primary, ignoring review_program_code (RRC-R-16)', () => {
+      const approved = notificationOf(NotificationType.BILATERAL_RESULT_APPROVED, {
+        obj_result: currentPrimarySp10,
+        has_review_entry: true,
+        review_program_code: 'SP02'
+      });
+
+      expect(getResultNotificationTextParts(approved).suffix).toBe('has been Approved by the Science Program SP10.');
+    });
+
+    it('a server-composed centre sentence (text) still wins for Rejected', () => {
+      const n = rejected({ has_review_entry: true, review_program_code: 'SP02', text: 'where your center was tagged, has been rejected by the Science Program SP02.' });
+
+      expect(getResultNotificationTextParts(n).suffix).toBe('where your center was tagged, has been rejected by the Science Program SP02.');
+    });
+
+    it('getReviewProgramCode exposes the same rule to the bell chip', () => {
+      expect(getReviewProgramCode(rejected({ has_review_entry: true, review_program_code: 'SP02' }))).toBe('SP02');
+      expect(getReviewProgramCode(rejected({ has_review_entry: true, review_program_code: null }))).toBeNull();
+      expect(getReviewProgramCode(rejected({ has_review_entry: false, review_program_code: 'SP02' }))).toBeNull();
+      expect(
+        getReviewProgramCode(notificationOf(NotificationType.BILATERAL_RESULT_APPROVED, { has_review_entry: true, review_program_code: 'SP02' }))
+      ).toBeNull();
     });
   });
 });

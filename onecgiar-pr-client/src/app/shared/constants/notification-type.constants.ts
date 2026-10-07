@@ -224,8 +224,22 @@ export function parseCenterReportedProjectText(text: string): { reporter: string
   return { reporter, code, owner };
 }
 
+/**
+ * RRC-T-10-F1 (RRC-R-13 "by which SP"): the Science Program that recorded THIS rejection, as returned
+ * by the server (`review_program_code`, from the linked history row). Only a `BILATERAL_RESULT_REJECTED`
+ * row with a linked entry (`has_review_entry === true`) and a non-blank string code qualifies; anything
+ * else returns null so the caller keeps today's `getProgramCode` (legacy rows, history rows without SP).
+ */
+export function getReviewProgramCode(notification: any): string | null {
+  if (resolveNotificationType(notification) !== NotificationType.BILATERAL_RESULT_REJECTED) return null;
+  if (notification?.has_review_entry !== true) return null;
+
+  const code = notification?.review_program_code;
+  return typeof code === 'string' && code.trim() ? code.trim() : null;
+}
+
 function buildBilateralReviewSuffix(decisionLabel: string, notification: any): string {
-  const programCode = getProgramCode(notification);
+  const programCode = getReviewProgramCode(notification) ?? getProgramCode(notification);
   const programText = programCode ? `the Science Program ${programCode}` : 'the Science Program';
   return `has been ${decisionLabel} by ${programText}.`;
 }

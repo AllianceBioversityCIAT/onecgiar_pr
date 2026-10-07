@@ -2375,8 +2375,12 @@ describe('NotificationService', () => {
           });
         expect(resultScopedCalls).toHaveLength(2); // viewed + pending
         for (const opts of resultScopedCalls) {
+          // RRC-T-10-F1: was `{ obj_review_history: true }`; the relation is now nested so the
+          // linked row's initiative can be joined as well (still the same LEFT JOIN of the row).
           expect(opts.relations).toEqual(
-            expect.objectContaining({ obj_review_history: true }),
+            expect.objectContaining({
+              obj_review_history: expect.anything(),
+            }),
           );
           expect(opts.select).toEqual(
             expect.objectContaining({
@@ -2484,6 +2488,186 @@ describe('NotificationService', () => {
         expect(byId['2006']).not.toHaveProperty('obj_review_history');
         expect(byId['2007']).not.toHaveProperty('review_comment');
         expect(byId['2007']).not.toHaveProperty('has_review_entry');
+      });
+
+      // RRC-T-10-F1 / RRC-R-13 "by which SP" — the code comes from the linked history row, never
+      // from the result's current primary (which moved to SP10 after a direct transfer).
+      describe('review_program_code (RRC-T-10-F1)', () => {
+        const historyWithProgram = (
+          id: string,
+          initiativeId: number | null,
+          officialCode: string | null,
+        ) => ({
+          id,
+          action: 'REJECT',
+          comment: `comment ${id}`,
+          obj_initiative:
+            officialCode === null
+              ? null
+              : { id: initiativeId, official_code: officialCode },
+        });
+
+        const withPrimarySp10 = (id: string, reviewHistoryId: string | null) =>
+          rejectedRow(id, reviewHistoryId, {
+            obj_result: {
+              result_code: 10,
+              title: 'A bilateral result',
+              source: 'API',
+              obj_result_by_initiatives: [
+                {
+                  is_active: true,
+                  initiative_role_id: 1,
+                  obj_initiative: { official_code: 'SP10' },
+                },
+              ],
+              obj_result_by_project: [],
+            },
+          });
+
+        const stubWithPrograms = (
+          rows: Record<string, any>[],
+          histories: Record<string, any>[],
+        ) => {
+          mockNotificationRepository.find.mockImplementation(
+            async (opts: any) => {
+              const where = Array.isArray(opts.where)
+                ? opts.where[0]
+                : opts.where;
+              if (where?.obj_result?.obj_result_by_initiatives === undefined) {
+                return [];
+              }
+              return rows
+                .filter((row) => row.read === where.read)
+                .map((row) => ({
+                  ...row,
+                  ...(opts.relations?.obj_review_history
+                    ? {
+                        obj_review_history:
+                          histories.find(
+                            (history) =>
+                              String(history.id) ===
+                              String(row.review_history_id),
+                          ) ?? null,
+                      }
+                    : {}),
+                }));
+            },
+          );
+        };
+
+        it('asks the repository for the history row initiative code (relation + official_code selected)', async () => {
+          stubWithPrograms([], []);
+
+          await service.getAllNotifications(user);
+
+          const resultScopedCalls = mockNotificationRepository.find.mock.calls
+            .map(([opts]) => opts)
+            .filter((opts) => {
+              const where = Array.isArray(opts.where)
+                ? opts.where[0]
+                : opts.where;
+              return where?.obj_result?.obj_result_by_initiatives !== undefined;
+            });
+          expect(resultScopedCalls).toHaveLength(2);
+          for (const opts of resultScopedCalls) {
+            expect(opts.relations).toEqual(
+              expect.objectContaining({
+                obj_review_history: { obj_initiative: true },
+              }),
+            );
+            expect(opts.select).toEqual(
+              expect.objectContaining({
+                obj_review_history: expect.objectContaining({
+                  obj_initiative: expect.objectContaining({
+                    official_code: true,
+                  }),
+                }),
+              }),
+            );
+          }
+        });
+
+        it('two rejections by SP02 while the result primary is now SP10: both rows return SP02', async () => {
+          stubWithPrograms(
+            [withPrimarySp10('2101', '201'), withPrimarySp10('2102', '202')],
+            [
+              historyWithProgram('201', 2, 'SP02'),
+              historyWithProgram('202', 2, 'SP02'),
+            ],
+          );
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'history',
+          });
+
+          const rows = result.response.notificationsViewed;
+          expect(rows).toHaveLength(2);
+          for (const row of rows) {
+            expect(row.review_program_code).toBe('SP02');
+          }
+        });
+
+        it('a linked history row without a Science Program (pre-RSB-T-1): review_program_code null', async () => {
+          stubWithPrograms(
+            [withPrimarySp10('2103', '203')],
+            [historyWithProgram('203', null, null)],
+          );
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'history',
+          });
+
+          const [row] = result.response.notificationsViewed;
+          expect(row.has_review_entry).toBe(true);
+          expect(row.review_program_code).toBeNull();
+        });
+
+        it('a legacy rejection (no linked row): review_program_code null', async () => {
+          stubWithPrograms([withPrimarySp10('2104', null)], []);
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'history',
+          });
+
+          const [row] = result.response.notificationsViewed;
+          expect(row.has_review_entry).toBe(false);
+          expect(row.review_program_code).toBeNull();
+        });
+
+        it('a pending rejection (bell/pending readout) also carries the code, and the joined initiative is not leaked', async () => {
+          stubWithPrograms(
+            [{ ...withPrimarySp10('2105', '204'), read: false }],
+            [historyWithProgram('204', 2, 'SP02')],
+          );
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'pending',
+          });
+
+          const [row] = result.response.notificationsPending;
+          expect(row.review_program_code).toBe('SP02');
+          expect(row).not.toHaveProperty('obj_review_history');
+        });
+
+        it('rows that are not Rejected gain no review_program_code', async () => {
+          stubWithPrograms(
+            [
+              rejectedRow('2106', null, {
+                obj_notification_type: {
+                  type: NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+                },
+              }),
+            ],
+            [],
+          );
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'history',
+          });
+
+          const [row] = result.response.notificationsViewed;
+          expect(row).not.toHaveProperty('review_program_code');
+        });
       });
     });
 
