@@ -285,6 +285,549 @@ describe('validateCatalogShape', () => {
   });
 });
 
+describe('validateCatalogShape — QAC-T-14 model extension (QAC-R-13, QAC-R-14, DD-12, DD-13)', () => {
+  const eq = (key: string, value: string | number | boolean) => ({
+    field: key,
+    operator: 'eq' as const,
+    value,
+  });
+  const gate = (over: Partial<CatalogField> = {}) =>
+    field({ key: 'general.gate', type: 'boolean', order: 2, ...over });
+
+  it('accepts a visible_when / required_when over an existing key, nested all/any, and the pseudo fields', () => {
+    expect(
+      validateCatalogShape(
+        catalog({
+          fields: [
+            gate(),
+            field({
+              key: 'general.detail',
+              order: 3,
+              visible_when: {
+                all: [
+                  eq('general.gate', true),
+                  { any: [eq('result_type', 'policy_change')] },
+                ],
+              },
+              required_when: eq('general.gate', true),
+            }),
+          ],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('DD-12: `result_type` is the only pseudo-key; `is_replicated` is not (it is the catalog field `general.is_replicated`)', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          field({ required_when: eq('is_replicated', 1) }),
+          field({
+            key: 'general.other',
+            order: 2,
+            required_when: eq('result_type', 'policy_change'),
+          }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'UNKNOWN_CONDITION_KEY',
+        path: 'field:general.title/required_when',
+      }),
+    ]);
+  });
+
+  it.each([
+    [
+      'an operator outside eq | in | not_null',
+      { field: 'general.gate', operator: 'gt', value: 1 },
+    ],
+    ['a missing operator', { field: 'general.gate', value: 1 }],
+    [
+      '`in` with a scalar value',
+      { field: 'general.gate', operator: 'in', value: 'a' },
+    ],
+    ['`in` with no value', { field: 'general.gate', operator: 'in' }],
+    [
+      '`in` with an empty array',
+      { field: 'general.gate', operator: 'in', value: [] },
+    ],
+    ['`eq` with no value', { field: 'general.gate', operator: 'eq' }],
+    [
+      '`eq` with an array value',
+      { field: 'general.gate', operator: 'eq', value: [1] },
+    ],
+  ])(
+    'DD-12: rejects a condition with %s (also nested in all/any, and on a subfield)',
+    (_name, leaf) => {
+      const bad = leaf as never;
+      const expected = (path: string) => [
+        expect.objectContaining({ rule: 'MALFORMED_CONDITION', path }),
+      ];
+      expect(
+        validateCatalogShape(
+          catalog({ fields: [gate(), field({ visible_when: bad })] }),
+        ),
+      ).toEqual(expected('field:general.title/visible_when'));
+      expect(
+        validateCatalogShape(
+          catalog({
+            fields: [
+              gate(),
+              field({ required_when: { all: [{ any: [bad] }] } }),
+            ],
+          }),
+        ),
+      ).toEqual(expected('field:general.title/required_when'));
+      expect(
+        validateCatalogShape(
+          catalog({
+            fields: [
+              gate(),
+              field({
+                key: 'general.people',
+                type: 'list',
+                order: 3,
+                subfields: [{ ...subfield, key: 'org', required_when: bad }],
+              }),
+            ],
+          }),
+        ),
+      ).toEqual(expected('field:general.people/subfield:org/required_when'));
+    },
+  );
+
+  it('DD-12: rejects `not_null` carrying a value (it takes none)', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          gate(),
+          field({
+            visible_when: {
+              field: 'general.gate',
+              operator: 'not_null',
+              value: true,
+            },
+          }),
+        ],
+      }),
+    );
+    expect(errors.map((e) => e.rule)).toEqual(['MALFORMED_CONDITION']);
+    expect(errors[0].message).toContain('not_null');
+  });
+
+  it('DD-12: accepts `not_null` with no value and `in` with a non-empty array (control for the operator check)', () => {
+    expect(
+      validateCatalogShape(
+        catalog({
+          fields: [
+            gate(),
+            field({
+              visible_when: { field: 'general.gate', operator: 'not_null' },
+              required_when: {
+                field: 'result_type',
+                operator: 'in',
+                value: ['policy_change', 'other_output'],
+              },
+            }),
+          ],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('QAC-R-13: rejects a visible_when naming a key that is not in the catalog (also inside all/any)', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          field({
+            visible_when: { all: [{ any: [eq('general.ghost', true)] }] },
+          }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'UNKNOWN_CONDITION_KEY',
+        path: 'field:general.title/visible_when',
+      }),
+    ]);
+    expect(errors[0].message).toContain('general.ghost');
+  });
+
+  it('QAC-R-13: rejects a required_when naming an unknown key', () => {
+    const errors = validateCatalogShape(
+      catalog({ fields: [field({ required_when: eq('general.ghost', 1) })] }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'UNKNOWN_CONDITION_KEY',
+        path: 'field:general.title/required_when',
+      }),
+    ]);
+  });
+
+  it('QAC-R-13: rejects a condition key that exists but is not valid in every year the field is valid', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          gate({ valid_from: 2025, valid_to: 2025 }),
+          field({
+            key: 'general.detail',
+            order: 3,
+            valid_from: 2026,
+            visible_when: eq('general.gate', true),
+          }),
+          // control: the referenced field covers the referrer's whole range -> accepted
+          field({
+            key: 'general.covered',
+            order: 4,
+            valid_from: 2025,
+            valid_to: 2025,
+            visible_when: eq('general.gate', true),
+          }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'CONDITION_KEY_NOT_VALID',
+        path: 'field:general.detail/visible_when',
+      }),
+    ]);
+  });
+
+  it('QAC-R-13: subfield conditions may name a sibling subfield or a top-level key; an unknown key is rejected', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          gate(),
+          field({
+            key: 'general.people',
+            type: 'list',
+            order: 3,
+            subfields: [
+              { ...subfield, key: 'is_external', type: 'boolean' },
+              {
+                ...subfield,
+                key: 'org',
+                visible_when: eq('is_external', true),
+                required_when: eq('general.gate', true),
+              },
+              { ...subfield, key: 'bad', visible_when: eq('ghost', true) },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'UNKNOWN_CONDITION_KEY',
+        path: 'field:general.people/subfield:bad/visible_when',
+      }),
+    ]);
+  });
+
+  it('QAC-R-14: accepts subfields nested to depth 2', () => {
+    expect(
+      validateCatalogShape(
+        catalog({
+          fields: [
+            field({
+              key: 'general.programs',
+              type: 'list',
+              subfields: [
+                {
+                  ...subfield,
+                  key: 'program',
+                  type: 'list',
+                  subfields: [{ ...subfield, key: 'indicator' }],
+                },
+              ],
+            }),
+          ],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('QAC-R-14: rejects depth 3 (a depth-2 subfield that itself has subfields)', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          field({
+            key: 'general.programs',
+            type: 'list',
+            subfields: [
+              {
+                ...subfield,
+                key: 'program',
+                type: 'list',
+                subfields: [
+                  {
+                    ...subfield,
+                    key: 'mapping',
+                    type: 'list',
+                    subfields: [{ ...subfield, key: 'too_deep' }],
+                  },
+                ],
+              },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'MAX_DEPTH_EXCEEDED',
+        path: 'field:general.programs/subfield:program/subfield:mapping',
+      }),
+    ]);
+  });
+
+  it('QAC-R-1: a nested list/object subfield still needs subfields; a nested select still needs a control_list; sibling keys are unique', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          field({
+            key: 'general.programs',
+            type: 'list',
+            subfields: [
+              {
+                ...subfield,
+                key: 'program',
+                type: 'list',
+                subfields: [
+                  { ...subfield, key: 'pick', type: 'single_select' },
+                  { ...subfield, key: 'dup' },
+                  { ...subfield, key: 'dup' },
+                ],
+              },
+              { ...subfield, key: 'group', type: 'object' },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'DUPLICATE_KEY',
+        path: 'field:general.programs/subfield:program/subfield:dup',
+      }),
+      expect.objectContaining({
+        rule: 'SELECT_WITHOUT_CONTROL_LIST',
+        path: 'field:general.programs/subfield:program/subfield:pick',
+      }),
+      expect.objectContaining({
+        rule: 'STRUCTURED_WITHOUT_SUBFIELDS',
+        path: 'field:general.programs/subfield:group',
+      }),
+    ]);
+  });
+
+  it('DD-13: rejects two subfields that would persist as the same row (parent_key "<field>.<sub>" collision)', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          field({
+            key: 'general.a',
+            type: 'list',
+            subfields: [
+              {
+                ...subfield,
+                key: 'b',
+                type: 'list',
+                subfields: [{ ...subfield, key: 'c' }],
+              },
+            ],
+          }),
+          field({
+            key: 'general.a.b',
+            type: 'list',
+            order: 2,
+            subfields: [{ ...subfield, key: 'c' }],
+          }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'DUPLICATE_KEY',
+        path: 'field:general.a.b/subfield:c',
+      }),
+    ]);
+  });
+
+  const pathStep = { table: 'child', join_from: 'id', join_to: 'parent_id' };
+  const withPath = (storage: unknown, asSub = false) =>
+    asSub
+      ? catalog({
+          fields: [
+            field({
+              key: 'general.group',
+              type: 'list',
+              subfields: [{ ...subfield, storage: storage as never }],
+            }),
+          ],
+        })
+      : catalog({ fields: [field({ storage: storage as never })] });
+
+  it('QAC-R-14: accepts a well-formed path binding on a field and on a subfield', () => {
+    const ok = {
+      kind: 'path',
+      steps: [pathStep, { ...pathStep, filter: { is_active: 1 } }],
+      value_column: 'value',
+      columns: ['extra'],
+    };
+    expect(validateCatalogShape(withPath(ok))).toEqual([]);
+    expect(validateCatalogShape(withPath(ok, true))).toEqual([]);
+  });
+
+  it.each([
+    ['no steps', { kind: 'path', steps: [], value_column: 'v' }],
+    [
+      'a step without a table',
+      {
+        kind: 'path',
+        steps: [{ ...pathStep, table: '' }],
+        value_column: 'v',
+      },
+    ],
+    [
+      'a step without join_to',
+      {
+        kind: 'path',
+        steps: [{ table: 't', join_from: 'id' }],
+        value_column: 'v',
+      },
+    ],
+    ['no value_column', { kind: 'path', steps: [pathStep] }],
+  ])('QAC-R-14: rejects a malformed path binding (%s)', (_name, storage) => {
+    const errors = validateCatalogShape(withPath(storage));
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'MALFORMED_PATH_BINDING',
+        path: 'field:general.title',
+      }),
+    ]);
+    expect(
+      validateCatalogShape(withPath(storage, true)).map((e) => e.rule),
+    ).toEqual(['MALFORMED_PATH_BINDING']);
+  });
+
+  it('QAC-R-14: accepts a lookup binding; rejects one missing source, key_from or value_column', () => {
+    // key_from must name a real key: a top-level key (a subfield may not name itself)
+    const ok = (asSub: boolean) => ({
+      kind: 'lookup',
+      source: 'toc_hlo',
+      key_from: asSub ? 'general.group' : 'general.title',
+      value_column: 'statement',
+    });
+    expect(validateCatalogShape(withPath(ok(false)))).toEqual([]);
+    expect(validateCatalogShape(withPath(ok(true), true))).toEqual([]);
+    for (const missing of ['source', 'key_from', 'value_column']) {
+      const bad = (asSub: boolean) => ({ ...ok(asSub), [missing]: '' });
+      expect(validateCatalogShape(withPath(bad(false)))).toEqual([
+        expect.objectContaining({
+          rule: 'MALFORMED_LOOKUP_BINDING',
+          path: 'field:general.title',
+        }),
+      ]);
+      expect(
+        validateCatalogShape(withPath(bad(true), true)).map((e) => e.rule),
+      ).toEqual(['MALFORMED_LOOKUP_BINDING']);
+    }
+  });
+});
+
+describe('validateCatalogShape: lookup key_from (DD-13)', () => {
+  const lookup = (key_from: string) => ({
+    kind: 'lookup' as const,
+    source: 'toc_hlo',
+    key_from,
+    value_column: 'statement',
+  });
+  const holder = (over: Partial<CatalogField>): CatalogDefinition =>
+    catalog({
+      fields: [
+        field({
+          key: 'general.programs',
+          type: 'list',
+          subfields: [
+            { ...subfield, key: 'hlo_id', type: 'number' },
+            { ...subfield, key: 'hlo', storage: lookup('hlo_id') },
+          ],
+        }),
+        field({ key: 'general.anchor_id', order: 2, type: 'number' }),
+        field({ key: 'general.hlo', order: 3, ...over }),
+      ],
+    });
+
+  it('accepts key_from naming a sibling subfield key, or a top-level key', () => {
+    expect(
+      validateCatalogShape(holder({ storage: lookup('general.anchor_id') })),
+    ).toEqual([]);
+  });
+
+  it('rejects key_from naming neither a sibling subfield nor a top-level key (subfield and top-level lookups)', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          field({
+            key: 'general.programs',
+            type: 'list',
+            subfields: [
+              { ...subfield, key: 'hlo', storage: lookup('ghost_id') },
+            ],
+          }),
+          field({ key: 'general.hlo', order: 2, storage: lookup('ghost_id') }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'UNKNOWN_LOOKUP_KEY',
+        path: 'field:general.programs/subfield:hlo',
+      }),
+      expect.objectContaining({
+        rule: 'UNKNOWN_LOOKUP_KEY',
+        path: 'field:general.hlo',
+      }),
+    ]);
+    expect(errors[0].message).toContain('ghost_id');
+  });
+
+  it('rejects a subfield lookup whose key_from names the subfield itself, even when a top-level key has that name', () => {
+    const errors = validateCatalogShape(
+      catalog({
+        fields: [
+          field({
+            key: 'general.programs',
+            type: 'list',
+            subfields: [
+              { ...subfield, key: 'hlo', storage: lookup('hlo') },
+              { ...subfield, key: 'other', storage: lookup('hlo') },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(errors).toEqual([
+      expect.objectContaining({
+        rule: 'UNKNOWN_LOOKUP_KEY',
+        path: 'field:general.programs/subfield:hlo',
+      }),
+    ]);
+    expect(errors[0].message).toContain('itself');
+  });
+
+  it('a sibling key is not enough for a top-level lookup (siblings only exist among subfields)', () => {
+    const errors = validateCatalogShape(holder({ storage: lookup('hlo_id') }));
+    expect(errors.map((e) => e.rule)).toEqual(['UNKNOWN_LOOKUP_KEY']);
+  });
+});
+
 describe('isValidIn (QAC-R-3)', () => {
   it.each([
     [{ valid_from: 2025, valid_to: 2025 }, 2024, false],
@@ -322,7 +865,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 9 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 10 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -448,11 +991,50 @@ describe('the real catalog definitions', () => {
       'general.discontinued_reasons',
       'general.merge_targets',
       'general.split_targets',
+      'general.is_replicated',
     ]);
     expect(gi.map((f) => f.order)).toEqual(gi.map((_, i) => i + 1));
     const cp = sorted('contributors_partners');
     expect(cp.map((f) => f.order)).toEqual(cp.map((_, i) => i + 1));
     expect(cp[0].key).toBe('contributors.submitter');
+  });
+
+  it('DD-12 (T-14 review): `general.is_replicated` is a catalogued boolean on result.is_replicated for the innovation types; no condition names the bare column; it is no longer NOT_FOR_QA', () => {
+    const f = CATALOG_FIELDS.find((x) => x.key === 'general.is_replicated');
+    expect(f).toBeDefined();
+    expect(f?.section).toBe('general_information');
+    expect(f?.type).toBe('boolean');
+    expect(f?.label).toBe('Is this a replicated innovation?');
+    expect(f?.result_types).toEqual([
+      'innovation_development',
+      'innovation_use',
+    ]);
+    expect(f?.required).toBe(false);
+    expect(f?.required_confirmed).toBe(false);
+    expect(f?.storage).toEqual({
+      kind: 'column',
+      table: 'result',
+      column: 'is_replicated',
+    });
+    expect(
+      NOT_FOR_QA.some(
+        (n) => n.table === 'result' && n.column === 'is_replicated',
+      ),
+    ).toBe(false);
+    const conditionKeys = (c: unknown): string[] => {
+      const o = c as Record<string, unknown>;
+      if (!o) return [];
+      if (Array.isArray(o.all)) return o.all.flatMap(conditionKeys);
+      if (Array.isArray(o.any)) return o.any.flatMap(conditionKeys);
+      return [o.field as string];
+    };
+    const used = CATALOG_FIELDS.flatMap((x) => [
+      ...conditionKeys(x.required_when),
+      ...conditionKeys(x.visible_when),
+    ]);
+    expect(used).not.toContain('is_replicated');
+    // the discontinued-reasons rule (ANNUAL_UPDATING_ACTIVE) and the is_discontinued rule
+    expect(used.filter((k) => k === 'general.is_replicated')).toHaveLength(2);
   });
 
   it('QAC-R-5: the IPSR step-1 geography is unconfirmed and optional (the live step-1 function does not test it), and innovation_package carries no common geo.* key', () => {

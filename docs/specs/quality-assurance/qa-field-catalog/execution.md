@@ -255,3 +255,11 @@
 
 - Owner: "que quede contributors and partners melo… reglas explícitas de qué mostraría y cuándo… QA debe armar la consulta" + granularity question. Answered: granularity valid as description; QA selects top-level fields; the results endpoint returns the whole object.
 - Added QAC-R-13 (visible_when / required_when exposed), QAC-R-14 (depth 2, path and lookup bindings; top-level field = QA unit), DD-12, DD-13, tasks QAC-T-14, QAC-T-15. Approval Mode unchanged (pre-approved; owner mandate to decide).
+
+### QAC-T-14 — Model extension: display rules, depth 2, path and lookup bindings — PASS (attempt 3)
+
+- Date: 2026-10-07 · Attempts: 3
+- Delivered: `Condition` type shared by `required_when` / `visible_when` (fields and subfields); subfields depth 2; `PathBinding` (subfield paths start from the parent element's table) and `LookupBinding`; validator rules `UNKNOWN_CONDITION_KEY`, `CONDITION_KEY_NOT_VALID`, `MAX_DEPTH_EXCEEDED`, `MALFORMED_PATH_BINDING`, `MALFORMED_LOOKUP_BINDING`, `MALFORMED_CONDITION`, `UNKNOWN_LOOKUP_KEY`; completeness guard handles path columns, ignores lookups; mapper exposes `visible_when` / `required_when` and nested subfields (never storage); `CONTRACT_VERSION` in the content hash + `PROJECTION_FINGERPRINTS` map + 71-path structural pin; new field `general.is_replicated` (conditions no longer use a non-catalog pseudo-key; only `result_type` remains); catalog 2026.10 (115 fields); depth-2 persistence `parent_key = '<field>.<sub>'`; contract doc v1.5 (+ caveat restored, gap 7: `visible_when` not persisted — migration pending, owner runs it).
+- Attempt 1 → FAIL (doc caveat dropped; response changed w/o version; `is_replicated` pseudo-key). Attempt 2 → FAIL (pinned fixture missed field-level description/control_list). Attempt 3 → PASS. Final: 183/183, tsc/eslint clean; falsifiers red for each guard.
+- Spec edits by the Leader (2a2fba021): DD-12 and QAC-R-13 (only pseudo-key `result_type`; response change ⇒ version change; subfield paths from parent).
+- Requirements: QAC-R-13, QAC-R-14 (mechanics)

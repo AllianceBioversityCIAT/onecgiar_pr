@@ -74,7 +74,7 @@ const impactAreaField = (
 const ANNUAL_UPDATING_ACTIVE = {
   all: [
     whenEq('general.is_discontinued', true),
-    whenEq(IS_REPLICATED_FIELD, 1),
+    whenEq(IS_REPLICATED_FIELD, true),
   ],
 };
 
@@ -316,7 +316,7 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     result_types: INNOVATION_TYPES,
     required: false,
     required_confirmed: true,
-    required_when: whenEq(IS_REPLICATED_FIELD, 1),
+    required_when: whenEq(IS_REPLICATED_FIELD, true),
     ...FROM_2026,
     storage: { kind: 'column', table: 'result', column: 'is_discontinued' },
   },
@@ -392,5 +392,21 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
       value_column: 'target_result_id',
       filter: { transition_type: 'split' },
     },
+  },
+  // Flag that gates the annual-updating block (`rd-general-information.component.html:2`, only for result types 7
+  // and 2 per the annual-updating guide). It is stored on every result but the form never shows it as an input, so
+  // the label is the catalog's own wording, not a client string. Catalogued (T-14 review) so the three
+  // annual-updating conditions reference a real key instead of a pseudo-key.
+  {
+    key: 'general.is_replicated',
+    label: 'Is this a replicated innovation?',
+    type: 'boolean',
+    section: SECTION,
+    order: 25,
+    result_types: INNOVATION_TYPES,
+    required: false,
+    required_confirmed: false,
+    ...FROM_2026,
+    storage: { kind: 'column', table: 'result', column: 'is_replicated' },
   },
 ];

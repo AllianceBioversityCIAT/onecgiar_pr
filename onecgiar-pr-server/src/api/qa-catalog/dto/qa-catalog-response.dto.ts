@@ -1,6 +1,7 @@
 // @akili-spec quality-assurance/qa-field-catalog
 import {
   CatalogFieldType,
+  Condition,
   CatalogLevel,
   ResultTypeScope,
 } from '../definitions/types';
@@ -25,6 +26,11 @@ export interface QaCatalogSubFieldResponse {
   type: CatalogFieldType;
   control_list?: string;
   required?: boolean;
+  /** QAC-R-13: omitted when the subfield is always required / always shown. */
+  required_when?: Condition;
+  visible_when?: Condition;
+  /** QAC-R-14: one more level (max depth 2 below the top-level field). */
+  subfields?: QaCatalogSubFieldResponse[];
 }
 
 export interface QaCatalogFieldResponse {
@@ -39,6 +45,8 @@ export interface QaCatalogFieldResponse {
   required: boolean;
   valid_from: number;
   valid_to: number | null;
+  required_when?: Condition;
+  visible_when?: Condition;
   subfields?: QaCatalogSubFieldResponse[];
 }
 

@@ -179,7 +179,7 @@ Same shape as T-8 for IPSR. **Implements:** QAC-R-11, R-1, R-7. **Depends on:** 
 
 Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignored) diffed against 2026; set `valid_from=2025` on shared fields, `valid_to=2025` on retired ones, add 2025-only fields; `versions.ts` 2025 entry; HITL review as T-7. **Implements:** QAC-R-9 (2025 vs 2026 scenario on real data), QAC-R-3, QAC-R-11 (2025 MAY). **Depends on:** T-12. **Review:** checklist. **Falsifier:** a 2026-only field leaking into 2025 → service test red. **Consumers:** none. **Skills:** `nestjs-expert`.
 
-### QAC-T-14 — Model extension: display rules, depth 2, path and lookup bindings (amendment 2026-10-07)
+### [x] QAC-T-14 — Model extension: display rules, depth 2, path and lookup bindings (amendment 2026-10-07)
 
 - **Type:** server · **Review:** full (contract + CI gate)
 - **Description:** types (`visible_when` on field/subfield; `required_when` on subfield; nested subfields depth 2; `PathBinding`, `LookupBinding`); shape validator (condition keys exist and are valid that year; depth ≤ 2; path steps well-formed; lookup has source + key_from); completeness guard (path steps' columns subtracted; lookups ignored; path tables must be in scope); response mapper exposes `visible_when` / `required_when` (and nested subfields), still never storage; sync unaffected beyond JSON; snapshot hash includes the new data; contract doc updated.

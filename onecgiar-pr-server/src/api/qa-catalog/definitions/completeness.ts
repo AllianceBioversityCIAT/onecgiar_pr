@@ -5,7 +5,14 @@ import type { ColumnMetadataArgs } from 'typeorm/metadata-args/ColumnMetadataArg
 import type { JoinColumnMetadataArgs } from 'typeorm/metadata-args/JoinColumnMetadataArgs';
 import type { TableMetadataArgs } from 'typeorm/metadata-args/TableMetadataArgs';
 import { snakeCase } from 'typeorm/util/StringUtils';
-import { CatalogField, NotForQaEntry, PendingCatalogEntry } from './types';
+import {
+  CatalogField,
+  CatalogSubField,
+  NotForQaEntry,
+  PendingCatalogEntry,
+  StorageBinding,
+  SubFieldStorageBinding,
+} from './types';
 import type { ExcludedTable } from './excluded-tables';
 import type { EntityClass } from './scope';
 
@@ -86,37 +93,97 @@ interface Claim {
 }
 
 /**
+ * The table a binding's value row lives on, i.e. the row a child (subfield) binding starts from:
+ * a column or relation binding names it; a path binding ends on its last step's table; a lookup has
+ * no table (reference data), so nothing can be joined from it.
+ */
+function lastTableOf(
+  s: StorageBinding | SubFieldStorageBinding,
+): string | undefined {
+  switch (s.kind) {
+    case 'column':
+    case 'relation':
+      return s.table;
+    case 'path':
+      return s.steps?.[s.steps.length - 1]?.table;
+    default:
+      return undefined;
+  }
+}
+
+/**
  * Columns a binding claims. A relation binding covers `fk_to_result` and `value_column` of its table;
  * its `filter` keys also count as covered (they are columns the binding itself names and must exist),
- * and are stale-checked like the rest.
+ * and are stale-checked like the rest. A path binding (DD-13) claims, per step, `join_to` and the
+ * filter keys on the step's table and `join_from` on the previous table, plus `value_column` and
+ * `columns` on the last step's table. The first step starts from `startTable`: `result` for a
+ * top-level field, the PARENT binding's last table for a subfield (DD-12), so the parent table must
+ * be in scope too; with no start table (the parent is a lookup) the first `join_from` is unchecked.
+ * A lookup claims nothing: its source is reference data, not a result table.
  */
-function claimsFrom(fields: CatalogField[]): Claim[] {
-  const claims: Claim[] = [];
-  for (const f of fields) {
-    const s = f.storage;
-    if (s.kind === 'column') {
-      claims.push({
-        table: s.table,
-        column: s.column,
-        origin: `field ${f.key}`,
-      });
-    } else {
-      const origin = `field ${f.key}`;
-      claims.push({ table: s.table, column: s.fk_to_result, origin });
-      claims.push({ table: s.table, column: s.value_column, origin });
-      for (const key of Object.keys(s.filter ?? {})) {
-        claims.push({ table: s.table, column: key, origin });
+function claimsOfBinding(
+  s: StorageBinding | SubFieldStorageBinding,
+  origin: string,
+  startTable: string | undefined,
+): Claim[] {
+  switch (s.kind) {
+    case 'column':
+      return [{ table: s.table, column: s.column, origin }];
+    case 'relation':
+      return [
+        { table: s.table, column: s.fk_to_result, origin },
+        { table: s.table, column: s.value_column, origin },
+        ...Object.keys(s.filter ?? {}).map((column) => ({
+          table: s.table,
+          column,
+          origin,
+        })),
+      ];
+    case 'path': {
+      const claims: Claim[] = [];
+      let previous = startTable;
+      for (const step of s.steps ?? []) {
+        if (previous !== undefined) {
+          claims.push({ table: previous, column: step.join_from, origin });
+        }
+        claims.push({ table: step.table, column: step.join_to, origin });
+        for (const column of Object.keys(step.filter ?? {})) {
+          claims.push({ table: step.table, column, origin });
+        }
+        previous = step.table;
       }
+      const last = s.steps?.[s.steps.length - 1];
+      if (last) {
+        for (const column of [s.value_column, ...(s.columns ?? [])]) {
+          claims.push({ table: last.table, column, origin });
+        }
+      }
+      return claims;
     }
-    for (const sub of f.subfields ?? []) {
-      claims.push({
-        table: sub.storage.table,
-        column: sub.storage.column,
-        origin: `subfield ${f.key}.${sub.key}`,
-      });
-    }
+    default:
+      return [];
   }
-  return claims;
+}
+
+function claimsOfSubfields(
+  subs: CatalogSubField[] | undefined,
+  prefix: string,
+  parentTable: string | undefined,
+): Claim[] {
+  return (subs ?? []).flatMap((sub) => {
+    const id = `${prefix}.${sub.key}`;
+    return [
+      ...claimsOfBinding(sub.storage, `subfield ${id}`, parentTable),
+      ...claimsOfSubfields(sub.subfields, id, lastTableOf(sub.storage)),
+    ];
+  });
+}
+
+function claimsFrom(fields: CatalogField[]): Claim[] {
+  return fields.flatMap((f) => [
+    ...claimsOfBinding(f.storage, `field ${f.key}`, 'result'),
+    ...claimsOfSubfields(f.subfields, f.key, lastTableOf(f.storage)),
+  ]);
 }
 
 /** Returns human-readable failures; empty array means the guard passes. */

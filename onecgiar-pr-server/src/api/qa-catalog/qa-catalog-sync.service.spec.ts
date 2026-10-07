@@ -387,4 +387,68 @@ describe('QaCatalogSyncService (QAC-R-6, QAC-R-3)', () => {
     expect(typeof patch.synced_at).toBe('function');
     expect(patch.synced_at()).toBe('CURRENT_TIMESTAMP');
   });
+
+  it('QAC-T-14: persists depth-2 subfields as rows with parent_key "<field>.<sub>", plus a subfield required_when; re-sync of the same rows writes nothing', async () => {
+    const source = makeSource();
+    source.fields[1].subfields = [
+      {
+        key: 'program',
+        label: 'Program',
+        type: 'list',
+        required_when: { field: 'title', operator: 'not_null' },
+        visible_when: { field: 'title', operator: 'not_null' },
+        storage: {
+          kind: 'path',
+          steps: [{ table: 'child', join_from: 'id', join_to: 'parent_id' }],
+          value_column: 'v',
+        },
+        subfields: [
+          {
+            key: 'indicator',
+            label: 'Indicator',
+            type: 'text',
+            storage: {
+              kind: 'lookup',
+              source: 'toc',
+              key_from: 'indicator_id',
+              value_column: 'name',
+            },
+          },
+        ],
+      },
+    ];
+    const empty = build({
+      resultTypes: [],
+      sections: [],
+      fields: [],
+      versions: [],
+    });
+    await empty.service.sync(source);
+    const rows = empty.repos.field.insert.mock.calls[0][0];
+    expect(rows.map((f: any) => [f.key, f.parent_key])).toEqual([
+      ['title', ''],
+      ['geo', ''],
+      ['program', 'geo'],
+      ['indicator', 'geo.program'],
+    ]);
+    const program = rows[2];
+    expect(program.required_when).toEqual({
+      field: 'title',
+      operator: 'not_null',
+    });
+    expect(program.storage.kind).toBe('path');
+    expect(rows[3].storage.kind).toBe('lookup');
+    // visible_when has no column yet (needs a migration): it must not leak into a row
+    expect(rows.some((r: any) => 'visible_when' in r)).toBe(false);
+
+    const again = build({
+      resultTypes: [],
+      sections: [],
+      fields: rows.map((r: any, i: number) => ({ id: i + 1, ...r })),
+      versions: [],
+    });
+    await again.service.sync(source);
+    expect(again.repos.field.insert).not.toHaveBeenCalled();
+    expect(again.repos.field.update).not.toHaveBeenCalled();
+  });
 });

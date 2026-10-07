@@ -11,7 +11,10 @@ import { join } from 'path';
 import { CATALOG_RESULT_TYPES } from './definitions/result-types';
 import { CATALOG_FIELDS, CATALOG_SECTIONS } from './definitions/sections';
 import { CATALOG_VERSIONS } from './definitions/versions';
-import { computeCatalogContentHash } from './definitions/content-hash';
+import {
+  CONTRACT_VERSION,
+  computeCatalogContentHash,
+} from './definitions/content-hash';
 import {
   buildSnapshot,
   checkSnapshot,
@@ -185,6 +188,118 @@ describe('qa-catalog snapshot integrity (fixtures)', () => {
     const relabelled = baseFields();
     relabelled[0] = field({ label: 'Countries (renamed)' });
     expect(checkSnapshot(frozen, snap(relabelled, 2))).toEqual([]);
+  });
+
+  const nestedField = (over: Partial<CatalogField['subfields'][0]> = {}) =>
+    field({
+      type: 'list',
+      subfields: [
+        {
+          key: 'program',
+          label: 'Program',
+          type: 'list',
+          storage: { kind: 'column', table: 'x', column: 'program' },
+          subfields: [
+            {
+              key: 'indicator',
+              label: 'Indicator',
+              type: 'text',
+              storage: {
+                kind: 'lookup',
+                source: 'toc',
+                key_from: 'id',
+                value_column: 'name',
+              },
+              ...over,
+            },
+          ],
+        },
+      ],
+    });
+
+  it('QAC-T-14: a removed depth-2 subfield key fails naming field/sub/subsub', () => {
+    const frozenNested = snap([nestedField()], 1);
+    const flat = field({
+      type: 'list',
+      subfields: nestedField().subfields.map((s) => ({
+        ...s,
+        subfields: undefined,
+      })),
+    });
+    expect(checkSnapshot(frozenNested, snap([flat], 2))).toContain(
+      'key removed from catalog: subfield:geo.countries/program/indicator',
+    );
+  });
+
+  it.each([
+    [
+      'visible_when on a subfield',
+      { visible_when: { field: 'a', operator: 'not_null' as const } },
+    ],
+    [
+      'required_when on a subfield',
+      { required_when: { field: 'a', operator: 'eq' as const, value: 1 } },
+    ],
+    [
+      'a changed lookup binding',
+      {
+        storage: {
+          kind: 'lookup' as const,
+          source: 'toc2',
+          key_from: 'id',
+          value_column: 'name',
+        },
+      },
+    ],
+  ])(
+    'QAC-T-14: %s changes the content hash (a change without a bump fails)',
+    (_name, over) => {
+      const frozenNested = snap([nestedField()], 1);
+      expect(checkSnapshot(frozenNested, snap([nestedField(over)], 1))).toEqual(
+        ['year 2026: content changed without a revision bump (revision 1)'],
+      );
+    },
+  );
+
+  it('QAC-T-14: a field-level visible_when changes the content hash', () => {
+    const withRule = baseFields();
+    withRule[0] = field({
+      visible_when: { field: 'general.x', operator: 'not_null' },
+    });
+    expect(checkSnapshot(frozen, snap(withRule, 1))).toEqual([
+      'year 2026: content changed without a revision bump (revision 1)',
+    ]);
+  });
+
+  // DD-12: the response projection (what the mapper emits) is part of the contract QA caches by
+  // catalog_version. The hash covers CONTRACT_VERSION, so a projection change that bumps it forces a
+  // revision bump even when no catalog entry changed.
+  it('DD-12: the content hash covers CONTRACT_VERSION (same catalog, different contract -> different hash)', () => {
+    const cat = catalogOf(baseFields());
+    expect(computeCatalogContentHash(cat, 2026, CONTRACT_VERSION + 1)).not.toBe(
+      computeCatalogContentHash(cat, 2026, CONTRACT_VERSION),
+    );
+    // the default is the shipped constant
+    expect(computeCatalogContentHash(cat, 2026)).toBe(
+      computeCatalogContentHash(cat, 2026, CONTRACT_VERSION),
+    );
+  });
+
+  it('DD-12: a projection change (CONTRACT_VERSION bump) with no catalog change and no revision bump fails the snapshot check', () => {
+    const cat = catalogOf(baseFields());
+    const at = (contract: number, revision: number) => ({
+      years: {
+        '2026': {
+          revision,
+          content_hash: computeCatalogContentHash(cat, 2026, contract),
+        },
+      },
+      keys: [],
+    });
+    expect(checkSnapshot(at(1, 4), at(2, 4))).toEqual([
+      'year 2026: content changed without a revision bump (revision 4)',
+    ]);
+    expect(checkSnapshot(at(1, 4), at(2, 5))).toEqual([]);
   });
 
   it('hash is stable across array and object key ordering', () => {

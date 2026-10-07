@@ -168,3 +168,198 @@ export const FIXTURE_SOURCE: QaCatalogSource = {
     },
   ],
 };
+
+/** QAC-T-14: names carried only by the path / lookup bindings of FIXTURE_NESTED_SOURCE. */
+export const FIXTURE_NESTED_SECRET_NAMES = [
+  'secret_path_table_a',
+  'secret_path_table_b',
+  'secret_join_from',
+  'secret_join_to',
+  'secret_path_value',
+  'secret_extra_column',
+  'secret_filter_column',
+  'secret_lookup_source',
+  'secret_key_from',
+  'secret_lookup_value',
+  'secret_nested_table',
+  'secret_nested_column',
+];
+
+/**
+ * QAC-T-14 fixture: one 2026 list field with display rules (field and subfield level), depth-2
+ * subfields, and path + lookup bindings. Kept apart from FIXTURE_SOURCE, whose exact field lists
+ * other suites assert.
+ */
+export const FIXTURE_NESTED_SOURCE: QaCatalogSource = {
+  versions: FIXTURE_SOURCE.versions,
+  resultTypes: FIXTURE_SOURCE.resultTypes,
+  sections: FIXTURE_SOURCE.sections,
+  fields: [
+    {
+      key: 'general.gate',
+      label: 'Gate',
+      type: 'boolean',
+      section: 'general',
+      order: 1,
+      result_types: ['*'],
+      required: true,
+      required_confirmed: true,
+      valid_from: 2026,
+      valid_to: null,
+      storage: {
+        kind: 'column',
+        table: 'secret_nested_table',
+        column: 'secret_nested_column',
+      },
+    },
+    {
+      key: 'general.programs',
+      label: 'Programs',
+      type: 'list',
+      section: 'general',
+      order: 2,
+      result_types: ['*'],
+      required: false,
+      required_confirmed: false,
+      required_when: {
+        all: [
+          { field: 'general.gate', operator: 'eq', value: true },
+          { field: 'result_type', operator: 'in', value: ['policy_change'] },
+        ],
+      },
+      visible_when: { field: 'general.gate', operator: 'not_null' },
+      valid_from: 2026,
+      valid_to: null,
+      storage: {
+        kind: 'path',
+        steps: [
+          {
+            table: 'secret_path_table_a',
+            join_from: 'secret_join_from',
+            join_to: 'secret_join_to',
+            filter: { secret_filter_column: 1 },
+          },
+        ],
+        value_column: 'secret_path_value',
+        columns: ['secret_extra_column'],
+      },
+      subfields: [
+        {
+          key: 'program',
+          label: 'Program',
+          type: 'single_select',
+          control_list: 'programs',
+          required: false,
+          required_when: { field: 'general.gate', operator: 'eq', value: true },
+          visible_when: {
+            any: [{ field: 'general.gate', operator: 'eq', value: true }],
+          },
+          storage: {
+            kind: 'column',
+            table: 'secret_nested_table',
+            column: 'secret_nested_column',
+          },
+        },
+        {
+          key: 'mappings',
+          label: 'Mappings',
+          type: 'list',
+          storage: {
+            kind: 'path',
+            steps: [
+              {
+                table: 'secret_path_table_b',
+                join_from: 'secret_join_from',
+                join_to: 'secret_join_to',
+              },
+            ],
+            value_column: 'secret_path_value',
+          },
+          subfields: [
+            {
+              key: 'indicator',
+              label: 'Indicator',
+              type: 'text',
+              storage: {
+                kind: 'lookup',
+                source: 'secret_lookup_source',
+                key_from: 'secret_key_from',
+                value_column: 'secret_lookup_value',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // QAC-T-14 projection pin: carries EVERY optional key the mapper can emit, at every level
+      // (field description / control_list / required_when / visible_when, subfield and depth-2
+      // control_list / required / required_when / visible_when, every condition shape).
+      key: 'general.regions',
+      label: 'Regions',
+      description: 'Regions the result reports on',
+      type: 'list',
+      control_list: 'regions',
+      section: 'general',
+      order: 3,
+      result_types: ['*'],
+      required: false,
+      required_confirmed: false,
+      required_when: { field: 'general.gate', operator: 'in', value: ['x'] },
+      visible_when: {
+        any: [
+          { field: 'general.gate', operator: 'eq', value: true },
+          { field: 'result_type', operator: 'in', value: ['policy_change'] },
+        ],
+      },
+      valid_from: 2026,
+      valid_to: null,
+      storage: {
+        kind: 'column',
+        table: 'secret_nested_table',
+        column: 'secret_nested_column',
+      },
+      subfields: [
+        {
+          key: 'region',
+          label: 'Region',
+          type: 'single_select',
+          control_list: 'regions',
+          required: true,
+          required_when: { field: 'general.gate', operator: 'not_null' },
+          visible_when: { field: 'general.gate', operator: 'eq', value: 'yes' },
+          storage: {
+            kind: 'column',
+            table: 'secret_nested_table',
+            column: 'secret_nested_column',
+          },
+          subfields: [
+            {
+              key: 'subregion',
+              label: 'Subregion',
+              type: 'multi_select',
+              control_list: 'subregions',
+              required: false,
+              required_when: {
+                field: 'general.gate',
+                operator: 'in',
+                value: ['a', 'b'],
+              },
+              visible_when: {
+                all: [
+                  { field: 'general.gate', operator: 'not_null' },
+                  { field: 'general.gate', operator: 'eq', value: false },
+                ],
+              },
+              storage: {
+                kind: 'column',
+                table: 'secret_nested_table',
+                column: 'secret_nested_column',
+              },
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};

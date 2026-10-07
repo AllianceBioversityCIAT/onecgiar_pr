@@ -48,7 +48,26 @@ class ResultsFixtureEntity {
   @PrimaryGeneratedColumn({ name: 'id' }) id: number;
 }
 
+// QAC-T-14: stands in for `result` so a path binding's first join column (a column of `result`) can be checked.
+@Entity('result')
+class ResultAnchorEntity {
+  @PrimaryGeneratedColumn({ name: 'id' }) id: number;
+}
+
+// QAC-T-14 (DD-13): a child table of `fixture_table`, so a subfield path can start from its parent's row.
+@Entity('child_fixture')
+class ChildFixtureEntity {
+  @PrimaryGeneratedColumn({ name: 'id' }) id: number;
+  @Column({ name: 'parent_id', nullable: true }) parent_id: number;
+  @Column({ name: 'label', nullable: true }) label: string;
+}
+
 const FIXTURES: unknown[] = [FixtureEntity, ResultsFixtureEntity];
+const NOT_REAL: unknown[] = [
+  ...FIXTURES,
+  ResultAnchorEntity,
+  ChildFixtureEntity,
+];
 
 function view(include: (target: unknown) => boolean): MetadataView {
   const s = getMetadataArgsStorage();
@@ -60,7 +79,7 @@ function view(include: (target: unknown) => boolean): MetadataView {
 }
 // Real view: everything registered except the fixtures above and the Auditable base is irrelevant
 // (base columns are reached through the prototype chain, never as tables).
-const realView = (): MetadataView => view((t) => !FIXTURES.includes(t));
+const realView = (): MetadataView => view((t) => !NOT_REAL.includes(t));
 // Fixture view: fixtures plus the bases they inherit from (columns on Auditable are registered on it).
 const fixtureView = (): MetadataView =>
   view((t) => FIXTURES.includes(t) || t === Auditable);
@@ -289,5 +308,301 @@ describe('QAC-R-7 completeness guard — fixtures through the same function', ()
     expect(stale.join('\n')).toContain(
       'stale excluded entry: table results_gone',
     );
+  });
+});
+
+describe('QAC-T-14 completeness guard — path and lookup bindings, nested subfields (DD-13)', () => {
+  const pathView = (): MetadataView =>
+    view(
+      (t) =>
+        t === FixtureEntity ||
+        t === ResultAnchorEntity ||
+        t === ChildFixtureEntity ||
+        t === Auditable,
+    );
+  const runPath = (over: Partial<Parameters<typeof checkCompleteness>[0]>) =>
+    checkCompleteness({
+      metadata: pathView(),
+      scope: [ResultAnchorEntity, FixtureEntity],
+      excluded: [],
+      fields: [],
+      notForQa: [],
+      pending: [],
+      ...over,
+    });
+  const anchor = col('result', 'id');
+  // One distinct column per role, so removing a role from the binding must surface exactly that column.
+  const pathField = (
+    over: Partial<{
+      join_from: string;
+      join_to: string;
+      value_column: string;
+      filter: Record<string, number>;
+      columns: string[];
+    }> = {},
+  ): CatalogField => {
+    const { value_column, columns, ...step } = over;
+    return {
+      key: 'p',
+      storage: {
+        kind: 'path',
+        steps: [
+          {
+            table: 'fixture_table',
+            join_from: 'id',
+            join_to: 'id',
+            filter: { created_at: 1 },
+            ...step,
+          },
+        ],
+        value_column: value_column ?? 'foo_bar',
+        columns: columns ?? ['updated_at'],
+      },
+    } as unknown as CatalogField;
+  };
+  const onlyUpdatedBy = [
+    { table: 'fixture_table', column: 'updated_by', reason: 'audit' },
+  ];
+
+  it('subtracts the join columns, value_column, filter keys and extra columns a path binding touches', () => {
+    expect(runPath({ fields: [pathField()], notForQa: onlyUpdatedBy })).toEqual(
+      [],
+    );
+  });
+
+  it.each([
+    ['join_to', { join_to: 'updated_by' }, 'fixture_table.id'],
+    ['value_column', { value_column: 'id' }, 'fixture_table.foo_bar'],
+    ['filter', { filter: {} }, 'fixture_table.created_at'],
+    ['columns', { columns: [] }, 'fixture_table.updated_at'],
+  ])(
+    'a column the path no longer touches (%s) comes back as uncatalogued',
+    (_role, over, expected) => {
+      const failures = runPath({
+        fields: [pathField(over)],
+        notForQa: onlyUpdatedBy.filter((e) => e.column !== over['join_to']),
+      });
+      expect(failures.join('\n')).toContain(`uncatalogued column ${expected}`);
+    },
+  );
+
+  it('the first step join_from is a column of `result`: a ghost one is stale, a real one is covered', () => {
+    const failures = runPath({
+      fields: [pathField({ join_from: 'ghost' }), anchor],
+      notForQa: onlyUpdatedBy,
+    });
+    expect(failures.join('\n')).toContain('stale field p: result.ghost');
+  });
+
+  it('a later step joins from the previous step table', () => {
+    const twoSteps = {
+      key: 'p2',
+      storage: {
+        kind: 'path',
+        steps: [
+          { table: 'fixture_table', join_from: 'id', join_to: 'id' },
+          { table: 'fixture_table', join_from: 'created_at', join_to: 'ghost' },
+        ],
+        value_column: 'foo_bar',
+        columns: ['updated_at'],
+      },
+    } as unknown as CatalogField;
+    const failures = runPath({
+      fields: [twoSteps],
+      notForQa: onlyUpdatedBy,
+    });
+    expect(failures.join('\n')).toContain(
+      'stale field p2: fixture_table.ghost',
+    );
+    expect(failures.join('\n')).not.toContain('uncatalogued column');
+  });
+
+  it('fails when a path step table is not in scope (like a relation binding)', () => {
+    const failures = runPath({
+      scope: [ResultAnchorEntity],
+      fields: [pathField(), anchor],
+    });
+    expect(failures.join('\n')).toContain(
+      'field p names fixture_table.id but table fixture_table is not in scope.ts',
+    );
+  });
+
+  it('ignores lookup bindings: no table check, and they cover no column', () => {
+    const lookup = {
+      key: 'l',
+      storage: {
+        kind: 'lookup',
+        source: 'toc_not_a_table',
+        key_from: 'ghost_column',
+        value_column: 'statement',
+      },
+    } as unknown as CatalogField;
+    const failures = runPath({
+      fields: [lookup, anchor, col('fixture_table', 'id')],
+      notForQa: [
+        ...onlyUpdatedBy,
+        { table: 'fixture_table', column: 'created_at', reason: 'audit' },
+        { table: 'fixture_table', column: 'updated_at', reason: 'audit' },
+      ],
+    });
+    // nothing stale about the lookup; only foo_bar (which the lookup does not cover) is reported
+    expect(failures).toEqual([
+      expect.stringContaining('uncatalogued column fixture_table.foo_bar'),
+    ]);
+  });
+
+  it('counts the bindings of nested subfields (depth 2) and ignores lookup subfields', () => {
+    const nested = {
+      key: 'n',
+      storage: { kind: 'column', table: 'fixture_table', column: 'id' },
+      subfields: [
+        {
+          key: 'a',
+          storage: {
+            kind: 'column',
+            table: 'fixture_table',
+            column: 'foo_bar',
+          },
+          subfields: [
+            {
+              key: 'b',
+              storage: {
+                kind: 'column',
+                table: 'fixture_table',
+                column: 'created_at',
+              },
+            },
+            {
+              key: 'c',
+              storage: {
+                kind: 'lookup',
+                source: 's',
+                key_from: 'k',
+                value_column: 'v',
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as CatalogField;
+    const notForQa = onlyUpdatedBy.concat({
+      table: 'fixture_table',
+      column: 'updated_at',
+      reason: 'audit',
+    });
+    expect(runPath({ fields: [nested, anchor], notForQa })).toEqual([]);
+    // control: without the depth-2 column binding, created_at is reported
+    const shallow = {
+      ...nested,
+      subfields: [{ ...nested['subfields'][0], subfields: [] }],
+    } as unknown as CatalogField;
+    expect(
+      runPath({ fields: [shallow, anchor], notForQa }).join('\n'),
+    ).toContain('uncatalogued column fixture_table.created_at');
+  });
+  // DD-13 (T-14 review): a subfield path starts from the PARENT element's row, not from `result`.
+  const pathSub = (
+    join_from: string,
+    extra: Partial<{ columns: string[] }> = {},
+  ) => ({
+    kind: 'path',
+    steps: [{ table: 'child_fixture', join_from, join_to: 'parent_id' }],
+    value_column: 'label',
+    columns: ['id'],
+    ...extra,
+  });
+  const parentField = (subfield: unknown, parent = 'fixture_table') =>
+    ({
+      key: 'n',
+      storage: { kind: 'column', table: parent, column: 'id' },
+      subfields: [{ key: 's', ...(subfield as object) }],
+    }) as unknown as CatalogField;
+  const childScope = [ResultAnchorEntity, FixtureEntity, ChildFixtureEntity];
+  const parentNotForQa = [
+    ...onlyUpdatedBy,
+    { table: 'fixture_table', column: 'created_at', reason: 'audit' },
+    { table: 'fixture_table', column: 'updated_at', reason: 'audit' },
+    { table: 'fixture_table', column: 'foo_bar', reason: 'audit' },
+  ];
+
+  it('DD-13: a subfield path first-step join_from is a column of the PARENT binding table (not of `result`)', () => {
+    // `foo_bar` exists on fixture_table and not on result: read from `result` it would be stale.
+    expect(
+      runPath({
+        scope: childScope,
+        fields: [parentField({ storage: pathSub('foo_bar') }), anchor],
+        notForQa: parentNotForQa.filter((n) => n.column !== 'foo_bar'),
+      }),
+    ).toEqual([]);
+  });
+
+  it('DD-13: a ghost join_from on a subfield path is stale against the parent table, not `result`', () => {
+    const failures = runPath({
+      scope: childScope,
+      fields: [parentField({ storage: pathSub('ghost') }), anchor],
+      notForQa: parentNotForQa,
+    });
+    expect(failures).toEqual([
+      'stale subfield n.s: fixture_table.ghost does not exist',
+    ]);
+  });
+
+  it('DD-13: a depth-2 path joins from its depth-1 parent path last table; the parent table must be in scope', () => {
+    const grandchild = {
+      kind: 'path',
+      steps: [
+        { table: 'fixture_table', join_from: 'parent_id', join_to: 'id' },
+      ],
+      value_column: 'foo_bar',
+    };
+    const nested = {
+      key: 'n',
+      storage: { kind: 'column', table: 'fixture_table', column: 'id' },
+      subfields: [
+        {
+          key: 'a',
+          storage: pathSub('id'),
+          subfields: [{ key: 'b', storage: grandchild }],
+        },
+      ],
+    } as unknown as CatalogField;
+    // parent_id is a column of child_fixture (the depth-1 path's last table); read from `result` it would be stale
+    const notForQa = parentNotForQa.filter((n) => n.column !== 'foo_bar');
+    expect(
+      runPath({ scope: childScope, fields: [nested, anchor], notForQa }),
+    ).toEqual([]);
+    // control: a column that is on fixture_table only is stale when the depth-2 path joins from child_fixture
+    const wrong = JSON.parse(JSON.stringify(nested));
+    wrong.subfields[0].subfields[0].storage.steps[0].join_from = 'foo_bar';
+    expect(
+      runPath({ scope: childScope, fields: [wrong, anchor], notForQa }),
+    ).toEqual(['stale subfield n.a.b: child_fixture.foo_bar does not exist']);
+    // the parent table must be in scope
+    expect(
+      runPath({
+        scope: [ResultAnchorEntity, FixtureEntity],
+        fields: [nested, anchor],
+        notForQa,
+      }).join('\n'),
+    ).toContain('table child_fixture is not in scope.ts');
+  });
+
+  it('DD-13: a subfield path under a top-level path binding joins from that path last table', () => {
+    const top = {
+      key: 'n',
+      storage: {
+        kind: 'path',
+        steps: [{ table: 'fixture_table', join_from: 'id', join_to: 'id' }],
+        value_column: 'id',
+      },
+      subfields: [{ key: 's', storage: pathSub('foo_bar') }],
+    } as unknown as CatalogField;
+    expect(
+      runPath({
+        scope: childScope,
+        fields: [top, anchor],
+        notForQa: parentNotForQa.filter((n) => n.column !== 'foo_bar'),
+      }),
+    ).toEqual([]);
   });
 });

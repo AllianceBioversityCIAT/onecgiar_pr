@@ -45,11 +45,6 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
   ...nfq('result', LEGACY, 'legacy_id'),
   ...nfq(
     'result',
-    'flag that gates the form version (annual updating), exposed through the catalog valid_from / valid_to, not as a field',
-    'is_replicated',
-  ),
-  ...nfq(
-    'result',
     'legacy single-value impact area column, written null by the P25 save; the 2026 value lives in result_impact_area_score',
     'gender_impact_area_id',
     'climate_impact_area_id',

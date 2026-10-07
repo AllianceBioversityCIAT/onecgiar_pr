@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 9,
-      "content_hash": "c03bfb555b50a389c02ac69375ada88a7c0f5589adc31da12b9afc8ae92f51af"
+      "revision": 10,
+      "content_hash": "a63d580ee8f299e7b690b303172d6a3861a9eef6ddaefcd20ab28ecbc0149871"
     }
   },
   "keys": [
@@ -30,6 +30,7 @@
     "field:general.gender_impact_areas",
     "field:general.gender_tag",
     "field:general.is_discontinued",
+    "field:general.is_replicated",
     "field:general.lead_contact_person",
     "field:general.merge_targets",
     "field:general.nutrition_impact_areas",

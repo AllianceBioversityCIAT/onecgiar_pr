@@ -1,6 +1,7 @@
 // @akili-spec quality-assurance/qa-field-catalog
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { computeCatalogContentHash, HashableCatalog } from './content-hash';
+import { CatalogSubField } from './types';
 import { CatalogYearVersion } from './versions';
 
 /**
@@ -14,6 +15,19 @@ export interface CatalogSnapshot {
   keys: string[];
 }
 
+/** Subfield keys at every depth: `subfield:<field>/<sub>` and `subfield:<field>/<sub>/<subsub>`. */
+function addSubfieldKeys(
+  keys: Set<string>,
+  prefix: string,
+  subs: CatalogSubField[] | undefined,
+): void {
+  for (const sf of subs ?? []) {
+    const key = `${prefix}/${sf.key}`;
+    keys.add(key);
+    addSubfieldKeys(keys, key, sf.subfields);
+  }
+}
+
 /** All keys ever declared — NOT filtered by year, so retirement never reads as removal. */
 export function collectAllKeys(catalog: HashableCatalog): string[] {
   const keys = new Set<string>();
@@ -21,9 +35,7 @@ export function collectAllKeys(catalog: HashableCatalog): string[] {
   catalog.sections.forEach((s) => keys.add(`section:${s.key}`));
   for (const f of catalog.fields) {
     keys.add(`field:${f.key}`);
-    (f.subfields ?? []).forEach((sf) =>
-      keys.add(`subfield:${f.key}/${sf.key}`),
-    );
+    addSubfieldKeys(keys, `subfield:${f.key}`, f.subfields);
   }
   return [...keys].sort();
 }

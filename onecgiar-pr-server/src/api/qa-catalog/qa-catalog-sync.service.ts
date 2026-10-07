@@ -13,7 +13,7 @@ import {
   computeCatalogContentHash,
   stableStringify,
 } from './definitions/content-hash';
-import { CatalogField } from './definitions/types';
+import { CatalogField, CatalogSubField } from './definitions/types';
 import { QaCatalogSource } from './qa-catalog.service';
 
 export interface QaCatalogSyncResult {
@@ -79,7 +79,12 @@ const SECTION_COLUMNS = [
 ];
 const RESULT_TYPE_COLUMNS = ['label', 'level'];
 
-/** DD-4 / DD-10: a field is one row (parent_key ''), each subfield one more row (parent's key). */
+/**
+ * DD-4 / DD-10 / DD-13: a field is one row (parent_key ''), each subfield one more row. A depth-1
+ * subfield carries its field's key as parent_key; a depth-2 subfield carries '<field>.<sub>' (the
+ * dotted path of its parent row). `visible_when` has no column on qa_catalog_field yet (it needs a
+ * migration), so it is not persisted; the endpoint serves it from code.
+ */
 function toFieldRows(field: CatalogField): Row[] {
   const base = {
     section_key: field.section,
@@ -103,23 +108,30 @@ function toFieldRows(field: CatalogField): Row[] {
       ...base,
     },
   ];
-  (field.subfields ?? []).forEach((sub, index) => {
-    rows.push({
-      key: sub.key,
-      parent_key: field.key,
-      label: sub.label,
-      description: null,
-      type: sub.type,
-      control_list: sub.control_list ?? null,
-      order: index,
-      result_types: field.result_types,
-      required: sub.required ?? false,
-      required_confirmed: false,
-      required_when: null,
-      storage: sub.storage,
-      ...base,
+  const addSubfields = (
+    subs: CatalogSubField[] | undefined,
+    parentKey: string,
+  ) => {
+    (subs ?? []).forEach((sub, index) => {
+      rows.push({
+        key: sub.key,
+        parent_key: parentKey,
+        label: sub.label,
+        description: null,
+        type: sub.type,
+        control_list: sub.control_list ?? null,
+        order: index,
+        result_types: field.result_types,
+        required: sub.required ?? false,
+        required_confirmed: false,
+        required_when: sub.required_when ?? null,
+        storage: sub.storage,
+        ...base,
+      });
+      addSubfields(sub.subfields, `${parentKey}.${sub.key}`);
     });
-  });
+  };
+  addSubfields(field.subfields, field.key);
   return rows;
 }
 
