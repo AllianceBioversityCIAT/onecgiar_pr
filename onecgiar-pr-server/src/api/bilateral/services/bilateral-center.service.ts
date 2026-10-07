@@ -372,42 +372,74 @@ export class BilateralCenterService {
         // primary SP until SP12 accepts" (`PSR-R-2`, DD-4) — so `activePrimaryRows` above is read
         // only to detect a change, never mutated here.
         if (changed) {
-          // `PNS-R-1` (design.md §5 item 3): a first pick (no owner yet) is saved as a DRAFT, not
-          // sent — the whole method already requires Editing/Draft status (guard above), so "no
-          // owner" is normally the only remaining condition. A swap (an owner already exists) is
-          // unchanged: it sends the request immediately, out of this spec's scope.
-          //
-          // `PSR-T-5` rework attempt 2 — Reviewer FAIL remediation (b): an ownerless result can
-          // ALSO already carry an active PENDING primary request — a legacy result created before
-          // this feature existed, or any result whose round was already sent by an earlier save.
-          // requirements.md §7 Compatibility: such a result "stay[s] pending" and keeps working the
-          // OLD send-immediately way; it must not be treated as a first pick just because there is
-          // no owner yet (that would wrongly draft-demote a live pending request, see `request()`'s
-          // own idempotency guard for the other half of this fix).
-          // @akili-spec notifications/primary-notify-on-submit
-          const hasPendingRound =
-            currentPrimaryId === 0 &&
-            (await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
-              parsedResultId,
-              manager,
-            )) != null;
-          const outcome: PrimaryRequestOutcome =
-            await this.primaryProgramRequestService.request(
-              parsedResultId,
+          // `PRA-R-2` / `PRA-DD-4` (notifications/primary-review-not-accept) — a SWAP (an owner
+          // already exists) is a DIRECT transfer, like the Rejected branch above: no request, the
+          // new SP owns the result at once. The earlier catalogue guard only proves the SP is
+          // allocated to the project, so alignment to the lead project is checked here with the
+          // same rule and message `request()` uses (`not_aligned`). The lead row was written in
+          // this transaction, hence the `manager`.
+          if (currentPrimaryId !== 0) {
+            const aligned = await this.primaryProgramRequestService.isAligned(
+              Number(project.id),
               nextPrimaryId,
-              user,
               manager,
-              { asDraft: currentPrimaryId === 0 && !hasPendingRound },
             );
-          if (outcome.ok === false) {
-            if (outcome.reason === 'not_aligned') {
-              throw new BadRequestException(outcome.message);
+            if (!aligned) {
+              throw new BadRequestException(
+                PrimaryProgramRequestService.NOT_ALIGNED_MESSAGE,
+              );
             }
-            // `internal_error`: requirements.md §7 Reliability — the lead-project/percentage save
-            // still succeeds; only logged, never thrown.
-            this.logger.warn(
-              `updatePrimaryAssignment: primary program request failed for result ${parsedResultId} (reason=internal_error)`,
-            );
+            const swap =
+              await this.primaryProgramRequestService.transferPrimary(
+                parsedResultId,
+                nextPrimaryId,
+                user,
+                manager,
+                { releaseContributors: false },
+              );
+            if (swap.outcome === 'transferred') {
+              this.logger.log(
+                `updatePrimaryAssignment: direct primary swap on result ${parsedResultId} (previous initiative ${swap.previousInitiativeId ?? 'none'}, new initiative ${nextPrimaryId}, user ${user.id})`,
+              );
+            }
+          } else {
+            // `PNS-R-1` (design.md §5 item 3): a first pick (no owner yet) is saved as a DRAFT, not
+            // sent — the whole method already requires Editing/Draft status (guard above), so "no
+            // owner" is normally the only remaining condition. A swap (an owner already exists) is
+            // unchanged: it sends the request immediately, out of this spec's scope.
+            //
+            // `PSR-T-5` rework attempt 2 — Reviewer FAIL remediation (b): an ownerless result can
+            // ALSO already carry an active PENDING primary request — a legacy result created before
+            // this feature existed, or any result whose round was already sent by an earlier save.
+            // requirements.md §7 Compatibility: such a result "stay[s] pending" and keeps working the
+            // OLD send-immediately way; it must not be treated as a first pick just because there is
+            // no owner yet (that would wrongly draft-demote a live pending request, see `request()`'s
+            // own idempotency guard for the other half of this fix).
+            // @akili-spec notifications/primary-notify-on-submit
+            const hasPendingRound =
+              currentPrimaryId === 0 &&
+              (await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
+                parsedResultId,
+                manager,
+              )) != null;
+            const outcome: PrimaryRequestOutcome =
+              await this.primaryProgramRequestService.request(
+                parsedResultId,
+                nextPrimaryId,
+                user,
+                manager,
+                { asDraft: currentPrimaryId === 0 && !hasPendingRound },
+              );
+            if (outcome.ok === false) {
+              if (outcome.reason === 'not_aligned') {
+                throw new BadRequestException(outcome.message);
+              }
+              // `internal_error`: requirements.md §7 Reliability — the lead-project/percentage save
+              // still succeeds; only logged, never thrown.
+              this.logger.warn(
+                `updatePrimaryAssignment: primary program request failed for result ${parsedResultId} (reason=internal_error)`,
+              );
+            }
           }
         } else {
           // `PSR-T-5` reviewer FAIL (rework attempt 2, discovered issue 3 / judgment call 1): the
@@ -2439,6 +2471,13 @@ export class BilateralCenterService {
       Number(result.status_id) === ResultStatusData.Rejected.value;
 
     await this.resultRepository.manager.transaction(async (manager) => {
+      // `PRA-R-1` — lock the `Result` row FIRST (same pattern as `updatePrimaryAssignment`) so a
+      // concurrent swap / accept cannot interleave with the owner write below.
+      await manager.findOne(Result, {
+        where: { id: parsedResultId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
       // The decision and status transition are one atomic event. `NOW()` is
       // deliberate: MySQL owns the timestamp, avoiding a local JS Date.
       await manager.query(
@@ -2495,15 +2534,37 @@ export class BilateralCenterService {
       );
       await manager.save(ResultReviewHistory, reviewHistory);
 
-      // `PNS-R-2`/`PNS-DD-2` — ownerless: this submit is what turns the saved (DRAFT) choice
-      // into the actual pending request, INSIDE this same transaction. `sendDraft` throws on
-      // failure (no active DRAFT row / a query error), which rejects this callback and rolls
-      // back the whole submit — no result may land in Pending Review with nobody asked.
-      // @akili-spec notifications/primary-notify-on-submit
+      // `PRA-R-1` / `PRA-DD-1` — ownerless: the saved (DRAFT) or legacy PENDING choice becomes
+      // the OWNER here, inside this transaction (the SP reviews the result; it is no longer asked
+      // to accept ownership). `transferPrimary` writes role 1, retires every active primary row
+      // and records one ACCEPTED row. `releaseContributors: false`: contributor requests wait for
+      // approval (`PRA-R-4`). It throws on failure, which rolls the whole submit back — no result
+      // may land in Pending Review without an owner.
       if (!hasOwner) {
-        await this.primaryProgramRequestService.sendDraft(
+        const choiceId =
+          (await this.primaryProgramRequestService.findDraftPrimaryInitiativeId(
+            parsedResultId,
+            manager,
+          )) ??
+          (await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
+            parsedResultId,
+            manager,
+          ));
+        if (choiceId == null) {
+          throw new BadRequestException(
+            'The result has no Science Program assigned. Select a Science Program before submitting for review.',
+          );
+        }
+        await this.primaryProgramRequestService.transferPrimary(
           parsedResultId,
+          Number(choiceId),
+          user,
           manager,
+          { releaseContributors: false },
+        );
+        // ids only (`.cursorrules`).
+        this.logger.log(
+          `submitForReview: ownerless submit made initiative ${Number(choiceId)} the owner of result ${parsedResultId} (user ${user.id})`,
         );
       }
 
@@ -2530,16 +2591,9 @@ export class BilateralCenterService {
     // BCT-T-5: goes through the shared orchestrator (submitted notification, then contributor
     // tagging) instead of calling the submitted emitter directly. Post-commit and non-blocking
     // (`announcePendingReview` never throws) — the submit already succeeded.
-    // `PNS-R-2` second `AND IT MUST` — an ownerless submit sends the request but MUST NOT also
-    // fire the submitted/tagging notices here: there is no owner yet for them to be about.
-    // `accept()` (`PrimaryProgramRequestService`, `PNS-R-3`) sends them later, once one exists.
-    // @akili-spec notifications/primary-notify-on-submit
-    if (hasOwner) {
-      await this.bilateralService.announcePendingReview(
-        parsedResultId,
-        user.id,
-      );
-    }
+    // `PRA-DD-3` — always announced now: an ownerless submit has just made its SP the owner, so
+    // the submitted notice (and the informational contributor tag) has a recipient.
+    await this.bilateralService.announcePendingReview(parsedResultId, user.id);
 
     return {
       response: {
@@ -2670,34 +2724,37 @@ export class BilateralCenterService {
         parsedResultId,
       );
     if (!owner?.id) {
-      // `PNS-R-2`/`PNS-DD-1` — an ownerless result can still submit when the Center already
-      // saved a primary choice (a DRAFT `primary` row, `PNS-R-1`): Submit is what turns that
-      // choice into the actual request (`submitForReview`'s `sendDraft`, below). No saved
-      // choice at all keeps today's refusal.
-      // @akili-spec notifications/primary-notify-on-submit
-      const draftPrimaryId =
-        await this.primaryProgramRequestService.findDraftPrimaryInitiativeId(
+      // `PRA-R-1` / `PRA-DD-2` (notifications/primary-review-not-accept) — an ownerless result can
+      // submit when the Center saved a primary choice (a DRAFT `primary` row, `PNS-R-1`) OR still
+      // carries a legacy PENDING primary request (prod 9737 / 9738): the SP no longer answers
+      // before submit, it reviews after it, so a pending request is just a choice. `submitForReview`
+      // makes that SP the owner. No choice at all keeps today's refusal.
+      const choiceId =
+        (await this.primaryProgramRequestService.findDraftPrimaryInitiativeId(
           parsedResultId,
-        );
-      if (draftPrimaryId == null) {
+        )) ??
+        (await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
+          parsedResultId,
+        ));
+      if (choiceId == null) {
         throw new BadRequestException(
           'The result has no Science Program assigned. Select a Science Program before submitting for review.',
         );
       }
-    }
-
-    // `PSR-T-6` (design.md DD-4, requirements.md `PSR-R-2` swap "MUST block Submit for review
-    // while the swap request is pending") — `stateFor` alone can't surface this: an ACCEPTED
-    // `primary` row (the current owner, just checked above) outranks a PENDING one in its
-    // priority order, so a swap in progress would otherwise look exactly like a settled result.
-    const pendingPrimaryId =
-      await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
-        parsedResultId,
-      );
-    if (pendingPrimaryId != null) {
-      throw new BadRequestException(
-        'A new primary Science Program request is pending for this result. Submit for review is unavailable until it is accepted or declined.',
-      );
+    } else {
+      // `PSR-T-6` (design.md DD-4, requirements.md `PSR-R-2` swap "MUST block Submit for review
+      // while the swap request is pending") — safety net kept ONLY for owned results (`PRA-R-1`):
+      // `stateFor` alone can't surface this, an ACCEPTED `primary` row outranks a PENDING one.
+      // New code never creates owner + pending (`PRA-R-2` swaps transfer directly).
+      const pendingPrimaryId =
+        await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
+          parsedResultId,
+        );
+      if (pendingPrimaryId != null) {
+        throw new BadRequestException(
+          'A new primary Science Program request is pending for this result. Submit for review is unavailable until it is accepted or declined.',
+        );
+      }
     }
 
     if (result.result_type_id === ResultTypeEnum.INNOVATION_USE) {

@@ -137,6 +137,7 @@ describe('BilateralCenterService', () => {
             manager: {
               transaction: jest.fn(async (cb: any) =>
                 cb({
+                  findOne: jest.fn().mockResolvedValue({ id: 99 }),
                   update: jest.fn().mockResolvedValue({}),
                   create: jest.fn((_entity, payload) => payload),
                   save: jest.fn().mockResolvedValue({}),
@@ -383,6 +384,13 @@ describe('BilateralCenterService', () => {
             // `PNS-T-2` — flips a DRAFT primary round to PENDING inside the submit transaction;
             // individual tests override to simulate a failure.
             sendDraft: jest.fn().mockResolvedValue(undefined),
+            // `PRA-T-1` — owner at submit and direct swap go through `transferPrimary`; the swap
+            // also checks `isAligned`. Defaults: transferred / aligned; tests override.
+            transferPrimary: jest.fn().mockResolvedValue({
+              outcome: 'transferred',
+              previousInitiativeId: null,
+            }),
+            isAligned: jest.fn().mockResolvedValue(true),
           },
         },
       ],
@@ -2377,7 +2385,9 @@ describe('BilateralCenterService', () => {
         });
       });
 
-      it('resolves the internal CLARISA initiative id and requests it, writing no role-1 row', async () => {
+      // `PRA-R-2` (primary-review-not-accept): `configureTransaction()`'s default owner (100) makes
+      // this a SWAP, which is now a direct transfer, never a request.
+      it('resolves the internal CLARISA initiative id and transfers to it on a swap, writing no role-1 row itself', async () => {
         const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
           ClarisaInitiativesRepository,
         ) as any;
@@ -2395,16 +2405,12 @@ describe('BilateralCenterService', () => {
         expect(clarisaInitiatives.findOne).toHaveBeenCalledWith({
           where: { official_code: 'SP04', active: true },
         });
-        expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
-          11513,
-          404,
-          user,
-          fakeManager,
-          // `PNS-T-1`: `configureTransaction()`'s default active role-1 row (initiative_id 100)
-          // makes this a swap (an owner already exists) — out of this spec's scope, so the choice
-          // is sent immediately (`asDraft: false`), unchanged from today's behavior.
-          { asDraft: false },
-        );
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledWith(11513, 404, user, fakeManager, {
+          releaseContributors: false,
+        });
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
         expect(initiativeRepository.save).not.toHaveBeenCalled();
         expect(initiativeRepository.update).not.toHaveBeenCalled();
         expect(response.response).toEqual(
@@ -2414,9 +2420,9 @@ describe('BilateralCenterService', () => {
         expect(response.response).not.toHaveProperty('tocCleared');
       });
 
-      // DD-4: swap — the current owner (role-1 row, initiative_id 100 from `configureTransaction`)
-      // stays the primary SP until the newly requested SP accepts.
-      it('leaves the current owner active on a swap (DD-4)', async () => {
+      // `PRA-R-2` supersedes DD-4: the swap is a direct transfer done by `transferPrimary` (mocked
+      // here), so `updatePrimaryAssignment` itself never writes the old owner's role-1 row.
+      it('does not write the old owner role-1 row itself on a swap (PRA-R-2: transferPrimary owns it)', async () => {
         const { initiativeRepository } = configureTransaction();
 
         await service.updatePrimaryAssignment(user, 11513, {
@@ -2585,34 +2591,37 @@ describe('BilateralCenterService', () => {
         expect(criteria.share_result_request_id.value).toEqual([77, 78]);
       });
 
-      // requirements.md PSR-R-3 — the same validation message the Project Information card uses.
-      it('rejects with 400 and the request() message when the SP is not an alignment', async () => {
+      // `PRA-R-2` "BUT IT MUST still refuse an SP that is not an alignment of the lead project
+      // (same message as today)": a swap to a non-aligned SP is a 400 and transfers nothing.
+      it('swap to a non-aligned SP → 400 with the not-aligned message, transferPrimary not called (PRA-R-2)', async () => {
         const primaryProgramRequestService =
           module.get<PrimaryProgramRequestService>(
             PrimaryProgramRequestService,
           );
         (
-          primaryProgramRequestService.request as jest.Mock
-        ).mockResolvedValueOnce({
-          ok: false,
-          reason: 'not_aligned',
-          message:
-            'The selected primary Science Program is not allocated to the selected project.',
-        });
-        configureTransaction();
+          primaryProgramRequestService.isAligned as jest.Mock
+        ).mockResolvedValueOnce(false);
+        const { fakeManager } = configureTransaction();
 
         await expect(
           service.updatePrimaryAssignment(user, 11513, {
             project_id: 20,
             primary_science_program_id: 701,
           }),
-        ).rejects.toThrow(
-          'The selected primary Science Program is not allocated to the selected project.',
+        ).rejects.toThrow(PrimaryProgramRequestService.NOT_ALIGNED_MESSAGE);
+        expect(primaryProgramRequestService.isAligned).toHaveBeenCalledWith(
+          20,
+          404,
+          fakeManager,
         );
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).not.toHaveBeenCalled();
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
       });
 
       // requirements.md §7 Reliability — an internal error is logged, never fails the save.
-      it('still saves the lead project/percentage when the request fails unexpectedly', async () => {
+      it('still saves the lead project/percentage when the first-pick request fails unexpectedly', async () => {
         const primaryProgramRequestService =
           module.get<PrimaryProgramRequestService>(
             PrimaryProgramRequestService,
@@ -2623,7 +2632,8 @@ describe('BilateralCenterService', () => {
         const logger = jest
           .spyOn((service as any).logger, 'warn')
           .mockImplementation(() => undefined);
-        configureTransaction();
+        // First pick (no owner): the only path that still sends a request (`PRA-R-2` unchanged).
+        configureTransaction().initiativeRepository.find.mockResolvedValue([]);
 
         const response = await service.updatePrimaryAssignment(user, 11513, {
           project_id: 20,
@@ -3211,23 +3221,21 @@ describe('BilateralCenterService', () => {
         [ResultStatusData.Editing.value, 'Editing'],
         [ResultStatusData.Draft.value, 'Draft'],
       ])(
-        'at %i (%s), a changed primary SP still goes through the request flow, never the transfer',
+        // `PRA-R-2` supersedes `RRC-R-12` for a swap: at Editing/Draft with an owner the change is
+        // now a direct transfer too (no request); a first pick still drafts a request.
+        'at %i (%s), a changed primary SP on an owned result is a direct transfer, no request (PRA-R-2)',
         async (statusId) => {
           arrange(statusId);
           const { fakeManager } = configureTransaction();
 
           await pick();
 
-          expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
-            RESULT,
-            404,
-            user,
-            fakeManager,
-            { asDraft: false },
-          );
           expect(
             primaryProgramRequestService.transferPrimary,
-          ).not.toHaveBeenCalled();
+          ).toHaveBeenCalledWith(RESULT, 404, user, fakeManager, {
+            releaseContributors: false,
+          });
+          expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
         },
       );
 
@@ -3659,6 +3667,7 @@ describe('BilateralCenterService', () => {
         resultRepository.manager.transaction as jest.Mock
       ).mockImplementationOnce(async (cb: any) =>
         cb({
+          findOne: jest.fn().mockResolvedValue({ id: 77 }),
           query: jest.fn().mockResolvedValue({ affectedRows: 1 }),
           update,
           create: jest.fn((_entity, payload) => payload),
@@ -3685,6 +3694,7 @@ describe('BilateralCenterService', () => {
         resultRepository.manager.transaction as jest.Mock
       ).mockImplementationOnce(async (cb: any) =>
         cb({
+          findOne: jest.fn().mockResolvedValue({ id: 77 }),
           query: jest.fn().mockResolvedValue({ affectedRows: 1 }),
           update,
           create: jest.fn((_entity, payload) => payload),
@@ -3865,16 +3875,19 @@ describe('BilateralCenterService', () => {
       ).rejects.toThrow(/no Science Program assigned/);
     });
 
-    // `PNS-T-2` (requirements.md `PNS-R-2`, design.md §5 items 7-8) — submit now sends the
-    // saved (DRAFT) primary choice for an ownerless result instead of refusing it.
-    describe('PNS-R-2 — ownerless submit sends the saved primary choice', () => {
-      let primaryProgramRequestService: PrimaryProgramRequestService;
+    // `PRA-T-1` (notifications/primary-review-not-accept; supersedes `PNS-R-2`'s `sendDraft`):
+    // an ownerless submit makes the saved (DRAFT) or legacy PENDING choice the OWNER, in the same
+    // transaction, and never sends an "Accept as primary" request.
+    describe('PRA-R-1 — ownerless submit makes the chosen SP the owner', () => {
+      let primaryProgramRequestService: any;
       let resultByInitiativesRepository: ResultByInitiativesRepository;
+      let bilateralService: any;
 
       beforeEach(() => {
         primaryProgramRequestService = module.get<PrimaryProgramRequestService>(
           PrimaryProgramRequestService,
         );
+        bilateralService = module.get<BilateralService>(BilateralService);
         resultByInitiativesRepository =
           module.get<ResultByInitiativesRepository>(
             ResultByInitiativesRepository,
@@ -3882,74 +3895,173 @@ describe('BilateralCenterService', () => {
         (resultRepository.findOne as jest.Mock).mockResolvedValue(
           editingResult,
         );
-        // Ownerless for this whole describe block; each test sets the DRAFT lookup it needs.
+        // Ownerless for this whole describe block; each test sets the lookups it needs.
         (
           resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
         ).mockResolvedValue(null);
       });
 
-      // `Fails if` (tasks.md) — on today's (pre-T-2) code this gets "The result has no Science
-      // Program assigned" instead of succeeding. Must be seen red first.
-      it('ownerless + a saved DRAFT choice → Pending Review, sendDraft runs inside the submit transaction, announcePendingReview is NOT called (R-2 main, first AND IT MUST)', async () => {
+      // Transaction with one observable manager (so the arguments `transferPrimary` got can be
+      // asserted) and a marker that fires once the transaction COMMITTED.
+      const arrangeTx = () => {
+        const manager = {
+          findOne: jest.fn().mockResolvedValue({ id: 77 }),
+          update: jest.fn().mockResolvedValue({}),
+          create: jest.fn((_entity, payload) => payload),
+          save: jest.fn().mockResolvedValue({}),
+          query: jest.fn().mockResolvedValue({}),
+        };
+        const committed = jest.fn();
         (
-          primaryProgramRequestService.findDraftPrimaryInitiativeId as jest.Mock
-        ).mockResolvedValue(9); // SP09 saved as a draft choice
+          resultRepository.manager.transaction as jest.Mock
+        ).mockImplementationOnce(async (cb: any) => {
+          const out = await cb(manager);
+          committed();
+          return out;
+        });
+        return { manager, committed };
+      };
+
+      it('saved DRAFT choice → Pending Review, transferPrimary(choice, releaseContributors:false) on the tx manager; no sendDraft, no request, no releaseContributors', async () => {
+        primaryProgramRequestService.findDraftPrimaryInitiativeId.mockResolvedValue(
+          9,
+        );
+        const { manager } = arrangeTx();
 
         const result = await service.submitForReview(user, 77, decisionDto);
 
         expect((result.response as any).status).toBe(
           ResultStatusData.PendingReview.value,
         );
-        // `sendDraft` is called with the SAME manager the transaction's other writes use
-        // (passed through from `resultRepository.manager.transaction`'s callback argument).
-        expect(resultRepository.manager.transaction).toHaveBeenCalled();
-        expect(primaryProgramRequestService.sendDraft).toHaveBeenCalledWith(
-          77,
-          expect.anything(),
-        );
-        const bilateralService = module.get<BilateralService>(
-          BilateralService,
-        ) as any;
-        expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledWith(77, 9, user, manager, {
+          releaseContributors: false,
+        });
+        expect(primaryProgramRequestService.sendDraft).not.toHaveBeenCalled();
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
+        expect(
+          primaryProgramRequestService.releaseContributors,
+        ).not.toHaveBeenCalled();
       });
 
-      // R-2 no-choice scenario, restated explicitly for this describe block's ownerless setup
-      // (the plain "refuses a result with no Science Program assigned" test above already
-      // covers the same message; this one pins that the DRAFT lookup is what is consulted).
-      it("ownerless, no saved choice → refused with today's message, no update (R-2 no-choice)", async () => {
-        (
-          primaryProgramRequestService.findDraftPrimaryInitiativeId as jest.Mock
-        ).mockResolvedValue(null);
+      it('locks the Result row before any other write in the submit transaction', async () => {
+        primaryProgramRequestService.findDraftPrimaryInitiativeId.mockResolvedValue(
+          9,
+        );
+        const { manager } = arrangeTx();
+
+        await service.submitForReview(user, 77, decisionDto);
+
+        expect(manager.findOne).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            where: { id: 77 },
+            lock: { mode: 'pessimistic_write' },
+          }),
+        );
+        const lock = manager.findOne.mock.invocationCallOrder[0];
+        expect(lock).toBeLessThan(manager.query.mock.invocationCallOrder[0]);
+        expect(lock).toBeLessThan(manager.update.mock.invocationCallOrder[0]);
+        expect(lock).toBeLessThan(
+          primaryProgramRequestService.transferPrimary.mock
+            .invocationCallOrder[0],
+        );
+      });
+
+      it('announcePendingReview is called once, after the commit, for an ownerless submit', async () => {
+        primaryProgramRequestService.findDraftPrimaryInitiativeId.mockResolvedValue(
+          9,
+        );
+        const { committed } = arrangeTx();
+
+        await service.submitForReview(user, 77, decisionDto);
+
+        expect(bilateralService.announcePendingReview).toHaveBeenCalledTimes(1);
+        expect(bilateralService.announcePendingReview).toHaveBeenCalledWith(
+          77,
+          user.id,
+        );
+        expect(
+          bilateralService.announcePendingReview.mock.invocationCallOrder[0],
+        ).toBeGreaterThan(committed.mock.invocationCallOrder[0]);
+      });
+
+      it('legacy PENDING primary request, no draft → submit passes and transferPrimary gets the pending SP (prod 9737 / 9738), no "pending" 400', async () => {
+        primaryProgramRequestService.findDraftPrimaryInitiativeId.mockResolvedValue(
+          null,
+        );
+        primaryProgramRequestService.findPendingPrimaryInitiativeId.mockResolvedValue(
+          12,
+        );
+        const { manager } = arrangeTx();
+
+        const result = await service.submitForReview(user, 77, decisionDto);
+
+        expect((result.response as any).status).toBe(
+          ResultStatusData.PendingReview.value,
+        );
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledWith(77, 12, user, manager, {
+          releaseContributors: false,
+        });
+      });
+
+      it('ownerless, no draft and no pending → refused with "no Science Program assigned", nothing runs', async () => {
+        primaryProgramRequestService.findDraftPrimaryInitiativeId.mockResolvedValue(
+          null,
+        );
+        primaryProgramRequestService.findPendingPrimaryInitiativeId.mockResolvedValue(
+          null,
+        );
 
         await expect(
           service.submitForReview(user, 77, decisionDto),
         ).rejects.toThrow(/no Science Program assigned/);
         expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).not.toHaveBeenCalled();
       });
 
-      // R-2 failure scenario — `sendDraft` throwing must reject the whole submit; the status
-      // update inside the SAME transaction callback must not be left committed.
-      it('sendDraft throws → submit rejects, the transaction callback rejects (R-2 failure)', async () => {
-        (
-          primaryProgramRequestService.findDraftPrimaryInitiativeId as jest.Mock
-        ).mockResolvedValue(9);
-        (primaryProgramRequestService.sendDraft as jest.Mock).mockRejectedValue(
-          new Error('no active DRAFT primary row'),
+      it('choice vanishes between the guard and the transaction → throws inside the tx (rolls back), no transfer, no announce', async () => {
+        primaryProgramRequestService.findDraftPrimaryInitiativeId
+          .mockResolvedValueOnce(9) // assertSubmittable
+          .mockResolvedValueOnce(null); // inside the transaction
+        primaryProgramRequestService.findPendingPrimaryInitiativeId.mockResolvedValue(
+          null,
         );
 
         await expect(
           service.submitForReview(user, 77, decisionDto),
-        ).rejects.toThrow('no active DRAFT primary row');
-        const bilateralService = module.get<BilateralService>(
-          BilateralService,
-        ) as any;
+        ).rejects.toThrow(/no Science Program assigned/);
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).not.toHaveBeenCalled();
+        expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
+      });
+
+      it('transferPrimary rejects → submit rejects and announcePendingReview is not called', async () => {
+        primaryProgramRequestService.findDraftPrimaryInitiativeId.mockResolvedValue(
+          9,
+        );
+        primaryProgramRequestService.transferPrimary.mockRejectedValue(
+          new Error('owner write failed'),
+        );
+
+        await expect(
+          service.submitForReview(user, 77, decisionDto),
+        ).rejects.toThrow('owner write failed');
         expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
       });
     });
 
-    // R-2 existing scenario — restated for clarity next to the new ownerless tests: an owner
-    // already exists, so `sendDraft` must never be called (only `announcePendingReview` is).
-    it('owner exists → announcePendingReview is called, sendDraft is NOT called (R-2 existing)', async () => {
+    // `PRA-R-1` "submit with an owner (unchanged)": no owner write, the announce still runs.
+    it('owner exists → announcePendingReview is called, transferPrimary and sendDraft are NOT called (PRA-R-1 unchanged)', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const bilateral = module.get<BilateralService>(BilateralService) as any;
       const primaryProgramRequestService =
@@ -3960,7 +4072,27 @@ describe('BilateralCenterService', () => {
       await service.submitForReview(user, 77, decisionDto);
 
       expect(bilateral.announcePendingReview).toHaveBeenCalledWith(77, user.id);
+      expect(
+        primaryProgramRequestService.transferPrimary,
+      ).not.toHaveBeenCalled();
       expect(primaryProgramRequestService.sendDraft).not.toHaveBeenCalled();
+    });
+
+    // `PRA-R-1` safety net: owner + a PENDING primary row (never created by new code) still blocks.
+    it('owner + a PENDING primary request still blocks submit with the "pending" 400 (PRA-R-1 safety net)', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const primaryProgramRequestService =
+        module.get<PrimaryProgramRequestService>(
+          PrimaryProgramRequestService,
+        ) as any;
+      primaryProgramRequestService.findPendingPrimaryInitiativeId.mockResolvedValue(
+        12,
+      );
+
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/A new primary Science Program request is pending/);
+      expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
     });
   });
 
@@ -4008,6 +4140,7 @@ describe('BilateralCenterService', () => {
     /** One manager for the whole transaction, plus a marker that fires once it has COMMITTED. */
     const arrangeTransaction = () => {
       const manager = {
+        findOne: jest.fn().mockResolvedValue({ id: RESULT }),
         update: jest.fn().mockResolvedValue({}),
         create: jest.fn((_entity, payload) => payload),
         save: jest.fn().mockResolvedValue({}),
@@ -4230,10 +4363,13 @@ describe('BilateralCenterService', () => {
         ).toBeGreaterThan(committed.mock.invocationCallOrder[0]);
       });
 
-      it('never takes the ownerless branch (the owner exists at 7): no sendDraft', async () => {
+      it('never takes the ownerless branch (the owner exists at 7): no sendDraft, no transferPrimary', async () => {
         await submitFromRejected();
 
         expect(primaryProgramRequestService.sendDraft).not.toHaveBeenCalled();
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).not.toHaveBeenCalled();
       });
 
       // `RRC-R-18`: one line, AFTER the transaction resolved, ids only (`.cursorrules`).
