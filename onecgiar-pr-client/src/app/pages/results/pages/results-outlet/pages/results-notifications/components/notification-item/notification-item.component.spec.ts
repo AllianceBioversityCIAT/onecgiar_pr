@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { NotificationItemComponent } from './notification-item.component';
 import { ResultsNotificationsService } from '../../results-notifications.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -3183,13 +3184,13 @@ describe('NotificationItemComponent', () => {
     });
 
     describe('primary request row', () => {
-      it('renders the "Primary program request" chip, the flag icon, and the row sentence (PSR-R-9)', () => {
+      it('renders the "Needs your review" chip, the flag icon, and the row sentence (PSR-R-9, PRA-R-3)', () => {
         component.notification = buildPsrFixture({ request_type: 'primary' });
         fixture.detectChanges();
 
         const root: HTMLElement = fixture.nativeElement;
-        expect(component.rowTypeChipLabel).toBe('Primary program request');
-        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Primary program request');
+        expect(component.rowTypeChipLabel).toBe('Needs your review');
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Needs your review');
         expect(root.querySelector('.notification_avatar i.pi.pi-flag')).toBeTruthy();
 
         const bodyText = root.querySelector('.notification_content_body_text')?.textContent?.replace(/\s+/g, ' ').trim();
@@ -3207,14 +3208,106 @@ describe('NotificationItemComponent', () => {
         expect(component.creatingCenterLabel).not.toContain('()');
       });
 
-      it('renders "Accept as primary" / "Decline" as the row button labels (PSR-R-9)', () => {
+      it('PRA-R-3 label + no Decline: the row shows one "Review result" button and no Decline button', () => {
         component.notification = buildPsrFixture({ request_type: 'primary' });
         fixture.detectChanges();
 
         const acceptBtn: any = fixture.nativeElement.querySelector('[data-testid="accept-contribution-btn"]');
-        const declineBtn: any = fixture.nativeElement.querySelector('[data-testid="decline-contribution-btn"]');
-        expect(acceptBtn.text).toBe('Accept as primary');
-        expect(declineBtn.text).toBe('Decline');
+        expect(acceptBtn.text).toBe('Review result');
+        expect(fixture.nativeElement.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+        expect(fixture.nativeElement.textContent).not.toContain('Accept as primary');
+      });
+
+      describe('PRA-R-3 Review result click (accept PATCH, then drawer or notify-later)', () => {
+        let navigate: jest.SpyInstance;
+        let alertSpy: jest.SpyInstance;
+        let patchSpy: jest.SpyInstance;
+        let emitSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+          navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+          alertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
+          patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+          emitSpy = jest.spyOn(component.requestEvent, 'emit');
+        });
+
+        const reviewRow = (statusId: string) =>
+          buildPsrFixture({ request_type: 'primary', obj_result: { status_id: statusId, result_code: 'RC-10001' } });
+
+        it('Pending Review (5): accept PATCH once, then navigateByUrl once with the bilateral-review drawer URL; no toast', () => {
+          component.notification = reviewRow('5');
+          const order: string[] = [];
+          patchSpy.mockImplementation(() => {
+            order.push('patch');
+            return of({ response: {} });
+          });
+          navigate.mockImplementation(() => {
+            order.push('navigate');
+            return Promise.resolve(true);
+          });
+
+          component.onAcceptContribution();
+
+          expect(order).toEqual(['patch', 'navigate']);
+          expect(patchSpy).toHaveBeenCalledTimes(1);
+          expect(navigate).toHaveBeenCalledTimes(1);
+          const url = navigate.mock.calls[0][0] as string;
+          expect(url).toContain('/result-framework-reporting/entity-details/SP12/bilateral-review');
+          expect(url).toContain('reviewResult=RC-10001');
+          expect(url).toContain('reviewResultId=10001');
+          expect(alertSpy).not.toHaveBeenCalled();
+          expect(emitSpy).toHaveBeenCalled();
+        });
+
+        it('Editing (1): accept PATCH, the notify-later toast, and the router is NOT called', () => {
+          component.notification = reviewRow('1');
+
+          component.onAcceptContribution();
+
+          expect(patchSpy).toHaveBeenCalledTimes(1);
+          expect(navigate).not.toHaveBeenCalled();
+          expect(alertSpy).toHaveBeenCalledTimes(1);
+          expect(alertSpy).toHaveBeenCalledWith({
+            id: 'noti',
+            title: 'You are now the primary Science Program. You will be notified when the Center submits it for review.',
+            status: 'success'
+          });
+        });
+
+        it('stale 409 on a Pending Review row: navigates to the drawer and shows NO error / already-answered toast', () => {
+          component.notification = reviewRow('5');
+          patchSpy.mockReturnValue(throwError(() => ({ status: 409 })));
+          const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+          component.onAcceptContribution();
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(alertSpy).not.toHaveBeenCalled();
+          consoleSpy.mockRestore();
+        });
+
+        it('any other error: the generic error toast, no navigation', () => {
+          component.notification = reviewRow('5');
+          patchSpy.mockReturnValue(throwError(() => ({ status: 500 })));
+          const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+          component.onAcceptContribution();
+
+          expect(navigate).not.toHaveBeenCalled();
+          expect(alertSpy).toHaveBeenCalledWith({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+          consoleSpy.mockRestore();
+        });
+
+        it('the drawer footer offers no Decline for a primary row (showDecline=false)', () => {
+          component.notification = reviewRow('5');
+          fixture.detectChanges();
+          component.openDrawer('details');
+          fixture.detectChanges();
+
+          const content: NotificationDetailContentComponent = fixture.debugElement.query(By.directive(NotificationDetailContentComponent)).componentInstance;
+          expect(content.showDecline()).toBe(false);
+          expect(fixture.nativeElement.ownerDocument.querySelector('[data-testid="crd-decline-btn"]')).toBeNull();
+        });
       });
 
       it('counts under "Needs your decision" while pending (PSR-R-9)', () => {
@@ -3263,9 +3356,9 @@ describe('NotificationItemComponent', () => {
           expect(body.result_toc_result).toEqual({ planned_result: null, result_toc_results: [] });
         });
 
-        it('(4) the Accept text is "Accept as primary" for both the row and the drawer', () => {
+        it('(4) the Accept text is "Review result" for both the row and the drawer', () => {
           component.notification = buildPsrFixture({ request_type: 'primary' });
-          expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+          expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.reviewResult);
         });
 
         // PSR-T-8 rework attempt 2 (Reviewer finding 3): queries the real content debug instance's
@@ -3274,7 +3367,7 @@ describe('NotificationItemComponent', () => {
         // DSP-T-3: `showAlignSlot`/`acceptLabel` moved from the (now shell-only)
         // ContributionRequestDrawerComponent to NotificationDetailContentComponent — updated to
         // query the new owner, assertions unchanged.
-        it('the content actually receives showAlignSlot=false and acceptLabel="Accept as primary"', () => {
+        it('the content actually receives showAlignSlot=false and acceptLabel="Review result"', () => {
           component.notification = buildPsrFixture({ request_type: 'primary' });
           fixture.detectChanges();
           // DSP-T-3: the content only renders once the (mocked) sheet reports open — the shell's
@@ -3287,7 +3380,7 @@ describe('NotificationItemComponent', () => {
           ).componentInstance;
 
           expect(content.showAlignSlot()).toBe(false);
-          expect(content.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+          expect(content.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.reviewResult);
         });
       });
     });
@@ -3368,9 +3461,9 @@ describe('NotificationItemComponent', () => {
     // DSP-T-4 moves the request kind out to `detailTitle()` (the panel's header title, DD-6) —
     // same `rowTypeChipLabel` source as before, single source with the row's own type chip.
     describe('detailTitle() (PSR-R-11, moved by DSP-T-4)', () => {
-      it('is "Primary program request" for a primary row (incl. resolved)', () => {
+      it('is "Needs your review" for a primary row (incl. resolved)', () => {
         component.notification = buildPsrFixture({ request_type: 'primary', request_status_id: 2 });
-        expect(component.detailTitle()).toBe('Primary program request');
+        expect(component.detailTitle()).toBe('Needs your review');
       });
 
       it('is "Contributor request" for a bilateral contributor row', () => {
@@ -4772,15 +4865,19 @@ describe('NotificationItemComponent', () => {
       expect(patchSpy).not.toHaveBeenCalled();
     });
 
-    it("autoAction='decline' on a primary row -> showPrimaryDeclineDialog() true", async () => {
+    it("PRA-R-3: autoAction='decline' on a primary pending row opens no dialog, sends 0 PATCH and still reports consumed", async () => {
       component.notification = primaryRow();
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
       fixture.componentRef.setInput('autoAction', 'decline');
 
       fixture.detectChanges();
       await flush();
 
-      expect(component.showPrimaryDeclineDialog()).toBe(true);
+      expect(component.showPrimaryDeclineDialog()).toBe(false);
       expect(component.showConfirmRejectDialog()).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
     });
 
     it("autoAction='decline' on a non-primary row -> the inline reject confirm (showConfirmRejectDialog)", async () => {
@@ -4985,15 +5082,16 @@ describe('NotificationItemComponent', () => {
       expect(consumed).toHaveBeenCalledTimes(1);
     });
 
-    it('primary row + action=decline -> the justification dialog opens and 0 PATCH_updateRequest', async () => {
+    it('PRA-R-3: primary row + action=decline -> no dialog opens, 0 PATCH_updateRequest, consumed once', async () => {
       const consumed = await run(rows['primary'](), 'decline');
 
-      expect(component.showPrimaryDeclineDialog()).toBe(true);
+      expect(component.showPrimaryDeclineDialog()).toBe(false);
+      expect(component.showConfirmRejectDialog()).toBe(false);
       expect(patchSpy).not.toHaveBeenCalled();
       expect(consumed).toHaveBeenCalledTimes(1);
     });
 
-    it.each(Object.keys(rows))('%s row + action=decline -> 0 PATCH_updateRequest until the user confirms', async kind => {
+    it.each(Object.keys(rows).filter(k => k !== 'primary'))('%s row + action=decline -> 0 PATCH_updateRequest until the user confirms', async kind => {
       const consumed = await run(rows[kind](), 'decline');
 
       expect(component.showPrimaryDeclineDialog() || component.showConfirmRejectDialog()).toBe(true);

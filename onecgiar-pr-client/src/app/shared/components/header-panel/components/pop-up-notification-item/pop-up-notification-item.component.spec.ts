@@ -31,7 +31,7 @@ describe('PopUpNotificationItemComponent', () => {
   let router: { navigate: jest.Mock; navigateByUrl: jest.Mock };
   let bilateralApi: { GET_centersByResultId: jest.Mock };
   let resultsApi: { PATCH_readNotification: jest.Mock };
-  let notificationsSE: { decideRequest: jest.Mock; refreshBell: jest.Mock; markRequestSeen: jest.Mock };
+  let notificationsSE: { decideRequest: jest.Mock; acceptPrimaryForReview: jest.Mock; refreshBell: jest.Mock; markRequestSeen: jest.Mock };
   let apiMock: any;
 
   beforeEach(async () => {
@@ -40,9 +40,10 @@ describe('PopUpNotificationItemComponent', () => {
       GET_centersByResultId: jest.fn().mockReturnValue(of({ response: [] }))
     };
     resultsApi = { PATCH_readNotification: jest.fn().mockReturnValue(of({})) };
-    notificationsSE = { decideRequest: jest.fn().mockResolvedValue(undefined), refreshBell: jest.fn(), markRequestSeen: jest.fn().mockResolvedValue(true) };
+    notificationsSE = { decideRequest: jest.fn().mockResolvedValue(undefined), acceptPrimaryForReview: jest.fn().mockResolvedValue(undefined), refreshBell: jest.fn(), markRequestSeen: jest.fn().mockResolvedValue(true) };
     apiMock = {
       rolesSE: { isAdmin: false, platformIsClosed: false },
+      alertsFe: { show: jest.fn() },
       dataControlSE: { reportingCurrentPhase: { phaseId: 'v1' }, IPSRCurrentPhase: { phaseId: 'v1' } }
     };
 
@@ -847,21 +848,20 @@ describe('PopUpNotificationItemComponent', () => {
       expect(component.actionTooltip).toBe('');
     });
 
-    it('BELL-T-11: confirming a one-click Accept and double-clicking calls decideRequest ONCE', () => {
+    it('PRA-R-3 no confirm: a primary Review result click is busy-guarded and sends ONE accept', () => {
       let resolve!: () => void;
-      notificationsSE.decideRequest.mockReturnValue(new Promise<void>(r => (resolve = r)));
+      notificationsSE.acceptPrimaryForReview.mockReturnValue(new Promise<void>(r => (resolve = r)));
       const row = decisionRow({ is_map_to_toc: false, request_type: 'primary' });
       render(row);
 
-      click('bell-accept'); // enters confirm
-      click('bell-accept'); // decides
+      click('bell-accept'); // decides immediately
       click('bell-accept'); // busy: ignored
       fixture.detectChanges();
 
-      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(1);
-      expect(notificationsSE.decideRequest).toHaveBeenCalledWith(row, true);
+      expect(notificationsSE.acceptPrimaryForReview).toHaveBeenCalledTimes(1);
+      expect(notificationsSE.acceptPrimaryForReview).toHaveBeenCalledWith(row);
+      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
       expect(disabledOf('bell-accept')).toBe(true);
-      expect(disabledOf('bell-decline')).toBe(true);
       resolve();
     });
 
@@ -878,13 +878,6 @@ describe('PopUpNotificationItemComponent', () => {
       expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(0);
     });
 
-    it('Accept on a primary row decides directly (after its confirm step)', () => {
-      render(decisionRow({ is_map_to_toc: false, request_type: 'primary' }));
-      click('bell-accept');
-      click('bell-accept');
-      expect(notificationsSE.decideRequest).toHaveBeenCalledWith(expect.anything(), true);
-    });
-
     it('Accept on a bilateral step row emits handoff and never decides', () => {
       const handoff = jest.fn();
       component.handoff.subscribe(handoff);
@@ -898,18 +891,15 @@ describe('PopUpNotificationItemComponent', () => {
       expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(0);
     });
 
-    it('Decline on a primary row emits handoff(decline) with no PATCH and no confirm strip', () => {
-      const handoff = jest.fn();
-      component.handoff.subscribe(handoff);
-      const row = decisionRow({ is_map_to_toc: false, request_type: 'primary' });
-      render(row);
+    it('PRA-R-3 no Decline: a primary card renders no Decline button', () => {
+      render(decisionRow({ is_map_to_toc: false, request_type: 'primary' }));
+      expect(q('bell-decline')).toBeNull();
+      expect(q('bell-accept')?.textContent?.trim()).toBe('Review result');
+    });
 
-      click('bell-decline');
-      fixture.detectChanges();
-
-      expect(handoff).toHaveBeenCalledWith({ row, action: 'decline' });
-      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
-      expect(q('bell-decline-confirm')).toBeNull();
+    it('PRA-R-3 contribution unchanged: a contribution card still renders Decline', () => {
+      render(decisionRow({ is_map_to_toc: false, request_type: 'contribution' }));
+      expect(q('bell-decline')).toBeTruthy();
     });
 
     it('BELL-T-12: first Decline click on a contribution row arms "Confirm decline" and sends nothing (no strip)', () => {
@@ -940,18 +930,17 @@ describe('PopUpNotificationItemComponent', () => {
       resolve();
     });
 
-    it('on error the error text is visible and the buttons are enabled again', async () => {
-      notificationsSE.decideRequest.mockRejectedValue(new Error('boom'));
-      render(decisionRow({ is_map_to_toc: false, request_type: 'primary' }));
+    it('on error (non-409) the error text is visible, no navigation, and Review result is enabled again', async () => {
+      notificationsSE.acceptPrimaryForReview.mockRejectedValue(new Error('boom'));
+      render(decisionRow({ is_map_to_toc: false, request_type: 'primary', obj_result: { ...decisionRow().obj_result, status_id: 5 } }));
 
-      click('bell-accept');
       click('bell-accept');
       await fixture.whenStable();
       fixture.detectChanges();
 
       expect(q('bell-decision-error')?.textContent).toContain(BELL_QUICK_INBOX_COPY.decisionError);
       expect(disabledOf('bell-accept')).toBe(false);
-      expect(disabledOf('bell-decline')).toBe(false);
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
     });
 
     it('a failed confirmed decline shows the error and re-enables both buttons', async () => {
@@ -970,18 +959,16 @@ describe('PopUpNotificationItemComponent', () => {
     });
 
     it('a retry after an error sends a new request and clears the error', async () => {
-      notificationsSE.decideRequest.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
+      notificationsSE.acceptPrimaryForReview.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
       render(decisionRow({ is_map_to_toc: false, request_type: 'primary' }));
-      click('bell-accept');
       click('bell-accept');
       await fixture.whenStable();
       fixture.detectChanges();
-      click('bell-accept');
       click('bell-accept');
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(2);
+      expect(notificationsSE.acceptPrimaryForReview).toHaveBeenCalledTimes(2);
       expect(q('bell-decision-error')).toBeNull();
     });
 
@@ -1150,7 +1137,6 @@ describe('PopUpNotificationItemComponent', () => {
     afterEach(() => jest.useRealTimers());
 
     it.each([
-      ['primary', primary(), 'Accept as primary'],
       ['bilateral contributor', row({ obj_result: { ...row().obj_result, source_name: 'W3/Bilaterals' } }), 'Accept'],
       ['W1/W2', row(), 'Accept contribution'],
       ['ToC-carried', row({ is_map_to_toc: true }), 'Accept contribution']
@@ -1161,82 +1147,67 @@ describe('PopUpNotificationItemComponent', () => {
       expect(f.nativeElement.querySelector('[data-testid="bell-decline"]').textContent.trim()).toBe(copy.actions.decline);
     });
 
-    it('primary: first click shows "Confirm accept as primary" and sends nothing', () => {
-      const f = mount(primary());
-      btn(f).click();
-      f.detectChanges();
-      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
-      expect(text(f)).toBe('Confirm accept as primary');
-      expect(hint(f)?.getAttribute('aria-live')).toBe('polite');
-      expect(hint(f)?.textContent?.trim()).toBe(copy.actions.confirmHint);
-    });
-
-    it('primary: second click decides once; a third click while busy sends nothing more', () => {
-      let resolve!: () => void;
-      notificationsSE.decideRequest.mockReturnValue(new Promise<void>(r => (resolve = r)));
+    it('PRA-R-3 label + chip: the primary card shows "Review result" and "Needs your review", and equals the inbox label', () => {
       const r = primary();
       const f = mount(r);
-      btn(f).click();
-      btn(f).click();
-      btn(f).click();
-      f.detectChanges();
-      expect(notificationsSE.decideRequest).toHaveBeenCalledTimes(1);
-      expect(notificationsSE.decideRequest).toHaveBeenCalledWith(r, true);
-      resolve();
+      expect(text(f)).toBe('Review result');
+      expect(text(f)).toBe(acceptLabelFor(r));
+      expect(f.nativeElement.querySelector('[data-testid="bell-status-chip"]').textContent.trim()).toBe('Needs your review');
+      expect(f.nativeElement.querySelector('[data-testid="bell-decline"]')).toBeNull();
     });
 
-    it('the confirm state reverts after 5 s with 0 decide', () => {
-      jest.useFakeTimers();
+    it('PRA-R-3 no confirm: the first click on a primary card sends the accept and never shows a confirm state', () => {
       const f = mount(primary());
       btn(f).click();
       f.detectChanges();
-      expect(text(f)).toBe('Confirm accept as primary');
-      jest.advanceTimersByTime(4999);
-      f.detectChanges();
-      expect(text(f)).toBe('Confirm accept as primary');
-      jest.advanceTimersByTime(1);
-      f.detectChanges();
-      expect(text(f)).toBe('Accept as primary');
-      expect(hint(f)?.textContent?.trim()).toBe('');
-      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+      expect(notificationsSE.acceptPrimaryForReview).toHaveBeenCalledTimes(1);
+      expect(text(f)).toBe('Review result');
+      expect(hint(f)?.textContent?.trim() ?? '').toBe('');
     });
 
-    it('Escape reverts the confirm state with 0 decide', () => {
-      const f = mount(primary());
+    it('PRA-R-3 Pending Review: accept first, then navigates to the review drawer URL exactly once', async () => {
+      const r: any = primary(9);
+      r.obj_result = { ...r.obj_result, status_id: 5, result_code: 9640 };
+      r.result_id = 9640;
+      const f = mount(r);
+      const order: string[] = [];
+      notificationsSE.acceptPrimaryForReview.mockImplementation(async () => void order.push('accept'));
+      router.navigateByUrl.mockImplementation(() => void order.push('navigate'));
+
       btn(f).click();
-      f.detectChanges();
-      btn(f).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      f.detectChanges();
-      expect(text(f)).toBe('Accept as primary');
-      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+      await f.whenStable();
+
+      expect(order).toEqual(['accept', 'navigate']);
+      expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
+      const url = router.navigateByUrl.mock.calls[0][0] as string;
+      expect(url).toContain('/result-framework-reporting/entity-details/SP02/bilateral-review');
+      expect(url).toContain('reviewResult=9640');
+      expect(url).toContain('reviewResultId=9640');
+      expect(apiMock.alertsFe.show).not.toHaveBeenCalled();
     });
 
-    it('focus leaving the card reverts the confirm state; focus moving inside it does not', () => {
-      const f = mount(primary());
+    it('PRA-R-3 Editing: accept, then the notify-later toast; the router is NOT called', async () => {
+      const f = mount(primary()); // status_id 1
       btn(f).click();
-      f.detectChanges();
-      const decline = f.nativeElement.querySelector('[data-testid="bell-decline"]') as HTMLElement;
-      btn(f).dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: decline }));
-      f.detectChanges();
-      expect(text(f)).toBe('Confirm accept as primary');
-      btn(f).dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
-      f.detectChanges();
-      expect(text(f)).toBe('Accept as primary');
-      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+      await f.whenStable();
+
+      expect(notificationsSE.acceptPrimaryForReview).toHaveBeenCalledTimes(1);
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+      expect(apiMock.alertsFe.show).toHaveBeenCalledTimes(1);
+      expect(apiMock.alertsFe.show.mock.calls[0][0].title).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.primaryNotifyLater);
     });
 
-    it('entering confirm on card B resets card A (only one card in confirm)', () => {
-      const a = mount(primary(1));
-      const b = mount(primary(2));
-      btn(a).click();
-      a.detectChanges();
-      expect(text(a)).toBe('Confirm accept as primary');
-      btn(b).click();
-      a.detectChanges();
-      b.detectChanges();
-      expect(text(a)).toBe('Accept as primary');
-      expect(text(b)).toBe('Confirm accept as primary');
-      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    it('PRA-R-3 stale 409: the service treats 409 as success (see its spec), so a status 5 row navigates with no error shown', async () => {
+      const r: any = primary();
+      r.obj_result = { ...r.obj_result, status_id: 5 };
+      const f = mount(r);
+      notificationsSE.acceptPrimaryForReview.mockResolvedValue(undefined);
+      btn(f).click();
+      await f.whenStable();
+      f.detectChanges();
+
+      expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
+      expect(f.nativeElement.querySelector('[data-testid="bell-decision-error"]')).toBeNull();
     });
 
     it('a contribution card: one click hands off, with no confirm state', () => {
@@ -1364,31 +1335,17 @@ describe('PopUpNotificationItemComponent', () => {
       expect(text(dec(a))).toBe(copy.actions.decline);
       expect(text(dec(b))).toBe(confirmDecline);
 
-      const p = mount(primary(3));
-      acc(p).click();
-      b.detectChanges();
-      p.detectChanges();
-      expect(text(acc(p))).toBe('Confirm accept as primary');
-      expect(text(dec(b))).toBe(copy.actions.decline);
-
       dec(a).click();
       a.detectChanges();
-      p.detectChanges();
-      expect(text(acc(p))).toBe('Accept as primary');
+      b.detectChanges();
+      expect(text(dec(b))).toBe(copy.actions.decline);
       expect(text(dec(a))).toBe(confirmDecline);
       expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
     });
 
-    it('primary Decline hands off with no confirm state', () => {
-      const r = primary();
-      const f = mount(r);
-      const handoff = jest.fn();
-      f.componentInstance.handoff.subscribe(handoff);
-      dec(f).click();
-      f.detectChanges();
-      expect(handoff).toHaveBeenCalledWith({ row: r, action: 'decline' });
-      expect(text(dec(f))).toBe(copy.actions.decline);
-      expect(notificationsSE.decideRequest).not.toHaveBeenCalled();
+    it('PRA-R-3: a primary card has no Decline at all, so nothing can hand off', () => {
+      const f = mount(primary());
+      expect(dec(f)).toBeNull();
     });
   });
   // @akili-spec notifications/bell-read-state — BRS-T-5: fresh / read look + request body click marks seen
@@ -1548,7 +1505,7 @@ describe('PopUpNotificationItemComponent', () => {
       });
 
       it('Accept and Decline clicks never mark the request seen', () => {
-        render(decision({ is_map_to_toc: false, request_type: 'primary' }));
+        render(decision({ is_map_to_toc: false, request_type: 'contribution' }));
         q('bell-accept')!.click();
         q('bell-decline')!.click();
         expect(notificationsSE.markRequestSeen).not.toHaveBeenCalled();

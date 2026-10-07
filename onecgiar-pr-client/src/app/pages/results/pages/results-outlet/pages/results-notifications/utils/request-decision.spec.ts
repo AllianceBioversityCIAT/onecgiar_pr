@@ -1,4 +1,4 @@
-import { buildDecisionBody, isDecidable, classifyAccept, bellAcceptMode, declineMode, isP25, bellHandoffUrl, acceptLabelFor } from './request-decision';
+import { buildDecisionBody, isDecidable, classifyAccept, bellAcceptMode, declineMode, isP25, bellHandoffUrl, acceptLabelFor, primaryReviewTarget } from './request-decision';
 
 /**
  * BELL-T-1 (`notifications/bell-quick-inbox`): table-driven spec for the pure request-decision
@@ -239,11 +239,23 @@ describe('request-decision utils', () => {
       expect(bellHandoffUrl(row, 'accept')).toBe(`${base}?phase=30&request=77&action=accept`);
     });
   });
+  // PRA-R-3 / design §8.1: where "Review result" leads once the accept settled.
+  describe('primaryReviewTarget()', () => {
+    it('Pending Review (status_id 5) -> review-drawer', () => {
+      expect(primaryReviewTarget({ ...primaryRow, obj_result: { ...primaryRow.obj_result, status_id: 5 } })).toBe('review-drawer');
+    });
+    it('Editing (status_id 1) -> notify-later', () => {
+      expect(primaryReviewTarget({ ...primaryRow, obj_result: { ...primaryRow.obj_result, status_id: 1 } })).toBe('notify-later');
+    });
+    it('a missing result -> notify-later', () => {
+      expect(primaryReviewTarget({})).toBe('notify-later');
+    });
+  });
   // BELL-T-11: single source of the Accept label. Literals are the pre-refactor
   // `notification-item.drawerAcceptLabel()` outputs (+ the template `?? 'Accept contribution'`).
   describe('acceptLabelFor() — parity with the inbox row label', () => {
-    it('primary request -> "Accept as primary"', () => {
-      expect(acceptLabelFor(primaryRow)).toBe('Accept as primary');
+    it('primary request -> "Review result" (PRA-R-3)', () => {
+      expect(acceptLabelFor(primaryRow)).toBe('Review result');
     });
     it('bilateral contributor -> "Accept"', () => {
       expect(acceptLabelFor(bilateralContributorRow)).toBe('Accept');

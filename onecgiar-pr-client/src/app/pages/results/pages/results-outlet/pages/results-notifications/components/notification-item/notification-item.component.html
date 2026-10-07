@@ -292,6 +292,7 @@
               [style]="{ whiteSpace: 'nowrap' }"
               tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
+            @if (!isPrimaryRequest) {
             <app-pr-button
               data-testid="decline-contribution-btn"
               class="notification_decline_btn"
@@ -302,6 +303,7 @@
               [verticalMargin]="0"
               [style]="{ whiteSpace: 'nowrap' }"
               [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+            }
           </div>
         }
       </div>
@@ -833,6 +835,7 @@
     [chain]="chainState.status === 'ok' ? { state: 'ok', data: chainState.data } : { state: chainState.status }"
     [reviewRows]="drawerReviewRowsForMode()"
     [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
+    [showDecline]="!isPrimaryRequest"
     [declineDisabled]="requestingAccept || requestingReject"
     [acceptBusy]="requestingAccept"
     [declineBusy]="requestingReject"

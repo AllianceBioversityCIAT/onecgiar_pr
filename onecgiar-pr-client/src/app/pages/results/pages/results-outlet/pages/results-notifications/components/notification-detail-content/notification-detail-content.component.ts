@@ -197,6 +197,8 @@ export class NotificationDetailContentComponent {
 
   /** Footer state (CRD-R-6..R-8). */
   readonly acceptDisabled = input(false);
+  /** PRA-R-3: a primary request's footer offers no Decline (the SP rejects in the review drawer instead). */
+  readonly showDecline = input(true);
   readonly declineDisabled = input(false);
   readonly acceptBusy = input(false);
   readonly declineBusy = input(false);

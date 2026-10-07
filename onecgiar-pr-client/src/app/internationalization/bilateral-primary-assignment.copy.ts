@@ -7,7 +7,7 @@ export const BILATERAL_PRIMARY_ASSIGNMENT_COPY = {
   banner: {
     /** PSR-R-15: "Awaiting {SP code} acceptance as primary Science Program". */
     pending: (programCode: string): string =>
-      `Awaiting ${programCode} acceptance as primary Science Program`,
+      `${programCode} will review this result when you submit it for review`,
     /** PSR-R-15: "Declined by {SP code}. Pick another primary Science Program". */
     sentBack: (programCode: string): string =>
       `Declined by ${programCode}. Pick another primary Science Program`,
@@ -30,7 +30,7 @@ export const BILATERAL_PRIMARY_ASSIGNMENT_COPY = {
      * but not yet sent (create / Project Information save). Submit is what sends it.
      */
     draft: (programCode: string): string =>
-      `${programCode} will be asked to be the primary Science Program when you submit for review`,
+      `${programCode} will review this result when you submit it for review`,
   },
   /** design.md §6.3 — shown next to the banner while the result has no owner. */
   submitBlockedReason:

@@ -370,6 +370,29 @@ export class ResultsNotificationsService {
     else this.refreshBell();
   }
 
+  /**
+   * `notifications/primary-review-not-accept` PRA-R-3 (bell): a primary row's "Review result" sends the
+   * existing accept PATCH and treats 409 (the Center already submitted and closed the row) as success,
+   * with no "already answered" toast. Neither outcome toasts here — the caller opens the review drawer
+   * or shows the notify-later message. Any other error rejects, leaving bell state untouched.
+   */
+  async acceptPrimaryForReview(row: any): Promise<void> {
+    const { kind: _kind, fresh: _fresh, seen: _seen, ...raw } = row ?? {};
+
+    try {
+      await firstValueFrom(this.api.resultsSE.PATCH_updateRequest(buildDecisionBody(raw, true), isP25(raw)), { defaultValue: null });
+    } catch (err: any) {
+      if (err?.status !== 409) {
+        console.error('ResultsNotificationsService: bell primary review failed', err?.status);
+        throw err;
+      }
+    }
+
+    this.bellReceived.update(rows => rows.filter(r => r?.share_result_request_id !== raw.share_result_request_id));
+    if (this.phaseFilter) this.refreshSource('received');
+    else this.refreshBell();
+  }
+
   /** Any source still has a next page — drives "Load more" visibility (PAGE-R-4). */
   get hasMore(): boolean {
     return ALL_SOURCES.some(source => this.paging[source].hasMore);

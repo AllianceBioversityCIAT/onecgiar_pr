@@ -129,6 +129,8 @@ export class SectionZeroDashboardComponent {
     const request = this.primaryRequest();
     if (!request || request.state === 'accepted' || request.state === 'draft') return null;
     if (request.state === 'none' && this.isRejected() && this.hasOwner()) return null;
+    // PRA-R-1/R-5: a legacy pending choice with no owner no longer blocks Submit (the SP reviews after it).
+    if (request.state === 'pending' && !this.hasOwner()) return null;
     return BILATERAL_PRIMARY_ASSIGNMENT_COPY.submitBlockedReason;
   });
 

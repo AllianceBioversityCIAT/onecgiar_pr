@@ -96,7 +96,7 @@
         hlmBadge
         variant="secondary"
         data-testid="bell-status-chip"
-        class="!bg-[var(--pr-status-in-progress-bg)] !text-[10px] !font-semibold !uppercase !text-[var(--pr-status-in-progress-fg)]">{{ copy.card.requiresDecision }}</span>
+        class="!bg-[var(--pr-status-in-progress-bg)] !text-[10px] !font-semibold !uppercase !text-[var(--pr-status-in-progress-fg)]">{{ statusChipLabel }}</span>
       <span class="ml-auto text-[11px] text-[var(--pr-text-subtle)]" data-testid="bell-time">{{ shortAge(notification?.requested_date) }}</span>
     </div>
 
@@ -134,7 +134,7 @@
 
   @if (isDecisionRow) {
     <div class="mt-2 flex flex-col gap-2" data-testid="bell-decision-actions" role="group" [attr.aria-label]="copy.actions.groupAriaLabel">
-      <div class="grid grid-cols-2 gap-2" data-testid="bell-decision-buttons">
+      <div class="grid gap-2" [class.grid-cols-2]="!isPrimaryRow" data-testid="bell-decision-buttons">
         <span class="flex" [hlmTooltip]="actionTooltip" [tooltipDisabled]="!actionTooltip">
           <button
             hlmBtn
@@ -150,6 +150,7 @@
             {{ acceptButtonText }}
           </button>
         </span>
+        @if (!isPrimaryRow) {
         <span class="flex" [hlmTooltip]="actionTooltip" [tooltipDisabled]="!actionTooltip">
           <button
             hlmBtn
@@ -164,6 +165,7 @@
             {{ declineButtonText }}
           </button>
         </span>
+        }
       </div>
 
       <p class="m-0 text-[11px] text-[var(--pr-text-subtle)]" aria-live="polite" data-testid="bell-accept-hint">

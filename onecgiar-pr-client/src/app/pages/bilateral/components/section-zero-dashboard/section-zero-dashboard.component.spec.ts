@@ -386,15 +386,17 @@ describe('SectionZeroDashboardComponent', () => {
       expect(component.showPrimaryOptions()).toBe(false);
     });
 
-    it('shows the "Awaiting acceptance" banner while pending', () => {
+    it('PRA-R-5: shows the "will review" banner while pending (no owner) and does not show the submit-blocked note', () => {
       setPrimaryRequest('pending', 'SP09');
       openResultWithProgramOptions(21);
+      (creationService.selectedPrimarySp as any).set(null); // ownerless legacy result
+      fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.textContent).toContain('Awaiting SP09 acceptance as primary Science Program');
-      expect(el.textContent).toContain(
-        'Submit for review is unavailable until a primary Science Program accepts.',
-      );
+      expect(el.textContent).toContain('SP09 will review this result when you submit it for review');
+      expect(el.textContent).not.toContain('Awaiting');
+      expect(el.textContent).not.toContain('Submit for review is unavailable');
+      expect(component.submitBlockedReason()).toBeNull();
     });
 
     it('Falsifier: state "sent_back" keeps the picker enabled and marks the declined SP', () => {
@@ -482,7 +484,7 @@ describe('SectionZeroDashboardComponent', () => {
 
       expect(component.primaryRequest()?.state).toBe('pending');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-        'Awaiting SP12 acceptance as primary Science Program',
+        'SP12 will review this result when you submit it for review',
       );
     });
   });
@@ -568,18 +570,16 @@ describe('SectionZeroDashboardComponent', () => {
       fixture.detectChanges();
     };
 
-    it('Falsifier: state "draft" shows the info banner "SP09 will be asked to be the primary Science Program when you submit for review"', () => {
+    it('PRA-R-5 Falsifier: state "draft" shows the info banner "SP09 will review this result when you submit it for review"', () => {
       setPrimaryRequest('draft', 'SP09');
       openResult(41);
 
       expect(component.primaryAssignmentBanner()?.tone).toBe('info');
       expect(component.primaryAssignmentBanner()?.message).toBe(
-        'SP09 will be asked to be the primary Science Program when you submit for review',
+        'SP09 will review this result when you submit it for review',
       );
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.textContent).toContain(
-        'SP09 will be asked to be the primary Science Program when you submit for review',
-      );
+      expect(el.textContent).toContain('SP09 will review this result when you submit it for review');
     });
 
     it('Falsifier: state "draft" does not block Submit and keeps the picker enabled', () => {
@@ -590,14 +590,22 @@ describe('SectionZeroDashboardComponent', () => {
       expect(component.primaryPickerDisabled()).toBe(false);
     });
 
-    it('Regression: state "pending" still shows "Awaiting SP09 acceptance..." and blocks Submit', () => {
+    it('PRA-R-5: ownerless "pending" shows the new banner, does not block Submit, and keeps the picker disabled', () => {
       setPrimaryRequest('pending', 'SP09');
       openResult(43);
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.textContent).toContain('Awaiting SP09 acceptance as primary Science Program');
-      expect(component.submitBlockedReason()).not.toBeNull();
+      expect(el.textContent).toContain('SP09 will review this result when you submit it for review');
+      expect(component.submitBlockedReason()).toBeNull();
       expect(component.primaryPickerDisabled()).toBe(true);
+    });
+
+    it('PRA-R-5: "pending" with an existing owner keeps the submit-blocked reason (only the ownerless case is unblocked)', () => {
+      (creationService.selectedPrimarySp as any).set({ programId: 1, programCode: 'SP01', allocation: '100' });
+      setPrimaryRequest('pending', 'SP09');
+      openResult(44);
+
+      expect(component.submitBlockedReason()).not.toBeNull();
     });
   });
   // RRC-T-7 (bilateral/rejected-result-correction) — RRC-R-11 + T-1 forward pointer: at Rejected (7)
