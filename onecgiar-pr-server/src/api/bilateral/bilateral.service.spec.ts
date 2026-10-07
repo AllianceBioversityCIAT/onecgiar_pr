@@ -4895,6 +4895,8 @@ describe('BilateralService (unit)', () => {
           resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
           primaryChanged: false,
           payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
         });
         await svc.handleEvidence(RESULT, [{ link: 'https://x.org/new' }], USER);
 
@@ -4931,6 +4933,8 @@ describe('BilateralService (unit)', () => {
           resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
           primaryChanged: false,
           payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
         });
         await svc.handleNonPooledProject(
           RESULT,
@@ -4999,6 +5003,8 @@ describe('BilateralService (unit)', () => {
           resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
           primaryChanged: false,
           payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
         });
         await svc.handleInstitutions(
           RESULT,
@@ -5049,6 +5055,8 @@ describe('BilateralService (unit)', () => {
           resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
           primaryChanged: false,
           payloadSendsPartners: false,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
         });
         await svc.handleInstitutions(
           RESULT,
@@ -5144,6 +5152,8 @@ describe('BilateralService (unit)', () => {
           resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
           primaryChanged: false,
           payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
         });
         expect(rows().filter((r) => r.is_active === 1)).toEqual([]);
         await svc.handleCountries(
@@ -5217,6 +5227,8 @@ describe('BilateralService (unit)', () => {
           resultTypeId: ResultTypeEnum.INNOVATION_USE,
           primaryChanged: false,
           payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
         });
         await innovationUse.saveAnticipatedInnoUser(
           RESULT,
