@@ -250,3 +250,8 @@
 
 - Correction of v1.3 (Leader misread "también" as "move"): the primary program appears in BOTH sections. `contributors.submitter` back in `contributors_partners` as "Submitter", order 1 (client `rd-contributors-and-partners.component.html:9-24`); new key `general.primary_program` ("Primary Program", order 3 in `general_information`) mirroring the same stored value (`results_by_inititiative`, role 1).
 - Revision 8 → 9 (pure addition; no key removed). 114 fields. Tests 123/123; falsifier → red. Reviewer PASS (advisory: share the storage literal as a constant).
+
+## Spec amendment — display rules and nested data (owner, 2026-10-07)
+
+- Owner: "que quede contributors and partners melo… reglas explícitas de qué mostraría y cuándo… QA debe armar la consulta" + granularity question. Answered: granularity valid as description; QA selects top-level fields; the results endpoint returns the whole object.
+- Added QAC-R-13 (visible_when / required_when exposed), QAC-R-14 (depth 2, path and lookup bindings; top-level field = QA unit), DD-12, DD-13, tasks QAC-T-14, QAC-T-15. Approval Mode unchanged (pre-approved; owner mandate to decide).

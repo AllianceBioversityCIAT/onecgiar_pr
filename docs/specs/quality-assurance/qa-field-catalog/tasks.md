@@ -179,6 +179,24 @@ Same shape as T-8 for IPSR. **Implements:** QAC-R-11, R-1, R-7. **Depends on:** 
 
 Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignored) diffed against 2026; set `valid_from=2025` on shared fields, `valid_to=2025` on retired ones, add 2025-only fields; `versions.ts` 2025 entry; HITL review as T-7. **Implements:** QAC-R-9 (2025 vs 2026 scenario on real data), QAC-R-3, QAC-R-11 (2025 MAY). **Depends on:** T-12. **Review:** checklist. **Falsifier:** a 2026-only field leaking into 2025 → service test red. **Consumers:** none. **Skills:** `nestjs-expert`.
 
+### QAC-T-14 — Model extension: display rules, depth 2, path and lookup bindings (amendment 2026-10-07)
+
+- **Type:** server · **Review:** full (contract + CI gate)
+- **Description:** types (`visible_when` on field/subfield; `required_when` on subfield; nested subfields depth 2; `PathBinding`, `LookupBinding`); shape validator (condition keys exist and are valid that year; depth ≤ 2; path steps well-formed; lookup has source + key_from); completeness guard (path steps' columns subtracted; lookups ignored; path tables must be in scope); response mapper exposes `visible_when` / `required_when` (and nested subfields), still never storage; sync unaffected beyond JSON; snapshot hash includes the new data; contract doc updated.
+- **Implements:** QAC-R-13, QAC-R-14 (mechanics), DD-12, DD-13
+- **Depends on:** T-1…T-12 (done)
+- **Verification:** qa-catalog Jest suites; fixtures per new rule (unknown key in condition → error; depth 3 → error; path column unbound → guard error; lookup not checked by guard); mapper deep-scan still finds no storage; tsc; eslint.
+- **Falsifier:** remove the condition-key check → the "unknown key" fixture stays green → red required.
+- **Consumers:** response shape (QA) — additive; contract doc change log.
+
+### QAC-T-15 — Contributors & partners fully parametrized (amendment 2026-10-07)
+
+- **Type:** server · **Review:** full
+- **Description:** from the 2026 client form (`rd-contributors-and-partners.component.*` and its child components) transcribe every field with its `visible_when` / `required_when`: submitter; planned result; Multiple WPs (`toc.entries`: level, output/outcome, HLO statement [lookup], KPI [path], indicator typology / unit / target [lookup], contribution to target [path]); program invested; narrative; lead center before contributing centers; contributing centers (from ToC) and other(s) centers; Contributing Science Program/Accelerator (list depth 2: program, from ToC/other, planned result, its own ToC mappings); bilateral projects; external partners applicability; partners list (institution, partner type [lookup], partner role [path]); led by external partner; lead partner; linked/bundled + results. Remove the now-bound columns from `PENDING_CATALOG`. Form order.
+- **Implements:** QAC-R-13, QAC-R-14 for this section; owner walk-through 2026-10-07
+- **Depends on:** QAC-T-14
+- **Verification:** qa-catalog suites; a test asserting each owner-listed field and its rule; live endpoint response saved to `tmp/qa-catalog-2026.json`.
+
 ## 4. Dependency graph
 
 ```

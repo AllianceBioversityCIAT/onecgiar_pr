@@ -216,6 +216,29 @@ The endpoint MUST return, for a valid year with catalog content:
 
 - No QA-facing response MAY include a field not present in the catalog for that year.
 
+### QAC-R-13 — Explicit display rules (amendment 2026-10-07)
+
+The catalog MUST state, for every field and subfield, **when it is shown** and **when it is required**, as data QA can evaluate without knowing Reporting's code:
+
+- `visible_when` — condition(s) over other catalog keys (same vocabulary as `required_when`: `eq`, `in`, `not_null`, combined with `all` / `any`), transcribed from the 2026 client form. Absent = always shown for its `result_types`.
+- `required_when` — as QAC-R-5; subfields MAY carry it too (lifts the QAC-R-5 exception).
+- Both MUST be returned by `GET /api/qa/catalog` (additive to the agreed shape, ADR-004).
+- A condition MUST only reference keys that exist in the same year's catalog (validated in CI).
+
+#### Scenario: Linked results only when the answer is yes
+- GIVEN `linked.results` with `visible_when: linked.has_innovation_link eq true`
+- WHEN QA renders a result whose answer is `false`
+- THEN QA hides `linked.results`
+- AND IT MUST be able to decide this from the catalog alone
+
+### QAC-R-14 — Full structure for nested data (amendment 2026-10-07)
+
+- A `list`/`object` field MAY have subfields with their own subfields (**max depth 2**), so "Contributing Science Program/Accelerator" (each program → its own ToC mappings) and "Multiple WPs" (each mapping → indicator, target, contribution) are described completely.
+- A binding MAY follow a **path** of parent → child tables (e.g. result → ToC mapping → mapped indicator → target) instead of a single relation to `result`.
+- A field MAY be a **lookup**: a value Reporting does not store but reads from a reference source by a stored id (ToC `integration_information.toc_*`: HLO statement, indicator typology, unit, target; CLARISA: partner type). Lookups are read-only and are not subject to the completeness guard (their source tables are not result tables).
+- **QA's unit of selection is the top-level field**; subfields describe the shape of each element. The future results endpoint returns the whole object of a selected field.
+- This lifts the D1/D2 deferrals of QAC-R-11 for the fields it is applied to.
+
 ## 6. Non-Functional Requirements
 
 | Dimension | Target |
@@ -259,6 +282,8 @@ The endpoint MUST return, for a valid year with catalog content:
 | QAC-R-10 | Service authentication | proposal Scope item 5 |
 | QAC-R-11 | Initial content (staged: required fields first, `PENDING_CATALOG` for the rest) | proposal Scope item 6 + user, 2026-10-06 (twice) |
 | QAC-R-12 | Only catalogued data reaches QA | proposal Rules |
+| QAC-R-13 | Explicit display rules (`visible_when`, `required_when` exposed) | owner, 2026-10-07 |
+| QAC-R-14 | Nested data (depth 2, path bindings, lookups); top-level field = QA unit | owner, 2026-10-07 |
 
 ## 9. Dependencies & Assumptions
 
