@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 19,
-      "content_hash": "f5a4c7410952dde454e31dff5a030a00c4c5a1b8f1c439fd42ec6ad74d578a99"
+      "revision": 20,
+      "content_hash": "9a08c27359a3937514a261c8163f51fd1270e962578e17f6a009f3db8170b848"
     }
   },
   "keys": [
@@ -124,10 +124,13 @@
     "field:partners.kp_additional_partners",
     "field:partners.lead_partner",
     "field:partners.not_applicable",
+    "field:policy_change.actors_influenced",
+    "field:policy_change.amount_status",
     "field:policy_change.implementing_organizations",
     "field:policy_change.policy_stage",
     "field:policy_change.policy_type",
     "field:policy_change.related_to",
+    "field:policy_change.usd_amount",
     "field:toc.entries",
     "field:toc.narrative",
     "field:toc.planned_result",

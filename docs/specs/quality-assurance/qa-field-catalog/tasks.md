@@ -235,7 +235,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Implements:** QAC-R-13, QAC-R-14, QAC-R-5 for Innovation use
 - **Depends on:** QAC-T-19
 
-### QAC-T-21 — Policy change (Results) completed (amendment 2026-10-07) · P2-3925
+### [x] QAC-T-21 — Policy change (Results) completed (amendment 2026-10-07) · P2-3925
 
 - **Type:** server · **Review:** full
 - **Description:** From prtest result 9674 (phase 36): USD amount and its status visible (and required per the form) when `policy_type_id` = 1; actors influenced per the form's `showActorsInfluenced()` rule; status as a closed list; policy-type guidance as verbatim description. Option B for `required`.

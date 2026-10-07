@@ -53,6 +53,13 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      */
     evidence_sources: [0, 1],
     /**
+     * `policy_change.amount_status` (QAC-T-21): 1 Confirmed, 2 Estimated, 3 Unknown. Source: the form's hard-coded options
+     * (policy-change-info.component.html:28-32, identical in every environment). `results_policy_changes.status_amount` is `text` with
+     * no FK (entity :57-62) and no migration seeds the options, so a stored value is not guaranteed to be one of them (contract doc,
+     * known gap 15).
+     */
+    policy_amount_statuses: [1, 2, 3],
+    /**
      * Innovation team diversity (QAC-T-18): options of question 112 (113 "Yes, concrete actions...", 114, 115) and, under 113, the
      * action checkboxes 116..121 (121 = "Other"). Source: `result_questions` ids of Innovation P25 questions 101-121, 138, 147-149 are
      * identical in test and prod (owner check, docs/specs/quality-assurance/qa-field-catalog/execution.md "result_questions check run

@@ -208,18 +208,7 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   // this list; QAC-T-20 binds the same columns again for innovation_use.investment.*. They still serve ipsr_step_4.*_investment (not
   // catalogued yet), covered by those bindings until that field is described.
 
-  // Policy change (QAC-T-10): optional rows (UI [required]=false, no live rule)
-  ...stage2('results_policy_changes', 'policy_change.usd_amount', 'amount'),
-  ...stage2(
-    'results_policy_changes',
-    'policy_change.amount_status (hard-coded options, no FK)',
-    'status_amount',
-  ),
-  ...stage2(
-    'results_policy_changes',
-    'policy_change.actors_influenced',
-    'actors_influenced',
-  ),
+  // Policy change: `amount`, `status_amount` and `actors_influenced` were bound by QAC-T-21 (policy_change.usd_amount|amount_status|actors_influenced) and left this list.
 
   // Innovation use (QAC-T-10)
   // QAC-T-20: `results_innovations_use.has_innovation_link` is bound by `innovation_use.linked_result.has_innovation_link` and left this list.

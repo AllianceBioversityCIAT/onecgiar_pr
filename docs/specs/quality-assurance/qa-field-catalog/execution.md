@@ -325,3 +325,10 @@
 - Attempt 1 → FAIL (picker requirement missed from V-CP; flags wrongly in 2030 block; single_select over a multi-row relation; NULL semantics undocumented; mirror contract text wrong). Attempt 2 → FAIL (form note used as subfield label). Attempt 3 → PASS. Final 408/408, tsc and eslint clean.
 - Leader decisions: picker typed `multi_select` (faithful mirror of `linked.results`).
 - ADVISORY open: subfields have no `description` in the model — the youth-split form note is not delivered to QA (model change would be its own contract version); `innovation_dev.estimates_*.kind_cash` keeps no rule (V-ID does not require it) while innovation use has one (VIU does).
+
+### QAC-T-21 — Policy change (Results) completed · P2-3925 — PASS (attempt 2)
+
+- Date: 2026-10-07 · catalog 2026.20
+- Delivered: `policy_change.usd_amount` (number) and `policy_change.amount_status` (single_select, closed list `policy_amount_statuses` [1,2,3] — form hard-coded options, evidence_sources precedent), both visible when `policy_type` = 1, optional (form `[required]="false"`, function does not read them); `policy_change.actors_influenced` (number, optional, no `visible_when` — Known gap 15: the form gates it on `related_to` option id 51, env-specific); 2026 policy-type guidance as verbatim `description`. Pending 112 → 109. Snapshot 280 → 283, none removed.
+- Attempt 1 → FAIL (status list left open contrary to task; two wrong citations). Attempt 2 → PASS. Final 422/422, tsc and eslint clean.
+- ADVISORY / possible product defect (out of scope, UNVERIFIED in prod): prod `related_to` options are 49/50 with no 51 (inventory 2026-B:86), so the P2-2932 "Number of key actors influenced" input and the server derivation (`achieved-value-derivation.ts:146`) keyed on 51 may never apply in prod. Reported to the owner.
