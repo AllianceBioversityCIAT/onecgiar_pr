@@ -87,7 +87,8 @@ describe('SectionContributorsComponent', () => {
 
     // P2-3443: the partner block is read back from the bilateral detail endpoint.
     bilateralApi = {
-      GET_BilateralResultDetail: jest.fn().mockReturnValue(of({ response: { commonFields: {}, contributingInstitutions: [] } }))
+      GET_BilateralResultDetail: jest.fn().mockReturnValue(of({ response: { commonFields: {}, contributingInstitutions: [] } })),
+      GET_resultInitiativeId: jest.fn().mockReturnValue(of({ response: { primary_request: null } }))
     };
 
     await TestBed.configureTestingModule({
@@ -109,6 +110,54 @@ describe('SectionContributorsComponent', () => {
 
   it('should create', () => {
     expect(build()).toBeTruthy();
+  });
+
+  // ── ToC notice while the primary SP has not accepted (Ángel, result 9768) ──
+  describe('pendingPrimaryTocNotice', () => {
+    const draftRequest = (code: string) => of({ response: { initiativeId: null, primary_request: { state: 'draft', program_code: code, declined_by_codes: [] } } });
+
+    it('shows the notice with the SP code when the primary request has no owner yet', () => {
+      bilateralApi.GET_resultInitiativeId.mockReturnValue(draftRequest('SP06'));
+      build();
+      fixture.detectChanges();
+      expect(bilateralApi.GET_resultInitiativeId).toHaveBeenCalledWith(4242);
+      expect(component.pendingPrimaryTocNotice()).toContain('(SP06)');
+      expect(component.pendingPrimaryTocNotice()).toContain('Available once the primary Science Program accepts.');
+    });
+
+    it('shows nothing and does not ask when the result already has an owner', () => {
+      creation.selectedPrimarySp.set({ programId: 7, programCode: 'SP07', allocation: '100' });
+      build();
+      fixture.detectChanges();
+      expect(bilateralApi.GET_resultInitiativeId).not.toHaveBeenCalled();
+      expect(component.pendingPrimaryTocNotice()).toBe('');
+    });
+
+    it('drops the notice once the owner arrives', () => {
+      bilateralApi.GET_resultInitiativeId.mockReturnValue(draftRequest('SP06'));
+      build();
+      fixture.detectChanges();
+      creation.selectedPrimarySp.set({ programId: 6, programCode: 'SP06', allocation: '100' });
+      fixture.detectChanges();
+      expect(component.pendingPrimaryTocNotice()).toBe('');
+    });
+
+    it('shows nothing when no primary SP was ever picked or the read fails', () => {
+      build();
+      fixture.detectChanges();
+      expect(component.pendingPrimaryTocNotice()).toBe('');
+      bilateralApi.GET_resultInitiativeId.mockReturnValue(throwError(() => new Error('boom')));
+      creation.currentResultId.set(5151);
+      fixture.detectChanges();
+      expect(component.pendingPrimaryTocNotice()).toBe('');
+    });
+
+    it('renders the notice in the no-owner branch of the template', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const elseBranch = html.slice(html.indexOf('} @else {'));
+      expect(elseBranch).toContain('pendingPrimaryTocNotice()');
+      expect(elseBranch).toContain('data-testid="contributors-toc-waiting-primary-sp"');
+    });
   });
 
   // ── primarySpData ────────────────────────────────────────────────────

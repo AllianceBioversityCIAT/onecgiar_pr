@@ -45,4 +45,11 @@ export const BILATERAL_PRIMARY_ASSIGNMENT_COPY = {
   declinedOptionSuffix: '(declined)',
   /** design.md §6.3 — the ToC section's notice while the result has no owner. */
   tocNotice: 'Available once the primary Science Program accepts.',
+  /**
+   * Contributors & partners, result with no owner yet (draft / pending / sent-back request): the
+   * whole ToC block is gated on the owner, so this line stands in for it — without it the section
+   * just showed nothing and read as "ToC does not load" (Ángel Jarrín, result 9768, 7-oct-2026).
+   */
+  contributorsTocNotice: (programCode: string): string =>
+    `Theory of Change alignment comes from the primary Science Program (${programCode}). Available once the primary Science Program accepts.`,
 } as const;

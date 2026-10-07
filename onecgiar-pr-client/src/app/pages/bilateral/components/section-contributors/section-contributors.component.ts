@@ -18,6 +18,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideRefreshCw } from '@ng-icons/lucide';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 import { BILATERAL_CONTRIBUTORS_COPY } from '../../../../internationalization/bilateral-contributors.copy';
+import { BILATERAL_PRIMARY_ASSIGNMENT_COPY } from '../../../../internationalization/bilateral-primary-assignment.copy';
 import { CLARISA_GLOSSARY_URL } from '../../../../shared/constants/clarisa-links.constants';
 
 interface CenterOption {
@@ -79,6 +80,33 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * Read straight from the service, the way this section already reads the rest of the result state.
    */
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+  /**
+   * SP code of a primary request that has no owner yet (draft / pending / sent back). The ToC block
+   * lives inside `primarySpData()` (role 1 only), so without this the section rendered nothing where
+   * the ToC goes. Same owner-initiative read the dashboard banner uses (PSR-T-10).
+   */
+  readonly pendingPrimaryCode = signal<string | null>(null);
+  readonly pendingPrimaryTocNotice = computed(() => {
+    const code = this.pendingPrimaryCode();
+    return code ? BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsTocNotice(code) : '';
+  });
+  private readonly loadPendingPrimary = effect(() => {
+    const resultId = this.creationService.currentResultId();
+    const hasOwner = !!this.creationService.selectedPrimarySp();
+    untracked(() => {
+      this.pendingPrimaryCode.set(null);
+      if (!resultId || hasOwner) return;
+      this.bilateralApi.GET_resultInitiativeId(resultId).subscribe({
+        next: ({ response }: any) => {
+          // A late answer must not paint the notice over an owner that arrived meanwhile.
+          if (this.creationService.currentResultId() !== resultId || this.creationService.selectedPrimarySp()) return;
+          this.pendingPrimaryCode.set(response?.primary_request?.program_code ?? null);
+        },
+        error: () => this.pendingPrimaryCode.set(null)
+      });
+    });
+  });
 
 
   private centersSubscription?: Subscription;
