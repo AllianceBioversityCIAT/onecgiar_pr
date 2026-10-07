@@ -223,7 +223,8 @@ The catalog MUST state, for every field and subfield, **when it is shown** and *
 - `visible_when` — condition(s) over other catalog keys (same vocabulary as `required_when`: `eq`, `in`, `not_null`, combined with `all` / `any`), transcribed from the 2026 client form. Absent = always shown for its `result_types`.
 - `required_when` — as QAC-R-5; subfields MAY carry it too (lifts the QAC-R-5 exception).
 - Both MUST be returned by `GET /api/qa/catalog` (additive to the agreed shape, ADR-004).
-- A condition MUST only reference keys that exist in the same year's catalog (validated in CI).
+- A condition MUST only reference keys that exist in the same year's catalog, or the pseudo-key `result_type` (validated in CI). Any value a condition needs (e.g. the replicated-innovation flag) MUST itself be a catalog field.
+- A change in what the endpoint returns MUST change `catalog_version` (consumers cache by it).
 
 #### Scenario: Linked results only when the answer is yes
 - GIVEN `linked.results` with `visible_when: linked.has_innovation_link eq true`
