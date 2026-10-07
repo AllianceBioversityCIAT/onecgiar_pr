@@ -321,3 +321,48 @@ Unverified side findings from the scout (not acted on): `result_initiative_budge
   - RISK: the metadata tests trust the entity. Entity-vs-DB drift is covered only by T-7.
 - **Lesson (Leader):** for raw SQL in a repository, a mocked `query()` spec proves the shape, not the schema. Future briefs should require a column check against the entity/DDL, and the Reviewer should check identifiers against the DDL, not only the spec.
 - **Still owed:** the live re-run of Step 2b on PRTest after this fix is deployed.
+
+#### Step 2b re-run after the `d9073be80` deploy — ✅ 201 (2026-10-07 12:43:22Z)
+
+- **Context:** the first retry at 12:15:46Z still returned the old 500, because the deploy had not finished. The user waited for Jenkins and re-sent the same payload.
+- **Response:** `201 "Results Bilateral created successfully."`, `outcomes: [{result_code:"9550", operation:"updated", status_id:5, status:"pending review"}]`. ✅ `R-10` wording live.
+- **Result state:** 12018 is now Pending Review, `geographic_scope_id` 5 (Sub-national).
+- **Subnationals:** `result_country_array[CO].result_countries_subnational_array` lists **one** `CO-ANT`. **C2 (user):** row 971 has `is_active = 0` (unchanged since 11:57:24) and row **972** has `is_active = 1` (12:43:16). There is no third row. ✅ **`RSF-R-4` proven live:** exactly one active row per code, the newest id, and the duplicate stays inactive. MySQL accepted the two-step SQL.
+- **Role 2 (`obj_result_by_initiatives`):**
+  - SP06 is `is_active:false`, last updated 11:59:07 (retired by the first attempt and not touched again).
+  - SP07 is `is_active:true`, last updated 11:57:47 (untouched).
+  - ✅ `RSF-R-7` holds on the re-run.
+- **Role 1:** SP11 is active (touched at 12:43:16 by the pre-existing role-1 step, not by T-6). SP09 is still inactive.
+- **⚠️ Observed: the known gap, now more visible.** `obj_results_toc_result` lists **SP06 as "Contributor"** although its role-2 row is inactive. This is design §12 "Inactive role-2 entries in `obj_results_toc_result` … outside this mandate → follow-up spec" (`DD-4` scoped the GET predicate to role 1 only). T-6 now produces retired role-2 rows on every resubmission that drops a contributor, so this gap shows up routinely. Escalated to the user as a follow-up decision. It is not a regression of this spec.
+
+#### Step 3: p95 (`RSF-R-9`) — **NOT MEASURED** (user decision, 2026-10-07)
+
+- `R-9` is a SHOULD. There is no automated harness, and measuring needs ≥ 10 resubmissions plus 10 creates on PRTest, including 10 junk results.
+- The user followed the Leader's recommendation: record it as **not measured**. This is not "within +30%" and not "inconclusive". The only data point is one resubmission returned in < 1 s (Postman, 2026-10-07). It is anecdotal, not a p95.
+- This stays a known open item for `/akili-archive`, and is a candidate for a performance check if platforms report slowness.
+
+## Spec amendment: `RSF-R-12` / `DD-9` / `RSF-T-8` (user-approved, 2026-10-07)
+
+- **Trigger:** the T-7 live re-run showed SP06, retired by `R-7`, still listed as "Contributor" in `obj_results_toc_result`. That was design §12's out-of-mandate gap, and `R-7` now makes it routine.
+- **Decision:** after the explanation, the user said "te sigo las recomendaciones, hazlo". The gap moves into this spec.
+- **Spec edits:**
+  - `requirements.md`: new `RSF-R-12` + index row.
+  - `design.md`: new `DD-9`; `DD-4` marked superseded for role 2; §12 row struck.
+  - `tasks.md`: new `RSF-T-8`; T-2 disqualifier annotated as historical; coverage rows for `R-12`.
+- **Correction-closure sweep:** grep for `DD-4`, "out of mandate", "Role-2 rows behave", "contributors untouched". `R-3`'s "contributors untouched" scenario is about **active** contributors and still holds.
+
+### `RSF-T-8` — Bilateral GET: retired contributors leave `obj_results_toc_result`
+
+- **Final status:** PASS, 2026-10-07, 1 attempt. **Skills:** `nestjs-expert`, `systematic-debugging`. **Effort:** medium.
+- **Files:** `onecgiar-pr-server/src/api/results/result.repository.ts` (`getTocMappingsByResultId` :4075-4080) + spec; `docs/bilateral-result-summaries.en.md` (one change-log row).
+- **Change:** `AND rbi.is_active = 1` replaces T-2's `AND (rbi.initiative_role_id <> 1 OR rbi.is_active = 1)`. It sits inside the WHERE, before GROUP BY, and binds no new parameter.
+- **Red:** the RSF-R-12 test failed on the old predicate (1 of 73). **Green:** `npx jest --maxWorkers=2 --silent --reporters=summary --forceExit --testPathPattern="result.repository|bilateral.service.spec|result-header.mapper"` → 5 suites, **332 passed**. eslint → exit 0.
+- **Reviewer verdict: PASS.**
+  - The predicate is placed correctly.
+  - `R-3`'s ownerless clause holds: the only caller is `bs:3913-3914`, which assigns `[]` and still returns the result.
+  - No consumer relied on inactive role-2 rows. `contributors-and-partners.mapper.ts:132-133` `Owner ?? tocRows[0]` can now only fall back to an *active* contributor, which also closes the T-2 advisory leak.
+  - Keeping the 2026-10-06 change-log row unedited is correct for an append-only log; the new row says it amends it.
+- **Reviewer gaps (not gating):**
+  - The repo test is presence-only; the live GET of 12018 is the proof.
+  - `requirements.md` §7 Backwards-compat still said "only inactive role-1 entries disappear". **Fixed by the Leader** in the spec sync (now cites `R-3` + `R-12`).
+- **Requirements covered:** `RSF-R-12`; `DD-9`.

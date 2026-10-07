@@ -120,10 +120,11 @@ No new visual pattern, so no Spartan component is needed: the existing `<b>` and
 - **`RSF-DD-1` — one text builder for the link and the filter.** Today the two strings are hand-copied (`P-2`), which is how a fix in one silently breaks the deep link. *Rejected:* patching both sites in parallel (drift returns at the next copy change).
 - **`RSF-DD-2` — the bell reuses the inbox sentence.** One wording for one request kind across surfaces. *Rejected:* the proposal's "{requester} asked {SP}…", which would be a third sentence for the same row.
 - **`RSF-DD-3` — filter rows, never existence.** Adding `is_active` to the TypeORM relation `where` would also hide every notification of an ownerless result (`P-6`), breaking the `R-3` BUT clause. So the filter runs on loaded rows (notifications) or as a role-scoped SQL predicate (GET).
-- **`RSF-DD-4` — role-1-scoped predicate in the GET.** Only inactive **role-1** entries are removed. Inactive role-2 entries also exist, but changing them is a different content change outside this spec's mandate (§12).
+- **`RSF-DD-4` — role-1-scoped predicate in the GET.** *(Superseded by `DD-9` on 2026-10-07 for inactive role-2 entries; the role-1 part stands.)* Only inactive **role-1** entries are removed. Inactive role-2 entries also exist, but changing them is a different content change outside this spec's mandate (§12).
 - **`RSF-DD-5` — subnational fix in the shared repository.** The duplicate risk is the same for the in-app geo save (`P-9`). On a result with no duplicates, the behaviour is identical. *Rejected:* a resubmission-only flag, which would leave the same defect in-app.
 - **`RSF-DD-6` — b and c are refused, on the resubmission branch only** (user, 2026-10-06). The no-code `create` keeps warn-and-continue and last-wins (follow-up in §12).
 - **`RSF-DD-7` — check d: replace** (user, 2026-10-06). The reset retires role-2 rows the payload dropped. It does **not** create role-2 rows: contributors still go through the drafts flow (`RSB-DD-6`, `RRC-R-8`).
+- **`RSF-DD-9` — the GET predicate covers every role (amends `DD-4`, 2026-10-07).** `rr.getTocMappingsByResultId` filters `rbi.is_active = 1` for all roles, not only role 1. `DD-4` had left inactive role-2 entries out of mandate (§12). `R-7` now makes them routine, and the T-7 live run showed one (SP06 on 9550). Consumers learn about it through a change-log row. The history stays visible in `obj_result_by_initiatives`.
 - **`RSF-DD-8` — sequencing with `RRC`.** `T-3` (notifications) runs after `RRC-T-5`, and `T-4`/`T-5` (resubmission) run after `RRC-T-6`, or each rebases on them. This is a warning, not a block.
 
 ### Reversion challenge (Step 2.3) — "what does removing this break?"
@@ -163,7 +164,7 @@ This matches **Standard**. Over 400 LOC, but the slices are independent, so the 
 
 | # | Gap | Owner |
 |---|---|---|
-| Inactive **role-2** entries in `obj_results_toc_result` | Declined or retired contributors are still listed. Same defect class as `R-3`, outside this mandate | Follow-up spec |
+| ~~Inactive **role-2** entries in `obj_results_toc_result`~~ | **Moved in-scope 2026-10-07** as `RSF-R-12` / `DD-9` / `RSF-T-8` (user-approved) | — |
 | No-code `create`: unknown lead centre (warn), several leads (last wins), subnational codes applied to every country (`bs:6409`, `:6418`) | `DD-6` gates the fixes to resubmission | Follow-up spec |
 | `RSF-OQ-4` live role label ("Owner" vs "Primary submitter") | Read at the `T-7` live GET; fix the doc example if it differs | User at HITL |
 | `findCenterNoticeNotifications` (`ns:320-359`) loads every role, active or not | Not shown as owner today (scout); not changed | Watch |

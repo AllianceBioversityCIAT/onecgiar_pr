@@ -1515,9 +1515,10 @@ describe('ResultRepository — getTocMappingsByResultId indicators[] (BTC-T-1)',
     );
   });
 
-  // @akili-spec bilateral/resubmit-followups — RSF-T-2 (RSF-R-3, DD-4): only an ACTIVE role-1 row
-  // is the primary. A presence check on the SQL (execution is proven live by T-7).
-  it('RSF-R-3: the WHERE drops INACTIVE role-1 rows and keeps every role-2 row (role-scoped, never a blanket is_active)', async () => {
+  // @akili-spec bilateral/resubmit-followups — RSF-T-8 (RSF-R-12, DD-9; supersedes the T-2 / DD-4
+  // role-1-scoped predicate): only ACTIVE rows of ANY role are listed. A presence check on the SQL
+  // (execution is proven live by T-7).
+  it('RSF-R-12: the WHERE keeps only active rows of any role (SP06 r2 inactive dropped, SP07 r2 and SP11 r1 active kept), with no role condition', async () => {
     queryMock.mockResolvedValue([]);
 
     await repo.getTocMappingsByResultId(42);
@@ -1525,10 +1526,9 @@ describe('ResultRepository — getTocMappingsByResultId indicators[] (BTC-T-1)',
     const sql = (queryMock.mock.calls[0][0] as string)
       .replace(/--[^\n]*/g, '')
       .replace(/\s+/g, ' ');
-    expect(sql).toContain(
-      'WHERE rbi.result_id = ? AND (rbi.initiative_role_id <> 1 OR rbi.is_active = 1)',
-    );
-    // DD-4: inactive role-2 rows behave as today, so no unscoped rbi.is_active predicate.
+    expect(sql).toContain('WHERE rbi.result_id = ? AND rbi.is_active = 1');
+    // DD-9: one blanket is_active predicate and no role-scoped condition on rbi.
     expect(sql.match(/rbi\.is_active/g)).toHaveLength(1);
+    expect(sql).not.toMatch(/rbi\.initiative_role_id\s*<>/);
   });
 });

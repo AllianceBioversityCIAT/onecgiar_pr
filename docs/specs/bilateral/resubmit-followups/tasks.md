@@ -69,7 +69,7 @@
     - A second fixture holds no active role 1 and expects none. It must not pick a contributor.
     - The budget guard feeds an inactive parent with an active budget row. A reader that drops the parent filter fails it.
   - **Cannot prove:** the SQL assertion is a presence check, not execution. Behaviour is proven by `T-7`'s live GET of 9550/9762.
-  - **Disqualifier:** if the predicate also drops role-2 rows (any contributor fixture loses an entry), the change is out of mandate. Re-scope instead of shipping.
+  - **Disqualifier:** if the predicate also drops role-2 rows (any contributor fixture loses an entry), the change is out of mandate. Re-scope instead of shipping. *(Historical: T-2 shipped role-1-scoped. `T-8` / `DD-9` later widened it to every role by user-approved amendment, 2026-10-07.)*
   - **Consumers:** `bs.findOne` / list / `/results` (`bs:3912`), `contributors-and-partners.mapper.ts`, `result-header.mapper.ts`.
 - **Definition of done:** [ ] scoped Jest green · [ ] eslint on touched files · [ ] change-log row added · [ ] `R-8` evidence in `execution.md`.
 
@@ -178,6 +178,25 @@
   - The SQL for the row counts goes to the user inline in chat, never as a file.
 - **Definition of done:** [ ] the four results recorded in `execution.md` · [ ] `OQ-4` answered (doc example fixed in a follow-up if the label differs).
 
+### `RSF-T-8` — Bilateral GET: retired contributors leave `obj_results_toc_result` (amendment 2026-10-07)
+
+- **Status:** `[x]`: Reviewer PASS, attempt 1, 2026-10-07 (see `execution.md`); live GET of 12018 owed in `T-7`.
+- **Type:** `server` · Bug Mode
+- **Description:**
+  1. In `rr.getTocMappingsByResultId`, replace the role-1-scoped predicate from T-2 (`AND (rbi.initiative_role_id <> 1 OR rbi.is_active = 1)`) with `AND rbi.is_active = 1` (`DD-9`).
+  2. Update the T-2 repository spec. It asserted a role-scoped predicate, which `DD-9` supersedes. Add the T-7 live case: SP06 r2 inactive, SP07 r2 active, SP11 r1 active.
+  3. Contract doc: one change-log row ("`obj_results_toc_result` lists only active Science Programs of any role; a retired contributor stays visible in `obj_result_by_initiatives` with `is_active:false`").
+- **Implements:** `RSF-R-12`; `DD-9`
+- **Files (expected):** `onecgiar-pr-server/src/api/results/result.repository.ts` + spec; `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`
+- **Depends on:** `T-2` · **Blocks:** `T-7` (live GET of 12018)
+- **Estimate:** `S` · **Review:** standard
+- **Verification:**
+  - `cd onecgiar-pr-server && npx jest --maxWorkers=2 --silent --reporters=summary --forceExit --testPathPattern="result.repository|bilateral.service.spec|result-header.mapper"`
+  - **Red run:** the repository spec asserts the SQL filters inactive rows of every role. It fails on the T-2 predicate, which still keeps inactive role 2.
+  - **Falsifier:** the mapper specs (`result-header.mapper`, contributors) still pass. The ownerless GET still returns the result.
+  - **Cannot prove:** presence check only. Live proof is the GET of 12018: SP06 is absent, SP07 and SP11 are present.
+- **Definition of done:** [ ] scoped Jest green · [ ] eslint · [ ] change-log row.
+
 ## 4. Dependency Graph
 
 ```
@@ -207,7 +226,8 @@ RRC-T-6 ┄┄▶ RSF-T-4 (preflight) ─▶ RSF-T-6 ───┤
 | `R-3` owner changed: THEN SP11 / IT MUST NOT list SP09 | T-2 (code), T-7 step 1 (live) | — |
 | `R-3` ownerless: THEN no SP presented | T-2 (GET/QA), T-3 (notifications) | No-active-role-1 fixtures |
 | `R-3` ownerless: BUT must NOT hide the notification or drop the result | T-3 (notifications), T-2 (GET returns the result) | `where` preserved assertion; GET fixture returns the result |
-| `R-3` contributors untouched | T-2 | Role-2 fixture + disqualifier |
+| `R-3` contributors untouched | T-2 | Role-2 fixture + disqualifier (active contributors; inactive ones leave per `R-12`) |
+| `R-12` retired contributor absent from `obj_results_toc_result` | T-8 (code), T-7 (live GET 12018) | Repo SQL assertion + live GET |
 | `R-4` THEN exactly one active / BUT must NOT reactivate both | T-5 (code), T-7 step 2 (live) | — |
 | `R-5` THEN 400 naming R | T-4 | Refusal spec |
 | `R-5` AND IT MUST leave R unchanged | T-4 | Zero-writer spies |

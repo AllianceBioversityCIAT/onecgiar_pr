@@ -183,6 +183,19 @@ The resubmission p95 SHOULD be within +30% of a regular `create` of the same typ
 
 The contract doc already says: a 409 "its status is pending review" after a timeout means the attempt committed, so do not resend (`bilateral-result-summaries.en.md` §Resubmitting). The server MUST produce that exact status wording for status 5. A test MUST pin `describeResultStatus(5)` → the doc's text, so the doc and the code cannot drift apart.
 
+#### Requirement `RSF-R-12` (added 2026-10-07, user-approved amendment): Retired contributors leave `obj_results_toc_result`
+
+The bilateral GET `obj_results_toc_result` MUST list only **active** `results_by_inititiative` rows of any role. An inactive role-2 row (a contributor retired by `RSF-R-7`, or declined) MUST NOT appear as a `"Contributor"` entry. `obj_result_by_initiatives` keeps listing every row with its `is_active` (unchanged).
+
+*Why:* the T-7 live run (2026-10-07, result 9550) showed SP06 retired by `R-7` (`is_active:false`) still listed as `"Contributor"`. Since `R-7` retires contributors on every resubmission that drops one, consumers would routinely see SPs that no longer contribute.
+
+##### Scenario: retired contributor (regression, 9550 live case)
+- GIVEN result 12018 (9550) with SP06 role 2 inactive, SP07 role 2 active and SP11 role 1 active
+- WHEN a platform calls `GET /api/bilateral/12018`
+- THEN `obj_results_toc_result` lists SP11 ("Primary submitter") and SP07 ("Contributor")
+- BUT it must NOT list SP06
+- AND IT MUST keep `R-3`: no inactive role-1 entry, and the result is still returned when no row is active
+
 ### SHOULD
 
 - **`RSF-R-11`** — Each new 400 (`R-5`, `R-6`) SHOULD reuse the `RSB-R-21` log line (`result_code`, `operation=updated`, platform, outcome), with no payload or keys.
@@ -191,7 +204,7 @@ The contract doc already says: a 409 "its status is pending review" after a time
 
 | Dimension | Target |
 |---|---|
-| **Backwards compatibility** | `AC-4`: no field added, removed or renamed. `obj_results_toc_result` keeps its shape; only inactive role-1 entries disappear. That is a content correction → one change-log row in the contract doc. New 400s on the resubmission branch → change-log row + error table |
+| **Backwards compatibility** | `AC-4`: no field added, removed or renamed. `obj_results_toc_result` keeps its shape; only inactive entries disappear (role 1 per `R-3`; role 2 per `R-12`, amendment 2026-10-07). That is a content correction → one change-log row in the contract doc. New 400s on the resubmission branch → change-log row + error table |
 | **No-code create unchanged** | `RSB-R-1` holds: the existing create Jest suite stays green, unchanged |
 | **Atomicity** | `R-5`, `R-6` refuse before the first write (`RSB-R-8`) |
 | **Copy** | New client strings come from `src/app/internationalization/` (DD-9), reusing `contribution-request-drawer.copy.ts` `primaryVerb`/`primaryTail` |
@@ -257,3 +270,4 @@ The contract doc already says: a 409 "its status is pending review" after a time
 | `RSF-R-9` | Resubmission p95 | SHOULD | Measured | §9.3 f |
 | `RSF-R-10` | Retry guidance pinned | MUST | Verified OK + pin | §9.3 g |
 | `RSF-R-11` | Log line for new refusals | SHOULD | — | `RSB-R-21` |
+| `RSF-R-12` | Retired contributors leave `obj_results_toc_result` | MUST | Bug (amendment 2026-10-07) | T-7 live run |
