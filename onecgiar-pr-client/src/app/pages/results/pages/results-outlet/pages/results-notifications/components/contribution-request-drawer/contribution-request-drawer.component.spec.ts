@@ -1,127 +1,50 @@
 // @akili-spec contribution-request-drawer (CRD-T-1, CRD-T-2, CRD-T-4 forward pointer 5)
+// @akili-spec notifications/detail-side-panel (DSP-T-3)
+//
+// DSP-T-3 reduced this component to a thin sheet shell (`open`, `labelledBy`, `closed` for the
+// sheet's own scrim/Escape/outside-click dismissal). Every test that exercised the body/footer
+// markup/logic (header sentence, RESULT card, review tables, footer, `[crdAlign]` gating,
+// `needsMore`/expand, focus-scroll, the content ✕ button) MOVED 1:1 to
+// `../notification-detail-content/notification-detail-content.component.spec.ts` — see that file's
+// own header comment for the full list. What stays here tests only the shell's own remaining
+// surface: `open`-driven panel visibility, the sheet's native scrim/Escape close, the panel's width
+// override (CRD-P-9) and motion-reduce classes (both still live on this component's own
+// `hlm-sheet-content`), the single-close-surface guarantee (`showCloseButton=false`), and the new
+// `labelledBy` → `aria-labelledby` passthrough (DSP falsifier: "the sheet panel has no accessible
+// name").
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import {
-  ContributionRequestDrawerComponent,
-  ContributionRequestDrawerHeaderParts,
-  ContributionRequestDrawerMode,
-  ContributionRequestDrawerReviewField,
-  ContributionRequestDrawerViewFields
-} from './contribution-request-drawer.component';
-import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
+import { By } from '@angular/platform-browser';
+import { HlmSheet } from '@spartan/sheet';
+import { ContributionRequestDrawerComponent } from './contribution-request-drawer.component';
 
-/**
- * CRD-T-1/T-2 falsifier host: drives every input from a signal and projects a `[crdAlign]` marker
- * so we can prove CRD-P-3 (open/close is driven by the `open` input), CRD-P-4 (the projected
- * content renders as part of the sheet's content, not silently dropped), and T-2's render logic.
- *
- * ⚠️ Portal fidelity: `@spartan-ng/brain/*` is globally mocked under Jest
- * (`tests/mocks/spartanBrainMock.ts`, via `moduleNameMapper` — every Brain-based overlay in this
- * repo works this way, not something introduced here) because there is no real CDK Overlay/portal
- * in jsdom. The mock renders the sheet's content INLINE, in place, instead of moving it into a
- * `document.body`-level overlay the way the real `hlm-sheet` does in a browser. So this suite
- * proves the drawer's OWN wiring — it does not and cannot prove the content is portaled into
- * `document.body`, that the 3-line clamp actually truncates visually, or that the mockup layout
- * matches. Those are CRD-T-6 (real browser).
- */
 @Component({
   standalone: true,
   imports: [ContributionRequestDrawerComponent],
   template: `
     <app-contribution-request-drawer
       [open]="open()"
-      [mode]="mode()"
-      [headerParts]="headerParts()"
-      [resultCode]="resultCode()"
-      [resultTitle]="resultTitle()"
-      [reviewRows]="reviewRows()"
-      [acceptDisabled]="acceptDisabled()"
-      [declineDisabled]="declineDisabled()"
-      [acceptBusy]="acceptBusy()"
-      [declineBusy]="declineBusy()"
-      [blockedReason]="blockedReason()"
-      [acceptHelper]="acceptHelper()"
-      [focusAlign]="focusAlign()"
-      [viewFields]="viewFields()"
-      [acceptLabel]="acceptLabel()"
-      [showAlignSlot]="showAlignSlot()"
+      [labelledBy]="labelledBy()"
+      [describedBy]="describedBy()"
       (closed)="onClosed()"
-      (resultActivated)="onResultActivated()"
-      (acceptClicked)="onAcceptClicked()"
-      (declineClicked)="onDeclineClicked()"
-      (declineConfirmed)="onDeclineConfirmed()"
-      (declineCancelled)="onDeclineCancelled()"
     >
-      <div crdAlign data-testid="align-slot">align content</div>
+      <div data-testid="projected-content">projected content</div>
     </app-contribution-request-drawer>
   `
 })
 class HostComponent {
   readonly open = signal(false);
-  readonly mode = signal<ContributionRequestDrawerMode>('decide');
-  readonly headerParts = signal<ContributionRequestDrawerHeaderParts | null>(null);
-  readonly resultCode = signal('');
-  readonly resultTitle = signal('');
-  readonly reviewRows = signal<ContributionRequestDrawerReviewField[][]>([]);
-  readonly acceptDisabled = signal(false);
-  readonly declineDisabled = signal(false);
-  readonly acceptBusy = signal(false);
-  readonly declineBusy = signal(false);
-  readonly blockedReason = signal<string | null>(null);
-  readonly acceptHelper = signal<string | null>(null);
-  readonly focusAlign = signal(false);
-  readonly viewFields = signal<ContributionRequestDrawerViewFields | null>(null);
-  readonly acceptLabel = signal<string | null>(null);
-  readonly showAlignSlot = signal(true);
+  readonly labelledBy = signal<string | null>(null);
+  readonly describedBy = signal<string | null>(null);
 
   closedCount = 0;
-  resultActivatedCount = 0;
-  acceptClickedCount = 0;
-  declineClickedCount = 0;
-  declineConfirmedCount = 0;
-  declineCancelledCount = 0;
 
   onClosed(): void {
     this.closedCount++;
   }
-
-  onResultActivated(): void {
-    this.resultActivatedCount++;
-  }
-
-  onAcceptClicked(): void {
-    this.acceptClickedCount++;
-  }
-
-  onDeclineClicked(): void {
-    this.declineClickedCount++;
-  }
-
-  onDeclineConfirmed(): void {
-    this.declineConfirmedCount++;
-  }
-
-  onDeclineCancelled(): void {
-    this.declineCancelledCount++;
-  }
 }
 
-const copy = CONTRIBUTION_REQUEST_DRAWER_COPY;
-
-function buildReviewRow(overrides: Partial<Record<string, string>> = {}): ContributionRequestDrawerReviewField[] {
-  const dash = copy.dashValue;
-  return [
-    { label: copy.fieldLabels.level, value: overrides.level ?? dash },
-    { label: copy.fieldLabels.highLevelOutputOutcome, value: overrides.highLevelOutputOutcome ?? dash },
-    { label: copy.fieldLabels.outcomeStatement, value: overrides.outcomeStatement ?? dash },
-    { label: copy.fieldLabels.indicatorTypology, value: overrides.indicatorTypology ?? dash },
-    { label: copy.fieldLabels.unitOfMeasurement, value: overrides.unitOfMeasurement ?? dash },
-    { label: copy.fieldLabels.target, value: overrides.target ?? dash, mono: true },
-    { label: copy.fieldLabels.contributionTarget, value: overrides.contributionTarget ?? dash, mono: true }
-  ];
-}
-
-describe('ContributionRequestDrawerComponent', () => {
+describe('ContributionRequestDrawerComponent (shell, DSP-T-3)', () => {
   let fixture: ComponentFixture<HostComponent>;
   let host: HostComponent;
 
@@ -168,46 +91,10 @@ describe('ContributionRequestDrawerComponent', () => {
     expect(panel()).toBeNull();
   });
 
-  it('CRD-P-4 (jsdom-provable half): renders the projected [crdAlign] content inside the sheet body', async () => {
+  it('projects content via <ng-content /> inside the sheet panel', async () => {
     await openDrawer();
 
-    const projected = query('[data-testid="align-slot"]');
-    expect(projected).toBeTruthy();
-    expect(projected?.textContent).toContain('align content');
-    // Lives inside the drawer's scrolling body, not the header/footer.
-    expect(query('[data-testid="crd-body"] [data-testid="align-slot"]')).toBeTruthy();
-  });
-
-  describe('PSR-T-9: kind-aware Accept label', () => {
-    it('DISQUALIFIER falsifier / CRD zero-touch: acceptLabel = null (default) still shows "Accept contribution" exactly as before', async () => {
-      await openDrawer();
-
-      const acceptBtn = query('[data-testid="crd-accept-btn"]');
-      expect(acceptBtn?.textContent?.trim()).toBe(copy.footer.acceptContribution);
-    });
-
-    it('a non-null acceptLabel overrides the footer Accept button text (e.g. "Accept as primary")', async () => {
-      host.acceptLabel.set(copy.footer.acceptAsPrimary);
-      await openDrawer();
-
-      const acceptBtn = query('[data-testid="crd-accept-btn"]');
-      expect(acceptBtn?.textContent?.trim()).toBe(copy.footer.acceptAsPrimary);
-    });
-  });
-
-  describe('PSR-T-9: no ToC Align projection for primary requests (showAlignSlot)', () => {
-    it('DISQUALIFIER falsifier / CRD zero-touch: showAlignSlot = true (default) still renders the projected [crdAlign] content', async () => {
-      await openDrawer();
-
-      expect(query('[data-testid="align-slot"]')).toBeTruthy();
-    });
-
-    it('Falsifier: showAlignSlot = false never renders the projected [crdAlign] content, even though it is projected', async () => {
-      host.showAlignSlot.set(false);
-      await openDrawer();
-
-      expect(query('[data-testid="align-slot"]')).toBeNull();
-    });
+    expect(query('[data-testid="crd-panel"] [data-testid="projected-content"]')).toBeTruthy();
   });
 
   it('CRD-P-9: the rendered hlm-sheet-content carries the 720px width override', async () => {
@@ -225,20 +112,6 @@ describe('ContributionRequestDrawerComponent', () => {
     const className = panel()?.className ?? '';
     expect(className).toContain('motion-reduce:transition-none');
     expect(className).toContain('motion-reduce:animate-none');
-  });
-
-  it('emits closed when the projected close button (hlmSheetClose, labelled from copy) is clicked', async () => {
-    await openDrawer();
-
-    const closeBtn = query('[data-testid="crd-close-btn"]') as HTMLButtonElement | null;
-    expect(closeBtn).toBeTruthy();
-    expect(closeBtn?.getAttribute('aria-label')).toBe(copy.closeAriaLabel);
-    closeBtn?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(host.closedCount).toBe(1);
-    expect(panel()).toBeNull();
   });
 
   it('emits closed when the scrim is clicked', async () => {
@@ -265,629 +138,49 @@ describe('ContributionRequestDrawerComponent', () => {
     expect(panel()).toBeNull();
   });
 
-  it('does NOT render the sheet-content built-in close button (showCloseButton=false, single close surface)', async () => {
+  it('does NOT render the sheet-content built-in close button (showCloseButton=false, single close surface — DSP-T-3: the sole close button now lives in notification-detail-content)', async () => {
     await openDrawer();
 
-    // The built-in close renders `<span class="sr-only">Close</span>` — our own close button never does.
+    // The built-in close renders `<span class="sr-only">Close</span>` — nothing projected here does.
     const builtIn = queryAll('[data-slot="sheet-close"] span.sr-only').find(el => el.textContent === 'Close');
     expect(builtIn).toBeUndefined();
   });
 
-  describe('CRD-R-2: header sentence', () => {
-    it('renders the non-bilateral sentence with codes in mono', async () => {
-      host.headerParts.set({
-        lead: 'Priya Raghavan',
-        requesterCode: 'SP06',
-        verb: copy.header.verb,
-        responderCode: 'SP01',
-        tail: copy.header.tail,
-        resultCode: '9377',
-        resultTitle: 'Some result title'
-      });
+  describe('DSP-T-3 attempt 2: labelledBy/describedBy → <hlm-sheet>[aria-labelledby/describedby] (DD-3, falsifier "the sheet panel has no accessible name")', () => {
+    // Reviewer FAIL issue 1 (attempt 1): asserting `panel()?.getAttribute('aria-labelledby')`
+    // only proved the attribute existed on `hlm-sheet-content` — a role-less element AT ignores.
+    // The real accessible name comes from `BrnDialog.ariaLabelledBy` (aliased `aria-labelledby`,
+    // inherited by `HlmSheet`), which only `<hlm-sheet>` itself carries and which flows into the
+    // CDK dialog's `role="dialog"` container config. Assert it on the `HlmSheet` directive
+    // instance instead of the DOM, matching the real forwarding mechanism.
+    function hlmSheetInstance(): HlmSheet {
+      const debugEl = fixture.debugElement.query(By.directive(HlmSheet));
+      expect(debugEl).toBeTruthy();
+      return debugEl.injector.get(HlmSheet);
+    }
+
+    it('forwards `labelledBy` onto <hlm-sheet>´s own aria-labelledby input (BrnDialog.ariaLabelledBy)', async () => {
+      host.labelledBy.set('crd-heading-42');
       await openDrawer();
 
-      const sentence = query('[data-testid="crd-header-sentence"]');
-      const text = (sentence?.textContent ?? '').replace(/\s+/g, ' ').trim();
-      expect(text).toBe('Priya Raghavan from SP06 has asked SP01 to contribute to result 9377 – Some result title');
-
-      const monoEls = sentence?.querySelectorAll('.font-mono') ?? [];
-      const monoTexts = Array.from(monoEls).map(el => el.textContent?.trim());
-      expect(monoTexts).toEqual(['SP06', 'SP01', '9377']);
+      expect((hlmSheetInstance() as unknown as { ariaLabelledBy: string | null }).ariaLabelledBy).toBe('crd-heading-42');
     });
 
-    it('renders the bilateral sentence with no invented requester name', async () => {
-      // CRD-T-4 / CRD-R-2: notification-item's drawerHeader() leaves requesterCode empty for
-      // bilateral requests — this host fixture mirrors that, exactly as the real caller does.
-      host.headerParts.set({
-        lead: `${copy.header.bilateralLeadPrefix} CIAT`,
-        requesterCode: '',
-        verb: copy.header.bilateralVerb,
-        responderCode: 'SP01',
-        tail: copy.header.bilateralTail,
-        resultCode: '9377',
-        resultTitle: 'Some result title'
-      });
+    it('forwards `describedBy` onto <hlm-sheet>´s own aria-describedby input (BrnDialog.ariaDescribedBy)', async () => {
+      host.describedBy.set('crd-heading-42-desc');
       await openDrawer();
 
-      const sentence = query('[data-testid="crd-header-sentence"]');
-      const text = (sentence?.textContent ?? '').replace(/\s+/g, ' ').trim();
-      expect(text).toBe('Center CIAT has reported a contribution to SP01 for result 9377 – Some result title');
-      expect(text).not.toContain('undefined');
-      expect(text).not.toContain('from');
+      expect((hlmSheetInstance() as unknown as { ariaDescribedBy: string | null }).ariaDescribedBy).toBe('crd-heading-42-desc');
     });
 
-    it('PSR-T-9 (PSR-R-10, design.md §6.1 "Bilateral contributor request"): leadCode renders bold right after lead, and suffix renders after the result title', async () => {
-      host.headerParts.set({
-        lead: '',
-        leadCode: 'SP09',
-        requesterCode: '',
-        verb: copy.header.bilateralContributorVerb,
-        responderCode: 'SP12',
-        tail: copy.header.bilateralContributorTail,
-        resultCode: '9377',
-        resultTitle: 'Some result title',
-        suffix: `${copy.header.onBehalfOf} CIAT`
-      });
+    it('DISQUALIFIER falsifier: a null `labelledBy`/`describedBy` forwards `null`, never a fabricated id or the literal string "null"', async () => {
+      host.labelledBy.set(null);
+      host.describedBy.set(null);
       await openDrawer();
 
-      const sentence = query('[data-testid="crd-header-sentence"]');
-      const text = (sentence?.textContent ?? '').replace(/\s+/g, ' ').trim();
-      expect(text).toBe(
-        'SP09, as primary Science Program, has tagged SP12 as a contributing Science Program to result 9377 – Some result title on behalf of CIAT'
-      );
-
-      const monoEls = sentence?.querySelectorAll('.font-mono') ?? [];
-      const monoTexts = Array.from(monoEls).map(el => el.textContent?.trim());
-      expect(monoTexts).toEqual(['SP09', 'SP12', '9377']);
-    });
-
-    it('DISQUALIFIER falsifier / CRD zero-touch: omitting leadCode/suffix renders byte-identical to before (no extra whitespace, no "undefined")', async () => {
-      host.headerParts.set({
-        lead: 'Priya Raghavan',
-        requesterCode: 'SP06',
-        verb: copy.header.verb,
-        responderCode: 'SP01',
-        tail: copy.header.tail,
-        resultCode: '9377',
-        resultTitle: 'Some result title'
-        // leadCode / suffix intentionally absent.
-      });
-      await openDrawer();
-
-      const sentence = query('[data-testid="crd-header-sentence"]');
-      const text = (sentence?.textContent ?? '').replace(/\s+/g, ' ').trim();
-      expect(text).toBe('Priya Raghavan from SP06 has asked SP01 to contribute to result 9377 – Some result title');
-      expect(text).not.toContain('undefined');
-    });
-  });
-
-  describe('CRD-R-3: Result card', () => {
-    it('emits resultActivated when the RESULT card is activated', async () => {
-      host.resultCode.set('9377');
-      host.resultTitle.set('Some result title');
-      await openDrawer();
-
-      const card = query('[data-testid="crd-result-card"]') as HTMLButtonElement | null;
-      expect(card?.textContent).toContain('9377');
-      expect(card?.textContent).toContain('Some result title');
-
-      card?.click();
-      expect(host.resultActivatedCount).toBe(1);
-    });
-  });
-
-  describe('CRD-R-4: "Where it contributes"', () => {
-    it('renders one table with all 7 labels and a muted dash in every value when reviewRows is empty (no review data)', async () => {
-      host.reviewRows.set([]);
-      await openDrawer();
-
-      // BUT the section itself must not be hidden.
-      expect(query('[data-testid="crd-review-section"]')).toBeTruthy();
-
-      const labels = queryAll('[data-testid="crd-review-label"]').map(el => el.textContent?.trim());
-      expect(labels).toEqual([
-        copy.fieldLabels.level,
-        copy.fieldLabels.highLevelOutputOutcome,
-        copy.fieldLabels.outcomeStatement,
-        copy.fieldLabels.indicatorTypology,
-        copy.fieldLabels.unitOfMeasurement,
-        copy.fieldLabels.target,
-        copy.fieldLabels.contributionTarget
-      ]);
-      expect(labels.length).not.toBeLessThan(7);
-
-      const values = queryAll('[data-testid="crd-review-value"]').map(el => el.textContent?.trim());
-      expect(values.every(v => v === copy.dashValue)).toBe(true);
-    });
-
-    it('renders one table, with mono + tabular-nums on Target/Contribution target, for a request with one review entry', async () => {
-      host.reviewRows.set([buildReviewRow({ level: 'Output', target: '100', contributionTarget: '40' })]);
-      await openDrawer();
-
-      const tables = queryAll('[data-testid="crd-review-table"]');
-      expect(tables.length).toBe(1);
-
-      const values = queryAll('[data-testid="crd-review-value"]');
-      const targetValue = values[values.length - 2];
-      expect(targetValue.className).toContain('font-mono');
-      expect(targetValue.className).toContain('tabular-nums');
-    });
-
-    it('renders two tables (not one) for two review entries, in server order', async () => {
-      host.reviewRows.set([buildReviewRow({ level: 'Output' }), buildReviewRow({ level: 'Outcome' })]);
-      await openDrawer();
-
-      const tables = queryAll('[data-testid="crd-review-table"]');
-      expect(tables.length).toBe(2);
-      expect(tables[0].textContent).toContain('Output');
-      expect(tables[1].textContent).toContain('Outcome');
-    });
-
-    it('long text (CRD-R-4 Long text): a value past the clamp threshold gets line-clamp-3 + an inline Show more toggle', async () => {
-      const longStatement = 'a'.repeat(200);
-      host.reviewRows.set([buildReviewRow({ outcomeStatement: longStatement })]);
-      await openDrawer();
-
-      const values = queryAll('[data-testid="crd-review-value"]');
-      const statementValue = values[2];
-      expect(statementValue.className).toContain('line-clamp-3');
-
-      const toggle = query('[data-testid="crd-review-toggle"]') as HTMLButtonElement | null;
-      expect(toggle).toBeTruthy();
-      expect(toggle?.textContent?.trim()).toBe(copy.showMore);
-
-      toggle?.click();
-      fixture.detectChanges();
-      await fixture.whenStable();
-
-      const expandedValue = queryAll('[data-testid="crd-review-value"]')[2];
-      expect(expandedValue.className).not.toContain('line-clamp-3');
-      expect(query('[data-testid="crd-review-toggle"]')?.textContent?.trim()).toBe(copy.showLess);
-    });
-
-    it('a short dash value gets no Show more toggle', async () => {
-      host.reviewRows.set([buildReviewRow()]);
-      await openDrawer();
-
-      expect(query('[data-testid="crd-review-toggle"]')).toBeNull();
-    });
-
-    it('DISQUALIFIER falsifier (min fix): the clamp is present only where the toggle is — a short value gets NEITHER line-clamp-3 NOR a toggle, a long value gets BOTH', async () => {
-      const shortStatement = 'a'.repeat(50);
-      const longStatement = 'a'.repeat(200);
-      host.reviewRows.set([buildReviewRow({ level: shortStatement, outcomeStatement: longStatement })]);
-      await openDrawer();
-
-      const values = queryAll('[data-testid="crd-review-value"]');
-      const shortValue = values[0];
-      const longValue = values[2];
-
-      expect(shortValue.className).not.toContain('line-clamp-3');
-      expect(longValue.className).toContain('line-clamp-3');
-
-      const toggles = queryAll('[data-testid="crd-review-toggle"]');
-      expect(toggles.length).toBe(1);
-    });
-  });
-
-  describe('CRD-R-6/R-8: footer — decide mode, disabled/busy/blocked/helper', () => {
-    it('DISQUALIFIER falsifier: acceptDisabled = true actually disables the Accept button (does not leave it clickable)', async () => {
-      // `[disabled]` on `button[hlmBtn]` resolves to `BrnButton`'s hostDirectives-forwarded input,
-      // which the shared Jest Brain stub (`tests/mocks/spartanBrainMock.ts`, out of this task's
-      // scope) never reflects onto the native DOM attribute — the real `BrnButton` does, via its
-      // own `[attr.disabled]` host binding. So the falsifier is proven at the emission boundary
-      // (a disabled click never emits), which the component's own guard makes true either way.
-      host.acceptDisabled.set(true);
-      await openDrawer();
-
-      const acceptBtn = query('[data-testid="crd-accept-btn"]') as HTMLButtonElement | null;
-      acceptBtn?.click();
-      expect(host.acceptClickedCount).toBe(0);
-    });
-
-    it('declineDisabled = true disables the Decline button', async () => {
-      host.declineDisabled.set(true);
-      await openDrawer();
-
-      const declineBtn = query('[data-testid="crd-decline-btn"]') as HTMLButtonElement | null;
-      declineBtn?.click();
-      expect(host.declineClickedCount).toBe(0);
-    });
-
-    it('Busy: acceptBusy shows a spinner on Accept and declineBusy shows one on Decline', async () => {
-      host.acceptBusy.set(true);
-      host.declineBusy.set(true);
-      await openDrawer();
-
-      expect(query('[data-testid="crd-accept-btn"] ng-icon[name="lucideLoaderCircle"]')).toBeTruthy();
-      expect(query('[data-testid="crd-decline-btn"] ng-icon[name="lucideLoaderCircle"]')).toBeTruthy();
-    });
-
-    it('Blocked: a non-null blockedReason renders the reason line and ties it via aria-describedby to Accept and Decline', async () => {
-      host.blockedReason.set(copy.footer.blockedGenericReason);
-      await openDrawer();
-
-      const reason = query('[data-testid="crd-blocked-reason"]');
-      expect(reason?.textContent?.trim()).toBe(copy.footer.blockedGenericReason);
-
-      const acceptBtn = query('[data-testid="crd-accept-btn"]') as HTMLButtonElement | null;
-      const declineBtn = query('[data-testid="crd-decline-btn"]') as HTMLButtonElement | null;
-      expect(acceptBtn?.getAttribute('aria-describedby')).toContain('crd-blocked-reason');
-      expect(declineBtn?.getAttribute('aria-describedby')).toBe('crd-blocked-reason');
-
-      // See the acceptDisabled/declineDisabled tests above for why this is proven at the
-      // emission boundary rather than the native `disabled` attribute under the Jest Brain stub.
-      acceptBtn?.click();
-      declineBtn?.click();
-      expect(host.acceptClickedCount).toBe(0);
-      expect(host.declineClickedCount).toBe(0);
-    });
-
-    it('DISQUALIFIER falsifier: blockedReason = null renders NO reason element (CRD-R-8 "the footer shows one reason line" only when blocked)', async () => {
-      host.blockedReason.set(null);
-      await openDrawer();
-
-      expect(query('[data-testid="crd-blocked-reason"]')).toBeNull();
-
-      const acceptBtn = query('[data-testid="crd-accept-btn"]') as HTMLButtonElement | null;
-      const declineBtn = query('[data-testid="crd-decline-btn"]') as HTMLButtonElement | null;
-      expect(acceptBtn?.hasAttribute('aria-describedby')).toBe(false);
-      expect(declineBtn?.hasAttribute('aria-describedby')).toBe(false);
-    });
-
-    it('Incomplete mapping helper: a non-null acceptHelper renders and is tied via aria-describedby to Accept', async () => {
-      host.acceptHelper.set(copy.footer.acceptHelperIncompleteMapping);
-      await openDrawer();
-
-      const helper = query('[data-testid="crd-accept-helper"]');
-      expect(helper?.textContent?.trim()).toBe(copy.footer.acceptHelperIncompleteMapping);
-
-      const acceptBtn = query('[data-testid="crd-accept-btn"]') as HTMLButtonElement | null;
-      expect(acceptBtn?.getAttribute('aria-describedby')).toContain('crd-accept-helper');
-    });
-
-    it('acceptHelper = null renders NO helper element', async () => {
-      host.acceptHelper.set(null);
-      await openDrawer();
-
-      expect(query('[data-testid="crd-accept-helper"]')).toBeNull();
-    });
-
-    it('emits acceptClicked / declineClicked when the footer buttons are activated', async () => {
-      await openDrawer();
-
-      (query('[data-testid="crd-accept-btn"]') as HTMLButtonElement)?.click();
-      (query('[data-testid="crd-decline-btn"]') as HTMLButtonElement)?.click();
-
-      expect(host.acceptClickedCount).toBe(1);
-      expect(host.declineClickedCount).toBe(1);
-    });
-  });
-
-  describe('CRD-R-7: footer — confirm-decline mode', () => {
-    it('DISQUALIFIER falsifier: mode = "confirm-decline" does NOT show Accept contribution', async () => {
-      host.mode.set('confirm-decline');
-      await openDrawer();
-
-      expect(query('[data-testid="crd-accept-btn"]')).toBeNull();
-      expect(query('[data-testid="crd-decline-btn"]')).toBeNull();
-      expect(query('[data-testid="crd-confirm-decline-btn"]')).toBeTruthy();
-      expect(query('[data-testid="crd-decline-confirm-title"]')?.textContent?.trim()).toBe(copy.footer.declineConfirmTitle);
-    });
-
-    it('Cancel emits declineCancelled and nothing else', async () => {
-      host.mode.set('confirm-decline');
-      await openDrawer();
-
-      (query('[data-testid="crd-cancel-btn"]') as HTMLButtonElement)?.click();
-
-      expect(host.declineCancelledCount).toBe(1);
-      expect(host.declineConfirmedCount).toBe(0);
-    });
-
-    it('Confirm decline emits declineConfirmed', async () => {
-      host.mode.set('confirm-decline');
-      await openDrawer();
-
-      (query('[data-testid="crd-confirm-decline-btn"]') as HTMLButtonElement)?.click();
-
-      expect(host.declineConfirmedCount).toBe(1);
-    });
-  });
-
-  describe('CRD-R-10: Bilateral row accept — scroll Align into view', () => {
-    it('scrolls the projected [crdAlign] slot into view when focusAlign is true on open', async () => {
-      const scrollIntoViewSpy = jest.fn();
-      const original = Element.prototype.scrollIntoView;
-      Element.prototype.scrollIntoView = scrollIntoViewSpy;
-
-      try {
-        host.focusAlign.set(true);
-        await openDrawer();
-        // The scroll is deferred a microtask past the sheet's own portal/state effects; give the
-        // zone one more turn to flush it.
-        await Promise.resolve();
-        fixture.detectChanges();
-        await fixture.whenStable();
-
-        expect(scrollIntoViewSpy).toHaveBeenCalled();
-      } finally {
-        Element.prototype.scrollIntoView = original;
-      }
-    });
-
-    it('does NOT scroll when focusAlign is false', async () => {
-      const scrollIntoViewSpy = jest.fn();
-      const original = Element.prototype.scrollIntoView;
-      Element.prototype.scrollIntoView = scrollIntoViewSpy;
-
-      try {
-        host.focusAlign.set(false);
-        await openDrawer();
-
-        expect(scrollIntoViewSpy).not.toHaveBeenCalled();
-      } finally {
-        Element.prototype.scrollIntoView = original;
-      }
-    });
-  });
-
-  describe('NOTIF-T-4: `view` mode', () => {
-    it('DISQUALIFIER falsifier: `view` mode renders no footer at all — no Accept/Decline, no confirm-decline', async () => {
-      host.mode.set('view');
-      await openDrawer();
-
-      expect(query('[data-testid="crd-footer"]')).toBeNull();
-      expect(query('[data-testid="crd-accept-btn"]')).toBeNull();
-      expect(query('[data-testid="crd-decline-btn"]')).toBeNull();
-      expect(query('[data-testid="crd-confirm-decline-btn"]')).toBeNull();
-      expect(query('[data-testid="crd-cancel-btn"]')).toBeNull();
-    });
-
-    it('regression: `decide` mode is unaffected by the new mode — still shows the Accept/Decline footer exactly as before', async () => {
-      host.mode.set('decide');
-      await openDrawer();
-
-      expect(query('[data-testid="crd-footer"]')).toBeTruthy();
-      expect(query('[data-testid="crd-accept-btn"]')).toBeTruthy();
-      expect(query('[data-testid="crd-decline-btn"]')).toBeTruthy();
-    });
-
-    it('Falsifier: an Updates-source row (no result_center_array) renders a metadata grid with NO "Reporting center" row at all — not a blank placeholder', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'update',
-        phase: 'Phase 2026',
-        primaryProgram: 'SP03',
-        submittedBy: 'John Doe'
-        // resultType / reportingCenter intentionally absent — NOTIF-P-2.
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels).not.toContain(copy.viewFieldLabels.reportingCenter);
-      expect(labels).not.toContain(copy.viewFieldLabels.resultType);
-      expect(labels).toEqual([copy.viewFieldLabels.phase, copy.viewFieldLabels.primaryProgram, copy.viewFieldLabels.submittedBy]);
-
-      const values = queryAll('[data-testid="crd-view-metadata-value"]').map(el => el.textContent?.trim());
-      expect(values).toEqual(['Phase 2026', 'SP03', 'John Doe']);
-    });
-
-    it('an Updates-source row still omits Result type / Reporting center even if the caller mistakenly passes them', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'update',
-        resultType: 'Should not render',
-        reportingCenter: 'Should not render either',
-        phase: 'Phase 2026'
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels).toEqual([copy.viewFieldLabels.phase]);
-    });
-
-    it('a Requests-source row with every field (incl. status) renders all six metadata rows in order, status first', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'request',
-        status: 'Needs your decision',
-        resultType: 'Innovation development',
-        phase: 'Phase 2026',
-        primaryProgram: 'SP06',
-        reportingCenter: 'CIAT',
-        submittedBy: 'Priya Raghavan'
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels).toEqual([
-        copy.viewFieldLabels.status,
-        copy.viewFieldLabels.resultType,
-        copy.viewFieldLabels.phase,
-        copy.viewFieldLabels.primaryProgram,
-        copy.viewFieldLabels.reportingCenter,
-        copy.viewFieldLabels.submittedBy
-      ]);
-
-      const values = queryAll('[data-testid="crd-view-metadata-value"]').map(el => el.textContent?.trim());
-      expect(values[0]).toBe('Needs your decision');
-    });
-
-    it('NOTIF-T-14: renders the "Status" row first when `viewFields.status` is populated (NOTIF-R-5)', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'update',
-        status: 'For your information',
-        phase: 'Phase 2026'
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels[0]).toBe(copy.viewFieldLabels.status);
-      const values = queryAll('[data-testid="crd-view-metadata-value"]').map(el => el.textContent?.trim());
-      expect(values[0]).toBe('For your information');
-    });
-
-    it('NOTIF-T-14: omits the "Status" row entirely when `viewFields.status` is null/absent — never a blank row', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'update',
-        phase: 'Phase 2026'
-        // status intentionally absent.
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels).not.toContain(copy.viewFieldLabels.status);
-      expect(labels).toEqual([copy.viewFieldLabels.phase]);
-    });
-
-    it('PSR-T-9 (PSR-R-11): renders "Request type" right after Status when `viewFields.requestKind` is populated', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'request',
-        status: 'Needs your decision',
-        requestKind: 'Primary program request',
-        phase: 'Phase 2026'
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels).toEqual([copy.viewFieldLabels.status, copy.viewFieldLabels.requestKind, copy.viewFieldLabels.phase]);
-
-      const values = queryAll('[data-testid="crd-view-metadata-value"]').map(el => el.textContent?.trim());
-      expect(values[1]).toBe('Primary program request');
-    });
-
-    it('PSR-T-9: omits the "Request type" row entirely when `viewFields.requestKind` is null/absent — never a blank row', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'update',
-        phase: 'Phase 2026'
-        // requestKind intentionally absent.
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels).not.toContain(copy.viewFieldLabels.requestKind);
-      expect(labels).toEqual([copy.viewFieldLabels.phase]);
-    });
-
-    it('a Requests-source row missing one field (e.g. no primaryProgram) omits just that row, not a blank one', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'request',
-        resultType: 'Innovation development',
-        phase: 'Phase 2026',
-        reportingCenter: 'CIAT',
-        submittedBy: 'Priya Raghavan'
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels).not.toContain(copy.viewFieldLabels.primaryProgram);
-      expect(labels.length).toBe(4);
-    });
-
-    it('renders no metadata section at all when `viewFields` is null', async () => {
-      host.mode.set('view');
-      host.viewFields.set(null);
-      await openDrawer();
-
-      expect(query('[data-testid="crd-view-metadata-section"]')).toBeNull();
-    });
-
-    it('reuses the header sentence and RESULT card unchanged in `view` mode', async () => {
-      host.mode.set('view');
-      host.resultCode.set('9377');
-      host.resultTitle.set('Some result title');
-      host.headerParts.set({
-        lead: 'Priya Raghavan',
-        requesterCode: 'SP06',
-        verb: copy.header.verb,
-        responderCode: 'SP01',
-        tail: copy.header.tail,
-        resultCode: '9377',
-        resultTitle: 'Some result title'
-      });
-      await openDrawer();
-
-      const card = query('[data-testid="crd-result-card"]');
-      expect(card?.textContent).toContain('9377');
-      expect(card?.textContent).toContain('Some result title');
-
-      const sentence = query('[data-testid="crd-header-sentence"]');
-      expect((sentence?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
-        'Priya Raghavan from SP06 has asked SP01 to contribute to result 9377 – Some result title'
-      );
-    });
-
-    it('omits the "Where it contributes" section entirely in `view` mode when there is no review data (no dash-fallback placeholder)', async () => {
-      host.mode.set('view');
-      host.reviewRows.set([]);
-      await openDrawer();
-
-      expect(query('[data-testid="crd-review-section"]')).toBeNull();
-    });
-
-    it('still renders "Where it contributes" in `view` mode when real review data is present', async () => {
-      host.mode.set('view');
-      host.reviewRows.set([buildReviewRow({ level: 'Output' })]);
-      await openDrawer();
-
-      expect(query('[data-testid="crd-review-section"]')).toBeTruthy();
-      const tables = queryAll('[data-testid="crd-review-table"]');
-      expect(tables.length).toBe(1);
-    });
-
-    it('a whitespace-only field value is omitted, not rendered as a blank row', async () => {
-      host.mode.set('view');
-      host.viewFields.set({
-        source: 'update',
-        phase: 'Phase 2026',
-        primaryProgram: '   ',
-        submittedBy: 'John Doe'
-      });
-      await openDrawer();
-
-      const labels = queryAll('[data-testid="crd-view-metadata-label"]').map(el => el.textContent?.trim());
-      expect(labels).not.toContain(copy.viewFieldLabels.primaryProgram);
-      expect(labels).toEqual([copy.viewFieldLabels.phase, copy.viewFieldLabels.submittedBy]);
-    });
-
-    it('renders the labelled close control (hlmSheetClose / crd-close-btn) in `view` mode, same as `decide` mode', async () => {
-      host.mode.set('view');
-      await openDrawer();
-
-      const closeBtn = query('[data-testid="crd-close-btn"]') as HTMLButtonElement | null;
-      expect(closeBtn).toBeTruthy();
-      expect(closeBtn?.getAttribute('aria-label')).toBe(copy.closeAriaLabel);
-    });
-
-    it('emits closed exactly once when the close button is clicked in `view` mode (no footer to intercept it)', async () => {
-      host.mode.set('view');
-      await openDrawer();
-
-      const closeBtn = query('[data-testid="crd-close-btn"]') as HTMLButtonElement | null;
-      closeBtn?.click();
-      fixture.detectChanges();
-      await fixture.whenStable();
-
-      expect(host.closedCount).toBe(1);
-      expect(panel()).toBeNull();
-    });
-
-    it('emits closed exactly once on Escape in `view` mode', async () => {
-      host.mode.set('view');
-      await openDrawer();
-
-      panel()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      fixture.detectChanges();
-      await fixture.whenStable();
-
-      expect(host.closedCount).toBe(1);
-      expect(panel()).toBeNull();
+      const sheet = hlmSheetInstance() as unknown as { ariaLabelledBy: string | null; ariaDescribedBy: string | null };
+      expect(sheet.ariaLabelledBy).toBeNull();
+      expect(sheet.ariaDescribedBy).toBeNull();
     });
   });
 });

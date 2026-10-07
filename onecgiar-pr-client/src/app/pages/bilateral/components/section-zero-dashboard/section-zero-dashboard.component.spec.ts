@@ -386,15 +386,17 @@ describe('SectionZeroDashboardComponent', () => {
       expect(component.showPrimaryOptions()).toBe(false);
     });
 
-    it('shows the "Awaiting acceptance" banner while pending', () => {
+    it('PRA-R-5: shows the "will review" banner while pending (no owner) and does not show the submit-blocked note', () => {
       setPrimaryRequest('pending', 'SP09');
       openResultWithProgramOptions(21);
+      (creationService.selectedPrimarySp as any).set(null); // ownerless legacy result
+      fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.textContent).toContain('Awaiting SP09 acceptance as primary Science Program');
-      expect(el.textContent).toContain(
-        'Submit for review is unavailable until a primary Science Program accepts.',
-      );
+      expect(el.textContent).toContain('SP09 will review this result when you submit it for review');
+      expect(el.textContent).not.toContain('Awaiting');
+      expect(el.textContent).not.toContain('Submit for review is unavailable');
+      expect(component.submitBlockedReason()).toBeNull();
     });
 
     it('Falsifier: state "sent_back" keeps the picker enabled and marks the declined SP', () => {
@@ -482,7 +484,7 @@ describe('SectionZeroDashboardComponent', () => {
 
       expect(component.primaryRequest()?.state).toBe('pending');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-        'Awaiting SP12 acceptance as primary Science Program',
+        'SP12 will review this result when you submit it for review',
       );
     });
   });
@@ -568,18 +570,16 @@ describe('SectionZeroDashboardComponent', () => {
       fixture.detectChanges();
     };
 
-    it('Falsifier: state "draft" shows the info banner "SP09 will be asked to be the primary Science Program when you submit for review"', () => {
+    it('PRA-R-5 Falsifier: state "draft" shows the info banner "SP09 will review this result when you submit it for review"', () => {
       setPrimaryRequest('draft', 'SP09');
       openResult(41);
 
       expect(component.primaryAssignmentBanner()?.tone).toBe('info');
       expect(component.primaryAssignmentBanner()?.message).toBe(
-        'SP09 will be asked to be the primary Science Program when you submit for review',
+        'SP09 will review this result when you submit it for review',
       );
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.textContent).toContain(
-        'SP09 will be asked to be the primary Science Program when you submit for review',
-      );
+      expect(el.textContent).toContain('SP09 will review this result when you submit it for review');
     });
 
     it('Falsifier: state "draft" does not block Submit and keeps the picker enabled', () => {
@@ -590,14 +590,91 @@ describe('SectionZeroDashboardComponent', () => {
       expect(component.primaryPickerDisabled()).toBe(false);
     });
 
-    it('Regression: state "pending" still shows "Awaiting SP09 acceptance..." and blocks Submit', () => {
+    it('PRA-R-5: ownerless "pending" shows the new banner, does not block Submit, and keeps the picker disabled', () => {
       setPrimaryRequest('pending', 'SP09');
       openResult(43);
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.textContent).toContain('Awaiting SP09 acceptance as primary Science Program');
-      expect(component.submitBlockedReason()).not.toBeNull();
+      expect(el.textContent).toContain('SP09 will review this result when you submit it for review');
+      expect(component.submitBlockedReason()).toBeNull();
       expect(component.primaryPickerDisabled()).toBe(true);
+    });
+
+    it('PRA-R-5: "pending" with an existing owner keeps the submit-blocked reason (only the ownerless case is unblocked)', () => {
+      (creationService.selectedPrimarySp as any).set({ programId: 1, programCode: 'SP01', allocation: '100' });
+      setPrimaryRequest('pending', 'SP09');
+      openResult(44);
+
+      expect(component.submitBlockedReason()).not.toBeNull();
+    });
+  });
+  // RRC-T-7 (bilateral/rejected-result-correction) — RRC-R-11 + T-1 forward pointer: at Rejected (7)
+  // the owner shown comes from the role-1 initiative, not from the (deactivated -> "none") request.
+  describe('RRC-T-7 — Rejected (7): owner chip and single-allocation note', () => {
+    const SP = (programId: number, programCode: string) => ({
+      programId,
+      programCode,
+      allocation: '100',
+      spName: `Program ${programCode}`,
+      spShortName: programCode,
+    });
+
+    const openRejected = (programs: any[], status: number | null = 7, requestState: any = 'none') => {
+      const api = TestBed.inject(BilateralApiService) as any;
+      api.GET_resultInitiativeId.mockReturnValue(primaryRequestResponse(requestState, null, []));
+      const current = project(12, 'OLDPROJ');
+      current.sciencePrograms = programs;
+      (creationService.selectedProject as any).set(current);
+      (creationService.selectedPrimarySp as any).set({ programId: 1, programCode: 'SP09', allocation: '100' });
+      (creationService.resultStatusId as any).set(status);
+      (creationService.currentResultId as any).set(60);
+      fixture.detectChanges();
+    };
+
+    it('one allocated SP at 7: read-only chip with the owner + the note, and no empty dropdown', () => {
+      openRejected([SP(1, 'SP09')]);
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-testid="bp-single-allocation-chip"]')?.textContent).toContain('SP09');
+      expect(el.querySelector('[data-testid="bp-single-allocation-note"]')?.textContent?.trim()).toBe(
+        'This project is allocated to a single Science Program, so there is no alternative to choose.',
+      );
+      expect(el.querySelector('.bp-primary-selector')).toBeNull();
+    });
+
+    it('T-1 pointer: request state "none" at 7 with an owner still shows the owner, no "pick" banner, Submit not blocked', () => {
+      openRejected([SP(1, 'SP09')], 7, 'none');
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('SP09');
+      expect(el.textContent).not.toContain('Pick a primary Science Program');
+      expect(component.primaryAssignmentBanner()).toBeNull();
+      expect(component.submitBlockedReason()).toBeNull();
+    });
+
+    it('two allocated SPs at 7: the picker is interactive and there is no single-allocation note', () => {
+      openRejected([SP(1, 'SP09'), SP(2, 'SP12')]);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const toggle = el.querySelector('.bp-primary-selector') as HTMLButtonElement;
+      expect(toggle).not.toBeNull();
+      expect(toggle.disabled).toBe(false);
+      expect(el.querySelector('[data-testid="bp-single-allocation-note"]')).toBeNull();
+    });
+
+    it('falsifier: one allocated SP in Editing (1) keeps the picker, no note', () => {
+      openRejected([SP(1, 'SP09')], 1, 'accepted');
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-testid="bp-single-allocation-note"]')).toBeNull();
+      expect(el.querySelector('.bp-primary-selector')).not.toBeNull();
+    });
+
+    it('sent_back at 7 (editable, not readOnly) shows the rejected banner, not "Pick another"', () => {
+      openRejected([SP(1, 'SP09'), SP(2, 'SP12')], 7, 'sent_back');
+
+      expect(component.primaryAssignmentBanner()?.tone).toBe('error');
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Pick another');
     });
   });
 });

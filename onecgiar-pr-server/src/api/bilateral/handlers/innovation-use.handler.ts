@@ -3,12 +3,18 @@ import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
   HandlerBeforeCreateContext,
+  HandlerResolveContext,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 import { InnovationUseService } from '../../results-framework-reporting/innovation-use/innovation-use.service';
 import { ActorTypeRepository } from '../../results/result-actors/repositories/actors-type.repository';
 import { InnovationUseMdsValidator } from '../services/innovation-use-mds-validator.service';
+
+/** What `resolveAndValidate` hands `afterCreate` (RSB-T-3). */
+interface ResolvedInnovationUse {
+  innovationUseDto: Record<string, unknown>;
+}
 
 @Injectable()
 export class InnovationUseBilateralHandler
@@ -30,13 +36,18 @@ export class InnovationUseBilateralHandler
     await this._innovationUseMdsValidator.assertExternalCreateMds(bilateralDto);
   }
 
-  async afterCreate({
+  /**
+   * @akili-spec bilateral/resubmit-rejected-result — RSB-T-3. The shape checks, the use-level
+   * lookup (`resolveInnovationUseLevel`) and the actor checks (`prepareActors`: type, youth) that
+   * `afterCreate` used to run inline, moved verbatim (same order, same messages). None of them
+   * needs the saved row, so the resubmission preflight runs them before the first write
+   * (`UBC-T-3` attempt-1 FAIL R-B #1). No write here.
+   */
+  async resolveAndValidate({
     bilateralDto,
-    resultId,
-    userId,
-  }: HandlerAfterCreateContext): Promise<void> {
+  }: HandlerResolveContext): Promise<ResolvedInnovationUse | null> {
     if (bilateralDto.result_type_id !== ResultTypeEnum.INNOVATION_USE) {
-      return;
+      return null;
     }
 
     const innovationUse = bilateralDto.innovation_use;
@@ -94,6 +105,20 @@ export class InnovationUseBilateralHandler
       organization: currentNumbers.organization || [],
       measures: currentNumbers.measures || [],
     };
+
+    return { innovationUseDto };
+  }
+
+  async afterCreate({
+    bilateralDto,
+    resultId,
+    userId,
+  }: HandlerAfterCreateContext): Promise<void> {
+    const resolved = await this.resolveAndValidate({ bilateralDto });
+    if (!resolved) {
+      return;
+    }
+    const { innovationUseDto } = resolved;
 
     const userToken = { id: userId } as any;
 

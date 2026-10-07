@@ -95,7 +95,7 @@
 
 ---
 
-### `UBC-T-3` — ⏸ ON HOLD (2026-09-30, pending STAR confirmation on 2026-10-01; see `execution.md` → Pivot Record: UBC-T-3) — Update in place: header, immutable type, title rule, and a preflight of the post-header checks
+### `UBC-T-3` — [SUPERSEDED by `bilateral/resubmit-rejected-result`, rebuilt as `RSB-T-2`/`RSB-T-3`/`RSB-T-5`, 2026-10-06; history below kept] ⏸ ON HOLD (2026-09-30, pending STAR confirmation on 2026-10-01; see `execution.md` → Pivot Record: UBC-T-3) — Update in place: header, immutable type, title rule, and a preflight of the post-header checks
 
 - **Type:** `server` · **Size:** `M` · **Depends on:** `UBC-T-1`
 - **Precondition (settled 2026-09-30):** `P-16` / `OQ-1`: Manuel confirmed that STAR sends the full result. Replace semantics stand. If a producer later sends partial data, that is a new change, not this task.
@@ -140,7 +140,7 @@
 
 ---
 
-### `UBC-T-4` — ⏸ ON HOLD (with T-3, pending STAR) — Section reset so the create writers replace instead of duplicating, plus the lead-centre correction
+### `UBC-T-4` — [SUPERSEDED by `bilateral/resubmit-rejected-result`, rebuilt as `RSB-T-4`, 2026-10-06; history below kept] ⏸ ON HOLD (with T-3, pending STAR) — Section reset so the create writers replace instead of duplicating, plus the lead-centre correction
 
 - **Type:** `server` · **Size:** `M` · **Depends on:** `UBC-T-3`
 - **Implements:** `UBC-R-2` (sections)

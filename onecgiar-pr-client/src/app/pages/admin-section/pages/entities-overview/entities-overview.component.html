@@ -244,7 +244,9 @@
         <div class="flex flex-wrap items-center justify-between gap-[12px] px-[20px] pb-[16px]">
           <div class="relative w-full sm:w-[240px]">
             <ng-icon name="lucideSearch" size="15px" class="pointer-events-none absolute left-[12px] top-1/2 -translate-y-1/2 text-[var(--pr-text-muted)]" />
+            <label for="entities-overview-detail-search" class="sr-only">{{ view() === 'programs' ? copy.searchPrograms : copy.searchCenters }}</label>
             <input
+              id="entities-overview-detail-search"
               type="text"
               [value]="search()"
               (input)="onSearch($event)"

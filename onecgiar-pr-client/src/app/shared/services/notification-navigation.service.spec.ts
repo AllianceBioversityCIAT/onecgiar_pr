@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { BilateralApiService } from './api/bilateral-api.service';
 import { NotificationNavigationService } from './notification-navigation.service';
+import { CentersService } from './global/centers.service';
 
 const buildNotification = (typeId = 1) => ({
   result_id: 91,
@@ -16,10 +17,18 @@ const buildNotification = (typeId = 1) => ({
 describe('NotificationNavigationService', () => {
   let service: NotificationNavigationService;
   const bilateralApi = { GET_centersByResultId: jest.fn() };
+  const centersService = { centers: jest.fn(), getData: jest.fn() };
 
   beforeEach(() => {
     bilateralApi.GET_centersByResultId.mockReset();
-    TestBed.configureTestingModule({ providers: [{ provide: BilateralApiService, useValue: bilateralApi }] });
+    centersService.centers.mockReset().mockReturnValue([]);
+    centersService.getData.mockReset().mockResolvedValue([]);
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: BilateralApiService, useValue: bilateralApi },
+        { provide: CentersService, useValue: centersService }
+      ]
+    });
     service = TestBed.inject(NotificationNavigationService);
   });
 
@@ -32,6 +41,17 @@ describe('NotificationNavigationService', () => {
     );
   });
 
+  it('PRA-R-3: a primary request row resolves the requested SP code even when the result has no owner yet', () => {
+    expect(
+      service.reviewRequestUrl({
+        request_type: 'primary',
+        result_id: 91,
+        obj_shared_inititiative: { official_code: 'SP12' },
+        obj_result: { result_code: 9737, obj_result_by_initiatives: [] }
+      })
+    ).toBe('/result-framework-reporting/entity-details/SP12/bilateral-review?reviewResult=9737&reviewResultId=91');
+  });
+
   it('returns null for a review request without an SP code', () => {
     expect(service.reviewRequestUrl({ result_id: 91, obj_result: { result_code: 9544 } })).toBeNull();
   });
@@ -42,6 +62,20 @@ describe('NotificationNavigationService', () => {
     );
     expect(await resolve(buildNotification())).toBe('/bilateral/CIMMYT/result/9544?phase=36');
     expect(bilateralApi.GET_centersByResultId).toHaveBeenCalledWith(91);
+  });
+
+  it('maps the lead center code to its CLARISA catalogue acronym instead of the institution acronym', async () => {
+    centersService.centers.mockReturnValue([{ code: 'CENTER-02', acronym: 'Bioversity (Alliance)' }]);
+    bilateralApi.GET_centersByResultId.mockReturnValue(
+      of({ response: [{ code: 'CENTER-02', acronym: 'Bioversity', is_leading_result: 1 }] })
+    );
+    expect(await resolve(buildNotification())).toBe('/bilateral/Bioversity%20%28Alliance%29/result/9544?phase=36');
+  });
+
+  it('keeps the lookup acronym and loads the catalogue when it is not there yet', async () => {
+    bilateralApi.GET_centersByResultId.mockReturnValue(of({ response: [{ code: 'C-9', acronym: 'CIMMYT', is_leading_result: 1 }] }));
+    expect(await resolve(buildNotification())).toBe('/bilateral/CIMMYT/result/9544?phase=36');
+    expect(centersService.getData).toHaveBeenCalled();
   });
 
   it('uses the creating center acronym of a request without calling the centers lookup', async () => {

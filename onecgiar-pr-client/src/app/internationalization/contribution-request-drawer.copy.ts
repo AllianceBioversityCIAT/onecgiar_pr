@@ -20,9 +20,18 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
   sections: {
     result: 'RESULT',
     whereItContributes: 'WHERE IT CONTRIBUTES',
-    align: 'ALIGN TO YOUR THEORY OF CHANGE',
     /** NOTIF-T-4: `view` mode's metadata grid section (design.md §6.2 field-adapter table). */
-    details: 'DETAILS'
+    details: 'DETAILS',
+    /** DSP-T-5 (design.md §6.2/§6.3 "APPROVAL CHAIN"): the chain section's own h3 heading. */
+    approvalChain: 'APPROVAL CHAIN',
+    /**
+     * DSP-T-8 (design.md "Order in the body", mockup `docked-panel-detail.png`): the heading that
+     * now wraps the existing `[crdAlign]` Align step — framing only, no new AOW checklist (DD-8).
+     * Rework attempt 2: this heading REPLACES the slot's own inner heading (the former
+     * `sections.align`/`align.hint` pair, deleted below) rather than stacking above it — see
+     * `toc.helper`'s docstring for where that inner hint's wording went.
+     */
+    mapToToc: 'MAP TO YOUR THEORY OF CHANGE'
   },
   /** CRD-R-4: the 7 field labels, in order. */
   fieldLabels: {
@@ -35,24 +44,45 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
     contributionTarget: 'Contribution target'
   },
   /**
-   * NOTIF-T-4: `view` mode's per-source metadata grid labels (design.md §6.2). A field with no
-   * source on a given row is omitted entirely by the component — never rendered with this label
-   * next to a blank/dash value (NOTIF-R-5, NOTIF-AC-7).
+   * DSP-T-4 (design.md §6.2 "Field sources" / §6.3 "RESULT card"): the RESULT card's 6-field grid
+   * labels, in fixed order (Reporting center → Result type → Primary Science Program →
+   * Contributing programs → Submitted by → Phase). Replaces `viewFieldLabels` (DD-6 supersedes
+   * NOTIF-R-5/NOTIF-AC-7 for THIS grid only — a missing value renders the label with `dashValue`
+   * instead of being omitted; `status`/`requestKind` moved out to the chips row / `detailTitle()`).
    */
-  viewFieldLabels: {
-    /** NOTIF-T-14 (NOTIF-R-5): rendered first — the row's decision/info status. */
-    status: 'Status',
-    /** PSR-T-9 (PSR-R-11 "showing the request kind"): rendered second, right after status. */
-    requestKind: 'Request type',
-    resultType: 'Result type',
-    phase: 'Phase',
-    primaryProgram: 'Primary program',
+  resultGridLabels: {
     reportingCenter: 'Reporting center',
-    submittedBy: 'Submitted by'
+    resultType: 'Result type',
+    primaryProgram: 'Primary Science Program',
+    contributingPrograms: 'Contributing programs',
+    submittedBy: 'Submitted by',
+    phase: 'Phase'
   },
   dashValue: '–',
   showMore: 'Show more',
   showLess: 'Show less',
+  /**
+   * DSP-T-5 (design.md §6.2 "Program steps" / §6.3 "Chain step", DSP-R-8): the APPROVAL CHAIN
+   * section's own strings — the fixed "Program submission" step name, its two pill texts
+   * (`submitted`/`notSubmitted` reuses the result's own `result_status_name`, not a copy key),
+   * the "Your program"/"Contributing program" pair (DSP-AC-6 "SP01 ... marked 'Your program',
+   * subtitle 'Contributing program'"), the three program-step pills, and the loading/error state.
+   */
+  chain: {
+    programSubmission: 'Program submission',
+    submittedPill: 'Submitted',
+    /** DSP-R-8 "Submitted by {actor} · {date}" — date already formatted `dd MMM yyyy` by the caller. */
+    submittedBy: (actor: string, date: string): string => `Submitted by ${actor} · ${date}`,
+    /** `{actor} · {date}` subtitle for an accepted/declined/pending program step (not the viewer's own). */
+    actorAndDate: (actor: string, date: string): string => `${actor} · ${date}`,
+    yourProgram: 'Your program',
+    contributingProgram: 'Contributing program',
+    acceptedPill: 'Accepted',
+    awaitingDecisionPill: 'Awaiting decision',
+    declinedPill: 'Declined',
+    errorMessage: "Couldn't load the approval chain.",
+    retry: 'Retry'
+  },
   /**
    * CRD-R-2: header sentence words. `notification-item`'s `drawerHeader()` (CRD-T-4) reads these
    * directly — there is no longer a separate local copy of them.
@@ -92,8 +122,24 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
     primaryTail: 'as the primary Science Program of result'
   },
   align: {
-    hint: 'Pick the indicator this result contributes to in your own theory of change. You can do this later.',
     clearMapping: 'Clear mapping'
+  },
+  /**
+   * DSP-T-8 (design.md "Order in the body", DSP-R-10/DD-8): the single helper line under the
+   * "MAP TO YOUR THEORY OF CHANGE" heading in `notification-detail-content`. Rework attempt 2
+   * (Reviewer FAIL — requirements.md:34/L202, design.md DD-8: there is no AOW checklist, the real
+   * control is the indicator picker): replaces the former `align.hint` string that used to render
+   * BY `notification-item`, inside the projected `[crdAlign]` block's own now-deleted inner
+   * heading — that inner `h3`/`p` is gone (no spec/CT reference to `sections.align`/`align.hint`
+   * existed outside it), so this is now the ONLY guidance line in the ToC area.
+   *
+   * DSP-T-9 Q-4 (user-approved 2026-10-05): reverted to the mockup's literal wording — a user
+   * decision, overriding the T-8 "accurate indicator wording" choice recorded above. The T-8
+   * rationale (no AOW checklist exists) still stands as background; the user chose the mockup copy
+   * anyway.
+   */
+  toc: {
+    helper: 'Choose the area of work this result contributes to. You can do this later.'
   },
   footer: {
     acceptContribution: 'Accept contribution',
@@ -105,6 +151,8 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
      * pre-existing caller that never sets `acceptLabel` keeps seeing `acceptContribution`).
      */
     acceptAsPrimary: 'Accept as primary',
+    /** `notifications/primary-review-not-accept` PRA-R-3: the primary request row's one action (replaces `acceptAsPrimary` at runtime). */
+    reviewResult: 'Review result',
     /**
      * PSR-T-9 (design.md §6.1 "Bilateral contributor request"): the plain "Accept" label for a
      * bilateral contributor request row — distinct from `acceptContribution`'s "Accept contribution"
@@ -127,12 +175,13 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
    * `design.md`, closed by explicit user decision 2026-09-29, recorded in `execution.md`).
    * **No longer rendered in the row** — `NOTIF-T-12` (rework attempt 1) removed the row-level status
    * chip that used to render `statusNeedsDecision`/`statusInfo` directly. `notification-item`'s
-   * `rowStatusLabel` getter still resolves one of these two same strings, but only to feed
-   * `drawerViewFields().status`, which `NOTIF-T-14` (a parallel task this same rework round) renders
-   * inside the drawer's `view`-mode metadata grid instead (under the `viewFieldLabels.status` label
-   * above) — the gap this removal reopened.
+   * `rowStatusLabel` getter still resolves one of these two same strings; `DSP-T-4` now feeds it into
+   * the detail panel's `chips()` (first chip, status) instead of the retired `view`-mode metadata
+   * grid — same strings, new destination.
    */
   notificationItem: {
+    /** Call to action next to the result link: opens the bilateral review drawer (inbox row, update row, bell card). */
+    validateBilateralCta: 'Click here to validate the bilateral result',
     /** `NOTIF-DD-3`: single chip for every `source:'request'` row — no sub-typing. */
     contributionRequestChip: 'Contribution request',
     /**
@@ -142,7 +191,9 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
      * the row and the drawer can never say something different about the same request (PSR-T-8
      * task brief).
      */
-    primaryRequestChip: 'Primary program request',
+    primaryRequestChip: 'Needs your review',
+    /** PRA-R-3: toast when the SP answers a primary request while the result is still Editing. */
+    primaryNotifyLater: 'You are now the primary Science Program. You will be notified when the Center submits it for review.',
     /**
      * PSR-T-8 (design.md §6.1 "Bilateral contributor request" row, PSR-R-10): chip text for a
      * bilateral (`source_name: 'W3/Bilaterals'`) contribution request — distinct from the plain
@@ -206,10 +257,17 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
   },
   /** NOTIF-T-6: the migrated filter toolbar (moved here from the retired `requests.component.*`). */
   filterToolbar: {
-    filterButton: 'Filter',
-    searchPlaceholder: 'Search notifications…',
-    phasesLabel: 'Phases',
-    phasesPlaceholder: 'Select phase',
+    // FTD-T-1 (`FTD-R-11`): matches the per-facet toolbar reference image; the search predicate
+    // already covers result, person and code — only the label changed.
+    searchPlaceholder: 'Search result, person or code',
+    // FTD-T-2 (design.md §6.3c): `filterButton`/`phasesLabel`/`phasesPlaceholder` removed — the
+    // single Filter trigger and its `app-pr-select` Phase picker no longer render; `phaseLabel` is
+    // the one surviving Phase label, read by the per-facet toolbar's own trigger/dropdown.
+    phaseLabel: 'Phase',
+    programLabel: 'Program / Accelerator',
+    programSearchPlaceholder: 'Search programs',
+    selectPhaseFirst: 'Select a phase first',
+    noProgramsYet: 'No programs available for this phase.',
     centerLabel: 'Center',
     centerSearchPlaceholder: 'Search centers',
     bilateralProjectLabel: 'Bilateral project',

@@ -41,6 +41,8 @@
           }
         </div>
       }
+      <!-- RRC-R-14: current rejection reason, only at status 7. -->
+      <app-bilateral-rejection-notice [statusId]="noticeStatusId()" [resultId]="noticeResultId()" />
     </header>
   } @else {
   <div
@@ -363,7 +365,7 @@
             aria-hidden="true">
             fact_check
           </span>
-          <span>AI Draft Results</span>
+          <span>My Drafts</span>
           @if (bilateralAiService.draftCountDisplay(); as count) {
             <span
               class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"

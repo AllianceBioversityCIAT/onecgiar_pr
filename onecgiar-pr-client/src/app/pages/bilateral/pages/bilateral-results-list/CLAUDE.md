@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-29 · branch qa-development-2026-ss · 0d67e1f02 · `quick/bilateral-results-default-100-rows` (default page size 10 → 100; options unchanged `[10, 25, 50, 100]`)
+**Verified:** 2026-10-06 · branch qa-development-2026-ss · `bilateral/rejected-result-correction` RRC-T-8 (history modal lists every rejection + resubmission)
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -15,7 +15,7 @@ result the centre participates in for the selected reporting phase, as lead or a
   outside the payload contract in `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`.
   Server side: `results.controller.ts` → `results.service.getBilateralCenterResults` →
   `result.repository.getResultsByBilateralCenter`.
-- Rejection history: `GET_bilateralReviewHistory(resultId)` (P2-3157 AC4 dialog).
+- Rejection history: `GET_bilateralReviewHistory(resultId)` (P2-3157 AC4 dialog). `RRC-R-15`: the dialog lists every `REJECT`/`REJECTED` and `RESUBMIT` entry oldest first (action, SP code when `initiative_code` exists, reviewer, date, comment or *"No justification was recorded."*); `UPDATE` rows hidden. The trigger (`hasReviewHistory`) shows at status 5, 6 and 7 — the list payload has no "was ever rejected" flag, so a resubmitted/approved result keeps access; warning icon only at 7, neutral "Review history" at 5/6. One history request, on click. Entry type + sort helpers: `../../services/bilateral-review-history.interface.ts`; copy: `bilateral-rejection-notice.copy.ts`.
 - Delete: `ResultsApiService.PATCH_DeleteResult(id)`.
 - Exported for reuse/tests: `BilateralCenterResult` (`COV-DD-11` — the interface itself now lives
   in `../../services/bilateral-center-result.interface.ts`, with a `project_id?: number | null`

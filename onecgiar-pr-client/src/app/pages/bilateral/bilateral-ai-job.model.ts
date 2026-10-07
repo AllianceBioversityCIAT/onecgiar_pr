@@ -366,6 +366,12 @@ export interface BilateralAiErrorCopy {
 const ERROR_COPY: Readonly<Record<string, BilateralAiErrorCopy>> = {
   HTTP_413: { message: 'The files you uploaded are too large for the AI service to process.', actionLabel: 'Upload smaller files' },
   HTTP_415: { message: "One of the files you uploaded is a format the AI service doesn't support.", actionLabel: 'Upload a supported file type' },
+  // P2-3897: the AI answers 422 when it cannot read usable content from the sources (e.g. an audio
+  // file with no speech). AC9 of P2-3103: say what to do next, never the raw status code.
+  HTTP_422: {
+    message: "The AI couldn't find usable content in your sources. Try a clearer recording or different files, or create the result manually.",
+    actionLabel: 'Try different sources',
+  },
   HTTP_502: { message: 'The AI service is temporarily unavailable.', actionLabel: 'Try again later' },
   HTTP_503: { message: 'The AI service is temporarily unavailable.', actionLabel: 'Try again later' },
   PROCESSING_ERROR: { message: 'The AI service ran into a problem while processing your sources.', actionLabel: 'Try again' },
@@ -382,7 +388,7 @@ const ERROR_COPY: Readonly<Record<string, BilateralAiErrorCopy>> = {
 export function errorCopy(code: string | null | undefined): BilateralAiErrorCopy {
   if (code && ERROR_COPY[code]) return ERROR_COPY[code];
   return {
-    message: `The AI service reported an error (${code ?? 'unknown'}). Try again or contact support.`,
+    message: 'The AI service ran into an unexpected problem. Try again, or create the result manually if it keeps failing.',
     actionLabel: 'Try again',
   };
 }

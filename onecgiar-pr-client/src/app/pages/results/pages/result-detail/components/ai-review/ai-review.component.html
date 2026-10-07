@@ -113,7 +113,7 @@
           <div class="current-version">
             <div class="radio-button-group">
               @for (option of scoreSE.genderTagScoreList; track option.id) {
-                <div class="radio-button-item" [class.is-readonly]="readOnly" [attr.aria-disabled]="readOnly" (click)="onResultVersionChange(dacScore, option.id)">
+                <div class="radio-button-item" [class.is-readonly]="readOnly" [attr.aria-disabled]="readOnly" tabindex="0" (click)="onResultVersionChange(dacScore, option.id)" (keydown.enter)="onResultVersionChange(dacScore, option.id)" (keydown.space)="$event.preventDefault(); onResultVersionChange(dacScore, option.id)">
                   <div class="radio-circle" [class.selected]="dacScore.tag_id === option.id">
                     @if (dacScore.tag_id === option.id) {
                       <div class="radio-dot"></div>
@@ -130,7 +130,7 @@
               <label class="version-label">Component</label>
               <div class="radio-button-group">
                 @for (component of getComponentListByFieldName(dacScore.field_name); track component.id) {
-                  <div class="radio-button-item" [class.is-readonly]="readOnly" [attr.aria-disabled]="readOnly" (click)="onComponentChange(dacScore, component.id)">
+                  <div class="radio-button-item" [class.is-readonly]="readOnly" [attr.aria-disabled]="readOnly" tabindex="0" (click)="onComponentChange(dacScore, component.id)" (keydown.enter)="onComponentChange(dacScore, component.id)" (keydown.space)="$event.preventDefault(); onComponentChange(dacScore, component.id)">
                     <div class="checkbox-square" [class.selected]="isComponentSelected(dacScore, component.id)">
                       @if (isComponentSelected(dacScore, component.id)) {
                         <i class="material-icons-round checkbox-check">check</i>

@@ -1,8 +1,10 @@
-import { Component, ElementRef, HostListener, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { skip } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ResultsNotificationsService } from './results-notifications.service';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { buildUnifiedList, UnifiedNotification } from './utils/build-unified-list';
 import { FilterNotificationByInitiativePipe } from './pipes/filter-notification-by-initiative.pipe';
 import { FilterNotificationBySearchPipe } from './pipes/filter-notification-by-search.pipe';
@@ -16,9 +18,20 @@ import { FilterNotificationByResultTypePipe } from './pipes/filter-notification-
 import { resolveNotificationType } from '../../../../../../shared/constants/notification-type.constants';
 import { GroupNotificationsByRecencyPipe, TGroupedNotificationsByRecency } from './pipes/group-notifications-by-recency.pipe';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../internationalization/contribution-request-drawer.copy';
+import { provideIcons } from '@ng-icons/core';
+import { lucideChevronDown } from '@ng-icons/lucide';
+// @akili-spec notifications/detail-side-panel (DSP-T-6): page-scoped coordinator for the docked
+// panel vs drawer decision (design.md §6.2). Provided below so this page gets its own instance.
+import { NotificationDetailPanelService } from './services/notification-detail-panel.service';
 
 /** NOTIF-T-6: the three decision-state tabs (`NOTIF-R-1`/`NOTIF-US-1`). */
 export type NotifDecisionTab = 'all' | 'decision' | 'info';
+
+/**
+ * `@akili-spec notifications/filter-toolbar-dropdowns` (FTD-T-1, design.md §6.2): the seven facets
+ * of the per-facet toolbar, in the fixed order `filterFacets` renders them (FTD-R-1).
+ */
+export type FilterFacetKey = 'phase' | 'type' | 'funding' | 'resultType' | 'program' | 'center' | 'bilateral';
 
 /**
  * NOTIF-T-6 (Pivot re-scope, `NOTIF-DD-6`): `NOTIF-R-8`'s Received/Sent independence, re-expressed
@@ -39,7 +52,11 @@ interface ActiveFilterChip {
   selector: 'app-results-notifications',
   templateUrl: './results-notifications.component.html',
   styleUrls: ['./results-notifications.component.scss'],
-  standalone: false
+  standalone: false,
+  // DSP-T-6: component-scoped, not root — each `ResultsNotificationsComponent` instance (one per
+  // page visit) gets its own panel coordinator (design.md §6.1 "nothing is shared with the header
+  // bell").
+  providers: [provideIcons({ lucideChevronDown }), NotificationDetailPanelService]
 })
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   // ---------------------------------------------------------------------
@@ -57,6 +74,13 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
    * `results-notifications` -> `.../requests` -> `.../requests/received`). */
   activeSource = signal<NotifSourceView>('received');
 
+  /**
+   * @akili-spec notifications/bell-quick-inbox (BELL-T-5, BELL-DD-4): the `request` + `action` deep
+   * link the bell hands off with. Set once from the query params; the one `received` request row whose
+   * id matches gets it as `[autoAction]` and clears it via `onAutoActionConsumed()`. Null = no deep link.
+   */
+  pendingAutoAction = signal<{ requestId: string; action: 'accept' | 'decline' } | null>(null);
+
   /** NOTIF-T-6 i18n: tab labels come from the same centralized copy `notificationItem.status*`
    * already uses, so the row's own status text and this tab row never say two different things. */
   readonly copy = CONTRIBUTION_REQUEST_DRAWER_COPY;
@@ -66,18 +90,43 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   // `requests.component.ts`. See that file's git history for the original NOTIF-T-6/T-9/T-11/T-12/
   // T-13/T-15/T-16/DD-7 rationale — nothing about the mechanics changes here, only the owner.
   // -----------------------------------------------------------------------
-  filterPopoverOpen = signal(false);
-  filterTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('filterTriggerBtn');
-  filterPanelRef = viewChild<ElementRef<HTMLDivElement>>('filterPanel');
-  filterPopoverAlign = signal<'start' | 'end'>('start');
   centerSearchQuery = signal('');
   bilateralProjectSearchQuery = signal('');
   // NOTIF-T-11 (`NOTIF-R-16`): search-within-checklist state for the three new facets, following the
   // same pattern as centerSearchQuery/bilateralProjectSearchQuery above.
   resultTypeSearchQuery = signal('');
 
-  private static readonly FILTER_POPOVER_WIDTH = 280;
-  private static readonly FILTER_POPOVER_VIEWPORT_MARGIN = 32;
+  // -----------------------------------------------------------------------
+  // `@akili-spec notifications/filter-toolbar-dropdowns` (FTD-T-1) — per-facet dropdown state. The
+  // legacy single-popover members this section used to sit alongside were removed in FTD-T-2, once
+  // the template stopped reading them (re-sequenced 2026-10-05, user decision).
+  // -----------------------------------------------------------------------
+
+  /** FTD-R-1: the seven facet triggers, in the one fixed order the toolbar renders them. Labels
+   * come from the centralized copy so there is no second, hand-typed list to drift from it. */
+  readonly filterFacets: ReadonlyArray<{ key: FilterFacetKey; label: string }> = [
+    { key: 'phase', label: this.copy.filterToolbar.phaseLabel },
+    { key: 'type', label: this.copy.filterToolbar.typeLabel },
+    { key: 'funding', label: this.copy.filterToolbar.fundingLabel },
+    { key: 'resultType', label: this.copy.filterToolbar.resultTypeLabel },
+    { key: 'program', label: this.copy.filterToolbar.programLabel },
+    { key: 'center', label: this.copy.filterToolbar.centerLabel },
+    { key: 'bilateral', label: this.copy.filterToolbar.bilateralProjectLabel }
+  ];
+
+  /** FTD-R-3: which facet's dropdown is open — `null` means none. A single nullable key makes "at
+   * most one open" true by construction (FTD-DD-2). */
+  openFacet = signal<FilterFacetKey | null>(null);
+
+  /** FTD-R-5.S4 (Program search). */
+  programSearchQuery = signal('');
+
+  /** FTD-DD-4: re-open guard — `toggleFacet` ignores an open request for the SAME key within
+   * `FACET_REOPEN_GUARD_MS` of that key's own close, so a trigger re-click race (FTD-P-4, whether or
+   * not the CDK overlay treats the trigger as "outside") can never immediately reopen what it just
+   * closed. */
+  private lastClosedFacet: { key: FilterFacetKey; at: number } | null = null;
+  private static readonly FACET_REOPEN_GUARD_MS = 50;
 
   private readonly filterByInitiativePipe = new FilterNotificationByInitiativePipe();
   private readonly filterBySearchPipe = new FilterNotificationBySearchPipe();
@@ -87,14 +136,37 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   private readonly filterByFundingPipe = new FilterNotificationByFundingPipe();
   private readonly filterByResultTypePipe = new FilterNotificationByResultTypePipe();
   private readonly groupByRecencyPipe = new GroupNotificationsByRecencyPipe();
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(
     public api: ApiService,
     private readonly shareRequestModalSE: ShareRequestModalService,
     public resultsNotificationsSE: ResultsNotificationsService,
     public router: Router,
-    private readonly activatedRoute: ActivatedRoute
+    private readonly activatedRoute: ActivatedRoute,
+    /** DSP-T-6: public so the page template can read `panel.isWide()` / `panel.portal()` directly. */
+    public readonly panel: NotificationDetailPanelService
   ) {}
+
+  /** BRS-T-7: double-click guard for the shared "Mark all as read". */
+  private markingAllRead = false;
+
+  /**
+   * BRS-T-7 (BRS-R-3/R-5): same action as the bell popover, all phases (the button is gated on
+   * `bellCount()`, not the phase-filtered list). `markAllBellRead()` rejects only when both legs
+   * failed; it already logged, so the rejection is swallowed here.
+   */
+  async onMarkAllRead(): Promise<void> {
+    if (this.markingAllRead) return;
+    this.markingAllRead = true;
+    try {
+      await this.resultsNotificationsSE.markAllBellRead();
+    } catch {
+      // both legs failed: state untouched, already logged by the service
+    } finally {
+      this.markingAllRead = false;
+    }
+  }
 
   setActiveTab(tab: NotifDecisionTab): void {
     this.activeTab.set(tab);
@@ -117,6 +189,10 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
    */
   setActiveSource(source: NotifSourceView): void {
     this.activeSource.set(source);
+    // DSP-T-6 / DSP-R-3: a Received<->Sent switch must close any open detail panel regardless of
+    // which row key owns it — `closeAll()` (not `close(key)`) is the unconditional form for exactly
+    // this page-level event (design.md §2.2 step 6 / §6.2).
+    this.panel.closeAll();
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -339,6 +415,10 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     });
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
+    // BELL-T-5 attempt 2 (BELL-T-6 D-1): a bell hand-off while this page is ALREADY open only changes the
+    // query params on the same route, so `setQueryParams()` (init-time snapshot) never sees it. `skip(1)`
+    // drops the replay of the current params (the snapshot above already handled them).
+    this.activatedRoute.queryParamMap.pipe(skip(1), takeUntilDestroyed(this.destroyRef)).subscribe(params => this.onQueryParamMapChange(params));
     this.api.dataControlSE.getCurrentPhases().subscribe();
     this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
   }
@@ -352,6 +432,15 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
       this.resultsNotificationsSE.phaseFilter = this.activatedRoute.snapshot.queryParams['phase'];
     }
 
+    // BELL-T-5: a bell hand-off (`request` + a valid `action`). `init`/`search` are deliberately NOT
+    // applied. Without `request` everything below is unchanged.
+    const request = this.activatedRoute.snapshot.queryParams['request'];
+    const action = this.activatedRoute.snapshot.queryParams['action'];
+    if (request && (action === 'accept' || action === 'decline')) {
+      this.armBellHandoff(String(request), action);
+      return;
+    }
+
     if (this.activatedRoute.snapshot.queryParams['init']) {
       this.resultsNotificationsSE.initiativeIdFilter = this.activatedRoute.snapshot.queryParams['init'];
     }
@@ -359,6 +448,57 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     if (this.activatedRoute.snapshot.queryParams['search']) {
       this.resultsNotificationsSE.searchFilter = this.activatedRoute.snapshot.queryParams['search'];
     }
+  }
+
+  /**
+   * BELL-T-5 attempt 2 (BELL-T-6 D-1): the same hand-off, arriving while the inbox is already open.
+   * Only a `request` + valid `action` does anything; the clearing navigation (`request`/`action` null) and
+   * every other param change fall through untouched, so it cannot re-trigger itself.
+   */
+  private onQueryParamMapChange(params: ParamMap): void {
+    const request = params.get('request');
+    const action = params.get('action');
+    if (!request || (action !== 'accept' && action !== 'decline')) return;
+
+    const phase = params.get('phase');
+    if (phase && phase != this.resultsNotificationsSE.phaseFilter) {
+      this.resultsNotificationsSE.phaseFilter = phase;
+      this.resultsNotificationsSE.onPhaseChange(phase);
+    }
+    this.armBellHandoff(request, action);
+  }
+
+  /** BELL-T-5: shared by init and the live case — program/search/facet filters reset (so the row cannot be
+   * hidden by them), Received view + All tab forced, and the matching row is handed `autoAction`. */
+  private armBellHandoff(requestId: string, action: 'accept' | 'decline'): void {
+    this.resultsNotificationsSE.resetFilters();
+    this.activeSource.set('received');
+    this.activeTab.set('all');
+    this.pendingAutoAction.set({ requestId, action });
+  }
+
+  /**
+   * BELL-T-5: the `autoAction` for one rendered row — only the `received` request row whose
+   * `share_result_request_id` matches (an Updates row's `notification_id` shares the number space).
+   */
+  autoActionFor(item: UnifiedNotification): 'accept' | 'decline' | null {
+    const pending = this.pendingAutoAction();
+    if (!pending) return null;
+    const row = item as any;
+    if (row?.origin !== 'received') return null;
+    return String(row?.share_result_request_id) === pending.requestId ? pending.action : null;
+  }
+
+  /** BELL-T-5: the row ran its handler — drop the pending action and strip `request`/`action` from the
+   * URL (`replaceUrl`, so reload/back do not replay it). */
+  onAutoActionConsumed(): void {
+    this.pendingAutoAction.set(null);
+    this.router.navigate([], {
+      relativeTo: this.activatedRoute,
+      queryParams: { request: null, action: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   clearFilters() {
@@ -415,47 +555,116 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   }
 
   // -----------------------------------------------------------------------
-  // NOTIF-T-6 (Pivot re-scope) — Filter toolbar (relocated from the retired `requests.component.ts`)
+  // `@akili-spec notifications/filter-toolbar-dropdowns` (FTD-T-2) — per-facet dropdown behavior.
+  // The legacy single-popover toolbar (`filterPopoverOpen`/`toggleFilterPopover`/
+  // `onDocumentClick`/`onDocumentEscape`/the align-math helper) is gone — the `hlm-popover` CDK
+  // overlay now owns outside-click + Escape dismissal per facet (design.md DD-1).
   // -----------------------------------------------------------------------
 
-  private computeFilterPopoverAlign(): 'start' | 'end' {
-    const rect = this.filterTriggerRef()?.nativeElement.getBoundingClientRect();
-    if (!rect) return 'start';
-
-    const fitsToTheRight =
-      rect.left + ResultsNotificationsComponent.FILTER_POPOVER_WIDTH + ResultsNotificationsComponent.FILTER_POPOVER_VIEWPORT_MARGIN <=
-      window.innerWidth;
-
-    return fitsToTheRight ? 'start' : 'end';
-  }
-
-  toggleFilterPopover() {
-    const opening = !this.filterPopoverOpen();
-    if (opening) {
-      this.filterPopoverAlign.set(this.computeFilterPopoverAlign());
+  /** FTD-R-3.S1/S2: activating `key`'s trigger closes it if it is already the open one, else opens
+   * it (replacing whatever else was open, by construction of the single `openFacet` signal). Guarded
+   * by FTD-DD-4 against immediately reopening the facet it just closed. */
+  toggleFacet(key: FilterFacetKey): void {
+    if (this.openFacet() === key) {
+      this.closeFacet();
+      return;
     }
-    this.filterPopoverOpen.set(opening);
-  }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent) {
-    if (!this.filterPopoverOpen()) return;
-
-    const path = event.composedPath();
-    const trigger = this.filterTriggerRef()?.nativeElement;
-    const panel = this.filterPanelRef()?.nativeElement;
-
-    if (trigger && path.includes(trigger)) return;
-    if (panel && path.includes(panel)) return;
-
-    this.filterPopoverOpen.set(false);
-  }
-
-  @HostListener('document:keydown.escape')
-  onDocumentEscape() {
-    if (this.filterPopoverOpen()) {
-      this.filterPopoverOpen.set(false);
+    const lastClosed = this.lastClosedFacet;
+    if (lastClosed?.key === key && performance.now() - lastClosed.at < ResultsNotificationsComponent.FACET_REOPEN_GUARD_MS) {
+      return;
     }
+
+    this.openFacet.set(key);
+  }
+
+  /** FTD-DD-5: closes whichever facet is open (no-op if none), optionally restoring focus to its
+   * trigger (`[data-facet=key]`) via `queueMicrotask` — the overlay content attaches/detaches on the
+   * next tick, so a synchronous focus call right after closing could miss the trigger still being
+   * there (same shape as `program-overview.closeScopePopover`). */
+  closeFacet(refocus = false): void {
+    const key = this.openFacet();
+    if (key === null) return;
+
+    this.openFacet.set(null);
+
+    if (refocus) {
+      queueMicrotask(() => {
+        (document.querySelector(`[data-facet="${key}"]`) as HTMLElement | null)?.focus();
+      });
+    }
+  }
+
+  /** FTD-R-4: mirrors the overlay's own dismissal (outside click, Escape) back into `openFacet`, and
+   * records the close for the FTD-DD-4 re-open guard. Only a `'closed'` state transition for the
+   * CURRENTLY open facet clears it — a stale event for an already-replaced facet is a no-op. */
+  onFacetStateChanged(key: FilterFacetKey, state: 'open' | 'closed'): void {
+    if (state !== 'closed') return;
+
+    this.lastClosedFacet = { key, at: performance.now() };
+    if (this.openFacet() === key) {
+      this.openFacet.set(null);
+    }
+  }
+
+  /** FTD-R-6: per-trigger badge count, reading the exact same service fields `activeFilterCount`
+   * reads — a facet's trigger and the aggregate count can never disagree on what is selected. Phase
+   * is excluded on purpose (FTD-R-6: it shows the selected phase name instead of a count). */
+  facetSelectedCount(key: FilterFacetKey): number {
+    switch (key) {
+      case 'type':
+        return this.resultsNotificationsSE.typeFilter?.length ?? 0;
+      case 'funding':
+        return this.resultsNotificationsSE.fundingFilter?.length ?? 0;
+      case 'resultType':
+        return this.resultsNotificationsSE.resultTypeFilter?.length ?? 0;
+      case 'program':
+        return this.resultsNotificationsSE.initiativeIdFilter ? 1 : 0;
+      case 'center':
+        return this.resultsNotificationsSE.centerIdsFilter?.length ?? 0;
+      case 'bilateral':
+        return this.resultsNotificationsSE.bilateralProjectIdsFilter?.length ?? 0;
+      default:
+        return 0;
+    }
+  }
+
+  /** FTD-R-6: the `Phase` trigger's own label — the selected phase's `phase_name_status`, or an
+   * empty string before any phase has resolved. */
+  get selectedPhaseLabel(): string {
+    const phases = this.resultsNotificationsSE.phaseList ?? [];
+    const selected = phases.find((phase: any) => phase.id == this.resultsNotificationsSE.phaseFilter);
+    return selected?.phase_name_status ?? '';
+  }
+
+  /** FTD-R-5.S3: re-picking the already-selected phase is a no-op — it must NOT call
+   * `onPhaseChange` (which reloads the whole inbox, FTD-P-5). Leaving the dropdown open on that
+   * no-op is a UX choice, not a spec requirement. Picking a different phase applies it the same way
+   * `onPhaseChange` does today, then closes the dropdown. Phase itself is never clearable (no branch
+   * clears it to `null`). */
+  selectPhase(id: string | number): void {
+    if (this.resultsNotificationsSE.phaseFilter == id) return;
+
+    this.resultsNotificationsSE.phaseFilter = id;
+    this.resultsNotificationsSE.onPhaseChange(id);
+    this.closeFacet(true);
+  }
+
+  /** FTD-R-5.S3: picking the already-selected program clears it (toggle); picking a different one
+   * selects it. Either way the dropdown closes. */
+  selectProgram(id: string | number): void {
+    const current = this.resultsNotificationsSE.initiativeIdFilter;
+    this.resultsNotificationsSE.initiativeIdFilter = current == id ? null : id;
+    this.closeFacet(true);
+  }
+
+  /** FTD-R-5.S4: Program's own search-within-list state, mirroring `centerSearchQuery` /
+   * `bilateralProjectSearchQuery` above. */
+  get filteredProgramOptions(): any[] {
+    const query = this.programSearchQuery().trim().toLowerCase();
+    const options = this.resultsNotificationsSE.filteredInitiatives ?? [];
+    if (!query) return options;
+    return options.filter((option: any) => (option.full_name ?? '').toLowerCase().includes(query));
   }
 
   /** Mirrors `notification-item.component.ts`'s own `isBilateralResult` getter. */

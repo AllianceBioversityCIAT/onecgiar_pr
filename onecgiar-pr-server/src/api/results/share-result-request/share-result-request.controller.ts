@@ -5,6 +5,7 @@ import {
   Body,
   Patch,
   Param,
+  ParseIntPipe,
   Query,
   UseInterceptors,
   Version,
@@ -13,6 +14,7 @@ import { ShareResultRequestService } from './share-result-request.service';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
+import { ApprovalChainDto } from './dto/approval-chain.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import {
@@ -168,6 +170,75 @@ export class ShareResultRequestController {
     });
   }
 
+  // `BRS-T-2`: `seen-all` is declared before `seen/:shareResultRequestId`. The paths differ in
+  // shape (`seen-all` vs `seen/<id>`), so neither can capture the other; the order is kept anyway.
+  @Patch('seen-all')
+  @ApiOperation({
+    summary: 'Mark every pending received request as seen by the caller',
+    description:
+      'Records, for the calling user only, that all requests listed as pending in the bell (all phases) were seen. The set is resolved server-side; the client sends no ids. Idempotent. Never changes the requests themselves.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Number of seen rows newly recorded (0 when already seen)',
+    schema: {
+      example: {
+        response: { recorded: 12 },
+        message: 'Requests marked as seen',
+        status: 200,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  markAllSeen(@UserToken() user: TokenDto) {
+    return this.shareResultRequestService.markAllSeen(user);
+  }
+
+  @Patch('seen/:shareResultRequestId')
+  @ApiOperation({
+    summary: 'Mark one pending received request as seen by the caller',
+    description:
+      'Records, for the calling user only, that the request was seen. Idempotent. Never changes the request itself.',
+  })
+  @ApiParam({
+    name: 'shareResultRequestId',
+    type: 'number',
+    description: 'ID of the share result request',
+    example: 123,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The request is recorded as seen by the caller',
+    schema: {
+      example: {
+        response: { seen: true },
+        message: 'Request marked as seen',
+        status: 200,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - the id is not an integer',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - the request does not exist or is not pending',
+  })
+  markSeen(
+    @UserToken() user: TokenDto,
+    @Param('shareResultRequestId', ParseIntPipe) shareResultRequestId: number,
+  ) {
+    return this.shareResultRequestService.markSeen(user, shareResultRequestId);
+  }
+
   @Get('get/sent')
   @ApiOperation({
     summary: 'Get all sent share result requests',
@@ -243,6 +314,51 @@ export class ShareResultRequestController {
       scope,
       cursor,
     });
+  }
+
+  @Get('get/result/:resultId/approval-chain')
+  @ApiOperation({
+    summary: "Get a result's approval chain",
+    description:
+      '@akili-spec notifications/detail-side-panel (DSP-R-12) — returns the submission step ' +
+      'plus one step per program (primary first, then contributors by code) for one result: ' +
+      'status, actor and date. Authorized when the user is an admin or holds an active role on ' +
+      'an initiative involved in the result (owner, contributor, requester or approver of a ' +
+      'request); otherwise 403 with no data. The response never carries an email or a user id.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: 'number',
+    description: 'ID of the result whose approval chain is requested',
+    example: 9400,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "The result's approval chain",
+    type: ApprovalChainDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - resultId is not a positive integer',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - the user is not involved in this result and is not an admin',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - the result does not exist or is inactive',
+  })
+  getApprovalChain(
+    @Param('resultId') resultId: string,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.shareResultRequestService.getApprovalChain(resultId, user);
   }
 
   @Get('get/all')

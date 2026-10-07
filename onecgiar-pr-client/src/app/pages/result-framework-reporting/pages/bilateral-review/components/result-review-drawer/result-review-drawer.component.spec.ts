@@ -394,6 +394,65 @@ describe('ResultReviewDrawerComponent', () => {
       component.markTocAsDirty();
       expect(component.hasTocUnsavedChanges()).toBe(true);
     });
+
+    // P2-3885 — Yes then back to the saved No left "Unsaved ToC changes" and Approve blocked.
+    describe('toc dirty state against the saved answer (P2-3885)', () => {
+      const loadToc = (planned: boolean, rows: any[] = []) => {
+        component.tocInitiative = { planned_result: planned, initiative_id: 59, result_toc_results: rows, toc_progressive_narrative: null };
+        (component as any).resetTocDirty();
+      };
+
+      it('clears when the answer goes back to the saved No', () => {
+        loadToc(false);
+        component.tocInitiative.planned_result = true;
+        component.markTocAsDirty();
+        expect(component.hasTocUnsavedChanges()).toBe(true);
+
+        component.tocInitiative.planned_result = false;
+        component.markTocAsDirty();
+        expect(component.hasTocUnsavedChanges()).toBe(false);
+      });
+
+      it('lets Approve through again once the answer is back to the saved one', () => {
+        loadToc(false);
+        component.isToCCompleted.set(true);
+        component.tocInitiative.planned_result = true;
+        component.markTocAsDirty();
+        expect(component.canApprove()).toBe(false);
+
+        component.tocInitiative.planned_result = false;
+        expect(component.canApprove()).toBe(true);
+      });
+
+      it('still counts a real change of answer', () => {
+        loadToc(true, [{ toc_result_id: 10 }]);
+        component.tocInitiative.planned_result = false;
+        component.markTocAsDirty();
+        expect(component.hasTocUnsavedChanges()).toBe(true);
+      });
+
+      it('still counts a changed ToC row on Yes', () => {
+        loadToc(true, [{ toc_result_id: 10 }]);
+        component.tocInitiative.result_toc_results[0].toc_result_id = 11;
+        component.markTocAsDirty();
+        expect(component.hasTocUnsavedChanges()).toBe(true);
+      });
+
+      it('treats rows that cannot be compared as changed, as before', () => {
+        const row: any = { toc_result_id: 10 };
+        loadToc(true, [row]);
+        row.self = row;
+        component.markTocAsDirty();
+        expect(component.hasTocUnsavedChanges()).toBe(true);
+      });
+
+      it('drives the Unsaved badge and the Save ToC button from the comparison', () => {
+        const html = fs.readFileSync(path.join(__dirname, 'result-review-drawer.component.html'), 'utf8');
+        expect(html).toContain('@if (hasTocUnsavedChanges()) {');
+        expect(html).toContain('!hasTocUnsavedChanges() || isSaving()');
+        expect(html).not.toContain('isTocDirty()');
+      });
+    });
   });
 
   describe('canApprove / getApproveButtonTooltip', () => {

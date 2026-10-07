@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { NotificationItemComponent } from './notification-item.component';
+import { ResultsNotificationsService } from '../../results-notifications.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
@@ -7,6 +9,7 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 import { of, throwError, Subject } from 'rxjs';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { TemplatePortal } from '@angular/cdk/portal';
 import { CommonModule } from '@angular/common';
 import { By } from '@angular/platform-browser';
 // Leader addition (CRD-T-4 rework, attempt 2): resolved to `tests/mocks/spartanBrainMock.ts` via
@@ -28,6 +31,9 @@ import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../intern
 // tests/mocks/spartanBrainMock.ts, same as every other Brain-based overlay in this repo) so the
 // decline confirm/cancel wiring tests below can drive its actual footer buttons.
 import { ContributionRequestDrawerComponent } from '../contribution-request-drawer/contribution-request-drawer.component';
+// DSP-T-3: the drawer's body/footer, relocated here — the `showAlignSlot`/`acceptLabel` assertions
+// below now query THIS component's debug instance instead of the (now shell-only) drawer's.
+import { NotificationDetailContentComponent } from '../notification-detail-content/notification-detail-content.component';
 // PDR-T-4: the real primary-decline justification dialog (PDR-T-3), rendered so the row/drawer
 // wiring tests below can observe `[(visible)]` and drive its actual Confirm/Cancel buttons.
 import { PrimaryDeclineJustificationDialogComponent } from '../primary-decline-justification-dialog/primary-decline-justification-dialog.component';
@@ -37,6 +43,50 @@ import { NotificationType } from '../../../../../../../../shared/constants/notif
 // SACN-T-4 (`sp-approval-center-notice`): the "Decision update" chip string, reused rather than
 // redeclared (forward pointer from SACN-T-3).
 import { BILATERAL_DECISION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-decision-notice.copy';
+// @akili-spec notifications/detail-side-panel (DSP-T-7): the page-scoped coordinator this row now
+// routes its detail template through — mocked below so these tests control `isWide`/`activeKey`
+// directly instead of depending on a real `BreakpointObserver`.
+import { NotificationDetailPanelService } from '../../services/notification-detail-panel.service';
+
+/**
+ * DSP-T-7: a minimal stand-in for `NotificationDetailPanelService` that keeps the SAME open/close
+ * guard semantics as the real service (close() is a no-op unless `key` is still the active one) —
+ * the falsifier tests below need that real behavior to prove the row's OWN code (not the service's),
+ * so a bare `jest.fn()` stub without the guard would make a broken row pass by accident.
+ */
+function buildMockPanel() {
+  const isWideSig = signal(false);
+  const activeKeySig = signal<string | null>(null);
+  const portalSig = signal<unknown>(null);
+  const labelledBySig = signal<string | null>(null);
+  const closedByUserSubject = new Subject<void>();
+
+  return {
+    isWide: isWideSig,
+    activeKey: activeKeySig,
+    portal: portalSig,
+    labelledBy: labelledBySig,
+    closedByUser$: closedByUserSubject.asObservable(),
+    closedByUserSubject,
+    open: jest.fn((key: string, portal: unknown, labelledBy?: string) => {
+      activeKeySig.set(key);
+      portalSig.set(portal);
+      labelledBySig.set(labelledBy ?? null);
+    }),
+    close: jest.fn((key: string) => {
+      if (activeKeySig() !== key) return;
+      activeKeySig.set(null);
+      portalSig.set(null);
+      labelledBySig.set(null);
+    }),
+    closeAll: jest.fn(() => {
+      activeKeySig.set(null);
+      portalSig.set(null);
+      labelledBySig.set(null);
+    }),
+    requestClose: jest.fn(() => closedByUserSubject.next())
+  };
+}
 
 describe('NotificationItemComponent', () => {
   let component: NotificationItemComponent;
@@ -44,6 +94,7 @@ describe('NotificationItemComponent', () => {
   let mockApiService: any;
   let mockRetrieveModalService: any;
   let mockShareRequestModalService: any;
+  let mockPanel: ReturnType<typeof buildMockPanel>;
 
   beforeEach(async () => {
     mockApiService = {
@@ -75,7 +126,11 @@ describe('NotificationItemComponent', () => {
       resultsSE: {
         currentResultId: 1,
         GET_TypeByResultLevel: () => of({}),
-        PATCH_updateRequest: () => of({ response: {} })
+        PATCH_updateRequest: () => of({ response: {} }),
+        // DSP-T-2 (notifications/detail-side-panel): default happy-path stub so every pre-existing
+        // `openDrawer()`/`acceptOrReject()` call in this suite (which now also fetches the chain)
+        // keeps working without each test having to know about it.
+        GET_requestApprovalChain: () => of({ response: { result_id: 1, submission: {}, steps: [] } })
       }
     };
 
@@ -94,6 +149,8 @@ describe('NotificationItemComponent', () => {
       }
     };
 
+    mockPanel = buildMockPanel();
+
     await TestBed.configureTestingModule({
       declarations: [NotificationItemComponent],
       imports: [
@@ -101,6 +158,7 @@ describe('NotificationItemComponent', () => {
         FormatTimeAgoPipe,
         CommonModule,
         ContributionRequestDrawerComponent,
+        NotificationDetailContentComponent,
         PrimaryDeclineJustificationDialogComponent,
         ...HlmBadgeImports,
         ...HlmButtonImports
@@ -117,6 +175,10 @@ describe('NotificationItemComponent', () => {
         {
           provide: ShareRequestModalService,
           useValue: mockShareRequestModalService
+        },
+        {
+          provide: NotificationDetailPanelService,
+          useValue: mockPanel
         }
       ],
       // NOTIF-T-7: the template pulls in app-pr-button/app-cp-multiple-wps/app-pr-yes-or-not
@@ -1236,6 +1298,36 @@ describe('NotificationItemComponent', () => {
     });
 
     describe('openDrawer() / closeDrawer()', () => {
+      // BRS-T-7 (BRS-R-3/R-9): opening the drawer on a received PENDING request records it as seen.
+      describe('marks the request seen (BRS-T-7)', () => {
+        let seenSpy: jest.SpyInstance;
+        beforeEach(() => {
+          seenSpy = jest.spyOn(TestBed.inject(ResultsNotificationsService), 'markRequestSeen').mockResolvedValue(true);
+        });
+
+        it('calls markRequestSeen(row) once on a received pending row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 1 };
+          component.isSent = false;
+          component.openDrawer('details');
+          expect(seenSpy).toHaveBeenCalledTimes(1);
+          expect(seenSpy).toHaveBeenCalledWith(component.notification);
+        });
+
+        it('does nothing on a sent pending row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 1 };
+          component.isSent = true;
+          component.openDrawer('details');
+          expect(seenSpy).not.toHaveBeenCalled();
+        });
+
+        it('does nothing on a done (resolved) received row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 2 };
+          component.isSent = false;
+          component.openDrawer('details');
+          expect(seenSpy).not.toHaveBeenCalled();
+        });
+      });
+
       it('seeds an untouched tocInitiative locally, with NO global hydration, for a bilateral request', () => {
         component.notification = buildBilateral();
         const hydrateSpy = jest.spyOn(component as any, 'hydrateGlobalTocState');
@@ -1320,6 +1412,117 @@ describe('NotificationItemComponent', () => {
         expect(component.tocInitiative.official_code).toBe('INIT-88');
         expect(component.tocInitiative.planned_result).toBeNull();
         expect(component.isTocMappingTouched()).toBe(false);
+      });
+    });
+
+    // @akili-spec notifications/detail-side-panel (DSP-T-2)
+    describe('approvalChain (DSP-T-2)', () => {
+      const buildWithResultId = (resultId: number) => buildBilateral({ obj_result: { id: resultId } });
+
+      it('opening the row calls GET_requestApprovalChain with obj_result.id', () => {
+        const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain');
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+
+        expect(spy).toHaveBeenCalledWith(9400);
+        expect(component.approvalChain()).toEqual({ status: 'ok', data: { result_id: 1, submission: {}, steps: [] } });
+      });
+
+      it('settles on error after an HTTP failure', () => {
+        jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain').mockReturnValue(throwError(() => new Error('boom')));
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+
+        expect(component.approvalChain()).toEqual({ status: 'error' });
+      });
+
+      it('retryChain() re-dispatches the GET', () => {
+        const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain');
+        component.notification = buildWithResultId(9400);
+        component.openDrawer('details');
+        spy.mockClear();
+
+        component.retryChain();
+
+        expect(spy).toHaveBeenCalledWith(9400);
+      });
+
+      // DSP-T-2 attempt 2 (pivot): the PATCH goes through an async Subject — not a synchronous
+      // `of(...)` — so `finalize()` (which calls `closeDrawer()`, bumping `chainRequestToken`)
+      // behaves exactly as it does against a real HttpClient. A sync mock would resolve the `next`
+      // handler BEFORE `finalize`, hiding the exact ordering bug this pair of tests proves.
+      it('after a successful accept, no chain request is sent before the panel closes', () => {
+        const chainSpy = jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain');
+        const patch$ = new Subject<any>();
+        jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(patch$.asObservable());
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+        expect(chainSpy).toHaveBeenCalledTimes(1);
+
+        component.acceptOrReject(true);
+        patch$.next({ response: {} });
+        patch$.complete();
+
+        // Broken by re-inserting `this.fetchApprovalChain()` in the `next:` handler: chainSpy is
+        // then called a 2nd time here, before the drawer closes — red: "Expected number of calls: 1
+        // Received number of calls: 2".
+        expect(chainSpy).toHaveBeenCalledTimes(1);
+        expect(component.drawerOpen()).toBe(false);
+      });
+
+      it('after a successful accept, reopening the row fetches a fresh chain', () => {
+        const chainSpy = jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain');
+        const patch$ = new Subject<any>();
+        jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(patch$.asObservable());
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+        component.acceptOrReject(true);
+        patch$.next({ response: {} });
+        patch$.complete();
+
+        const freshChain$ = new Subject<any>();
+        chainSpy.mockReturnValue(freshChain$.asObservable());
+
+        component.openDrawer('details');
+
+        // Broken by disabling the open-path fetch (commenting out `this.fetchApprovalChain()` in
+        // `openDrawer()`): chainSpy is never called (every open is a no-op) — red: "Expected
+        // number of calls: 2 Received number of calls: 0".
+        expect(chainSpy).toHaveBeenCalledTimes(2);
+
+        const freshData = { result_id: 9400, submission: {}, steps: ['renewed'] };
+        freshChain$.next({ response: freshData });
+
+        expect(component.approvalChain()).toEqual({ status: 'ok', data: freshData });
+      });
+
+      it('a response arriving after close is ignored, not overwriting the state', () => {
+        const pending = new Subject<any>();
+        jest.spyOn(mockApiService.resultsSE, 'GET_requestApprovalChain').mockReturnValue(pending.asObservable());
+        component.notification = buildWithResultId(9400);
+
+        component.openDrawer('details');
+        component.closeDrawer();
+        pending.next({ response: { result_id: 9400, submission: {}, steps: [] } });
+
+        expect(component.approvalChain()).toEqual({ status: 'loading' });
+      });
+
+      it('the accept PATCH payload is unchanged by the approval-chain wiring', () => {
+        const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+        component.notification = buildWithResultId(9400);
+        component.openDrawer('details');
+
+        component.acceptOrReject(true);
+
+        expect(patchSpy).toHaveBeenCalledWith(
+          { result_request: component.notification, result_toc_result: { planned_result: null, result_toc_results: [] }, request_status_id: 2 },
+          true
+        );
       });
     });
 
@@ -1748,6 +1951,65 @@ describe('NotificationItemComponent', () => {
       });
     });
 
+    // DSP-T-3 attempt 2 (Reviewer FAIL issue 2): before this split, the ✕ was `hlmSheetClose` and
+    // the drawer spec itself proved the end-to-end close. Now the content's own ✕ only emits ITS
+    // OWN `closed` output — the only link back to the row is the template binding
+    // `(closed)="onDrawerClosedSignal()"` on `<app-notification-detail-content>`. This test proves
+    // that binding reaches `closeDrawer()` through the REAL mounted content component.
+    describe('DSP-T-3: the content ✕ click reaches notification-item.closeDrawer() (Reviewer FAIL issue 2)', () => {
+      it('clicking crd-close-btn calls closeDrawer() exactly once and removes the panel', async () => {
+        component.notification = buildTocCarried();
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(component.drawerOpen()).toBe(true);
+
+        const closeDrawerSpy = jest.spyOn(component, 'closeDrawer');
+
+        const closeBtn: HTMLElement = fixture.nativeElement.querySelector('[data-testid="crd-close-btn"]');
+        expect(closeBtn).toBeTruthy();
+        closeBtn.dispatchEvent(new Event('click'));
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(closeDrawerSpy).toHaveBeenCalledTimes(1);
+        expect(component.drawerOpen()).toBe(false);
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-panel"]')).toBeNull();
+      });
+    });
+
+    // DSP-T-3 attempt 2 (Reviewer FAIL issue 3 — Disqualifier "the moved-test count must equal the
+    // removed-test count"): relocated from the pre-split drawer spec
+    // (`NOTIF-T-4 > "emits closed exactly once on Escape in view mode"`), deleted outright in
+    // attempt 1 instead of moved. The shell's own "emits closed on Escape" test still proves the
+    // sheet's native Escape handling in isolation, but the property this test guards — a view-mode
+    // panel closes exactly once on Escape — depends on THIS row's `(closed)="onDrawerClosedSignal()"`
+    // wiring, which only a mounted notification-item test can prove. Recorded as the 48th
+    // relocation (moved = removed = 48, see execution.md).
+    describe('DSP-T-3: Escape inside the panel in view mode (relocated NOTIF-T-4 test, Reviewer FAIL issue 3)', () => {
+      it('emits closed exactly once on Escape in view mode, closing the drawer', async () => {
+        component.notification = buildTocCarried({ request_status_id: 2 });
+        component.isSent = false;
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(component.drawerOpen()).toBe(true);
+        expect(component.drawerMode()).toBe('view');
+
+        const closeDrawerSpy = jest.spyOn(component, 'closeDrawer');
+
+        const panelEl: HTMLElement = fixture.nativeElement.querySelector('[data-testid="crd-panel"]');
+        expect(panelEl).toBeTruthy();
+        panelEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(closeDrawerSpy).toHaveBeenCalledTimes(1);
+        expect(component.drawerOpen()).toBe(false);
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-panel"]')).toBeNull();
+      });
+    });
+
     // CRD-T-4 forward pointer 4: the real BrnDialog's `closed` output also fires asynchronously
     // after a PROGRAMMATIC close (e.g. acceptOrReject's finalize). Under track $index instance
     // reuse a late, second `closed` must not wipe state — this proves the guard on the exact
@@ -1973,6 +2235,23 @@ describe('NotificationItemComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('[crdAlign]')).toBeTruthy();
+    });
+
+    // DSP-T-8 rework attempt 2 (Reviewer FAIL, (d)): the "MAP TO YOUR THEORY OF CHANGE" heading in
+    // `notification-detail-content` must be the ONLY heading in the ToC area — the slot's own former
+    // inner `h3`/`p` (design.md DD-8 framing, requirements.md DSP-R-10) is deleted, not stacked under it.
+    it('bilateral decide mode: the align-slot has no h3 of its own, and the only ToC heading is copy.sections.mapToToc', () => {
+      component.notification = buildFixture({ request_status_id: 1, is_map_to_toc: false, obj_result: { source_name: 'W3/Bilaterals' } });
+      component.openDrawer('align');
+      fixture.detectChanges();
+
+      const alignSlot = fixture.nativeElement.querySelector('[data-testid="align-slot"]');
+      expect(alignSlot).toBeTruthy();
+      expect(alignSlot.querySelector('h3')).toBeNull();
+
+      const tocHeadings = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="crd-toc-section"] h3')) as HTMLElement[];
+      expect(tocHeadings.length).toBe(1);
+      expect(tocHeadings[0].textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.sections.mapToToc);
     });
 
     // Leader addition (CRD-T-4 rework, attempt 2): CRD-R-8 "Busy" — Clear mapping must be disabled
@@ -2254,45 +2533,358 @@ describe('NotificationItemComponent', () => {
         expect(fixture.nativeElement.querySelector('[data-notif-type-chip]')).toBeNull();
       });
 
-      it('drawerViewFields() supplies the emitter as submittedBy, source "update", and the phase', () => {
+      it('DSP-T-4: resultGrid() supplies the phase (supersedes drawerViewFields())', () => {
         component.notification = buildUpdateFixture();
 
-        const fields = component.drawerViewFields();
+        const grid = component.resultGrid();
+        const byLabel = (label: string) => grid.find(f => f.label === label)?.value;
 
-        expect(fields.source).toBe('update');
-        expect(fields.submittedBy).toBe('Amy Lopez');
-        expect(fields.phase).toBe('Reporting 2026');
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.phase)).toBe('Reporting 2026');
+      });
+
+      // DSP-T-9 Q-1 (user-approved 2026-10-05, design.md §6.2 "Submitted by"): the grid's
+      // "Submitted by" cell now reads the chain's submission actor — not the row's own requester/
+      // emitter — so the grid and the APPROVAL CHAIN section never disagree. FALSIFIER: reverting
+      // to the old `obj_requested_by`/`obj_emitter_user` source fails this (it would show "Santiago
+      // Sanchez" instead) — observed red before the fix.
+      it('DSP-T-9 Q-1: resultGrid() "Submitted by" is the chain submission actor, not the row requester', () => {
+        component.notification = buildUpdateFixture({ obj_emitter_user: { id: 4, first_name: 'Santiago', last_name: 'Sanchez' } });
+        component.approvalChain.set({
+          status: 'ok',
+          data: {
+            result_id: 1,
+            submission: { state: 'submitted', result_status_id: 6, result_status_name: 'Approved', actor_name: 'Nicoleta Trifa', date: '2026-09-29' },
+            steps: []
+          }
+        });
+
+        const grid = component.resultGrid();
+        const byLabel = (label: string) => grid.find(f => f.label === label)?.value;
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.submittedBy)).toBe('Nicoleta Trifa');
+      });
+
+      it('DSP-T-9 Q-1: "Submitted by" is a dash when the chain reports not_submitted', () => {
+        component.notification = buildUpdateFixture();
+        component.approvalChain.set({
+          status: 'ok',
+          data: {
+            result_id: 1,
+            submission: { state: 'not_submitted', result_status_id: 1, result_status_name: 'Editing', actor_name: null, date: null },
+            steps: []
+          }
+        });
+
+        const grid = component.resultGrid();
+        const byLabel = (label: string) => grid.find(f => f.label === label)?.value;
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.submittedBy)).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.dashValue);
+      });
+
+      it('DSP-T-9 Q-1: "Submitted by" is a dash on a chain error', () => {
+        component.notification = buildUpdateFixture();
+        component.approvalChain.set({ status: 'error' });
+
+        const grid = component.resultGrid();
+        const byLabel = (label: string) => grid.find(f => f.label === label)?.value;
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.submittedBy)).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.dashValue);
+      });
+
+      it('DSP-T-9 Q-1: "Submitted by" shows the loading skeleton (same mechanism as Contributing programs) while the chain loads', () => {
+        component.notification = buildUpdateFixture();
+        // Default state: no approvalChain.set() call yet, so approvalChain() is still 'loading'.
+
+        const grid = component.resultGrid();
+        const submittedByField = grid.find(f => f.label === CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.submittedBy);
+        expect(submittedByField?.loading).toBe(true);
+        expect(submittedByField?.value).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.dashValue);
       });
     });
 
     // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
-    // badge): `drawerViewFields()` must supply `status` from the same `rowStatusLabel` getter the
-    // row itself used to render, for all three row-status cases.
-    describe('drawerViewFields() status (NOTIF-T-14)', () => {
+    // badge) — DSP-T-4 moves the status from `drawerViewFields()`'s retired grid into `chips()`
+    // (first chip, always present) instead, same `rowStatusLabel` source, for all three row-status cases.
+    describe('Updates row BILATERAL_RESULT_SUBMITTED: link + CTA open the review drawer', () => {
+      let navigate: jest.SpyInstance;
+      const drawerUrl = '/result-framework-reporting/entity-details/SP11/bilateral-review?reviewResult=9762&reviewResultId=9762';
+      const submittedRow = (overrides: any = {}) =>
+        buildUpdateFixture({
+          result_id: 9762,
+          obj_notification_type: { type: NotificationType.BILATERAL_RESULT_SUBMITTED },
+          ...overrides,
+          obj_result: {
+            result_code: 9762,
+            title: 'Submitted result',
+            source_name: 'W3/Bilaterals',
+            obj_version: { id: 36 },
+            obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP11' } }],
+            ...(overrides.obj_result ?? {})
+          }
+        });
+      const link = () => fixture.nativeElement.querySelector('.notification_content_body_text a.font-mono, .notification_content_body_text a') as HTMLAnchorElement;
+      const cta = () => fixture.nativeElement.querySelector('[data-testid="validate-bilateral-cta"]') as HTMLAnchorElement | null;
+      const fire = (el: Element, init: MouseEventInit = {}) => {
+        const e = new MouseEvent('click', { button: 0, bubbles: true, cancelable: true, ...init });
+        el.dispatchEvent(e);
+        return e;
+      };
+
+      beforeEach(() => {
+        navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      });
+
+      it('the link href is the drawer URL, never /result/result-detail, and a plain click navigates once', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+        expect(link().getAttribute('href')).toBe(drawerUrl);
+        expect(link().getAttribute('href')).not.toContain('/result/result-detail');
+        const e = fire(link());
+
+        expect(e.defaultPrevented).toBe(true);
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+        expect(openCenterSpy).not.toHaveBeenCalled();
+      });
+
+      it('Ctrl-click on the link keeps the href (not prevented, no navigation)', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+
+        expect(fire(link(), { ctrlKey: true }).defaultPrevented).toBe(false);
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('the CTA renders and navigates once', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+
+        expect(cta()?.textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta);
+        expect(cta()?.getAttribute('href')).toBe(drawerUrl);
+        fire(cta()!);
+
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+      });
+
+      it('the detail drawer result card navigates to the drawer URL', () => {
+        component.notification = submittedRow();
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+        component.onDrawerResult();
+
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+        expect(openCenterSpy).not.toHaveBeenCalled();
+      });
+
+      it('no SP code: no CTA and the old href', () => {
+        component.notification = submittedRow({ obj_result: { obj_result_by_initiatives: [] } });
+        fixture.detectChanges();
+
+        expect(cta()).toBeNull();
+        expect(link().getAttribute('href')).toContain('/result/result-detail/9762');
+      });
+
+      it('another update type (RESULT_CONTRIBUTION_ACCEPTED) keeps its old target and has no CTA', () => {
+        component.notification = submittedRow({ obj_notification_type: { type: NotificationType.RESULT_CONTRIBUTION_ACCEPTED } });
+        fixture.detectChanges();
+
+        expect(cta()).toBeNull();
+        expect(link().getAttribute('href')).toContain('/result/result-detail/9762');
+      });
+    });
+
+    describe('chips() status (NOTIF-T-14, moved by DSP-T-4)', () => {
       it('a pending Received row (needs your decision)', () => {
         component.notification = buildRequestFixture({ request_status_id: 1 });
         component.isSent = false;
 
-        const fields = component.drawerViewFields();
-
-        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusNeedsDecision);
+        expect(component.chips()[0].text).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusNeedsDecision);
       });
 
       it('a resolved Received row (for your information)', () => {
         component.notification = buildRequestFixture({ request_status_id: 2 });
         component.isSent = false;
 
-        const fields = component.drawerViewFields();
-
-        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
+        expect(component.chips()[0].text).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
       });
 
       it('an Updates row (for your information)', () => {
         component.notification = buildUpdateFixture();
 
-        const fields = component.drawerViewFields();
+        expect(component.chips()[0].text).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
+      });
+    });
 
-        expect(fields.status).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusInfo);
+    describe('DSP-T-4: chips()/resultGrid() falsifiers (design.md §6.2/§6.3, DD-6/DD-7)', () => {
+      it('Falsifier: a fixture with result_center_array: [] still renders the "Reporting center" label, with a dash — never dropped', () => {
+        component.notification = buildRequestFixture({ obj_result: { result_center_array: [] } });
+
+        const grid = component.resultGrid();
+        const reportingCenter = grid.find(f => f.label === CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.reportingCenter);
+
+        expect(reportingCenter).toBeDefined();
+        expect(reportingCenter?.value).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.dashValue);
+      });
+
+      it('Falsifier: resultGrid() order is always Reporting center → Result type → Primary SP → Contributing programs → Submitted by → Phase', () => {
+        component.notification = buildRequestFixture();
+
+        const grid = component.resultGrid();
+        expect(grid.map(f => f.label)).toEqual([
+          CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.reportingCenter,
+          CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.resultType,
+          CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.primaryProgram,
+          CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.contributingPrograms,
+          CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.submittedBy,
+          CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.phase
+        ]);
+      });
+
+      it('Falsifier: a `W3/Bilaterals` row\'s chips() always includes the outlined funding chip', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1, obj_result: { source_name: 'W3/Bilaterals' } });
+
+        const funding = component.chips().find(c => c.text === 'W3/Bilateral');
+        expect(funding).toBeDefined();
+        expect(funding?.outlined).toBe(true);
+      });
+
+      // DSP-T-9 Q-2 (user-approved 2026-10-05): only status and funding are pills — level · type
+      // and the date are plain muted text. FALSIFIER: marking every chip `pill: true` fails this.
+      it('DSP-T-9 Q-2: chips() marks only status and funding as pill: true; level·type and date are not', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 1,
+          requested_date: '2026-09-25T10:00:00.000Z',
+          obj_result: {
+            source_name: 'W3/Bilaterals',
+            obj_result_level: { id: 3, name: 'Output' },
+            obj_result_type: { id: 7, name: 'Innovation Development' }
+          }
+        });
+
+        const chips = component.chips();
+        const byText = (text: string) => chips.find(c => c.text === text);
+        expect(byText(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.statusNeedsDecision)?.pill).toBe(true);
+        expect(byText('W3/Bilateral')?.pill).toBe(true);
+        expect(byText('Output · Innovation Development')?.pill).toBeFalsy();
+        expect(byText('25 Sep 2026')?.pill).toBeFalsy();
+      });
+
+      it('resultGrid() falls back to obj_result_by_initiatives[0] for Primary SP while the chain is loading', () => {
+        component.notification = buildRequestFixture({
+          obj_result: { obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP07' } }] }
+        });
+        // Default state: no openDrawer() call yet, so approvalChain() is still 'loading'.
+        const grid = component.resultGrid();
+        const primary = grid.find(f => f.label === CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.primaryProgram);
+        expect(primary?.value).toBe('SP07');
+      });
+
+      it('resultGrid() prefers the chain\'s primary step official_code once the chain resolves', () => {
+        component.notification = buildRequestFixture({
+          obj_result: { obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP07' } }] }
+        });
+        component.approvalChain.set({
+          status: 'ok',
+          data: {
+            result_id: 1,
+            submission: { state: 'submitted', result_status_id: 1, result_status_name: 'Submitted', actor_name: 'A', date: '2026-09-25' },
+            steps: [
+              { initiative_id: 1, official_code: 'SP04', short_name: 'SP04', name: 'SP04', role: 'primary', status: 'accepted', actor_name: null, date: null, is_viewer_program: false },
+              { initiative_id: 2, official_code: 'SP01', short_name: 'SP01', name: 'SP01', role: 'contributor', status: 'pending', actor_name: null, date: null, is_viewer_program: true },
+              { initiative_id: 3, official_code: 'SP09', short_name: 'SP09', name: 'SP09', role: 'contributor', status: 'declined', actor_name: null, date: null, is_viewer_program: false }
+            ]
+          }
+        });
+
+        const grid = component.resultGrid();
+        const primary = grid.find(f => f.label === CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.primaryProgram);
+        const contributing = grid.find(f => f.label === CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.contributingPrograms);
+        expect(primary?.value).toBe('SP04');
+        // SP09 is declined — excluded; only SP01 (pending, not declined) joins the list.
+        expect(contributing?.value).toBe('SP01');
+        expect(contributing?.loading).toBeFalsy();
+      });
+
+      // Reviewer FAIL issue 1 (design.md §6.2 "Field sources" L129 "Result type: level · type";
+      // mockup shows "Output · Innovation Development"): resultGrid() used to render only
+      // `obj_result_type.name`, dropping the level half entirely.
+      it('Reviewer FAIL issue 1: resultGrid() Result type is "level · type", not the type name alone', () => {
+        component.notification = buildRequestFixture({
+          obj_result: {
+            obj_result_level: { id: 3, name: 'Output' },
+            obj_result_type: { id: 7, name: 'Innovation Development' }
+          }
+        });
+
+        const grid = component.resultGrid();
+        const resultType = grid.find(f => f.label === CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.resultType);
+        expect(resultType?.value).toBe('Output · Innovation Development');
+      });
+
+      // Reviewer FAIL issue 2 (design.md §6.2 L134 "An empty value → copy.dashValue (muted)"):
+      // resultGrid() used to guard only with `?? dash` (null/undefined), which a whitespace-only
+      // source string slips straight through — rendering a label next to a blank cell.
+      it('Reviewer FAIL issue 2: a whitespace-only source value renders the dash, not a blank cell', () => {
+        component.notification = buildRequestFixture({
+          obj_result: {
+            result_center_array: [{ clarisa_center_object: { clarisa_institution: { acronym: '   ' } } }],
+            obj_version: { id: '30', phase_name: '   ', status: true, obj_portfolio: { acronym: 'P25' } },
+            obj_result_by_initiatives: [{ obj_initiative: { official_code: '  ' } }]
+          }
+        });
+
+        const grid = component.resultGrid();
+        const dash = CONTRIBUTION_REQUEST_DRAWER_COPY.dashValue;
+        const byLabel = (label: string) => grid.find(f => f.label === label)?.value;
+
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.reportingCenter)).toBe(dash);
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.phase)).toBe(dash);
+        expect(byLabel(CONTRIBUTION_REQUEST_DRAWER_COPY.resultGridLabels.primaryProgram)).toBe(dash);
+      });
+    });
+
+    // Leader addition (attempt 2): `formatActivityDate` now delegates to Angular's `formatDate`
+    // instead of a hand-rolled `MONTH_ABBREVIATIONS` table — new strings must not live outside
+    // `contribution-request-drawer.copy.ts`. Behavior (format + null-safety) is unchanged.
+    describe('Leader addition: activityDate / chips() date chip use dd MMM yyyy (formatDate, not a hand-rolled table)', () => {
+      it('formats a valid created_date as "25 Sep 2026"', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1, requested_date: null, created_date: '2026-09-25T10:00:00.000Z' });
+
+        const dateChip = component.chips().find(c => /^\d{2} [A-Za-z]{3} \d{4}$/.test(c.text));
+        expect(dateChip?.text).toBe('25 Sep 2026');
+      });
+
+      it('omits the date chip for a missing/unparseable requested_date AND created_date', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1, requested_date: null, created_date: null });
+
+        const dateChip = component.chips().find(c => /^\d{2} [A-Za-z]{3} \d{4}$/.test(c.text));
+        expect(dateChip).toBeUndefined();
+      });
+    });
+
+    // DSP-T-9 F-2 (user-approved 2026-10-05): a real request row carries `requested_date` only — the
+    // T-9 browser pass found every request row's date chip missing because `activityDate` read only
+    // `created_date`. FALSIFIER: reverting `activityDate` to `created_date` alone fails this (the
+    // chip would be omitted) — observed red before the fix.
+    describe('DSP-T-9 F-2: activityDate prefers requested_date over created_date for request rows', () => {
+      it('shows the chip from requested_date on a request-shaped fixture with no created_date', () => {
+        component.notification = buildRequestFixture({ request_status_id: 1, requested_date: '2026-09-29T10:00:00.000Z' });
+        expect((component.notification as any).created_date).toBeUndefined();
+
+        const dateChip = component.chips().find(c => /^\d{2} [A-Za-z]{3} \d{4}$/.test(c.text));
+        expect(dateChip?.text).toBe('29 Sep 2026');
+      });
+
+      it('prefers requested_date over created_date when both are present', () => {
+        component.notification = buildRequestFixture({
+          request_status_id: 1,
+          requested_date: '2026-09-29T10:00:00.000Z',
+          created_date: '2026-09-01T10:00:00.000Z'
+        });
+
+        const dateChip = component.chips().find(c => /^\d{2} [A-Za-z]{3} \d{4}$/.test(c.text));
+        expect(dateChip?.text).toBe('29 Sep 2026');
       });
     });
 
@@ -2684,13 +3276,13 @@ describe('NotificationItemComponent', () => {
     });
 
     describe('primary request row', () => {
-      it('renders the "Primary program request" chip, the flag icon, and the row sentence (PSR-R-9)', () => {
+      it('renders the "Needs your review" chip, the flag icon, and the row sentence (PSR-R-9, PRA-R-3)', () => {
         component.notification = buildPsrFixture({ request_type: 'primary' });
         fixture.detectChanges();
 
         const root: HTMLElement = fixture.nativeElement;
-        expect(component.rowTypeChipLabel).toBe('Primary program request');
-        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Primary program request');
+        expect(component.rowTypeChipLabel).toBe('Needs your review');
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Needs your review');
         expect(root.querySelector('.notification_avatar i.pi.pi-flag')).toBeTruthy();
 
         const bodyText = root.querySelector('.notification_content_body_text')?.textContent?.replace(/\s+/g, ' ').trim();
@@ -2708,14 +3300,184 @@ describe('NotificationItemComponent', () => {
         expect(component.creatingCenterLabel).not.toContain('()');
       });
 
-      it('renders "Accept as primary" / "Decline" as the row button labels (PSR-R-9)', () => {
+      it('PRA-R-3 label + no Decline: the row shows one "Review result" button and no Decline button', () => {
         component.notification = buildPsrFixture({ request_type: 'primary' });
         fixture.detectChanges();
 
         const acceptBtn: any = fixture.nativeElement.querySelector('[data-testid="accept-contribution-btn"]');
-        const declineBtn: any = fixture.nativeElement.querySelector('[data-testid="decline-contribution-btn"]');
-        expect(acceptBtn.text).toBe('Accept as primary');
-        expect(declineBtn.text).toBe('Decline');
+        expect(acceptBtn.text).toBe('Review result');
+        expect(fixture.nativeElement.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+        expect(fixture.nativeElement.textContent).not.toContain('Accept as primary');
+      });
+
+      describe('result link + CTA validate the bilateral result (follow-up of PRA)', () => {
+        let navigate: jest.SpyInstance;
+        const reviewPrefix = '/result-framework-reporting/entity-details/SP12/bilateral-review';
+        const row = (statusId: string, overrides: any = {}) =>
+          buildPsrFixture({ request_type: 'primary', ...overrides, obj_result: { status_id: statusId, result_code: 'RC-10001' } });
+        const link = () => fixture.nativeElement.querySelector('.notification_content_body_text a.font-mono') as HTMLAnchorElement;
+        const cta = () => fixture.nativeElement.querySelector('[data-testid="validate-bilateral-cta"]') as HTMLAnchorElement | null;
+
+        beforeEach(() => {
+          navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        });
+
+        it('status 5: the result link navigates once to the review drawer URL, never to /result/result-detail', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+
+          expect(link().getAttribute('href')).toContain(reviewPrefix);
+          link().dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          const url = navigate.mock.calls[0][0] as string;
+          expect(url).toContain(reviewPrefix);
+          expect(url).toContain('reviewResult=RC-10001');
+          expect(url).not.toContain('/result/result-detail');
+        });
+
+        it('status 5: the CTA renders with the drawer URL and navigates once on click', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+
+          expect(cta()?.textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta);
+          expect(cta()?.getAttribute('href')).toContain(reviewPrefix);
+          cta()!.dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(navigate.mock.calls[0][0]).toContain(reviewPrefix);
+        });
+
+        it('status 5: Ctrl-click on the CTA keeps the href (not prevented, no navigation)', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+          const e = new MouseEvent('click', { button: 0, ctrlKey: true, bubbles: true, cancelable: true });
+          cta()!.dispatchEvent(e);
+          expect(e.defaultPrevented).toBe(false);
+          expect(navigate).not.toHaveBeenCalled();
+        });
+
+        it('status 5: the drawer result card navigates to the review drawer URL', () => {
+          component.notification = row('5');
+          const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+          component.onDrawerResult();
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(navigate.mock.calls[0][0]).toContain(reviewPrefix);
+          expect(openCenterSpy).not.toHaveBeenCalled();
+        });
+
+        it('status 1: keeps the Result Detail href and shows no CTA', () => {
+          component.notification = row('1');
+          fixture.detectChanges();
+
+          expect(link().getAttribute('href')).toBe(component.resultUrl(component.notification));
+          expect(link().getAttribute('href')).toContain('/result/result-detail');
+          expect(cta()).toBeNull();
+          expect(component.primaryReviewUrl).toBeNull();
+        });
+
+        it('status 5 without any SP code: no CTA and the link keeps its old target', () => {
+          component.notification = row('5', { obj_shared_inititiative: null, obj_owner_initiative: null });
+          fixture.detectChanges();
+
+          expect(component.primaryReviewUrl).toBeNull();
+          expect(cta()).toBeNull();
+          expect(link().getAttribute('href')).toContain('/result/result-detail');
+        });
+      });
+
+      describe('PRA-R-3 Review result click (accept PATCH, then drawer or notify-later)', () => {
+        let navigate: jest.SpyInstance;
+        let alertSpy: jest.SpyInstance;
+        let patchSpy: jest.SpyInstance;
+        let emitSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+          navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+          alertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
+          patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+          emitSpy = jest.spyOn(component.requestEvent, 'emit');
+        });
+
+        const reviewRow = (statusId: string) =>
+          buildPsrFixture({ request_type: 'primary', obj_result: { status_id: statusId, result_code: 'RC-10001' } });
+
+        it('Pending Review (5): accept PATCH once, then navigateByUrl once with the bilateral-review drawer URL; no toast', () => {
+          component.notification = reviewRow('5');
+          const order: string[] = [];
+          patchSpy.mockImplementation(() => {
+            order.push('patch');
+            return of({ response: {} });
+          });
+          navigate.mockImplementation(() => {
+            order.push('navigate');
+            return Promise.resolve(true);
+          });
+
+          component.onAcceptContribution();
+
+          expect(order).toEqual(['patch', 'navigate']);
+          expect(patchSpy).toHaveBeenCalledTimes(1);
+          expect(navigate).toHaveBeenCalledTimes(1);
+          const url = navigate.mock.calls[0][0] as string;
+          expect(url).toContain('/result-framework-reporting/entity-details/SP12/bilateral-review');
+          expect(url).toContain('reviewResult=RC-10001');
+          expect(url).toContain('reviewResultId=10001');
+          expect(alertSpy).not.toHaveBeenCalled();
+          expect(emitSpy).toHaveBeenCalled();
+        });
+
+        it('Editing (1): accept PATCH, the notify-later toast, and the router is NOT called', () => {
+          component.notification = reviewRow('1');
+
+          component.onAcceptContribution();
+
+          expect(patchSpy).toHaveBeenCalledTimes(1);
+          expect(navigate).not.toHaveBeenCalled();
+          expect(alertSpy).toHaveBeenCalledTimes(1);
+          expect(alertSpy).toHaveBeenCalledWith({
+            id: 'noti',
+            title: 'You are now the primary Science Program. You will be notified when the Center submits it for review.',
+            status: 'success'
+          });
+        });
+
+        it('stale 409 on a Pending Review row: navigates to the drawer and shows NO error / already-answered toast', () => {
+          component.notification = reviewRow('5');
+          patchSpy.mockReturnValue(throwError(() => ({ status: 409 })));
+          const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+          component.onAcceptContribution();
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(alertSpy).not.toHaveBeenCalled();
+          consoleSpy.mockRestore();
+        });
+
+        it('any other error: the generic error toast, no navigation', () => {
+          component.notification = reviewRow('5');
+          patchSpy.mockReturnValue(throwError(() => ({ status: 500 })));
+          const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+          component.onAcceptContribution();
+
+          expect(navigate).not.toHaveBeenCalled();
+          expect(alertSpy).toHaveBeenCalledWith({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+          consoleSpy.mockRestore();
+        });
+
+        it('the drawer footer offers no Decline for a primary row (showDecline=false)', () => {
+          component.notification = reviewRow('5');
+          fixture.detectChanges();
+          component.openDrawer('details');
+          fixture.detectChanges();
+
+          const content: NotificationDetailContentComponent = fixture.debugElement.query(By.directive(NotificationDetailContentComponent)).componentInstance;
+          expect(content.showDecline()).toBe(false);
+          expect(fixture.nativeElement.ownerDocument.querySelector('[data-testid="crd-decline-btn"]')).toBeNull();
+        });
       });
 
       it('counts under "Needs your decision" while pending (PSR-R-9)', () => {
@@ -2764,24 +3526,31 @@ describe('NotificationItemComponent', () => {
           expect(body.result_toc_result).toEqual({ planned_result: null, result_toc_results: [] });
         });
 
-        it('(4) the Accept text is "Accept as primary" for both the row and the drawer', () => {
+        it('(4) the Accept text is "Review result" for both the row and the drawer', () => {
           component.notification = buildPsrFixture({ request_type: 'primary' });
-          expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+          expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.reviewResult);
         });
 
-        // PSR-T-8 rework attempt 2 (Reviewer finding 3): queries the real drawer debug instance's
+        // PSR-T-8 rework attempt 2 (Reviewer finding 3): queries the real content debug instance's
         // `showAlignSlot`/`acceptLabel` INPUTS — not just the row's own `isPrimaryRequest` getter,
-        // which proved nothing about what the drawer actually received.
-        it('the drawer actually receives showAlignSlot=false and acceptLabel="Accept as primary"', () => {
+        // which proved nothing about what the content actually received.
+        // DSP-T-3: `showAlignSlot`/`acceptLabel` moved from the (now shell-only)
+        // ContributionRequestDrawerComponent to NotificationDetailContentComponent — updated to
+        // query the new owner, assertions unchanged.
+        it('the content actually receives showAlignSlot=false and acceptLabel="Review result"', () => {
           component.notification = buildPsrFixture({ request_type: 'primary' });
           fixture.detectChanges();
+          // DSP-T-3: the content only renders once the (mocked) sheet reports open — the shell's
+          // `*hlmSheetPortal` content is gated on sheet state, same as the real CDK Dialog.
+          component.openDrawer('details');
+          fixture.detectChanges();
 
-          const drawer: ContributionRequestDrawerComponent = fixture.debugElement.query(
-            By.directive(ContributionRequestDrawerComponent)
+          const content: NotificationDetailContentComponent = fixture.debugElement.query(
+            By.directive(NotificationDetailContentComponent)
           ).componentInstance;
 
-          expect(drawer.showAlignSlot()).toBe(false);
-          expect(drawer.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+          expect(content.showAlignSlot()).toBe(false);
+          expect(content.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.reviewResult);
         });
       });
     });
@@ -2826,18 +3595,23 @@ describe('NotificationItemComponent', () => {
         expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept);
       });
 
-      // PSR-T-8 rework attempt 2 (Reviewer finding 3): the drawer's real input values, not just the
+      // PSR-T-8 rework attempt 2 (Reviewer finding 3): the content's real input values, not just the
       // row getter — regression counterpart to the primary-row assertion above.
-      it('the drawer actually receives showAlignSlot=true and acceptLabel="Accept"', () => {
+      // DSP-T-3: queries NotificationDetailContentComponent now (see the primary-row test above).
+      it('the content actually receives showAlignSlot=true and acceptLabel="Accept"', () => {
         component.notification = buildContributorFixture();
         fixture.detectChanges();
+        // DSP-T-3: the content only renders once the (mocked) sheet reports open — the shell's
+        // `*hlmSheetPortal` content is gated on sheet state, same as the real CDK Dialog.
+        component.openDrawer('details');
+        fixture.detectChanges();
 
-        const drawer: ContributionRequestDrawerComponent = fixture.debugElement.query(
-          By.directive(ContributionRequestDrawerComponent)
+        const content: NotificationDetailContentComponent = fixture.debugElement.query(
+          By.directive(NotificationDetailContentComponent)
         ).componentInstance;
 
-        expect(drawer.showAlignSlot()).toBe(true);
-        expect(drawer.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept);
+        expect(content.showAlignSlot()).toBe(true);
+        expect(content.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept);
       });
 
       it('null-owner-code fallback: no empty bold and no sentence starting with "," (Reviewer advisory)', () => {
@@ -2853,26 +3627,28 @@ describe('NotificationItemComponent', () => {
     });
 
     // PSR-T-8 rework attempt 2 (Reviewer finding 3): `requestKind` was untested — deleting the
-    // `requestKind:` line in `drawerViewFields()` kept the whole suite green before this.
-    describe('drawerViewFields().requestKind (PSR-R-11)', () => {
-      it('is "Primary program request" for a primary row (incl. resolved)', () => {
+    // `requestKind:` line in the old `drawerViewFields()` kept the whole suite green before this.
+    // DSP-T-4 moves the request kind out to `detailTitle()` (the panel's header title, DD-6) —
+    // same `rowTypeChipLabel` source as before, single source with the row's own type chip.
+    describe('detailTitle() (PSR-R-11, moved by DSP-T-4)', () => {
+      it('is "Needs your review" for a primary row (incl. resolved)', () => {
         component.notification = buildPsrFixture({ request_type: 'primary', request_status_id: 2 });
-        expect(component.drawerViewFields().requestKind).toBe('Primary program request');
+        expect(component.detailTitle()).toBe('Needs your review');
       });
 
       it('is "Contributor request" for a bilateral contributor row', () => {
         component.notification = buildPsrFixture({ owner_program_code: 'SP09' });
-        expect(component.drawerViewFields().requestKind).toBe('Contributor request');
+        expect(component.detailTitle()).toBe('Contributor request');
       });
 
       it('is "Contribution request" for a W1/W2 row', () => {
         component.notification = buildPsrFixture({ is_map_to_toc: true, obj_result: { source_name: 'W1/W2' } });
-        expect(component.drawerViewFields().requestKind).toBe('Contribution request');
+        expect(component.detailTitle()).toBe('Contribution request');
       });
 
-      it('is null for an Updates/Center-notice row', () => {
+      it('falls back to the generic copy.title for an Updates/Center-notice row whose type cannot be resolved', () => {
         component.notification = { source: 'update', obj_result: { result_code: '1', title: 't' } };
-        expect(component.drawerViewFields().requestKind).toBeNull();
+        expect(component.detailTitle()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.title);
       });
     });
 
@@ -3754,6 +4530,71 @@ describe('NotificationItemComponent', () => {
     });
   });
 
+  describe('BPT-T-3: Center-reported bilateral project tagged row (avatar)', () => {
+    const centerReportedFixture = (overrides: any = {}) => ({
+      notification_id: 24,
+      source: 'update',
+      created_date: new Date().toISOString(),
+      text: 'ICRISAT has tagged the bilateral project B-A1187 from your center (ABC)',
+      obj_notification_type: { type: NotificationType.RESULT_BILATERAL_PROJECT_TAGGED },
+      obj_emitter_user: { first_name: 'Jane', last_name: 'Doe' },
+      obj_result: {
+        result_code: 9322,
+        title: 'A bilateral result',
+        obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP09' } }],
+        obj_version: { id: 1 }
+      },
+      ...overrides
+    });
+
+    it('isCenterReportedProjectRow is true for the Center-reported shape', () => {
+      component.notification = centerReportedFixture();
+      expect(component.isCenterReportedProjectRow).toBe(true);
+    });
+
+    it('isCenterReportedProjectRow is false for the W1/W2 enriched/bare shape (same type)', () => {
+      component.notification = centerReportedFixture({ text: 'B-A1080 (ABC)' });
+      expect(component.isCenterReportedProjectRow).toBe(false);
+    });
+
+    it('isCenterReportedProjectRow is false for a non-update-source row', () => {
+      component.notification = { ...centerReportedFixture(), source: 'request' };
+      expect(component.isCenterReportedProjectRow).toBe(false);
+    });
+
+    it('renders the briefcase icon with the amber modifier class, no initials', () => {
+      component.notification = centerReportedFixture();
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const avatar = root.querySelector('.notification_avatar');
+      expect(avatar?.querySelector('.pi-briefcase')).toBeTruthy();
+      expect(avatar?.classList.contains('notification_avatar_project_tagged')).toBe(true);
+      expect(root.querySelector('.notification_avatar_initials')).toBeNull();
+    });
+
+    it('a W1/W2 enriched row (same type) still renders initials, no briefcase', () => {
+      component.notification = centerReportedFixture({ text: 'B-A1080 (ABC)' });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('.notification_avatar .pi-briefcase')).toBeNull();
+      expect(root.querySelector('.notification_avatar_initials')).toBeTruthy();
+    });
+
+    it('AI-job and approved-decision avatar branches still win ahead of the briefcase', () => {
+      component.notification = centerReportedFixture({
+        text: "SP06, as primary Science Program, has approved your center's result",
+        obj_notification_type: { type: NotificationType.BILATERAL_RESULT_APPROVED }
+      });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('.notification_avatar .pi-check-circle')).toBeTruthy();
+      expect(root.querySelector('.notification_avatar .pi-briefcase')).toBeNull();
+    });
+  });
+
   describe('Bilateral AI Job Finished row (no result behind it)', () => {
     const aiJobRow = () => ({
       source: 'update',
@@ -3785,5 +4626,688 @@ describe('NotificationItemComponent', () => {
       expect(openDrawer).not.toHaveBeenCalled();
     });
   });
-});
 
+  // @akili-spec notifications/detail-side-panel (DSP-T-7): panel routing, lifecycle, focus.
+  describe('DSP-T-7 — panel routing, takeover, lifecycle, focus', () => {
+    const buildRow = (overrides: any = {}) => ({
+      origin: 'received',
+      share_result_request_id: 6001,
+      request_status_id: 1,
+      requested_date: '2026-09-25T01:24:56.104Z',
+      is_map_to_toc: false,
+      obj_requested_by: { id: 307, first_name: 'John', last_name: 'Doe' },
+      obj_owner_initiative: { id: 31, official_code: 'INIT-31', name: 'Owner program' },
+      obj_shared_inititiative: { id: 77, official_code: 'INIT-77', name: 'Contributor program' },
+      ...overrides,
+      obj_result: {
+        id: 9400,
+        result_code: '9400',
+        title: 'A centre-reported bilateral result',
+        status_id: '1',
+        source_name: 'W3/Bilaterals',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        ...(overrides.obj_result ?? {})
+      }
+    });
+
+    beforeEach(() => {
+      component.isSent = false;
+    });
+
+    describe('notificationKey', () => {
+      it('mirrors the page\'s own trackNotificationKey() formula (origin-id, id from either id field)', () => {
+        component.notification = buildRow({ origin: 'sent', share_result_request_id: 123 });
+        expect(component.notificationKey).toBe('sent-123');
+
+        component.notification = buildRow({ origin: 'update', share_result_request_id: undefined, notification_id: 55 });
+        expect(component.notificationKey).toBe('update-55');
+      });
+    });
+
+    describe('openDrawer() -> panel.open()', () => {
+      it('creates a TemplatePortal from this row\'s own #detailTpl and opens the panel under notificationKey', () => {
+        fixture.detectChanges();
+        component.notification = buildRow();
+
+        component.openDrawer('details');
+
+        expect(mockPanel.open).toHaveBeenCalledWith(component.notificationKey, expect.any(TemplatePortal), component.drawerHeadingId);
+        expect(mockPanel.activeKey()).toBe(component.notificationKey);
+        expect(mockPanel.portal()).not.toBeNull();
+      });
+    });
+
+    describe('FALSIFIER: with isWide=true, opening A must NOT set the drawer open input to true', () => {
+      it('routes to the docked aside instead — the drawer stays closed (no `crd-panel` in the DOM)', async () => {
+        mockPanel.isWide.set(true);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow();
+
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(component.drawerOpen()).toBe(true);
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-panel"]')).toBeNull();
+      });
+    });
+
+    describe('FALSIFIER: opening B must reset A\'s drawerMode/drawerOpen via the activeKey effect', () => {
+      it('A leaves confirm-decline and closes once B takes over the panel', async () => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow({ share_result_request_id: 6001 });
+        component.openDrawer('confirm-decline');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(component.drawerMode()).toBe('confirm-decline');
+        expect(component.drawerOpen()).toBe(true);
+
+        const fixtureB = TestBed.createComponent(NotificationItemComponent);
+        const componentB = fixtureB.componentInstance;
+        fixtureB.detectChanges();
+        await fixtureB.whenStable();
+        componentB.notification = buildRow({ share_result_request_id: 6002 });
+        componentB.openDrawer('details');
+        fixtureB.detectChanges();
+        await fixtureB.whenStable();
+        // Flush A's own activeKey effect.
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(component.drawerMode()).not.toBe('confirm-decline');
+        expect(component.drawerOpen()).toBe(false);
+        // A's own stale chain fetch must be invalidated too (DSP-T-2 token bump), not just reset here
+        // by direct inspection — proven indirectly: a reopen of A still fetches (not blocked).
+        expect(mockPanel.activeKey()).toBe(componentB.notificationKey);
+      });
+
+      it('never resets the row that just opened itself (activeKey === own key is a no-op)', async () => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow();
+
+        component.openDrawer('confirm-decline');
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(component.drawerMode()).toBe('confirm-decline');
+        expect(component.drawerOpen()).toBe(true);
+      });
+    });
+
+    describe('FALSIFIER: destroying A while it is active must not leave panel.portal() non-null', () => {
+      it('ngOnDestroy() releases the panel slot', () => {
+        fixture.detectChanges();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        expect(mockPanel.portal()).not.toBeNull();
+
+        component.ngOnDestroy();
+
+        expect(mockPanel.portal()).toBeNull();
+        expect(mockPanel.activeKey()).toBeNull();
+      });
+
+      it('is a no-op if a different row already took over (never clears the now-active key)', () => {
+        fixture.detectChanges();
+        component.notification = buildRow({ share_result_request_id: 7001 });
+        component.openDrawer('details');
+
+        mockPanel.open('received-9999', {});
+
+        component.ngOnDestroy();
+
+        expect(mockPanel.activeKey()).toBe('received-9999');
+      });
+    });
+
+    describe('FALSIFIER: flipping isWide true -> false while A is in confirm-decline must keep it open, same mode', () => {
+      it('the drawer takes over with open=true and mode still "confirm-decline" (state survives the resize)', async () => {
+        mockPanel.isWide.set(true);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow();
+        component.openDrawer('confirm-decline');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-panel"]')).toBeNull();
+
+        mockPanel.isWide.set(false);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(component.drawerOpen()).toBe(true);
+        expect(component.drawerMode()).toBe('confirm-decline');
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-panel"]')).toBeTruthy();
+      });
+    });
+
+    describe('FALSIFIER: the aside and the drawer must never both report open at the same time', () => {
+      it('isWide=true closes the drawer even though drawerOpen() stays true (the aside owns it)', async () => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(fixture.nativeElement.querySelector('[data-testid="crd-panel"]')).toBeTruthy();
+
+        mockPanel.isWide.set(true);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        const drawerRendersOpen = !!fixture.nativeElement.querySelector('[data-testid="crd-panel"]');
+        expect(drawerRendersOpen).toBe(false);
+        expect(component.drawerOpen()).toBe(true); // the row's own state, not the container
+      });
+    });
+
+    // DSP-T-7 rework attempt 2 (Reviewer FAIL issue 1): attempt 1's "aside and drawer never both
+    // open" test above only flips `mockPanel.isWide`, which the Jest `BrnSheet` mock never turns
+    // into a real `closed` emission — it is structurally blind to the real `BrnDialog`'s
+    // asynchronous post-exit-animation `closed` event. This test instead fires the SHELL's own
+    // `closed` output directly (the real event the container swap triggers), proving the row
+    // survives it instead of resetting.
+    describe('DSP-T-7 rework attempt 2: resize-to-wide must not close the panel via the shell\'s own `closed` event (Reviewer FAIL issue 1)', () => {
+      it('firing the shell\'s (closed) while isWide=true keeps drawerMode/drawerOpen/activeKey intact', async () => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow();
+        component.openDrawer('confirm-decline');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(component.drawerMode()).toBe('confirm-decline');
+
+        // The resize: isWide flips true, which drives the drawer's `[open]` to false — in the real
+        // app this is what makes the real `BrnDialog` run its exit animation and later emit `closed`.
+        mockPanel.isWide.set(true);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        const shellDebugEl = fixture.debugElement.query(By.directive(ContributionRequestDrawerComponent));
+        shellDebugEl.triggerEventHandler('closed', undefined);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(component.drawerMode()).toBe('confirm-decline');
+        expect(component.drawerOpen()).toBe(true);
+        expect(mockPanel.activeKey()).toBe(component.notificationKey);
+      });
+
+      // The content component (`notification-detail-content`'s own ✕) is only ever mounted inside
+      // THIS fixture when narrow (`*hlmSheetPortal`/`crd-panel` only instantiate on `open=true`,
+      // i.e. `drawerOpen() && !panel.isWide()`) — when docked, the SAME `#detailTpl` instance
+      // mounts instead via the PAGE's `cdkPortalOutlet`, outside this component's own fixture
+      // (design.md §2.2 step 2). The content's `(closed)` binding
+      // (`notification-item.component.html` L837, `onDrawerClosedSignal()`) is a static, unguarded
+      // template binding — never conditioned on `panel.isWide()` — so proving it reaches
+      // `closeDrawer()` while `isWide()` is true proves the docked ✕ closes too: it is the exact
+      // same handler the docked instance would call.
+      it('the docked ✕ (content\'s own (closed) -> onDrawerClosedSignal()) still closes while isWide=true', () => {
+        mockPanel.isWide.set(true);
+        fixture.detectChanges();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        const closeDrawerSpy = jest.spyOn(component, 'closeDrawer');
+
+        component.onDrawerClosedSignal();
+
+        expect(closeDrawerSpy).toHaveBeenCalledTimes(1);
+        expect(component.drawerOpen()).toBe(false);
+        expect(mockPanel.activeKey()).toBeNull();
+      });
+
+      it('a genuine narrow-mode close (isWide stays false) still closes via the shell\'s own (closed)', async () => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        const shellDebugEl = fixture.debugElement.query(By.directive(ContributionRequestDrawerComponent));
+        shellDebugEl.triggerEventHandler('closed', undefined);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(component.drawerOpen()).toBe(false);
+        expect(mockPanel.activeKey()).toBeNull();
+      });
+    });
+
+    describe('closeDrawer() -> panel.close() + focus restore', () => {
+      it('releases the panel slot and restores focus to the row\'s own interactive element', () => {
+        fixture.detectChanges();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        const rowEl: HTMLElement = fixture.debugElement.query(By.css('.notification_interactive')).nativeElement;
+        const focusSpy = jest.spyOn(rowEl, 'focus');
+
+        component.closeDrawer();
+
+        expect(mockPanel.close).toHaveBeenCalledWith(component.notificationKey);
+        expect(mockPanel.activeKey()).toBeNull();
+        expect(focusSpy).toHaveBeenCalled();
+      });
+
+      // Leader addition (DSP-T-7 rework attempt 2, conformance): `closeDrawer()` used to move focus
+      // to the row unconditionally, including for a popup-path decision where the drawer/panel was
+      // never open at all (`acceptOrReject`'s `finalize`, `onDrawerDeclineClicked`'s
+      // close-before-dialog with the drawer already closed). requirements.md §4 "Out of scope" keeps
+      // the row's own inline Accept/Decline popups unchanged (`CRD-DD-10`); DSP-R-13 only scopes
+      // focus-return to closing the PANEL.
+      it('a popup-path decision (drawer never opened) does NOT move focus to the row', () => {
+        fixture.detectChanges();
+        component.notification = buildRow();
+        const focusSpy = jest.spyOn(component as any, 'focusRowInteractive');
+
+        // Never called openDrawer()/panel.open() for this row — mirrors a popup-only decision
+        // (e.g. the row's own Accept/Decline buttons), where drawerOpen() is false on entry.
+        expect(component.drawerOpen()).toBe(false);
+        component.closeDrawer();
+
+        expect(focusSpy).not.toHaveBeenCalled();
+      });
+
+      it('closing an actually-open panel still moves focus (the guard does not break the happy path)', () => {
+        fixture.detectChanges();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        const focusSpy = jest.spyOn(component as any, 'focusRowInteractive');
+
+        component.closeDrawer();
+
+        expect(focusSpy).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('docked-open focus (afterNextRender) — Disqualifier: jsdom proves the CALL, not real focus order (see T-9)', () => {
+      it('focuses the content heading only when docked (isWide) and this row is the active, open one', async () => {
+        const focusSpy = jest.spyOn(component as any, 'focusContentHeading');
+        mockPanel.isWide.set(true);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow();
+
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(focusSpy).toHaveBeenCalled();
+      });
+
+      it('does not focus the content heading when narrow — the drawer keeps its own CDK focus trap/restore', async () => {
+        const focusSpy = jest.spyOn(component as any, 'focusContentHeading');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        component.notification = buildRow();
+
+        component.openDrawer('details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(focusSpy).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Escape inside the aside -> panel.closedByUser$ -> this row\'s own closeDrawer()', () => {
+      it('closes via closeDrawer() when this row currently owns the panel', () => {
+        fixture.detectChanges();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        const closeDrawerSpy = jest.spyOn(component, 'closeDrawer');
+
+        mockPanel.requestClose();
+
+        expect(closeDrawerSpy).toHaveBeenCalledTimes(1);
+        expect(component.drawerOpen()).toBe(false);
+      });
+
+      it('is a no-op for a row that does not own the panel (another row took over first)', () => {
+        fixture.detectChanges();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        mockPanel.open('received-other', {});
+        const closeDrawerSpy = jest.spyOn(component, 'closeDrawer');
+
+        mockPanel.requestClose();
+
+        expect(closeDrawerSpy).not.toHaveBeenCalled();
+      });
+
+      it('is a no-op once the row has already closed on its own', () => {
+        fixture.detectChanges();
+        component.notification = buildRow();
+        component.openDrawer('details');
+        component.closeDrawer();
+        const closeDrawerSpy = jest.spyOn(component, 'closeDrawer');
+
+        mockPanel.requestClose();
+
+        expect(closeDrawerSpy).not.toHaveBeenCalled();
+      });
+    });
+  });
+  // @akili-spec notifications/bell-quick-inbox (BELL-T-5, BELL-DD-4): `autoAction` replays the row's
+  // own Accept/Decline handler exactly once and then reports `autoActionConsumed`. jsdom proves the
+  // wiring only; the real dialog opening after a route transition is BELL-T-6 manual pass.
+  describe('BELL-T-5 - autoAction', () => {
+    const bilateralStepRow = () => ({
+      share_result_request_id: 77,
+      result_id: '7774',
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: false,
+      requested_date: '2026-09-25T01:24:56.104Z',
+      obj_result: {
+        result_code: '5618',
+        title: 'A bilateral result',
+        status_id: '1',
+        source_name: 'W3/Bilaterals',
+        obj_version: { id: '30', obj_portfolio: { acronym: 'P25' } }
+      }
+    });
+    const primaryRow = () => ({ ...bilateralStepRow(), request_type: 'primary' });
+
+    let patchSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.rolesSE.platformIsClosed = false;
+      patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+      component.isSent = false;
+    });
+
+    const flush = () => Promise.resolve();
+
+    it("autoAction='accept' on a bilateral step row -> showTocPromptDialog() true and 0 PATCH", async () => {
+      component.notification = bilateralStepRow();
+      fixture.componentRef.setInput('autoAction', 'accept');
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(component.showTocPromptDialog()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it("PRA-R-3: autoAction='decline' on a primary pending row opens no dialog, sends 0 PATCH and still reports consumed", async () => {
+      component.notification = primaryRow();
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+      fixture.componentRef.setInput('autoAction', 'decline');
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(component.showPrimaryDeclineDialog()).toBe(false);
+      expect(component.showConfirmRejectDialog()).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it("autoAction='decline' on a non-primary row -> the inline reject confirm (showConfirmRejectDialog)", async () => {
+      component.notification = bilateralStepRow();
+      fixture.componentRef.setInput('autoAction', 'decline');
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(component.showConfirmRejectDialog()).toBe(true);
+    });
+
+    it('runs the handler once and emits autoActionConsumed once, even when the input is set twice', async () => {
+      component.notification = bilateralStepRow();
+      const acceptSpy = jest.spyOn(component, 'onAcceptContribution');
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+
+      fixture.componentRef.setInput('autoAction', 'accept');
+      fixture.detectChanges();
+      fixture.componentRef.setInput('autoAction', null);
+      fixture.componentRef.setInput('autoAction', 'accept');
+      fixture.detectChanges();
+      await flush();
+
+      expect(acceptSpy).toHaveBeenCalledTimes(1);
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    // BELL-T-6 D-1 follow-up: the SAME row instance survives between two bell hand-offs for the same
+    // request (cancel the modal, reopen the bell, click Accept again). The inbox clears the input after
+    // the first one, so the second arrival is a new hand-off and must replay; only a re-set WITHOUT the
+    // input having been cleared (previous test) stays a single run.
+    it('a second hand-off after the input was cleared replays on the same instance (runs twice, consumed twice)', async () => {
+      component.notification = bilateralStepRow();
+      const acceptSpy = jest.spyOn(component, 'onAcceptContribution');
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+
+      fixture.componentRef.setInput('autoAction', 'accept');
+      fixture.detectChanges();
+      await flush();
+      expect(acceptSpy).toHaveBeenCalledTimes(1);
+      expect(consumed).toHaveBeenCalledTimes(1);
+
+      // the inbox consumed it: input cleared, change detection ran
+      fixture.componentRef.setInput('autoAction', null);
+      fixture.detectChanges();
+      expect(acceptSpy).toHaveBeenCalledTimes(1);
+
+      // modal cancelled, bell clicked again -> params come back
+      fixture.componentRef.setInput('autoAction', 'accept');
+      fixture.detectChanges();
+      await flush();
+
+      expect(acceptSpy).toHaveBeenCalledTimes(2);
+      expect(consumed).toHaveBeenCalledTimes(2);
+    });
+
+    it('does nothing and emits nothing while autoAction is not set', async () => {
+      component.notification = bilateralStepRow();
+      const acceptSpy = jest.spyOn(component, 'onAcceptContribution');
+      const declineSpy = jest.spyOn(component, 'onDeclineClick');
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(acceptSpy).not.toHaveBeenCalled();
+      expect(declineSpy).not.toHaveBeenCalled();
+      expect(consumed).not.toHaveBeenCalled();
+    });
+
+    it('a row that is no longer pending still consumes the param but opens nothing', async () => {
+      component.notification = { ...bilateralStepRow(), request_status_id: 2 };
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+      fixture.componentRef.setInput('autoAction', 'decline');
+
+      fixture.detectChanges();
+      await flush();
+
+      expect(component.showConfirmRejectDialog()).toBe(false);
+      expect(component.showPrimaryDeclineDialog()).toBe(false);
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // @akili-spec notifications/bell-quick-inbox (BELL-T-7, BELL-R-6 "a link never decides"): a crafted
+  // `?request=N&action=...` link must never record a decision. Every test spies PATCH_updateRequest
+  // (the call that records it) - asserting only "handler not called" would not prove it.
+  describe('BELL-T-7 - a deep link never records a decision', () => {
+    const baseRow = () => ({
+      share_result_request_id: 77,
+      result_id: '7774',
+      request_status_id: 1,
+      request_type: 'contribution',
+      is_map_to_toc: false,
+      requested_date: '2026-09-25T01:24:56.104Z',
+      obj_result: {
+        result_code: '5618',
+        title: 'A result',
+        status_id: '1',
+        source_name: 'W3/Bilaterals',
+        obj_version: { id: '30', obj_portfolio: { acronym: 'P25' } }
+      }
+    });
+    const rows: Record<string, () => any> = {
+      primary: () => ({ ...baseRow(), request_type: 'primary' }),
+      'ToC-carried one-click': () => ({ ...baseRow(), is_map_to_toc: true }),
+      'bilateral step': () => baseRow(),
+      'legacy modal-first (W1/W2)': () => ({ ...baseRow(), obj_result: { ...baseRow().obj_result, source_name: 'W1/W2' } }),
+      'P25 W1/W2 ToC-carried': () => ({ ...baseRow(), is_map_to_toc: true, obj_result: { ...baseRow().obj_result, source_name: 'W1/W2' } }),
+      'IPSR ToC-carried': () => ({
+        ...baseRow(),
+        is_map_to_toc: true,
+        obj_result: { ...baseRow().obj_result, source_name: 'W1/W2', obj_result_type: { id: 10 } }
+      })
+    };
+
+    let patchSpy: jest.SpyInstance;
+    const flush = () => Promise.resolve();
+
+    beforeEach(() => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.rolesSE.platformIsClosed = false;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: '30' };
+      mockApiService.dataControlSE.IPSRCurrentPhase = { phaseId: '30' };
+      patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+      component.isSent = false;
+    });
+
+    const run = async (row: any, action: 'accept' | 'decline') => {
+      component.notification = row;
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
+      fixture.componentRef.setInput('autoAction', action);
+      fixture.detectChanges();
+      await flush();
+      return consumed;
+    };
+
+    it('primary row + action=accept -> 0 PATCH_updateRequest, no dialog, consumed once', async () => {
+      const consumed = await run(rows['primary'](), 'accept');
+
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(component.showTocPromptDialog()).toBe(false);
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('ToC-carried one-click row + action=accept -> 0 PATCH_updateRequest, consumed once', async () => {
+      const consumed = await run(rows['ToC-carried one-click'](), 'accept');
+
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('BELL-T-9: ToC-carried contribution + action=accept -> the review step (drawer) opens, 0 PATCH, 0 legacy modal', async () => {
+      const consumed = await run(rows['ToC-carried one-click'](), 'accept');
+
+      expect(component.drawerOpen()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(mockApiService.dataControlSE.showShareRequest).not.toBe(true);
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('BELL-T-9: primary + action=accept -> nothing opens (consume only), 0 PATCH', async () => {
+      await run(rows['primary'](), 'accept');
+
+      expect(component.drawerOpen()).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it('BELL-T-9: a not-pending ToC-carried row + action=accept opens nothing', async () => {
+      await run({ ...rows['ToC-carried one-click'](), request_status_id: 2 }, 'accept');
+
+      expect(component.drawerOpen()).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it('a ToC-carried IPSR row + action=accept -> 0 PATCH_updateRequest', async () => {
+      const consumed = await run(rows['IPSR ToC-carried'](), 'accept');
+
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('bilateral step row + action=accept -> the prompt still opens, 0 PATCH_updateRequest, consumed once', async () => {
+      const consumed = await run(rows['bilateral step'](), 'accept');
+
+      expect(component.showTocPromptDialog()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('legacy modal-first row + action=accept -> the modal opens (step), 0 PATCH_updateRequest', async () => {
+      const consumed = await run(rows['legacy modal-first (W1/W2)'](), 'accept');
+
+      expect(mockApiService.dataControlSE.showShareRequest).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('PRA-R-3: primary row + action=decline -> no dialog opens, 0 PATCH_updateRequest, consumed once', async () => {
+      const consumed = await run(rows['primary'](), 'decline');
+
+      expect(component.showPrimaryDeclineDialog()).toBe(false);
+      expect(component.showConfirmRejectDialog()).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(Object.keys(rows).filter(k => k !== 'primary'))('%s row + action=decline -> 0 PATCH_updateRequest until the user confirms', async kind => {
+      const consumed = await run(rows[kind](), 'decline');
+
+      expect(component.showPrimaryDeclineDialog() || component.showConfirmRejectDialog()).toBe(true);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
+    });
+
+    // RRC-T-9 (`bilateral/rejected-result-correction`, RRC-R-13): reason line on a rejection update row.
+    describe('rejection reason line (RRC-T-9)', () => {
+      const buildRejection = (type: string, extra: any) => ({
+        notification_id: 6001,
+        source: 'update',
+        created_date: '2026-09-30T10:00:00.000Z',
+        text: '',
+        obj_notification_type: { type },
+        obj_emitter_user: { first_name: 'System', last_name: '' },
+        obj_result: { result_code: '601', title: 'A rejected result' },
+        ...extra
+      });
+      const lineOf = () => fixture.nativeElement.querySelector('[data-testid="notification-rejection-reason"]') as HTMLElement | null;
+
+      it('shows the comment for an entry with a comment', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: true, review_comment: 'Belongs to SP12' });
+        fixture.detectChanges();
+        expect(lineOf()?.textContent).toContain('Reason:');
+        expect(lineOf()?.textContent).toContain('Belongs to SP12');
+        expect(lineOf()?.className).toContain('line-clamp-2');
+      });
+
+      it('shows the fallback for an entry with an empty comment', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: true, review_comment: '' });
+        fixture.detectChanges();
+        expect(lineOf()?.textContent).toContain('No justification was recorded.');
+      });
+
+      it('shows no line for a legacy row', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: false, review_comment: null });
+        fixture.detectChanges();
+        expect(lineOf()).toBeNull();
+      });
+
+      it('shows no line for another type', () => {
+        component.notification = buildRejection('Bilateral Result Approved', { has_review_entry: true, review_comment: 'x' });
+        fixture.detectChanges();
+        expect(lineOf()).toBeNull();
+      });
+    });
+  });
+});

@@ -3,6 +3,7 @@ import { Like } from 'typeorm';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
+  HandlerResolveContext,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultsPolicyChangesRepository } from '../../results/summary/repositories/results-policy-changes.repository';
@@ -13,6 +14,19 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
 import { ClarisaInstitution } from '../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+
+/** What `resolveAndValidate` hands `afterCreate` (RSB-T-3). */
+interface ResolvedPolicyChange {
+  policyTypeId: number;
+  policyStageId: number;
+  statusAmount: string | null;
+  amount: number | null;
+  implementingOrganization: Array<{
+    institutions_id?: number;
+    institutions_acronym?: string;
+    institutions_name?: string;
+  }>;
+}
 
 @Injectable()
 export class PolicyChangeBilateralHandler
@@ -29,13 +43,16 @@ export class PolicyChangeBilateralHandler
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
   ) {}
 
-  async afterCreate({
+  /**
+   * @akili-spec bilateral/resubmit-rejected-result — RSB-T-3. The checks and catalogue lookups
+   * `afterCreate` used to make inline, moved verbatim (same order, same messages): they need no
+   * saved row, so the resubmission preflight runs them before the first write. No write here.
+   */
+  async resolveAndValidate({
     bilateralDto,
-    resultId,
-    userId,
-  }: HandlerAfterCreateContext): Promise<void> {
+  }: HandlerResolveContext): Promise<ResolvedPolicyChange | null> {
     if (bilateralDto.result_type_id !== ResultTypeEnum.POLICY_CHANGE) {
-      return;
+      return null;
     }
 
     const policyChange = bilateralDto.policy_change;
@@ -91,6 +108,32 @@ export class PolicyChangeBilateralHandler
       }
     }
 
+    return {
+      policyTypeId,
+      policyStageId,
+      statusAmount,
+      amount,
+      implementingOrganization: policyChange.implementing_organization,
+    };
+  }
+
+  async afterCreate({
+    bilateralDto,
+    resultId,
+    userId,
+  }: HandlerAfterCreateContext): Promise<void> {
+    const resolved = await this.resolveAndValidate({ bilateralDto });
+    if (!resolved) {
+      return;
+    }
+    const {
+      policyTypeId,
+      policyStageId,
+      statusAmount,
+      amount,
+      implementingOrganization,
+    } = resolved;
+
     const existing = await this._resultsPolicyChangesRepository.findOne({
       where: { result_id: resultId },
     });
@@ -121,7 +164,7 @@ export class PolicyChangeBilateralHandler
 
     await this.saveImplementingOrganizations(
       resultId,
-      policyChange.implementing_organization,
+      implementingOrganization,
       userId,
     );
   }

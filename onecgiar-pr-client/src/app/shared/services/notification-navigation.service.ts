@@ -4,6 +4,8 @@ import { Observable, catchError, map, of, timeout } from 'rxjs';
 import { getProgramCode } from '../constants/notification-type.constants';
 import { bilateralRouteToUrl, buildCenterEditorRoute, buildReviewDrawerRoute } from '../routing/bilateral-result-open-route.util';
 import { BilateralApiService } from './api/bilateral-api.service';
+import { primaryReviewTarget } from '../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-decision';
+import { CentersService } from './global/centers.service';
 
 /** Navigation side (bell, list) gives up on the lead-center lookup after this and uses the fallback URL. */
 export const DECISION_URL_TIMEOUT_MS = 8000;
@@ -16,13 +18,28 @@ export const DECISION_URL_TIMEOUT_MS = 8000;
 export class NotificationNavigationService {
   private readonly bilateralApi = inject(BilateralApiService);
   private readonly router = inject(Router);
+  private readonly centersService = inject(CentersService);
 
   /** Review drawer URL for "submitted for your review"; null when the payload has no SP code. */
   reviewRequestUrl(notification: any): string | null {
-    const programCode = getProgramCode(notification);
+    // A primary request row (PRA-R-3) names the requested SP on the row itself; a legacy ownerless
+    // result has no `obj_result_by_initiatives` yet, so `getProgramCode` alone would find nothing.
+    const requestedCode = notification?.request_type === 'primary' ? notification?.obj_shared_inititiative?.official_code : null;
+    const programCode = requestedCode || getProgramCode(notification);
     if (!programCode) return null;
     const resultCode = notification?.obj_result?.result_code;
-    return bilateralRouteToUrl(buildReviewDrawerRoute(programCode, resultCode, notification?.result_id));
+    return bilateralRouteToUrl(buildReviewDrawerRoute(programCode, resultCode, notification?.result_id ?? notification?.obj_result?.id));
+  }
+
+  /**
+   * PRA-R-3 / design §8.3: what happens once a primary row's accept settled (success or 409), shared by
+   * the inbox and the bell. Pending Review opens the review drawer; otherwise `notifyLater` runs
+   * (the "you will be notified" toast) and nothing navigates.
+   */
+  completePrimaryReview(notification: any, notifyLater: () => void): void {
+    const url = primaryReviewTarget(notification) === 'review-drawer' ? this.reviewRequestUrl(notification) : null;
+    if (url) void this.router.navigateByUrl(url);
+    else if (primaryReviewTarget(notification) !== 'review-drawer') notifyLater();
   }
 
   /**
@@ -51,7 +68,8 @@ export class NotificationNavigationService {
 
     // A primary/contributor request carries the creating center with the route's own acronym
     // ("Bioversity (Alliance)"). The centers lookup below returns the institution acronym
-    // ("Bioversity"), which the bilateral route does not recognise, so it is only the fallback.
+    // ("Bioversity"), which the bilateral route does not recognise, so the lead center's code is
+    // mapped to its CLARISA centers catalogue acronym (what `/bilateral/:acronym` resolves) first.
     const creatingCenter = notification?.creating_center?.acronym;
     if (creatingCenter && resultCode) {
       return of(bilateralRouteToUrl(buildCenterEditorRoute(creatingCenter, resultCode, phase)));
@@ -61,11 +79,26 @@ export class NotificationNavigationService {
       map(response => {
         const centers = response?.response ?? [];
         const leadCenter = centers.find(center => !!center?.is_leading_result) ?? centers[0];
-        const acronym = leadCenter?.acronym || leadCenter?.code;
+        const acronym = this.routeAcronymFor(leadCenter?.code) || leadCenter?.acronym || leadCenter?.code;
         return acronym && resultCode ? bilateralRouteToUrl(buildCenterEditorRoute(acronym, resultCode, phase)) : fallback;
       }),
       catchError(() => of(fallback))
     );
+  }
+
+  /**
+   * CLARISA catalogue acronym for a center code, which is what `/bilateral/:acronym` resolves
+   * ("Bioversity (Alliance)" for CENTER-02). The catalogue is loaded at bootstrap; while it is not
+   * there yet this returns null and a load is kicked off, so the caller keeps its own acronym.
+   */
+  private routeAcronymFor(code: string | null | undefined): string | null {
+    if (!code) return null;
+    const catalogue = this.centersService.centers();
+    if (!catalogue.length) {
+      void this.centersService.getData().catch(() => undefined);
+      return null;
+    }
+    return catalogue.find(center => center?.code === code)?.acronym || null;
   }
 
   /** W3/Bilaterals results are edited in the center editor, not in Result Detail. */

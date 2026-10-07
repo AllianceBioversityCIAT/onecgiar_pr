@@ -83,6 +83,9 @@
     <!-- Filters row -->
     <div class="flex w-full min-w-0 flex-col gap-2">
       <div class="flex w-full min-w-0 flex-wrap items-center gap-2">
+      <!-- Search filters, not form fields: [editable]="true" keeps them usable for non-admin users.
+           Without it pr-select inherits rolesSE.readOnly (true for every non-admin while creating) and
+           renders as plain text "Not provided". -->
       <!-- Type Filter -->
       <div class="relative w-full min-w-0 min-[480px]:w-44 min-[480px]:min-w-[160px] kp-filter-type">
         <app-pr-select
@@ -90,6 +93,7 @@
           optionLabel="label"
           optionValue="value"
           placeholder="Filter by type"
+          [editable]="true"
           [showClear]="true"
           [truncateSelectionText]="true"
           optionsInlineStyles="min-width: 260px;"
@@ -110,6 +114,7 @@
           optionLabel="label"
           optionValue="value"
           placeholder="Filter by affiliation"
+          [editable]="true"
           [showClear]="true"
           [truncateSelectionText]="true"
           optionsInlineStyles="min-width: 440px; max-width: 520px;"

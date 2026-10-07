@@ -514,10 +514,19 @@ export class BilateralCreationService {
    * P2-3152 AC3 — a result stops being editable by its Center User the moment it leaves Editing.
    * A null status means "not loaded yet"; the editor must not lock the form on an unknown status,
    * so it is treated as editable and the server stays the real gate.
+   *
+   * `bilateral/rejected-result-correction` RRC-R-1 / RRC-DD-2 — Rejected (7) is editable too, so the
+   * Centre can correct a rejected result; every consumer (sections, drawer, Submit rail) follows this
+   * one computed. Pending Review (5), Approved (6) and Discontinued (4) stay locked.
    */
   readonly isEditableByCenterUser = computed(() => {
     const status = this.resultStatusId();
-    return status == null || status === BILATERAL_STATUS.Editing || status === BILATERAL_STATUS.Draft;
+    return (
+      status == null ||
+      status === BILATERAL_STATUS.Editing ||
+      status === BILATERAL_STATUS.Draft ||
+      status === BILATERAL_STATUS.Rejected
+    );
   });
 
   /** Wipe old bp_* keys left by previous singleton/localStorage wizard persistence. */

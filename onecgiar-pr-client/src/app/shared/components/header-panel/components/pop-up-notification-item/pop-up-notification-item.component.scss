@@ -1,41 +1,53 @@
-@use '../../../../../../styles/fonts.scss' as fonts;
-
-.p {
-  margin: 0;
+// BELL-T-10: the host is a card in the popover's list (the list owns the gap). Only structure that
+// utilities cannot express stays here; every colour is a --pr-* token.
+:host {
+  display: block;
 }
 
-.init {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--pr-color-primary-300);
-  padding: 0px 8px;
-  border: 1px solid var(--pr-color-primary-300);
-  border-radius: 20px;
-  width: fit-content;
-  margin-bottom: 8px;
-  @include fonts.pr-typography('body-2');
-  font-weight: 500;
-}
+// BELL-T-3: the card chrome lives on the wrapper so the inline Accept / Decline buttons can sit
+// outside the anchor (a button inside an <a> is invalid HTML and would navigate on click) while the
+// whole row still reads as one card.
+.notification-row {
+  position: relative;
+  // BRS-T-5: extra left room for the 7px unread dot (mockup: 18px).
+  padding: 12px 12px 12px 18px;
+  overflow: hidden;
+  background-color: var(--pr-surface-card);
+  border: 1px solid var(--pr-border);
+  border-radius: 10px;
 
-.date {
-  @include fonts.pr-typography('body-2');
-  font-weight: 400;
-  color: var(--pr-color-accents-4);
-  text-align: right;
-  margin-top: 6px;
+  &:hover {
+    background-color: var(--pr-surface-raised-soft);
+  }
+
+  // Decision cards: left accent bar.
+  &--decision::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    content: '';
+    background-color: var(--pr-color-primary-300);
+  }
 }
 
 .notification {
   display: block;
   unicode-bidi: isolate;
-  padding: 15px 1.5rem 10px 1.5rem;
-  background-color: var(--pr-color-primary-25);
-  border-bottom: 1px solid var(--pr-color-primary-300);
-  color: var(--pr-color-black);
+  color: var(--pr-text);
+  cursor: pointer;
+}
 
-  &:hover {
-    background-color: var(--pr-color-primary-50);
-    cursor: pointer;
-  }
+// BELL-T-11: the armed ("Confirm ...") state of a direct Accept: amber in-progress tokens on an outline
+// button, clearly different from the filled primary Accept it replaces.
+.bell-accept--confirm {
+  color: var(--pr-status-in-progress-fg);
+  background-color: var(--pr-status-in-progress-bg);
+  border-color: var(--pr-status-in-progress-fg);
+}
+
+// BELL-T-12: the armed ("Confirm decline") state of a contribution Decline: destructive outline, token colours only.
+.bell-decline--confirm {
+  color: var(--destructive);
+  background-color: transparent;
+  border-color: var(--destructive);
 }

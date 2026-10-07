@@ -1,12 +1,21 @@
 import { TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, ActivatedRoute, RouterOutlet, RouterModule } from '@angular/router';
-import { of, Subject } from 'rxjs';
-import { ResultsNotificationsComponent } from './results-notifications.component';
+import { Router, ActivatedRoute, RouterOutlet, RouterModule, convertToParamMap } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { BehaviorSubject, of, Subject } from 'rxjs';
+import { ResultsNotificationsComponent, FilterFacetKey } from './results-notifications.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ResultsNotificationsService } from './results-notifications.service';
+// @akili-spec notifications/detail-side-panel (DSP-T-6)
+import { NotificationDetailPanelService } from './services/notification-detail-panel.service';
+// @akili-spec notifications/filter-toolbar-dropdowns (FTD-T-3): the per-facet toolbar's own DOM
+// tests need the REAL Spartan popover directives imported (not just `NO_ERRORS_SCHEMA`), because
+// `*hlmPopoverPortal` is a structural directive — see the `FTD-T-3` describe block below for why.
+import { HlmPopoverImports } from '@spartan/popover';
+import { BrnPopover } from '@spartan-ng/brain/popover';
+import { NgIcon } from '@ng-icons/core';
 
 describe('ResultsNotificationsComponent', () => {
   let component: ResultsNotificationsComponent;
@@ -17,6 +26,7 @@ describe('ResultsNotificationsComponent', () => {
   let routerMock: any;
   let activatedRouteMock: any;
   let routerEvents$: Subject<any>;
+  let queryParamMap$: BehaviorSubject<any>;
 
   beforeEach(async () => {
     apiServiceMock = {
@@ -37,7 +47,8 @@ describe('ResultsNotificationsComponent', () => {
       get_section_information: jest.fn(),
       get_sent_notifications: jest.fn(),
       get_updates_notifications: jest.fn(),
-      markAllUpdatesNotificationsAsRead: jest.fn(),
+      markAllBellRead: jest.fn().mockResolvedValue(undefined),
+      bellCount: signal(0),
       resetNotificationInformation: jest.fn(),
       resetFilters: jest.fn(),
       getAllPhases: jest.fn(),
@@ -77,10 +88,14 @@ describe('ResultsNotificationsComponent', () => {
       events: routerEvents$.asObservable()
     };
 
+    // BELL-T-5 attempt 2: the real `ActivatedRoute.queryParamMap` is a BehaviorSubject-backed stream
+    // (emits the current params on subscribe, then on every same-route query-param change).
+    queryParamMap$ = new BehaviorSubject(convertToParamMap({}));
     activatedRouteMock = {
       snapshot: {
         queryParams: {}
-      }
+      },
+      queryParamMap: queryParamMap$.asObservable()
     };
 
     await TestBed.configureTestingModule({
@@ -312,17 +327,6 @@ describe('ResultsNotificationsComponent', () => {
       }
     });
 
-    const getTriggerButton = () => (fixture.nativeElement as HTMLElement).querySelector('button[aria-haspopup="dialog"]') as HTMLButtonElement;
-    const getPanel = () => (fixture.nativeElement as HTMLElement).querySelector('[role="dialog"][aria-label="Filter"]') as HTMLElement | null;
-
-    it('toggles the popover open state', () => {
-      expect(component.filterPopoverOpen()).toBe(false);
-      component.toggleFilterPopover();
-      expect(component.filterPopoverOpen()).toBe(true);
-      component.toggleFilterPopover();
-      expect(component.filterPopoverOpen()).toBe(false);
-    });
-
     it('derives Center facet options from bilateral rows only, keyed on clarisa_institution.id', () => {
       resultsNotificationsServiceMock.receivedData = {
         receivedContributionsPending: [bilateralRow(), { obj_result: { source_name: 'W1/W2', result_code: 'W1-1' } }],
@@ -390,55 +394,419 @@ describe('ResultsNotificationsComponent', () => {
       expect(resultsNotificationsServiceMock.filteredInitiatives).toEqual([]);
     });
 
-    it('renders the Filter trigger button and toggles a real @if-rendered panel into the DOM', () => {
-      routerMock.url = '/result/results-outlet/results-notifications';
-      fixture.detectChanges();
+  });
 
-      expect(getPanel()).toBeNull();
-      getTriggerButton().click();
-      fixture.detectChanges();
-
-      expect(getPanel()).toBeTruthy();
-      expect(getTriggerButton().getAttribute('aria-expanded')).toBe('true');
+  // @akili-spec notifications/filter-toolbar-dropdowns (FTD-T-1, design.md §6.2): the per-facet
+  // dropdown state added additively alongside the legacy popover above (removed in FTD-T-2).
+  describe('FTD — facet dropdown state', () => {
+    it('filterFacets lists the seven facets in the fixed order Phase, Type, Funding, Result type, Program, Center, Bilateral project', () => {
+      expect(component.filterFacets.map(facet => facet.key)).toEqual([
+        'phase',
+        'type',
+        'funding',
+        'resultType',
+        'program',
+        'center',
+        'bilateral'
+      ]);
     });
 
-    it('clicking outside the panel closes it; clicking inside it (a checkbox) does not', () => {
-      resultsNotificationsServiceMock.receivedData = { receivedContributionsPending: [bilateralRow()], receivedContributionsDone: [] };
-      routerMock.url = '/result/results-outlet/results-notifications';
-      fixture.detectChanges();
-      getTriggerButton().click();
-      fixture.detectChanges();
-      expect(getPanel()).toBeTruthy();
+    describe('toggleFacet / closeFacet — at most one open', () => {
+      it('opens a facet that was closed', () => {
+        expect(component.openFacet()).toBeNull();
+        component.toggleFacet('type');
+        expect(component.openFacet()).toBe('type');
+      });
 
-      const checkbox = getPanel()!.querySelector('hlm-checkbox') as HTMLElement;
-      checkbox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      fixture.detectChanges();
-      expect(getPanel()).toBeTruthy();
+      it('re-activating the open facet closes it (FTD-R-3.S2)', () => {
+        component.toggleFacet('type');
+        component.toggleFacet('type');
+        expect(component.openFacet()).toBeNull();
+      });
 
-      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      fixture.detectChanges();
-      expect(component.filterPopoverOpen()).toBe(false);
-      expect(getPanel()).toBeNull();
+      it('activating a different facet replaces the open one, leaving exactly one open (FTD-R-3.S1 / FTD-AC-4)', () => {
+        component.toggleFacet('type');
+        component.toggleFacet('funding');
+        expect(component.openFacet()).toBe('funding');
+        expect(component.openFacet()).not.toBe('type');
+      });
+
+      it('closeFacet() is a no-op when nothing is open', () => {
+        expect(() => component.closeFacet()).not.toThrow();
+        expect(component.openFacet()).toBeNull();
+      });
     });
 
-    it('pressing Escape closes the panel', () => {
-      routerMock.url = '/result/results-outlet/results-notifications';
-      fixture.detectChanges();
-      getTriggerButton().click();
-      fixture.detectChanges();
-      expect(getPanel()).toBeTruthy();
+    describe('onFacetStateChanged + the FTD-DD-4 re-open guard', () => {
+      let nowSpy: jest.SpyInstance;
 
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      fixture.detectChanges();
+      afterEach(() => {
+        nowSpy?.mockRestore();
+      });
 
-      expect(component.filterPopoverOpen()).toBe(false);
-      expect(getPanel()).toBeNull();
+      it('an "open" transition is ignored (only "closed" is acted on)', () => {
+        component.toggleFacet('type');
+        component.onFacetStateChanged('type', 'open');
+        expect(component.openFacet()).toBe('type');
+      });
+
+      it('a "closed" transition for the currently open facet clears openFacet', () => {
+        component.toggleFacet('type');
+        component.onFacetStateChanged('type', 'closed');
+        expect(component.openFacet()).toBeNull();
+      });
+
+      it('a stale "closed" transition for an already-replaced facet does not clear the NEW open facet', () => {
+        component.toggleFacet('type');
+        component.toggleFacet('funding');
+        component.onFacetStateChanged('type', 'closed');
+        expect(component.openFacet()).toBe('funding');
+      });
+
+      it('re-toggling the same facet INSIDE the 50 ms guard window is ignored (Disqualifier: explicit performance.now values, not fake timers)', () => {
+        // `toggleFacet('type')`'s FIRST call (opening, no prior close recorded) short-circuits
+        // before reaching `performance.now()` — only the close and the re-toggle check call it.
+        component.toggleFacet('type');
+
+        nowSpy = jest.spyOn(performance, 'now');
+        nowSpy.mockReturnValueOnce(1000); // onFacetStateChanged closes it, records the guard at t=1000
+        component.onFacetStateChanged('type', 'closed');
+
+        nowSpy.mockReturnValueOnce(1030); // 30ms later — still inside the 50ms window
+        component.toggleFacet('type');
+
+        expect(component.openFacet()).toBeNull();
+      });
+
+      it('re-toggling the same facet OUTSIDE the 50 ms guard window reopens it', () => {
+        component.toggleFacet('type');
+
+        nowSpy = jest.spyOn(performance, 'now');
+        nowSpy.mockReturnValueOnce(1000); // onFacetStateChanged closes it, records the guard at t=1000
+        component.onFacetStateChanged('type', 'closed');
+
+        nowSpy.mockReturnValueOnce(1070); // 70ms later — outside the 50ms window
+        component.toggleFacet('type');
+
+        expect(component.openFacet()).toBe('type');
+      });
     });
 
-    it('never renders the Filter popover trigger on the settings route', () => {
+    describe('facetSelectedCount — reads the same service fields activeFilterCount reads', () => {
+      it('counts multi-select facets off their own filter array length', () => {
+        resultsNotificationsServiceMock.centerIdsFilter = [1, 2];
+        expect(component.facetSelectedCount('center')).toBe(2);
+
+        resultsNotificationsServiceMock.typeFilter = ['Contribution request'];
+        expect(component.facetSelectedCount('type')).toBe(1);
+
+        resultsNotificationsServiceMock.fundingFilter = [];
+        expect(component.facetSelectedCount('funding')).toBe(0);
+      });
+
+      it('counts Program as 1 when initiativeIdFilter is set, else 0', () => {
+        resultsNotificationsServiceMock.initiativeIdFilter = null;
+        expect(component.facetSelectedCount('program')).toBe(0);
+
+        resultsNotificationsServiceMock.initiativeIdFilter = '5';
+        expect(component.facetSelectedCount('program')).toBe(1);
+      });
+
+      it('Phase has no count (FTD-R-6)', () => {
+        expect(component.facetSelectedCount('phase')).toBe(0);
+      });
+    });
+
+    describe('selectedPhaseLabel', () => {
+      it('reads the selected phase’s phase_name_status off phaseList', () => {
+        resultsNotificationsServiceMock.phaseList = [
+          { id: 'P25', phase_name_status: 'Reporting 2025' },
+          { id: 'P24', phase_name_status: 'Reporting 2024' }
+        ];
+        resultsNotificationsServiceMock.phaseFilter = 'P25';
+        expect(component.selectedPhaseLabel).toBe('Reporting 2025');
+      });
+
+      it('is empty before any phase resolves', () => {
+        resultsNotificationsServiceMock.phaseList = [];
+        resultsNotificationsServiceMock.phaseFilter = null;
+        expect(component.selectedPhaseLabel).toBe('');
+      });
+    });
+
+    describe('selectPhase — no-op on the same id, applies + reloads on a different one (FTD-R-5.S3 / FTD-AC-9)', () => {
+      it('re-picking the already-selected phase does NOT call onPhaseChange and does not reload (Falsifier)', () => {
+        resultsNotificationsServiceMock.phaseFilter = 'P25';
+        component.toggleFacet('phase');
+
+        component.selectPhase('P25');
+
+        expect(resultsNotificationsServiceMock.onPhaseChange).not.toHaveBeenCalled();
+        expect(resultsNotificationsServiceMock.phaseFilter).toBe('P25');
+      });
+
+      it('picking a different phase sets phaseFilter, calls onPhaseChange and closes the dropdown', () => {
+        resultsNotificationsServiceMock.phaseFilter = 'P24';
+        component.toggleFacet('phase');
+
+        component.selectPhase('P25');
+
+        expect(resultsNotificationsServiceMock.phaseFilter).toBe('P25');
+        expect(resultsNotificationsServiceMock.onPhaseChange).toHaveBeenCalledWith('P25');
+        expect(component.openFacet()).toBeNull();
+      });
+    });
+
+    describe('selectProgram — toggles initiativeIdFilter, always closes (FTD-R-5.S3 / FTD-AC-9)', () => {
+      it('picking a program sets initiativeIdFilter and closes', () => {
+        resultsNotificationsServiceMock.initiativeIdFilter = null;
+        component.toggleFacet('program');
+
+        component.selectProgram('5');
+
+        expect(resultsNotificationsServiceMock.initiativeIdFilter).toBe('5');
+        expect(component.openFacet()).toBeNull();
+      });
+
+      it('picking the already-selected program clears it back to null (toggle)', () => {
+        resultsNotificationsServiceMock.initiativeIdFilter = '5';
+        component.toggleFacet('program');
+
+        component.selectProgram('5');
+
+        expect(resultsNotificationsServiceMock.initiativeIdFilter).toBeNull();
+      });
+
+      it('picking the same program TWICE in a row leaves initiativeIdFilter null, never stuck non-null (Falsifier)', () => {
+        resultsNotificationsServiceMock.initiativeIdFilter = null;
+
+        component.selectProgram('5');
+        expect(resultsNotificationsServiceMock.initiativeIdFilter).toBe('5');
+
+        component.selectProgram('5');
+        expect(resultsNotificationsServiceMock.initiativeIdFilter).toBeNull();
+      });
+    });
+
+    describe('filteredProgramOptions — FTD-R-5.S4 Program search', () => {
+      beforeEach(() => {
+        resultsNotificationsServiceMock.filteredInitiatives = [
+          { initiative_id: '5', full_name: 'Accelerating livestock genetics' },
+          { initiative_id: '6', full_name: 'Climate resilience' }
+        ];
+      });
+
+      it('returns every option when the search query is empty', () => {
+        expect(component.filteredProgramOptions).toHaveLength(2);
+      });
+
+      it('narrows to the options whose full_name matches the query, case-insensitively', () => {
+        component.programSearchQuery.set('climate');
+        expect(component.filteredProgramOptions).toEqual([{ initiative_id: '6', full_name: 'Climate resilience' }]);
+      });
+
+      it('returns an empty list when nothing matches (FTD-R-5.S4 "Nothing matches that search.")', () => {
+        component.programSearchQuery.set('zzz-no-match');
+        expect(component.filteredProgramOptions).toEqual([]);
+      });
+    });
+  });
+
+  // @akili-spec notifications/filter-toolbar-dropdowns (FTD-T-3, design.md §10/§13, tasks.md
+  // FTD-T-3): DOM-level coverage for the per-facet toolbar — trigger order, the retired single
+  // Filter button, settings-route absence, `aria-expanded` wiring, the REAL `BrnPopover`
+  // `stateChanged` output closing a facet, and that each facet's OWN `hlm-popover-content` renders
+  // only that facet's own controls.
+  //
+  // Own TestBed (same pattern as the `DSP-T-6` block above), because this block needs
+  // `HlmPopoverImports` (+ `NgIcon`) actually IMPORTED — the outer block's `NO_ERRORS_SCHEMA` lets
+  // `<hlm-popover>`/`<hlm-popover-content>` render as opaque tags, but `*hlmPopoverPortal`
+  // (`HlmPopoverPortal`, a host directive wrapping `BrnPopoverContent`) is a STRUCTURAL directive —
+  // without it imported, Angular never instantiates the `<ng-template>` it compiles to, so the
+  // popover body never renders at all. (None of the existing facet-option/chip tests above need this:
+  // they call the component's own methods directly and never read popover-content DOM.)
+  //
+  // Disqualifier recorded (tasks.md FTD-T-3): under Jest, `BrnPopoverContent`
+  // (`tests/mocks/spartanBrainMock.ts`) renders its template INLINE and UNCONDITIONALLY, regardless
+  // of `state` — there is no real CDK overlay, so EVERY facet's `hlm-popover-content` is present in
+  // the DOM at once, open or not (confirmed by reading the mock: unlike `BrnSheetContent`'s sibling,
+  // which gates on an `effect()` reading the sheet's own open signal, `BrnPopoverContent`/
+  // `BrnDialogContent` have no such gate). The "only its facet" test below therefore does NOT assert
+  // on open/closed visibility (jsdom cannot prove that at all — real dismissal/positioning is this
+  // task's browser part) — it scopes the query to that facet's own `hlm-popover-content[aria-label=…]`
+  // element, which the DOM genuinely has one-per-facet regardless of state. This is still a real
+  // falsifier: swapping a `@switch` case body (falsifier 2 below) breaks it.
+  describe('FTD-T-3 — toolbar DOM (per-facet popovers, design.md §6.3/§10)', () => {
+    let ftdFixture: any;
+    let ftdComponent: ResultsNotificationsComponent;
+
+    function bilateralRow(overrides: Record<string, unknown> = {}) {
+      return {
+        obj_result: {
+          source_name: 'W3/Bilaterals',
+          obj_result_by_project: [{ obj_clarisa_project: { shortName: 'BIL-1', fullName: 'Bilateral result one' } }],
+          result_center_array: [{ clarisa_center_object: { clarisa_institution: { id: 10, acronym: 'CTR' } } }],
+          ...overrides
+        }
+      };
+    }
+
+    function triggers(): HTMLButtonElement[] {
+      return Array.from((ftdFixture.nativeElement as HTMLElement).querySelectorAll('button[data-facet]'));
+    }
+
+    function triggerFor(key: FilterFacetKey): HTMLButtonElement {
+      const el = triggers().find(b => b.getAttribute('data-facet') === key);
+      expect(el).toBeTruthy();
+      return el!;
+    }
+
+    function popoverContentFor(label: string): HTMLElement {
+      const el = (ftdFixture.nativeElement as HTMLElement).querySelector(`hlm-popover-content[aria-label="${label}"]`);
+      expect(el).toBeTruthy();
+      return el as HTMLElement;
+    }
+
+    function brnPopoverFor(key: FilterFacetKey): BrnPopover {
+      const index = ftdComponent.filterFacets.findIndex(f => f.key === key);
+      const debugEls = ftdFixture.debugElement.queryAll(By.directive(BrnPopover));
+      expect(debugEls.length).toBe(ftdComponent.filterFacets.length);
+      return debugEls[index].injector.get(BrnPopover);
+    }
+
+    beforeEach(async () => {
+      resultsNotificationsServiceMock.receivedData = {
+        receivedContributionsPending: [bilateralRow()],
+        receivedContributionsDone: []
+      };
+      resultsNotificationsServiceMock.sentData = {
+        sentContributionsPending: [bilateralRow()],
+        sentContributionsDone: []
+      };
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        declarations: [ResultsNotificationsComponent],
+        imports: [RouterOutlet, RouterModule, CommonModule, ...HlmPopoverImports, NgIcon],
+        providers: [
+          { provide: ApiService, useValue: apiServiceMock },
+          { provide: ShareRequestModalService, useValue: shareRequestModalServiceMock },
+          { provide: ResultsNotificationsService, useValue: resultsNotificationsServiceMock },
+          { provide: Router, useValue: routerMock },
+          { provide: ActivatedRoute, useValue: activatedRouteMock }
+        ],
+        schemas: [NO_ERRORS_SCHEMA]
+      }).compileComponents();
+
+      ftdFixture = TestBed.createComponent(ResultsNotificationsComponent);
+      ftdComponent = ftdFixture.componentInstance;
+      // NOT calling `detectChanges()` here, same discipline as the outer block's own `beforeEach`
+      // (no initial render there either) — a test that mutates `routerMock.url` must do so BEFORE its
+      // own first (and, per this file's established precedent elsewhere, ideally only) `detectChanges()`.
+    });
+
+    it('renders the seven triggers in the fixed order phase,type,funding,resultType,program,center,bilateral — FALSIFIER: swapping two `filterFacets` entries turns this red', () => {
+      ftdFixture.detectChanges();
+      expect(triggers().map(b => b.getAttribute('data-facet'))).toEqual([
+        'phase',
+        'type',
+        'funding',
+        'resultType',
+        'program',
+        'center',
+        'bilateral'
+      ]);
+    });
+
+    it('renders no "Filter" button anywhere in the toolbar (the retired single popover trigger)', () => {
+      ftdFixture.detectChanges();
+      const anyFilterButton = Array.from((ftdFixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (b: HTMLButtonElement) => b.textContent?.trim() === 'Filter'
+      );
+      expect(anyFilterButton).toBeUndefined();
+    });
+
+    it('renders no [data-facet] trigger at all on the settings route', () => {
       routerMock.url = '/result/results-outlet/results-notifications/settings';
-      fixture.detectChanges();
-      expect(getTriggerButton()).toBeFalsy();
+      ftdFixture.detectChanges();
+      expect(triggers().length).toBe(0);
+    });
+
+    it('aria-expanded toggles true on the clicked trigger only, and clicking it again closes it', () => {
+      ftdFixture.detectChanges();
+      const typeTrigger = triggerFor('type');
+      const fundingTrigger = triggerFor('funding');
+      expect(typeTrigger.getAttribute('aria-expanded')).toBe('false');
+
+      typeTrigger.click();
+      ftdFixture.detectChanges();
+      expect(typeTrigger.getAttribute('aria-expanded')).toBe('true');
+      expect(fundingTrigger.getAttribute('aria-expanded')).toBe('false');
+
+      typeTrigger.click();
+      ftdFixture.detectChanges();
+      expect(typeTrigger.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('the overlay\'s own stateChanged("closed") output closes the facet and flips aria-expanded back, even without a trigger click', () => {
+      ftdFixture.detectChanges();
+      ftdComponent.toggleFacet('type');
+      ftdFixture.detectChanges();
+      expect(ftdComponent.openFacet()).toBe('type');
+
+      brnPopoverFor('type').stateChanged.emit('closed');
+      ftdFixture.detectChanges();
+
+      expect(ftdComponent.openFacet()).toBeNull();
+      expect(triggerFor('type').getAttribute('aria-expanded')).toBe('false');
+    });
+
+    // a11y regression (FTD-T-2 -> FTD-T-3 browser run): spartan's popover default puts role="dialog" on the
+    // CDK overlay container; ours must be neutralised (role="presentation" on hlm-popover) so exactly ONE named dialog
+    // exists per facet (hlm-popover-content). Under Jest the brain mock renders no overlay container, so the
+    // container's real ARIA is only provable in the browser; this asserts the template wiring only.
+    it('each facet has exactly one named dialog: hlm-popover-content carries role=dialog + facet label, and its hlm-popover host neutralises the overlay container role with role=none', () => {
+      ftdFixture.detectChanges();
+      const root = ftdFixture.nativeElement as HTMLElement;
+      const popovers = Array.from(root.querySelectorAll('hlm-popover'));
+      expect(popovers.length).toBeGreaterThan(0);
+      for (const popover of popovers) {
+        expect(popover.getAttribute('role')).toBe('presentation');
+        const contents = popover.querySelectorAll('hlm-popover-content');
+        expect(contents.length).toBe(1);
+        expect(contents[0].getAttribute('role')).toBe('dialog');
+        expect(contents[0].getAttribute('aria-label')).toBeTruthy();
+      }
+      expect(root.querySelectorAll('hlm-popover-content[role="dialog"]').length).toBe(popovers.length);
+      // Wiring proof: the template attribute alone survives a revert of the helm edit, but the BrnPopover
+      // instance only receives `role` if 'role' is forwarded in hlm-popover.ts hostDirectives.inputs.
+      for (const facet of ftdComponent.filterFacets) {
+        expect(brnPopoverFor(facet.key).role).toBe('presentation');
+      }
+    });
+
+    it('every facet popover is anchored to its own trigger button via attachTo (no globally centred overlay) - FALSIFIER: removing [attachTo] turns this red', () => {
+      ftdFixture.detectChanges();
+      const root = ftdFixture.nativeElement as HTMLElement;
+      for (const facet of ftdComponent.filterFacets) {
+        const button = root.querySelector(`button[data-facet="${facet.key}"]`);
+        expect(button).toBeTruthy();
+        expect(brnPopoverFor(facet.key).attachTo).toBe(button);
+      }
+    });
+
+    it('the Center facet\'s own hlm-popover-content renders only Center controls, never the Bilateral project search/checkbox — FALSIFIER: rendering the bilateral body in every popover turns this red', () => {
+      ftdFixture.detectChanges();
+      ftdComponent.toggleFacet('center');
+      ftdFixture.detectChanges();
+
+      const centerContent = popoverContentFor(ftdComponent.copy.filterToolbar.centerLabel);
+      expect(centerContent.querySelector(`input[placeholder="${ftdComponent.copy.filterToolbar.centerSearchPlaceholder}"]`)).toBeTruthy();
+      expect(centerContent.textContent).toContain('CTR');
+      expect(
+        centerContent.querySelector(`input[placeholder="${ftdComponent.copy.filterToolbar.bilateralProjectSearchPlaceholder}"]`)
+      ).toBeNull();
+      expect(centerContent.textContent).not.toContain('BIL-1');
     });
   });
 
@@ -637,6 +1005,125 @@ describe('ResultsNotificationsComponent', () => {
     });
   });
 
+  // @akili-spec notifications/detail-side-panel (DSP-T-6, design.md §2.1/§6.2): the page's docked
+  // panel layout. A mock `NotificationDetailPanelService` (writable signals) is swapped in via
+  // `TestBed.overrideComponent` so `isWide()`/`portal()` are deterministic here — the service's OWN
+  // isWide/BreakpointObserver wiring is covered independently in
+  // `notification-detail-panel.service.spec.ts`.
+  describe('DSP-T-6 — docked panel layout (page side)', () => {
+    let panelIsWide: ReturnType<typeof signal<boolean>>;
+    let panelPortal: ReturnType<typeof signal<unknown>>;
+    let panelLabelledBy: ReturnType<typeof signal<string | null>>;
+    let panelMock: any;
+    let dspFixture: any;
+    let dspComponent: ResultsNotificationsComponent;
+
+    beforeEach(async () => {
+      panelIsWide = signal(false);
+      panelPortal = signal<unknown>(null);
+      panelLabelledBy = signal<string | null>(null);
+      panelMock = {
+        isWide: panelIsWide,
+        portal: panelPortal,
+        labelledBy: panelLabelledBy,
+        activeKey: signal<string | null>(null),
+        open: jest.fn(),
+        close: jest.fn(),
+        closeAll: jest.fn()
+      };
+
+      // The outer `beforeEach` already configured + compiled + created a component instance from
+      // the shared TestBed — `overrideComponent` cannot run after that, so this block gets its own
+      // fresh TestBed, reusing the same service mocks the outer block built.
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        declarations: [ResultsNotificationsComponent],
+        imports: [RouterOutlet, RouterModule, CommonModule],
+        providers: [
+          { provide: ApiService, useValue: apiServiceMock },
+          { provide: ShareRequestModalService, useValue: shareRequestModalServiceMock },
+          { provide: ResultsNotificationsService, useValue: resultsNotificationsServiceMock },
+          { provide: Router, useValue: routerMock },
+          { provide: ActivatedRoute, useValue: activatedRouteMock }
+        ],
+        schemas: [NO_ERRORS_SCHEMA]
+      })
+        .overrideComponent(ResultsNotificationsComponent, {
+          add: { providers: [{ provide: NotificationDetailPanelService, useValue: panelMock }] }
+        })
+        .compileComponents();
+
+      dspFixture = TestBed.createComponent(ResultsNotificationsComponent);
+      dspComponent = dspFixture.componentInstance;
+    });
+
+    it('FALSIFIER: with isWide=false the aside must NOT be in the DOM, even with a non-null portal', () => {
+      panelIsWide.set(false);
+      panelPortal.set({ kind: 'stub-portal' });
+      dspFixture.detectChanges();
+
+      // Broken-code check performed manually (see task report): rendering the aside off
+      // `panel.portal()` alone (dropping the `panel.isWide() &&` guard) makes this assertion fail —
+      // restored before this run.
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
+      expect(aside).toBeNull();
+    });
+
+    it('renders the aside when BOTH isWide=true and a portal are present', () => {
+      panelIsWide.set(true);
+      panelPortal.set({ kind: 'stub-portal' });
+      dspFixture.detectChanges();
+
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
+      expect(aside).not.toBeNull();
+    });
+
+    it('does not render the aside when isWide=true but no portal is open', () => {
+      panelIsWide.set(true);
+      panelPortal.set(null);
+      dspFixture.detectChanges();
+
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
+      expect(aside).toBeNull();
+    });
+
+    it('binds the aside\'s aria-labelledby to panel.labelledBy()', () => {
+      panelIsWide.set(true);
+      panelPortal.set({ kind: 'stub-portal' });
+      panelLabelledBy.set('detail-heading-123');
+      dspFixture.detectChanges();
+
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
+      expect(aside?.getAttribute('aria-labelledby')).toBe('detail-heading-123');
+    });
+
+    it('DSP-T-9 F-1: the aside offsets its sticky top/height from --pr-shell-header-height, not a static 24px/140px', () => {
+      panelIsWide.set(true);
+      panelPortal.set({ kind: 'stub-portal' });
+      dspFixture.detectChanges();
+
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside') as HTMLElement;
+      // FALSIFIER: reverting to the old static `top-[24px] h-[calc(100vh-140px)]` classes (no
+      // `--pr-shell-header-height` reference) fails this assertion — observed red before the fix.
+      // Asserted on the raw `style` attribute string, not `el.style.top/.height`: jsdom's CSSOM does
+      // not parse a `calc(var(...))` value back into those properties (verified empty in this suite).
+      const styleAttr = aside.getAttribute('style') ?? '';
+      expect(styleAttr).toContain('--pr-shell-header-height');
+      expect(styleAttr.replace(/\s+/g, ' ')).toContain('top: calc(var(--pr-shell-header-height, 56px) + 24px)');
+      expect(styleAttr.replace(/\s+/g, ' ')).toContain('height: calc(100vh - var(--pr-shell-header-height, 56px) - 48px)');
+    });
+
+    it('FALSIFIER: switching Received -> Sent must leave portal() non-null false — setActiveSource must call panel.closeAll()', () => {
+      dspFixture.detectChanges();
+
+      dspComponent.setActiveSource('sent');
+
+      // Broken-code check performed manually: removing the `this.panel.closeAll();` line from
+      // `setActiveSource()` makes `panelMock.closeAll` never get called — restored before this run.
+      expect(panelMock.closeAll).toHaveBeenCalled();
+    });
+  });
+
   // NOTIF-T-6 (Pivot re-scope): Announcements + "Mark all as read", ported from the retired
   // `updates.component.html`/`.ts` so real capability doesn't silently disappear with those files.
   describe('Announcements + Mark all as read — ported from the retired updates.component.* (NOTIF-T-6 Pivot re-scope)', () => {
@@ -658,31 +1145,55 @@ describe('ResultsNotificationsComponent', () => {
       expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Announcements');
     });
 
-    it('renders "Mark all as read" only when there is at least one unread Update, and it delegates to the service', () => {
+    const findMarkAll = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
+        b.textContent?.includes('Mark all as read')
+      ) as HTMLButtonElement | undefined;
+
+    // BRS-T-7 (BRS-R-3/R-5): the button follows the bell badge (all phases), not the phase-filtered
+    // `notificationsPending`, and delegates to the shared `markAllBellRead()`.
+    it('shows "Mark all as read" while the bell has a badge even if the filtered view has 0 unread updates, and delegates to markAllBellRead', () => {
+      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+      resultsNotificationsServiceMock.bellCount.set(3);
+      fixture.detectChanges();
+
+      const button = findMarkAll();
+      expect(button).toBeTruthy();
+
+      button.click();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render "Mark all as read" when the bell count is 0, even with unread updates in the filtered view', () => {
       resultsNotificationsServiceMock.updatesData = {
         notificationAnnouncements: [],
         notificationsPending: [{ notification_id: 1 }],
         notificationsViewed: []
       };
+      resultsNotificationsServiceMock.bellCount.set(0);
       fixture.detectChanges();
 
-      const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
-        b.textContent?.includes('Mark all as read')
-      ) as HTMLButtonElement;
-      expect(button).toBeTruthy();
-
-      button.click();
-      expect(resultsNotificationsServiceMock.markAllUpdatesNotificationsAsRead).toHaveBeenCalled();
+      expect(findMarkAll()).toBeFalsy();
     });
 
-    it('does not render "Mark all as read" when there is nothing pending', () => {
-      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+    it('ignores a second click while the first markAllBellRead() is still in flight', async () => {
+      let resolve: () => void;
+      resultsNotificationsServiceMock.markAllBellRead.mockReturnValue(new Promise<void>(r => (resolve = r)));
+      resultsNotificationsServiceMock.bellCount.set(2);
       fixture.detectChanges();
 
-      const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
-        b.textContent?.includes('Mark all as read')
-      );
-      expect(button).toBeFalsy();
+      const p1 = component.onMarkAllRead();
+      const p2 = component.onMarkAllRead();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(1);
+      resolve();
+      await Promise.all([p1, p2]);
+      await component.onMarkAllRead();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(2);
+    });
+
+    it('swallows a markAllBellRead() rejection (both legs failed) without an unhandled error', async () => {
+      resultsNotificationsServiceMock.markAllBellRead.mockRejectedValue(new Error('x'));
+      await expect(component.onMarkAllRead()).resolves.toBeUndefined();
     });
   });
 
@@ -900,6 +1411,232 @@ describe('ResultsNotificationsComponent', () => {
         component.groupedTabList;
 
         expect(transformSpy).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+  // @akili-spec notifications/bell-quick-inbox (BELL-T-5, BELL-DD-4, BELL-R-6/R-7, BELL-AC-4/AC-6):
+  // the inbox reads `request` + `action`, hands `autoAction` to the ONE matching row, and clears both
+  // params once the row consumed them. jsdom proves the wiring only - that the real drawer/dialog/
+  // global modal opens after a real route transition is BELL-T-6 manual pass.
+  describe('BELL-T-5 - deep link request + action', () => {
+    const pendingRow = (id: number) => ({
+      share_result_request_id: id,
+      request_status_id: 1,
+      requested_date: '2026-09-29T09:00:00Z'
+    });
+
+    const rowEls = () => fixture.debugElement.queryAll(By.css('app-notification-item'));
+
+    beforeEach(() => {
+      routerMock.url = '/result/results-outlet/results-notifications';
+      resultsNotificationsServiceMock.receivedData = {
+        receivedContributionsPending: [pendingRow(76), pendingRow(77)],
+        receivedContributionsDone: []
+      };
+    });
+
+    it('?request=77&action=accept with rows [76, 77] -> only row 77 receives autoAction="accept"', () => {
+      activatedRouteMock.snapshot.queryParams = { phase: '30', request: '77', action: 'accept' };
+
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      const els = rowEls();
+      expect(els.length).toBe(2);
+      expect(els.map(el => el.properties['autoAction'] ?? null)).toEqual([null, 'accept']);
+    });
+
+    it('action=decline is passed as "decline" to the matching row', () => {
+      activatedRouteMock.snapshot.queryParams = { phase: '30', request: '76', action: 'decline' };
+
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      expect(rowEls().map(el => el.properties['autoAction'] ?? null)).toEqual(['decline', null]);
+    });
+
+    it('unknown id ?request=999 -> no row receives autoAction and nothing throws', () => {
+      activatedRouteMock.snapshot.queryParams = { phase: '30', request: '999', action: 'accept' };
+
+      expect(() => {
+        component.ngOnInit();
+        fixture.detectChanges();
+      }).not.toThrow();
+
+      expect(rowEls().map(el => el.properties['autoAction'] ?? null)).toEqual([null, null]);
+    });
+
+    it('an invalid action value is ignored (no row receives anything)', () => {
+      activatedRouteMock.snapshot.queryParams = { phase: '30', request: '77', action: 'explode' };
+
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      expect(rowEls().map(el => el.properties['autoAction'] ?? null)).toEqual([null, null]);
+    });
+
+    it('an Updates row sharing the numeric id 77 never receives the request autoAction (id spaces collide)', () => {
+      resultsNotificationsServiceMock.receivedData = { receivedContributionsPending: [pendingRow(76)], receivedContributionsDone: [] };
+      resultsNotificationsServiceMock.updatesData = {
+        notificationAnnouncements: [],
+        notificationsPending: [{ notification_id: 77, read: false, created_date: '2026-09-29T09:00:00Z', obj_notification_type: { name: 'x' } }],
+        notificationsViewed: []
+      };
+      activatedRouteMock.snapshot.queryParams = { phase: '30', request: '77', action: 'accept' };
+
+      component.ngOnInit();
+
+      const updateRow = component.sourceScopedList.find((item: any) => item.origin === 'update');
+      expect(updateRow).toBeDefined();
+      expect(component.autoActionFor(updateRow as any)).toBeNull();
+    });
+
+    it('resets program, search and every facet filter so the row is not hidden, and forces the Received view', () => {
+      resultsNotificationsServiceMock.resetFilters.mockImplementation(() => {
+        resultsNotificationsServiceMock.initiativeIdFilter = null;
+        resultsNotificationsServiceMock.searchFilter = null;
+        resultsNotificationsServiceMock.centerIdsFilter = [];
+        resultsNotificationsServiceMock.bilateralProjectIdsFilter = [];
+        resultsNotificationsServiceMock.typeFilter = [];
+        resultsNotificationsServiceMock.fundingFilter = [];
+        resultsNotificationsServiceMock.resultTypeFilter = [];
+      });
+      resultsNotificationsServiceMock.initiativeIdFilter = 5;
+      resultsNotificationsServiceMock.searchFilter = 'zzz';
+      resultsNotificationsServiceMock.centerIdsFilter = [1];
+      resultsNotificationsServiceMock.typeFilter = ['Contribution request'];
+      component.activeSource.set('sent');
+      component.activeTab.set('info');
+      activatedRouteMock.snapshot.queryParams = { phase: '30', request: '77', action: 'accept', init: '5', search: 'zzz' };
+
+      component.ngOnInit();
+
+      expect(resultsNotificationsServiceMock.phaseFilter).toBe('30');
+      expect(resultsNotificationsServiceMock.initiativeIdFilter).toBeNull();
+      expect(resultsNotificationsServiceMock.searchFilter).toBeNull();
+      expect(resultsNotificationsServiceMock.centerIdsFilter).toEqual([]);
+      expect(resultsNotificationsServiceMock.typeFilter).toEqual([]);
+      expect(component.activeSource()).toBe('received');
+      expect(component.activeTab()).toBe('all');
+    });
+
+    it('without `request`, init/search/phase behave exactly as before and nothing is reset or forced', () => {
+      resultsNotificationsServiceMock.resetFilters.mockClear();
+      component.activeSource.set('sent');
+      activatedRouteMock.snapshot.queryParams = { phase: '30', init: '5', search: 'abc' };
+
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      expect(resultsNotificationsServiceMock.phaseFilter).toBe('30');
+      expect(resultsNotificationsServiceMock.initiativeIdFilter).toBe('5');
+      expect(resultsNotificationsServiceMock.searchFilter).toBe('abc');
+      expect(resultsNotificationsServiceMock.resetFilters).not.toHaveBeenCalled();
+      expect(component.activeSource()).toBe('sent');
+    });
+
+    it('autoActionConsumed -> router.navigate clears request/action with replaceUrl, and no row keeps autoAction', () => {
+      activatedRouteMock.snapshot.queryParams = { phase: '30', request: '77', action: 'accept' };
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      rowEls()[1].triggerEventHandler('autoActionConsumed', undefined);
+      fixture.detectChanges();
+
+      expect(routerMock.navigate).toHaveBeenCalledTimes(1);
+      const [commands, extras] = routerMock.navigate.mock.calls[0];
+      expect(commands).toEqual([]);
+      expect(extras.queryParams).toEqual({ request: null, action: null });
+      expect(extras.queryParamsHandling).toBe('merge');
+      expect(extras.replaceUrl).toBe(true);
+      expect(rowEls().map(el => el.properties['autoAction'] ?? null)).toEqual([null, null]);
+    });
+
+    // BELL-T-6 D-1 (attempt 2): the user is ALREADY on the inbox when the bell hands off, so the params
+    // change on the same route after init. Every test here initializes FIRST, then changes the params.
+    describe('hand-off while the inbox is already open (D-1)', () => {
+      const emitQueryParams = (params: Record<string, string>) => {
+        activatedRouteMock.snapshot.queryParams = params;
+        queryParamMap$.next(convertToParamMap(params));
+        fixture.detectChanges();
+      };
+
+      const initOnPhase36 = () => {
+        activatedRouteMock.snapshot.queryParams = { phase: '36' };
+        queryParamMap$.next(convertToParamMap({ phase: '36' }));
+        // the first detectChanges() runs ngOnInit() exactly once, like the real page
+        fixture.detectChanges();
+        resultsNotificationsServiceMock.resetFilters.mockClear();
+        resultsNotificationsServiceMock.onPhaseChange.mockClear();
+      };
+
+      it('?phase=36 open, then request=77&action=accept arrives -> row 77 gets autoAction, filters reset, Received/All forced', () => {
+        initOnPhase36();
+        component.activeSource.set('sent');
+        component.activeTab.set('info');
+        expect(rowEls().map(el => el.properties['autoAction'] ?? null)).toEqual([null, null]);
+
+        emitQueryParams({ phase: '36', request: '77', action: 'accept' });
+
+        expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalledTimes(1);
+        expect(component.activeSource()).toBe('received');
+        expect(component.activeTab()).toBe('all');
+        expect(rowEls().map(el => el.properties['autoAction'] ?? null)).toEqual([null, 'accept']);
+      });
+
+      it('after the row consumes it, request/action are cleared with replaceUrl, and the clearing emission does not re-arm', () => {
+        initOnPhase36();
+        emitQueryParams({ phase: '36', request: '77', action: 'accept' });
+
+        rowEls()[1].triggerEventHandler('autoActionConsumed', undefined);
+        expect(routerMock.navigate).toHaveBeenCalledTimes(1);
+        const [commands, extras] = routerMock.navigate.mock.calls[0];
+        expect(commands).toEqual([]);
+        expect(extras.queryParams).toEqual({ request: null, action: null });
+        expect(extras.replaceUrl).toBe(true);
+
+        // the router now reports the cleared params: must be ignored (no reset, no new pending action)
+        resultsNotificationsServiceMock.resetFilters.mockClear();
+        emitQueryParams({ phase: '36' });
+
+        expect(resultsNotificationsServiceMock.resetFilters).not.toHaveBeenCalled();
+        expect(component.pendingAutoAction()).toBeNull();
+        expect(rowEls().map(el => el.properties['autoAction'] ?? null)).toEqual([null, null]);
+      });
+
+      it('a different phase in the hand-off loads that phase; the same phase does not reload', () => {
+        initOnPhase36();
+        resultsNotificationsServiceMock.phaseFilter = '36';
+
+        emitQueryParams({ phase: '36', request: '77', action: 'accept' });
+        expect(resultsNotificationsServiceMock.onPhaseChange).not.toHaveBeenCalled();
+
+        emitQueryParams({ phase: '30', request: '76', action: 'decline' });
+        expect(resultsNotificationsServiceMock.phaseFilter).toBe('30');
+        expect(resultsNotificationsServiceMock.onPhaseChange).toHaveBeenCalledTimes(1);
+        expect(resultsNotificationsServiceMock.onPhaseChange).toHaveBeenCalledWith('30');
+        expect(component.pendingAutoAction()).toEqual({ requestId: '76', action: 'decline' });
+      });
+
+      it('an invalid action, or a change without `request`, is ignored (no reset, nothing armed)', () => {
+        initOnPhase36();
+
+        emitQueryParams({ phase: '36', request: '77', action: 'explode' });
+        emitQueryParams({ phase: '36', init: '5', search: 'abc' });
+
+        expect(resultsNotificationsServiceMock.resetFilters).not.toHaveBeenCalled();
+        expect(component.pendingAutoAction()).toBeNull();
+      });
+
+      it('the subscription is torn down with the component (no handler after destroy)', () => {
+        initOnPhase36();
+        fixture.destroy();
+        resultsNotificationsServiceMock.resetFilters.mockClear();
+
+        queryParamMap$.next(convertToParamMap({ phase: '36', request: '77', action: 'accept' }));
+
+        expect(resultsNotificationsServiceMock.resetFilters).not.toHaveBeenCalled();
+        expect(component.pendingAutoAction()).toBeNull();
       });
     });
   });

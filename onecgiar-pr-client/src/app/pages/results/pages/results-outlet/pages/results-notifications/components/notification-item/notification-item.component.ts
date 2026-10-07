@@ -1,10 +1,33 @@
-import { Component, Input, Output, EventEmitter, inject, signal } from '@angular/core';
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-rejection-notice.copy';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  Input,
+  Output,
+  EventEmitter,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  SimpleChanges,
+  TemplateRef,
+  ViewContainerRef,
+  afterNextRender,
+  effect,
+  inject,
+  signal,
+  viewChild
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TemplatePortal } from '@angular/cdk/portal';
+import { formatDate } from '@angular/common';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { ResultLevelService } from '../../../../../result-creator/services/result-level.service';
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { ResultsNotificationsService } from '../../results-notifications.service';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import { NotificationNavigationService } from '../../../../../../../../shared/services/notification-navigation.service';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
@@ -13,14 +36,85 @@ import {
   getResultNotificationTextParts,
   resolveNotificationType,
   isBilateralReviewNotification,
+  isBilateralSubmittedNotification,
+  parseCenterReportedProjectText,
   NotificationType,
+  getRejectionReasonLine,
   type AiJobNotificationParts,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
 import { NOTIFICATION_CENTER_TAGGED_COPY } from '../../../../../../../../internationalization/notification-center-tagged.copy';
 import { NOTIFICATION_PROJECT_TAGGED_COPY } from '../../../../../../../../internationalization/notification-project-tagged.copy';
 import { BILATERAL_DECISION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-decision-notice.copy';
-import type { ContributionRequestDrawerMode, ContributionRequestDrawerViewFields } from '../contribution-request-drawer/contribution-request-drawer.component';
+// DSP-T-3 (notifications/detail-side-panel): this type moved with the body/footer logic it
+// describes, out of the (now shell-only) drawer, into the new content component.
+import type { ContributionRequestDrawerMode } from '../notification-detail-content/notification-detail-content.component';
+// DSP-T-2 (notifications/detail-side-panel): the approval-chain contract, mirrored from the server DTO.
+import type { ApprovalChainDto } from '../../../../../../../../shared/services/api/results-api.service';
+// BELL-T-1 (notifications/bell-quick-inbox, BELL-DD-2): the shared decision helper — `acceptOrReject`
+// and `invalidateRequest()` below delegate the body/eligibility logic to it.
+import { acceptLabelFor, buildDecisionBody, classifyAccept, isDecidable, primaryReviewTarget } from '../../utils/request-decision';
+// @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2/§6.2): the page-scoped
+// coordinator that decides whether THIS row's detail template renders docked (wide) or in the
+// drawer (narrow), and which row "owns" it when only one may be open at a time.
+import { NotificationDetailPanelService } from '../../services/notification-detail-panel.service';
+
+/**
+ * DSP-T-4 (design.md §6.2 "chips"): mirrors `ContributionRequestDrawerChip` structurally (same
+ * precedent as `DrawerHeaderParts`/`ContributionRequestDrawerHeaderParts` below — this file builds
+ * the raw values, the content component only renders them).
+ */
+export interface NotificationDetailChip {
+  text: string;
+  outlined?: boolean;
+  /**
+   * DSP-T-9 Q-2 (design.md §6.3 "Chips row", user-approved 2026-10-05): only the status and funding
+   * chips render as pills; level · type and the date render as plain muted text. `true` for status
+   * and funding only — set at the one place chips are built, below.
+   */
+  pill?: boolean;
+}
+
+/**
+ * DSP-T-4 (design.md §6.2/§6.3 "RESULT card", DD-6/DD-7): mirrors `ContributionRequestDrawerGridField`.
+ */
+export interface NotificationDetailGridField {
+  label: string;
+  value: string;
+  mono?: boolean;
+  loading?: boolean;
+}
+
+/**
+ * DSP-T-4 (design.md §6.2 "the date `activityDate` formatted `dd MMM yyyy`"): a pure formatter —
+ * no DI (Angular's `formatDate` is a plain function, not the `DatePipe` service), since this feeds
+ * a plain string into `chips()`, not a template binding. Returns `null` for anything that doesn't
+ * parse to a valid date, so a malformed/missing `created_date` omits the chip entirely instead of
+ * rendering "Invalid Date".
+ *
+ * Leader addition (attempt 2): replaces a hand-rolled `MONTH_ABBREVIATIONS` table — new English
+ * strings do not belong outside `contribution-request-drawer.copy.ts`, and `formatDate` already
+ * owns this formatting job.
+ */
+function formatActivityDate(raw: unknown): string | null {
+  if (!raw) return null;
+  const date = new Date(raw as string | number | Date);
+  if (Number.isNaN(date.getTime())) return null;
+  return formatDate(date, 'dd MMM yyyy', 'en-US');
+}
+
+/**
+ * DSP-T-2 (design.md §6.2 DD-10): the row's own approval-chain fetch state — `loading` while the
+ * GET is in flight (or has not started), `ok` with the envelope's `response` once it resolves,
+ * `error` on an HTTP failure. T-5 wires this into `notification-detail-content`'s `chain` input;
+ * this component only owns the fetch/state/stale-guard (DSP-R-8 "Loading and failure" state side).
+ */
+export type ApprovalChainState = { status: 'loading' } | { status: 'ok'; data: ApprovalChainDto } | { status: 'error' };
+
+// DSP-T-3 (DD-3 "unique id per row"): a per-instance counter, not derived from the notification key,
+// so the drawer content's `h2[id]` (and the shell's matching `aria-labelledby`) never collides even
+// across unrelated component instances created within the same test run or page lifetime.
+let nextDetailHeadingId = 0;
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
 export interface TocContributionReview {
@@ -75,10 +169,21 @@ export interface DrawerReviewField {
   styleUrls: ['./notification-item.component.scss'],
   standalone: false
 })
-export class NotificationItemComponent {
+export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   @Input() notification: any;
   @Input() isSent: boolean;
   @Output() requestEvent = new EventEmitter<any>();
+
+  /**
+   * @akili-spec notifications/bell-quick-inbox (BELL-T-5, BELL-DD-4): set by the inbox on the ONE row a
+   * bell hand-off targets. Once the row is initialized and this is set, it replays the row's own
+   * handler (`onAcceptContribution()` / `onDeclineClick()`) exactly once, then emits
+   * `autoActionConsumed` so the inbox can clear the URL params.
+   */
+  @Input() autoAction: 'accept' | 'decline' | null = null;
+  @Output() autoActionConsumed = new EventEmitter<void>();
+  private autoActionRan = false;
+  private initialized = false;
   requestingAccept = false;
   requestingReject = false;
 
@@ -129,10 +234,65 @@ export class NotificationItemComponent {
   drawerOpen = signal(false);
   drawerMode = signal<ContributionRequestDrawerMode>('decide');
   drawerFocusAlign = signal(false);
+  /**
+   * DSP-T-3 (DD-3): the id this row's drawer content heading (`h2[id]`) renders, and the value the
+   * shell's `[labelledBy]` must be passed — both wired to this SAME property so the sheet panel
+   * always has an accessible name pointed at an id that actually exists (falsifier: "the sheet
+   * panel has no accessible name").
+   */
+  readonly drawerHeadingId = `crd-heading-${nextDetailHeadingId++}`;
   /** CRD-DD-3: the global ToC hydration is deferred from "open" to "first answer". */
   private tocHydrated = false;
 
+  /**
+   * @akili-spec notifications/detail-side-panel
+   * DSP-T-2 (DSP-R-8 "Loading and failure" state side, DD-10 amended): the row's approval-chain
+   * fetch state. Starts on every `openDrawer()` call (any mode) only — a successful decision no
+   * longer dispatches its own fetch (the pivot: `closeDrawer()` runs in the same tick via
+   * `finalize`, which would always supersede that fetch's token before the response could land, so
+   * it could never be displayed). The panel closes instead, and the next `openDrawer()` fetches
+   * fresh. `retryChain()` is the drawer's Retry action.
+   */
+  approvalChain = signal<ApprovalChainState>({ status: 'loading' });
+  /**
+   * DSP-T-2: incremented on every fetch dispatch AND on close, so a response that lands for a
+   * superseded request — the row reopened (a new fetch wins), or closed in the meantime — is
+   * ignored instead of overwriting `approvalChain` (falsifier: "a response arriving after close
+   * overwrites the state").
+   */
+  private chainRequestToken = 0;
+
   private readonly notificationNavigation = inject(NotificationNavigationService);
+  private readonly resultsNotificationsSE = inject(ResultsNotificationsService);
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-7)
+   * `panel` is read from the template (`[open]="drawerOpen() && !panel.isWide()"`) so it is not
+   * `private` — a private member fails `ng build`'s strict template type-checking. `vcr`/`injector`
+   * are implementation details only this class needs.
+   */
+  readonly panel = inject(NotificationDetailPanelService);
+  private readonly vcr = inject(ViewContainerRef);
+  private readonly injector = inject(Injector);
+
+  /** DSP-T-7 (design.md §2.1 "Create the portal at open time"): this row's own `#detailTpl`. */
+  private readonly detailTemplateRef = viewChild<TemplateRef<unknown>>('detailTpl');
+  /** DSP-T-7 (design.md §6.2 Focus "On close, the row focuses its own host row element"). */
+  private readonly rowInteractiveRef = viewChild<ElementRef<HTMLElement>>('rowInteractive');
+
+  /**
+   * DSP-T-7 (design.md §2.1 "Pick a key from the notification's own id fields"): identifies the
+   * NOTIFICATION, not this component instance — rows are reused under `track $index`/the same
+   * instance can be rebound to a different notification (CRD-P-6, the DD-6 trap). Mirrors the
+   * page's own `trackNotificationKey()` exactly (`results-notifications.component.ts`) so the same
+   * notification always resolves to the same key whether the page or the row computes it — `origin`
+   * disambiguates id spaces that otherwise collide (`share_result_request_id` vs `notification_id`).
+   */
+  get notificationKey(): string {
+    const n = this.notification;
+    const id = n?.share_result_request_id ?? n?.notification_id;
+    return `${n?.origin ?? ''}-${id ?? ''}`;
+  }
 
   constructor(
     public api: ApiService,
@@ -141,7 +301,120 @@ export class NotificationItemComponent {
     private retrieveModalSE: RetrieveModalService,
     private router: Router,
     private bilateralResultsService: BilateralResultsService
-  ) {}
+  ) {
+    // DSP-T-7 (design.md §2.2 step 5, DSP-R-2): another row took over the panel while this one was
+    // still open — discard this row's in-progress state. Never fires for the row that JUST opened
+    // itself: by the time this runs, `panel.open()` has already set `activeKey` to THIS row's own
+    // key (see `openDrawer()`), so the two reads below agree and the condition is false.
+    effect(() => {
+      const activeKey = this.panel.activeKey();
+      if (this.drawerOpen() && activeKey !== this.notificationKey) {
+        this.resetForTakeover();
+      }
+    });
+
+    // DSP-T-7 (design.md §6.2 Focus "docked open -> focus the content heading"): deferred to the
+    // render that follows the portal's own insertion into the aside's `cdkPortalOutlet` (same
+    // one-render deferral `notification-detail-content`'s `focusAlign` effect already relies on).
+    effect(() => {
+      const isActiveAndOpen = this.drawerOpen() && this.panel.activeKey() === this.notificationKey;
+      if (isActiveAndOpen && this.panel.isWide()) {
+        afterNextRender(() => this.focusContentHeading(), { injector: this.injector });
+      }
+    });
+
+    // DSP-T-7 (forward pointer from DSP-T-6, design.md §6.2 "closedByUser$"): a close that did not
+    // go through this row's own ✕/toggle (today: the docked aside's Escape handler). Routed through
+    // `closeDrawer()` so the row still resets state and restores focus to itself, exactly like a ✕
+    // click — only the row that currently owns the panel reacts.
+    this.panel.closedByUser$.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (this.drawerOpen() && this.panel.activeKey() === this.notificationKey) {
+        this.closeDrawer();
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    this.initialized = true;
+    this.runAutoAction();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['autoAction'];
+    if (!change) return;
+    // The inbox clears the input once it consumed a hand-off; that re-arms this instance, so a later
+    // hand-off for the same row (cancel the modal, click the bell again) replays. Re-setting the input
+    // WITHOUT it having been cleared in between stays a single run.
+    if (!change.currentValue) {
+      this.autoActionRan = false;
+      return;
+    }
+    if (this.initialized) this.runAutoAction();
+  }
+
+  /**
+   * BELL-T-5: runs at most once per instance. Only a still-pending row opens anything (a request
+   * decided meanwhile must not pop a dialog); either way the param is reported consumed. The emit is
+   * deferred a microtask so the parent clearing its binding does not land inside this change-detection
+   * pass (NG0100).
+   */
+  private runAutoAction(): void {
+    const action = this.autoAction;
+    if (!action || this.autoActionRan) return;
+    this.autoActionRan = true;
+
+    if (this.isPending) {
+      // BELL-T-7: a link never records a decision. Accept replays only when it opens a step (prompt /
+      // legacy modal); a one-click row would PATCH straight away. Decline only ever opens a dialog.
+      if (action === 'accept') {
+        if (classifyAccept(this.notification) === 'step') this.onAcceptContribution();
+        // BELL-T-9: a ToC-carried contribution opens the row's detail drawer, which renders the carried
+        // mapping (`tocReview`) and whose own Accept (`onDrawerAccept`) is the user's click. Opening
+        // never PATCHes. A primary request only consumes the param (T-7).
+        else if (this.notification?.is_map_to_toc && !this.isPrimaryRequest) this.openDrawer('details');
+      } else if (action === 'decline' && !this.isPrimaryRequest) this.onDeclineClick();
+      // PRA-R-3: a primary request has no Decline, so a `?action=decline` link only consumes the param.
+    }
+
+    queueMicrotask(() => this.autoActionConsumed.emit());
+  }
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-7)
+   * Falsifier "opening B leaves A's drawerMode === 'confirm-decline'": mirrors `closeDrawer()`'s
+   * state reset but never calls `panel.close(key)` (the active key has already moved to the row
+   * that took over — a stale `close()` would be a safe no-op anyway, see the service's own guard)
+   * and never moves focus (this row did not choose to close; only a user-initiated close/toggle
+   * restores focus — see `closeDrawer()`).
+   */
+  private resetForTakeover(): void {
+    this.drawerOpen.set(false);
+    this.drawerMode.set('decide');
+    this.drawerFocusAlign.set(false);
+    this.tocHydrated = false;
+    this.tocInitiative = null;
+    // DSP-T-2/T-7: invalidate any in-flight chain fetch for the row that just lost ownership.
+    this.chainRequestToken++;
+  }
+
+  private focusContentHeading(): void {
+    document.getElementById(this.drawerHeadingId)?.focus({ preventScroll: true });
+  }
+
+  private focusRowInteractive(): void {
+    this.rowInteractiveRef()?.nativeElement?.focus({ preventScroll: true });
+  }
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-7)
+   * Falsifier "destroying A's component while it is active leaves panel.portal() non-null": a row
+   * can be torn down (filtered/tab-switched/paged away, `DSP-P-8`) without ever calling
+   * `closeDrawer()` first — `panel.close()` is a no-op unless THIS row's key is still the active one,
+   * so an already-superseded row's destroy never clears a different, now-active row.
+   */
+  ngOnDestroy(): void {
+    this.panel.close(this.notificationKey);
+  }
 
   get isBilateralResult() {
     return this.notification?.obj_result?.source_name === 'W3/Bilaterals';
@@ -196,10 +469,11 @@ export class NotificationItemComponent {
 
   /**
    * PSR-T-8 (PSR-R-11 "showing the request kind"): single source for the row's own type chip
-   * (`rowTypeChipLabel` below) AND the drawer's `view`-mode `requestKind` metadata field
-   * (`drawerViewFields()`), so the two can never say something different about the same request
-   * (the task brief's own wording). Only meaningful for a `source:'request'` row — an
-   * `isUpdateSource` row's chip/requestKind never reads this getter (see the callers).
+   * (`rowTypeChipLabel` below) AND the detail panel's title (`detailTitle()`, DSP-T-4 — moved from
+   * the retired `drawerViewFields()`'s `requestKind` metadata field), so the two can never say
+   * something different about the same request (the task brief's own wording). Only meaningful for
+   * a `source:'request'` row — an `isUpdateSource` row's chip/title never reads this getter (see
+   * the callers).
    */
   get requestKindLabel(): string {
     const labels = this.copy.notificationItem;
@@ -279,9 +553,10 @@ export class NotificationItemComponent {
    * NOTIF-T-12 (rework attempt 1) removed the row-level status badge that used to consume this
    * getter directly (it didn't match the reference image) — the template no longer renders a
    * `.notification_status_chip` anywhere; `rowStatusLabel` is no longer read from `notification-item.component.html`
-   * at all. It now feeds the drawer's `view`-mode metadata grid instead, via `drawerViewFields()`'s
-   * `status` field (`NOTIF-T-14`, closing the `NOTIF-R-5` gap this removal reopened — see the copy
-   * file's docstring for the same history).
+   * at all. It now feeds the detail panel's chips row instead, via `chips()`'s first entry
+   * (`NOTIF-T-14`, closing the `NOTIF-R-5` gap this removal reopened; moved from the retired
+   * `drawerViewFields()`'s `status` field by `DSP-T-4` — see the copy file's docstring for the same
+   * history).
    *
    * NOTIF-T-5 (rework, attempt 2): a resolved (status 2/3) row never actually reaches this getter
    * from the template — the resolved-row branches (`@case (2)`/`@case (3)`) render the existing
@@ -301,6 +576,13 @@ export class NotificationItemComponent {
     return getResultNotificationTextParts(this.notification);
   }
 
+  /** RRC-T-9 (RRC-R-13): the "Reason" line of a rejection update row; null for every other row. */
+  get rejectionReasonLine(): string | null {
+    return this.isUpdateSource ? getRejectionReasonLine(this.notification) : null;
+  }
+
+  readonly rejectionReasonLabel = BILATERAL_REJECTION_NOTICE_COPY.notificationReasonLabel;
+
   /** A finished AI job has no result behind it: no result link, no drawer, just its sentence. */
   get aiJobParts(): AiJobNotificationParts | null {
     return getAiJobNotificationParts(this.notification);
@@ -316,6 +598,20 @@ export class NotificationItemComponent {
     // getter is only ever read from the Updates-row avatar branch, so a `source:'request'` row
     // resolving (however unlikely) to the same `NotificationType` value can never flip it true.
     return this.isUpdateSource && resolveNotificationType(this.notification) === NotificationType.BILATERAL_RESULT_APPROVED;
+  }
+
+  /**
+   * BPT-T-3 (`bilateral-project-tagged`, design §8.3, BPT-R-5): true for the Center-reported
+   * `RESULT_BILATERAL_PROJECT_TAGGED` shape — an Updates row whose stored `text` matches
+   * `parseCenterReportedProjectText`. Guarded by `isUpdateSource` first (same defensive pattern as
+   * `isApprovedDecisionUpdateRow` above), so a `source:'request'` row can never flip it true. A
+   * W1/W2 enriched/bare row of the same `NotificationType` (no match) keeps its initials avatar.
+   */
+  get isCenterReportedProjectRow(): boolean {
+    if (!this.isUpdateSource) return false;
+    if (resolveNotificationType(this.notification) !== NotificationType.RESULT_BILATERAL_PROJECT_TAGGED) return false;
+    const text = this.notification?.text?.trim();
+    return !!text && !!parseCenterReportedProjectText(text);
   }
 
   /**
@@ -345,35 +641,112 @@ export class NotificationItemComponent {
   }
 
   /**
-   * NOTIF-T-5 (design.md §6.2 field-adapter table): raw per-source fields for the drawer's `view`
-   * metadata grid. Always supplies whatever the row has — the drawer's own `viewMetadataRows`
-   * (NOTIF-T-4, closed scope) already omits `resultType`/`reportingCenter` for `source:'update'`
-   * rows per `NOTIF-P-2`, and omits any field that is empty/absent (`NOTIF-R-5`/`NOTIF-AC-7`).
-   *
-   * NOTIF-T-14: also supplies `status` from the existing `rowStatusLabel` getter, so the drawer's
-   * metadata grid renders the decision/info status `NOTIF-R-5` requires (the row-level badge that
-   * used to satisfy this was removed by `NOTIF-T-12` for not matching the reference image).
+   * DSP-T-4 (design.md §6.2 "title", DD-6): the detail panel's header title — request kind / update
+   * type label, same single source as the row's own type chip (`rowTypeChipLabel`) so the two can
+   * never say something different about the same request/update (same guarantee `requestKindLabel`'s
+   * own docstring already gives for the chip vs the old drawer field). Falls back to the generic
+   * `copy.title` ("Contribution request") when the kind/type can't be resolved — the same text every
+   * row's title showed, statically, before this task.
    */
-  drawerViewFields(): ContributionRequestDrawerViewFields {
-    const n = this.notification;
-    const actor = this.isUpdateSource ? n?.obj_emitter_user : n?.obj_requested_by;
-    const submittedBy = actor ? `${actor?.first_name ?? ''} ${actor?.last_name ?? ''}`.trim() : '';
+  detailTitle(): string {
+    return this.rowTypeChipLabel ?? this.copy.title;
+  }
 
-    return {
-      source: this.isUpdateSource ? 'update' : 'request',
-      // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
-      // badge): reuse the row's own status getter, never recompute it here.
-      status: this.rowStatusLabel,
-      // PSR-T-8 (PSR-R-11 "showing the request kind"): only meaningful for a `source:'request'` row
-      // — `requestKindLabel` reads `isPrimaryRequest`/`isBilateralContributorRequest`, both hard
-      // false for an `isUpdateSource` row, so this is `null` for every Center notice/Updates row.
-      requestKind: this.isUpdateSource ? null : this.requestKindLabel,
-      resultType: n?.obj_result?.obj_result_type?.name ?? null,
-      phase: n?.obj_result?.obj_version?.phase_name ?? null,
-      primaryProgram: n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? null,
-      reportingCenter: n?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym ?? null,
-      submittedBy: submittedBy || null
+  /**
+   * DSP-T-4 (design.md §6.2 "the date `activityDate` formatted `dd MMM yyyy`"): the notification's
+   * own date, for the chips row — `requested_date ?? created_date` (DSP-T-9 F-2, user-approved
+   * 2026-10-05). Request rows carry `requested_date` only (the row's own `.notification_date` line
+   * formats the same field with `appFormatTimeAgo`, a relative string; this is the chips row's
+   * absolute counterpart); update rows carry `created_date`. `null` when neither parses (chip
+   * omitted, never a fabricated/invalid date).
+   */
+  get activityDate(): string | null {
+    return formatActivityDate(this.notification?.requested_date ?? this.notification?.created_date);
+  }
+
+  /**
+   * DSP-T-4 (design.md §6.2 "chips"/§6.3): the header's chips row, in this fixed order — status,
+   * funding (outlined), level · type, date. Status is the only chip that's always present
+   * (`rowStatusLabel` never returns null); the other three are omitted, never a blank chip, exactly
+   * like `fundingWindowBadge`/`resultLevelTypeBadge` already do for the row itself.
+   */
+  chips(): NotificationDetailChip[] {
+    const chips: NotificationDetailChip[] = [{ text: this.rowStatusLabel, pill: true }];
+    if (this.fundingWindowBadge) chips.push({ text: this.fundingWindowBadge, outlined: true, pill: true });
+    if (this.resultLevelTypeBadge) chips.push({ text: this.resultLevelTypeBadge });
+    if (this.activityDate) chips.push({ text: this.activityDate });
+    return chips;
+  }
+
+  /**
+   * DSP-T-4 (design.md §6.2 "Field sources" / §6.3 "RESULT card", DD-6/DD-7): the RESULT card's
+   * 6-field grid, always exactly 6 cells in this fixed order — Reporting center, Result type,
+   * Primary Science Program, Contributing programs, Submitted by, Phase. Supersedes
+   * `drawerViewFields()`'s `view`-mode-only metadata grid: this grid renders for every row/mode now,
+   * and a missing source value shows `copy.dashValue` (muted) instead of omitting the label
+   * (DD-6 supersedes NOTIF-R-5/NOTIF-AC-7 for THIS grid only — status/requestKind, the two fields
+   * that used to satisfy them here, moved to `chips()`/`detailTitle()` instead).
+   *
+   * Primary SP / Contributing programs read the approval chain (`approvalChain()`, DSP-T-2): the
+   * chain's primary step's `official_code` for Primary SP, falling back to the row's own
+   * `obj_result_by_initiatives[0]` while the chain hasn't resolved to `'ok'`; the chain's
+   * non-declined contributor codes, joined ", ", for Contributing programs — with a skeleton
+   * (`loading: true`) on that one cell while the chain is still `'loading'`.
+   *
+   * Reviewer FAIL (attempt 1), fixed here:
+   * - **Result type** now reuses `resultLevelTypeBadge` ("level · type"), the same getter the
+   *   row's own badge renders, instead of `obj_result_type.name` alone — the grid used to drop the
+   *   level half the spec/mockup both show.
+   * - **Every cell is normalized** through `blankToNull()` — an empty or whitespace-only source
+   *   string (acronym, phase name, a contributing code) now falls through to `dash` instead of
+   *   rendering a label next to a blank cell. Only `?? dash` (null/undefined only) used to guard
+   *   this, which a whitespace string slips straight through.
+   */
+  resultGrid(): NotificationDetailGridField[] {
+    const n = this.notification;
+    const dash = this.copy.dashValue;
+    const labels = this.copy.resultGridLabels;
+
+    // Reviewer FAIL issue 2: trims and discards a whitespace-only value — `?? dash` alone only
+    // catches null/undefined, not `''`/`'   '`.
+    const blankToNull = (s?: string | null): string | null => {
+      const trimmed = s?.trim();
+      return trimmed ? trimmed : null;
     };
+
+    const chain = this.approvalChain();
+    const chainData = chain.status === 'ok' ? chain.data : null;
+
+    const reportingCenter = blankToNull(n?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym);
+    const resultType = this.resultLevelTypeBadge;
+    const phase = blankToNull(n?.obj_result?.obj_version?.phase_name);
+
+    // DSP-T-9 Q-1 (user-approved 2026-10-05, design.md §6.2 "Submitted by"): the chain's SUBMISSION
+    // actor (who actually submitted the RESULT), not the request's requester — so the grid and the
+    // APPROVAL CHAIN section never name different people for the same panel (T-9 real data, result
+    // 9674: Santiago Sanchez (requester) vs Nicoleta Trifa (submission actor)). `–` for
+    // `not_submitted` or a chain error; a skeleton (same mechanism as Contributing programs) while
+    // the chain is still loading.
+    const submittedBy = chainData?.submission.state === 'submitted' ? blankToNull(chainData.submission.actor_name) : null;
+
+    const fallbackPrimary = blankToNull(n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code);
+    const primaryStep = chainData?.steps?.find(step => step.role === 'primary');
+    const primaryProgram = blankToNull(primaryStep?.official_code) ?? fallbackPrimary;
+
+    const contributingCodes = (chainData?.steps ?? [])
+      .filter(step => step.role === 'contributor' && step.status !== 'declined')
+      .map(step => blankToNull(step.official_code))
+      .filter((code): code is string => code !== null);
+    const contributingPrograms = contributingCodes.length ? contributingCodes.join(', ') : null;
+
+    return [
+      { label: labels.reportingCenter, value: reportingCenter ?? dash },
+      { label: labels.resultType, value: resultType ?? dash },
+      { label: labels.primaryProgram, value: primaryProgram ?? dash, mono: true },
+      { label: labels.contributingPrograms, value: contributingPrograms ?? dash, mono: true, loading: chain.status === 'loading' },
+      { label: labels.submittedBy, value: submittedBy ?? dash, loading: chain.status === 'loading' },
+      { label: labels.phase, value: phase ?? dash }
+    ];
   }
 
   /**
@@ -449,24 +822,21 @@ export class NotificationItemComponent {
     return name || sentinel || '—';
   }
 
-  private get isIpsrNotification(): boolean {
-    const typeId = this.notification?.obj_result?.obj_result_type?.id;
-    return typeId === 10 || typeId === 11;
-  }
-
+  /**
+   * BELL-T-1 (BELL-DD-2): delegates the non-busy part of this predicate to `isDecidable()`. Only
+   * `requestingAccept`/`requestingReject` stay here — in-flight UI state, not a row/context property
+   * the shared util should own.
+   */
   invalidateRequest() {
-    const currentPhaseId = this.isIpsrNotification
-      ? this.api.dataControlSE.IPSRCurrentPhase?.phaseId
-      : this.api.dataControlSE.reportingCurrentPhase.phaseId;
-
     return (
       this.requestingAccept ||
       this.requestingReject ||
-      this.api.rolesSE.platformIsClosed ||
-      this.isQAed ||
-      (!this.api.rolesSE.isAdmin &&
-        this.notification?.obj_result?.obj_version?.id != currentPhaseId &&
-        this.notification?.obj_result?.status_id != 3)
+      !isDecidable(this.notification, {
+        isAdmin: this.api.rolesSE.isAdmin,
+        platformIsClosed: this.api.rolesSE.platformIsClosed,
+        currentPhaseId: this.api.dataControlSE.reportingCurrentPhase.phaseId,
+        ipsrCurrentPhaseId: this.api.dataControlSE.IPSRCurrentPhase?.phaseId
+      })
     );
   }
 
@@ -512,7 +882,12 @@ export class NotificationItemComponent {
     // no prompt, no mapping step, no `tocInitiative` seed. It is `is_map_to_toc: false` on the
     // server (design.md §3.1), so without this branch it would fall into `acceptsWithoutToc` (today
     // false for it) or, worse, the legacy modal-first flow via `mapAndAccept()`.
-    if (this.notification?.is_map_to_toc || this.isPrimaryRequest) {
+    if (this.isPrimaryRequest) {
+      this.reviewPrimaryResult();
+      return;
+    }
+
+    if (this.notification?.is_map_to_toc) {
       this.acceptOrReject(true);
       return;
     }
@@ -632,16 +1007,92 @@ export class NotificationItemComponent {
       this.seedTocInitiative();
     }
 
+    // BRS-T-7 (BRS-R-3/R-9): opening a received PENDING request's drawer records it as seen
+    // (`isPending` = status 1 AND not Sent). Fire-and-forget: never blocks opening; never rejects.
+    if (this.isPending) void this.resultsNotificationsSE.markRequestSeen(this.notification);
+
     this.drawerOpen.set(true);
+    // DSP-T-2 (DSP-R-8, DD-10): one chain fetch per open, every mode — never gated on `mode`.
+    this.fetchApprovalChain();
+
+    // @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2 step 1, DSP-P-10):
+    // `openDrawer()` -> `panel.open(key, TemplatePortal(detailTpl))`. The portal is created HERE, at
+    // open time — not stored eagerly — because the row's own `#detailTpl`/`ViewContainerRef` only
+    // exist once this component has rendered. `labelledBy` is the content heading id (`drawerHeadingId`,
+    // DSP-T-3) so the docked `<aside>`'s `aria-labelledby` resolves the same way the drawer's own
+    // `labelledBy` input already does.
+    const templateRef = this.detailTemplateRef();
+    if (templateRef) {
+      this.panel.open(this.notificationKey, new TemplatePortal(templateRef, this.vcr), this.drawerHeadingId);
+    }
   }
 
-  /** CRD-R-9: closing records nothing — the request stays pending and an in-progress mapping is discarded. */
+  /**
+   * CRD-R-9: closing records nothing — the request stays pending and an in-progress mapping is
+   * discarded.
+   * @akili-spec notifications/detail-side-panel (DSP-T-7): the single seam every existing close path
+   * (✕/Escape, NOTIF-R-11 toggle, `finalize` after a decision — CRD-R-8) already runs through, so
+   * every one of them now also releases this row's panel slot and restores focus to the row — no
+   * caller above this method changed.
+   *
+   * DSP-T-7 rework attempt 2 (Leader conformance addition): `finalize`'s unconditional
+   * `closeDrawer()` call also runs for a POPUP-path decision (`acceptOrReject`'s own ✕/Decline
+   * popups, `onDrawerDeclineClicked`'s close-before-dialog) where this row's drawer/panel was never
+   * open at all — requirements.md §4 "Out of scope" keeps the row's own popup focus behavior
+   * unchanged (`CRD-DD-10`), and DSP-R-13 only scopes focus-return to closing the PANEL. `wasOpen`
+   * is read BEFORE `drawerOpen` is reset to `false` below, so `focusRowInteractive()` only runs when
+   * this call is actually closing an open panel/drawer — never for a no-op popup-path `closeDrawer()`
+   * where `drawerOpen()` was already `false` on entry.
+   */
   closeDrawer() {
+    const wasOpen = this.drawerOpen();
     this.drawerOpen.set(false);
     this.drawerMode.set('decide');
     this.drawerFocusAlign.set(false);
     this.tocHydrated = false;
     this.tocInitiative = null;
+    // DSP-T-2: supersede any in-flight chain request so a late response cannot overwrite the state
+    // after the row has closed (falsifier: "a response arriving after close overwrites the state").
+    this.chainRequestToken++;
+    // DSP-T-7: release this row's slot (no-op unless this row is still the active one — the service's
+    // own guard).
+    this.panel.close(this.notificationKey);
+    // DSP-T-7 rework attempt 2: only move focus to the row when a panel/drawer was actually open —
+    // never for a popup-path call where nothing was open to close (see the docstring above).
+    if (wasOpen) this.focusRowInteractive();
+  }
+
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-2)
+   * Dispatches the approval-chain GET for `obj_result.id`, tagged with a fresh token so an older,
+   * now-superseded in-flight request can never write into `approvalChain` once this one has started
+   * (DSP-R-8 "Loading and failure"; DD-10 "owned by the row, uncached").
+   */
+  private fetchApprovalChain(): void {
+    const resultId = this.notification?.obj_result?.id;
+    const token = ++this.chainRequestToken;
+    this.approvalChain.set({ status: 'loading' });
+
+    if (resultId === undefined || resultId === null) {
+      this.approvalChain.set({ status: 'error' });
+      return;
+    }
+
+    this.api.resultsSE.GET_requestApprovalChain(resultId).subscribe({
+      next: (resp: any) => {
+        if (token !== this.chainRequestToken) return;
+        this.approvalChain.set({ status: 'ok', data: resp?.response });
+      },
+      error: () => {
+        if (token !== this.chainRequestToken) return;
+        this.approvalChain.set({ status: 'error' });
+      }
+    });
+  }
+
+  /** DSP-T-2 (DSP-R-8 "Loading and failure"): the chain section's Retry action. */
+  retryChain(): void {
+    this.fetchApprovalChain();
   }
 
   /**
@@ -657,6 +1108,35 @@ export class NotificationItemComponent {
     this.closeDrawer();
   }
 
+  /**
+   * @akili-spec notifications/detail-side-panel (DSP-T-7 rework attempt 2)
+   * Reviewer FAIL issue 1: the SHELL's own `closed` output (narrow-mode scrim/Escape/outside-click
+   * dismissal, AND the real `BrnDialog`'s asynchronous post-exit-animation `closed` that a
+   * `[open]=false` binding also triggers) must NOT be treated as a user close when that `[open]=false`
+   * was caused by `isWide` flipping true mid-open (design.md §2.2 step 4, DSP-R-4 "preserve its
+   * in-progress state"/"applies in both directions") — the container swap is not a close.
+   *
+   * Guard: `panel.isWide()` AT THE TIME `closed` ARRIVES. When true, this is read as the container
+   * swap and ignored — the row stays open, the aside takes over the SAME template instance.
+   *
+   * Trade-off (named in the task brief): a genuine narrow-mode Escape/scrim close that races a
+   * resize to wide — the user closes at < 1280px, then the viewport crosses 1280px before the real
+   * sheet's exit-animation `closed` event lands — reads `isWide()` as already `true` by the time
+   * this runs, so it is swallowed as a swap instead of closing. This is the same
+   * `isWide()`-as-proxy trade the task names; closing it fully would need the real close path to
+   * tag ITS OWN `closed` event (e.g. a reason) rather than reading ambient state at arrival time,
+   * which is out of this task's scope (CRD-T-6/T-9 own the real-browser timing pass).
+   *
+   * The content's own ✕ button (`notification-detail-content`'s `(closed)`, L837) is NOT routed
+   * through this guard — it stays wired straight to `onDrawerClosedSignal()`/`closeDrawer()`,
+   * because the ✕ must still close the panel when DOCKED (wide): a single shared guard on both
+   * bindings would make the docked ✕ a no-op (Reviewer FAIL remediation note).
+   */
+  onDrawerShellClosedSignal(): void {
+    if (this.panel.isWide()) return;
+    this.onDrawerClosedSignal();
+  }
+
   // @akili-spec changes/contribution-request-drawer
   /**
    * CRD-R-6: the drawer's single "Accept contribution" decision table (design.md §2.2).
@@ -670,7 +1150,12 @@ export class NotificationItemComponent {
     // PSR-T-8 (carried forward-pointer, PSR-T-9): a primary request's drawer Accept sends the same
     // inert ToC payload as the ToC-carried path — never `acceptOrReject(true, true)`, and never the
     // legacy `mapAndAccept()` fallback at the bottom of this method.
-    if (this.notification?.is_map_to_toc || this.isPrimaryRequest) {
+    if (this.isPrimaryRequest) {
+      this.reviewPrimaryResult();
+      return;
+    }
+
+    if (this.notification?.is_map_to_toc) {
       this.acceptOrReject(true);
       return;
     }
@@ -725,8 +1210,19 @@ export class NotificationItemComponent {
    * would land the user on the requested SP's review queue for a result that MUST NOT appear there
    * (requirements.md L94) — before it has even accepted. A primary request therefore takes the same
    * `resultUrl()`-in-a-new-tab path as a non-bilateral row, exactly like the row's own inline link.
+   *
+   * PRA follow-up: once the primary request's result is Pending Review (status 5) the SP validates
+   * it in the review drawer, so this closes the drawer and navigates in-app to `reviewRequestUrl()`
+   * (`primaryReviewUrl`) instead; the "MUST NOT appear" reasoning above holds only before that.
    */
   onDrawerResult() {
+    const reviewUrl = this.reviewLinkUrl;
+    if (reviewUrl) {
+      this.closeDrawer();
+      void this.router.navigateByUrl(reviewUrl);
+      return;
+    }
+
     if (this.isBilateralResult && !this.isPrimaryRequest) {
       this.closeDrawer();
       this.navigateToResult(this.notification);
@@ -742,12 +1238,61 @@ export class NotificationItemComponent {
   }
 
   /**
+   * Review-drawer URL for a primary request whose result is Pending Review (status 5): the SP
+   * validates it there instead of opening the form. Null for any other row or status, or when the
+   * payload names no SP code.
+   */
+  get primaryReviewUrl(): string | null {
+    if (!this.isPrimaryRequest || primaryReviewTarget(this.notification) !== 'review-drawer') return null;
+    return this.notificationNavigation.reviewRequestUrl(this.notification);
+  }
+
+  /**
+   * Review-drawer URL for an update row of type BILATERAL_RESULT_SUBMITTED ("was submitted for your
+   * review"); null for any other row, or when the payload names no SP code (old behaviour stays).
+   */
+  get submittedReviewUrl(): string | null {
+    if (!this.isUpdateSource || !isBilateralSubmittedNotification(this.notification)) return null;
+    return this.notificationNavigation.reviewRequestUrl(this.notification);
+  }
+
+  /** The review drawer URL for whichever row kind has one (primary Pending Review, or submitted update). */
+  get reviewLinkUrl(): string | null {
+    return this.primaryReviewUrl ?? this.submittedReviewUrl;
+  }
+
+  /** `href` of a row's result link: the review drawer when the row has one, else Result Detail. */
+  primaryResultHref(notification: any): string {
+    return this.reviewLinkUrl ?? this.resultUrl(notification);
+  }
+
+  /** "Click here to validate the bilateral result": in-app to the review drawer, middle-click keeps the href. */
+  onValidateCtaClick(event: MouseEvent): void {
+    event.stopPropagation();
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    const url = this.reviewLinkUrl;
+    if (url) void this.router.navigateByUrl(url);
+  }
+
+  /**
    * Row result link. A W3/Bilaterals result (e.g. a primary program request) opens in its lead
    * center's editor instead of Result Detail, which does not serve bilateral results. The href
    * keeps Result Detail for middle-click / context menu.
+   *
+   * PRA follow-up: for a primary row whose result is Pending Review (status 5) the click goes in-app
+   * to `reviewRequestUrl()` and the href (middle-click / context menu) is that review drawer URL.
    */
   onResultLinkClick(event: MouseEvent): void {
     event.stopPropagation();
+    // The review drawer wins over the decision / center-editor path (primary Pending Review, or a
+    // "submitted for your review" update row); modifier and non-primary clicks keep the href.
+    const reviewUrl = this.reviewLinkUrl;
+    if (reviewUrl && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      void this.router.navigateByUrl(reviewUrl);
+      return;
+    }
     if (!this.isBilateralResult) return;
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
 
@@ -834,10 +1379,10 @@ export class NotificationItemComponent {
    * This is also the row's own Accept button text (`buttonTextConfirm` in the template), single
    * source so the row and drawer can never say a different word for the same action (PSR-R-11).
    */
-  drawerAcceptLabel(): string | null {
-    if (this.isPrimaryRequest) return CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary;
-    if (this.isBilateralContributorRequest) return CONTRIBUTION_REQUEST_DRAWER_COPY.footer.accept;
-    return null;
+  drawerAcceptLabel(): string {
+    // BELL-T-11: delegates to the single-source util shared with the bell card. The former `null` for
+    // "everything else" is now the explicit default text the drawer and the row button both fell back to.
+    return acceptLabelFor(this.notification);
   }
 
   /**
@@ -1151,6 +1696,52 @@ export class NotificationItemComponent {
     return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
   }
 
+  /**
+   * `notifications/primary-review-not-accept` PRA-R-3 / PRA-DD-5: a primary row's single "Review result"
+   * action. It still sends the existing accept PATCH (a legacy ownerless result cannot be reviewed
+   * without an owner), then — on success OR a 409 (the Center already submitted and closed the row) —
+   * opens the review drawer (Pending Review) or tells the SP it will be notified (Editing). Any other
+   * error keeps the generic error toast. Never shows a confirm step or the "already answered" toast.
+   */
+  private reviewPrimaryResult() {
+    if (this.invalidateRequest()) return;
+
+    const body = buildDecisionBody(this.notification, true);
+    const row = this.notification;
+    this.requestingAccept = true;
+
+    const settle = () =>
+      this.notificationNavigation.completePrimaryReview(row, () =>
+        this.api.alertsFe.show({
+          id: 'noti',
+          title: this.copy.notificationItem.primaryNotifyLater,
+          status: 'success'
+        })
+      );
+
+    this.api.resultsSE
+      .PATCH_updateRequest(body, this.isP25Request)
+      .pipe(
+        finalize(() => {
+          this.closeDrawer();
+          this.requestingAccept = false;
+          this.requestingReject = false;
+          this.requestEvent.emit();
+        })
+      )
+      .subscribe({
+        next: () => settle(),
+        error: err => {
+          console.error(err);
+          if (err?.status === 409) {
+            settle();
+            return;
+          }
+          this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+        }
+      });
+  }
+
   acceptOrReject(isAccept: boolean, withTocMapping = false, justification?: string) {
     if (this.invalidateRequest()) {
       return;
@@ -1166,21 +1757,18 @@ export class NotificationItemComponent {
     // P2-3187 AC4: when the contributor chose "Map it", the mapping travels WITH this same PATCH —
     // `mapWorkPackagesToInitiative*` writes the contributor's `result_toc_result` rows on approval,
     // so one request records the decision and the optional mapping together (no second accept).
-    const body: Record<string, unknown> = {
-      result_request: this.notification,
-      result_toc_result:
-        withTocMapping && isAccept ? this.buildTocMappingPayload() : { planned_result: null, result_toc_results: [] },
-      request_status_id: isAccept ? 2 : 3
-    };
-
-    // PDR-T-4 (design.md §8.2): `justification` is added to the body only for a primary decline —
-    // never on accept, and never for a contributor/W1W2 decline (`PDR-R-2`, `requesterCode` getter
-    // untouched). `isPrimaryRequest` gates it, not merely "a justification argument was passed", so
-    // a stray caller can never smuggle the key in for the wrong row kind.
-    const isPrimaryDecline = !isAccept && this.isPrimaryRequest;
-    if (isPrimaryDecline) {
-      body['justification'] = justification;
+    //
+    // BELL-T-1 (BELL-DD-2): `buildDecisionBody()` builds the inert body AND the primary-decline
+    // `justification` key (gated on the row's own kind, not on "a justification argument was
+    // passed" — see its docstring). The ToC-MAPPING override below stays here: it reads
+    // `buildTocMappingPayload()`, which depends on this row's interactively-seeded `tocInitiative`
+    // (component state), not a pure function of `this.notification`.
+    const body = buildDecisionBody(this.notification, isAccept, { justification });
+    if (withTocMapping && isAccept) {
+      body['result_toc_result'] = this.buildTocMappingPayload();
     }
+
+    const isPrimaryDecline = !isAccept && this.isPrimaryRequest;
 
     if (isAccept) this.requestingAccept = true;
     else this.requestingReject = true;

@@ -10,6 +10,7 @@ import { AuthService } from '../../../../shared/services/api/auth.service';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { environment } from '../../../../../environments/environment';
 import { BILATERAL_HEADER_INFO_COPY } from '../../../../internationalization/bilateral-header-info.copy';
+import { BilateralRejectionNoticeComponent } from '../bilateral-rejection-notice/bilateral-rejection-notice.component';
 import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
 import { AiProcessesTriggerComponent } from '../ai-processes-trigger/ai-processes-trigger.component';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
@@ -20,7 +21,7 @@ import { centerLogoSrc } from '../../../result-framework-reporting/pages/result-
 @Component({
   selector: 'app-bilateral-page-header',
   standalone: true,
-  imports: [RouterLink, AiProvenanceNoticeComponent, AiProcessesTriggerComponent, NgIcon, CenterMarkerComponent],
+  imports: [RouterLink, BilateralRejectionNoticeComponent, AiProvenanceNoticeComponent, AiProcessesTriggerComponent, NgIcon, CenterMarkerComponent],
   providers: [provideIcons({ lucideInfo, lucideX })],
   templateUrl: './bilateral-page-header.component.html',
   styleUrl: './bilateral-page-header.component.scss',
@@ -111,6 +112,14 @@ export class BilateralPageHeaderComponent {
   readonly isW3Bilateral = input(false);
   /** `result.status_id`. Only the four the story lists render a badge; anything else is ignored. */
   readonly statusId = input<number | null>(null);
+
+  /**
+   * `RRC-R-14`: result id + status for the rejection notice. Separate from `statusId` on purpose —
+   * `statusId` also switches on this header's own status pill, which the result editor leaves off
+   * (the rail already shows it, BRRA-R-3).
+   */
+  readonly noticeResultId = input<number | string | null>(null);
+  readonly noticeStatusId = input<number | string | null>(null);
 
   /**
    * `APF-R-12` — the "Result detail (read-only)" provenance surface: a static badge next to the

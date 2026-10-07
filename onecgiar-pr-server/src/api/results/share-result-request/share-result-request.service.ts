@@ -7,8 +7,14 @@ import {
   Logger,
   Optional,
 } from '@nestjs/common';
+import { ShareResultRequestSeenRepository } from './repositories/share-result-request-seen.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ShareResultRequestRepository } from './share-result-request.repository';
+import {
+  ApprovalChainInitiativeRoleRow,
+  ApprovalChainRequestRow,
+  composeApprovalChain,
+  ShareResultRequestRepository,
+} from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
@@ -139,6 +145,10 @@ export class ShareResultRequestService {
     @Optional()
     @Inject(forwardRef(() => NotificationService))
     private readonly _notificationService?: NotificationService,
+    // `BRS-T-2`. @Optional() for the same reason as above: other modules re-provide this service
+    // locally (they only call `resultRequest()`) and do not register the seen repository.
+    @Optional()
+    private readonly _shareResultRequestSeenRepository?: ShareResultRequestSeenRepository,
   ) {}
 
   async resultRequest(
@@ -540,12 +550,16 @@ export class ShareResultRequestService {
         cursor,
       });
 
+      const receivedContributionsPending = this.combineAndDistinct(
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+      );
+      // `BRS-T-2` / BRS-DD-2: one per-user lookup for the whole pending set; `done` is untouched.
+      await this.tagPendingWithSeen(user.id, receivedContributionsPending);
+
       return {
         response: {
-          receivedContributionsPending: this.combineAndDistinct(
-            receivedContributionsPendingOwner,
-            receivedContributionsPendingShared,
-          ),
+          receivedContributionsPending,
           receivedContributionsDone,
           doneMeta,
         },
@@ -553,6 +567,105 @@ export class ShareResultRequestService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /** `BRS-T-2`: adds `seen` (this user only) to each pending row, with a single query. */
+  private async tagPendingWithSeen(userId: number, pending: any[]) {
+    if (!pending.length) {
+      return;
+    }
+    const seenIds = await this._shareResultRequestSeenRepository.findSeenIds(
+      userId,
+      pending.map((row) => row.share_result_request_id),
+    );
+    for (const row of pending) {
+      row.seen = seenIds.has(Number(row.share_result_request_id));
+    }
+  }
+
+  /**
+   * `BRS-T-2` / BRS-DD-3: records that the caller has seen one PENDING request. 404 comes from the
+   * pre-check (missing, inactive or already decided), never from the insert: `insertIgnore`
+   * returning 0 (already seen) is a normal result. Never writes `share_result_request` (D4).
+   */
+  async markSeen(user: TokenDto, shareResultRequestId: number) {
+    try {
+      const request = await this._shareResultRequestRepository.findOne({
+        select: { share_result_request_id: true },
+        where: {
+          share_result_request_id: shareResultRequestId,
+          is_active: true,
+          request_status_id: 1,
+        },
+      });
+      if (!request) {
+        return {
+          response: {},
+          message: 'The request was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      await this._shareResultRequestSeenRepository.insertIgnore(user.id, [
+        shareResultRequestId,
+      ]);
+
+      return {
+        response: { seen: true },
+        message: 'Request marked as seen',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(`markSeen failed for user ${user.id}`);
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * `BRS-T-2` / BRS-DD-3: marks every request the bell lists as pending for the caller. The pending
+   * set is resolved server-side with the SAME role + initiatives + `buildWhereReceivedConditions`
+   * as `getReceivedResultRequest`, minus the version filter (all phases, `BRS-R-5`), selecting ids
+   * only (no relations, no enrichment). One bulk `insertIgnore`; `recorded: 0` is not an error.
+   */
+  async markAllSeen(user: TokenDto) {
+    try {
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+      const inits = await this.getUserInitiatives(user);
+      const { pendingOwner, pendingShared } = this.buildWhereReceivedConditions(
+        inits,
+        role,
+      );
+
+      const whereList =
+        pendingOwner === pendingShared
+          ? [pendingOwner]
+          : [pendingOwner, pendingShared];
+      const rowSets = await Promise.all(
+        whereList.map((where) =>
+          this._shareResultRequestRepository.find({
+            select: { share_result_request_id: true },
+            where,
+          }),
+        ),
+      );
+      const ids = Array.from(
+        new Set(
+          rowSets.flat().map((row) => Number(row.share_result_request_id)),
+        ),
+      );
+
+      const recorded =
+        await this._shareResultRequestSeenRepository.insertIgnore(user.id, ids);
+
+      return {
+        response: { recorded },
+        message: 'Requests marked as seen',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(`markAllSeen failed for user ${user.id}`);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
@@ -2155,5 +2268,125 @@ export class ShareResultRequestService {
   ) {
     // Currently same as V1, but can be modified independently
     await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
+  }
+
+  // ============================================
+  // APPROVAL CHAIN (notifications/detail-side-panel — DSP-R-12)
+  // ============================================
+
+  /**
+   * @akili-spec notifications/detail-side-panel
+   * DSP-R-12, design.md §4.1/§7 — 400 on a non-positive-integer id, 404 when the result is missing
+   * or inactive, 403 when the viewer is neither an admin nor involved in the result (no response
+   * body data leaks in that case — just the thrown message). Authorization goes through the real
+   * `$_getMaxRoleByUser` / `role_by_user` lookups (not a stub), same source as
+   * `getUserInitiatives()` above.
+   */
+  async getApprovalChain(resultId: number | string, user: TokenDto) {
+    try {
+      const parsedResultId = this.parseApprovalChainResultId(resultId);
+
+      const resultRow =
+        await this._shareResultRequestRepository.getResultForApprovalChain(
+          parsedResultId,
+        );
+
+      if (!resultRow || !resultRow.is_active) {
+        throw {
+          message: 'The result was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const { submissionRow, initiativeRoleRows, requestRows } =
+        await this._shareResultRequestRepository.getApprovalChainData(
+          parsedResultId,
+        );
+
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+      const viewerInitiatives = await this.getUserInitiatives(user);
+      const viewerInitiativeIds = viewerInitiatives.map((i) => i.initiative_id);
+
+      const isAdmin = role === 1;
+      const isInvolved = this.isViewerInvolvedInApprovalChain(
+        viewerInitiativeIds,
+        initiativeRoleRows,
+        requestRows,
+      );
+
+      if (!isAdmin && !isInvolved) {
+        throw {
+          message: 'You are not authorized to view this approval chain',
+          status: HttpStatus.FORBIDDEN,
+        };
+      }
+
+      const response = composeApprovalChain(
+        parsedResultId,
+        resultRow,
+        submissionRow,
+        initiativeRoleRows,
+        requestRows,
+        viewerInitiativeIds,
+      );
+
+      return {
+        response,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private parseApprovalChainResultId(resultId: number | string): number {
+    if (
+      resultId === undefined ||
+      resultId === null ||
+      !/^[1-9]\d*$/.test(String(resultId))
+    ) {
+      throw {
+        message: 'resultId must be a positive integer',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+    return Number(resultId);
+  }
+
+  private isViewerInvolvedInApprovalChain(
+    viewerInitiativeIds: number[],
+    initiativeRoleRows: ApprovalChainInitiativeRoleRow[],
+    requestRows: ApprovalChainRequestRow[],
+  ): boolean {
+    if (!viewerInitiativeIds.length) {
+      return false;
+    }
+
+    const viewerSet = new Set(viewerInitiativeIds);
+    const involvedIds = new Set<number>();
+
+    for (const row of initiativeRoleRows) {
+      involvedIds.add(row.initiative_id);
+    }
+
+    for (const row of requestRows) {
+      [
+        row.shared_inititiative_id,
+        row.owner_initiative_id,
+        row.requester_initiative_id,
+        row.approving_inititiative_id,
+      ]
+        .filter((id): id is number => id !== null && id !== undefined)
+        .forEach((id) => involvedIds.add(id));
+    }
+
+    for (const id of involvedIds) {
+      if (viewerSet.has(id)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

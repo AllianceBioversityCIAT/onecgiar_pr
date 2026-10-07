@@ -26,6 +26,13 @@ interface TaggedTarget {
   /** Human label the message names — the centre name, or the bilateral project's name. */
   label: string;
   type: NotificationTypeEnum;
+  /**
+   * BPT-R-1/DD-2 — a pre-built, self-describing sentence. When set, `emitFor` stores it verbatim
+   * and skips both the bare-label and the lead-in composition for this target. Only the BCT
+   * project targets set it; every other target (including BCT Center targets) leaves it unset, so
+   * `emitFor`'s existing composition runs byte-identically.
+   */
+  text?: string;
 }
 
 /**
@@ -152,6 +159,14 @@ export class ResultTaggedNotificationService {
    * never both (BCT-R-9, DD-5) — `emitFor`'s existing per-user dedup enforces that from ordering
    * alone.
    *
+   * BPT-R-1/DD-2 — project targets now also carry a pre-built `text`: `"<reporter> has tagged the
+   * bilateral project <code> from your center (<owner>)"`, each part trimmed. `emitFor` stores it
+   * verbatim. `leadIn` is still passed unconditionally (project and Center targets alike), so the
+   * cross-type dedup (BCT-R-9/AC32) and project-before-Center ordering are unaffected — dropping
+   * it for project targets would switch them onto the direct flow's per-type dedup set instead
+   * (design §10, DD-2's rejected alternative). Center targets are untouched: no `text`, same
+   * composed sentence as before.
+   *
    * Never throws (BCT-NFR-1): a failure here must not affect the submit or ingest that already
    * committed the status change.
    */
@@ -215,12 +230,17 @@ export class ResultTaggedNotificationService {
         const ownerCenterLabel =
           centerIndex.byCode.get(centerCode)?.clarisa_institution?.acronym ||
           centerCode;
+        const projectCode =
+          project.shortName ?? project.fullName ?? `project ${project.id}`;
+        // BPT-R-1/DD-1 — a self-describing sentence, built once at emit time (BPT-NFR-1), so the
+        // read path needs no join. Each part trimmed per BPT-R-1; `reportingCenterLabel` keeps its
+        // existing `||` fallback chain (acronym → code → degraded label).
+        const reporterLabel = (reportingCenterLabel || 'A CGIAR Center').trim();
         targets.push({
           centerCode,
-          label: `${
-            project.shortName ?? project.fullName ?? `project ${project.id}`
-          } of your center (${ownerCenterLabel})`,
+          label: `${projectCode} of your center (${ownerCenterLabel})`,
           type: NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+          text: `${reporterLabel} has tagged the bilateral project ${projectCode.trim()} from your center (${ownerCenterLabel.trim()})`,
         });
       }
 
@@ -284,6 +304,10 @@ export class ResultTaggedNotificationService {
    * `programCode` computed only in that branch. When a caller passes one (bilateral submissions,
    * BCT-R-7/R-8), it replaces that whole clause verbatim — the suffix template past it is
    * unchanged either way.
+   *
+   * BPT-R-1/DD-2 — a target's own `text`, when set, is stored verbatim ahead of all of the above:
+   * neither the bare-label branch nor the lead-in composition runs for that target. Only BCT
+   * project targets set it today; every other target is unaffected.
    */
   private async emitFor(
     resultId: number,
@@ -326,6 +350,11 @@ export class ResultTaggedNotificationService {
 
       // AC3, minus the identity the readers prepend themselves.
       //
+      // BPT-R-1/DD-2 — when the target carries its own pre-built `text` (BCT project targets
+      // only), it is stored verbatim: both the bare-label and the lead-in composition below are
+      // skipped entirely for that target. Every other target (absent `text`) is byte-identical to
+      // before this change.
+      //
       // NOTIF-T-12: the composed sentence for RESULT_BILATERAL_PROJECT_TAGGED moved to the client
       // (`getResultNotificationTextParts()`, `notification-type.constants.ts`) — through the
       // default lead-in path (AC1/AC2's direct-tag flow, `leadIn` absent) this now stores just the
@@ -334,14 +363,14 @@ export class ResultTaggedNotificationService {
       // WCT-R-8: RESULT_CENTER_TAGGED joins the same bare-label shape through the same default
       // lead-in path (W1/W2 partners save, IPSR contributors save, SP review of a bilateral
       // result — none of which pass `leadIn`). The BCT-T-4 submission flow always passes an
-      // explicit `leadIn` and keeps the composed sentence unchanged (WCT-R-7), and so does its own
-      // project label shape ("<project> of your center (<code>)") — not touched here.
+      // explicit `leadIn` and keeps the composed sentence unchanged (WCT-R-7) for Center targets.
       const text =
-        !leadIn &&
+        target.text ??
+        (!leadIn &&
         (target.type === NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED ||
           target.type === NotificationTypeEnum.RESULT_CENTER_TAGGED)
           ? target.label
-          : `${resolvedLeadIn} has tagged the ${target.label}. Click to see the result.`;
+          : `${resolvedLeadIn} has tagged the ${target.label}. Click to see the result.`);
 
       await this._notificationService.emitResultNotification(
         NotificationLevelEnum.RESULT,
@@ -402,10 +431,12 @@ export class ResultTaggedNotificationService {
     if (!Array.isArray(initiatives)) return undefined;
 
     // `initiative_role_id = 1` is the owning entity; the same row the notification read paths
-    // filter on.
-    const owner =
-      initiatives.find((i) => Number(i?.initiative_role_id) === 1) ??
-      initiatives[0];
+    // filter on. `RSF-R-3`: only an ACTIVE one, and no fallback to another row — a result with no
+    // active owner takes the caller's "a Science Program" wording instead of naming a contributor
+    // or a retired owner.
+    const owner = initiatives.find(
+      (i) => Number(i?.initiative_role_id) === 1 && i?.is_active,
+    );
     return owner?.obj_initiative?.official_code ?? undefined;
   }
 }

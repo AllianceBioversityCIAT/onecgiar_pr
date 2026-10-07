@@ -1,13 +1,14 @@
 import { A11yModule } from '@angular/cdk/a11y';
-import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { CdkConnectedOverlay, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, Injector, afterNextRender, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideBell,
   lucideBookOpen,
+  lucideCheck,
   lucideChevronDown,
   lucideExternalLink,
   lucideLifeBuoy,
@@ -20,9 +21,14 @@ import {
   lucideSparkles
 } from '@ng-icons/lucide';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
+import { bellHandoffUrl } from '../../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-decision';
+import { BELL_QUICK_INBOX_COPY } from '../../../internationalization/bell-quick-inbox.copy';
 import { environment } from '../../../../environments/environment';
 import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
+import { HlmTabsImports } from '@spartan/tabs';
+import { HlmBadge } from '@spartan/badge';
+import { HlmButton } from '@spartan/button';
 import { PopUpNotificationItemComponent } from '../header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
 import { GlobalSearchPaletteComponent } from '../global-search-palette/global-search-palette.component';
 import { ReportFeedbackDialogComponent } from '../report-feedback-dialog/report-feedback-dialog.component';
@@ -32,6 +38,14 @@ import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 import { FontScale, FONT_SCALE_OPTIONS, FontScaleService } from '../../services/font-scale.service';
 import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
+
+/** BELL-R-3: the popover lists at most this many rows; the rest is a "+N more" link to the inbox. */
+export const BELL_MAX_ROWS = 10;
+/** BELL-T-10: client-side filter of the popover rows. Never a phase filter, never touches the badge. */
+export type BellTab = 'all' | 'decide' | 'updates';
+
+/** BELL-R-1: counts above this render as `99+`. */
+export const BELL_BADGE_CAP = 99;
 
 /**
  * CURRENT shell topbar (PRMS-Shell.dc.html header):
@@ -50,6 +64,9 @@ import { ResultFrameworkReportingHomeService } from '../../../pages/result-frame
     OverlayModule,
     A11yModule,
     NgIcon,
+    ...HlmTabsImports,
+    HlmBadge,
+    HlmButton,
     PopUpNotificationItemComponent,
     GlobalSearchPaletteComponent,
     ReportFeedbackDialogComponent
@@ -58,6 +75,7 @@ import { ResultFrameworkReportingHomeService } from '../../../pages/result-frame
     provideIcons({
       lucideSearch,
       lucideBell,
+      lucideCheck,
       lucideLifeBuoy,
       lucideMessageCircle,
       lucideMegaphone,
@@ -129,13 +147,31 @@ export class ShellTopbarComponent {
   /** Shown on the trigger. Mac reports `macOS`/`MacIntel`; everything else gets Ctrl. */
   readonly shortcutHint = /mac/i.test(navigator?.platform ?? navigator?.userAgent ?? '') ? '⌘K' : 'Ctrl K';
   notificationsOpen = signal(false);
+  /**
+   * quick/bell-popover-hidden: the bell popover is switched off — the button goes straight to the
+   * notifications inbox. The popover (template, tabs, inline decisions) is kept intact so a redesigned
+   * version can reuse it: set this to `true` to bring it back.
+   */
+  bellPopoverEnabled = false;
 
   readonly userMenuPositions: ConnectedPosition[] = [
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
   ];
+  /**
+   * BELL-T-8: end-aligned under the bell (unchanged on desktop), with a start-aligned fallback for
+   * viewports too narrow to hold it. Together with `notificationsViewportMargin` and `push` in the
+   * template, the pane never leaves the viewport.
+   */
   readonly notificationsPositions: ConnectedPosition[] = [
-    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
+    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 },
+    { originX: 'start', overlayX: 'start', originY: 'bottom', overlayY: 'top', offsetY: 8 }
   ];
+  /** Minimum gap (px) between the bell popover and every viewport edge. */
+  readonly notificationsViewportMargin = 16;
+  /** Space left below the bell (px); caps the panel so header and footer stay on screen. */
+  readonly notificationsMaxHeight = signal<number | null>(null);
+  /** Panel width in its own (zoomed) CSS px: min(360, viewport - 2 margins) under the app zoom. */
+  readonly notificationsWidth = signal<number | null>(null);
   /** Support hangs from the LEFT edge of its trigger, per the reference (P2-3683). */
   readonly supportMenuPositions: ConnectedPosition[] = [
     { originX: 'start', overlayX: 'start', originY: 'bottom', overlayY: 'top', offsetY: 8 }
@@ -161,13 +197,181 @@ export class ShellTopbarComponent {
     this.openReportFeedback();
   }
 
-  get unreadNotifications() {
-    return this.resultsNotificationsSE.updatesPopUpData ?? [];
+  readonly bellCopy = BELL_QUICK_INBOX_COPY.popover;
+  private readonly injector = inject(Injector);
+  private readonly notifPanel = viewChild<ElementRef<HTMLElement>>('notifPanel');
+  private readonly bellOverlay = viewChild<CdkConnectedOverlay>('bellOverlay');
+  private readonly notifTriggerEl = viewChild('notifTrigger', { read: ElementRef<HTMLElement> });
+  /** Index of the popover row that last held focus, so focus can land on its successor (NFR focus). */
+  private lastFocusedRow = 0;
+
+  /** BELL-T-4: everything below reads the bell's own phase-agnostic snapshot (BELL-T-2). */
+  readonly bellCount = computed(() => this.resultsNotificationsSE.bellCount());
+  /** BELL-T-10: the active tab. The cap (R-3) and "+N more" below count against it. */
+  readonly bellTab = signal<BellTab>('all');
+  /** BRS-R-6: the Decide tab counts every pending request (fresh or seen), so it ignores the badge. */
+  readonly bellDecisionCount = computed(() => this.resultsNotificationsSE.bellPendingRequestCount());
+  /** BRS-R-6: the Updates tab counts unread updates (the read ones listed under "Earlier" do not count). */
+  readonly bellUpdatesCount = computed(() => this.resultsNotificationsSE.bellUpdates().length);
+  /** BRS-R-6: the All tab counts the rows it lists. */
+  readonly bellAllCount = computed(() => this.resultsNotificationsSE.bellItems().length);
+  readonly bellTabItems = computed(() => {
+    const items = this.resultsNotificationsSE.bellItems();
+    const tab = this.bellTab();
+    if (tab === 'decide') return items.filter(row => row?.kind === 'decision');
+    if (tab === 'updates') return items.filter(row => row?.kind === 'update');
+    return items;
+  });
+  readonly bellVisibleItems = computed(() => this.bellTabItems().slice(0, BELL_MAX_ROWS));
+  /** BRS-R-8: index (within the rendered rows) of the first non-fresh row, where "Earlier" goes; -1 = none. */
+  readonly bellEarlierIndex = computed(() => {
+    const index = this.bellVisibleItems().findIndex(row => row?.fresh === false);
+    return index > 0 ? index : -1;
+  });
+  readonly bellOverflow = computed(() => Math.max(0, this.bellTabItems().length - BELL_MAX_ROWS));
+  /** BELL-T-10: in-flight "Mark as read" (blocks a double click). */
+  readonly markingRead = signal(false);
+  readonly bellError = computed(() => this.resultsNotificationsSE.bellError());
+  readonly bellButtonLabel = computed(() => this.bellCopy.buttonLabel(this.bellCount()));
+  /**
+   * Which body the popover shows. `refreshBell()` resets `bellError` at the start of every call, so
+   * during a retry the error line clears and `loading` takes over (only while there is nothing to
+   * show). BELL-R-14: the error never hides rows we already have — see `bellError()` in the
+   * template, which renders the line above the list in that case.
+   */
+  readonly bellState = computed<'loading' | 'error' | 'empty' | 'list'>(() => {
+    // BRS-R-8: read/seen rows keep the list on screen even when the badge is 0.
+    if (this.bellCount() > 0 || this.resultsNotificationsSE.bellItems().length > 0) return 'list';
+    if (this.resultsNotificationsSE.bellError()) return 'error';
+    if (this.resultsNotificationsSE.bellLoading()) return 'loading';
+    return 'empty';
+  });
+
+  constructor() {
+    // After an inline decision the row leaves the list; the focused button goes with it. Keep
+    // keyboard users inside the popover instead of dropping them on <body>.
+    effect(() => {
+      this.resultsNotificationsSE.bellItems();
+      untracked(() => {
+        if (!this.notificationsOpen()) return;
+        afterNextRender(() => this.restoreFocusIfLost(), { injector: this.injector });
+      });
+    });
   }
 
   notificationBadgeLength(): string {
-    const n = this.unreadNotifications.length;
-    return n > 0 ? String(n) : '';
+    const n = this.bellCount();
+    if (n <= 0) return '';
+    return n > BELL_BADGE_CAP ? `${BELL_BADGE_CAP}+` : String(n);
+  }
+
+  /** BELL-R-4: refresh on every open, never awaited — the cached rows render meanwhile. */
+  /** Bell click: the inbox while the popover is hidden (`bellPopoverEnabled`), else the popover. */
+  onNotificationsClick(): void {
+    if (this.bellPopoverEnabled) this.toggleNotifications();
+    else this.goToNotifications();
+  }
+
+  toggleNotifications(): void {
+    const opening = !this.notificationsOpen();
+    this.notificationsOpen.set(opening);
+    if (opening) {
+      this.updateNotificationsBounds();
+      // The panel exists after this render: re-measure with its own zoom, then let CDK re-place it.
+      afterNextRender(
+        () => {
+          this.updateNotificationsBounds();
+          this.bellOverlay()?.overlayRef?.updatePosition();
+        },
+        { injector: this.injector }
+      );
+      this.resultsNotificationsSE.refreshBell();
+      this.resultsNotificationsSE.loadBellReadUpdates();
+    }
+  }
+
+  /**
+   * BELL-T-8: pure sizing maths. `zoom` is the effective CSS zoom of the panel (the app runs
+   * `html { zoom: 1.15 }` at the larger text sizes): `vw`/`innerWidth`/trigger rects are device px
+   * while the panel's `width`/`max-height` are zoomed CSS px, so every device-px budget is divided
+   * by `zoom` to land in the panel's own units. Width is capped at `maxWidth` (the desktop width);
+   * height gets what is left below the bell (+8px offset) minus the bottom margin, never < 120.
+   */
+  static notificationsBounds(
+    viewport: { width: number; height: number },
+    triggerBottom: number,
+    zoom: number,
+    margin = 16,
+    maxWidth = 360
+  ): { width: number; maxHeight: number } {
+    const z = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
+    return {
+      width: Math.max(Math.min(maxWidth, (viewport.width - 2 * margin) / z), 0),
+      maxHeight: Math.max((viewport.height - triggerBottom - 8 - margin) / z, 120)
+    };
+  }
+
+  /** Effective zoom of an element: rendered (device) width over its own CSS width. 1 without layout. */
+  private measureZoom(el: HTMLElement | undefined | null): number {
+    const css = el?.offsetWidth ?? 0;
+    const rendered = el?.getBoundingClientRect?.().width ?? 0;
+    return css > 0 && rendered > 0 ? rendered / css : 1;
+  }
+
+  /** Recompute the bell panel bounds; the panel's own zoom wins, the bell button's seeds the first pass. */
+  @HostListener('window:resize')
+  updateNotificationsBounds(): void {
+    const trigger = this.notifTriggerEl()?.nativeElement;
+    const bottom = trigger?.getBoundingClientRect?.().bottom;
+    if (typeof bottom !== 'number') return;
+    const zoom = this.measureZoom(this.notifPanel()?.nativeElement ?? trigger);
+    const bounds = ShellTopbarComponent.notificationsBounds(
+      { width: window.innerWidth, height: window.innerHeight },
+      bottom,
+      zoom,
+      this.notificationsViewportMargin
+    );
+    this.notificationsWidth.set(bounds.width);
+    this.notificationsMaxHeight.set(bounds.maxHeight);
+  }
+
+  rememberFocusedRow(event: Event): void {
+    const row = (event.target as HTMLElement | null)?.closest?.('[data-bell-row]');
+    const index = Number(row?.getAttribute('data-bell-row'));
+    if (Number.isFinite(index)) this.lastFocusedRow = index;
+  }
+
+  private restoreFocusIfLost(): void {
+    const panel = this.notifPanel()?.nativeElement;
+    const active = document.activeElement;
+    const focusIsLost = !active || active === document.body;
+    if (!this.notificationsOpen() || !panel || !focusIsLost) return;
+    const rows = panel.querySelectorAll<HTMLElement>('[data-bell-row]');
+    const next = rows[Math.min(this.lastFocusedRow, rows.length - 1)];
+    (next?.querySelector<HTMLElement>('button:not([disabled]), a[href]') ?? panel).focus();
+  }
+
+  setBellTab(tab: BellTab): void {
+    this.bellTab.set(tab);
+  }
+
+  /** BELL-T-10: marks every unread update read (all phases); decisions are untouched. */
+  async markAllRead(): Promise<void> {
+    if (this.markingRead()) return;
+    this.markingRead.set(true);
+    try {
+      await this.resultsNotificationsSE.markAllBellRead();
+    } catch {
+      // The service already logged it; rows stay as they were and the control is re-enabled below.
+    } finally {
+      this.markingRead.set(false);
+    }
+  }
+
+  /** BELL-R-6 / R-7: a row that needs the inbox's richer step hands off; nothing is decided here. */
+  onBellHandoff(event: { row: any; action: 'accept' | 'decline' }): void {
+    this.notificationsOpen.set(false);
+    void this.router.navigateByUrl(bellHandoffUrl(event.row, event.action));
   }
 
   getUserInitials(): string {
@@ -270,12 +474,6 @@ export class ShellTopbarComponent {
    */
   goToNotifications(): void {
     void this.router.navigate(['/result/results-outlet/results-notifications']);
-  }
-
-  handleClosePopUp(): void {
-    if (this.unreadNotifications.length === 0) return;
-    this.resultsNotificationsSE.updatesPopUpData = [];
-    this.resultsNotificationsSE.handlePopUpNotificationLastViewed();
   }
 
   isInNotificationsRoute(): boolean {

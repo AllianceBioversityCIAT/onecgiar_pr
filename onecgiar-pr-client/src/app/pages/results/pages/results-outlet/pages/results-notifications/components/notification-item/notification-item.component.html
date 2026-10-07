@@ -8,6 +8,7 @@
      Updates row). Decided/Sent/Updates rows render through the very same `.notification` wrapper
      below, so the bindings are unconditional now instead of gated on `isPending`. -->
 <div
+  #rowInteractive
   class="notification notification_interactive"
   role="button"
   tabindex="0"
@@ -21,13 +22,18 @@
          labels invented, NOTIF-DD-3) instead of the Requests-tab `@switch` below. -->
     <div class="notification_content">
       @let aiJob = aiJobParts;
-      <div class="notification_avatar">
+      <div class="notification_avatar" [ngClass]="{ notification_avatar_project_tagged: isCenterReportedProjectRow }">
         @if (aiJob) {
           <span class="material-icons-round" style="font-size: 16px" aria-hidden="true">auto_awesome</span>
         } @else if (isApprovedDecisionUpdateRow) {
           <!-- SACN-T-4 (design §8.3, SACN-R-6): Approved bilateral review row — check icon instead
                of initials. Rejected rows fall through to the initials branch, unchanged. -->
           <i class="pi pi-check-circle" aria-hidden="true"></i>
+        } @else if (isCenterReportedProjectRow) {
+          <!-- BPT-T-3 (design §8.3, BPT-R-5): Center-reported bilateral project tagged row — amber
+               rounded-square briefcase instead of initials. A W1/W2 row of the same type (no match)
+               falls through to the initials branch, unchanged. -->
+          <i class="pi pi-briefcase" aria-hidden="true"></i>
         } @else {
         <span class="notification_avatar_initials">{{
           ((notification?.obj_emitter_user?.first_name?.charAt(0) ?? '') + (notification?.obj_emitter_user?.last_name?.charAt(0) ?? ''))
@@ -63,7 +69,7 @@
           }
 
           <a
-            [href]="resultUrl(notification)"
+            [href]="primaryResultHref(notification)"
             target="_blank"
             rel="noopener noreferrer"
             class="font-mono"
@@ -75,8 +81,24 @@
           @if (parts.suffix) {
             <b> {{ parts.suffix }} </b>
           }
+          @if (submittedReviewUrl; as reviewUrl) {
+            <a
+              [href]="reviewUrl"
+              class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+              data-testid="validate-bilateral-cta"
+              (click)="onValidateCtaClick($event)"
+              >{{ copy.notificationItem.validateBilateralCta }}</a
+            >
+          }
           }
         </p>
+
+        <!-- RRC-T-9 (RRC-R-13): reason of a rejection; null for every other type and legacy rows. -->
+        @if (rejectionReasonLine) {
+          <p class="m-0 mt-1 line-clamp-2 break-words text-[12px] leading-[1.45] text-[var(--pr-text-secondary)]" data-testid="notification-rejection-reason">
+            <span class="font-semibold">{{ rejectionReasonLabel }}</span> {{ rejectionReasonLine }}
+          </p>
+        }
 
         <!-- NOTIF-T-15: line 2 — badges + timestamp, stacked BELOW the message (previously siblings
              of `.notification_content_body` at the `.notification_content` row level, laid out
@@ -153,14 +175,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -168,6 +191,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -261,7 +293,7 @@
                button text now matches the drawer's `acceptLabel` exactly, per kind — single source
                (`drawerAcceptLabel()`), falling back to the pre-existing "Accept contribution" for
                everything else (W1/W2 unchanged, `PSR-DD-10`). -->
-          @let buttonTextConfirm = drawerAcceptLabel() ?? 'Accept contribution';
+          @let buttonTextConfirm = drawerAcceptLabel();
 
           <div class="notification_content_actions_buttons">
             <app-pr-button
@@ -279,6 +311,7 @@
               [style]="{ whiteSpace: 'nowrap' }"
               tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
+            @if (!isPrimaryRequest) {
             <app-pr-button
               data-testid="decline-contribution-btn"
               class="notification_decline_btn"
@@ -289,6 +322,7 @@
               [verticalMargin]="0"
               [style]="{ whiteSpace: 'nowrap' }"
               [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+            }
           </div>
         }
       </div>
@@ -343,14 +377,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -358,6 +393,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -487,14 +531,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -502,6 +547,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -797,86 +851,109 @@
   </div>
 </app-pr-dialog>
 
-<!-- @akili-spec changes/contribution-request-drawer
-     CRD-R-1..R-11: replaces the removed reject-confirm / "Map to your Theory of Change?" / mapping
-     popup dialogs and the inline toc_review block. Mounted unconditionally (cheap while closed —
-     design.md §8); `notification-item` owns every input/output, the drawer itself is presentational. -->
-<app-contribution-request-drawer
-  [open]="drawerOpen()"
-  [mode]="drawerMode()"
-  [headerParts]="drawerHeader()"
-  [resultCode]="notification?.obj_result?.result_code"
-  [resultTitle]="notification?.obj_result?.title"
-  [reviewRows]="drawerReviewRowsForMode()"
-  [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
-  [declineDisabled]="requestingAccept || requestingReject"
-  [acceptBusy]="requestingAccept"
-  [declineBusy]="requestingReject"
-  [blockedReason]="drawerBlockedReason()"
-  [acceptHelper]="drawerAcceptHelper()"
-  [acceptLabel]="drawerAcceptLabel()"
-  [showAlignSlot]="!isPrimaryRequest"
-  [focusAlign]="drawerFocusAlign()"
-  [viewFields]="drawerViewFields()"
-  (closed)="onDrawerClosedSignal()"
-  (resultActivated)="onDrawerResult()"
-  (acceptClicked)="onDrawerAccept()"
-  (declineClicked)="onDrawerDeclineClicked()"
-  (declineConfirmed)="acceptOrReject(false)"
-  (declineCancelled)="drawerMode.set('decide')">
-  <!-- NOTIF-T-5 item 1: `[crdAlign]` is the Align/ToC-mapping block (CRD-DD-3) — per design.md
-       §6.2's `view`-mode table ("no footer — result card + metadata grid only"), it must never
-       project in `view` mode, only `decide`/`confirm-decline` (CRD-DD-10, unchanged). `tocInitiative`
-       is already only ever seeded for `mode==='decide'` (see `openDrawer()`), so this condition is
-       defense in depth, not the only guard. -->
-  @if (isBilateralResult && tocInitiative && (drawerMode() === 'decide' || drawerMode() === 'confirm-decline')) {
-    <!-- CRD-R-5: today's mapping controls, moved inline (bilateral only). CRD-P-5: relative + a
-         z-index so the ToC widget's dropdowns are not clipped by the sheet body's own scroll. -->
-    <!-- PSR-T-8: `data-testid="align-slot"` lets a rendered-DOM assertion confirm the slot never
-         projects for a primary request (belt-and-suspenders with `showAlignSlot`/the guards above). -->
-    <div crdAlign data-testid="align-slot" style="position: relative; z-index: 1" class="flex flex-col gap-3">
-      <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.align }}</h3>
-      <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.align.hint }}</p>
-
-      <app-pr-yes-or-not
-        label="Does this result align with the Program's planned TOC indicators?"
-        [required]="false"
-        [editable]="true"
-        [(ngModel)]="tocInitiative.planned_result"
-        (selectOptionEvent)="onTocPlannedResultChange()">
-      </app-pr-yes-or-not>
-
-      @if (tocInitiative.planned_result !== null && tocMappingConsumed()) {
-        <app-cp-multiple-wps
+<!-- @akili-spec notifications/detail-side-panel (DSP-T-3)
+     CRD-R-1..R-11, unchanged: replaces the removed reject-confirm / "Map to your Theory of Change?"
+     / mapping popup dialogs and the inline toc_review block. Mounted unconditionally (cheap while
+     closed — design.md §8); `notification-item` owns every input/output.
+     The drawer is now a thin shell (DD-3): the body/footer live in `app-notification-detail-content`,
+     wrapped here in `#detailTpl` and rendered inside the shell via `ngTemplateOutlet` — the same
+     template instance the (future) wide-screen `<aside>` portal will reuse without touching this
+     markup again. -->
+<ng-template #detailTpl>
+  <!-- DSP-T-5 rework attempt 2: `@let` narrows `chainState.status` across the ternary below; a second `approvalChain()` call would not narrow under strictTemplates (see notification-item CLAUDE.md). -->
+  @let chainState = approvalChain();
+  <app-notification-detail-content
+    [headingId]="drawerHeadingId"
+    [mode]="drawerMode()"
+    [title]="detailTitle()"
+    [chips]="chips()"
+    [headerParts]="drawerHeader()"
+    [resultCode]="notification?.obj_result?.result_code"
+    [resultTitle]="notification?.obj_result?.title"
+    [resultGrid]="resultGrid()"
+    [chain]="chainState.status === 'ok' ? { state: 'ok', data: chainState.data } : { state: chainState.status }"
+    [reviewRows]="drawerReviewRowsForMode()"
+    [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
+    [showDecline]="!isPrimaryRequest"
+    [declineDisabled]="requestingAccept || requestingReject"
+    [acceptBusy]="requestingAccept"
+    [declineBusy]="requestingReject"
+    [blockedReason]="drawerBlockedReason()"
+    [acceptHelper]="drawerAcceptHelper()"
+    [acceptLabel]="drawerAcceptLabel()"
+    [showAlignSlot]="!isPrimaryRequest"
+    [focusAlign]="drawerFocusAlign()"
+    (closed)="onDrawerClosedSignal()"
+    (resultActivated)="onDrawerResult()"
+    (acceptClicked)="onDrawerAccept()"
+    (declineClicked)="onDrawerDeclineClicked()"
+    (declineConfirmed)="acceptOrReject(false)"
+    (declineCancelled)="drawerMode.set('decide')"
+    (retryChain)="retryChain()">
+    <!-- NOTIF-T-5 item 1: `[crdAlign]` is the Align/ToC-mapping block (CRD-DD-3) — per design.md
+         §6.2's `view`-mode table ("no footer — result card + metadata grid only"), it must never
+         project in `view` mode, only `decide`/`confirm-decline` (CRD-DD-10, unchanged). `tocInitiative`
+         is already only ever seeded for `mode==='decide'` (see `openDrawer()`), so this condition is
+         defense in depth, not the only guard. -->
+    @if (isBilateralResult && tocInitiative && (drawerMode() === 'decide' || drawerMode() === 'confirm-decline')) {
+      <!-- CRD-R-5: today's mapping controls, moved inline (bilateral only). CRD-P-5: relative + a
+           z-index so the ToC widget's dropdowns are not clipped by the sheet body's own scroll. -->
+      <!-- PSR-T-8: `data-testid="align-slot"` lets a rendered-DOM assertion confirm the slot never
+           projects for a primary request (belt-and-suspenders with `showAlignSlot`/the guards above). -->
+      <div crdAlign data-testid="align-slot" style="position: relative; z-index: 1" class="flex flex-col gap-3">
+        <app-pr-yes-or-not
+          label="Does this result align with the Program's planned TOC indicators?"
+          [required]="false"
           [editable]="true"
-          [initiative]="tocInitiative"
-          [initiativeId]="tocInitiative?.initiative_id"
-          [resultLevelId]="notification?.obj_result?.obj_result_level?.id"
-          [isIpsr]="false"
-          [isContributor]="false"
-          [isNotifications]="false"
-          [isUnplanned]="!tocInitiative.planned_result"
-          [showMultipleWPsContent]="tocMappingConsumed()"
-          [hidden]="true"
-          [forceP25]="true">
-        </app-cp-multiple-wps>
-      }
+          [(ngModel)]="tocInitiative.planned_result"
+          (selectOptionEvent)="onTocPlannedResultChange()">
+        </app-pr-yes-or-not>
 
-      @if (isTocMappingTouched()) {
-        <!-- CRD-R-8 "Busy": Clear mapping must be disabled while an accept/decline PATCH is in flight,
-             same as the drawer's own actions, so it cannot re-seed `tocInitiative` mid-request. -->
-        <button
-          type="button"
-          hlmBtn
-          variant="ghost"
-          size="sm"
-          class="self-start text-[13px]"
-          data-testid="crd-align-clear-mapping-btn"
-          [disabled]="requestingAccept || requestingReject"
-          (click)="onClearTocMappingActivate()">
-          {{ copy.align.clearMapping }}
-        </button>
-      }
-    </div>
-  }
+        @if (tocInitiative.planned_result !== null && tocMappingConsumed()) {
+          <app-cp-multiple-wps
+            [editable]="true"
+            [initiative]="tocInitiative"
+            [initiativeId]="tocInitiative?.initiative_id"
+            [resultLevelId]="notification?.obj_result?.obj_result_level?.id"
+            [isIpsr]="false"
+            [isContributor]="false"
+            [isNotifications]="false"
+            [isUnplanned]="!tocInitiative.planned_result"
+            [showMultipleWPsContent]="tocMappingConsumed()"
+            [hidden]="true"
+            [forceP25]="true">
+          </app-cp-multiple-wps>
+        }
+
+        @if (isTocMappingTouched()) {
+          <!-- CRD-R-8 "Busy": Clear mapping must be disabled while an accept/decline PATCH is in flight,
+               same as the drawer's own actions, so it cannot re-seed `tocInitiative` mid-request. -->
+          <button
+            type="button"
+            hlmBtn
+            variant="ghost"
+            size="sm"
+            class="self-start text-[13px]"
+            data-testid="crd-align-clear-mapping-btn"
+            [disabled]="requestingAccept || requestingReject"
+            (click)="onClearTocMappingActivate()">
+            {{ copy.align.clearMapping }}
+          </button>
+        }
+      </div>
+    }
+  </app-notification-detail-content>
+</ng-template>
+
+<!-- @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2 step 2/4): the drawer is
+     only ever open when narrow — docked (`panel.isWide()`) means the SAME `#detailTpl` instance is
+     portaled into the page's `<aside>` instead (DSP-R-4 "AND IT MUST NOT show both containers at
+     the same time"). The row's own state survives the swap because it lives here, not in either
+     container. -->
+<app-contribution-request-drawer
+  [open]="drawerOpen() && !panel.isWide()"
+  [labelledBy]="drawerHeadingId"
+  [describedBy]="drawerHeadingId + '-desc'"
+  (closed)="onDrawerShellClosedSignal()">
+  <ng-container *ngTemplateOutlet="detailTpl"></ng-container>
 </app-contribution-request-drawer>
