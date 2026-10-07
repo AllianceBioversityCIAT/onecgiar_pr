@@ -145,7 +145,8 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
         {
           provide: BilateralApiService,
           useValue: {
-            GET_BilateralResultDetail: jest.fn().mockReturnValue(of({ response: { commonFields: {}, contributingInstitutions: [] } }))
+            GET_BilateralResultDetail: jest.fn().mockReturnValue(of({ response: { commonFields: {}, contributingInstitutions: [] } })),
+            GET_resultInitiativeId: jest.fn().mockReturnValue(of({ response: { primary_request: null } }))
           }
         }
       ]
