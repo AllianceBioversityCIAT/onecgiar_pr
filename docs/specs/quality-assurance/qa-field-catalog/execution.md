@@ -233,3 +233,9 @@
 - Result: 19 sections, 112 fields + 61 subfields; NOT_FOR_QA 357. Tests 121/121; tsc/eslint clean; falsifiers (toc field back, linked field back, created_by renamed) → red. Leader re-run + live call with CLARISA test key → 200, 2026.6, 19 sections, 112 fields — VERIFIED. Reviewer PASS.
 - ADVISORY: orphan rows `toc_alignment`, `linked_results` remain in `qa_catalog_section` (sync never deletes; optional manual cleanup); doc line on revision-5 boot counts; v1 "additive-only" note vs v1.1 section removal; `linked.has_innovation_link` binds `result.has_innovation_link` but for innovation use the client stores `results_innovations_use.has_innovation_link` — check separately.
 - Diagram: `diagram/qa-catalog.html` (Archify dataflow, showcase validation + delivery + visual-check pass).
+
+## Amendment v1.2 — catalog 2026.7 (owner, 2026-10-07) — PASS
+
+- Owner: bilateral projects (`results_by_projects` → `clarisa_projects`) were missing. Added frozen inventory key `contributors.bilateral_projects` ("Contributing W3 and/or bilateral projects", `multi_select`, control list `projects`, all types, required false / unconfirmed — no rule in `validation_contributor_partner_P25`), order 8 in `contributors_partners` (client `rd-contributors-and-partners.component.html:270-281`; no per-project % or lead control in 2026). `contribution_percentage` stays PENDING, `is_lead` NOT_FOR_QA.
+- Revision 6 → 7 (pure addition, guarded snapshot accepted). Counts verified from the service: 19 sections, 113 fields, 61 subfields, pending 144, not-for-qa 357 — match the contract doc (v1.2 row).
+- Tests 122/122, tsc/eslint clean; falsifier (field removed) → completeness `uncatalogued column results_by_projects.project_id` + shape + snapshot red. Reviewer PASS. Advisory applied: IPSR project picker `ipsr_step_4.bilateral_investment.project` kept visible in the D2 pending reason.

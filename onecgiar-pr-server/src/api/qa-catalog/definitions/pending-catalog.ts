@@ -98,12 +98,6 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   ),
   ...stage2(
     'results_by_projects',
-    'contributors.bilateral_projects and ipsr_step_4.bilateral_investment.project (IPSR add-project dialog)',
-    'result_id',
-    'project_id',
-  ),
-  ...stage2(
-    'results_by_projects',
     'results_by_projects.contribution_percentage (stored, no control; P2-3760)',
     'contribution_percentage',
   ),
@@ -282,7 +276,7 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   ),
   ...twoHop(
     'non_pooled_projetct_budget',
-    'innovation_dev.estimates_non_pooled, innovation_use.investment.bilateral and ipsr_step_4.bilateral_investment (kind_cash / is_determined)',
+    'innovation_dev.estimates_non_pooled, innovation_use.investment.bilateral and ipsr_step_4.bilateral_investment (kind_cash / is_determined; the IPSR project picker `ipsr_step_4.bilateral_investment.project` also waits on D2)',
     'kind_cash',
     'is_determined',
   ),

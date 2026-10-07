@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 6,
-      "content_hash": "54e075b53f6865a2f66609774c6d732dd13c902efadee707219432ad3f664284"
+      "revision": 7,
+      "content_hash": "5372c5f92784c3a67dd124c2b64187ad33c9ee68e92bdaf01e6a3e7078b3792b"
     }
   },
   "keys": [
@@ -14,6 +14,7 @@
     "field:capacity_sharing.male_using",
     "field:capacity_sharing.non_binary_using",
     "field:capacity_sharing.organizations",
+    "field:contributors.bilateral_projects",
     "field:contributors.centers",
     "field:contributors.lead_center",
     "field:contributors.submitter",

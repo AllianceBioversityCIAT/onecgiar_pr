@@ -322,7 +322,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 6 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 7 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -347,6 +347,28 @@ describe('the real catalog definitions', () => {
       (f) => f.section === 'contributors_partners',
     );
     expect(new Set(merged.map((f) => f.order)).size).toBe(merged.length);
+  });
+
+  it('2026-10-07 amendment: `contributors.bilateral_projects` is a plain multi_select of `projects` bound to results_by_projects, in contributors_partners, for every result type', () => {
+    const f = CATALOG_FIELDS.find(
+      (x) => x.key === 'contributors.bilateral_projects',
+    );
+    expect(f).toBeDefined();
+    expect(f?.section).toBe('contributors_partners');
+    expect(f?.type).toBe('multi_select');
+    expect(f?.control_list).toBe('projects');
+    expect(f?.label).toBe('Contributing W3 and/or bilateral projects');
+    expect(f?.required).toBe(false);
+    expect(f?.required_confirmed).toBe(false);
+    expect(f?.result_types).toEqual(['*']);
+    expect(f?.subfields).toBeUndefined();
+    expect(f?.storage).toEqual({
+      kind: 'relation',
+      table: 'results_by_projects',
+      fk_to_result: 'result_id',
+      value_column: 'project_id',
+      filter: { is_active: 1 },
+    });
   });
 
   it('2026-10-06 amendment: the result envelope fields are catalogued in general_information for every result type', () => {

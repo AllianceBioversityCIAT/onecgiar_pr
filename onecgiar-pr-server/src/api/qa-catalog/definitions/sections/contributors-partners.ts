@@ -8,7 +8,7 @@
 // (2-hop bindings, REVIEW D2).
 // `order` follows the client page (rd-contributors-and-partners.component.html, "CP.html"): submitter :9-13,
 // ToC block :38-95 (planned_result :38, invested resources :51, entries :67, narrative :83), centers :98+,
-// lead center :251, partners/lead partner :556-575. The former `linked_results` section (QAC-T-8 · C-6) is merged here too, after the partners block (:586-634).
+// lead center :251, bilateral projects :270-325, partners/lead partner :556-575. The former `linked_results` section (QAC-T-8 · C-6) is merged here too, after the partners block (:586-634).
 import { CatalogField, CatalogSection } from '../types';
 import { ALL_TYPES, FROM_2026, NON_KP_TYPES, whenEq } from './shared';
 
@@ -188,12 +188,35 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     },
   },
   {
+    key: 'contributors.bilateral_projects',
+    label: 'Contributing W3 and/or bilateral projects',
+    type: 'multi_select',
+    control_list: 'projects',
+    section: SECTION,
+    order: 8,
+    result_types: ALL_TYPES,
+    // no live rule (validation_contributor_partner_P25 never reads results_by_projects); the client marks it
+    // optional ([required]="false", CP.html:274) and disables it until a ToC result is mapped (CP.html:327-355).
+    // A plain multi-select: the form has no per-project percentage and no lead flag (results_by_projects.
+    // contribution_percentage stays PENDING_CATALOG, is_lead stays NOT_FOR_QA).
+    required: false,
+    required_confirmed: false,
+    ...FROM_2026,
+    storage: {
+      kind: 'relation',
+      table: 'results_by_projects',
+      fk_to_result: 'result_id',
+      value_column: 'project_id',
+      filter: { is_active: 1 },
+    },
+  },
+  {
     key: 'partners.not_applicable',
     label: 'Not applicable',
     description: 'Select this option if the partner section is not applicable',
     type: 'boolean',
     section: SECTION,
-    order: 8,
+    order: 9,
     result_types: ALL_TYPES,
     required: true,
     required_confirmed: true,
@@ -212,7 +235,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'institutions',
     section: SECTION,
-    order: 9,
+    order: 10,
     result_types: NON_KP_TYPES,
     required: false,
     required_confirmed: true,
@@ -231,7 +254,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     label: 'Is this result being led by an external partner?',
     type: 'boolean',
     section: SECTION,
-    order: 10,
+    order: 11,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
@@ -251,7 +274,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'single_select',
     control_list: 'institutions',
     section: SECTION,
-    order: 11,
+    order: 12,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
@@ -270,7 +293,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'institutions',
     section: SECTION,
-    order: 12,
+    order: 13,
     result_types: ['knowledge_product'],
     required: false,
     required_confirmed: true,
@@ -295,7 +318,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?',
     type: 'boolean',
     section: SECTION,
-    order: 13,
+    order: 14,
     result_types: ALL_TYPES,
     // Live rule only for innovation_development; other types have no live rule (client-only required).
     required: false,
@@ -310,7 +333,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'results',
     section: SECTION,
-    order: 14,
+    order: 15,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,

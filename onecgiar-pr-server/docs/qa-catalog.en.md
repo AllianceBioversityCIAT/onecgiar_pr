@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.6",
+  "catalog_version": "2026.7",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -176,7 +176,7 @@ Notes:
 
 ## Versioning and change rules
 
-- `catalog_version` = `<phase_year>.<revision>`. Example: `2026.6` is the sixth revision of the 2026 catalog.
+- `catalog_version` = `<phase_year>.<revision>`. Example: `2026.7` is the seventh revision of the 2026 catalog.
 - **Keys are immutable.** A key, once published, always identifies the same field. A label, description, order, section or `required` flag may change in a later revision; the key does not.
 - **Retirement is by validity, never by deletion.** A field that stops existing in year Y keeps its key, and gets `valid_to` = last year it existed. Requests for a year after `valid_to` no longer contain it; earlier years still do.
 - A field valid in several years appears in each of those responses with the **same key**.
@@ -196,22 +196,22 @@ Notes:
 
 ---
 
-## Catalog at revision 6 (2026.6)
+## Catalog at revision 7 (2026.7)
 
-Counts measured on the code catalog on 2026-10-06 (the same data the endpoint returns):
+Counts measured on the code catalog on 2026-10-07 (the same data the endpoint returns):
 
 | Item | Count |
 |---|---|
 | Result types | 9 |
 | Sections | 19 |
-| Catalogued fields (top level) | 112 |
+| Catalogued fields (top level) | 113 |
 | Catalogued subfields | 61 |
 | Fields with `required: true` (unconditional) | 39 |
 | Fields with a conditional requirement (not exposed, `required: false`) | 44 |
-| Fields by type | `single_select` 35 · `multi_select` 21 · `boolean` 18 · `text` 16 · `list` 14 · `number` 7 · `date` 1 |
-| Fields applying to every type (`["*"]`) | 32 |
+| Fields by type | `single_select` 35 · `multi_select` 22 · `boolean` 18 · `text` 16 · `list` 14 · `number` 7 · `date` 1 |
+| Fields applying to every type (`["*"]`) | 33 |
 | Fields naming a result type explicitly (the `["*"]` fields above are not repeated here) | `innovation_development` 29 · `innovation_use` 27 · `innovation_package` 17 · `knowledge_product` 15 · `capacity_sharing` 14 · `policy_change` 10 · `other_outcome` 6 · `other_output` 6 · `impact_contribution` 6 |
-| `PENDING_CATALOG` entries (columns known, for QA, not yet described) | 146 columns across 36 in-scope tables |
+| `PENDING_CATALOG` entries (columns known, for QA, not yet described) | 144 columns across 36 in-scope tables |
 | `NOT_FOR_QA` entries (columns that are never for QA, each with a reason) | 357 columns |
 
 `PENDING_CATALOG` and `NOT_FOR_QA` are internal PRMS lists enforced by an automated completeness check: a column of an in-scope table that is in neither list and bound to no field fails the build. Only their counts are public.
@@ -224,7 +224,7 @@ The first boot of this revision wrote 9 result types, 21 sections and 167 field 
 
 These are deliberate and tracked; each one is **additive** when resolved.
 
-1. **`PENDING_CATALOG` (146 columns).** Fields that are for QA but cannot yet be described faithfully. They arrive in later revisions as new keys. Causes:
+1. **`PENDING_CATALOG` (144 columns).** Fields that are for QA but cannot yet be described faithfully. They arrive in later revisions as new keys. Causes:
    - **Two-hop storage (REVIEW D2):** values that reach the result through a parent row (budget rows of innovation development / use / package, indicator and target per ToC mapping, complementary-innovation rows, and similar).
    - **Nested lists (REVIEW D1):** the IPSR step 3 evidence lists need two levels of subfields; the contract allows one.
    - **IPSR sections validated by embedded SQL (REVIEW D16):** general information, contributors and links of the innovation package are catalogued only where inventoried.
@@ -244,3 +244,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 |---|---|
 | 2026-10-06 | **v1 — `GET /api/qa/catalog?phase_year=` introduced** (spec `quality-assurance/qa-field-catalog`, QAC-T-12). Content: phase 2026 (portfolio P25), `catalog_version` `2026.5`; 9 result types, 21 sections, 106 fields, 61 subfields; 146 `PENDING_CATALOG` and 363 `NOT_FOR_QA` internal entries (counts only). Authentication by CLARISA API key (`x-api-key`) with permission `/api/qa/catalog`. Status codes 200 / 400 / 401 / 404 (no empty 200). Additive-only from here. |
 | 2026-10-06 | **v1.1 — 2026-10-06: `toc_alignment` and `linked_results` merged into `contributors_partners` (pre-release); result envelope fields added to general_information: result_code, result_type, result_level, created_by, created_date, status; catalog_version 2026.6.** The 4 `toc.*` fields (and their subfields) and the 2 `linked.*` fields keep their keys and move to section `contributors_partners` (order 30), now 19 sections (the standalone "Links to results" section ended in 2024; in 2026 the question lives inside that page, and Innovation use also shows it on its own page); field `order` inside it follows the client page. Subfields unchanged (61); top-level fields 106 → 112 and `NOT_FOR_QA` 363 → 357 columns (the six envelope columns are now bound). |
+| 2026-10-07 | **v1.2 — 2026-10-07: `contributors.bilateral_projects` added (W3/bilateral projects per result); catalog_version 2026.7.** New optional `multi_select` in `contributors_partners` (order 8, control list `projects`, all result types, `required: false`), stored in `results_by_projects` (`project_id`, `is_active = 1`). Following orders in that section shift by one. Top-level fields 112 → 113; `PENDING_CATALOG` 146 → 144 columns. |
