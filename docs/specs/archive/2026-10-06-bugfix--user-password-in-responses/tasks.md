@@ -6,7 +6,7 @@
 |---|---|
 | Spec | `bugfix/user-password-in-responses` · **Lite** · Bug Mode |
 | Linked | `requirements.md` · `design.md` (same folder) · `docs/prd.md` `AC-4`/`AC-9` · `docs/trd/trd.md` §8 · `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` |
-| Status | `[~]` PWD-T-1: Reviewer PASS 2026-10-06, pending HITL D6 (manual local GET). See `execution.md` |
+| Status | complete: PWD-T-1 `[x]` (Reviewer PASS + HITL D6 confirmed 2026-10-06). See `execution.md` |
 | Budget | 1 task · ~60 LOC · 1 review round (`design.md` §14) |
 
 ## 2. Pre-flight
@@ -19,7 +19,7 @@
 
 ## 3. Task List
 
-### [~] PWD-T-1: Default-deny `User.password` with a behavioral regression test
+### [x] PWD-T-1: Default-deny `User.password` with a behavioral regression test
 
 - **Type:** server + tests + docs
 - **Description:** Use red-then-green order.

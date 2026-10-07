@@ -84,4 +84,19 @@ The unrelated worktree changes (`bilateral-center.service*`, `primary-program-re
 
 **Budget check:** 1 task, about 75 LOC (1 entity line, a ~70-line spec, 1 doc row), 1 review round. Within budget (`design.md` §14 estimated ~60 LOC; the difference is spec comments and guards). No tripwire.
 
-**Final verification:** automated gates green. Pending: D6 HITL GET.
+**Final verification:** automated gates green. D6 confirmed (below).
+
+#### HITL D6: manual GET (2026-10-06, user)
+
+- The user ran `GET /api/bilateral/11475` against the local stack with the change and shared a screenshot of the response.
+- `obj_created` and `obj_external_submitter` (user 1026) still carry `id`, `first_name`, `last_name`, `email`, `is_cgiar`, `last_login`, `active`, `created_date`, `last_updated_date` and `last_pop_up_viewed`. **There is no `password` key in either object.** Other fields are unchanged (R-1.S1 THEN/BUT).
+- Re-validation before promoting the commit to `performance-refactor`: lint clean, and the scoped run (`--runInBand`, 1.9 GB of RAM free) gave 5 suites and 172 tests passing. The commit is `bd032a9e4` and was fast-forwarded to `performance-refactor`.
+- **Final status: PASS.** PWD-T-1 → `[x]`.
+
+## Summary
+
+| Task | Status | Attempts | Commit |
+|---|---|---|---|
+| PWD-T-1 | PASS | 1 | `bd032a9e4` (qa-development-2026-ss, performance-refactor) |
+
+The spec is complete within budget. Open items outside the code: PWD-OQ-1 (production confirmation, hash rotation) and F1 (dead raw readers).
