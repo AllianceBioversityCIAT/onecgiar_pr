@@ -284,3 +284,10 @@
 - Pre-release breaking rename (`result_type` → `$result_type`) authorized by the owner; recorded in the change log.
 - Reviews: FAIL (spec triplet not amended; change-log justification missing) → Leader doc fixes → PASS. Tests 252/252; falsifiers red.
 - 2026-10-07: owner — focus is Results, not IPSR; IPSR geography alignment deferred. Added QAC-T-16 (Geo, Results). Owner's CLARISA test key now returns 401 (rejected by CLARISA); live checks wait for a valid key.
+
+### QAC-T-16 — Geographic location (Results) — PASS
+
+- Date: 2026-10-07 · Attempts: 1 · catalog 2026.15
+- Delivered: `visible_when` / `required_when` for all 11 Results geo fields (client geoscope-management / rd-geographic-location; validation_geo_location_P25 + owner's FIXED version for the extra scope); `geo.countries` / `geo.extra_countries` → list (country + subnational path on `result_country_subnational`, role 1/2, active) — owner-authorized pre-release type change; corrections to T-8 rules matching the function (regions_specified scope 1 only; countries not required for scope 5; extra relations active); closed list `geographic_scopes` [1,2,3,4,5,50] (4 UNVERIFIED as a CLARISA row, kept because stored data and the function use it).
+- Evidence: 274/274; falsifiers red. Leader re-run: one intermittent failure in `QaCatalogController` "user JWT in the auth header is not a substitute -> 401" (outside this diff; 5 isolated runs green) — flake to investigate separately. Reviewer PASS.
+- ADVISORY: subnational required_when stricter than the function for countries without CLARISA areas (documented); wrong citation on WHEN_EXTRA_QUESTION (should be V-GEO:136-138 / V-FIX:143-145); verify id 4 in `clarisa_geographic_scope` when the DB is reachable.

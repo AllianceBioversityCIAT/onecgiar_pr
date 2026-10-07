@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 14,
-      "content_hash": "167f4f707ce8d5bbaef34532d9478110e1a721fd766c39972add8ff332ae4e8f"
+      "revision": 15,
+      "content_hash": "f0f3f45fda86feb80f641ad7d7720b731a2882d76e14632135ad7d150b411d0b"
     }
   },
   "keys": [
@@ -174,6 +174,10 @@
     "subfield:evidence.items/poverty_related",
     "subfield:general.discontinued_reasons/description",
     "subfield:general.lead_contact_person/directory_user",
+    "subfield:geo.countries/country",
+    "subfield:geo.countries/subnational",
+    "subfield:geo.extra_countries/country",
+    "subfield:geo.extra_countries/subnational",
     "subfield:innovation_dev.gesi_stage/not_applicable_reason",
     "subfield:innovation_dev.risk_stage/not_applicable_reason",
     "subfield:innovation_dev.team_diversity/actions",

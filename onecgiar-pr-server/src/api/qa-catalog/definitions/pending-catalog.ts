@@ -104,9 +104,11 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   ),
 
   // C-4 Geographic location
+  // QAC-T-16: `geo.countries` / `geo.extra_countries` now bind these columns (their `subnational` subfield); the entries stay only
+  // for the still uncatalogued IPSR key, which shares them (a column shared with a catalogued field may appear here).
   ...twoHop(
     'result_country_subnational',
-    'geo.subnational, geo.extra_subnational and ipsr_step_1.countries.sub_national',
+    'ipsr_step_1.countries.sub_national',
     'result_country_id',
     'clarisa_subnational_scope_code',
   ),

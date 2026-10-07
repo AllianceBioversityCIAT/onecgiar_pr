@@ -10,7 +10,7 @@
 //    `geo.*` keys therefore list every other type explicitly (never `ALL_TYPES`). `required: false`,
 //    `required_confirmed: false` (REVIEW D12 (b): the UI marks the scope required, no live rule backs it). The IPSR label
 //    is the `label`; it is not form help text, so no `description`.
-//    `ipsr_step_1.countries.sub_national` is 2-hop like `geo.subnational` (through `result_country`) -> PENDING_CATALOG
+//    `ipsr_step_1.countries.sub_national` is 2-hop like the `subnational` subfield of `geo.countries` (through `result_country`) -> PENDING_CATALOG
 //    (REVIEW D2; the `result_country_subnational` entry names the key).
 //  - `ipsr_step_1.eoi_outcomes` (required, VS1:32-41): `result_ip_eoi_outcomes` hangs off the package through
 //    `result_by_innovation_package` (2-hop: `result_by_innovation_package_id`), which a RelationBinding cannot express

@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.14",
+  "catalog_version": "2026.15",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -249,7 +249,7 @@ Notes:
 
 ---
 
-## Catalog at revision 14 (2026.14)
+## Catalog at revision 15 (2026.15)
 
 Counts measured on the code catalog on 2026-10-07 (the same data the endpoint returns):
 
@@ -258,10 +258,10 @@ Counts measured on the code catalog on 2026-10-07 (the same data the endpoint re
 | Result types | 9 |
 | Sections | 19 |
 | Catalogued fields (top level) | 118 |
-| Catalogued subfields | 82 (of which 8 at the second level) |
+| Catalogued subfields | 86 (of which 8 at the second level) |
 | Fields with `required: true` (unconditional) | 40 |
 | Fields with a conditional requirement (`required: false` plus `required_when`) | 44 |
-| Fields by type | `single_select` 36 · `multi_select` 22 · `boolean` 19 · `text` 16 · `list` 16 · `number` 8 · `date` 1 |
+| Fields by type | `single_select` 36 · `multi_select` 20 · `boolean` 19 · `text` 16 · `list` 18 · `number` 8 · `date` 1 |
 | Fields applying to every type (`["*"]`) | 37 |
 | Fields naming a result type explicitly (the `["*"]` fields above are not repeated here) | `innovation_development` 30 · `innovation_use` 28 · `innovation_package` 17 · `knowledge_product` 15 · `capacity_sharing` 14 · `policy_change` 10 · `other_outcome` 6 · `other_output` 6 · `impact_contribution` 6 |
 | `PENDING_CATALOG` entries (columns known, for QA, not yet described) | 135 columns across 32 in-scope tables |
@@ -308,3 +308,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-07 | **v1.7 — 2026-10-07: review rework of the v1.6 contributors & partners content (QAC-T-15); catalog_version 2026.12.** the Science Program ToC answer and mappings now match the program's rows of THIS result only (they previously matched that program's rows in every result); `toc.entries`, `toc.planned_result`, `toc.narrative` and `toc.program_invested_financial_resources` read the submitter's ToC rows only, so the contributors' mappings are no longer repeated in `toc.entries`; the ToC target is chosen for the reporting year (the year part of the target date, which the ToC stores both as `YYYY` and as `YYYY-MM-DD`; when several target rows remain, the latest target date is taken) and the KPI-derived values (typology, unit, target) accept either identifier the ToC stores for a KPI; `level` and `partner_role` are no longer marked `required` (client-only rules); `contributors.submitter` and `general.primary_program` read the active submitter row only. The response shape is unchanged (no new properties); the only visible differences are the missing `required` flag on those two subfields (and the same two copies under each science program) and the new `catalog_version`. Storage bindings stay internal. |
 | 2026-10-07 | **v1.8 — 2026-10-07: `general.reported_year` added to `general_information`; catalog_version 2026.13.** New `number` field "Reporting year" (applies to every result type, `required: true`, set by the system; value is the year itself, e.g. 2026) right after `general.status`; the following `general_information` fields move one position (orders stay contiguous 1–26). Pure addition: no key removed or changed, response shape unchanged. |
 | 2026-10-07 | **v1.9 — 2026-10-07: condition semantics (owner amendment); catalog_version 2026.14.** The result-header condition key `result_type` is renamed `$result_type` (the `$` prefix is reserved for result header data; any other `$...` key is invalid); every condition `field` is documented by scope (sibling subfield inside subfields, top-level key outside); comparison is defined by the referenced field's type (`single_select` against the option id, `multi_select` only with `in`, `$result_type` against the type key) and `not_null` by type (`""` and `[]` are null, `false` and `0` are not); ids compared against a closed control list must exist in it; `general.is_discontinued` is relabelled to describe the stored value ("Is this innovation discontinued?", the inverse of the form question) and `general.primary_program` is documented as the same stored value as `contributors.submitter`. **Breaking for consumers that read `result_type` conditions:** the key is now `$result_type`. Pre-release change authorized by the owner (2026-10-07): the catalog has not been deployed or consumed by QA yet. Response shape unchanged; no field added or removed. |
+| 2026-10-07 | **v1.10 — 2026-10-07: geographic location (Results) fully parametrized (QAC-T-16); catalog_version 2026.15.** `geo.countries` and `geo.extra_countries` change type `multi_select` to `list` (pre-release type change authorized by the owner; the keys, the stored rows and the control list of the country are unchanged): each element is a country (`country`, `single_select`, control list `countries`) with its sub-national areas (`subnational`, `multi_select`, control list `subnational_areas`, shown and required when the scope, or for `geo.extra_countries` the extra scope, is 5). The sub-national areas are a subfield; no `geo.subnational` / `geo.extra_subnational` key exists or is added. Every `geo.*` field now carries `visible_when` and `required_when` transcribed from the 2026 form, and the control list `geographic_scopes` is a closed list (1 Global, 2 Regional, 3 Country, 5 Sub-national, 50 To be determined, and the stored legacy id 4, which the live validation treats like 3). Corrections to earlier rules: `geo.regions_specified` is required only for scope 1 (scope 2 never leaves it unanswered); `geo.countries` is no longer required for scope 5 (the live validation accepts scope 5 with no country; its sub-national areas are checked per country); the extra-scope rows (`geo.extra_scope` and below) are nested in the extra block (main scope 2, 3, 4 or 5 and "other geographic areas" = Yes) and `geo.extra_regions` / `geo.extra_countries` count only active rows, as the main ones do. A consumer applying `subnational` as required must skip a country for which CLARISA lists no sub-national areas (reference data, not in the catalog). `geo.has_extra_scope` and below keep their order contiguous (1–11). IPSR geography is unchanged. Top-level fields 118 (unchanged); subfields 82 → 86; `list` 16 → 18, `multi_select` 22 → 20. |

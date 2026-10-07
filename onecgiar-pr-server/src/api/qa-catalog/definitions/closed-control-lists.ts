@@ -8,7 +8,6 @@
  * and are NOT checked.
  *
  * UNVERIFIED (left out on purpose, no authoritative source in the repo, so no ids are invented):
- *  - `geographic_scopes`  (clarisa_geographic_scope, synced from CLARISA; conditions use 1..5 as scope ids)
  *  - `innovation_use_levels` (CLARISA use levels; see the D28 note in sections/innovation-use.ts)
  *  - `innovation_types` (CLARISA; `innovation_dev.nature eq 12`)
  *  - `discontinued_reasons` (`investment_discontinued_option`, rows added over time by migration
@@ -35,4 +34,16 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      * table, ids 1..3; id 2 renamed by migration 1685138922752).
      */
     assessed_workshop_options: [1, 2, 3],
+    /**
+     * `clarisa_geographic_scope` ids a result can store (QAC-T-16; the DB was unreachable (VPN), so the rows were not read):
+     *  - 1 Global, 2 Regional, 3 Country, 5 Sub-national: client `GeoScopeEnum` (shared/enum/geo-scope.enum.ts) and the server's own
+     *    scope mapping (results.service.ts:2609-2622); rows come from the CLARISA sync, no seed in this repository.
+     *  - 50 To be determined: seeded by migration 1667327277664-InsertCustomScope (`INSERT ... VALUES (50, ...)`).
+     *  - 4: UNVERIFIED as a catalog row (neither the enum nor a seed names it), kept because stored data holds it and conditions must be
+     *    able to name it: the server WRITES it (result-innovation-package.service.ts:301, a single-country package), the live function
+     *    treats `IN (3, 4)` alike (V-GEO:93), the server folds it into 3 on read (result.repository.ts:573, results.service.ts:2616-2619)
+     *    and the client reads it as Country (`legacyCountries = 4`, rd-geographic-location.component.ts:292). The FK
+     *    `result.geographic_scope_id -> clarisa_geographic_scope.id` implies the row exists wherever those writes succeed. Inventory D24.
+     */
+    geographic_scopes: [1, 2, 3, 4, 5, 50],
   };
