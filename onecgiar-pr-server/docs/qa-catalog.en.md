@@ -37,7 +37,7 @@ x-api-key: <CLARISA key registered for QA>
 {
   "portfolio": "P25",
   "phase": 2026,
-  "catalog_version": "2026.7",
+  "catalog_version": "2026.8",
   "generated_at": "2026-10-06T12:00:00.000Z",
   "result_types": [
     { "key": "innovation_development", "label": "Innovation development", "level": "output" }
@@ -176,7 +176,7 @@ Notes:
 
 ## Versioning and change rules
 
-- `catalog_version` = `<phase_year>.<revision>`. Example: `2026.7` is the seventh revision of the 2026 catalog.
+- `catalog_version` = `<phase_year>.<revision>`. Example: `2026.8` is the eighth revision of the 2026 catalog.
 - **Keys are immutable.** A key, once published, always identifies the same field. A label, description, order, section or `required` flag may change in a later revision; the key does not.
 - **Retirement is by validity, never by deletion.** A field that stops existing in year Y keeps its key, and gets `valid_to` = last year it existed. Requests for a year after `valid_to` no longer contain it; earlier years still do.
 - A field valid in several years appears in each of those responses with the **same key**.
@@ -196,7 +196,7 @@ Notes:
 
 ---
 
-## Catalog at revision 7 (2026.7)
+## Catalog at revision 8 (2026.8)
 
 Counts measured on the code catalog on 2026-10-07 (the same data the endpoint returns):
 
@@ -245,3 +245,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-06 | **v1 — `GET /api/qa/catalog?phase_year=` introduced** (spec `quality-assurance/qa-field-catalog`, QAC-T-12). Content: phase 2026 (portfolio P25), `catalog_version` `2026.5`; 9 result types, 21 sections, 106 fields, 61 subfields; 146 `PENDING_CATALOG` and 363 `NOT_FOR_QA` internal entries (counts only). Authentication by CLARISA API key (`x-api-key`) with permission `/api/qa/catalog`. Status codes 200 / 400 / 401 / 404 (no empty 200). Additive-only from here. |
 | 2026-10-06 | **v1.1 — 2026-10-06: `toc_alignment` and `linked_results` merged into `contributors_partners` (pre-release); result envelope fields added to general_information: result_code, result_type, result_level, created_by, created_date, status; catalog_version 2026.6.** The 4 `toc.*` fields (and their subfields) and the 2 `linked.*` fields keep their keys and move to section `contributors_partners` (order 30), now 19 sections (the standalone "Links to results" section ended in 2024; in 2026 the question lives inside that page, and Innovation use also shows it on its own page); field `order` inside it follows the client page. Subfields unchanged (61); top-level fields 106 → 112 and `NOT_FOR_QA` 363 → 357 columns (the six envelope columns are now bound). |
 | 2026-10-07 | **v1.2 — 2026-10-07: `contributors.bilateral_projects` added (W3/bilateral projects per result); catalog_version 2026.7.** New optional `multi_select` in `contributors_partners` (order 8, control list `projects`, all result types, `required: false`), stored in `results_by_projects` (`project_id`, `is_active = 1`). Following orders in that section shift by one. Top-level fields 112 → 113; `PENDING_CATALOG` 146 → 144 columns. |
+| 2026-10-07 | **v1.3 — 2026-10-07: `contributors.submitter` moved to `general_information` as 'Primary Program'; general_information reordered to the form order (tags interleaved with their impact-area components); catalog_version 2026.8.** Key, binding, type, control list (`initiatives`) and required flags unchanged; only `section`, `label` ("Submitter" → "Primary Program") and `order` change. `general_information` now orders result level, result type, Primary Program, title, description, lead contact person, each impact-area tag followed by its component field, result code, created by, creation date, status, then the annual-updating block; `contributors_partners` orders renumbered 1–14. Section and field totals unchanged. |

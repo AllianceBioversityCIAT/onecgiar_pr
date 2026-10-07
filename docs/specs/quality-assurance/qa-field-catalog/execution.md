@@ -239,3 +239,9 @@
 - Owner: bilateral projects (`results_by_projects` → `clarisa_projects`) were missing. Added frozen inventory key `contributors.bilateral_projects` ("Contributing W3 and/or bilateral projects", `multi_select`, control list `projects`, all types, required false / unconfirmed — no rule in `validation_contributor_partner_P25`), order 8 in `contributors_partners` (client `rd-contributors-and-partners.component.html:270-281`; no per-project % or lead control in 2026). `contribution_percentage` stays PENDING, `is_lead` NOT_FOR_QA.
 - Revision 6 → 7 (pure addition, guarded snapshot accepted). Counts verified from the service: 19 sections, 113 fields, 61 subfields, pending 144, not-for-qa 357 — match the contract doc (v1.2 row).
 - Tests 122/122, tsc/eslint clean; falsifier (field removed) → completeness `uncatalogued column results_by_projects.project_id` + shape + snapshot red. Reviewer PASS. Advisory applied: IPSR project picker `ipsr_step_4.bilateral_investment.project` kept visible in the D2 pending reason.
+
+## Amendment v1.3 — catalog 2026.8 (owner, 2026-10-07) — PASS
+
+- Form walk-through, General information: `contributors.submitter` (key unchanged) moved to `general_information` as "Primary Program"; section reordered to the form: level, type, Primary Program, title, description, lead contact, each tag followed by its impact-area component, then code, created by, created date, status, annual-updating block. `contributors_partners` renumbered 1–14.
+- Revision 7 → 8 (no key removed; guarded snapshot accepted). Tests 123/123; falsifier (title/description swapped) → red. Reviewer PASS.
+- Owner Q&A: conditional fields (impact-area components when tag = Principal) are delivered; only the condition (`required_when`) is internal, so they read `required: false`. Owner: not needed in the response for now; values will arrive with the future results endpoint regardless.

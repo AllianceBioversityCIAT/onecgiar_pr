@@ -322,7 +322,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 7 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 8 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -395,8 +395,54 @@ describe('the real catalog definitions', () => {
     const gi = CATALOG_FIELDS.filter(
       (f) => f.section === 'general_information',
     );
-    expect(gi.slice(0, 6).map((f) => f.key)).toEqual(Object.keys(expected));
+    expect(gi.map((f) => f.key)).toEqual(
+      expect.arrayContaining(Object.keys(expected)),
+    );
     expect(new Set(gi.map((f) => f.order)).size).toBe(gi.length);
+  });
+
+  it('2026-10-07 amendment: `contributors.submitter` lives in general_information as "Primary Program"; general_information follows the owner form order; contributors_partners orders are contiguous from 1', () => {
+    const submitter = CATALOG_FIELDS.find(
+      (f) => f.key === 'contributors.submitter',
+    );
+    expect(submitter?.section).toBe('general_information');
+    expect(submitter?.label).toBe('Primary Program');
+    expect(submitter?.control_list).toBe('initiatives');
+    expect(submitter?.type).toBe('single_select');
+    const sorted = (section: string) =>
+      CATALOG_FIELDS.filter((f) => f.section === section).sort(
+        (a, b) => a.order - b.order,
+      );
+    const gi = sorted('general_information');
+    expect(gi.map((f) => f.key)).toEqual([
+      'general.result_level',
+      'general.result_type',
+      'contributors.submitter',
+      'general.title',
+      'general.description',
+      'general.lead_contact_person',
+      'general.gender_tag',
+      'general.gender_impact_areas',
+      'general.climate_tag',
+      'general.climate_impact_areas',
+      'general.nutrition_tag',
+      'general.nutrition_impact_areas',
+      'general.environment_tag',
+      'general.environment_impact_areas',
+      'general.poverty_tag',
+      'general.poverty_impact_areas',
+      'general.result_code',
+      'general.created_by',
+      'general.created_date',
+      'general.status',
+      'general.is_discontinued',
+      'general.discontinued_reasons',
+      'general.merge_targets',
+      'general.split_targets',
+    ]);
+    expect(gi.map((f) => f.order)).toEqual(gi.map((_, i) => i + 1));
+    const cp = sorted('contributors_partners');
+    expect(cp.map((f) => f.order)).toEqual(cp.map((_, i) => i + 1));
   });
 
   it('QAC-R-5: the IPSR step-1 geography is unconfirmed and optional (the live step-1 function does not test it), and innovation_package carries no common geo.* key', () => {
