@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-09-24 · Innovation Use quantitative measures are optional in the bilateral form, MDS tracker, and server gate.
+**Verified:** 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
 
 ## What it is
 BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
@@ -118,6 +118,8 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 - The whole spec uses `overrideTemplate`, so the HTML is not compiled in Jest: template facts are asserted by
   reading the `.html` file as text, and copy that QA quotes lives in a constant (`MDS_INFO_NOTE`,
   `LOAD_ERROR_NOTE`).
+- The use-level ladder is **not MDS** (P2-3785 AC1) and lives under **full metadata**, right before the
+  scaling-studies and explanation questions it gates (quick/innov-use-level-to-full-metadata, 7-Oct-2026).
 - Quantitative measures are optional. When a row is added, it only counts as complete with **both unit AND quantity** (AC6).
 - Organizations are optional and remain under the full-metadata toggle; the Fetcher schema and MDS do not require an organization row. Current-use measures are optional and shown only when `innov_use_to_be_determined === false`; they do not count toward the MDS.
 
