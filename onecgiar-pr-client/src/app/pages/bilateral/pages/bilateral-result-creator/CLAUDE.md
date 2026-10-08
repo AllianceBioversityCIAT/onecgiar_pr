@@ -1,6 +1,7 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-30 · `ARM-T-2` (bilateral/ai-queue-report-manually, single-mount rework): this
+**Verified:** 2026-10-08 · quick/footer-capsules-align: las cápsulas Back/Next y Save draft del pie
+comparten fila mientras quepan (flex-wrap en vez del umbral fijo de 820px); prior: 2026-09-30 · `ARM-T-2` (bilateral/ai-queue-report-manually, single-mount rework): this
 page no longer mounts `<app-bilateral-manual-create-drawer-host>` — neither in its template nor in
 its `imports:` array. The host now mounts exactly once, in the bilateral shell
 (`bilateral.component.html`, next to `<router-outlet>`, imported by `BilateralModule`), reachable
@@ -39,12 +40,13 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   `mdsTracker.overallStatus() === 'complete'` + no in-flight + no read-only; `submitResult()`
   re-chequea sus propios guards), columna con scroll propio
   (`.bcr-scroll`: header `variant="detail"`, phase switcher, card con pastilla numérica) y un pie
-  SIN franja (P2-3736, 16-sep-2026): `.bcr-editor-footer` mide 0 y flota sobre el piso de
-  `.bcr-content`; solo se pintan sus dos cápsulas (izq: Back · **Next** · "Section X of Y"; der:
-  estado · Save draft). `.bcr-scroll` reserva 88px abajo para que el último campo salga de detrás.
-  ⚠️ Con "Unsaved changes" la cápsula derecha mide ~400px: bajo 820px de COLUMNA
-  (`@container` sobre `.bcr-content`) la izquierda sube una fila y el scroll reserva 152px — medido,
-  a 1024px de ventana se cruzaban 65px. Misma geometría que `section-bottom-bar` de W1/W2.
+  SIN franja (P2-3736, 16-sep-2026): `.bcr-editor-footer` es una fila flex `pointer-events:none`
+  anclada a 14px del piso de `.bcr-content`; solo se pintan sus dos cápsulas (izq: Back · **Next** ·
+  "Section X of Y"; der: estado · Save draft). `.bcr-scroll` reserva 88px abajo para que el último
+  campo salga de detrás. ⚠️ Las cápsulas envuelven con `flex-wrap` (izquierda arriba) **sólo cuando
+  no caben** — antes un umbral fijo de 820px de columna las partía en dos filas aunque cupieran
+  (quick/footer-capsules-align, 2026-10-08: con zoom alto se veían desalineadas). Bajo 820px de
+  COLUMNA (`@container` sobre `.bcr-content`) el scroll sigue reservando 152px por si envuelven.
 - El marco del editor se ancla al slot de la página (`:host.bcr-host--editor { position:absolute;
   inset:0 }`, clase ligada a `!isCreating()`), no con una cadena de `height:100%`: `main` es sólo
   `min-h-svh`, así que en un formulario largo la cadena resuelve a la altura del contenido y el
