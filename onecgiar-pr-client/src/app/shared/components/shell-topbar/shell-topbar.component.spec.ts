@@ -78,20 +78,28 @@ describe('ShellTopbarComponent', () => {
     dataControlMock = { show_qa_full_screen: false, focusMode: signal(false) };
     routerMock = { url: '/result/results-outlet/results-list', navigate: jest.fn(), navigateByUrl: jest.fn() };
     bellRows = signal<any[]>([]);
+    bellCountsOverride = signal<any>(null);
     notificationsMock = {
       updatesPopUpData: [] as any[],
       handlePopUpNotificationLastViewed: jest.fn(),
       bellItems: bellRows,
       // BRS: the badge counts fresh rows only (a row without `fresh` counts as fresh); Decide counts every request.
-      bellCount: computed(() => bellRows().filter(row => row?.fresh !== false).length),
       bellUpdates: computed(() => bellRows().filter(row => row?.kind === 'update' && row?.fresh !== false)),
-      bellPendingRequestCount: computed(() => bellRows().filter(row => row?.kind === 'decision').length),
+      // PPG-T-4: server counts; in this mock they mirror the rows (<=10 per group parity).
+      bellCounts: computed(() => bellCountsOverride() ?? ({
+        unseenRequests: bellRows().filter(row => row?.kind === 'decision' && row?.fresh !== false).length,
+        pendingRequests: bellRows().filter(row => row?.kind === 'decision').length,
+        unreadUpdates: bellRows().filter(row => row?.kind === 'update' && row?.fresh !== false).length
+      })),
       bellLoading: signal(false),
       bellError: signal(false),
       refreshBell: jest.fn(),
       loadBellReadUpdates: jest.fn(),
       markAllBellRead: jest.fn().mockResolvedValue(undefined)
     };
+    // BRS: the badge counts fresh items (unseen requests + unread updates) from the counts.
+    notificationsMock.bellPendingRequestCount = computed(() => notificationsMock.bellCounts().pendingRequests);
+    notificationsMock.bellCount = computed(() => notificationsMock.bellCounts().unseenRequests + notificationsMock.bellCounts().unreadUpdates);
     filterMock = { text_to_search: signal('') };
     fontScaleMock = { scale: signal('default'), set: jest.fn(), reset: jest.fn() };
     reportingGuideMock = { startSidebarTour: jest.fn() };
@@ -760,6 +768,24 @@ describe('ShellTopbarComponent', () => {
       flush();
       expect(routerMock.navigate).toHaveBeenCalledWith(['/result/results-outlet/results-notifications']);
       expect(panel()).toBeNull();
+    });
+
+    // @akili-spec notifications/admin-pending-paging — PPG-T-4 test 2 (topbar half): the numbers come from
+    // the server counts while the service only holds a bounded 30 rows.
+    it('PPG-R-2 admin: counts {1000, 1150, 6514} + 10 rows per group -> 99+, Decide 1150, All and "+N more" from the counts', async () => {
+      bellCountsOverride.set({ unseenRequests: 1000, pendingRequests: 1150, unreadUpdates: 6514 });
+      bellRows.set([...rows(10, 'decision'), ...rows(10)]);
+      await buildRendered();
+      flush();
+      openBell();
+
+      expect(component.bellCount()).toBe(7514);
+      expect(badge()?.textContent?.trim()).toBe('99+');
+      expect(component.bellDecisionCount()).toBe(1150);
+      expect(component.bellUpdatesCount()).toBe(6514);
+      expect(component.bellAllCount()).toBe(1150 + 6514);
+      expect(rowEls()).toHaveLength(10);
+      expect(component.bellOverflow()).toBe(1150 + 6514 - 10);
     });
 
     it('shows no "+N more" at or below the cap', async () => {

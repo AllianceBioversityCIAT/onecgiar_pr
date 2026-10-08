@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -13,6 +14,12 @@ import { Result } from '../../results/entities/result.entity';
 import { ResultReviewHistory } from '../../results/result-review-history/entities/result-review-history.entity';
 
 @Entity('notifications')
+@Index('IDX_notifications_target_read_created', [
+  'target_user',
+  'read',
+  'created_date',
+  'notification_id',
+])
 export class Notification {
   @PrimaryGeneratedColumn({
     type: 'bigint',

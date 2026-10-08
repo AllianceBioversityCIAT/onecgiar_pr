@@ -8,12 +8,24 @@ import { buildDecisionBody, isP25 } from './utils/request-decision';
 type SourceKey = 'received' | 'sent' | 'updates';
 
 interface SourcePaging {
+  /** History paging (`PAGE-*`). */
   hasMore: boolean;
   nextCursor: string | null;
+  /** @akili-spec notifications/admin-pending-paging - PPG-T-5: pending paging, kept apart from the history
+   * fields above because the server reads ONE untyped `cursor` param for both scopes (a history cursor
+   * sent on a pending request, or vice versa, would be misread). Only `updates`/`received` page their
+   * pending set; `sent` stays complete (`pendingHasMore: false`). */
+  pendingHasMore: boolean;
+  pendingNextCursor: string | null;
+  pendingTotal: number;
 }
 
+const emptyPaging = (): SourcePaging => ({ hasMore: false, nextCursor: null, pendingHasMore: false, pendingNextCursor: null, pendingTotal: 0 });
+
 interface SourceConfig {
-  api: (options: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) => any;
+  api: (options: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number }) => any;
+  /** PPG-T-5: this source's pending scope is requested with `limit` and paged. */
+  pagedPending: boolean;
   pendingKey: string;
   historyKey: string;
   metaKey: string;
@@ -21,6 +33,20 @@ interface SourceConfig {
 }
 
 const ALL_SOURCES: SourceKey[] = ['received', 'sent', 'updates'];
+
+/** PPG-DD-5: pending rows per page for the paged inbox sources. Mirrors the server's `PENDING_PAGE_SIZE`
+ * (`keyset-cursor.util.ts`); the history page size is chosen by the server (`limit` omitted there). */
+export const PENDING_PAGE_SIZE = 50;
+
+/** PPG-DD-5: rows fetched per bell popover group (unseen requests, seen requests, unread updates). */
+export const BELL_GROUP_LIMIT = 10;
+
+/** `GET notification/attention-counts` payload (PPG-R-1). */
+export interface BellCounts {
+  unseenRequests: number;
+  pendingRequests: number;
+  unreadUpdates: number;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -113,10 +139,19 @@ export class ResultsNotificationsService {
   loadingMore = false;
 
   private paging: Record<SourceKey, SourcePaging> = {
-    received: { hasMore: false, nextCursor: null },
-    sent: { hasMore: false, nextCursor: null },
-    updates: { hasMore: false, nextCursor: null }
+    received: emptyPaging(),
+    sent: emptyPaging(),
+    updates: emptyPaging()
   };
+
+  /** `true` while a `loadMorePending()` call has in-flight requests; a second call is a no-op (PPG-R-5). */
+  loadingMorePending = false;
+
+  /** PPG-T-5: one token per source for PENDING fetches only. Bumped by every page-1 pending fetch
+   * (`loadInbox`, `refreshSource`, boot `refreshPending`); a `loadMorePending` page captures it, so a
+   * page-1 reload that lands while page N is in flight drops page N instead of appending it onto the
+   * fresh page 1 with a stale cursor. Independent of `sourceGen` (which `refreshPending` must not bump). */
+  private pendingGen: Record<SourceKey, number> = { received: 0, sent: 0, updates: 0 };
 
   /** Sources whose FIRST history page (of their current `sourceGen`) has not resolved yet. Exposed
    * via `historyLoading` for the component's "Loading history…" row (design.md §6.2). Membership is
@@ -128,6 +163,7 @@ export class ResultsNotificationsService {
   private readonly sourceConfig: Record<SourceKey, SourceConfig> = {
     received: {
       api: options => this.api.resultsSE.GET_allRequest(options),
+      pagedPending: true,
       pendingKey: 'receivedContributionsPending',
       historyKey: 'receivedContributionsDone',
       metaKey: 'doneMeta',
@@ -135,6 +171,7 @@ export class ResultsNotificationsService {
     },
     sent: {
       api: options => this.api.resultsSE.GET_sentRequest(options),
+      pagedPending: false,
       pendingKey: 'sentContributionsPending',
       historyKey: 'sentContributionsDone',
       metaKey: 'doneMeta',
@@ -142,6 +179,7 @@ export class ResultsNotificationsService {
     },
     updates: {
       api: options => this.api.resultsSE.GET_requestUpdates(options),
+      pagedPending: true,
       pendingKey: 'notificationsPending',
       historyKey: 'notificationsViewed',
       metaKey: 'viewedMeta',
@@ -158,6 +196,12 @@ export class ResultsNotificationsService {
 
   readonly bellReceived = signal<any[]>([]);
   readonly bellUpdates = signal<any[]>([]);
+  /**
+   * @akili-spec notifications/admin-pending-paging — PPG-T-4 (design §8.1). Server-truth totals from
+   * `GET notification/attention-counts`. The rows above are bounded to {@link BELL_GROUP_LIMIT} per
+   * group, so badge / Decide / "N more" can no longer be derived from their length.
+   */
+  readonly bellCounts = signal<BellCounts>({ unseenRequests: 0, pendingRequests: 0, unreadUpdates: 0 });
   readonly bellLoading = signal(false);
   readonly bellError = signal(false);
 
@@ -203,25 +247,27 @@ export class ResultsNotificationsService {
   });
 
   /** BRS-DD-6: the badge counts fresh items only (unseen requests + unread updates). Server truth only. */
-  readonly bellCount = computed(() => this.bellUnseenRequests().length + this.bellUpdates().length);
+  readonly bellCount = computed(() => this.bellCounts().unseenRequests + this.bellCounts().unreadUpdates);
 
   /** BRS-R-6: the Decide tab counts every pending request, fresh or seen. */
-  readonly bellPendingRequestCount = computed(() => this.bellReceived().length);
+  readonly bellPendingRequestCount = computed(() => this.bellCounts().pendingRequests);
 
   /**
-   * Reloads the bell snapshot: pending received requests + unread updates, ALL phases (no
-   * `versionId`). Generation-guarded: only the latest call may apply data or settle loading/error.
-   * A failed leg leaves the previous snapshot in place and flags `bellError`.
+   * Reloads the bell snapshot, ALL phases (no `versionId`): the server counts + at most
+   * {@link BELL_GROUP_LIMIT} rows per group (unseen requests, seen requests, unread updates) —
+   * never a full pending set (PPG-R-2/R-3). Generation-guarded: only the latest call may apply data
+   * or settle loading/error. A failed leg leaves its previous data in place and flags `bellError`.
    */
   refreshBell(): void {
     const gen = ++this.bellGen;
     this.bellLoading.set(true);
     this.bellError.set(false);
 
+    const LEGS = 4;
     let settled = 0;
     const onSettled = () => {
       settled++;
-      if (settled === 2 && gen === this.bellGen) this.bellLoading.set(false);
+      if (settled === LEGS && gen === this.bellGen) this.bellLoading.set(false);
     };
     const onError = (err: any) => {
       this.logPagingError(err);
@@ -229,16 +275,35 @@ export class ResultsNotificationsService {
       onSettled();
     };
 
-    this.api.resultsSE.GET_allRequest({ scope: 'pending' }).subscribe({
+    this.api.resultsSE.GET_notificationAttentionCounts().subscribe({
       next: ({ response }: any) => {
         if (gen !== this.bellGen || !response) return;
-        this.bellReceived.set(response.receivedContributionsPending || []);
+        this.bellCounts.set({
+          unseenRequests: Number(response.unseenRequests) || 0,
+          pendingRequests: Number(response.pendingRequests) || 0,
+          unreadUpdates: Number(response.unreadUpdates) || 0
+        });
       },
       error: onError,
       complete: onSettled
     });
 
-    this.api.resultsSE.GET_requestUpdates({ scope: 'pending' }).subscribe({
+    // Each received leg owns one side of the `seen` split; the other side's rows are kept.
+    const receivedLeg = (seen: boolean) =>
+      this.api.resultsSE.GET_allRequest({ scope: 'pending', limit: BELL_GROUP_LIMIT, seen }).subscribe({
+        next: ({ response }: any) => {
+          if (gen !== this.bellGen || !response) return;
+          const isSide = (row: any) => (row?.seen === true) === seen;
+          const incoming = (response.receivedContributionsPending || []).filter(isSide);
+          this.bellReceived.update(rows => (seen ? [...rows.filter(row => !isSide(row)), ...incoming] : [...incoming, ...rows.filter(row => !isSide(row))]));
+        },
+        error: onError,
+        complete: onSettled
+      });
+    receivedLeg(false);
+    receivedLeg(true);
+
+    this.api.resultsSE.GET_requestUpdates({ scope: 'pending', limit: BELL_GROUP_LIMIT }).subscribe({
       next: ({ response }: any) => {
         if (gen !== this.bellGen || !response) return;
         this.bellUpdates.set(response.notificationsPending || []);
@@ -287,6 +352,8 @@ export class ResultsNotificationsService {
     }
 
     this.applySeen(id);
+    // The server just recorded one more seen request: keep the badge in step until the next refresh.
+    this.bellCounts.update(counts => ({ ...counts, unseenRequests: Math.max(0, counts.unseenRequests - 1) }));
     return true;
   }
 
@@ -317,6 +384,8 @@ export class ResultsNotificationsService {
 
     // Keep an already-loaded inbox consistent with what the server just did (all phases).
     if (readLeg.status === 'fulfilled') {
+      // The server just read every pending update: no pending page is left to load.
+      this.paging = { ...this.paging, updates: { ...this.paging.updates, pendingHasMore: false, pendingNextCursor: null, pendingTotal: 0 } };
       const pending = this.updatesData?.notificationsPending ?? [];
       if (pending.length) {
         pending.forEach(notification => (notification.read = true));
@@ -403,6 +472,22 @@ export class ResultsNotificationsService {
     return this.firstHistoryOutstanding.size > 0;
   }
 
+  /** PPG-T-5: any paged source still has an unloaded pending page - drives the pending "Load more". */
+  get hasMorePending(): boolean {
+    return ALL_SOURCES.some(source => this.paging[source].pendingHasMore);
+  }
+
+  /** PPG-T-5: this source has more pending rows on the server than are loaded. */
+  pendingHasMore(source: SourceKey): boolean {
+    return this.paging[source].pendingHasMore;
+  }
+
+  /** PPG-T-5: server total of pending rows for this source in the current scope (rows loaded when the
+   * server sent no `pendingMeta`). PPG-T-6 builds the tab remainder (`total - loaded`) on this. */
+  pendingTotal(source: SourceKey): number {
+    return this.paging[source].pendingTotal;
+  }
+
   constructor(private readonly api: ApiService) {}
 
   // ---------------------------------------------------------------------------------------------
@@ -422,11 +507,7 @@ export class ResultsNotificationsService {
     this.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [] };
     this.sentData = { sentContributionsPending: [], sentContributionsDone: [] };
     this.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
-    this.paging = {
-      received: { hasMore: false, nextCursor: null },
-      sent: { hasMore: false, nextCursor: null },
-      updates: { hasMore: false, nextCursor: null }
-    };
+    this.paging = { received: emptyPaging(), sent: emptyPaging(), updates: emptyPaging() };
     this.initialLoading = true;
 
     let pendingSettled = 0;
@@ -489,6 +570,32 @@ export class ResultsNotificationsService {
   }
 
   /**
+   * PPG-T-5 "Load more" for the pending block (PPG-R-5/R-6). Fetches the next pending page of every paged
+   * source that still has one and APPENDS it (new array, never in place). A second call while one is in
+   * flight issues nothing. A failed page keeps rows and cursor, so calling again retries it. Like
+   * `loadMore`, it never bumps a generation: a `loadInbox`/`refreshSource`/boot reload that starts
+   * meanwhile bumps `sourceGen`/`pendingGen`, which drops this page on arrival.
+   */
+  loadMorePending(): void {
+    if (this.loadingMorePending) return;
+
+    const sources = ALL_SOURCES.filter(source => this.paging[source].pendingHasMore);
+    if (sources.length === 0) return;
+
+    this.loadingMorePending = true;
+    let settled = 0;
+    const onSettled = () => {
+      settled++;
+      if (settled === sources.length) this.loadingMorePending = false;
+    };
+
+    sources.forEach(source => {
+      const cursor = this.paging[source].pendingNextCursor ?? undefined;
+      this.fetchPending(source, this.phaseFilter, this.sourceGen[source], onSettled, cursor);
+    });
+  }
+
+  /**
    * Pending + first history page for ONE source at the given phase (design.md §6.2). Replaces that
    * source's history entirely — any Load-more pages already fetched (or still in flight) for it are
    * discarded (PAGE-DD-6, a known/accepted reversion; Reviewer FAIL #2a/#2b). Does not touch the
@@ -498,7 +605,7 @@ export class ResultsNotificationsService {
    */
   refreshSource(source: SourceKey, versionId: any = this.phaseFilter, callback?: () => void): void {
     this.resetSourceView(source);
-    this.paging = { ...this.paging, [source]: { hasMore: false, nextCursor: null } };
+    this.paging = { ...this.paging, [source]: emptyPaging() };
 
     // PAGE-T-4 rework (Reviewer FAIL #2b): bumping this source's generation cancels any OTHER
     // in-flight fetch for the same source (an earlier loadMore page, or a concurrent refreshSource
@@ -532,27 +639,64 @@ export class ResultsNotificationsService {
     this.fetchPending(source, versionId, sgen);
   }
 
-  private fetchPending(source: SourceKey, versionId: any, sgen: number, onSettled?: () => void): void {
+  private fetchPending(source: SourceKey, versionId: any, sgen: number, onSettled?: () => void, cursor?: string): void {
     const config = this.sourceConfig[source];
-    config.api({ versionId, scope: 'pending' }).subscribe({
+    const isFirstPage = cursor === undefined;
+    // A page-1 fetch supersedes every earlier pending fetch of this source (incl. an in-flight page N).
+    const pgen = isFirstPage ? ++this.pendingGen[source] : this.pendingGen[source];
+    const options: { versionId?: any; scope: 'pending'; limit?: number; cursor?: string } = { versionId, scope: 'pending' };
+    if (config.pagedPending) options.limit = PENDING_PAGE_SIZE;
+    if (cursor !== undefined) options.cursor = cursor;
+
+    config.api(options).subscribe({
       next: ({ response }: any) => {
-        if (sgen !== this.sourceGen[source] || !response) return;
+        if (sgen !== this.sourceGen[source] || pgen !== this.pendingGen[source] || !response) return;
 
         const rows = (response[config.pendingKey] || [])
           .slice()
           .sort((a: any, b: any) => Date.parse(b?.[config.dateField]) - Date.parse(a?.[config.dateField]));
-        this.applyPendingRows(source, rows);
+        // PPG section 9: missing `pendingMeta` (old server during rollback) -> the response IS the
+        // complete pending set, whatever page it was requested as (an old server ignores `limit` and
+        // `cursor` on `scope=pending`). So it SETS the rows instead of appending, or a rollback while
+        // paging would duplicate the rows already loaded.
+        const meta = config.pagedPending ? response.pendingMeta : undefined;
+        const isCompleteSet = config.pagedPending && !meta;
+        // Same set-vs-append split as history: page 1 SETS, later pages APPEND into a new array.
+        const loaded = isFirstPage || isCompleteSet ? rows : [...this.getPendingRows(source), ...rows];
+        this.applyPendingRows(source, loaded);
 
-        if (source === 'updates') {
+        this.paging = {
+          ...this.paging,
+          [source]: {
+            ...this.paging[source],
+            pendingHasMore: !!meta?.hasMore,
+            pendingNextCursor: meta?.hasMore ? (meta.nextCursor ?? null) : null,
+            pendingTotal: typeof meta?.total === 'number' ? meta.total : loaded.length
+          }
+        };
+
+        if (source === 'updates' && isFirstPage) {
           this.updatesData = { ...this.updatesData, notificationAnnouncements: response.notificationAnnouncement || [] };
         }
       },
       error: err => {
+        // PPG-R-5 "error": loaded rows and the pending cursor stay untouched, so Load more can retry.
         this.logPagingError(err);
         onSettled?.();
       },
       complete: () => onSettled?.()
     });
+  }
+
+  private getPendingRows(source: SourceKey): any[] {
+    switch (source) {
+      case 'received':
+        return this.receivedData.receivedContributionsPending || [];
+      case 'sent':
+        return this.sentData.sentContributionsPending || [];
+      default:
+        return this.updatesData.notificationsPending || [];
+    }
   }
 
   private fetchHistory(source: SourceKey, versionId: any, sgen: number, cursor: string | undefined, onSettled?: () => void): void {
@@ -576,7 +720,7 @@ export class ResultsNotificationsService {
         } else {
           this.appendHistoryRows(source, rows);
         }
-        this.paging = { ...this.paging, [source]: { hasMore: !!meta.hasMore, nextCursor: meta.nextCursor ?? null } };
+        this.paging = { ...this.paging, [source]: { ...this.paging[source], hasMore: !!meta.hasMore, nextCursor: meta.nextCursor ?? null } };
       },
       error: err => {
         this.logPagingError(err);
@@ -752,6 +896,13 @@ export class ResultsNotificationsService {
 
     notification.read = !notification.read;
 
+    // Keep the server-truth pending total in step with the optimistic move (rolled back on error).
+    const initialPendingTotal = this.paging.updates.pendingTotal;
+    this.paging = {
+      ...this.paging,
+      updates: { ...this.paging.updates, pendingTotal: Math.max(0, initialPendingTotal + (notification.read ? -1 : 1)) }
+    };
+
     if (notification.read) {
       this.updatesData.notificationsViewed.push(notification);
       this.updatesData.notificationsPending = this.updatesData.notificationsPending.filter(noti => noti !== notification);
@@ -774,6 +925,7 @@ export class ResultsNotificationsService {
       error: err => {
         this.updatesData.notificationsViewed = initialViewed;
         this.updatesData.notificationsPending = initialPending;
+        this.paging = { ...this.paging, updates: { ...this.paging.updates, pendingTotal: initialPendingTotal } };
         console.error(err);
       }
     });

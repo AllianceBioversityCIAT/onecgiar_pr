@@ -12,7 +12,7 @@ import {
   NotificationTypeEnum,
 } from './enum/notification.enum';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { In, Not } from 'typeorm';
+import { FindOperator, In, Not } from 'typeorm';
 
 const mockNotificationLevelRepository = {
   findOne: jest.fn(),
@@ -26,6 +26,7 @@ const mockNotificationRepository = {
   save: jest.fn(),
   findOne: jest.fn(),
   find: jest.fn(),
+  count: jest.fn(),
   createQueryBuilder: jest.fn(),
 };
 
@@ -36,6 +37,7 @@ const mockSocketManagementService = {
 
 const mockShareResultRequestService = {
   getReceivedResultRequestPopUp: jest.fn(),
+  countPendingReceived: jest.fn(),
 };
 const mockUserRepository = {
   InitiativeByUser: jest.fn(),
@@ -2204,7 +2206,8 @@ describe('NotificationService', () => {
         );
       });
 
-      it('scope=pending with limit: pending queries are unchanged (no take)', async () => {
+      // PPG-R-4 supersedes the BRS-T-3 'pending never limited' rule: limit under scope=pending now pages pending.
+      it('scope=pending with limit: the 3 pending queries are paged (take 11), announcements are not', async () => {
         mockNotificationRepository.find.mockResolvedValue([]);
 
         await service.getAllNotifications(user, {
@@ -2214,7 +2217,10 @@ describe('NotificationService', () => {
 
         const calls = mockNotificationRepository.find.mock.calls;
         expect(calls).toHaveLength(4);
-        calls.forEach((call) => expect(call[0].take).toBeUndefined());
+        expect(calls.filter((call) => call[0].take === 11)).toHaveLength(3);
+        expect(calls.filter((call) => call[0].take === undefined)).toHaveLength(
+          1,
+        );
       });
 
       it('legacy scope (both) with limit: only the 3 history queries get take 11, pending ones none', async () => {
@@ -2242,6 +2248,333 @@ describe('NotificationService', () => {
   // RRC-T-5 (bilateral/rejected-result-correction): RRC-R-13 — the rejection notification is linked
   // to its own `result_review_history` row (`notifications.review_history_id`) and the panel/bell
   // readout returns that row's comment; RRC-R-16 — the other types keep their wording.
+  describe('PPG-T-3 — pending paging + attention counts', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'user@cgiar.org',
+      first_name: 'Test',
+      last_name: 'User',
+    };
+    const CENTER_TYPES = [
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
+    ];
+    type Path = 'result' | 'center' | 'job';
+    interface FakeRow {
+      notification_id: number;
+      path: Path;
+      target_user: number;
+      read: boolean;
+      created_date: Date;
+      version_id?: number;
+    }
+    const BASE = new Date('2026-09-30T00:00:00Z').getTime();
+
+    const pathOfWhere = (entry: any): Path => {
+      const type = entry.obj_notification_type?.type;
+      if (type === NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED) return 'job';
+      if (type instanceof FindOperator && (type as any).type === 'in')
+        return 'center';
+      return 'result';
+    };
+    const sortDesc = (a: FakeRow, b: FakeRow) =>
+      b.created_date.getTime() - a.created_date.getTime() ||
+      b.notification_id - a.notification_id;
+    const matches = (row: FakeRow, entry: any): boolean => {
+      if (pathOfWhere(entry) !== row.path) return false;
+      if (
+        entry.target_user !== undefined &&
+        entry.target_user !== row.target_user
+      )
+        return false;
+      if (entry.read !== undefined && entry.read !== row.read) return false;
+      const version = entry.obj_result?.version_id;
+      if (version !== undefined && row.version_id !== version) return false;
+      const cd = entry.created_date;
+      if (cd instanceof FindOperator) {
+        if (!(row.created_date.getTime() < (cd as any).value.getTime()))
+          return false;
+      } else if (cd instanceof Date) {
+        if (row.created_date.getTime() !== cd.getTime()) return false;
+      }
+      const id = entry.notification_id;
+      if (
+        id instanceof FindOperator &&
+        !(row.notification_id < (id as any).value)
+      )
+        return false;
+      return true;
+    };
+    // In-memory stand-in for the notification table: `find`/`count` evaluate the where
+    // (object or keyset-OR array) against `rows`, which tests may mutate between calls.
+    let rows: FakeRow[];
+    const installFakeRepo = () => {
+      const run = (where: any) => {
+        const entries = Array.isArray(where) ? where : [where];
+        return rows.filter((r) => entries.some((e) => matches(r, e)));
+      };
+      mockNotificationRepository.find.mockImplementation(async (opts: any) => {
+        if (opts?.where?.obj_notification_level) return []; // announcements
+        const found = run(opts.where).sort(sortDesc);
+        return (opts.take ? found.slice(0, opts.take) : found).map((r) => ({
+          ...r,
+        }));
+      });
+      mockNotificationRepository.count.mockImplementation(
+        async (opts: any) => run(opts.where).length,
+      );
+    };
+    const mk = (
+      notification_id: number,
+      path: Path,
+      minutes: number,
+      extra: Partial<FakeRow> = {},
+    ): FakeRow => ({
+      notification_id,
+      path,
+      target_user: 42,
+      read: false,
+      created_date: new Date(BASE - minutes * 60000),
+      ...extra,
+    });
+
+    beforeEach(() => {
+      mockNotificationRepository.count.mockReset();
+      mockShareResultRequestService.countPendingReceived.mockResolvedValue({
+        pendingRequests: 5,
+        unseenRequests: 3,
+      });
+    });
+
+    describe('getAttentionCounts (PPG-R-1)', () => {
+      const parityFixture = () => [
+        mk(1, 'result', 0),
+        mk(2, 'center', 1),
+        mk(3, 'job', 2),
+        mk(4, 'job', 3),
+        // noise that must not be counted: already read, and another user's rows
+        mk(5, 'result', 4, { read: true }),
+        mk(6, 'job', 5, { target_user: 99 }),
+        mk(7, 'center', 6, { target_user: 99 }),
+        mk(8, 'result', 7, { target_user: 99 }),
+      ];
+
+      it('T1: parity - 1 result-scoped + 1 Center + 2 AI-job unread -> unreadUpdates 4 with the request counts', async () => {
+        rows = parityFixture();
+        installFakeRepo();
+        const result = await service.getAttentionCounts(user);
+        expect(result.status).toBe(200);
+        expect(result.response).toEqual({
+          unseenRequests: 3,
+          pendingRequests: 5,
+          unreadUpdates: 4,
+        });
+      });
+
+      it.each([
+        ['result', 3],
+        ['center', 3],
+        ['job', 2],
+      ] as Array<[Path, number]>)(
+        'T1: removing the %s path changes the count by its share -> %i',
+        async (path, expected) => {
+          rows = parityFixture().filter((r) => r.path !== path);
+          installFakeRepo();
+          const result = await service.getAttentionCounts(user);
+          expect(result.response.unreadUpdates).toBe(expected);
+        },
+      );
+
+      it('T2: counts through count(), never find() (admin scale: MUST NOT load rows)', async () => {
+        rows = parityFixture();
+        installFakeRepo();
+        await service.getAttentionCounts(user);
+        expect(mockNotificationRepository.find).not.toHaveBeenCalled();
+        expect(mockNotificationRepository.count).toHaveBeenCalledTimes(3);
+        mockNotificationRepository.count.mock.calls.forEach(([opts]) => {
+          expect(opts.where.target_user).toBe(42);
+          expect(opts.where.read).toBe(false);
+          expect(opts.relations).toBeDefined();
+        });
+      });
+
+      it('returns the standard 500 envelope when a count fails', async () => {
+        rows = [];
+        installFakeRepo();
+        mockNotificationRepository.count.mockRejectedValueOnce(new Error('x'));
+        const result = await service.getAttentionCounts(user);
+        expect(result.status).toBe(500);
+      });
+    });
+
+    describe('getAllNotifications scope=pending with limit (PPG-R-4)', () => {
+      const bigFixture = () => {
+        const out: FakeRow[] = [];
+        // 130 rows over the 3 paths; shared minute slots so date ties cross paths.
+        for (let i = 0; i < 130; i++) {
+          const path: Path = (['result', 'center', 'job'] as Path[])[i % 3];
+          out.push(mk(1000 + i, path, Math.floor(i / 2), { version_id: 8 }));
+        }
+        return out;
+      };
+
+      it('T3: pages cover all 130 rows once, newest first, total=130 on every page', async () => {
+        rows = bigFixture();
+        installFakeRepo();
+        const pages: any[] = [];
+        let cursor: string | undefined;
+        for (let guard = 0; guard < 10; guard++) {
+          const res = await service.getAllNotifications(user, {
+            scope: 'pending',
+            limit: 50,
+            cursor,
+          });
+          pages.push(res.response);
+          if (!res.response.pendingMeta.hasMore) break;
+          cursor = res.response.pendingMeta.nextCursor;
+        }
+        expect(pages.map((p) => p.notificationsPending.length)).toEqual([
+          50, 50, 30,
+        ]);
+        const ids = pages.flatMap((p) =>
+          p.notificationsPending.map((r: any) => r.notification_id),
+        );
+        expect(new Set(ids).size).toBe(130);
+        expect(ids).toEqual(
+          [...rows].sort(sortDesc).map((r) => r.notification_id),
+        );
+        pages.forEach((p) => expect(p.pendingMeta.total).toBe(130));
+        expect(pages[0].pendingMeta.hasMore).toBe(true);
+        expect(pages[2].pendingMeta.hasMore).toBe(false);
+      });
+
+      it('T4: a page-1 row marked read before page 2 -> no repeat, no gap among still-pending rows', async () => {
+        rows = bigFixture();
+        installFakeRepo();
+        const p1 = await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 50,
+        });
+        const page1Ids = p1.response.notificationsPending.map(
+          (r: any) => r.notification_id,
+        );
+        // mutate between pages: a page-1 row leaves pending
+        rows.find((r) => r.notification_id === page1Ids[10]).read = true;
+        const p2 = await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 50,
+          cursor: p1.response.pendingMeta.nextCursor,
+        });
+        const page2Ids = p2.response.notificationsPending.map(
+          (r: any) => r.notification_id,
+        );
+        const stillPending = [...rows]
+          .filter((r) => !r.read && !page1Ids.includes(r.notification_id))
+          .sort(sortDesc)
+          .map((r) => r.notification_id);
+        expect(page2Ids.some((id: number) => page1Ids.includes(id))).toBe(
+          false,
+        );
+        expect(page2Ids).toEqual(stillPending.slice(0, 50));
+        expect(p2.response.pendingMeta.total).toBe(129);
+      });
+
+      it('T5: version_id=8 -> phase-8 rows plus phase-less AI-job rows only', async () => {
+        rows = [
+          mk(1, 'result', 0, { version_id: 8 }),
+          mk(2, 'result', 1, { version_id: 7 }),
+          mk(3, 'center', 2, { version_id: 8 }),
+          mk(4, 'center', 3, { version_id: 7 }),
+          mk(5, 'job', 4), // phase-less
+        ];
+        installFakeRepo();
+        const res = await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 50,
+          versionId: 8,
+        });
+        expect(
+          res.response.notificationsPending.map((r: any) => r.notification_id),
+        ).toEqual([1, 3, 5]);
+        expect(res.response.pendingMeta.total).toBe(3);
+      });
+
+      it('paged mode runs one find per path with take limit+1 and the keyset order', async () => {
+        rows = bigFixture();
+        installFakeRepo();
+        await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 50,
+        });
+        const withTake = mockNotificationRepository.find.mock.calls.filter(
+          ([o]) => o.take,
+        );
+        expect(withTake).toHaveLength(3);
+        withTake.forEach(([o]) => {
+          expect(o.take).toBe(51);
+          expect(o.order).toEqual({
+            created_date: 'DESC',
+            notification_id: 'DESC',
+          });
+        });
+      });
+    });
+
+    describe('legacy and history unchanged (PPG-NFR-3)', () => {
+      it('T6: scope=pending without limit keeps the legacy shape and queries, no count calls', async () => {
+        rows = [mk(1, 'result', 0), mk(2, 'center', 1), mk(3, 'job', 2)];
+        installFakeRepo();
+        const res = await service.getAllNotifications(user, {
+          scope: 'pending',
+        });
+        expect(Object.keys(res.response).sort()).toEqual([
+          'notificationAnnouncement',
+          'notificationsPending',
+          'notificationsViewed',
+          'viewedMeta',
+        ]);
+        expect(res.response.notificationsPending).toHaveLength(3);
+        expect(mockNotificationRepository.count).not.toHaveBeenCalled();
+        const calls = mockNotificationRepository.find.mock.calls;
+        expect(calls).toHaveLength(4);
+        expect(calls[0][0].where).toEqual({
+          target_user: 42,
+          read: false,
+          obj_result: {
+            is_active: true,
+            obj_result_by_initiatives: { initiative_role_id: 1 },
+          },
+          obj_notification_type: { type: Not(In(CENTER_TYPES)) },
+        });
+        expect(calls[0][0].take).toBeUndefined();
+        expect(calls[2][0].where).toEqual({
+          target_user: 42,
+          read: false,
+          obj_notification_type: {
+            type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+          },
+        });
+      });
+
+      it('T6: scope=history&limit=10 stays a history page (take 11), without pendingMeta or counts', async () => {
+        rows = [];
+        installFakeRepo();
+        const res = await service.getAllNotifications(user, {
+          scope: 'history',
+          limit: 10,
+        });
+        expect(res.response.pendingMeta).toBeUndefined();
+        expect(res.response.viewedMeta).toBeDefined();
+        expect(mockNotificationRepository.count).not.toHaveBeenCalled();
+        const takes = mockNotificationRepository.find.mock.calls.map(
+          ([o]) => o.take,
+        );
+        expect(takes).toEqual([11, 11, 11]);
+      });
+    });
+  });
+
   describe('RRC-T-5 — the rejection notification carries its history row', () => {
     const user: TokenDto = {
       id: 42,

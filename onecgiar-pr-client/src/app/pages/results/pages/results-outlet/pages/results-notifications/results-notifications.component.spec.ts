@@ -77,7 +77,13 @@ describe('ResultsNotificationsComponent', () => {
       hasMore: false,
       historyLoading: false,
       loadingMore: false,
-      loadMore: jest.fn()
+      loadMore: jest.fn(),
+      // @akili-spec notifications/admin-pending-paging (PPG-T-5): pending paging, exhausted by default.
+      hasMorePending: false,
+      pendingHasMore: jest.fn(() => false),
+      pendingTotal: jest.fn(() => 0),
+      loadingMorePending: false,
+      loadMorePending: jest.fn()
     };
 
     routerEvents$ = new Subject<any>();
@@ -1250,6 +1256,44 @@ describe('ResultsNotificationsComponent', () => {
       expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Loading history…');
     });
 
+    // @akili-spec notifications/admin-pending-paging (PPG-T-5, PPG-R-5): the pending "Load more".
+    const getPendingLoadMore = () => (fixture.nativeElement as HTMLElement).querySelector('[data-testid="load-more-pending"]') as HTMLButtonElement | null;
+
+    it('PPG-R-5 ordinary user: no pending "Load more" when no source has more pending rows', () => {
+      resultsNotificationsServiceMock.hasMorePending = false;
+      fixture.detectChanges();
+
+      expect(getPendingLoadMore()).toBeNull();
+    });
+
+    it('PPG-R-5 admin first paint: shows the pending "Load more" while a source has more pending rows, and it delegates to loadMorePending', () => {
+      resultsNotificationsServiceMock.hasMorePending = true;
+      fixture.detectChanges();
+
+      const button = getPendingLoadMore()!;
+      expect(button).toBeTruthy();
+      expect(button.disabled).toBe(false);
+      button.click();
+      expect(resultsNotificationsServiceMock.loadMorePending).toHaveBeenCalled();
+      expect(resultsNotificationsServiceMock.loadMore).not.toHaveBeenCalled();
+    });
+
+    it('PPG-R-5: the pending "Load more" is disabled and aria-busy while loadingMorePending', () => {
+      resultsNotificationsServiceMock.hasMorePending = true;
+      resultsNotificationsServiceMock.loadingMorePending = true;
+      fixture.detectChanges();
+      expect(getPendingLoadMore()!.disabled).toBe(true);
+      expect(getPendingLoadMore()!.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('PPG-R-5: the pending "Load more" is hidden during the initial skeleton gate', () => {
+      resultsNotificationsServiceMock.hasMorePending = true;
+      resultsNotificationsServiceMock.initialLoading = true;
+      fixture.detectChanges();
+
+      expect(getPendingLoadMore()).toBeNull();
+    });
+
     // Falsifier (a): all hasMore=false and the button is rendered -> fail.
     it('falsifier (a): does not render "Load more" when every source is exhausted (hasMore=false)', () => {
       resultsNotificationsServiceMock.hasMore = false;
@@ -1338,6 +1382,83 @@ describe('ResultsNotificationsComponent', () => {
       fixture.detectChanges();
 
       expect(component.showFilteredHistoryHint).toBe(false);
+    });
+
+    // @akili-spec notifications/admin-pending-paging (PPG-T-6, PPG-R-7 / PPG-R-8)
+    describe('PPG-T-6 - tab totals with an unloaded pending remainder + partial-filter notice', () => {
+      const NOTICE = 'Showing results from loaded notifications only. Load more pending to include the rest.';
+      const updateRow = (id: number) => ({ notification_id: id, read: false, registered_date: '2026-09-29T09:00:00Z' });
+      const receivedRow = (id: number) => ({ share_result_request_id: id, request_status_id: 1, requested_date: '2026-09-29T09:00:00Z' });
+      const seed = () => {
+        const se = resultsNotificationsServiceMock;
+        se.updatesData = { notificationAnnouncements: [], notificationsPending: Array.from({ length: 50 }, (_, i) => updateRow(i + 1)), notificationsViewed: [] };
+        se.receivedData = { receivedContributionsPending: [receivedRow(1), receivedRow(2)], receivedContributionsDone: [] };
+        se.hasMorePending = true;
+        se.pendingHasMore = jest.fn((source: string) => source === 'updates');
+        se.pendingTotal = jest.fn((source: string) => (source === 'updates' ? 6000 : 2));
+      };
+
+      it('test 1: no filter - All and Info include the 5,950 update remainder, Decision does not', () => {
+        seed();
+        const loadedAll = component.sourceScopedList.length;
+        const loadedDecision = component.sourceScopedList.filter(i => i.needsDecision).length;
+        const loadedInfo = loadedAll - loadedDecision;
+        expect(component.allTabCount).toBe(loadedAll + 5950);
+        expect(component.infoTabCount).toBe(loadedInfo + 5950);
+        expect(component.decisionTabCount).toBe(loadedDecision);
+      });
+
+      it('test 1b: a received remainder lands in Decision + All (not Info), and only on the Received side', () => {
+        seed();
+        const se = resultsNotificationsServiceMock;
+        se.pendingHasMore = jest.fn((source: string) => source === 'received');
+        se.pendingTotal = jest.fn((source: string) => (source === 'received' ? 102 : 50));
+        const loaded = component.sourceScopedList;
+        const loadedDecision = loaded.filter(i => i.needsDecision).length;
+        const loadedInfo = loaded.length - loadedDecision;
+        expect(component.decisionTabCount).toBe(loadedDecision + 100);
+        expect(component.infoTabCount).toBe(loadedInfo);
+        expect(component.allTabCount).toBe(loaded.length + 100);
+
+        component.activeSource.set('sent');
+        expect(component.decisionTabCount).toBe(component.sourceScopedList.filter(i => i.needsDecision).length);
+      });
+
+      it('test 1c: remainder clamps at 0 when the total is below the loaded rows', () => {
+        seed();
+        resultsNotificationsServiceMock.pendingTotal = jest.fn(() => 10);
+        expect(component.allTabCount).toBe(component.sourceScopedList.length);
+      });
+
+      it('test 2: with a search term counts are loaded-only and the notice is visible', () => {
+        seed();
+        resultsNotificationsServiceMock.searchFilter = 'zzz-no-match';
+        fixture.detectChanges();
+        expect(component.allTabCount).toBe(component.sourceScopedList.length);
+        expect(component.infoTabCount).toBe(component.sourceScopedList.filter(i => !i.needsDecision).length);
+        expect(component.showPartialFilterNotice).toBe(true);
+        const notice = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="partial-filter-notice"]');
+        expect(notice?.textContent).toContain(NOTICE);
+      });
+
+      it('test 3a: notice hidden when the filter is cleared (hasMore still true)', () => {
+        seed();
+        resultsNotificationsServiceMock.searchFilter = 'x';
+        expect(component.showPartialFilterNotice).toBe(true);
+        resultsNotificationsServiceMock.searchFilter = null;
+        fixture.detectChanges();
+        expect(component.showPartialFilterNotice).toBe(false);
+        expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="partial-filter-notice"]')).toBeNull();
+      });
+
+      it('test 3b: notice hidden when a filter is active but no pending source has more', () => {
+        seed();
+        resultsNotificationsServiceMock.searchFilter = 'x';
+        resultsNotificationsServiceMock.hasMorePending = false;
+        fixture.detectChanges();
+        expect(component.showPartialFilterNotice).toBe(false);
+        expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="partial-filter-notice"]')).toBeNull();
+      });
     });
 
     // Falsifier (e): calling groupedTabList twice with unchanged inputs must not invoke the pipes
