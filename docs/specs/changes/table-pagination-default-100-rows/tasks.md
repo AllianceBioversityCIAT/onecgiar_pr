@@ -7,7 +7,7 @@ Linked: `requirements.md` + `design.md` (same folder).
 - **Module / feature:** `changes/table-pagination-default-100-rows`
 - **Sprint / target phase:** immediate
 - **Owner / driver:** M. Giraldo
-- **Status:** in-progress
+- **Status:** shipped
 
 ## 2. Pre-flight checklist
 
@@ -109,7 +109,7 @@ Linked: `requirements.md` + `design.md` (same folder).
   - [ ] `npx jest --silent --reporters=summary --no-coverage --testPathPattern="wp-home"` green, no new failures.
   - [ ] Commit via `🎨 style(pr-table-defaults) [SPEC:changes/table-pagination-default-100-rows]: <description>`.
 
-### `PTR-T-4` — [ ] Manual performance/scroll verification on the 3 render-heavy tables
+### `PTR-T-4` — [x] Manual performance/scroll verification on the 3 render-heavy tables
 
 - **Type:** `tests` (manual, non-automated)
 - **Description:** With `PTR-T-1` and `PTR-T-3` landed, manually load `results-list`, `programme-results`, and `wp-home` in a real browser against a dataset reaching (or close to) 100 rows, scroll the full page on each, and record whether the page remains responsive with no visible layout break. This is the substitute gate for the "render/performance regression" defect class named in `requirements.md` §8, since no automated perf-testing infrastructure exists in this repo.

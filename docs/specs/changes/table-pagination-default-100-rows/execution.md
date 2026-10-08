@@ -75,6 +75,25 @@
 - **Issues encountered:** none.
 - **Final verification result:** PASS — Jest 702/702 green, lint clean, all 12 files scope-confined, Reviewer PASS with an independent repo-wide sweep.
 
+### `PTR-T-4` — Manual performance/scroll verification on the 3 render-heavy tables
+
+- **Final status:** `PASS` (manual check, per `tasks.md` `Review: checklist`)
+- **Date:** 2026-10-08
+- **Performed by:** M. Giraldo, in a real authenticated browser session (`localhost:4200`, TEST environment).
+
+**Outcome per table:**
+
+| Table | Route observed | Result |
+|---|---|---|
+| `programme-results` | `/result-framework-reporting/entity-details/SP02/results?...` | Initially showed a stale paginator — "1 – 10 of 132" with the dropdown reading "10" despite `[rows]="100"` already on disk/committed. **Root cause: stale `ng serve` bundle** (the running dev server was serving a pre-edit compiled bundle — the exact trap documented in `onecgiar-pr-client/CLAUDE.md` §9, "Never trust a dev server you did not start"), not a code defect. After the user restarted the dev server, confirmed correct: shows 100, dropdown reads "100". |
+| `results-list` | main platform results list | Confirmed showing 100, scroll fluid, no layout break. |
+| `wp-home` | Work Packages home (grouped/expandable) | Confirmed showing 100, group expand/collapse still functions correctly, no layout break. |
+
+- **Disqualifier check:** the initial "10" observation on `programme-results` was investigated before being recorded as a FAIL — confirmed via direct disk read (`grep -n "rows\|paginator" programme-results.component.html` → `[rows]="100"` at line 393, matching the committed diff) that the source was correct, and the symptom appearing identically "in every table" (per the user's own words) was the tell that pointed to a shared stale-bundle cause rather than 3 independent code defects — consistent with `.agents/leader.md` → *Deferring a check* (probe the assumption before recording a blocker). Resolved by dev-server restart, not a code change.
+- **Requirements covered:** `PTR-R-10`, `PTR-AC-6`.
+- **Issues encountered:** the stale-bundle false negative above — no spec or code defect, no follow-up task needed.
+- **Final verification result:** PASS on all 3 tables.
+
 ## 3. Summary
 
-3/4 tasks closed on first attempt, no rework, zero `ADVISORY` findings of note across all three. `PTR-T-4` (manual browser verification) depends on `PTR-T-1` and `PTR-T-3` — both now `[x]` — and is the only remaining task. Spec not yet `shipped`.
+All 4/4 tasks closed, 3 on first-attempt Reviewer PASS with zero `ADVISORY` findings of note, 1 (`PTR-T-4`) closed by manual user verification after correctly diagnosing a stale-dev-server false negative rather than a code defect. Spec status: `shipped`.
