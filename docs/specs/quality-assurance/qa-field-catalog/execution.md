@@ -346,3 +346,10 @@
 - QA feedback relayed by the owner: the four `geo.extra_*` fields repeated the main geo labels. Owner approved distinct labels. Delivered: form label + verbatim qualifier "(potential impact in other geographic areas)" (tail of the extra-block question, rd-geographic-location.component.html:56) on `geo.extra_regions_specified`, `geo.extra_regions`, `geo.extra_countries_specified`, `geo.extra_countries`; keys, types and rules unchanged; v1.17 row.
 - Leader re-run: 456/456, tsc and eslint clean; snapshot 323 → 323 keys. Reviewer PASS; falsifier real.
 - Same QA message, answered without change: IPSR step 1 geography has no rules and `countries` is still multi_select — deferred by the owner's Results-first focus (to align with T-16 when IPSR enters scope); `geographic_scopes` = [1,2,3,4,5,50] (50 "This is yet to be determined", migration 1667327277664; 4 UNVERIFIED as a CLARISA row).
+
+### QAC-T-24 — Geo: extra-scope option list and level-word labels · P2-3925 — PASS (attempt 2)
+
+- Date: 2026-10-08 · catalog 2026.23
+- Owner question: which geo fields does the QA admin know are required? Answer recorded in the contract ("Geographic location notes"): only `geo.scope` is always required; every other `geo.*` field is required exactly when visible (verified field by field, subfields included). Delivered: closed list `extra_geographic_scopes` [1,2,3,4,5] for `geo.extra_scope` (form hides 50 there, geoscope-management.component.ts:182-183; offers 1,2,3,5, id 4 = stored legacy country scope); `resultLevelWord` note ("for this Output/Outcome…" — catalog keeps "result"); v1.18 row.
+- Attempt 1 → FAIL (doc made `geo.has_extra_scope` depend on its own answer). Attempt 2 → PASS (doc only; Leader closed one parenthesis). 459/459, tsc and eslint clean; snapshot 323 → 323.
+- Open with owner: the owner described the "other geographic areas" question under Global; code and live validation hide it for Global and 50 (rd-geographic-location.component.html:34). Catalog follows the code pending a prtest result to check.

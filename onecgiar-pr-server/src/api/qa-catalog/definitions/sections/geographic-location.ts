@@ -290,7 +290,7 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
     label:
       'What is the geographic scope where there may be potential impact in other geographic areas?',
     type: 'single_select',
-    control_list: 'geographic_scopes',
+    control_list: 'extra_geographic_scopes',
     section: SECTION,
     order: 7,
     result_types: INNOVATION_TYPES,

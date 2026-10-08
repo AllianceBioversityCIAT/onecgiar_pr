@@ -89,6 +89,39 @@ describe('QAC-T-16 geographic location (Results)', () => {
     });
   });
 
+  describe('closed list extra_geographic_scopes (QAC-T-24)', () => {
+    it('is the main list minus 50, which the extra block hides ([hideTobeDetermined]="true")', () => {
+      expect(CLOSED_CONTROL_LISTS.extra_geographic_scopes).toEqual([
+        1, 2, 3, 4, 5,
+      ]);
+      expect(CLOSED_CONTROL_LISTS.extra_geographic_scopes).not.toContain(50);
+    });
+
+    it('geo.extra_scope uses it; the main scope keeps geographic_scopes', () => {
+      expect(get('geo.extra_scope').control_list).toBe(
+        'extra_geographic_scopes',
+      );
+      expect(get('geo.scope').control_list).toBe('geographic_scopes');
+    });
+
+    it('a condition geo.extra_scope eq 50 is rejected (CONDITION_VALUE_NOT_IN_LIST)', () => {
+      const fields = CATALOG_FIELDS.map((f) =>
+        f.key === 'geo.extra_regions'
+          ? { ...f, visible_when: eq('geo.extra_scope', 50) }
+          : f,
+      );
+      const errors = validateCatalogShape({
+        resultTypes: CATALOG_RESULT_TYPES,
+        sections: CATALOG_SECTIONS,
+        fields,
+        notForQa: NOT_FOR_QA,
+      });
+      expect(errors.map((e) => e.rule)).toContain(
+        'CONDITION_VALUE_NOT_IN_LIST',
+      );
+    });
+  });
+
   describe('main block', () => {
     it('geo.scope: always shown, unconditionally required (live function: NULL fails)', () => {
       const f = get('geo.scope');

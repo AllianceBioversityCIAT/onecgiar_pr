@@ -256,6 +256,13 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Implements:** QAC-R-1 (labels), QAC-R-13 (QA evaluates without Reporting's code)
 - **Depends on:** QAC-T-22
 
+### [x] QAC-T-24 — Geo: extra-scope option list and level-word labels (owner 2026-10-08) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** (1) `geo.extra_scope` gets its own closed list `extra_geographic_scopes` = `geographic_scopes` minus 50: the form hides "This is yet to be determined" in the extra block (`hideTobeDetermined`, rd-geographic-location.component.html), so a condition on it can no longer name 50. (2) Contract: the form's "for this Output/Outcome/…" questions substitute the result level word (`resultLevelWord`); the catalog's labels say "result" as the generic form — documented, labels unchanged. Owner asked for the adjustments; revision bump.
+- **Implements:** QAC-R-13 (closed lists), QAC-R-1 (labels)
+- **Depends on:** QAC-T-23
+
 ## 4. Dependency graph
 
 ```

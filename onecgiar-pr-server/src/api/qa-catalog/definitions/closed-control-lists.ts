@@ -47,6 +47,14 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      */
     geographic_scopes: [1, 2, 3, 4, 5, 50],
     /**
+     * `geo.extra_scope` (QAC-T-24): the scopes the form offers in the extra block ("potential impact in other geographic areas").
+     * Source: rd-geographic-location.component.html:55-58 renders `app-geoscope-management` with `[hideTobeDetermined]="true"`, and
+     * geoscope-management.component.ts:183 adds the "This is yet to be determined" option (id 50) only when that flag is false, so the
+     * extra block offers exactly the `geographic_scopes` ids minus 50. Ids 1, 2, 3, 5 and the UNVERIFIED id 4: see the note on
+     * `geographic_scopes` above. IPSR keeps `geographic_scopes`.
+     */
+    extra_geographic_scopes: [1, 2, 3, 4, 5],
+    /**
      * `evidence.is_sharepoint` (QAC-T-17): 0 Link, 1 Upload file. Source: the stored tinyint (evidence.entity.ts) and the form's two
      * hard-coded radio options (evidence-item.component.ts `evidencesType`, booleans there; the server stores `Number(!!is_sharepoint)`,
      * evidences.service.ts:842,894).
