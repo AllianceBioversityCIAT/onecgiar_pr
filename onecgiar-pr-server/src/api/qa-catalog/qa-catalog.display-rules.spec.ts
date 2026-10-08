@@ -46,6 +46,16 @@ const VISIBLE: Record<string, Condition | undefined> = {
       eq('general.is_discontinued', true),
     ],
   },
+  // QAC-T-26: impact-area pickers show only when the tag is Principal (3) (rd-general-information.component.html:146/195/244/297/346)
+  'general.gender_impact_areas': eq('general.gender_tag', 3),
+  'general.climate_impact_areas': eq('general.climate_tag', 3),
+  'general.nutrition_impact_areas': eq('general.nutrition_tag', 3),
+  'general.environment_impact_areas': eq('general.environment_tag', 3),
+  'general.poverty_impact_areas': eq('general.poverty_tag', 3),
+  // QAC-T-26: needsDescription() = option.requires_description, else legacy id 6 (rd-annual-updating.component.ts:627-633)
+  'general.discontinued_reasons>description': {
+    any: [eq('requires_description', true), eq('reason', 6)],
+  },
   'knowledge_product.melia_previous_submitted': eq(
     'knowledge_product.is_melia',
     true,
@@ -289,5 +299,75 @@ describe('QAC-T-25 display rules and value shapes', () => {
         order('general.split_targets'),
       );
     });
+  });
+});
+
+describe('QAC-T-26 impact-area and discontinued-description visibility', () => {
+  const IMPACT = [
+    ['general.gender_impact_areas', 'general.gender_tag'],
+    ['general.climate_impact_areas', 'general.climate_tag'],
+    ['general.nutrition_impact_areas', 'general.nutrition_tag'],
+    ['general.environment_impact_areas', 'general.environment_tag'],
+    ['general.poverty_impact_areas', 'general.poverty_tag'],
+  ];
+
+  it.each(IMPACT)(
+    '%s is visible exactly when it is required (tag eq 3)',
+    (key, tag) => {
+      const f = CATALOG_FIELDS.find((x) => x.key === key);
+      expect(f?.visible_when).toEqual(eq(tag, 3));
+      expect(f?.visible_when).toEqual(f?.required_when);
+    },
+  );
+
+  it('discontinued description: visible by requires_description or reason 6, required by reason 6 only', () => {
+    const d = resolve(
+      CATALOG_FIELDS,
+      'general.discontinued_reasons>description',
+    );
+    expect(d?.visible_when).toEqual({
+      any: [eq('requires_description', true), eq('reason', 6)],
+    });
+    expect(d?.required_when).toEqual(eq('reason', 6));
+  });
+
+  it('requires_description is a read-only boolean lookup of the options table keyed by the row reason', () => {
+    const r = resolve(
+      CATALOG_FIELDS,
+      'general.discontinued_reasons>requires_description',
+    );
+    expect(r).toMatchObject({
+      type: 'boolean',
+      required: false,
+      storage: {
+        kind: 'lookup',
+        source: 'prms.investment_discontinued_option',
+        keys: [{ from: 'reason', to: 'investment_discontinued_option_id' }],
+        value_column: 'requires_description',
+      },
+    });
+    expect(shapeRules(CATALOG_FIELDS)).toEqual([]);
+  });
+
+  it.each(IMPACT.map(([k]) => [k]))(
+    'falsifier: dropping visible_when of %s is detected by the real-catalog check',
+    (key) => {
+      const fields = mutate(key, (n) => {
+        const { visible_when, ...rest } = n;
+        void visible_when;
+        return rest;
+      });
+      expect(check(fields)).toContain(`${key}: visible_when`);
+      expect(check(CATALOG_FIELDS)).toEqual([]);
+    },
+  );
+
+  it('falsifier: description visible only for reason 6 (flag branch dropped) is detected', () => {
+    const path = 'general.discontinued_reasons>description';
+    const fields = mutate(path, (n) => ({
+      ...n,
+      visible_when: eq('reason', 6),
+    }));
+    expect(check(fields)).toContain(`${path}: visible_when`);
   });
 });

@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 24,
-      "content_hash": "7b472d077c293b2ed339644c34c3240f9946450e7471aaadd3202f0a1e66b430"
+      "revision": 25,
+      "content_hash": "e2cd36d823ff3897b33ee9b006fe9f7917a699a45c964043a9ac9ad8af36b7bf"
     }
   },
   "keys": [
@@ -219,6 +219,7 @@
     "subfield:evidence.items/source",
     "subfield:general.discontinued_reasons/description",
     "subfield:general.discontinued_reasons/reason",
+    "subfield:general.discontinued_reasons/requires_description",
     "subfield:general.lead_contact_person/directory_user",
     "subfield:geo.countries/country",
     "subfield:geo.countries/subnational",

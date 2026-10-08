@@ -270,6 +270,13 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Implements:** QAC-R-1, QAC-R-13, QAC-R-14
 - **Depends on:** QAC-T-24
 
+### [x] QAC-T-26 — Missing display rules: impact-area components, discontinued-reason description (QA review 2026-10-08) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** QA review of 2026.24. (1) `general.{gender,climate,nutrition,environment,poverty}_impact_areas`: `visible_when` = `<tag> eq 3` (form shows the components only when the tag is Principal, rd-general-information.component.html:146,195,244,297,346). (2) `general.discontinued_reasons` → `description`: the form shows the text box per `needsDescription()` (rd-annual-updating.component.ts:627-633: the option's `requires_description` flag, else legacy id 6). Owner chose option (a): read-only lookup subfield `requires_description` from the discontinued options table, `visible_when: any[requires_description eq true, reason eq 6]`; `required_when` unchanged (`reason eq 6`, live function).
+- **Implements:** QAC-R-13
+- **Depends on:** QAC-T-25
+
 ## 4. Dependency graph
 
 ```

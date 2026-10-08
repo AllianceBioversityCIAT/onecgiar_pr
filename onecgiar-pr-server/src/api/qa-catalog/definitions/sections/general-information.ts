@@ -46,6 +46,9 @@ const IMPACT_AREA_LABEL =
   'Which component of the Impact Area is this result intended to impact?';
 
 // One control list per impact area (decided 2026-10-06, Santiago): no join filter on the binding.
+// QAC-T-26: the form shows the component picker only when the tag is Principal (3), the same gate as the requirement
+// (rd-general-information.component.html:146 gender, :195 climate, :244 nutrition, :297 environment, :346 poverty;
+// each `@if (<tag>_tag_id == 3)`), so `visible_when` equals `required_when`.
 const impactAreaField = (
   key: string,
   order: number,
@@ -62,6 +65,7 @@ const impactAreaField = (
   required: false,
   required_confirmed: true,
   required_when: whenEq(tagKey, 3),
+  visible_when: whenEq(tagKey, 3),
   ...FROM_2026,
   storage: {
     kind: 'relation',
@@ -414,10 +418,32 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
           column: 'investment_discontinued_option_id',
         },
       },
+      // QAC-T-26: read-only flag of the chosen option (`investment_discontinued_option.requires_description`, added by
+      // migration 1788442000000-AddPhaseAxisToDiscontinuedOptions). It has NO form label: the form never shows it, it
+      // drives whether the text box below is shown (rd-annual-updating.component.ts:627-633 `needsDescription()`;
+      // template .html:81). The label names the column's meaning. A lookup claims no table in the completeness guard;
+      // `prms.` reference source, same pattern as `option_label` (innovation-development.ts).
+      {
+        key: 'requires_description',
+        label: 'Requires a description',
+        type: 'boolean',
+        required: false,
+        storage: {
+          kind: 'lookup',
+          source: 'prms.investment_discontinued_option',
+          keys: [{ from: 'reason', to: 'investment_discontinued_option_id' }],
+          value_column: 'requires_description',
+        },
+      },
       {
         key: 'description',
         label: 'Enter text',
         type: 'text',
+        // QAC-T-26: VISIBILITY follows the form (`needsDescription()`: the option's `requires_description` flag when not
+        // null, else the legacy id 6, .ts:627-633, .html:81); the REQUIREMENT stays function-stated (id 6 only, below).
+        visible_when: {
+          any: [whenEq('requires_description', true), whenEq('reason', 6)],
+        },
         // QAC-T-19: FUNCTION-STATED, not in the form. The live function requires a non-empty description when the
         // chosen reason is id 6, the legacy "Other" row (validation_general_information_P25:149-151). The form's free-text
         // input is `[required]="false"` (annual-updating/rd-annual-updating.component.html:80-88) and shows for any reason the
