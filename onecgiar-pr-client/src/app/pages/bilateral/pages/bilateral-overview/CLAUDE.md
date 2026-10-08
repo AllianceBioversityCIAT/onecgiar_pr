@@ -13,16 +13,16 @@ by result type, Reporting pace) computed from the center's filtered result set f
   regardless of status, so `replicatedCount + newCount` always equals `totalResults.count`
   (`BOV-R-2`/`BOV-R-2.1`). **Do not "fix" one to match the other** — intentionally different numbers
   for the same center/phase. Badges are non-interactive `<span>`s (whole card is one `<a>`, `BOV-DD-4`);
-  tokens copied from `bilateral-projects-panel.component.html:265-299`, all counts computed in one
+  translucent white-on-gradient pills since the mockup change (no longer the projects-panel tokens), all counts computed in one
   loop (`BOV-DD-2`).
-- **`w1w2ContributorCount`/`w1w2LeadCount` (`BOV2-R-1`) render INLINE next to `w1w2Count`** —
-  `"N W1/W2 (X contributing · Y lead)"` — not as a standalone badge. A standalone "N of M W1/W2"
-  pill shipped first and confused users twice (lived apart from the number it explained, reused
-  words already on the line above); moved inline as a direct UX fix. Filter: `source !== 'API'`
-  AND `is_leading_result !== 1` = contributing; `w1w2LeadCount = w1w2Count - w1w2ContributorCount`.
-  **A progress-bar-panel redesign of this card was tried and reverted same-day** (`overview-total-
-  results-progress-bars` spec, task `OTR-T-1`) — user preferred the plain-text card once seeing it
-  next to the deck's other plain-white cards. Don't re-attempt without re-confirming visual direction.
+- **Card body follows the center mockup (`quick/overview-total-results-mockup`, 2026-10-08):** count,
+  divider, three label + count-chip rows — "Innovations replicated for update" = `replicatedCount`,
+  "New W3/Bilateral results" = `w3Count` (all W3, not only non-replicated — user's call),
+  "W1/W2 results tagging Center bilateral project" = `w1w2ContributorCount` — then the replicated /
+  `+ N new` pills. The lead/contributing lines were dropped from the visible card (still in the
+  `aria-label`); `w1w2LeadCount` is no longer rendered. The card keeps its primary gradient — the
+  mockup's purple was explicitly NOT adopted. A progress-bar redesign (`OTR-T-1`) was tried and
+  reverted earlier; don't re-attempt without re-confirming visual direction.
 - **The page computes no figure itself** (`COV-DD-1`). Every number rendered comes out of
   `bilateral-overview.aggregate.ts`'s `buildOverviewModel` — the component only wires signals and
   renders. If a card shows a wrong number, the bug is in `aggregate.ts` or in the row set fed to it,
@@ -111,6 +111,6 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
 
 - Whether the `sm:`/arbitrary-breakpoint cascade defect above also affects other mixed-breakpoint
   pages — not audited beyond this folder.
-- Visual-parity vs `bilateral-projects-panel`'s badges: human check at browser-verification (`BOV-T-1`).
+- Visual parity vs the center mockup (Total results card): human browser check pending.
 
-**Verified:** 2026-09-29 · qa-development-2026-ss · bd37a0f31 (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-w1w2-breakdown-inline`)
+**Verified:** 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)

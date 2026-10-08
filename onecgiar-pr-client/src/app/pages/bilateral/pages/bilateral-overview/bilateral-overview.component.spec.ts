@@ -216,13 +216,11 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       // FIXTURE_D1_ROWS: all 10 rows default `is_replicated: false` → 0 replicated, 10 new.
       expect(text('kpi-total-replicated-badge')).toBe('0 replicated');
-      expect(text('kpi-total-new-badge')).toBe('10 new');
+      expect(text('kpi-total-new-badge')).toBe('+ 10 new');
 
-      // BOV-T-1 rework: at 0 count the replicated badge mutes to the reference's zero-count token
-      // (bilateral-projects-panel.component.html:270-272), never the "has a count" token.
+      // At 0 count the replicated pill mutes (quick/overview-total-results-mockup), never the "has a count" tone.
       const replicatedBadgeClass = (el('kpi-total-replicated-badge')?.nativeElement as HTMLElement).className;
-      expect(replicatedBadgeClass).toContain('text-[var(--pr-color-accents-4)]');
-      expect(replicatedBadgeClass).not.toContain('text-[var(--pr-color-secondary-400)]');
+      expect(replicatedBadgeClass).toContain('text-white/70');
 
       const ariaLabel = el('kpi-total').attributes['aria-label'];
       expect(ariaLabel).toContain('10 results');
@@ -231,14 +229,15 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
     });
 
     // @akili-spec bilateral/overview-w1w2-contributor-badge (BOV2-R-2, BOV2-R-3)
-    it('renders the W1/W2 contributing/lead breakdown inline next to the W1/W2 figure, with the counts in the aria-label (BOV2-T-1, UX follow-up)', async () => {
+    it('renders the mockup breakdown rows (replicated · W3 · W1/W2 contributing), with the W1/W2 split in the aria-label (BOV2-T-1, quick/overview-total-results-mockup)', async () => {
       await setup();
       flushData();
 
-      // FIXTURE_D1_ROWS: only row id 6 is W1/W2 (`source: 'Result'`, w1w2Count=1), and it is lead,
-      // so 0 contributing · 1 lead. The breakdown now lives inline next to "1 W1/W2" instead of a
-      // standalone badge — a standalone "N of M W1/W2" pill confused users (see CLAUDE.md).
-      expect(text('kpi-total')).toContain('1 W1/W2 (0 contributing · 1 lead)');
+      // FIXTURE_D1_ROWS: 10 rows, only row id 6 is W1/W2 and it is lead → 0 replicated · 9 W3 · 0 contributing.
+      const breakdown = text('kpi-total-breakdown');
+      expect(breakdown).toMatch(/Innovations replicated for update\s*0/);
+      expect(breakdown).toMatch(/New W3\/Bilateral results\s*9/);
+      expect(breakdown).toMatch(/W1\/W2 results tagging Center bilateral project\s*0/);
 
       const ariaLabel = el('kpi-total').attributes['aria-label'];
       expect(ariaLabel).toContain('of 1 W1/W2 results 0 are contributing and 1 are leading');
