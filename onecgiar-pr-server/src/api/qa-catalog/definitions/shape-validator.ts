@@ -15,6 +15,7 @@ import {
 
 export type CatalogShapeRule =
   | 'SELECT_WITHOUT_CONTROL_LIST'
+  | 'MULTI_SELECT_WITH_SUBFIELDS'
   | 'STRUCTURED_WITHOUT_SUBFIELDS'
   | 'INVALID_VALIDITY_RANGE'
   | 'DUPLICATE_KEY'
@@ -533,6 +534,13 @@ export function validateCatalogShape(
           message: `${subPath}: ${sub.type} requires a control_list`,
         });
       }
+      if (sub.type === 'multi_select' && sub.subfields?.length) {
+        errors.push({
+          rule: 'MULTI_SELECT_WITH_SUBFIELDS',
+          path: subPath,
+          message: `${subPath}: a multi_select cannot carry subfields (one value per element); use a list with an identity subfield`,
+        });
+      }
       if (STRUCTURED_TYPES.includes(sub.type) && !sub.subfields?.length) {
         errors.push({
           rule: 'STRUCTURED_WITHOUT_SUBFIELDS',
@@ -580,6 +588,13 @@ export function validateCatalogShape(
         rule: 'SELECT_WITHOUT_CONTROL_LIST',
         path,
         message: `${path}: ${f.type} requires a control_list`,
+      });
+    }
+    if (f.type === 'multi_select' && f.subfields?.length) {
+      errors.push({
+        rule: 'MULTI_SELECT_WITH_SUBFIELDS',
+        path,
+        message: `${path}: a multi_select cannot carry subfields (one value per element); use a list with an identity subfield`,
       });
     }
     if (STRUCTURED_TYPES.includes(f.type) && !f.subfields?.length) {

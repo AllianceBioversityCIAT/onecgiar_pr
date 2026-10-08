@@ -122,6 +122,8 @@ const col = (table: string, column: string) => ({
 interface SubRule {
   required?: boolean;
   required_when?: Condition;
+  /** QAC-T-25: display rule, equal to `required_when` wherever both describe the same form gate. */
+  visible_when?: Condition;
 }
 
 const sub = (
@@ -139,13 +141,17 @@ const sub = (
   ...(control_list ? { control_list } : {}),
   required: rule.required ?? false,
   ...(rule.required_when ? { required_when: rule.required_when } : {}),
+  ...(rule.visible_when ? { visible_when: rule.visible_when } : {}),
   storage: col(table, column),
 });
 
 const ALWAYS: SubRule = { required: true };
 // Women / Men / Youth: shown (and required, `!!result_actors_id`) only while "Sex and age disaggregation does not apply" is off.
+// QAC-T-25: the four counters are rendered only while that tick is off (IUF:152,:186,:220 current use; :547,:580,:613 2030), so `visible_when` = `required_when`.
+// `how_many` is NOT gated: it is always rendered, read-only (the sum of the breakdown) while the tick is off (IUF:220-232) and typed while it is on (IUF:233).
 const WHEN_DISAGGREGATED: SubRule = {
   required_when: whenEq('sex_and_age_disaggregation', false),
+  visible_when: whenEq('sex_and_age_disaggregation', false),
 };
 
 // The any-of group rule (D13) has no form help text, so the three lists carry no `description`; the rule is
@@ -197,6 +203,9 @@ function usageLists(
     required: false,
     required_confirmed: true,
     required_when: whenEq(gate, false),
+    // QAC-T-25: each list is rendered only while its block's "yet to be determined" tick is off (IUF:18-23 current use, :471 2030). A NULL tick
+    // means "not ticked" (the template tests `!body.innov_use_to_be_determined`), the same reading as `required_when` (contract known gap 11).
+    visible_when: whenEq(gate, false),
     ...FROM_2026,
   };
   return [
@@ -234,6 +243,8 @@ function usageLists(
           undefined,
           {
             required_when: whenEq('actor_type', 5),
+            // IUF:112 (current use) / :527 (2030): the input exists only for the type 5
+            visible_when: whenEq('actor_type', 5),
           },
         ),
         sub(
@@ -334,7 +345,11 @@ function usageLists(
           'text',
           'other_institution',
           undefined,
-          { required_when: whenEq('institution_type', 78) },
+          {
+            required_when: whenEq('institution_type', 78),
+            // IUF:282 (current use) / :674 (2030): the input exists only for the type 78
+            visible_when: whenEq('institution_type', 78),
+          },
         ),
         // Form-only (IUF:314 / :706, `[required]="!!id"`); VIU is silent on the count.
         sub(
@@ -574,6 +589,11 @@ export const INNOVATION_USE_FIELDS: CatalogField[] = [
     // `innovation_use_levels` data before relying on this gate. The form shows the control for levels 5-9 (IUF:414)
     // but the live function requires it only from 6. Max 50 words.
     required_when: whenIn(
+      'innovation_use.use_level.innovation_use_level',
+      [5, 6, 7, 8, 9],
+    ),
+    // QAC-T-25: same gate, the textarea itself (IUF:410-418 `getUseLevelIndex() > 4 && <= 9`).
+    visible_when: whenIn(
       'innovation_use.use_level.innovation_use_level',
       [5, 6, 7, 8, 9],
     ),

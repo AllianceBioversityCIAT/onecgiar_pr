@@ -263,6 +263,13 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Implements:** QAC-R-13 (closed lists), QAC-R-1 (labels)
 - **Depends on:** QAC-T-23
 
+### [x] QAC-T-25 — QA review fixes: value shape, capdev lists, missing display rules (owner 2026-10-08) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** From the QA review of catalog 2026.23 (owner approved the necessary and recommended items). (a) `multi_select` fields that carry subfields (`contributors.centers`, `contributors.other_centers` with `from_cgspace`; `general.discontinued_reasons` with `reason` / `description`) become `list` with an identity subfield — the contract defines subfields on lists only. (b) Capacity sharing: separate closed lists — length of training offers 3 Short-term / 4 Long-term, degree offers 1 PhD / 2 Master (cap-dev-info.component.ts:98-102) — and degree visible when length = 4 (the 1/2 branches are unreachable, .ts:206-209, 234). (c) Add `visible_when` where the form hides the field: `general.is_discontinued` / `discontinued_reasons` (annual-updating block on `is_replicated` and Innovation dev/use; reasons on `is_discontinued`), KP MELIA cascade, Innovation use actors / organizations / measures (hidden when "yet to be determined", current use and 2030), actor subfields women / youth / men (shown when disaggregation applies), `other_actor_type` (type 5), `other_institution` (type 78), `use_level.readiness_level_explanation` (levels 5–9). Not `partners.is_lead_by_partner`, `how_many`, `kind_cash` (always visible). (d) `innovation_dev.number_of_varieties`: `required_when` equal to its `visible_when`. (e) KP `online_date` / `issue_date_*` labels state the value is a year. (f) GI order: `general.is_replicated` before `is_discontinued` / `discontinued_reasons`. (g) Contract: `is_determined` true = "This is yet to be determined". Keys unchanged; IPSR out of scope.
+- **Implements:** QAC-R-1, QAC-R-13, QAC-R-14
+- **Depends on:** QAC-T-24
+
 ## 4. Dependency graph
 
 ```

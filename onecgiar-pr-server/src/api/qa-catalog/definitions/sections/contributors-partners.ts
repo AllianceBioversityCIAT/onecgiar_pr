@@ -165,6 +165,16 @@ const FROM_CGSPACE_SUBFIELD: CatalogSubField = {
   storage: { kind: 'column', table: 'results_center', column: 'from_cgspace' },
 };
 
+/** QAC-T-25: identity of a center element (the same `results_center.center_id` the list is keyed on); a center row always has its center. */
+const CENTER_SUBFIELD: CatalogSubField = {
+  key: 'center',
+  label: 'Center',
+  type: 'single_select',
+  control_list: 'centers',
+  required: true,
+  storage: { kind: 'column', table: 'results_center', column: 'center_id' },
+};
+
 /** A column of the M-QAP match row (`results_kp_mqap_institutions`) of a `results_by_institution` element (QAC-T-22). */
 const kpMqapColumn = (value_column: string): PathBinding => ({
   kind: 'path',
@@ -501,8 +511,8 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     label: 'Contributing CGIAR Centers',
     description:
       "The CGIAR Centers listed below were identified in your 2026 ToC. To select a different Center, choose 'Other' from the drop-down menu and then make your selection from the options that appear.",
-    type: 'multi_select',
-    control_list: 'centers',
+    // QAC-T-25: a `list` (one element per center, identity subfield `center`): the contract defines subfields on `list` only.
+    type: 'list',
     section: SECTION,
     order: 7,
     result_types: ALL_TYPES,
@@ -522,13 +532,13 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       value_column: 'center_id',
       filter: { is_active: 1, from_toc: 1 },
     },
-    subfields: [FROM_CGSPACE_SUBFIELD],
+    subfields: [CENTER_SUBFIELD, FROM_CGSPACE_SUBFIELD],
   },
   {
     key: 'contributors.other_centers',
     label: 'Other(s) Contributing CGIAR Centers',
-    type: 'multi_select',
-    control_list: 'centers',
+    // QAC-T-25: a `list` (one element per center, identity subfield `center`): the contract defines subfields on `list` only.
+    type: 'list',
     section: SECTION,
     order: 8,
     result_types: ALL_TYPES,
@@ -545,7 +555,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       value_column: 'center_id',
       filter: { is_active: 1, from_toc: 0 },
     },
-    subfields: [FROM_CGSPACE_SUBFIELD],
+    subfields: [CENTER_SUBFIELD, FROM_CGSPACE_SUBFIELD],
   },
   {
     // Contributing Science Program/Accelerator (CP.html:435-508, 2026). Each element is a program that contributes (accepted rows,

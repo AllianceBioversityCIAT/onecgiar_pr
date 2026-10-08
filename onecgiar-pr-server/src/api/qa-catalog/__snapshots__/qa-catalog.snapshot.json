@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 23,
-      "content_hash": "eeb839d56c07c0a975a2356af1f9a2a7e4c5432214c15a4fab5300bc66744fdf"
+      "revision": 24,
+      "content_hash": "7b472d077c293b2ed339644c34c3240f9946450e7471aaadd3202f0a1e66b430"
     }
   },
   "keys": [
@@ -183,7 +183,9 @@
     "section:knowledge_product",
     "section:policy_change_info",
     "subfield:capacity_sharing.length_of_training/degree",
+    "subfield:contributors.centers/center",
     "subfield:contributors.centers/from_cgspace",
+    "subfield:contributors.other_centers/center",
     "subfield:contributors.other_centers/from_cgspace",
     "subfield:contributors.science_programs/from_toc",
     "subfield:contributors.science_programs/planned_result",

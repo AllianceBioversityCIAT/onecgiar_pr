@@ -197,6 +197,8 @@ export const KNOWLEDGE_PRODUCT_FIELDS: CatalogField[] = [
     required: false,
     required_confirmed: true,
     required_when: whenEq('knowledge_product.is_melia', true),
+    // QAC-T-25: shown only for a MELIA product (knowledge-product-info.component.html:20 `*ngIf isMeliaProduct === true`); same gate as required_when.
+    visible_when: whenEq('knowledge_product.is_melia', true),
     ...FROM_2026,
     storage: {
       kind: 'column',
@@ -222,6 +224,13 @@ export const KNOWLEDGE_PRODUCT_FIELDS: CatalogField[] = [
         whenEq('knowledge_product.melia_previous_submitted', false),
       ],
     },
+    // QAC-T-25: same gate as required_when (knowledge-product-info.component.html:33, `*ngIf ostSubmitted === false`, inside the isMeliaProduct block :20).
+    visible_when: {
+      all: [
+        whenEq('knowledge_product.is_melia', true),
+        whenEq('knowledge_product.melia_previous_submitted', false),
+      ],
+    },
     ...FROM_2026,
     storage: { kind: 'column', table: TABLE, column: 'melia_type_id' },
   },
@@ -242,6 +251,13 @@ export const KNOWLEDGE_PRODUCT_FIELDS: CatalogField[] = [
         whenEq('knowledge_product.melia_previous_submitted', true),
       ],
     },
+    // QAC-T-25: same gate as required_when (knowledge-product-info.component.html:48, `*ngIf ostSubmitted === true`, inside the isMeliaProduct block :20).
+    visible_when: {
+      all: [
+        whenEq('knowledge_product.is_melia', true),
+        whenEq('knowledge_product.melia_previous_submitted', true),
+      ],
+    },
     ...FROM_2026,
     storage: { kind: 'column', table: TABLE, column: 'toc_melia_study_id' },
   },
@@ -255,10 +271,10 @@ export const KNOWLEDGE_PRODUCT_FIELDS: CatalogField[] = [
     26,
     metadata(CG_ROW, 'source'),
   ),
-  // KPI.html:61-66
+  // KPI.html:61-66. QAC-T-25: the value is a YEAR (column `online_year`; the mapper keeps only the year, extractOnlyYearFromDateString), so the label says so.
   metadataField(
     'knowledge_product.online_date',
-    'Date online (CGSpace)',
+    'Date online (CGSpace) (year)',
     'number',
     6,
     metadata(CG_ROW, 'online_year'),
@@ -266,7 +282,7 @@ export const KNOWLEDGE_PRODUCT_FIELDS: CatalogField[] = [
   // KPI.html:67-72: the stored `year`; when it is empty or 0 the server shows the online year instead (mapper `issue_year`, :426-427)
   metadataField(
     'knowledge_product.issue_date_cg',
-    'Issue date (CGSpace)',
+    'Issue date (CGSpace) (year)',
     'number',
     7,
     metadata(CG_ROW, 'year'),
@@ -274,7 +290,7 @@ export const KNOWLEDGE_PRODUCT_FIELDS: CatalogField[] = [
   // KPI.html:73-79
   metadataField(
     'knowledge_product.issue_date_wos',
-    'Issue date (WoS)',
+    'Issue date (WoS) (year)',
     'number',
     8,
     metadata(WOS_ROW, 'year'),

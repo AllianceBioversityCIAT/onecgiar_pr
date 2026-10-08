@@ -73,7 +73,7 @@ const EXPECTED: Record<string, Rule> = {
   // capacity sharing display rules (cap-dev-info.component.html:56, :91-101)
   'capacity_sharing.length_of_training>degree': {
     required: false,
-    visible_when: inn('capacity_sharing.length_of_training', [1, 2, 4]),
+    visible_when: eq('capacity_sharing.length_of_training', 4),
   },
   'capacity_sharing.organizations': {
     required: false,
@@ -239,7 +239,7 @@ describe('QAC-T-19 required follows the form (option B)', () => {
     ).toEqual([]);
   });
 
-  it('a degree id outside the closed capdev_terms list is rejected', () => {
+  it('a length id outside the closed capdev_training_lengths list is rejected (1 is a degree, not a length)', () => {
     const fields = CATALOG_FIELDS.map((f) =>
       f.key === 'capacity_sharing.length_of_training'
         ? {
@@ -248,10 +248,7 @@ describe('QAC-T-19 required follows the form (option B)', () => {
               s.key === 'degree'
                 ? {
                     ...s,
-                    visible_when: inn(
-                      'capacity_sharing.length_of_training',
-                      [1, 2, 5],
-                    ),
+                    visible_when: eq('capacity_sharing.length_of_training', 1),
                   }
                 : s,
             ),

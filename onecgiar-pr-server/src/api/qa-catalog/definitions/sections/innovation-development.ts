@@ -259,13 +259,20 @@ export const INNOVATION_DEVELOPMENT_FIELDS: CatalogField[] = [
     // cannot be reached without it). Form and function disagree: reported.
     required: false,
     required_confirmed: true,
+    // QAC-T-25: `required_when` equals `visible_when` (the input exists only inside the nature-12 block, IDI.html:30-44); the function reads only
+    // `is_new_variety` (V-ID:74), but `is_new_variety` can only be true under nature 12, so the two readings agree on every real answer.
     visible_when: {
       all: [
         whenEq('innovation_dev.nature', VARIETY_NATURE),
         whenEq('innovation_dev.is_new_variety', true),
       ],
     },
-    required_when: whenEq('innovation_dev.is_new_variety', true),
+    required_when: {
+      all: [
+        whenEq('innovation_dev.nature', VARIETY_NATURE),
+        whenEq('innovation_dev.is_new_variety', true),
+      ],
+    },
     ...FROM_2026,
     storage: { kind: 'column', table: TABLE, column: 'number_of_varieties' },
   },

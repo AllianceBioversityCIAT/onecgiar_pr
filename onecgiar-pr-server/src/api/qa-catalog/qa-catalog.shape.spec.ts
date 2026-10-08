@@ -1026,7 +1026,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 23 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 24 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -1150,11 +1150,11 @@ describe('the real catalog definitions', () => {
       'general.created_date',
       'general.status',
       'general.reported_year',
+      'general.is_replicated',
       'general.is_discontinued',
       'general.discontinued_reasons',
       'general.merge_targets',
       'general.split_targets',
-      'general.is_replicated',
     ]);
     expect(gi.map((f) => f.order)).toEqual(gi.map((_, i) => i + 1));
     const cp = sorted('contributors_partners');
@@ -1196,8 +1196,8 @@ describe('the real catalog definitions', () => {
       ...conditionKeys(x.visible_when),
     ]);
     expect(used).not.toContain('is_replicated');
-    // the discontinued-reasons rule (ANNUAL_UPDATING_DISCONTINUED) and the is_discontinued rule
-    expect(used.filter((k) => k === 'general.is_replicated')).toHaveLength(2);
+    // is_discontinued and discontinued_reasons, each in required_when and (QAC-T-25) in visible_when
+    expect(used.filter((k) => k === 'general.is_replicated')).toHaveLength(4);
   });
 
   it('QAC-R-5: the IPSR step-1 geography is unconfirmed and optional (the live step-1 function does not test it), and innovation_package carries no common geo.* key', () => {

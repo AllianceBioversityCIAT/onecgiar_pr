@@ -79,6 +79,14 @@ const ANNUAL_UPDATING_DISCONTINUED = {
   ],
 };
 
+// QAC-T-25: the annual-updating block is shown for a replicated innovation of the two innovation types.
+const ANNUAL_UPDATING_VISIBLE = {
+  all: [
+    whenEq(IS_REPLICATED_FIELD, true),
+    whenIn(RESULT_TYPE_FIELD, INNOVATION_TYPES),
+  ],
+};
+
 export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
   // Result envelope fields (owner decision 2026-10-06, reverses REVIEW D21; catalog_version 2026.6). System-set,
   // not form inputs and not a validation rule, hence `required_confirmed: false`. Bindings: result.entity.ts
@@ -325,6 +333,22 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     'poverty',
     'general.poverty_tag',
   ),
+  // Flag that gates the annual-updating block (`rd-general-information.component.html:2`, only for result types 7
+  // and 2 per the annual-updating guide). It is stored on every result but the form never shows it as an input, so
+  // the label is the catalog's own wording, not a client string. Catalogued (T-14 review) so the three
+  // annual-updating conditions reference a real key instead of a pseudo-key.
+  {
+    key: 'general.is_replicated',
+    label: 'Is this a replicated innovation?',
+    type: 'boolean',
+    section: SECTION,
+    order: 22,
+    result_types: INNOVATION_TYPES,
+    required: false,
+    required_confirmed: false,
+    ...FROM_2026,
+    storage: { kind: 'column', table: 'result', column: 'is_replicated' },
+  },
   // Annual-updating block (inventory C-1 rows 14-17). The inventory names C-1 as the single owner of
   // these keys (REVIEW D7) and applies them per result type through `result_types`.
   {
@@ -337,25 +361,38 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     label: 'Is this innovation discontinued?',
     type: 'boolean',
     section: SECTION,
-    order: 22,
+    order: 23,
     result_types: INNOVATION_TYPES,
     required: false,
     required_confirmed: true,
+    // `result_types` already restricts the field to the two innovation types, so `required_when` needs no `$result_type` gate; `visible_when`
+    // names it because the template does (QAC-T-25: rd-general-information.component.html:1-4 `*ngIf is_replicated`; rd-annual-updating.component.html:1
+    // `resolvedResultTypeId == 7 || == 2`).
     required_when: whenEq(IS_REPLICATED_FIELD, true),
+    visible_when: ANNUAL_UPDATING_VISIBLE,
     ...FROM_2026,
     storage: { kind: 'column', table: 'result', column: 'is_discontinued' },
   },
   {
     key: 'general.discontinued_reasons',
     label: 'What are the main reasons this innovation is inactive?',
-    type: 'multi_select',
-    control_list: 'discontinued_reasons',
+    // QAC-T-25: a `list` (one element per ticked reason, identity subfield `reason`); the contract defines subfields on `list` only and a
+    // `multi_select` is one value per element.
+    type: 'list',
     section: SECTION,
-    order: 23,
+    order: 24,
     result_types: INNOVATION_TYPES,
     required: false,
     required_confirmed: true,
     required_when: ANNUAL_UPDATING_DISCONTINUED,
+    // rd-annual-updating.component.html:54 `*ngIf is_discontinued`, inside the annual-updating block (:1) shown for a replicated innovation.
+    visible_when: {
+      all: [
+        whenEq(IS_REPLICATED_FIELD, true),
+        whenIn(RESULT_TYPE_FIELD, INNOVATION_TYPES),
+        whenEq('general.is_discontinued', true),
+      ],
+    },
     ...FROM_2026,
     storage: {
       kind: 'relation',
@@ -404,7 +441,7 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'results',
     section: SECTION,
-    order: 24,
+    order: 25,
     result_types: ['innovation_development'],
     // QAC-T-19 documented gap: the form reports a merge as incomplete when the reason "Discontinued: merging..." is ticked and
     // no target is chosen (rd-annual-updating.component.html:159-161, .ts:481-486, `showsMergeTargets` .ts:245). The reason is
@@ -428,7 +465,7 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'results',
     section: SECTION,
-    order: 25,
+    order: 26,
     result_types: ['innovation_development'],
     // QAC-T-19 documented gap: same as `general.merge_targets` for the reason "Discontinued: splitting..."
     // (rd-annual-updating.component.html:159-161, .ts:481-486, `showsSplitTargets` .ts:249; control `[required]="false"` html:135).
@@ -442,21 +479,5 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
       value_column: 'target_result_id',
       filter: { transition_type: 'split' },
     },
-  },
-  // Flag that gates the annual-updating block (`rd-general-information.component.html:2`, only for result types 7
-  // and 2 per the annual-updating guide). It is stored on every result but the form never shows it as an input, so
-  // the label is the catalog's own wording, not a client string. Catalogued (T-14 review) so the three
-  // annual-updating conditions reference a real key instead of a pseudo-key.
-  {
-    key: 'general.is_replicated',
-    label: 'Is this a replicated innovation?',
-    type: 'boolean',
-    section: SECTION,
-    order: 26,
-    result_types: INNOVATION_TYPES,
-    required: false,
-    required_confirmed: false,
-    ...FROM_2026,
-    storage: { kind: 'column', table: 'result', column: 'is_replicated' },
   },
 ];

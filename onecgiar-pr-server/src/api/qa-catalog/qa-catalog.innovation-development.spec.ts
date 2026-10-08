@@ -131,7 +131,7 @@ describe('QAC-T-18 innovation development (Results)', () => {
       expect(f.required).toBe(false);
     });
 
-    it('number_of_varieties: shown for typology 12 AND "yes"; required (> 0) when "yes" (function)', () => {
+    it('number_of_varieties: shown and required (> 0) for typology 12 AND "yes"', () => {
       const f = get('innovation_dev.number_of_varieties');
       expect(f.visible_when).toEqual({
         all: [
@@ -139,9 +139,8 @@ describe('QAC-T-18 innovation development (Results)', () => {
           eq('innovation_dev.is_new_variety', true),
         ],
       });
-      expect(f.required_when).toEqual(
-        eq('innovation_dev.is_new_variety', true),
-      );
+      // QAC-T-25: the requirement equals the display gate
+      expect(f.required_when).toEqual(f.visible_when);
     });
 
     it('developers and collaborators are optional free text, no rules', () => {

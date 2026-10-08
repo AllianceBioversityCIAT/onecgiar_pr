@@ -80,8 +80,16 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
     question_options_team_diversity: [113, 114, 115],
     question_options_team_diversity_actions: [116, 117, 118, 119, 120, 121],
     /**
-     * `capdevs_term` rows (QAC-T-19): 1 PhD, 2 Master (migration 1668784095214-addCapDevMethodsAndTerm.ts, three inserts into a fresh
-     * table: PhD, Master, Short-term = 1, 2, 3) and 4 Long-term (migration 1668806452093-migrationCaptDev.ts, one later insert).
+     * Length of training (QAC-T-25): the options the form offers, 3 Short-term and 4 Long-term (cap-dev-info.component.ts:98-102 splices the
+     * `capdevs_term` rows into [1,2] = degrees and [3,4] = lengths; html:36-45). Source of the rows: 3 = migration
+     * 1668784095214-addCapDevMethodsAndTerm.ts (third insert, after PhD and Master), 4 = migration 1668806452093-migrationCaptDev.ts (one later insert).
      */
-    capdev_terms: [1, 2, 3, 4],
+    capdev_training_lengths: [3, 4],
+    /**
+     * Degree (QAC-T-25): 1 PhD and 2 Master, the first two `capdevs_term` rows of migration 1668784095214-addCapDevMethodsAndTerm.ts, offered
+     * under Long-term only (cap-dev-info.component.html:55-63). Both lists are values of the SAME column `capdev_term_id`: the form stores the
+     * degree when there is one and the length otherwise (`term_2 ?? term_1`, cap-dev-info.component.ts:235), so a stored 1 or 2 is
+     * "Long-term with that degree" (the load maps it back, .ts:206-209).
+     */
+    capdev_degrees: [1, 2],
   };

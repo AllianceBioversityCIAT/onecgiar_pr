@@ -141,10 +141,26 @@ describe('QAC-T-15 contributors & partners: owner field list', () => {
     it('contributing centers are narrowed to from_toc = 1, other(s) to from_toc = 0, same control list', () => {
       const toc = get('contributors.centers');
       const other = get('contributors.other_centers');
-      expect(toc.type).toBe('multi_select');
-      expect(other.type).toBe('multi_select');
-      expect(toc.control_list).toBe('centers');
-      expect(other.control_list).toBe('centers');
+      expect(toc.type).toBe('list'); // QAC-T-25: subfields exist only on a list
+      expect(other.type).toBe('list');
+      for (const f of [toc, other]) {
+        // QAC-T-25: the list carries no control list; its identity subfield `center` does, on the same column the list is keyed on
+        expect(f.control_list).toBeUndefined();
+        expect(f.subfields?.map((x) => x.key)).toEqual([
+          'center',
+          'from_cgspace',
+        ]);
+        expect(f.subfields?.[0]).toMatchObject({
+          type: 'single_select',
+          control_list: 'centers',
+          required: true,
+          storage: {
+            kind: 'column',
+            table: 'results_center',
+            column: 'center_id',
+          },
+        });
+      }
       expect(toc.storage).toMatchObject({
         kind: 'relation',
         table: 'results_center',
