@@ -97,31 +97,6 @@
       </div>
     }
 
-    <!-- P2-3785 AC1 — the use level is NO LONGER part of the bilateral MDS (Nicoleta Trifa, #INC-163204
-       point 4a, 21-Sep-2026), reversing what P2-3428 established. It stays here rather than moving under
-       the full-metadata toggle because three questions below branch on it (the scaling-studies ceiling,
-       the use-level explanation and the evidence prompt), and hiding the answer while keeping its
-       consequences visible reads as a bug. Optional now means optional on both sides: the marker is gone
-       here, the item is gone from `updateMds()`, and the server's submit gate no longer asks for it. -->
-    <app-pr-field-header
-      label="How would you assess the current use level of the innovation?"
-      description="Use the slider to select the appropriate use level."
-      [required]="false">
-    </app-pr-field-header>
-
-    <div class="tsf-readiness">
-      <app-pr-range-level
-        itemTitle="name"
-        itemDescription="definition"
-        optionLabel="name"
-        optionValue="id"
-        [options]="innovationControlListSE.useLevelsList"
-        [required]="false"
-        [(ngModel)]="body.innovation_use_level_id"
-        (ngModelChange)="onUseLevelChange()">
-      </app-pr-range-level>
-    </div>
-
     <!-- P2-3785 AC3 — the three investment tables are shown together (#INC-163204 point 4c): one for the
        Program the result is submitted under, one for the bilateral project, one for the external partners.
        They used to be split, with Programs and Partners hidden under the full-metadata toggle, so a
@@ -166,6 +141,32 @@
           }
 
           <app-add-button name="Add another organization" (clickEvent)="addOrganization()"></app-add-button>
+        </div>
+
+        <!-- P2-3785 AC1 — the use level is NOT part of the bilateral MDS (Nicoleta Trifa, #INC-163204
+           point 4a, 21-Sep-2026): it is out of `updateMds()` and the server submit gate. It first stayed
+           above the toggle because the questions below branch on it, but all of them already live here
+           in full metadata, so it now sits with them (review feedback: "use levels are not part of MDS
+           – pls remove"). Placed right before the questions it gates. -->
+        <div class="flex flex-col gap-3">
+          <app-pr-field-header
+            label="How would you assess the current use level of the innovation?"
+            description="Use the slider to select the appropriate use level."
+            [required]="false">
+          </app-pr-field-header>
+
+          <div class="tsf-readiness">
+            <app-pr-range-level
+              itemTitle="name"
+              itemDescription="definition"
+              optionLabel="name"
+              optionValue="id"
+              [options]="innovationControlListSE.useLevelsList"
+              [required]="false"
+              [(ngModel)]="body.innovation_use_level_id"
+              (ngModelChange)="onUseLevelChange()">
+            </app-pr-range-level>
+          </div>
         </div>
 
         <!-- P2-3428 AC13 / P2-3294: hidden from use level 6 upwards. -->

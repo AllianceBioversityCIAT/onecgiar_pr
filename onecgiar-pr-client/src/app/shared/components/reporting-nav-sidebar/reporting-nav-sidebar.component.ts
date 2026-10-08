@@ -18,7 +18,6 @@ import {
   lucideClipboardCheck,
   lucideWrench,
   lucideTicket,
-  lucideTable2,
   lucideLayers,
   lucideBookOpen,
   lucideUserCog,
@@ -49,6 +48,7 @@ import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
 import { CentersService } from '../../services/global/centers.service';
 import { SpMarkerComponent } from '../sp-marker/sp-marker.component';
+import { CenterMarkerComponent } from '../center-marker/center-marker.component';
 import { REPORTING_NAV_SIDEBAR_COPY } from '../../../internationalization/reporting-nav-sidebar.copy';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
@@ -80,7 +80,7 @@ interface IconFlyout {
 @Component({
   selector: 'app-reporting-nav-sidebar',
   standalone: true,
-  imports: [RouterModule, NgIcon, SpMarkerComponent, ...HlmSidebarImports],
+  imports: [RouterModule, NgIcon, SpMarkerComponent, CenterMarkerComponent, ...HlmSidebarImports],
   templateUrl: './reporting-nav-sidebar.component.html',
   styleUrls: ['./reporting-nav-sidebar.component.scss'],
   providers: [
@@ -99,7 +99,6 @@ interface IconFlyout {
       lucideClipboardCheck,
       lucideWrench,
       lucideTicket,
-      lucideTable2,
       lucideLayers,
       lucideBookOpen,
       lucideUserCog,
@@ -181,7 +180,6 @@ export class ReportingNavSidebarComponent {
   /** Sentence case throughout, matching the reference and the two siblings already spelled that way. */
   readonly adminModuleLinks: NavSubLink[] = [
     { name: 'Tickets dashboard', path: '/admin-module/tickets-dashboard', icon: 'lucideTicket' },
-    { name: 'All P/As and Centers', path: '/admin-module/entities-overview', icon: 'lucideTable2' },
     { name: 'Phase management', path: '/admin-module/phase-management', icon: 'lucideLayers' },
     { name: 'Knowledge products', path: '/admin-module/knowledge-products', icon: 'lucideBookOpen' },
     { name: 'User management', path: '/admin-module/user-management', icon: 'lucideUserCog' },

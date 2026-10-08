@@ -36,6 +36,7 @@ import {
   getResultNotificationTextParts,
   resolveNotificationType,
   isBilateralReviewNotification,
+  isBilateralSubmittedNotification,
   parseCenterReportedProjectText,
   NotificationType,
   getRejectionReasonLine,
@@ -52,7 +53,7 @@ import type { ContributionRequestDrawerMode } from '../notification-detail-conte
 import type { ApprovalChainDto } from '../../../../../../../../shared/services/api/results-api.service';
 // BELL-T-1 (notifications/bell-quick-inbox, BELL-DD-2): the shared decision helper — `acceptOrReject`
 // and `invalidateRequest()` below delegate the body/eligibility logic to it.
-import { acceptLabelFor, buildDecisionBody, classifyAccept, isDecidable } from '../../utils/request-decision';
+import { acceptLabelFor, buildDecisionBody, classifyAccept, isDecidable, primaryReviewTarget } from '../../utils/request-decision';
 // @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2/§6.2): the page-scoped
 // coordinator that decides whether THIS row's detail template renders docked (wide) or in the
 // drawer (narrow), and which row "owns" it when only one may be open at a time.
@@ -1209,8 +1210,19 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
    * would land the user on the requested SP's review queue for a result that MUST NOT appear there
    * (requirements.md L94) — before it has even accepted. A primary request therefore takes the same
    * `resultUrl()`-in-a-new-tab path as a non-bilateral row, exactly like the row's own inline link.
+   *
+   * PRA follow-up: once the primary request's result is Pending Review (status 5) the SP validates
+   * it in the review drawer, so this closes the drawer and navigates in-app to `reviewRequestUrl()`
+   * (`primaryReviewUrl`) instead; the "MUST NOT appear" reasoning above holds only before that.
    */
   onDrawerResult() {
+    const reviewUrl = this.reviewLinkUrl;
+    if (reviewUrl) {
+      this.closeDrawer();
+      void this.router.navigateByUrl(reviewUrl);
+      return;
+    }
+
     if (this.isBilateralResult && !this.isPrimaryRequest) {
       this.closeDrawer();
       this.navigateToResult(this.notification);
@@ -1226,12 +1238,61 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * Review-drawer URL for a primary request whose result is Pending Review (status 5): the SP
+   * validates it there instead of opening the form. Null for any other row or status, or when the
+   * payload names no SP code.
+   */
+  get primaryReviewUrl(): string | null {
+    if (!this.isPrimaryRequest || primaryReviewTarget(this.notification) !== 'review-drawer') return null;
+    return this.notificationNavigation.reviewRequestUrl(this.notification);
+  }
+
+  /**
+   * Review-drawer URL for an update row of type BILATERAL_RESULT_SUBMITTED ("was submitted for your
+   * review"); null for any other row, or when the payload names no SP code (old behaviour stays).
+   */
+  get submittedReviewUrl(): string | null {
+    if (!this.isUpdateSource || !isBilateralSubmittedNotification(this.notification)) return null;
+    return this.notificationNavigation.reviewRequestUrl(this.notification);
+  }
+
+  /** The review drawer URL for whichever row kind has one (primary Pending Review, or submitted update). */
+  get reviewLinkUrl(): string | null {
+    return this.primaryReviewUrl ?? this.submittedReviewUrl;
+  }
+
+  /** `href` of a row's result link: the review drawer when the row has one, else Result Detail. */
+  primaryResultHref(notification: any): string {
+    return this.reviewLinkUrl ?? this.resultUrl(notification);
+  }
+
+  /** "Click here to validate the bilateral result": in-app to the review drawer, middle-click keeps the href. */
+  onValidateCtaClick(event: MouseEvent): void {
+    event.stopPropagation();
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    const url = this.reviewLinkUrl;
+    if (url) void this.router.navigateByUrl(url);
+  }
+
+  /**
    * Row result link. A W3/Bilaterals result (e.g. a primary program request) opens in its lead
    * center's editor instead of Result Detail, which does not serve bilateral results. The href
    * keeps Result Detail for middle-click / context menu.
+   *
+   * PRA follow-up: for a primary row whose result is Pending Review (status 5) the click goes in-app
+   * to `reviewRequestUrl()` and the href (middle-click / context menu) is that review drawer URL.
    */
   onResultLinkClick(event: MouseEvent): void {
     event.stopPropagation();
+    // The review drawer wins over the decision / center-editor path (primary Pending Review, or a
+    // "submitted for your review" update row); modifier and non-primary clicks keep the href.
+    const reviewUrl = this.reviewLinkUrl;
+    if (reviewUrl && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      void this.router.navigateByUrl(reviewUrl);
+      return;
+    }
     if (!this.isBilateralResult) return;
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
 

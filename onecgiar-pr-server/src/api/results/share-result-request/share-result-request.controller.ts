@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -17,6 +18,7 @@ import { CreateShareResultRequestDto } from './dto/create-share-result-request.d
 import { ApprovalChainDto } from './dto/approval-chain.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { KEYSET_PAGE_SIZE } from '../../../shared/utils/keyset-cursor.util';
 import {
   ApiBody,
   ApiOperation,
@@ -119,7 +121,21 @@ export class ShareResultRequestController {
     required: false,
     type: String,
     description:
-      "Opaque keyset cursor from a previous response's `doneMeta.nextCursor`, to fetch the next history page. Malformed cursor -> 400.",
+      "Opaque keyset cursor from a previous response's `doneMeta.nextCursor` (history) or `pendingMeta.nextCursor` (paged pending), to fetch the next page. Malformed cursor -> 400.",
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description:
+      '@akili-spec notifications/admin-pending-paging: with scope=pending, switches to the paged pending mode (newest first by (requested_date, share_result_request_id)) and returns at most this many rows plus `pendingMeta { hasMore, nextCursor, total }`. Integer 1..200, else 400. Omit for the legacy complete pending set.',
+  })
+  @ApiQuery({
+    name: 'seen',
+    required: false,
+    type: Boolean,
+    description:
+      "Paged pending mode only: 'true' / 'false' keeps only the caller's seen / unseen rows before paging. Anything else -> 400.",
   })
   @ApiResponse({
     status: 200,
@@ -162,12 +178,41 @@ export class ShareResultRequestController {
     @Query('version_id') versionId?: string,
     @Query('scope') scope?: string,
     @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('seen') seen?: string,
   ) {
+    const parsedLimit = this.parseLimit(limit);
+    const parsedSeen = this.parseSeen(seen);
     return this.shareResultRequestService.getReceivedResultRequest(user, {
       versionId,
       scope,
       cursor,
+      // Spread keeps the legacy (no `limit`/`seen`) call shape identical to before (PPG-NFR-3).
+      ...(parsedLimit !== undefined ? { limit: parsedLimit } : {}),
+      ...(parsedSeen !== undefined ? { seen: parsedSeen } : {}),
     });
+  }
+
+  /** PPG-R-4: absent -> undefined (legacy); otherwise an integer in 1..200, else 400. */
+  private parseLimit(limit?: string): number | undefined {
+    if (limit === undefined || limit === null) {
+      return undefined;
+    }
+    const parsed = limit.trim() === '' ? Number.NaN : Number(limit);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > KEYSET_PAGE_SIZE) {
+      throw new BadRequestException('Invalid limit');
+    }
+    return parsed;
+  }
+
+  /** PPG-R-6: absent -> undefined; 'true' / 'false' -> boolean; anything else -> 400. */
+  private parseSeen(seen?: string): boolean | undefined {
+    if (seen === undefined || seen === null) {
+      return undefined;
+    }
+    if (seen === 'true') return true;
+    if (seen === 'false') return false;
+    throw new BadRequestException('Invalid seen');
   }
 
   // `BRS-T-2`: `seen-all` is declared before `seen/:shareResultRequestId`. The paths differ in

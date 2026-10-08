@@ -855,7 +855,7 @@ describe('TypeInnovationUseComponent', () => {
      * P2-3785 AC1 reverses this: the ladder used to carry its pending marker BECAUSE it was an MDS
      * item the footer counted. It is not one any more, so a marker would name a field that can never
      * hold Submit back — the very "count that names a finished-looking field" this assertion was
-     * written to prevent, only inverted. The ladder stays on screen; only the demand is gone.
+     * written to prevent, only inverted. Only the demand is gone — the ladder is still rendered.
      * Asserted as text because this spec `overrideTemplate`s, same approach as the tests above.
      */
     it('P2-3785 AC1 — the use ladder no longer asks for its pending marker', () => {
@@ -867,6 +867,22 @@ describe('TypeInnovationUseComponent', () => {
       expect(html).toMatch(ladder);
       // And it is still rendered — "not required" must not become "not shown".
       expect(html).toContain('innovationControlListSE.useLevelsList');
+    });
+
+    /**
+     * quick/innov-use-level-to-full-metadata — review feedback "use levels are not part of MDS – pls
+     * remove": the ladder sat above the toggle, so it read as an MDS field. It now lives under
+     * full metadata, BEFORE the scaling-studies and explanation questions it gates.
+     */
+    it('P2-3785 AC1 — the use ladder lives under full metadata, before the questions it gates', () => {
+      const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+      const fullMetadataToggle = html.indexOf('@if (showAllFields())');
+      const ladder = html.indexOf('innovationControlListSE.useLevelsList');
+
+      expect(fullMetadataToggle).toBeGreaterThan(-1);
+      expect(ladder).toBeGreaterThan(fullMetadataToggle);
+      expect(ladder).toBeLessThan(html.indexOf('@if (showScalingStudies)'));
+      expect(ladder).toBeLessThan(html.indexOf('@if (showUseLevelExplanation)'));
     });
 
     it('keeps optional Organizations in full metadata and gates current-use measures on TBD = No', () => {
@@ -881,7 +897,8 @@ describe('TypeInnovationUseComponent', () => {
       expect(organizations).toBeGreaterThan(fullMetadataToggle);
       expect(measuresGate).toBeGreaterThan(-1);
       expect(measuresGate).toBeLessThan(measureLabel);
-      expect(template).toContain('[required]="false">\n        </app-pr-field-header>');
+      // Indentation-agnostic: the use-level header moved under full metadata (one level deeper).
+      expect(template).toMatch(/\[required\]="false">\s*\n\s*<\/app-pr-field-header>/);
     });
 
     /**

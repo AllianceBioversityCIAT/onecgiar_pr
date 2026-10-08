@@ -132,6 +132,14 @@
   }
 </a>
 
+  @if (validateCtaUrl; as ctaUrl) {
+    <a
+      class="ml-[4px] mt-1.5 inline-block text-[12px] font-semibold text-[var(--pr-color-primary-300)] underline"
+      data-testid="bell-validate-cta"
+      [href]="ctaUrl"
+      (click)="onValidateCtaClick($event)">{{ validateCtaLabel }}</a>
+  }
+
   @if (isDecisionRow) {
     <div class="mt-2 flex flex-col gap-2" data-testid="bell-decision-actions" role="group" [attr.aria-label]="copy.actions.groupAriaLabel">
       <div class="grid gap-2" [class.grid-cols-2]="!isPrimaryRow" data-testid="bell-decision-buttons">

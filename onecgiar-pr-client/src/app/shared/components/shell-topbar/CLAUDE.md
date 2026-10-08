@@ -5,19 +5,13 @@ user menu. Rendered by `app.component.html:38`, and hidden entirely when `dataCo
 or `focusMode()` is on — so nothing in here exists in QA full-screen or focus mode, **including the
 `Cmd/Ctrl+K` listener**.
 
-**Release notes (`/whats-new`)** lives here now, as a plain `routerLink` button (`pr-topbar-icon-btn`,
-`lucideRocket` + visible "Release notes" label — `quick/topbar-labelled-actions`) placed between Support and the notifications bell — it used to be a link inside the
-sidebar's EXTRAS group (`reporting-nav-sidebar`) but was moved up to the toolbar, next to the bell, per
-user request. Active state via `isInWhatsNewRoute()` (checks `router.url.includes('/whats-new')`), same
-pattern as `isInNotificationsRoute()`.
+**Release notes (`/whats-new`)** is a plain `routerLink` button (`pr-topbar-icon-btn`, `lucideRocket` + visible label,
+`quick/topbar-labelled-actions`) between Support and the bell; active state via `isInWhatsNewRoute()`, same pattern
+as `isInNotificationsRoute()`.
 
-⚠️ **The sidebar collapse/expand toggle no longer lives here.** Per
-`SPEC:changes/sidebar-toggle-consolidation` (STC-DD-1), the topbar's `pr-topbar-icon-btn` toggle
-button and its `data-guide="sidebar-toggle"` hook were removed — `reporting-nav-sidebar` now owns
-that control in both its expanded and collapsed states, and is the sole DOM anchor
-`ReportingGuideService.startResultSidebarHint()` targets. `toggleSidebar()` and the `HlmSidebarService`
-injection were removed from this component's `.ts` too (STC-T-2) — nothing here calls the sidebar
-service any more.
+⚠️ **The sidebar collapse/expand toggle no longer lives here** (`SPEC:changes/sidebar-toggle-consolidation`, STC-DD-1/T-2):
+`reporting-nav-sidebar` owns it and is the DOM anchor of `ReportingGuideService.startResultSidebarHint()`; no
+`data-guide="sidebar-toggle"`, `toggleSidebar()` or `HlmSidebarService` here.
 
 ## Contract
 
@@ -39,7 +33,7 @@ service any more.
 - **The bell is the quick inbox (`SPEC:notifications/bell-quick-inbox`, BELL-T-4).** Badge, label and rows read
   `ResultsNotificationsService.bellCount()/bellItems()` (phase-agnostic, BELL-T-2) — NOT `updatesPopUpData`.
   Badge hidden at 0, `99+` above 99, button `aria-label` = `Notifications, N waiting`. The popover lists
-  `bellItems().slice(0, 10)` (`BELL_MAX_ROWS`) and a `+N more` link when `bellCount > 10`. Copy lives in
+  `bellItems().slice(0, 10)` (`BELL_MAX_ROWS`) and a `+N more` link when the active tab's server total exceeds 10 (`bellOverflow`). Copy lives in
   `internationalization/bell-quick-inbox.copy.ts` (`popover`).
 - **Popover states (`bellState`)**: `list` when count > 0 (a `bellError` shows an error line ABOVE the rows —
   R-14, rows and badge keep their last value); else `error` (`bellError`), `loading` (`bellLoading`, nothing
@@ -65,12 +59,17 @@ service any more.
   `bellCount > 0`, calls `markAllRead()` -> `ResultsNotificationsService.markAllBellRead()` (rejects only when both legs
   fail); `markingRead` blocks double clicks, a rejection re-enables it. Spartan tabs (`hlm-tabs`, `bellTab`: all / decide /
   updates) filter `bellItems` client-side; triggers also call `setBellTab` directly (Jest Brain mock wires no clicks).
-  Tab counts are plain text in the trigger (part of its accessible name): All = `bellAllCount`, Decide =
+  Tab counts are plain text in the trigger (part of its accessible name): All = `bellAllCount` (pending + unread + loaded read rows), Decide =
   `bellPendingRequestCount` as `N to decide` in `--pr-color-orange-500` (shows at badge 0, unchanged by Mark as read),
-  Updates = `bellUpdates().length`; Decide/Updates hidden at 0. `bellState` stays `list` while any row exists (read rows
+  Updates = `bellCounts().unreadUpdates`; Decide/Updates hidden at 0. `bellState` stays `list` while any row exists (read rows
   render light). `bellEarlierIndex` (first `fresh === false` row, only when > 0) renders the `Earlier` separator
-  (`data-bell-earlier`). Opening calls `refreshBell()` + `loadBellReadUpdates()` un-awaited. Cap 10 / `+N more` count the
-  ACTIVE tab (`bellTabItems`); an empty tab shows `tabEmpty`. Cards live in `pop-up-notification-item`.
+  (`data-bell-earlier`). Opening calls `refreshBell()` + `loadBellReadUpdates()` un-awaited. The cap of 10 applies to the
+  ACTIVE tab's rows (`bellTabItems`) and `+N more` = that tab's server total - 10 (`bellOverflow`); an empty tab shows `tabEmpty`. Cards live in `pop-up-notification-item`.
+
+- **Bounded bell (`SPEC:notifications/admin-pending-paging`, PPG-T-4).** `refreshBell()` = 4 calls, all with `limit=10`:
+  `notification/attention-counts` + received `seen=false` + received `seen=true` + updates `scope=pending`. Badge, Decide
+  and the Updates tab read `bellCounts()`, so <= 30 rows are held whatever the backlog. A failed leg keeps its previous
+  data and sets `bellError`. NEVER call the pending endpoints without `limit` from the bell.
 
 - **Support is the single entry point for getting help** (P2-3683): `Start a support chat`,
   `Give feedback`, and `Contact us` (mailto:prmstechsupport@cgiar.org). It replaced the standalone bug button, and Tawk's floating bubble in the
@@ -108,10 +107,8 @@ service any more.
   accepts either modifier regardless.
 - The search control keeps `cursor: text` even though it is a button — the design specifies it
   (`cursor:text` at snapshot line 232) because it opens a search surface.
-- `quick/topbar-labelled-actions` (2026-10-06): the bell is now a labelled button — icon + "Notifications"
-  + an INLINE 18px `.pr-topbar-badge` pill after the text (no longer absolute over the icon; the
-  `.pr-topbar-badge-wrap` wrapper is gone). Release notes got the same icon + text treatment. Both
-  override the 32px square with `!w-auto px-2.5`. Supersedes the NOTIF-T-8 icon-only bell sizing.
+- `quick/topbar-labelled-actions` (2026-10-06): the bell is a labelled button with an INLINE 18px `.pr-topbar-badge`
+  (no `.pr-topbar-badge-wrap`); bell and Release notes override the 32px square with `!w-auto px-2.5`.
 
 ## Children
 
@@ -120,4 +117,4 @@ service any more.
 | `app-global-search-palette` | the palette overlay | has its own `CLAUDE.md` — read it before touching the trigger |
 | `app-pop-up-notification-item` | one bell row (decision or update), emits `handoff` | lives under `header-panel/components/`; has inline Accept/Decline (BELL-T-3) |
 
-**Verified:** 2026-10-07 · qa-development-2026-ss · `quick/bell-popover-hidden` on top of `notifications/bell-read-state` BRS-T-6, `quick/topbar-labelled-actions`, `BELL-T-10`, `BELL-T-8`, `BELL-T-4`
+**Verified:** 2026-10-07 · qa-development-2026-ss · `notifications/admin-pending-paging` PPG-T-4 on top of `quick/bell-popover-hidden`, `notifications/bell-read-state` BRS-T-6, `BELL-T-10`, `BELL-T-8`, `BELL-T-4`

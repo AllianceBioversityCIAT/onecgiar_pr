@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { centerLogoSrc } from './center-logos';
 
 export interface CenterHomeItem {
   center_id: string;
@@ -17,4 +18,10 @@ export interface CenterHomeItem {
 })
 export class ResultFrameworkReportingCenterCardItemComponent {
   @Input() item!: CenterHomeItem;
+
+  readonly imageLoadError = signal(false);
+
+  get logoSrc(): string | null {
+    return centerLogoSrc(this.item?.center_acronym);
+  }
 }

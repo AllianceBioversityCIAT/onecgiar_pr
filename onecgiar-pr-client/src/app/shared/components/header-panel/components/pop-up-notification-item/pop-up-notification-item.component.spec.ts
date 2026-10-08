@@ -431,6 +431,62 @@ describe('PopUpNotificationItemComponent', () => {
       expect(emitted).toHaveBeenCalled();
     });
 
+    describe('validate-the-bilateral-result CTA', () => {
+      const submitted = (initiatives: any[] = [{ obj_initiative: { official_code: 'SP03' } }]) =>
+        bilateralNotification({
+          kind: null,
+          result_id: 91,
+          obj_notification_type: { type: NotificationType.BILATERAL_RESULT_SUBMITTED },
+          obj_result: { result_code: 9544, obj_version: { id: 36 }, obj_result_by_initiatives: initiatives }
+        });
+      const render = (row: any) => {
+        fixture = TestBed.createComponent(PopUpNotificationItemComponent);
+        component = fixture.componentInstance;
+        component.notification = row;
+        fixture.detectChanges();
+      };
+      const cta = () => fixture.nativeElement.querySelector('[data-testid="bell-validate-cta"]') as HTMLAnchorElement | null;
+
+      it('submitted: renders the CTA with the review drawer URL; click navigates once, marks read once, emits once', () => {
+        const emitted = jest.fn();
+        fixture = TestBed.createComponent(PopUpNotificationItemComponent);
+        component = fixture.componentInstance;
+        component.itemSelected.subscribe(emitted);
+        component.notification = submitted();
+        fixture.detectChanges();
+
+        const expected = '/result-framework-reporting/entity-details/SP03/bilateral-review?reviewResult=9544&reviewResultId=91';
+        expect(cta()?.textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta);
+        expect(cta()?.getAttribute('href')).toBe(expected);
+
+        cta()!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+
+        expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
+        expect(router.navigateByUrl).toHaveBeenCalledWith(expected);
+        expect(resultsApi.PATCH_readNotification).toHaveBeenCalledTimes(1);
+        expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(55);
+        expect(emitted).toHaveBeenCalledTimes(1);
+      });
+
+      it('submitted: Ctrl-click keeps the href (not prevented, no navigation, no read)', () => {
+        render(submitted());
+        const e = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, ctrlKey: true });
+        cta()!.dispatchEvent(e);
+        expect(e.defaultPrevented).toBe(false);
+        expect(router.navigateByUrl).not.toHaveBeenCalled();
+      });
+
+      it('submitted without an SP code: no CTA', () => {
+        render(submitted([]));
+        expect(cta()).toBeNull();
+      });
+
+      it('other update types: no CTA', () => {
+        render(bilateralNotification({ kind: null }));
+        expect(cta()).toBeNull();
+      });
+    });
+
     it('opens Result Detail, without throwing, when the centres lookup hangs', () => {
       jest.useFakeTimers();
       try {

@@ -350,13 +350,6 @@ hlm-sidebar {
   border-color: var(--pr-color-primary-200);
 }
 
-.pr-nav-center-diamond {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  transform: rotate(45deg);
-}
-
 // Content column: the design's scroll pad is 4px 12px 16px — horizontal 12px on groups.
 .pr-nav-programs,
 .pr-nav-platform,

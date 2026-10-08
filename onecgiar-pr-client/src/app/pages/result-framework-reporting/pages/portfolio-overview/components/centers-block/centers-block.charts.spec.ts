@@ -9,10 +9,10 @@ import {
   STATUS_TILE_TOKEN,
   percentOf,
   statusIdFromChartEvent
-} from './entities-overview.charts';
-import { EntityOverviewRow } from './entities-overview.aggregate';
+} from './centers-block.charts';
+import { EntityOverviewRow } from './centers-block.aggregate';
 
-describe('entities-overview charts (P2-3858 rework)', () => {
+describe('centers-block charts (P2-3858 rework, moved by P2-3928)', () => {
   const columns: StatusColumn[] = [
     { id: 1, label: 'Editing', color: 'orange' },
     { id: 5, label: 'Pending review', color: 'blue' }

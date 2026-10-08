@@ -76,7 +76,6 @@ import {
 import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
 import {
   PrimaryProgramRequestService,
-  PrimaryRequestOutcome,
   PrimaryRequestState,
   PrimaryRequestStateEnum,
 } from '../../results/share-result-request/services/primary-program-request.service';
@@ -365,81 +364,37 @@ export class BilateralCenterService {
         const nextPrimaryId = Number(primaryInitiative.id);
         const changed = currentPrimaryId !== nextPrimaryId;
 
-        // `PSR-T-5` (design.md DD-2/DD-4): a primary change — first pick or swap — no longer
-        // writes role 1 (or the role-2/request cleanup, or the ToC clear) here. It sends a
-        // pending primary request instead; role 1 and those cleanups are written only at accept
-        // (T-3/T-4). On a swap the CURRENT owner is deliberately left untouched — "SP09 stays the
-        // primary SP until SP12 accepts" (`PSR-R-2`, DD-4) — so `activePrimaryRows` above is read
-        // only to detect a change, never mutated here.
         if (changed) {
-          // `PRA-R-2` / `PRA-DD-4` (notifications/primary-review-not-accept) — a SWAP (an owner
-          // already exists) is a DIRECT transfer, like the Rejected branch above: no request, the
-          // new SP owns the result at once. The earlier catalogue guard only proves the SP is
-          // allocated to the project, so alignment to the lead project is checked here with the
-          // same rule and message `request()` uses (`not_aligned`). The lead row was written in
-          // this transaction, hence the `manager`.
-          if (currentPrimaryId !== 0) {
-            const aligned = await this.primaryProgramRequestService.isAligned(
-              Number(project.id),
-              nextPrimaryId,
-              manager,
+          // A primary pick — first pick or swap — is a DIRECT transfer: the chosen SP owns the
+          // result at once (role 1 + ToC stub), with no acceptance round, so the Contributors
+          // section shows the SP and its default ToC linkage as soon as the Center saves it
+          // (confirmed by product 2026-10-07; supersedes `PSR-R-1` / `PNS-R-1` draft-first-pick).
+          // The earlier catalogue guard only proves the SP is allocated to the project, so
+          // alignment to the lead project is checked here with the same rule and message
+          // `request()` uses (`not_aligned`). The lead row was written in this transaction,
+          // hence the `manager`. Contributors stay held until approval (`PRA-R-4`).
+          const aligned = await this.primaryProgramRequestService.isAligned(
+            Number(project.id),
+            nextPrimaryId,
+            manager,
+          );
+          if (!aligned) {
+            throw new BadRequestException(
+              PrimaryProgramRequestService.NOT_ALIGNED_MESSAGE,
             );
-            if (!aligned) {
-              throw new BadRequestException(
-                PrimaryProgramRequestService.NOT_ALIGNED_MESSAGE,
-              );
-            }
-            const swap =
-              await this.primaryProgramRequestService.transferPrimary(
-                parsedResultId,
-                nextPrimaryId,
-                user,
-                manager,
-                { releaseContributors: false },
-              );
-            if (swap.outcome === 'transferred') {
-              this.logger.log(
-                `updatePrimaryAssignment: direct primary swap on result ${parsedResultId} (previous initiative ${swap.previousInitiativeId ?? 'none'}, new initiative ${nextPrimaryId}, user ${user.id})`,
-              );
-            }
-          } else {
-            // `PNS-R-1` (design.md §5 item 3): a first pick (no owner yet) is saved as a DRAFT, not
-            // sent — the whole method already requires Editing/Draft status (guard above), so "no
-            // owner" is normally the only remaining condition. A swap (an owner already exists) is
-            // unchanged: it sends the request immediately, out of this spec's scope.
-            //
-            // `PSR-T-5` rework attempt 2 — Reviewer FAIL remediation (b): an ownerless result can
-            // ALSO already carry an active PENDING primary request — a legacy result created before
-            // this feature existed, or any result whose round was already sent by an earlier save.
-            // requirements.md §7 Compatibility: such a result "stay[s] pending" and keeps working the
-            // OLD send-immediately way; it must not be treated as a first pick just because there is
-            // no owner yet (that would wrongly draft-demote a live pending request, see `request()`'s
-            // own idempotency guard for the other half of this fix).
-            // @akili-spec notifications/primary-notify-on-submit
-            const hasPendingRound =
-              currentPrimaryId === 0 &&
-              (await this.primaryProgramRequestService.findPendingPrimaryInitiativeId(
-                parsedResultId,
-                manager,
-              )) != null;
-            const outcome: PrimaryRequestOutcome =
-              await this.primaryProgramRequestService.request(
-                parsedResultId,
-                nextPrimaryId,
-                user,
-                manager,
-                { asDraft: currentPrimaryId === 0 && !hasPendingRound },
-              );
-            if (outcome.ok === false) {
-              if (outcome.reason === 'not_aligned') {
-                throw new BadRequestException(outcome.message);
-              }
-              // `internal_error`: requirements.md §7 Reliability — the lead-project/percentage save
-              // still succeeds; only logged, never thrown.
-              this.logger.warn(
-                `updatePrimaryAssignment: primary program request failed for result ${parsedResultId} (reason=internal_error)`,
-              );
-            }
+          }
+          const transfer =
+            await this.primaryProgramRequestService.transferPrimary(
+              parsedResultId,
+              nextPrimaryId,
+              user,
+              manager,
+              { releaseContributors: false },
+            );
+          if (transfer.outcome === 'transferred') {
+            this.logger.log(
+              `updatePrimaryAssignment: direct primary assignment on result ${parsedResultId} (previous initiative ${transfer.previousInitiativeId ?? 'none'}, new initiative ${nextPrimaryId}, user ${user.id})`,
+            );
           }
         } else {
           // `PSR-T-5` reviewer FAIL (rework attempt 2, discovered issue 3 / judgment call 1): the
@@ -604,25 +559,28 @@ export class BilateralCenterService {
         where: { official_code: dto.program_code, active: true },
       });
       if (initiative) {
-        // `PSR-T-5` (design.md DD-2): the chosen primary SP is sent a pending request instead of
-        // being written as the owner outright (role 1 is written only on accept, T-3/T-4).
-        // `request()` never throws (requirements.md §7 Reliability / PSR-R-1 "request step
-        // fails") — a failure is logged and swallowed so result creation still succeeds, leaving
-        // the result ownerless and retryable (`PSR-R-1`, "sent-back state").
-        // `PNS-R-1` (design.md §5 item 2): a brand-new result has no owner — the choice is saved
-        // as a DRAFT, not sent.
-        // @akili-spec notifications/primary-notify-on-submit
-        const outcome: PrimaryRequestOutcome =
-          await this.primaryProgramRequestService.request(
-            result.id,
-            initiative.id,
-            user,
-            undefined,
-            { asDraft: true },
-          );
-        if (outcome.ok === false) {
+        // The chosen primary SP owns the result at once (role 1 + ToC stub, no acceptance round),
+        // so the Contributors section shows it and its default ToC linkage right after creation
+        // (confirmed by product 2026-10-07; supersedes the `PNS-R-1` draft request). Non-fatal,
+        // like the request it replaces: a failure is logged and the result is still created,
+        // ownerless, so the Center can pick the SP again from Section 0.
+        try {
+          await this.resultRepository.manager.transaction(async (manager) => {
+            await manager.findOne(Result, {
+              where: { id: result.id },
+              lock: { mode: 'pessimistic_write' },
+            });
+            await this.primaryProgramRequestService.transferPrimary(
+              result.id,
+              Number(initiative.id),
+              user,
+              manager,
+              { releaseContributors: false },
+            );
+          });
+        } catch (error) {
           this.logger.warn(
-            `createResultHeader: primary program request failed for result ${result.id} (reason=${outcome.reason})`,
+            `createResultHeader: primary assignment failed for result ${result.id} (${error instanceof Error ? error.message : 'unknown error'})`,
           );
         }
       }
@@ -639,6 +597,9 @@ export class BilateralCenterService {
         dto.contributing_programs,
         user,
         contribSyncResult,
+        // The result is created in Editing with its owner already set: contributor requests
+        // still wait for approval (`PRA-R-4`), so the drafts are held, not released.
+        true,
       );
     }
 
@@ -1665,8 +1626,13 @@ export class BilateralCenterService {
           dto.contributing_programs,
           user,
           result,
-          // `RRC-T-3`: at Rejected the drafts are written but not released.
-          Number(bilResult.status_id) === ResultStatusData.Rejected.value,
+          // `RRC-T-3`: at Rejected the drafts are written but not released. In Editing they are
+          // held too: the owner now exists from the primary pick, and contributor requests still
+          // wait for approval (`PRA-R-4`).
+          [
+            ResultStatusData.Rejected.value,
+            ResultStatusData.Editing.value,
+          ].includes(Number(bilResult.status_id)),
         );
       }
 

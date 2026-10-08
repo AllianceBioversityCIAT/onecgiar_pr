@@ -48,6 +48,16 @@ const NOTIFICATION_KEYSET_FIELDS: KeysetFields = {
   idField: 'notification_id',
 };
 
+/**
+ * The `obj_result` condition of the result-scoped path (active result, role-1 owner, optional
+ * phase). Shared by the history query and {@link NotificationService.buildPendingWheres}.
+ */
+const resultScopedObjResult = (versionId?: number) => ({
+  is_active: true,
+  obj_result_by_initiatives: { initiative_role_id: 1 },
+  ...(versionId !== undefined ? { version_id: versionId } : {}),
+});
+
 /** `getAllNotifications` scope/cursor options (PAGE-R-1, R-2, R-3, R-6, R-7). */
 export interface GetAllNotificationsOptions {
   /** Phase (`result.version_id`) to scope result-linked rows to; absent -> all phases. */
@@ -56,7 +66,11 @@ export interface GetAllNotificationsOptions {
   scope?: 'pending' | 'history';
   /** Opaque keyset cursor for the next history page (PAGE-DD-2). */
   cursor?: string;
-  /** BRS-T-3: history page size, integer 1..200 (validated by the controller); absent -> `KEYSET_PAGE_SIZE`. Never applies to pending. */
+  /**
+   * BRS-T-3: history page size, integer 1..200 (validated by the controller); absent -> `KEYSET_PAGE_SIZE`.
+   * PPG-R-4: under `scope=pending` it instead turns on paged pending mode (page size = `limit`, `cursor`
+   * applies to the pending feed); without it pending stays the complete, legacy set.
+   */
   limit?: number;
 }
 
@@ -265,6 +279,117 @@ export class NotificationService {
     }
   }
 
+  /** AI-job path `where` (phase-less). Single definition for lists, pages and counts (PPG-DD-2). */
+  private bilateralAiJobWhere(
+    userId: number,
+    options: { read?: boolean; after?: Date } = {},
+  ) {
+    return {
+      target_user: userId,
+      ...(options.read !== undefined ? { read: options.read } : {}),
+      ...(options.after ? { created_date: MoreThan(options.after) } : {}),
+      obj_notification_type: {
+        type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+      },
+    };
+  }
+
+  /** Center-notice path `where`. Single definition for lists, pages and counts (PPG-DD-2). */
+  private centerNoticeWhere(
+    userId: number,
+    options: { read?: boolean; after?: Date; versionId?: number } = {},
+  ) {
+    return {
+      target_user: userId,
+      ...(options.read !== undefined ? { read: options.read } : {}),
+      ...(options.after ? { created_date: MoreThan(options.after) } : {}),
+      obj_result: {
+        is_active: true,
+        ...(options.versionId !== undefined
+          ? { version_id: options.versionId }
+          : {}),
+      },
+      obj_notification_type: { type: In(CENTER_NOTICE_TYPES) },
+    };
+  }
+
+  /**
+   * PPG-DD-2 — the 3 `where` objects that define "pending" (unread) for a user: result-scoped,
+   * Center notices and bilateral AI-job. Used by the legacy list, the paged list and
+   * {@link countPendingUpdates}, so the three can never diverge. `versionId` scopes the
+   * result-scoped and Center paths; the AI-job path is phase-less.
+   */
+  private buildPendingWheres(userId: number, versionId?: number) {
+    return {
+      resultScoped: {
+        target_user: userId,
+        read: false,
+        obj_result: resultScopedObjResult(versionId),
+        obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
+      },
+      centerNotice: this.centerNoticeWhere(userId, { read: false, versionId }),
+      aiJob: this.bilateralAiJobWhere(userId, { read: false }),
+    };
+  }
+
+  /**
+   * PPG-R-1 — number of unread updates across the 3 paths, via `count` (COUNT DISTINCT, no rows
+   * or heavy relations loaded). Relations are only the ones the `where` joins on.
+   */
+  private async countPendingUpdates(
+    userId: number,
+    versionId?: number,
+  ): Promise<number> {
+    const wheres = this.buildPendingWheres(userId, versionId);
+    const counts = await Promise.all([
+      this._notificationRepository.count({
+        where: wheres.resultScoped,
+        relations: {
+          obj_result: { obj_result_by_initiatives: true },
+          obj_notification_type: true,
+        },
+      }),
+      this._notificationRepository.count({
+        where: wheres.centerNotice,
+        relations: { obj_result: true, obj_notification_type: true },
+      }),
+      this._notificationRepository.count({
+        where: wheres.aiJob,
+        relations: { obj_notification_type: true },
+      }),
+    ]);
+    return counts.reduce((sum, n) => sum + n, 0);
+  }
+
+  /**
+   * PPG-R-1 — `{ unseenRequests, pendingRequests, unreadUpdates }` for the caller across all
+   * phases, without returning rows. Only the token user's rows are counted (PPG-NFR-5).
+   */
+  async getAttentionCounts(user: TokenDto) {
+    try {
+      const [unreadUpdates, requests] = await Promise.all([
+        this.countPendingUpdates(user.id),
+        this._shareResultRequestService.countPendingReceived(user),
+      ]);
+      return {
+        response: {
+          unseenRequests: requests.unseenRequests,
+          pendingRequests: requests.pendingRequests,
+          unreadUpdates,
+        },
+        message: 'Attention counts retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(error);
+      return {
+        response: error,
+        message: 'An error occurred while retrieving the attention counts',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   /**
    * `design.md` §6.4 "Read path" — a bilateral AI job notification carries no result
    * (`result_id NULL`), so the `innerJoin`-shaped queries in `getAllNotifications`,
@@ -292,14 +417,7 @@ export class NotificationService {
       pageSize?: number;
     } = {},
   ): Promise<Notification[]> {
-    const where = {
-      target_user: userId,
-      ...(options.read !== undefined ? { read: options.read } : {}),
-      ...(options.after ? { created_date: MoreThan(options.after) } : {}),
-      obj_notification_type: {
-        type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
-      },
-    };
+    const where = this.bilateralAiJobWhere(userId, options);
     return this._notificationRepository.find({
       select: this.getNotificattionSelect(),
       relations: this.getNotificationRelations(),
@@ -338,18 +456,7 @@ export class NotificationService {
       pageSize?: number;
     } = {},
   ): Promise<Notification[]> {
-    const where = {
-      target_user: userId,
-      ...(options.read !== undefined ? { read: options.read } : {}),
-      ...(options.after ? { created_date: MoreThan(options.after) } : {}),
-      obj_result: {
-        is_active: true,
-        ...(options.versionId !== undefined
-          ? { version_id: options.versionId }
-          : {}),
-      },
-      obj_notification_type: { type: In(CENTER_NOTICE_TYPES) },
-    };
+    const where = this.centerNoticeWhere(userId, options);
     return this._notificationRepository.find({
       select: this.getNotificattionSelect(),
       relations: this.getNotificationRelations(),
@@ -743,12 +850,19 @@ export class NotificationService {
       const pageSize = limit ?? KEYSET_PAGE_SIZE;
       const runPending = scope !== 'history';
       const runHistory = scope !== 'pending';
+      // PPG-R-4: paged pending is opt-in (`scope=pending` + `limit`); without `limit` the
+      // pending set stays complete and identical to the legacy response (PPG-DD-1).
+      const pendingPaged = scope === 'pending' && limit !== undefined;
 
-      const resultScopeWhere = () => ({
-        is_active: true,
-        obj_result_by_initiatives: { initiative_role_id: 1 },
-        ...(versionId !== undefined ? { version_id: versionId } : {}),
-      });
+      const resultScopeWhere = () => resultScopedObjResult(versionId);
+      const pendingWheres = this.buildPendingWheres(user.id, versionId);
+      const pendingPageQuery = {
+        take: pageSize + 1,
+        order: {
+          created_date: 'DESC',
+          notification_id: 'DESC',
+        } as const,
+      };
 
       const [
         viewedResultScoped,
@@ -758,6 +872,7 @@ export class NotificationService {
         jobFinishedPending,
         centerNoticeViewed,
         centerNoticePending,
+        pendingTotal,
       ] = await Promise.all([
         runHistory
           ? this._notificationRepository.find({
@@ -787,12 +902,14 @@ export class NotificationService {
           ? this._notificationRepository.find({
               select: this.getNotificationReadoutSelect(),
               relations: this.getNotificationReadoutRelations(),
-              where: {
-                target_user: user.id,
-                read: false,
-                obj_result: resultScopeWhere(),
-                obj_notification_type: { type: Not(In(CENTER_NOTICE_TYPES)) },
-              },
+              where: pendingPaged
+                ? applyKeysetCursor(
+                    pendingWheres.resultScoped,
+                    cursor,
+                    NOTIFICATION_KEYSET_FIELDS,
+                  )
+                : pendingWheres.resultScoped,
+              ...(pendingPaged ? pendingPageQuery : {}),
             })
           : Promise.resolve([]),
 
@@ -843,6 +960,7 @@ export class NotificationService {
         runPending
           ? this.findBilateralAiJobFinishedNotifications(user.id, {
               read: false,
+              ...(pendingPaged ? { cursor, paged: true, pageSize } : {}),
             })
           : Promise.resolve([]),
 
@@ -861,9 +979,27 @@ export class NotificationService {
           ? this.findCenterNoticeNotifications(user.id, {
               read: false,
               versionId,
+              ...(pendingPaged ? { cursor, paged: true, pageSize } : {}),
             })
           : Promise.resolve([]),
+
+        // PPG-R-4: `total` for the page meta, from the same wheres as the lists (count, no rows).
+        pendingPaged
+          ? this.countPendingUpdates(user.id, versionId)
+          : Promise.resolve(0),
       ]);
+
+      const pendingPage = pendingPaged
+        ? mergeKeysetLists(
+            [
+              this.mapNotificationResultFields(notificationsPending),
+              jobFinishedPending,
+              this.mapNotificationResultFields(centerNoticePending),
+            ],
+            NOTIFICATION_KEYSET_FIELDS,
+            pageSize,
+          )
+        : null;
 
       const viewedPage = runHistory
         ? mergeKeysetLists(
@@ -875,16 +1011,27 @@ export class NotificationService {
 
       const notifications = {
         notificationsViewed: this.mapNotificationResultFields(viewedPage.rows),
-        notificationsPending: [
-          ...this.mapNotificationResultFields(notificationsPending),
-          ...jobFinishedPending,
-          ...this.mapNotificationResultFields(centerNoticePending),
-        ],
+        notificationsPending: pendingPage
+          ? pendingPage.rows
+          : [
+              ...this.mapNotificationResultFields(notificationsPending),
+              ...jobFinishedPending,
+              ...this.mapNotificationResultFields(centerNoticePending),
+            ],
         notificationAnnouncement,
         viewedMeta: {
           hasMore: viewedPage.hasMore,
           nextCursor: viewedPage.nextCursor,
         },
+        ...(pendingPage
+          ? {
+              pendingMeta: {
+                hasMore: pendingPage.hasMore,
+                nextCursor: pendingPage.nextCursor,
+                total: pendingTotal,
+              },
+            }
+          : {}),
       };
 
       return {

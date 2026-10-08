@@ -20,6 +20,7 @@ describe('NotificationController', () => {
             updateReadStatus: jest.fn(),
             updateAllReadStatus: jest.fn(),
             getAllNotifications: jest.fn(),
+            getAttentionCounts: jest.fn(),
             getPopUpNotifications: jest.fn(),
             getRecentResultActivity: jest.fn(),
           },
@@ -227,6 +228,79 @@ describe('NotificationController', () => {
         ),
       ).toThrow(BadRequestException);
       expect(service.getAllNotifications).not.toHaveBeenCalled();
+    });
+
+    // PPG-R-4: under scope=pending, limit means "paged mode"; bad values stay 400.
+    it('passes limit and cursor through under scope=pending (PPG-R-4)', () => {
+      jest.spyOn(service, 'getAllNotifications').mockResolvedValue(result);
+      const cursor = Buffer.from(
+        '2026-09-29T00:00:00.000Z|500',
+        'utf8',
+      ).toString('base64url');
+
+      controller.getAllNotifications(user, '8', 'pending', cursor, '50');
+
+      expect(service.getAllNotifications).toHaveBeenCalledWith(user, {
+        versionId: 8,
+        scope: 'pending',
+        cursor,
+        limit: 50,
+      });
+    });
+
+    it.each(['0', '201', 'abc'])(
+      'PPG-R-4: rejects limit %p under scope=pending with 400 and never calls the service',
+      (badLimit) => {
+        jest.spyOn(service, 'getAllNotifications');
+        expect(() =>
+          controller.getAllNotifications(
+            user,
+            undefined,
+            'pending',
+            undefined,
+            badLimit,
+          ),
+        ).toThrow(BadRequestException);
+        expect(service.getAllNotifications).not.toHaveBeenCalled();
+      },
+    );
+
+    it('PPG-R-4: rejects a malformed cursor together with limit under scope=pending', () => {
+      jest.spyOn(service, 'getAllNotifications');
+      expect(() =>
+        controller.getAllNotifications(
+          user,
+          undefined,
+          'pending',
+          '!!bad!!',
+          '50',
+        ),
+      ).toThrow(BadRequestException);
+      expect(service.getAllNotifications).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getAttentionCounts (PPG-R-1)', () => {
+    it('delegates to the service with the token user', async () => {
+      const user: TokenDto = {
+        id: 1,
+        email: 'test@example.com',
+        first_name: 'test',
+        last_name: 'user',
+      };
+      const counts = {
+        response: { unseenRequests: 1, pendingRequests: 2, unreadUpdates: 3 },
+        status: 200,
+        message: 'ok',
+      };
+      jest
+        .spyOn(service, 'getAttentionCounts')
+        .mockResolvedValue(counts as any);
+
+      const res = await controller.getAttentionCounts(user);
+
+      expect(service.getAttentionCounts).toHaveBeenCalledWith(user);
+      expect(res).toBe(counts);
     });
   });
 

@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ShareResultRequestController } from './share-result-request.controller';
 import { ShareResultRequestService } from './share-result-request.service';
-import { ParseIntPipe, RequestMethod } from '@nestjs/common';
+import {
+  BadRequestException,
+  ParseIntPipe,
+  RequestMethod,
+} from '@nestjs/common';
 import {
   METHOD_METADATA,
   PATH_METADATA,
@@ -88,6 +92,124 @@ describe('ShareResultRequestController', () => {
         scope: undefined,
         cursor: undefined,
       });
+    });
+
+    // @akili-spec notifications/admin-pending-paging (PPG-T-2) — PPG-R-4 (received variant)
+    describe('limit / seen (paged pending mode)', () => {
+      beforeEach(() => {
+        mockShareResultRequestService.getReceivedResultRequest.mockResolvedValue(
+          {
+            response: {},
+            status: 200,
+          },
+        );
+      });
+
+      it('parses limit to a number and seen to a boolean before forwarding', async () => {
+        await controller.findReceived(
+          user,
+          '8',
+          'pending',
+          'abc',
+          '50',
+          'false',
+        );
+
+        expect(
+          mockShareResultRequestService.getReceivedResultRequest,
+        ).toHaveBeenCalledWith(user, {
+          versionId: '8',
+          scope: 'pending',
+          cursor: 'abc',
+          limit: 50,
+          seen: false,
+        });
+        const sent =
+          mockShareResultRequestService.getReceivedResultRequest.mock
+            .calls[0][1];
+        expect(sent.limit).toBe(50);
+        expect(sent.seen).toBe(false);
+      });
+
+      it('forwards seen=true and omits limit/seen keys on a legacy call', async () => {
+        await controller.findReceived(
+          user,
+          undefined,
+          'pending',
+          undefined,
+          '10',
+          'true',
+        );
+        expect(
+          mockShareResultRequestService.getReceivedResultRequest.mock
+            .calls[0][1].seen,
+        ).toBe(true);
+
+        mockShareResultRequestService.getReceivedResultRequest.mockClear();
+        await controller.findReceived(user);
+        const legacy =
+          mockShareResultRequestService.getReceivedResultRequest.mock
+            .calls[0][1];
+        expect(legacy).not.toHaveProperty('limit');
+        expect(legacy).not.toHaveProperty('seen');
+      });
+
+      it.each(['0', '201', 'abc', '', '1.5', '-3'])(
+        'rejects limit=%p with 400 and never calls the service',
+        (limit) => {
+          expect(() =>
+            controller.findReceived(
+              user,
+              undefined,
+              'pending',
+              undefined,
+              limit,
+            ),
+          ).toThrow(BadRequestException);
+          expect(
+            mockShareResultRequestService.getReceivedResultRequest,
+          ).not.toHaveBeenCalled();
+        },
+      );
+
+      it('accepts the 1 and 200 limits', async () => {
+        await controller.findReceived(
+          user,
+          undefined,
+          'pending',
+          undefined,
+          '1',
+        );
+        await controller.findReceived(
+          user,
+          undefined,
+          'pending',
+          undefined,
+          '200',
+        );
+        expect(
+          mockShareResultRequestService.getReceivedResultRequest,
+        ).toHaveBeenCalledTimes(2);
+      });
+
+      it.each(['maybe', 'TRUE', '1', ''])(
+        'rejects seen=%p with 400 and never calls the service',
+        (seen) => {
+          expect(() =>
+            controller.findReceived(
+              user,
+              undefined,
+              'pending',
+              undefined,
+              '10',
+              seen,
+            ),
+          ).toThrow(BadRequestException);
+          expect(
+            mockShareResultRequestService.getReceivedResultRequest,
+          ).not.toHaveBeenCalled();
+        },
+      );
     });
   });
 

@@ -85,6 +85,14 @@
       }
     </div>
   } @else {
+    @if (pendingPrimaryTocNotice(); as notice) {
+      <app-alert-status
+        status="info"
+        [collapsible]="false"
+        data-testid="contributors-toc-waiting-primary-sp"
+        [description]="notice">
+      </app-alert-status>
+    }
     <ng-container [ngTemplateOutlet]="contributorNote" />
   }
 

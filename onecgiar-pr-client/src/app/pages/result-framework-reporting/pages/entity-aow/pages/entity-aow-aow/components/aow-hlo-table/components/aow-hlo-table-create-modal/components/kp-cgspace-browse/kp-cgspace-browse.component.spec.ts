@@ -5,6 +5,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { CgspaceItemDto, KP_LAST_REPOSITORY_TITLE, KpCgspaceBrowseComponent } from './kp-cgspace-browse.component';
 import { ALL_KP_REPOSITORIES } from './kp-repositories.constants';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
+import { RolesService } from 'src/app/shared/services/global/roles.service';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -104,6 +105,21 @@ describe('KpCgspaceBrowseComponent', () => {
     component = fixture.componentInstance;
     // Override so fakeAsync tests do not wait 600 ms per retry (KCSR-DD-2)
     component.retryDelayMs = 0;
+  });
+
+  // A non-admin user creating a result has RolesService.readOnly === true (it only drops for
+  // admins or inside a result of one of their initiatives). The search filters must stay usable:
+  // without [editable]="true" pr-select rendered them as plain text "Not provided".
+  it('keeps the type and affiliation filters interactive for a non-admin (read-only roles) user', () => {
+    TestBed.inject(RolesService).readOnly = true;
+    fixture.componentRef.setInput('phaseYear', 2026);
+    fixture.detectChanges();
+
+    for (const selector of ['.kp-filter-type', '.kp-filter-center']) {
+      const filter: HTMLElement = fixture.nativeElement.querySelector(selector);
+      expect(filter.querySelector('.custom_select')).not.toBeNull();
+      expect(filter.textContent).not.toContain('Not provided');
+    }
   });
 
   it('should create and load facets on init', () => {

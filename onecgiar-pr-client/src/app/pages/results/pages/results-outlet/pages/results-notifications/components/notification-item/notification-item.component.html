@@ -69,7 +69,7 @@
           }
 
           <a
-            [href]="resultUrl(notification)"
+            [href]="primaryResultHref(notification)"
             target="_blank"
             rel="noopener noreferrer"
             class="font-mono"
@@ -80,6 +80,15 @@
 
           @if (parts.suffix) {
             <b> {{ parts.suffix }} </b>
+          }
+          @if (submittedReviewUrl; as reviewUrl) {
+            <a
+              [href]="reviewUrl"
+              class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+              data-testid="validate-bilateral-cta"
+              (click)="onValidateCtaClick($event)"
+              >{{ copy.notificationItem.validateBilateralCta }}</a
+            >
           }
           }
         </p>
@@ -166,14 +175,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -181,6 +191,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -358,14 +377,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -373,6 +393,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -502,14 +531,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -517,6 +547,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
