@@ -316,3 +316,57 @@ describe('QAC-T-16 geographic location (Results)', () => {
     }
   });
 });
+
+/**
+ * QAC-T-23: the four `geo.extra_*` region/country fields carry labels distinct from the main geographic fields (QA feedback:
+ * "Select countries" appeared twice). Keys unchanged; label disambiguated for QA (owner 2026-10-08).
+ */
+describe('QAC-T-23 extra geographic block labels', () => {
+  const PAIRS: Array<[string, string]> = [
+    ['geo.regions_specified', 'geo.extra_regions_specified'],
+    ['geo.regions', 'geo.extra_regions'],
+    ['geo.countries_specified', 'geo.extra_countries_specified'],
+    ['geo.countries', 'geo.extra_countries'],
+  ];
+  const QUALIFIER = '(potential impact in other geographic areas)';
+
+  const assertDistinctExtraLabels = (fields: CatalogField[]): void => {
+    const find = (k: string) => {
+      const f = fields.find((x) => x.key === k);
+      if (!f) throw new Error(`catalog has no field ${k}`);
+      return f.label;
+    };
+    for (const [main, extra] of PAIRS) {
+      if (find(extra) === find(main)) {
+        throw new Error(`${extra} repeats the label of ${main}`);
+      }
+    }
+    const extras = PAIRS.map(([, extra]) => find(extra));
+    if (new Set(extras).size !== extras.length) {
+      throw new Error(
+        'extra geographic labels are not distinct from each other',
+      );
+    }
+  };
+
+  it('passes on the real catalog', () => {
+    expect(() => assertDistinctExtraLabels(CATALOG_FIELDS)).not.toThrow();
+  });
+
+  it('keeps the form label first and the same qualifier on all four', () => {
+    for (const [main, extra] of PAIRS) {
+      expect(get(extra).label).toBe(`${get(main).label} ${QUALIFIER}`);
+    }
+  });
+
+  it('falsifier: throws on a copy where one extra label is reset to the main label', () => {
+    const copy = CATALOG_FIELDS.map((f) =>
+      f.key === 'geo.extra_countries'
+        ? { ...f, label: get('geo.countries').label }
+        : f,
+    );
+    expect(() => assertDistinctExtraLabels(copy)).toThrow(
+      /geo\.extra_countries repeats the label of geo\.countries/,
+    );
+  });
+});

@@ -16,6 +16,10 @@
 // `required_confirmed: true` only where V-GEO states the rule. The `geo.extra_*` rows follow the UI intent (Santiago, 2026-10-06) and
 // V-FIX: `required_confirmed: false` until the fix is applied in the environment (the live function does not read `extra_geo_scope_id`).
 //
+// Labels of the four `geo.extra_*` region/country fields: the form's own label (same geoscope-management component as the main block)
+// plus the qualifier taken verbatim from the extra block question (rd-geographic-location.component.html:56, "...potential impact in
+// other geographic areas?"); label disambiguated for QA (owner 2026-10-08, QAC-T-23). Keys unchanged.
+//
 // The SAME `app-geoscope-management` component renders the main block (`body` = the main body) and the extra block (`body` = the extra
 // body, extra scope in `geo_scope_id`, "To be determined" hidden: GEO.html:54-60), so every extra rule below is the main rule with
 // `geo.extra_*` keys, nested inside the extra block gate (EXTRA_BLOCK: main scope not Global/TBD, GEO.html:32, and "other areas" = Yes, GEO.html:54).
@@ -304,7 +308,8 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
   {
     // same component as the main block, `extra_geo_scope_id` as scope (GEO.html:55-60); V-FIX:153-171
     key: 'geo.extra_regions_specified',
-    label: 'Are there any regions that you wish to specify for this result?',
+    label:
+      'Are there any regions that you wish to specify for this result? (potential impact in other geographic areas)',
     type: 'boolean',
     section: SECTION,
     order: 8,
@@ -319,7 +324,7 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
   {
     // V-FIX:155-166 (>= 1 active role-2 region)
     key: 'geo.extra_regions',
-    label: 'Select regions',
+    label: 'Select regions (potential impact in other geographic areas)',
     type: 'multi_select',
     control_list: 'regions',
     section: SECTION,
@@ -341,7 +346,8 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
   {
     // V-FIX:174-192
     key: 'geo.extra_countries_specified',
-    label: 'Are there any countries that you wish to specify for this result?',
+    label:
+      'Are there any countries that you wish to specify for this result? (potential impact in other geographic areas)',
     type: 'boolean',
     section: SECTION,
     order: 10,
@@ -357,7 +363,7 @@ export const GEOGRAPHIC_LOCATION_FIELDS: CatalogField[] = [
     // Pre-release type change multi_select -> list authorized by the owner (2026-10-07, QAC-T-16); same shape as `geo.countries`
     // with the role 2 rows. V-FIX:174-213 (countries), :215-243 (sub-national per country).
     key: 'geo.extra_countries',
-    label: 'Select countries',
+    label: 'Select countries (potential impact in other geographic areas)',
     type: 'list',
     section: SECTION,
     order: 11,

@@ -249,6 +249,13 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Implements:** QAC-R-13, QAC-R-14, QAC-R-5 for Knowledge product
 - **Depends on:** QAC-T-19
 
+### [x] QAC-T-23 — Distinct labels for the extra geographic block (QA feedback 2026-10-08) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** QA feedback: `geo.extra_regions_specified`, `geo.extra_regions`, `geo.extra_countries_specified` and `geo.extra_countries` repeat the labels of the main geo fields, so a QA assessor sees "Select countries" twice. In the form they sit under the "potential impact in other geographic areas" question, context QA loses. The catalog supplies distinct labels (owner approved 2026-10-08), keys unchanged, e.g. "Select countries (other geographic areas of potential impact)". Contract change-log row; revision bump.
+- **Implements:** QAC-R-1 (labels), QAC-R-13 (QA evaluates without Reporting's code)
+- **Depends on:** QAC-T-22
+
 ## 4. Dependency graph
 
 ```
