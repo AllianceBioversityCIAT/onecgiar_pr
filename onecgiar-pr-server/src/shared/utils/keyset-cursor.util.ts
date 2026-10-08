@@ -10,6 +10,9 @@ import { FindOptionsWhere, LessThan } from 'typeorm';
 /** Fixed, server-owned page size (PAGE-DD-2). Callers fetch `KEYSET_PAGE_SIZE + 1` rows. */
 export const KEYSET_PAGE_SIZE = 200;
 
+/** Default page size of the pending feeds (PPG-DD-5); mirrored client-side. The bell groups use 10. */
+export const PENDING_PAGE_SIZE = 50;
+
 const MAX_CURSOR_LENGTH = 128;
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 const CURSOR_PAYLOAD_RE =

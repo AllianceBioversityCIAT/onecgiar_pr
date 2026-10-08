@@ -77,12 +77,25 @@ export interface SharedRequestPagingParams {
   versionId?: string;
   scope?: string;
   cursor?: string;
+  /** @akili-spec notifications/admin-pending-paging (PPG-R-6): validated by the controller (1..200). */
+  limit?: number;
+  /** PPG-R-6: caller-seen filter for the paged pending mode, parsed by the controller. */
+  seen?: boolean;
 }
 
 interface ParsedPagingParams {
   versionId?: number;
   scope?: 'pending' | 'history';
   cursor?: string;
+  limit?: number;
+  seen?: boolean;
+}
+
+/** PPG-R-6: one pending request in the light index (id + date + the caller's own seen flag). */
+export interface PendingReceivedIndexEntry {
+  id: number;
+  requested_date: Date;
+  seen: boolean;
 }
 
 @Injectable()
@@ -518,7 +531,18 @@ export class ShareResultRequestService {
     pagingParams?: SharedRequestPagingParams,
   ) {
     try {
-      const { versionId, scope, cursor } = this.parsePagingParams(pagingParams);
+      const parsedParams = this.parsePagingParams(pagingParams);
+      const { versionId, scope, cursor } = parsedParams;
+      // @akili-spec notifications/admin-pending-paging (PPG-R-6, PPG-DD-1): opt-in paged mode.
+      // Only `scope=pending` + `limit` take it; every other call keeps the legacy path below.
+      if (scope === 'pending' && parsedParams.limit !== undefined) {
+        return await this.getReceivedPendingPage(user, {
+          versionId,
+          cursor,
+          limit: parsedParams.limit,
+          seen: parsedParams.seen,
+        });
+      }
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
       const extraConditions =
@@ -569,6 +593,142 @@ export class ShareResultRequestService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * @akili-spec notifications/admin-pending-paging (PPG-R-6, PPG-DD-3)
+   * Paged pending, id-first: the light index gives the full id set and the exact `seen`
+   * partition; only the page's ids (`limit + 1`) go through the heavy relation fetch, whose rows
+   * are re-ordered to the index order. `total` is the (seen-filtered) index length. `seen` on
+   * each row comes from the index, so a row's flag always agrees with the partition it was
+   * paged under (and no second seen lookup is needed).
+   */
+  private async getReceivedPendingPage(
+    user: TokenDto,
+    params: {
+      versionId?: number;
+      cursor?: string;
+      limit: number;
+      seen?: boolean;
+    },
+  ) {
+    const { versionId, cursor, limit, seen } = params;
+    const index = await this.getPendingReceivedIndex(user, versionId);
+    const candidates = (
+      seen === undefined ? index : index.filter((entry) => entry.seen === seen)
+    ).sort(
+      (a, b) =>
+        b.requested_date.getTime() - a.requested_date.getTime() || b.id - a.id,
+    );
+    const total = candidates.length;
+
+    let remaining = candidates;
+    if (cursor) {
+      const { date, id } = decodeCursor(cursor);
+      remaining = candidates.filter((entry) => {
+        const time = entry.requested_date.getTime();
+        return (
+          time < date.getTime() || (time === date.getTime() && entry.id < id)
+        );
+      });
+    }
+    const pageEntries = remaining.slice(0, limit + 1);
+
+    let rows: any[] = [];
+    if (pageEntries.length) {
+      const fetched = await this.getRequest({
+        share_result_request_id: In(pageEntries.map((entry) => entry.id)),
+      });
+      const byId = new Map<number, any>(
+        fetched.map((row: any) => [Number(row.share_result_request_id), row]),
+      );
+      rows = pageEntries
+        .map((entry) => byId.get(entry.id))
+        .filter((row) => row !== undefined);
+    }
+    const [enriched] = await this.enrichBucketsOnce([rows]);
+
+    const seenById = new Map(
+      pageEntries.map((entry) => [entry.id, entry.seen]),
+    );
+    for (const row of enriched) {
+      row.seen = seenById.get(Number(row.share_result_request_id)) ?? false;
+    }
+
+    const page = sliceKeysetPage(enriched, DONE_KEYSET_FIELDS, limit);
+    return {
+      response: {
+        receivedContributionsPending: page.rows,
+        receivedContributionsDone: [],
+        doneMeta: { hasMore: false, nextCursor: null },
+        pendingMeta: {
+          // From the id list, not the fetched rows: a row removed between the two queries
+          // must not hide the next page.
+          hasMore: pageEntries.length > limit,
+          nextCursor: page.nextCursor,
+          total,
+        },
+      },
+      message: 'Successful response',
+      status: HttpStatus.OK,
+    };
+  }
+
+  /**
+   * @akili-spec notifications/admin-pending-paging (PPG-R-1, PPG-R-6, PPG-DD-2)
+   * One light query (`share_result_request_id` + `requested_date`, no relations) over the same
+   * pending wheres as the inbox. Non-admins pass owner + shared as a where-array (OR), which
+   * replaces `combineAndDistinct`. One `findSeenIds` for the caller only (never another user).
+   * `versionId` narrows to one phase; omitted = all phases (the bell, `BELL-R-1`).
+   */
+  async getPendingReceivedIndex(
+    user: TokenDto,
+    versionId?: number,
+  ): Promise<PendingReceivedIndexEntry[]> {
+    const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+    const inits = await this.getUserInitiatives(user);
+    const extraConditions =
+      versionId !== undefined
+        ? { obj_result: { version_id: versionId } }
+        : undefined;
+    const { pendingOwner, pendingShared } = this.buildWhereReceivedConditions(
+      inits,
+      role,
+      extraConditions,
+    );
+    const where =
+      pendingOwner === pendingShared
+        ? pendingOwner
+        : [pendingOwner, pendingShared];
+
+    const rows = await this._shareResultRequestRepository.find({
+      select: { share_result_request_id: true, requested_date: true },
+      where,
+    });
+    const seenIds = await this._shareResultRequestSeenRepository.findSeenIds(
+      user.id,
+      rows.map((row) => Number(row.share_result_request_id)),
+    );
+    return rows.map((row) => ({
+      id: Number(row.share_result_request_id),
+      requested_date: new Date(row.requested_date),
+      seen: seenIds.has(Number(row.share_result_request_id)),
+    }));
+  }
+
+  /**
+   * @akili-spec notifications/admin-pending-paging (PPG-R-1) — the request half of the bell
+   * counts: all phases, caller-scoped. `pendingRequests` = index length; `unseenRequests` = the
+   * ones without the caller's own seen row.
+   */
+  async countPendingReceived(
+    user: TokenDto,
+  ): Promise<{ pendingRequests: number; unseenRequests: number }> {
+    const index = await this.getPendingReceivedIndex(user);
+    return {
+      pendingRequests: index.length,
+      unseenRequests: index.filter((entry) => !entry.seen).length,
+    };
   }
 
   /** `BRS-T-2`: adds `seen` (this user only) to each pending row, with a single query. */
@@ -700,7 +860,13 @@ export class ShareResultRequestService {
       decodeCursor(cursor); // validates eagerly; result re-derived inside applyKeysetCursor
     }
 
-    return { versionId, scope, cursor };
+    return {
+      versionId,
+      scope,
+      cursor,
+      limit: params?.limit,
+      seen: params?.seen,
+    };
   }
 
   /**

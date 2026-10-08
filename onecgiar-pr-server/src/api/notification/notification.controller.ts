@@ -95,21 +95,21 @@ export class NotificationController {
     required: false,
     enum: ['pending', 'history'],
     description:
-      '"pending" returns only the complete pending set (notificationsPending/notificationAnnouncement); "history" returns only the paginated viewed page; omitted -> legacy shape (complete pending + first history page).',
+      '"pending" returns only the pending set (notificationsPending/notificationAnnouncement), complete unless limit is sent (then paged, see limit); "history" returns only the paginated viewed page; omitted -> legacy shape (complete pending + first history page).',
   })
   @ApiQuery({
     name: 'cursor',
     required: false,
     type: String,
     description:
-      "Opaque keyset cursor from a previous response's viewedMeta.nextCursor, to fetch the next history page. Never logged (.cursorrules).",
+      "Opaque keyset cursor from a previous response's viewedMeta.nextCursor (history) or pendingMeta.nextCursor (scope=pending with limit), to fetch the next page. Never logged (.cursorrules).",
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
     description:
-      'History page size (BRS-DD-5). Integer 1..200; omitted -> 200. Applies only to the history (viewed) page; pending is never limited.',
+      'Page size, integer 1..200. History (viewed) page size (BRS-DD-5) when scope is history/omitted (omitted -> 200). With scope=pending it switches pending to paged mode (<= limit rows newest first plus pendingMeta { hasMore, nextCursor, total }, PPG-R-4); without it pending stays the complete legacy set.',
   })
   @ApiResponse({
     status: 200,
@@ -172,6 +172,24 @@ export class NotificationController {
       throw new BadRequestException('Invalid version_id');
     }
     return parsed;
+  }
+
+  @ApiOperation({
+    summary: 'Attention counts for the current user (bell badge)',
+    description:
+      'PPG-R-1: unseen/pending share requests and unread updates across all phases, computed with COUNT queries (no rows returned). Always scoped to the caller.',
+  })
+  @ApiOkResponse({
+    description:
+      'Counts retrieved: response = { unseenRequests, pendingRequests, unreadUpdates } (numbers).',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'An error occurred while retrieving the attention counts',
+  })
+  @Get('attention-counts')
+  getAttentionCounts(@UserToken() user: TokenDto) {
+    return this.notificationService.getAttentionCounts(user);
   }
 
   @ApiOperation({ summary: 'Retrieve all notifications for the current user' })
