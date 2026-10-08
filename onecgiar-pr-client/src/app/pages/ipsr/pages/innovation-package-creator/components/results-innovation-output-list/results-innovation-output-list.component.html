@@ -6,7 +6,7 @@
     <app-pr-table sortField="result_code" [sortOrder]="-1"
         [value]="(this.manageInnovationsListSE.allInnovationsList | filterByText:searchText)"
         [paginator]="!!((this.manageInnovationsListSE.allInnovationsList| filterByText:searchText)?.length) "
-        [rows]="10" selectionMode="single"
+        [rows]="100" selectionMode="single"
         [rowsPerPageOptions]="[10,50,100]">
         <ng-template prTableHeader>
             <tr>

@@ -43,7 +43,7 @@
       [paginator]="
         (this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length
       "
-      [rows]="10"
+      [rows]="100"
       styleClass="p-datatable-gridlines p-datatable-sm"
       [rowsPerPageOptions]="[10, 50, 100]"
       [first]="this.indicatorDetailsService.textToSearch().value && 0">

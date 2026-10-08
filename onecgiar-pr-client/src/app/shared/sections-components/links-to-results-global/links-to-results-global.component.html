@@ -24,7 +24,7 @@
       (this.api.dataControlSE.resultsList | filterResultNotLinked: this.linksToResultsBody.links : this.combine : counterPipe : this.text_to_search)
         ?.length
     "
-    [rows]="5"
+    [rows]="100"
     selectionMode="single"
     [rowsPerPageOptions]="[5, 50, 100]">
     <ng-template prTableHeader>
