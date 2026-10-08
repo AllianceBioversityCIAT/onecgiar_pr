@@ -726,7 +726,9 @@ describe('BilateralCenterService', () => {
     // `PSR-T-5` falsifier: "after createResultHeader with SP09, an active role-1 row exists →
     // FAIL". design.md DD-2 — the chosen primary SP is sent a pending request, never written as
     // the owner outright.
-    describe('PSR-T-5: primary program request instead of role 1', () => {
+    // Product decision 2026-10-07: the chosen SP owns the result at once — no acceptance round —
+    // so the Contributors section shows it and its default ToC linkage right after creation.
+    describe('direct primary assignment on create', () => {
       let primaryProgramRequestService: PrimaryProgramRequestService;
 
       beforeEach(() => {
@@ -742,36 +744,22 @@ describe('BilateralCenterService', () => {
         });
       });
 
-      it('requests the chosen SP instead of writing an active role-1 row', async () => {
+      it('transfers the primary to the chosen SP (no request, contributors held)', async () => {
         await service.createResultHeader(user, {
           result_level_id: 2,
           result_type_id: 7,
           program_code: 'SP09',
         });
 
-        // `PNS-T-1`: a brand-new result has no owner — the choice is saved as a DRAFT, not sent.
-        expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
-          99,
-          10,
-          user,
-          undefined,
-          { asDraft: true },
-        );
-        const resultByInitiativesRepository =
-          module.get<ResultByInitiativesRepository>(
-            ResultByInitiativesRepository,
-          );
-        expect(resultByInitiativesRepository.save).not.toHaveBeenCalledWith(
-          expect.objectContaining({ initiative_role_id: 1 }),
-        );
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledWith(99, 10, user, expect.anything(), {
+          releaseContributors: false,
+        });
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
       });
 
-      // `PSR-T-5` reviewer FAIL (rework attempt 2, discovered issue 1): manual create must write
-      // the lead-project row BEFORE `request()` runs — `PrimaryProgramRequestService
-      // .findLeadProjectId` resolves the lead project via `results_by_projects`, so calling
-      // `request()` first always found no project, returned `not_aligned`, and manual create
-      // silently produced no pending request at all.
-      it('saves the lead project before requesting the primary SP (manual create with project_id)', async () => {
+      it('saves the lead project before assigning the primary SP (manual create with project_id)', async () => {
         const resultsByProjectsRepository =
           module.get<ResultsByProjectsRepository>(ResultsByProjectsRepository);
 
@@ -784,16 +772,16 @@ describe('BilateralCenterService', () => {
 
         const projectSaveOrder = (resultsByProjectsRepository.save as jest.Mock)
           .mock.invocationCallOrder[0];
-        const requestOrder = (primaryProgramRequestService.request as jest.Mock)
-          .mock.invocationCallOrder[0];
-        expect(projectSaveOrder).toBeLessThan(requestOrder);
+        const transferOrder = (
+          primaryProgramRequestService.transferPrimary as jest.Mock
+        ).mock.invocationCallOrder[0];
+        expect(projectSaveOrder).toBeLessThan(transferOrder);
       });
 
-      // requirements.md PSR-R-1 "request step fails": creation still succeeds, logged only.
-      it('still succeeds when the primary program request fails (sent back, retry allowed)', async () => {
+      it('still succeeds when the primary assignment fails (logged, SP can be picked again)', async () => {
         (
-          primaryProgramRequestService.request as jest.Mock
-        ).mockResolvedValueOnce({ ok: false, reason: 'internal_error' });
+          primaryProgramRequestService.transferPrimary as jest.Mock
+        ).mockRejectedValueOnce(new Error('boom'));
         const logger = jest
           .spyOn((service as any).logger, 'warn')
           .mockImplementation(() => undefined);
@@ -806,7 +794,7 @@ describe('BilateralCenterService', () => {
 
         expect(result.response.id).toBe(99);
         expect(logger).toHaveBeenCalledWith(
-          expect.stringContaining('primary program request failed'),
+          expect.stringContaining('primary assignment failed'),
         );
       });
     });
@@ -1673,26 +1661,40 @@ describe('BilateralCenterService', () => {
           expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
         });
 
-        // Unchanged paths: with an owner, Editing (1) and Draft (8) still release on every save.
-        it.each([
-          [ResultStatusData.Editing.value, 'Editing'],
-          [ResultStatusData.Draft.value, 'Draft'],
-        ])(
-          'at %i (%s) with an owner the save still releases (unchanged)',
-          async (statusId) => {
-            const { primaryProgramRequestService } = arrangeAt(statusId);
+        // Editing (1) now has an owner from the primary pick (direct assignment, 2026-10-07):
+        // contributor requests still wait for approval (`PRA-R-4`), so the drafts are held.
+        it('at 1 (Editing) with an owner the save writes the draft but does NOT release it', async () => {
+          const { primaryProgramRequestService } = arrangeAt(
+            ResultStatusData.Editing.value,
+          );
 
-            await service.saveContributors(
-              10,
-              { contributing_programs: [{ science_program_id: 'SP02' }] },
-              user2,
-            );
+          await service.saveContributors(
+            10,
+            { contributing_programs: [{ science_program_id: 'SP02' }] },
+            user2,
+          );
 
-            expect(
-              primaryProgramRequestService.releaseContributors,
-            ).toHaveBeenCalledWith(10);
-          },
-        );
+          expect(
+            primaryProgramRequestService.releaseContributors,
+          ).not.toHaveBeenCalled();
+        });
+
+        // Unchanged path: with an owner, Draft (8) still releases on every save.
+        it('at 8 (Draft) with an owner the save still releases (unchanged)', async () => {
+          const { primaryProgramRequestService } = arrangeAt(
+            ResultStatusData.Draft.value,
+          );
+
+          await service.saveContributors(
+            10,
+            { contributing_programs: [{ science_program_id: 'SP02' }] },
+            user2,
+          );
+
+          expect(
+            primaryProgramRequestService.releaseContributors,
+          ).toHaveBeenCalledWith(10);
+        });
       });
     });
 
@@ -2364,7 +2366,7 @@ describe('BilateralCenterService', () => {
     // `PSR-T-5` falsifier: "after ... updatePrimaryAssignment, an active role-1 row exists →
     // FAIL". design.md DD-2/DD-4 — a primary change requests the new SP instead of writing role
     // 1 (or deactivating the current owner) directly; role 1 is written only at accept (T-3/T-4).
-    describe('PSR-T-5: requests the new SP instead of writing role 1', () => {
+    describe('primary assignment is a direct transfer (first pick and swap)', () => {
       beforeEach(() => {
         (resultRepository.findOne as jest.Mock).mockResolvedValue(
           editingResult,
@@ -2436,11 +2438,9 @@ describe('BilateralCenterService', () => {
         );
       });
 
-      // `PNS-T-1` (requirements.md PNS-R-1, scope guard): the first pick on an ownerless result
-      // (no active role-1 row) is saved as a DRAFT, not sent — distinct from the swap test above,
-      // where `configureTransaction()`'s default active role-1 row makes `asDraft: false`. Must
-      // be seen red against today's `request()` call, which passes no `opts` at all.
-      it('passes asDraft: true for a first pick on an ownerless result (no active role-1 row)', async () => {
+      // Product decision 2026-10-07: the first pick on an ownerless result is a DIRECT transfer
+      // too — the chosen SP owns the result at once, so its default ToC linkage shows right away.
+      it('transfers directly on a first pick on an ownerless result (no request, no draft)', async () => {
         const primaryProgramRequestService =
           module.get<PrimaryProgramRequestService>(
             PrimaryProgramRequestService,
@@ -2453,45 +2453,38 @@ describe('BilateralCenterService', () => {
           primary_science_program_id: 701,
         });
 
-        expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
-          11513,
+        expect(primaryProgramRequestService.isAligned).toHaveBeenCalledWith(
+          20,
           404,
-          user,
           fakeManager,
-          { asDraft: true },
         );
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledWith(11513, 404, user, fakeManager, {
+          releaseContributors: false,
+        });
+        expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
       });
 
-      // `PSR-T-5` rework attempt 2 — Reviewer FAIL remediation (b): a result created before this
-      // feature existed can be ownerless (no active role-1 row) while ALREADY carrying a sent
-      // PENDING primary request (`findPendingPrimaryInitiativeId` resolves it). requirements.md §7
-      // Compatibility — such a result "stays pending" and keeps using the old send-immediately
-      // path; it must NOT be treated as a first pick / draft just because there is no owner yet.
-      // Must be seen red against attempt-1 code, whose `asDraft` only checked
-      // `currentPrimaryId === 0`.
-      it('passes asDraft: false for an ownerless result that already has a pending primary request', async () => {
+      it('first pick to a non-aligned SP → 400 with the not-aligned message, nothing transferred', async () => {
         const primaryProgramRequestService =
           module.get<PrimaryProgramRequestService>(
             PrimaryProgramRequestService,
           );
-        const { initiativeRepository, fakeManager } = configureTransaction();
-        initiativeRepository.find.mockResolvedValue([]);
         (
-          primaryProgramRequestService.findPendingPrimaryInitiativeId as jest.Mock
-        ).mockResolvedValueOnce(9);
+          primaryProgramRequestService.isAligned as jest.Mock
+        ).mockResolvedValueOnce(false);
+        configureTransaction().initiativeRepository.find.mockResolvedValue([]);
 
-        await service.updatePrimaryAssignment(user, 11513, {
-          project_id: 20,
-          primary_science_program_id: 701,
-        });
-
-        expect(primaryProgramRequestService.request).toHaveBeenCalledWith(
-          11513,
-          404,
-          user,
-          fakeManager,
-          { asDraft: false },
-        );
+        await expect(
+          service.updatePrimaryAssignment(user, 11513, {
+            project_id: 20,
+            primary_science_program_id: 701,
+          }),
+        ).rejects.toThrow(PrimaryProgramRequestService.NOT_ALIGNED_MESSAGE);
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).not.toHaveBeenCalled();
       });
 
       // "Also required" (Leader, rework attempt 2, promoted from advisory / binding forward
@@ -2620,30 +2613,24 @@ describe('BilateralCenterService', () => {
         expect(primaryProgramRequestService.request).not.toHaveBeenCalled();
       });
 
-      // requirements.md §7 Reliability — an internal error is logged, never fails the save.
-      it('still saves the lead project/percentage when the first-pick request fails unexpectedly', async () => {
+      // The transfer runs inside the save transaction and throws on failure, so the whole save
+      // rolls back instead of leaving an ownerless result behind (same as a swap).
+      it('fails the save when the first-pick transfer fails (transaction rolled back)', async () => {
         const primaryProgramRequestService =
           module.get<PrimaryProgramRequestService>(
             PrimaryProgramRequestService,
           );
         (
-          primaryProgramRequestService.request as jest.Mock
-        ).mockResolvedValueOnce({ ok: false, reason: 'internal_error' });
-        const logger = jest
-          .spyOn((service as any).logger, 'warn')
-          .mockImplementation(() => undefined);
-        // First pick (no owner): the only path that still sends a request (`PRA-R-2` unchanged).
+          primaryProgramRequestService.transferPrimary as jest.Mock
+        ).mockRejectedValueOnce(new Error('boom'));
         configureTransaction().initiativeRepository.find.mockResolvedValue([]);
 
-        const response = await service.updatePrimaryAssignment(user, 11513, {
-          project_id: 20,
-          primary_science_program_id: 701,
-        });
-
-        expect(response.response.resultId).toBe(11513);
-        expect(logger).toHaveBeenCalledWith(
-          expect.stringContaining('primary program request failed'),
-        );
+        await expect(
+          service.updatePrimaryAssignment(user, 11513, {
+            project_id: 20,
+            primary_science_program_id: 701,
+          }),
+        ).rejects.toThrow();
       });
     });
 

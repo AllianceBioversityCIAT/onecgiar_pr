@@ -544,6 +544,8 @@
   display: block;
   padding-bottom: 24px;
   position: relative;
+  // Keeps the loading spinner's z-index: 10000 inside the table so the filter/column panels stay on top.
+  isolation: isolate;
 
   border: 1px solid var(--pr-border, #e3e3e8);
   border-radius: 12px;
