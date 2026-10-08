@@ -5169,8 +5169,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text x="745" y="68" class="t-dim" font-size="9" font-weight="600" text-anchor="middle">04 / Consumo</text>
 
         <!-- Flow paths -->
-        <path data-edge-from="form" data-edge-to="catalog" data-edge-label="campos y labels" data-edge-key="0" data-edge-id="form-fields" data-composition-points="156,157;207.5,157;207.5,271;259,271" d="M 156 157 L 207.5 157 L 207.5 271 L 259 271" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="validations" data-edge-to="catalog" data-edge-label="reglas required" data-edge-key="1" data-edge-id="validation-rules" data-composition-points="156,271;259,271" d="M 156 271 L 259 271" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="form" data-edge-to="catalog" data-edge-label="campos y visibilidad" data-edge-key="0" data-edge-id="form-fields" data-composition-points="156,157;207.5,157;207.5,271;259,271" d="M 156 157 L 207.5 157 L 207.5 271 L 259 271" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="validations" data-edge-to="catalog" data-edge-label="obligatoriedad" data-edge-key="1" data-edge-id="validation-rules" data-composition-points="156,271;259,271" d="M 156 271 L 259 271" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="catalog" data-edge-to="ciguard" data-edge-label="cada build" data-edge-key="2" data-edge-id="catalog-checks" data-composition-points="315,300;315,356" d="M 315 300 L 315 356" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
         <path data-edge-from="entities" data-edge-to="ciguard" data-edge-label="columnas" data-edge-key="3" data-edge-id="entity-columns" data-composition-points="156,385;259,385" d="M 156 385 L 259 385" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
         <path data-edge-from="catalog" data-edge-to="sync" data-edge-label="al arrancar" data-edge-key="4" data-edge-id="boot-sync" data-composition-points="315,242;315,186" d="M 315 242 L 315 186" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
@@ -5178,10 +5178,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <path data-edge-from="catalog" data-edge-to="endpoint" data-edge-label="sirve desde código" data-edge-key="6" data-edge-id="serve-code" data-composition-points="371,271;474,271" d="M 371 271 L 474 271" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="endpoint" data-edge-to="qa" data-edge-label="catálogo JSON" data-edge-key="7" data-edge-id="catalog-json" data-composition-points="586,271;689,271" d="M 586 271 L 689 271" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="endpoint" data-edge-to="clarisa" data-edge-label="valida x-api-key" data-edge-key="8" data-edge-id="key-check" data-composition-points="530,300;530,356" d="M 530 300 L 530 356" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="qa" data-edge-to="results" data-edge-label="pide campos elegidos" data-edge-key="9" data-edge-id="pick-fields" data-composition-points="745,242;745,186" d="M 745 242 L 745 186" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Nodes -->
-        <g id="node-form" data-node-id="form" data-node-label="Formulario 2026" tabindex="0" role="button" aria-label="Focus Formulario 2026, P25, 01 / Fuentes" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="P25" data-node-tag="campos" data-node-context="01 / Fuentes">
-          <title>Formulario 2026 · P25 · 01 / Fuentes · campos</title>
+        <g id="node-form" data-node-id="form" data-node-label="Formulario 2026" tabindex="0" role="button" aria-label="Focus Formulario 2026, P25, 01 / Fuentes" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="P25" data-node-tag="visible_when" data-node-context="01 / Fuentes">
+          <title>Formulario 2026 · P25 · 01 / Fuentes · visible_when</title>
           <rect x="44" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="44" y="128" width="112" height="58" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(50 134) scale(0.6875)">
@@ -5192,11 +5193,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           </g>
           <text data-node-label="" data-detail-anchor="" x="100" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Formulario 2026</text>
           <text data-detail="context" x="100" y="165" class="t-muted" font-size="7" text-anchor="middle">P25</text>
-        <text data-detail="fine" x="100" y="175" class="t-frontend" font-size="7" text-anchor="middle">campos</text>
+        <text data-detail="fine" x="100" y="175" class="t-frontend" font-size="7" text-anchor="middle">visible_when</text>
         </g>
 
-        <g id="node-validations" data-node-id="validations" data-node-label="validation_*_P25" tabindex="0" role="button" aria-label="Focus validation_*_P25, MySQL, 01 / Fuentes" aria-pressed="false" data-node-kind="database" data-node-sublabel="MySQL" data-node-tag="obligatorios" data-node-context="01 / Fuentes">
-          <title>validation_*_P25 · MySQL · 01 / Fuentes · obligatorios</title>
+        <g id="node-validations" data-node-id="validations" data-node-label="validation_*_P25" tabindex="0" role="button" aria-label="Focus validation_*_P25, MySQL, 01 / Fuentes" aria-pressed="false" data-node-kind="database" data-node-sublabel="MySQL" data-node-tag="required_when" data-node-context="01 / Fuentes">
+          <title>validation_*_P25 · MySQL · 01 / Fuentes · required_when</title>
           <rect x="44" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="44" y="242" width="112" height="58" rx="6" class="c-database" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(50 248) scale(0.6875)">
@@ -5205,23 +5206,23 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           </g>
           <text data-node-label="" data-detail-anchor="" x="100" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">validation_*_P25</text>
           <text data-detail="context" x="100" y="279" class="t-muted" font-size="7" text-anchor="middle">MySQL</text>
-        <text data-detail="fine" x="100" y="289" class="t-database" font-size="7" text-anchor="middle">obligatorios</text>
+        <text data-detail="fine" x="100" y="289" class="t-database" font-size="7" text-anchor="middle">required_when</text>
         </g>
 
-        <g id="node-catalog" data-node-id="catalog" data-node-label="Catálogo en código" tabindex="0" role="button" aria-label="Focus Catálogo en código, TypeScript, 02 / Definición y CI" aria-pressed="false" data-node-kind="backend" data-node-sublabel="TypeScript" data-node-tag="2026.6" data-node-context="02 / Definición y CI">
-          <title>Catálogo en código · TypeScript · 02 / Definición y CI · 2026.6</title>
+        <g id="node-catalog" data-node-id="catalog" data-node-label="Catálogo en código" tabindex="0" role="button" aria-label="Focus Catálogo en código, 146 campos, 02 / Definición y CI" aria-pressed="false" data-node-kind="backend" data-node-sublabel="146 campos" data-node-tag="2026.25" data-node-context="02 / Definición y CI">
+          <title>Catálogo en código · 146 campos · 02 / Definición y CI · 2026.25</title>
           <rect x="259" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="259" y="242" width="112" height="58" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(265 248) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="315" y="263" class="t-primary" font-size="9.6" font-weight="600" text-anchor="middle">Catálogo en código</text>
-          <text data-detail="context" x="315" y="279" class="t-muted" font-size="7" text-anchor="middle">TypeScript</text>
-        <text data-detail="fine" x="315" y="289" class="t-backend" font-size="7" text-anchor="middle">2026.6</text>
+          <text data-detail="context" x="315" y="279" class="t-muted" font-size="7" text-anchor="middle">146 campos</text>
+        <text data-detail="fine" x="315" y="289" class="t-backend" font-size="7" text-anchor="middle">2026.25</text>
         </g>
 
-        <g id="node-ciguard" data-node-id="ciguard" data-node-label="Guards de Jest" tabindex="0" role="button" aria-label="Focus Guards de Jest, completitud, 02 / Definición y CI" aria-pressed="false" data-node-kind="security" data-node-sublabel="completitud" data-node-tag="CI" data-node-context="02 / Definición y CI">
-          <title>Guards de Jest · completitud · 02 / Definición y CI · CI</title>
+        <g id="node-ciguard" data-node-id="ciguard" data-node-label="Guards de Jest" tabindex="0" role="button" aria-label="Focus Guards de Jest, forma y cobertura, 02 / Definición y CI" aria-pressed="false" data-node-kind="security" data-node-sublabel="forma y cobertura" data-node-tag="CI" data-node-context="02 / Definición y CI">
+          <title>Guards de Jest · forma y cobertura · 02 / Definición y CI · CI</title>
           <rect x="259" y="356" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="259" y="356" width="112" height="58" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(265 362) scale(0.6875)">
@@ -5229,12 +5230,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="315" y="377" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Guards de Jest</text>
-          <text data-detail="context" x="315" y="393" class="t-muted" font-size="7" text-anchor="middle">completitud</text>
+          <text data-detail="context" x="315" y="393" class="t-muted" font-size="7" text-anchor="middle">forma y cobertura</text>
         <text data-detail="fine" x="315" y="403" class="t-security" font-size="7" text-anchor="middle">CI</text>
         </g>
 
-        <g id="node-entities" data-node-id="entities" data-node-label="Entidades TypeORM" tabindex="0" role="button" aria-label="Focus Entidades TypeORM, tablas result, 01 / Fuentes" aria-pressed="false" data-node-kind="database" data-node-sublabel="tablas result" data-node-tag="metadata" data-node-context="01 / Fuentes">
-          <title>Entidades TypeORM · tablas result · 01 / Fuentes · metadata</title>
+        <g id="node-entities" data-node-id="entities" data-node-label="Entidades TypeORM" tabindex="0" role="button" aria-label="Focus Entidades TypeORM, tablas result, 01 / Fuentes" aria-pressed="false" data-node-kind="database" data-node-sublabel="tablas result" data-node-tag="columnas" data-node-context="01 / Fuentes">
+          <title>Entidades TypeORM · tablas result · 01 / Fuentes · columnas</title>
           <rect x="44" y="356" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="44" y="356" width="112" height="58" rx="6" class="c-database" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(50 362) scale(0.6875)">
@@ -5243,7 +5244,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           </g>
           <text data-node-label="" data-detail-anchor="" x="100" y="377" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Entidades TypeORM</text>
           <text data-detail="context" x="100" y="393" class="t-muted" font-size="7" text-anchor="middle">tablas result</text>
-        <text data-detail="fine" x="100" y="403" class="t-database" font-size="7" text-anchor="middle">metadata</text>
+        <text data-detail="fine" x="100" y="403" class="t-database" font-size="7" text-anchor="middle">columnas</text>
         </g>
 
         <g id="node-sync" data-node-id="sync" data-node-label="Sync al arrancar" tabindex="0" role="button" aria-label="Focus Sync al arrancar, al iniciar, 02 / Definición y CI" aria-pressed="false" data-node-kind="backend" data-node-sublabel="al iniciar" data-node-tag="idempotente" data-node-context="02 / Definición y CI">
@@ -5283,8 +5284,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="fine" x="530" y="175" class="t-database" font-size="7" text-anchor="middle">nunca borra</text>
         </g>
 
-        <g id="node-qa" data-node-id="qa" data-node-label="Plataforma QA" tabindex="0" role="button" aria-label="Focus Plataforma QA, consumidor, 04 / Consumo" aria-pressed="false" data-node-kind="external" data-node-sublabel="consumidor" data-node-tag="x-api-key" data-node-context="04 / Consumo">
-          <title>Plataforma QA · consumidor · 04 / Consumo · x-api-key</title>
+        <g id="node-qa" data-node-id="qa" data-node-label="Plataforma QA" tabindex="0" role="button" aria-label="Focus Plataforma QA, admin elige campos, 04 / Consumo" aria-pressed="false" data-node-kind="external" data-node-sublabel="admin elige campos" data-node-tag="x-api-key" data-node-context="04 / Consumo">
+          <title>Plataforma QA · admin elige campos · 04 / Consumo · x-api-key</title>
           <rect x="689" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="689" y="242" width="112" height="58" rx="6" class="c-external" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(695 248) scale(0.6875)">
@@ -5292,7 +5293,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="745" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Plataforma QA</text>
-          <text data-detail="context" x="745" y="279" class="t-muted" font-size="7" text-anchor="middle">consumidor</text>
+          <text data-detail="context" x="745" y="279" class="t-muted" font-size="7" text-anchor="middle">admin elige campos</text>
         <text data-detail="fine" x="745" y="289" class="t-external" font-size="7" text-anchor="middle">x-api-key</text>
         </g>
 
@@ -5309,14 +5310,26 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="fine" x="530" y="403" class="t-security" font-size="7" text-anchor="middle">permiso</text>
         </g>
 
-        <!-- Flow labels -->
-        <g data-detail="context" data-edge-from="form" data-edge-to="catalog" data-edge-label="campos y labels" data-edge-key="0" data-edge-id="form-fields">
-          <rect x="164.75" y="193" width="85.5" height="16" rx="4" class="c-mask"/>
-          <text x="207.5" y="204" class="t-backend" font-size="8" text-anchor="middle">campos y labels</text>
+        <g id="node-results" data-node-id="results" data-node-label="Resultados QA" tabindex="0" role="button" aria-label="Focus Resultados QA, endpoint futuro, 04 / Consumo" aria-pressed="false" data-node-kind="backend" data-node-sublabel="endpoint futuro" data-node-tag="futuro" data-node-context="04 / Consumo">
+          <title>Resultados QA · endpoint futuro · 04 / Consumo · futuro</title>
+          <rect x="689" y="128" width="112" height="58" rx="6" class="c-mask"/>
+          <rect x="689" y="128" width="112" height="58" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(695 134) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="745" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Resultados QA</text>
+          <text data-detail="context" x="745" y="165" class="t-muted" font-size="7" text-anchor="middle">endpoint futuro</text>
+        <text data-detail="fine" x="745" y="175" class="t-backend" font-size="7" text-anchor="middle">futuro</text>
         </g>
-        <g data-detail="context" data-edge-from="validations" data-edge-to="catalog" data-edge-label="reglas required" data-edge-key="1" data-edge-id="validation-rules">
-          <rect x="164.25" y="281" width="85.5" height="16" rx="4" class="c-mask"/>
-          <text x="207" y="292" class="t-muted" font-size="8" text-anchor="middle">reglas required</text>
+
+        <!-- Flow labels -->
+        <g data-detail="context" data-edge-from="form" data-edge-to="catalog" data-edge-label="campos y visibilidad" data-edge-key="0" data-edge-id="form-fields">
+          <rect x="152.5" y="193" width="110" height="16" rx="4" class="c-mask"/>
+          <text x="207.5" y="204" class="t-backend" font-size="8" text-anchor="middle">campos y visibilidad</text>
+        </g>
+        <g data-detail="context" data-edge-from="validations" data-edge-to="catalog" data-edge-label="obligatoriedad" data-edge-key="1" data-edge-id="validation-rules">
+          <rect x="166.7" y="281" width="80.6" height="16" rx="4" class="c-mask"/>
+          <text x="207" y="292" class="t-muted" font-size="8" text-anchor="middle">obligatoriedad</text>
         </g>
         <g data-detail="context" data-edge-from="catalog" data-edge-to="ciguard" data-edge-label="cada build" data-edge-key="2" data-edge-id="catalog-checks">
           <rect x="284.5" y="317" width="61" height="16" rx="4" class="c-mask"/>
@@ -5346,6 +5359,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="484.8" y="317" width="90.4" height="16" rx="4" class="c-mask"/>
           <text x="530" y="328" class="t-security" font-size="8" text-anchor="middle">valida x-api-key</text>
         </g>
+        <g data-detail="context" data-edge-from="qa" data-edge-to="results" data-edge-label="pide campos elegidos" data-edge-key="9" data-edge-id="pick-fields">
+          <rect x="690" y="221" width="110" height="16" rx="4" class="c-mask"/>
+          <text x="745" y="232" class="t-messagebus" font-size="8" text-anchor="middle">pide campos elegidos</text>
+        </g>
 
         <!-- Legend -->
         <g data-legend="" data-legend-bridge="">
@@ -5358,17 +5375,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="M 185 521 L 219 521" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
             <text x="228" y="524" class="t-muted" font-size="10" font-weight="500">control / autenticación</text>
           </g>
-          <g data-legend-semantic-kind="dashed" data-legend-x="365" data-legend-baseline="524" data-legend-width="118">
+          <g data-legend-semantic-kind="dashed" data-legend-x="365" data-legend-baseline="524" data-legend-width="158">
             <path d="M 365 521 L 399 521" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
-            <text x="408" y="524" class="t-muted" font-size="10" font-weight="500">metadata y sync</text>
+            <text x="408" y="524" class="t-muted" font-size="10" font-weight="500">metadata, sync y futuro</text>
           </g>
-          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="almacenamiento" data-legend-x="505" data-legend-baseline="524" data-legend-width="113">
-            <rect x="505" y="516" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
-            <text x="527" y="524" class="t-muted" font-size="10" font-weight="500">almacenamiento</text>
+          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="almacenamiento" data-legend-x="545" data-legend-baseline="524" data-legend-width="113">
+            <rect x="545" y="516" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
+            <text x="567" y="524" class="t-muted" font-size="10" font-weight="500">almacenamiento</text>
           </g>
-          <g data-legend-semantic-kind="default" data-legend-x="640" data-legend-baseline="524" data-legend-width="68">
-            <path d="M 640 521 L 674 521" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-            <text x="683" y="524" class="t-muted" font-size="10" font-weight="500">regla</text>
+          <g data-legend-semantic-kind="default" data-legend-x="680" data-legend-baseline="524" data-legend-width="68">
+            <path d="M 680 521 L 714 521" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+            <text x="723" y="524" class="t-muted" font-size="10" font-weight="500">regla</text>
           </g>
         </g>
       </svg>
@@ -5564,7 +5581,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>&bull; El catálogo vive en código y se versiona con el repo</li>
-          <li>&bull; Formulario 2026 da campos; validation_* da obligatoriedad</li>
+          <li>&bull; El form da campos y visible_when; form ∪ validation_* da required</li>
           <li>&bull; El endpoint responde desde el código, no desde la base</li>
         </ul>
       </div>
@@ -5589,7 +5606,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <ul>
           <li>&bull; Llave CLARISA en x-api-key; el JWT no sirve</li>
           <li>&bull; Año sin catálogo da 404, nunca un 200 vacío</li>
-          <li>&bull; QA nunca ve tablas ni columnas de Reporting</li>
+          <li>&bull; Elegir un campo arrastra a los que nombra su visible_when</li>
         </ul>
       </div>
     </div>

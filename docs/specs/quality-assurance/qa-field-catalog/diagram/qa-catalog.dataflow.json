@@ -17,7 +17,7 @@
           "label": "control / autenticación"
         },
         "dashed": {
-          "label": "metadata y sync"
+          "label": "metadata, sync y futuro"
         },
         "database": {
           "label": "almacenamiento"
@@ -50,7 +50,7 @@
       "sublabel": "P25",
       "stage": 0,
       "row": 0,
-      "tag": "campos"
+      "tag": "visible_when"
     },
     {
       "id": "validations",
@@ -59,22 +59,22 @@
       "sublabel": "MySQL",
       "stage": 0,
       "row": 1,
-      "tag": "obligatorios"
+      "tag": "required_when"
     },
     {
       "id": "catalog",
       "type": "backend",
       "label": "Catálogo en código",
-      "sublabel": "TypeScript",
+      "sublabel": "146 campos",
       "stage": 1,
       "row": 1,
-      "tag": "2026.6"
+      "tag": "2026.25"
     },
     {
       "id": "ciguard",
       "type": "security",
       "label": "Guards de Jest",
-      "sublabel": "completitud",
+      "sublabel": "forma y cobertura",
       "stage": 1,
       "row": 2,
       "tag": "CI"
@@ -86,7 +86,7 @@
       "sublabel": "tablas result",
       "stage": 0,
       "row": 2,
-      "tag": "metadata"
+      "tag": "columnas"
     },
     {
       "id": "sync",
@@ -119,7 +119,7 @@
       "id": "qa",
       "type": "external",
       "label": "Plataforma QA",
-      "sublabel": "consumidor",
+      "sublabel": "admin elige campos",
       "stage": 3,
       "row": 1,
       "tag": "x-api-key"
@@ -132,6 +132,15 @@
       "stage": 2,
       "row": 2,
       "tag": "permiso"
+    },
+    {
+      "id": "results",
+      "type": "backend",
+      "label": "Resultados QA",
+      "sublabel": "endpoint futuro",
+      "stage": 3,
+      "row": 0,
+      "tag": "futuro"
     }
   ],
   "flows": [
@@ -139,14 +148,14 @@
       "id": "form-fields",
       "from": "form",
       "to": "catalog",
-      "label": "campos y labels",
+      "label": "campos y visibilidad",
       "variant": "emphasis"
     },
     {
       "id": "validation-rules",
       "from": "validations",
       "to": "catalog",
-      "label": "reglas required",
+      "label": "obligatoriedad",
       "variant": "default",
       "route": "straight",
       "labelAt": [
@@ -210,6 +219,13 @@
         530,
         328
       ]
+    },
+    {
+      "id": "pick-fields",
+      "from": "qa",
+      "to": "results",
+      "label": "pide campos elegidos",
+      "variant": "dashed"
     }
   ],
   "cards": [
@@ -218,7 +234,7 @@
       "title": "Fuente de verdad",
       "items": [
         "El catálogo vive en código y se versiona con el repo",
-        "Formulario 2026 da campos; validation_* da obligatoriedad",
+        "El form da campos y visible_when; form ∪ validation_* da required",
         "El endpoint responde desde el código, no desde la base"
       ]
     },
@@ -237,7 +253,7 @@
       "items": [
         "Llave CLARISA en x-api-key; el JWT no sirve",
         "Año sin catálogo da 404, nunca un 200 vacío",
-        "QA nunca ve tablas ni columnas de Reporting"
+        "Elegir un campo arrastra a los que nombra su visible_when"
       ]
     }
   ]
