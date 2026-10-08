@@ -212,9 +212,17 @@ export class ShellTopbarComponent {
   /** BRS-R-6: the Decide tab counts every pending request (fresh or seen), so it ignores the badge. */
   readonly bellDecisionCount = computed(() => this.resultsNotificationsSE.bellPendingRequestCount());
   /** BRS-R-6: the Updates tab counts unread updates (the read ones listed under "Earlier" do not count). */
-  readonly bellUpdatesCount = computed(() => this.resultsNotificationsSE.bellUpdates().length);
-  /** BRS-R-6: the All tab counts the rows it lists. */
-  readonly bellAllCount = computed(() => this.resultsNotificationsSE.bellItems().length);
+  readonly bellUpdatesCount = computed(() => this.resultsNotificationsSE.bellCounts().unreadUpdates);
+  /** PPG-T-4: loaded read updates (the "Earlier" update rows); they are not part of the server counts. */
+  private readonly bellReadOnlyCount = computed(() => this.resultsNotificationsSE.bellItems().filter(row => row?.kind === 'update' && row?.fresh === false).length);
+  /**
+   * BRS-R-6 / PPG-T-4: the All tab counts everything the popover could list — server pending requests +
+   * server unread updates + the loaded read updates. With <=10 rows per group this equals `bellItems().length`.
+   */
+  readonly bellAllCount = computed(() => {
+    const counts = this.resultsNotificationsSE.bellCounts();
+    return counts.pendingRequests + counts.unreadUpdates + this.bellReadOnlyCount();
+  });
   readonly bellTabItems = computed(() => {
     const items = this.resultsNotificationsSE.bellItems();
     const tab = this.bellTab();
@@ -228,7 +236,13 @@ export class ShellTopbarComponent {
     const index = this.bellVisibleItems().findIndex(row => row?.fresh === false);
     return index > 0 ? index : -1;
   });
-  readonly bellOverflow = computed(() => Math.max(0, this.bellTabItems().length - BELL_MAX_ROWS));
+  /** PPG-T-4: "+N more" uses the server totals of the ACTIVE tab, not the (bounded) loaded rows. */
+  readonly bellOverflow = computed(() => {
+    const tab = this.bellTab();
+    const total =
+      tab === 'decide' ? this.bellDecisionCount() : tab === 'updates' ? this.bellUpdatesCount() + this.bellReadOnlyCount() : this.bellAllCount();
+    return Math.max(0, total - BELL_MAX_ROWS);
+  });
   /** BELL-T-10: in-flight "Mark as read" (blocks a double click). */
   readonly markingRead = signal(false);
   readonly bellError = computed(() => this.resultsNotificationsSE.bellError());

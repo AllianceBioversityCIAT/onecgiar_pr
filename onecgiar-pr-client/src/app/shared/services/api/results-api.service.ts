@@ -788,7 +788,7 @@ export class ResultsApiService {
   // §4.1 — "no new method names needed"). The only caller of these 3 methods is
   // ResultsNotificationsService, so this is not a breaking change for any other consumer.
   // Cursor is opaque and MUST NOT be logged (.cursorrules) — it is only ever forwarded verbatim.
-  private buildPagingQueryParams(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number }): string {
+  private buildPagingQueryParams(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number; seen?: boolean }): string {
     if (!options) return '';
     const params = new URLSearchParams();
     // PAGE-T-4 rework (Reviewer L3): a plain truthy check — `0` is not a real phase id either, same
@@ -803,15 +803,21 @@ export class ResultsApiService {
     if (options.cursor) {
       params.set('cursor', options.cursor);
     }
-    // BRS-T-4: only the updates endpoint honours `limit` (history page size); the inbox never sets it.
+    // BRS-T-4: `limit` is the history page size on updates. PPG-T-4: with `scope=pending` both the
+    // received and the updates endpoints also honour it (bounded bell groups); WITHOUT it they answer
+    // the legacy full pending set, so callers that must stay unbounded simply omit it.
     if (options.limit) {
       params.set('limit', String(options.limit));
+    }
+    // PPG-T-4: `seen` splits the received pending set into the bell's unseen / seen groups.
+    if (typeof options.seen === 'boolean') {
+      params.set('seen', String(options.seen));
     }
     const qs = params.toString();
     return qs ? `?${qs}` : '';
   }
 
-  GET_allRequest(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string }) {
+  GET_allRequest(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number; seen?: boolean }) {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/received${this.buildPagingQueryParams(options)}`);
   }
 
@@ -831,6 +837,11 @@ export class ResultsApiService {
 
   GET_requestUpdates(options?: { versionId?: any; scope?: 'pending' | 'history'; cursor?: string; limit?: number }) {
     return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates${this.buildPagingQueryParams(options)}`);
+  }
+
+  /** PPG-T-4: server-truth bell counts. `response: { unseenRequests, pendingRequests, unreadUpdates }`. */
+  GET_notificationAttentionCounts() {
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/attention-counts`);
   }
 
   GET_notificationsPopUp() {

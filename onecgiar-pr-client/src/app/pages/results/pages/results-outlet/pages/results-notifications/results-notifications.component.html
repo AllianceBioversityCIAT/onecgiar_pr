@@ -395,6 +395,13 @@
         </div>
       </div>
     } @else {
+    <!-- @akili-spec notifications/admin-pending-paging (PPG-T-6, design.md section 8.3, PPG-R-8):
+         a filter only narrows the loaded rows; while pending rows remain unloaded the tab counts are
+         loaded-only too, so say so above the list. -->
+    @if (showPartialFilterNotice) {
+      <p class="mb-[12px] text-[12px] text-[var(--pr-color-accents-5)]" data-testid="partial-filter-notice" role="status">{{ copy.inbox.partialFilterNotice }}</p>
+    }
+
     <div class="unified_notifications_list flex flex-col gap-[20px] w-full mb-[20px]">
       @if (groupedTabList.today.length > 0) {
         <div class="unified_notifications_list_group flex flex-col gap-[10px]">
@@ -497,6 +504,26 @@
         </div>
       }
     </div>
+    }
+
+    <!-- @akili-spec notifications/admin-pending-paging (PPG-T-5, design.md section 8.3, PPG-R-5/R-6):
+         pending "Load more", shown while any paged source (updates / received) has an unloaded pending
+         page. Same button markup as the history control below; the list is date-grouped, so the
+         pending rows have no block of their own and the control sits right under the rendered rows.
+         An in-flight `loadMorePending()` disables it and announces `aria-busy`. -->
+    @if (!resultsNotificationsSE.initialLoading && resultsNotificationsSE.hasMorePending) {
+      <div class="flex flex-col items-center gap-[8px] mb-[20px]">
+        <button
+          hlmBtn
+          variant="outline"
+          type="button"
+          data-testid="load-more-pending"
+          [disabled]="resultsNotificationsSE.loadingMorePending"
+          [attr.aria-busy]="resultsNotificationsSE.loadingMorePending"
+          (click)="resultsNotificationsSE.loadMorePending()">
+          {{ copy.inbox.loadMorePending }}
+        </button>
+      </div>
     }
 
     <!-- @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2, PAGE-R-4/R-10):

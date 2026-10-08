@@ -4314,6 +4314,32 @@ describe('ResultsApiService', () => {
   // take a single options object `{ versionId?, scope?, cursor? }` (design.md §4.1) instead of a
   // positional `versionId`. These cases exercise `buildPagingQueryParams` directly through each of
   // the 3 methods.
+  describe('GET_allRequest - bell bounded options (PPG-T-4)', () => {
+    it('serializes limit and seen=false / seen=true', () => {
+      service.GET_allRequest({ scope: 'pending', limit: 10, seen: false }).subscribe();
+      httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=pending&limit=10&seen=false`).flush({});
+      service.GET_allRequest({ scope: 'pending', limit: 10, seen: true }).subscribe();
+      httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=pending&limit=10&seen=true`).flush({});
+    });
+
+    it('omits limit and seen when not given (legacy callers stay unbounded)', () => {
+      service.GET_allRequest({ scope: 'pending' }).subscribe();
+      httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=pending`).flush({});
+    });
+
+    it('GET_requestUpdates pending accepts limit', () => {
+      service.GET_requestUpdates({ scope: 'pending', limit: 10 }).subscribe();
+      httpMock.expectOne(`${service.baseApiBaseUrl}notification/updates?scope=pending&limit=10`).flush({});
+    });
+
+    it('GET_notificationAttentionCounts hits notification/attention-counts', () => {
+      service.GET_notificationAttentionCounts().subscribe();
+      const req = httpMock.expectOne(`${service.baseApiBaseUrl}notification/attention-counts`);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+  });
+
   describe('GET_allRequest - paging options', () => {
     it('should include versionId param when provided', done => {
       service.GET_allRequest({ versionId: 'v2' }).subscribe(response => {
