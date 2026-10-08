@@ -2781,35 +2781,44 @@ describe('BilateralService (unit)', () => {
   // `PSR-T-5` — `promoteDraft`'s only caller (P-3, reversion challenge). design.md DD-2/DD-3: the
   // chosen primary SP is sent a pending request instead of being written as the owner outright,
   // and the ToC stub seed moves to accept.
-  describe('populateInitiativeAndTocFromProgramCode (PSR-T-5)', () => {
-    it('requests the resolved initiative instead of writing role 1, and seeds no ToC stub', async () => {
+  describe('populateInitiativeAndTocFromProgramCode (direct primary assignment)', () => {
+    // Product decision 2026-10-07: the chosen SP owns the result at once — no acceptance round.
+    const withTransaction = (service: any) => {
+      const manager = { findOne: jest.fn().mockResolvedValue({ id: 10 }) };
+      service.dataSource = {
+        ...service.dataSource,
+        transaction: jest.fn(async (work: any) => work(manager)),
+      };
+      return manager;
+    };
+
+    it('assigns the resolved initiative as primary directly (role 1 + ToC stub via transferPrimary), inside a locked transaction', async () => {
       const { service, stubs } = makeService();
       stubs.clarisaInitiatives.findOne.mockResolvedValue({
         id: 404,
         official_code: 'SP09',
       });
-      (stubs.resultByInitiativesRepository as any).save = jest.fn();
-      (stubs.resultsTocResultsRepository as any).save = jest.fn();
-      (stubs.resultsTocResultsRepository as any).findOne = jest.fn();
+      const manager = withTransaction(service);
 
       await service.populateInitiativeAndTocFromProgramCode(10, 'sp09', 42);
 
-      expect(stubs.primaryProgramRequestService.request).toHaveBeenCalledWith(
+      expect(manager.findOne).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          where: { id: 10 },
+          lock: { mode: 'pessimistic_write' },
+        }),
+      );
+      expect(
+        stubs.primaryProgramRequestService.transferPrimary,
+      ).toHaveBeenCalledWith(
         10,
         404,
         expect.objectContaining({ id: 42 }),
-        undefined,
-        { asDraft: true },
+        manager,
+        { releaseContributors: false },
       );
-      expect(
-        (stubs.resultByInitiativesRepository as any).save,
-      ).not.toHaveBeenCalled();
-      expect(
-        (stubs.resultsTocResultsRepository as any).findOne,
-      ).not.toHaveBeenCalled();
-      expect(
-        (stubs.resultsTocResultsRepository as any).save,
-      ).not.toHaveBeenCalled();
+      expect(stubs.primaryProgramRequestService.request).not.toHaveBeenCalled();
     });
 
     it('does nothing when no program_code is provided', async () => {
@@ -2835,23 +2844,23 @@ describe('BilateralService (unit)', () => {
 
     // requirements.md PSR-R-1 "request step fails": promoteDraft must still succeed (this method
     // never throws); the caller (`promoteDraft`) is unaffected and only a warning is logged.
-    it('logs and swallows when the primary program request fails', async () => {
+    it('logs and swallows when the primary assignment fails', async () => {
       const { service, stubs } = makeService();
       stubs.clarisaInitiatives.findOne.mockResolvedValue({
         id: 404,
         official_code: 'SP09',
       });
-      stubs.primaryProgramRequestService.request.mockResolvedValueOnce({
-        ok: false,
-        reason: 'internal_error',
-      });
+      withTransaction(service);
+      stubs.primaryProgramRequestService.transferPrimary.mockRejectedValueOnce(
+        new Error('boom'),
+      );
 
       await expect(
         service.populateInitiativeAndTocFromProgramCode(10, 'SP09', 42),
       ).resolves.toBeUndefined();
 
       expect(service.logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('primary program request failed'),
+        expect.stringContaining('primary assignment failed'),
       );
     });
   });

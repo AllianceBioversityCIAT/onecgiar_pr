@@ -130,10 +130,7 @@ import {
   ResubmissionWriteArgs,
 } from './services/bilateral-resubmission.service';
 import { ExternalPlatformIdentity } from './interfaces/external-platform-identity.interface';
-import {
-  PrimaryProgramRequestService,
-  PrimaryRequestOutcome,
-} from '../results/share-result-request/services/primary-program-request.service';
+import { PrimaryProgramRequestService } from '../results/share-result-request/services/primary-program-request.service';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
 const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
@@ -5533,27 +5530,28 @@ export class BilateralService {
       return;
     }
 
-    // `PSR-T-5` (design.md DD-2/DD-3): a promoted AI draft no longer becomes the chosen Science
-    // Program's owner outright — it sends a pending primary request instead (role 1 is written
-    // only on accept, T-3/T-4). The ToC stub seed that used to run here unconditionally moved to
-    // accept too: it's keyed on the primary SP, which isn't final until that SP accepts.
-    // `request()` never throws (requirements.md §7 Reliability / PSR-R-1 "request step fails") —
-    // a failure is logged and swallowed so `promoteDraft` still succeeds, leaving the result
-    // ownerless and retryable.
-    // `PNS-R-1` (design.md §5 item 2): no owner exists yet at promote time, so the choice is
-    // saved as a DRAFT, not sent.
-    // @akili-spec notifications/primary-notify-on-submit
-    const outcome: PrimaryRequestOutcome =
-      await this._primaryProgramRequestService.request(
-        resultId,
-        initiative.id,
-        { id: userId } as TokenDto,
-        undefined,
-        { asDraft: true },
-      );
-    if (outcome.ok === false) {
+    // A promoted AI draft's chosen Science Program owns the result at once (role 1 + ToC stub, no
+    // acceptance round), so the Contributors section shows it and its default ToC linkage
+    // (confirmed by product 2026-10-07; supersedes the `PNS-R-1` draft request). Non-fatal so
+    // `promoteDraft` still succeeds: a failure is logged and the result stays ownerless, and the
+    // Center can pick the SP again from Section 0.
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        await manager.findOne(Result, {
+          where: { id: resultId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        await this._primaryProgramRequestService.transferPrimary(
+          resultId,
+          Number(initiative.id),
+          { id: userId } as TokenDto,
+          manager,
+          { releaseContributors: false },
+        );
+      });
+    } catch (error) {
       this.logger.warn(
-        `populateInitiativeAndTocFromProgramCode: primary program request failed for result ${resultId} (reason=${outcome.reason})`,
+        `populateInitiativeAndTocFromProgramCode: primary assignment failed for result ${resultId} (${error instanceof Error ? error.message : 'unknown error'})`,
       );
     }
   }
