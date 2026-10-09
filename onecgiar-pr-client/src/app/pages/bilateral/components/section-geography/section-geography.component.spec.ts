@@ -41,6 +41,7 @@ describe('SectionGeographyComponent', () => {
       resultTypeId: signal<number | null>(null),
     };
     autoSave = {
+      isReadOnly: signal(false), // R2B-1/2 — the editor lock the sections read
       manualSave$,
       fieldStatus: signal<Record<string, string>>({}),
       schedulePayload: jest.fn(),

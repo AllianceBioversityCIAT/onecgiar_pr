@@ -42,6 +42,7 @@ describe('SectionGeneralInfoComponent', () => {
     scoresResponse = of({ response: [{ id: 10, name: 'Score A', impact_area: 'Gender', is_active: true }] });
 
     autoSave = {
+      isReadOnly: signal(false), // R2B-1/2 — the editor lock the sections read
       registerField: jest.fn(),
       updateField: jest.fn(),
       updateFieldsBatch: jest.fn(),
@@ -189,6 +190,7 @@ describe('SectionGeneralInfoComponent', () => {
         resultCode: signal<string | number | null>(null)
       };
       wrapperAutoSave = {
+        isReadOnly: signal(false),
         registerField: jest.fn(),
         updateField: jest.fn(),
         updateFieldsBatch: jest.fn(),

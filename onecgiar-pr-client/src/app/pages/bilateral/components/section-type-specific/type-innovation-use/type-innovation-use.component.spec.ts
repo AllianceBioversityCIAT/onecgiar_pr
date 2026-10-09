@@ -45,6 +45,7 @@ describe('TypeInnovationUseComponent', () => {
   beforeEach(async () => {
     mdsTracker = { setSectionFields: jest.fn() };
     autoSave = {
+      isReadOnly: signal(false), // R2B-1/2 — the editor lock the sections read
       fieldStatus: signal<Record<string, string>>({}),
       schedulePayload: jest.fn(),
       // Which section the editor is showing. The component re-reads its investment tables on the

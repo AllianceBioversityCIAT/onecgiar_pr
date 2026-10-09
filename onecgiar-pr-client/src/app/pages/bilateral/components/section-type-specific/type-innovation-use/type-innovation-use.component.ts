@@ -160,7 +160,7 @@ export class TypeInnovationUseComponent implements OnInit {
    * here still took input (measured on prtest #9479, 2026-09-21). The autosave was already locked,
    * so nothing reached the database — the screen simply lied about what could be changed.
    */
-  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser() || this.autoSave.isReadOnly());
 
   readonly loaded = signal<boolean | null>(null);
 

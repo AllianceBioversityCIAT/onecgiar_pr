@@ -92,6 +92,7 @@ export class BilateralAnnualUpdatingComponent implements OnInit, OnDestroy {
     const isEditableByCenterUser = this.creationService.isEditableByCenterUser();
     const resultStatusId = this.creationService.resultStatusId();
     const isAdmin = this.api.rolesSE.isAdmin;
+    const isReadOnly = this.autoSaveService.isReadOnly();
 
     return {
       resultId,
@@ -99,7 +100,9 @@ export class BilateralAnnualUpdatingComponent implements OnInit, OnDestroy {
       phaseYear,
       storedIsDiscontinued,
       isAdmin,
-      editable: isEditableByCenterUser || (isAdmin && resultStatusId === 4),
+      // R2B-1 — a non-admin also needs the editor's "may edit at all" lock down (lead-centre Center User);
+      // for a non-admin `isReadOnly` = !editable || !canEdit, so it folds both. Admin keeps the Discontinued escape.
+      editable: isAdmin ? isEditableByCenterUser || resultStatusId === 4 : isEditableByCenterUser && !isReadOnly,
     };
   });
 

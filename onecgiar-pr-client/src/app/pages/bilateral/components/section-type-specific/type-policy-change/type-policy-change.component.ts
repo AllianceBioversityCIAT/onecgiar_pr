@@ -78,7 +78,7 @@ export class TypePolicyChangeComponent implements OnInit {
    * `isEditableByCenterUser()` has answered this since P2-3520 and every other section reads it;
    * the type-specific tabs never did, so a submitted result still took input here.
    */
-  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser() || this.autoSave.isReadOnly());
 
   readonly institutionsService = inject(InstitutionsService);
 
