@@ -1,0 +1,329 @@
+# Reporting Tool DEV: CI on GitHub Actions (+ a manual deploy request to the ONECGIAR CI/CD Platform).
+#
+# Replaces the build, test, lint and image stages of the Jenkins DEV job. Jenkins keeps deploying DEV
+# until the migration is authorized.
+#
+# Triggers:
+#   push to feature/reporting-dev-github-actions-cicd
+#       CI only. Quality checks, then ONE publish job (common quality barrier: it starts only when every
+#       mandatory check of the backend, the frontend and the deploy script passed) that builds both images
+#       and pushes them to ECR by immutable digest. NO deploy request, no server change.
+#   workflow_dispatch (manual)
+#       The same CI; the deploy request is sent ONLY when the `request-deploy` input is true, through the
+#       platform's reusable workflow, for the two digests of this run.
+# There is no pull_request trigger: the frontend checks need the DEV configuration, which is never given
+# to pull request code.
+#
+# CI and CD are separated by GitHub Environment (the platform contract is unchanged):
+#   reporting-tool-dev-ci   CI jobs that need AWS (frontend configuration read, ECR push). No required
+#                           reviewers (it runs on every push); deployment branches: the feature branch only.
+#                           Variables: CICD_BOUND_REF, RT_AWS_REGION, RT_ECR_BACKEND_REPOSITORY,
+#                           RT_ECR_FRONTEND_REPOSITORY.
+#                           Secrets: RT_BUILD_ROLE_ARN, RT_FRONTEND_CONFIG_SECRET_ID. They are identifiers, not
+#                           credentials; they are secrets only so GitHub masks them in these public logs
+#                           (`with:` inputs and `env:` headers), which `::add-mask::` cannot do before a step runs.
+#   reporting-tool-dev      CD only: the platform's reusable workflow sends the deploy request from it.
+#                           Keeps its protections (required reviewers, deployment branches).
+#                           Variables: CICD_BOUND_REF, CICD_ROLE_ARN, CICD_AWS_REGION, CICD_ECR_REPOSITORY,
+#                           CICD_DEPLOY_QUEUE_NAME (read by the reusable workflow).
+#   The build role trusts only `reporting-tool-dev-ci`; the platform's CI role trusts only `reporting-tool-dev`.
+#   CICD_BOUND_REF is refs/heads/feature/reporting-dev-github-actions-cicd in both, for now.
+#
+# Secret handling (only the frontend configuration, as in the Jenkins job; the backend needs no secret in CI):
+#   * OIDC with `output-env-credentials: false`: credentials are never exported to the job; only the
+#     secret-read step and the push step receive them, through their own `env:`.
+#   * `npm ci` runs before the configuration is written, and the backend image is built before it too.
+#   * npm, lint, tests and docker builds run through .github/scripts/without-oidc.sh: no AWS credential and
+#     no OIDC request variable, so no code they run can obtain a token.
+#   * The AWS CLI writes the secret straight to the git-ignored environment files (mode 0600); its string
+#     values are also registered as log masks (defense in depth, not the protection itself). Never echoed,
+#     never an output, never uploaded, never cached; the files and the build caches that hold transformed
+#     copies are removed by `if: always()` steps. No `set -x`.
+#
+# Action pinning: every `uses:` is a full commit SHA (resolved through the GitHub API on 2026-10-09):
+#   actions/checkout                       v7.0.1  3d3c42e5aac5ba805825da76410c181273ba90b1
+#   actions/setup-node                     v7.0.0  820762786026740c76f36085b0efc47a31fe5020
+#   aws-actions/configure-aws-credentials  v6.3.0  e1253824e5c10ff9df46874f81ed3ec929e19cfd
+#   platform reusable workflow (architecture-change-03, `artifacts` input):
+#                                                  3893a882ed8c687b78d4b509252ef55352a87c07
+#     The platform's CI role trust must pin this same commit (PinnedWorkflowSha) before a manual deploy.
+name: reporting-tool-dev-cicd
+
+on:
+  push:
+    branches: [feature/reporting-dev-github-actions-cicd]
+  workflow_dispatch:
+    inputs:
+      request-deploy:
+        description: Send ONE deploy request for the images published by this run (explicit authorization)
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: reporting-tool-dev-cicd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------- mandatory checks
+  # No secret and no AWS access: the backend lint, tests and build need no runtime configuration.
+  backend-checks:
+    name: backend checks (lint, tests)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: onecgiar-pr-server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20.13.1 # the runtime image (node:20.13.1-alpine)
+          cache: npm
+          cache-dependency-path: onecgiar-pr-server/package-lock.json
+      - name: Install dependencies (lockfile only, no install scripts)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Lint (the `lint` script without --fix)
+        run: npx eslint "{src,apps,libs,test}/**/*.ts"
+      - name: Unit tests with coverage thresholds
+        run: npm run test:cov -- --ci
+
+  frontend-checks:
+    name: frontend checks (lint, typecheck, tests)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: reporting-tool-dev-ci
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Enforce bound ref
+        env:
+          BOUND_REF: ${{ vars.CICD_BOUND_REF }}
+          CURRENT_REF: ${{ github.ref }}
+        run: |
+          if [ -z "${BOUND_REF:-}" ] || [ "$CURRENT_REF" != "$BOUND_REF" ]; then echo "::error::ref is not the bound ref (fail closed)"; exit 1; fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20 # the build image (node:20-alpine); Angular 21 needs >= 20.19
+          cache: npm
+          cache-dependency-path: onecgiar-pr-client/package-lock.json
+      # Dependencies are installed BEFORE the configuration exists: install scripts never see it.
+      - name: Install dependencies (lockfile only)
+        working-directory: onecgiar-pr-client
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm ci --no-audit --no-fund
+      - name: Assume the build role through OIDC (credentials not exported to the job)
+        id: aws
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.RT_BUILD_ROLE_ARN }}
+          aws-region: ${{ vars.RT_AWS_REGION }}
+          role-session-name: reporting-tool-dev-ci-${{ github.run_id }}
+          mask-aws-account-id: true
+          output-env-credentials: false
+          output-credentials: true
+      - name: Frontend configuration from Secrets Manager
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws.outputs.aws-session-token }}
+          AWS_REGION: ${{ vars.RT_AWS_REGION }}
+          SECRET_ID: ${{ secrets.RT_FRONTEND_CONFIG_SECRET_ID }}
+        run: bash .github/scripts/write-frontend-config.sh
+      - name: Lint
+        working-directory: onecgiar-pr-client
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm run lint
+      - name: Typecheck (application)
+        working-directory: onecgiar-pr-client
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npx tsc -p tsconfig.app.json --noEmit
+      - name: Unit tests with coverage
+        working-directory: onecgiar-pr-client
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm run test:coverage -- --ci --silent
+      - name: Remove the frontend configuration and the caches that hold copies of it
+        if: always()
+        run: bash .github/scripts/remove-frontend-config.sh
+
+  deploy-script-checks:
+    name: deploy script checks (bash -n, ShellCheck)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Syntax
+        run: |
+          for f in deploy/reporting-tool-dev/deploy-reporting-tool-dev.sh .github/scripts/*.sh; do bash -n "$f"; done
+      - name: ShellCheck (preinstalled on the runner)
+        run: shellcheck --severity=warning deploy/reporting-tool-dev/deploy-reporting-tool-dev.sh .github/scripts/*.sh
+
+  # ---------------------------------------------------------------- non-blocking, visible
+  # The Jenkins job also type-checks the specs. On `staging` (2026-10-09) that check reports about 200
+  # PRE-EXISTING errors in 24 spec files. It runs on every trigger and its failure stays visible (no
+  # continue-on-error), but the publish job does not depend on it until the specs are fixed.
+  frontend-spec-typecheck:
+    name: frontend spec typecheck (known pre-existing failures)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: reporting-tool-dev-ci
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Enforce bound ref
+        env:
+          BOUND_REF: ${{ vars.CICD_BOUND_REF }}
+          CURRENT_REF: ${{ github.ref }}
+        run: |
+          if [ -z "${BOUND_REF:-}" ] || [ "$CURRENT_REF" != "$BOUND_REF" ]; then echo "::error::ref is not the bound ref (fail closed)"; exit 1; fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: onecgiar-pr-client/package-lock.json
+      # Dependencies are installed BEFORE the configuration exists: install scripts never see it.
+      - name: Install dependencies (lockfile only)
+        working-directory: onecgiar-pr-client
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm ci --no-audit --no-fund
+      - name: Assume the build role through OIDC (credentials not exported to the job)
+        id: aws
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.RT_BUILD_ROLE_ARN }}
+          aws-region: ${{ vars.RT_AWS_REGION }}
+          role-session-name: reporting-tool-dev-ci-${{ github.run_id }}
+          mask-aws-account-id: true
+          output-env-credentials: false
+          output-credentials: true
+      - name: Frontend configuration from Secrets Manager
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws.outputs.aws-session-token }}
+          AWS_REGION: ${{ vars.RT_AWS_REGION }}
+          SECRET_ID: ${{ secrets.RT_FRONTEND_CONFIG_SECRET_ID }}
+        run: bash .github/scripts/write-frontend-config.sh
+      - name: Typecheck (specs)
+        working-directory: onecgiar-pr-client
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npx tsc -p tsconfig.spec.json --noEmit
+      - name: Remove the frontend configuration and the caches that hold copies of it
+        if: always()
+        run: bash .github/scripts/remove-frontend-config.sh
+
+  # ---------------------------------------------------------------- common quality barrier + publish
+  # Starts only when ALL mandatory checks passed. Both images are built before anything is pushed, so a
+  # failed build pushes neither. No deploy request here.
+  publish-images:
+    name: publish images (backend, frontend)
+    needs: [backend-checks, frontend-checks, deploy-script-checks]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: reporting-tool-dev-ci
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      backend-digest: ${{ steps.push-backend.outputs.digest }}
+      frontend-digest: ${{ steps.push-frontend.outputs.digest }}
+    steps:
+      - name: Enforce bound ref
+        env:
+          BOUND_REF: ${{ vars.CICD_BOUND_REF }}
+          CURRENT_REF: ${{ github.ref }}
+        run: |
+          if [ -z "${BOUND_REF:-}" ] || [ "$CURRENT_REF" != "$BOUND_REF" ]; then echo "::error::ref is not the bound ref (fail closed)"; exit 1; fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The backend image needs no configuration: it is built BEFORE the frontend configuration exists.
+      - name: Build backend image (Jenkins `--target development` equivalent; no secret in its context)
+        env:
+          TAG: local/backend:${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash .github/scripts/without-oidc.sh docker build --file onecgiar-pr-server/Dockerfile.cicd-dev --tag "$TAG" -- onecgiar-pr-server
+      - name: Assume the build role through OIDC (credentials not exported to the job)
+        id: aws-config
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.RT_BUILD_ROLE_ARN }}
+          aws-region: ${{ vars.RT_AWS_REGION }}
+          role-session-name: reporting-tool-dev-ci-${{ github.run_id }}
+          mask-aws-account-id: true
+          output-env-credentials: false
+          output-credentials: true
+      - name: Frontend configuration from Secrets Manager
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-config.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-config.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-config.outputs.aws-session-token }}
+          AWS_REGION: ${{ vars.RT_AWS_REGION }}
+          SECRET_ID: ${{ secrets.RT_FRONTEND_CONFIG_SECRET_ID }}
+        run: bash .github/scripts/write-frontend-config.sh
+      - name: Build frontend image (`build:dev` with the DEV configuration, as Jenkins)
+        env:
+          TAG: local/frontend:${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash .github/scripts/without-oidc.sh docker build --file onecgiar-pr-client/Dockerfile --tag "$TAG" -- onecgiar-pr-client
+      - name: Remove the frontend configuration and the caches that hold copies of it
+        if: always()
+        run: bash .github/scripts/remove-frontend-config.sh
+      - name: Assume the build role through OIDC for the push (credentials not exported to the job)
+        id: aws
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.RT_BUILD_ROLE_ARN }}
+          aws-region: ${{ vars.RT_AWS_REGION }}
+          role-session-name: reporting-tool-dev-ci-${{ github.run_id }}
+          mask-aws-account-id: true
+          output-env-credentials: false
+          output-credentials: true
+      - name: Push backend image and capture its digest
+        id: push-backend
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws.outputs.aws-session-token }}
+          AWS_REGION: ${{ vars.RT_AWS_REGION }}
+          REPOSITORY: ${{ vars.RT_ECR_BACKEND_REPOSITORY }}
+          LOCAL: local/backend:${{ github.run_id }}-${{ github.run_attempt }}
+          TAG: gha-${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash .github/scripts/push-image.sh
+      - name: Push frontend image and capture its digest
+        id: push-frontend
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws.outputs.aws-session-token }}
+          AWS_REGION: ${{ vars.RT_AWS_REGION }}
+          REPOSITORY: ${{ vars.RT_ECR_FRONTEND_REPOSITORY }}
+          LOCAL: local/frontend:${{ github.run_id }}-${{ github.run_attempt }}
+          TAG: gha-${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash .github/scripts/push-image.sh
+
+  # ---------------------------------------------------------------- manual CD (never on push)
+  # ONE DEPLOY_REQUESTED for both images, from the protected `reporting-tool-dev` environment.
+  deploy-request:
+    name: deploy request (ONECGIAR CI/CD Platform)
+    needs: publish-images
+    if: github.event_name == 'workflow_dispatch' && inputs.request-deploy
+    permissions:
+      id-token: write
+      contents: read
+    uses: AllianceBioversityCIAT/onecgiar-cicd-platform/.github/workflows/deploy-request.reusable.yml@3893a882ed8c687b78d4b509252ef55352a87c07
+    with:
+      targetId: reporting-tool-dev
+      environment: reporting-tool-dev
+      units: "[]"
+      artifacts: >-
+        {"backend":"${{ needs.publish-images.outputs.backend-digest }}","frontend":"${{ needs.publish-images.outputs.frontend-digest }}"}

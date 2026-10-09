@@ -1,0 +1,30 @@
+# EXAMPLE configuration of deploy-reporting-tool-dev.sh.
+# Install as /etc/cicd/targets/reporting-tool-dev.conf on the target, owned by root, mode 0644, NOT writable
+# by the deploy user. Read as KEY=VALUE lines, never sourced. The values in angle brackets are resolved on
+# the target only and are never committed (publication policy).
+
+aws-region=<AWS_REGION>
+# Credential source. Reporting Tool DEV reuses the mechanism the server already has:
+#   default-chain          -> the AWS CLI's own provider chain, untouched (decided for this target)
+#   instance-profile       -> the instance role only
+#   profile:<PROFILE_NAME> -> a named profile of the deploy user
+aws-credentials=default-chain
+
+# The ECR repositories the workflow pushes to (registry/repository: no tag, no digest); the same
+# repositories the Jenkins DEV job uses for the server and the client images.
+backend.repository=<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/<BACKEND_ECR_REPOSITORY>
+frontend.repository=<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/<FRONTEND_ECR_REPOSITORY>
+
+# Secrets Manager id of the backend runtime configuration (the one the Jenkins DEV job writes to the
+# backend .env; KEY=VALUE lines, Docker env-file format).
+backend.runtime-secret=<BACKEND_RUNTIME_SECRET_ID>
+
+# Health URLs (loopback only). Healthy = container running and HTTP status below 500.
+# BLOCKER: the backend path is not confirmed yet. The script refuses to run while it is missing; do not
+# use a path that answers 404 (it would pass without proving the API works).
+backend.health-url=http://127.0.0.1:3900/<BACKEND_HEALTH_PATH_TO_CONFIRM>
+frontend.health-url=http://127.0.0.1:4600/
+
+# Optional (defaults shown).
+# health-timeout-seconds=300
+# migration-timeout-seconds=1800
