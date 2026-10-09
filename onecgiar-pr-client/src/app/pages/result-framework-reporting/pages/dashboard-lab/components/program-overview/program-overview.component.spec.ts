@@ -882,7 +882,8 @@ describe('ProgramOverviewComponent', () => {
     it('computes correct totals for all KPI cards including Total General', () => {
       expect(component.statusTotal()).toBe(7);
       expect(component.bilateralStatusTotal()).toBe(0);
-      expect(component.programResultsTotal()).toBe(7);
+      // STG-DD-3: headline = replicated + new from the input (default zeros), never the segments.
+      expect(component.programResultsTotal()).toBe(0);
       expect(component.contributingCentersCount()).toBe(4);
       expect(component.aowStats().pct).toBe(30);
       expect(component.aowStats().count).toBe(2);
@@ -895,7 +896,7 @@ describe('ProgramOverviewComponent', () => {
       expect(text).toContain('W3 / Bilateral');
       expect(text).toContain('Contributing Centers');
       expect(text).toContain('Areas of Work');
-      expect(fixture.nativeElement.querySelectorAll('[data-testid^="overview-kpi-"]').length).toBe(5);
+      expect(fixture.nativeElement.querySelectorAll('[data-testid^="overview-kpi-"]:not([data-testid*="-breakdown"])').length).toBe(5);
     });
 
     it('filters visible sections when a section tab is clicked', () => {
@@ -1058,6 +1059,77 @@ describe('ProgramOverviewComponent', () => {
         expect(card.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
         expect(card.querySelector('.pr-figure')).toBeNull();
       }
+    });
+  });
+
+  // @akili-spec changes/sp-overview-total-general-card
+  describe('KPI 1 Total General breakdown (STG-R-1..R-5)', () => {
+    const q = (id: string) => (fixture.nativeElement as HTMLElement).querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
+    const chip = (id: string) => q(id)?.querySelector('.font-mono')?.textContent?.trim();
+
+    it('programResultsTotal = replicated + new from the input; bilateral segments do not change it', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 3 });
+      fixture.componentRef.setInput('bilateralStatusSegments', [
+        { key: 'pending', label: 'Pending Review', count: 9, bg: '', fg: '', statusName: 'Pending Review', link: null }
+      ]);
+      fixture.detectChanges();
+      // Proves the input reaches the summed computed, so the next assertion is able to detect a leak.
+      expect(component.bilateralStatusTotal()).toBe(9);
+      expect(component.programResultsTotal()).toBe(69);
+      expect(q('overview-kpi-total')!.querySelector('.pr-figure')!.textContent!.trim()).toBe('69');
+    });
+
+    it('renders three rows in order with chips 62, 7, 0 (zero row present) and headline 69', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 0 });
+      fixture.detectChanges();
+      const ids = ['replicated', 'new', 'pending-review'].map(k => `overview-kpi-total-breakdown-${k}`);
+      const rows = ids.map(q);
+      expect(rows.every(Boolean)).toBe(true);
+      const container = q('overview-kpi-total-breakdown')!;
+      expect(Array.from(container.children)).toEqual(rows);
+      expect(ids.map(chip)).toEqual(['62', '7', '0']);
+      expect(rows.map(r => r!.querySelector('span')!.textContent!.trim())).toEqual([
+        'Innovations replicated for update',
+        'New results',
+        'W3/Bilateral results awaiting review'
+      ]);
+      expect(rows.map(r => r!.getAttribute('title'))).toEqual([
+        'W1/W2 results carried over from a previous phase for update',
+        'W1/W2 results created in this phase',
+        'W3/Bilateral results tagged to this program waiting for your review (Pending Review)'
+      ]);
+      expect(q('overview-kpi-total')!.querySelector('.pr-figure')!.textContent!.trim()).toBe('69');
+      expect(q('overview-kpi-total')!.querySelector('[title="Program-wide W1/W2 results in this phase"]')).not.toBeNull();
+    });
+
+    it('KPI 1 text has no W3/Bilateral other than the awaiting-review label; KPI 3 still renders its figure', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 2 });
+      fixture.detectChanges();
+      const text = q('overview-kpi-total')!.textContent!.replace('W3/Bilateral results awaiting review', '');
+      expect(text).not.toContain('W3/Bilateral');
+      expect(q('overview-kpi-bilateral')!.querySelector('.pr-figure')).not.toBeNull();
+    });
+
+    it('shows no figure and no chip while loading', () => {
+      fixture.componentRef.setInput('meterLoading', true);
+      fixture.detectChanges();
+      expect(q('overview-kpi-total')!.querySelector('.pr-figure')).toBeNull();
+      expect(q('overview-kpi-total-breakdown')).toBeNull();
+      expect(q('overview-kpi-total')!.querySelectorAll('.animate-pulse').length).toBe(3);
+    });
+
+    it('shows no figure and no chip while only bilateral data loads', () => {
+      fixture.componentRef.setInput('bilateralLoading', true);
+      fixture.detectChanges();
+      expect(q('overview-kpi-total')!.querySelector('.pr-figure')).toBeNull();
+      expect(q('overview-kpi-total-breakdown')).toBeNull();
+    });
+
+    it('clicking KPI 1 sets activeSection to all', () => {
+      component.setActiveSection('w1w2');
+      q('overview-kpi-total')!.dispatchEvent(new Event('click'));
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('all');
     });
   });
 

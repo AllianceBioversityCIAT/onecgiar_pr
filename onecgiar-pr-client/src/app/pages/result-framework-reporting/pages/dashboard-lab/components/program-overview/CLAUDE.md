@@ -1,6 +1,6 @@
 # program-overview
 
-**Verified:** 2026-10-02 · qa-development-2026-ss · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit` on the hero and AoW rows — see "QA/Prel split hidden" below) · prior: 2026-09-04 · branch qa-development-2026 · 6a9a45b5e
+**Verified:** 2026-10-08 · qa-development-2026-ss · changes/sp-overview-total-general-card (KPI 1 "Total General" = replicated + new, program-wide — see "Total General" in Data flow) · prior: 2026-10-02 bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit` on the hero and AoW rows — see "QA/Prel split hidden" below) · prior: 2026-09-04 · branch qa-development-2026 · 6a9a45b5e
 
 **What this owns:** the **Overview** tab of the programme shell — the six cards under
 `entity-details/:entityId/overview`. Purely presentational: every figure arrives as a signal input.
@@ -84,6 +84,9 @@ Every input is a `computed()` on the parent (`dashboard-lab.component.ts`):
 | `aowProgress` / `xcutProgress` | `overviewAowProgress` / `overviewXcutProgress` | `GET_ClarisaGlobalUnits`, ToC loads |
 | `categories` | `overviewCategories` | `GET_IndicatorContributionSummary(code)` |
 | `bilateralCategories` / `bilateralRoles` | `overviewBilateralCategories` / `overviewBilateralRoles` | `GET_ResultToReview(code)`, loaded by an **overview-gated** effect |
+| `totalBreakdown` | `overviewTotalBreakdown` | meter Version (`replicated`/`new`) + unscoped `bilateralRows()` (status 5) |
+
+**Total General (KPI 1):** replicated + new from the meter Version, program-wide, plus `pendingReview` from unscoped bilateral rows. `programResultsTotal` = replicated + new only (never adds bilateral); it equals KPI 2 (W1/W2) with no scope set. The scope selector does NOT narrow KPI 1 (tooltip says "Program-wide"); KPI 3 (W3/Bilateral) is unchanged. The old `W1/W2 · W3/Bilateral` sub-line is gone.
 
 ## Gotchas
 
