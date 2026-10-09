@@ -152,6 +152,8 @@ export class AdminPanelController {
   }
 
   @Patch('bulk/kps')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
   @ApiOperation({
     summary: 'Bulk synchronize Knowledge Products',
     description:
@@ -205,6 +207,8 @@ export class AdminPanelController {
   }
 
   @Patch('phases/:phaseId/reporting-initiatives/bulk')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
   @ApiOperation({
     summary:
       'Open or close reporting for all eligible initiatives (Results or IPSR phase)',
@@ -242,6 +246,8 @@ export class AdminPanelController {
   }
 
   @Patch('phases/:phaseId/reporting-initiatives/:initiativeId')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
   @ApiOperation({
     summary: 'Enable or disable reporting for one initiative in a phase',
   })
