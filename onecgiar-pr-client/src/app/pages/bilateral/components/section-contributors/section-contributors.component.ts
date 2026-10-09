@@ -78,8 +78,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   /**
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
    * Read straight from the service, the way this section already reads the rest of the result state.
+   *
+   * RNB-1 — the status is only half of the rule. The editor's `isFormReadOnly` also folds in WHO
+   * may edit (an admin, or a Center User of the LEAD centre) and hands it down through the shared
+   * auto-save service, so a Center User of another centre sees these pickers locked exactly like the
+   * title and description. Every `[isStatic]="!readOnly()"` below follows this one computed.
    */
-  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser() || this.autoSave.isReadOnly());
 
   /**
    * SP code of a primary request that has no owner yet (draft / pending / sent back). The ToC block
