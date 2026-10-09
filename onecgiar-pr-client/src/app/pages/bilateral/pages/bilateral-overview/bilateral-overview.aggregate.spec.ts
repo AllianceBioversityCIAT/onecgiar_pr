@@ -42,7 +42,7 @@ describe('bilateral-overview.aggregate', () => {
   });
 
   describe('KPI deck (COV-R-6)', () => {
-    const kpis = buildOverviewKpis(FIXTURE_D1_ROWS, FIXTURE_PROJECTS, FIXTURE_DRAFTS, FIXTURE_TODAY);
+    const kpis = buildOverviewKpis(FIXTURE_D1_ROWS, FIXTURE_PROJECTS, FIXTURE_TODAY);
 
     it('Total results: counts, W3/W1W2 split, lead/contributing split, replicated/new split', () => {
       expect(kpis.totalResults).toEqual({
@@ -139,12 +139,8 @@ describe('bilateral-overview.aggregate', () => {
     });
 
     it('Approved: approval rate is null when approved + rejected === 0', () => {
-      const approved = buildOverviewKpis(FIXTURE_ROWS_NO_APPROVALS, FIXTURE_PROJECTS, [], FIXTURE_TODAY).approved;
+      const approved = buildOverviewKpis(FIXTURE_ROWS_NO_APPROVALS, FIXTURE_PROJECTS, FIXTURE_TODAY).approved;
       expect(approved.approvalRatePercent).toBeNull();
-    });
-
-    it('Needs attention: editing + rejected + active AI drafts (discarded draft excluded)', () => {
-      expect(kpis.needsAttention).toEqual({ count: 4, editingCount: 1, rejectedCount: 1, aiDraftCount: 2 });
     });
 
     it('Projects covered: covered/total/not-started — null-project rows never count toward coverage', () => {

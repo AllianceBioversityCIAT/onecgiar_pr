@@ -27,7 +27,7 @@
     <!-- ═══ KPI deck (COV-R-6, COV-R-19) ══════════════════════════════════════════════════ -->
     <section
       aria-label="Key figures"
-      class="grid grid-cols-1 min-[640px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1280px]:grid-cols-5 gap-[16px]">
+      class="grid grid-cols-1 min-[640px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1280px]:grid-cols-4 gap-[16px]">
       @if (resultsLoading()) {
         @for (slot of kpiSkeletonSlots; track slot) {
           <div
@@ -44,7 +44,7 @@
         <div
           role="alert"
           data-testid="kpi-error"
-          class="min-[640px]:col-span-2 min-[900px]:col-span-3 min-[1280px]:col-span-5 flex max-h-[160px] flex-wrap items-center gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[14px]">
+          class="min-[640px]:col-span-2 min-[900px]:col-span-3 min-[1280px]:col-span-4 flex max-h-[160px] flex-wrap items-center gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[14px]">
           <i class="material-icons-round text-[18px] text-[var(--pr-danger)]" aria-hidden="true">error_outline</i>
           <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
           <button
@@ -187,27 +187,7 @@
           </span>
         </a>
 
-        <!-- 4 · Needs attention (scrolls to its card, COV-R-6 #4) -->
-        <button
-          type="button"
-          data-testid="kpi-attention"
-          [attr.aria-label]="'Needs attention, ' + overview.kpis.needsAttention.count + ' items — go to the Needs attention card'"
-          class="flex min-h-[120px] flex-col items-start gap-[8px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] text-left cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-          (click)="scrollToAttention()">
-          <span class="flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
-            Needs attention
-            <span class="rounded-[9px] bg-[var(--pr-color-primary-50)] px-[8px] py-[2px] text-[10.5px] font-semibold normal-case tracking-normal text-[var(--pr-color-primary-600)]">Action</span>
-          </span>
-          <span class="font-mono text-[28px] font-bold leading-none tabular-nums text-[var(--pr-text-heading)]">
-            {{ overview.kpis.needsAttention.count }}<span class="ml-[6px] font-sans text-[13px] font-medium text-[var(--pr-text-secondary)]">items</span>
-          </span>
-          <span class="flex flex-wrap gap-[10px] text-[12px] text-[var(--pr-text-secondary)]">
-            <span>{{ overview.kpis.needsAttention.editingCount }} editing · {{ overview.kpis.needsAttention.rejectedCount }} rejected</span>
-            <span>· {{ overview.kpis.needsAttention.aiDraftCount }} AI drafts</span>
-          </span>
-        </button>
-
-        <!-- 5 · Projects covered — its figures come from the PROJECTS call (COV-R-17) -->
+        <!-- 4 · Projects covered — its figures come from the PROJECTS call (COV-R-17) -->
         @if (projectsError()) {
           <div
             role="alert"

@@ -3,6 +3,8 @@
 **What this owns:** the center Overview tab (`/bilateral/:acronym/overview`) — a KPI deck plus six
 cards (Reporting status, Needs attention, Results by project, Science Program contribution, Results
 by result type, Reporting pace) computed from the center's filtered result set for the selected phase.
+The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, `scrollToAttention()`) was removed
+2026-10-08 at reviewer request; the Needs attention panel next to Reporting status stays.
 
 ## Invariants
 
@@ -75,10 +77,6 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
 - `OverviewControlsComponent` is purely presentational — it owns no data, no URL, no service. Don't
   add a fetch or a router call there; emit `phaseChange` / `filtersChange` / `clearFilters` and let
   the page reconcile.
-- `scrollToAttention()` reads `window.matchMedia('(prefers-reduced-motion: reduce)')` directly, not
-  an Angular CDK layout service — jsdom implements neither `matchMedia` nor
-  `HTMLElement.prototype.scrollIntoView`, so a Jest spec must assign both by hand (not `jest.spyOn`,
-  which requires a pre-existing property) and restore the originals afterward.
 - `BilateralAiService.loadAllDrafts()` sets `draftList` from the HTTP response body **directly**
   (`data ?? []`, no `.response` unwrap) — the opposite envelope shape from
   `GET_bilateralCenterResults`/`GET_bilateralProjects`. A CT/manual stub of `GET_bilateralAiDrafts`
@@ -113,4 +111,4 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
   pages — not audited beyond this folder.
 - Visual parity vs the center mockup (Total results card): human browser check pending.
 
-**Verified:** 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)
+**Verified:** 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)

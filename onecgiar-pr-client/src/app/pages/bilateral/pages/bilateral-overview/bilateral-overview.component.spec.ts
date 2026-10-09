@@ -196,7 +196,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
     it('shows a skeleton per card while the phase data is in flight, then the data', async () => {
       await setup();
 
-      expect(harness.routeDebugElement!.queryAll(By.css('[data-testid="kpi-skeleton"]')).length).toBe(5);
+      expect(harness.routeDebugElement!.queryAll(By.css('[data-testid="kpi-skeleton"]')).length).toBe(4);
       expect(el('status-skeleton')).toBeTruthy();
       expect(el('attention-skeleton')).toBeTruthy();
       expect(el('by-project-skeleton')).toBeTruthy();
@@ -590,7 +590,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         'kpi-total',
         'kpi-pending',
         'kpi-approved',
-        'kpi-attention',
         'kpi-projects-covered',
         'status-tile-editing',
         'status-tile-pending',
@@ -771,46 +770,13 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
     });
   });
 
-  // ── COV-R-18 · reduced motion (carried over from the COV-T-5 review, closed in COV-T-8) ──
-
-  describe('scrollToAttention respects prefers-reduced-motion (COV-R-18)', () => {
-    // jsdom implements neither API by default (`HTMLElement.prototype.scrollIntoView` does not
-    // exist and `window.matchMedia` is absent) — `jest.spyOn` needs a pre-existing property to
-    // wrap, so both are assigned directly and restored by hand rather than via `jest.spyOn`.
-    const originalMatchMedia = window.matchMedia;
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
-
-    afterEach(() => {
-      window.matchMedia = originalMatchMedia;
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
-    });
-
-    it('scrolls with behavior "auto" when the user prefers reduced motion', async () => {
+  describe('main container and removed tiles', () => {
+    it('does not render the Needs attention KPI tile while the Needs attention panel stays (reviewer request 2026-10-08)', async () => {
       await setup();
       flushData();
 
-      const scrollIntoViewSpy = jest.fn();
-      HTMLElement.prototype.scrollIntoView = scrollIntoViewSpy;
-      window.matchMedia = jest.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia;
-
-      (el('kpi-attention').nativeElement as HTMLButtonElement).click();
-      harness.detectChanges();
-
-      expect(scrollIntoViewSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
-    });
-
-    it('scrolls with behavior "smooth" when the user does not prefer reduced motion', async () => {
-      await setup();
-      flushData();
-
-      const scrollIntoViewSpy = jest.fn();
-      HTMLElement.prototype.scrollIntoView = scrollIntoViewSpy;
-      window.matchMedia = jest.fn().mockReturnValue({ matches: false }) as unknown as typeof window.matchMedia;
-
-      (el('kpi-attention').nativeElement as HTMLButtonElement).click();
-      harness.detectChanges();
-
-      expect(scrollIntoViewSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+      expect(el('kpi-attention')).toBeFalsy();
+      expect(harness.fixture.nativeElement.querySelector('#overview-attention')).toBeTruthy();
     });
 
     it('renders data-guide="bilateral-tab-overview" on the main container (BGT-T-3, BGT-R-2, Gate D1)', async () => {

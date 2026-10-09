@@ -5,7 +5,7 @@
 // `design.md` §6.3 / §10, `tasks.md` `COV-T-8`:
 //
 //   (a) the KPI deck's viewport-keyed Tailwind grid actually sheds columns at the browser's real
-//       computed layout (5 / 5 / 3 / 1 — `COV-R-19`, `COV-AC-23`), measured via each card's
+//       computed layout (4 / 4 / 3 / 1 — `COV-R-19`, `COV-AC-23`), measured via each card's
 //       `getBoundingClientRect().left`, never by asserting a class name is present;
 //   (b) `document.documentElement.scrollWidth <= clientWidth` at every viewport — no card
 //       overflows its column into a horizontal document scroll;
@@ -125,7 +125,7 @@ const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
   };
 });
 
-const KPI_TESTIDS = ['kpi-total', 'kpi-pending', 'kpi-approved', 'kpi-attention', 'kpi-projects-covered'];
+const KPI_TESTIDS = ['kpi-total', 'kpi-pending', 'kpi-approved', 'kpi-projects-covered'];
 const KPI_SELECTOR = KPI_TESTIDS.map(id => `[data-testid="${id}"]`).join(', ');
 
 const CHART_TESTIDS = ['status-chart', 'by-project-chart', 'by-sp-chart', 'by-type-chart', 'pace-chart'];
@@ -141,8 +141,8 @@ interface ViewportCase {
 /** `design.md` §6.3 grid classes / `requirements.md` `COV-R-19` table — the exact 4 cases the task
  *  names, plus the second 1280 height `KZ-EVM-1` needs for the sticky proof. */
 const VIEWPORTS: ViewportCase[] = [
-  { width: 1280, height: 720, label: '1280x720', expectedColumns: 5 },
-  { width: 1280, height: 1000, label: '1280x1000', expectedColumns: 5 },
+  { width: 1280, height: 720, label: '1280x720', expectedColumns: 4 },
+  { width: 1280, height: 1000, label: '1280x1000', expectedColumns: 4 },
   { width: 900, height: 800, label: '900x800', expectedColumns: 3 },
   { width: 375, height: 800, label: '375x800', expectedColumns: 1 },
 ];
@@ -242,7 +242,7 @@ function scrollWorkArea(top: number): void {
 }
 
 describe('BilateralOverviewComponent — CT layout gate (COV-T-8)', () => {
-  it('KPI deck sheds to 5 / 5 / 3 / 1 columns and the document never scrolls horizontally, with chart heights fixed across viewports (COV-R-19, COV-AC-23)', () => {
+  it('KPI deck sheds to 4 / 4 / 3 / 1 columns and the document never scrolls horizontally, with chart heights fixed across viewports (COV-R-19, COV-AC-23)', () => {
     mountOverview();
     cy.get('[data-testid="kpi-total"]', { timeout: 10000 }).should('exist');
 
