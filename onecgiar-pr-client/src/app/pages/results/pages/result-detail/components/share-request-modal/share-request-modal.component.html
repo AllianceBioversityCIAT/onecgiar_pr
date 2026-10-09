@@ -28,6 +28,7 @@
       optionLabel="full_name"
       optionValue="initiative_id"
       placeholder="Select entity"
+      [editable]="true"
       [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
       (ngModelChange)="modelChange()"
       [disabled]="this.api.dataControlSE.inNotifications"
