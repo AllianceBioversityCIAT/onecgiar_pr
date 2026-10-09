@@ -57,7 +57,19 @@
   <div
     class="absolute bottom-[14px] right-[40px] flex items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-white px-[10px] py-[8px] shadow-[var(--pr-shadow-2)]"
     data-testid="section-bottom-bar-anchored">
-    @if (isComplete()) {
+    @if (!canSave) {
+      <!-- Read-only: nothing here can be fixed by this person, so "N fields missing" and its "Still
+           missing" list would only be noise (and, in R2-1, a number that moved while they played with
+           locked controls). A neutral chip says what is true instead — same pill family, no red/amber. -->
+      <span
+        class="inline-flex items-center gap-[8px] rounded-full bg-[var(--pr-surface-app)] px-[10px] py-[4px] text-[14px] font-semibold text-[var(--pr-text-secondary)]"
+        [attr.title]="viewOnlyReason()"
+        [attr.aria-label]="'View only. ' + viewOnlyReason()"
+        data-testid="section-bottom-bar-view-only">
+        <i class="material-icons-round text-[18px]" aria-hidden="true">visibility</i>
+        View only
+      </span>
+    } @else if (isComplete()) {
       <!-- Un solo indicador: el aro ES el icono del estado. Antes había dos píldoras seguidas —
              "2 of 7 required" y "5 fields missing" — diciendo lo mismo con dos formas distintas. -->
       <span

@@ -229,6 +229,19 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
     return count ? `${count} field${count === 1 ? '' : 's'} missing` : 'Section incomplete';
   });
 
+  /**
+   * Why this user cannot edit, when it is cheap to know (tooltip of the "View only" chip). The two
+   * flags already exist in `RolesService`; anything else falls back to the generic sentence.
+   */
+  viewOnlyReason(): string {
+    if (this.rolesSE.platformIsClosed) return 'The reporting phase is closed, so this result can only be viewed.';
+    const initiativeId = this.dataControlSE.currentResult?.initiative_id;
+    if (initiativeId != null && this.rolesSE.validateInitiative?.(initiativeId) === false && !this.rolesSE.isAdmin) {
+      return "You are not a member of this result's program, so you can view it but not edit it.";
+    }
+    return 'You can view this result but not edit it.';
+  }
+
   get canSave(): boolean {
     return !this.rolesSE.readOnly || this.editable;
   }
