@@ -31,7 +31,7 @@ import { PendingCatalogEntry } from './types';
  * `ipsr_step_3.complementary_components.use_evidences`, each with its 11 sub-keys (4 lists + 44 sub-keys; the 22
  * sub-keys of the core lists plus the 22 of the complementary lists, which need two levels of nesting, D1).
  * `evidence` and `evidence_sharepoint` (in scope since QAC-T-8) hold the shared columns of those items.
- * The step 2.2 rows (`ipsr_step_2_2.*`, admin-only tab) are deferred by REVIEW D19.
+ * QAC-T-29: the step 2.1 modal fields and the step 2.2 enabler types (`ipsr_step_2_1.complementary_innovations.*`, `ipsr_step_2_2.enabler_elements.*`) are catalogued; no step 2 column is pending.
  */
 const stage2 = (
   table: string,
@@ -236,25 +236,7 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'contributing_toc',
   ),
 
-  // IPSR (QAC-T-11) · step 2.1 / 2.2 tables (child complementary result: 2-hop; step 2.2: admin-only, REVIEW D19)
-  ...twoHop(
-    'results_complementary_innovation',
-    'ipsr_step_2_1.complementary_innovations.short_title|other_functions|projects_organizations_working_on_innovation|specify_projects_organizations (the child result hangs off result_by_innovation_package; title/description are columns of `result`)',
-    'short_title',
-    'other_funcions',
-    'projects_organizations_working_on_innovation',
-    'specify_projects_organizations',
-  ),
-  ...twoHop(
-    'results_complementary_innovations_function',
-    'ipsr_step_2_1.complementary_innovations.functions',
-    'complementary_innovation_function_id',
-  ),
-  ...stage2(
-    'results_innovatio_packages_enabler_type',
-    'ipsr_step_2_2.enabler_elements.enabler_type_level_1 and .enabler_type_level_2 (admin-only tab deferred by REVIEW D19, stage 2; no live rule; also 2-hop, REVIEW D2)',
-    'complementary_innovation_enable_type_id',
-  ),
+  // IPSR step 2.1 / 2.2 tables: QAC-T-29 (2026.28) bound every column (results_complementary_innovation, its functions, the enabler types) and removed their entries
 
   // IPSR (QAC-T-11) · step 3 current use of the core innovation (reaches the package through result_by_innovation_package)
   ...twoHop(

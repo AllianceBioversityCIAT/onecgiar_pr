@@ -763,7 +763,7 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
   ),
   ...nfq(
     'results_complementary_innovation',
-    'foreign key to the child complementary result (2-hop through result_by_innovation_package); not form data',
+    'join column to the element result (`result_by_innovation_package.result_id`) read by the step 2.1 subfield paths; not form data',
     'result_id',
   ),
 
@@ -807,6 +807,28 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'results_innovatio_packages_enabler_type',
     FK_PARENT,
     'result_by_innovation_package_id',
+  ),
+
+  // complementary_innovation_enabler_types (QAC-T-29): control list of the step 2.2 type pickers; `id` and `level` are read by the
+  // paths of ipsr_step_2_2.enabler_elements.enabler_type_level_1|2, the rest is the list's own labels and tree
+  ...nfq(
+    'complementary_innovation_enabler_types',
+    AUDIT,
+    'is_active',
+    'created_by',
+    'created_date',
+    'last_updated_by',
+    'last_updated_date',
+  ),
+  ...nfq(
+    'complementary_innovation_enabler_types',
+    'label of the option in the control list, not an answer of the result',
+    'group',
+  ),
+  ...nfq(
+    'complementary_innovation_enabler_types',
+    'parent option in the control list tree, not an answer of the result',
+    'type',
   ),
 
   // result_ip_result_actors (QAC-T-11)

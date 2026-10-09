@@ -48,6 +48,7 @@ import { ResultsByIpInnovationUseMeasure } from '../../ipsr/results-by-ip-innova
 import { ResultsComplementaryInnovation } from '../../ipsr/results-complementary-innovations/entities/results-complementary-innovation.entity';
 import { ResultsComplementaryInnovationsFunction } from '../../ipsr/results-complementary-innovations-functions/entities/results-complementary-innovations-function.entity';
 import { ResultsInnovationPackagesEnablerType } from '../../ipsr/results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
+import { ComplementaryInnovationEnablerTypes } from '../../ipsr/results-innovation-packages-enabler-type/entities/complementary-innovation-enabler-types.entity';
 
 export type EntityClass = new (...args: any[]) => object;
 
@@ -105,4 +106,6 @@ export const CATALOG_SCOPE: EntityClass[] = [
   ResultsComplementaryInnovation,
   ResultsComplementaryInnovationsFunction,
   ResultsInnovationPackagesEnablerType,
+  // QAC-T-29 · reference table of the step 2.2 enabler types (the paths filter by its `level`)
+  ComplementaryInnovationEnablerTypes,
 ];

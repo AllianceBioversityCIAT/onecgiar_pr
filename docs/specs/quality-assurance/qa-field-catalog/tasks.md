@@ -290,7 +290,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Description:** `ipsr_step_1.geo_scope` on its own closed list [1,2,3,4,5] (no TBD); `regions` / `countries` with the same visibility and requirement rules as Results geo; `countries` → list with subnational subfield (IPSR rows have no scope role); `eoi_outcomes` (required, VS1:32-41); `scaling_partners` with partner role (form-required; VS1:211-237); workshop: facilitators visible when Yes (+ email), participants link, participants consent (visible per form), scaling-ambition blurb (read-only); targeted use actors / organizations / measures subfield rules (other type 5, other org 78, disaggregation). Keys from inventory 2026-B §3.4.
 - **Depends on:** QAC-T-27
 
-### QAC-T-29 — IPSR Step 2 completed · P2-3925
+### [x] QAC-T-29 — IPSR Step 2 completed · P2-3925
 
 - **Type:** server · **Review:** full
 - **Description:** 2.1 new complementary innovation fields (short / long title, description, function(s), other functions, aware of projects + specify) with the form's rules; 2.2 type of enabler per bundled element (admin-only screen; nested option tree). Keys from inventory 2026-B §3.5–3.6.

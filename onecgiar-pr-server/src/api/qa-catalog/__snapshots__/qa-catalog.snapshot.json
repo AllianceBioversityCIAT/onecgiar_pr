@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 27,
-      "content_hash": "a4f0e7d176bd9668f6277dde708fe84d095438e9a433c9eaa48344bcc1355113"
+      "revision": 28,
+      "content_hash": "3afef06c12226829a5cabc55a4f4966b0b4f7c30c509151cc0c97549f2751aad"
     }
   },
   "keys": [
@@ -107,6 +107,7 @@
     "field:ipsr_step_1.workshop_facilitators",
     "field:ipsr_step_1.workshop_participants_link",
     "field:ipsr_step_2_1.complementary_innovations",
+    "field:ipsr_step_2_2.enabler_elements",
     "field:ipsr_step_3.assessed_during_workshop",
     "field:ipsr_step_3.complementary_components",
     "field:ipsr_step_3.core.current_readiness_level",
@@ -179,6 +180,7 @@
     "section:ipsr_s1_partners",
     "section:ipsr_s1_targeted_use",
     "section:ipsr_s21_bundle",
+    "section:ipsr_s22_basic_info",
     "section:ipsr_s3_complementary",
     "section:ipsr_s3_core",
     "section:ipsr_s3_workshop",
@@ -313,6 +315,18 @@
     "subfield:ipsr_step_1.workshop_facilitators/first_name",
     "subfield:ipsr_step_1.workshop_facilitators/last_name",
     "subfield:ipsr_step_1.workshop_facilitators/workshop_role",
+    "subfield:ipsr_step_2_1.complementary_innovations/description",
+    "subfield:ipsr_step_2_1.complementary_innovations/functions",
+    "subfield:ipsr_step_2_1.complementary_innovations/other_functions",
+    "subfield:ipsr_step_2_1.complementary_innovations/projects_organizations_working_on_innovation",
+    "subfield:ipsr_step_2_1.complementary_innovations/result",
+    "subfield:ipsr_step_2_1.complementary_innovations/result_type",
+    "subfield:ipsr_step_2_1.complementary_innovations/short_title",
+    "subfield:ipsr_step_2_1.complementary_innovations/specify_projects_organizations",
+    "subfield:ipsr_step_2_1.complementary_innovations/title",
+    "subfield:ipsr_step_2_2.enabler_elements/enabler_type_level_1",
+    "subfield:ipsr_step_2_2.enabler_elements/enabler_type_level_2",
+    "subfield:ipsr_step_2_2.enabler_elements/result",
     "subfield:ipsr_step_3.complementary_components/current_readiness_level",
     "subfield:ipsr_step_3.complementary_components/current_use_level",
     "subfield:ipsr_step_4.reference_materials/link",

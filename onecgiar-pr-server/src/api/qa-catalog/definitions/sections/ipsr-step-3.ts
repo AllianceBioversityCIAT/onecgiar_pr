@@ -38,21 +38,21 @@ import {
 export const IPSR_S3_WORKSHOP_SECTION: CatalogSection = {
   key: 'ipsr_s3_workshop',
   label: 'Scaling readiness assessment',
-  order: 85,
+  order: 86,
   result_types: IPSR_TYPES,
   ...FROM_2026,
 };
 export const IPSR_S3_CORE_SECTION: CatalogSection = {
   key: 'ipsr_s3_core',
   label: 'Core innovation',
-  order: 86,
+  order: 87,
   result_types: IPSR_TYPES,
   ...FROM_2026,
 };
 export const IPSR_S3_COMPLEMENTARY_SECTION: CatalogSection = {
   key: 'ipsr_s3_complementary',
   label: 'Complementary innovations/ enablers/ solutions',
-  order: 87,
+  order: 88,
   result_types: IPSR_TYPES,
   ...FROM_2026,
 };

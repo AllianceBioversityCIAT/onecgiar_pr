@@ -16,7 +16,7 @@ import { IPSR_TYPES, sub } from './ipsr-shared';
 export const IPSR_S4_MATERIALS_SECTION: CatalogSection = {
   key: 'ipsr_s4_materials',
   label: 'Reference materials',
-  order: 88,
+  order: 89,
   result_types: IPSR_TYPES,
   ...FROM_2026,
 };
