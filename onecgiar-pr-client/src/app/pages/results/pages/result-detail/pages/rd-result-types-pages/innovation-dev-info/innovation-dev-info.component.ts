@@ -117,7 +117,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
   }
 
   constructor(
-    private readonly api: ApiService,
+    public readonly api: ApiService,
     public innovationControlListSE: InnovationControlListService,
     private readonly innovationDevInfoUtilsSE: InnovationDevInfoUtilsService,
     public fieldsManagerSE: FieldsManagerService,
