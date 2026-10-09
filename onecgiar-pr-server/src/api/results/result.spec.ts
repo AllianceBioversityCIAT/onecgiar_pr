@@ -1440,6 +1440,7 @@ describe('ResultsService (unit, pure mocks)', () => {
   });
 
   it('should delete a result', async () => {
+    mockRoleByUserRepository.validationRolePermissions.mockResolvedValueOnce(1);
     const results: returnFormatService = await resultService.deleteResult(
       currentResultId,
       userTest,
@@ -1463,6 +1464,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   it('should error when deleting a result with quality assessment', async () => {
     const resultQA: number = 3;
+    mockRoleByUserRepository.validationRolePermissions.mockResolvedValueOnce(1);
     const results: returnFormatService = await resultService.deleteResult(
       resultQA,
       userTest,
@@ -1475,6 +1477,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   it('should delete a legacy result', async () => {
     const tempCurrentId: number = 4;
+    mockRoleByUserRepository.validationRolePermissions.mockResolvedValueOnce(1);
     const results: returnFormatService = await resultService.deleteResult(
       tempCurrentId,
       userTest,
@@ -1483,6 +1486,94 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(results.response.id).toBe(tempCurrentId.toString());
     expect(results.message).toBe('The result has been successfully deleted');
     expect(results.status).toBe(HttpStatus.OK);
+  });
+
+  describe('deleteResult permission (P2-3946)', () => {
+    const run = async (
+      program: number,
+      centers: any[] = [],
+      centerUser = 0,
+    ) => {
+      mockRoleByUserRepository.validationRolePermissions.mockResolvedValueOnce(
+        program,
+      );
+      mockResultsCenterRepository.getAllResultsCenterByResultId.mockResolvedValueOnce(
+        centers,
+      );
+      mockRoleByUserRepository.validationCenterPermissions.mockResolvedValueOnce(
+        centerUser,
+      );
+      return resultService.deleteResult(currentResultId, userTest);
+    };
+
+    beforeEach(() => {
+      mockRoleByUserRepository.validationCenterPermissions = jest.fn();
+    });
+
+    // Once-queued values the early-return (allowed by program role) never consumes must not leak.
+    afterEach(() => {
+      mockResultsCenterRepository.getAllResultsCenterByResultId
+        .mockReset()
+        .mockResolvedValue([]);
+      mockRoleByUserRepository.validationRolePermissions
+        .mockReset()
+        .mockResolvedValue(0);
+    });
+
+    // Admin, Lead, Co-Lead and Coordinator all resolve through the same program-role check.
+    it.each(['admin', 'lead', 'co-lead', 'coordinator'])(
+      '%s is allowed',
+      async () => {
+        const r = await run(1);
+        expect(r.status).toBe(HttpStatus.OK);
+        expect(
+          mockRoleByUserRepository.validationRolePermissions,
+        ).toHaveBeenLastCalledWith(
+          userTest.id,
+          currentResultId,
+          expect.arrayContaining([1, 3, 4, 5]),
+        );
+      },
+    );
+
+    it('member (no program role, no center role) gets 403', async () => {
+      const r = await run(0, [{ code: 'C1', is_leading_result: 1 }], 0);
+      expect(r.status).toBe(HttpStatus.FORBIDDEN);
+    });
+
+    it('center user of the lead center is allowed', async () => {
+      const r = await run(0, [{ code: 'C1', is_leading_result: 1 }], 1);
+      expect(r.status).toBe(HttpStatus.OK);
+      expect(
+        mockRoleByUserRepository.validationCenterPermissions,
+      ).toHaveBeenLastCalledWith(userTest.id, 'C1');
+    });
+
+    it('center user of another (non-lead) center gets 403', async () => {
+      const r = await run(
+        0,
+        [
+          { code: 'C2', is_leading_result: 0 },
+          { code: 'C1', is_leading_result: 1 },
+        ],
+        0,
+      );
+      expect(r.status).toBe(HttpStatus.FORBIDDEN);
+      expect(
+        mockRoleByUserRepository.validationCenterPermissions,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockRoleByUserRepository.validationCenterPermissions,
+      ).toHaveBeenCalledWith(userTest.id, 'C1');
+    });
+
+    it('user with no roles and a result without lead center gets 403', async () => {
+      const r = await run(0, [], 0);
+      expect(r.status).toBe(HttpStatus.FORBIDDEN);
+      expect(
+        mockRoleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
+    });
   });
 
   it('should return all results again', async () => {
