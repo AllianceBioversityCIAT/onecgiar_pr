@@ -11,6 +11,7 @@ import { normalizeListJob } from '../../bilateral-ai-job.model';
 import { rawListJob } from '../../bilateral-ai-job.fixtures';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
+import { RolesService } from '../../../../shared/services/global/roles.service';
 
 describe('BilateralPageHeaderComponent', () => {
   let component: BilateralPageHeaderComponent;
@@ -31,6 +32,9 @@ describe('BilateralPageHeaderComponent', () => {
     component = fixture.componentInstance;
     ctx = TestBed.inject(BilateralContextService);
     aiService = TestBed.inject(BilateralAiService);
+    // RNB-2 (P2-3941): the Bulk Results Uploader is for an admin or a member of the centre. The cases
+    // below are about the CTA's own behaviour, so they run as an admin; the gate is pinned at the end.
+    TestBed.inject(RolesService).isAdmin = true;
 
     // `src/environments/*.ts` is gitignored and supplied per environment by CI, so the CTA's URL
     // key is absent from most checkouts and from the build agents — reading it here made these
@@ -1057,6 +1061,46 @@ describe('BilateralPageHeaderComponent', () => {
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('[data-testid="bilateral-rejection-notice"]')).toBeNull();
       expect(fixture.nativeElement.querySelector('[data-testid="bilateral-status-badge"]')).toBeNull();
+    });
+  });
+  // RNB-2 (P2-3941, PO decision option A): the Bulk Results Uploader is not offered to a user who is
+  // not assigned to the centre (admins see every centre, so they keep it).
+  describe('Bulk Results Uploader CTA — centre membership gate (RNB-2)', () => {
+    let roles: RolesService;
+
+    beforeEach(() => {
+      roles = TestBed.inject(RolesService);
+      ctx.setCenter('SMO', 'CGIAR System Organization', 'CENTER-05');
+      fixture.componentRef.setInput('activeTab', 'overview');
+    });
+
+    const cta = () => fixture.debugElement.query(By.css('[data-testid="bilateral-bulk-uploader-cta"]'));
+
+    it('is shown to an admin', () => {
+      roles.isAdmin = true;
+      fixture.detectChanges();
+      expect(cta()).not.toBeNull();
+    });
+
+    it('is shown to a member of the centre', () => {
+      roles.isAdmin = false;
+      jest.spyOn(roles, 'getMyCenters').mockReturnValue([{ center_id: 'CENTER-05', center_acronym: 'SMO' }] as any);
+      fixture.detectChanges();
+      expect(cta()).not.toBeNull();
+    });
+
+    it('is hidden from a user with no centre', () => {
+      roles.isAdmin = false;
+      jest.spyOn(roles, 'getMyCenters').mockReturnValue([]);
+      fixture.detectChanges();
+      expect(cta()).toBeNull();
+    });
+
+    it('is hidden from a member of ANOTHER centre', () => {
+      roles.isAdmin = false;
+      jest.spyOn(roles, 'getMyCenters').mockReturnValue([{ center_id: 'CENTER-99', center_acronym: 'IRRI' }] as any);
+      fixture.detectChanges();
+      expect(cta()).toBeNull();
     });
   });
 });

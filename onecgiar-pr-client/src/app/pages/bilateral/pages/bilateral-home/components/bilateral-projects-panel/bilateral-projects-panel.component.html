@@ -330,15 +330,17 @@
                     <i class="pi pi-arrow-right"></i>
                   </button>
 
-                  <button
-                    type="button"
-                    class="bpp_cta_btn"
-                    data-testid="bilateral-project-create-result"
-                    [attr.data-guide]="$first ? 'bilateral-project-create-result' : null"
-                    (click)="openManualCreate(project, $event)">
-                    <i class="pi pi-plus"></i>
-                    Create result
-                  </button>
+                  @if (manualCreateFlow.canCreateResults()) {
+                    <button
+                      type="button"
+                      class="bpp_cta_btn"
+                      data-testid="bilateral-project-create-result"
+                      [attr.data-guide]="$first ? 'bilateral-project-create-result' : null"
+                      (click)="openManualCreate(project, $event)">
+                      <i class="pi pi-plus"></i>
+                      Create result
+                    </button>
+                  }
                 </div>
               </article>
             }
@@ -421,15 +423,17 @@
                       </button>
                     </td>
                     <td class="bpp_td_action">
-                      <button
-                        type="button"
-                        class="bpp_cta_btn bpp_cta_btn--table"
-                        data-testid="bilateral-project-create-result"
-                        [attr.data-guide]="$first ? 'bilateral-project-create-result' : null"
-                        (click)="openManualCreate(project, $event)">
-                        <i class="pi pi-plus"></i>
-                        <span>Create result</span>
-                      </button>
+                      @if (manualCreateFlow.canCreateResults()) {
+                        <button
+                          type="button"
+                          class="bpp_cta_btn bpp_cta_btn--table"
+                          data-testid="bilateral-project-create-result"
+                          [attr.data-guide]="$first ? 'bilateral-project-create-result' : null"
+                          (click)="openManualCreate(project, $event)">
+                          <i class="pi pi-plus"></i>
+                          <span>Create result</span>
+                        </button>
+                      }
                     </td>
                   </tr>
                 }

@@ -32,3 +32,23 @@ export function isCenterMember(
       (!!centerId && center?.center_id === centerId) || (!!centerAcronym && center?.center_acronym === centerAcronym)
   );
 }
+
+/**
+ * `RNB-2` (P2-3941, PO decision, option A) — may this user GENERATE bilateral results for the
+ * current centre: an admin (who sees every centre) or a member of THAT centre. Anyone else is not
+ * assigned to the centre, so the centre is not theirs to report for. The server answers the same
+ * question on `POST bilateral/center/create-header` (admin, or Center User of the lead centre).
+ *
+ * Unlike the AI-draft surfaces above, an admin DOES pass here — that is what the decision says —
+ * so this is the one place the `isAdmin` short-circuit is intended. Every create/bulk entry point
+ * (home buttons, the card click, the page-header Bulk Results Uploader, the manual form) reads this
+ * function so they cannot drift apart.
+ */
+export function canCreateAtCenter(
+  isAdmin: boolean | null | undefined,
+  centers: readonly CenterAssignmentLike[] | null | undefined,
+  centerId: string | null | undefined,
+  centerAcronym: string | null | undefined,
+): boolean {
+  return !!isAdmin || isCenterMember(centers, centerId, centerAcronym);
+}

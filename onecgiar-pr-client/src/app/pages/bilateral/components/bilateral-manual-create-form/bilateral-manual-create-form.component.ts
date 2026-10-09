@@ -28,6 +28,8 @@ import {
 import { BilateralResultLevelSelectorComponent } from '../bilateral-result-level-selector/bilateral-result-level-selector.component';
 import { WordCounterService } from '../../../../shared/services/word-counter.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
+import { canCreateAtCenter } from '../../services/bilateral-center-membership.util';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { RESULT_TYPES_BY_LEVEL } from '../../shared/result-types-by-level';
 import { resolveLegacyTypeForDepthSearch } from '../../shared/bilateral-title-legacy-type';
@@ -76,6 +78,7 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
 
   private readonly wordCounterSE = inject(WordCounterService);
   private readonly api = inject(ApiService);
+  private readonly ctx = inject(BilateralContextService);
   private readonly phasesSE = inject(PhasesService);
   private readonly titleSearch$ = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
@@ -169,8 +172,24 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
     return this.copy.form.fieldsLeftPlural(count);
   });
 
+  /**
+   * `RNB-2` (P2-3941) — the form refuses, like the AI flow, to create for a centre the user is not
+   * assigned to (admin or member of the current centre, one shared check). The server enforces the
+   * same on `create-header`; this keeps the user from ever submitting a request that will be refused.
+   */
+  readonly isCenterAllowed = computed(() => {
+    this.api.rolesSE.rolesVersion;
+    return canCreateAtCenter(
+      this.api.rolesSE.isAdmin,
+      this.api.rolesSE.getMyCenters(),
+      this.ctx.centerId(),
+      this.ctx.centerAcronym()
+    );
+  });
+
   readonly canCreate = computed(
     () =>
+      this.isCenterAllowed() &&
       this.missingFields().length === 0 &&
       !this.creating() &&
       !this.loadingTitleCheck() &&
@@ -343,6 +362,7 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
   }
 
   onCreateClick(): void {
+    if (!this.isCenterAllowed()) return;
     if (!this.canCreate()) {
       this.showValidationErrors.set(true);
       this.showMissingList.set(true);

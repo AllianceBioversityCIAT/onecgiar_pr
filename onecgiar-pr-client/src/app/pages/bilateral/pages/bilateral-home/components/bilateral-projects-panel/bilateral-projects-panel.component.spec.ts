@@ -5,6 +5,7 @@ import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/ro
 import { Subject, of, throwError } from 'rxjs';
 import { BilateralProjectsPanelComponent } from './bilateral-projects-panel.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
 import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
@@ -130,6 +131,9 @@ describe('BilateralProjectsPanelComponent', () => {
     bilateralApiService = TestBed.inject(BilateralApiService) as jest.Mocked<BilateralApiService>;
     ctx = TestBed.inject(BilateralContextService);
     manualCreateFlow = TestBed.inject(BilateralManualCreateFlowService);
+    // RNB-2 (P2-3941): creating is for an admin or a member of the centre. These cases are about the
+    // catalog itself, so they run as an admin; the gate has its own describe at the end of the file.
+    TestBed.inject(RolesService).isAdmin = true;
   });
 
   afterEach(() => {
@@ -1026,6 +1030,50 @@ describe('BilateralProjectsPanelComponent', () => {
       refreshBtn.click();
 
       expect(refreshSpy).toHaveBeenCalled();
+    });
+  });
+  // RNB-2 (P2-3941, PO decision option A): a user who is not assigned to the centre cannot generate
+  // bilateral results — the buttons are not offered and the card/row click does not open the drawer.
+  describe('create entry points — centre membership gate (RNB-2)', () => {
+    let roles: RolesService;
+
+    beforeEach(() => {
+      roles = TestBed.inject(RolesService);
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+    });
+
+    function createButtons(): number {
+      return fixture.nativeElement.querySelectorAll('[data-testid="bilateral-project-create-result"]').length;
+    }
+
+    it('offers Create result to an admin', () => {
+      roles.isAdmin = true;
+      fixture.detectChanges();
+      expect(createButtons()).toBeGreaterThan(0);
+    });
+
+    it('offers Create result to a member of the centre', () => {
+      roles.isAdmin = false;
+      jest.spyOn(roles, 'getMyCenters').mockReturnValue([{ center_id: 'Bioversity', center_acronym: 'Bioversity' }] as any);
+      fixture.detectChanges();
+      expect(createButtons()).toBeGreaterThan(0);
+    });
+
+    it('hides Create result from a user with no centre and the card click opens nothing', () => {
+      roles.isAdmin = false;
+      jest.spyOn(roles, 'getMyCenters').mockReturnValue([]);
+      fixture.detectChanges();
+      expect(createButtons()).toBe(0);
+      component.openManualCreate(mockProjects[0], { preventDefault: jest.fn() } as unknown as Event);
+      expect(manualCreateFlow.drawerOpen()).toBe(false);
+    });
+
+    it('hides Create result from a member of ANOTHER centre', () => {
+      roles.isAdmin = false;
+      jest.spyOn(roles, 'getMyCenters').mockReturnValue([{ center_id: 'CENTER-99', center_acronym: 'IRRI' }] as any);
+      fixture.detectChanges();
+      expect(createButtons()).toBe(0);
     });
   });
 });
