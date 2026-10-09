@@ -350,3 +350,4 @@ No cycles.
 - Results-to-QA endpoints using the storage bindings.
 - Validation engine evaluating `required_when` (replacing `validation_*`).
 - Optional `information_schema` check if a DB becomes available in CI.
+- Level-number rules (use / readiness levels compared as level-table row ids): deferred by the owner to bug P2-3939 (epic P2-2340), not addressed in P2-3925.
