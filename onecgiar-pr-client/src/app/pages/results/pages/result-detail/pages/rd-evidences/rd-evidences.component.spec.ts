@@ -1214,7 +1214,8 @@ describe('RdEvidencesComponent', () => {
 
     it('is NOT complete for a non-exempt result with no evidence', () => {
       setType(7);
-      component.isOptionalReadinessLevel = true;
+      component.isOptional = false;
+      component.isOptionalReadinessLevel = false;
       component.evidencesBody = cleanBody([]);
       expect(component.evidenceSectionComplete).toBe(false);
     });
@@ -1245,6 +1246,33 @@ describe('RdEvidencesComponent', () => {
       setType(7);
       component.isOptionalReadinessLevel = false;
       component.evidencesBody = cleanBody([{ link: 'x', innovation_readiness_related: false }]);
+      expect(component.evidenceSectionComplete).toBe(false);
+    });
+
+    it('is complete for Innovation Development at readiness 0 with NO evidence (the screen says none is required)', () => {
+      setType(7);
+      component.isOptional = true;
+      component.isOptionalReadinessLevel = true;
+      component.evidencesBody = cleanBody([]);
+      expect(component.evidenceNotRequired).toBe(true);
+      expect(component.evidenceSectionComplete).toBe(true);
+    });
+
+    it('readiness 0 with no evidence is NOT complete when a Principal marker has no evidence (exemption drops, same as the note)', () => {
+      setType(7);
+      component.isOptional = true;
+      component.isOptionalReadinessLevel = true;
+      const body = cleanBody([]);
+      body.gender_tag_level = '3';
+      component.evidencesBody = body;
+      expect(component.evidenceSectionComplete).toBe(false);
+      expect(component.evidenceNotRequired).toBe(false);
+    });
+
+    it('other types never get the readiness-0 exemption, even if isOptional is set', () => {
+      setType(1);
+      component.isOptional = true;
+      component.evidencesBody = cleanBody([]);
       expect(component.evidenceSectionComplete).toBe(false);
     });
 
