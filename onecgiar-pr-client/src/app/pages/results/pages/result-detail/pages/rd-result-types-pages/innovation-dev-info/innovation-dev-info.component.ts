@@ -762,6 +762,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
 
   // Métodos para manejar evidencias
   addEvidence() {
+    if (this.api.rolesSE.readOnly) return;
     this.evidencesBody.evidences.push({ is_sharepoint: false } as any);
   }
 
