@@ -102,7 +102,6 @@ describe('QAC-T-17 evidence (Results)', () => {
           'innovation_development',
           'other_output',
           'impact_contribution',
-          'innovation_package',
         ],
       });
       expect(s.visible_when).not.toEqual(

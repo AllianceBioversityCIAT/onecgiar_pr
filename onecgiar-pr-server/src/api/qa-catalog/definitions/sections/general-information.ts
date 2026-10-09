@@ -6,6 +6,7 @@ import {
   ALL_TYPES,
   FROM_2026,
   INNOVATION_TYPES,
+  NON_IPSR_TYPES,
   IS_REPLICATED_FIELD,
   NON_KP_TYPES,
   RESULT_TYPE_FIELD,
@@ -83,11 +84,18 @@ const ANNUAL_UPDATING_DISCONTINUED = {
   ],
 };
 
-// QAC-T-25: the annual-updating block is shown for a replicated innovation of the two innovation types.
+/**
+ * QAC-T-27: the annual-updating block also shows for an innovation package (IPSR GI,
+ * ipsr-general-information.component.html:1-3 `*ngIf is_replicated` -> ipsr-annual-updating.component.html:1-46), which reads and
+ * writes the same stored columns (ipsr_general_information.service.ts:200-244). Merge/split targets stay innovation development only.
+ */
+const ANNUAL_UPDATING_TYPES = [...INNOVATION_TYPES, 'innovation_package'];
+
+// QAC-T-25: the annual-updating block is shown for a replicated innovation of the two innovation types (+ the package, QAC-T-27).
 const ANNUAL_UPDATING_VISIBLE = {
   all: [
     whenEq(IS_REPLICATED_FIELD, true),
-    whenIn(RESULT_TYPE_FIELD, INNOVATION_TYPES),
+    whenIn(RESULT_TYPE_FIELD, ANNUAL_UPDATING_TYPES),
   ],
 };
 
@@ -199,7 +207,8 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     control_list: 'initiatives',
     section: SECTION,
     order: 3,
-    result_types: ALL_TYPES,
+    // QAC-T-27: not on the IPSR 2026 form (its contributors page has no Submitter select, ipsr-contributors.component.html:6-16).
+    result_types: NON_IPSR_TYPES,
     // no live rule (owner: function not needed). QAC-T-19 (option B): required follows the form. The same stored value is
     // edited by the Submitter select of Contributors & partners, a `pr-select` with no `[required]="false"` (so its default
     // `required = true`; rd-contributors-and-partners.component.html:9-25, custom-fields/pr-select.component.ts:33).
@@ -347,7 +356,8 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     type: 'boolean',
     section: SECTION,
     order: 22,
-    result_types: INNOVATION_TYPES,
+    // QAC-T-27: + innovation_package (ipsr-general-information.component.html:1-3 gates the IPSR annual-updating block on it).
+    result_types: ANNUAL_UPDATING_TYPES,
     required: false,
     required_confirmed: false,
     ...FROM_2026,
@@ -366,10 +376,15 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     type: 'boolean',
     section: SECTION,
     order: 23,
-    result_types: INNOVATION_TYPES,
+    // QAC-T-27: + innovation_package. IPSR form rule (ipsr-annual-updating.component.html:42 `Annual Update` complete when
+    // `is_discontinued != null`, shown when is_replicated): the same `required_when`. V-GI:140-161 checks only types 2 and 7, so for the package the
+    // rule is form-only; `required_confirmed` is ONE flag per field and stays true for the two types the function does check.
+    // The IPSR label is "Please indicate if the investment for this innovation package was continued or discontinued" (radio: "Innovation
+    // Package is active/investment was continued." = false, "...inactive/investment was discontinued, because:" = true); not repeated here.
+    result_types: ANNUAL_UPDATING_TYPES,
     required: false,
     required_confirmed: true,
-    // `result_types` already restricts the field to the two innovation types, so `required_when` needs no `$result_type` gate; `visible_when`
+    // `result_types` already restricts the field to the annual-updating types (the two innovation types and the package, QAC-T-27), so `required_when` needs no `$result_type` gate; `visible_when`
     // names it because the template does (QAC-T-25: rd-general-information.component.html:1-4 `*ngIf is_replicated`; rd-annual-updating.component.html:1
     // `resolvedResultTypeId == 7 || == 2`).
     required_when: whenEq(IS_REPLICATED_FIELD, true),
@@ -385,7 +400,10 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     type: 'list',
     section: SECTION,
     order: 24,
-    result_types: INNOVATION_TYPES,
+    // QAC-T-27: + innovation_package (ipsr-annual-updating.component.html:27-40 checklist of reasons when `is_discontinued`; the form requires at
+    // least one ticked, html:44 -> ipsr-annual-updating.component.ts `isIpsrDiscontinuedOptionsTrue`). Form-only for the package (V-GI:140-161
+    // checks types 2 and 7); the flag is per field, see `general.is_discontinued`. The IPSR checklist has no header question.
+    result_types: ANNUAL_UPDATING_TYPES,
     required: false,
     required_confirmed: true,
     required_when: ANNUAL_UPDATING_DISCONTINUED,
@@ -393,7 +411,7 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
     visible_when: {
       all: [
         whenEq(IS_REPLICATED_FIELD, true),
-        whenIn(RESULT_TYPE_FIELD, INNOVATION_TYPES),
+        whenIn(RESULT_TYPE_FIELD, ANNUAL_UPDATING_TYPES),
         whenEq('general.is_discontinued', true),
       ],
     },
@@ -403,6 +421,9 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
       table: 'results_investment_discontinued_options',
       fk_to_result: 'result_id',
       value_column: 'investment_discontinued_option_id',
+      // IPSR writes one row per option with `is_active` = ticked (result-innovation-package.service.ts:778-807, ipsr_general_information.service.ts:221-250,
+      // read back with is_active true :411-417; V-GI:153 counts is_active > 0): an unticked row is not an element (also fixes types 2/7).
+      filter: { is_active: 1 },
     },
     subfields: [
       // Identity of the row (QAC-T-19 attempt 2): which reason this description belongs to, so a rule can name the id-6 row only.
@@ -441,8 +462,15 @@ export const GENERAL_INFORMATION_FIELDS: CatalogField[] = [
         type: 'text',
         // QAC-T-26: VISIBILITY follows the form (`needsDescription()`: the option's `requires_description` flag when not
         // null, else the legacy id 6, .ts:627-633, .html:81); the REQUIREMENT stays function-stated (id 6 only, below).
+        // QAC-T-27: + reason 12, the IPSR "Other" option (type-10 options 7-12, migration 1712162692416-updateDiscontinuedOptions.ts:9-34;
+        // the IPSR form shows the box only for id 12, ipsr-annual-updating.component.html:31-38; `requires_description` is NULL on those base rows).
+        // The IPSR input is `[required]="false"` (:35), so `required_when` is unchanged.
         visible_when: {
-          any: [whenEq('requires_description', true), whenEq('reason', 6)],
+          any: [
+            whenEq('requires_description', true),
+            whenEq('reason', 6),
+            whenEq('reason', 12),
+          ],
         },
         // QAC-T-19: FUNCTION-STATED, not in the form. The live function requires a non-empty description when the
         // chosen reason is id 6, the legacy "Other" row (validation_general_information_P25:149-151). The form's free-text

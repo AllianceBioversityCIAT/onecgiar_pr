@@ -24,6 +24,7 @@ const inn = (field: string, value: Array<string | number>): Condition => ({
 const INNOVATION = inn('$result_type', [
   'innovation_development',
   'innovation_use',
+  'innovation_package', // QAC-T-27: the IPSR annual-updating block (ipsr-general-information.component.html:1-3)
 ]);
 
 type Node = CatalogField | CatalogSubField;
@@ -54,7 +55,7 @@ const VISIBLE: Record<string, Condition | undefined> = {
   'general.poverty_impact_areas': eq('general.poverty_tag', 3),
   // QAC-T-26: needsDescription() = option.requires_description, else legacy id 6 (rd-annual-updating.component.ts:627-633)
   'general.discontinued_reasons>description': {
-    any: [eq('requires_description', true), eq('reason', 6)],
+    any: [eq('requires_description', true), eq('reason', 6), eq('reason', 12)],
   },
   'knowledge_product.melia_previous_submitted': eq(
     'knowledge_product.is_melia',
@@ -326,7 +327,11 @@ describe('QAC-T-26 impact-area and discontinued-description visibility', () => {
       'general.discontinued_reasons>description',
     );
     expect(d?.visible_when).toEqual({
-      any: [eq('requires_description', true), eq('reason', 6)],
+      any: [
+        eq('requires_description', true),
+        eq('reason', 6),
+        eq('reason', 12),
+      ],
     });
     expect(d?.required_when).toEqual(eq('reason', 6));
   });

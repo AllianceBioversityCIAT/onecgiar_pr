@@ -366,3 +366,11 @@
 - Date: 2026-10-08 · catalog 2026.25
 - QA review of 2026.24 (two cases), both confirmed against the form. Delivered: `visible_when` = `<tag> eq 3` on the five `general.*_impact_areas` (form :146,195,244,297,346); read-only lookup subfield `general.discontinued_reasons>requires_description` (prms.investment_discontinued_option, keyed by `reason`) and `description.visible_when: any[requires_description eq true, reason eq 6]` mirroring `needsDescription()`; `required_when` unchanged (`reason eq 6`, live function). Owner chose option (a).
 - Leader re-run: 527/527, tsc and eslint clean; snapshot 325 → 326 (added requires_description), none removed. Reviewer PASS: no option row has id 6 with an explicit false flag (migration 1788442000000 leaves legacy rows NULL, 2026 rows AUTO_INCREMENT); latent risk only if someone later sets row 6 to 0.
+
+### QAC-T-27 — IPSR: common sections fitted to the innovation package form · P2-3925 — PASS (attempt 2)
+
+- Date: 2026-10-09 · catalog 2026.26
+- Origin: owner asked to complete IPSR before documenting the Jira story; review of prtest result 9733 (phase 37) + read-only gap analysis (12 gaps; tasks T-27..T-31 added). Owner decisions: IPSR gets its own centers field; add the TypeORM entity for `result_ip_step_three_evidence` (T-30).
+- Delivered: `innovation_package` removed from `evidence.items` (and Evidence section), `contributors.submitter`, `general.primary_program`, `linked.*`, `contributors.centers` / `other_centers`; new `contributors.ipsr_centers` (all active `results_center` rows, required, form-only); annual updating (`is_replicated`, `is_discontinued`, `discontinued_reasons`) extended to IPSR; `discontinued_reasons` binding filtered `is_active = 1` (IPSR writes every option; also fixes unticked rows for types 2/7); description visible for reason 12 (IPSR "Other").
+- Attempt 1 → FAIL: the Leader had asked for `is_lead_by_partner` always required for IPSR — wrong (IPSR markup equals W1/W2, read-only when not applicable); reason 12 missing; reasons binding without `is_active`. Attempt 2 → PASS. 558/558, tsc and eslint clean; snapshot 326 → 328 keys, none removed.
+- Known mismatch kept and documented: IPSR annual-updating uses the legacy wording; catalog labels are shared per field.

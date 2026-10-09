@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 25,
-      "content_hash": "e2cd36d823ff3897b33ee9b006fe9f7917a699a45c964043a9ac9ad8af36b7bf"
+      "revision": 26,
+      "content_hash": "822b94a76301ab3d07757840b314165acaf22467250da7c883a15ea772c79cca"
     }
   },
   "keys": [
@@ -16,6 +16,7 @@
     "field:capacity_sharing.organizations",
     "field:contributors.bilateral_projects",
     "field:contributors.centers",
+    "field:contributors.ipsr_centers",
     "field:contributors.lead_center",
     "field:contributors.other_centers",
     "field:contributors.science_programs",
@@ -185,6 +186,7 @@
     "subfield:capacity_sharing.length_of_training/degree",
     "subfield:contributors.centers/center",
     "subfield:contributors.centers/from_cgspace",
+    "subfield:contributors.ipsr_centers/center",
     "subfield:contributors.other_centers/center",
     "subfield:contributors.other_centers/from_cgspace",
     "subfield:contributors.science_programs/from_toc",

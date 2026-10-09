@@ -1026,7 +1026,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 25 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 26 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -1168,9 +1168,11 @@ describe('the real catalog definitions', () => {
     expect(f?.section).toBe('general_information');
     expect(f?.type).toBe('boolean');
     expect(f?.label).toBe('Is this a replicated innovation?');
+    // QAC-T-27: + innovation_package (ipsr-general-information.component.html:1-3)
     expect(f?.result_types).toEqual([
       'innovation_development',
       'innovation_use',
+      'innovation_package',
     ]);
     expect(f?.required).toBe(false);
     expect(f?.required_confirmed).toBe(false);

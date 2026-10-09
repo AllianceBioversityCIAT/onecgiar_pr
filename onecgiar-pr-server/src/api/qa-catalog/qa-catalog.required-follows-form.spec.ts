@@ -35,8 +35,7 @@ const NON_KP = [
   'innovation_development',
   'other_output',
   'impact_contribution',
-  'innovation_package',
-];
+]; // QAC-T-27: no 'innovation_package' (no Evidence tab in the IPSR 2026 form)
 const LEVEL_ASKED = [
   'policy_change',
   'innovation_use',

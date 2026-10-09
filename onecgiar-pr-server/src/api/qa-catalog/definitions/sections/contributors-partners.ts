@@ -10,7 +10,7 @@
 // list (not the client's DOM order, which puts the lead center after the centers dropdowns and "invested resources"
 // before "Multiple WPs"): submitter, planned result, Multiple WPs, invested resources, narrative, lead center,
 // contributing centers (ToC), other(s) centers, Science Program/Accelerator, bilateral projects, partners block,
-// linked block, KP-only partners, KP author affiliations (QAC-T-22). Orders run 1..18.
+// linked block, KP-only partners, KP author affiliations (QAC-T-22). Orders run 1..19 (QAC-T-27 inserted `contributors.ipsr_centers` at 9).
 //
 // Citation legend (all paths under onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/):
 //   CP.html  = rd-contributors-and-partners.component.html     CP.ts  = rd-contributors-and-partners.component.ts
@@ -50,6 +50,7 @@ import {
 import {
   ALL_TYPES,
   FROM_2026,
+  NON_IPSR_TYPES,
   NON_KP_TYPES,
   RESULT_TYPE_FIELD,
   whenEq,
@@ -397,7 +398,8 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     control_list: 'initiatives',
     section: SECTION,
     order: 1,
-    result_types: ALL_TYPES,
+    // QAC-T-27: not on the IPSR 2026 contributors page, which starts at the ToC question (ipsr-contributors.component.html:6-16).
+    result_types: NON_IPSR_TYPES,
     // QAC-T-19, form-only: no live rule (V-CP never reads it); pr-select default required (CP.html:9-25, no `[required]`, shown in every
     // phase; the select is only disabled when the result has a single program)
     required: true,
@@ -515,7 +517,8 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'list',
     section: SECTION,
     order: 7,
-    result_types: ALL_TYPES,
+    // QAC-T-27 (owner decision): the IPSR form has a single centers list, `contributors.ipsr_centers`.
+    result_types: NON_IPSR_TYPES,
     // CP.html:98-116 (dropdown 1, `[required]="true"`; at least one center must stay from the ToC when the ToC brings centers, CP.ts:549-551).
     // No live rule: the function has the center check commented out (V-CP:124-132). Always shown: when the answer is No the client
     // paints a flat dropdown with the same label (CP.html:128-141, `[required]="true"` at :135).
@@ -541,7 +544,8 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'list',
     section: SECTION,
     order: 8,
-    result_types: ALL_TYPES,
+    // QAC-T-27 (owner decision): the IPSR form has no "Other(s)" centers dropdown (see `contributors.ipsr_centers`).
+    result_types: NON_IPSR_TYPES,
     // CP.html:179-209 (`[required]="!hasReferenceCenters()"`: required only when the ToC brought no centers, which is ToC reference
     // data, not a catalog key). No live rule (V-CP:124-132). Visibility is UI state, see the header.
     // QAC-T-19: stays `required: false`: the form requires it only in that ToC-reference case (documented gap, see contributors.centers).
@@ -558,6 +562,35 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     subfields: [CENTER_SUBFIELD, FROM_CGSPACE_SUBFIELD],
   },
   {
+    // QAC-T-27 (owner decision, 2026-10-09): the IPSR (`innovation_package`) 2026 form has ONE centers list, "Contributing CGIAR Centers"
+    // (ipsr-contributors.component.html:74-85, `rdPartnersSE.partnersBody.contributing_center`), with no ToC-derived / "Other(s)" split.
+    // IPSR sends the centers without `from_toc` (ipsr-contributors.component.ts:627 `contributing_center`) and the server stores
+    // `!!from_toc` (results_by_institutions.service.ts:772,777), so the binding carries NO `from_toc` filter: it is every active
+    // `results_center` row of the result (the lead center is one of them, as `contributors.lead_center` is, QAC-T-19).
+    // Form-only: the pr-multi-select defaults to `required = true` and the block does not opt out (ipsr-contributors.component.html:74-85,
+    // pr-multi-select.component.ts:45); the V-CP center check is commented out (tmp/validation_contributor_partner_P25, V-CP:124-132),
+    // so `required_confirmed` is false.
+    key: 'contributors.ipsr_centers',
+    label: 'Contributing CGIAR Centers',
+    description:
+      'CG Center that you collaborated with or are currently collaborating with to generate this result.',
+    type: 'list',
+    section: SECTION,
+    order: 9,
+    result_types: ['innovation_package'],
+    required: true,
+    required_confirmed: false,
+    ...FROM_2026,
+    storage: {
+      kind: 'relation',
+      table: 'results_center',
+      fk_to_result: 'result_id',
+      value_column: 'center_id',
+      filter: { is_active: 1 },
+    },
+    subfields: [CENTER_SUBFIELD],
+  },
+  {
     // Contributing Science Program/Accelerator (CP.html:435-508, 2026). Each element is a program that contributes (accepted rows,
     // `initiative_role_id = 2`; pending requests live in share_result_request and are not result data) with ITS OWN ToC answer and
     // mappings, which the client shows read-only under "Other contributors" (CP.html:510-551).
@@ -569,7 +602,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       "The Science Programs listed below were identified in your 2026 ToC. To select a different Science Program, choose 'Other' from the drop-down menu and then make your selection from the options that appear.",
     type: 'list',
     section: SECTION,
-    order: 9,
+    order: 10,
     result_types: ALL_TYPES,
     // optional (`[required]="false"`, CP.html:452,495); no live rule
     required: false,
@@ -639,7 +672,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'projects',
     section: SECTION,
-    order: 10,
+    order: 11,
     result_types: ALL_TYPES,
     // no live rule (validation_contributor_partner_P25 never reads results_by_projects); the client marks it
     // optional ([required]="false", CP.html:274) and disables it until a ToC result is mapped (CP.html:327-355).
@@ -662,7 +695,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     description: 'Select this option if the partner section is not applicable',
     type: 'boolean',
     section: SECTION,
-    order: 11,
+    order: 12,
     result_types: ALL_TYPES,
     // NS.html:6-39 (card "External partners" with the "Not applicable" switch, always shown); V-CP:95,167 (NULL fails, TRUE short-circuits)
     required: true,
@@ -684,7 +717,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       'Partner information is inherited/sourced from the HLO/Outcome level in the ToC. Please review this list before saving — remove any partner that does not apply to this specific result, or add the ones that do.',
     type: 'list',
     section: SECTION,
-    order: 12,
+    order: 13,
     result_types: NON_KP_TYPES,
     // V-CP:104-112,169: not applicable = false => at least one role 2 row
     required: false,
@@ -705,11 +738,13 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     // CP.html:563-570 (always shown, `[required]="true"`, read-only while "Not applicable" is on EXCEPT for a knowledge product, :569);
     // V-CP:168 NULL fails when not applicable = false (V-CP:167 TRUE short-circuits). QAC-T-19: form UNION function = required when not
     // applicable is false, or always for a knowledge product (its control stays editable); confirmed because V-CP states the first branch.
+    // QAC-T-27: the IPSR markup equals W1/W2 (ipsr-contributors.component.html:288-294: `[required]="true"`, read-only while "Not applicable" is
+    // on and the type is not a KP, :293), so the package needs no branch of its own: the field is `*` and has one rule.
     key: 'partners.is_lead_by_partner',
     label: 'Is this result being led by an external partner?',
     type: 'boolean',
     section: SECTION,
-    order: 13,
+    order: 14,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
@@ -735,7 +770,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'single_select',
     control_list: 'institutions',
     section: SECTION,
-    order: 14,
+    order: 15,
     result_types: ALL_TYPES,
     required: false,
     required_confirmed: true,
@@ -760,8 +795,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?',
     type: 'boolean',
     section: SECTION,
-    order: 15,
-    result_types: ALL_TYPES,
+    order: 16,
+    // QAC-T-27: the IPSR 2026 form drops the link tab (ipsr-contributors.component.ts:667-672 deletes both keys from the PATCH).
+    result_types: NON_IPSR_TYPES,
     // QAC-T-19, form-only: V-CP:135-152 never requires the ANSWER (only the linked rows when it is Yes), so `required_confirmed` is false
     // (was true). The form requires the answer for innovation development (fieldRef config `required: true`, fields-manager.service.ts
     // `[innovation-use-form]-has-innovation-link`; CP.html:606-616) and, from 2026, for every other type (generic radio
@@ -783,8 +819,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     type: 'multi_select',
     control_list: 'results',
     section: SECTION,
-    order: 16,
-    result_types: ALL_TYPES,
+    order: 17,
+    // QAC-T-27: the IPSR 2026 form drops the link tab (ipsr-contributors.component.ts:667-672).
+    result_types: NON_IPSR_TYPES,
     required: false,
     required_confirmed: true,
     visible_when: whenEq('linked.has_innovation_link', true),
@@ -808,7 +845,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     label: 'Partners',
     type: 'list',
     section: SECTION,
-    order: 17,
+    order: 18,
     result_types: ['knowledge_product'],
     required: false,
     required_confirmed: true,
@@ -841,7 +878,7 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
     description: 'Please match each author affiliation with a CLARISA partner.',
     type: 'list',
     section: SECTION,
-    order: 18,
+    order: 19,
     result_types: ['knowledge_product'],
     required: false,
     required_confirmed: false,

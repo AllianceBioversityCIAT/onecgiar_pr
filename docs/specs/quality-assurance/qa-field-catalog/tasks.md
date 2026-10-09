@@ -277,6 +277,37 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Implements:** QAC-R-13
 - **Depends on:** QAC-T-25
 
+### [x] QAC-T-27 — IPSR: common sections fitted to the innovation package form (owner 2026-10-09) · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** From the IPSR review of prtest result 9733 (phase 37). `innovation_package` is removed from fields its 2026 form does not have: `evidence.items` (no Evidence tab; IPSR evidence lives in Step 3), `contributors.submitter`, `general.primary_program`, `linked.has_innovation_link`, `linked.results`. Centers (owner decision): `contributors.centers` / `contributors.other_centers` do not apply to IPSR; new `contributors.ipsr_centers` — one list of all active `results_center` rows, required (IPSR stores centers without `from_toc`, ipsr-contributors.component.ts:627). Annual updating: the IPSR form shows `is_discontinued` / reasons when `is_replicated` (ipsr-annual-updating.component.html) — include `innovation_package` with the form's rules (V-GI does not enforce it for type 10).
+- **Implements:** QAC-R-11, QAC-R-13 for IPSR
+- **Depends on:** QAC-T-26
+
+### QAC-T-28 — IPSR Step 1 completed · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** `ipsr_step_1.geo_scope` on its own closed list [1,2,3,4,5] (no TBD); `regions` / `countries` with the same visibility and requirement rules as Results geo; `countries` → list with subnational subfield (IPSR rows have no scope role); `eoi_outcomes` (required, VS1:32-41); `scaling_partners` with partner role (form-required; VS1:211-237); workshop: facilitators visible when Yes (+ email), participants link, participants consent (visible per form), scaling-ambition blurb (read-only); targeted use actors / organizations / measures subfield rules (other type 5, other org 78, disaggregation). Keys from inventory 2026-B §3.4.
+- **Depends on:** QAC-T-27
+
+### QAC-T-29 — IPSR Step 2 completed · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** 2.1 new complementary innovation fields (short / long title, description, function(s), other functions, aware of projects + specify) with the form's rules; 2.2 type of enabler per bundled element (admin-only screen; nested option tree). Keys from inventory 2026-B §3.5–3.6.
+- **Depends on:** QAC-T-28
+
+### QAC-T-30 — IPSR Step 3 completed · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** Owner decision: add the TypeORM entity for the existing `result_ip_step_three_evidence` table (no migration) so the catalog can bind it. Core and complementary evidence-based readiness / use levels with their evidence lists (max 6; required when level ≠ 0 per form; VS3:19-47, 231-264); current use of the core (actors / organizations / measures with evidence link; hidden when use level is 0; VS3:49-230); `assessed_during_workshop` and the current-level table visible per the form; complementary levels' requirement per VS3. Keys from inventory 2026-B §3.7.
+- **Depends on:** QAC-T-29
+
+### QAC-T-31 — IPSR Step 4 completed · P2-3925
+
+- **Type:** server · **Review:** full
+- **Description:** The three investment lists (CGIAR programs, W3 / bilateral projects, partner co-investment; amount or "yet to be determined", VS4:45-103) on the innovation-use pattern; reference materials link rule. Keys from inventory 2026-B §3.8. Fix the stale "pending" comment in ipsr-step-4.ts.
+- **Depends on:** QAC-T-30
+
 ## 4. Dependency graph
 
 ```

@@ -13,9 +13,8 @@ import {
   PathBinding,
 } from '../types';
 import {
-  ALL_TYPES,
   FROM_2026,
-  NON_KP_TYPES,
+  NON_IPSR_TYPES,
   RESULT_TYPE_FIELD,
   whenEq,
   whenIn,
@@ -25,11 +24,18 @@ export const EVIDENCE_SECTION: CatalogSection = {
   key: 'evidence',
   label: 'Evidence',
   order: 60,
-  result_types: ALL_TYPES,
+  // QAC-T-27: the IPSR 2026 form has no Evidence tab (ipsr-detail-top-menu.component.ts:15) and the IPSR validation
+  // runs no evidence check (results-innovation-packages-validation-module.service.ts:141-190).
+  result_types: NON_IPSR_TYPES,
   ...FROM_2026,
 };
 
 const SECTION = EVIDENCE_SECTION.key;
+
+/** Every type the section applies to except knowledge product (the source radio is hidden for KP, EI.html:5). */
+const EVIDENCE_NON_KP_TYPES = NON_IPSR_TYPES.filter(
+  (t) => t !== 'knowledge_product',
+);
 
 /** `evidence.is_sharepoint` (tinyint) as stored: 0 = Link, 1 = Upload file. Closed list `evidence_sources`. */
 const SOURCE_FIELD = 'source';
@@ -107,7 +113,6 @@ const EVIDENCE_REQUIRED_TYPES = [
   'innovation_development',
   'other_output',
   'impact_contribution',
-  'innovation_package',
 ];
 
 export const EVIDENCE_FIELDS: CatalogField[] = [
@@ -117,7 +122,7 @@ export const EVIDENCE_FIELDS: CatalogField[] = [
     type: 'list',
     section: SECTION,
     order: 1,
-    result_types: ALL_TYPES,
+    result_types: NON_IPSR_TYPES,
     required: false,
     required_confirmed: true,
     required_when: whenIn(RESULT_TYPE_FIELD, EVIDENCE_REQUIRED_TYPES),
@@ -142,8 +147,8 @@ export const EVIDENCE_FIELDS: CatalogField[] = [
         type: 'single_select',
         control_list: 'evidence_sources',
         required: false,
-        required_when: whenIn(RESULT_TYPE_FIELD, NON_KP_TYPES),
-        visible_when: whenIn(RESULT_TYPE_FIELD, NON_KP_TYPES),
+        required_when: whenIn(RESULT_TYPE_FIELD, EVIDENCE_NON_KP_TYPES),
+        visible_when: whenIn(RESULT_TYPE_FIELD, EVIDENCE_NON_KP_TYPES),
         storage: { kind: 'column', table: 'evidence', column: 'is_sharepoint' },
       },
       {

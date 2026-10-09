@@ -41,6 +41,7 @@ describe('QAC-T-15 contributors & partners: owner field list', () => {
       'contributors.lead_center',
       'contributors.centers',
       'contributors.other_centers',
+      'contributors.ipsr_centers',
       'contributors.science_programs',
       'contributors.bilateral_projects',
       'partners.not_applicable',
