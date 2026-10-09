@@ -2220,6 +2220,98 @@ describe('BilateralCenterService', () => {
         expect(resultsCenterRepository.updateCenter).toHaveBeenCalled();
       });
     });
+
+    // RNB-1 — `assertCenterWrite` only gates on status; the lead-centre rule is its own check.
+    describe('Lead-center permission (RNB-1)', () => {
+      let roleByUserRepository: RoleByUserRepository;
+      let resultsCenterRepository: ResultsCenterRepository;
+
+      beforeEach(() => {
+        roleByUserRepository =
+          module.get<RoleByUserRepository>(RoleByUserRepository);
+        resultsCenterRepository = module.get<ResultsCenterRepository>(
+          ResultsCenterRepository,
+        );
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          status_id: ResultStatusData.Editing.value,
+          source: SourceEnum.Bilateral,
+        } as any);
+        (resultsCenterRepository.getAllResultsCenterByResultId as jest.Mock)
+          .mockResolvedValue([{ code: 'AFRICARICE', is_leading_result: 1 }]);
+        jest
+          .spyOn(resultsCenterRepository, 'find')
+          .mockResolvedValue([
+            { center_id: 'AFRICARICE', is_leading_result: true },
+          ] as any);
+        (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValue(
+          false,
+        );
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockClear();
+        (resultsCenterRepository.updateCenter as jest.Mock).mockClear();
+      });
+
+      it('allows an admin without asking for a centre role', async () => {
+        (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValue(true);
+
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).not.toHaveBeenCalled();
+        expect(resultsCenterRepository.updateCenter).toHaveBeenCalled();
+      });
+
+      it('allows a Center User of the lead centre (checked against the lead centre code)', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(1);
+
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).toHaveBeenCalledWith(user.id, 'AFRICARICE');
+        expect(resultsCenterRepository.updateCenter).toHaveBeenCalled();
+      });
+
+      it('rejects with 403 a Center User of ANOTHER centre, before any write', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(0);
+
+        await expect(
+          service.saveContributors(
+            10,
+            { contributing_center: [{ center_id: 'ICARDA' } as any] },
+            user,
+          ),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).toHaveBeenCalledWith(user.id, 'AFRICARICE');
+        expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
+      });
+
+      it('rejects with 403 a user without any centre assignment', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(0);
+
+        await expect(
+          service.saveContributors(
+            10,
+            { contributing_center: [] },
+            { id: 905, email: 'nocenters@cgiar.org' } as TokenDto,
+          ),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('changeResultType', () => {

@@ -1591,6 +1591,19 @@ export class BilateralCenterService {
         user,
       );
 
+      // RNB-1 — `assertCenterWrite` only gates on the review status, so a Center User of ANOTHER
+      // centre (or an account with no centre at all) could rewrite the contributors of a result
+      // they do not own. Same rule the editor applies to title/description and `updatePrimaryAssignment`
+      // applies here: an admin, or a Center User (role 9) of the result's LEAD centre.
+      const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+      if (!isAdmin) {
+        await this.assertCenterPermission(
+          user,
+          resultId,
+          'You do not have permission to edit the contributors of this result: only a Center User of the lead center can.',
+        );
+      }
+
       if (dto.contributing_center !== undefined) {
         await this.syncContributingCenters(
           resultId,
@@ -2882,6 +2895,7 @@ export class BilateralCenterService {
   private async assertCenterPermission(
     user: TokenDto,
     resultId: number,
+    message = 'You do not have permission to submit results for this center.',
   ): Promise<void> {
     const leadCenter = await this.getLeadCenter(resultId);
 
@@ -2892,9 +2906,7 @@ export class BilateralCenterService {
       );
 
     if (!isAllowed) {
-      throw new ForbiddenException(
-        'You do not have permission to submit results for this center.',
-      );
+      throw new ForbiddenException(message);
     }
   }
 
