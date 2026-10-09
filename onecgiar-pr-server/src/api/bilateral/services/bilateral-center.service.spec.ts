@@ -2237,8 +2237,9 @@ describe('BilateralCenterService', () => {
           status_id: ResultStatusData.Editing.value,
           source: SourceEnum.Bilateral,
         } as any);
-        (resultsCenterRepository.getAllResultsCenterByResultId as jest.Mock)
-          .mockResolvedValue([{ code: 'AFRICARICE', is_leading_result: 1 }]);
+        (
+          resultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
+        ).mockResolvedValue([{ code: 'AFRICARICE', is_leading_result: 1 }]);
         jest
           .spyOn(resultsCenterRepository, 'find')
           .mockResolvedValue([
@@ -2302,11 +2303,10 @@ describe('BilateralCenterService', () => {
         ).mockResolvedValue(0);
 
         await expect(
-          service.saveContributors(
-            10,
-            { contributing_center: [] },
-            { id: 905, email: 'nocenters@cgiar.org' } as TokenDto,
-          ),
+          service.saveContributors(10, { contributing_center: [] }, {
+            id: 905,
+            email: 'nocenters@cgiar.org',
+          } as TokenDto),
         ).rejects.toThrow(ForbiddenException);
 
         expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
