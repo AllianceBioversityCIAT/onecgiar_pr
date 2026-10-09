@@ -21,7 +21,7 @@ import {
 export const IPSR_S21_BUNDLE_SECTION: CatalogSection = {
   key: 'ipsr_s21_bundle',
   label: 'Complementary innovations, enablers and solutions',
-  order: 82,
+  order: 84,
   result_types: IPSR_TYPES,
   ...FROM_2026,
 };

@@ -55,6 +55,15 @@ export const CLOSED_CONTROL_LISTS: Readonly<Record<string, readonly number[]>> =
      */
     extra_geographic_scopes: [1, 2, 3, 4, 5],
     /**
+     * `ipsr_step_1.geo_scope` (QAC-T-28): the scopes the IPSR step-1 form offers plus the stored legacy id 4. The form
+     * (geoscope-management.component.ts:30-35, :183-184) lists Global 1, Regional 2, Country 3 and Sub-national 5 and, for module
+     * `ipsr`, never adds "To be determined" (50), so 50 cannot be an IPSR scope. 4 is the country scope the server WRITES for a
+     * single-country package (result-innovation-package.service.ts:301; the step-1 client reads it as 3, step-n1.component.ts:
+     * `legacyCountries = 4`). Same ids as `extra_geographic_scopes`, own name because the list is an own concept (see the note on
+     * `geographic_scopes` for the UNVERIFIED id 4).
+     */
+    ipsr_geographic_scopes: [1, 2, 3, 4, 5],
+    /**
      * `evidence.is_sharepoint` (QAC-T-17): 0 Link, 1 Upload file. Source: the stored tinyint (evidence.entity.ts) and the form's two
      * hard-coded radio options (evidence-item.component.ts `evidencesType`, booleans there; the server stores `Number(!!is_sharepoint)`,
      * evidences.service.ts:842,894).

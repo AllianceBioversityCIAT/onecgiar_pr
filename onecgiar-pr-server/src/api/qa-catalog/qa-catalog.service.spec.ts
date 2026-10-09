@@ -170,7 +170,7 @@ describe('QaCatalogService.getCatalog', () => {
 
   it('uses the code catalog when no source is injected: 2026 has the common sections (200), an undeclared year is 404', () => {
     const res = service.getCatalog(2026);
-    expect(res.catalog_version).toBe('2026.26');
+    expect(res.catalog_version).toBe('2026.27');
     expect(res.fields.map((f) => f.key)).toEqual(
       expect.arrayContaining(['general.title', 'geo.scope', 'evidence.items']),
     );
@@ -187,7 +187,8 @@ describe('QaCatalogService.getCatalog', () => {
     const ipsrKeys = forIpsr.map((f) => f.key);
     const geoScope = forIpsr.find((f) => f.key === 'ipsr_step_1.geo_scope');
     expect(geoScope).toBeDefined();
-    expect(geoScope.required).toBe(false);
+    // QAC-T-28: the IPSR scope radio is required in the form (GM:10), still not confirmed by the live function
+    expect(geoScope.required).toBe(true);
     expect(ipsrKeys).toEqual(
       expect.arrayContaining(['ipsr_step_1.regions', 'ipsr_step_1.countries']),
     );

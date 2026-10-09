@@ -20,8 +20,8 @@ import { PendingCatalogEntry } from './types';
  *
  * QAC-T-15 (2026-10-07) bound the columns of the ToC mappings (`results_toc_result_indicators`, `result_indicators_targets`),
  * the centers and science-programs `from_toc` flags, and `result_by_institutions_by_deliveries_type` (partner roles) and
- * removed their entries. `partners.kp_author_affiliations` (and its `roles`) was catalogued by QAC-T-22; the still uncatalogued field
- * that reads the partner-role rows is `ipsr_step_1.scaling_partners.partner_role` (its columns are covered by the external partners role path).
+ * removed their entries. `partners.kp_author_affiliations` (and its `roles`) was catalogued by QAC-T-22 and
+ * `ipsr_step_1.scaling_partners.partner_role` by QAC-T-28 (its columns are covered by the external partners role path).
  *
  * Known gap (QAC-T-11, REVIEW D1 + D2): the IPSR step 3 evidence lists live in `result_ip_step_three_evidence`, a table
  * created by migration 1790347604000-IpsrStepThreeEvidence and used with raw SQL (evidences.repository.ts); it has NO
@@ -93,15 +93,8 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'from_toc',
   ),
 
-  // C-4 Geographic location
-  // QAC-T-16: `geo.countries` / `geo.extra_countries` now bind these columns (their `subnational` subfield); the entries stay only
-  // for the still uncatalogued IPSR key, which shares them (a column shared with a catalogued field may appear here).
-  ...twoHop(
-    'result_country_subnational',
-    'ipsr_step_1.countries.sub_national',
-    'result_country_id',
-    'clarisa_subnational_scope_code',
-  ),
+  // C-4 Geographic location (QAC-T-16: `geo.countries` / `geo.extra_countries` bind the `result_country_subnational` columns through their
+  // `subnational` subfield; QAC-T-28: `ipsr_step_1.countries` does too, so the table has no pending entry left)
 
   // C-5 Evidence (QAC-T-17: description, source, the file fields and every flag column are bound by `evidence.items`;
   // evidence_sharepoint.document_id / folder_path moved to NOT_FOR_QA)
@@ -189,12 +182,6 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   // IPSR (QAC-T-11) · result_innovation_package
   ...stage2(
     'result_innovation_package',
-    'ipsr_step_1.scaling_ambition_blurb (generated read-only text) and ipsr_step_1.participants_consent',
-    'scaling_ambition_blurb',
-    'participants_consent',
-  ),
-  ...stage2(
-    'result_innovation_package',
     'IPSR publication state and PDF report (system columns, not on the 2026 form; inventory 2026-B §7.4)',
     'is_result_ip_published',
     'ipsr_pdf_report',
@@ -242,31 +229,11 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'use_details_of_evidence',
   ),
 
-  // IPSR (QAC-T-11) · step 1 tables
-  ...twoHop(
-    'result_ip_eoi_outcomes',
-    'ipsr_step_1.eoi_outcomes (required by the live function; reaches the package through result_by_innovation_package)',
-    'toc_result_id',
-  ),
+  // IPSR (QAC-T-11) · step 1 tables (QAC-T-28: `ipsr_step_1.*` is fully catalogued; only the contributing_toc flag stays pending)
   ...stage2(
     'result_ip_eoi_outcomes',
     'contributing_toc flag (not on the 2026 form)',
     'contributing_toc',
-  ),
-  ...stage2(
-    'result_ip_expert_workshop_organized',
-    'ipsr_step_1.workshop_facilitators.email',
-    'email',
-  ),
-  ...stage2(
-    'results_by_institution',
-    'ipsr_step_1.scaling_partners (role 5; shares the external partners binding, optional)',
-    'institutions_id',
-  ),
-  ...stage2(
-    'evidence',
-    'ipsr_step_1.workshop_participants_link (evidence type 5, optional; shares the evidence binding)',
-    'link',
   ),
 
   // IPSR (QAC-T-11) · step 2.1 / 2.2 tables (child complementary result: 2-hop; step 2.2: admin-only, REVIEW D19)

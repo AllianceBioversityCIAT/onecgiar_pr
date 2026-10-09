@@ -1,6 +1,6 @@
 // @akili-spec quality-assurance/qa-field-catalog
 // QAC-T-11 · helpers shared by the IPSR (innovation package) section files. Data only.
-import { CatalogSubField } from '../types';
+import { CatalogSubField, Condition } from '../types';
 
 /** Every IPSR row applies to the innovation package result type only. */
 export const IPSR_TYPES = ['innovation_package'];
@@ -18,7 +18,14 @@ export const col = (table: string, column: string) => ({
   column,
 });
 
-/** Subfield of a list. Row-level rules stay in the inventory (subfields carry no `required_when`, QAC-R-5). */
+/** QAC-T-28: row-level rule of a subfield. Unconditional -> `required: true`; conditional -> `required: false` + `required_when`. */
+export interface SubRule {
+  required?: boolean;
+  required_when?: Condition;
+  visible_when?: Condition;
+}
+
+/** Subfield of a list; `rule` is its optional row-level rule (none = optional and always shown). */
 export const sub = (
   table: string,
   key: string,
@@ -26,11 +33,14 @@ export const sub = (
   type: CatalogSubField['type'],
   column: string = key,
   control_list?: string,
+  rule: SubRule = {},
 ): CatalogSubField => ({
   key,
   label,
   type,
   ...(control_list ? { control_list } : {}),
-  required: false,
+  required: rule.required ?? false,
+  ...(rule.required_when ? { required_when: rule.required_when } : {}),
+  ...(rule.visible_when ? { visible_when: rule.visible_when } : {}),
   storage: col(table, column),
 });

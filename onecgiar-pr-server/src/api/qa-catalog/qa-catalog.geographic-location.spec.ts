@@ -240,15 +240,10 @@ describe('QAC-T-16 geographic location (Results)', () => {
       );
     });
 
-    it('PENDING_CATALOG keeps the result_country_subnational columns only for the IPSR key', () => {
-      const entries = PENDING_CATALOG.filter(
-        (e) => e.table === 'result_country_subnational',
-      );
-      expect(entries.length).toBeGreaterThan(0);
-      for (const e of entries) {
-        expect(e.reason).toContain('ipsr_step_1.countries.sub_national');
-        expect(e.reason).not.toContain('geo.');
-      }
+    it('result_country_subnational has no PENDING_CATALOG entry left: geo.countries, geo.extra_countries and (QAC-T-28) ipsr_step_1.countries bind its columns', () => {
+      expect(
+        PENDING_CATALOG.filter((e) => e.table === 'result_country_subnational'),
+      ).toEqual([]);
     });
 
     it('the subnational path binding is a PathBinding (validator-checked)', () => {

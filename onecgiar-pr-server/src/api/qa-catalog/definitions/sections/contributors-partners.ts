@@ -101,7 +101,7 @@ const tocRowsOfInitiative = (
  * `partners.external_partners` (role 2) and, since QAC-T-22, `partners.kp_additional_partners` (role 8): the KP picker renders the same
  * chips (NS.html:105-179 for the roles, `[isComplete]="!!option?.delivery?.length"`).
  */
-const PARTNER_SUBFIELDS: CatalogSubField[] = [
+export const PARTNER_SUBFIELDS: CatalogSubField[] = [
   {
     key: 'institution',
     label: 'Partner',

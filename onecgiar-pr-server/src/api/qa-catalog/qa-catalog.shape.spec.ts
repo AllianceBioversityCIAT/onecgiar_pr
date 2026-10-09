@@ -1026,7 +1026,7 @@ describe('the real catalog definitions', () => {
       'other_output',
       'policy_change',
     ]);
-    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 26 });
+    expect(CATALOG_VERSIONS[2026]).toEqual({ portfolio: 'P25', revision: 27 });
   });
 
   it('2026-10-06 amendment: no `toc_alignment` / `linked_results` section exists; every `toc.*` and `linked.*` field lives in `contributors_partners` (one client page)', () => {
@@ -1202,7 +1202,7 @@ describe('the real catalog definitions', () => {
     expect(used.filter((k) => k === 'general.is_replicated')).toHaveLength(4);
   });
 
-  it('QAC-R-5: the IPSR step-1 geography is unconfirmed and optional (the live step-1 function does not test it), and innovation_package carries no common geo.* key', () => {
+  it('QAC-R-5: the IPSR step-1 geography is form-only (the live step-1 function does not test it: unconfirmed), and innovation_package carries no common geo.* key', () => {
     const byKey = (k: string) => CATALOG_FIELDS.find((f) => f.key === k);
     for (const key of [
       'ipsr_step_1.geo_scope',
@@ -1212,7 +1212,8 @@ describe('the real catalog definitions', () => {
       const field = byKey(key);
       expect(field).toBeDefined();
       expect(field.result_types).toEqual(['innovation_package']);
-      expect(field.required).toBe(false);
+      // QAC-T-28: the scope is required by the form (GM:10); regions / countries only when their picker is shown
+      expect(field.required).toBe(key === 'ipsr_step_1.geo_scope');
       expect(field.required_confirmed).toBe(false);
     }
     // The IPSR step-1 writer leaves result_region/result_country.geo_scope_role_id NULL: a role filter finds nothing.
