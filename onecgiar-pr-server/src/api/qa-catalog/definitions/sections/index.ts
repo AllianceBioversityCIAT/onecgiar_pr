@@ -53,7 +53,11 @@ import {
   IPSR_S3_WORKSHOP_SECTION,
   IPSR_STEP_3_FIELDS,
 } from './ipsr-step-3';
-import { IPSR_S4_MATERIALS_SECTION, IPSR_STEP_4_FIELDS } from './ipsr-step-4';
+import {
+  IPSR_S4_INVESTMENT_SECTION,
+  IPSR_S4_MATERIALS_SECTION,
+  IPSR_STEP_4_FIELDS,
+} from './ipsr-step-4';
 
 // One file per section; per-type tasks add theirs here.
 export const CATALOG_SECTIONS: CatalogSection[] = [
@@ -83,6 +87,7 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   IPSR_S3_WORKSHOP_SECTION,
   IPSR_S3_CORE_SECTION,
   IPSR_S3_COMPLEMENTARY_SECTION,
+  IPSR_S4_INVESTMENT_SECTION,
   IPSR_S4_MATERIALS_SECTION,
 ];
 

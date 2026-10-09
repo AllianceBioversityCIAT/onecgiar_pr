@@ -1,8 +1,8 @@
 {
   "years": {
     "2026": {
-      "revision": 29,
-      "content_hash": "267f8f2489fdc8c79c3b0015099075cf8f1c2a6a999e5f1d10b44de2b92ac5bc"
+      "revision": 30,
+      "content_hash": "3a8cb6bdf3215a74aa765cb0901c998285c7aed495a643dcea344b9b0d487339"
     }
   },
   "keys": [
@@ -119,6 +119,9 @@
     "field:ipsr_step_3.core.readiness_level",
     "field:ipsr_step_3.core.use_evidences",
     "field:ipsr_step_3.core.use_level",
+    "field:ipsr_step_4.bilateral_investment",
+    "field:ipsr_step_4.initiative_investment",
+    "field:ipsr_step_4.partner_investment",
     "field:ipsr_step_4.reference_materials",
     "field:knowledge_product.accessibility_cg",
     "field:knowledge_product.accessibility_wos",
@@ -189,6 +192,7 @@
     "section:ipsr_s3_complementary",
     "section:ipsr_s3_core",
     "section:ipsr_s3_workshop",
+    "section:ipsr_s4_investment",
     "section:ipsr_s4_materials",
     "section:iu_current_use",
     "section:iu_investment",
@@ -403,6 +407,16 @@
     "subfield:ipsr_step_3.core.use_evidences/link",
     "subfield:ipsr_step_3.core.use_evidences/nutrition_related",
     "subfield:ipsr_step_3.core.use_evidences/poverty_related",
+    "subfield:ipsr_step_4.bilateral_investment/is_determined",
+    "subfield:ipsr_step_4.bilateral_investment/kind_cash",
+    "subfield:ipsr_step_4.bilateral_investment/project",
+    "subfield:ipsr_step_4.initiative_investment/is_determined",
+    "subfield:ipsr_step_4.initiative_investment/kind_cash",
+    "subfield:ipsr_step_4.initiative_investment/program",
+    "subfield:ipsr_step_4.partner_investment/institution",
+    "subfield:ipsr_step_4.partner_investment/is_determined",
+    "subfield:ipsr_step_4.partner_investment/kind_cash",
+    "subfield:ipsr_step_4.partner_investment/partner_type",
     "subfield:ipsr_step_4.reference_materials/link",
     "subfield:knowledge_product.accessibility_cg/accessibility",
     "subfield:knowledge_product.accessibility_cg/open_access",

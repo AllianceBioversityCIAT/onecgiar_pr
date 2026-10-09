@@ -302,7 +302,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Description:** Owner decision: add the TypeORM entity for the existing `result_ip_step_three_evidence` table (no migration) so the catalog can bind it. Core and complementary evidence-based readiness / use levels with their evidence lists (max 6; required when level ≠ 0 per form; VS3:19-47, 231-264); current use of the core (actors / organizations / measures with evidence link; hidden when use level is 0; VS3:49-230); `assessed_during_workshop` and the current-level table visible per the form; complementary levels' requirement per VS3. Keys from inventory 2026-B §3.7.
 - **Depends on:** QAC-T-29
 
-### QAC-T-31 — IPSR Step 4 completed · P2-3925
+### [x] QAC-T-31 — IPSR Step 4 completed · P2-3925
 
 - **Type:** server · **Review:** full
 - **Description:** The three investment lists (CGIAR programs, W3 / bilateral projects, partner co-investment; amount or "yet to be determined", VS4:45-103) on the innovation-use pattern; reference materials link rule. Keys from inventory 2026-B §3.8. Fix the stale "pending" comment in ipsr-step-4.ts.

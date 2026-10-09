@@ -100,8 +100,8 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
 
   // Innovation development estimates budgets (result_initiative_budget / non_pooled_projetct_budget / result_institutions_budget):
   // `kind_cash` / `is_determined` were bound by QAC-T-18 (innovation_dev.estimates_pooled|non_pooled|partners, path bindings) and left
-  // this list; QAC-T-20 binds the same columns again for innovation_use.investment.*. They still serve ipsr_step_4.*_investment (not
-  // catalogued yet), covered by those bindings until that field is described.
+  // this list; QAC-T-20 binds the same columns again for innovation_use.investment.*. QAC-T-31 binds them a third time for
+  // ipsr_step_4.*_investment (the IPSR step 4 tables).
 
   // Policy change: `amount`, `status_amount` and `actors_influenced` were bound by QAC-T-21 (policy_change.usd_amount|amount_status|actors_influenced) and left this list.
 

@@ -397,3 +397,10 @@
 - Level gates (evidence required at level ≠ 0; current use hidden at use level 0) not stated: stored values are level-table row ids, not level numbers — documented gap.
 - Attempt 1 → FAIL (legacy single-link evidence columns moved to NOT_FOR_QA, but pre-P2-3824 and carried-over packages hold their only evidence there). Attempt 2 → PASS (columns back in PENDING with that reason). 624/624, tsc and eslint clean; snapshot 356 → 430, none removed. Leader fixed one stale comment.
 - SIDE FINDING (confirmed by the Reviewer, shipped in Results): `innovation_use.use_level.readiness_level_explanation` gates on `innovation_use_level in [5..9]`, but the column stores the level-table row id (= level + 1): the rule matches levels 4–8 instead of 5–9. Proposed fix to the owner: a read-only level-number lookup (T-32).
+
+### QAC-T-31 — IPSR Step 4 completed · P2-3925 — PASS (attempt 2)
+
+- Date: 2026-10-09 · catalog 2026.30
+- Delivered: `ipsr_step_4.initiative_investment` / `bilateral_investment` / `partner_investment` (active parent rows; `kind_cash` required when `is_determined` false or NULL, VS4:45-103; `is_determined`; identity; partner type) reusing the innovation-use budget subfields; `reference_materials` link required per row (form). New section `ipsr_s4_investment` (order 89; materials 90).
+- Attempt 1 → FAIL (partner list binds every active partner row of any role — role-5 scaling partners have no budget row and were marked as missing an amount; contract described VS4 wrongly). Neither faithful filter (roles 2 or 7; budget row exists) is expressible → Attempt 2 documents it: Known gap 14 extended to `ipsr_step_4.*` and `innovation_use.investment.*` (the row rule applies only to elements with an active budget row); inventory "row exists" condition recorded as a deviation. PASS. 637/637, tsc and eslint clean; snapshot 430 → 444, none removed. Leader applied two wording advisories in the contract.
+- IPSR (T-27..T-31) complete: GI, C&P and the four Package-and-Assess steps.

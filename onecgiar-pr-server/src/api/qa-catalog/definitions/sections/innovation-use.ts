@@ -413,7 +413,7 @@ function usageLists(
 }
 
 // ---- investment tables (EST; same rows as innovation_dev.estimates_*, see the header) ------------------------------------------------
-const budgetSubfields = (
+export const budgetSubfields = (
   budgetTable: string,
   parentFk: string,
 ): CatalogSubField[] => [
