@@ -685,18 +685,10 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
   // (2) evidence for every Impact-Area marker set to Principal (validateCheckBoxes() returns '' when covered),
   // (3) Innovation-Readiness evidence when the readiness level is 1-9 (Innovation Development, type 7, only).
   // Reuses the same helpers that drive the yellow warnings so the check and the alerts never disagree.
-  // Single source for "no evidence is required" (Innovation Development at readiness level 0, no Principal marker
-  // left uncovered). The grey note in the template and the evidence counter both read this, so they cannot disagree.
-  get evidenceNotRequired(): boolean {
-    return this.isOptional;
-  }
-
   get evidenceSectionComplete(): boolean {
     const resultTypeId = this.api.dataControlSE.currentResult?.result_type_id;
-    // validateCheckBoxes() can switch `isOptional` off (Principal marker without evidence), so it must run
-    // BEFORE the exemption is read: the counter then agrees with the "No evidence is required" note.
+    const hasBaseEvidence = this.evidencesBody.evidences.length > 0 || resultTypeId == 5;
     const markersCovered = !this.validateCheckBoxes();
-    const hasBaseEvidence = this.evidencesBody.evidences.length > 0 || resultTypeId == 5 || (resultTypeId == 7 && this.evidenceNotRequired);
     const readinessCovered = resultTypeId !== 7 || this.validateHasInnoReadinessLevelEvidence();
     return hasBaseEvidence && markersCovered && readinessCovered;
   }
