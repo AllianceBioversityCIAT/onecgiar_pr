@@ -4,6 +4,7 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { HttpStatus } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { RoleByUserRepository } from '../role-by-user/RoleByUser.repository';
 
 describe('UserController', () => {
   let controller: UserController;
@@ -104,6 +105,10 @@ describe('UserController', () => {
         {
           provide: UserService,
           useValue: mockUserService,
+        },
+        {
+          provide: RoleByUserRepository,
+          useValue: { isUserAdmin: jest.fn().mockResolvedValue(true) },
         },
       ],
     }).compile();
