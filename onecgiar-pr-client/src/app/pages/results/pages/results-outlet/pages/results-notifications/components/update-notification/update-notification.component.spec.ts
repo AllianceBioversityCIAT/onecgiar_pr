@@ -130,6 +130,37 @@ describe('UpdateNotificationComponent', () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
 
+    it('review request: the CTA renders with the drawer URL and navigates in-app once', () => {
+      const { f } = build(NotificationType.BILATERAL_RESULT_SUBMITTED);
+      const cta: HTMLAnchorElement = f.nativeElement.querySelector('[data-testid="update-validate-cta"]');
+      const expected = '/result-framework-reporting/entity-details/SP03/bilateral-review?reviewResult=9544&reviewResultId=91';
+
+      expect(cta.textContent?.trim()).toBe('Click here to validate the bilateral result');
+      expect(cta.getAttribute('href')).toBe(expected);
+      expect(click(cta).defaultPrevented).toBe(true);
+      expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
+      expect(router.navigateByUrl).toHaveBeenCalledWith(expected);
+    });
+
+    it('review request: Ctrl-click on the CTA keeps the href (not prevented, no navigation)', () => {
+      const { f } = build(NotificationType.BILATERAL_RESULT_SUBMITTED);
+      const cta: HTMLAnchorElement = f.nativeElement.querySelector('[data-testid="update-validate-cta"]');
+      expect(click(cta, { ctrlKey: true }).defaultPrevented).toBe(false);
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('review request without an SP code: no CTA', () => {
+      const { f } = build(NotificationType.BILATERAL_RESULT_SUBMITTED, {
+        obj_result: { result_code: 9544, title: 'T', obj_version: { id: 36 }, obj_result_by_initiatives: [] }
+      });
+      expect(f.nativeElement.querySelector('[data-testid="update-validate-cta"]')).toBeNull();
+    });
+
+    it('other types: no CTA', () => {
+      const { f } = build(NotificationType.BILATERAL_RESULT_APPROVED);
+      expect(f.nativeElement.querySelector('[data-testid="update-validate-cta"]')).toBeNull();
+    });
+
     it('decision: keeps Result Detail as href, opens a tab synchronously and sets the center editor URL', () => {
       const { a } = build(NotificationType.BILATERAL_RESULT_APPROVED);
       expect(a.getAttribute('href')).toBe('/result/result-detail/9544/general-information?phase=36');

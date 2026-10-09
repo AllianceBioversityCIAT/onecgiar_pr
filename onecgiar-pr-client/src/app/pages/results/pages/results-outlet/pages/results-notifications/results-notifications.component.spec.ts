@@ -47,7 +47,8 @@ describe('ResultsNotificationsComponent', () => {
       get_section_information: jest.fn(),
       get_sent_notifications: jest.fn(),
       get_updates_notifications: jest.fn(),
-      markAllUpdatesNotificationsAsRead: jest.fn(),
+      markAllBellRead: jest.fn().mockResolvedValue(undefined),
+      bellCount: signal(0),
       resetNotificationInformation: jest.fn(),
       resetFilters: jest.fn(),
       getAllPhases: jest.fn(),
@@ -76,7 +77,13 @@ describe('ResultsNotificationsComponent', () => {
       hasMore: false,
       historyLoading: false,
       loadingMore: false,
-      loadMore: jest.fn()
+      loadMore: jest.fn(),
+      // @akili-spec notifications/admin-pending-paging (PPG-T-5): pending paging, exhausted by default.
+      hasMorePending: false,
+      pendingHasMore: jest.fn(() => false),
+      pendingTotal: jest.fn(() => 0),
+      loadingMorePending: false,
+      loadMorePending: jest.fn()
     };
 
     routerEvents$ = new Subject<any>();
@@ -761,7 +768,7 @@ describe('ResultsNotificationsComponent', () => {
     });
 
     // a11y regression (FTD-T-2 -> FTD-T-3 browser run): spartan's popover default puts role="dialog" on the
-    // CDK overlay container; ours must be neutralised (role="none" on hlm-popover) so exactly ONE named dialog
+    // CDK overlay container; ours must be neutralised (role="presentation" on hlm-popover) so exactly ONE named dialog
     // exists per facet (hlm-popover-content). Under Jest the brain mock renders no overlay container, so the
     // container's real ARIA is only provable in the browser; this asserts the template wiring only.
     it('each facet has exactly one named dialog: hlm-popover-content carries role=dialog + facet label, and its hlm-popover host neutralises the overlay container role with role=none', () => {
@@ -770,7 +777,7 @@ describe('ResultsNotificationsComponent', () => {
       const popovers = Array.from(root.querySelectorAll('hlm-popover'));
       expect(popovers.length).toBeGreaterThan(0);
       for (const popover of popovers) {
-        expect(popover.getAttribute('role')).toBe('none');
+        expect(popover.getAttribute('role')).toBe('presentation');
         const contents = popover.querySelectorAll('hlm-popover-content');
         expect(contents.length).toBe(1);
         expect(contents[0].getAttribute('role')).toBe('dialog');
@@ -780,7 +787,7 @@ describe('ResultsNotificationsComponent', () => {
       // Wiring proof: the template attribute alone survives a revert of the helm edit, but the BrnPopover
       // instance only receives `role` if 'role' is forwarded in hlm-popover.ts hostDirectives.inputs.
       for (const facet of ftdComponent.filterFacets) {
-        expect(brnPopoverFor(facet.key).role).toBe('none');
+        expect(brnPopoverFor(facet.key).role).toBe('presentation');
       }
     });
 
@@ -1064,7 +1071,7 @@ describe('ResultsNotificationsComponent', () => {
       // Broken-code check performed manually (see task report): rendering the aside off
       // `panel.portal()` alone (dropping the `panel.isWide() &&` guard) makes this assertion fail —
       // restored before this run.
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
       expect(aside).toBeNull();
     });
 
@@ -1073,7 +1080,7 @@ describe('ResultsNotificationsComponent', () => {
       panelPortal.set({ kind: 'stub-portal' });
       dspFixture.detectChanges();
 
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
       expect(aside).not.toBeNull();
     });
 
@@ -1082,7 +1089,7 @@ describe('ResultsNotificationsComponent', () => {
       panelPortal.set(null);
       dspFixture.detectChanges();
 
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
       expect(aside).toBeNull();
     });
 
@@ -1092,7 +1099,7 @@ describe('ResultsNotificationsComponent', () => {
       panelLabelledBy.set('detail-heading-123');
       dspFixture.detectChanges();
 
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]');
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside');
       expect(aside?.getAttribute('aria-labelledby')).toBe('detail-heading-123');
     });
 
@@ -1101,7 +1108,7 @@ describe('ResultsNotificationsComponent', () => {
       panelPortal.set({ kind: 'stub-portal' });
       dspFixture.detectChanges();
 
-      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside[role="complementary"]') as HTMLElement;
+      const aside = (dspFixture.nativeElement as HTMLElement).querySelector('aside') as HTMLElement;
       // FALSIFIER: reverting to the old static `top-[24px] h-[calc(100vh-140px)]` classes (no
       // `--pr-shell-header-height` reference) fails this assertion — observed red before the fix.
       // Asserted on the raw `style` attribute string, not `el.style.top/.height`: jsdom's CSSOM does
@@ -1144,31 +1151,55 @@ describe('ResultsNotificationsComponent', () => {
       expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Announcements');
     });
 
-    it('renders "Mark all as read" only when there is at least one unread Update, and it delegates to the service', () => {
+    const findMarkAll = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
+        b.textContent?.includes('Mark all as read')
+      ) as HTMLButtonElement | undefined;
+
+    // BRS-T-7 (BRS-R-3/R-5): the button follows the bell badge (all phases), not the phase-filtered
+    // `notificationsPending`, and delegates to the shared `markAllBellRead()`.
+    it('shows "Mark all as read" while the bell has a badge even if the filtered view has 0 unread updates, and delegates to markAllBellRead', () => {
+      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+      resultsNotificationsServiceMock.bellCount.set(3);
+      fixture.detectChanges();
+
+      const button = findMarkAll();
+      expect(button).toBeTruthy();
+
+      button.click();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render "Mark all as read" when the bell count is 0, even with unread updates in the filtered view', () => {
       resultsNotificationsServiceMock.updatesData = {
         notificationAnnouncements: [],
         notificationsPending: [{ notification_id: 1 }],
         notificationsViewed: []
       };
+      resultsNotificationsServiceMock.bellCount.set(0);
       fixture.detectChanges();
 
-      const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
-        b.textContent?.includes('Mark all as read')
-      ) as HTMLButtonElement;
-      expect(button).toBeTruthy();
-
-      button.click();
-      expect(resultsNotificationsServiceMock.markAllUpdatesNotificationsAsRead).toHaveBeenCalled();
+      expect(findMarkAll()).toBeFalsy();
     });
 
-    it('does not render "Mark all as read" when there is nothing pending', () => {
-      resultsNotificationsServiceMock.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+    it('ignores a second click while the first markAllBellRead() is still in flight', async () => {
+      let resolve: () => void;
+      resultsNotificationsServiceMock.markAllBellRead.mockReturnValue(new Promise<void>(r => (resolve = r)));
+      resultsNotificationsServiceMock.bellCount.set(2);
       fixture.detectChanges();
 
-      const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
-        b.textContent?.includes('Mark all as read')
-      );
-      expect(button).toBeFalsy();
+      const p1 = component.onMarkAllRead();
+      const p2 = component.onMarkAllRead();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(1);
+      resolve();
+      await Promise.all([p1, p2]);
+      await component.onMarkAllRead();
+      expect(resultsNotificationsServiceMock.markAllBellRead).toHaveBeenCalledTimes(2);
+    });
+
+    it('swallows a markAllBellRead() rejection (both legs failed) without an unhandled error', async () => {
+      resultsNotificationsServiceMock.markAllBellRead.mockRejectedValue(new Error('x'));
+      await expect(component.onMarkAllRead()).resolves.toBeUndefined();
     });
   });
 
@@ -1223,6 +1254,44 @@ describe('ResultsNotificationsComponent', () => {
       fixture.detectChanges();
 
       expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Loading history…');
+    });
+
+    // @akili-spec notifications/admin-pending-paging (PPG-T-5, PPG-R-5): the pending "Load more".
+    const getPendingLoadMore = () => (fixture.nativeElement as HTMLElement).querySelector('[data-testid="load-more-pending"]') as HTMLButtonElement | null;
+
+    it('PPG-R-5 ordinary user: no pending "Load more" when no source has more pending rows', () => {
+      resultsNotificationsServiceMock.hasMorePending = false;
+      fixture.detectChanges();
+
+      expect(getPendingLoadMore()).toBeNull();
+    });
+
+    it('PPG-R-5 admin first paint: shows the pending "Load more" while a source has more pending rows, and it delegates to loadMorePending', () => {
+      resultsNotificationsServiceMock.hasMorePending = true;
+      fixture.detectChanges();
+
+      const button = getPendingLoadMore()!;
+      expect(button).toBeTruthy();
+      expect(button.disabled).toBe(false);
+      button.click();
+      expect(resultsNotificationsServiceMock.loadMorePending).toHaveBeenCalled();
+      expect(resultsNotificationsServiceMock.loadMore).not.toHaveBeenCalled();
+    });
+
+    it('PPG-R-5: the pending "Load more" is disabled and aria-busy while loadingMorePending', () => {
+      resultsNotificationsServiceMock.hasMorePending = true;
+      resultsNotificationsServiceMock.loadingMorePending = true;
+      fixture.detectChanges();
+      expect(getPendingLoadMore()!.disabled).toBe(true);
+      expect(getPendingLoadMore()!.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('PPG-R-5: the pending "Load more" is hidden during the initial skeleton gate', () => {
+      resultsNotificationsServiceMock.hasMorePending = true;
+      resultsNotificationsServiceMock.initialLoading = true;
+      fixture.detectChanges();
+
+      expect(getPendingLoadMore()).toBeNull();
     });
 
     // Falsifier (a): all hasMore=false and the button is rendered -> fail.
@@ -1313,6 +1382,83 @@ describe('ResultsNotificationsComponent', () => {
       fixture.detectChanges();
 
       expect(component.showFilteredHistoryHint).toBe(false);
+    });
+
+    // @akili-spec notifications/admin-pending-paging (PPG-T-6, PPG-R-7 / PPG-R-8)
+    describe('PPG-T-6 - tab totals with an unloaded pending remainder + partial-filter notice', () => {
+      const NOTICE = 'Showing results from loaded notifications only. Load more pending to include the rest.';
+      const updateRow = (id: number) => ({ notification_id: id, read: false, registered_date: '2026-09-29T09:00:00Z' });
+      const receivedRow = (id: number) => ({ share_result_request_id: id, request_status_id: 1, requested_date: '2026-09-29T09:00:00Z' });
+      const seed = () => {
+        const se = resultsNotificationsServiceMock;
+        se.updatesData = { notificationAnnouncements: [], notificationsPending: Array.from({ length: 50 }, (_, i) => updateRow(i + 1)), notificationsViewed: [] };
+        se.receivedData = { receivedContributionsPending: [receivedRow(1), receivedRow(2)], receivedContributionsDone: [] };
+        se.hasMorePending = true;
+        se.pendingHasMore = jest.fn((source: string) => source === 'updates');
+        se.pendingTotal = jest.fn((source: string) => (source === 'updates' ? 6000 : 2));
+      };
+
+      it('test 1: no filter - All and Info include the 5,950 update remainder, Decision does not', () => {
+        seed();
+        const loadedAll = component.sourceScopedList.length;
+        const loadedDecision = component.sourceScopedList.filter(i => i.needsDecision).length;
+        const loadedInfo = loadedAll - loadedDecision;
+        expect(component.allTabCount).toBe(loadedAll + 5950);
+        expect(component.infoTabCount).toBe(loadedInfo + 5950);
+        expect(component.decisionTabCount).toBe(loadedDecision);
+      });
+
+      it('test 1b: a received remainder lands in Decision + All (not Info), and only on the Received side', () => {
+        seed();
+        const se = resultsNotificationsServiceMock;
+        se.pendingHasMore = jest.fn((source: string) => source === 'received');
+        se.pendingTotal = jest.fn((source: string) => (source === 'received' ? 102 : 50));
+        const loaded = component.sourceScopedList;
+        const loadedDecision = loaded.filter(i => i.needsDecision).length;
+        const loadedInfo = loaded.length - loadedDecision;
+        expect(component.decisionTabCount).toBe(loadedDecision + 100);
+        expect(component.infoTabCount).toBe(loadedInfo);
+        expect(component.allTabCount).toBe(loaded.length + 100);
+
+        component.activeSource.set('sent');
+        expect(component.decisionTabCount).toBe(component.sourceScopedList.filter(i => i.needsDecision).length);
+      });
+
+      it('test 1c: remainder clamps at 0 when the total is below the loaded rows', () => {
+        seed();
+        resultsNotificationsServiceMock.pendingTotal = jest.fn(() => 10);
+        expect(component.allTabCount).toBe(component.sourceScopedList.length);
+      });
+
+      it('test 2: with a search term counts are loaded-only and the notice is visible', () => {
+        seed();
+        resultsNotificationsServiceMock.searchFilter = 'zzz-no-match';
+        fixture.detectChanges();
+        expect(component.allTabCount).toBe(component.sourceScopedList.length);
+        expect(component.infoTabCount).toBe(component.sourceScopedList.filter(i => !i.needsDecision).length);
+        expect(component.showPartialFilterNotice).toBe(true);
+        const notice = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="partial-filter-notice"]');
+        expect(notice?.textContent).toContain(NOTICE);
+      });
+
+      it('test 3a: notice hidden when the filter is cleared (hasMore still true)', () => {
+        seed();
+        resultsNotificationsServiceMock.searchFilter = 'x';
+        expect(component.showPartialFilterNotice).toBe(true);
+        resultsNotificationsServiceMock.searchFilter = null;
+        fixture.detectChanges();
+        expect(component.showPartialFilterNotice).toBe(false);
+        expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="partial-filter-notice"]')).toBeNull();
+      });
+
+      it('test 3b: notice hidden when a filter is active but no pending source has more', () => {
+        seed();
+        resultsNotificationsServiceMock.searchFilter = 'x';
+        resultsNotificationsServiceMock.hasMorePending = false;
+        fixture.detectChanges();
+        expect(component.showPartialFilterNotice).toBe(false);
+        expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="partial-filter-notice"]')).toBeNull();
+      });
     });
 
     // Falsifier (e): calling groupedTabList twice with unchanged inputs must not invoke the pipes

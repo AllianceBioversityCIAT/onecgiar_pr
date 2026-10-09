@@ -110,6 +110,8 @@ carries no footer (drawer's own `mode !== 'view'` guard, `NOTIF-T-4`, closed sco
   PATCH (`justification` only for a primary decline, `PDR-T-4`).
 
 ## PDR-T-4: primary Decline asks for a justification (`notifications/primary-decline-rejects-result`)
+
+> **SUPERSEDED for the UI by `PRA-T-2`: no primary Decline entry point is reachable any more (row button hidden, drawer `[showDecline]=false`, `?action=decline` link only consumed). `showPrimaryDeclineDialog`, `onDeclineClick()`'s primary branch and `onPrimaryDeclineConfirm()` stay as dead code (design §8.1). Kept for history.**
 Both primary Decline entry points — the row button (`onDeclineClick()`) and the drawer footer
 (`onDrawerDeclineClicked()`) — open `app-primary-decline-justification-dialog`
 (`showPrimaryDeclineDialog`, PDR-T-3) instead of today's yes/no popups, **only** when
@@ -220,6 +222,8 @@ Three new builders feed the content's new inputs, all read by the template in pl
   side effects.
 
 ## PSR-T-8: primary / bilateral contributor rows + Center notices (`bilateral-primary-sp-request`)
+
+> **Primary-row bullets below are SUPERSEDED by `PRA-T-2` (see that section at the end): the primary row button is now "Review result", there is no primary Decline, and the chip reads "Needs your review". Kept for history.**
 Two new `source:'request'` row variants, on top of the pre-existing "Contribution request"
 (W1/W2 + everything else, unchanged, `PSR-DD-10`) and the 3 new Center-facing notices (plain
 `Notification` rows, rendered through the existing `isUpdateSource` branch — no new template
@@ -467,7 +471,14 @@ code" without checking design.md CRD-DD-10's consequences note first.
 `[chain]` reads a `@let chainState` local; a second `approvalChain()` call is not narrowed under
 `strictTemplates`, and only `ngc` catches it (see `src/CLAUDE.md` §21.7).
 
-**Verified:** 2026-10-06 · qa-development-2026-ss · BELL-T-11 (`drawerAcceptLabel()` now delegates to `acceptLabelFor(row)` in `utils/request-decision.ts`, the single source shared with the bell card; it returns the explicit string ("Accept contribution" for the old `null` case), and the row template no longer needs its `?? 'Accept contribution'` fallback). Prior: BELL-T-9 (`runAutoAction()` opens the detail drawer for a ToC-carried accept, 0 PATCH; see BELL-T-9 section). Prior: BELL-T-5 attempt 2 (BELL-T-6 D-1): `ngOnChanges` re-arms `autoActionRan` when `autoAction` becomes falsy (re-hand-off on the same instance); the inbox now also reacts to same-route `queryParamMap` changes. Prior: BELL-T-7 (`notifications/bell-quick-inbox`): `runAutoAction()` gated so a link never PATCHes (see the BELL-T-7 section above); no other handler changed.
+## BRS-T-7: opening the drawer marks a received pending request seen
+`openDrawer()` calls `ResultsNotificationsService.markRequestSeen(this.notification)` (fire-and-forget,
+never blocks, never rejects) only when `isPending` (status 1 AND `!isSent`). Sent rows and done rows do
+nothing. All entry points (row click, ToC step, `runAutoAction()` ToC accept) go through `openDrawer()`,
+so the gate lives there. The inbox page's "Mark all as read" is the page's job (`onMarkAllRead()` ->
+`markAllBellRead()`, shown on `bellCount() > 0`), not this row's.
+
+**Verified:** 2026-10-06 · qa-development-2026-ss · BRS-T-7 (`notifications/bell-read-state`): `openDrawer()` marks a received pending request seen via `markRequestSeen`. Prior: BELL-T-11 (`drawerAcceptLabel()` now delegates to `acceptLabelFor(row)` in `utils/request-decision.ts`, the single source shared with the bell card; it returns the explicit string ("Accept contribution" for the old `null` case), and the row template no longer needs its `?? 'Accept contribution'` fallback). Prior: BELL-T-9 (`runAutoAction()` opens the detail drawer for a ToC-carried accept, 0 PATCH; see BELL-T-9 section). Prior: BELL-T-5 attempt 2 (BELL-T-6 D-1): `ngOnChanges` re-arms `autoActionRan` when `autoAction` becomes falsy (re-hand-off on the same instance); the inbox now also reacts to same-route `queryParamMap` changes. Prior: BELL-T-7 (`notifications/bell-quick-inbox`): `runAutoAction()` gated so a link never PATCHes (see the BELL-T-7 section above); no other handler changed.
 
 **Prior verification:** 2026-10-06 · qa-development-2026-ss · BELL-T-5 (`notifications/bell-quick-inbox`): added `autoAction`/`autoActionConsumed` (see the new BELL-T-5 section above); no change to any existing handler. Supersedes nothing below.
 
@@ -576,3 +587,29 @@ contract: `acceptLabel`, `showAlignSlot`, `requestKind`, `leadCode`/`suffix`), a
 below, which still stands for the wording/chip-sizing fixes.
 
 **Prior verification:** 2026-09-30 · qa-development-2026-ss · NOTIF-T-16 ("Declined by" wording + chip font-size/weight/gap fixes, ad-hoc user style feedback; supersedes NOTIF-T-15's stamp above which still stands, just re-stamped here)
+
+## RRC-T-9: reason line on rejection update rows
+`rejectionReasonLine` (getter) delegates to `getRejectionReasonLine()` in `notification-type.constants.ts`
+for `isUpdateSource` rows only: Rejected + `has_review_entry` shows "Reason: <comment>" (2-line clamp) or the
+shared fallback; legacy/other types render no line. Copy in `bilateral-rejection-notice.copy.ts`.
+
+**Verified:** 2026-10-06 · qa-development-2026-ss · RRC-T-9 (`bilateral/rejected-result-correction`): reason line added under the update-row sentence; no other row behaviour changed.
+
+## PRA-T-2: primary rows say "Review result", never Decline (`notifications/primary-review-not-accept`)
+- `onAcceptContribution()` / `onDrawerAccept()` call `reviewPrimaryResult()` for a primary row (no more `acceptOrReject(true)` for it): the existing accept PATCH, then on success **or HTTP 409** `NotificationNavigationService.completePrimaryReview(row, notifyLater)` - status 5 navigates to `reviewRequestUrl(row)` (review drawer), anything else shows `copy.notificationItem.primaryNotifyLater` and does NOT navigate. Other errors keep the generic "Error when requesting" toast. No confirm step, no "already answered" toast.
+- Decline is gone for primary: the row's Decline button is not rendered (`@if (!isPrimaryRequest)`), the drawer gets `[showDecline]="!isPrimaryRequest"`, and `runAutoAction()` ignores `?action=decline` for a primary row (consumes the param only, like accept under BELL-T-7).
+- Chip and `detailTitle()` read "Needs your review" (`primaryRequestChip`); the Accept label is `footer.reviewResult` via `acceptLabelFor`.
+- SP code for the URL comes from `obj_shared_inititiative` on a primary row (an ownerless legacy result has no initiative yet).
+
+**Verified:** 2026-10-07 · qa-development-2026-ss · PRA-T-2 attempt 2 (`notifications/primary-review-not-accept`): `reviewPrimaryResult()`, Decline removed for primary (row, drawer, deep link), chip "Needs your review". Supersedes the primary bullets of PSR-T-8 and PDR-T-4 above.
+
+## Primary Pending Review: result link and CTA open the review drawer (follow-up of PRA, 2026-10-07)
+- `primaryReviewUrl` (getter): for `isPrimaryRequest` with `obj_result.status_id == 5` (`primaryReviewTarget()`), `NotificationNavigationService.reviewRequestUrl(row)`; else `null` (also `null` with no SP code).
+- The primary row's result `<a>` (all three status cases) uses `primaryResultHref()` as `href`; `onResultLinkClick()` and `onDrawerResult()` navigate in-app with `router.navigateByUrl(primaryReviewUrl)` when it is set, otherwise keep the center-editor-in-new-tab path. The old "a primary request is never in the requested SP's review queue" comment was stale after PRA-R-1/PRA-R-3 and was fixed.
+- CTA `copy.notificationItem.validateBilateralCta` ("Click here to validate the bilateral result", `data-testid="validate-bilateral-cta"`) renders next to the link only when `primaryReviewUrl` is non-null; click goes through `onValidateCtaClick()` (in-app, modifier clicks keep the `href`). The same copy key feeds the inbox update rows (this component's `isUpdateSource` branch, see the next bullet) and the bell card (`pop-up-notification-item`) for `BILATERAL_RESULT_SUBMITTED`; the copy in `update-notification` is inert in the inbox, which renders only announcements there.
+
+**Verified:** 2026-10-07 · qa-development-2026-ss · primary Pending Review link + validate CTA (follow-up of `notifications/primary-review-not-accept`): `primaryReviewUrl`, `primaryResultHref()`, `onValidateCtaClick()`.
+
+- **Update rows (attempt 3):** the inbox renders every regular update through THIS component's `isUpdateSource` branch (`app-update-notification` only renders announcements). For `BILATERAL_RESULT_SUBMITTED` `submittedReviewUrl` (= `reviewRequestUrl`, null without an SP code) feeds the link `href` (`primaryResultHref()`), `onResultLinkClick()` (checked BEFORE the `isBilateralResult` center-editor path; modifier clicks keep the href), `onDrawerResult()` and the CTA. `reviewLinkUrl` = `primaryReviewUrl ?? submittedReviewUrl`. Before this the click went through `onResultLinkClick()` -> `openCenterEditorInNewTab()` (center editor in a new tab).
+
+**Verified:** 2026-10-07 · qa-development-2026-ss · attempt 3: `submittedReviewUrl` / `reviewLinkUrl` route the BILATERAL_RESULT_SUBMITTED update row link, drawer result card and CTA to the review drawer.

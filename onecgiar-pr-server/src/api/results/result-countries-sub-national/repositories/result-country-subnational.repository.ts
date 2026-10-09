@@ -171,14 +171,18 @@ export class ResultCountrySubnationalRepository
         and clarisa_subnational_scope_code not in (${codePlaceholders});
     `;
 
-    const upDateActive = `
-      update result_country_subnational  
-      set is_active = 1, 
-        last_updated_date = NOW(),
-        last_updated_by = ?
-      where result_country_id  = ?
+    // RSF-T-5 / RSF-R-4: reactivate ONE row per code (the newest id), never every historic
+    // duplicate, and none for a code that already has an active row. Two steps (read the ids,
+    // then update by id) instead of a subquery on the same table, which MySQL rejects with
+    // error 1093 ("can't specify target table for update in FROM clause").
+    const selectIdsToReactivate = `
+      select max(result_country_subnational_id) as result_country_subnational_id
+      from result_country_subnational
+      where result_country_id = ?
         and geo_scope_role_id = ?
-        and clarisa_subnational_scope_code in (${codePlaceholders});
+        and clarisa_subnational_scope_code in (${codePlaceholders})
+      group by clarisa_subnational_scope_code
+      having sum(is_active > 0) = 0;
     `;
 
     const upDateAllInactive = `
@@ -199,12 +203,29 @@ export class ResultCountrySubnationalRepository
           ...subnationals,
         ]);
 
-        return await this.query(upDateActive, [
-          userId,
+        const rowsToReactivate: {
+          result_country_subnational_id: number | string;
+        }[] = await this.query(selectIdsToReactivate, [
           rcId,
           geoScopeRoleId,
           ...subnationals,
         ]);
+        const ids = (rowsToReactivate ?? []).map(
+          (row) => row.result_country_subnational_id,
+        );
+        if (!ids.length) return rowsToReactivate;
+
+        const idPlaceholders = ids.map(() => '?').join(', ');
+        return await this.query(
+          `
+      update result_country_subnational
+      set is_active = 1,
+        last_updated_date = NOW(),
+        last_updated_by = ?
+      where result_country_subnational_id in (${idPlaceholders});
+    `,
+          [userId, ...ids],
+        );
       } else {
         return await this.query(upDateAllInactive, [
           userId,

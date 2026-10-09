@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { NotificationItemComponent } from './notification-item.component';
+import { ResultsNotificationsService } from '../../results-notifications.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
@@ -1296,6 +1298,36 @@ describe('NotificationItemComponent', () => {
     });
 
     describe('openDrawer() / closeDrawer()', () => {
+      // BRS-T-7 (BRS-R-3/R-9): opening the drawer on a received PENDING request records it as seen.
+      describe('marks the request seen (BRS-T-7)', () => {
+        let seenSpy: jest.SpyInstance;
+        beforeEach(() => {
+          seenSpy = jest.spyOn(TestBed.inject(ResultsNotificationsService), 'markRequestSeen').mockResolvedValue(true);
+        });
+
+        it('calls markRequestSeen(row) once on a received pending row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 1 };
+          component.isSent = false;
+          component.openDrawer('details');
+          expect(seenSpy).toHaveBeenCalledTimes(1);
+          expect(seenSpy).toHaveBeenCalledWith(component.notification);
+        });
+
+        it('does nothing on a sent pending row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 1 };
+          component.isSent = true;
+          component.openDrawer('details');
+          expect(seenSpy).not.toHaveBeenCalled();
+        });
+
+        it('does nothing on a done (resolved) received row', () => {
+          component.notification = { share_result_request_id: 9, request_status_id: 2 };
+          component.isSent = false;
+          component.openDrawer('details');
+          expect(seenSpy).not.toHaveBeenCalled();
+        });
+      });
+
       it('seeds an untouched tocInitiative locally, with NO global hydration, for a bilateral request', () => {
         component.notification = buildBilateral();
         const hydrateSpy = jest.spyOn(component as any, 'hydrateGlobalTocState');
@@ -2570,6 +2602,98 @@ describe('NotificationItemComponent', () => {
     // NOTIF-T-14 (closes the NOTIF-R-5 gap left by NOTIF-T-12's removal of the row-level status
     // badge) — DSP-T-4 moves the status from `drawerViewFields()`'s retired grid into `chips()`
     // (first chip, always present) instead, same `rowStatusLabel` source, for all three row-status cases.
+    describe('Updates row BILATERAL_RESULT_SUBMITTED: link + CTA open the review drawer', () => {
+      let navigate: jest.SpyInstance;
+      const drawerUrl = '/result-framework-reporting/entity-details/SP11/bilateral-review?reviewResult=9762&reviewResultId=9762';
+      const submittedRow = (overrides: any = {}) =>
+        buildUpdateFixture({
+          result_id: 9762,
+          obj_notification_type: { type: NotificationType.BILATERAL_RESULT_SUBMITTED },
+          ...overrides,
+          obj_result: {
+            result_code: 9762,
+            title: 'Submitted result',
+            source_name: 'W3/Bilaterals',
+            obj_version: { id: 36 },
+            obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP11' } }],
+            ...(overrides.obj_result ?? {})
+          }
+        });
+      const link = () => fixture.nativeElement.querySelector('.notification_content_body_text a.font-mono, .notification_content_body_text a') as HTMLAnchorElement;
+      const cta = () => fixture.nativeElement.querySelector('[data-testid="validate-bilateral-cta"]') as HTMLAnchorElement | null;
+      const fire = (el: Element, init: MouseEventInit = {}) => {
+        const e = new MouseEvent('click', { button: 0, bubbles: true, cancelable: true, ...init });
+        el.dispatchEvent(e);
+        return e;
+      };
+
+      beforeEach(() => {
+        navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      });
+
+      it('the link href is the drawer URL, never /result/result-detail, and a plain click navigates once', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+        expect(link().getAttribute('href')).toBe(drawerUrl);
+        expect(link().getAttribute('href')).not.toContain('/result/result-detail');
+        const e = fire(link());
+
+        expect(e.defaultPrevented).toBe(true);
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+        expect(openCenterSpy).not.toHaveBeenCalled();
+      });
+
+      it('Ctrl-click on the link keeps the href (not prevented, no navigation)', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+
+        expect(fire(link(), { ctrlKey: true }).defaultPrevented).toBe(false);
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('the CTA renders and navigates once', () => {
+        component.notification = submittedRow();
+        fixture.detectChanges();
+
+        expect(cta()?.textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta);
+        expect(cta()?.getAttribute('href')).toBe(drawerUrl);
+        fire(cta()!);
+
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+      });
+
+      it('the detail drawer result card navigates to the drawer URL', () => {
+        component.notification = submittedRow();
+        const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+        component.onDrawerResult();
+
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(drawerUrl);
+        expect(openCenterSpy).not.toHaveBeenCalled();
+      });
+
+      it('no SP code: no CTA and the old href', () => {
+        component.notification = submittedRow({ obj_result: { obj_result_by_initiatives: [] } });
+        fixture.detectChanges();
+
+        expect(cta()).toBeNull();
+        expect(link().getAttribute('href')).toContain('/result/result-detail/9762');
+      });
+
+      it('another update type (RESULT_CONTRIBUTION_ACCEPTED) keeps its old target and has no CTA', () => {
+        component.notification = submittedRow({ obj_notification_type: { type: NotificationType.RESULT_CONTRIBUTION_ACCEPTED } });
+        fixture.detectChanges();
+
+        expect(cta()).toBeNull();
+        expect(link().getAttribute('href')).toContain('/result/result-detail/9762');
+      });
+    });
+
     describe('chips() status (NOTIF-T-14, moved by DSP-T-4)', () => {
       it('a pending Received row (needs your decision)', () => {
         component.notification = buildRequestFixture({ request_status_id: 1 });
@@ -3152,13 +3276,13 @@ describe('NotificationItemComponent', () => {
     });
 
     describe('primary request row', () => {
-      it('renders the "Primary program request" chip, the flag icon, and the row sentence (PSR-R-9)', () => {
+      it('renders the "Needs your review" chip, the flag icon, and the row sentence (PSR-R-9, PRA-R-3)', () => {
         component.notification = buildPsrFixture({ request_type: 'primary' });
         fixture.detectChanges();
 
         const root: HTMLElement = fixture.nativeElement;
-        expect(component.rowTypeChipLabel).toBe('Primary program request');
-        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Primary program request');
+        expect(component.rowTypeChipLabel).toBe('Needs your review');
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Needs your review');
         expect(root.querySelector('.notification_avatar i.pi.pi-flag')).toBeTruthy();
 
         const bodyText = root.querySelector('.notification_content_body_text')?.textContent?.replace(/\s+/g, ' ').trim();
@@ -3176,14 +3300,184 @@ describe('NotificationItemComponent', () => {
         expect(component.creatingCenterLabel).not.toContain('()');
       });
 
-      it('renders "Accept as primary" / "Decline" as the row button labels (PSR-R-9)', () => {
+      it('PRA-R-3 label + no Decline: the row shows one "Review result" button and no Decline button', () => {
         component.notification = buildPsrFixture({ request_type: 'primary' });
         fixture.detectChanges();
 
         const acceptBtn: any = fixture.nativeElement.querySelector('[data-testid="accept-contribution-btn"]');
-        const declineBtn: any = fixture.nativeElement.querySelector('[data-testid="decline-contribution-btn"]');
-        expect(acceptBtn.text).toBe('Accept as primary');
-        expect(declineBtn.text).toBe('Decline');
+        expect(acceptBtn.text).toBe('Review result');
+        expect(fixture.nativeElement.querySelector('[data-testid="decline-contribution-btn"]')).toBeNull();
+        expect(fixture.nativeElement.textContent).not.toContain('Accept as primary');
+      });
+
+      describe('result link + CTA validate the bilateral result (follow-up of PRA)', () => {
+        let navigate: jest.SpyInstance;
+        const reviewPrefix = '/result-framework-reporting/entity-details/SP12/bilateral-review';
+        const row = (statusId: string, overrides: any = {}) =>
+          buildPsrFixture({ request_type: 'primary', ...overrides, obj_result: { status_id: statusId, result_code: 'RC-10001' } });
+        const link = () => fixture.nativeElement.querySelector('.notification_content_body_text a.font-mono') as HTMLAnchorElement;
+        const cta = () => fixture.nativeElement.querySelector('[data-testid="validate-bilateral-cta"]') as HTMLAnchorElement | null;
+
+        beforeEach(() => {
+          navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        });
+
+        it('status 5: the result link navigates once to the review drawer URL, never to /result/result-detail', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+
+          expect(link().getAttribute('href')).toContain(reviewPrefix);
+          link().dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          const url = navigate.mock.calls[0][0] as string;
+          expect(url).toContain(reviewPrefix);
+          expect(url).toContain('reviewResult=RC-10001');
+          expect(url).not.toContain('/result/result-detail');
+        });
+
+        it('status 5: the CTA renders with the drawer URL and navigates once on click', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+
+          expect(cta()?.textContent?.trim()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta);
+          expect(cta()?.getAttribute('href')).toContain(reviewPrefix);
+          cta()!.dispatchEvent(new MouseEvent('click', { button: 0, bubbles: true, cancelable: true }));
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(navigate.mock.calls[0][0]).toContain(reviewPrefix);
+        });
+
+        it('status 5: Ctrl-click on the CTA keeps the href (not prevented, no navigation)', () => {
+          component.notification = row('5');
+          fixture.detectChanges();
+          const e = new MouseEvent('click', { button: 0, ctrlKey: true, bubbles: true, cancelable: true });
+          cta()!.dispatchEvent(e);
+          expect(e.defaultPrevented).toBe(false);
+          expect(navigate).not.toHaveBeenCalled();
+        });
+
+        it('status 5: the drawer result card navigates to the review drawer URL', () => {
+          component.notification = row('5');
+          const openCenterSpy = jest.spyOn(component['notificationNavigation'], 'openCenterEditorInNewTab').mockImplementation(() => undefined);
+
+          component.onDrawerResult();
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(navigate.mock.calls[0][0]).toContain(reviewPrefix);
+          expect(openCenterSpy).not.toHaveBeenCalled();
+        });
+
+        it('status 1: keeps the Result Detail href and shows no CTA', () => {
+          component.notification = row('1');
+          fixture.detectChanges();
+
+          expect(link().getAttribute('href')).toBe(component.resultUrl(component.notification));
+          expect(link().getAttribute('href')).toContain('/result/result-detail');
+          expect(cta()).toBeNull();
+          expect(component.primaryReviewUrl).toBeNull();
+        });
+
+        it('status 5 without any SP code: no CTA and the link keeps its old target', () => {
+          component.notification = row('5', { obj_shared_inititiative: null, obj_owner_initiative: null });
+          fixture.detectChanges();
+
+          expect(component.primaryReviewUrl).toBeNull();
+          expect(cta()).toBeNull();
+          expect(link().getAttribute('href')).toContain('/result/result-detail');
+        });
+      });
+
+      describe('PRA-R-3 Review result click (accept PATCH, then drawer or notify-later)', () => {
+        let navigate: jest.SpyInstance;
+        let alertSpy: jest.SpyInstance;
+        let patchSpy: jest.SpyInstance;
+        let emitSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+          navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+          alertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
+          patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
+          emitSpy = jest.spyOn(component.requestEvent, 'emit');
+        });
+
+        const reviewRow = (statusId: string) =>
+          buildPsrFixture({ request_type: 'primary', obj_result: { status_id: statusId, result_code: 'RC-10001' } });
+
+        it('Pending Review (5): accept PATCH once, then navigateByUrl once with the bilateral-review drawer URL; no toast', () => {
+          component.notification = reviewRow('5');
+          const order: string[] = [];
+          patchSpy.mockImplementation(() => {
+            order.push('patch');
+            return of({ response: {} });
+          });
+          navigate.mockImplementation(() => {
+            order.push('navigate');
+            return Promise.resolve(true);
+          });
+
+          component.onAcceptContribution();
+
+          expect(order).toEqual(['patch', 'navigate']);
+          expect(patchSpy).toHaveBeenCalledTimes(1);
+          expect(navigate).toHaveBeenCalledTimes(1);
+          const url = navigate.mock.calls[0][0] as string;
+          expect(url).toContain('/result-framework-reporting/entity-details/SP12/bilateral-review');
+          expect(url).toContain('reviewResult=RC-10001');
+          expect(url).toContain('reviewResultId=10001');
+          expect(alertSpy).not.toHaveBeenCalled();
+          expect(emitSpy).toHaveBeenCalled();
+        });
+
+        it('Editing (1): accept PATCH, the notify-later toast, and the router is NOT called', () => {
+          component.notification = reviewRow('1');
+
+          component.onAcceptContribution();
+
+          expect(patchSpy).toHaveBeenCalledTimes(1);
+          expect(navigate).not.toHaveBeenCalled();
+          expect(alertSpy).toHaveBeenCalledTimes(1);
+          expect(alertSpy).toHaveBeenCalledWith({
+            id: 'noti',
+            title: 'You are now the primary Science Program. You will be notified when the Center submits it for review.',
+            status: 'success'
+          });
+        });
+
+        it('stale 409 on a Pending Review row: navigates to the drawer and shows NO error / already-answered toast', () => {
+          component.notification = reviewRow('5');
+          patchSpy.mockReturnValue(throwError(() => ({ status: 409 })));
+          const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+          component.onAcceptContribution();
+
+          expect(navigate).toHaveBeenCalledTimes(1);
+          expect(alertSpy).not.toHaveBeenCalled();
+          consoleSpy.mockRestore();
+        });
+
+        it('any other error: the generic error toast, no navigation', () => {
+          component.notification = reviewRow('5');
+          patchSpy.mockReturnValue(throwError(() => ({ status: 500 })));
+          const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+          component.onAcceptContribution();
+
+          expect(navigate).not.toHaveBeenCalled();
+          expect(alertSpy).toHaveBeenCalledWith({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+          consoleSpy.mockRestore();
+        });
+
+        it('the drawer footer offers no Decline for a primary row (showDecline=false)', () => {
+          component.notification = reviewRow('5');
+          fixture.detectChanges();
+          component.openDrawer('details');
+          fixture.detectChanges();
+
+          const content: NotificationDetailContentComponent = fixture.debugElement.query(By.directive(NotificationDetailContentComponent)).componentInstance;
+          expect(content.showDecline()).toBe(false);
+          expect(fixture.nativeElement.ownerDocument.querySelector('[data-testid="crd-decline-btn"]')).toBeNull();
+        });
       });
 
       it('counts under "Needs your decision" while pending (PSR-R-9)', () => {
@@ -3232,9 +3526,9 @@ describe('NotificationItemComponent', () => {
           expect(body.result_toc_result).toEqual({ planned_result: null, result_toc_results: [] });
         });
 
-        it('(4) the Accept text is "Accept as primary" for both the row and the drawer', () => {
+        it('(4) the Accept text is "Review result" for both the row and the drawer', () => {
           component.notification = buildPsrFixture({ request_type: 'primary' });
-          expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+          expect(component.drawerAcceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.reviewResult);
         });
 
         // PSR-T-8 rework attempt 2 (Reviewer finding 3): queries the real content debug instance's
@@ -3243,7 +3537,7 @@ describe('NotificationItemComponent', () => {
         // DSP-T-3: `showAlignSlot`/`acceptLabel` moved from the (now shell-only)
         // ContributionRequestDrawerComponent to NotificationDetailContentComponent — updated to
         // query the new owner, assertions unchanged.
-        it('the content actually receives showAlignSlot=false and acceptLabel="Accept as primary"', () => {
+        it('the content actually receives showAlignSlot=false and acceptLabel="Review result"', () => {
           component.notification = buildPsrFixture({ request_type: 'primary' });
           fixture.detectChanges();
           // DSP-T-3: the content only renders once the (mocked) sheet reports open — the shell's
@@ -3256,7 +3550,7 @@ describe('NotificationItemComponent', () => {
           ).componentInstance;
 
           expect(content.showAlignSlot()).toBe(false);
-          expect(content.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptAsPrimary);
+          expect(content.acceptLabel()).toBe(CONTRIBUTION_REQUEST_DRAWER_COPY.footer.reviewResult);
         });
       });
     });
@@ -3337,9 +3631,9 @@ describe('NotificationItemComponent', () => {
     // DSP-T-4 moves the request kind out to `detailTitle()` (the panel's header title, DD-6) —
     // same `rowTypeChipLabel` source as before, single source with the row's own type chip.
     describe('detailTitle() (PSR-R-11, moved by DSP-T-4)', () => {
-      it('is "Primary program request" for a primary row (incl. resolved)', () => {
+      it('is "Needs your review" for a primary row (incl. resolved)', () => {
         component.notification = buildPsrFixture({ request_type: 'primary', request_status_id: 2 });
-        expect(component.detailTitle()).toBe('Primary program request');
+        expect(component.detailTitle()).toBe('Needs your review');
       });
 
       it('is "Contributor request" for a bilateral contributor row', () => {
@@ -4741,15 +5035,19 @@ describe('NotificationItemComponent', () => {
       expect(patchSpy).not.toHaveBeenCalled();
     });
 
-    it("autoAction='decline' on a primary row -> showPrimaryDeclineDialog() true", async () => {
+    it("PRA-R-3: autoAction='decline' on a primary pending row opens no dialog, sends 0 PATCH and still reports consumed", async () => {
       component.notification = primaryRow();
+      const consumed = jest.fn();
+      component.autoActionConsumed.subscribe(consumed);
       fixture.componentRef.setInput('autoAction', 'decline');
 
       fixture.detectChanges();
       await flush();
 
-      expect(component.showPrimaryDeclineDialog()).toBe(true);
+      expect(component.showPrimaryDeclineDialog()).toBe(false);
       expect(component.showConfirmRejectDialog()).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(consumed).toHaveBeenCalledTimes(1);
     });
 
     it("autoAction='decline' on a non-primary row -> the inline reject confirm (showConfirmRejectDialog)", async () => {
@@ -4954,21 +5252,62 @@ describe('NotificationItemComponent', () => {
       expect(consumed).toHaveBeenCalledTimes(1);
     });
 
-    it('primary row + action=decline -> the justification dialog opens and 0 PATCH_updateRequest', async () => {
+    it('PRA-R-3: primary row + action=decline -> no dialog opens, 0 PATCH_updateRequest, consumed once', async () => {
       const consumed = await run(rows['primary'](), 'decline');
 
-      expect(component.showPrimaryDeclineDialog()).toBe(true);
+      expect(component.showPrimaryDeclineDialog()).toBe(false);
+      expect(component.showConfirmRejectDialog()).toBe(false);
       expect(patchSpy).not.toHaveBeenCalled();
       expect(consumed).toHaveBeenCalledTimes(1);
     });
 
-    it.each(Object.keys(rows))('%s row + action=decline -> 0 PATCH_updateRequest until the user confirms', async kind => {
+    it.each(Object.keys(rows).filter(k => k !== 'primary'))('%s row + action=decline -> 0 PATCH_updateRequest until the user confirms', async kind => {
       const consumed = await run(rows[kind](), 'decline');
 
       expect(component.showPrimaryDeclineDialog() || component.showConfirmRejectDialog()).toBe(true);
       expect(patchSpy).not.toHaveBeenCalled();
       expect(consumed).toHaveBeenCalledTimes(1);
     });
+
+    // RRC-T-9 (`bilateral/rejected-result-correction`, RRC-R-13): reason line on a rejection update row.
+    describe('rejection reason line (RRC-T-9)', () => {
+      const buildRejection = (type: string, extra: any) => ({
+        notification_id: 6001,
+        source: 'update',
+        created_date: '2026-09-30T10:00:00.000Z',
+        text: '',
+        obj_notification_type: { type },
+        obj_emitter_user: { first_name: 'System', last_name: '' },
+        obj_result: { result_code: '601', title: 'A rejected result' },
+        ...extra
+      });
+      const lineOf = () => fixture.nativeElement.querySelector('[data-testid="notification-rejection-reason"]') as HTMLElement | null;
+
+      it('shows the comment for an entry with a comment', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: true, review_comment: 'Belongs to SP12' });
+        fixture.detectChanges();
+        expect(lineOf()?.textContent).toContain('Reason:');
+        expect(lineOf()?.textContent).toContain('Belongs to SP12');
+        expect(lineOf()?.className).toContain('line-clamp-2');
+      });
+
+      it('shows the fallback for an entry with an empty comment', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: true, review_comment: '' });
+        fixture.detectChanges();
+        expect(lineOf()?.textContent).toContain('No justification was recorded.');
+      });
+
+      it('shows no line for a legacy row', () => {
+        component.notification = buildRejection('Bilateral Result Rejected', { has_review_entry: false, review_comment: null });
+        fixture.detectChanges();
+        expect(lineOf()).toBeNull();
+      });
+
+      it('shows no line for another type', () => {
+        component.notification = buildRejection('Bilateral Result Approved', { has_review_entry: true, review_comment: 'x' });
+        fixture.detectChanges();
+        expect(lineOf()).toBeNull();
+      });
+    });
   });
 });
-

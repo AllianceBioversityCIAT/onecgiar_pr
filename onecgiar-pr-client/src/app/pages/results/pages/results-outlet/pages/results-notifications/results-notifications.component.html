@@ -68,9 +68,9 @@
         @for (facet of filterFacets; track facet.key) {
           <!-- a11y (FTD-T-3): spartan's popover default puts role="dialog" on the CDK overlay container
                (unnamed, and brain exposes no aria-label for it). Neutralise it with role="none" so the
-               single named dialog is hlm-popover-content below. -->
+               single named dialog is hlm-popover-content below. ("presentation" = "none"; Sonar Web:S6821 only accepts this name.) -->
           <hlm-popover
-            role="none"
+            role="presentation"
             align="start"
             sideOffset="6"
             [autoFocus]="false"
@@ -124,7 +124,9 @@
                     <p class="text-[12px] text-[var(--pr-color-accents-5)]">{{ copy.filterToolbar.selectPhaseFirst }}</p>
                   } @else {
                     <div class="flex flex-col gap-[6px]">
+                      <label for="notifications-program-search" class="sr-only">{{ copy.filterToolbar.programSearchPlaceholder }}</label>
                       <input
+                        id="notifications-program-search"
                         type="text"
                         hlmInput
                         [placeholder]="copy.filterToolbar.programSearchPlaceholder"
@@ -274,10 +276,10 @@
 
       <div class="flex-1 min-w-[16px]"></div>
 
-      @if (this.resultsNotificationsSE?.updatesData?.notificationsPending?.length > 0) {
+      @if (this.resultsNotificationsSE?.bellCount() > 0) {
         <button
           type="button"
-          (click)="this.resultsNotificationsSE.markAllUpdatesNotificationsAsRead()"
+          (click)="onMarkAllRead()"
           class="flex h-[36px] flex-none cursor-pointer items-center gap-[7px] rounded-[8px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)] px-[12px] text-[14px] font-medium text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]">
           <i class="material-icons-outlined" style="font-size: 16px">drafts</i>
           {{ copy.filterToolbar.markAllAsRead }}
@@ -393,6 +395,13 @@
         </div>
       </div>
     } @else {
+    <!-- @akili-spec notifications/admin-pending-paging (PPG-T-6, design.md section 8.3, PPG-R-8):
+         a filter only narrows the loaded rows; while pending rows remain unloaded the tab counts are
+         loaded-only too, so say so above the list. -->
+    @if (showPartialFilterNotice) {
+      <p class="mb-[12px] text-[12px] text-[var(--pr-color-accents-5)]" data-testid="partial-filter-notice" role="status">{{ copy.inbox.partialFilterNotice }}</p>
+    }
+
     <div class="unified_notifications_list flex flex-col gap-[20px] w-full mb-[20px]">
       @if (groupedTabList.today.length > 0) {
         <div class="unified_notifications_list_group flex flex-col gap-[10px]">
@@ -497,6 +506,26 @@
     </div>
     }
 
+    <!-- @akili-spec notifications/admin-pending-paging (PPG-T-5, design.md section 8.3, PPG-R-5/R-6):
+         pending "Load more", shown while any paged source (updates / received) has an unloaded pending
+         page. Same button markup as the history control below; the list is date-grouped, so the
+         pending rows have no block of their own and the control sits right under the rendered rows.
+         An in-flight `loadMorePending()` disables it and announces `aria-busy`. -->
+    @if (!resultsNotificationsSE.initialLoading && resultsNotificationsSE.hasMorePending) {
+      <div class="flex flex-col items-center gap-[8px] mb-[20px]">
+        <button
+          hlmBtn
+          variant="outline"
+          type="button"
+          data-testid="load-more-pending"
+          [disabled]="resultsNotificationsSE.loadingMorePending"
+          [attr.aria-busy]="resultsNotificationsSE.loadingMorePending"
+          (click)="resultsNotificationsSE.loadMorePending()">
+          {{ copy.inbox.loadMorePending }}
+        </button>
+      </div>
+    }
+
     <!-- @akili-spec notifications/inbox-paginated-load (PAGE-T-6, design.md §6.2, PAGE-R-4/R-10):
          "Load more" is shown iff any source still has a next page (not during the initial skeleton
          gate — PAGE-R-2's pending set hasn't even rendered yet). A busy state (an in-flight
@@ -532,7 +561,6 @@
            Escape handler to rely on — `panel.requestClose()` only notifies; the active row's own
            subscription (notification-item) is what actually closes via `closeDrawer()`. -->
       <aside
-        role="complementary"
         [attr.aria-labelledby]="panel.labelledBy()"
         (keydown.escape)="panel.requestClose()"
         class="sticky w-[380px] min-[1600px]:w-[440px] shrink-0 overflow-hidden flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-surface-card motion-reduce:transition-none"

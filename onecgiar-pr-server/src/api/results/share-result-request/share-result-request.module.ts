@@ -33,6 +33,8 @@ import { VersioningModule } from '../../versioning/versioning.module';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { NotificationModule } from '../../notification/notification.module';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { ShareResultRequestSeenRepository } from './repositories/share-result-request-seen.repository';
+import { ShareResultRequestSeen } from './entities/share-result-request-seen.entity';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -66,6 +68,8 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
     UserRepository,
     // P2-3188: resolves the result's lead centre, whose users are the recipients.
     ResultsCenterRepository,
+    // BRS-T-1: per-user seen facts for the bell (design 5/7).
+    ShareResultRequestSeenRepository,
   ],
   exports: [
     ShareResultRequestRepository,
@@ -78,7 +82,11 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
     // read), and importing `ResultsByProjectsModule`/`BilateralModule` here would cycle back
     // (`bilateral.module.ts` already imports `ShareResultRequestModule`). Same pattern as
     // `ClarisaProjectsModule`'s own `TypeOrmModule.forFeature([ClarisaCenter])` (BCT-T-2).
-    TypeOrmModule.forFeature([ResultsByProjects, ClarisaProjectMapping]),
+    TypeOrmModule.forFeature([
+      ResultsByProjects,
+      ClarisaProjectMapping,
+      ShareResultRequestSeen,
+    ]),
     EmailNotificationManagementModule,
     ResultsTocResultsModule,
     forwardRef(() => VersioningModule),

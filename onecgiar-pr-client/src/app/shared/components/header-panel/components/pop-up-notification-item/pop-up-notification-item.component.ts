@@ -19,15 +19,22 @@ import {
   acceptLabelFor,
   bellAcceptMode,
   declineMode,
-  isDecidable
+  isDecidable,
+  isPrimaryRequest,
+  primaryReviewTarget
 } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-decision';
+import { buildRequestNotificationText, creatingCenterLabelOf } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/utils/request-notification-text';
+import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../internationalization/contribution-request-drawer.copy';
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../../internationalization/bilateral-rejection-notice.copy';
 import { BELL_QUICK_INBOX_COPY } from '../../../../../internationalization/bell-quick-inbox.copy';
 import {
   buildResultNotificationText,
   getNotificationActionVerb,
   getAiJobNotificationParts,
   getProgramCode,
+  getRejectionReasonLine,
   getResultNotificationTextParts,
+  getReviewProgramCode,
   NotificationType,
   resolveNotificationType,
   isAiJobFinishedNotification,
@@ -77,6 +84,11 @@ export class PopUpNotificationItemComponent implements OnDestroy {
   private readonly api = inject(ApiService);
   private readonly notificationsSE = inject(ResultsNotificationsService);
 
+  /** BRS-T-5: unread / unseen row. Rows without the tag (legacy callers) read as fresh. */
+  get fresh(): boolean {
+    return this.notification?.fresh !== false;
+  }
+
   /** Bell rows are tagged `kind` by `ResultsNotificationsService.bellItems`; only decisions get actions. */
   get isDecisionRow(): boolean {
     return this.notification?.kind === 'decision';
@@ -88,7 +100,8 @@ export class PopUpNotificationItemComponent implements OnDestroy {
    */
   get programCode(): string {
     const n = this.notification;
-    if (n?.notification_id) return n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? getProgramCode(n) ?? '';
+    // RRC-T-10-F1: a rejection's chip names the SP that rejected it, not the result's current primary.
+    if (n?.notification_id) return getReviewProgramCode(n) ?? n?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.official_code ?? getProgramCode(n) ?? '';
     return (n?.is_map_to_toc ? n?.obj_owner_initiative?.official_code : n?.obj_shared_inititiative?.official_code) ?? '';
   }
 
@@ -159,6 +172,12 @@ export class PopUpNotificationItemComponent implements OnDestroy {
     event.preventDefault();
     if (this.busy() || !this.canDecide) return;
 
+    // PRA-R-3: a primary row's "Review result" is one click, no confirm, and never hands off.
+    if (this.isPrimaryRow) {
+      void this.reviewPrimary();
+      return;
+    }
+
     // BELL-T-9: only a primary request is decided in one click; contributions hand off to the ToC step.
     if (bellAcceptMode(this.notification) === 'handoff') {
       this.handoff.emit({ row: this.notification, action: 'accept' });
@@ -172,6 +191,34 @@ export class PopUpNotificationItemComponent implements OnDestroy {
     }
     this.exitConfirm();
     void this.decide(true);
+  }
+
+  /** PRA-R-3: a primary Science Program request card (one "Review result" action, no Decline). */
+  get isPrimaryRow(): boolean {
+    return isPrimaryRequest(this.notification);
+  }
+
+  /** PRA-R-3: the card's status chip — "Needs your review" for a primary request. */
+  get statusChipLabel(): string {
+    return this.isPrimaryRow ? this.copy.card.needsYourReview : this.copy.card.requiresDecision;
+  }
+
+  /** PRA-R-3 / design §8.3: accept, then the shared outcome (review drawer or notify-later toast); other errors show the row error. */
+  private async reviewPrimary(): Promise<void> {
+    this.busy.set(true);
+    this.decisionFailed.set(false);
+    const row = this.notification;
+    try {
+      await this.notificationsSE.acceptPrimaryForReview(row);
+      this.navigation.completePrimaryReview(row, () =>
+        this.api.alertsFe.show({ id: 'noti', title: CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.primaryNotifyLater, status: 'success' })
+      );
+      if (primaryReviewTarget(row) === 'review-drawer') this.itemSelected.emit();
+    } catch {
+      this.decisionFailed.set(true);
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   /** BELL-T-11/12: Escape cancels the armed button (and is not propagated to the popover while armed). */
@@ -254,6 +301,13 @@ export class PopUpNotificationItemComponent implements OnDestroy {
     return getResultNotificationTextParts(notification);
   }
 
+  /** RRC-T-9: the "Reason" line of a rejection row, or null when the row has none (RRC-R-13). */
+  rejectionReasonOf(notification): string | null {
+    return getRejectionReasonLine(notification);
+  }
+
+  readonly rejectionReasonLabel = BILATERAL_REJECTION_NOTICE_COPY.notificationReasonLabel;
+
   /** A finished AI job: no result behind it, so the row shows only the server sentence. */
   isAiJob(notification): boolean {
     return isAiJobFinishedNotification(notification);
@@ -294,12 +348,33 @@ export class PopUpNotificationItemComponent implements OnDestroy {
     const versionId = notification?.obj_result?.obj_version?.id;
 
     if (notification?.notification_id) {
-      const updateInitId = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.id;
-      return `${baseUrl}?phase=${versionId}&init=${updateInitId}&search=${this.generateNotificationTextUpdates(notification)}`;
+      const updateInitId = notification?.obj_result?.obj_result_by_initiatives?.[0]?.obj_initiative?.id;
+      // RSF-T-1 (RSF-P-8, DD-3): an ownerless result has no active rbi row -> no `init` param.
+      const updateInitParam = updateInitId == null ? '' : `&init=${updateInitId}`;
+      return `${baseUrl}?phase=${versionId}${updateInitParam}&search=${this.generateNotificationTextUpdates(notification)}`;
     } else {
       const requestInitId = notification?.is_map_to_toc ? notification?.obj_owner_initiative?.id : notification?.obj_shared_inititiative?.id;
-      return `${baseUrl}?phase=${versionId}&init=${requestInitId}&search=${this.generateNotificationTextRequest(notification)}`;
+      // RSF-T-1 (design §9, DD-3 reversion outcome): no initiative on the row -> no `init` param.
+      const initParam = requestInitId == null ? '' : `&init=${requestInitId}`;
+      return `${baseUrl}?phase=${versionId}${initParam}&search=${this.generateNotificationTextRequest(notification)}`;
     }
+  }
+
+  /** Review-drawer URL for the "validate the bilateral result" call to action; null hides it. */
+  get validateCtaUrl(): string | null {
+    const n = this.notification;
+    if (!n?.notification_id || !isBilateralSubmittedNotification(n)) return null;
+    return this.navigation.reviewRequestUrl(n);
+  }
+
+  readonly validateCtaLabel = CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta;
+
+  /** The CTA sits outside the card anchor (no nested links), so it reuses the submitted path exactly once. */
+  onValidateCtaClick(event: MouseEvent): void {
+    event.stopPropagation();
+    // Modifier / non-primary clicks keep the native href (new tab), like the inbox CTAs.
+    if ((event.button ?? 0) !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    this.onNotificationClick(event);
   }
 
   /**
@@ -309,6 +384,20 @@ export class PopUpNotificationItemComponent implements OnDestroy {
    */
   onNotificationClick(event: MouseEvent): void {
     const notification = this.notification;
+
+    // BRS-T-5 (BRS-DD-7, BRS-R-3): a decision row body click records "seen" and navigates in-app, so a
+    // full document navigation cannot abort the PATCH. Modifier / non-primary clicks keep the native
+    // anchor (new tab). `markRequestSeen` never rejects and is NOT awaited: a failure must not block
+    // navigation. The destination is the same link the anchor carries (relative app path).
+    if (this.isDecisionRow && !notification?.notification_id) {
+      if ((event.button ?? 0) !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      void this.notificationsSE.markRequestSeen(notification);
+      this.itemSelected.emit();
+      const url = this.generateUrlLink(notification);
+      this.router.navigateByUrl(url.startsWith('/') ? url : `/${url}`);
+      return;
+    }
 
     // A finished AI job goes to its drafts (or the failed job) inside the app.
     if (isAiJobFinishedNotification(notification)) {
@@ -404,11 +493,20 @@ export class PopUpNotificationItemComponent implements OnDestroy {
   }
 
   generateNotificationTextRequest(notification) {
-    if (notification?.is_map_to_toc) {
-      return `${notification?.obj_requested_by?.first_name} ${notification?.obj_requested_by?.last_name} from ${notification?.obj_shared_inititiative?.official_code} has requested contribution to result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title} submitted by ${notification?.obj_owner_initiative?.official_code}`;
-    }
+    return buildRequestNotificationText(notification);
+  }
 
-    return `${notification?.obj_requested_by?.first_name} ${notification?.obj_requested_by?.last_name} from ${notification?.obj_owner_initiative?.official_code} has requested inclusion of ${notification?.obj_shared_inititiative?.official_code} as a contributor to result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title}`;
+  /**
+   * RSF-T-1 (RSF-R-1): pieces of the primary-request sentence for the template —
+   * "**{centre}** has tagged **{SP}** as the primary Science Program of result ...".
+   */
+  primaryRequestParts(notification) {
+    return {
+      center: creatingCenterLabelOf(notification),
+      verb: CONTRIBUTION_REQUEST_DRAWER_COPY.header.primaryVerb,
+      code: notification?.obj_shared_inititiative?.official_code,
+      tail: CONTRIBUTION_REQUEST_DRAWER_COPY.header.primaryTail
+    };
   }
 
   getNotificationAction(notificationType: number) {

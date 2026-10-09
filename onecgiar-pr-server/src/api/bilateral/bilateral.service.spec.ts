@@ -5,16 +5,48 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { In } from 'typeorm';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { In, Not } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { BilateralService } from './bilateral.service';
+import {
+  BilateralResubmissionService,
+  describeResultStatus,
+} from './services/bilateral-resubmission.service';
+import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
+import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
+import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
+import { InnovationUseBilateralHandler } from './handlers/innovation-use.handler';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultCreationMethod } from '../../shared/constants/result-creation-method.enum';
 import { SourceEnum } from '../results/entities/result.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultTaggedNotificationService } from '../notification/services/result-tagged-notification.service';
 import { TocMappingDto } from './dto/create-bilateral.dto';
+import { createClosedWorld } from '../../shared/test/closed-world.test-helper';
+import {
+  createInMemoryDb,
+  EntityClass,
+  Row,
+} from '../../shared/test/in-memory-db.test-helper';
+import { Evidence } from '../results/evidences/entities/evidence.entity';
+import { ResultsByProjects } from '../results/results_by_projects/entities/results_by_projects.entity';
+import { NonPooledProjectBudget } from '../results/result_budget/entities/non_pooled_proyect_budget.entity';
+import { ResultsByInstitution } from '../results/results_by_institutions/entities/results_by_institution.entity';
+import { ResultCountry } from '../results/result-countries/entities/result-country.entity';
+import { ResultCountrySubnational } from '../results/result-countries-sub-national/entities/result-country-subnational.entity';
+import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultActor } from '../results/result-actors/entities/result-actor.entity';
+import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
+import { PrimaryProgramRequestService } from '../results/share-result-request/services/primary-program-request.service';
+import { ShareResultRequest } from '../results/share-result-request/entities/share-result-request.entity';
+import { ResultsByInititiative } from '../results/results_by_inititiatives/entities/results_by_inititiative.entity';
+import { ResultInitiativeBudget } from '../results/result_budget/entities/result_initiative_budget.entity';
+import { ResultsTocResult } from '../results/results-toc-results/entities/results-toc-result.entity';
+import { ResultReviewHistory } from '../results/result-review-history/entities/result-review-history.entity';
+import { Result } from '../results/entities/result.entity';
 
 describe('BilateralService (unit)', () => {
   const makeService = (
@@ -165,6 +197,13 @@ describe('BilateralService (unit)', () => {
       resolveVersionableResult: jest.fn(),
       assertCallerMayVersion: jest.fn().mockResolvedValue(undefined),
       assertNotKnowledgeProduct: jest.fn(),
+      assertIsBilateral: jest.fn(),
+    };
+    // @akili-spec bilateral/resubmit-rejected-result — RSB-T-2: the resubmission skeleton the
+    // `updated` branch delegates to. Its own lock/status behaviour is covered in
+    // `services/bilateral-resubmission.service.spec.ts`.
+    const bilateralResubmissionService = {
+      resubmit: jest.fn(),
     };
     const notificationService = {
       emitResultNotification: jest.fn().mockResolvedValue(undefined),
@@ -175,6 +214,11 @@ describe('BilateralService (unit)', () => {
       request: jest
         .fn()
         .mockResolvedValue({ ok: true, shareResultRequestId: 1 }),
+      // `RRC-T-6`: the API resubmission assigns a changed primary directly.
+      transferPrimary: jest.fn().mockResolvedValue({
+        outcome: 'transferred',
+        previousInitiativeId: null,
+      }),
       stateFor: jest.fn().mockResolvedValue({
         state: 'none',
         program_code: null,
@@ -240,6 +284,7 @@ describe('BilateralService (unit)', () => {
       roleByUserRepository as any,
       primaryProgramRequestService as any,
       bilateralVersioningRulesService as any,
+      bilateralResubmissionService as any,
       notificationService as any,
       // BCT-T-5 falsifier: "the service fails to construct when the optional dependency is
       // absent" — `opts.withResultTaggedNotificationService: false` calls the real constructor
@@ -1597,6 +1642,25 @@ describe('BilateralService (unit)', () => {
       expect(saved).toEqual([]);
     });
 
+    // @akili-spec bilateral/resubmit-followups — RSF-R-5 "BUT the no-code create must NOT change":
+    // the lookup lifted into `findLeadCenter` is shared with the resubmission preflight, but
+    // `handleLeadCenter` itself still only warns on an unknown centre and never throws or stores.
+    it('RSF-R-5: the no-code path with an unknown lead_center still logs a warn and writes nothing', async () => {
+      const { service, saved } = makeCenterService();
+      const warn = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      await expect(
+        service.handleLeadCenter(1, { acronym: 'NOWHERE' }, 9),
+      ).resolves.toBeUndefined();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('No institutions matched lead_center input'),
+      );
+      expect(saved).toEqual([]);
+    });
+
     it('stores an Alliance contributing centre under its own code', async () => {
       const { service, saved } = makeCenterService();
 
@@ -2368,6 +2432,104 @@ describe('BilateralService (unit)', () => {
       );
     });
 
+    // @akili-spec bilateral/resubmit-rejected-result — RSB-T-5 / RSB-R-1 (falsifier (i)): a create
+    // WITHOUT result_code makes the identical call sequence it made before the resubmission existed,
+    // with the identical arguments (none of the replace-safe options leaks into it), and returns the
+    // identical response. The literals below were captured from the create path BEFORE this task's
+    // changes (the create path itself is untouched: only the `updated` branch is new).
+    it('RSB-R-1: a no-code create keeps its exact call sequence, its arguments and its response', async () => {
+      const { service } = arrangeCreateHarness();
+      const traced = [
+        'runResultTypePreflight',
+        'validateTocMappingInitiatives',
+        'resolveContributingProjects',
+        'findOrCreateUser',
+        'ensureUniqueTitle',
+        'initializeResultHeader',
+        'handleLeadCenter',
+        'findScope',
+        'validateGeoFocus',
+        'handleRegions',
+        'handleCountries',
+        'resolveScopeId',
+        'handleTocMapping',
+        'handleInstitutions',
+        'handleEvidence',
+        'handleNonPooledProject',
+        'runResultTypeHandlers',
+        'handleContributingCenters',
+        'ensureDerivedContributingCenters',
+        'enrichBilateralResultResponse',
+        'announcePendingReview',
+      ];
+      // Set BEFORE tracing: `mockResolvedValue` would replace the tracing wrapper.
+      (service.initializeResultHeader as jest.Mock).mockResolvedValue({
+        id: 10,
+        result_code: 'RC-1',
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      const called: Array<[number, string]> = [];
+      for (const name of traced) {
+        const mock = service[name] as jest.Mock;
+        const previous = mock.getMockImplementation();
+        mock.mockImplementation((...args: any[]) => {
+          called.push([called.length, name]);
+          return previous?.(...args);
+        });
+      }
+      const resubmit = service._bilateralResubmissionService.resubmit;
+
+      const result = await service.create(buildDto());
+
+      // The sequence, in order (a name can appear twice: findOrCreateUser runs for created_by and for
+      // the submitter).
+      expect(called.map(([, name]) => name)).toEqual([
+        'runResultTypePreflight',
+        'validateTocMappingInitiatives',
+        'resolveContributingProjects',
+        'findOrCreateUser',
+        'findOrCreateUser',
+        'ensureUniqueTitle',
+        'initializeResultHeader',
+        'handleLeadCenter',
+        'findScope',
+        'validateGeoFocus',
+        'handleRegions',
+        'handleCountries',
+        'resolveScopeId',
+        'handleTocMapping',
+        'handleInstitutions',
+        'handleEvidence',
+        'handleNonPooledProject',
+        'runResultTypeHandlers',
+        'handleContributingCenters',
+        'ensureDerivedContributingCenters',
+        'enrichBilateralResultResponse',
+        'announcePendingReview',
+      ]);
+      // The arguments: none of the resubmission options reaches the create path.
+      expect(service.handleLeadCenter.mock.calls[0]).toHaveLength(3);
+      expect(service.handleCountries.mock.calls[0]).toHaveLength(5);
+      expect(service.handleTocMapping.mock.calls[0]).toHaveLength(5);
+      expect(service.handleInstitutions.mock.calls[0]).toHaveLength(4);
+      // The resubmission machinery is never consulted.
+      expect(resubmit).not.toHaveBeenCalled();
+      // The response.
+      expect(result.status).toBe(201);
+      expect(result.message).toBe('Results Bilateral created successfully.');
+      expect(result.response.outcomes).toEqual([
+        {
+          result_code: 'RC-1',
+          operation: 'created',
+          status_id: ResultStatusData.PendingReview.value,
+          status: ResultStatusData.PendingReview.name,
+          external_reference: null,
+        },
+      ]);
+      expect(service.announcePendingReview).toHaveBeenCalledTimes(1);
+      expect(service.announcePendingReview).toHaveBeenCalledWith(10, 42);
+    });
+
     // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-1/DD-5/R-10: additive
     // per-result outcomes, `operation: 'created'` for the unchanged (no-code) path.
     it('stamps response.outcomes with operation "created" for a codeless create', async () => {
@@ -2619,35 +2781,44 @@ describe('BilateralService (unit)', () => {
   // `PSR-T-5` — `promoteDraft`'s only caller (P-3, reversion challenge). design.md DD-2/DD-3: the
   // chosen primary SP is sent a pending request instead of being written as the owner outright,
   // and the ToC stub seed moves to accept.
-  describe('populateInitiativeAndTocFromProgramCode (PSR-T-5)', () => {
-    it('requests the resolved initiative instead of writing role 1, and seeds no ToC stub', async () => {
+  describe('populateInitiativeAndTocFromProgramCode (direct primary assignment)', () => {
+    // Product decision 2026-10-07: the chosen SP owns the result at once — no acceptance round.
+    const withTransaction = (service: any) => {
+      const manager = { findOne: jest.fn().mockResolvedValue({ id: 10 }) };
+      service.dataSource = {
+        ...service.dataSource,
+        transaction: jest.fn(async (work: any) => work(manager)),
+      };
+      return manager;
+    };
+
+    it('assigns the resolved initiative as primary directly (role 1 + ToC stub via transferPrimary), inside a locked transaction', async () => {
       const { service, stubs } = makeService();
       stubs.clarisaInitiatives.findOne.mockResolvedValue({
         id: 404,
         official_code: 'SP09',
       });
-      (stubs.resultByInitiativesRepository as any).save = jest.fn();
-      (stubs.resultsTocResultsRepository as any).save = jest.fn();
-      (stubs.resultsTocResultsRepository as any).findOne = jest.fn();
+      const manager = withTransaction(service);
 
       await service.populateInitiativeAndTocFromProgramCode(10, 'sp09', 42);
 
-      expect(stubs.primaryProgramRequestService.request).toHaveBeenCalledWith(
+      expect(manager.findOne).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          where: { id: 10 },
+          lock: { mode: 'pessimistic_write' },
+        }),
+      );
+      expect(
+        stubs.primaryProgramRequestService.transferPrimary,
+      ).toHaveBeenCalledWith(
         10,
         404,
         expect.objectContaining({ id: 42 }),
-        undefined,
-        { asDraft: true },
+        manager,
+        { releaseContributors: false },
       );
-      expect(
-        (stubs.resultByInitiativesRepository as any).save,
-      ).not.toHaveBeenCalled();
-      expect(
-        (stubs.resultsTocResultsRepository as any).findOne,
-      ).not.toHaveBeenCalled();
-      expect(
-        (stubs.resultsTocResultsRepository as any).save,
-      ).not.toHaveBeenCalled();
+      expect(stubs.primaryProgramRequestService.request).not.toHaveBeenCalled();
     });
 
     it('does nothing when no program_code is provided', async () => {
@@ -2673,23 +2844,23 @@ describe('BilateralService (unit)', () => {
 
     // requirements.md PSR-R-1 "request step fails": promoteDraft must still succeed (this method
     // never throws); the caller (`promoteDraft`) is unaffected and only a warning is logged.
-    it('logs and swallows when the primary program request fails', async () => {
+    it('logs and swallows when the primary assignment fails', async () => {
       const { service, stubs } = makeService();
       stubs.clarisaInitiatives.findOne.mockResolvedValue({
         id: 404,
         official_code: 'SP09',
       });
-      stubs.primaryProgramRequestService.request.mockResolvedValueOnce({
-        ok: false,
-        reason: 'internal_error',
-      });
+      withTransaction(service);
+      stubs.primaryProgramRequestService.transferPrimary.mockRejectedValueOnce(
+        new Error('boom'),
+      );
 
       await expect(
         service.populateInitiativeAndTocFromProgramCode(10, 'SP09', 42),
       ).resolves.toBeUndefined();
 
       expect(service.logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('primary program request failed'),
+        expect.stringContaining('primary assignment failed'),
       );
     });
   });
@@ -2809,29 +2980,271 @@ describe('BilateralService (unit)', () => {
       expect(service.findOrCreateUser).not.toHaveBeenCalled();
     });
 
-    it('rejects an eligible update target (open phase, editable) with the T-3 placeholder, writing nothing', async () => {
-      const { service } = arrangeCreateHarness();
-      const editableOpenPhaseRow = {
-        id: 501,
-        result_code: '28565',
-        status_id: ResultStatusData.PendingReview.value,
-      };
-      service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
-        editableOpenPhaseRow,
+    // @akili-spec bilateral/resubmit-rejected-result — RSB-T-2 / RSB-R-2. Replaces the UBC-T-3
+    // placeholder test (a 409 for any editable status): only Rejected (7) reaches
+    // `resubmit()`; every other status is a 409 naming the code and the status. Expected status
+    // names come from the requirements scenario ("pending review").
+    describe('open-phase status table (RSB-R-2)', () => {
+      const nonRejected: Array<[number, string]> = [
+        [1, 'editing'],
+        [2, 'quality assessed'],
+        [3, 'submitted'],
+        [4, 'discontinued'],
+        [5, 'pending review'],
+        [6, 'approved'],
+        [8, 'draft'],
+      ];
+
+      it.each(nonRejected)(
+        'status %s (%s) -> 409 naming the code and the status; resubmit never called',
+        async (statusId, statusName) => {
+          const { service } = arrangeCreateHarness();
+          service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+            {
+              id: 501,
+              result_code: 28565,
+              status_id: statusId,
+              result_type_id: ResultTypeEnum.OTHER_OUTPUT,
+            },
+          );
+
+          const attempt = service.create(
+            buildDtoWithCode('28565'),
+            STAR as any,
+          );
+          await expect(attempt).rejects.toMatchObject({ status: 409 });
+          await expect(attempt).rejects.toThrow('28565');
+          await expect(attempt).rejects.toThrow(statusName);
+
+          expect(
+            service._bilateralResubmissionService.resubmit,
+          ).not.toHaveBeenCalled();
+          expect(service._resultRepository.save).not.toHaveBeenCalled();
+          expect(service.findOrCreateUser).not.toHaveBeenCalled();
+          expect(
+            service._bilateralVersioningRulesService.resolveVersionableResult,
+          ).not.toHaveBeenCalled();
+        },
       );
 
-      await expect(
-        service.create(buildDtoWithCode('28565'), STAR as any),
-      ).rejects.toMatchObject({
-        status: 409,
-        message:
-          'Updating an existing result through create is not available yet.',
+      it('status 7 (rejected) reaches resubmit() with target, payload and platform, and skips the normal create sequence', async () => {
+        const { service } = arrangeCreateHarness();
+        const rejectedRow = {
+          id: 501,
+          result_code: 28565,
+          status_id: ResultStatusData.Rejected.value,
+          result_type_id: ResultTypeEnum.OTHER_OUTPUT,
+        };
+        service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+          rejectedRow,
+        );
+        service._bilateralResubmissionService.resubmit.mockResolvedValue({
+          id: 501,
+          result_code: 28565,
+          status_id: ResultStatusData.PendingReview.value,
+          status: ResultStatusData.PendingReview.name,
+        });
+        const dto = buildDtoWithCode('28565');
+
+        const result = await service.create(dto, STAR as any);
+
+        expect(
+          service._bilateralResubmissionService.resubmit,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          service._bilateralResubmissionService.resubmit,
+        ).toHaveBeenCalledWith({
+          target: rejectedRow,
+          bilateralDto: dto.result.data,
+          platform: STAR,
+          // RSB-T-3: the read-only preflight checks, built from this service own helpers.
+          preflight: expect.objectContaining({
+            validateTypeSpecificPayload: expect.any(Function),
+            ensureUniqueTitle: expect.any(Function),
+          }),
+          // RSB-T-5: the writers of the pipeline, built from this service own helpers.
+          writers: expect.objectContaining({
+            countResolvablePartners: expect.any(Function),
+            readOwnerInitiativeId: expect.any(Function),
+            writeResult: expect.any(Function),
+            // RRC-T-6: the direct transfer replaced the ownership request on this port.
+            transferPrimary: expect.any(Function),
+            announcePendingReview: expect.any(Function),
+          }),
+        });
+        expect(service._resultRepository.save).not.toHaveBeenCalled();
+        expect(service.findOrCreateUser).not.toHaveBeenCalled();
+        expect(result.response.outcomes).toEqual([
+          expect.objectContaining({
+            operation: 'updated',
+            result_code: 28565,
+            status_id: ResultStatusData.PendingReview.value,
+          }),
+        ]);
       });
-      expect(service._resultRepository.save).not.toHaveBeenCalled();
-      expect(service.findOrCreateUser).not.toHaveBeenCalled();
-      expect(
-        service._bilateralVersioningRulesService.resolveVersionableResult,
-      ).not.toHaveBeenCalled();
+
+      // RSB-R-17 (T-5 attempt 2): the resubmission is already COMMITTED when the response body is
+      // built. A failure there must not turn it into an error: the outcome is still returned.
+      it.each([
+        [
+          'the read-back findOne',
+          (svc: any) =>
+            (svc._resultRepository.findOne = jest
+              .fn()
+              .mockRejectedValue(new Error('db read failed'))),
+        ],
+        [
+          'enrichBilateralResultResponse',
+          (svc: any) =>
+            (svc.enrichBilateralResultResponse = jest
+              .fn()
+              .mockRejectedValue(new Error('enrich failed'))),
+        ],
+      ])(
+        'RSB-R-17: %s throws after the commit -> the `updated` outcome is STILL returned, the error is logged without the payload',
+        async (_label, breakIt) => {
+          const { service } = arrangeCreateHarness();
+          service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+            {
+              id: 501,
+              result_code: 28565,
+              status_id: ResultStatusData.Rejected.value,
+              result_type_id: ResultTypeEnum.OTHER_OUTPUT,
+            },
+          );
+          service._bilateralResubmissionService.resubmit.mockResolvedValue({
+            id: 501,
+            result_code: 28565,
+            status_id: ResultStatusData.PendingReview.value,
+            status: 'pending review',
+          });
+          // The harness stubs the enrichment; the throwing variants replace what they name.
+          service._resultRepository.findOne = jest
+            .fn()
+            .mockResolvedValue({ id: 501, source: SourceEnum.Bilateral });
+          breakIt(service);
+          const dto = buildDtoWithCode('28565');
+          (dto.result.data as any).description = 'a private description';
+
+          const result = await service.create(dto, STAR as any);
+
+          expect(result.status).toBe(201);
+          expect(result.response.outcomes).toEqual([
+            {
+              result_code: 28565,
+              operation: 'updated',
+              status_id: ResultStatusData.PendingReview.value,
+              status: 'pending review',
+              external_reference: null,
+            },
+          ]);
+          const logged = (service.logger.error as jest.Mock).mock.calls
+            .map((call) => call.map(String).join(' '))
+            .join('\n');
+          expect(logged).toContain('was committed');
+          expect(logged).not.toContain('a private description');
+        },
+      );
+
+      it('another platform -> 403 (RSB-R-6); resubmit never called', async () => {
+        const { service } = arrangeCreateHarness();
+        service._bilateralVersioningRulesService.findInPhase.mockResolvedValue({
+          id: 501,
+          result_code: 28565,
+          status_id: ResultStatusData.Rejected.value,
+        });
+        service._bilateralVersioningRulesService.assertCallerMayVersion.mockRejectedValue(
+          new ForbiddenException(
+            'Result 28565 was reported by a different platform.',
+          ),
+        );
+
+        await expect(
+          service.create(buildDtoWithCode('28565'), STAR as any),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+        expect(
+          service._bilateralResubmissionService.resubmit,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('a Knowledge Product target -> 409 (RSB-R-7); resubmit never called', async () => {
+        const { service } = arrangeCreateHarness();
+        service._bilateralVersioningRulesService.findInPhase.mockResolvedValue({
+          id: 501,
+          result_code: 28565,
+          status_id: ResultStatusData.Rejected.value,
+          result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+        });
+        service._bilateralVersioningRulesService.assertNotKnowledgeProduct.mockImplementation(
+          () => {
+            throw new ConflictException('Result 28565 is a Knowledge Product.');
+          },
+        );
+
+        await expect(
+          service.create(buildDtoWithCode('28565'), STAR as any),
+        ).rejects.toMatchObject({ status: 409 });
+        expect(
+          service._bilateralResubmissionService.resubmit,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('a payload of a different type than the stored one -> 409 naming code and both types (RSB-R-22); nothing written', async () => {
+        const { service } = arrangeCreateHarness();
+        // The harness payload is OTHER_OUTPUT; the stored row is a policy change.
+        service._bilateralVersioningRulesService.findInPhase.mockResolvedValue({
+          id: 501,
+          result_code: 28565,
+          status_id: ResultStatusData.Rejected.value,
+          result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        });
+
+        const attempt = service.create(buildDtoWithCode('28565'), STAR as any);
+        await expect(attempt).rejects.toMatchObject({ status: 409 });
+        await expect(attempt).rejects.toThrow('28565');
+        await expect(attempt).rejects.toThrow('policy change');
+        await expect(attempt).rejects.toThrow('other output');
+        expect(
+          service._bilateralResubmissionService.resubmit,
+        ).not.toHaveBeenCalled();
+        expect(service._resultRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('a result_code found in no phase is still a 404 and never reaches resubmit() (RSB-R-10)', async () => {
+        const { service } = arrangeCreateHarness();
+        service._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+          undefined,
+        );
+        service._bilateralVersioningRulesService.resolveVersionableResult.mockRejectedValue(
+          new NotFoundException(
+            'No active result found for result_code 99999.',
+          ),
+        );
+
+        await expect(
+          service.create(buildDtoWithCode('99999'), STAR as any),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect(
+          service._bilateralResubmissionService.resubmit,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('a no-code create never touches the resolver nor resubmit() (RSB-R-1)', async () => {
+        const { service } = arrangeCreateHarness();
+
+        const result = await service.create(buildDto(), STAR as any);
+
+        expect(result.status).toBe(201);
+        expect(
+          service._bilateralResubmissionService.resubmit,
+        ).not.toHaveBeenCalled();
+        expect(
+          service._bilateralVersioningRulesService.findInPhase,
+        ).not.toHaveBeenCalled();
+        expect(
+          service._bilateralVersioningRulesService.getActiveReportingPhase,
+        ).not.toHaveBeenCalled();
+      });
     });
 
     // Superseded by `create() — versioning with data (UBC-T-2)` below: an eligible
@@ -3053,6 +3466,2717 @@ describe('BilateralService (unit)', () => {
         },
         relations: { obj_clarisa_project: { obj_organization: true } },
       });
+    });
+  });
+
+  // @akili-spec bilateral/resubmit-rejected-result — RSB-T-3 (RSB-R-8, R-12, R-13, R-16; DD-1,
+  // DD-2, DD-7). Drives `create()` end to end with the REAL `BilateralResubmissionService`, the
+  // REAL `BilateralService` helpers behind the preflight port and the REAL type handlers; only the
+  // repositories are fakes. Every repository a resubmission could write to is a spy, so "zero
+  // writes before the refusal" is a claim about calls actually made, not about the shape of the
+  // code (tasks.md RSB-T-3 Falsifier; the UBC-T-3 attempt-1 FAILs were exactly writes that
+  // slipped in before a late refusal).
+  describe('create() — resubmission preflight: zero writes before any refusal (RSB-T-3)', () => {
+    const STAR = { id: 12, acronym: 'STAR' };
+    // RSB-T-5: past the preflight the pipeline reads the stored owner and then RESETS (its first
+    // write). These cases stop right at the reset with a sentinel, so "the preflight passed and
+    // wrote nothing" stays a claim about the preflight alone.
+    const AFTER_PREFLIGHT = 'RSB-T-3 spec: the preflight passed';
+    const PLACEHOLDER = AFTER_PREFLIGHT;
+    const REJECTED = ResultStatusData.Rejected.value;
+
+    const arrangeResubmission = (
+      opts: { targetType?: number; stored?: Record<string, unknown> } = {},
+    ) => {
+      const { service } = makeService();
+      const svc: any = service;
+      const targetType = opts.targetType ?? ResultTypeEnum.OTHER_OUTPUT;
+      const target = {
+        id: 501,
+        result_code: 28565,
+        status_id: REJECTED,
+        result_type_id: targetType,
+        version_id: 36,
+        ...opts.stored,
+      };
+
+      // CLOSED WORLD (T-3 review advisory B, delivered in T-4). Every repository, service and
+      // manager the branch could reach answers ONLY the reads declared below; any other method is
+      // a recorded violation that throws. A writer nobody listed (today's, or one T-5 adds) fails
+      // `expectNothingWritten` by construction, even when a `try/catch` swallows the throw.
+      const world = createClosedWorld();
+      const writers: Record<string, jest.Mock> = {};
+      // Methods of the service itself that the branch must never reach before a refusal.
+      const writer = (name: string) =>
+        (writers[name] = jest.fn().mockResolvedValue(undefined));
+
+      svc._resultRepository = world.fake('resultRepository', {
+        findOne: jest.fn().mockResolvedValue(null),
+      });
+      svc._yearRepository = world.fake('yearRepository', {
+        findOne: jest.fn().mockResolvedValue({ year: 2025 }),
+      });
+      svc._geoScopeRepository = world.fake('geoScopeRepository', {
+        findOne: jest
+          .fn()
+          .mockResolvedValue({ id: 4, code: 4, name: 'National' }),
+      });
+      svc._clarisaRegionsRepository = world.fake('clarisaRegions', {
+        find: jest.fn().mockResolvedValue([{ um49Code: 1 }]),
+      });
+      svc._resultRegionRepository = world.fake('resultRegion', {
+        getResultRegionByResultIdAndRegionId: jest.fn(),
+      });
+      svc._clarisaCountriesRepository = world.fake('clarisaCountries', {
+        find: jest.fn().mockResolvedValue([{ id: 1 }]),
+      });
+      svc._resultCountryRepository = world.fake('resultCountry', {
+        getResultCountrieByIdResultAndCountryId: jest.fn(),
+      });
+      svc._clarisaSubnationalAreasRepository = world.fake(
+        'clarisaSubnational',
+        { find: jest.fn().mockResolvedValue([{ code: 'S1' }]) },
+      );
+      svc._resultCountrySubnationalRepository = world.fake(
+        'resultCountrySubnational',
+      );
+      svc._resultByIntitutionsRepository = world.fake('resultByInstitutions', {
+        getResultByInstitutionExists: jest.fn(),
+      });
+      svc._resultInstitutionsBudgetRepository = world.fake(
+        'institutionsBudget',
+        { findOne: jest.fn() },
+      );
+      svc._evidencesRepository = world.fake('evidences');
+      svc._evidencesService = world.fake('evidencesService');
+      svc._resultsTocResultsRepository = world.fake('tocResults');
+      svc._resultsTocResultsIndicatorsRepository = world.fake('tocIndicators');
+      svc._resultsTocTargetIndicatorRepository = world.fake('tocTargets');
+      svc._resultsCenterRepository = world.fake('resultsCenter');
+      svc._resultsByProjectsRepository = world.fake('resultsByProjects', {
+        find: jest.fn().mockResolvedValue([]),
+      });
+      svc._nonPooledProjectBudgetRepository = world.fake('projectBudget', {
+        findOne: jest.fn(),
+      });
+      svc._resultByInitiativesRepository = world.fake('resultByInitiatives', {
+        findOne: jest.fn(),
+        // The stored owner is a READ the pipeline makes before the reset (T-4 pointer 5).
+        getOwnerInitiativeByResult: jest.fn().mockResolvedValue(undefined),
+      });
+      svc._shareResultRequestRepository = world.fake('shareRequests', {
+        findOne: jest.fn(),
+      });
+      svc._userRepository = world.fake('userRepository', {
+        findOne: jest.fn().mockResolvedValue({ id: 1, email: 'admin@prms.pr' }),
+      });
+      svc._userService = world.fake('userService');
+      svc._clarisaInitiatives = world.fake('clarisaInitiatives', {
+        findOne: jest.fn(async ({ where }: any) =>
+          where.official_code === 'SP99'
+            ? null
+            : {
+                id: Number(String(where.official_code).replace(/\D/g, '')),
+                official_code: where.official_code,
+              },
+        ),
+      });
+      svc._clarisaProjectsRepository = world.fake('clarisaProjects', {
+        find: jest.fn(async ({ where }: any) =>
+          where.externalCode === 'P1' ? [{ id: 77, isActive: true }] : [],
+        ),
+      });
+      svc._primaryProgramRequestService = world.fake('primaryRequests', {
+        isAligned: jest.fn().mockResolvedValue(true),
+        getAlignments: jest.fn(),
+      });
+      // `findOrCreateUser` may create a user row on a VALID payload (same as the create path); it
+      // is therefore NOT a "writer" here: the specs assert it runs last, and never on a refusal.
+      svc.findOrCreateUser = jest.fn(async () => ({ id: 9 }));
+      svc.announcePendingReview = writer('announcePendingReview');
+      svc.initializeResultHeader = writer('initializeResultHeader');
+
+      // The real type handlers, in the same closed world.
+      const policyRepo = world.fake('policyRepo', { findOne: jest.fn() });
+      svc.resultTypeHandlerMap.set(
+        ResultTypeEnum.POLICY_CHANGE,
+        new PolicyChangeBilateralHandler(
+          policyRepo as any,
+          { findOne: jest.fn().mockResolvedValue({ id: 2 }) } as any,
+          { findOne: jest.fn().mockResolvedValue({ id: 6 }) } as any,
+          world.fake('policyInstitutions', {
+            getResultByInstitutionExists: jest.fn(),
+          }) as any,
+          { findOne: jest.fn(), find: jest.fn() } as any,
+        ),
+      );
+      const capDevRepo = world.fake('capDevRepo', {
+        capDevExists: jest.fn(),
+      });
+      svc.resultTypeHandlerMap.set(
+        ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        new CapacityChangeBilateralHandler(
+          capDevRepo as any,
+          {
+            findOne: jest.fn().mockResolvedValue({ capdev_term_id: 3 }),
+          } as any,
+          {
+            findOne: jest
+              .fn()
+              .mockResolvedValue({ capdev_delivery_method_id: 2 }),
+          } as any,
+        ),
+      );
+      svc.resultTypeHandlerMap.set(
+        ResultTypeEnum.INNOVATION_DEVELOPMENT,
+        new InnovationDevelopmentBilateralHandler(
+          world.fake('innoDevRepo', { findOne: jest.fn() }) as any,
+          {
+            findOne: jest.fn().mockResolvedValue({ id: 14, level: 3 }),
+          } as any,
+        ),
+      );
+      const actorTypes = [
+        { actor_type_id: 1, name: 'Farmers' },
+        { actor_type_id: 2, name: 'Researchers' },
+      ];
+      svc.resultTypeHandlerMap.set(
+        ResultTypeEnum.INNOVATION_USE,
+        new InnovationUseBilateralHandler(
+          world.fake('innovationUseService') as any,
+          {
+            findOne: jest.fn(async ({ where }: any) =>
+              where.level === 2 ? { id: 3, level: 2 } : null,
+            ),
+          } as any,
+          {
+            findOne: jest.fn(
+              async ({ where }: any) =>
+                actorTypes.find(
+                  (a) => a.actor_type_id === where.actor_type_id,
+                ) ?? null,
+            ),
+            find: jest.fn().mockResolvedValue(actorTypes),
+          } as any,
+          {
+            assertExternalCreateMds: jest.fn().mockResolvedValue(undefined),
+          } as any,
+        ),
+      );
+
+      // Rules: the open-phase target, ownership and KP guards all pass.
+      svc._bilateralVersioningRulesService.findInPhase.mockResolvedValue(
+        target,
+      );
+
+      // Real resubmission service over a closed-world connection: it answers the lock plumbing and
+      // the status read; any other statement, and any manager / transaction / repository, is a
+      // violation (and `sql` keeps the statements for the regex check below).
+      const sql: string[] = [];
+      const query = jest.fn(async (statement: string) => {
+        sql.push(statement);
+        if (statement.includes('GET_LOCK')) return [{ acquired: 1 }];
+        if (statement.includes('RELEASE_LOCK')) return [{ released: 1 }];
+        if (/select\s+status_id/i.test(statement))
+          return [{ status_id: REJECTED }];
+        world.violations.push(`queryRunner.query(${statement.slice(0, 40)})`);
+        throw new Error(`unexpected SQL in test: ${statement}`);
+      });
+      const resubmission = new BilateralResubmissionService(
+        world.fake('dataSource', {
+          createQueryRunner: () =>
+            world.fake('queryRunner', {
+              connect: jest.fn().mockResolvedValue(undefined),
+              query,
+              release: jest.fn().mockResolvedValue(undefined),
+            }),
+        }) as any,
+      );
+      ['log', 'warn', 'error'].forEach((level) =>
+        jest
+          .spyOn((resubmission as any).logger, level)
+          .mockImplementation(() => undefined),
+      );
+      svc._bilateralResubmissionService = resubmission;
+      const resetSpy = jest
+        .spyOn(resubmission, 'resetSectionsForResubmission')
+        .mockRejectedValue(new ConflictException(AFTER_PREFLIGHT));
+
+      const payload = (overrides: Record<string, unknown> = {}) => ({
+        result: {
+          data: {
+            result_code: '28565',
+            result_type_id: targetType,
+            title: 'Corrected title',
+            geo_focus: {
+              scope_code: 4,
+              regions: [],
+              countries: [{ id: 1 }],
+              subnational_areas: [],
+            },
+            toc_mapping: { science_program_id: 'SP06' },
+            contributing_bilateral_projects: [
+              { grant_title: 'P1', is_lead: true },
+            ],
+            evidence: [{ link: 'https://example.org/a' }],
+            ...overrides,
+          },
+        },
+      });
+
+      // `resetReached`: the payload passed the whole preflight, so the pipeline got as far as the
+      // reset (the sentinel above) and not one write came before it.
+      const expectNothingWritten = ({
+        resetReached,
+      }: { resetReached?: boolean } = {}) => {
+        Object.entries(writers).forEach(([name, fn]) => {
+          if (fn.mock.calls.length) {
+            throw new Error(
+              `${name} was called ${fn.mock.calls.length} time(s)`,
+            );
+          }
+        });
+        expect(world.violations).toEqual([]);
+        if (resetReached) expect(resetSpy).toHaveBeenCalledTimes(1);
+        else expect(resetSpy).not.toHaveBeenCalled();
+        expect(sql.join('\n')).not.toMatch(
+          /\b(insert|update|delete|replace)\b/i,
+        );
+      };
+
+      return {
+        svc,
+        target,
+        payload,
+        writers,
+        expectNothingWritten,
+        sql,
+        world,
+      };
+    };
+
+    // [label, target type, payload overrides, mutation of the fakes, status, message]
+    type Refusal = [
+      string,
+      number,
+      Record<string, unknown>,
+      ((svc: any) => void) | undefined,
+      number,
+      string,
+    ];
+    const OTHER = ResultTypeEnum.OTHER_OUTPUT;
+    const refusals: Refusal[] = [
+      [
+        'unknown country (geo lookup the handlers run after the header)',
+        OTHER,
+        { geo_focus: { scope_code: 4, countries: [{ id: 99999 }] } },
+        (svc) => svc._clarisaCountriesRepository.find.mockResolvedValue([]),
+        404,
+        'No countries found matching any of the provided identifiers: ids=99999, names=N/A.',
+      ],
+      [
+        'unknown region',
+        OTHER,
+        {
+          geo_focus: {
+            scope_code: 2,
+            regions: [{ um49code: 1 }],
+            countries: [],
+          },
+        },
+        (svc) => {
+          svc._geoScopeRepository.findOne.mockResolvedValue({
+            id: 2,
+            code: 2,
+            name: 'Regional',
+          });
+          svc._clarisaRegionsRepository.find.mockResolvedValue([]);
+        },
+        404,
+        'No regions found matching the provided data (codes: 1, names: N/A).',
+      ],
+      [
+        'unknown subnational area',
+        OTHER,
+        {
+          geo_focus: {
+            scope_code: 5,
+            countries: [{ id: 1 }],
+            subnational_areas: [{ id: 9 }],
+          },
+        },
+        (svc) => {
+          svc._geoScopeRepository.findOne.mockResolvedValue({
+            id: 5,
+            code: 5,
+            name: 'Sub-national',
+          });
+          svc._clarisaSubnationalAreasRepository.find.mockResolvedValue([]);
+        },
+        404,
+        'No subnational areas found matching any of the provided identifiers: ids=9, names=N/A.',
+      ],
+      [
+        'unknown geographic scope',
+        OTHER,
+        { geo_focus: { scope_code: 77 } },
+        (svc) => svc._geoScopeRepository.findOne.mockResolvedValue(null),
+        404,
+        'No geographic scope found for code 77',
+      ],
+      [
+        'geo_focus missing',
+        OTHER,
+        { geo_focus: undefined },
+        undefined,
+        400,
+        'geo_focus is required for non-Knowledge Product results.',
+      ],
+      [
+        'invalid innovation_use_level',
+        ResultTypeEnum.INNOVATION_USE,
+        {
+          innovation_use: {
+            current_innovation_use_numbers: {
+              innov_use_to_be_determined: false,
+              actors: [{ actor_type_id: 1, how_many: 1 }],
+            },
+            innovation_use_level: { level: 77 },
+          },
+        },
+        undefined,
+        400,
+        'Invalid innovation use level: 77.',
+      ],
+      [
+        'unknown actor type',
+        ResultTypeEnum.INNOVATION_USE,
+        {
+          innovation_use: {
+            current_innovation_use_numbers: {
+              innov_use_to_be_determined: false,
+              actors: [{ actor_type_id: 999, how_many: 1 }],
+            },
+          },
+        },
+        undefined,
+        400,
+        'Invalid actors[0].actor_type_id: 999.',
+      ],
+      [
+        'policy change without policy_stage',
+        ResultTypeEnum.POLICY_CHANGE,
+        {
+          policy_change: {
+            policy_type: { id: 2 },
+            implementing_organization: [{ institutions_id: 1 }],
+          },
+        },
+        undefined,
+        400,
+        'policy_stage is required for POLICY_CHANGE results.',
+      ],
+      [
+        'capacity sharing with an unsupported delivery method',
+        ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        {
+          capacity_sharing: {
+            number_people_trained: { women: 1 },
+            length_training: 'Short-term',
+            delivery_method: 'Unknown',
+          },
+        },
+        undefined,
+        400,
+        'Unsupported delivery_method value "Unknown".',
+      ],
+      [
+        'innovation development with an unsupported typology',
+        ResultTypeEnum.INNOVATION_DEVELOPMENT,
+        {
+          innovation_development: {
+            innovation_typology: { code: 99 },
+            innovation_readiness_level: { level: 3 },
+          },
+        },
+        undefined,
+        400,
+        'Unsupported innovation typology code "99".',
+      ],
+      [
+        'duplicate evidence links',
+        OTHER,
+        {
+          evidence: [
+            { link: 'https://example.org/a' },
+            { link: 'https://example.org/a' },
+          ],
+        },
+        undefined,
+        400,
+        'Duplicate links found in the evidence',
+      ],
+      [
+        'science program unknown to CLARISA',
+        OTHER,
+        { toc_mapping: { science_program_id: 'SP99' } },
+        undefined,
+        400,
+        'do not exist in CLARISA: SP99',
+      ],
+      [
+        'contributing project that resolves to nothing',
+        OTHER,
+        { contributing_bilateral_projects: [{ grant_title: 'NOPE' }] },
+        undefined,
+        400,
+        'no project of the 2025 reporting phase matches grant_title "NOPE"',
+      ],
+      [
+        'no primary Science Program',
+        OTHER,
+        { toc_mapping: {} },
+        undefined,
+        400,
+        'Result 28565 cannot be resubmitted without a primary Science Program (toc_mapping.science_program_id).',
+      ],
+      [
+        'SP09 present in CLARISA but not allocated to the lead project',
+        OTHER,
+        { toc_mapping: { science_program_id: 'SP09' } },
+        (svc) =>
+          svc._primaryProgramRequestService.isAligned.mockImplementation(
+            async (_project: number, initiative: number) => initiative !== 9,
+          ),
+        400,
+        'SP09 is not allocated to the lead project of result 28565.',
+      ],
+      [
+        'a title equal to ANOTHER result',
+        OTHER,
+        { title: 'Same as another result' },
+        (svc) => svc._resultRepository.findOne.mockResolvedValue({ id: 999 }),
+        400,
+        'A result with the title "Same as another result" already exists.',
+      ],
+    ];
+
+    it.each(refusals)(
+      '%s -> refused, nothing written',
+      async (_label, targetType, overrides, mutate, status, message) => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission({
+          targetType,
+        });
+        mutate?.(svc);
+
+        const attempt = svc.create(payload(overrides), STAR as any);
+        await expect(attempt).rejects.toMatchObject({ status });
+        await expect(attempt).rejects.toMatchObject({
+          message: expect.stringContaining(message),
+        });
+
+        expectNothingWritten();
+        expect(svc.findOrCreateUser).not.toHaveBeenCalled();
+      },
+    );
+
+    it('the active reporting year missing -> 404, nothing written', async () => {
+      const { svc, payload, expectNothingWritten } = arrangeResubmission();
+      svc._yearRepository.findOne.mockResolvedValue(null);
+
+      await expect(svc.create(payload(), STAR as any)).rejects.toMatchObject({
+        status: 404,
+        message: 'Active year not found',
+      });
+      expectNothingWritten();
+    });
+
+    it('the allocated primary of a fully valid payload passes the preflight with zero writes, and reaches the reset (the first write)', async () => {
+      const { svc, payload, expectNothingWritten } = arrangeResubmission();
+
+      await expect(svc.create(payload(), STAR as any)).rejects.toMatchObject({
+        status: 409,
+        message: PLACEHOLDER,
+      });
+
+      // The payload lead project (77, from grant_title "P1") is what alignment is checked on.
+      expect(svc._primaryProgramRequestService.isAligned).toHaveBeenCalledWith(
+        77,
+        6,
+      );
+      expectNothingWritten({ resetReached: true });
+    });
+
+    // T-3 review forward pointer (7). RSB-R-12 scenario "project with a single SP": "GIVEN a lead
+    // project allocated only to SP01, WHEN it is resubmitted with another SP as primary, THEN it is
+    // refused". The allocation list of the lead project is {SP01}; SP06 is a real CLARISA program.
+    describe('RSB-R-12 scenario: a project with a single SP', () => {
+      const SP01_ONLY = (svc: any) =>
+        svc._primaryProgramRequestService.isAligned.mockImplementation(
+          async (_project: number, initiative: number) => initiative === 1,
+        );
+
+      it('another SP as primary is refused (400 naming the SP and the result), zero writes, the title and users never reached', async () => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission();
+        SP01_ONLY(svc);
+
+        const attempt = svc.create(
+          payload({ toc_mapping: { science_program_id: 'SP06' } }),
+          STAR as any,
+        );
+        await expect(attempt).rejects.toMatchObject({ status: 400 });
+        await expect(attempt).rejects.toThrow(
+          'SP06 is not allocated to the lead project of result 28565.',
+        );
+
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).toHaveBeenCalledWith(77, 6);
+        expect(svc.findOrCreateUser).not.toHaveBeenCalled();
+        expectNothingWritten();
+      });
+
+      it('the SAME single SP as primary passes (the twin: the refusal above is the allocation, not the payload)', async () => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission();
+        SP01_ONLY(svc);
+
+        await expect(
+          svc.create(
+            payload({ toc_mapping: { science_program_id: 'SP01' } }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: AFTER_PREFLIGHT });
+
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).toHaveBeenCalledWith(77, 1);
+        expectNothingWritten({ resetReached: true });
+      });
+    });
+
+    it('the SAME title as the result itself passes (R-16): the duplicate lookup excludes the result id', async () => {
+      const { svc, payload, expectNothingWritten } = arrangeResubmission();
+      // The only row that carries this title is the result being resubmitted: a lookup that
+      // excludes it finds nothing. A lookup that does NOT exclude it would find id 501 and refuse.
+      svc._resultRepository.findOne.mockImplementation(async (options: any) =>
+        options?.where?.id ? null : { id: 501 },
+      );
+
+      await expect(
+        svc.create(payload({ title: 'Its own title' }), STAR as any),
+      ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+
+      expect(svc._resultRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            title: 'Its own title',
+            version_id: 36,
+            id: Not(501),
+          }),
+        }),
+      );
+      expectNothingWritten({ resetReached: true });
+    });
+
+    // RSB-R-23 (T-3 Pivot Record, user decision 2026-10-06): the payload names the lead project the
+    // create writers will store. The stored lead is NOT a fallback (the reset deactivates it).
+    describe('RSB-R-23: the payload must yield a lead bilateral project', () => {
+      const NO_LEAD =
+        'Result 28565 cannot be resubmitted without a lead bilateral project (one project, or one flagged is_lead).';
+      const twoProjects = (svc: any) =>
+        svc._clarisaProjectsRepository.find.mockImplementation(
+          async ({ where }: any) =>
+            ({
+              P1: [{ id: 77, isActive: true }],
+              P2: [{ id: 78, isActive: true }],
+            })[where.externalCode] ?? [],
+        );
+
+      it('no project in the payload -> 400 before any write; alignment never asked', async () => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission();
+
+        const attempt = svc.create(
+          payload({ contributing_bilateral_projects: [] }),
+          STAR as any,
+        );
+        await expect(attempt).rejects.toMatchObject({ status: 400 });
+        await expect(attempt).rejects.toMatchObject({ message: NO_LEAD });
+
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).not.toHaveBeenCalled();
+        expect(svc.findOrCreateUser).not.toHaveBeenCalled();
+        expectNothingWritten();
+      });
+
+      it('several projects, none flagged is_lead (the R-23 scenario) -> 400, zero writes', async () => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission();
+        twoProjects(svc);
+
+        const attempt = svc.create(
+          payload({
+            contributing_bilateral_projects: [
+              { grant_title: 'P1' },
+              { grant_title: 'P2' },
+            ],
+          }),
+          STAR as any,
+        );
+        await expect(attempt).rejects.toMatchObject({ status: 400 });
+        await expect(attempt).rejects.toMatchObject({ message: NO_LEAD });
+
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).not.toHaveBeenCalled();
+        expectNothingWritten();
+      });
+
+      it('one project flagged among several -> passes, and isAligned receives THAT project', async () => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission();
+        twoProjects(svc);
+
+        await expect(
+          svc.create(
+            payload({
+              contributing_bilateral_projects: [
+                { grant_title: 'P1' },
+                { grant_title: 'P2', is_lead: true },
+              ],
+            }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).toHaveBeenCalledWith(78, 6);
+        expectNothingWritten({ resetReached: true });
+      });
+
+      it('a single project is the lead even without the flag (determineIsLead)', async () => {
+        const { svc, payload } = arrangeResubmission();
+
+        await expect(
+          svc.create(
+            payload({
+              contributing_bilateral_projects: [{ grant_title: 'P1' }],
+            }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).toHaveBeenCalledWith(77, 6);
+      });
+
+      it('the stored lead project is never read (no `find` on results_by_projects during the preflight)', async () => {
+        const { svc, payload } = arrangeResubmission();
+
+        await expect(
+          svc.create(
+            payload({ contributing_bilateral_projects: [] }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 400 });
+
+        expect(svc._resultsByProjectsRepository.find).not.toHaveBeenCalled();
+      });
+    });
+
+    // @akili-spec bilateral/resubmit-followups — RSF-T-4 (RSF-R-5, R-6, DD-6, P-13). The lead centre
+    // is resolved with the lookup `handleLeadCenter` uses, through a CLOSED WORLD: `_clarisaCenters`,
+    // `_clarisaInstitutionsRepository` and `_resultsCenterRepository` answer only reads, so a
+    // lookup that wrote (a cache row, a `save`) is a recorded violation.
+    describe('RSF-T-4: lead centre, one lead project, contributor ids (resubmission branch only)', () => {
+      const arrange = () => {
+        const base = arrangeResubmission();
+        const { svc, world } = base;
+        const centers = {
+          findOne: jest.fn().mockResolvedValue(null),
+          find: jest.fn().mockResolvedValue([]),
+        };
+        const institutions = {
+          findOne: jest.fn().mockResolvedValue(null),
+          find: jest.fn().mockResolvedValue([]),
+        };
+        svc._clarisaCenters = world.fake('clarisaCenters', centers);
+        svc._clarisaInstitutionsRepository = world.fake(
+          'clarisaInstitutions',
+          institutions,
+        );
+        const persist = jest.spyOn(svc, 'persistLeadCenter');
+        return { ...base, centers, institutions, persist };
+      };
+      const LEAD_CENTER_400 = (value: string) =>
+        `Result 28565 cannot be resubmitted: lead_center ${value} does not match a CGIAR center.`;
+      const threeProjects = (svc: any) =>
+        svc._clarisaProjectsRepository.find.mockImplementation(
+          async ({ where }: any) =>
+            ({
+              P1: [{ id: 77, isActive: true }],
+              P2: [{ id: 78, isActive: true }],
+              P3: [{ id: 79, isActive: true }],
+            })[where.externalCode] ?? [],
+        );
+
+      it('an unknown lead_center -> 400 naming the result and the value sent; zero writes, users and reset never reached', async () => {
+        const { svc, payload, expectNothingWritten, persist } = arrange();
+
+        const attempt = svc.create(
+          payload({ lead_center: { acronym: 'NOWHERE' } }),
+          STAR as any,
+        );
+        await expect(attempt).rejects.toMatchObject({
+          status: 400,
+          message: LEAD_CENTER_400('NOWHERE'),
+        });
+
+        expect(svc.findOrCreateUser).not.toHaveBeenCalled();
+        expect(persist).not.toHaveBeenCalled();
+        expectNothingWritten();
+      });
+
+      it('an institution that matches but owns no clarisa_center -> the same 400', async () => {
+        const { svc, payload, expectNothingWritten, institutions } = arrange();
+        institutions.find.mockResolvedValue([{ id: 5 }]);
+
+        await expect(
+          svc.create(
+            payload({ lead_center: { name: 'Some Institute' } }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({
+          status: 400,
+          message: LEAD_CENTER_400('Some Institute'),
+        });
+        expectNothingWritten();
+      });
+
+      it('a lead_center that resolves through institutions passes, and the lookup wrote nothing', async () => {
+        const { svc, payload, expectNothingWritten, institutions, centers } =
+          arrange();
+        institutions.find.mockResolvedValue([{ id: 5 }]);
+        centers.find.mockResolvedValue([
+          { code: 'CENTER-09', institutionId: 5 },
+        ]);
+
+        await expect(
+          svc.create(
+            payload({ lead_center: { acronym: 'IITA' } }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+
+        // Read-only: the closed world holds `_resultsCenterRepository` (no save / update / query).
+        expectNothingWritten({ resetReached: true });
+      });
+
+      it('an Alliance alias resolves from the alias table and passes', async () => {
+        const { svc, payload, expectNothingWritten, centers } = arrange();
+        centers.findOne.mockResolvedValue({ code: 'CENTER-03' });
+
+        await expect(
+          svc.create(
+            payload({ lead_center: { acronym: 'CIAT (Alliance)' } }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+        expectNothingWritten({ resetReached: true });
+      });
+
+      it('a payload without a lead_center object is not refused (nothing to resolve, as before)', async () => {
+        const { svc, payload, expectNothingWritten } = arrange();
+
+        await expect(svc.create(payload(), STAR as any)).rejects.toMatchObject({
+          status: 409,
+          message: PLACEHOLDER,
+        });
+        expectNothingWritten({ resetReached: true });
+      });
+
+      it('two projects flagged is_lead -> 400 naming the result and the count; alignment, users and writers never reached', async () => {
+        const { svc, payload, expectNothingWritten } = arrange();
+        threeProjects(svc);
+
+        const attempt = svc.create(
+          payload({
+            contributing_bilateral_projects: [
+              { grant_title: 'P1', is_lead: true },
+              { grant_title: 'P2', is_lead: 1 },
+              { grant_title: 'P3' },
+            ],
+          }),
+          STAR as any,
+        );
+        await expect(attempt).rejects.toMatchObject({
+          status: 400,
+          message:
+            'Result 28565 cannot be resubmitted: 2 bilateral projects are flagged is_lead; flag exactly one.',
+        });
+
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).not.toHaveBeenCalled();
+        expect(svc.findOrCreateUser).not.toHaveBeenCalled();
+        expectNothingWritten();
+      });
+
+      it('one flagged project among three passes; a lone project passes without the flag', async () => {
+        const { svc, payload, expectNothingWritten } = arrange();
+        threeProjects(svc);
+
+        await expect(
+          svc.create(
+            payload({
+              contributing_bilateral_projects: [
+                { grant_title: 'P1' },
+                { grant_title: 'P2', is_lead: true },
+                { grant_title: 'P3', is_lead: false },
+              ],
+            }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+        expect(
+          svc._primaryProgramRequestService.isAligned,
+        ).toHaveBeenCalledWith(78, 6);
+        expectNothingWritten({ resetReached: true });
+      });
+
+      // RSF-R-10: the contract doc tells platforms that a 409 "its status is pending review" after a
+      // timeout means the attempt committed. The server must produce exactly that wording for 5.
+      it('R-10: describeResultStatus(5) is the literal "pending review", the wording the contract doc promises', () => {
+        expect(describeResultStatus(5)).toBe('pending review');
+        expect(describeResultStatus('5')).toBe('pending review');
+
+        const doc = readFileSync(
+          join(__dirname, '../../../docs/bilateral-result-summaries.en.md'),
+          'utf8',
+        );
+        expect(doc).toContain('`409` with `its status is pending review`');
+        expect(doc).toContain('`status: "pending review"` (with a space)');
+      });
+
+      it('the preflight result carries the contributor initiative ids, deduped (read-only CLARISA lookup, P-13)', async () => {
+        const { svc, payload, expectNothingWritten } = arrange();
+        const preflight = jest.spyOn(
+          svc._bilateralResubmissionService,
+          'runPreflight',
+        );
+
+        await expect(
+          svc.create(
+            payload({
+              contributing_programs: [
+                { science_program_id: ' sp03 ' },
+                { science_program_id: 'SP04' },
+                { science_program_id: 'SP03' },
+              ],
+            }),
+            STAR as any,
+          ),
+        ).rejects.toMatchObject({ status: 409, message: PLACEHOLDER });
+
+        await expect(preflight.mock.results[0].value).resolves.toMatchObject({
+          contributorInitiativeIds: [3, 4],
+        });
+        expectNothingWritten({ resetReached: true });
+      });
+    });
+
+    // T-3 review carry-over: the users are resolved in the preflight, before any result write.
+    describe('users are resolved in the preflight (T-3 review, forward pointer to T-4)', () => {
+      it('a valid payload resolves both users AFTER every validation (title check included)', async () => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission();
+
+        await expect(svc.create(payload(), STAR as any)).rejects.toMatchObject({
+          status: 409,
+          message: PLACEHOLDER,
+        });
+
+        // created_by, then the submitter (same two calls the create path makes).
+        expect(svc.findOrCreateUser).toHaveBeenCalledTimes(2);
+        const lastValidation = Math.max(
+          ...svc._resultRepository.findOne.mock.invocationCallOrder,
+          ...svc._primaryProgramRequestService.isAligned.mock
+            .invocationCallOrder,
+        );
+        expect(
+          svc.findOrCreateUser.mock.invocationCallOrder[0],
+        ).toBeGreaterThan(lastValidation);
+        // It may create a USER row (like the create path); no RESULT row is written.
+        expectNothingWritten({ resetReached: true });
+      });
+
+      it('a users refusal ("User email is required.") is raised before any result write', async () => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission();
+        svc.findOrCreateUser.mockRejectedValue(
+          new BadRequestException('User email is required.'),
+        );
+
+        await expect(svc.create(payload(), STAR as any)).rejects.toMatchObject({
+          status: 400,
+          message: 'User email is required.',
+        });
+
+        expectNothingWritten();
+      });
+
+      it('the real findOrCreateUser refuses a payload without an email (not just the stub)', async () => {
+        const { svc, payload, expectNothingWritten } = arrangeResubmission();
+        svc.findOrCreateUser = BilateralService.prototype['findOrCreateUser'];
+
+        await expect(
+          svc.create(payload({ created_by: {} }), STAR as any),
+        ).rejects.toMatchObject({
+          status: 400,
+          message: 'User email is required.',
+        });
+
+        expectNothingWritten();
+      });
+    });
+  });
+
+  // @akili-spec bilateral/resubmit-rejected-result — RSB-T-3 / RSB-DD-1 / RSB-R-1. The handlers'
+  // `afterCreate` now consumes `resolveAndValidate`; a NO-CODE create with an invalid payload must
+  // fail with the same message at the same moment as before: after the header and every section
+  // writer, before the contributing centres (assert the call order, not just the message).
+  describe('create() — no-code create keeps the handler error at the same moment (RSB-T-3 / RSB-R-1)', () => {
+    const STAR = { id: 12, acronym: 'STAR' };
+
+    const cases: Array<[string, number, Record<string, unknown>, string]> = [
+      [
+        'policy change',
+        ResultTypeEnum.POLICY_CHANGE,
+        { policy_change: undefined },
+        'policy_change object is required for POLICY_CHANGE results.',
+      ],
+      [
+        'capacity sharing',
+        ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        { capacity_sharing: undefined },
+        'capacity_sharing object is required for capacity sharing results.',
+      ],
+      [
+        'innovation development',
+        ResultTypeEnum.INNOVATION_DEVELOPMENT,
+        { innovation_development: undefined },
+        'innovation_development object is required for INNOVATION_DEVELOPMENT results.',
+      ],
+      [
+        'innovation use',
+        ResultTypeEnum.INNOVATION_USE,
+        {
+          innovation_use: {
+            current_innovation_use_numbers: {
+              innov_use_to_be_determined: false,
+              actors: [{ actor_type_id: 999 }],
+            },
+          },
+        },
+        'Invalid actors[0].actor_type_id: 999.',
+      ],
+    ];
+
+    it.each(cases)(
+      '%s: invalid payload -> same message, raised after the header + section writers, before the contributing centres',
+      async (_label, resultType, overrides, message) => {
+        const { service } = arrangeCreateHarness();
+        const svc: any = service;
+        // Put the real code back: the harness stubs it out.
+        (svc.runResultTypeHandlers as jest.Mock).mockRestore();
+        const writes = {
+          save: jest.fn(),
+          create: jest.fn(),
+          saveUse: jest.fn(),
+        };
+        const stubHandlers = {
+          [ResultTypeEnum.POLICY_CHANGE]: new PolicyChangeBilateralHandler(
+            {
+              save: writes.save,
+              create: writes.create,
+              findOne: jest.fn(),
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+          ),
+          [ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT]:
+            new CapacityChangeBilateralHandler(
+              { save: writes.save, create: writes.create } as any,
+              {} as any,
+              {} as any,
+            ),
+          [ResultTypeEnum.INNOVATION_DEVELOPMENT]:
+            new InnovationDevelopmentBilateralHandler(
+              {
+                save: writes.save,
+                create: writes.create,
+                findOne: jest.fn(),
+              } as any,
+              {} as any,
+            ),
+          [ResultTypeEnum.INNOVATION_USE]: new InnovationUseBilateralHandler(
+            { saveInnovationUse: writes.saveUse } as any,
+            {} as any,
+            {
+              findOne: jest.fn().mockResolvedValue(null),
+              find: jest.fn().mockResolvedValue([]),
+            } as any,
+            {} as any,
+          ),
+        };
+        svc.resultTypeHandlerMap.set(resultType, stubHandlers[resultType]);
+
+        const dto: any = {
+          result: {
+            data: {
+              ...(buildDto().result.data as any),
+              result_type_id: resultType,
+              ...overrides,
+            },
+          },
+        };
+
+        await expect(svc.create(dto, STAR as any)).rejects.toThrow(message);
+
+        // Same moment as before: the header and every section writer already ran...
+        const order = (spy: jest.SpyInstance) =>
+          spy.mock.invocationCallOrder[0];
+        expect(svc.initializeResultHeader).toHaveBeenCalledTimes(1);
+        expect(svc.handleTocMapping).toHaveBeenCalledTimes(1);
+        expect(svc.handleInstitutions).toHaveBeenCalledTimes(1);
+        expect(svc.handleEvidence).toHaveBeenCalledTimes(1);
+        expect(svc.handleNonPooledProject).toHaveBeenCalledTimes(1);
+        expect(order(svc.initializeResultHeader)).toBeLessThan(
+          order(svc.handleNonPooledProject),
+        );
+        // ...and the error stopped the create before anything after the handlers.
+        expect(svc.handleContributingCenters).not.toHaveBeenCalled();
+        expect(svc.ensureDerivedContributingCenters).not.toHaveBeenCalled();
+        // The handler wrote nothing of its own.
+        expect(writes.save).not.toHaveBeenCalled();
+        expect(writes.create).not.toHaveBeenCalled();
+        expect(writes.saveUse).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  // @akili-spec bilateral/resubmit-rejected-result — RSB-T-4 (RSB-R-4, R-23; design §7
+  // `bs.persistLeadCenter`, §9 DD-7). The replace-safe writer fixes the reset depends on. Every
+  // case here proves CALLS (and, where an in-memory table is used, the rows left active); that the
+  // real rows come out right on MySQL is RSB-T-7 (tasks.md T-4 "Gap").
+  describe('replace-safe writers (RSB-T-4)', () => {
+    const USER = 9;
+    const center = { code: 'CENTER-02', institutionId: 0 } as any;
+
+    const makeCenters = (existing: any = null) => {
+      const queries: Array<{ sql: string; params: unknown[] }> = [];
+      const { service } = makeService({
+        _resultRepository: {
+          query: jest.fn(async (sql: string, params: unknown[]) => {
+            queries.push({ sql, params });
+          }),
+        },
+        _resultsCenterRepository: {
+          getAllResultsCenterByResultIdAndCenterId: jest.fn(
+            async () => existing,
+          ),
+          save: jest.fn(async (row: any) => row),
+          update: jest.fn(async () => undefined),
+        },
+      });
+      const svc: any = service;
+      return { svc, queries, centers: svc._resultsCenterRepository };
+    };
+
+    describe('persistLeadCenter', () => {
+      it('NEW create (no existing row): exactly the calls it made before -- one lookup, one save, no UPDATE, no demotion', async () => {
+        const { svc, queries, centers } = makeCenters(null);
+
+        await svc.persistLeadCenter(501, center, USER);
+
+        expect(
+          centers.getAllResultsCenterByResultIdAndCenterId,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          centers.getAllResultsCenterByResultIdAndCenterId,
+        ).toHaveBeenCalledWith(501, 'CENTER-02');
+        expect(centers.save).toHaveBeenCalledTimes(1);
+        expect(centers.save).toHaveBeenCalledWith({
+          result_id: 501,
+          center_id: 'CENTER-02',
+          is_primary: true,
+          is_leading_result: true,
+          from_cgspace: false,
+          is_active: true,
+          created_by: USER,
+        });
+        expect(queries).toEqual([]);
+        expect(centers.update).not.toHaveBeenCalled();
+      });
+
+      it('an existing row is REACTIVATED as the lead (a reset may have deactivated it), not duplicated', async () => {
+        const { svc, queries, centers } = makeCenters({
+          id: 31,
+          is_active: 0,
+          is_leading_result: 0,
+        });
+
+        await svc.persistLeadCenter(501, center, USER);
+
+        expect(centers.save).not.toHaveBeenCalled();
+        expect(queries).toHaveLength(1);
+        expect(queries[0].sql).toMatch(/is_active\s*=\s*1/);
+        expect(queries[0].sql).toMatch(/is_leading_result\s*=\s*1/);
+        expect(queries[0].params).toEqual([USER, 31]);
+      });
+
+      it('replacePreviousLead: the previous lead (another centre) is demoted and deactivated, scoped to this result', async () => {
+        const { svc, queries } = makeCenters(null);
+
+        await svc.persistLeadCenter(501, center, USER, {
+          replacePreviousLead: true,
+        });
+
+        const demotion = queries.find((q) =>
+          /is_leading_result\s*=\s*0/.test(q.sql),
+        );
+        expect(demotion).toBeDefined();
+        expect(demotion.sql).toMatch(/is_active\s*=\s*0/);
+        expect(demotion.sql).toMatch(/is_primary\s*=\s*0/);
+        // Only this result, never the centre being made lead, only rows that ARE the lead.
+        expect(demotion.sql).toMatch(/result_id\s*=\s*\?/);
+        expect(demotion.sql).toMatch(/center_id\s*<>\s*\?/);
+        expect(demotion.sql).toMatch(/is_leading_result\s*=\s*1/);
+        expect(demotion.params).toEqual([USER, 501, 'CENTER-02']);
+      });
+
+      it('the demotion comes BEFORE the new lead is flagged', async () => {
+        const { svc, queries, centers } = makeCenters({
+          id: 31,
+          is_active: 1,
+          is_leading_result: 0,
+        });
+
+        await svc.persistLeadCenter(501, center, USER, {
+          replacePreviousLead: true,
+        });
+
+        expect(queries).toHaveLength(2);
+        expect(queries[0].sql).toMatch(/is_leading_result\s*=\s*0/);
+        expect(queries[1].params).toEqual([USER, 31]);
+        expect(centers.save).not.toHaveBeenCalled();
+      });
+
+      it('handleLeadCenter threads the option through to persistLeadCenter, and omits it by default (create path)', async () => {
+        const { service } = makeService({
+          _clarisaCenters: {
+            findOne: jest.fn(async ({ where }: any) => ({
+              code: where.code,
+              institutionId: 0,
+            })),
+          },
+        });
+        const svc: any = service;
+        const persist = jest
+          .spyOn(svc, 'persistLeadCenter')
+          .mockResolvedValue(undefined);
+
+        await svc.handleLeadCenter(
+          7,
+          { acronym: 'Bioversity (Alliance)' },
+          USER,
+        );
+        await svc.handleLeadCenter(
+          7,
+          { acronym: 'Bioversity (Alliance)' },
+          USER,
+          { replacePreviousLead: true },
+        );
+
+        expect(persist.mock.calls[0][3]).toBeUndefined();
+        expect(persist.mock.calls[1][3]).toEqual({ replacePreviousLead: true });
+      });
+    });
+
+    describe('persistContributingCenter', () => {
+      it('no existing row: the same single save as before', async () => {
+        const { svc, centers } = makeCenters(null);
+
+        await svc.persistContributingCenter(501, center, USER);
+
+        expect(centers.save).toHaveBeenCalledWith({
+          result_id: 501,
+          center_id: 'CENTER-02',
+          is_primary: false,
+          is_leading_result: false,
+          from_cgspace: false,
+          is_active: true,
+          created_by: USER,
+        });
+        expect(centers.update).not.toHaveBeenCalled();
+      });
+
+      it('an existing INACTIVE row (deactivated by the reset) is reactivated as a contributor, never duplicated', async () => {
+        const { svc, centers } = makeCenters({ id: 31, is_active: 0 });
+
+        await svc.persistContributingCenter(501, center, USER);
+
+        expect(centers.save).not.toHaveBeenCalled();
+        expect(centers.update).toHaveBeenCalledWith(
+          { id: 31 },
+          {
+            is_active: true,
+            is_primary: false,
+            is_leading_result: false,
+            last_updated_by: USER,
+          },
+        );
+      });
+
+      it('an existing ACTIVE row is left exactly as it is', async () => {
+        const { svc, centers } = makeCenters({ id: 31, is_active: 1 });
+
+        await svc.persistContributingCenter(501, center, USER);
+
+        expect(centers.save).not.toHaveBeenCalled();
+        expect(centers.update).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('handleCountries / subnationals (R-4: "an existing country with new subnationals -> written")', () => {
+      const arrangeCountries = (existingCountryRow: any) => {
+        const { service } = makeService({
+          _clarisaCountriesRepository: {
+            find: jest.fn().mockResolvedValue([{ id: 1 }]),
+          },
+          _clarisaSubnationalAreasRepository: {
+            find: jest.fn().mockResolvedValue([{ code: 'S1' }]),
+          },
+          _resultCountryRepository: {
+            updateCountries: jest.fn().mockResolvedValue(undefined),
+            getResultCountrieByIdResultAndCountryId: jest
+              .fn()
+              .mockResolvedValue(existingCountryRow),
+            save: jest.fn(async (rows: any[]) => {
+              rows.forEach((r) => (r.result_country_id = 77));
+              return rows;
+            }),
+          },
+          _resultCountrySubnationalRepository: {
+            bulkUpdateSubnational: jest.fn().mockResolvedValue(undefined),
+            upsertSubnational: jest.fn().mockResolvedValue(undefined),
+          },
+        });
+        const svc: any = service;
+        return { svc, subnationals: svc._resultCountrySubnationalRepository };
+      };
+
+      it('resubmission (all countries): a country that ALREADY exists gets its subnationals written', async () => {
+        const { svc, subnationals } = arrangeCountries({
+          result_country_id: 33,
+        });
+
+        await svc.handleCountries(
+          { id: 501 },
+          [{ id: 1 }],
+          [{ id: 9 }],
+          5,
+          USER,
+          {
+            writeSubnationalsForAllCountries: true,
+          },
+        );
+
+        expect(subnationals.bulkUpdateSubnational).toHaveBeenCalledWith(
+          33,
+          ['S1'],
+          USER,
+        );
+        expect(subnationals.upsertSubnational).toHaveBeenCalledWith(
+          33,
+          ['S1'],
+          USER,
+        );
+      });
+
+      it('NEW country: identical subnational writes with or without the option (the create path is unchanged)', async () => {
+        const plain = arrangeCountries(undefined);
+        const all = arrangeCountries(undefined);
+
+        await plain.svc.handleCountries(
+          { id: 501 },
+          [{ id: 1 }],
+          [{ id: 9 }],
+          5,
+          USER,
+        );
+        await all.svc.handleCountries(
+          { id: 501 },
+          [{ id: 1 }],
+          [{ id: 9 }],
+          5,
+          USER,
+          {
+            writeSubnationalsForAllCountries: true,
+          },
+        );
+
+        for (const { subnationals } of [plain, all]) {
+          expect(subnationals.bulkUpdateSubnational.mock.calls).toEqual([
+            [77, ['S1'], USER],
+          ]);
+          expect(subnationals.upsertSubnational.mock.calls).toEqual([
+            [77, ['S1'], USER],
+          ]);
+        }
+      });
+
+      it('create path default: an existing country is NOT touched (behaviour unchanged for every other caller)', async () => {
+        const { svc, subnationals } = arrangeCountries({
+          result_country_id: 33,
+        });
+
+        await svc.handleCountries(
+          { id: 501 },
+          [{ id: 1 }],
+          [{ id: 9 }],
+          5,
+          USER,
+        );
+
+        expect(subnationals.bulkUpdateSubnational).not.toHaveBeenCalled();
+        expect(subnationals.upsertSubnational).not.toHaveBeenCalled();
+      });
+    });
+
+    // The reset runs against an in-memory model of the tables; the writers are the REAL bs methods
+    // writing into the same model, so "before 2, payload 1 -> 1 active" is a claim about both
+    // halves together. A model, not MySQL: the behavioural proof is RSB-T-7.
+    describe('reset + the real writers (rows left active)', () => {
+      const RESULT = 501;
+      const arrangeDb = (seed: Array<[EntityClass, Row[]]>) => {
+        const db = createInMemoryDb(seed);
+        const resubmission = new BilateralResubmissionService(db.dataSource);
+        return { db, resubmission };
+      };
+      const activeLinks = (db: ReturnType<typeof createInMemoryDb>) =>
+        db
+          .rowsOf(Evidence)
+          .filter((r) => r.result_id === RESULT && db.isActive(Evidence, r.id))
+          .map((r) => r.link);
+
+      it('EVIDENCE: two links before, one in the payload -> exactly one active (without the reset: three)', async () => {
+        const { db, resubmission } = arrangeDb([
+          [
+            Evidence,
+            [
+              {
+                id: 1,
+                result_id: RESULT,
+                link: 'https://x.org/old-1',
+                is_active: 1,
+              },
+              {
+                id: 2,
+                result_id: RESULT,
+                link: 'https://x.org/old-2',
+                is_active: 1,
+              },
+            ],
+          ],
+        ]);
+        const { service } = makeService({
+          _evidencesRepository: {
+            save: jest.fn(async (e: any) => {
+              db.rowsOf(Evidence).push({ id: 3, ...e, is_active: 1 });
+            }),
+          },
+          _evidencesService: {
+            getHandleFromRegularLink: jest.fn(async (l: string) => l),
+          },
+          _resultsKnowledgeProductsRepository: {
+            findOne: jest.fn().mockResolvedValue(null),
+          },
+        });
+        const svc: any = service;
+
+        await resubmission.resetSectionsForResubmission(RESULT, {
+          userId: USER,
+          resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
+          primaryChanged: false,
+          payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
+        });
+        await svc.handleEvidence(RESULT, [{ link: 'https://x.org/new' }], USER);
+
+        expect(activeLinks(db)).toEqual(['https://x.org/new']);
+      });
+
+      it('PROJECTS: two before, the payload names one -> exactly one active, and its budget row is the new one', async () => {
+        const { db, resubmission } = arrangeDb([
+          [
+            ResultsByProjects,
+            [
+              { id: 1, result_id: RESULT, project_id: 10, is_active: 1 },
+              { id: 2, result_id: RESULT, project_id: 11, is_active: 1 },
+            ],
+          ],
+          [
+            NonPooledProjectBudget,
+            [{ id: 5, result_project_id: 1, is_active: 1 }],
+          ],
+        ]);
+        const { service } = makeService({
+          _resultsByProjectsRepository: {
+            save: jest.fn(async (row: any) => {
+              const saved = { id: 3, ...row, is_active: 1 };
+              db.rowsOf(ResultsByProjects).push(saved);
+              return saved;
+            }),
+          },
+        });
+        const svc: any = service;
+
+        await resubmission.resetSectionsForResubmission(RESULT, {
+          userId: USER,
+          resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
+          primaryChanged: false,
+          payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
+        });
+        await svc.handleNonPooledProject(
+          RESULT,
+          USER,
+          [{ grant_title: 'P1', is_lead: true }],
+          ResultTypeEnum.OTHER_OUTPUT,
+          new Map([['P1', { id: 12 }]]),
+        );
+
+        const active = db
+          .rowsOf(ResultsByProjects)
+          .filter((r) => db.isActive(ResultsByProjects, r.id));
+        expect(active.map((r) => r.project_id)).toEqual([12]);
+        expect(db.isActive(NonPooledProjectBudget, 5)).toBe(false);
+      });
+
+      it('PARTNERS ({A,B} -> {C}): the reset leaves them to updateInstitutions, which gets exactly {C}; an existing C row is reused, so there is no duplicate C (call-level: the SQL replace is RSB-T-7)', async () => {
+        const { db, resubmission } = arrangeDb([
+          [
+            ResultsByInstitution,
+            [
+              {
+                id: 1,
+                result_id: RESULT,
+                institutions_id: 71,
+                institution_roles_id: 2,
+                is_active: 1,
+              },
+              {
+                id: 2,
+                result_id: RESULT,
+                institutions_id: 72,
+                institution_roles_id: 2,
+                is_active: 1,
+              },
+              {
+                id: 3,
+                result_id: RESULT,
+                institutions_id: 73,
+                institution_roles_id: 2,
+                is_active: 0,
+              },
+            ],
+          ],
+        ]);
+        const institutions = {
+          updateInstitutions: jest.fn().mockResolvedValue(undefined),
+          getResultByInstitutionExists: jest.fn().mockResolvedValue({
+            id: 3,
+            institutions_id: 73,
+            is_active: false,
+          }),
+          save: jest.fn(),
+        };
+        const { service } = makeService({
+          _clarisaInstitutionsRepository: {
+            findOne: jest.fn().mockResolvedValue({ id: 73 }),
+            find: jest.fn().mockResolvedValue([]),
+          },
+          _resultByIntitutionsRepository: institutions,
+        });
+        const svc: any = service;
+
+        await resubmission.resetSectionsForResubmission(RESULT, {
+          userId: USER,
+          resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
+          primaryChanged: false,
+          payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
+        });
+        await svc.handleInstitutions(
+          RESULT,
+          [{ institution_id: 73 }],
+          USER,
+          ResultTypeEnum.OTHER_OUTPUT,
+        );
+
+        // The reset did not touch A and B (the writer below deactivates them: it is replace-safe).
+        expect(db.isActive(ResultsByInstitution, 1)).toBe(true);
+        expect(institutions.updateInstitutions).toHaveBeenCalledWith(
+          RESULT,
+          [{ institutions_id: 73 }],
+          USER,
+          false,
+          [2],
+        );
+        expect(institutions.save).not.toHaveBeenCalled();
+      });
+
+      it('PARTNERS the payload sends none -> no active partner is left (the reset deactivates them; handleInstitutions returns early)', async () => {
+        const { db, resubmission } = arrangeDb([
+          [
+            ResultsByInstitution,
+            [
+              {
+                id: 1,
+                result_id: RESULT,
+                institutions_id: 71,
+                institution_roles_id: 2,
+                is_active: 1,
+              },
+              {
+                id: 2,
+                result_id: RESULT,
+                institutions_id: 72,
+                institution_roles_id: 2,
+                is_active: 1,
+              },
+            ],
+          ],
+        ]);
+        const { service } = makeService();
+        const svc: any = service;
+
+        await resubmission.resetSectionsForResubmission(RESULT, {
+          userId: USER,
+          resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
+          primaryChanged: false,
+          payloadSendsPartners: false,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
+        });
+        await svc.handleInstitutions(
+          RESULT,
+          [],
+          USER,
+          ResultTypeEnum.OTHER_OUTPUT,
+        );
+
+        expect(
+          db
+            .rowsOf(ResultsByInstitution)
+            .filter((r) => db.isActive(ResultsByInstitution, r.id)),
+        ).toEqual([]);
+      });
+
+      it('SUBNATIONALS: same country, same subnational S re-sent -> exactly ONE active S (real handleCountries + real repository logic over the model)', async () => {
+        const { db, resubmission } = arrangeDb([
+          [
+            ResultCountry,
+            [{ id: 1, result_country_id: 33, result_id: RESULT, is_active: 1 }],
+          ],
+          [
+            ResultCountrySubnational,
+            [
+              {
+                id: 1,
+                result_country_id: 33,
+                clarisa_subnational_scope_code: 'S1',
+                geo_scope_role_id: 1,
+                is_active: 1,
+              },
+            ],
+          ],
+        ]);
+        // The REAL repository methods; only the two database primitives they use are modelled.
+        // Each primitive acts when CALLED and resolves a tick later, like a query on a pool: that
+        // is what lets a parallel read overtake a write issued by a sibling call.
+        const rows = () => db.rowsOf(ResultCountrySubnational);
+        const repo: any = Object.create(
+          ResultCountrySubnationalRepository.prototype,
+        );
+        repo._handlersError = {
+          returnErrorRepository: ({ error }: any) => error,
+        };
+        repo.query = async (sql: string, params: any[]) => {
+          const [, rcId, role, ...codes] = params;
+          const notIn = /not in/i.test(sql);
+          for (const r of rows()) {
+            if (r.result_country_id !== rcId || r.geo_scope_role_id !== role)
+              continue;
+            const listed = codes.includes(r.clarisa_subnational_scope_code);
+            if (notIn && !listed && r.is_active === 1) r.is_active = 0;
+            if (!notIn && listed) r.is_active = 1;
+          }
+          await Promise.resolve();
+        };
+        repo.findOneBy = async (where: any) => {
+          const found = rows().find(
+            (r) =>
+              r.is_active === (where.is_active ? 1 : 0) &&
+              r.result_country_id === where.result_country_id &&
+              r.clarisa_subnational_scope_code ===
+                where.clarisa_subnational_scope_code &&
+              r.geo_scope_role_id === where.geo_scope_role_id,
+          );
+          await Promise.resolve();
+          return found ?? null;
+        };
+        repo.save = async (toSave: any[]) => {
+          toSave.forEach((r) =>
+            rows().push({ id: rows().length + 1, ...r, is_active: 1 }),
+          );
+        };
+        const { service } = makeService({
+          _clarisaCountriesRepository: {
+            find: jest.fn().mockResolvedValue([{ id: 1 }]),
+          },
+          _clarisaSubnationalAreasRepository: {
+            find: jest.fn().mockResolvedValue([{ code: 'S1' }]),
+          },
+          _resultCountryRepository: {
+            updateCountries: jest.fn().mockResolvedValue(undefined),
+            getResultCountrieByIdResultAndCountryId: jest
+              .fn()
+              .mockResolvedValue({ result_country_id: 33 }),
+          },
+          _resultCountrySubnationalRepository: repo,
+        });
+        const svc: any = service;
+
+        await resubmission.resetSectionsForResubmission(RESULT, {
+          userId: USER,
+          resultTypeId: ResultTypeEnum.OTHER_OUTPUT,
+          primaryChanged: false,
+          payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
+        });
+        expect(rows().filter((r) => r.is_active === 1)).toEqual([]);
+        await svc.handleCountries(
+          { id: RESULT },
+          [{ id: 1 }],
+          [{ id: 9 }],
+          5,
+          USER,
+          { writeSubnationalsForAllCountries: true },
+        );
+
+        const active = rows().filter((r) => r.is_active === 1);
+        expect(active.map((r) => r.clarisa_subnational_scope_code)).toEqual([
+          'S1',
+        ]);
+      });
+
+      it('INNOVATION USE actors: before two actor types, the payload sends one -> one active (the REAL saveAnticipatedInnoUser writes into the same model)', async () => {
+        const { db, resubmission } = arrangeDb([
+          [
+            ResultActor,
+            [
+              {
+                id: 1,
+                result_id: RESULT,
+                actor_type_id: 1,
+                section_id: 1,
+                is_active: 1,
+              },
+              {
+                id: 2,
+                result_id: RESULT,
+                actor_type_id: 2,
+                section_id: 1,
+                is_active: 1,
+              },
+            ],
+          ],
+        ]);
+        // The real writer, over thin CRUD stand-ins for the actor repository (no writer logic here).
+        const innovationUse: any = Object.create(
+          InnovationUseService.prototype,
+        );
+        const sameWhere = (
+          row: Record<string, any>,
+          where: Record<string, any>,
+        ) =>
+          Object.entries(where).every(
+            ([key, value]) =>
+              (typeof value === 'boolean' ? Number(value) : value) === row[key],
+          );
+        innovationUse._resultActorRepository = {
+          findOne: jest.fn(
+            async ({ where }: any) =>
+              db.rowsOf(ResultActor).find((r) => sameWhere(r, where)) ?? null,
+          ),
+          update: jest.fn(async (criteria: any, set: any) => {
+            const where =
+              typeof criteria === 'object' ? criteria : { id: criteria };
+            db.rowsOf(ResultActor)
+              .filter((r) => sameWhere(r, where))
+              .forEach((r) => Object.assign(r, set));
+          }),
+          save: jest.fn(async (row: any) => {
+            db.rowsOf(ResultActor).push({ id: 3, ...row, is_active: 1 });
+          }),
+        };
+
+        await resubmission.resetSectionsForResubmission(RESULT, {
+          userId: USER,
+          resultTypeId: ResultTypeEnum.INNOVATION_USE,
+          primaryChanged: false,
+          payloadSendsPartners: true,
+          // The pre-RSF-T-6 shape of these cases: no contributing_programs in the payload.
+          contributorInitiativeIds: [],
+        });
+        await innovationUse.saveAnticipatedInnoUser(
+          RESULT,
+          USER,
+          {
+            actors: [{ actor_type_id: 1, men: 3 }],
+            organization: [],
+            measures: [],
+          },
+          1,
+          false,
+        );
+
+        const activeActors = db
+          .rowsOf(ResultActor)
+          .filter((r) => db.isActive(ResultActor, r.id))
+          .map((r) => r.actor_type_id);
+        expect(activeActors).toEqual([1]);
+      });
+    });
+  });
+
+  // @akili-spec bilateral/resubmit-rejected-result — RSB-T-5 (RSB-R-1, R-3, R-4, R-14, R-15; DD-5,
+  // DD-6; T-4 forward pointers 1, 2, 3, 5). What each member of the writers port really does. The
+  // ORDER of the pipeline stages and what they do with the result are pinned in
+  // `services/bilateral-resubmission.service.spec.ts`; here the REAL `BilateralService` helpers run.
+  describe('resubmission writers port (RSB-T-5)', () => {
+    const USER = 9;
+    const SUBMITTER = 10;
+    const STAR = { id: 12, acronym: 'STAR' };
+
+    describe('writeResubmittedResult: the header in place, then every writer in the create order', () => {
+      const dto = (): any => ({
+        result_type_id: ResultTypeEnum.OTHER_OUTPUT,
+        result_level_id: 3,
+        title: 'Corrected title',
+        description: 'Corrected description',
+        geo_focus: {
+          scope_code: 4,
+          regions: [],
+          countries: [{ id: 1 }],
+          subnational_areas: [],
+        },
+        lead_center: { acronym: 'CIP' },
+        toc_mapping: { science_program_id: 'SP06' },
+        contributing_programs: [{ science_program_id: 'SP01' }],
+        contributing_partners: [{ name: 'Partner' }],
+        evidence: [{ link: 'https://example.org/a' }],
+        contributing_bilateral_projects: [{ grant_title: 'P1' }],
+        contributing_center: [{ acronym: 'ILRI' }],
+        submitted_by: {
+          email: 's@example.org',
+          name: 'S',
+          submitted_date: '2026-10-05',
+          comment: 'second attempt',
+        },
+        created_by: { email: 'c@example.org' },
+        external_reference: 'ext-1',
+        keep_editing: true,
+      });
+
+      const arrange = () => {
+        const { service } = makeService();
+        const svc: any = service;
+        const order: string[] = [];
+        svc._resultRepository = {
+          update: jest.fn(async () => {
+            order.push('header.update');
+          }),
+          findOne: jest.fn(async () => {
+            order.push('header.read');
+            return { id: 501, status_id: 7, result_code: 28565 };
+          }),
+          save: jest.fn(async (row: any) => {
+            order.push('result.save');
+            return row;
+          }),
+        };
+        const spy = (
+          name: string,
+          impl: (...a: any[]) => any = () => undefined,
+        ) =>
+          jest.spyOn(svc, name).mockImplementation(async (...a: any[]) => {
+            order.push(name);
+            return impl(...a);
+          });
+        spy('handleLeadCenter');
+        spy('findScope', () => ({ id: 4 }));
+        jest.spyOn(svc, 'validateGeoFocus').mockReturnValue(undefined);
+        spy('handleRegions');
+        spy('handleCountries');
+        spy('handleTocMapping');
+        spy('handleInstitutions');
+        spy('handleEvidence');
+        spy('handleNonPooledProject');
+        spy('runResultTypeHandlers');
+        spy('handleContributingCenters');
+        spy('ensureDerivedContributingCenters');
+        const args = (overrides: Record<string, unknown> = {}) => ({
+          target: { id: 501, result_code: 28565 },
+          bilateralDto: dto(),
+          platform: STAR,
+          userId: USER,
+          submittedUserId: SUBMITTER,
+          resolvedProjects: new Map([['P1', { id: 77 }]]),
+          suppressPrimaryRole: false,
+          ...overrides,
+        });
+        return { svc, order, args };
+      };
+
+      it('runs the header update, then the writers, in the order the no-code create runs them', async () => {
+        const { svc, order, args } = arrange();
+
+        await svc.writeResubmittedResult(args());
+
+        expect(order).toEqual([
+          'header.update',
+          'header.read',
+          'handleLeadCenter',
+          'findScope',
+          'handleRegions',
+          'handleCountries',
+          'result.save',
+          'handleTocMapping',
+          'handleInstitutions',
+          'handleEvidence',
+          'handleNonPooledProject',
+          'runResultTypeHandlers',
+          'handleContributingCenters',
+          'ensureDerivedContributingCenters',
+        ]);
+      });
+
+      it('T-4 pointer 1: the replace-safe options are passed to the lead centre and the countries writers (and ONLY there)', async () => {
+        const { svc, args } = arrange();
+        const payload = args();
+
+        await svc.writeResubmittedResult(payload);
+
+        expect(svc.handleLeadCenter).toHaveBeenCalledWith(
+          501,
+          payload.bilateralDto.lead_center,
+          USER,
+          { replacePreviousLead: true },
+        );
+        expect(svc.handleCountries).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 501 }),
+          payload.bilateralDto.geo_focus.countries,
+          payload.bilateralDto.geo_focus.subnational_areas,
+          4,
+          USER,
+          { writeSubnationalsForAllCountries: true },
+        );
+      });
+
+      it.each([
+        [true, 'the primary changed: role 1 is suppressed'],
+        [false, 'the same owner: role 1 is written'],
+      ])(
+        'DD-5: handleTocMapping gets suppressPrimaryRole=%s (%s)',
+        async (suppressPrimaryRole) => {
+          const { svc, args } = arrange();
+          const payload = args({ suppressPrimaryRole });
+
+          await svc.writeResubmittedResult(payload);
+
+          expect(svc.handleTocMapping).toHaveBeenCalledWith(
+            payload.bilateralDto.toc_mapping,
+            payload.bilateralDto.contributing_programs,
+            USER,
+            501,
+            ResultTypeEnum.OTHER_OUTPUT,
+            { suppressPrimaryRole },
+          );
+        },
+      );
+
+      it('hands the other writers what the create hands them (user, resolved projects, lead centre)', async () => {
+        const { svc, args } = arrange();
+        const payload = args();
+        const body = payload.bilateralDto;
+
+        await svc.writeResubmittedResult(payload);
+
+        expect(svc.handleInstitutions).toHaveBeenCalledWith(
+          501,
+          body.contributing_partners,
+          USER,
+          ResultTypeEnum.OTHER_OUTPUT,
+        );
+        expect(svc.handleEvidence).toHaveBeenCalledWith(
+          501,
+          body.evidence,
+          USER,
+        );
+        expect(svc.handleNonPooledProject).toHaveBeenCalledWith(
+          501,
+          USER,
+          body.contributing_bilateral_projects,
+          ResultTypeEnum.OTHER_OUTPUT,
+          payload.resolvedProjects,
+        );
+        expect(svc.runResultTypeHandlers).toHaveBeenCalledWith({
+          resultId: 501,
+          userId: USER,
+          bilateralDto: body,
+          isDuplicateResult: false,
+        });
+        expect(svc.handleContributingCenters).toHaveBeenCalledWith(
+          501,
+          body.contributing_center,
+          USER,
+          body.lead_center,
+        );
+        expect(svc.ensureDerivedContributingCenters).toHaveBeenCalledWith(
+          501,
+          USER,
+        );
+      });
+
+      it('the header is updated IN PLACE: one update of the payload columns, never the status, the id, the code or the creator (keep_editing is ignored)', async () => {
+        const { svc, args } = arrange();
+
+        await svc.writeResubmittedResult(args());
+
+        expect(svc._resultRepository.update).toHaveBeenCalledTimes(1);
+        const [id, columns] = svc._resultRepository.update.mock.calls[0];
+        expect(id).toBe(501);
+        expect(columns).toEqual({
+          title: 'Corrected title',
+          description: 'Corrected description',
+          result_level_id: 3,
+          external_submitter: SUBMITTER,
+          external_submitted_date: '2026-10-05',
+          external_submitted_comment: 'second attempt',
+          external_platform_id: 12,
+          external_platform_code: 'STAR',
+          external_reference: 'ext-1',
+          last_updated_by: USER,
+        });
+        for (const forbidden of [
+          'id',
+          'status_id',
+          'result_code',
+          'created_by',
+          'created_date',
+          'version_id',
+          'source',
+          'creation_method',
+        ]) {
+          expect(columns).not.toHaveProperty(forbidden);
+        }
+      });
+
+      it('a description the payload omits replaces the old one with NULL (the payload is the new truth); an absent submitter comment clears the old comment', async () => {
+        const { svc, args } = arrange();
+        const payload = args();
+        delete payload.bilateralDto.description;
+        payload.bilateralDto.submitted_by = { email: 's@example.org' };
+
+        await svc.writeResubmittedResult(payload);
+
+        const [, columns] = svc._resultRepository.update.mock.calls[0];
+        expect(columns).toMatchObject({
+          description: null,
+          external_submitted_date: null,
+          external_submitted_comment: null,
+        });
+      });
+
+      it('the geographic scope is saved on the FRESH header (status stays what it was: the flip is not the writers job)', async () => {
+        const { svc, args } = arrange();
+
+        await svc.writeResubmittedResult(args());
+
+        expect(svc._resultRepository.save).toHaveBeenCalledWith({
+          id: 501,
+          status_id: 7,
+          result_code: 28565,
+          geographic_scope_id: 4,
+        });
+      });
+
+      // T-4 pointer 3 end to end: the REAL handleLeadCenter -> persistLeadCenter, with the demotion
+      // failing. Before this task the error was swallowed and the writers ran on, leaving zero or
+      // two lead centres with the result on its way to Pending Review.
+      it('T-4 pointer 3: a lead-centre demotion that fails REJECTS the whole write: no geography, no ToC, nothing after it', async () => {
+        const { svc, order, args } = arrange();
+        (svc.handleLeadCenter as jest.Mock).mockRestore();
+        svc._clarisaCenters = {
+          findOne: jest.fn(async ({ where }: any) => ({
+            code: where.code,
+            institutionId: 0,
+          })),
+        };
+        svc._resultRepository.query = jest
+          .fn()
+          .mockRejectedValue(new Error('demotion failed'));
+        const payload = args();
+        payload.bilateralDto.lead_center = { acronym: 'Bioversity (Alliance)' };
+
+        await expect(svc.writeResubmittedResult(payload)).rejects.toThrow(
+          'demotion failed',
+        );
+
+        expect(svc._resultRepository.query).toHaveBeenCalledTimes(1);
+        for (const later of [
+          'findScope',
+          'handleCountries',
+          'handleTocMapping',
+          'handleInstitutions',
+        ]) {
+          expect(order).not.toContain(later);
+        }
+      });
+
+      it('a writer that throws stops the sequence: nothing after it runs (the pipeline then leaves the result Rejected)', async () => {
+        const { svc, order, args } = arrange();
+        (svc.handleTocMapping as jest.Mock).mockRejectedValue(
+          new Error('toc down'),
+        );
+
+        await expect(svc.writeResubmittedResult(args())).rejects.toThrow(
+          'toc down',
+        );
+
+        expect(order).not.toContain('handleInstitutions');
+        expect(order).not.toContain('ensureDerivedContributingCenters');
+      });
+    });
+
+    // @akili-spec bilateral/resubmit-rejected-result — RSB-T-5 attempt 2 (Reviewer A FAIL, decided by
+    // Juan David Delgado): the lead-program investment of an OWNERLESS resubmission lives on an
+    // INACTIVE role-1 row (the budget row itself is ACTIVE). The REAL writer, the REAL
+    // `PrimaryProgramRequestService.accept` / `decline` and the REAL bilateral budget reader run over
+    // the same in-memory rows. A MODEL of the database, not MySQL (RSB-T-7).
+    describe('lead-program investment on the ownerless branch (T-5 attempt 2)', () => {
+      const RESULT = 501;
+      const SP06 = 6;
+      const USER_ID = 9;
+      const PK = new Map<EntityClass, string>([
+        [ShareResultRequest, 'share_result_request_id'],
+        [ResultInitiativeBudget, 'result_initiative_budget_id'],
+        [ResultsTocResult, 'result_toc_result_id'],
+      ]);
+
+      const arrange = (seedRoles: Row[] = []) => {
+        const db = createInMemoryDb(
+          [
+            [ResultsByInititiative, seedRoles],
+            [ResultInitiativeBudget, []],
+            [
+              ShareResultRequest,
+              [
+                {
+                  share_result_request_id: 40,
+                  result_id: RESULT,
+                  request_type: 'primary',
+                  request_status_id: 1,
+                  shared_inititiative_id: SP06,
+                  owner_initiative_id: SP06,
+                  is_active: 1,
+                },
+              ],
+            ],
+            [Result, [{ id: RESULT, status_id: 5, is_active: 1 }]],
+            [ResultReviewHistory, []],
+            [ResultsTocResult, []],
+          ],
+          { writes: true, pk: PK },
+        );
+        const { service, stubs: typedStubs } = makeService();
+        const stubs: any = typedStubs;
+        const svc: any = service;
+        stubs.clarisaInitiatives.findOne.mockResolvedValue({
+          id: SP06,
+          official_code: 'SP06',
+          active: true,
+          name: 'Six',
+        });
+        svc._resultByInitiativesRepository = db.repositoryOf(
+          ResultsByInititiative,
+        );
+        svc._resultsTocResultsRepository = {
+          findOne: jest.fn().mockResolvedValue(null),
+          save: jest.fn().mockResolvedValue({ result_toc_result_id: 555 }),
+        };
+        svc.dataSource = {
+          getRepository: (entity: EntityClass) => db.repositoryOf(entity),
+        };
+        // The budget READER the bilateral GET / list / sync payloads use, over the same model:
+        // projects, partners and evidence are empty.
+        svc._resultsByProjectsRepository = { find: async () => [] };
+        svc._resultByIntitutionsRepository = { find: async () => [] };
+        svc._evidencesRepository = { find: async () => [] };
+
+        const ppr = new PrimaryProgramRequestService(
+          {
+            ...db.repositoryOf(ShareResultRequest),
+            manager: {
+              transaction: (work: any) => db.dataSource.transaction(work),
+            },
+          } as any,
+          {
+            findOne: async ({ where }: any) => ({
+              id: where.id,
+              official_code: 'SP06',
+            }),
+          } as any,
+          undefined as any,
+          undefined as any,
+          { isUserAdmin: jest.fn().mockResolvedValue(true) } as any,
+          {
+            getAllResultsCenterByResultId: jest.fn().mockResolvedValue([]),
+          } as any,
+          undefined as any,
+          undefined as any,
+          undefined as any,
+          undefined as any,
+          undefined as any,
+          undefined as any,
+          undefined as any,
+          undefined as any,
+        );
+        ['log', 'warn', 'error'].forEach((level) =>
+          jest
+            .spyOn((ppr as any).logger, level)
+            .mockImplementation(() => undefined),
+        );
+
+        const write = (toc: Record<string, unknown> = { usd_budget: 1500 }) =>
+          svc.handleTocMapping(
+            { science_program_id: 'SP06', ...toc },
+            [],
+            USER_ID,
+            RESULT,
+            ResultTypeEnum.INNOVATION_DEVELOPMENT,
+            { suppressPrimaryRole: true },
+          );
+        const roleRows = () =>
+          db
+            .rowsOf(ResultsByInititiative)
+            .filter((r) => r.initiative_role_id === 1);
+        const activeOwner = () =>
+          roleRows().filter((r) => db.isActive(ResultsByInititiative, r.id));
+        /** The bilateral read model (GET /:id, /list, /results): budgets of ACTIVE initiative rows. */
+        const readBudgets = async () =>
+          (await svc.buildInnovationSharedBudgetAndEvidenceExtras(RESULT))
+            .initiative_budget;
+        return { db, svc, ppr, write, roleRows, activeOwner, readBudgets };
+      };
+
+      it('(a) the investment is stored on ONE INACTIVE role-1 row; the budget row is ACTIVE; nothing is visible while it is ownerless', async () => {
+        const t = arrange();
+
+        await t.write();
+
+        expect(t.roleRows()).toHaveLength(1);
+        expect(t.roleRows()[0]).toMatchObject({
+          initiative_id: SP06,
+          initiative_role_id: 1,
+          is_active: 0,
+        });
+        const budgets = t.db.rowsOf(ResultInitiativeBudget);
+        expect(budgets).toHaveLength(1);
+        expect(budgets[0]).toMatchObject({
+          result_initiative_id: t.roleRows()[0].id,
+          kind_cash: 1500,
+          is_active: 1,
+        });
+        // Ownerless: no active role 1, and the read model shows no amount.
+        expect(t.activeOwner()).toEqual([]);
+        await expect(t.readBudgets()).resolves.toEqual([]);
+      });
+
+      it('(a) writing twice (a retry) finds the SAME role-1 row and the SAME budget: no duplicates', async () => {
+        const t = arrange();
+
+        await t.write({ usd_budget: 1500 });
+        await t.write({ usd_budget: 2000 });
+
+        expect(t.roleRows()).toHaveLength(1);
+        expect(t.db.rowsOf(ResultInitiativeBudget)).toHaveLength(1);
+        expect(t.db.rowsOf(ResultInitiativeBudget)[0].kind_cash).toBe(2000);
+      });
+
+      it('(b) an existing ACTIVE role-2 row of the same SP is NOT converted: a separate inactive role-1 row carries the budget, and the budget is not on the role-2 row', async () => {
+        const t = arrange([
+          {
+            id: 7,
+            result_id: RESULT,
+            initiative_id: SP06,
+            initiative_role_id: 2,
+            is_active: 1,
+          },
+        ]);
+
+        await t.write();
+
+        const role2 = t.db
+          .rowsOf(ResultsByInititiative)
+          .find((r) => r.id === 7);
+        expect(role2).toMatchObject({ initiative_role_id: 2, is_active: 1 });
+        const role1 = t.roleRows();
+        expect(role1).toHaveLength(1);
+        expect(role1[0].id).not.toBe(7);
+        expect(role1[0].is_active).toBe(0);
+        expect(
+          t.db
+            .rowsOf(ResultInitiativeBudget)
+            .map((b) => b.result_initiative_id),
+        ).toEqual([role1[0].id]);
+      });
+
+      it('(b) a FORMER role-1 row of that SP is reused (not duplicated) and stays inactive', async () => {
+        const t = arrange([
+          {
+            id: 8,
+            result_id: RESULT,
+            initiative_id: SP06,
+            initiative_role_id: 1,
+            is_active: 0,
+          },
+        ]);
+
+        await t.write();
+
+        expect(t.roleRows().map((r) => r.id)).toEqual([8]);
+        expect(t.roleRows()[0].is_active).toBe(0);
+        expect(
+          t.db.rowsOf(ResultInitiativeBudget)[0].result_initiative_id,
+        ).toBe(8);
+      });
+
+      // @akili-spec bilateral/resubmit-followups RSF-T-2 (RSF-R-8): the consumer-facing budget reader
+      // must keep filtering the PARENT row. Falsifier: a reader that drops the parent `is_active`
+      // filter would surface 777 from the retired owner row.
+      it('RSF-R-8: an ACTIVE budget under an INACTIVE parent row never surfaces; the active role-2 row keeps its own', async () => {
+        const t = arrange([
+          {
+            id: 8,
+            result_id: RESULT,
+            initiative_id: SP06,
+            initiative_role_id: 1,
+            is_active: 0,
+          },
+          {
+            id: 9,
+            result_id: RESULT,
+            initiative_id: 11,
+            initiative_role_id: 2,
+            is_active: 1,
+          },
+        ]);
+        const budgets = t.db.repositoryOf(ResultInitiativeBudget);
+        await budgets.save({
+          result_initiative_id: 8,
+          kind_cash: 777,
+          is_active: 1,
+        });
+        await budgets.save({
+          result_initiative_id: 9,
+          kind_cash: 55,
+          is_active: 1,
+        });
+
+        const readback = await t.readBudgets();
+
+        expect(readback).toHaveLength(1);
+        expect(readback[0]).toMatchObject({ kind_cash: 55 });
+        expect(JSON.stringify(readback)).not.toContain('777');
+      });
+
+      it('(c) the REAL accept reactivates that row and the amount appears (usd_budget 1500 on the reactivated owner row)', async () => {
+        const t = arrange();
+        await t.write();
+
+        const outcome = await t.ppr.accept(40, { id: 55 } as any);
+
+        expect(outcome).toMatchObject({ ok: true, state: 'accepted' });
+        // Still ONE role-1 row, now active: accept found it without an is_active filter.
+        expect(t.roleRows()).toHaveLength(1);
+        expect(t.activeOwner().map((r) => r.initiative_id)).toEqual([SP06]);
+        const readback = await t.readBudgets();
+        expect(readback).toHaveLength(1);
+        expect(readback[0]).toMatchObject({ kind_cash: 1500 });
+        expect(t.db.rowsOf(ResultInitiativeBudget)).toHaveLength(1);
+      });
+
+      it('(c) with an accepted role-2 row of that SP in the way, accept retires the role-2 row and the budget still lands on the reactivated role-1 row', async () => {
+        const t = arrange([
+          {
+            id: 7,
+            result_id: RESULT,
+            initiative_id: SP06,
+            initiative_role_id: 2,
+            is_active: 1,
+          },
+        ]);
+        await t.write();
+
+        await t.ppr.accept(40, { id: 55 } as any);
+
+        expect(t.db.isActive(ResultsByInititiative, 7)).toBe(false);
+        const readback = await t.readBudgets();
+        expect(readback).toHaveLength(1);
+        expect(readback[0]).toMatchObject({ kind_cash: 1500 });
+      });
+
+      it('(d) SP06 DECLINES: the REAL decline rejects the result; no role 1 is active anywhere and the amount surfaces in NO reader (budget payloads, owner lookup)', async () => {
+        const t = arrange();
+        await t.write();
+
+        const outcome = await t.ppr.decline(40, { id: 55 } as any, 'not ours');
+
+        expect(outcome).toMatchObject({ ok: true, state: 'rejected' });
+        expect(t.db.rowsOf(Result)[0].status_id).toBe(7);
+        // Ownership checks read ACTIVE role 1 (getOwnerInitiativeByResult: `is_active > 0`).
+        expect(t.activeOwner()).toEqual([]);
+        // The row and its ACTIVE budget are still there, but hidden by the inactive parent.
+        expect(t.roleRows()).toHaveLength(1);
+        expect(t.db.rowsOf(ResultInitiativeBudget)[0].is_active).toBe(1);
+        await expect(t.readBudgets()).resolves.toEqual([]);
+        // The filter every other reader applies (the parent's is_active first, then the budget by the
+        // surviving parent ids), replayed over the rows.
+        const visibleParents = t.db
+          .rowsOf(ResultsByInititiative)
+          .filter(
+            (r) =>
+              r.result_id === RESULT &&
+              t.db.isActive(ResultsByInititiative, r.id),
+          )
+          .map((r) => r.id);
+        expect(
+          t.db
+            .rowsOf(ResultInitiativeBudget)
+            .filter((b) => visibleParents.includes(b.result_initiative_id)),
+        ).toEqual([]);
+      });
+    });
+
+    describe('the port members', () => {
+      it('readOwnerInitiativeId reads the active role-1 owner and answers null when there is none', async () => {
+        const { service, stubs: typedStubs } = makeService();
+        const stubs: any = typedStubs;
+        const svc: any = service;
+        stubs.resultByInitiativesRepository.getOwnerInitiativeByResult = jest
+          .fn()
+          .mockResolvedValueOnce({ id: 6, official_code: 'SP06' })
+          .mockResolvedValueOnce(undefined);
+        const port = svc.buildResubmissionWritersPort();
+
+        await expect(port.readOwnerInitiativeId(501)).resolves.toBe(6);
+        await expect(port.readOwnerInitiativeId(501)).resolves.toBeNull();
+        expect(
+          stubs.resultByInitiativesRepository.getOwnerInitiativeByResult,
+        ).toHaveBeenCalledWith(501);
+      });
+
+      it('RRC-T-6: transferPrimary assigns the primary DIRECTLY (releaseContributors:true) THROUGH THE GIVEN TRANSACTION MANAGER, in the name of the audit user, with a NUMERIC id, and returns its outcome untouched; it never sends a request', async () => {
+        const { service, stubs } = makeService();
+        const svc: any = service;
+        const outcome = { outcome: 'transferred', previousInitiativeId: null };
+        stubs.primaryProgramRequestService.transferPrimary.mockResolvedValue(
+          outcome,
+        );
+        stubs.primaryProgramRequestService.request.mockClear();
+        const port = svc.buildResubmissionWritersPort();
+
+        const manager = { marker: 'tx' };
+        // A string id (as an unconverted CLARISA id could be) must reach the core as a number.
+        await expect(
+          port.transferPrimary(501, '6', USER, manager),
+        ).resolves.toBe(outcome);
+
+        expect(
+          stubs.primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledWith(501, 6, { id: USER }, manager, {
+          releaseContributors: true,
+        });
+        expect(
+          stubs.primaryProgramRequestService.request,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('announcePendingReview delegates to the shared orchestrator (never the emitter directly)', async () => {
+        const { service } = makeService();
+        const svc: any = service;
+        const announce = jest
+          .spyOn(svc, 'announcePendingReview')
+          .mockResolvedValue(undefined);
+        const emit = jest.spyOn(svc, 'emitBilateralSubmittedNotification');
+        const port = svc.buildResubmissionWritersPort();
+
+        await port.announcePendingReview(501, SUBMITTER);
+
+        expect(announce).toHaveBeenCalledWith(501, SUBMITTER);
+        expect(emit).not.toHaveBeenCalled();
+      });
+    });
+
+    // T-4 forward pointer 2 (gap a). `handleInstitutions` returns EARLY when none of the sent
+    // partners resolves, so it never deactivates the stale PARTNER rows. The reset has to, and it
+    // can only know from the partners that RESOLVE, not from the raw payload.
+    describe('countResolvablePartners (T-4 pointer 2)', () => {
+      const arrange = (resolve: (where: any) => any) => {
+        const { service } = makeService({
+          _clarisaInstitutionsRepository: {
+            findOne: jest.fn(async ({ where }: any) => resolve(where)),
+            find: jest.fn(async () => []),
+          },
+        });
+        return service as any;
+      };
+
+      it('no partners, or an empty list: 0, without a single CLARISA lookup', async () => {
+        const svc = arrange(() => ({ id: 1 }));
+
+        await expect(
+          svc.countResolvablePartners({ contributing_partners: undefined }),
+        ).resolves.toBe(0);
+        await expect(
+          svc.countResolvablePartners({ contributing_partners: [] }),
+        ).resolves.toBe(0);
+
+        expect(
+          svc._clarisaInstitutionsRepository.findOne,
+        ).not.toHaveBeenCalled();
+        expect(svc._clarisaInstitutionsRepository.find).not.toHaveBeenCalled();
+      });
+
+      it('partners SENT but none resolves in CLARISA: 0 (so the reset deactivates the stale ones), while handleInstitutions writes nothing', async () => {
+        const svc = arrange(() => null);
+        const partners = [{ name: 'Nobody Inc.' }, { institution_id: 999 }];
+
+        await expect(
+          svc.countResolvablePartners({
+            contributing_partners: partners,
+            result_type_id: ResultTypeEnum.OTHER_OUTPUT,
+          }),
+        ).resolves.toBe(0);
+
+        // The writer's early return is exactly why the reset has to do the deactivation.
+        await svc.handleInstitutions(
+          501,
+          partners,
+          USER,
+          ResultTypeEnum.OTHER_OUTPUT,
+        );
+        expect(
+          svc._resultByIntitutionsRepository.updateInstitutions,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('counts each RESOLVED institution once, however many payload entries point at it', async () => {
+        const svc = arrange((where) =>
+          where.id === 73 || where.id === 74 ? { id: where.id } : null,
+        );
+
+        await expect(
+          svc.countResolvablePartners({
+            contributing_partners: [
+              { institution_id: 73 },
+              { institution_id: 73 },
+              { institution_id: 74 },
+              { institution_id: 999 },
+            ],
+            result_type_id: ResultTypeEnum.OTHER_OUTPUT,
+          }),
+        ).resolves.toBe(2);
+      });
+    });
+
+    // T-4 forward pointer 3 (gap c). A failed demotion of the previous lead leaves zero or two
+    // leads; on the resubmission it must reject so the result stays Rejected and retryable (DD-3).
+    // The create path keeps swallowing exactly as it always did.
+    describe('persistLeadCenter: errors (T-4 pointer 3)', () => {
+      const center = { code: 'CENTER-02', institutionId: 0 } as any;
+      const arrange = () => {
+        const { service } = makeService({
+          _resultRepository: {
+            query: jest.fn().mockRejectedValue(new Error('demotion failed')),
+          },
+          _resultsCenterRepository: {
+            getAllResultsCenterByResultIdAndCenterId: jest
+              .fn()
+              .mockResolvedValue(null),
+            save: jest.fn(async (row: any) => row),
+          },
+        });
+        return service as any;
+      };
+
+      it('replacePreviousLead: a failed demotion REJECTS (and nothing is saved after it)', async () => {
+        const svc = arrange();
+
+        await expect(
+          svc.persistLeadCenter(501, center, USER, {
+            replacePreviousLead: true,
+          }),
+        ).rejects.toThrow('demotion failed');
+
+        expect(svc._resultsCenterRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('the create path (no option) keeps swallowing the same failure and logging it', async () => {
+        const svc = arrange();
+        svc._resultRepository.query.mockRejectedValue(new Error('db hiccup'));
+        svc._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId =
+          jest.fn().mockRejectedValue(new Error('db hiccup'));
+
+        await expect(
+          svc.persistLeadCenter(501, center, USER),
+        ).resolves.toBeUndefined();
+
+        expect(svc.logger.error).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to save lead center for result 501'),
+          expect.anything(),
+        );
+      });
+    });
+
+    // DD-5 / DD-6. On the ownerless branch the writers do not write role 1 (accept does), but the
+    // ToC row and the contributor drafts still hang off the REQUESTED primary.
+    describe('handleTocMapping: suppressPrimaryRole (DD-5, DD-6)', () => {
+      const arrange = () => {
+        const { service, stubs: typedStubs } = makeService();
+        const stubs: any = typedStubs;
+        const svc: any = service;
+        const initiatives: Record<string, any> = {
+          SP06: { id: 6, official_code: 'SP06', active: true, name: 'Six' },
+          SP01: { id: 1, official_code: 'SP01', active: true, name: 'One' },
+        };
+        stubs.clarisaInitiatives.findOne.mockImplementation(
+          async ({ where }: any) => initiatives[where.official_code] ?? null,
+        );
+        stubs.resultByInitiativesRepository.findOne.mockResolvedValue(null);
+        stubs.resultByInitiativesRepository.update = jest
+          .fn()
+          .mockResolvedValue(undefined);
+        stubs.resultByInitiativesRepository.save = jest
+          .fn()
+          .mockResolvedValue({});
+        stubs.resultsTocResultsRepository.findOne = jest
+          .fn()
+          .mockResolvedValue(null);
+        stubs.resultsTocResultsRepository.save = jest
+          .fn()
+          .mockResolvedValue({ result_toc_result_id: 555 });
+        return { svc, stubs };
+      };
+      const toc = () => ({ science_program_id: 'SP06' });
+      const contributors = () => [{ science_program_id: 'SP01' }];
+
+      it('suppressed: no ACTIVE role 1 is written (an INACTIVE one is), the ToC row is written for the requested primary, and the contributor draft (status 4) is owned by the requested primary', async () => {
+        const { svc, stubs } = arrange();
+
+        await svc.handleTocMapping(toc(), contributors(), USER, 501, 8, {
+          suppressPrimaryRole: true,
+        });
+
+        // Ownership is untouched: nothing is activated, nothing is updated.
+        expect(
+          stubs.resultByInitiativesRepository.update,
+        ).not.toHaveBeenCalled();
+        const roleRows =
+          stubs.resultByInitiativesRepository.save.mock.calls.map(
+            (call: any[]) => call[0],
+          );
+        expect(roleRows).toEqual([
+          expect.objectContaining({
+            result_id: 501,
+            initiative_id: 6,
+            initiative_role_id: 1,
+            is_active: false,
+          }),
+        ]);
+        expect(stubs.resultsTocResultsRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_id: 501,
+            initiative_id: 6,
+            initiative_ids: 6,
+          }),
+        );
+        // DD-6: the contributor is a CONTRIBUTION draft (status 4) whose owner is the requested SP.
+        expect(svc._shareResultRequestRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_id: 501,
+            owner_initiative_id: 6,
+            shared_inititiative_id: 1,
+            approving_inititiative_id: 1,
+            request_status_id: 4,
+            requested_by: USER,
+            is_active: true,
+          }),
+        );
+      });
+
+      it.each([
+        ['the option is false', { suppressPrimaryRole: false }],
+        ['there is no option (the create path)', undefined],
+      ])(
+        'role 1 IS written when %s, and the contributor draft is the same one',
+        async (_label, options) => {
+          const { svc, stubs } = arrange();
+
+          await svc.handleTocMapping(
+            toc(),
+            contributors(),
+            USER,
+            501,
+            8,
+            ...(options ? [options] : []),
+          );
+
+          expect(stubs.resultByInitiativesRepository.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+              result_id: 501,
+              initiative_id: 6,
+              initiative_role_id: 1,
+              is_active: true,
+            }),
+          );
+          expect(svc._shareResultRequestRepository.save).toHaveBeenCalledWith(
+            expect.objectContaining({
+              owner_initiative_id: 6,
+              shared_inititiative_id: 1,
+              request_status_id: 4,
+            }),
+          );
+        },
+      );
     });
   });
 });

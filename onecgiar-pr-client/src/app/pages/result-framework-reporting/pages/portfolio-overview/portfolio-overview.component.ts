@@ -12,6 +12,7 @@ import {
 } from '@ng-icons/lucide';
 
 import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
+import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { ResultsListFilterService } from '../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
@@ -95,7 +96,7 @@ type SortKey = 'programme' | 'total' | number;
   standalone: true,
   templateUrl: './portfolio-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgIcon, PrVizChartComponent],
+  imports: [NgIcon, PrVizChartComponent, PortfolioCentersBlockComponent],
   providers: [
     PortfolioOverviewService,
     provideIcons({

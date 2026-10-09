@@ -81,6 +81,15 @@
           <b> {{ parts.suffix }} </b>
         }
         }
+        @if (validateCtaUrl; as ctaUrl) {
+          <a
+            class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+            data-testid="update-validate-cta"
+            [href]="ctaUrl"
+            (click)="onValidateCtaClick($event, ctaUrl)"
+            >{{ validateCtaLabel }}</a
+          >
+        }
       </p>
     </div>
 

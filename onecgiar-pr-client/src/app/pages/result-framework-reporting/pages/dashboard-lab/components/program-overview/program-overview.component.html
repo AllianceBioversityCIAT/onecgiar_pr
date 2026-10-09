@@ -28,7 +28,7 @@
 <div class="grid grid-cols-12 content-start gap-[12px] sm:gap-[16px] p-[16px] sm:p-[24px] lg:p-[32px]">
   <!-- KPI Summary Cards: Totals and key health metrics -->
   <div class="col-span-12 grid grid-cols-1 gap-[16px] sm:grid-cols-2 xl:grid-cols-5">
-    <!-- KPI 1: Total General (W1/W2 + W3/Bilateral) -->
+    <!-- KPI 1: Total General (program-wide W1/W2 replicated + new, with pending-review W3/Bilateral row) -->
     <button
       type="button"
       data-testid="overview-kpi-total"
@@ -51,17 +51,27 @@
           <span class="h-[32px] w-[64px] animate-pulse rounded-[6px] bg-white/25"></span>
         </div>
         <div class="relative z-10 h-[14px] w-[160px] animate-pulse rounded-[4px] bg-white/15" aria-hidden="true"></div>
+        <div class="relative z-10 h-[14px] w-[120px] animate-pulse rounded-[4px] bg-white/15" aria-hidden="true"></div>
       } @else {
-        <div class="relative z-10 flex items-baseline gap-[8px]">
+        <div class="relative z-10 flex items-baseline gap-[8px]" title="Program-wide W1/W2 results in this phase">
           <span class="pr-figure text-[32px] font-extrabold leading-none text-white tabular-nums drop-shadow-xs">
             {{ programResultsTotal() }}
           </span>
           <span class="text-[13px] font-medium text-purple-200">results</span>
         </div>
-        <div class="relative z-10 flex flex-wrap items-center gap-x-[6px] gap-y-[2px] text-[12px] font-medium text-purple-100">
-          <span>{{ statusTotal() }} W1/W2</span>
-          <span class="text-purple-300">·</span>
-          <span>{{ bilateralStatusTotal() }} W3/Bilateral</span>
+        <div class="relative z-10 mt-[12px] flex flex-col gap-[6px] border-t border-white/20 pt-[10px] text-[12px] text-purple-100" data-testid="overview-kpi-total-breakdown">
+          <div class="flex items-center justify-between gap-[8px]" data-testid="overview-kpi-total-breakdown-replicated" title="W1/W2 results carried over from a previous phase for update">
+            <span class="min-w-0 truncate">Innovations replicated for update</span>
+            <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().replicated }}</span>
+          </div>
+          <div class="flex items-center justify-between gap-[8px]" data-testid="overview-kpi-total-breakdown-new" title="W1/W2 results created in this phase">
+            <span class="min-w-0 truncate">New results</span>
+            <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().new }}</span>
+          </div>
+          <div class="flex items-center justify-between gap-[8px]" data-testid="overview-kpi-total-breakdown-pending-review" title="W3/Bilateral results tagged to this program waiting for your review (Pending Review)">
+            <span class="min-w-0 truncate">W3/Bilateral results awaiting review</span>
+            <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().pendingReview }}</span>
+          </div>
         </div>
       }
     </button>

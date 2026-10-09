@@ -12,7 +12,7 @@ import {
   NotificationTypeEnum,
 } from './enum/notification.enum';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { In, Not } from 'typeorm';
+import { FindOperator, In, Not } from 'typeorm';
 
 const mockNotificationLevelRepository = {
   findOne: jest.fn(),
@@ -26,6 +26,7 @@ const mockNotificationRepository = {
   save: jest.fn(),
   findOne: jest.fn(),
   find: jest.fn(),
+  count: jest.fn(),
   createQueryBuilder: jest.fn(),
 };
 
@@ -36,6 +37,7 @@ const mockSocketManagementService = {
 
 const mockShareResultRequestService = {
   getReceivedResultRequestPopUp: jest.fn(),
+  countPendingReceived: jest.fn(),
 };
 const mockUserRepository = {
   InitiativeByUser: jest.fn(),
@@ -481,7 +483,11 @@ describe('NotificationService', () => {
           result_code: 4321,
           title: 'A bilateral result title',
           obj_result_by_initiatives: [
-            { obj_initiative: { id: 5, official_code: 'SP5' } },
+            {
+              initiative_role_id: 1,
+              is_active: true,
+              obj_initiative: { id: 5, official_code: 'SP5' },
+            },
           ],
           ...resultOverrides,
         },
@@ -638,7 +644,11 @@ describe('NotificationService', () => {
           result_code: 4321,
           title: 'A bilateral result title',
           obj_result_by_initiatives: [
-            { obj_initiative: { id: 5, official_code: 'SP5' } },
+            {
+              initiative_role_id: 1,
+              is_active: true,
+              obj_initiative: { id: 5, official_code: 'SP5' },
+            },
           ],
           ...resultOverrides,
         },
@@ -859,7 +869,11 @@ describe('NotificationService', () => {
           result_code: 9398,
           title: 'A pooled funding result',
           obj_result_by_initiatives: [
-            { obj_initiative: { id: 1, official_code: 'SP01' } },
+            {
+              initiative_role_id: 1,
+              is_active: true,
+              obj_initiative: { id: 1, official_code: 'SP01' },
+            },
           ],
           ...resultOverrides,
         },
@@ -1601,6 +1615,205 @@ describe('NotificationService', () => {
     });
   });
 
+  // `RSF-T-3` / `RSF-R-3` — only an ACTIVE role-1 row is the owner/primary in the notification
+  // readers, but the filter runs on the loaded rows, never on the relation `where` (`DD-3`): an
+  // `is_active` in that `where` would also hide every notification of an ownerless result.
+  describe('RSF-T-3 — active role-1 only; the notification is never hidden', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'sp-user@cgiar.org',
+      first_name: 'Sp',
+      last_name: 'User',
+    };
+
+    const initiativeRow = (
+      code: string,
+      overrides: Record<string, any> = {},
+    ) => ({
+      initiative_id: 1,
+      initiative_role_id: 1,
+      is_active: true,
+      obj_initiative: { id: 1, official_code: code },
+      ...overrides,
+    });
+
+    const notificationRow = (initiatives: Record<string, any>[]) => ({
+      notification_id: '3001',
+      target_user: 42,
+      result_id: 9550,
+      read: false,
+      obj_result: {
+        result_code: 9550,
+        title: 'Owner changed result',
+        source: 'API',
+        obj_result_by_initiatives: initiatives,
+        obj_result_by_project: [],
+      },
+      obj_notification_type: { type: NotificationTypeEnum.RESULT_SUBMITTED },
+      created_date: new Date('2026-10-01T10:00:00Z'),
+    });
+
+    // SP09 (retired) FIRST, SP11 (active) second — the order that makes `[0]` wrong.
+    const ownerChanged = () => [
+      initiativeRow('SP09', { is_active: false }),
+      initiativeRow('SP11'),
+    ];
+    const ownerless = () => [initiativeRow('SP09', { is_active: false })];
+
+    const codesOf = (row: any) =>
+      row.obj_result.obj_result_by_initiatives.map(
+        (i: any) => i.obj_initiative.official_code,
+      );
+
+    const ROLE_1_WHERE = {
+      is_active: true,
+      obj_result_by_initiatives: { initiative_role_id: 1 },
+    };
+
+    describe('getAllNotifications', () => {
+      it('drops the inactive role-1 row from pending and viewed payloads (owner changed)', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([notificationRow(ownerChanged())]) // viewed
+          .mockResolvedValueOnce([notificationRow(ownerChanged())]); // pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(codesOf(result.response.notificationsPending[0])).toEqual([
+          'SP11',
+        ]);
+        expect(codesOf(result.response.notificationsViewed[0])).toEqual([
+          'SP11',
+        ]);
+      });
+
+      // Ownerless falsifier: the notification must NOT disappear, and the `find` options keep the
+      // ORIGINAL relation `where` (no `is_active` on `obj_result_by_initiatives`).
+      it('still returns the notification of an ownerless result, with an empty initiatives list', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // viewed
+          .mockResolvedValueOnce([notificationRow(ownerless())]); // pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(result.response.notificationsPending).toHaveLength(1);
+        expect(
+          result.response.notificationsPending[0].obj_result
+            .obj_result_by_initiatives,
+        ).toEqual([]);
+
+        const viewedCall = mockNotificationRepository.find.mock.calls[0][0];
+        const pendingCall = mockNotificationRepository.find.mock.calls[1][0];
+        expect(pendingCall.where.obj_result).toEqual(ROLE_1_WHERE);
+        expect(viewedCall.where[0].obj_result).toEqual(ROLE_1_WHERE);
+        // The activity flag is selected so the loaded rows can be filtered.
+        expect(pendingCall.select.obj_result.obj_result_by_initiatives).toEqual(
+          expect.objectContaining({ is_active: true }),
+        );
+      });
+    });
+
+    describe('getPopUpNotifications', () => {
+      beforeEach(() => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+      });
+
+      it('drops the inactive role-1 row from the payload (owner changed)', async () => {
+        mockNotificationRepository.find.mockResolvedValueOnce([
+          notificationRow(ownerChanged()),
+        ]);
+
+        const result = await service.getPopUpNotifications(user);
+
+        expect(codesOf((result.response as any[])[0])).toEqual(['SP11']);
+      });
+
+      it('still returns the notification of an ownerless result, with an empty initiatives list', async () => {
+        mockNotificationRepository.find.mockResolvedValueOnce([
+          notificationRow(ownerless()),
+        ]);
+
+        const result = await service.getPopUpNotifications(user);
+
+        expect(result.response as any[]).toHaveLength(1);
+        expect(
+          (result.response as any[])[0].obj_result.obj_result_by_initiatives,
+        ).toEqual([]);
+
+        const findOptions = mockNotificationRepository.find.mock.calls[0][0];
+        expect(findOptions.where.obj_result).toEqual(ROLE_1_WHERE);
+        expect(findOptions.select.obj_result.obj_result_by_initiatives).toEqual(
+          expect.objectContaining({ is_active: true }),
+        );
+      });
+    });
+
+    // The emit path loads EVERY initiative of the result (no relation `where`), so the role and
+    // the activity flag both have to be selected and checked.
+    describe('resolveOwnerProgramCode (emit path)', () => {
+      const emitAndReadDescription = async (
+        initiatives: Record<string, any>[],
+      ): Promise<string> => {
+        mockNotificationLevelRepository.findOne.mockResolvedValue({
+          notifications_level_id: 2,
+        });
+        mockNotificationTypeRepository.findOne.mockResolvedValue({
+          notifications_type_id: 6,
+        });
+        mockNotificationRepository.save.mockResolvedValue(null);
+        mockNotificationRepository.findOne.mockResolvedValue({
+          obj_emitter_user: { id: 9, first_name: 'Ana', last_name: 'R' },
+          obj_result: {
+            result_code: 4321,
+            title: 'A bilateral result title',
+            obj_result_by_initiatives: initiatives,
+          },
+        });
+        mockSocketManagementService.getActiveUsers.mockResolvedValue({
+          response: [{ userId: 2 }],
+          status: 200,
+        });
+        mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+          status: 200,
+        });
+
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+          [2],
+          9,
+          4321,
+        );
+
+        return mockSocketManagementService.sendNotificationToUsers.mock.calls.at(
+          -1,
+        )[1].desc;
+      };
+
+      it('names the active role-1 SP even when a retired role-1 SP comes first', async () => {
+        const desc = await emitAndReadDescription(ownerChanged());
+
+        expect(desc).toContain('Science Program SP11.');
+        expect(desc).not.toContain('SP09');
+      });
+
+      it('names no SP when the only role-1 row is inactive and a role-2 contributor is active', async () => {
+        const desc = await emitAndReadDescription([
+          initiativeRow('SP09', { is_active: false }),
+          initiativeRow('SP22', { initiative_role_id: 2 }),
+        ]);
+
+        expect(desc).toContain('by the Science Program.');
+        expect(desc).not.toContain('SP22');
+        expect(desc).not.toContain('SP09');
+      });
+    });
+  });
+
   // `PSR-T-7` — the socket-push description for the 3 Center-notice types (`buildResultNotificationDescription`).
   describe('buildResultNotificationDescription — Center notices (PSR-T-7)', () => {
     beforeEach(() => {
@@ -1934,6 +2147,988 @@ describe('NotificationService', () => {
       expect(calls[0][0].take).toBe(201);
       expect(calls[1][0].where).toHaveLength(2); // call 2: AI-job viewed
       expect(calls[2][0].where).toHaveLength(2); // call 3: Center-notice viewed
+    });
+
+    // BRS-T-3 (notifications/bell-read-state, BRS-R-8 / BRS-DD-5): optional `limit` on the
+    // history page only.
+    describe('BRS-T-3 limit', () => {
+      it('limit=10, scope=history: every history find() takes 11 and the page holds 10 rows with hasMore', async () => {
+        const base = new Date('2026-09-30T00:00:00Z').getTime();
+        const resultScoped = Array.from({ length: 11 }, (_, i) =>
+          viewedRow(`${1000 + i}`, new Date(base - i * 60000).toISOString()),
+        );
+        mockNotificationRepository.find
+          .mockResolvedValueOnce(resultScoped)
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+          limit: 10,
+        });
+
+        const calls = mockNotificationRepository.find.mock.calls;
+        expect(calls).toHaveLength(3);
+        calls.forEach((call) => expect(call[0].take).toBe(11));
+        expect(result.response.notificationsViewed).toHaveLength(10);
+        expect(result.response.viewedMeta.hasMore).toBe(true);
+        expect(result.response.viewedMeta.nextCursor).toEqual(
+          expect.any(String),
+        );
+      });
+
+      it('limit=10 with 3 rows in total: hasMore is false', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([
+            viewedRow('1', '2026-09-29T00:00:00Z'),
+            viewedRow('2', '2026-09-28T00:00:00Z'),
+            viewedRow('3', '2026-09-27T00:00:00Z'),
+          ])
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+          limit: 10,
+        });
+
+        expect(result.response.notificationsViewed).toHaveLength(3);
+        expect(result.response.viewedMeta.hasMore).toBe(false);
+      });
+
+      it('no limit: history take stays 201 (unchanged default)', async () => {
+        mockNotificationRepository.find.mockResolvedValue([]);
+
+        await service.getAllNotifications(user, { scope: 'history' });
+
+        mockNotificationRepository.find.mock.calls.forEach((call) =>
+          expect(call[0].take).toBe(201),
+        );
+      });
+
+      // PPG-R-4 supersedes the BRS-T-3 'pending never limited' rule: limit under scope=pending now pages pending.
+      it('scope=pending with limit: the 3 pending queries are paged (take 11), announcements are not', async () => {
+        mockNotificationRepository.find.mockResolvedValue([]);
+
+        await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 10,
+        });
+
+        const calls = mockNotificationRepository.find.mock.calls;
+        expect(calls).toHaveLength(4);
+        expect(calls.filter((call) => call[0].take === 11)).toHaveLength(3);
+        expect(calls.filter((call) => call[0].take === undefined)).toHaveLength(
+          1,
+        );
+      });
+
+      it('legacy scope (both) with limit: only the 3 history queries get take 11, pending ones none', async () => {
+        mockNotificationRepository.find.mockResolvedValue([]);
+
+        await service.getAllNotifications(user, { limit: 10 });
+
+        const takes = mockNotificationRepository.find.mock.calls.map(
+          (call) => call[0].take,
+        );
+        // order: viewed, pending, announcement, job-viewed, job-pending, center-viewed, center-pending
+        expect(takes).toEqual([
+          11,
+          undefined,
+          undefined,
+          11,
+          undefined,
+          11,
+          undefined,
+        ]);
+      });
+    });
+  });
+
+  // RRC-T-5 (bilateral/rejected-result-correction): RRC-R-13 — the rejection notification is linked
+  // to its own `result_review_history` row (`notifications.review_history_id`) and the panel/bell
+  // readout returns that row's comment; RRC-R-16 — the other types keep their wording.
+  describe('PPG-T-3 — pending paging + attention counts', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'user@cgiar.org',
+      first_name: 'Test',
+      last_name: 'User',
+    };
+    const CENTER_TYPES = [
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_ACCEPTED,
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_DECLINED,
+      NotificationTypeEnum.PRIMARY_PROGRAM_REQUEST_MOVED,
+    ];
+    type Path = 'result' | 'center' | 'job';
+    interface FakeRow {
+      notification_id: number;
+      path: Path;
+      target_user: number;
+      read: boolean;
+      created_date: Date;
+      version_id?: number;
+    }
+    const BASE = new Date('2026-09-30T00:00:00Z').getTime();
+
+    const pathOfWhere = (entry: any): Path => {
+      const type = entry.obj_notification_type?.type;
+      if (type === NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED) return 'job';
+      if (type instanceof FindOperator && (type as any).type === 'in')
+        return 'center';
+      return 'result';
+    };
+    const sortDesc = (a: FakeRow, b: FakeRow) =>
+      b.created_date.getTime() - a.created_date.getTime() ||
+      b.notification_id - a.notification_id;
+    const matches = (row: FakeRow, entry: any): boolean => {
+      if (pathOfWhere(entry) !== row.path) return false;
+      if (
+        entry.target_user !== undefined &&
+        entry.target_user !== row.target_user
+      )
+        return false;
+      if (entry.read !== undefined && entry.read !== row.read) return false;
+      const version = entry.obj_result?.version_id;
+      if (version !== undefined && row.version_id !== version) return false;
+      const cd = entry.created_date;
+      if (cd instanceof FindOperator) {
+        if (!(row.created_date.getTime() < (cd as any).value.getTime()))
+          return false;
+      } else if (cd instanceof Date) {
+        if (row.created_date.getTime() !== cd.getTime()) return false;
+      }
+      const id = entry.notification_id;
+      if (
+        id instanceof FindOperator &&
+        !(row.notification_id < (id as any).value)
+      )
+        return false;
+      return true;
+    };
+    // In-memory stand-in for the notification table: `find`/`count` evaluate the where
+    // (object or keyset-OR array) against `rows`, which tests may mutate between calls.
+    let rows: FakeRow[];
+    const installFakeRepo = () => {
+      const run = (where: any) => {
+        const entries = Array.isArray(where) ? where : [where];
+        return rows.filter((r) => entries.some((e) => matches(r, e)));
+      };
+      mockNotificationRepository.find.mockImplementation(async (opts: any) => {
+        if (opts?.where?.obj_notification_level) return []; // announcements
+        const found = run(opts.where).sort(sortDesc);
+        return (opts.take ? found.slice(0, opts.take) : found).map((r) => ({
+          ...r,
+        }));
+      });
+      mockNotificationRepository.count.mockImplementation(
+        async (opts: any) => run(opts.where).length,
+      );
+    };
+    const mk = (
+      notification_id: number,
+      path: Path,
+      minutes: number,
+      extra: Partial<FakeRow> = {},
+    ): FakeRow => ({
+      notification_id,
+      path,
+      target_user: 42,
+      read: false,
+      created_date: new Date(BASE - minutes * 60000),
+      ...extra,
+    });
+
+    beforeEach(() => {
+      mockNotificationRepository.count.mockReset();
+      mockShareResultRequestService.countPendingReceived.mockResolvedValue({
+        pendingRequests: 5,
+        unseenRequests: 3,
+      });
+    });
+
+    describe('getAttentionCounts (PPG-R-1)', () => {
+      const parityFixture = () => [
+        mk(1, 'result', 0),
+        mk(2, 'center', 1),
+        mk(3, 'job', 2),
+        mk(4, 'job', 3),
+        // noise that must not be counted: already read, and another user's rows
+        mk(5, 'result', 4, { read: true }),
+        mk(6, 'job', 5, { target_user: 99 }),
+        mk(7, 'center', 6, { target_user: 99 }),
+        mk(8, 'result', 7, { target_user: 99 }),
+      ];
+
+      it('T1: parity - 1 result-scoped + 1 Center + 2 AI-job unread -> unreadUpdates 4 with the request counts', async () => {
+        rows = parityFixture();
+        installFakeRepo();
+        const result = await service.getAttentionCounts(user);
+        expect(result.status).toBe(200);
+        expect(result.response).toEqual({
+          unseenRequests: 3,
+          pendingRequests: 5,
+          unreadUpdates: 4,
+        });
+      });
+
+      it.each([
+        ['result', 3],
+        ['center', 3],
+        ['job', 2],
+      ] as Array<[Path, number]>)(
+        'T1: removing the %s path changes the count by its share -> %i',
+        async (path, expected) => {
+          rows = parityFixture().filter((r) => r.path !== path);
+          installFakeRepo();
+          const result = await service.getAttentionCounts(user);
+          expect(result.response.unreadUpdates).toBe(expected);
+        },
+      );
+
+      it('T2: counts through count(), never find() (admin scale: MUST NOT load rows)', async () => {
+        rows = parityFixture();
+        installFakeRepo();
+        await service.getAttentionCounts(user);
+        expect(mockNotificationRepository.find).not.toHaveBeenCalled();
+        expect(mockNotificationRepository.count).toHaveBeenCalledTimes(3);
+        mockNotificationRepository.count.mock.calls.forEach(([opts]) => {
+          expect(opts.where.target_user).toBe(42);
+          expect(opts.where.read).toBe(false);
+          expect(opts.relations).toBeDefined();
+        });
+      });
+
+      it('returns the standard 500 envelope when a count fails', async () => {
+        rows = [];
+        installFakeRepo();
+        mockNotificationRepository.count.mockRejectedValueOnce(new Error('x'));
+        const result = await service.getAttentionCounts(user);
+        expect(result.status).toBe(500);
+      });
+    });
+
+    describe('getAllNotifications scope=pending with limit (PPG-R-4)', () => {
+      const bigFixture = () => {
+        const out: FakeRow[] = [];
+        // 130 rows over the 3 paths; shared minute slots so date ties cross paths.
+        for (let i = 0; i < 130; i++) {
+          const path: Path = (['result', 'center', 'job'] as Path[])[i % 3];
+          out.push(mk(1000 + i, path, Math.floor(i / 2), { version_id: 8 }));
+        }
+        return out;
+      };
+
+      it('T3: pages cover all 130 rows once, newest first, total=130 on every page', async () => {
+        rows = bigFixture();
+        installFakeRepo();
+        const pages: any[] = [];
+        let cursor: string | undefined;
+        for (let guard = 0; guard < 10; guard++) {
+          const res = await service.getAllNotifications(user, {
+            scope: 'pending',
+            limit: 50,
+            cursor,
+          });
+          pages.push(res.response);
+          if (!res.response.pendingMeta.hasMore) break;
+          cursor = res.response.pendingMeta.nextCursor;
+        }
+        expect(pages.map((p) => p.notificationsPending.length)).toEqual([
+          50, 50, 30,
+        ]);
+        const ids = pages.flatMap((p) =>
+          p.notificationsPending.map((r: any) => r.notification_id),
+        );
+        expect(new Set(ids).size).toBe(130);
+        expect(ids).toEqual(
+          [...rows].sort(sortDesc).map((r) => r.notification_id),
+        );
+        pages.forEach((p) => expect(p.pendingMeta.total).toBe(130));
+        expect(pages[0].pendingMeta.hasMore).toBe(true);
+        expect(pages[2].pendingMeta.hasMore).toBe(false);
+      });
+
+      it('T4: a page-1 row marked read before page 2 -> no repeat, no gap among still-pending rows', async () => {
+        rows = bigFixture();
+        installFakeRepo();
+        const p1 = await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 50,
+        });
+        const page1Ids = p1.response.notificationsPending.map(
+          (r: any) => r.notification_id,
+        );
+        // mutate between pages: a page-1 row leaves pending
+        rows.find((r) => r.notification_id === page1Ids[10]).read = true;
+        const p2 = await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 50,
+          cursor: p1.response.pendingMeta.nextCursor,
+        });
+        const page2Ids = p2.response.notificationsPending.map(
+          (r: any) => r.notification_id,
+        );
+        const stillPending = [...rows]
+          .filter((r) => !r.read && !page1Ids.includes(r.notification_id))
+          .sort(sortDesc)
+          .map((r) => r.notification_id);
+        expect(page2Ids.some((id: number) => page1Ids.includes(id))).toBe(
+          false,
+        );
+        expect(page2Ids).toEqual(stillPending.slice(0, 50));
+        expect(p2.response.pendingMeta.total).toBe(129);
+      });
+
+      it('T5: version_id=8 -> phase-8 rows plus phase-less AI-job rows only', async () => {
+        rows = [
+          mk(1, 'result', 0, { version_id: 8 }),
+          mk(2, 'result', 1, { version_id: 7 }),
+          mk(3, 'center', 2, { version_id: 8 }),
+          mk(4, 'center', 3, { version_id: 7 }),
+          mk(5, 'job', 4), // phase-less
+        ];
+        installFakeRepo();
+        const res = await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 50,
+          versionId: 8,
+        });
+        expect(
+          res.response.notificationsPending.map((r: any) => r.notification_id),
+        ).toEqual([1, 3, 5]);
+        expect(res.response.pendingMeta.total).toBe(3);
+      });
+
+      it('paged mode runs one find per path with take limit+1 and the keyset order', async () => {
+        rows = bigFixture();
+        installFakeRepo();
+        await service.getAllNotifications(user, {
+          scope: 'pending',
+          limit: 50,
+        });
+        const withTake = mockNotificationRepository.find.mock.calls.filter(
+          ([o]) => o.take,
+        );
+        expect(withTake).toHaveLength(3);
+        withTake.forEach(([o]) => {
+          expect(o.take).toBe(51);
+          expect(o.order).toEqual({
+            created_date: 'DESC',
+            notification_id: 'DESC',
+          });
+        });
+      });
+    });
+
+    describe('legacy and history unchanged (PPG-NFR-3)', () => {
+      it('T6: scope=pending without limit keeps the legacy shape and queries, no count calls', async () => {
+        rows = [mk(1, 'result', 0), mk(2, 'center', 1), mk(3, 'job', 2)];
+        installFakeRepo();
+        const res = await service.getAllNotifications(user, {
+          scope: 'pending',
+        });
+        expect(Object.keys(res.response).sort()).toEqual([
+          'notificationAnnouncement',
+          'notificationsPending',
+          'notificationsViewed',
+          'viewedMeta',
+        ]);
+        expect(res.response.notificationsPending).toHaveLength(3);
+        expect(mockNotificationRepository.count).not.toHaveBeenCalled();
+        const calls = mockNotificationRepository.find.mock.calls;
+        expect(calls).toHaveLength(4);
+        expect(calls[0][0].where).toEqual({
+          target_user: 42,
+          read: false,
+          obj_result: {
+            is_active: true,
+            obj_result_by_initiatives: { initiative_role_id: 1 },
+          },
+          obj_notification_type: { type: Not(In(CENTER_TYPES)) },
+        });
+        expect(calls[0][0].take).toBeUndefined();
+        expect(calls[2][0].where).toEqual({
+          target_user: 42,
+          read: false,
+          obj_notification_type: {
+            type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+          },
+        });
+      });
+
+      it('T6: scope=history&limit=10 stays a history page (take 11), without pendingMeta or counts', async () => {
+        rows = [];
+        installFakeRepo();
+        const res = await service.getAllNotifications(user, {
+          scope: 'history',
+          limit: 10,
+        });
+        expect(res.response.pendingMeta).toBeUndefined();
+        expect(res.response.viewedMeta).toBeDefined();
+        expect(mockNotificationRepository.count).not.toHaveBeenCalled();
+        const takes = mockNotificationRepository.find.mock.calls.map(
+          ([o]) => o.take,
+        );
+        expect(takes).toEqual([11, 11, 11]);
+      });
+    });
+  });
+
+  describe('RRC-T-5 — the rejection notification carries its history row', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center-user@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    // The two rejections of ONE result (same `result_id`), each with its own reason. A readout that
+    // looked up "the latest REJECT of the result" would answer B for the first notification.
+    const HISTORY_TABLE = [
+      { id: '101', action: 'REJECT', comment: 'A - add evidence' },
+      { id: '102', action: 'REJECT', comment: 'B - wrong Science Program' },
+      { id: '103', action: 'REJECT', comment: null },
+    ];
+
+    const rejectedRow = (
+      id: string,
+      reviewHistoryId: string | null,
+      overrides: Record<string, any> = {},
+    ) => ({
+      notification_id: id,
+      target_user: 42,
+      result_id: 10,
+      read: true,
+      review_history_id: reviewHistoryId,
+      text: 'where your center was tagged, has been rejected by the Science Program SP09.',
+      created_date: new Date('2026-10-06T10:00:00Z'),
+      obj_notification_type: {
+        type: NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+      },
+      obj_result: {
+        result_code: 10,
+        title: 'A bilateral result',
+        source: 'API',
+        obj_result_by_initiatives: [],
+        obj_result_by_project: [],
+      },
+      ...overrides,
+    });
+
+    /**
+     * Stands in for the database on the result-scoped queries: a LEFT JOIN of
+     * `result_review_history` ON `notifications.review_history_id = result_review_history.id`,
+     * performed ONLY when the query asks for the `obj_review_history` relation. Every other query
+     * (job-finished, Center notices, announcements) matches nothing.
+     */
+    const stubResultScopedFind = (rows: Record<string, any>[]) => {
+      mockNotificationRepository.find.mockImplementation(async (opts: any) => {
+        const where = Array.isArray(opts.where) ? opts.where[0] : opts.where;
+        if (where?.obj_result?.obj_result_by_initiatives === undefined) {
+          return [];
+        }
+        return rows
+          .filter((row) => row.read === where.read)
+          .map((row) => ({
+            ...row,
+            ...(opts.relations?.obj_review_history
+              ? {
+                  obj_review_history:
+                    HISTORY_TABLE.find(
+                      (history) =>
+                        String(history.id) === String(row.review_history_id),
+                    ) ?? null,
+                }
+              : {}),
+          }));
+      });
+    };
+
+    describe('emitResultNotification (write path)', () => {
+      beforeEach(() => {
+        mockNotificationLevelRepository.findOne.mockResolvedValue({
+          notifications_level_id: 2,
+        });
+        mockNotificationTypeRepository.findOne.mockResolvedValue({
+          notifications_type_id: 6,
+        });
+        mockNotificationRepository.save.mockResolvedValue(null);
+        mockSocketManagementService.getActiveUsers.mockResolvedValue({
+          response: [],
+          status: 200,
+        });
+      });
+
+      it('stores review_history_id on every row it writes when one is given', async () => {
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+          [2, 3],
+          9,
+          10,
+          'where your center was tagged, has been rejected by the Science Program SP09.',
+          101,
+        );
+
+        expect(mockNotificationRepository.save).toHaveBeenCalledWith([
+          expect.objectContaining({ target_user: 2, review_history_id: 101 }),
+          expect.objectContaining({ target_user: 3, review_history_id: 101 }),
+        ]);
+      });
+
+      it('writes no review_history_id key at all when none is given', async () => {
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+          [2],
+          9,
+          10,
+        );
+
+        const [rows] = mockNotificationRepository.save.mock.calls[0];
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).not.toHaveProperty('review_history_id');
+      });
+    });
+
+    describe('getAllNotifications (panel readout)', () => {
+      it('asks the repository for the linked history row (relation + comment selected)', async () => {
+        stubResultScopedFind([]);
+
+        await service.getAllNotifications(user);
+
+        const resultScopedCalls = mockNotificationRepository.find.mock.calls
+          .map(([opts]) => opts)
+          .filter((opts) => {
+            const where = Array.isArray(opts.where)
+              ? opts.where[0]
+              : opts.where;
+            return where?.obj_result?.obj_result_by_initiatives !== undefined;
+          });
+        expect(resultScopedCalls).toHaveLength(2); // viewed + pending
+        for (const opts of resultScopedCalls) {
+          // RRC-T-10-F1: was `{ obj_review_history: true }`; the relation is now nested so the
+          // linked row's initiative can be joined as well (still the same LEFT JOIN of the row).
+          expect(opts.relations).toEqual(
+            expect.objectContaining({
+              obj_review_history: expect.anything(),
+            }),
+          );
+          expect(opts.select).toEqual(
+            expect.objectContaining({
+              obj_review_history: expect.objectContaining({ comment: true }),
+            }),
+          );
+        }
+      });
+
+      // RRC-R-13 "Older rejection keeps its own reason" — the falsifier of this task.
+      it('two rejections of the same result: each notification returns its OWN comment', async () => {
+        stubResultScopedFind([
+          rejectedRow('2002', '102', {
+            created_date: new Date('2026-10-06T12:00:00Z'),
+          }),
+          rejectedRow('2001', '101'),
+        ]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+        });
+
+        const byId = Object.fromEntries(
+          result.response.notificationsViewed.map((row: any) => [
+            row.notification_id,
+            row,
+          ]),
+        );
+        expect(byId['2001']).toMatchObject({
+          has_review_entry: true,
+          review_comment: 'A - add evidence',
+        });
+        expect(byId['2002']).toMatchObject({
+          has_review_entry: true,
+          review_comment: 'B - wrong Science Program',
+        });
+      });
+
+      it('a pending rejection also carries its comment (bigint FK arriving as a string)', async () => {
+        stubResultScopedFind([rejectedRow('2003', '102', { read: false })]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'pending',
+        });
+
+        expect(result.response.notificationsPending).toEqual([
+          expect.objectContaining({
+            notification_id: '2003',
+            has_review_entry: true,
+            review_comment: 'B - wrong Science Program',
+          }),
+        ]);
+      });
+
+      // RRC-R-13 "Notifications sent before this change" — must NOT read as "no justification".
+      it('legacy rejection (review_history_id NULL): has_review_entry false and review_comment null', async () => {
+        stubResultScopedFind([rejectedRow('2004', null)]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+        });
+
+        const [row] = result.response.notificationsViewed;
+        expect(row.has_review_entry).toBe(false);
+        expect(row.review_comment).toBeNull();
+        // ...and the row still reads exactly as before.
+        expect(row.text).toBe(
+          'where your center was tagged, has been rejected by the Science Program SP09.',
+        );
+      });
+
+      it('a linked history row with no comment: has_review_entry true, review_comment null (client shows the fallback)', async () => {
+        stubResultScopedFind([rejectedRow('2005', '103')]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+        });
+
+        const [row] = result.response.notificationsViewed;
+        expect(row.has_review_entry).toBe(true);
+        expect(row.review_comment).toBeNull();
+      });
+
+      it('does not leak the joined history object, and only Rejected rows gain the two fields', async () => {
+        stubResultScopedFind([
+          rejectedRow('2006', '101'),
+          rejectedRow('2007', null, {
+            obj_notification_type: {
+              type: NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+            },
+            text: undefined,
+          }),
+        ]);
+
+        const result = await service.getAllNotifications(user, {
+          scope: 'history',
+        });
+
+        const byId = Object.fromEntries(
+          result.response.notificationsViewed.map((row: any) => [
+            row.notification_id,
+            row,
+          ]),
+        );
+        expect(byId['2006']).not.toHaveProperty('obj_review_history');
+        expect(byId['2007']).not.toHaveProperty('review_comment');
+        expect(byId['2007']).not.toHaveProperty('has_review_entry');
+      });
+
+      // RRC-T-10-F1 / RRC-R-13 "by which SP" — the code comes from the linked history row, never
+      // from the result's current primary (which moved to SP10 after a direct transfer).
+      describe('review_program_code (RRC-T-10-F1)', () => {
+        const historyWithProgram = (
+          id: string,
+          initiativeId: number | null,
+          officialCode: string | null,
+        ) => ({
+          id,
+          action: 'REJECT',
+          comment: `comment ${id}`,
+          obj_initiative:
+            officialCode === null
+              ? null
+              : { id: initiativeId, official_code: officialCode },
+        });
+
+        const withPrimarySp10 = (id: string, reviewHistoryId: string | null) =>
+          rejectedRow(id, reviewHistoryId, {
+            obj_result: {
+              result_code: 10,
+              title: 'A bilateral result',
+              source: 'API',
+              obj_result_by_initiatives: [
+                {
+                  is_active: true,
+                  initiative_role_id: 1,
+                  obj_initiative: { official_code: 'SP10' },
+                },
+              ],
+              obj_result_by_project: [],
+            },
+          });
+
+        const stubWithPrograms = (
+          rows: Record<string, any>[],
+          histories: Record<string, any>[],
+        ) => {
+          mockNotificationRepository.find.mockImplementation(
+            async (opts: any) => {
+              const where = Array.isArray(opts.where)
+                ? opts.where[0]
+                : opts.where;
+              if (where?.obj_result?.obj_result_by_initiatives === undefined) {
+                return [];
+              }
+              return rows
+                .filter((row) => row.read === where.read)
+                .map((row) => ({
+                  ...row,
+                  ...(opts.relations?.obj_review_history
+                    ? {
+                        obj_review_history:
+                          histories.find(
+                            (history) =>
+                              String(history.id) ===
+                              String(row.review_history_id),
+                          ) ?? null,
+                      }
+                    : {}),
+                }));
+            },
+          );
+        };
+
+        it('asks the repository for the history row initiative code (relation + official_code selected)', async () => {
+          stubWithPrograms([], []);
+
+          await service.getAllNotifications(user);
+
+          const resultScopedCalls = mockNotificationRepository.find.mock.calls
+            .map(([opts]) => opts)
+            .filter((opts) => {
+              const where = Array.isArray(opts.where)
+                ? opts.where[0]
+                : opts.where;
+              return where?.obj_result?.obj_result_by_initiatives !== undefined;
+            });
+          expect(resultScopedCalls).toHaveLength(2);
+          for (const opts of resultScopedCalls) {
+            expect(opts.relations).toEqual(
+              expect.objectContaining({
+                obj_review_history: { obj_initiative: true },
+              }),
+            );
+            expect(opts.select).toEqual(
+              expect.objectContaining({
+                obj_review_history: expect.objectContaining({
+                  obj_initiative: expect.objectContaining({
+                    official_code: true,
+                  }),
+                }),
+              }),
+            );
+          }
+        });
+
+        it('two rejections by SP02 while the result primary is now SP10: both rows return SP02', async () => {
+          stubWithPrograms(
+            [withPrimarySp10('2101', '201'), withPrimarySp10('2102', '202')],
+            [
+              historyWithProgram('201', 2, 'SP02'),
+              historyWithProgram('202', 2, 'SP02'),
+            ],
+          );
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'history',
+          });
+
+          const rows = result.response.notificationsViewed;
+          expect(rows).toHaveLength(2);
+          for (const row of rows) {
+            expect(row.review_program_code).toBe('SP02');
+          }
+        });
+
+        it('a linked history row without a Science Program (pre-RSB-T-1): review_program_code null', async () => {
+          stubWithPrograms(
+            [withPrimarySp10('2103', '203')],
+            [historyWithProgram('203', null, null)],
+          );
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'history',
+          });
+
+          const [row] = result.response.notificationsViewed;
+          expect(row.has_review_entry).toBe(true);
+          expect(row.review_program_code).toBeNull();
+        });
+
+        it('a legacy rejection (no linked row): review_program_code null', async () => {
+          stubWithPrograms([withPrimarySp10('2104', null)], []);
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'history',
+          });
+
+          const [row] = result.response.notificationsViewed;
+          expect(row.has_review_entry).toBe(false);
+          expect(row.review_program_code).toBeNull();
+        });
+
+        it('a pending rejection (bell/pending readout) also carries the code, and the joined initiative is not leaked', async () => {
+          stubWithPrograms(
+            [{ ...withPrimarySp10('2105', '204'), read: false }],
+            [historyWithProgram('204', 2, 'SP02')],
+          );
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'pending',
+          });
+
+          const [row] = result.response.notificationsPending;
+          expect(row.review_program_code).toBe('SP02');
+          expect(row).not.toHaveProperty('obj_review_history');
+        });
+
+        it('rows that are not Rejected gain no review_program_code', async () => {
+          stubWithPrograms(
+            [
+              rejectedRow('2106', null, {
+                obj_notification_type: {
+                  type: NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+                },
+              }),
+            ],
+            [],
+          );
+
+          const result = await service.getAllNotifications(user, {
+            scope: 'history',
+          });
+
+          const [row] = result.response.notificationsViewed;
+          expect(row).not.toHaveProperty('review_program_code');
+        });
+      });
+    });
+
+    describe('getPopUpNotifications (bell readout)', () => {
+      it('returns the linked comment for a rejection and the legacy flags for an older one', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+        stubResultScopedFind([
+          rejectedRow('2008', '101', { read: false }),
+          rejectedRow('2009', null, { read: false }),
+        ]);
+
+        const result = await service.getPopUpNotifications(user);
+
+        const byId = Object.fromEntries(
+          (result.response as any[]).map((row) => [row.notification_id, row]),
+        );
+        expect(byId['2008']).toMatchObject({
+          has_review_entry: true,
+          review_comment: 'A - add evidence',
+        });
+        expect(byId['2009']).toMatchObject({
+          has_review_entry: false,
+          review_comment: null,
+        });
+      });
+    });
+
+    // RRC-R-16 — expected strings are the pre-change builder's literals (that code is untouched by
+    // this task), not output captured from a run. They pin the socket description for every type
+    // whose wording must not move, alongside the Approved/Rejected strings pinned further up.
+    describe('wording of the other notification types is unchanged (RRC-R-16)', () => {
+      const describeFor = async (
+        notificationType: NotificationTypeEnum,
+        reviewHistoryId?: number,
+      ): Promise<string> => {
+        mockNotificationLevelRepository.findOne.mockResolvedValue({
+          notifications_level_id: 2,
+        });
+        mockNotificationTypeRepository.findOne.mockResolvedValue({
+          notifications_type_id: 6,
+        });
+        mockNotificationRepository.save.mockResolvedValue(null);
+        mockNotificationRepository.findOne.mockResolvedValue({
+          obj_emitter_user: {
+            id: 9,
+            first_name: 'Ana',
+            last_name: 'Reviewer',
+            email: 'ana@example.com',
+          },
+          obj_result: {
+            result_code: 4321,
+            title: 'A bilateral result title',
+            obj_result_by_initiatives: [
+              {
+                initiative_role_id: 1,
+                is_active: true,
+                obj_initiative: { id: 5, official_code: 'SP5' },
+              },
+            ],
+          },
+        });
+        mockSocketManagementService.getActiveUsers.mockResolvedValue({
+          response: [{ userId: 2 }],
+          status: 200,
+        });
+        mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+          status: 200,
+        });
+
+        await service.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          notificationType,
+          [2],
+          9,
+          4321,
+          undefined,
+          reviewHistoryId,
+        );
+
+        const [, payload] =
+          mockSocketManagementService.sendNotificationToUsers.mock.calls.at(-1);
+        return payload.desc;
+      };
+
+      it.each([
+        [
+          NotificationTypeEnum.RESULT_CREATED,
+          'The result 4321 has been created by Ana Reviewer',
+        ],
+        [
+          NotificationTypeEnum.RESULT_SUBMITTED,
+          'The result 4321 has been submitted by Ana Reviewer',
+        ],
+        [
+          NotificationTypeEnum.RESULT_UNSUBMITTED,
+          'The result 4321 has been unsubmitted by Ana Reviewer',
+        ],
+        [
+          NotificationTypeEnum.RESULT_QUALITY_ASSESED,
+          'The result 4321 has been quality assessed by Ana Reviewer',
+        ],
+        [
+          NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+          '✅ Your Result 4321 - A bilateral result title has been Approved by the Science Program SP5.',
+        ],
+        [
+          NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+          '❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program SP5.',
+        ],
+      ])('%s keeps its exact description', async (type, expected) => {
+        expect(await describeFor(type)).toBe(expected);
+      });
+
+      it('a linked rejection keeps the same description (the reason is a separate field, not text)', async () => {
+        expect(
+          await describeFor(
+            NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+            101,
+          ),
+        ).toBe(
+          '❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program SP5.',
+        );
+      });
     });
   });
 });

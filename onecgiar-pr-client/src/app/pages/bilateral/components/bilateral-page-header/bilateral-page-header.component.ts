@@ -10,15 +10,18 @@ import { AuthService } from '../../../../shared/services/api/auth.service';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { environment } from '../../../../../environments/environment';
 import { BILATERAL_HEADER_INFO_COPY } from '../../../../internationalization/bilateral-header-info.copy';
+import { BilateralRejectionNoticeComponent } from '../bilateral-rejection-notice/bilateral-rejection-notice.component';
 import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
 import { AiProcessesTriggerComponent } from '../ai-processes-trigger/ai-processes-trigger.component';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
 import { resultStatusLabel, resultStatusToken } from '../../../../shared/constants/result-status-tokens';
 
+import { CenterMarkerComponent } from '../../../../shared/components/center-marker/center-marker.component';
+import { centerLogoSrc } from '../../../result-framework-reporting/pages/result-framework-reporting-home/components/result-framework-reporting-center-card-item/center-logos';
 @Component({
   selector: 'app-bilateral-page-header',
   standalone: true,
-  imports: [RouterLink, AiProvenanceNoticeComponent, AiProcessesTriggerComponent, NgIcon],
+  imports: [RouterLink, BilateralRejectionNoticeComponent, AiProvenanceNoticeComponent, AiProcessesTriggerComponent, NgIcon, CenterMarkerComponent],
   providers: [provideIcons({ lucideInfo, lucideX })],
   templateUrl: './bilateral-page-header.component.html',
   styleUrl: './bilateral-page-header.component.scss',
@@ -111,6 +114,14 @@ export class BilateralPageHeaderComponent {
   readonly statusId = input<number | null>(null);
 
   /**
+   * `RRC-R-14`: result id + status for the rejection notice. Separate from `statusId` on purpose —
+   * `statusId` also switches on this header's own status pill, which the result editor leaves off
+   * (the rail already shows it, BRRA-R-3).
+   */
+  readonly noticeResultId = input<number | string | null>(null);
+  readonly noticeStatusId = input<number | string | null>(null);
+
+  /**
    * `APF-R-12` — the "Result detail (read-only)" provenance surface: a static badge next to the
    * status pill. The caller decides WHEN (draft-ness / `creation_method === 'AI'`, and only once the
    * result is read-only — the editable editor shows the dismissible banner instead, see
@@ -166,6 +177,9 @@ export class BilateralPageHeaderComponent {
     const acronym = this.ctx.centerAcronym();
     return name ? `${name} (${acronym})` : acronym;
   });
+
+  /** Logo of the current Center; when present it replaces the eyebrow dot as the identity marker. */
+  readonly centerLogoSrc = computed(() => centerLogoSrc(this.ctx.centerAcronym()));
 
   readonly headerTitle = computed(() => this.ctx.centerName() || this.ctx.centerAcronym() || '');
 

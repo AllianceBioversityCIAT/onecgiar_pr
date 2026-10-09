@@ -275,4 +275,29 @@ describe('FilterNotificationBySearchPipe', () => {
       expect(result[0].joinAll).toBe('The result 004 - Legacy Update was successfully Quality Assessed.');
     });
   });
+
+  // @akili-spec bilateral/resubmit-followups — RSF-T-1 (RSF-R-2): the bell's link text finds its row.
+  describe('RSF-R-2: bell search text is in the pipe haystack', () => {
+    const base = {
+      obj_requested_by: { first_name: 'Ana', last_name: 'Diaz' },
+      obj_owner_initiative: { official_code: 'SP12' },
+      obj_shared_inititiative: { official_code: 'SP12' },
+      obj_result: { result_code: 9762, title: 'Some title' }
+    };
+    const kinds: Array<[string, any, string]> = [
+      ['primary', { ...base, request_type: 'primary', is_map_to_toc: false, creating_center: { acronym: 'CIAT' } }, 'CIAT has tagged SP12 as the primary Science Program of result 9762 - Some title'],
+      ['contribution', { ...base, request_type: 'contribution', is_map_to_toc: false }, 'Ana Diaz from SP12 has requested inclusion of SP12 as a contributor to result 9762 - Some title'],
+      ['map-to-ToC', { ...base, request_type: 'contribution', is_map_to_toc: true }, 'Ana Diaz from SP12 has requested contribution to result 9762 - Some title submitted by SP12']
+    ];
+
+    it.each(kinds)('%s: the row stays visible and its joinAll is the literal sentence', (_kind, row, literal) => {
+      const out = pipe.transform([{ ...row }], literal);
+      expect(out).toHaveLength(1);
+      expect(out[0].joinAll).toBe(literal);
+    });
+
+    it('primary: a primary row is not matched by the old contributor wording', () => {
+      expect(pipe.transform([{ ...kinds[0][1] }], 'as a contributor')).toEqual([]);
+    });
+  });
 });

@@ -74,7 +74,7 @@ Current behavior. Every claim below is cited as run at `35e58fd87` unless marked
 ### MUST
 
 - **`UBC-R-1` — No code, no change.** A `create` result without `result_code` MUST behave exactly as today, including the response shape it already returns.
-- **`UBC-R-2` — Update in the open phase.** ⏸ **On hold 2026-09-30, pending STAR confirmation (2026-10-01):** the user believes STAR does not resend results already in the open phase. Until then, a `result_code` matching an active open-phase result is rejected with 409, as shipped in T-1. When `result_code` matches an active open-phase result, the result MUST be updated in place:
+- **`UBC-R-2` — Update in the open phase.** **Superseded by `bilateral/resubmit-rejected-result` (`RSB-R-2..R-5`, restricted to Rejected; shipped as the resubmission, 2026-10-06).** History below kept as written. ⏸ **On hold 2026-09-30, pending STAR confirmation (2026-10-01):** the user believes STAR does not resend results already in the open phase. Until then, a `result_code` matching an active open-phase result is rejected with 409, as shipped in T-1. When `result_code` matches an active open-phase result, the result MUST be updated in place:
   - it keeps the same `id` and the same `result_code`;
   - its data is replaced by the payload;
   - no new result row is created.
@@ -83,7 +83,7 @@ Current behavior. Every claim below is cited as run at `35e58fd87` unless marked
   - its data is the payload's;
   - the earlier version MUST remain byte-identical.
 - **`UBC-R-4` — Ownership.** Both operations MUST require the caller to be the owner platform. This is the same rule `/version` applies. Another platform's code is rejected.
-- **`UBC-R-5` — Editable statuses for update.** An open-phase result MAY be updated only in **Editing (1), Draft (8), Pending Review (5) or Rejected (7)**. Every other status MUST be rejected: Approved (6), Submitted (3), QA (2), Discontinued (4).
+- **`UBC-R-5` — Editable statuses for update.** **Modified by `bilateral/resubmit-rejected-result` (`RSB-R-2`, 2026-10-06): the editable statuses are now {Rejected (7)} only.** Editing, Draft and Pending Review get 409; the original text is kept below. An open-phase result MAY be updated only in **Editing (1), Draft (8), Pending Review (5) or Rejected (7)**. Every other status MUST be rejected: Approved (6), Submitted (3), QA (2), Discontinued (4).
   - ⚠️ *This is a default pending the user's confirmation at the Phase 1 gate (`proposal.md` `OQ-2`).*
 - **`UBC-R-6` — Knowledge Products excluded.** A `result_code` belonging to a Knowledge Product MUST be rejected, for update and for version.
   - ⚠️ *This is a default pending the user's confirmation (`OQ-4`).*
@@ -92,7 +92,7 @@ Current behavior. Every claim below is cited as run at `35e58fd87` unless marked
 - **`UBC-R-8` — Never silently create.** A `result_code` that is not found, belongs to another platform, is a KP, is not Approved (version), or is in a non-editable status (update) MUST be rejected with a 4xx, and no row may be written.
   - The codes and messages MUST follow `/version`'s vocabulary: 400, 403, 404, 409.
   - A rejected result MUST leave the database unchanged for that result. The guarantee is **per result**: in a multi-result request, results processed before the rejected one stay written (decided by the user at the T-1 gate, 2026-09-30).
-- **`UBC-R-9` — Duplicate title excludes itself.** ⏸ **On hold with `R-2`.** The version path never needed it, because the source row is not in the open phase. The duplicate-title rule MUST ignore the result being updated or versioned. A payload whose title equals *another* open-phase result's title MUST still be rejected.
+- **`UBC-R-9` — Duplicate title excludes itself.** **Superseded by `bilateral/resubmit-rejected-result` (`RSB-R-16`; shipped for the resubmission path, `ensureUniqueTitle` takes `excludeResultId`, 2026-10-06).** History below kept as written. ⏸ **On hold with `R-2`.** The version path never needed it, because the source row is not in the open phase. The duplicate-title rule MUST ignore the result being updated or versioned. A payload whose title equals *another* open-phase result's title MUST still be rejected.
 - **`UBC-R-10` — Response states the operation.** The response for each result MUST carry `result_code`, `operation`, the resulting `status`, and `external_reference` when one was sent.
   - `operation` is one of `created`, `updated` or `versioned`.
   - The change MUST be additive: every field returned today is still returned.

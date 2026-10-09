@@ -3,6 +3,7 @@ import { Component, Input, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, of, timeout } from 'rxjs';
 import { DECISION_URL_TIMEOUT_MS, NotificationNavigationService } from '../../../../../../../../shared/services/notification-navigation.service';
+import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
 import { ResultsNotificationsService } from '../../results-notifications.service';
 import type { TNotificationResult } from './model/update-notification.model';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
@@ -113,6 +114,20 @@ export class UpdateNotificationComponent {
         if (tab) tab.location.href = `${window.location.origin}${url}`;
         else this.router.navigateByUrl(url);
       });
+  }
+
+  readonly validateCtaLabel = CONTRIBUTION_REQUEST_DRAWER_COPY.notificationItem.validateBilateralCta;
+
+  /** Review-drawer URL for the "validate the bilateral result" call to action; null hides it. */
+  get validateCtaUrl(): string | null {
+    return this.isBilateralSubmitted ? this.navigation.reviewRequestUrl(this.notification) : null;
+  }
+
+  onValidateCtaClick(event: MouseEvent, url: string): void {
+    event.stopPropagation();
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    void this.router.navigateByUrl(url);
   }
 
   getNotificationAction(notificationType: number) {

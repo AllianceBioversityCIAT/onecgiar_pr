@@ -3,6 +3,9 @@
   "configurations": [
     {
       "name": "onecgiar-pr-client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start", "--prefix", "onecgiar-pr-client"],
+      "port": 4200,
       "url": "http://localhost:4200"
     }
   ]

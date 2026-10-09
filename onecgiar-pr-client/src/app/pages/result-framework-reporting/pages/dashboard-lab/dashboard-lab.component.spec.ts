@@ -1589,6 +1589,68 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
     expect(openRow?.statuses.length).toBeGreaterThan(0);
   });
 
+  // ---- sp-overview-total-general-card T-1: `overviewTotalBreakdown` (STG-R-2, STG-R-4) ----
+  // Tests drive the SOURCES (selected()/meter overlay, bilateral cache, overviewScope) — never the
+  // computed's output.
+  describe('overviewTotalBreakdown (STG-S-2.1, STG-S-4.1, STG-S-4.2)', () => {
+    const bilateralRows = (statuses: string[]) =>
+      statuses.map((status_id, i) => ({ id: String(i), status_id, acronym: 'AOW01' })) as unknown as ResultToReview[];
+    const setBilateral = (component: unknown, entries: [string, ResultToReview[]][]) =>
+      (component as { bilateralRowsByKey: { set: (v: Map<string, ResultToReview[]>) => void } }).bilateralRowsByKey.set(
+        new Map(entries)
+      );
+    const withCounts = (versionId: number, replicatedResults?: number, newResults?: number) =>
+      ({
+        versionId,
+        phaseName: `Phase ${versionId}`,
+        phaseYear: 2000 + versionId,
+        totalResults: 0,
+        statuses: [],
+        ...(replicatedResults !== undefined ? { replicatedResults } : {}),
+        ...(newResults !== undefined ? { newResults } : {})
+      }) as any;
+
+    it('S-2.1: replicated/new from the phase version, pendingReview counts status 5 only', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '1'])]]);
+
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, pendingReview: 2 });
+    });
+
+    it('S-4.2: an active scope matching none of the bilateral rows does not narrow pendingReview', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '1'])]]);
+
+      component.overviewScope.set('ZZZ99');
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, pendingReview: 2 });
+    });
+
+    it('missing replicatedResults/newResults coerce to 0 while pendingReview still counts', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '6', '5'])]]);
+
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, pendingReview: 2 });
+    });
+
+    it('S-4.1: switching phase yields the new phase figures, none from the previous phase', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [
+        ['SP04::36', bilateralRows(['5', '5', '6', '1'])],
+        ['SP04::34', bilateralRows(['5', '6', '6'])]
+      ]);
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, pendingReview: 2 });
+
+      (component as any).cacheMeterOverlay((component as any).summaryCacheKey('SP04', 34), withCounts(34, 40, 3));
+      component.selectedVersionId.set(34);
+
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 40, new: 3, pendingReview: 1 });
+    });
+  });
+
   // (e2) The loading-vs-settled distinction requirement 4 asks for: while the overlay fetch is in
   // flight (key present in the loading set, absent from the resolved map), `loadingMeter()` is
   // true and `latestVersion()` still returns `null` — the non-leak guarantee in (e) holds BEFORE

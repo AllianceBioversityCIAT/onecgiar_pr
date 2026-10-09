@@ -19,7 +19,10 @@ import {
   ApiOkResponse,
   ApiQuery,
 } from '@nestjs/swagger';
-import { decodeCursor } from '../../shared/utils/keyset-cursor.util';
+import {
+  decodeCursor,
+  KEYSET_PAGE_SIZE,
+} from '../../shared/utils/keyset-cursor.util';
 
 @ApiTags('Notifications')
 @Controller()
@@ -92,14 +95,21 @@ export class NotificationController {
     required: false,
     enum: ['pending', 'history'],
     description:
-      '"pending" returns only the complete pending set (notificationsPending/notificationAnnouncement); "history" returns only the paginated viewed page; omitted -> legacy shape (complete pending + first history page).',
+      '"pending" returns only the pending set (notificationsPending/notificationAnnouncement), complete unless limit is sent (then paged, see limit); "history" returns only the paginated viewed page; omitted -> legacy shape (complete pending + first history page).',
   })
   @ApiQuery({
     name: 'cursor',
     required: false,
     type: String,
     description:
-      "Opaque keyset cursor from a previous response's viewedMeta.nextCursor, to fetch the next history page. Never logged (.cursorrules).",
+      "Opaque keyset cursor from a previous response's viewedMeta.nextCursor (history) or pendingMeta.nextCursor (scope=pending with limit), to fetch the next page. Never logged (.cursorrules).",
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description:
+      'Page size, integer 1..200. History (viewed) page size (BRS-DD-5) when scope is history/omitted (omitted -> 200). With scope=pending it switches pending to paged mode (<= limit rows newest first plus pendingMeta { hasMore, nextCursor, total }, PPG-R-4); without it pending stays the complete legacy set.',
   })
   @ApiResponse({
     status: 200,
@@ -107,7 +117,7 @@ export class NotificationController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid version_id or cursor.',
+    description: 'Invalid version_id, cursor or limit.',
   })
   @ApiResponse({
     status: 500,
@@ -119,11 +129,13 @@ export class NotificationController {
     @Query('version_id') versionId?: string,
     @Query('scope') scope?: string,
     @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
   ) {
     // PAGE-R-1/PAGE-T-3: validate up front so bad input is a 400 regardless of `scope`
     // (design.md §4.1) — validating only inside a scope branch would let `scope=pending`
     // skip the check entirely.
     const parsedVersionId = this.parseVersionId(versionId);
+    const parsedLimit = this.parseLimit(limit);
     if (cursor !== undefined) {
       decodeCursor(cursor);
     }
@@ -134,7 +146,21 @@ export class NotificationController {
       versionId: parsedVersionId,
       scope: parsedScope,
       cursor,
+      // Spread keeps the no-`limit` call shape identical to before (BRS-T-3 consumers).
+      ...(parsedLimit !== undefined ? { limit: parsedLimit } : {}),
     });
+  }
+
+  /** BRS-T-3: absent -> undefined (service default 200); otherwise an integer in 1..200. */
+  private parseLimit(limit?: string): number | undefined {
+    if (limit === undefined || limit === null) {
+      return undefined;
+    }
+    const parsed = limit.trim() === '' ? NaN : Number(limit);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > KEYSET_PAGE_SIZE) {
+      throw new BadRequestException('Invalid limit');
+    }
+    return parsed;
   }
 
   private parseVersionId(versionId?: string): number | undefined {
@@ -146,6 +172,24 @@ export class NotificationController {
       throw new BadRequestException('Invalid version_id');
     }
     return parsed;
+  }
+
+  @ApiOperation({
+    summary: 'Attention counts for the current user (bell badge)',
+    description:
+      'PPG-R-1: unseen/pending share requests and unread updates across all phases, computed with COUNT queries (no rows returned). Always scoped to the caller.',
+  })
+  @ApiOkResponse({
+    description:
+      'Counts retrieved: response = { unseenRequests, pendingRequests, unreadUpdates } (numbers).',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'An error occurred while retrieving the attention counts',
+  })
+  @Get('attention-counts')
+  getAttentionCounts(@UserToken() user: TokenDto) {
+    return this.notificationService.getAttentionCounts(user);
   }
 
   @ApiOperation({ summary: 'Retrieve all notifications for the current user' })

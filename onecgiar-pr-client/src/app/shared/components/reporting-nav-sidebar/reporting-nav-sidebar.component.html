@@ -120,7 +120,7 @@
               [class.pr-nav-rail-btn--active]="isActiveCenter(center)"
               [attr.aria-label]="center.isAssigned ? center.center_name + ', ' + assignedMarkerLabel : center.center_name"
               [title]="centerTooltip(center)">
-              <span class="pr-nav-center-diamond" [style.background]="programDotColor(center.center_id)"></span>
+              <app-center-marker [acronym]="center.center_acronym" [size]="26" [fallbackColor]="programDotColor(center.center_id)" />
               @if (center.isAssigned) {
                 <ng-icon name="lucideCheck" class="pr-nav-center-check--rail text-[9px]" aria-hidden="true" />
               }
@@ -275,7 +275,7 @@
               [class.pr-nav-program-card--active]="isActiveCenter(center)"
               [attr.aria-current]="isActiveCenter(center) ? 'page' : null"
               [title]="centerTooltip(center)">
-              <span class="pr-nav-center-diamond" [style.background]="programDotColor(center.center_id)"></span>
+              <app-center-marker [acronym]="center.center_acronym" [size]="24" [fallbackColor]="programDotColor(center.center_id)" />
               <span class="pr-nav-program-name">{{ center.center_acronym || center.center_name }}</span>
               @if (center.isAssigned) {
                 <ng-icon name="lucideCheck" class="pr-nav-program-check shrink-0 text-[14px]" aria-hidden="true" />

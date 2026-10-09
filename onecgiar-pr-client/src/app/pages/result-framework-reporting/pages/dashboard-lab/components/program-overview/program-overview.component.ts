@@ -85,6 +85,13 @@ export interface StatusSegment {
   link: OverviewLink | null;
 }
 
+/** Program-wide Total General breakdown (sp-overview-total-general-card, STG-R-2/R-4). */
+export interface OverviewTotalBreakdown {
+  replicated: number;
+  new: number;
+  pendingReview: number;
+}
+
 export type OverviewSection = 'all' | 'w1w2' | 'bilateral' | 'aow';
 
 export interface AowProgressRow {
@@ -238,6 +245,7 @@ export class ProgramOverviewComponent {
   /** Long About copy. Empty → short stand-in using the program name. */
   readonly programDescription = input<string>('');
   readonly statusSegments = input<StatusSegment[]>([]);
+  readonly totalBreakdown = input<OverviewTotalBreakdown>({ replicated: 0, new: 0, pendingReview: 0 });
   /** AoW rows already sorted ascending by completion (least complete first). */
   readonly aowProgress = input<AowProgressRow[]>([]);
 
@@ -663,7 +671,7 @@ export class ProgramOverviewComponent {
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
 
-  readonly programResultsTotal = computed(() => this.statusTotal() + this.bilateralStatusTotal());
+  readonly programResultsTotal = computed(() => this.totalBreakdown().replicated + this.totalBreakdown().new);
 
   readonly programResultsLoading = computed(() => this.meterLoading() || this.bilateralLoading());
 

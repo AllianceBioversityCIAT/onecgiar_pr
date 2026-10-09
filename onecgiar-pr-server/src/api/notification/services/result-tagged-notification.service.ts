@@ -431,10 +431,12 @@ export class ResultTaggedNotificationService {
     if (!Array.isArray(initiatives)) return undefined;
 
     // `initiative_role_id = 1` is the owning entity; the same row the notification read paths
-    // filter on.
-    const owner =
-      initiatives.find((i) => Number(i?.initiative_role_id) === 1) ??
-      initiatives[0];
+    // filter on. `RSF-R-3`: only an ACTIVE one, and no fallback to another row — a result with no
+    // active owner takes the caller's "a Science Program" wording instead of naming a contributor
+    // or a retired owner.
+    const owner = initiatives.find(
+      (i) => Number(i?.initiative_role_id) === 1 && i?.is_active,
+    );
     return owner?.obj_initiative?.official_code ?? undefined;
   }
 }

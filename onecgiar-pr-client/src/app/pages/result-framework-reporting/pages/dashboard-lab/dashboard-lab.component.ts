@@ -60,6 +60,7 @@ import {
   CategoryBar as OverviewCategoryBar,
   OverviewCenterBar,
   OverviewLink,
+  OverviewTotalBreakdown,
   HeatmapModel,
   overviewScopeDisplayCode
 } from './components/program-overview/program-overview.component';
@@ -2096,6 +2097,19 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (!code) return [];
     const key = this.summaryCacheKey(code, this.effectiveVersionId());
     return this.bilateralRowsByKey().get(key) ?? [];
+  });
+
+  /**
+   * Total General card breakdown (sp-overview-total-general-card, STG-R-2/R-4, STG-DD-1/DD-2).
+   * Program-wide: deliberately reads NEITHER `overviewScope()` NOR `scopedBilateralRows()`.
+   */
+  readonly overviewTotalBreakdown = computed<OverviewTotalBreakdown>(() => {
+    const version = this.latestVersion(this.selected());
+    return {
+      replicated: version?.replicatedResults ?? 0,
+      new: version?.newResults ?? 0,
+      pendingReview: this.bilateralRows().filter(r => resolveBilateralStatusId(r) === 5).length
+    };
   });
 
   /**

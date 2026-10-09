@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bell Read State</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* Values mirror src/styles/colors.scss tokens (--pr-*). PRMS is light-only. */
+  :root {
+    --primary-300: #6b46e5; --primary-400: #5733c4; --band: #f5f3ff;
+    --heading: #191524; --secondary: #5d5872; --subtle: #8b8799;
+    --border: #e3e3e8; --surface: #ffffff; --page: #f6f5f9; --hover: #f3f2f7;
+    --decide-bg: #fff4e5; --decide-fg: #b45309;
+    --ok-bg: #e7f6ee; --ok-fg: #137a43; --no-bg: #fdecee; --no-fg: #b4232f;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--heading); font-family: 'Manrope', sans-serif; font-size: 13px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--secondary); margin: 0 0 20px; line-height: 1.5; max-width: 70ch; }
+  .grid { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+
+  .topbar { display: flex; justify-content: flex-end; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; margin-bottom: 8px; }
+  .tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--secondary); font: 500 13px 'Manrope', sans-serif; cursor: pointer; }
+  .tb-btn.on { background: var(--band); color: var(--primary-400); }
+  .badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--primary-300); color: #fff; font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 34px -12px rgba(30,32,47,.25); overflow: hidden; }
+  .head { display: flex; align-items: center; gap: 8px; padding: 12px 16px 8px; }
+  .head h2 { margin: 0; font-size: 15px; }
+  .chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--band); color: var(--primary-300); }
+  .link { margin-left: auto; border: 0; background: none; color: var(--primary-300); font: 600 12px 'Manrope', sans-serif; cursor: pointer; padding: 4px; }
+  .link[hidden] { display: none; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin: 0 12px 8px; padding: 3px; background: var(--hover); border-radius: 8px; }
+  .tab { border: 0; background: transparent; border-radius: 6px; padding: 6px 4px; font: 600 12px 'Manrope', sans-serif; color: var(--secondary); cursor: pointer; display: inline-flex; justify-content: center; align-items: center; gap: 5px; }
+  .tab.on { background: var(--surface); color: var(--heading); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .tab .n { font-weight: 500; color: var(--subtle); font-size: 11px; }
+  .tab .n.hot { color: var(--decide-fg); font-weight: 700; }
+
+  .list { display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px; max-height: 470px; overflow: auto; }
+  .sep { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); padding: 6px 2px 0; }
+  .row { position: relative; display: flex; gap: 10px; padding: 10px 10px 10px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; transition: background .15s, opacity .15s; }
+  .row:hover { background: var(--hover); }
+  .row.decision { border-left: 3px solid var(--decide-fg); }
+  .dot { position: absolute; left: 7px; top: 16px; width: 7px; height: 7px; border-radius: 50%; background: var(--primary-300); }
+  .row.read .dot { display: none; }
+  .ico { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .ico.ok { background: var(--ok-bg); color: var(--ok-fg); } .ico.no { background: var(--no-bg); color: var(--no-fg); } .ico.info { background: var(--hover); color: var(--secondary); }
+  .body { min-width: 0; flex: 1; }
+  .meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .pill { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 6px; background: var(--hover); color: var(--secondary); }
+  .pill.decide { background: var(--decide-bg); color: var(--decide-fg); text-transform: uppercase; }
+  .pill.code { background: transparent; border: 1px solid var(--border); }
+  .time { margin-left: auto; font-size: 11px; color: var(--subtle); }
+  .text { margin: 0; font-size: 12px; line-height: 1.45; color: var(--heading); font-weight: 700; }
+  .row.read .text { font-weight: 400; color: var(--secondary); }
+  .row.read .ico, .row.read .pill { opacity: .7; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .btn { border-radius: 8px; padding: 6px; font: 600 12px 'Manrope', sans-serif; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--heading); }
+  .btn.primary { background: var(--primary-300); border-color: var(--primary-300); color: #fff; }
+  .empty { text-align: center; color: var(--secondary); padding: 24px 8px; margin: 0; }
+  .foot { border-top: 1px solid var(--border); padding: 10px 16px; text-align: center; }
+
+  .side h3 { font-size: 14px; margin: 0 0 8px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .rules { margin: 0; padding-left: 18px; line-height: 1.6; color: var(--secondary); }
+  .rules b { color: var(--heading); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  .log { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--band); color: var(--primary-400); font-weight: 600; min-height: 34px; }
+  .legend { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; color: var(--secondary); }
+  .sw { font-size: 12px; } .sw.u { font-weight: 700; color: var(--heading); } .sw.r { color: var(--secondary); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bell — read state (Option A)</h1>
+  <p class="lead">Interactive mockup for <code>notifications/bell-read-state</code>. Click a row to read it, press <b>Mark as read</b>, or simulate a new request arriving. The badge counts only what you have not read or seen yet. Requests needing a decision always stay in the list until someone accepts or declines them.</p>
+
+  <div class="grid">
+    <div>
+      <div class="topbar">
+        <button class="tb-btn">🚀 Release notes</button>
+        <button class="tb-btn on" id="bellBtn">🔔 Notifications <span class="badge" id="badge"></span></button>
+      </div>
+
+      <div class="panel" role="dialog" aria-label="Notifications">
+        <div class="head">
+          <h2>Notifications</h2>
+          <span class="chip" id="newChip"></span>
+          <button class="link" id="markAll">✓ Mark as read</button>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab on" data-tab="all">All <span class="n" id="nAll"></span></button>
+          <button class="tab" data-tab="decide">Decide <span class="n" id="nDecide"></span></button>
+          <button class="tab" data-tab="updates">Updates <span class="n" id="nUpdates"></span></button>
+        </div>
+        <div class="list" id="list"></div>
+        <div class="foot"><button class="link" style="margin:0">See all the notifications</button></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h3>Try it</h3>
+        <div class="controls">
+          <button class="btn primary" id="simNew">+ A new request arrives</button>
+          <button class="btn" id="simUpdate">+ A new update arrives</button>
+          <button class="btn" id="reset">Reset</button>
+        </div>
+        <p class="log" id="log">Badge 5: 2 unseen requests + 3 unread updates.</p>
+      </div>
+      <div class="card">
+        <h3>How it reads</h3>
+        <div class="legend">
+          <span class="sw u">● Bold + dot</span><span>Unread / not seen yet: <b>counts on the badge</b>.</span>
+          <span class="sw r">Light</span><span>Read / seen: stays in the list, does not count.</span>
+          <span class="pill decide">Requires decision</span><span>Still needs Accept / Decline, read or not. Counted in the <b>Decide</b> tab until decided.</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Rules</h3>
+        <ul class="rules">
+          <li><b>Badge</b> = unread updates + requests not seen yet.</li>
+          <li><b>Opening the bell</b> changes nothing (as today).</li>
+          <li><b>Clicking a row</b> opens it and marks it read: it turns light in place, the badge drops by 1.</li>
+          <li><b>Mark as read</b>: every row turns light, the badge goes to 0. Requests stay in <b>Decide</b> with their buttons.</li>
+          <li><b>Decide tab</b> always shows how many requests are waiting for a decision, read or not.</li>
+          <li><b>Accept / Decline</b> removes the request from everywhere.</li>
+          <li>Same state on every device, and the same in the inbox page.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const seed = () => [
+    { id: 1, kind: 'decision', read: false, code: 'SP03', time: '2h', text: 'Ana Ruiz from SP03 has requested contribution to result 9821 – Climate-smart rice varieties adopted in Mekong' },
+    { id: 2, kind: 'decision', read: false, code: 'SP07', time: '1d', text: 'Luis Mora from SP07 has requested inclusion of SP11 as a contributor to result 9790 – Seed systems policy brief' },
+    { id: 3, kind: 'decision', read: true,  code: 'SP11', time: '6d', text: 'Kim Lee from SP11 has requested contribution to result 9650 – Soil health dashboard' },
+    { id: 4, kind: 'update', status: 'ok',   read: false, code: 'SP03', time: '35m', label: 'Approved', text: 'Result 9802 – Drought-tolerant maize was approved by the Science Program' },
+    { id: 5, kind: 'update', status: 'info', read: false, code: '',     time: '3h',  label: 'Processing finished', text: 'Your 12 AI drafts are ready in My Drafts' },
+    { id: 6, kind: 'update', status: 'no',   read: false, code: 'CIAT', time: '1d',  label: 'Declined', text: 'Result 9744 – Gender toolkit was declined by the Center' },
+    { id: 7, kind: 'update', status: 'ok',   read: true,  code: 'SP07', time: '4d',  label: 'Approved', text: 'Result 9611 – Livestock vaccine trial was approved' }
+  ];
+  let items = seed(), tab = 'all', nextId = 100;
+  const $ = id => document.getElementById(id);
+  const log = msg => ($('log').textContent = msg);
+
+  function counts() {
+    const unread = items.filter(i => !i.read);
+    return {
+      badge: unread.length,
+      unseenReq: unread.filter(i => i.kind === 'decision').length,
+      unreadUpd: unread.filter(i => i.kind === 'update').length,
+      decide: items.filter(i => i.kind === 'decision').length,
+      updates: items.filter(i => i.kind === 'update').length
+    };
+  }
+
+  function rowHtml(i) {
+    const ico = i.kind === 'decision' ? '' :
+      `<span class="ico ${i.status}">${i.status === 'ok' ? '✓' : i.status === 'no' ? '✕' : 'i'}</span>`;
+    const pills = i.kind === 'decision'
+      ? `<span class="pill code">${i.code}</span><span class="pill decide">Requires decision</span>`
+      : `<span class="pill">${i.label}</span>${i.code ? `<span class="pill code">${i.code}</span>` : ''}`;
+    const actions = i.kind === 'decision'
+      ? `<div class="actions"><button class="btn primary" data-act="accept">Accept</button><button class="btn" data-act="decline">Decline</button></div>` : '';
+    return `<div class="row ${i.kind} ${i.read ? 'read' : ''}" data-id="${i.id}">
+      <span class="dot" aria-hidden="true"></span>${ico}
+      <div class="body"><div class="meta">${pills}<span class="time">${i.time}</span></div>
+      <p class="text">${i.text}</p>${actions}</div></div>`;
+  }
+
+  function render() {
+    const c = counts();
+    $('badge').hidden = c.badge === 0;
+    $('badge').textContent = c.badge > 99 ? '99+' : c.badge;
+    $('newChip').hidden = c.badge === 0;
+    $('newChip').textContent = `${c.badge} new`;
+    $('markAll').hidden = c.badge === 0;
+    $('nAll').textContent = items.length;
+    $('nDecide').textContent = c.decide ? `${c.decide} to decide` : '';
+    $('nDecide').className = 'n' + (c.decide ? ' hot' : '');
+    $('nUpdates').textContent = c.unreadUpd || '';
+
+    const visible = items.filter(i => tab === 'all' || (tab === 'decide' ? i.kind === 'decision' : i.kind === 'update'));
+    // Unread first, then read; requests before updates inside each group.
+    const order = (a, b) => (a.read - b.read) || ((a.kind === 'decision' ? 0 : 1) - (b.kind === 'decision' ? 0 : 1));
+    const sorted = [...visible].sort(order);
+    const firstRead = sorted.findIndex(i => i.read);
+    $('list').innerHTML = sorted.length === 0
+      ? `<p class="empty">${tab === 'decide' ? 'Nothing waiting for your decision.' : 'You are all caught up.'}</p>`
+      : sorted.map((i, k) => (k === firstRead && k > 0 ? '<div class="sep">Earlier</div>' : '') + rowHtml(i)).join('');
+  }
+
+  $('list').addEventListener('click', e => {
+    const row = e.target.closest('.row'); if (!row) return;
+    const item = items.find(i => i.id === +row.dataset.id);
+    const act = e.target.dataset.act;
+    if (act) {
+      items = items.filter(i => i !== item);
+      log(`${act === 'accept' ? 'Accepted' : 'Declined'}: the request leaves the bell and the Decide tab.`);
+    } else if (!item.read) {
+      item.read = true;
+      log(`Opened and marked read: the row turns light in place, badge −1. (In the app it also navigates.)`);
+    } else {
+      log('Already read: opens it, nothing to count.');
+    }
+    render();
+  });
+  $('markAll').addEventListener('click', () => {
+    items.forEach(i => (i.read = true));
+    log(`Mark as read: badge 0. ${counts().decide} requests still wait in Decide with Accept / Decline.`);
+    render();
+  });
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    tab = t.dataset.tab;
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+    render();
+  }));
+  $('simNew').addEventListener('click', () => {
+    items.push({ id: nextId++, kind: 'decision', read: false, code: 'SP05', time: 'now', text: 'Marta Díaz from SP05 has requested contribution to result 9840 – Fish feed innovation scaled' });
+    log('A new request arrived after your last "Mark as read": bold, badge +1.');
+    render();
+  });
+  $('simUpdate').addEventListener('click', () => {
+    items.push({ id: nextId++, kind: 'update', status: 'ok', read: false, code: 'SP03', time: 'now', label: 'Approved', text: 'Result 9833 – Water governance study was approved' });
+    log('A new update arrived: bold, badge +1.');
+    render();
+  });
+  $('reset').addEventListener('click', () => { items = seed(); tab = 'all'; document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === 'all')); log('Badge 5: 2 unseen requests + 3 unread updates.'); render(); });
+  render();
+</script>
+</body>
+</html>

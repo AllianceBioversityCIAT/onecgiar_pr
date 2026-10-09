@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
   Body,
   Patch,
   Param,
+  ParseIntPipe,
   Query,
   UseInterceptors,
   Version,
@@ -16,6 +18,7 @@ import { CreateShareResultRequestDto } from './dto/create-share-result-request.d
 import { ApprovalChainDto } from './dto/approval-chain.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { KEYSET_PAGE_SIZE } from '../../../shared/utils/keyset-cursor.util';
 import {
   ApiBody,
   ApiOperation,
@@ -118,7 +121,21 @@ export class ShareResultRequestController {
     required: false,
     type: String,
     description:
-      "Opaque keyset cursor from a previous response's `doneMeta.nextCursor`, to fetch the next history page. Malformed cursor -> 400.",
+      "Opaque keyset cursor from a previous response's `doneMeta.nextCursor` (history) or `pendingMeta.nextCursor` (paged pending), to fetch the next page. Malformed cursor -> 400.",
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description:
+      '@akili-spec notifications/admin-pending-paging: with scope=pending, switches to the paged pending mode (newest first by (requested_date, share_result_request_id)) and returns at most this many rows plus `pendingMeta { hasMore, nextCursor, total }`. Integer 1..200, else 400. Omit for the legacy complete pending set.',
+  })
+  @ApiQuery({
+    name: 'seen',
+    required: false,
+    type: Boolean,
+    description:
+      "Paged pending mode only: 'true' / 'false' keeps only the caller's seen / unseen rows before paging. Anything else -> 400.",
   })
   @ApiResponse({
     status: 200,
@@ -161,12 +178,110 @@ export class ShareResultRequestController {
     @Query('version_id') versionId?: string,
     @Query('scope') scope?: string,
     @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('seen') seen?: string,
   ) {
+    const parsedLimit = this.parseLimit(limit);
+    const parsedSeen = this.parseSeen(seen);
     return this.shareResultRequestService.getReceivedResultRequest(user, {
       versionId,
       scope,
       cursor,
+      // Spread keeps the legacy (no `limit`/`seen`) call shape identical to before (PPG-NFR-3).
+      ...(parsedLimit !== undefined ? { limit: parsedLimit } : {}),
+      ...(parsedSeen !== undefined ? { seen: parsedSeen } : {}),
     });
+  }
+
+  /** PPG-R-4: absent -> undefined (legacy); otherwise an integer in 1..200, else 400. */
+  private parseLimit(limit?: string): number | undefined {
+    if (limit === undefined || limit === null) {
+      return undefined;
+    }
+    const parsed = limit.trim() === '' ? Number.NaN : Number(limit);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > KEYSET_PAGE_SIZE) {
+      throw new BadRequestException('Invalid limit');
+    }
+    return parsed;
+  }
+
+  /** PPG-R-6: absent -> undefined; 'true' / 'false' -> boolean; anything else -> 400. */
+  private parseSeen(seen?: string): boolean | undefined {
+    if (seen === undefined || seen === null) {
+      return undefined;
+    }
+    if (seen === 'true') return true;
+    if (seen === 'false') return false;
+    throw new BadRequestException('Invalid seen');
+  }
+
+  // `BRS-T-2`: `seen-all` is declared before `seen/:shareResultRequestId`. The paths differ in
+  // shape (`seen-all` vs `seen/<id>`), so neither can capture the other; the order is kept anyway.
+  @Patch('seen-all')
+  @ApiOperation({
+    summary: 'Mark every pending received request as seen by the caller',
+    description:
+      'Records, for the calling user only, that all requests listed as pending in the bell (all phases) were seen. The set is resolved server-side; the client sends no ids. Idempotent. Never changes the requests themselves.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Number of seen rows newly recorded (0 when already seen)',
+    schema: {
+      example: {
+        response: { recorded: 12 },
+        message: 'Requests marked as seen',
+        status: 200,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  markAllSeen(@UserToken() user: TokenDto) {
+    return this.shareResultRequestService.markAllSeen(user);
+  }
+
+  @Patch('seen/:shareResultRequestId')
+  @ApiOperation({
+    summary: 'Mark one pending received request as seen by the caller',
+    description:
+      'Records, for the calling user only, that the request was seen. Idempotent. Never changes the request itself.',
+  })
+  @ApiParam({
+    name: 'shareResultRequestId',
+    type: 'number',
+    description: 'ID of the share result request',
+    example: 123,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The request is recorded as seen by the caller',
+    schema: {
+      example: {
+        response: { seen: true },
+        message: 'Request marked as seen',
+        status: 200,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - the id is not an integer',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - the request does not exist or is not pending',
+  })
+  markSeen(
+    @UserToken() user: TokenDto,
+    @Param('shareResultRequestId', ParseIntPipe) shareResultRequestId: number,
+  ) {
+    return this.shareResultRequestService.markSeen(user, shareResultRequestId);
   }
 
   @Get('get/sent')

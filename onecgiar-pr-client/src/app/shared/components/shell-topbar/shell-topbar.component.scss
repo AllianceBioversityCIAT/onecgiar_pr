@@ -121,26 +121,18 @@
   margin-left: auto;
 }
 
-.pr-topbar-badge-wrap {
-  position: relative;
-  display: inline-flex;
-}
-
+// Inline count pill after the "Notifications" label (quick/topbar-labelled-actions).
 .pr-topbar-badge {
-  position: absolute;
-  top: -6px;
-  right: -8px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   border-radius: 999px;
   background: var(--pr-color-primary-300, #6b46e5);
   color: var(--pr-color-white, #fff);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 18px;
   text-align: center;
-  border: 2px solid var(--pr-color-white, #fff);
 }
 
 .pr-topbar-user {

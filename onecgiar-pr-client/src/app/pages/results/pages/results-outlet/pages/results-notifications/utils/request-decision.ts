@@ -52,13 +52,27 @@ function isBilateralContributorRow(row: any): boolean {
 /**
  * BELL-T-11: the ONE Accept label per row kind. The inbox row (`drawerAcceptLabel()`, which also feeds
  * its drawer and the inbox Accept button) and the bell card both read it, so they cannot drift.
- *   primary -> "Accept as primary" · bilateral contributor -> "Accept" · otherwise "Accept contribution".
+ *   primary -> "Review result" (PRA-R-3) · bilateral contributor -> "Accept" · otherwise "Accept contribution".
  */
 export function acceptLabelFor(row: any): string {
   const footer = CONTRIBUTION_REQUEST_DRAWER_COPY.footer;
-  if (isPrimaryRequestRow(row)) return footer.acceptAsPrimary;
+  if (isPrimaryRequestRow(row)) return footer.reviewResult;
   if (isBilateralContributorRow(row)) return footer.accept;
   return footer.acceptContribution;
+}
+
+/**
+ * `notifications/primary-review-not-accept` PRA-R-3 / design §8.1: where a primary row's "Review result"
+ * leads once the accept PATCH settles. A result in Pending Review (`status_id` 5) opens the SP's review
+ * drawer; anything else (Editing) has no drawer that can show it yet, so the SP is only told it will be notified.
+ */
+export function primaryReviewTarget(row: any): 'review-drawer' | 'notify-later' {
+  return row?.obj_result?.status_id == 5 ? 'review-drawer' : 'notify-later';
+}
+
+/** Whether the row is a primary Science Program request (inbox row, drawer and bell share it). */
+export function isPrimaryRequest(row: any): boolean {
+  return isPrimaryRequestRow(row);
 }
 
 /** BELL-P-4: `notification-item.component.ts::get isP25Request()`, verbatim. */

@@ -135,6 +135,18 @@ export type PrimaryDecisionOutcome =
   | { ok: false; reason: 'internal_error' };
 
 /**
+ * `RRC-T-1` — outcome of {@link PrimaryProgramRequestService.transferPrimary}. The core throws on
+ * any failure (it runs inside the caller's transaction, which must roll back), so there is no
+ * `ok: false` arm: the result only says whether anything was written.
+ */
+export interface PrimaryTransferResult {
+  /** `unchanged` — the named SP already owns the result: nothing was written (`RRC-R-10`, step 1). */
+  outcome: 'unchanged' | 'transferred';
+  /** The active role-1 owner before the call (`null` when the result had none). */
+  previousInitiativeId: number | null;
+}
+
+/**
  * `PSR-T-2` (design.md §2.1, §5 items 1 and 8) — owns the pending "primary Science Program"
  * request lifecycle up to the point where it is accepted or declined (T-3/T-4 add those).
  *
@@ -668,90 +680,23 @@ export class PrimaryProgramRequestService {
             const resultId = row.result_id;
             const nextPrimaryId = row.shared_inititiative_id;
 
-            const initiativeRepo = manager.getRepository(ResultsByInititiative);
-            const activePrimaryRows = await initiativeRepo.find({
-              where: {
-                result_id: resultId,
-                initiative_role_id: 1,
-                is_active: true,
-              },
-            });
-            const currentPrimaryId = Number(
-              activePrimaryRows[0]?.initiative_id ?? 0,
-            );
+            // `RRC-T-1` — the ownership writes below were extracted, verbatim and in the same
+            // order, into helpers `transferPrimary` shares (`RRC-R-17`). What stays here is what is
+            // specific to a request round: the swap's old accepted row, the decision on THIS row.
+            const { activePrimaryRows, currentPrimaryId } =
+              await this.loadActiveOwner(manager, resultId);
             const isSwap =
               currentPrimaryId > 0 && currentPrimaryId !== nextPrimaryId;
 
             if (currentPrimaryId !== nextPrimaryId) {
-              for (const oldOwnerRow of activePrimaryRows) {
-                await initiativeRepo.update(oldOwnerRow.id, {
-                  is_active: false,
-                  last_updated_by: user.id,
-                });
-              }
-
-              // An initiative cannot be both the owner and an accepted contributor.
-              await initiativeRepo.update(
-                {
-                  result_id: resultId,
-                  initiative_id: nextPrimaryId,
-                  initiative_role_id: 2,
-                  is_active: true,
-                },
-                { is_active: false, last_updated_by: user.id },
+              await this.writeOwnershipChange(
+                manager,
+                resultId,
+                nextPrimaryId,
+                currentPrimaryId,
+                activePrimaryRows,
+                user.id,
               );
-
-              // Forward pointer (T-2 attempt-2 advisory): filtered on `request_type` so this can
-              // never touch the very `primary` row being accepted right here (its owner and shared
-              // columns are also both `nextPrimaryId`).
-              await requestRepo.update(
-                {
-                  result_id: resultId,
-                  request_type: RequestTypeEnum.CONTRIBUTION,
-                  shared_inititiative_id: nextPrimaryId,
-                  is_active: true,
-                  is_map_to_toc: false,
-                  request_status_id: In(CONTRIBUTION_ACTIVE_STATUSES),
-                },
-                { is_active: false },
-              );
-
-              const formerPrimaryRow = await initiativeRepo.findOne({
-                where: {
-                  result_id: resultId,
-                  initiative_id: nextPrimaryId,
-                  initiative_role_id: 1,
-                },
-              });
-              if (formerPrimaryRow) {
-                await initiativeRepo.update(formerPrimaryRow.id, {
-                  is_active: true,
-                  last_updated_by: user.id,
-                });
-              } else {
-                await initiativeRepo.save({
-                  result_id: resultId,
-                  initiative_id: nextPrimaryId,
-                  initiative_role_id: 1,
-                  is_active: true,
-                  from_toc: false,
-                  created_by: user.id,
-                });
-              }
-
-              // ToC mappings belong to their primary initiative — don't carry one into a different
-              // Science Program.
-              if (currentPrimaryId > 0) {
-                const tocRepoForClear = manager.getRepository(ResultsTocResult);
-                await tocRepoForClear.update(
-                  {
-                    result_id: resultId,
-                    initiative_ids: currentPrimaryId,
-                    is_active: true,
-                  },
-                  { is_active: false, last_updated_by: user.id },
-                );
-              }
             }
 
             if (isSwap) {
@@ -776,28 +721,7 @@ export class PrimaryProgramRequestService {
               },
             );
 
-            // Moved from `populateInitiativeAndTocFromProgramCode` (design.md §5 item 2, DD-3): the
-            // stub ToC row is keyed on the primary SP, so it can only be written once the SP is
-            // known and has accepted.
-            const tocRepo = manager.getRepository(ResultsTocResult);
-            const existingToc = await tocRepo.findOne({
-              where: {
-                result_id: resultId,
-                initiative_ids: nextPrimaryId,
-                is_active: true,
-              },
-            });
-            if (!existingToc) {
-              await tocRepo.save({
-                created_by: user.id,
-                toc_result_id: null,
-                initiative_ids: nextPrimaryId,
-                result_id: resultId,
-                toc_level_id: null,
-                planned_result: true,
-                is_active: true,
-              });
-            }
+            await this.seedTocStub(manager, resultId, nextPrimaryId, user.id);
 
             await this.releaseContributors(resultId, manager);
 
@@ -840,6 +764,240 @@ export class PrimaryProgramRequestService {
   }
 
   /**
+   * `RRC-T-1` (bilateral/rejected-result-correction, design.md §8.2, `RRC-DD-3`; `RRC-R-10`,
+   * `RRC-R-17`) — **direct** primary transfer: the named SP becomes the result's primary at once,
+   * with no request round, no acceptance, and nothing sent to anyone. It is `accept()`'s
+   * ownership write block extracted (`writeOwnershipChange` + `seedTocStub`, the SAME code
+   * `accept()` now calls), plus the `primary` request rows `stateFor` reads (`RRC-DD-3`).
+   *
+   * Runs **inside the caller's transaction** (`manager` is required), after the caller has locked
+   * the `Result` row — the core itself never locks, never opens a transaction, and **throws** on
+   * any failure so the caller's transaction rolls back (`RRC-R-10` data integrity). Callers:
+   * `updatePrimaryAssignment` on a Rejected result (`releaseContributors: false`, `RRC-DD-5`) and
+   * the API resubmission (`releaseContributors: true`, the result is sent at once, `RRC-DD-7`).
+   *
+   * 1. The named SP already owns the result → `unchanged`, nothing written.
+   * 2. `writeOwnershipChange` (old role 1 off; stray accepted-contributor row and stale contribution
+   *    request of the new SP off; new role 1 written or reactivated; old ToC mapping retired) and
+   *    `seedTocStub` — in the order `accept()` runs them.
+   * 3. Every active `primary` request row of the result is retired and ONE ACCEPTED row is written
+   *    for the new SP (requested and decided by `user`). Without it `stateFor` (accepted > pending)
+   *    would report `none` for the new owner — a Rejected result has no active `primary` row,
+   *    because a rejection deactivates them all (`RRC-P-6`, `RRC-P-10`) — and two accepted rows
+   *    must never stay active together.
+   * 4. `releaseContributors` runs only when the flag says so.
+   *
+   * Emits **no** notice and does **not** call `announceIfPendingReview`: the caller announces
+   * (the in-app path at its submit, the API path after its commit).
+   */
+  async transferPrimary(
+    resultId: number,
+    newInitiativeId: number,
+    user: TokenDto,
+    manager: EntityManager,
+    opts: { releaseContributors: boolean },
+  ): Promise<PrimaryTransferResult> {
+    const { activePrimaryRows, currentPrimaryId } = await this.loadActiveOwner(
+      manager,
+      resultId,
+    );
+    const previousInitiativeId = currentPrimaryId > 0 ? currentPrimaryId : null;
+
+    if (currentPrimaryId === newInitiativeId) {
+      return { outcome: 'unchanged', previousInitiativeId };
+    }
+
+    await this.writeOwnershipChange(
+      manager,
+      resultId,
+      newInitiativeId,
+      currentPrimaryId,
+      activePrimaryRows,
+      user.id,
+    );
+    await this.seedTocStub(manager, resultId, newInitiativeId, user.id);
+
+    // `RRC-DD-3` — one coherent `primary` row: retire the whole current round (the old owner's
+    // accepted row, a declined or pending one), then record the transfer as an ACCEPTED row.
+    const requestRepo = manager.getRepository(ShareResultRequest);
+    await requestRepo.update(
+      {
+        result_id: resultId,
+        request_type: RequestTypeEnum.PRIMARY,
+        is_active: true,
+      },
+      { is_active: false },
+    );
+    await requestRepo.insert({
+      result_id: resultId,
+      request_type: RequestTypeEnum.PRIMARY,
+      shared_inititiative_id: newInitiativeId,
+      owner_initiative_id: newInitiativeId,
+      requester_initiative_id: null,
+      approving_inititiative_id: newInitiativeId,
+      request_status_id: RequestStatusId.ACCEPTED,
+      is_active: true,
+      is_map_to_toc: false,
+      from_toc: false,
+      requested_by: user.id,
+      approved_by: user.id,
+      aprovaed_date: new Date(),
+    });
+
+    if (opts.releaseContributors) {
+      await this.releaseContributors(resultId, manager);
+    }
+
+    return { outcome: 'transferred', previousInitiativeId };
+  }
+
+  /**
+   * `RRC-T-1` — the result's active role-1 row(s) and the initiative they name (`0` when it has no
+   * owner). Shared by `accept()` and {@link transferPrimary}; moved out of `accept()` unchanged.
+   */
+  private async loadActiveOwner(
+    manager: EntityManager,
+    resultId: number,
+  ): Promise<{
+    activePrimaryRows: ResultsByInititiative[];
+    currentPrimaryId: number;
+  }> {
+    const initiativeRepo = manager.getRepository(ResultsByInititiative);
+    const activePrimaryRows = await initiativeRepo.find({
+      where: {
+        result_id: resultId,
+        initiative_role_id: 1,
+        is_active: true,
+      },
+    });
+    const currentPrimaryId = Number(activePrimaryRows[0]?.initiative_id ?? 0);
+    return { activePrimaryRows, currentPrimaryId };
+  }
+
+  /**
+   * `RRC-T-1` / `RRC-R-17` — the ownership writes `accept()` runs on a **genuine change** of owner
+   * (no previous owner, or a different one), extracted verbatim and in the same order so both
+   * `accept()` and {@link transferPrimary} run one block: deactivate the old owner's role-1
+   * row(s), clear a stray "accepted contributor" row for the new owner (it can't be both), clear
+   * a stale *contribution* request to the new owner, write/reactivate role 1 for the new owner,
+   * and retire the old owner's ToC mapping. The caller decides whether it is a genuine change.
+   */
+  private async writeOwnershipChange(
+    manager: EntityManager,
+    resultId: number,
+    nextPrimaryId: number,
+    currentPrimaryId: number,
+    activePrimaryRows: ResultsByInititiative[],
+    userId: number,
+  ): Promise<void> {
+    const requestRepo = manager.getRepository(ShareResultRequest);
+    const initiativeRepo = manager.getRepository(ResultsByInititiative);
+
+    for (const oldOwnerRow of activePrimaryRows) {
+      await initiativeRepo.update(oldOwnerRow.id, {
+        is_active: false,
+        last_updated_by: userId,
+      });
+    }
+
+    // An initiative cannot be both the owner and an accepted contributor.
+    await initiativeRepo.update(
+      {
+        result_id: resultId,
+        initiative_id: nextPrimaryId,
+        initiative_role_id: 2,
+        is_active: true,
+      },
+      { is_active: false, last_updated_by: userId },
+    );
+
+    // Forward pointer (T-2 attempt-2 advisory): filtered on `request_type` so this can
+    // never touch the very `primary` row being accepted right here (its owner and shared
+    // columns are also both `nextPrimaryId`).
+    await requestRepo.update(
+      {
+        result_id: resultId,
+        request_type: RequestTypeEnum.CONTRIBUTION,
+        shared_inititiative_id: nextPrimaryId,
+        is_active: true,
+        is_map_to_toc: false,
+        request_status_id: In(CONTRIBUTION_ACTIVE_STATUSES),
+      },
+      { is_active: false },
+    );
+
+    const formerPrimaryRow = await initiativeRepo.findOne({
+      where: {
+        result_id: resultId,
+        initiative_id: nextPrimaryId,
+        initiative_role_id: 1,
+      },
+    });
+    if (formerPrimaryRow) {
+      await initiativeRepo.update(formerPrimaryRow.id, {
+        is_active: true,
+        last_updated_by: userId,
+      });
+    } else {
+      await initiativeRepo.save({
+        result_id: resultId,
+        initiative_id: nextPrimaryId,
+        initiative_role_id: 1,
+        is_active: true,
+        from_toc: false,
+        created_by: userId,
+      });
+    }
+
+    // ToC mappings belong to their primary initiative — don't carry one into a different
+    // Science Program.
+    if (currentPrimaryId > 0) {
+      const tocRepoForClear = manager.getRepository(ResultsTocResult);
+      await tocRepoForClear.update(
+        {
+          result_id: resultId,
+          initiative_ids: currentPrimaryId,
+          is_active: true,
+        },
+        { is_active: false, last_updated_by: userId },
+      );
+    }
+  }
+
+  /**
+   * Moved from `populateInitiativeAndTocFromProgramCode` (`PSR` design.md §5 item 2, DD-3): the
+   * stub ToC row is keyed on the primary SP, so it can only be written once the SP is known and
+   * has taken ownership. Extracted from `accept()` unchanged by `RRC-T-1`; idempotent (no second
+   * stub when the SP already has an active ToC row).
+   */
+  private async seedTocStub(
+    manager: EntityManager,
+    resultId: number,
+    nextPrimaryId: number,
+    userId: number,
+  ): Promise<void> {
+    const tocRepo = manager.getRepository(ResultsTocResult);
+    const existingToc = await tocRepo.findOne({
+      where: {
+        result_id: resultId,
+        initiative_ids: nextPrimaryId,
+        is_active: true,
+      },
+    });
+    if (!existingToc) {
+      await tocRepo.save({
+        created_by: userId,
+        toc_result_id: null,
+        initiative_ids: nextPrimaryId,
+        result_id: resultId,
+        toc_level_id: null,
+        planned_result: true,
+        is_active: true,
+      });
+    }
+  }
+
+  /**
    * `PDR-T-1` (requirements.md `PDR-R-3`..`R-7`, design.md §7.1) — decline a pending primary
    * request. Same lock + status re-check + authorization as {@link accept}. The declined row is
    * set to status 3 and left **active** (`PDR-R-11` — the SP's inbox needs it visible as
@@ -857,7 +1015,7 @@ export class PrimaryProgramRequestService {
    * - **Ownerless** (`PDR-R-4`, `DD-1`/`DD-2`): in the SAME transaction `manager` — mirroring the
    *   review-reject data shape (`results.service.ts` `reviewBilateralResult`, design.md §2) —
    *   `Result.status_id` → Rejected (7) with `reviewed_by`/`reviewed_at`; one `ResultReviewHistory`
-   *   row (`REJECTED`, comment prefixed with the declining SP's code, `created_by` the decliner);
+   *   row (`REJECT`, `initiative_id` = the declining SP, comment prefixed with the declining SP's code, `created_by` the decliner);
    *   every active pending/draft **contribution** row of the result is deactivated (`PDR-R-4`
    *   item 4, `PDR-R-6`). The primary row itself is NOT deactivated (`DD-2`) — only contribution
    *   rows. Outcome `rejected`.
@@ -984,6 +1142,7 @@ export class PrimaryProgramRequestService {
               historyRepo.create({
                 result_id: resultId,
                 action: ReviewActionEnum.REJECT,
+                initiative_id: declinedInitiativeId,
                 comment: `${declinedSpCode ?? 'The Science Program'} declined to be the primary Science Program of this result: ${trimmedJustification}`,
                 created_by: user.id,
               }),

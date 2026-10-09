@@ -1,3 +1,4 @@
+import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../../../../../internationalization/bilateral-rejection-notice.copy';
 import {
   Component,
   ElementRef,
@@ -26,6 +27,7 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 import { ResultLevelService } from '../../../../../result-creator/services/result-level.service';
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { ResultsNotificationsService } from '../../results-notifications.service';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import { NotificationNavigationService } from '../../../../../../../../shared/services/notification-navigation.service';
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
@@ -34,8 +36,10 @@ import {
   getResultNotificationTextParts,
   resolveNotificationType,
   isBilateralReviewNotification,
+  isBilateralSubmittedNotification,
   parseCenterReportedProjectText,
   NotificationType,
+  getRejectionReasonLine,
   type AiJobNotificationParts,
   type NotificationTextParts
 } from '../../../../../../../../shared/constants/notification-type.constants';
@@ -49,7 +53,7 @@ import type { ContributionRequestDrawerMode } from '../notification-detail-conte
 import type { ApprovalChainDto } from '../../../../../../../../shared/services/api/results-api.service';
 // BELL-T-1 (notifications/bell-quick-inbox, BELL-DD-2): the shared decision helper — `acceptOrReject`
 // and `invalidateRequest()` below delegate the body/eligibility logic to it.
-import { acceptLabelFor, buildDecisionBody, classifyAccept, isDecidable } from '../../utils/request-decision';
+import { acceptLabelFor, buildDecisionBody, classifyAccept, isDecidable, primaryReviewTarget } from '../../utils/request-decision';
 // @akili-spec notifications/detail-side-panel (DSP-T-7, design.md §2.2/§6.2): the page-scoped
 // coordinator that decides whether THIS row's detail template renders docked (wide) or in the
 // drawer (narrow), and which row "owns" it when only one may be open at a time.
@@ -259,6 +263,7 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   private chainRequestToken = 0;
 
   private readonly notificationNavigation = inject(NotificationNavigationService);
+  private readonly resultsNotificationsSE = inject(ResultsNotificationsService);
 
   /**
    * @akili-spec notifications/detail-side-panel (DSP-T-7)
@@ -367,7 +372,8 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
         // mapping (`tocReview`) and whose own Accept (`onDrawerAccept`) is the user's click. Opening
         // never PATCHes. A primary request only consumes the param (T-7).
         else if (this.notification?.is_map_to_toc && !this.isPrimaryRequest) this.openDrawer('details');
-      } else if (action === 'decline') this.onDeclineClick();
+      } else if (action === 'decline' && !this.isPrimaryRequest) this.onDeclineClick();
+      // PRA-R-3: a primary request has no Decline, so a `?action=decline` link only consumes the param.
     }
 
     queueMicrotask(() => this.autoActionConsumed.emit());
@@ -569,6 +575,13 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   get updateTextParts(): NotificationTextParts {
     return getResultNotificationTextParts(this.notification);
   }
+
+  /** RRC-T-9 (RRC-R-13): the "Reason" line of a rejection update row; null for every other row. */
+  get rejectionReasonLine(): string | null {
+    return this.isUpdateSource ? getRejectionReasonLine(this.notification) : null;
+  }
+
+  readonly rejectionReasonLabel = BILATERAL_REJECTION_NOTICE_COPY.notificationReasonLabel;
 
   /** A finished AI job has no result behind it: no result link, no drawer, just its sentence. */
   get aiJobParts(): AiJobNotificationParts | null {
@@ -869,7 +882,12 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     // no prompt, no mapping step, no `tocInitiative` seed. It is `is_map_to_toc: false` on the
     // server (design.md §3.1), so without this branch it would fall into `acceptsWithoutToc` (today
     // false for it) or, worse, the legacy modal-first flow via `mapAndAccept()`.
-    if (this.notification?.is_map_to_toc || this.isPrimaryRequest) {
+    if (this.isPrimaryRequest) {
+      this.reviewPrimaryResult();
+      return;
+    }
+
+    if (this.notification?.is_map_to_toc) {
       this.acceptOrReject(true);
       return;
     }
@@ -988,6 +1006,10 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     if (mode === 'decide' && this.isBilateralResult && !this.isPrimaryRequest) {
       this.seedTocInitiative();
     }
+
+    // BRS-T-7 (BRS-R-3/R-9): opening a received PENDING request's drawer records it as seen
+    // (`isPending` = status 1 AND not Sent). Fire-and-forget: never blocks opening; never rejects.
+    if (this.isPending) void this.resultsNotificationsSE.markRequestSeen(this.notification);
 
     this.drawerOpen.set(true);
     // DSP-T-2 (DSP-R-8, DD-10): one chain fetch per open, every mode — never gated on `mode`.
@@ -1128,7 +1150,12 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     // PSR-T-8 (carried forward-pointer, PSR-T-9): a primary request's drawer Accept sends the same
     // inert ToC payload as the ToC-carried path — never `acceptOrReject(true, true)`, and never the
     // legacy `mapAndAccept()` fallback at the bottom of this method.
-    if (this.notification?.is_map_to_toc || this.isPrimaryRequest) {
+    if (this.isPrimaryRequest) {
+      this.reviewPrimaryResult();
+      return;
+    }
+
+    if (this.notification?.is_map_to_toc) {
       this.acceptOrReject(true);
       return;
     }
@@ -1183,8 +1210,19 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
    * would land the user on the requested SP's review queue for a result that MUST NOT appear there
    * (requirements.md L94) — before it has even accepted. A primary request therefore takes the same
    * `resultUrl()`-in-a-new-tab path as a non-bilateral row, exactly like the row's own inline link.
+   *
+   * PRA follow-up: once the primary request's result is Pending Review (status 5) the SP validates
+   * it in the review drawer, so this closes the drawer and navigates in-app to `reviewRequestUrl()`
+   * (`primaryReviewUrl`) instead; the "MUST NOT appear" reasoning above holds only before that.
    */
   onDrawerResult() {
+    const reviewUrl = this.reviewLinkUrl;
+    if (reviewUrl) {
+      this.closeDrawer();
+      void this.router.navigateByUrl(reviewUrl);
+      return;
+    }
+
     if (this.isBilateralResult && !this.isPrimaryRequest) {
       this.closeDrawer();
       this.navigateToResult(this.notification);
@@ -1200,12 +1238,61 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * Review-drawer URL for a primary request whose result is Pending Review (status 5): the SP
+   * validates it there instead of opening the form. Null for any other row or status, or when the
+   * payload names no SP code.
+   */
+  get primaryReviewUrl(): string | null {
+    if (!this.isPrimaryRequest || primaryReviewTarget(this.notification) !== 'review-drawer') return null;
+    return this.notificationNavigation.reviewRequestUrl(this.notification);
+  }
+
+  /**
+   * Review-drawer URL for an update row of type BILATERAL_RESULT_SUBMITTED ("was submitted for your
+   * review"); null for any other row, or when the payload names no SP code (old behaviour stays).
+   */
+  get submittedReviewUrl(): string | null {
+    if (!this.isUpdateSource || !isBilateralSubmittedNotification(this.notification)) return null;
+    return this.notificationNavigation.reviewRequestUrl(this.notification);
+  }
+
+  /** The review drawer URL for whichever row kind has one (primary Pending Review, or submitted update). */
+  get reviewLinkUrl(): string | null {
+    return this.primaryReviewUrl ?? this.submittedReviewUrl;
+  }
+
+  /** `href` of a row's result link: the review drawer when the row has one, else Result Detail. */
+  primaryResultHref(notification: any): string {
+    return this.reviewLinkUrl ?? this.resultUrl(notification);
+  }
+
+  /** "Click here to validate the bilateral result": in-app to the review drawer, middle-click keeps the href. */
+  onValidateCtaClick(event: MouseEvent): void {
+    event.stopPropagation();
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    const url = this.reviewLinkUrl;
+    if (url) void this.router.navigateByUrl(url);
+  }
+
+  /**
    * Row result link. A W3/Bilaterals result (e.g. a primary program request) opens in its lead
    * center's editor instead of Result Detail, which does not serve bilateral results. The href
    * keeps Result Detail for middle-click / context menu.
+   *
+   * PRA follow-up: for a primary row whose result is Pending Review (status 5) the click goes in-app
+   * to `reviewRequestUrl()` and the href (middle-click / context menu) is that review drawer URL.
    */
   onResultLinkClick(event: MouseEvent): void {
     event.stopPropagation();
+    // The review drawer wins over the decision / center-editor path (primary Pending Review, or a
+    // "submitted for your review" update row); modifier and non-primary clicks keep the href.
+    const reviewUrl = this.reviewLinkUrl;
+    if (reviewUrl && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      void this.router.navigateByUrl(reviewUrl);
+      return;
+    }
     if (!this.isBilateralResult) return;
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
 
@@ -1607,6 +1694,52 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
+  }
+
+  /**
+   * `notifications/primary-review-not-accept` PRA-R-3 / PRA-DD-5: a primary row's single "Review result"
+   * action. It still sends the existing accept PATCH (a legacy ownerless result cannot be reviewed
+   * without an owner), then — on success OR a 409 (the Center already submitted and closed the row) —
+   * opens the review drawer (Pending Review) or tells the SP it will be notified (Editing). Any other
+   * error keeps the generic error toast. Never shows a confirm step or the "already answered" toast.
+   */
+  private reviewPrimaryResult() {
+    if (this.invalidateRequest()) return;
+
+    const body = buildDecisionBody(this.notification, true);
+    const row = this.notification;
+    this.requestingAccept = true;
+
+    const settle = () =>
+      this.notificationNavigation.completePrimaryReview(row, () =>
+        this.api.alertsFe.show({
+          id: 'noti',
+          title: this.copy.notificationItem.primaryNotifyLater,
+          status: 'success'
+        })
+      );
+
+    this.api.resultsSE
+      .PATCH_updateRequest(body, this.isP25Request)
+      .pipe(
+        finalize(() => {
+          this.closeDrawer();
+          this.requestingAccept = false;
+          this.requestingReject = false;
+          this.requestEvent.emit();
+        })
+      )
+      .subscribe({
+        next: () => settle(),
+        error: err => {
+          console.error(err);
+          if (err?.status === 409) {
+            settle();
+            return;
+          }
+          this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+        }
+      });
   }
 
   acceptOrReject(isAccept: boolean, withTocMapping = false, justification?: string) {

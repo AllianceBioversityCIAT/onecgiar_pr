@@ -25,7 +25,7 @@
         <app-pr-table id="resultListTable" sortField="result_code" [sortOrder]="-1"
             [value]="this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter : text_to_search"
             [paginator]="(this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter :text_to_search )?.length"
-            [rows]="10" selectionMode="single" [rowsPerPageOptions]="[10, 50, 100]">
+            [rows]="100" selectionMode="single" [rowsPerPageOptions]="[10, 50, 100]">
             <ng-template prTableHeader>
                 <tr>
                     <th id="{{column.attr}}" prSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">

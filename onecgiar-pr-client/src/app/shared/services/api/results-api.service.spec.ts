@@ -4314,6 +4314,32 @@ describe('ResultsApiService', () => {
   // take a single options object `{ versionId?, scope?, cursor? }` (design.md §4.1) instead of a
   // positional `versionId`. These cases exercise `buildPagingQueryParams` directly through each of
   // the 3 methods.
+  describe('GET_allRequest - bell bounded options (PPG-T-4)', () => {
+    it('serializes limit and seen=false / seen=true', () => {
+      service.GET_allRequest({ scope: 'pending', limit: 10, seen: false }).subscribe();
+      httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=pending&limit=10&seen=false`).flush({});
+      service.GET_allRequest({ scope: 'pending', limit: 10, seen: true }).subscribe();
+      httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=pending&limit=10&seen=true`).flush({});
+    });
+
+    it('omits limit and seen when not given (legacy callers stay unbounded)', () => {
+      service.GET_allRequest({ scope: 'pending' }).subscribe();
+      httpMock.expectOne(`${service.apiBaseUrl}request/get/received?scope=pending`).flush({});
+    });
+
+    it('GET_requestUpdates pending accepts limit', () => {
+      service.GET_requestUpdates({ scope: 'pending', limit: 10 }).subscribe();
+      httpMock.expectOne(`${service.baseApiBaseUrl}notification/updates?scope=pending&limit=10`).flush({});
+    });
+
+    it('GET_notificationAttentionCounts hits notification/attention-counts', () => {
+      service.GET_notificationAttentionCounts().subscribe();
+      const req = httpMock.expectOne(`${service.baseApiBaseUrl}notification/attention-counts`);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+  });
+
   describe('GET_allRequest - paging options', () => {
     it('should include versionId param when provided', done => {
       service.GET_allRequest({ versionId: 'v2' }).subscribe(response => {
@@ -4463,6 +4489,18 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates?version_id=v4&scope=history&cursor=xyz`);
       req.flush(mockResponse);
     });
+
+    // BRS-T-4: the bell loads its read rows with a small page; the inbox never passes `limit`.
+    it('should serialize limit on GET_requestUpdates (BRS-T-4)', done => {
+      service.GET_requestUpdates({ scope: 'history', limit: 10 }).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates?scope=history&limit=10`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_notificationsPopUp', () => {
@@ -4487,6 +4525,32 @@ describe('ResultsApiService', () => {
       });
 
       const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/read/${notificationId}`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_markRequestSeen (BRS-T-4)', () => {
+    it('PATCHes request/seen/:id on the results API base', done => {
+      service.PATCH_markRequestSeen(9821).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrl']}request/seen/9821`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_markAllRequestsSeen (BRS-T-4)', () => {
+    it('PATCHes request/seen-all on the results API base', done => {
+      service.PATCH_markAllRequestsSeen().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrl']}request/seen-all`);
       expect(req.request.method).toBe('PATCH');
       req.flush(mockResponse);
     });

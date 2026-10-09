@@ -24,21 +24,30 @@ export const BELL_QUICK_INBOX_COPY = {
     /** BELL-R-3: how many waiting items the capped list does not show. */
     more: (count: number) => `+${count} more`,
     seeAll: 'See all the notifications',
-    /** BELL-T-10: header chip ("3 new") = unread updates; hidden at 0. */
+    /** BRS-T-6: header chip ("3 new") = the bell badge count; hidden at 0. */
     newChip: (count: number) => `${count} new`,
     /** BELL-T-10: marks every unread update read (decisions untouched). */
     markAsRead: 'Mark as read',
     tabsAriaLabel: 'Filter notifications',
-    tabs: { all: 'All', decide: 'To decide', updates: 'Updates' },
+    /** BRS-T-6: the Decide tab carries "N to decide" beside its label, so the label is just "Decide". */
+    tabs: { all: 'All', decide: 'Decide', updates: 'Updates' },
+    /** BRS-T-6: the separator before the first read / seen row. */
+    earlier: 'Earlier',
+    /** BRS-T-6: Decide tab count ("40 to decide"); hidden at 0. */
+    decideCount: (count: number) => `${count} to decide`,
     /** BELL-T-10: per-tab empty states (the bell has rows, but none for this tab). */
     tabEmpty: { decide: 'Nothing to decide', updates: 'No new updates' }
   },
   /** BELL-T-10: card chips. */
   card: {
     requiresDecision: 'Requires decision',
+    /** `notifications/primary-review-not-accept` PRA-R-3: chip of a primary request card. */
+    needsYourReview: 'Needs your review',
     approved: 'Approved',
     declined: 'Declined',
     updateFallback: 'Update',
+    /** BRS-R-7: announced before a fresh (unread / unseen) row's text, so the state is not colour/weight alone. */
+    unreadRowPrefix: 'Unread',
     /** Neutral update chip, keyed by the notification type name (`NotificationType` values). */
     updateLabels: {
       'Result Created': 'Created',

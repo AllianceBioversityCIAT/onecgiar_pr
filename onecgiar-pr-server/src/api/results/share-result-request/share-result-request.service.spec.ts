@@ -21,6 +21,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { PrimaryProgramRequestService } from './services/primary-program-request.service';
 import { HttpStatus } from '@nestjs/common';
 import { FindOperator } from 'typeorm';
+import { ShareResultRequestSeenRepository } from './repositories/share-result-request-seen.repository';
 
 describe('ShareResultRequestService', () => {
   let service: ShareResultRequestService;
@@ -30,6 +31,9 @@ describe('ShareResultRequestService', () => {
     findOne: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
+    delete: jest.fn(),
+    softDelete: jest.fn(),
+    remove: jest.fn(),
     // @akili-spec notifications/detail-side-panel (DSP-T-1)
     getResultForApprovalChain: jest.fn(),
     getApprovalChainData: jest.fn(),
@@ -60,6 +64,12 @@ describe('ShareResultRequestService', () => {
     $_findActivePhase: jest.fn(),
   };
 
+  // `BRS-T-2`
+  const mockSeenRepository = {
+    findSeenIds: jest.fn(),
+    insertIgnore: jest.fn(),
+  };
+
   const user = { id: 10 } as TokenDto;
 
   // @akili-spec notifications/inbox-paginated-load (PAGE-T-2) — named so paging tests can assert
@@ -69,6 +79,8 @@ describe('ShareResultRequestService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockSeenRepository.findSeenIds.mockResolvedValue(new Set<number>());
+    mockSeenRepository.insertIgnore.mockResolvedValue(0);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -111,6 +123,10 @@ describe('ShareResultRequestService', () => {
         { provide: UserNotificationSettingRepository, useValue: {} },
         { provide: VersioningService, useValue: mockVersioningService },
         { provide: UserRepository, useValue: mockUserRepository },
+        {
+          provide: ShareResultRequestSeenRepository,
+          useValue: mockSeenRepository,
+        },
       ],
     }).compile();
 
@@ -827,8 +843,8 @@ describe('ShareResultRequestService', () => {
         const response: any = await service.getReceivedResultRequest(user);
 
         expect(response.response.receivedContributionsPending).toEqual([
-          mapExpectedRow(sharedKeyRow),
-          mapExpectedRow(ownerKeyRow, tocReviewS1),
+          { ...mapExpectedRow(sharedKeyRow), seen: false },
+          { ...mapExpectedRow(ownerKeyRow, tocReviewS1), seen: false },
         ]);
         expect(response.response.receivedContributionsDone).toEqual([
           mapExpectedRow(doneRow),
@@ -923,7 +939,7 @@ describe('ShareResultRequestService', () => {
         const response: any = await service.getReceivedResultRequest(user);
 
         expect(response.response.receivedContributionsPending).toEqual([
-          mapExpectedRow(adminRow, tocReviewS2),
+          { ...mapExpectedRow(adminRow, tocReviewS2), seen: false },
         ]);
         expect(response.response.receivedContributionsDone).toEqual([
           mapExpectedRow(adminDoneRow),
@@ -1017,7 +1033,7 @@ describe('ShareResultRequestService', () => {
         const response: any = await service.getReceivedResultRequest(user);
 
         expect(response.response.receivedContributionsPending).toEqual([
-          mapExpectedRow(pendingRow, tocReviewS3),
+          { ...mapExpectedRow(pendingRow, tocReviewS3), seen: false },
         ]);
         expect(response.response.receivedContributionsDone).toEqual([
           mapExpectedRow(doneRow, tocReviewS3),
@@ -2168,6 +2184,675 @@ describe('ShareResultRequestService', () => {
       expect(serialized).not.toMatch(/"user_id"/);
       expect(serialized).not.toMatch(/"requested_by"/);
       expect(serialized).not.toMatch(/"approved_by"/);
+    });
+  });
+
+  // `BRS-T-2` (notifications/bell-read-state) - per-user `seen` flag, markSeen, markAllSeen.
+  describe('bell read state (BRS-T-2)', () => {
+    const pendingRow = (id: number) => ({
+      share_result_request_id: id,
+      result_id: 900 + id,
+      shared_inititiative_id: 42,
+      request_status_id: 1,
+      is_map_to_toc: false,
+      obj_result: { source: 'Result', result_code: `R-${id}` },
+    });
+    const doneRow = (id: number) => ({
+      requested_date: new Date('2026-09-01T00:00:00Z'),
+      share_result_request_id: id,
+      result_id: 900 + id,
+      shared_inititiative_id: 42,
+      request_status_id: 2,
+      is_map_to_toc: false,
+      obj_result: { source: 'Result', result_code: `R-${id}` },
+    });
+
+    beforeEach(() => {
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3);
+      mockRoleByUserRepository.find.mockResolvedValue([{ initiative_id: 100 }]);
+    });
+
+    describe('getReceivedResultRequest seen tagging', () => {
+      it('tags pending rows with seen for the caller, one lookup, and leaves done untagged', async () => {
+        mockShareResultRequestRepository.find
+          .mockResolvedValueOnce([pendingRow(1), pendingRow(2), pendingRow(3)])
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([doneRow(9)]);
+        mockSeenRepository.findSeenIds.mockResolvedValue(new Set([2]));
+
+        const res: any = await service.getReceivedResultRequest(user);
+
+        expect(
+          res.response.receivedContributionsPending.map((r: any) => r.seen),
+        ).toEqual([false, true, false]);
+        expect(res.response.receivedContributionsDone).toHaveLength(1);
+        expect(res.response.receivedContributionsDone[0]).not.toHaveProperty(
+          'seen',
+        );
+        expect(mockSeenRepository.findSeenIds).toHaveBeenCalledTimes(1);
+        expect(mockSeenRepository.findSeenIds).toHaveBeenCalledWith(
+          user.id,
+          [1, 2, 3],
+        );
+      });
+
+      it('does not query seen when there are no pending rows', async () => {
+        mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+        await service.getReceivedResultRequest(user);
+
+        expect(mockSeenRepository.findSeenIds).not.toHaveBeenCalled();
+      });
+
+      it('never passes another user id (isolation)', async () => {
+        mockShareResultRequestRepository.find
+          .mockResolvedValueOnce([pendingRow(1)])
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([]);
+
+        await service.getReceivedResultRequest({ id: 77 } as TokenDto);
+
+        expect(mockSeenRepository.findSeenIds.mock.calls[0][0]).toBe(77);
+      });
+    });
+
+    // BRS-R-2 / BRS-R-4 / D4: the seen flag never writes to the request itself.
+    const expectNoRequestWrites = () => {
+      const repo = mockShareResultRequestRepository;
+      expect(repo.save).not.toHaveBeenCalled();
+      expect(repo.update).not.toHaveBeenCalled();
+      expect(repo.delete).not.toHaveBeenCalled();
+      expect(repo.softDelete).not.toHaveBeenCalled();
+      expect(repo.remove).not.toHaveBeenCalled();
+    };
+
+    describe('markSeen', () => {
+      it('records the seen row for the caller when the request is active and pending', async () => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue({
+          share_result_request_id: 5,
+        });
+        mockSeenRepository.insertIgnore.mockResolvedValue(1);
+
+        const res: any = await service.markSeen(user, 5);
+
+        expect(mockShareResultRequestRepository.findOne).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              share_result_request_id: 5,
+              is_active: true,
+              request_status_id: 1,
+            },
+          }),
+        );
+        expect(mockSeenRepository.insertIgnore).toHaveBeenCalledWith(10, [5]);
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(res.response).toEqual({ seen: true });
+        expectNoRequestWrites();
+      });
+
+      it('is still seen: true when the insert reports 0 (already seen)', async () => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue({
+          share_result_request_id: 5,
+        });
+        mockSeenRepository.insertIgnore.mockResolvedValue(0);
+
+        const res: any = await service.markSeen(user, 5);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(res.response).toEqual({ seen: true });
+      });
+
+      it('returns 404 and inserts nothing when the request is missing, inactive or not pending', async () => {
+        mockShareResultRequestRepository.findOne.mockResolvedValue(null);
+
+        const res: any = await service.markSeen(user, 404);
+
+        expect(res.status).toBe(HttpStatus.NOT_FOUND);
+        expect(mockSeenRepository.insertIgnore).not.toHaveBeenCalled();
+        expectNoRequestWrites();
+      });
+
+      it('routes unexpected failures through the module error handler', async () => {
+        mockShareResultRequestRepository.findOne.mockRejectedValue(
+          new Error('db down'),
+        );
+        mockHandlersError.returnErrorRes.mockReturnValue({ status: 500 });
+
+        const res: any = await service.markSeen(user, 5);
+
+        expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+        expect(res.status).toBe(500);
+      });
+    });
+
+    describe('markAllSeen', () => {
+      it('inserts the callers pending ids once, with no version filter and no request writes', async () => {
+        mockShareResultRequestRepository.find
+          .mockResolvedValueOnce([
+            { share_result_request_id: 1 },
+            { share_result_request_id: 2 },
+          ])
+          .mockResolvedValueOnce([
+            { share_result_request_id: 2 },
+            { share_result_request_id: 3 },
+          ]);
+        mockSeenRepository.insertIgnore.mockResolvedValue(3);
+
+        const res: any = await service.markAllSeen(user);
+
+        expect(mockSeenRepository.insertIgnore).toHaveBeenCalledTimes(1);
+        expect(mockSeenRepository.insertIgnore).toHaveBeenCalledWith(
+          10,
+          [1, 2, 3],
+        );
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(res.response).toEqual({ recorded: 3 });
+
+        for (const [arg] of mockShareResultRequestRepository.find.mock.calls) {
+          expect(arg.relations).toBeUndefined();
+          expect(arg.select).toEqual({ share_result_request_id: true });
+          expect(arg.where.request_status_id).toBe(1);
+          expect(arg.where.is_active).toBe(true);
+          expect(arg.where.obj_result).toEqual({ is_active: true });
+          expect(arg.where.obj_result).not.toHaveProperty('version_id');
+        }
+        expectNoRequestWrites();
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('scopes non-admin buckets to the caller initiatives like the inbox', async () => {
+        mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+        await service.markAllSeen(user);
+
+        const wheres = mockShareResultRequestRepository.find.mock.calls.map(
+          ([arg]) => arg.where,
+        );
+        expect(wheres).toHaveLength(2);
+        expect(wheres[0].is_map_to_toc).toBe(false);
+        expect(wheres[0].shared_inititiative_id).toBeInstanceOf(FindOperator);
+        expect(wheres[1].is_map_to_toc).toBe(true);
+        expect(wheres[1].owner_initiative_id).toBeInstanceOf(FindOperator);
+      });
+
+      it('runs a single query for admins (identical buckets) and still returns recorded', async () => {
+        mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(1);
+        mockShareResultRequestRepository.find.mockResolvedValue([
+          { share_result_request_id: 8 },
+        ]);
+        mockSeenRepository.insertIgnore.mockResolvedValue(1);
+
+        const res: any = await service.markAllSeen(user);
+
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(1);
+        expect(mockSeenRepository.insertIgnore).toHaveBeenCalledWith(10, [8]);
+        expect(res.response).toEqual({ recorded: 1 });
+      });
+
+      it('returns recorded: 0 (not an error) when nothing is pending', async () => {
+        mockShareResultRequestRepository.find.mockResolvedValue([]);
+
+        const res: any = await service.markAllSeen(user);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(res.response).toEqual({ recorded: 0 });
+      });
+
+      it('never uses another user id (isolation)', async () => {
+        mockShareResultRequestRepository.find.mockResolvedValue([
+          { share_result_request_id: 1 },
+        ]);
+
+        await service.markAllSeen({ id: 77 } as TokenDto);
+
+        expect(
+          mockRoleByUserRepository.$_getMaxRoleByUser,
+        ).toHaveBeenCalledWith(77);
+        expect(mockSeenRepository.insertIgnore.mock.calls[0][0]).toBe(77);
+      });
+    });
+  });
+
+  // @akili-spec notifications/admin-pending-paging (PPG-T-2)
+  // PPG-R-1 (request counts), PPG-R-2 (server side), PPG-R-4 (400s), PPG-R-6 (paged received
+  // pending), PPG-NFR-3 (legacy untouched), PPG-NFR-5 (caller-scoped). The repository is a small
+  // fake that evaluates the `where` objects the service builds, so the light index, the heavy
+  // fetch and the legacy path all read the same fixture.
+  describe('PPG-T-2 — received pending: index, counts, id-first paging', () => {
+    const BASE = Date.UTC(2026, 0, 1, 0, 0, 0);
+    const iso = (offsetSeconds: number) =>
+      new Date(BASE + offsetSeconds * 1000).toISOString();
+
+    const asArray = (v: any) =>
+      v instanceof FindOperator ? (v.value as any[]) : [v];
+    const entryMatches = (row: any, entry: any): boolean =>
+      Object.entries(entry).every(([key, expected]) => {
+        if (key === 'obj_result') {
+          const want: any = expected;
+          return (
+            want.version_id === undefined ||
+            row.obj_result?.version_id === want.version_id
+          );
+        }
+        if (key === 'requested_date') return true;
+        return asArray(expected).includes(row[key]);
+      });
+    const rowMatches = (row: any, where: any) =>
+      (Array.isArray(where) ? where : [where]).some((e) =>
+        entryMatches(row, e),
+      );
+
+    /** Light query = no `relations`; heavy `getRequest` = with relations. */
+    const installFakeRepo = (rows: any[]) => {
+      const lightCalls: any[] = [];
+      const heavyCalls: any[] = [];
+      mockShareResultRequestRepository.find.mockImplementation(
+        async (arg: any) => {
+          const hit = rows.filter((r) => rowMatches(r, arg.where));
+          if (arg.relations === undefined) {
+            lightCalls.push(arg);
+            return hit.map((r) => ({
+              share_result_request_id: r.share_result_request_id,
+              requested_date: r.requested_date,
+            }));
+          }
+          heavyCalls.push(arg);
+          // id-first page fetch: deliberately scrambled so the service must re-order;
+          // legacy bucket fetches keep fixture order (as today).
+          const copies = hit.map((r) => ({ ...r }));
+          return arg.where.share_result_request_id ? copies.reverse() : copies;
+        },
+      );
+      return { lightCalls, heavyCalls };
+    };
+
+    const makeRow = (id: number, extra: any = {}) => ({
+      share_result_request_id: id,
+      result_id: 5000 + id,
+      requested_date: iso(0),
+      request_status_id: 1,
+      is_active: true,
+      is_map_to_toc: false,
+      shared_inititiative_id: 100,
+      owner_initiative_id: 7,
+      obj_result: { source: 'Result', version_id: 8 },
+      ...extra,
+    });
+
+    // Non-admin fixture: 3 owner-side (map=false, shared=100), 2 shared-side (map=true,
+    // owner=100), 2 rows of other initiatives (must never count).
+    const nonAdminRows = () => [
+      makeRow(1, { requested_date: iso(10) }),
+      makeRow(2, { requested_date: iso(20) }),
+      makeRow(3, { requested_date: iso(30) }),
+      makeRow(4, {
+        is_map_to_toc: true,
+        shared_inititiative_id: 55,
+        owner_initiative_id: 100,
+        requested_date: iso(40),
+      }),
+      makeRow(5, {
+        is_map_to_toc: true,
+        shared_inititiative_id: 55,
+        owner_initiative_id: 100,
+        requested_date: iso(50),
+      }),
+      makeRow(6, { shared_inititiative_id: 999 }),
+      makeRow(7, {
+        is_map_to_toc: true,
+        shared_inititiative_id: 55,
+        owner_initiative_id: 999,
+      }),
+    ];
+
+    // 130 pending rows for an admin, in 26 groups of 5 sharing the same requested_date. Dates
+    // rise with the id so the expected order is simply 130..1: a wrong tiebreak (id ASC inside a
+    // group) or a wrong date direction both break it. Fixture order is scrambled.
+    const pagingRows = () =>
+      Array.from({ length: 130 }, (_, k) => {
+        const id = ((k * 37) % 130) + 1;
+        return makeRow(id, { requested_date: iso(Math.floor((id - 1) / 5)) });
+      });
+
+    const seenBy = (byUser: Record<number, (id: number) => boolean>) =>
+      mockSeenRepository.findSeenIds.mockImplementation(
+        async (userId: number, ids: number[]) =>
+          new Set(ids.filter((id) => byUser[userId]?.(Number(id)))),
+      );
+
+    const idsOf = (pages: any[]) =>
+      pages.flatMap((p) =>
+        p.receivedContributionsPending.map(
+          (r: any) => r.share_result_request_id,
+        ),
+      );
+
+    beforeEach(() => {
+      mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3);
+      mockRoleByUserRepository.find.mockResolvedValue([{ initiative_id: 100 }]);
+      mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative.mockResolvedValue(
+        [],
+      );
+    });
+
+    const pageRequest = (
+      cursor: string | undefined,
+      extra: any = {},
+    ): Promise<any> =>
+      service.getReceivedResultRequest(user, {
+        scope: 'pending',
+        limit: 50,
+        cursor,
+        ...extra,
+      }) as any;
+
+    const walk = async (extra: any = {}) => {
+      const pages: any[] = [];
+      let cursor: string | undefined;
+      for (;;) {
+        const res = await pageRequest(cursor, extra);
+        pages.push(res.response);
+        if (!res.response.pendingMeta.hasMore) break;
+        cursor = res.response.pendingMeta.nextCursor;
+      }
+      return pages;
+    };
+
+    // (1) PPG-R-1 parity, (6) other users' data
+    describe('countPendingReceived — parity with today (PPG-R-1)', () => {
+      it('non-admin: counts equal the legacy pending list (owner + shared, deduped) and its unseen subset', async () => {
+        installFakeRepo(nonAdminRows());
+        seenBy({ 10: (id) => id === 2 || id === 5 });
+
+        const legacy: any = await service.getReceivedResultRequest(user);
+        const legacyPending = legacy.response.receivedContributionsPending;
+        expect(
+          legacyPending.map((r: any) => r.share_result_request_id),
+        ).toEqual([1, 2, 3, 4, 5]);
+
+        const counts = await service.countPendingReceived(user);
+
+        expect(counts).toEqual({ pendingRequests: 5, unseenRequests: 3 });
+        expect(counts.pendingRequests).toBe(legacyPending.length);
+        expect(counts.unseenRequests).toBe(
+          legacyPending.filter((r: any) => !r.seen).length,
+        );
+      });
+
+      it('admin: counts equal the legacy pending list (single bucket) and its unseen subset', async () => {
+        mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(1);
+        mockRoleByUserRepository.find.mockResolvedValue([]);
+        installFakeRepo(nonAdminRows());
+        seenBy({ 10: (id) => id <= 3 });
+
+        const legacy: any = await service.getReceivedResultRequest(user);
+        const legacyPending = legacy.response.receivedContributionsPending;
+        const counts = await service.countPendingReceived(user);
+
+        expect(legacyPending).toHaveLength(7);
+        expect(counts).toEqual({ pendingRequests: 7, unseenRequests: 4 });
+        expect(counts.unseenRequests).toBe(
+          legacyPending.filter((r: any) => !r.seen).length,
+        );
+      });
+
+      it('runs one light id+date query (owner/shared as a where-array) and no heavy relation fetch', async () => {
+        const { lightCalls, heavyCalls } = installFakeRepo(nonAdminRows());
+
+        await service.countPendingReceived(user);
+
+        expect(heavyCalls).toHaveLength(0);
+        expect(lightCalls).toHaveLength(1);
+        expect(lightCalls[0].select).toEqual({
+          share_result_request_id: true,
+          requested_date: true,
+        });
+        expect(Array.isArray(lightCalls[0].where)).toBe(true);
+        expect(lightCalls[0].where).toHaveLength(2);
+        expect(mockSeenRepository.findSeenIds).toHaveBeenCalledTimes(1);
+      });
+
+      it('another user seen rows do not change the callers counts, and only the callers id is queried', async () => {
+        installFakeRepo(nonAdminRows());
+        seenBy({
+          10: (id) => id === 1,
+          77: () => true, // someone else has seen everything
+        });
+
+        const counts = await service.countPendingReceived(user);
+
+        expect(counts).toEqual({ pendingRequests: 5, unseenRequests: 4 });
+        for (const call of mockSeenRepository.findSeenIds.mock.calls) {
+          expect(call[0]).toBe(10);
+        }
+      });
+
+      it('counts all phases (no version filter)', async () => {
+        const { lightCalls } = installFakeRepo(nonAdminRows());
+
+        await service.countPendingReceived(user);
+
+        for (const entry of lightCalls[0].where) {
+          expect(entry.obj_result).not.toHaveProperty('version_id');
+        }
+      });
+    });
+
+    // (2) paging: 130 rows, limit 50, ties on requested_date
+    describe('paged pending (PPG-R-6)', () => {
+      beforeEach(() => {
+        mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(1);
+        mockRoleByUserRepository.find.mockResolvedValue([]);
+      });
+
+      it('130 pending, limit=50 -> 50/50/30, every id once, (requested_date DESC, id DESC), total=130 on each page', async () => {
+        installFakeRepo(pagingRows());
+
+        const pages = await walk();
+
+        expect(pages.map((p) => p.receivedContributionsPending.length)).toEqual(
+          [50, 50, 30],
+        );
+        const ids = idsOf(pages);
+        expect(ids).toEqual(Array.from({ length: 130 }, (_, i) => 130 - i));
+        expect(new Set(ids).size).toBe(130);
+        expect(pages.map((p) => p.pendingMeta.total)).toEqual([130, 130, 130]);
+        expect(pages.map((p) => p.pendingMeta.hasMore)).toEqual([
+          true,
+          true,
+          false,
+        ]);
+        expect(pages[0].pendingMeta.nextCursor).toEqual(expect.any(String));
+        expect(pages[0].receivedContributionsDone).toEqual([]);
+      });
+
+      it('a page boundary that falls inside a tie group neither repeats nor skips rows', async () => {
+        installFakeRepo(pagingRows());
+
+        // groups of 5: limit=7 cuts mid-group on most page boundaries
+        const pages = await walk({ limit: 7 });
+
+        expect(idsOf(pages)).toEqual(
+          Array.from({ length: 130 }, (_, i) => 130 - i),
+        );
+      });
+
+      it('the heavy getRequest runs once per page with at most limit+1 ids', async () => {
+        const { heavyCalls } = installFakeRepo(pagingRows());
+
+        const pages = await walk();
+
+        expect(heavyCalls).toHaveLength(pages.length);
+        const sizes = heavyCalls.map((c) => {
+          const filter = c.where.share_result_request_id;
+          expect(filter).toBeInstanceOf(FindOperator);
+          return filter.value.length;
+        });
+        expect(sizes).toEqual([51, 51, 30]);
+      });
+
+      it('passes the version filter to the light query when version_id is given', async () => {
+        const { lightCalls } = installFakeRepo(pagingRows());
+
+        await pageRequest(undefined, { versionId: '8' });
+
+        expect(lightCalls[0].where.obj_result).toMatchObject({ version_id: 8 });
+      });
+
+      it('empty pending set -> empty page, hasMore=false, total=0, no heavy fetch', async () => {
+        const { heavyCalls } = installFakeRepo([]);
+
+        const res = await pageRequest(undefined);
+
+        expect(res.response.receivedContributionsPending).toEqual([]);
+        expect(res.response.pendingMeta).toEqual({
+          hasMore: false,
+          nextCursor: null,
+          total: 0,
+        });
+        expect(heavyCalls).toHaveLength(0);
+      });
+
+      // (3) seen partition
+      it('seen=false / seen=true partition the index exactly and rows carry seen', async () => {
+        installFakeRepo(pagingRows());
+        seenBy({ 10: (id) => id % 3 === 0, 77: () => true });
+
+        const unseen = await walk({ seen: false });
+        const seen = await walk({ seen: true });
+        const all = await walk();
+
+        const unseenIds = idsOf(unseen);
+        const seenIds = idsOf(seen);
+
+        expect(unseen.map((p) => p.pendingMeta.total)).toEqual([87, 87]);
+        expect(seen.map((p) => p.pendingMeta.total)).toEqual([43]);
+        expect(unseenIds).toHaveLength(87);
+        expect(seenIds).toHaveLength(43);
+        expect(unseenIds.filter((id: number) => seenIds.includes(id))).toEqual(
+          [],
+        );
+        expect([...unseenIds, ...seenIds].sort((a, b) => a - b)).toEqual(
+          idsOf(all).sort((a: number, b: number) => a - b),
+        );
+        expect(
+          unseen
+            .flatMap((p) => p.receivedContributionsPending)
+            .every((r: any) => r.seen === false),
+        ).toBe(true);
+        expect(
+          seen
+            .flatMap((p) => p.receivedContributionsPending)
+            .every(
+              (r: any) =>
+                r.seen === true && r.share_result_request_id % 3 === 0,
+            ),
+        ).toBe(true);
+        expect(
+          mockSeenRepository.findSeenIds.mock.calls.every((c) => c[0] === 10),
+        ).toBe(true);
+      });
+
+      it('keeps seen on rows when seen is not sent', async () => {
+        installFakeRepo(pagingRows());
+        seenBy({ 10: (id) => id === 130 });
+
+        const res = await pageRequest(undefined);
+        const rows = res.response.receivedContributionsPending;
+
+        expect(rows[0]).toMatchObject({
+          share_result_request_id: 130,
+          seen: true,
+        });
+        expect(rows[1]).toMatchObject({
+          share_result_request_id: 129,
+          seen: false,
+        });
+      });
+    });
+
+    // (4) legacy path untouched
+    describe('legacy call (no limit) — PPG-NFR-3', () => {
+      it('returns exactly today response shape and content, no pendingMeta, 3 buckets fetched', async () => {
+        installFakeRepo(nonAdminRows());
+        seenBy({ 10: (id) => id === 2 });
+
+        const res: any = await service.getReceivedResultRequest(user);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(Object.keys(res.response).sort()).toEqual([
+          'doneMeta',
+          'receivedContributionsDone',
+          'receivedContributionsPending',
+        ]);
+        expect(res.response.receivedContributionsDone).toEqual([]);
+        expect(res.response.doneMeta).toEqual({
+          hasMore: false,
+          nextCursor: null,
+        });
+        expect(
+          res.response.receivedContributionsPending.map((r: any) => [
+            r.share_result_request_id,
+            r.seen,
+          ]),
+        ).toEqual([
+          [1, false],
+          [2, true],
+          [3, false],
+          [4, false],
+          [5, false],
+        ]);
+        // owner, shared, done — and no light index query
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(3);
+        for (const [arg] of mockShareResultRequestRepository.find.mock.calls) {
+          expect(arg.relations).toBeDefined();
+        }
+      });
+
+      it('scope=pending without limit is legacy too (2 heavy buckets, no pendingMeta)', async () => {
+        installFakeRepo(nonAdminRows());
+
+        const res: any = await service.getReceivedResultRequest(user, {
+          scope: 'pending',
+        });
+
+        expect(res.response).not.toHaveProperty('pendingMeta');
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(2);
+      });
+
+      it('limit without scope=pending does not switch to paged mode', async () => {
+        installFakeRepo(nonAdminRows());
+
+        const res: any = await service.getReceivedResultRequest(user, {
+          limit: 2,
+          seen: false,
+        });
+
+        expect(res.response).not.toHaveProperty('pendingMeta');
+        expect(res.response.receivedContributionsPending).toHaveLength(5);
+      });
+    });
+
+    // (7) 400s at the service level (cursor); limit/seen live in the controller spec
+    describe('malformed cursor (PPG-R-4)', () => {
+      it('paged mode with a bad cursor -> 400 before touching the repository', async () => {
+        installFakeRepo(pagingRows());
+
+        await service.getReceivedResultRequest(user, {
+          scope: 'pending',
+          limit: 50,
+          cursor: 'not-a-valid-cursor!!',
+        });
+
+        expect(mockShareResultRequestRepository.find).not.toHaveBeenCalled();
+        expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: expect.objectContaining({ status: 400 }),
+          }),
+        );
+      });
     });
   });
 });

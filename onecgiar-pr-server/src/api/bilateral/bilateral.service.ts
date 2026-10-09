@@ -43,6 +43,7 @@ import {
   In,
   IsNull,
   Like,
+  Not,
   Or,
   SelectQueryBuilder,
 } from 'typeorm';
@@ -121,11 +122,15 @@ import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/cl
 import { AssessedDuringExpertWorkshop } from '../ipsr/assessed-during-expert-workshop/entities/assessed-during-expert-workshop.entity';
 import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validation.interface';
 import { BilateralVersioningRulesService } from './versioning-rules/bilateral-versioning-rules.service';
-import { ExternalPlatformIdentity } from './interfaces/external-platform-identity.interface';
 import {
-  PrimaryProgramRequestService,
-  PrimaryRequestOutcome,
-} from '../results/share-result-request/services/primary-program-request.service';
+  BilateralResubmissionService,
+  describeResultStatus,
+  ResubmissionPreflightPort,
+  ResubmissionWritersPort,
+  ResubmissionWriteArgs,
+} from './services/bilateral-resubmission.service';
+import { ExternalPlatformIdentity } from './interfaces/external-platform-identity.interface';
+import { PrimaryProgramRequestService } from '../results/share-result-request/services/primary-program-request.service';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
 const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
@@ -222,12 +227,12 @@ const DAC_PILLAR_CONFIG = [
 
 // @akili-spec changes/bilateral-create-upsert-by-code — UBC-T-2. What `resolveResultCodeTarget`
 // hands back to `create()` for an eligible target so the header-insert step can restore the
-// source's code (`DD-2`) and the outcome can say `versioned` instead of `created`. `T-3` will
-// add an `'updated'` member here for its own (non-insert) path.
-interface ResolvedResultCodeTarget {
-  operation: 'versioned';
-  resultCode: number;
-}
+// source's code (`DD-2`) and the outcome can say `versioned` instead of `created`.
+// `bilateral/resubmit-rejected-result` RSB-T-2 adds the `'updated'` member: the open-phase
+// Rejected result `create()` hands to `BilateralResubmissionService.resubmit` (no insert here).
+type ResolvedResultCodeTarget =
+  | { operation: 'versioned'; resultCode: number }
+  | { operation: 'updated'; target: Result };
 
 @Injectable()
 export class BilateralService {
@@ -287,6 +292,10 @@ export class BilateralService {
     // ownership/KP/phase rules `create`'s resolve step reuses, so a `result_code` reuses the
     // exact same eligibility checks `/version` already enforces.
     private readonly _bilateralVersioningRulesService: BilateralVersioningRulesService,
+    // @akili-spec bilateral/resubmit-rejected-result — RSB-T-2: where the `updated` branch of the
+    // resolve step hands a Rejected result (lock -> re-read status -> pipeline). Required (not
+    // @Optional): a missing provider must fail the DI graph, not silently skip a resubmission.
+    private readonly _bilateralResubmissionService: BilateralResubmissionService,
     @Optional()
     private readonly _notificationService?: NotificationService,
     // BCT-T-5 / design §5.5 — trailing @Optional() like `_notificationService` above, so a
@@ -345,12 +354,64 @@ export class BilateralService {
         // here and nothing below runs for this result (R-8). An eligible `versioned` target
         // (T-2) flows into the normal create path below; `resultCodeTarget` is what tells the
         // header-insert step to restore the source's code (DD-2) and the outcome to say
-        // `versioned` instead of `created`. T-3 still wires the `updated` branch as a 409
-        // placeholder.
+        // `versioned` instead of `created`. An `updated` target (RSB-T-2) is handed to
+        // `BilateralResubmissionService` right below and never reaches the create sequence.
         const resultCodeTarget = await this.resolveResultCodeTarget(
           bilateralDto,
           platform,
         );
+
+        // @akili-spec bilateral/resubmit-rejected-result — RSB-T-2/DD-1: only an `updated`
+        // target (open-phase, Rejected, owned, same type) leaves the normal create sequence. A
+        // no-code create and a `versioned` target never enter this branch: their order and
+        // messages are unchanged.
+        if (resultCodeTarget?.operation === 'updated') {
+          const resubmitted = await this._bilateralResubmissionService.resubmit(
+            {
+              target: resultCodeTarget.target,
+              bilateralDto,
+              platform,
+              // RSB-T-3: the read-only preflight checks, built from this service own helpers.
+              // Passed in (not injected) because this service already injects the resubmission
+              // service: the other direction would be a DI cycle.
+              preflight: this.buildResubmissionPreflightPort(),
+              // RSB-T-5: the writers of the pipeline, same reason.
+              writers: this.buildResubmissionWritersPort(),
+            },
+          );
+          createdResults.push({
+            id: resubmitted.id,
+            result_code: resubmitted.result_code,
+            external_reference: bilateralDto.external_reference?.trim() || null,
+            is_duplicate_kp: false,
+            operation: 'updated',
+            status_id: resubmitted.status_id,
+            status: resubmitted.status,
+          });
+          // RSB-R-17: the resubmission is COMMITTED here. The response body below is enrichment:
+          // if reading it fails the platform must still get its `updated` outcome (the status
+          // flipped, and a retry would only be refused with a 409). Logged without the payload.
+          try {
+            resultInfo = await this._resultRepository.findOne({
+              where: { id: resubmitted.id },
+              relations: this.buildResultRelations(bilateralDto.result_type_id),
+            });
+            if (resultInfo) {
+              resultInfo = this.filterActiveRelations(resultInfo);
+              await this.enrichBilateralResultResponse(resultInfo);
+            }
+          } catch (enrichmentError) {
+            // An empty body still carries `outcomes[]` (attached after the loop).
+            resultInfo = {};
+            this.logger.error(
+              `Resubmission of result ${resubmitted.result_code} was committed, but its response could not be built; returning the outcome only.`,
+              enrichmentError instanceof Error
+                ? enrichmentError.stack
+                : undefined,
+            );
+          }
+          continue;
+        }
 
         await this.runResultTypePreflight(bilateralDto);
 
@@ -1493,6 +1554,13 @@ export class BilateralService {
     userId,
     resultId,
     resultTypeId?: number,
+    // RSB-T-5 / DD-5: the resubmission passes `suppressPrimaryRole` when the payload's primary is
+    // not the current owner. Role 1 is then written by `PrimaryProgramRequestService.transferPrimary`
+    // in the resubmission's final transaction (`RRC-R-17`), never here, so the previous owner stays
+    // active until that transaction commits. Everything else about the mapping is unchanged: the
+    // ToC row is still written for the requested primary, and the contributor drafts still hang off
+    // it (DD-6). The create path never passes it.
+    options?: { suppressPrimaryRole?: boolean },
   ) {
     if (!toc || typeof toc !== 'object') {
       this.logger.warn(
@@ -1698,17 +1766,43 @@ export class BilateralService {
           `Upserting result_by_initiative: resultId=${resultId}, initiativeId=${init.id}, roleId=${roleId}`,
         );
         try {
-          await this.upsertResultInitiative(resultId, init.id, roleId, userId);
-          this.logger.debug(
-            `Successfully upserted result_by_initiative for result ${resultId}, initiative ${init.id}`,
-          );
-          await this.saveLeadProgramInvestment(
-            resultId,
-            init.id,
-            toc,
-            resultTypeId,
-            userId,
-          );
+          if (options?.suppressPrimaryRole) {
+            // DD-5 (amended): no new ACTIVE role 1 here (that is ownership, and the direct transfer
+            // writes it, `RRC-R-17`). The lead-program investment still needs a row to hang off, so
+            // it goes on an INACTIVE role-1 row that the transfer reactivates in its ownership write.
+            const pendingRowId = await this.findOrCreatePendingPrimaryRow(
+              resultId,
+              init.id,
+              userId,
+            );
+            await this.saveLeadProgramInvestment(
+              resultId,
+              init.id,
+              toc,
+              resultTypeId,
+              userId,
+              pendingRowId,
+            );
+          } else {
+            await this.upsertResultInitiative(
+              resultId,
+              init.id,
+              roleId,
+              userId,
+            );
+            this.logger.debug(
+              `Successfully upserted result_by_initiative for result ${resultId}, initiative ${init.id}`,
+            );
+          }
+          if (!options?.suppressPrimaryRole) {
+            await this.saveLeadProgramInvestment(
+              resultId,
+              init.id,
+              toc,
+              resultTypeId,
+              userId,
+            );
+          }
         } catch (err) {
           this.logger.error(
             `Error upserting result_by_initiative for result ${resultId}, initiative ${init.id}: ${(err as Error).message}`,
@@ -4468,14 +4562,15 @@ export class BilateralService {
    *    already enforces bilateral-only, not-a-KP and Approved internally).
    * 3. The shared ownership rule (`rules.assertCallerMayVersion`, `UBC-R-4`), then — for the
    *    `updated` target only, since `resolveVersionableResult` already ran it — the KP guard
-   *    (`UBC-R-6`), then the `R-5` editable-status guard.
+   *    (`UBC-R-6`), then the Rejected-only status guard (`RSB-R-2`) and the same-type guard (`RSB-R-22`).
    *
    * An eligible `versioned` target (`UBC-T-2`, `DD-2`) resolves to `{ operation: 'versioned',
    * resultCode }` — `create()` uses it to restore the source's code after the header insert and
-   * to stamp the outcome. `T-3` still wires the `updated` branch as a 409 placeholder, so a
-   * `result_code` can never fall through to an unconditional create (`R-8`): every path through
-   * this method either throws, returns the versioned target, or (no code at all) returns
-   * `undefined`.
+   * to stamp the outcome. An eligible `updated` target (`RSB-T-2`: open phase, Rejected, owned,
+   * same type) resolves to `{ operation: 'updated', target }` and `create()` delegates it to
+   * `BilateralResubmissionService.resubmit`, so a `result_code` can never fall through to an
+   * unconditional create (`R-8`): every path through this method either throws, returns the
+   * versioned or updated target, or (no code at all) returns `undefined`.
    */
   private async resolveResultCodeTarget(
     bilateralDto: CreateBilateralDto,
@@ -4497,10 +4592,17 @@ export class BilateralService {
       );
 
     if (openPhaseResult) {
-      // R-8 observability (advisory): one line for this candidate, whatever the outcome —
-      // never the payload body, never a key. A guard rejection logs the real status; reaching
-      // past every guard logs the T-3 placeholder instead — either way, exactly one line.
+      // R-8 observability (advisory): a guard rejection logs the real status, never the payload
+      // body nor a key. A candidate that clears every guard is NOT logged here: its outcome
+      // (accepted / refused under the lock) is `BilateralResubmissionService`'s one line
+      // (RSB-R-21).
+      //
+      // RSB-DD-1 order (design §4 step 1): bilateral -> ownership -> KP -> Rejected -> same type.
       try {
+        this._bilateralVersioningRulesService.assertIsBilateral(
+          openPhaseResult,
+          resultCode,
+        );
         await this._bilateralVersioningRulesService.assertCallerMayVersion(
           openPhaseResult,
           resultCode,
@@ -4511,21 +4613,15 @@ export class BilateralService {
           resultCode,
         );
         this.assertResultCodeStatusIsEditable(openPhaseResult, resultCode);
+        this.assertSameResultType(openPhaseResult, resultCode, bilateralDto);
       } catch (error) {
         this.logResultCodeResolution(resultCode, 'updated', platform, error);
         throw error;
       }
 
-      this.logResultCodeResolution(
-        resultCode,
-        'updated',
-        platform,
-        'not_wired',
-      );
-      // T-3 wires the actual update path here.
-      throw new ConflictException(
-        'Updating an existing result through create is not available yet.',
-      );
+      // RSB-T-2: the target is handed back; `create()` delegates it to
+      // `BilateralResubmissionService.resubmit` (lock, re-read, pipeline).
+      return { operation: 'updated', target: openPhaseResult };
     }
 
     let source: Result;
@@ -4548,7 +4644,7 @@ export class BilateralService {
     // R-8 observability (advisory), mirroring the block above: one line, never the payload.
     // Unlike the `updated` branch, this candidate is not rejected — `create()` carries it into
     // a real write (`UBC-T-2`), so the outcome logged is the operation itself, not a guard
-    // status or the `not_wired` placeholder.
+    // status.
     this.logger.log(
       `result_code=${resultCode} operation=versioned platform=${
         platform?.acronym ?? platform?.id ?? 'unknown'
@@ -4564,43 +4660,55 @@ export class BilateralService {
   /**
    * R-8 observability (advisory): `result_code`, the candidate `operation`, the calling
    * `platform`, and the `outcome` — never a payload body, never a key. `outcome` is either the
-   * HTTP status a guard rejected with, or the literal `not_wired` for a candidate that cleared
-   * every guard but has no real write yet (T-2/T-3).
+   * HTTP status a guard rejected with.
    */
   private logResultCodeResolution(
     resultCode: string,
     operation: 'updated' | 'versioned',
     platform: ClarisaApiKeyValidationMis | undefined,
-    outcome: 'not_wired' | unknown,
+    outcome: unknown,
   ): void {
-    const outcomeLabel =
-      outcome === 'not_wired'
-        ? 'rejected(not_wired)'
-        : `rejected(${(outcome as any)?.getStatus?.() ?? 'error'})`;
+    const outcomeLabel = `rejected(${(outcome as any)?.getStatus?.() ?? 'error'})`;
     this.logger.log(
       `result_code=${resultCode} operation=${operation} platform=${platform?.acronym ?? platform?.id ?? 'unknown'} outcome=${outcomeLabel}`,
     );
   }
 
-  /** `UBC-R-5`: an open-phase result may be updated only from one of these statuses. */
+  /**
+   * `RSB-R-2` (narrows `UBC-R-5`): an open-phase result is overwritten only from **Rejected**.
+   * Any other status is a 409 naming the code and the status.
+   */
   private assertResultCodeStatusIsEditable(
     target: Result,
     resultCode: string,
   ): void {
-    const editableStatuses = [
-      ResultStatusData.Editing.value,
-      ResultStatusData.Draft.value,
-      ResultStatusData.PendingReview.value,
-      ResultStatusData.Rejected.value,
-    ];
-    if (!editableStatuses.includes(Number(target.status_id))) {
-      const statusName =
-        ResultStatusData.getFromValue(Number(target.status_id))?.name ??
-        String(target.status_id);
+    if (Number(target.status_id) !== ResultStatusData.Rejected.value) {
       throw new ConflictException(
-        `Result ${resultCode} is ${statusName} and cannot be updated through create.`,
+        `Result ${resultCode} cannot be resubmitted: its status is ${describeResultStatus(target.status_id)}. Only rejected results can be resubmitted.`,
       );
     }
+  }
+
+  /**
+   * `RSB-R-22` / `RSB-DD-8`: the type of a result never changes through a resubmission; a
+   * different type means a new result.
+   */
+  private assertSameResultType(
+    target: Result,
+    resultCode: string,
+    bilateralDto: CreateBilateralDto,
+  ): void {
+    if (Number(target.result_type_id) === Number(bilateralDto.result_type_id)) {
+      return;
+    }
+    const typeName = (typeId: unknown) =>
+      (ResultTypeEnum[Number(typeId)] ?? String(typeId))
+        .toString()
+        .toLowerCase()
+        .replace(/_/g, ' ');
+    throw new ConflictException(
+      `Result ${resultCode} is a ${typeName(target.result_type_id)}; the payload is a ${typeName(bilateralDto.result_type_id)}.`,
+    );
   }
 
   private async runResultTypePreflight(
@@ -4611,7 +4719,389 @@ export class BilateralService {
     await handler.validateBeforeCreate({ bilateralDto });
   }
 
-  private async ensureUniqueTitle(title: string, versionId: number) {
+  /**
+   * @akili-spec bilateral/resubmit-rejected-result — RSB-T-3.
+   *
+   * The read-only checks `BilateralResubmissionService` runs BEFORE its first write. Each member
+   * is the very helper the no-code create runs later (after the header), moved earlier for this
+   * branch only (`RSB-DD-1`): the no-code path keeps its own order, messages and pre-existing
+   * orphans. Nothing returned here writes (`RSB-R-8`).
+   */
+  private buildResubmissionPreflightPort(): ResubmissionPreflightPort {
+    return {
+      validateTypeSpecificPayload: (dto) =>
+        this.preflightTypeSpecificPayload(dto),
+      validateGeoFocus: (dto) => this.preflightGeoFocus(dto),
+      assertNoDuplicateEvidenceLinks: (evidence) =>
+        this.assertNoDuplicateEvidenceLinks(evidence),
+      validateTocMappingInitiatives: (tocMapping, contributingPrograms) =>
+        this.validateTocMappingInitiatives(tocMapping, contributingPrograms),
+      resolveContributingProjects: async (projects) => {
+        const year = await this._yearRepository.findOne({
+          where: { active: true },
+        });
+        if (!year) throw new NotFoundException('Active year not found');
+        const resolvedProjects = await this.resolveContributingProjects(
+          projects,
+          year.year,
+        );
+        return {
+          resolvedProjects,
+          payloadLeadProjectId: this.findPayloadLeadProjectId(
+            projects,
+            resolvedProjects,
+          ),
+          leadProjectCount: this.countPayloadLeadProjects(
+            projects,
+            resolvedProjects,
+          ),
+        };
+      },
+      resolveInitiative: async (officialCode) => {
+        const initiative = await this._clarisaInitiatives.findOne({
+          where: { official_code: officialCode },
+        });
+        return initiative
+          ? { id: initiative.id, code: initiative.official_code }
+          : null;
+      },
+      isAligned: (leadProjectId, initiativeId) =>
+        this._primaryProgramRequestService.isAligned(
+          leadProjectId,
+          initiativeId,
+        ),
+      ensureUniqueTitle: (title, versionId, excludeResultId) =>
+        this.ensureUniqueTitle(title, versionId, excludeResultId),
+      // RSF-T-4: both are reads. `findLeadCenter` is the lookup `handleLeadCenter` persists from.
+      isLeadCenterResolvable: async (leadCenter) =>
+        !leadCenter ||
+        typeof leadCenter !== 'object' ||
+        (await this.findLeadCenter(leadCenter)) !== null,
+      resolveContributorInitiativeIds: (contributingPrograms) =>
+        this.resolveContributorInitiativeIds(contributingPrograms),
+      resolveUsers: (dto) => this.resolveResubmissionUsers(dto),
+    };
+  }
+
+  /**
+   * @akili-spec bilateral/resubmit-rejected-result — RSB-T-5.
+   *
+   * The writers and collaborators `BilateralResubmissionService` needs once the preflight has
+   * passed. Each member is a thin wrapper over a helper this service already owns (the create path
+   * runs the same ones); the ORDER of the pipeline stages lives in the resubmission service.
+   */
+  private buildResubmissionWritersPort(): ResubmissionWritersPort {
+    return {
+      countResolvablePartners: (dto) => this.countResolvablePartners(dto),
+      // The stored owner is the active role-1 initiative, the same read the review decision uses to
+      // refuse "awaiting the primary Science Program's acceptance" (`results.service.ts:4323`).
+      readOwnerInitiativeId: async (resultId) => {
+        const owner =
+          await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+            resultId,
+          );
+        return owner?.id ?? null;
+      },
+      writeResult: (args) => this.writeResubmittedResult(args),
+      // `RRC-R-17` / `RRC-DD-7` (supersedes `RSB-R-14` / `PNS-R-2`): a resubmission that changes the
+      // primary SP assigns it DIRECTLY, with no ownership request and no acceptance round. The
+      // manager is the one of the resubmission's final transaction (NFR §7), where the `Result` row
+      // is already locked by the CAS. `releaseContributors: true`: the result is sent at once, so
+      // the contributor drafts go out now. The id is a number (the core compares strictly).
+      transferPrimary: (resultId, initiativeId, userId, manager) =>
+        this._primaryProgramRequestService.transferPrimary(
+          resultId,
+          Number(initiativeId),
+          { id: userId } as TokenDto,
+          manager,
+          { releaseContributors: true },
+        ),
+      announcePendingReview: (resultId, emitterUserId) =>
+        this.announcePendingReview(resultId, emitterUserId),
+    };
+  }
+
+  /**
+   * @akili-spec bilateral/resubmit-rejected-result — RSB-T-5 (design §4 step 4): the header updated
+   * IN PLACE (same `id`, same `result_code`, `RSB-R-3`) and then every section writer, in the order
+   * the no-code create runs them. It runs AFTER the section reset and the status is NOT touched here:
+   * the result stays Rejected until `BilateralResubmissionService.commitResubmission` flips it, so a
+   * failure anywhere in this sequence leaves a retryable Rejected result (`RSB-DD-3`).
+   *
+   * What differs from the create path, and only that:
+   *  - the header is UPDATED, never inserted, and `keep_editing` is ignored (`RSB-R-5`);
+   *  - `handleLeadCenter` demotes the previous lead and rethrows (`replacePreviousLead`);
+   *  - `handleCountries` writes the subnationals of EVERY country (`writeSubnationalsForAllCountries`);
+   *  - `handleTocMapping` does not write role 1 when the primary changes (`suppressPrimaryRole`).
+   *
+   * `geo_focus` is guaranteed by the preflight, and a resubmission is never a Knowledge Product
+   * (`RSB-R-7`), so there is no KP branch.
+   */
+  private async writeResubmittedResult(
+    args: ResubmissionWriteArgs,
+  ): Promise<void> {
+    const {
+      target,
+      bilateralDto: dto,
+      userId,
+      resolvedProjects,
+      suppressPrimaryRole,
+    } = args;
+    const resultId = target.id;
+
+    // The fresh row the geo writers save on top of (`handleRegions` saves the whole entity, so it
+    // must carry what the update below wrote).
+    const header = await this.updateResubmissionHeader(args);
+
+    await this.handleLeadCenter(resultId, dto.lead_center, userId, {
+      replacePreviousLead: true,
+    });
+
+    const { scope_code, scope_label, regions, countries, subnational_areas } =
+      dto.geo_focus;
+    const scope = await this.findScope(scope_code, scope_label);
+    this.validateGeoFocus(scope, regions, countries, subnational_areas);
+
+    await this.handleRegions(header, scope, regions);
+    await this.handleCountries(
+      header,
+      countries,
+      subnational_areas,
+      scope.id,
+      userId,
+      { writeSubnationalsForAllCountries: true },
+    );
+    await this._resultRepository.save({
+      ...header,
+      geographic_scope_id: this.resolveScopeId(scope.id, countries),
+    });
+
+    await this.handleTocMapping(
+      dto.toc_mapping,
+      dto.contributing_programs,
+      userId,
+      resultId,
+      dto.result_type_id,
+      { suppressPrimaryRole },
+    );
+    await this.handleInstitutions(
+      resultId,
+      dto.contributing_partners || [],
+      userId,
+      dto.result_type_id,
+    );
+    await this.handleEvidence(resultId, dto.evidence, userId);
+    await this.handleNonPooledProject(
+      resultId,
+      userId,
+      dto.contributing_bilateral_projects,
+      dto.result_type_id,
+      resolvedProjects,
+    );
+
+    await this.runResultTypeHandlers({
+      resultId,
+      userId,
+      bilateralDto: dto,
+      isDuplicateResult: false,
+    });
+
+    await this.handleContributingCenters(
+      resultId,
+      dto.contributing_center || [],
+      userId,
+      dto.lead_center,
+    );
+    await this.ensureDerivedContributingCenters(resultId, userId);
+  }
+
+  /**
+   * The payload's header columns, written onto the existing row with ONE `update` (the same columns
+   * `initializeResultHeader` writes on insert, minus the ones that identify or classify the record:
+   * `id`, `result_code`, `status_id`, `created_by`, `created_date`, `version_id`, `source`,
+   * `creation_method`, `result_type_id`, `reported_year_id`, `external_platform_*` are never
+   * touched, the last two because the preflight guaranteed the same platform). The payload is the
+   * new truth (`RSB-R-4`): a description or submitter comment it omits clears the old one.
+   * `external_reference` and the platform identity are rewritten only when the payload / the key
+   * carries them, like `applyExternalIdentity`.
+   */
+  private async updateResubmissionHeader(
+    args: ResubmissionWriteArgs,
+  ): Promise<Result> {
+    const {
+      target,
+      bilateralDto: dto,
+      platform,
+      userId,
+      submittedUserId,
+    } = args;
+    const leadContact = await this.resolveLeadContactColumns(dto);
+    const identity = this.buildExternalIdentity(dto, platform);
+
+    const columns: Record<string, unknown> = {
+      title: dto.title,
+      description: dto.description ?? null,
+      result_level_id: dto.result_level_id,
+      external_submitter: submittedUserId,
+      external_submitted_date: dto.submitted_by?.submitted_date ?? null,
+      external_submitted_comment: dto.submitted_by?.comment ?? null,
+      last_updated_by: userId,
+      ...(leadContact ?? {}),
+      ...Object.fromEntries(
+        Object.entries(identity ?? {}).filter(([, value]) => value != null),
+      ),
+    };
+    // TypeORM treats `undefined` as "leave alone" in some versions and as an error in others: never
+    // send it.
+    for (const key of Object.keys(columns)) {
+      if (columns[key] === undefined) delete columns[key];
+    }
+
+    await this._resultRepository.update(target.id, columns);
+    return this._resultRepository.findOne({ where: { id: target.id } });
+  }
+
+  /**
+   * `RSB-T-4` (T-3 review carry-over): the two `findOrCreateUser` calls the create path makes at
+   * the top of its transaction (`created_by`, then the submitter, which falls back to `created_by`),
+   * moved BEFORE the first result write for this branch. It can REFUSE (400 "User email is
+   * required.") and, like the create path, it may CREATE a user row when the email is unknown.
+   * Same calls, same order; the create path itself is untouched (`RSB-R-1`).
+   */
+  private async resolveResubmissionUsers(
+    dto: CreateBilateralDto,
+  ): Promise<{ userId: number; submittedUserId: number }> {
+    const adminUser = await this._userRepository.findOne({
+      where: { email: 'admin@prms.pr' },
+    });
+    const createdByUser = await this.findOrCreateUser(
+      dto.created_by,
+      adminUser,
+    );
+    const submittedUser = await this.findOrCreateUser(
+      this.resolveSubmitterPayload(dto),
+      createdByUser,
+    );
+    return { userId: createdByUser.id, submittedUserId: submittedUser.id };
+  }
+
+  /**
+   * Step 1 of the preflight: the type MDS gate the create runs first (`runResultTypePreflight`)
+   * plus the handler's `resolveAndValidate` (level, actors, numbers; `afterCreate` consumes the
+   * same logic after the header). Handlers without one (Noop, Knowledge Product) add nothing.
+   */
+  private async preflightTypeSpecificPayload(
+    dto: CreateBilateralDto,
+  ): Promise<void> {
+    await this.runResultTypePreflight(dto);
+    const handler = this.resultTypeHandlerMap.get(dto.result_type_id);
+    await handler?.resolveAndValidate?.({ bilateralDto: dto });
+  }
+
+  /**
+   * Step 2 of the preflight: every refusal the create raises from its geo block AFTER the header
+   * (`geo_focus` missing, scope, `validateGeoFocus`, and the region / country / subnational
+   * lookups inside `handleRegions` / `handleCountries` / `handleSubnationals`), run in the same
+   * order with the same messages and none of the writes. A resubmission is never a Knowledge
+   * Product (`RSB-R-7`), so `geo_focus` is always required.
+   */
+  private async preflightGeoFocus(dto: CreateBilateralDto): Promise<void> {
+    if (!dto.geo_focus) {
+      throw new BadRequestException(
+        'geo_focus is required for non-Knowledge Product results.',
+      );
+    }
+    const { scope_code, scope_label, regions, countries, subnational_areas } =
+      dto.geo_focus;
+    const scope = await this.findScope(scope_code, scope_label);
+    this.validateGeoFocus(scope, regions, countries, subnational_areas);
+
+    if (!this.regionsAreCleared(scope, regions)) {
+      await this.lookupRegions(regions);
+    }
+    if (Array.isArray(countries) && countries.length > 0) {
+      await this.lookupCountries(countries);
+      // `handleCountries` hands the subnational areas on only when it found countries.
+      if (scope.id === 5) {
+        await this.lookupSubnationalAreas(subnational_areas);
+      }
+    }
+  }
+
+  /**
+   * The lead project of the payload, as `handleNonPooledProject` will flag it (`determineIsLead`:
+   * a single project, or the one flagged `is_lead`; the last flagged wins like the later
+   * `id DESC` read in `findLeadProjectId`). `null` when the payload names no project, or none is
+   * flagged lead: the resubmission is then refused (`RSB-R-23`); there is no stored fallback.
+   */
+  private findPayloadLeadProjectId(
+    bilateralProjects: any[] | undefined,
+    resolvedProjects: Map<string, any>,
+  ): number | null {
+    if (!Array.isArray(bilateralProjects)) return null;
+    const isSingleProject = bilateralProjects.length === 1;
+    let leadProjectId: number | null = null;
+    for (const nonpp of bilateralProjects) {
+      if (!nonpp?.grant_title) continue;
+      const project = resolvedProjects.get(nonpp.grant_title);
+      if (!project) continue;
+      if (this.determineIsLead(isSingleProject, nonpp)) {
+        leadProjectId = Number(project.id);
+      }
+    }
+    return leadProjectId;
+  }
+
+  /**
+   * `RSF-R-6`: how many projects `handleNonPooledProject` will flag as lead for this payload (the
+   * same `determineIsLead` rule and the same skips as `findPayloadLeadProjectId`). The no-code
+   * create does not use it: several flags stay last-wins there.
+   */
+  private countPayloadLeadProjects(
+    bilateralProjects: any[] | undefined,
+    resolvedProjects: Map<string, any>,
+  ): number {
+    if (!Array.isArray(bilateralProjects)) return 0;
+    const isSingleProject = bilateralProjects.length === 1;
+    let leads = 0;
+    for (const nonpp of bilateralProjects) {
+      if (!nonpp?.grant_title) continue;
+      if (!resolvedProjects.get(nonpp.grant_title)) continue;
+      if (this.determineIsLead(isSingleProject, nonpp)) leads += 1;
+    }
+    return leads;
+  }
+
+  /**
+   * `RSF-P-13`: the CLARISA initiative ids of the `contributing_programs` codes, by the same
+   * normalised `official_code` lookup `handleTocMapping` uses. Read-only; a code CLARISA does not
+   * know is skipped (`validateTocMappingInitiatives` already refused it earlier in the preflight).
+   */
+  private async resolveContributorInitiativeIds(
+    contributingPrograms: any[] | undefined,
+  ): Promise<number[]> {
+    const ids: number[] = [];
+    for (const code of this.extractProgramIdsFromContributing(
+      contributingPrograms,
+    )) {
+      const init = await this._clarisaInitiatives.findOne({
+        where: { official_code: code.trim().toUpperCase() },
+      });
+      if (init && !ids.includes(init.id)) ids.push(init.id);
+    }
+    return ids;
+  }
+
+  /**
+   * `excludeResultId` (`RSB-R-16`, pattern of `results.service.ts:5558-5571`): a resubmission
+   * keeps its own title, so the lookup must not match the result being resubmitted. The no-code
+   * create passes nothing and the query is unchanged.
+   */
+  private async ensureUniqueTitle(
+    title: string,
+    versionId: number,
+    excludeResultId?: number,
+  ) {
     const normalizedTitle = (title || '').trim();
     if (!normalizedTitle) {
       throw new BadRequestException('Result title is required.');
@@ -4622,6 +5112,7 @@ export class BilateralService {
         title: normalizedTitle,
         is_active: true,
         version_id: versionId,
+        ...(excludeResultId != null && { id: Not(excludeResultId) }),
       },
       select: { id: true },
     });
@@ -4725,6 +5216,7 @@ export class BilateralService {
     resultId: number,
     leadCenter: { name?: string; acronym?: string; institution_id?: number },
     userId: number,
+    options?: { replacePreviousLead?: boolean },
   ) {
     if (!leadCenter || typeof leadCenter !== 'object') {
       this.logger.debug(
@@ -4733,6 +5225,24 @@ export class BilateralService {
       return;
     }
 
+    const selectedCenter = await this.findLeadCenter(leadCenter);
+    if (!selectedCenter) return;
+
+    await this.persistLeadCenter(resultId, selectedCenter, userId, options);
+  }
+
+  /**
+   * `RSF-T-4` / `RSF-DD-6`: the READ-ONLY half of `handleLeadCenter`, lifted out unchanged so the
+   * resubmission preflight resolves the lead centre with the very lookup the writer uses (alias
+   * table, then CLARISA institutions, then `clarisa_center`). It only calls `findOne` / `find`; the
+   * persisting stays in `persistLeadCenter`. `null` when nothing matches (the warn lines are the
+   * ones the no-code create has always logged: that path still warns and continues).
+   */
+  private async findLeadCenter(leadCenter: {
+    name?: string;
+    acronym?: string;
+    institution_id?: number;
+  }): Promise<ClarisaCenter | null> {
     // Alliance-descended centres resolve from the alias table before anything else: both
     // of their institution names contain "Bioversity", so institution matching cannot
     // tell CENTER-02 from CENTER-03.
@@ -4740,10 +5250,7 @@ export class BilateralService {
       leadCenter.name,
       leadCenter.acronym,
     );
-    if (aliasedCenter) {
-      await this.persistLeadCenter(resultId, aliasedCenter, userId);
-      return;
-    }
+    if (aliasedCenter) return aliasedCenter;
 
     const normalizedName = this.normalizeInstitutionValue(leadCenter.name);
     const normalizedAcronym = this.normalizeInstitutionValue(
@@ -4756,7 +5263,7 @@ export class BilateralService {
       this.logger.warn(
         'lead_center must include at least one of name, acronym, institution_id',
       );
-      return;
+      return null;
     }
 
     const institutionCandidates = [];
@@ -4800,7 +5307,7 @@ export class BilateralService {
       this.logger.warn(
         `No institutions matched lead_center input (name='${name || ''}', acronym='${acronym || ''}', institution_id='${institution_id || ''}')`,
       );
-      return;
+      return null;
     }
 
     let selectedCenter: ClarisaCenter | null = null;
@@ -4818,19 +5325,35 @@ export class BilateralService {
       this.logger.warn(
         'Institutions matched but none have associated clarisa_center records',
       );
-      return;
+      return null;
     }
 
-    await this.persistLeadCenter(resultId, selectedCenter, userId);
+    return selectedCenter;
   }
 
-  /** Flags a centre as the result's lead, whether the row already exists or not. */
+  /**
+   * Flags a centre as the result's lead, whether the row already exists or not.
+   *
+   * `RSB-T-4`: an existing row is REACTIVATED too (the section reset may have deactivated it), and
+   * with `replacePreviousLead` (the resubmission passes it; the create path never does, so its calls
+   * are exactly what they were) any OTHER centre that still holds the lead flag on this result is
+   * demoted and deactivated first: a result has one lead centre, and replace semantics (`RSB-R-4`)
+   * mean the payload's lead is the only one. If the old lead is also listed as a contributing
+   * centre, `persistContributingCenter` reactivates it as one.
+   */
   private async persistLeadCenter(
     resultId: number,
     center: ClarisaCenter,
     userId: number,
+    options?: { replacePreviousLead?: boolean },
   ): Promise<void> {
     try {
+      if (options?.replacePreviousLead) {
+        await this._resultRepository.query(
+          `update results_center set is_leading_result = 0, is_primary = 0, is_active = 0, last_updated_date = NOW(), last_updated_by = ? where result_id = ? and center_id <> ? and is_leading_result = 1`,
+          [userId, resultId, center.code],
+        );
+      }
       const existing =
         await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
           resultId,
@@ -4838,7 +5361,7 @@ export class BilateralService {
         );
       if (existing) {
         await this._resultRepository.query(
-          `update results_center set is_primary = 1, is_leading_result = 1, last_updated_date = NOW(), last_updated_by = ? where id = ?`,
+          `update results_center set is_primary = 1, is_leading_result = 1, is_active = 1, last_updated_date = NOW(), last_updated_by = ? where id = ?`,
           [userId, existing.id],
         );
         this.logger.debug(
@@ -4863,6 +5386,10 @@ export class BilateralService {
         `Failed to save lead center for result ${resultId}: ${center.code}`,
         err instanceof Error ? err.stack : JSON.stringify(err),
       );
+      // RSB-T-5 (T-4 forward pointer 3). On the resubmission a failed demotion would leave zero or
+      // two leads without a trace: let it fail, so the result stays Rejected and retryable (DD-3).
+      // The create path keeps swallowing it exactly as it always has.
+      if (options?.replacePreviousLead) throw err;
     }
   }
 
@@ -5003,27 +5530,28 @@ export class BilateralService {
       return;
     }
 
-    // `PSR-T-5` (design.md DD-2/DD-3): a promoted AI draft no longer becomes the chosen Science
-    // Program's owner outright — it sends a pending primary request instead (role 1 is written
-    // only on accept, T-3/T-4). The ToC stub seed that used to run here unconditionally moved to
-    // accept too: it's keyed on the primary SP, which isn't final until that SP accepts.
-    // `request()` never throws (requirements.md §7 Reliability / PSR-R-1 "request step fails") —
-    // a failure is logged and swallowed so `promoteDraft` still succeeds, leaving the result
-    // ownerless and retryable.
-    // `PNS-R-1` (design.md §5 item 2): no owner exists yet at promote time, so the choice is
-    // saved as a DRAFT, not sent.
-    // @akili-spec notifications/primary-notify-on-submit
-    const outcome: PrimaryRequestOutcome =
-      await this._primaryProgramRequestService.request(
-        resultId,
-        initiative.id,
-        { id: userId } as TokenDto,
-        undefined,
-        { asDraft: true },
-      );
-    if (outcome.ok === false) {
+    // A promoted AI draft's chosen Science Program owns the result at once (role 1 + ToC stub, no
+    // acceptance round), so the Contributors section shows it and its default ToC linkage
+    // (confirmed by product 2026-10-07; supersedes the `PNS-R-1` draft request). Non-fatal so
+    // `promoteDraft` still succeeds: a failure is logged and the result stays ownerless, and the
+    // Center can pick the SP again from Section 0.
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        await manager.findOne(Result, {
+          where: { id: resultId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        await this._primaryProgramRequestService.transferPrimary(
+          resultId,
+          Number(initiative.id),
+          { id: userId } as TokenDto,
+          manager,
+          { releaseContributors: false },
+        );
+      });
+    } catch (error) {
       this.logger.warn(
-        `populateInitiativeAndTocFromProgramCode: primary program request failed for result ${resultId} (reason=${outcome.reason})`,
+        `populateInitiativeAndTocFromProgramCode: primary assignment failed for result ${resultId} (${error instanceof Error ? error.message : 'unknown error'})`,
       );
     }
   }
@@ -5150,7 +5678,22 @@ export class BilateralService {
         resultId,
         center.code,
       );
-    if (existing) return;
+    if (existing) {
+      // RSB-T-4: the section reset deactivates the non-lead centres, and this lookup does not
+      // filter on `is_active`. Without this a centre the payload still lists would stay inactive.
+      if (!existing.is_active) {
+        await this._resultsCenterRepository.update(
+          { id: existing.id },
+          {
+            is_active: true,
+            is_primary: false,
+            is_leading_result: false,
+            last_updated_by: userId,
+          },
+        );
+      }
+      return;
+    }
 
     try {
       await this._resultsCenterRepository.save({
@@ -5311,6 +5854,9 @@ export class BilateralService {
     toc: any,
     resultTypeId: number | undefined,
     userId: number,
+    // RSB-T-5 attempt 2: the exact `results_by_inititiative` row to hang the budget off (the
+    // INACTIVE role-1 row of an ownerless resubmission). Without it, the historical lookup below.
+    resultInitiativeId?: number,
   ) {
     if (!this.isInnovationType(resultTypeId)) return;
 
@@ -5321,9 +5867,12 @@ export class BilateralService {
     // Innovation Use reaches this point with an explicit TBD pair after normalization.
     if (investment.amount === null && investment.isDetermined === null) return;
 
-    const resultInitiative = await this._resultByInitiativesRepository.findOne({
-      where: { result_id: resultId, initiative_id: initiativeId },
-    });
+    const resultInitiative =
+      resultInitiativeId != null
+        ? { id: resultInitiativeId }
+        : await this._resultByInitiativesRepository.findOne({
+            where: { result_id: resultId, initiative_id: initiativeId },
+          });
     if (!resultInitiative) return;
 
     const budgetRepository = this.dataSource.getRepository(
@@ -5351,6 +5900,42 @@ export class BilateralService {
         is_active: true,
       }),
     );
+  }
+
+  /**
+   * RSB-T-5 attempt 2 / DD-5 (amended): find-or-create ONE role-1 row for the requested primary and
+   * leave it INACTIVE. An inactive row is not ownership (queues and review decisions read active
+   * role 1), but it is where `PrimaryProgramRequestService.transferPrimary` looks for the SP's row
+   * (no `is_active` filter, the same ownership write `accept()` runs) and reactivates it, so the
+   * lead-program budget saved ACTIVE on it surfaces when the transfer commits (`RRC-R-17`).
+   *
+   * Only a ROLE-1 row is ever reused: an existing role-2 row of the same SP (an accepted
+   * contributor) is never converted, a separate role-1 row is written next to it. An existing role-1
+   * row is returned as it is (it is inactive: a former owner's, or an earlier attempt's).
+   */
+  private async findOrCreatePendingPrimaryRow(
+    resultId: number,
+    initiativeId: number,
+    userId: number,
+  ): Promise<number> {
+    const existing = await this._resultByInitiativesRepository.findOne({
+      where: {
+        result_id: resultId,
+        initiative_id: initiativeId,
+        initiative_role_id: 1,
+      },
+    });
+    if (existing) return existing.id;
+
+    const saved = await this._resultByInitiativesRepository.save({
+      result_id: resultId,
+      initiative_id: initiativeId,
+      initiative_role_id: 1,
+      is_active: false,
+      created_by: userId,
+      last_updated_by: userId,
+    });
+    return saved.id;
   }
 
   private async upsertResultInitiative(
@@ -5393,7 +5978,11 @@ export class BilateralService {
     return validIds.includes(id) ? id : undefined;
   }
 
-  private async handleEvidence(resultId, evidence, userId) {
+  /**
+   * The duplicate-links refusal `handleEvidence` makes, lifted out so the resubmission preflight
+   * can raise the same error (same shape, same message) before any write (`RSB-T-3`).
+   */
+  private assertNoDuplicateEvidenceLinks(evidence): void {
     if (!Array.isArray(evidence) || !evidence.length) return;
 
     const evidencesArray = evidence.filter((e) => !!e?.link);
@@ -5405,6 +5994,13 @@ export class BilateralService {
         status: HttpStatus.BAD_REQUEST,
       };
     }
+  }
+
+  private async handleEvidence(resultId, evidence, userId) {
+    if (!Array.isArray(evidence) || !evidence.length) return;
+
+    const evidencesArray = evidence.filter((e) => !!e?.link);
+    this.assertNoDuplicateEvidenceLinks(evidence);
 
     const long: number = evidencesArray.length > 6 ? 6 : evidencesArray.length;
     for (let index = 0; index < long; index++) {
@@ -5445,14 +6041,16 @@ export class BilateralService {
     }
   }
 
-  private async handleInstitutions(
-    resultId: number,
+  /**
+   * The CLARISA resolution of the payload's `contributing_partners`, lifted out of
+   * `handleInstitutions` verbatim (same lookups, same order) so the resubmission can ask how many
+   * partners resolve BEFORE it resets (`countResolvablePartners`, RSB-T-4 forward pointer 2). Reads
+   * only.
+   */
+  private async resolvePartnerInstitutions(
     institutions: any[],
-    userId: number,
     resultTypeId?: number,
   ) {
-    if (!Array.isArray(institutions) || !institutions.length) return;
-
     const resolvedInstitutionIds: number[] = [];
     // The amount each resolved institution arrived with. `resolvedInstitutionIds` is a flat id
     // list, so without this the link back to the payload entry — and its `usd_budget` — is lost
@@ -5510,6 +6108,38 @@ export class BilateralService {
         );
       }
     }
+
+    return { resolvedInstitutionIds, investmentByInstitutionId };
+  }
+
+  /**
+   * RSB-T-5 (T-4 forward pointer 2): how many of the payload's `contributing_partners` RESOLVE in
+   * CLARISA, by the very lookup `handleInstitutions` makes. `handleInstitutions` returns early when
+   * none does and so never deactivates the stale PARTNER rows; the reset has to, and it can only know
+   * that from the RESOLVED partners, not from the raw payload. Reads only.
+   */
+  private async countResolvablePartners(
+    dto: CreateBilateralDto,
+  ): Promise<number> {
+    const partners = dto?.contributing_partners;
+    if (!Array.isArray(partners) || !partners.length) return 0;
+    const { resolvedInstitutionIds } = await this.resolvePartnerInstitutions(
+      partners,
+      dto.result_type_id,
+    );
+    return resolvedInstitutionIds.length;
+  }
+
+  private async handleInstitutions(
+    resultId: number,
+    institutions: any[],
+    userId: number,
+    resultTypeId?: number,
+  ) {
+    if (!Array.isArray(institutions) || !institutions.length) return;
+
+    const { resolvedInstitutionIds, investmentByInstitutionId } =
+      await this.resolvePartnerInstitutions(institutions, resultTypeId);
 
     if (!resolvedInstitutionIds.length) {
       this.logger.warn(
@@ -5617,14 +6247,18 @@ export class BilateralService {
       throw new BadRequestException(validator.message);
   }
 
-  private async handleRegions(result: Result, scope, regions) {
+  /** `handleRegions` clears the result regions (no lookup) in these cases. */
+  private regionsAreCleared(scope, regions): boolean {
     const hasRegions = Array.isArray(regions) && regions.length > 0;
-    if ((!hasRegions && scope.id !== 2) || scope.id === 3 || scope.id === 4) {
-      await this._resultRegionRepository.updateRegions(result.id, []);
-      result.has_regions = false;
-      return;
-    }
+    return (!hasRegions && scope.id !== 2) || scope.id === 3 || scope.id === 4;
+  }
 
+  /**
+   * The region lookup of `handleRegions` (identifiers, CLARISA query, 400 / 404), with no write,
+   * so the resubmission preflight (`RSB-T-3`) can refuse an unknown region before anything is
+   * written. `handleRegions` calls it, so the two cannot drift apart.
+   */
+  private async lookupRegions(regions) {
     const um49codes = regions
       .map((r) => r.um49code)
       .filter((code) => code !== null && code !== undefined);
@@ -5652,6 +6286,18 @@ export class BilateralService {
         `No regions found matching the provided data (codes: ${um49codes.join(', ') || 'N/A'}, names: ${names.join(', ') || 'N/A'}).`,
       );
     }
+
+    return foundRegions;
+  }
+
+  private async handleRegions(result: Result, scope, regions) {
+    if (this.regionsAreCleared(scope, regions)) {
+      await this._resultRegionRepository.updateRegions(result.id, []);
+      result.has_regions = false;
+      return;
+    }
+
+    const foundRegions = await this.lookupRegions(regions);
 
     const regionIds = foundRegions.map((r) => r.um49Code);
 
@@ -5694,6 +6340,7 @@ export class BilateralService {
     subnational_areas,
     scopeId,
     userId,
+    options?: { writeSubnationalsForAllCountries?: boolean },
   ) {
     const hasCountries = Array.isArray(countries) && countries.length > 0;
 
@@ -5705,6 +6352,38 @@ export class BilateralService {
       return;
     }
 
+    const foundCountries = await this.lookupCountries(countries);
+
+    const foundCountryIds = foundCountries.map((c) => c.id);
+
+    await this._resultCountryRepository.updateCountries(
+      result.id,
+      foundCountryIds,
+    );
+
+    const resultCountryArray = await this.handleResultCountryArray(
+      result,
+      foundCountries,
+      options?.writeSubnationalsForAllCountries,
+    );
+    await this.handleSubnationals(
+      resultCountryArray,
+      subnational_areas,
+      scopeId,
+      userId,
+      // RSB-T-4: after the section reset the re-sent subnationals are INACTIVE rows; see below.
+      options?.writeSubnationalsForAllCountries,
+    );
+
+    result.has_countries = true;
+  }
+
+  /**
+   * The country lookup of `handleCountries` (identifiers, CLARISA query, 400 / 404), with no
+   * write, so the resubmission preflight (`RSB-T-3`) can refuse an unknown country before
+   * anything is written. `handleCountries` calls it, so the two cannot drift apart.
+   */
+  private async lookupCountries(countries) {
     const ids = countries
       .map((r) => r.id)
       .filter((id) => id !== null && id !== undefined);
@@ -5741,29 +6420,22 @@ export class BilateralService {
       );
     }
 
-    const foundCountryIds = foundCountries.map((c) => c.id);
-
-    await this._resultCountryRepository.updateCountries(
-      result.id,
-      foundCountryIds,
-    );
-
-    const resultCountryArray = await this.handleResultCountryArray(
-      result,
-      foundCountries,
-    );
-    await this.handleSubnationals(
-      resultCountryArray,
-      subnational_areas,
-      scopeId,
-      userId,
-    );
-
-    result.has_countries = true;
+    return foundCountries;
   }
 
-  private async handleResultCountryArray(result, countries) {
+  /**
+   * Returns the country rows the subnationals are written for. By default only the NEW ones (the
+   * create path: a new result has no other). With `includeExisting` (`RSB-T-4`, the resubmission)
+   * the countries the result already had come back too: `updateCountries` has just reactivated
+   * them, so without this an existing country with NEW subnationals would never get them.
+   */
+  private async handleResultCountryArray(
+    result,
+    countries,
+    includeExisting = false,
+  ) {
     const resultCountryArray: ResultCountry[] = [];
+    const existingCountryRows: ResultCountry[] = [];
 
     for (const c of countries) {
       const exist =
@@ -5776,6 +6448,8 @@ export class BilateralService {
         newCountry.country_id = c.id;
         newCountry.result_id = result.id;
         resultCountryArray.push(newCountry);
+      } else if (includeExisting) {
+        existingCountryRows.push(exist);
       }
     }
 
@@ -5783,7 +6457,9 @@ export class BilateralService {
       await this._resultCountryRepository.save(resultCountryArray);
     }
 
-    return resultCountryArray;
+    return includeExisting
+      ? [...existingCountryRows, ...resultCountryArray]
+      : resultCountryArray;
   }
 
   private async handleSubnationals(
@@ -5791,9 +6467,55 @@ export class BilateralService {
     subnational_areas,
     geoScopeId,
     userId,
+    sequential = false,
   ) {
     if (geoScopeId !== 5) return;
 
+    const foundSubnationalAreas =
+      await this.lookupSubnationalAreas(subnational_areas);
+
+    const foundCountryIds = foundSubnationalAreas.map((c) => c.code);
+
+    await Promise.all(
+      resultCountryArray.map(async (rc) => {
+        if (sequential) {
+          // RSB-T-4: the reset leaves a re-sent subnational INACTIVE. `upsertSubnational` only
+          // inserts when it finds no ACTIVE row, and `bulkUpdateSubnational` is what reactivates
+          // it (its second query). Run in parallel, the upsert reads before that reactivation and
+          // inserts a duplicate. Reactivate first, then upsert (it then finds the row active).
+          await this._resultCountrySubnationalRepository.bulkUpdateSubnational(
+            rc.result_country_id,
+            foundCountryIds,
+            userId,
+          );
+          await this._resultCountrySubnationalRepository.upsertSubnational(
+            rc.result_country_id,
+            foundCountryIds,
+            userId,
+          );
+          return;
+        }
+        await Promise.all([
+          this._resultCountrySubnationalRepository.bulkUpdateSubnational(
+            rc.result_country_id,
+            foundCountryIds,
+            userId,
+          ),
+          this._resultCountrySubnationalRepository.upsertSubnational(
+            rc.result_country_id,
+            foundCountryIds,
+            userId,
+          ),
+        ]);
+      }),
+    );
+  }
+
+  /**
+   * The subnational lookup of `handleSubnationals` (identifiers, CLARISA query, 400 / 404), with
+   * no write; shared with the resubmission preflight (`RSB-T-3`).
+   */
+  private async lookupSubnationalAreas(subnational_areas) {
     const ids = subnational_areas
       .map((r) => r.id)
       .filter((id) => id !== null && id !== undefined);
@@ -5823,23 +6545,6 @@ export class BilateralService {
       );
     }
 
-    const foundCountryIds = foundSubnationalAreas.map((c) => c.code);
-
-    await Promise.all(
-      resultCountryArray.map(async (rc) => {
-        await Promise.all([
-          this._resultCountrySubnationalRepository.bulkUpdateSubnational(
-            rc.result_country_id,
-            foundCountryIds,
-            userId,
-          ),
-          this._resultCountrySubnationalRepository.upsertSubnational(
-            rc.result_country_id,
-            foundCountryIds,
-            userId,
-          ),
-        ]);
-      }),
-    );
+    return foundSubnationalAreas;
   }
 }

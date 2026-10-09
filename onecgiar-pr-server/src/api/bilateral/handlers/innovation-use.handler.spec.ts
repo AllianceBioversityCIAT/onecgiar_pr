@@ -478,3 +478,184 @@ describe('InnovationUseBilateralHandler', () => {
     );
   });
 });
+
+// @akili-spec bilateral/resubmit-rejected-result — RSB-T-3 / RSB-DD-1. UBC-T-3 attempt 1 (R-B #1)
+// failed because this handler's checks (use level, actor type, youth figures, numbers) run in
+// `afterCreate`, after the header and every section writer. `resolveAndValidate` is the same
+// logic with no row and no write, so the resubmission preflight can run it first.
+describe('InnovationUseBilateralHandler.resolveAndValidate (RSB-T-3)', () => {
+  const ACTORS = [
+    { actor_type_id: 1, name: 'Farmers/ (agro)pastoralist/ herders/ fishers' },
+    { actor_type_id: 2, name: 'Researchers' },
+  ];
+  const dto = (innovationUse?: any): any => ({
+    result_type_id: ResultTypeEnum.INNOVATION_USE,
+    innovation_use: innovationUse,
+  });
+  const valid = (): any => ({
+    current_innovation_use_numbers: {
+      innov_use_to_be_determined: false,
+      actors: [
+        { actor_type_id: 1, sex_and_age_disaggregation: true, how_many: 10 },
+      ],
+    },
+    innovation_use_level: { level: 2 },
+  });
+
+  let handler: InnovationUseBilateralHandler;
+  let serviceStub: any;
+  let levelRepo: any;
+  let actorRepo: any;
+
+  beforeEach(() => {
+    serviceStub = { saveInnovationUse: jest.fn() };
+    levelRepo = {
+      findOne: jest.fn().mockResolvedValue({ id: 3, level: 2 }),
+      createQueryBuilder: jest.fn(),
+    };
+    actorRepo = {
+      findOne: jest.fn(({ where }: any) =>
+        Promise.resolve(
+          ACTORS.find(
+            (a) => a.actor_type_id === Number(where?.actor_type_id),
+          ) ?? null,
+        ),
+      ),
+      find: jest.fn().mockResolvedValue(ACTORS),
+    };
+    handler = new InnovationUseBilateralHandler(
+      serviceStub,
+      levelRepo,
+      actorRepo,
+      { assertExternalCreateMds: jest.fn() } as any,
+    );
+  });
+
+  const expectNoWrites = () =>
+    expect(serviceStub.saveInnovationUse).not.toHaveBeenCalled();
+
+  it.each([
+    [
+      undefined,
+      'innovation_use object is required for INNOVATION_USE results.',
+    ],
+    [
+      { ...valid(), current_innovation_use_numbers: undefined },
+      'current_innovation_use_numbers is required for INNOVATION_USE results.',
+    ],
+    [
+      {
+        ...valid(),
+        current_innovation_use_numbers: { actors: [] },
+      },
+      'innov_use_to_be_determined is required in current_innovation_use_numbers.',
+    ],
+    [
+      {
+        ...valid(),
+        current_innovation_use_numbers: {
+          innov_use_to_be_determined: false,
+          actors: [],
+        },
+      },
+      'actors array is required when innov_use_to_be_determined is false.',
+    ],
+  ])(
+    'rejects shape case %# with the create message and writes nothing',
+    async (innovationUse, message) => {
+      await expect(
+        handler.resolveAndValidate({ bilateralDto: dto(innovationUse) }),
+      ).rejects.toThrow(message);
+      expectNoWrites();
+    },
+  );
+
+  it('an unknown innovation_use_level is a 400 before any write', async () => {
+    levelRepo.findOne.mockResolvedValue(null);
+    await expect(
+      handler.resolveAndValidate({
+        bilateralDto: dto({
+          ...valid(),
+          innovation_use_level: { level: 77 },
+        }),
+      }),
+    ).rejects.toThrow('Invalid innovation use level: 77.');
+    expectNoWrites();
+  });
+
+  it('an unknown actor type is a 400 before any write', async () => {
+    await expect(
+      handler.resolveAndValidate({
+        bilateralDto: dto({
+          ...valid(),
+          current_innovation_use_numbers: {
+            innov_use_to_be_determined: false,
+            actors: [{ actor_type_id: 999, how_many: 1 }],
+          },
+        }),
+      }),
+    ).rejects.toThrow('Invalid actors[0].actor_type_id: 999.');
+    expectNoWrites();
+  });
+
+  it('youth above the total is a 400 before any write', async () => {
+    await expect(
+      handler.resolveAndValidate({
+        bilateralDto: dto({
+          ...valid(),
+          current_innovation_use_numbers: {
+            innov_use_to_be_determined: false,
+            actors: [{ actor_type_id: 1, women: 2, women_youth: 5 }],
+          },
+        }),
+      }),
+    ).rejects.toThrow(
+      'actors[0].women_youth (5) cannot be greater than women (2).',
+    );
+    expectNoWrites();
+  });
+
+  it('a payload with no use level is accepted (withdrawn from the standard, P2-3785)', async () => {
+    const withoutLevel = valid();
+    delete withoutLevel.innovation_use_level;
+    const resolved: any = await handler.resolveAndValidate({
+      bilateralDto: dto(withoutLevel),
+    });
+    expect(resolved.innovationUseDto.innovation_use_level_id).toBeNull();
+    expect(levelRepo.findOne).not.toHaveBeenCalled();
+  });
+
+  it('a valid payload resolves level and actors with no write', async () => {
+    const resolved: any = await handler.resolveAndValidate({
+      bilateralDto: dto(valid()),
+    });
+    expect(resolved.innovationUseDto).toEqual(
+      expect.objectContaining({
+        innovation_use_level_id: 2,
+        innov_use_to_be_determined: false,
+        actors: [expect.objectContaining({ actor_type_id: 1 })],
+      }),
+    );
+    expectNoWrites();
+  });
+
+  it('another result type resolves to null', async () => {
+    await expect(
+      handler.resolveAndValidate({
+        bilateralDto: { result_type_id: ResultTypeEnum.POLICY_CHANGE } as any,
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('afterCreate raises the same message the preflight raises, and saves nothing (DD-1 parity)', async () => {
+    levelRepo.findOne.mockResolvedValue(null);
+    const invalid = dto({ ...valid(), innovation_use_level: { level: 77 } });
+    await expect(
+      handler.resolveAndValidate({ bilateralDto: invalid }),
+    ).rejects.toThrow('Invalid innovation use level: 77.');
+    await expect(
+      handler.afterCreate({ bilateralDto: invalid, resultId: 5, userId: 2 }),
+    ).rejects.toThrow('Invalid innovation use level: 77.');
+    expectNoWrites();
+  });
+});

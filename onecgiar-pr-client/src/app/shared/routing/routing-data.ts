@@ -215,13 +215,9 @@ export const adminModuleRouting: PrRoute[] = [
     path: 'user-management',
     loadComponent: () => import('../../pages/admin-section/pages/user-management/user-management.component')
   },
-  {
-    // P2-3858 (INC-163934-2): every P/A and every Center Overview on one page. Admin via the parent guard.
-    prName: 'All P/As and Centers',
-    path: 'entities-overview',
-    loadComponent: () =>
-      import('../../pages/admin-section/pages/entities-overview/entities-overview.component').then(m => m.EntitiesOverviewComponent)
-  },
+  // P2-3928: the All P/As and Centers page (P2-3858) was removed; its Centers block now lives in the
+  // Portfolio overview. Old links land there (same CheckAdminGuard on both routes).
+  { prName: '', path: 'entities-overview', pathMatch: 'full', redirectTo: '/portfolio-overview' },
   {
     // @akili-spec changes/mass-reporting-flow
     prName: 'AI Narrative',

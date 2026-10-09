@@ -202,7 +202,7 @@
       dataKey="result_code"
       [loading]="this.resultsListService.showDeletingResultSpinner || (this.resultsListService.showLoadingResultSpinner && !filteredResults?.length)"
       [paginator]="filteredResults?.length"
-      [rows]="10"
+      [rows]="100"
       styleClass="rc-pr-table"
       selectionMode="single"
       [first]="this.resultsListFilterSE.text_to_search() && 0"

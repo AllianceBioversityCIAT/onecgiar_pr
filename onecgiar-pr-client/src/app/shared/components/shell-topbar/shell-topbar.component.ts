@@ -147,6 +147,12 @@ export class ShellTopbarComponent {
   /** Shown on the trigger. Mac reports `macOS`/`MacIntel`; everything else gets Ctrl. */
   readonly shortcutHint = /mac/i.test(navigator?.platform ?? navigator?.userAgent ?? '') ? '⌘K' : 'Ctrl K';
   notificationsOpen = signal(false);
+  /**
+   * quick/bell-popover-hidden: the bell popover is switched off — the button goes straight to the
+   * notifications inbox. The popover (template, tabs, inline decisions) is kept intact so a redesigned
+   * version can reuse it: set this to `true` to bring it back.
+   */
+  bellPopoverEnabled = false;
 
   readonly userMenuPositions: ConnectedPosition[] = [
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
@@ -203,9 +209,20 @@ export class ShellTopbarComponent {
   readonly bellCount = computed(() => this.resultsNotificationsSE.bellCount());
   /** BELL-T-10: the active tab. The cap (R-3) and "+N more" below count against it. */
   readonly bellTab = signal<BellTab>('all');
-  readonly bellDecisionCount = computed(() => this.resultsNotificationsSE.bellItems().filter(row => row?.kind === 'decision').length);
-  /** BELL-T-10: unread updates (the bell only ever holds unread ones) -> the "N new" chip. */
-  readonly bellUnreadUpdates = computed(() => this.resultsNotificationsSE.bellItems().filter(row => row?.kind === 'update').length);
+  /** BRS-R-6: the Decide tab counts every pending request (fresh or seen), so it ignores the badge. */
+  readonly bellDecisionCount = computed(() => this.resultsNotificationsSE.bellPendingRequestCount());
+  /** BRS-R-6: the Updates tab counts unread updates (the read ones listed under "Earlier" do not count). */
+  readonly bellUpdatesCount = computed(() => this.resultsNotificationsSE.bellCounts().unreadUpdates);
+  /** PPG-T-4: loaded read updates (the "Earlier" update rows); they are not part of the server counts. */
+  private readonly bellReadOnlyCount = computed(() => this.resultsNotificationsSE.bellItems().filter(row => row?.kind === 'update' && row?.fresh === false).length);
+  /**
+   * BRS-R-6 / PPG-T-4: the All tab counts everything the popover could list — server pending requests +
+   * server unread updates + the loaded read updates. With <=10 rows per group this equals `bellItems().length`.
+   */
+  readonly bellAllCount = computed(() => {
+    const counts = this.resultsNotificationsSE.bellCounts();
+    return counts.pendingRequests + counts.unreadUpdates + this.bellReadOnlyCount();
+  });
   readonly bellTabItems = computed(() => {
     const items = this.resultsNotificationsSE.bellItems();
     const tab = this.bellTab();
@@ -214,7 +231,18 @@ export class ShellTopbarComponent {
     return items;
   });
   readonly bellVisibleItems = computed(() => this.bellTabItems().slice(0, BELL_MAX_ROWS));
-  readonly bellOverflow = computed(() => Math.max(0, this.bellTabItems().length - BELL_MAX_ROWS));
+  /** BRS-R-8: index (within the rendered rows) of the first non-fresh row, where "Earlier" goes; -1 = none. */
+  readonly bellEarlierIndex = computed(() => {
+    const index = this.bellVisibleItems().findIndex(row => row?.fresh === false);
+    return index > 0 ? index : -1;
+  });
+  /** PPG-T-4: "+N more" uses the server totals of the ACTIVE tab, not the (bounded) loaded rows. */
+  readonly bellOverflow = computed(() => {
+    const tab = this.bellTab();
+    const total =
+      tab === 'decide' ? this.bellDecisionCount() : tab === 'updates' ? this.bellUpdatesCount() + this.bellReadOnlyCount() : this.bellAllCount();
+    return Math.max(0, total - BELL_MAX_ROWS);
+  });
   /** BELL-T-10: in-flight "Mark as read" (blocks a double click). */
   readonly markingRead = signal(false);
   readonly bellError = computed(() => this.resultsNotificationsSE.bellError());
@@ -226,8 +254,8 @@ export class ShellTopbarComponent {
    * template, which renders the line above the list in that case.
    */
   readonly bellState = computed<'loading' | 'error' | 'empty' | 'list'>(() => {
-    const count = this.bellCount();
-    if (count > 0) return 'list';
+    // BRS-R-8: read/seen rows keep the list on screen even when the badge is 0.
+    if (this.bellCount() > 0 || this.resultsNotificationsSE.bellItems().length > 0) return 'list';
     if (this.resultsNotificationsSE.bellError()) return 'error';
     if (this.resultsNotificationsSE.bellLoading()) return 'loading';
     return 'empty';
@@ -252,6 +280,12 @@ export class ShellTopbarComponent {
   }
 
   /** BELL-R-4: refresh on every open, never awaited — the cached rows render meanwhile. */
+  /** Bell click: the inbox while the popover is hidden (`bellPopoverEnabled`), else the popover. */
+  onNotificationsClick(): void {
+    if (this.bellPopoverEnabled) this.toggleNotifications();
+    else this.goToNotifications();
+  }
+
   toggleNotifications(): void {
     const opening = !this.notificationsOpen();
     this.notificationsOpen.set(opening);
@@ -266,6 +300,7 @@ export class ShellTopbarComponent {
         { injector: this.injector }
       );
       this.resultsNotificationsSE.refreshBell();
+      this.resultsNotificationsSE.loadBellReadUpdates();
     }
   }
 
@@ -339,7 +374,7 @@ export class ShellTopbarComponent {
     if (this.markingRead()) return;
     this.markingRead.set(true);
     try {
-      await this.resultsNotificationsSE.markAllBellUpdatesRead();
+      await this.resultsNotificationsSE.markAllBellRead();
     } catch {
       // The service already logged it; rows stay as they were and the control is re-enabled below.
     } finally {

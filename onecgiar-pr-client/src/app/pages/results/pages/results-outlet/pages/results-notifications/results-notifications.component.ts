@@ -148,6 +148,26 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     public readonly panel: NotificationDetailPanelService
   ) {}
 
+  /** BRS-T-7: double-click guard for the shared "Mark all as read". */
+  private markingAllRead = false;
+
+  /**
+   * BRS-T-7 (BRS-R-3/R-5): same action as the bell popover, all phases (the button is gated on
+   * `bellCount()`, not the phase-filtered list). `markAllBellRead()` rejects only when both legs
+   * failed; it already logged, so the rejection is swallowed here.
+   */
+  async onMarkAllRead(): Promise<void> {
+    if (this.markingAllRead) return;
+    this.markingAllRead = true;
+    try {
+      await this.resultsNotificationsSE.markAllBellRead();
+    } catch {
+      // both legs failed: state untouched, already logged by the service
+    } finally {
+      this.markingAllRead = false;
+    }
+  }
+
   setActiveTab(tab: NotifDecisionTab): void {
     this.activeTab.set(tab);
   }
@@ -314,15 +334,36 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
    * so switching tabs never changes what "All" itself reports.
    */
   get allTabCount(): number {
-    return this.sourceScopedList.length;
+    return this.sourceScopedList.length + this.unloadedPendingRemainder.decision + this.unloadedPendingRemainder.info;
   }
 
   get decisionTabCount(): number {
-    return this.sourceScopedList.filter(item => item.needsDecision).length;
+    return this.sourceScopedList.filter(item => item.needsDecision).length + this.unloadedPendingRemainder.decision;
   }
 
   get infoTabCount(): number {
-    return this.sourceScopedList.filter(item => !item.needsDecision).length;
+    return this.sourceScopedList.filter(item => !item.needsDecision).length + this.unloadedPendingRemainder.info;
+  }
+
+  /**
+   * @akili-spec notifications/admin-pending-paging (PPG-T-6, design.md section 8.3, PPG-R-7): the
+   * pending rows the server counts but the inbox has not loaded yet, per paged source, classified
+   * with the same rule as the loaded rows. Received-pending rows are `needsDecision` -> Decision +
+   * All; update rows are not -> Info + All. Received only counts on the Received side (the same
+   * scoping `sourceScopedList` applies to the loaded rows); updates show under both sides. Zero
+   * while any client filter is active (counts are loaded-only then, `showPartialFilterNotice` explains
+   * why) and for a source with no further pending page. Clamped at 0 so an optimistic mark-read
+   * toggle can never push a count below the loaded rows.
+   */
+  private get unloadedPendingRemainder(): { decision: number; info: number } {
+    const se = this.resultsNotificationsSE;
+    if (!se || this.anyClientFilterActive) return { decision: 0, info: 0 };
+    const remainder = (source: 'updates' | 'received', loaded: number): number =>
+      se.pendingHasMore(source) ? Math.max(0, se.pendingTotal(source) - loaded) : 0;
+    return {
+      decision: this.activeSource() === 'received' ? remainder('received', se.receivedData?.receivedContributionsPending?.length ?? 0) : 0,
+      info: remainder('updates', se.updatesData?.notificationsPending?.length ?? 0)
+    };
   }
 
   /** NOTIF-T-5 wiring note: `notification-item`'s own `isPending` getter is
@@ -825,8 +866,18 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
    * more history to fetch — filters/search only narrow the rows already loaded into memory, so older
    * (not-yet-loaded) rows matching the active filter would otherwise appear to be missing. */
   get showFilteredHistoryHint(): boolean {
-    const filtersActive = this.activeFilterCount > 0 || !!this.resultsNotificationsSE?.searchFilter;
-    return filtersActive && !!this.resultsNotificationsSE?.hasMore;
+    return this.anyClientFilterActive && !!this.resultsNotificationsSE?.hasMore;
+  }
+
+  /** A toolbar filter (program, center, project, type, funding, result type) or the search box is active. */
+  private get anyClientFilterActive(): boolean {
+    return this.activeFilterCount > 0 || !!this.resultsNotificationsSE?.searchFilter;
+  }
+
+  /** @akili-spec notifications/admin-pending-paging (PPG-R-8): filters only narrow the loaded rows, so
+   * while one is active and any pending source still has an unloaded page the inbox says so. */
+  get showPartialFilterNotice(): boolean {
+    return this.anyClientFilterActive && !!this.resultsNotificationsSE?.hasMorePending;
   }
 
   get activeFilterChips(): ActiveFilterChip[] {

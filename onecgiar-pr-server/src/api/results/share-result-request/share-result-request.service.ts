@@ -7,6 +7,7 @@ import {
   Logger,
   Optional,
 } from '@nestjs/common';
+import { ShareResultRequestSeenRepository } from './repositories/share-result-request-seen.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import {
   ApprovalChainInitiativeRoleRow,
@@ -76,12 +77,25 @@ export interface SharedRequestPagingParams {
   versionId?: string;
   scope?: string;
   cursor?: string;
+  /** @akili-spec notifications/admin-pending-paging (PPG-R-6): validated by the controller (1..200). */
+  limit?: number;
+  /** PPG-R-6: caller-seen filter for the paged pending mode, parsed by the controller. */
+  seen?: boolean;
 }
 
 interface ParsedPagingParams {
   versionId?: number;
   scope?: 'pending' | 'history';
   cursor?: string;
+  limit?: number;
+  seen?: boolean;
+}
+
+/** PPG-R-6: one pending request in the light index (id + date + the caller's own seen flag). */
+export interface PendingReceivedIndexEntry {
+  id: number;
+  requested_date: Date;
+  seen: boolean;
 }
 
 @Injectable()
@@ -144,6 +158,10 @@ export class ShareResultRequestService {
     @Optional()
     @Inject(forwardRef(() => NotificationService))
     private readonly _notificationService?: NotificationService,
+    // `BRS-T-2`. @Optional() for the same reason as above: other modules re-provide this service
+    // locally (they only call `resultRequest()`) and do not register the seen repository.
+    @Optional()
+    private readonly _shareResultRequestSeenRepository?: ShareResultRequestSeenRepository,
   ) {}
 
   async resultRequest(
@@ -513,7 +531,18 @@ export class ShareResultRequestService {
     pagingParams?: SharedRequestPagingParams,
   ) {
     try {
-      const { versionId, scope, cursor } = this.parsePagingParams(pagingParams);
+      const parsedParams = this.parsePagingParams(pagingParams);
+      const { versionId, scope, cursor } = parsedParams;
+      // @akili-spec notifications/admin-pending-paging (PPG-R-6, PPG-DD-1): opt-in paged mode.
+      // Only `scope=pending` + `limit` take it; every other call keeps the legacy path below.
+      if (scope === 'pending' && parsedParams.limit !== undefined) {
+        return await this.getReceivedPendingPage(user, {
+          versionId,
+          cursor,
+          limit: parsedParams.limit,
+          seen: parsedParams.seen,
+        });
+      }
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
       const extraConditions =
@@ -545,12 +574,16 @@ export class ShareResultRequestService {
         cursor,
       });
 
+      const receivedContributionsPending = this.combineAndDistinct(
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+      );
+      // `BRS-T-2` / BRS-DD-2: one per-user lookup for the whole pending set; `done` is untouched.
+      await this.tagPendingWithSeen(user.id, receivedContributionsPending);
+
       return {
         response: {
-          receivedContributionsPending: this.combineAndDistinct(
-            receivedContributionsPendingOwner,
-            receivedContributionsPendingShared,
-          ),
+          receivedContributionsPending,
           receivedContributionsDone,
           doneMeta,
         },
@@ -558,6 +591,241 @@ export class ShareResultRequestService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * @akili-spec notifications/admin-pending-paging (PPG-R-6, PPG-DD-3)
+   * Paged pending, id-first: the light index gives the full id set and the exact `seen`
+   * partition; only the page's ids (`limit + 1`) go through the heavy relation fetch, whose rows
+   * are re-ordered to the index order. `total` is the (seen-filtered) index length. `seen` on
+   * each row comes from the index, so a row's flag always agrees with the partition it was
+   * paged under (and no second seen lookup is needed).
+   */
+  private async getReceivedPendingPage(
+    user: TokenDto,
+    params: {
+      versionId?: number;
+      cursor?: string;
+      limit: number;
+      seen?: boolean;
+    },
+  ) {
+    const { versionId, cursor, limit, seen } = params;
+    const index = await this.getPendingReceivedIndex(user, versionId);
+    const candidates = (
+      seen === undefined ? index : index.filter((entry) => entry.seen === seen)
+    ).sort(
+      (a, b) =>
+        b.requested_date.getTime() - a.requested_date.getTime() || b.id - a.id,
+    );
+    const total = candidates.length;
+
+    let remaining = candidates;
+    if (cursor) {
+      const { date, id } = decodeCursor(cursor);
+      remaining = candidates.filter((entry) => {
+        const time = entry.requested_date.getTime();
+        return (
+          time < date.getTime() || (time === date.getTime() && entry.id < id)
+        );
+      });
+    }
+    const pageEntries = remaining.slice(0, limit + 1);
+
+    let rows: any[] = [];
+    if (pageEntries.length) {
+      const fetched = await this.getRequest({
+        share_result_request_id: In(pageEntries.map((entry) => entry.id)),
+      });
+      const byId = new Map<number, any>(
+        fetched.map((row: any) => [Number(row.share_result_request_id), row]),
+      );
+      rows = pageEntries
+        .map((entry) => byId.get(entry.id))
+        .filter((row) => row !== undefined);
+    }
+    const [enriched] = await this.enrichBucketsOnce([rows]);
+
+    const seenById = new Map(
+      pageEntries.map((entry) => [entry.id, entry.seen]),
+    );
+    for (const row of enriched) {
+      row.seen = seenById.get(Number(row.share_result_request_id)) ?? false;
+    }
+
+    const page = sliceKeysetPage(enriched, DONE_KEYSET_FIELDS, limit);
+    return {
+      response: {
+        receivedContributionsPending: page.rows,
+        receivedContributionsDone: [],
+        doneMeta: { hasMore: false, nextCursor: null },
+        pendingMeta: {
+          // From the id list, not the fetched rows: a row removed between the two queries
+          // must not hide the next page.
+          hasMore: pageEntries.length > limit,
+          nextCursor: page.nextCursor,
+          total,
+        },
+      },
+      message: 'Successful response',
+      status: HttpStatus.OK,
+    };
+  }
+
+  /**
+   * @akili-spec notifications/admin-pending-paging (PPG-R-1, PPG-R-6, PPG-DD-2)
+   * One light query (`share_result_request_id` + `requested_date`, no relations) over the same
+   * pending wheres as the inbox. Non-admins pass owner + shared as a where-array (OR), which
+   * replaces `combineAndDistinct`. One `findSeenIds` for the caller only (never another user).
+   * `versionId` narrows to one phase; omitted = all phases (the bell, `BELL-R-1`).
+   */
+  async getPendingReceivedIndex(
+    user: TokenDto,
+    versionId?: number,
+  ): Promise<PendingReceivedIndexEntry[]> {
+    const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+    const inits = await this.getUserInitiatives(user);
+    const extraConditions =
+      versionId !== undefined
+        ? { obj_result: { version_id: versionId } }
+        : undefined;
+    const { pendingOwner, pendingShared } = this.buildWhereReceivedConditions(
+      inits,
+      role,
+      extraConditions,
+    );
+    const where =
+      pendingOwner === pendingShared
+        ? pendingOwner
+        : [pendingOwner, pendingShared];
+
+    const rows = await this._shareResultRequestRepository.find({
+      select: { share_result_request_id: true, requested_date: true },
+      where,
+    });
+    const seenIds = await this._shareResultRequestSeenRepository.findSeenIds(
+      user.id,
+      rows.map((row) => Number(row.share_result_request_id)),
+    );
+    return rows.map((row) => ({
+      id: Number(row.share_result_request_id),
+      requested_date: new Date(row.requested_date),
+      seen: seenIds.has(Number(row.share_result_request_id)),
+    }));
+  }
+
+  /**
+   * @akili-spec notifications/admin-pending-paging (PPG-R-1) — the request half of the bell
+   * counts: all phases, caller-scoped. `pendingRequests` = index length; `unseenRequests` = the
+   * ones without the caller's own seen row.
+   */
+  async countPendingReceived(
+    user: TokenDto,
+  ): Promise<{ pendingRequests: number; unseenRequests: number }> {
+    const index = await this.getPendingReceivedIndex(user);
+    return {
+      pendingRequests: index.length,
+      unseenRequests: index.filter((entry) => !entry.seen).length,
+    };
+  }
+
+  /** `BRS-T-2`: adds `seen` (this user only) to each pending row, with a single query. */
+  private async tagPendingWithSeen(userId: number, pending: any[]) {
+    if (!pending.length) {
+      return;
+    }
+    const seenIds = await this._shareResultRequestSeenRepository.findSeenIds(
+      userId,
+      pending.map((row) => row.share_result_request_id),
+    );
+    for (const row of pending) {
+      row.seen = seenIds.has(Number(row.share_result_request_id));
+    }
+  }
+
+  /**
+   * `BRS-T-2` / BRS-DD-3: records that the caller has seen one PENDING request. 404 comes from the
+   * pre-check (missing, inactive or already decided), never from the insert: `insertIgnore`
+   * returning 0 (already seen) is a normal result. Never writes `share_result_request` (D4).
+   */
+  async markSeen(user: TokenDto, shareResultRequestId: number) {
+    try {
+      const request = await this._shareResultRequestRepository.findOne({
+        select: { share_result_request_id: true },
+        where: {
+          share_result_request_id: shareResultRequestId,
+          is_active: true,
+          request_status_id: 1,
+        },
+      });
+      if (!request) {
+        return {
+          response: {},
+          message: 'The request was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      await this._shareResultRequestSeenRepository.insertIgnore(user.id, [
+        shareResultRequestId,
+      ]);
+
+      return {
+        response: { seen: true },
+        message: 'Request marked as seen',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(`markSeen failed for user ${user.id}`);
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * `BRS-T-2` / BRS-DD-3: marks every request the bell lists as pending for the caller. The pending
+   * set is resolved server-side with the SAME role + initiatives + `buildWhereReceivedConditions`
+   * as `getReceivedResultRequest`, minus the version filter (all phases, `BRS-R-5`), selecting ids
+   * only (no relations, no enrichment). One bulk `insertIgnore`; `recorded: 0` is not an error.
+   */
+  async markAllSeen(user: TokenDto) {
+    try {
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+      const inits = await this.getUserInitiatives(user);
+      const { pendingOwner, pendingShared } = this.buildWhereReceivedConditions(
+        inits,
+        role,
+      );
+
+      const whereList =
+        pendingOwner === pendingShared
+          ? [pendingOwner]
+          : [pendingOwner, pendingShared];
+      const rowSets = await Promise.all(
+        whereList.map((where) =>
+          this._shareResultRequestRepository.find({
+            select: { share_result_request_id: true },
+            where,
+          }),
+        ),
+      );
+      const ids = Array.from(
+        new Set(
+          rowSets.flat().map((row) => Number(row.share_result_request_id)),
+        ),
+      );
+
+      const recorded =
+        await this._shareResultRequestSeenRepository.insertIgnore(user.id, ids);
+
+      return {
+        response: { recorded },
+        message: 'Requests marked as seen',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(`markAllSeen failed for user ${user.id}`);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
@@ -592,7 +860,13 @@ export class ShareResultRequestService {
       decodeCursor(cursor); // validates eagerly; result re-derived inside applyKeysetCursor
     }
 
-    return { versionId, scope, cursor };
+    return {
+      versionId,
+      scope,
+      cursor,
+      limit: params?.limit,
+      seen: params?.seen,
+    };
   }
 
   /**

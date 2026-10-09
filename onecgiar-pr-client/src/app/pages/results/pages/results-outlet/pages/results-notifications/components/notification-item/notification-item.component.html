@@ -69,7 +69,7 @@
           }
 
           <a
-            [href]="resultUrl(notification)"
+            [href]="primaryResultHref(notification)"
             target="_blank"
             rel="noopener noreferrer"
             class="font-mono"
@@ -81,8 +81,24 @@
           @if (parts.suffix) {
             <b> {{ parts.suffix }} </b>
           }
+          @if (submittedReviewUrl; as reviewUrl) {
+            <a
+              [href]="reviewUrl"
+              class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+              data-testid="validate-bilateral-cta"
+              (click)="onValidateCtaClick($event)"
+              >{{ copy.notificationItem.validateBilateralCta }}</a
+            >
+          }
           }
         </p>
+
+        <!-- RRC-T-9 (RRC-R-13): reason of a rejection; null for every other type and legacy rows. -->
+        @if (rejectionReasonLine) {
+          <p class="m-0 mt-1 line-clamp-2 break-words text-[12px] leading-[1.45] text-[var(--pr-text-secondary)]" data-testid="notification-rejection-reason">
+            <span class="font-semibold">{{ rejectionReasonLabel }}</span> {{ rejectionReasonLine }}
+          </p>
+        }
 
         <!-- NOTIF-T-15: line 2 — badges + timestamp, stacked BELOW the message (previously siblings
              of `.notification_content_body` at the `.notification_content` row level, laid out
@@ -159,14 +175,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -174,6 +191,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -285,6 +311,7 @@
               [style]="{ whiteSpace: 'nowrap' }"
               tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
+            @if (!isPrimaryRequest) {
             <app-pr-button
               data-testid="decline-contribution-btn"
               class="notification_decline_btn"
@@ -295,6 +322,7 @@
               [verticalMargin]="0"
               [style]="{ whiteSpace: 'nowrap' }"
               [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+            }
           </div>
         }
       </div>
@@ -349,14 +377,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -364,6 +393,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -493,14 +531,15 @@
                strings, never re-typed here) — so the row and the drawer can never drift apart. The
                result identity uses `navigateToResult()` for the bilateral-contributor kind (restores
                the pre-attempt-1 in-app navigation `onDrawerResult()` also uses for that kind) and
-               `resultUrl()` in a new tab for primary (matching `onDrawerResult()`'s primary branch —
-               a primary request is never in the requested SP's review queue). -->
+               the center editor in a new tab for a primary request still being edited, and the SP's
+               review drawer in-app once the result is Pending Review (PRA-R-1/PRA-R-3), matching
+               `onDrawerResult()`. -->
           @if (isPrimaryRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
               @let h = drawerHeader();
               <b>{{ h.lead }}</b> {{ h.verb }} <b>{{ h.responderCode }}</b> {{ h.tail }}
               <a
-                [href]="resultUrl(notification)"
+                [href]="primaryResultHref(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
@@ -508,6 +547,15 @@
                 (click)="onResultLinkClick($event)">
                 {{ h.resultCode }} - {{ h.resultTitle }}
               </a>
+              @if (primaryReviewUrl; as reviewUrl) {
+                <a
+                  [href]="reviewUrl"
+                  class="ml-[4px] font-semibold underline text-[var(--pr-color-primary-300)]"
+                  data-testid="validate-bilateral-cta"
+                  (click)="onValidateCtaClick($event)">
+                  {{ copy.notificationItem.validateBilateralCta }}
+                </a>
+              }
             </p>
           } @else if (isBilateralContributorRequest) {
             <p class="notification_content_body_text notification_content_body_text_compact">
@@ -826,6 +874,7 @@
     [chain]="chainState.status === 'ok' ? { state: 'ok', data: chainState.data } : { state: chainState.status }"
     [reviewRows]="drawerReviewRowsForMode()"
     [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
+    [showDecline]="!isPrimaryRequest"
     [declineDisabled]="requestingAccept || requestingReject"
     [acceptBusy]="requestingAccept"
     [declineBusy]="requestingReject"
