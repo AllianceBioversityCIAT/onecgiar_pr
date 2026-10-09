@@ -236,7 +236,11 @@
       <ng-template prTableHeader>
         <tr style="height: 54px">
           @for (column of columns; track column.key) {
-            <th [style.width]="column.width" [prSortableColumn]="column.key" scope="col">
+            <th
+              [style.width]="column.width"
+              [class.col-actions]="column.key === 'actions'"
+              [prSortableColumn]="column.key"
+              scope="col">
               <div class="header-content">
                 {{ column.label }}
                 <pr-sort-icon [field]="column.key"></pr-sort-icon>
@@ -316,7 +320,7 @@
               {{ user.userStatus }}
             </span>
           </td>
-          <td>
+          <td class="col-actions">
             <div class="action-buttons" [class.inactive-user]="!user.isActive">
               @if (user.isActive) {
                 <button type="button" class="action-btn" (click)="onEditUser(user)" prTooltip="Edit user" prTooltipPosition="top">
