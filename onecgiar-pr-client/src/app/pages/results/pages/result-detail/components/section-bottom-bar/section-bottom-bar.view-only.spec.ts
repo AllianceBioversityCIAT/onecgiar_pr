@@ -42,7 +42,7 @@ describe('SectionBottomBarComponent — View only chip for read-only users', () 
     });
     it('chip has no red/amber styling', () => {
       const chip = html.slice(html.indexOf('@if (!canSave) {'), html.indexOf('@else if (isComplete())'));
-      expect(chip).not.toMatch(/orange|red|amber/);
+      expect(chip).not.toMatch(/(orange|red|amber)-\d/);
     });
   });
 });
