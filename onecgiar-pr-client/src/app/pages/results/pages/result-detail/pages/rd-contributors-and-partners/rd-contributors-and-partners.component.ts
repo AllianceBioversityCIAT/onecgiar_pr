@@ -292,10 +292,12 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
   }
 
   toggleLinkedResultsPanel() {
+    if (this.api.rolesSE.readOnly) return;
     this.isLinkedResultsPanelExpanded = !this.isLinkedResultsPanelExpanded;
   }
 
   toggleResultSelection(id: number) {
+    if (this.api.rolesSE.readOnly) return;
     // Reassign a NEW array reference (not push/splice in place) — same convention already used by
     // `deleteContributingCenter`/`deleteScience` in this file, and load-bearing here now: it's what
     // lets `selectedLinkedResultIds` above detect the change via `!==` instead of re-scanning.
@@ -305,6 +307,7 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
   }
 
   clearLinkedResultsSelection() {
+    if (this.api.rolesSE.readOnly) return;
     this.rdPartnersSE.partnersBody.linked_results = [];
   }
 

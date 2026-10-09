@@ -636,7 +636,8 @@
           <app-pr-field-header label="Please select a result:" [required]="true"></app-pr-field-header>
           
           <div class="custom_select">
-            <div style="position: relative;">
+            @if (!this.api.rolesSE.readOnly) {
+            <div style="position: relative;" data-testid="cp-linked-results-selector">
               <a class="field" tabindex="0" (click)="toggleLinkedResultsPanel()">
                 <div class="text select_placeholder">Please select a result</div>
                 <div class="icon_container"></div>
@@ -734,6 +735,7 @@
               </div>
             </div>
             </div>
+            }
             
             <div class="selected_container custom_scroll" *ngIf="this.rdPartnersSE.partnersBody.linked_results?.length">
               <app-pr-field-header description="Results selected ({{ this.rdPartnersSE.partnersBody.linked_results.length }})"> </app-pr-field-header>
@@ -741,7 +743,9 @@
               <div class="chips_container" style="display: flex; flex-direction: column; gap: 8px;">
                 <div class="pr_chip_selected" style="display: flex; justify-content: space-between; align-items: center; width: 100%;" *ngFor="let id of this.rdPartnersSE.partnersBody.linked_results; trackBy: trackByLinkedId">
                   <div class="name" style="flex: 1;" [innerHtml]="formatResultLabel(getResultById(id))"></div>
-                  <i class="material-icons-round" style="cursor: pointer; color: #f44336; margin-left: 10px;" (click)="toggleResultSelection(id)">remove_circle</i>
+                  @if (!this.api.rolesSE.readOnly) {
+                    <i class="material-icons-round" style="cursor: pointer; color: #f44336; margin-left: 10px;" (click)="toggleResultSelection(id)">remove_circle</i>
+                  }
                 </div>
               </div>
             </div>
