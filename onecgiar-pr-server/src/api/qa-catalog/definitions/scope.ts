@@ -48,6 +48,7 @@ import { ResultsByIpInnovationUseMeasure } from '../../ipsr/results-by-ip-innova
 import { ResultsComplementaryInnovation } from '../../ipsr/results-complementary-innovations/entities/results-complementary-innovation.entity';
 import { ResultsComplementaryInnovationsFunction } from '../../ipsr/results-complementary-innovations-functions/entities/results-complementary-innovations-function.entity';
 import { ResultsInnovationPackagesEnablerType } from '../../ipsr/results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
+import { ResultIpStepThreeEvidence } from '../../ipsr/innovation-pathway/entities/result-ip-step-three-evidence.entity';
 import { ComplementaryInnovationEnablerTypes } from '../../ipsr/results-innovation-packages-enabler-type/entities/complementary-innovation-enabler-types.entity';
 
 export type EntityClass = new (...args: any[]) => object;
@@ -94,8 +95,9 @@ export const CATALOG_SCOPE: EntityClass[] = [
   ResultsByInstitutionType,
   ResultIpMeasure,
   ResultScalingStudyUrl,
-  // QAC-T-11 · innovation package (IPSR). `result_ip_step_three_evidence` has no entity, so it cannot be listed here
-  // (known gap, see the header of pending-catalog.ts).
+  // QAC-T-11 · innovation package (IPSR). QAC-T-30: `result_ip_step_three_evidence` (the step 3 evidence links) has an entity since
+  // 2026.29, so the guard classifies its columns.
+  ResultIpStepThreeEvidence,
   ResultInnovationPackage,
   Ipsr,
   ResultIpEoiOutcome,

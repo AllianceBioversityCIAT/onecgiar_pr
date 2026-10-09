@@ -23,16 +23,16 @@ import { PendingCatalogEntry } from './types';
  * removed their entries. `partners.kp_author_affiliations` (and its `roles`) was catalogued by QAC-T-22 and
  * `ipsr_step_1.scaling_partners.partner_role` by QAC-T-28 (its columns are covered by the external partners role path).
  *
- * Known gap (QAC-T-11, REVIEW D1 + D2): the IPSR step 3 evidence lists live in `result_ip_step_three_evidence`, a table
- * created by migration 1790347604000-IpsrStepThreeEvidence and used with raw SQL (evidences.repository.ts); it has NO
- * TypeORM entity, so the completeness guard cannot see it and no entry here can name its columns. An entity is not
- * created (D2: the approved model is not changed). The deferred keys are `ipsr_step_3.core.readiness_evidences`,
- * `ipsr_step_3.core.use_evidences`, `ipsr_step_3.complementary_components.readiness_evidences` and
- * `ipsr_step_3.complementary_components.use_evidences`, each with its 11 sub-keys (4 lists + 44 sub-keys; the 22
- * sub-keys of the core lists plus the 22 of the complementary lists, which need two levels of nesting, D1).
- * `evidence` and `evidence_sharepoint` (in scope since QAC-T-8) hold the shared columns of those items.
+ * QAC-T-30 (2026.29): the IPSR step 3 evidence lists (`result_ip_step_three_evidence`, now an entity in scope), the current use of the core
+ * innovation and the evidence-based levels of both element roles are catalogued; their entries were removed. The four legacy evidence columns of
+ * `result_by_innovation_package` (`readinees_evidence_link`, `use_evidence_link`, `readiness_details_of_evidence`, `use_details_of_evidence`) stay
+ * PENDING (leader decision): packages without link rows hold their only step 3 evidence there.
  * QAC-T-29: the step 2.1 modal fields and the step 2.2 enabler types (`ipsr_step_2_1.complementary_innovations.*`, `ipsr_step_2_2.enabler_elements.*`) are catalogued; no step 2 column is pending.
  */
+/** Exported so the step 3 spec asserts the reason verbatim. */
+export const LEGACY_STEP3_EVIDENCE_REASON =
+  'ipsr_step_3.*.readiness_evidences / use_evidences — packages without step-3 link rows (saved before P2-3824, no backfill, migration 1790347604000:25-26; or carried over to a new phase, evidences.repository.ts:23-29) hold their only readiness/use evidence in this column; the form shows it as the first, "legacy" item (innovation-pathway-step-three.service.ts:1030-1050; ipsr-step3-evidence-list.component.html:97-101) and VS3:19-47, 231-264 validates it';
+
 const stage2 = (
   table: string,
   field: string,
@@ -42,29 +42,6 @@ const stage2 = (
     table,
     column,
     reason: `${field} — optional — stage 2`,
-  }));
-
-const twoHop = (
-  table: string,
-  field: string,
-  ...columns: string[]
-): PendingCatalogEntry[] =>
-  columns.map((column) => ({
-    table,
-    column,
-    reason: `${field} — required/for QA but 2-hop binding (through a parent row), deferred (REVIEW D2)`,
-  }));
-
-/** Required/for QA but stored behind the entity-less step 3 evidence table and two nesting levels (REVIEW D1 + D2). */
-const evidenceD1D2 = (
-  table: string,
-  field: string,
-  ...columns: string[]
-): PendingCatalogEntry[] =>
-  columns.map((column) => ({
-    table,
-    column,
-    reason: `${field} — for QA but the step 3 evidence list is deferred (REVIEW D1 + D2: entity-less table, two nesting levels)`,
   }));
 
 /** Retired from the 2026 form but kept for QA of earlier phases: catalogued in a 2025 load. */
@@ -207,26 +184,23 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
     'has_scaling_studies',
   ),
 
-  // IPSR (QAC-T-11) · result_by_innovation_package
-  ...stage2(
-    'result_by_innovation_package',
-    'ipsr_step_3.complementary_components.readiness_level and .use_level (role 2 rows share the column with the core fields)',
-    'readiness_level_evidence_based',
-    'use_level_evidence_based',
-  ),
+  // IPSR (QAC-T-11) · result_by_innovation_package (QAC-T-30: the evidence-based levels are bound for both roles)
+  // QAC-T-30 attempt 2: kept pending (leader decision), not NOT_FOR_QA: for those packages this column is the only evidence there is
+  ...[
+    'readinees_evidence_link',
+    'use_evidence_link',
+    'readiness_details_of_evidence',
+    'use_details_of_evidence',
+  ].map((column) => ({
+    table: 'result_by_innovation_package',
+    column,
+    reason: LEGACY_STEP3_EVIDENCE_REASON,
+  })),
   ...legacy2025(
     'result_by_innovation_package',
     "IPSR step 3 'Potential situation (12 months later)' (hidden from 2026, values still sent)",
     'potential_innovation_readiness_level',
     'potential_innovation_use_level',
-  ),
-  ...evidenceD1D2(
-    'result_by_innovation_package',
-    'ipsr_step_3.*.readiness_evidences / use_evidences (dual-written mirror of the first evidence item; the live validation_ipsr_step_three_P25 still tests it; inventory 2026-B §7.3 proposed NOT_FOR_QA, kept pending because the evidence list it mirrors is deferred)',
-    'readinees_evidence_link',
-    'use_evidence_link',
-    'readiness_details_of_evidence',
-    'use_details_of_evidence',
   ),
 
   // IPSR (QAC-T-11) · step 1 tables (QAC-T-28: `ipsr_step_1.*` is fully catalogued; only the contributing_toc flag stays pending)
@@ -237,35 +211,5 @@ export const PENDING_CATALOG: PendingCatalogEntry[] = [
   ),
 
   // IPSR step 2.1 / 2.2 tables: QAC-T-29 (2026.28) bound every column (results_complementary_innovation, its functions, the enabler types) and removed their entries
-
-  // IPSR (QAC-T-11) · step 3 current use of the core innovation (reaches the package through result_by_innovation_package)
-  ...twoHop(
-    'result_ip_result_actors',
-    'ipsr_step_3.core.current_use.actors and its sub-keys',
-    'women',
-    'women_youth',
-    'men',
-    'men_youth',
-    'actor_type_id',
-    'other_actor_type',
-    'evidence_link',
-    'sex_and_age_disaggregation',
-    'how_many',
-  ),
-  ...twoHop(
-    'result_ip_result_institution_types',
-    'ipsr_step_3.core.current_use.organizations and its sub-keys',
-    'how_many',
-    'institution_types_id',
-    'evidence_link',
-    'other_institution',
-    'graduate_students',
-  ),
-  ...twoHop(
-    'result_ip_result_measures',
-    'ipsr_step_3.core.current_use.measures and its sub-keys',
-    'unit_of_measure',
-    'quantity',
-    'evidence_link',
-  ),
+  // IPSR step 3 (QAC-T-30, 2026.29): the evidence links, the current use of the core innovation and the evidence-based levels are bound; what stays pending of step 3 is the legacy potential-situation pair and the four legacy single-link evidence columns above
 ];

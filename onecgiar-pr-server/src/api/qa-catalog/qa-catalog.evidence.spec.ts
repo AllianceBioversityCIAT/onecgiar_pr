@@ -311,12 +311,12 @@ describe('QAC-T-17 evidence (Results)', () => {
 
     it('keeps the entries that stay undescribed', () => {
       expect(pending('evidence', 'is_supplementary')).toBe(true);
-      // IPSR step-3 evidence gap untouched
+      // IPSR step-3 evidence gap closed by QAC-T-30 (the list is catalogued, see qa-catalog.ipsr-step-3.spec.ts)
       expect(
         PENDING_CATALOG.some((p) =>
           p.reason.includes('the step 3 evidence list is deferred'),
         ),
-      ).toBe(true);
+      ).toBe(false);
     });
   });
 

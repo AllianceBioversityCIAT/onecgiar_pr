@@ -296,7 +296,7 @@ Inventory from the 9 `QA_RESULTS_2025` queries (field identity only; HTML ignore
 - **Description:** 2.1 new complementary innovation fields (short / long title, description, function(s), other functions, aware of projects + specify) with the form's rules; 2.2 type of enabler per bundled element (admin-only screen; nested option tree). Keys from inventory 2026-B §3.5–3.6.
 - **Depends on:** QAC-T-28
 
-### QAC-T-30 — IPSR Step 3 completed · P2-3925
+### [x] QAC-T-30 — IPSR Step 3 completed · P2-3925
 
 - **Type:** server · **Review:** full
 - **Description:** Owner decision: add the TypeORM entity for the existing `result_ip_step_three_evidence` table (no migration) so the catalog can bind it. Core and complementary evidence-based readiness / use levels with their evidence lists (max 6; required when level ≠ 0 per form; VS3:19-47, 231-264); current use of the core (actors / organizations / measures with evidence link; hidden when use level is 0; VS3:49-230); `assessed_during_workshop` and the current-level table visible per the form; complementary levels' requirement per VS3. Keys from inventory 2026-B §3.7.

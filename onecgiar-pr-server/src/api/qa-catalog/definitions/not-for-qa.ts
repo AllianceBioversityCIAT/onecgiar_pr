@@ -719,6 +719,11 @@ export const NOT_FOR_QA: NotForQaEntry[] = [
     'last_updated_date',
   ),
 
+  // result_ip_step_three_evidence (QAC-T-30; evidence_id, result_by_innovation_package_id, ipsr_evidence_level and is_active are covered as
+  // path join / filter of the step 3 evidence lists)
+  ...nfq('result_ip_step_three_evidence', IDENTITY, 'id'),
+  ...nfq('result_ip_step_three_evidence', AUDIT, 'created_date'),
+
   // result_ip_eoi_outcomes (QAC-T-11)
   ...nfq(
     'result_ip_eoi_outcomes',
