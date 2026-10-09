@@ -91,6 +91,8 @@ describe('BilateralCenterService', () => {
           provide: BilateralService,
           useValue: {
             handleLeadCenter: jest.fn().mockResolvedValue(undefined),
+            // RNB-2: read-only lookup of the CLARISA code a `lead_center` payload resolves to.
+            resolveLeadCenterCode: jest.fn().mockResolvedValue('CENTER-1'),
             // 2026-09-05: submitForReview announces the arrival to the primary SP post-commit.
             emitBilateralSubmittedNotification: jest
               .fn()
@@ -544,6 +546,15 @@ describe('BilateralCenterService', () => {
       last_name: 'User',
     };
 
+    // RNB-2: the pre-existing cases below are about what the header writes, not about who may
+    // create it, so they run as an admin; the permission gate has its own describe further down.
+    beforeEach(() => {
+      (
+        module.get<RoleByUserRepository>(RoleByUserRepository)
+          .isUserAdmin as jest.Mock
+      ).mockResolvedValue(true);
+    });
+
     // P2-3166. This flow writes `source = SourceEnum.Bilateral` ('API') but has no API key and so
     // no CLARISA `mis` — so 'API' means "is W3/bilateral", NOT "arrived through the external API".
     // The counterexample matters: anything deciding whether to dispatch a webhook must test
@@ -945,6 +956,92 @@ describe('BilateralCenterService', () => {
         expect(
           resultsKnowledgeProductsService.populateKPFromCGSpace,
         ).not.toHaveBeenCalled();
+      });
+    });
+
+    // RNB-2 (P2-3941): option A by the PO — a user who is not assigned to a centre cannot
+    // generate bilateral results. Only an admin or a Center User of the result's lead centre.
+    describe('center permission (RNB-2)', () => {
+      let roleByUserRepository: RoleByUserRepository;
+      const dto = {
+        result_level_id: 2,
+        result_type_id: 7,
+        lead_center: { name: 'IFPRI', acronym: 'IFPRI' },
+      } as any;
+
+      beforeEach(() => {
+        roleByUserRepository =
+          module.get<RoleByUserRepository>(RoleByUserRepository);
+        (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValue(
+          false,
+        );
+      });
+
+      it('lets an admin create without being a member of the centre', async () => {
+        (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValue(true);
+
+        const result = await service.createResultHeader(user, dto);
+
+        expect(result.response.id).toBe(99);
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('lets a Center User of the lead centre create', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(1);
+
+        const result = await service.createResultHeader(user, dto);
+
+        expect(result.response.id).toBe(99);
+        expect(bilateralService.resolveLeadCenterCode).toHaveBeenCalledWith(
+          dto.lead_center,
+        );
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).toHaveBeenCalledWith(42, 'CENTER-1');
+      });
+
+      it('rejects a Center User of ANOTHER centre with 403 and writes nothing', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(0);
+
+        await expect(service.createResultHeader(user, dto)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(resultRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('rejects a user with no centre at all (no Center User role anywhere)', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(0);
+
+        await expect(
+          service.createResultHeader(user, {
+            result_level_id: 2,
+            result_type_id: 7,
+            project_id: 1443,
+          } as any),
+        ).rejects.toThrow(ForbiddenException);
+        expect(resultRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('rejects a non-admin when the lead centre cannot be resolved', async () => {
+        (
+          bilateralService.resolveLeadCenterCode as jest.Mock
+        ).mockResolvedValueOnce(null);
+
+        await expect(service.createResultHeader(user, dto)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).not.toHaveBeenCalled();
+        expect(resultRepository.save).not.toHaveBeenCalled();
       });
     });
   });

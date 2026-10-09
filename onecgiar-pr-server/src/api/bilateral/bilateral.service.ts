@@ -5232,6 +5232,23 @@ export class BilateralService {
   }
 
   /**
+   * RNB-2 (P2-3941): the CLARISA code (`CENTER-xx`) of the centre a `lead_center` payload resolves
+   * to, through the same read-only lookup `handleLeadCenter` persists from — so a permission check
+   * and the row that gets written can never disagree about which centre it is. `null` when the
+   * input is empty or matches nothing.
+   */
+  async resolveLeadCenterCode(
+    leadCenter:
+      | { name?: string; acronym?: string; institution_id?: number }
+      | null
+      | undefined,
+  ): Promise<string | null> {
+    if (!leadCenter || typeof leadCenter !== 'object') return null;
+    const center = await this.findLeadCenter(leadCenter);
+    return center?.code ? String(center.code) : null;
+  }
+
+  /**
    * `RSF-T-4` / `RSF-DD-6`: the READ-ONLY half of `handleLeadCenter`, lifted out unchanged so the
    * resubmission preflight resolves the lead centre with the very lookup the writer uses (alias
    * table, then CLARISA institutions, then `clarisa_center`). It only calls `findOne` / `find`; the
