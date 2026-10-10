@@ -1,16 +1,18 @@
-# Reporting Tool DEV: CI on GitHub Actions (+ a manual deploy request to the ONECGIAR CI/CD Platform).
+# Reporting Tool DEV: CI on GitHub Actions + automatic deploy request to the ONECGIAR CI/CD Platform.
 #
-# Replaces the build, test, lint and image stages of the Jenkins DEV job. Jenkins keeps deploying DEV
-# until the migration is authorized.
+# Replaces the build, test, lint and image stages of the Jenkins DEV job.
 #
 # Triggers:
 #   push to feature/reporting-dev-github-actions-cicd
-#       CI only. Quality checks, then ONE publish job (common quality barrier: it starts only when every
-#       mandatory check of the backend, the frontend and the deploy script passed) that builds both images
-#       and pushes them to ECR by immutable digest. NO deploy request, no server change.
+#       Quality checks, then ONE publish job (common quality barrier: it starts only when every mandatory
+#       check of the backend, the frontend and the deploy script passed) that builds both images and pushes
+#       them to ECR by immutable digest, then AUTOMATICALLY one deploy request for those two digests through
+#       the platform's reusable workflow (owner decision D1: no human approval). The central Executor still
+#       authorizes the source repository and the target, deduplicates, orders, locks and applies the target's
+#       deploy window: a request is not a deploy.
 #   workflow_dispatch (manual)
-#       The same CI; the deploy request is sent ONLY when the `request-deploy` input is true, through the
-#       platform's reusable workflow, for the two digests of this run.
+#       The same CI; the deploy request is sent only when the `request-deploy` input is true. GitHub offers
+#       this trigger only once the workflow file is on the default branch.
 # There is no pull_request trigger: the frontend checks need the DEV configuration, which is never given
 # to pull request code.
 #
@@ -22,11 +24,13 @@
 #                           Secrets: RT_BUILD_ROLE_ARN, RT_FRONTEND_CONFIG_SECRET_ID. They are identifiers, not
 #                           credentials; they are secrets only so GitHub masks them in these public logs
 #                           (`with:` inputs and `env:` headers), which `::add-mask::` cannot do before a step runs.
-#   reporting-tool-dev      CD only: the platform's reusable workflow sends the deploy request from it.
-#                           Keeps its protections (required reviewers, deployment branches).
+#   reporting-tool-dev      CD request only: the platform's reusable workflow sends the deploy request from it.
+#                           No required reviewers (D1); deployment branches: the feature branch only.
 #                           Variables: CICD_BOUND_REF, CICD_ROLE_ARN, CICD_AWS_REGION, CICD_ECR_REPOSITORY,
 #                           CICD_DEPLOY_QUEUE_NAME (read by the reusable workflow).
-#   The build role trusts only `reporting-tool-dev-ci`; the platform's CI role trusts only `reporting-tool-dev`.
+#   The build role trusts only `reporting-tool-dev-ci`. CICD_ROLE_ARN is this repository's own CI role
+#   (platform template infra/sam/ci-repository-role.yaml, multi-repository decision D2), which trusts only
+#   `reporting-tool-dev`, the bound branch and the pinned reusable workflow.
 #   CICD_BOUND_REF is refs/heads/feature/reporting-dev-github-actions-cicd in both, for now.
 #
 # Secret handling (only the frontend configuration, as in the Jenkins job; the backend needs no secret in CI):
@@ -311,12 +315,19 @@ jobs:
           TAG: gha-${{ github.run_id }}-${{ github.run_attempt }}
         run: bash .github/scripts/push-image.sh
 
-  # ---------------------------------------------------------------- manual CD (never on push)
-  # ONE DEPLOY_REQUESTED for both images, from the protected `reporting-tool-dev` environment.
+  # ---------------------------------------------------------------- automatic deploy request (D1)
+  # ONE DEPLOY_REQUESTED for both images, from the `reporting-tool-dev` environment, only after
+  # `publish-images` succeeded and produced BOTH digests (the reusable workflow re-validates them).
+  # The spec typecheck job is outside `needs`: its pre-existing failures never block the request.
   deploy-request:
     name: deploy request (ONECGIAR CI/CD Platform)
     needs: publish-images
-    if: github.event_name == 'workflow_dispatch' && inputs.request-deploy
+    if: >-
+      needs.publish-images.result == 'success'
+      && needs.publish-images.outputs.backend-digest != ''
+      && needs.publish-images.outputs.frontend-digest != ''
+      && (github.event_name == 'push'
+          || (github.event_name == 'workflow_dispatch' && inputs.request-deploy))
     permissions:
       id-token: write
       contents: read

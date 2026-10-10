@@ -8,12 +8,15 @@ behavior of the Jenkins deploy is kept; the differences are deliberate and liste
 | Step | Where | What |
 |---|---|---|
 | CI (every push to `feature/reporting-dev-github-actions-cicd`, and manual runs) | `.github/workflows/reporting-tool-dev-cicd.yml`; jobs needing AWS run in GitHub Environment `reporting-tool-dev-ci` | Checks: backend `npm ci`, ESLint without `--fix`, `npm run test:cov` (no secret, no AWS access); frontend `npm ci`, `npm run lint`, application typecheck, `npm run test:coverage` (with the DEV configuration from Secrets Manager through OIDC, as Jenkins); deploy script `bash -n`, ShellCheck. Then ONE publish job, started only when all of them passed: builds both images, then pushes both to their ECR repositories and records the digests |
-| Deploy request (manual only: `workflow_dispatch` with `request-deploy: true`) | Platform reusable workflow, pinned by commit, from the protected GitHub Environment `reporting-tool-dev` | One `DEPLOY_REQUESTED` for target `reporting-tool-dev` with `artifacts: {backend, frontend}` (the digests published by the same run) |
+| Deploy request (automatic after `publish-images`, owner decision D1; also `workflow_dispatch` with `request-deploy: true` once the file is on the default branch) | Platform reusable workflow, pinned by commit, from GitHub Environment `reporting-tool-dev` (no required reviewers, bound branch only), with this repository's own CI role | One `DEPLOY_REQUESTED` for target `reporting-tool-dev` with `artifacts: {backend, frontend}` (the digests published by the same run) |
 | Deploy | Platform Executor, SSH with a pinned host key | Runs `deploy-reporting-tool-dev.sh --artifact backend=sha256:… --artifact frontend=sha256:…` on the target |
 
-**A push never requests a deploy and never touches the server**: Jenkins keeps deploying DEV until the
-migration is authorized. There is no pull request trigger (the frontend checks need the DEV configuration,
-which is never given to pull request code).
+**A push sends one deploy request automatically, but a request is not a deploy**: the central Executor
+authorizes the repository and the target, deduplicates, orders, locks and applies the target's deploy
+window. While the target keeps `deployWindowPolicy: required` with no open window (Phase A), every request
+ends `FAILED (DEPLOY_WINDOW_CLOSED)` before any lock, script or server access, and Jenkins keeps deploying
+DEV. There is no pull request trigger (the frontend checks need the DEV configuration, which is never given
+to pull request code).
 
 ### Secret handling in the workflow
 
