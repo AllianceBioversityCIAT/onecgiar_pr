@@ -388,9 +388,10 @@ run_phase() {
 }
 
 # Records what is actually running (repository@digest as started), never what was requested.
+# `running` is read through the nameref in images_json, which ShellCheck cannot follow; the directive
+# covers this function only (its declaration and its element assignments).
+# shellcheck disable=SC2034
 record_deployed() {
-  # `running` is read through the nameref in images_json.
-  # shellcheck disable=SC2034
   declare -A running=()
   local unit
   for unit in "${UNITS[@]}"; do running["$unit"]="$(container_image "$(container_of "$unit")" || true)"; done
