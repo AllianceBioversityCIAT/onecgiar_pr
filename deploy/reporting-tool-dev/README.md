@@ -72,8 +72,8 @@ configuration source, no image pruning (images may be shared with other applicat
 
 | Check | State |
 |---|---|
-| Backend ESLint, `test:cov`; frontend lint, application typecheck, `test:coverage`; script `bash -n` and ShellCheck | Enabled; common barrier: no image is built or pushed unless all of them pass; a push never sends a deploy request |
-| Frontend spec typecheck (`tsconfig.spec.json`) | Runs on every trigger and fails visibly: about 200 **pre-existing** errors in 24 spec files on `staging` (2026-10-09). The images and the deploy request do not depend on it until the specs are fixed |
+| Backend ESLint, `test:cov`; frontend lint, application typecheck, `test:coverage`; script `bash -n` and ShellCheck | Enabled; common barrier: no image is built or pushed unless all of them pass; a push to `feature/reporting-dev-github-actions-cicd` requests the deploy automatically only after `publish-images` succeeded with both digests (owner decision D1) |
+| Frontend spec typecheck (`tsconfig.spec.json`) | Runs on every trigger and fails visibly: about 200 **pre-existing** errors in 47 spec files on `staging` (2026-10-09). The images and the deploy request do not depend on it until the specs are fixed |
 | Backend tests without the DEV runtime configuration | Not yet observed in CI (the specs are written to run without it); the first run confirms it |
 
 ## Before the first real deployment
@@ -82,7 +82,7 @@ configuration source, no image pruning (images may be shared with other applicat
 |---|---|
 | **Backend health URL** | **Blocker.** No path is confirmed; the script refuses to run without `backend.health-url`. A path that answers 404 must not be used |
 | Target record `reporting-tool-dev` | To be registered (platform runbook 09): `scriptArguments: standard`, `deployWindowPolicy: required`, source repository = this repository |
-| GitHub Environments | `reporting-tool-dev-ci` (CI: no required reviewers, feature branch only) and `reporting-tool-dev` (CD: protections kept), with the variables listed in the workflow header |
+| GitHub Environments | `reporting-tool-dev-ci` (CI: no required reviewers, feature branch only) and `reporting-tool-dev` (CD: no required reviewers and no wait timer, owner decision D1; deployments only from `feature/reporting-dev-github-actions-cicd`), with the variables listed in the workflow header |
 | AWS: build role, platform CI role trust, ECR, secret access | See the platform's pending-change list (owner authorization) |
 | Server | Install the script (root, 0755) and the configuration (root, 0644); bash ≥ 4.4, docker, aws CLI, curl, flock; Jenkins DEV deploys stopped during the deploy window |
 
