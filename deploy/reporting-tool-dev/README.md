@@ -73,7 +73,7 @@ configuration source, no image pruning (images may be shared with other applicat
 | Check | State |
 |---|---|
 | Backend ESLint, `test:cov`; frontend lint, application typecheck, `test:coverage`; script `bash -n` and ShellCheck | Enabled; common barrier: no image is built or pushed unless all of them pass; a push to `feature/reporting-dev-github-actions-cicd` requests the deploy automatically only after `publish-images` succeeded with both digests (owner decision D1) |
-| Frontend spec typecheck (`tsconfig.spec.json`) | Runs on every trigger and fails visibly: about 200 **pre-existing** errors in 47 spec files on `staging` (2026-10-09). The images and the deploy request do not depend on it until the specs are fixed |
+| Frontend spec typecheck (`tsconfig.spec.json`) | Not run by this workflow (removed 2026-10-10): about 200 **pre-existing** errors in 47 spec files on `staging` (2026-10-09), outside the scope of this migration. The application typecheck stays in the frontend checks; add the spec typecheck back once the specs are fixed |
 | Backend tests without the DEV runtime configuration | Not yet observed in CI (the specs are written to run without it); the first run confirms it |
 
 ## Before the first real deployment

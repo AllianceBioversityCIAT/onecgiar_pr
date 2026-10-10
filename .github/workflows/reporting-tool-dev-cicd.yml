@@ -26,8 +26,9 @@
 #                           (`with:` inputs and `env:` headers), which `::add-mask::` cannot do before a step runs.
 #   reporting-tool-dev      CD request only: the platform's reusable workflow sends the deploy request from it.
 #                           No required reviewers (D1); deployment branches: the feature branch only.
-#                           Variables: CICD_BOUND_REF, CICD_ROLE_ARN, CICD_AWS_REGION, CICD_ECR_REPOSITORY,
-#                           CICD_DEPLOY_QUEUE_NAME (read by the reusable workflow).
+#                           Variables: CICD_BOUND_REF, CICD_ROLE_ARN, CICD_AWS_REGION, CICD_DEPLOY_QUEUE_NAME
+#                           (read by the reusable workflow). CICD_ECR_REPOSITORY is not set: it is read only to
+#                           push `units`, and this caller sends `units: "[]"` (its images are pushed by publish-images).
 #   The build role trusts only `reporting-tool-dev-ci`. CICD_ROLE_ARN is this repository's own CI role
 #   (platform template infra/sam/ci-repository-role.yaml, multi-repository decision D2), which trusts only
 #   `reporting-tool-dev`, the bound branch and the pinned reusable workflow.
