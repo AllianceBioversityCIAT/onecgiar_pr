@@ -55,8 +55,8 @@
                   <span class="cell_title">{{ result.title }}</span>
                 }
                 @case ('initiative_official_code') {
-                  @if (result.initiative_official_code) {
-                    <span class="cell_chip">{{ result.initiative_official_code }}</span>
+                  @if (leadLabel(result)) {
+                    <span class="cell_chip" [attr.title]="leadLabel(result)">{{ leadLabel(result) }}</span>
                   }
                 }
                 @case ('created_date') {

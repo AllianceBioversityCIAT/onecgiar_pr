@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { provideIcons } from '@ng-icons/core';
 import { lucideCheck, lucideExternalLink, lucidePlus, lucideSearch } from '@ng-icons/lucide';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
+import { scienceProgramLabel } from '../../../../../../../../../../../../shared/utils/science-program-label.util';
 import { COMPLEMENTARY_INNOVATION_COPY } from '../complementary-innovation.copy';
 
 interface ComplementaryInnovation {
@@ -42,12 +43,17 @@ export class TableInnovationComponent {
   columnOrder = [
     { title: 'Code', attr: 'result_code', width: '84px' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Lead', attr: 'initiative_official_code', width: '80px' },
+    { title: 'Lead', attr: 'initiative_official_code', width: '180px' },
     { title: 'Innovation Type', attr: 'result_type_name', width: '150px' },
     { title: 'Creation date', attr: 'created_date', width: '130px' }
   ];
 
   constructor(public api: ApiService) {}
+
+  /** P/A label `CODE - Name` for the Lead; a locally created row has no name and shows the code. */
+  leadLabel(result: any): string {
+    return scienceProgramLabel(result?.initiative_official_code, result?.initiative_name);
+  }
 
   selectInnovation(result: ComplementaryInnovation) {
     result.selected = true;

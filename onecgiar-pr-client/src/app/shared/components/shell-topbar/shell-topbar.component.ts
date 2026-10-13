@@ -35,6 +35,7 @@ import { ReportFeedbackDialogComponent } from '../report-feedback-dialog/report-
 import { ConsoleCaptureService } from '../../services/console-capture.service';
 import { SupportChatService } from '../../services/support-chat.service';
 import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
+import { scienceProgramLabel } from '../../utils/science-program-label.util';
 import { FontScale, FONT_SCALE_OPTIONS, FontScaleService } from '../../services/font-scale.service';
 import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
@@ -424,6 +425,11 @@ export class ShellTopbarComponent {
 
   getMyCenters() {
     return this.api.rolesSE.getMyCenters?.() ?? [];
+  }
+
+  /** Shared P/A label (`SP12 - Digital`); the code alone when the name is missing. */
+  initiativeLabel(item: any): string {
+    return scienceProgramLabel(item?.official_code, item?.initiative_name, item?.short_name);
   }
 
   getInitiativeSeparatedByPortfolio() {

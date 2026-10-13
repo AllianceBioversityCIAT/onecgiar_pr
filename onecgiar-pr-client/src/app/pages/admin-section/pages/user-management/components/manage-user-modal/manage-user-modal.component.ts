@@ -12,6 +12,7 @@ import { ResultsApiService } from '../../../../../../shared/services/api/results
 import { SearchUserSelectComponent } from '../../../../../../shared/components/search-user-select/search-user-select.component';
 import { SearchUser } from '../../../../../../shared/interfaces/search-user.interface';
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
+import { scienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { UserRolesInfoModalComponent } from '../../../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
@@ -229,7 +230,7 @@ export class ManageUserModalComponent {
     groups.forEach(group => {
       flat.push({ isLabel: true, name: group.name });
       (group.entities || []).forEach(entity => {
-        flat.push({ ...entity, display_label: `${entity.official_code} ${entity.name}` });
+        flat.push({ ...entity, display_label: scienceProgramLabel(entity.official_code, entity.name) });
       });
     });
     return flat;

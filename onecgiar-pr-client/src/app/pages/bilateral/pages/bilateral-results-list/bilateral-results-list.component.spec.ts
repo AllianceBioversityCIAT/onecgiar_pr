@@ -1712,6 +1712,12 @@ describe('BilateralResultsListComponent', () => {
       expect(document.body.textContent).not.toContain('edit');
     });
 
+    it('renders "SP12 - Better Diets" when the entry has a name, the code alone when it has none (PF2-R-2, M4)', () => {
+      const entries = open([{ ...row(2, 'REJECT', 'With name', 2, 'SP12'), initiative_name: 'Better Diets' }, row(1, 'REJECT', 'No name', 1, 'SP09')]);
+      expect(entries[0].querySelector('[data-testid="brl-history-sp"]')?.textContent?.trim()).toBe('SP09');
+      expect(entries[1].querySelector('[data-testid="brl-history-sp"]')?.textContent?.trim()).toBe('SP12 - Better Diets');
+    });
+
     it('shows no SP code for a legacy row without initiative_code', () => {
       const entries = open([row(1, 'REJECT', 'Old reason', 1, null)]);
       expect(entries[0].querySelector('[data-testid="brl-history-sp"]')).toBeNull();

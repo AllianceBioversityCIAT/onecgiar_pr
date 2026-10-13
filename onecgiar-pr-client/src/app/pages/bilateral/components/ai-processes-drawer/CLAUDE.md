@@ -109,5 +109,6 @@ injectable that opens/closes the dialog by reacting to `BilateralAiService.drawe
   `bilateral-query-params.ts` (`AI_QUEUE_PROJECT_QUERY_PARAM`/`AI_QUEUE_WAY_QUERY_PARAM`), not
   duplicated here.
 
-**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · widened drawer to 520px; closed
-the drawer on every navigating host action
+- Announcement labels fall back to `bilateralAiJobProgramLabel(job)` (code + `program_name`), not the bare `programCode`.
+
+**Verified:** 2026-10-13 · branch qa-development-2026-ss · program-full-names-labels-part-2 PF2-T-5

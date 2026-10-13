@@ -83,6 +83,18 @@ describe('ResultReviewHistoryRepository', () => {
       expect(sql).not.toMatch(/GROUP BY/i);
     });
 
+    // PF2-R-1 — the SP full name rides the same LEFT JOIN, no extra join or grouping.
+    it('selects ci.name as initiative_name from the existing clarisa_initiatives join', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      await repository.getReviewHistoryByResultId(55);
+
+      const [query] = mockQuery.mock.calls.at(-1);
+      const sql = String(query).replace(/\s+/g, ' ');
+      expect(sql).toMatch(/ci\.name AS initiative_name/);
+      expect(sql.match(/clarisa_initiatives/g)).toHaveLength(1);
+    });
+
     it('returns an entry without a Science Program (pre-spec rows) with null initiative fields', async () => {
       const rows = [
         {

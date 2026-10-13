@@ -54,7 +54,8 @@
                                     Pre 2022
                                 </div>
 
-                                {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date : 'yyyy-MM-dd') }}
+                                <span *ngIf="column.attr === 'official_code'; else plainCell" class="sp-label-text" [attr.title]="submitterLabel(result) || null">{{ submitterLabel(result) }}</span>
+                                <ng-template #plainCell>{{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date : 'yyyy-MM-dd') }}</ng-template>
                             </a>
                         </ng-container>
                     </td>

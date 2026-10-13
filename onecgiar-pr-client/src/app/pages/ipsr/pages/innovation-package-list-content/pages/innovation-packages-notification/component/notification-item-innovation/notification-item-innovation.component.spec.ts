@@ -66,4 +66,29 @@ describe('NotificationItemInnovationComponent', () => {
     component.acceptOrReject(response);
     expect(component.requesting).toBe(false);
   });
+
+  describe('PF2 mentions (S2)', () => {
+    const base = {
+      request_status_id: 2,
+      approving_official_code: 'SP05',
+      approving_name: 'Better Diets',
+      requester_official_code: 'SP01',
+      requester_name: 'Breeding for Tomorrow',
+      result_type_name: 'Innovation package'
+    };
+
+    it('shows the label for both the approver and the requester', () => {
+      component.notification = base;
+      fixture.detectChanges();
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('SP05 - Better Diets requests to be added');
+      expect(text).toContain('(SP01 - Breeding for Tomorrow)');
+    });
+
+    it('falls back to the code when the name is missing', () => {
+      component.notification = { ...base, approving_name: null, requester_name: null };
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('SP05 requests to be added');
+    });
+  });
 });

@@ -41,6 +41,18 @@ describe('BilateralRejectionNoticeComponent (RRC-R-14)', () => {
     expect(text('bilateral-rejection-notice-meta')).toContain('04 Oct 2026');
   });
 
+  it('renders the SP label when the entry carries a name, and the bare code when it does not (PF2-R-2, M4)', () => {
+    api.GET_bilateralReviewHistory.mockReturnValue(of({ response: [{ ...HISTORY[0], initiative_name: 'Better Diets' }] }));
+    render(7);
+    expect(text('bilateral-rejection-notice-meta')).toContain('SP12 - Better Diets');
+
+    fixture = TestBed.createComponent(BilateralRejectionNoticeComponent);
+    api.GET_bilateralReviewHistory.mockReturnValue(of({ response: [HISTORY[0]] }));
+    render(7);
+    expect(text('bilateral-rejection-notice-meta')).toContain('SP12');
+    expect(text('bilateral-rejection-notice-meta')).not.toContain('SP12 -');
+  });
+
   it('picks the newest rejection even if the server answers oldest first', () => {
     api.GET_bilateralReviewHistory.mockReturnValue(of({ response: [...HISTORY].reverse() }));
     render(7);

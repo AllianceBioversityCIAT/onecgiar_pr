@@ -8,6 +8,7 @@ import { environment } from '../../../../environments/environment';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { scienceProgramLabel } from '../../utils/science-program-label.util';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { A11yModule } from '@angular/cdk/a11y';
@@ -195,6 +196,11 @@ export class HeaderPanelComponent implements OnInit {
 
   isInitiativeClosed(officialCode: string): boolean {
     return this.closedInitiativeCodes.has(officialCode);
+  }
+
+  /** Shared P/A label (`SP12 - Digital`); the code alone when the name is missing. */
+  initiativeLabel(item: any): string {
+    return scienceProgramLabel(item?.official_code, item?.initiative_name, item?.short_name);
   }
 
   getInitiativeSeparatedByPortfolio() {

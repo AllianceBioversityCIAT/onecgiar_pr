@@ -1,6 +1,7 @@
 import { Component, EventEmitter, HostListener, Input, Output, signal } from '@angular/core';
 import { RetrieveModalService } from '../../../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { scienceProgramLabel } from '../../../../../../../../shared/utils/science-program-label.util';
 import { IpsrListService } from '../../services/ipsr-list.service';
 
 interface ItemMenu {
@@ -43,6 +44,11 @@ export class InnovationPackageCustomTableComponent {
     public retrieveModalSE: RetrieveModalService,
     public ipsrListService: IpsrListService
   ) {}
+
+  /** P/A label `CODE - Name` for the Submitter column; sort/filter keep keying off `official_code`. */
+  submitterLabel(row: any): string {
+    return scienceProgramLabel(row?.official_code, row?.submitter_name, row?.submitter_short_name);
+  }
 
   /** trackBy for the sub-results loops so rows are reused instead of destroyed/recreated. (P2-2973) */
   trackBySubResult(_index: number, subResult: any): any {

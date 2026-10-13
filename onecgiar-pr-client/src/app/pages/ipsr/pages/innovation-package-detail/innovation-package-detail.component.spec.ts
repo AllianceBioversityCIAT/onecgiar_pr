@@ -40,6 +40,7 @@ describe('InnovationPackageDetailComponent', () => {
           provide: ActivatedRoute,
           useValue: {
             snapshot: {
+              queryParams: {},
               paramMap: {
                 get: () => {
                   return 'id';
@@ -57,5 +58,21 @@ describe('InnovationPackageDetailComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  const submitterText = () => {
+    fixture.detectChanges();
+    const item = (Array.from(fixture.nativeElement.querySelectorAll('.item')) as HTMLElement[]).find(el => el.textContent.includes('Submitter:'));
+    return item?.querySelector('span')?.textContent.trim();
+  };
+
+  it('header Submitter renders the label from initiative_official_code + initiative_name, not blank (PF2 M5)', () => {
+    component.ipsrDataControlSE.detailData = { initiative_official_code: 'SP05', initiative_name: 'Better Diets' } as any;
+    expect(submitterText()).toBe('SP05 - Better Diets');
+  });
+
+  it('header Submitter shows only the code for a locally created row (PF2 R-3)', () => {
+    component.ipsrDataControlSE.detailData = { initiative_official_code: 'INIT-012' } as any;
+    expect(submitterText()).toBe('INIT-012');
   });
 });

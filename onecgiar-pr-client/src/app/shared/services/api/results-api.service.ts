@@ -967,7 +967,7 @@ export class ResultsApiService {
     return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives, phases }).pipe(
       map(resp => {
         resp?.response.map(result => {
-          result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
+          result.full_name = `${result.result_title} ${result.result_code} ${result.official_code}${result.initiative_name ? ` ${result.initiative_name}` : ''} ${result.result_type_name}`;
           result.result_code = Number(result.result_code);
           result.completeness = Number(result.completeness);
           result.general_information_value = Number(result?.general_information?.value);

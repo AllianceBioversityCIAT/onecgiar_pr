@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { scienceProgramLabel } from '../../../../../../../../shared/utils/science-program-label.util';
 import { ShareRequestModalService } from '../../../../../../../results/pages/result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
 
@@ -21,6 +22,16 @@ export class NotificationItemInnovationComponent {
     private shareRequestModalSE: ShareRequestModalService,
     private retrieveModalSE: RetrieveModalService
   ) {}
+
+  /** P/A label `CODE - Name` for the approving side mention. */
+  approvingLabel(): string {
+    return scienceProgramLabel(this.notification?.approving_official_code, this.notification?.approving_name, this.notification?.approving_short_name);
+  }
+
+  /** P/A label `CODE - Name` for the requester side mention. */
+  requesterLabel(): string {
+    return scienceProgramLabel(this.notification?.requester_official_code, this.notification?.requester_name, this.notification?.requester_short_name);
+  }
 
   mapAndAccept(notification) {
     if (this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status) {

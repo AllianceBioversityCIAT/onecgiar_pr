@@ -348,6 +348,27 @@ describe('SectionZeroDashboardComponent', () => {
   // PSR-T-10 (notifications/bilateral-primary-sp-request) — on-hold / sent-back banner, picker
   // gating, declined-SP marking, and the submit-blocked reason, all driven by `primary_request`
   // from `GET_resultInitiativeId` (replaces the old `tocCleared` boolean on the PATCH response).
+  describe('PF2-T-6 — banner names resolved from the bilateral context (DD-5)', () => {
+    it('reads SP03 - Animal when the context knows the name, and SP03 when it does not', () => {
+      const current = project(12, 'OLDPROJ');
+      current.sciencePrograms = [{ programId: 3, programCode: 'SP03', allocation: '100', spName: 'Animal', spShortName: 'SP03' }];
+      (creationService.selectedProject as any).set(current);
+      component.primaryRequest.set({ state: 'pending', program_code: 'SP03', declined_by_codes: [] });
+      expect(component.primaryAssignmentBanner()?.message).toBe('SP03 - Animal will review this result when you submit it for review');
+
+      (creationService.selectedProject as any).set(null);
+      expect(component.primaryAssignmentBanner()?.message).toBe('SP03 will review this result when you submit it for review');
+    });
+
+    it('labels every declined code in the sent-back banner', () => {
+      const current = project(12, 'OLDPROJ');
+      current.sciencePrograms = [{ programId: 3, programCode: 'SP03', allocation: '100', spName: 'Animal', spShortName: 'SP03' }];
+      (creationService.selectedProject as any).set(current);
+      component.primaryRequest.set({ state: 'sent_back', program_code: null, declined_by_codes: ['SP03', 'SP09'] });
+      expect(component.primaryAssignmentBanner()?.message).toBe('Declined by SP03 - Animal, SP09. Pick another primary Science Program');
+    });
+  });
+
   describe('PSR-T-10 — primary request state (on hold / sent back)', () => {
     const setPrimaryRequest = (
       state: 'none' | 'pending' | 'sent_back' | 'accepted',
@@ -393,7 +414,7 @@ describe('SectionZeroDashboardComponent', () => {
       fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.textContent).toContain('SP09 will review this result when you submit it for review');
+      expect(el.textContent).toContain('SP09 - Program nine will review this result when you submit it for review');
       expect(el.textContent).not.toContain('Awaiting');
       expect(el.textContent).not.toContain('Submit for review is unavailable');
       expect(component.submitBlockedReason()).toBeNull();
@@ -428,7 +449,7 @@ describe('SectionZeroDashboardComponent', () => {
       openResultWithProgramOptions(22);
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.textContent).toContain('Declined by SP09. Pick another primary Science Program');
+      expect(el.textContent).toContain('Declined by SP09 - Program nine. Pick another primary Science Program');
     });
 
     it('joins both codes when a two-alignment project has had both SPs decline', () => {
@@ -437,7 +458,7 @@ describe('SectionZeroDashboardComponent', () => {
 
       const el = fixture.nativeElement as HTMLElement;
       expect(el.textContent).toContain(
-        'Declined by SP09, SP12. Pick another primary Science Program',
+        'Declined by SP09 - Program nine, SP12 - Program twelve. Pick another primary Science Program',
       );
     });
 
@@ -484,7 +505,7 @@ describe('SectionZeroDashboardComponent', () => {
 
       expect(component.primaryRequest()?.state).toBe('pending');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-        'SP12 will review this result when you submit it for review',
+        'SP12 - Program twelve will review this result when you submit it for review',
       );
     });
   });

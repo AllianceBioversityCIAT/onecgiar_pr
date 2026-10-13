@@ -338,7 +338,7 @@
               <ul class="pr-topbar-account__list">
                 @for (item of getInitiativeSeparatedByPortfolio(); track $index) {
                   <li class="pr-topbar-account__row">
-                    <span class="pr-topbar-account__code">{{ item.official_code }}</span>
+                    <span class="pr-topbar-account__code" [attr.title]="initiativeLabel(item)">{{ initiativeLabel(item) }}</span>
                     <span class="pr-topbar-account__title">{{ item.role }}</span>
                   </li>
                 }

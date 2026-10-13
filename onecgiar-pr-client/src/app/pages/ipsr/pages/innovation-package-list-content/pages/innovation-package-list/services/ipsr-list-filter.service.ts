@@ -1,10 +1,11 @@
 import { DestroyRef, Injectable, Injector, WritableSignal, signal } from '@angular/core';
 import { PhasesService } from '../../../../../../../shared/services/global/phases.service';
+import { scienceProgramLabel } from '../../../../../../../shared/utils/science-program-label.util';
 import { ResultsApiService } from '../../../../../../../shared/services/api/results-api.service';
 
 /** Shape `IpsrListFilterService.programOptions()` emits — mirrors Results Center's
- * submitter/program option shape (`{ official_code, displayName }`, see
- * `results-list-filters.component.ts`'s `displayName: \`${submitter.official_code} ${submitter.name}\``). */
+ * submitter/program option shape (`{ official_code, displayName }`); `displayName` is the shared
+ * P/A label (`SP01 - Name`, see `shared/utils/science-program-label.util.ts`). */
 export interface IpsrProgramOption {
   official_code: string;
   displayName: string;
@@ -32,9 +33,13 @@ export function buildIpsrProgramOptions(initiatives: any[]): IpsrProgramOption[]
     .map(initiative => ({
       ...initiative,
       official_code: initiative.official_code,
-      displayName:
-        (initiative.official_code_short_name && String(initiative.official_code_short_name).trim()) ||
-        `${initiative.official_code}${initiative.short_name ? ' ' + initiative.short_name : ''}`
+      // `ApiService` overwrites `name` with the official code on the loaded lists, so a `name` equal to the code is not a real name.
+      displayName: scienceProgramLabel(
+        initiative.official_code,
+        initiative.initiative_name,
+        initiative.name !== initiative.official_code ? initiative.name : null,
+        initiative.short_name
+      )
     }));
 }
 

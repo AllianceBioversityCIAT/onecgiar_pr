@@ -2157,6 +2157,33 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('POST_reportSesultsCompleteness search full_name (PF2-R-2, M2)', () => {
+    it('includes initiative_name in full_name so search matches the program name', done => {
+      const section = { value: '1' };
+      const row = {
+        result_code: '5',
+        result_title: 'T',
+        official_code: 'SP10',
+        initiative_name: 'Gender',
+        result_type_name: 'Type',
+        completeness: '10',
+        general_information: section,
+        theory_of_change: section,
+        partners: section,
+        geographic_location: section,
+        links_to_results: section,
+        evidence: section,
+        section_seven: section
+      };
+      service.POST_reportSesultsCompleteness([], [], 'u').subscribe(response => {
+        expect(response.response[0].full_name).toContain('Gender');
+        expect(response.response[0].full_name).toContain('SP10');
+        done();
+      });
+      httpMock.expectOne(`${service.apiBaseUrl}admin-panel/report/results/completeness`).flush({ response: [row] });
+    });
+  });
+
   describe('GET_historicalByResultId', () => {
     it('should call GET_historicalByResultId and return expected data ', done => {
       const resultId = 1;

@@ -35,7 +35,12 @@
       </td>
       <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.phase_name }}</td>
       <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_type }}</td>
-      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_submitter }}</td>
+      <td
+        class="max-w-[220px] truncate text-center"
+        [ngClass]="{ removed: item?.is_active === false }"
+        [attr.title]="submitterLabel(item)">
+        {{ submitterLabel(item) }}
+      </td>
       <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.status_name }}</td>
       @if (item?.is_added) {
         <td class="text-center" style="white-space: nowrap" [ngClass]="{ removed: item?.is_active === false }">

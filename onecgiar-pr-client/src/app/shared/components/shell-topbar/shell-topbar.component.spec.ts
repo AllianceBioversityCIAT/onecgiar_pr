@@ -165,6 +165,14 @@ describe('ShellTopbarComponent', () => {
       expect(component.getInitiativeSeparatedByPortfolio()).toHaveLength(1);
     });
 
+    it('PF2-T-6: the role menu renders the shared P/A label (code alone when the name is missing)', async () => {
+      await build();
+      expect(component.initiativeLabel({ official_code: 'SP12', initiative_name: 'Digital' })).toBe('SP12 - Digital');
+      expect(component.initiativeLabel({ official_code: 'SP12' })).toBe('SP12');
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      expect(html).toContain('{{ initiativeLabel(item) }}');
+    });
+
     it('getInitiativeSeparatedByPortfolio tolerates a missing list', async () => {
       apiMock.dataControlSE.myInitiativesList = undefined;
       await build();

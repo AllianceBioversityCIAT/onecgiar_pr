@@ -5,6 +5,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { IpsrStep1Body, CoreResult, Measure, Actor, Organization } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
+import { scienceProgramLabel } from '../../../../../../../../shared/utils/science-program-label.util';
 import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum';
 import { ExpertWorkshopOrganized } from '../step-n3/model/Ipsr-step-3-body.model';
 import { untypedInnovationUseRowsMessage } from '../../../../../../utils/untyped-innovation-use-rows.util';
@@ -59,6 +60,11 @@ export class StepN1Component implements OnInit, CanComponentDeactivate {
     public ipsrDataControlSE: IpsrDataControlService,
     private readonly router: Router
   ) {}
+
+  /** P/A label `CODE - Name` for the selected core innovation chip. */
+  coreLabel(): string {
+    return scienceProgramLabel(this.coreResult?.official_code, this.coreResult?.initiative_name);
+  }
 
   ngOnInit(): void {
     this.getSectionInformation();
