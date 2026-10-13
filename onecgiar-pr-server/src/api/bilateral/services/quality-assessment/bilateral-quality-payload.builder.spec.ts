@@ -587,6 +587,77 @@ describe('BilateralQualityPayloadBuilder', () => {
       expect(payload.contract_version).toBe('0.2');
     });
 
+    it('Innovation use: reads actors from InnovationUseService, not from the ResultsService copy that falls back to flat rows (production result 31084)', async () => {
+      const bilateralServiceStub = {
+        findOne: jest.fn().mockResolvedValue({
+          response: innovationUseFixture.detail,
+          message: 'ok',
+          status: 200,
+        }),
+      };
+      // What the ResultsService copy BilateralModule receives returns for Innovation Use: its
+      // optional InnovationUseService is undefined, so the fallback emits flat rows with no
+      // `actors` key. Before the fix this reached the mapper and the AI saw zero people.
+      const resultsServiceStub = {
+        getBilateralResultById: jest.fn().mockResolvedValue({
+          response: {
+            ...(innovationUseFixture.formDetail as Record<string, unknown>),
+            resultTypeResponse: [{ result_actors_id: 12618, actor_type_id: 2 }],
+          },
+          message: 'ok',
+          status: 200,
+        }),
+      };
+      const innovationUseServiceStub = {
+        getBilateralInnovationUseData: jest.fn().mockResolvedValue([
+          {
+            actors: [
+              {
+                result_actors_id: 12618,
+                actor_type_id: 2,
+                obj_actor_type: { id: 2, name: 'Researchers' },
+                sex_and_age_disaggregation: false,
+                how_many: 80,
+                women: 25,
+                men: 55,
+                women_youth: 10,
+                men_youth: 25,
+              },
+            ],
+            organizations: [],
+            measures: [],
+          },
+        ]),
+      };
+
+      const nestedBuilder = new BilateralQualityPayloadBuilder(
+        bilateralServiceStub as never,
+        resultsServiceStub as never,
+        undefined,
+        undefined,
+        innovationUseServiceStub as never,
+      );
+
+      const payload = await nestedBuilder.build(34440, OPTS);
+      const fields = payload.sections.type_specific.fields;
+
+      expect(
+        innovationUseServiceStub.getBilateralInnovationUseData,
+      ).toHaveBeenCalledWith(34440);
+      expect(fields[INNOVATION_USE_FIELD_LABELS.USER_TYPES]).toEqual([
+        'Researchers',
+      ]);
+      expect(
+        fields[INNOVATION_USE_FIELD_LABELS.NUMBER_OF_PEOPLE_USING],
+      ).toEqual({
+        total: 80,
+        women: 25,
+        men: 55,
+        women_youth: 10,
+        men_youth: 25,
+      });
+    });
+
     it('throws a typed error when the form detail read reports a non-2xx status', async () => {
       const bilateralServiceStub = {
         findOne: jest.fn().mockResolvedValue({
