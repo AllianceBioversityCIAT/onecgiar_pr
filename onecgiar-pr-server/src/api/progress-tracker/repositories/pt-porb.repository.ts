@@ -16,7 +16,14 @@ export interface PtPorbRow {
   tocIndicatorIntegrationId: number | null;
   program: string;
   aow: string;
+  /**
+   * PRMS-side center acronym (`clarisa_institutions.acronym`), `''` when the indicator
+   * has no center target. Stored as-is on the map row; normalized to PT's spelling only
+   * when sent to `/resolve` (`toPtCenterName`).
+   */
   center: string;
+  /** The ToC indicator's `type_value`; `null` when unset. */
+  kpiType: string | null;
   hloTitle: string;
   description: string;
 }
@@ -51,9 +58,10 @@ export interface PtPorbRow {
  *   comment on `TocResultResponse.progress`, "this HLO's own progress").
  * - `center` — `clarisa_institutions.acronym` via the same
  *   `toc_result_indicator_target` → `toc_result_indicator_target_center` chain
- *   `aow-bilateral.repository.ts:602-606` joins, taking the first center alphabetically
- *   when more than one holds the same target (documented simplification — the Guide's
- *   `/resolve` call takes one `center` string, not a list).
+ *   `aow-bilateral.repository.ts:602-606` joins. `center` is part of the `GROUP BY`, so
+ *   an indicator with targets for N centers yields N rows — PT keeps one KPI per
+ *   (indicator, center), and `/resolve` takes one `center` string per call.
+ * - `kpi_type` — `toc_results_indicators.type_value`.
  * - `description` — `toc_results_indicators.indicator_description`, the same column
  *   `toc-indicator-description-resolver.service.ts:54` and
  *   `results.service.ts:3257-3313`'s `getTocMetadata` both read.
@@ -82,6 +90,11 @@ export class PtPorbRepository {
    * first, year predicate second: a wrong year alone would otherwise only quietly empty
    * `aow` via the `LEFT JOIN`, never break the one-row-per-indicator guarantee `PTM-R-10`
    * needs).
+   *
+   * The guarantee is now one row per (indicator, center): `ci.acronym` is grouped on
+   * (by column, not the `center` alias — MySQL resolves `GROUP BY` names against the
+   * `FROM` columns first) and the order is `tri.id, center` so runs are deterministic.
+   * Several targets for the same center collapse into that center's single row.
    */
   async findPorbRowsForPhase(
     phaseUuid: string,
@@ -105,7 +118,8 @@ export class PtPorbRepository {
             THEN CONCAT(UPPER(TRIM(wp.acronym)), ': ', wp.name)
           ELSE NULL
         END) AS aow,
-        MIN(ci.acronym) AS center,
+        COALESCE(ci.acronym, '') AS center,
+        tri.type_value AS kpi_type,
         tr.result_title AS hlo_title,
         tri.indicator_description AS description
       FROM ${env.DB_TOC}.toc_results_indicators tri
@@ -130,9 +144,11 @@ export class PtPorbRepository {
         tri.id,
         tri.related_node_id,
         program,
+        ci.acronym,
+        tri.type_value,
         tr.result_title,
         tri.indicator_description
-      ORDER BY tri.id ASC
+      ORDER BY tri.id ASC, center ASC
     `;
 
     const rows = await this.dataSource.query(query, params);
@@ -153,6 +169,10 @@ export class PtPorbRepository {
         program: row.program ?? '',
         aow: row.aow ?? '',
         center: row.center ?? '',
+        kpiType:
+          typeof row.kpi_type === 'string' && row.kpi_type.length > 0
+            ? row.kpi_type
+            : null,
         hloTitle: row.hlo_title ?? '',
         description: row.description ?? '',
       }));
