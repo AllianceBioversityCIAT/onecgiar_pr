@@ -109,7 +109,8 @@ describe('BilateralProjectsPanelComponent', () => {
 
     const mockApiService = {
       GET_bilateralProjects: jest.fn().mockReturnValue(of({ response: mockProjects })),
-      GET_bilateralCenterResults: jest.fn().mockReturnValue(of({ response: mockCenterResults }))
+      GET_bilateralCenterResults: jest.fn().mockReturnValue(of({ response: mockCenterResults })),
+      GET_bilateralCenterOverviewTotals: jest.fn().mockReturnValue(of({ response: null }))
     };
 
     activatedRouteStub = { snapshot: { queryParamMap: convertToParamMap({}) } };

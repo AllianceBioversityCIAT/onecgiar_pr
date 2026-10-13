@@ -831,6 +831,37 @@ export class ResultsController {
     return this.resultsService.getPendingReviewCount(programId);
   }
 
+  @Get('bilateral-center-overview-totals')
+  @ApiOperation({
+    summary: 'Get the Total results figures of the center Overview',
+    description:
+      'SR-164368. Counts, one row per result, for the center Overview Total results card: replicated results the center is on, new (not replicated) W3/Bilateral results the center is on, W1/W2 results that tag any bilateral project of the center, and the distinct total of the three.',
+  })
+  @ApiQuery({
+    name: 'centerId',
+    type: String,
+    required: true,
+    description: 'CLARISA center code or institution acronym',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: String,
+    required: true,
+    description: 'Reporting phase (version) ID',
+  })
+  @ApiOkResponse({
+    description: 'Bilateral center overview totals retrieved successfully.',
+  })
+  async getBilateralCenterOverviewTotals(
+    @Query('centerId') centerId: string,
+    @Query('versionId') versionId: string,
+  ) {
+    return this.resultsService.getBilateralCenterOverviewTotals(
+      centerId,
+      versionId,
+    );
+  }
+
   @Get('bilateral-center-results')
   @ApiOperation({
     summary: 'Get bilateral results by center and phase',

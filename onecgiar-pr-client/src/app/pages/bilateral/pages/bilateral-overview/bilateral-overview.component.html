@@ -85,25 +85,25 @@
         }
       } @else {
         @let overview = model();
+        <!-- SR-164368: the figures come from the server, one row per result; '—' until loaded. -->
+        @let totals = overviewTotals();
         <!-- 1 · Total results (hero) -->
         <a
           data-testid="kpi-total"
           [routerLink]="resultsLink()"
           [queryParams]="deepLinkParams()"
           [attr.aria-label]="
-            'Total results, ' +
-            overview.kpis.totalResults.count +
-            ' results, ' +
-            overview.kpis.totalResults.replicatedCount +
-            ' replicated, ' +
-            overview.kpis.totalResults.newCount +
-            ' new, of ' +
-            overview.kpis.totalResults.w1w2Count +
-            ' W1/W2 results ' +
-            overview.kpis.totalResults.w1w2ContributorCount +
-            ' are contributing and ' +
-            overview.kpis.totalResults.w1w2LeadCount +
-            ' are leading — open in Results'
+            totals
+              ? 'Total results, ' +
+                totals.total_count +
+                ' results: ' +
+                totals.replicated_count +
+                ' innovations replicated for update, ' +
+                totals.new_w3_count +
+                ' new W3/Bilateral results, ' +
+                totals.w1w2_tagging_count +
+                ' W1/W2 results tagging a Center bilateral project — open in Results'
+              : 'Total results — open in Results'
           "
           class="relative flex min-h-[120px] flex-col overflow-hidden rounded-[14px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[16px] text-white no-underline shadow-md cursor-pointer transition-all duration-200 motion-reduce:transition-none hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
           <!-- Same gradient + glow as the SP Overview Total General card. -->
@@ -114,38 +114,21 @@
             <span class="inline-flex h-[24px] items-center rounded-full border border-white/20 bg-white/15 px-[9px] text-[11px] font-semibold normal-case tracking-normal text-white">Center</span>
           </span>
           <span class="relative z-10 font-mono text-[28px] font-bold leading-none tabular-nums">
-            {{ overview.kpis.totalResults.count }}<span class="ml-[6px] font-sans text-[13px] font-medium text-purple-200">results</span>
+            {{ totals?.total_count ?? '—' }}<span class="ml-[6px] font-sans text-[13px] font-medium text-purple-200">results</span>
           </span>
           <!-- quick/overview-total-results-mockup: breakdown rows with right-aligned count chips. -->
           <span class="relative z-10 mt-[12px] flex flex-col gap-[6px] border-t border-white/20 pt-[10px] text-[12px] text-white/85" data-testid="kpi-total-breakdown">
-            <span class="flex items-center justify-between gap-[8px]" [title]="'Innovations replicated into this phase for update: ' + overview.kpis.totalResults.replicatedCount">
+            <span class="flex items-center justify-between gap-[8px]" [title]="'Results replicated into this phase for update'">
               <span class="min-w-0 truncate">Innovations replicated for update</span>
-              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ overview.kpis.totalResults.replicatedCount }}</span>
+              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totals?.replicated_count ?? '—' }}</span>
             </span>
-            <span class="flex items-center justify-between gap-[8px]" [title]="'Results created via the bilateral ingestion API (W3/Bilateral funding): ' + overview.kpis.totalResults.w3Count">
+            <span class="flex items-center justify-between gap-[8px]" [title]="'W3/Bilateral results of this center not replicated from a previous phase'">
               <span class="min-w-0 truncate">New W3/Bilateral results</span>
-              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ overview.kpis.totalResults.w3Count }}</span>
+              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totals?.new_w3_count ?? '—' }}</span>
             </span>
-            <span class="flex items-center justify-between gap-[8px]" [title]="'W1/W2 results where this center contributes through a bilateral project, not leading: ' + overview.kpis.totalResults.w1w2ContributorCount">
+            <span class="flex items-center justify-between gap-[8px]" [title]="'W1/W2 results that tag any bilateral project of this center'">
               <span class="min-w-0 truncate">W1/W2 results tagging Center bilateral project</span>
-              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ overview.kpis.totalResults.w1w2ContributorCount }}</span>
-            </span>
-          </span>
-          <!-- BOV-DD-4: rendered as non-interactive <span>s (the whole card is already one <a>). -->
-          <span class="relative z-10 mt-[12px] flex flex-wrap items-center gap-1.5" data-testid="kpi-total-replication-badges">
-            <span
-              data-testid="kpi-total-replicated-badge"
-              class="inline-flex items-center gap-1 rounded-[8px] border border-white/15 bg-black/15 px-2.5 py-1 text-[12px] font-semibold"
-              [class]="overview.kpis.totalResults.replicatedCount > 0 ? 'text-white' : 'text-white/70'">
-              <i class="pi pi-sync text-[12px]" aria-hidden="true"></i>
-              <span>{{ overview.kpis.totalResults.replicatedCount }} replicated</span>
-            </span>
-            <span
-              data-testid="kpi-total-new-badge"
-              class="inline-flex items-center gap-1 rounded-[8px] border border-white/15 bg-black/15 px-2.5 py-1 text-[12px] font-semibold"
-              [class]="overview.kpis.totalResults.newCount > 0 ? 'text-white' : 'text-white/70'">
-              <i class="pi pi-plus-circle text-[12px]" aria-hidden="true"></i>
-              <span>+ {{ overview.kpis.totalResults.newCount }} new</span>
+              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totals?.w1w2_tagging_count ?? '—' }}</span>
             </span>
           </span>
         </a>
