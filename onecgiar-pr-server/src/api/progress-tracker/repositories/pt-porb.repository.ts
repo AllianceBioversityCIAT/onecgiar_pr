@@ -177,4 +177,22 @@ export class PtPorbRepository {
         description: row.description ?? '',
       }));
   }
+
+  /**
+   * The program name for a PRMS official code (`SP01` → `Breeding for Tomorrow`), from
+   * the PRMS-owned `clarisa_initiatives` cache. The Progress Tracker keys programs on
+   * the name (its id is `md5("PROGRAM|{name}")[:12]`) and does not know SP codes.
+   * `null` when the code is not in the cache.
+   */
+  async findProgramName(officialCode: string): Promise<string | null> {
+    const rows = await this.dataSource.query(
+      `SELECT ci.name AS name
+         FROM ${env.DB_NAME}.clarisa_initiatives ci
+        WHERE ci.official_code = ?
+        LIMIT 1`,
+      [officialCode],
+    );
+    const name = rows?.[0]?.name;
+    return typeof name === 'string' && name.trim() ? name.trim() : null;
+  }
 }

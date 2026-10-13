@@ -182,4 +182,25 @@ describe('PtPorbRepository', () => {
       ['ind-1', 'IFPRI'],
     ]);
   });
+
+  describe('findProgramName', () => {
+    it('reads the name for an official code from clarisa_initiatives', async () => {
+      const { repository, dataSource } = makeRepository([
+        { name: ' Breeding for Tomorrow ' },
+      ]);
+
+      await expect(repository.findProgramName('SP01')).resolves.toBe(
+        'Breeding for Tomorrow',
+      );
+      const [sql, params] = dataSource.query.mock.calls[0];
+      expect(sql).toMatch(/clarisa_initiatives/);
+      expect(sql).toMatch(/official_code = \?/);
+      expect(params).toEqual(['SP01']);
+    });
+
+    it('answers null when the code is unknown', async () => {
+      const { repository } = makeRepository([]);
+      await expect(repository.findProgramName('SP99')).resolves.toBeNull();
+    });
+  });
 });

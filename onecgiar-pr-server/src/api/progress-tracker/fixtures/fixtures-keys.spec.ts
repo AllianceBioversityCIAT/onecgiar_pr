@@ -8,6 +8,7 @@ import { defer, of } from 'rxjs';
 import { ProgressTrackerService } from '../progress-tracker.service';
 import { ProgressTrackerIndicatorMap } from '../entities/progress-tracker-indicator-map.entity';
 import { Version } from '../../versioning/entities/version.entity';
+import { PtPorbRepository } from '../repositories/pt-porb.repository';
 
 /**
  * `PTM-T-8` — pins the upstream **staging** response shape (`P-14`) as a committed
@@ -86,6 +87,10 @@ describe('progress-tracker fixtures — staging contract key projection (PTM-T-8
           useValue: mappingRepository,
         },
         { provide: getRepositoryToken(Version), useValue: versionRepository },
+        {
+          provide: PtPorbRepository,
+          useValue: { findProgramName: jest.fn() },
+        },
       ],
     }).compile();
 

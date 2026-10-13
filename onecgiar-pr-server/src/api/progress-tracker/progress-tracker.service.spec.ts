@@ -9,6 +9,7 @@ import { Version } from '../versioning/entities/version.entity';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { getProgressTrackerTimeoutMs } from './progress-tracker.config';
+import { PtPorbRepository } from './repositories/pt-porb.repository';
 
 /**
  * `PTM-T-3` — `PTM-AC-1`–`PTM-AC-7`, plus the sentinel leak falsifier named in
@@ -46,6 +47,7 @@ describe('ProgressTrackerService', () => {
   let httpService: { get: jest.Mock };
   let mappingRepository: { findOne: jest.Mock };
   let versionRepository: { findOne: jest.Mock };
+  let porbRepository: { findProgramName: jest.Mock };
   let loggerWarnSpy: jest.SpyInstance;
 
   function allLoggerWarnCalls(): any[][] {
@@ -63,10 +65,13 @@ describe('ProgressTrackerService', () => {
       findOne: jest.fn().mockResolvedValue(ACTIVE_VERSION),
     };
 
+    porbRepository = { findProgramName: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProgressTrackerService,
         { provide: HttpService, useValue: httpService },
+        { provide: PtPorbRepository, useValue: porbRepository },
         {
           provide: getRepositoryToken(ProgressTrackerIndicatorMap),
           useValue: mappingRepository,
@@ -704,6 +709,38 @@ describe('ProgressTrackerService', () => {
         `${BASE_URL}/api/prms/programs/fdb65d1a595c/ready-counts`,
       );
       expect(config.params).toEqual({ min_evidence: 3 });
+    });
+
+    it('translates a PRMS official code (SP01) to the program name, URL-encoded — PT does not know SP codes', async () => {
+      porbRepository.findProgramName.mockResolvedValue('Breeding for Tomorrow');
+      httpService.get.mockReturnValue(of({ data: {} }));
+
+      await service.getProgramReadyCounts('sp01');
+
+      expect(porbRepository.findProgramName).toHaveBeenCalledWith('SP01');
+      expect(httpService.get.mock.calls[0][0]).toBe(
+        `${BASE_URL}/api/prms/programs/Breeding%20for%20Tomorrow/ready-counts`,
+      );
+    });
+
+    it('answers not_found with no upstream call for an official code PRMS cannot name', async () => {
+      porbRepository.findProgramName.mockResolvedValue(null);
+
+      const result = await service.getProgramReadyCounts('SP99');
+
+      expect(result.response.status).toBe('not_found');
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+
+    it('passes a program name or PT hash through without a lookup', async () => {
+      httpService.get.mockReturnValue(of({ data: {} }));
+
+      await service.getProgramReadyCounts('Food Frontiers and Security');
+
+      expect(porbRepository.findProgramName).not.toHaveBeenCalled();
+      expect(httpService.get.mock.calls[0][0]).toContain(
+        '/programs/Food%20Frontiers%20and%20Security/ready-counts',
+      );
     });
 
     /** `D-14` — same gate as `getIndicatorResults`'s equivalent test above. */
