@@ -8,7 +8,10 @@ import { firstValueFrom } from 'rxjs';
 import { ProgressTrackerIndicatorMap } from './entities/progress-tracker-indicator-map.entity';
 import { Version } from '../versioning/entities/version.entity';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
-import { getProgressTrackerTimeoutMs } from './progress-tracker.config';
+import {
+  getProgressTrackerTimeoutMs,
+  getPtReviewThreshold,
+} from './progress-tracker.config';
 import { classifyUpstreamFailure } from './progress-tracker.service';
 import { PtPorbRepository, PtPorbRow } from './repositories/pt-porb.repository';
 import { PtResolveTriggerDto } from './dto/pt-resolve-trigger.dto';
@@ -71,8 +74,6 @@ const RESOLVE_MESSAGES: Record<PtResolveRunStatus, string> = {
 /** One `/resolve` outcome, per row — what {@link resolveOneRow} reports back to the loop. */
 type RowOutcome = 'exact' | 'fuzzy' | 'unmapped' | 'skipped';
 
-/** A fuzzy match scoring below this is flagged for review. */
-export const PT_FUZZY_REVIEW_THRESHOLD = 0.97;
 /** Top two candidate scores closer than this are a tie — flagged for review. */
 export const PT_CANDIDATE_TIE_EPSILON = 0.005;
 
@@ -224,7 +225,7 @@ export class ProgressTrackerResolveService {
    * `PTM-R-21`/`PTM-AC-11`.
    *
    * `needs_review`: `exact` → false; `none` → true; `fuzzy` → true when its score is
-   * below {@link PT_FUZZY_REVIEW_THRESHOLD} (or unknown) or the top two candidates tie
+   * below {@link getPtReviewThreshold} (env `PT_INTEROP_REVIEW_THRESHOLD`, or unknown) or the top two candidates tie
    * within {@link PT_CANDIDATE_TIE_EPSILON}.
    *
    * 🛑 `PTM-R-11`/`PTM-AC-10`: `candidates[]` is read **only** inside the
@@ -277,7 +278,7 @@ export class ProgressTrackerResolveService {
       if (match === 'fuzzy') {
         needsReview =
           matchScore === null ||
-          matchScore < PT_FUZZY_REVIEW_THRESHOLD ||
+          matchScore < getPtReviewThreshold() ||
           this.topCandidatesTie(candidates);
       }
     }

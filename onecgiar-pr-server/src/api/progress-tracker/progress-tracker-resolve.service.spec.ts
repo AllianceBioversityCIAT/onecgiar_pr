@@ -429,6 +429,21 @@ describe('ProgressTrackerResolveService', () => {
       expect(row.needs_review).toBe(false);
     });
 
+    it('honours PT_INTEROP_REVIEW_THRESHOLD (0.95 accepts a 0.96 fuzzy match)', async () => {
+      process.env.PT_INTEROP_REVIEW_THRESHOLD = '0.95';
+      try {
+        const row = await resolveWith(
+          fuzzyWith([
+            { indicator_id: '8006329bfd49', score: 0.96 },
+            { indicator_id: '22ba725f9423', score: 0.5 },
+          ]),
+        );
+        expect(row.needs_review).toBe(false);
+      } finally {
+        delete process.env.PT_INTEROP_REVIEW_THRESHOLD;
+      }
+    });
+
     it('is true for a high-scoring fuzzy match whose top two candidates tie (diff < 0.005)', async () => {
       const row = await resolveWith(
         fuzzyWith([
