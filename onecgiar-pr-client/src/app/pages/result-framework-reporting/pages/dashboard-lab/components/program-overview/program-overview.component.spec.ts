@@ -110,7 +110,7 @@ describe('ProgramOverviewComponent', () => {
       }
     ],
     caption: 'W3/Bilateral results by center and category',
-    subtitle: 'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)'
+    subtitle: 'Bilateral results tagged to this program, excluding Editing (handled by centers)'
   };
 
   beforeEach(async () => {
@@ -189,7 +189,7 @@ describe('ProgramOverviewComponent', () => {
 
   it('shows the bilateral heatmap subtitle disclosing the review-status filter (OVW-R-3)', () => {
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)');
+    expect(text).toContain('Bilateral results tagged to this program, excluding Editing (handled by centers)');
   });
 
   it('uses the programme name in the fallback description', () => {

@@ -218,6 +218,12 @@ const BILATERAL_STATUS_SLOTS: { key: string; label: string; statusIds: number[];
   }
 ];
 
+/**
+ * Editing (1) and its draft alias (8): center-only work, never shown on a Science Program's Overview
+ * (SR-164368, requested by Nicoleta).
+ */
+const BILATERAL_EDITING_STATUS_IDS = new Set<number>([1, 8]);
+
 /** Statuses a Science Program sees on the W3/Bilateral KPI card: Pending Review, Approved, Rejected. */
 const BILATERAL_REVIEW_STATUS_IDS = new Set<number>([5, 6, 7]);
 
@@ -230,7 +236,7 @@ const BILATERAL_DISCONTINUED_SLOT = {
 };
 
 const BILATERAL_HEATMAP_SUBTITLE =
-  'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)';
+  'Bilateral results tagged to this program, excluding Editing (handled by centers)';
 
 /** Resolve a bilateral row's workflow status — prefer `status_id`, fall back to `status_name`. */
 function resolveBilateralStatusId(row: ResultToReview): number {
@@ -2122,9 +2128,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * partitions an array already in the client with no server change and no residual arithmetic
    * (`OSF-DD-3b`). A `null`/empty `acronym` lands in `UNTAGGED` rather than being dropped from
    * every scope. `overviewScope() === null` returns every row unchanged.
+   *
+   * Editing rows are dropped here, once, for every W3/Bilateral card that reads this (centers,
+   * categories, status segments, heatmap): only centers edit bilateral results, so a Science
+   * Program never sees them. `overviewTotalBreakdown` reads the unscoped `bilateralRows()` instead.
    */
   private readonly scopedBilateralRows = computed<ResultToReview[]>(() =>
-    filterRowsByScope(this.bilateralRows(), this.overviewScope(), r => r.acronym)
+    filterRowsByScope(
+      this.bilateralRows().filter(r => !BILATERAL_EDITING_STATUS_IDS.has(resolveBilateralStatusId(r))),
+      this.overviewScope(),
+      r => r.acronym
+    )
   );
 
   /**
@@ -2207,7 +2221,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   });
 
   /**
-   * Bilateral results reporting status segments (Editing, Pending Review, Approved, Rejected).
+   * Bilateral results reporting status segments (Pending Review, Approved, Rejected, Discontinued).
+   * Editing is left out: only centers edit bilateral results, a Science Program never acts on them
+   * (its status ids stay in `slottedIds` so they do not resurface as a fallback segment).
    * W1/W2-only states (Submitted, In QA, Not started) are omitted — bilateral workflow uses its
    * own review path. `OSF-T-5`: reads the scope-narrowed rows, same population as
    * `overviewBilateralCenters` / `overviewBilateralCategories` under any scope (`OSF-AC-4`).
@@ -2239,7 +2255,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       return fallback;
     };
 
-    const segments: OverviewStatusSegment[] = BILATERAL_STATUS_SLOTS.map(slot => {
+    const segments: OverviewStatusSegment[] = BILATERAL_STATUS_SLOTS.filter(slot => slot.key !== 'editing').map(slot => {
       const count = countOf(slot.statusIds);
       const statusName = statusNameOf(slot.statusIds, slot.label);
       return {

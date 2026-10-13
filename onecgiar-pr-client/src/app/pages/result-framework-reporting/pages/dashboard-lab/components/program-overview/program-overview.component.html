@@ -1599,7 +1599,7 @@
 
     @if (bilateralHeatmap()?.rows?.length || bilateralLoading()) {
       <span class="mb-[16px] text-[13px] font-normal text-[var(--pr-text-muted)]">
-        All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)
+        Bilateral results tagged to this program, excluding Editing (handled by centers)
       </span>
       @if (bilateralHeatmap()?.shownOf; as shownOf) {
         <span class="mb-[12px] text-[12px] font-normal text-[var(--pr-text-muted)]">
