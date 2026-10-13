@@ -41,6 +41,10 @@ const PT_NAME_BY_KEY = new Map<string, string>(
  * pre-split spellings to the **Bioversity** side (`CENTER-02`) to keep history in place, so
  * the two modules deliberately disagree on these aliases. Only the CIAT-side and
  * Bioversity-side spellings are unambiguous.
+ *
+ * 🛑 Open decision (2026-10-13): `ABC` is left on `CIAT (Alliance)` on purpose until the owner
+ * confirms which PT center an `ABC` target belongs to. Do not move it to Bioversity to "match" the
+ * bilateral module without that answer — both readings are plausible and only the business knows.
  */
 const ALLIANCE_ALIASES: Record<string, string> = {
   CIAT: 'CIAT (Alliance)',
