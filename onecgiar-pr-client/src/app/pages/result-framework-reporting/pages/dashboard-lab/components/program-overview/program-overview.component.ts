@@ -528,15 +528,6 @@ export class ProgramOverviewComponent {
     if (row.code) this.openAow.emit(row.code);
   }
 
-  readonly contributingCentersCount = computed(() => {
-    const centers = this.bilateralCenters();
-    return centers.filter(c => c.name !== 'Not specified').length || centers.length;
-  });
-
-  readonly w1w2SubmittedCount = computed(() =>
-    this.statusSegments().find(s => s.key === 'submitted')?.count ?? 0
-  );
-
   /**
    * W3/Bilateral results in the review path (Pending Review + Approved + Rejected). KPI 3 and the
    * W3/Bilateral section-tab badge show only this: a Science Program reviews bilateral results, it

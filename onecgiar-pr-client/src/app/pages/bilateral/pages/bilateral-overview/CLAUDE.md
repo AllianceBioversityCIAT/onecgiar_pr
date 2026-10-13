@@ -22,8 +22,10 @@ The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, 
   "New W3/Bilateral results" = `w3Count` (all W3, not only non-replicated — user's call),
   "W1/W2 results tagging Center bilateral project" = `w1w2ContributorCount` — then the replicated /
   `+ N new` pills. The lead/contributing lines were dropped from the visible card (still in the
-  `aria-label`); `w1w2LeadCount` is no longer rendered. The card keeps its primary gradient — the
-  mockup's purple was explicitly NOT adopted. A progress-bar redesign (`OTR-T-1`) was tried and
+  `aria-label`); `w1w2LeadCount` is no longer rendered. **Since 2026-10-13 (SR-164368, user's call) the card uses
+  the SP Overview Total General purple** (`from-[#4a1d96] via-[#5c24b8] to-[#793ce8]` + two blurred
+  glows, children `relative z-10`) — this reverses the earlier "keep the primary gradient" call;
+  keep both cards in lockstep. A progress-bar redesign (`OTR-T-1`) was tried and
   reverted earlier; don't re-attempt without re-confirming visual direction.
 - **The page computes no figure itself** (`COV-DD-1`). Every number rendered comes out of
   `bilateral-overview.aggregate.ts`'s `buildOverviewModel` — the component only wires signals and
@@ -111,4 +113,4 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
   pages — not audited beyond this folder.
 - Visual parity vs the center mockup (Total results card): human browser check pending.
 
-**Verified:** 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)
+**Verified:** 2026-10-13 · qa-development-2026-ss · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)

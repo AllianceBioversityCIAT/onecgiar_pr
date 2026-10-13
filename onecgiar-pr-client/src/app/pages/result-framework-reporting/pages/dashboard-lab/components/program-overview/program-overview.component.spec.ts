@@ -727,7 +727,7 @@ describe('ProgramOverviewComponent', () => {
       expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(6);
     });
 
-    it('W3/Bilateral KPI counts Pending Review + Approved + Rejected only (Editing is center-only)', () => {
+    it('bilateralReviewCount (W3/Bilateral tab badge) counts Pending Review + Approved + Rejected only', () => {
       const seg = (key: string, count: number): StatusSegment => ({
         key, label: key, count, bg: '', fg: '', statusName: key, link: null
       });
@@ -738,14 +738,9 @@ describe('ProgramOverviewComponent', () => {
         seg('rejected', 1),
         seg('discontinued', 4)
       ]);
-      fixture.componentRef.setInput('bilateralReviewCategoryCount', 2);
       fixture.detectChanges();
 
       expect(component.bilateralReviewCount()).toBe(6);
-      const card: HTMLElement = fixture.nativeElement.querySelector('[data-testid="overview-kpi-bilateral"]');
-      expect(card.querySelector('.pr-figure')!.textContent!.trim()).toBe('6');
-      expect(card.textContent).toContain('2 categories');
-      expect(card.textContent).not.toContain('% approved');
     });
 
     /**
@@ -905,19 +900,19 @@ describe('ProgramOverviewComponent', () => {
       expect(component.bilateralStatusTotal()).toBe(0);
       // STG-DD-3: headline = replicated + new from the input (default zeros), never the segments.
       expect(component.programResultsTotal()).toBe(0);
-      expect(component.contributingCentersCount()).toBe(4);
       expect(component.aowStats().pct).toBe(30);
       expect(component.aowStats().count).toBe(2);
     });
 
-    it('renders 5 KPI card buttons with proper content', () => {
-      const text = fixture.nativeElement.textContent as string;
-      expect(text).toContain('Total General');
-      expect(text).toContain('W1/W2 Results');
-      expect(text).toContain('W3 / Bilateral');
-      expect(text).toContain('Contributing Centers');
-      expect(text).toContain('Areas of Work');
-      expect(fixture.nativeElement.querySelectorAll('[data-testid^="overview-kpi-"]:not([data-testid*="-breakdown"])').length).toBe(5);
+    // SR-164368: the W1/W2, W3/Bilateral and Contributing Centers cards were removed; Total General carries those figures.
+    it('renders only the Total General and Areas of Work KPI cards', () => {
+      const el = fixture.nativeElement as HTMLElement;
+      const ids = Array.from(el.querySelectorAll('[data-testid^="overview-kpi-"]:not([data-testid*="-breakdown"])')).map(c => c.getAttribute('data-testid'));
+      expect(ids).toEqual(['overview-kpi-total', 'overview-kpi-aow']);
+      expect(el.querySelector('[data-testid="overview-kpi-w1w2"]')).toBeNull();
+      expect(el.querySelector('[data-testid="overview-kpi-bilateral"]')).toBeNull();
+      expect(el.querySelector('[data-testid="overview-kpi-centers"]')).toBeNull();
+      expect(el.textContent).not.toContain('Contributing Centers');
     });
 
     it('filters visible sections when a section tab is clicked', () => {
@@ -977,28 +972,6 @@ describe('ProgramOverviewComponent', () => {
    */
   // @akili-spec changes/reporting-entry-hub
   describe('KPI cards section filtering (REH-R-7 / REH-R-8 / REH-AC-15)', () => {
-    it('(a) clicking KPI card 3 (W3/Bilateral) sets activeSection to "bilateral" without opening hub', () => {
-      const emitted: string[] = [];
-      component.focusHub.subscribe(code => emitted.push(code));
-
-      fixture.nativeElement.querySelector('[data-testid="overview-kpi-bilateral"]')?.dispatchEvent(new Event('click'));
-      fixture.detectChanges();
-
-      expect(emitted).toEqual([]);
-      expect(component.activeSection()).toBe('bilateral');
-    });
-
-    it('(a-cont) clicking KPI card 4 (Contributing Centers) sets activeSection to "bilateral" without opening hub', () => {
-      const emitted: string[] = [];
-      component.focusHub.subscribe(code => emitted.push(code));
-
-      fixture.nativeElement.querySelector('[data-testid="overview-kpi-centers"]')?.dispatchEvent(new Event('click'));
-      fixture.detectChanges();
-
-      expect(emitted).toEqual([]);
-      expect(component.activeSection()).toBe('bilateral');
-    });
-
     it('(b) clicking a row\'s Report button yields exactly one openAow("AOW02") emission (its own stopPropagation guard, preserved verbatim)', () => {
       // @akili-spec changes/overview-aow-progress-hero — OAH-T-3 deliberate edit: the hero row is
       // now fed by `richRows` (design DD-4), not the thin `aowProgress` input, which stays wired
@@ -1069,13 +1042,8 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('bilateralLoading', true);
       fixture.detectChanges();
       const el = fixture.nativeElement as HTMLElement;
-      const cards = [
-        el.querySelector('[data-testid="overview-kpi-total"]'),
-        el.querySelector('[data-testid="overview-kpi-w1w2"]'),
-        el.querySelector('[data-testid="overview-kpi-bilateral"]'),
-        el.querySelector('[data-testid="overview-kpi-centers"]')
-      ].filter(Boolean) as HTMLElement[];
-      expect(cards.length).toBe(4);
+      const cards = [el.querySelector('[data-testid="overview-kpi-total"]')].filter(Boolean) as HTMLElement[];
+      expect(cards.length).toBe(1);
       for (const card of cards) {
         expect(card.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
         expect(card.querySelector('.pr-figure')).toBeNull();
@@ -1123,12 +1091,11 @@ describe('ProgramOverviewComponent', () => {
       expect(q('overview-kpi-total')!.querySelector('[title="Program-wide W1/W2 results in this phase"]')).not.toBeNull();
     });
 
-    it('KPI 1 text has no W3/Bilateral other than the awaiting-review label; KPI 3 still renders its figure', () => {
+    it('KPI 1 text has no W3/Bilateral other than the awaiting-review label', () => {
       fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 2 });
       fixture.detectChanges();
       const text = q('overview-kpi-total')!.textContent!.replace('W3/Bilateral results awaiting review', '');
       expect(text).not.toContain('W3/Bilateral');
-      expect(q('overview-kpi-bilateral')!.querySelector('.pr-figure')).not.toBeNull();
     });
 
     it('shows no figure and no chip while loading', () => {
