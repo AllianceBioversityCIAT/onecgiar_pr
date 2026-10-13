@@ -125,3 +125,8 @@
 - Active results with `status_id IS NULL`: **0**. This closes the `PNR-T-1` NULL-status advisory for test; repeat the check on prod.
 - Primary history rows (ACCEPTED/DECLINED, active) on results in a preparation status, i.e. the cards the fix hides: **22 rows, all Editing (1)**. There are no Rejected (7) or Draft (8) rows. Result 9800 is listed (initiative 51, `requested_date` 2026-10-13 13:21), which matches the reported case. The dates run from 2026-10-01 to 2026-10-13, so the read-side filter covers legacy rows without a data script (`PNR-R-1` "Existing production rows").
 - Still pending on PRTest after deploy: the UI checks HITL 1–3 (tasks §4).
+
+## HITL UI validation — 2026-10-13 (PRTest, user)
+
+- The user reported the PRTest validation as passed: **"ya validé"**. This covers tasks §4 HITL 1–3 (Editing result shows no primary card; Submit shows it under "Today" with the "Bilateral Result Submitted" notice; no duplicates across pages). Commit under test: `54cbcd85d`.
+- Spec status: **tested**, ready for `/akili-archive`.

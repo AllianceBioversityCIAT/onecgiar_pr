@@ -8,7 +8,7 @@
 | Linked spec | `requirements.md` + `design.md` (this folder) |
 | Depth | Lite · Bug Mode |
 | Approval Mode | gated |
-| Status | complete (HITL pending) |
+| Status | complete · tested (HITL passed 2026-10-13) |
 | Budget (design §11) | 2 tasks · ~45 prod LOC + ~180 test LOC · 1 review round — escalate above 3 tasks / ~90 prod LOC / 2 rounds |
 
 ## 2. Pre-flight checklist
