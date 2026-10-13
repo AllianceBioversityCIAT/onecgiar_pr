@@ -1,6 +1,6 @@
 # lab-report-form
 
-**Verified:** 2026-09-22 · JuankCadavid/progress-tracker-pull-bridge (spec `changes/progress-tracker-pull-bridge/progress-tracker-results-browse`, PTB-T-1–T-7: third entry mode `progress-tracker`, `app-pt-results-browse`, Create-and-continue-only for PT picks, short tab labels Browse/Manual/Tracker under a 640px container); prior: 2026-09-11 · qa-development-2026-ss (spec `changes/emerging-creation-hide-indicator-ui`, EHU-T-1: Card 2 + the ToC-attribution note are gated behind `!isEmerging()` — see "Trampa: Card 2/Card 3 comparten un solo `@if`" below); prior: 2026-09-11 · qa-development-2026-ss (spec `bugfix/emerging-contribution-not-required`, ECN-T-1: `missingFields()` no longer requires `contribution_to_indicator_target` when `isEmerging()` is true); prior: 2026-09-10 · qa-development-2026 · 2a4d965e9 (KPM-T-8, spec `changes/kp-multi-repository-browse`: Browse tab is now `Browse repositories`, live across CGSpace/MELSpace/WorldFish); prior: 2026-09-09 · qa-development-2026-ss · b1ca9ef1f (ERC-T-2); prior: 2026-09-05 · qa-development-2026 · b2d5f1c31
+**Verified:** 2026-10-13 · JuankCadavid/pt-center-mapping (PT requests carry the row center — `ptCenter`, see Entry modes); prior: 2026-09-22 · JuankCadavid/progress-tracker-pull-bridge (spec `changes/progress-tracker-pull-bridge/progress-tracker-results-browse`, PTB-T-1–T-7: third entry mode `progress-tracker`, `app-pt-results-browse`, Create-and-continue-only for PT picks, short tab labels Browse/Manual/Tracker under a 640px container); prior: 2026-09-11 · qa-development-2026-ss (spec `changes/emerging-creation-hide-indicator-ui`, EHU-T-1: Card 2 + the ToC-attribution note are gated behind `!isEmerging()` — see "Trampa: Card 2/Card 3 comparten un solo `@if`" below); prior: 2026-09-11 · qa-development-2026-ss (spec `bugfix/emerging-contribution-not-required`, ECN-T-1: `missingFields()` no longer requires `contribution_to_indicator_target` when `isEmerging()` is true); prior: 2026-09-10 · qa-development-2026 · 2a4d965e9 (KPM-T-8, spec `changes/kp-multi-repository-browse`: Browse tab is now `Browse repositories`, live across CGSpace/MELSpace/WorldFish); prior: 2026-09-09 · qa-development-2026-ss · b1ca9ef1f (ERC-T-2); prior: 2026-09-05 · qa-development-2026 · b2d5f1c31
 
 ## Qué es
 El formulario de creación de resultado que vive **dentro del aside** (`indicator-drawer`). Copia
@@ -116,6 +116,11 @@ no switcher and no PT panel.
   POST. Banner "Drafted from Progress Tracker proposal" stays visible outside every `[hidden]`
   panel. Provenance goes in `buildCreateResultPayload` as `progress_tracker_provenance` plus the
   draft narrative in `toc_progressive_narrative`.
+- **Center (2026-10-13):** PT keeps one KPI per (indicator, center), so the request carries the
+  row center: `ptCenterOptions()` = the row `center_acronym`, else the deduped
+  `targets_by_center.centers[]`. One option → `ptCenter()` uses it; several → an `app-pr-select`
+  ("Center you report for") above the panel sets `ptChosenCenter` and `app-pt-results-browse`
+  waits (`awaitingCenter`, state `choose_center`, no fetch); none → no center sent.
 - Geometry gate: `lab-report-form.tabs.cy.ts` (rendered rects, not classes). Pre-existing footer
   bleed at narrow widths is gap `PTB-G-4`, not asserted.
 

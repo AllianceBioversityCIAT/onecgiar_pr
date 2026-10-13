@@ -148,6 +148,43 @@ describe('PtResultsBrowseComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-test="pt-proposal-A:1"]')).toBeNull();
   });
 
+  describe('center of the reported row (PT keeps one KPI per indicator and center)', () => {
+    it('sends the center with the request when the host gives one', () => {
+      fixture.componentRef.setInput('center', 'CIAT');
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults).toHaveBeenCalledWith(123, {}, 'CIAT');
+    });
+
+    it('while awaiting a center, shows the prompt and fetches nothing; fetches once it arrives', () => {
+      fixture.componentRef.setInput('awaitingCenter', true);
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('choose_center');
+      expect(mockResultsApiService.GET_progressTrackerResults).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('[data-test="pt-choose-center"]')).toBeTruthy();
+
+      fixture.componentRef.setInput('awaitingCenter', false);
+      fixture.componentRef.setInput('center', 'IFPRI');
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults).toHaveBeenCalledWith(123, {}, 'IFPRI');
+      expect(component.status()).toBe('not_found');
+    });
+
+    it('re-fetches when the center changes for the same indicator', () => {
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.componentRef.setInput('center', 'CIAT');
+      fixture.detectChanges();
+      fixture.componentRef.setInput('center', 'IFPRI');
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults.mock.calls.map(c => c[2])).toEqual(['CIAT', 'IFPRI']);
+    });
+  });
+
   describe('loading state (PTB-AC-3)', () => {
     it('renders the loading state with the Manual escape reachable next to the spinner, not hidden behind it', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(new Subject());

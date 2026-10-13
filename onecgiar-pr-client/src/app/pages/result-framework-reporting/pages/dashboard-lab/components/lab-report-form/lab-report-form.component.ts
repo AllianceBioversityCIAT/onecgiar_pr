@@ -383,6 +383,30 @@ export class LabReportFormComponent {
   /** `related_node_id` is the string the Progress Tracker route expects (server decision block, `progress-tracker.service.ts`). */
   readonly ptTocIndicatorId = computed<string | number | null>(() => this.indicator()?.related_node_id ?? null);
   /**
+   * Centers the Progress Tracker request can be made for. PT keeps one KPI per (indicator, center):
+   * the row's own `center_acronym` when it has one; otherwise the centers of a shared target
+   * (`targets_by_center.centers[]`) — one is used directly, several make `app-pt-results-browse`
+   * ask which one the user reports for.
+   */
+  readonly ptCenterOptions = computed<string[]>(() => {
+    const ind = this.indicator();
+    const own = (ind?.center_acronym ?? '').trim();
+    if (own) return [own];
+    const shared = (ind?.targets_by_center?.centers ?? []).map((c: any) => (c?.center_acronym ?? '').trim()).filter(Boolean);
+    return [...new Set<string>(shared)];
+  });
+  readonly ptCenterSelectOptions = computed(() => this.ptCenterOptions().map(acronym => ({ acronym })));
+  /** The user's pick among several shared-target centers; kept across indicators while it is still an option. */
+  readonly ptChosenCenter = signal<string | null>(null);
+  /** The center sent to the Progress Tracker request; `null` = none needed, or not chosen yet. */
+  readonly ptCenter = computed<string | null>(() => {
+    const options = this.ptCenterOptions();
+    if (options.length === 1) return options[0];
+    const chosen = this.ptChosenCenter();
+    return chosen && options.includes(chosen) ? chosen : null;
+  });
+  readonly ptAwaitingCenter = computed(() => this.ptCenterOptions().length > 1 && !this.ptCenter());
+  /**
    * Whether the indicator already fixes its result type — same rule the picker itself uses
    * (`resolvedIndicatorResultTypeId`, `needsCategoryChoice`). `PTB-T-5` is the actual type guard on
    * pre-fill; here it is only passed through as an input.

@@ -1681,6 +1681,51 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
     missing_info: []
   };
 
+  describe('Progress Tracker center of the row', () => {
+    it('uses the row center_acronym', async () => {
+      const fix = await mountPt({ indicator: { ...nonKpIndicator, center_acronym: ' CIAT ' }, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      expect(fix.componentInstance.ptCenterOptions()).toEqual(['CIAT']);
+      expect(fix.componentInstance.ptCenter()).toBe('CIAT');
+      expect(fix.componentInstance.ptAwaitingCenter()).toBe(false);
+    });
+
+    it('uses the only center of a shared target', async () => {
+      const fix = await mountPt({
+        indicator: { ...nonKpIndicator, targets_by_center: { centers: [{ center_acronym: 'IFPRI' }, { center_acronym: 'IFPRI' }] } },
+        tocNode: { result_level_id: OUTPUT_LEVEL }
+      });
+      expect(fix.componentInstance.ptCenter()).toBe('IFPRI');
+    });
+
+    it('with several shared-target centers, awaits the chosen one and shows the picker on the Progress Tracker tab', async () => {
+      stubPtResults();
+      const fix = await mountPt({
+        indicator: { ...nonKpIndicator, targets_by_center: { centers: [{ center_acronym: 'CIAT' }, { center_acronym: 'ILRI' }] } },
+        tocNode: { result_level_id: OUTPUT_LEVEL }
+      });
+      const c = fix.componentInstance;
+      expect(c.ptCenter()).toBeNull();
+      expect(c.ptAwaitingCenter()).toBe(true);
+
+      c.onOpenProgressTrackerTab();
+      fix.detectChanges();
+      expect(fix.nativeElement.querySelector('[data-testid="pt-center-picker"]')).toBeTruthy();
+
+      c.ptChosenCenter.set('ILRI');
+      expect(c.ptCenter()).toBe('ILRI');
+      expect(c.ptAwaitingCenter()).toBe(false);
+
+      c.ptChosenCenter.set('IRRI'); // not an option of this row
+      expect(c.ptCenter()).toBeNull();
+    });
+
+    it('with no center anywhere, sends none and does not wait', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      expect(fix.componentInstance.ptCenter()).toBeNull();
+      expect(fix.componentInstance.ptAwaitingCenter()).toBe(false);
+    });
+  });
+
   it('PTB-AC-1: non-KP indicator renders exactly two tabs, no Browse repositories, defaulted to Manual entry with a non-empty tab body', async () => {
     const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
 
