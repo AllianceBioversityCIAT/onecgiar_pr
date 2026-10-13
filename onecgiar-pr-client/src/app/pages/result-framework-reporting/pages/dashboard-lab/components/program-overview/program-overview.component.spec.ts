@@ -727,6 +727,27 @@ describe('ProgramOverviewComponent', () => {
       expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(6);
     });
 
+    it('W3/Bilateral KPI counts Pending Review + Approved + Rejected only (Editing is center-only)', () => {
+      const seg = (key: string, count: number): StatusSegment => ({
+        key, label: key, count, bg: '', fg: '', statusName: key, link: null
+      });
+      fixture.componentRef.setInput('bilateralStatusSegments', [
+        seg('editing', 9),
+        seg('pending', 3),
+        seg('approved', 2),
+        seg('rejected', 1),
+        seg('discontinued', 4)
+      ]);
+      fixture.componentRef.setInput('bilateralReviewCategoryCount', 2);
+      fixture.detectChanges();
+
+      expect(component.bilateralReviewCount()).toBe(6);
+      const card: HTMLElement = fixture.nativeElement.querySelector('[data-testid="overview-kpi-bilateral"]');
+      expect(card.querySelector('.pr-figure')!.textContent!.trim()).toBe('6');
+      expect(card.textContent).toContain('2 categories');
+      expect(card.textContent).not.toContain('% approved');
+    });
+
     /**
      * `changes/overview-phase-filter` OPF-T-4 (Leader remediation, OPF-R-2 "AND IT MUST show a
      * loading state on each card"): same fix as the W1/W2 meter donut above, for the W3/Bilateral

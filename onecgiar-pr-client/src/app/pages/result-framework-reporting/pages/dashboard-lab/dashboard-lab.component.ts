@@ -218,6 +218,9 @@ const BILATERAL_STATUS_SLOTS: { key: string; label: string; statusIds: number[];
   }
 ];
 
+/** Statuses a Science Program sees on the W3/Bilateral KPI card: Pending Review, Approved, Rejected. */
+const BILATERAL_REVIEW_STATUS_IDS = new Set<number>([5, 6, 7]);
+
 const BILATERAL_DISCONTINUED_SLOT = {
   key: 'discontinued',
   label: 'Discontinued',
@@ -2123,6 +2126,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly scopedBilateralRows = computed<ResultToReview[]>(() =>
     filterRowsByScope(this.bilateralRows(), this.overviewScope(), r => r.acronym)
   );
+
+  /**
+   * Distinct categories among the scoped W3/Bilateral rows in the review path (Pending Review,
+   * Approved, Rejected) — the W3/Bilateral KPI card's sub-line. Science Programs never see Editing:
+   * only centers edit bilateral results.
+   */
+  readonly overviewBilateralReviewCategoryCount = computed(() => {
+    const names = new Set<string>();
+    for (const row of this.scopedBilateralRows()) {
+      if (!BILATERAL_REVIEW_STATUS_IDS.has(resolveBilateralStatusId(row))) continue;
+      const name = row.indicator_category?.trim();
+      if (name) names.add(name);
+    }
+    return names.size;
+  });
 
   /** Only the rows where this programme is the primary submitter (role id '1'). */
   private readonly bilateralPrimaryRows = computed(() =>

@@ -139,15 +139,12 @@
       } @else {
       <div class="flex items-baseline gap-[8px]">
         <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
-          {{ bilateralStatusTotal() }}
+          {{ bilateralReviewCount() }}
         </span>
         <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
       </div>
       <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
-        <span class="h-[7px] w-[7px] rounded-full bg-[var(--pr-status-approved-fg)]"></span>
-        <span>{{ bilateralApprovedPercent() }}% approved</span>
-        <span class="text-[var(--pr-text-muted)]">·</span>
-        <span>{{ bilateralCategories().length }} categories</span>
+        <span>{{ bilateralReviewCategoryCount() }} categories</span>
       </div>
       }
     </button>
@@ -267,9 +264,9 @@
           ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
           : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
         <span>W3 / Bilateral</span>
-        @if (bilateralStatusTotal() > 0) {
+        @if (bilateralReviewCount() > 0) {
           <span class="rounded-full bg-[var(--pr-border)] px-[7px] py-[1px] text-[11px] font-bold tabular-nums">
-            {{ bilateralStatusTotal() }}
+            {{ bilateralReviewCount() }}
           </span>
         }
       </button>
