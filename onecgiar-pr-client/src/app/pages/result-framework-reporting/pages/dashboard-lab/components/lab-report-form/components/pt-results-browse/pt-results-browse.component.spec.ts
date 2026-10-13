@@ -314,6 +314,30 @@ describe('PtResultsBrowseComponent', () => {
   });
 
   describe('empty state (PTB-AC-5)', () => {
+    it('treats generated_by.mode === template as no proposals, even when results[] is filled', () => {
+      const envelope: any = okEnvelope([sampleProposal]);
+      envelope.response.generated_by = { mode: 'template', fallback_reason: 'no_evidence' };
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(envelope));
+
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('empty');
+      expect(component.proposals()).toEqual([]);
+      expect(fixture.nativeElement.querySelector('[data-test="pt-empty"]')).toBeTruthy();
+    });
+
+    it('still lists the proposals of an ai-generated envelope', () => {
+      const envelope: any = okEnvelope([sampleProposal]);
+      envelope.response.generated_by = { mode: 'ai' };
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(envelope));
+
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('results');
+    });
+
     it('renders the empty state, not an error, when status is ok with zero results', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([])));
 

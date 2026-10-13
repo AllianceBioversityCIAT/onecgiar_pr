@@ -114,8 +114,9 @@ no switcher and no PT panel.
   it (`PTB-R-22`). Fetches through `ResultsApiService.GET_progressTrackerResults` on the PRMS
   origin only. "Use this result" pre-fills via `onPtResultSelected` / `ptDraft` and does **not**
   POST. Banner "Drafted from Progress Tracker proposal" stays visible outside every `[hidden]`
-  panel. Provenance goes in `buildCreateResultPayload` as `progress_tracker_provenance` plus the
-  draft narrative in `toc_progressive_narrative`.
+  panel. Provenance goes in `buildCreateResultPayload` as `progress_tracker_provenance`; the draft
+  text goes to `result.description` and `toc_progressive_narrative` carries only the origin note.
+  An envelope with `generated_by.mode === 'template'` renders as "nothing to propose" (`empty`).
 - **Center (2026-10-13):** PT keeps one KPI per (indicator, center), so the request carries the
   row center: `ptCenterOptions()` = the row `center_acronym`, else the deduped
   `targets_by_center.centers[]`. One option → `ptCenter()` uses it; several → an `app-pr-select`

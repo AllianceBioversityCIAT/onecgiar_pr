@@ -197,7 +197,10 @@ export class PtResultsBrowseComponent {
     this.ptUrl.set(body.source?.pt_url ?? null);
 
     if (body.status === 'ok') {
-      const raw = Array.isArray(body.results) ? body.results : [];
+      // `generated_by.mode === 'template'`: PT had no evidence to draft from and returned blank
+      // templates — those are not proposals, so the panel shows "nothing to propose".
+      const isTemplate = (body.generated_by as { mode?: unknown } | null | undefined)?.mode === 'template';
+      const raw = !isTemplate && Array.isArray(body.results) ? body.results : [];
       const mapped = raw.map(item => this.toProposal(item, body));
       this.proposals.set(mapped);
       this.status.set(mapped.length > 0 ? 'results' : 'empty');
