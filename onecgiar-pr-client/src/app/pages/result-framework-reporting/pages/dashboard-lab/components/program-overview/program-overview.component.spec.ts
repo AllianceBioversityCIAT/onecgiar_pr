@@ -1113,11 +1113,28 @@ describe('ProgramOverviewComponent', () => {
       expect(q('overview-kpi-total-breakdown')).toBeNull();
     });
 
-    it('clicking KPI 1 sets activeSection to all', () => {
-      component.setActiveSection('w1w2');
-      q('overview-kpi-total')!.dispatchEvent(new Event('click'));
+    // SR-164368: the breakdown rows reopen the sections the removed W1/W2 and W3/Bilateral cards opened.
+    it.each([
+      ['replicated', 'w1w2'],
+      ['new', 'w1w2'],
+      ['pending-review', 'bilateral']
+    ] as const)('clicking the %s row toggles the %s section (second click back to all)', (row, section) => {
+      const btn = q(`overview-kpi-total-breakdown-${row}`)!;
+      expect(btn.tagName).toBe('BUTTON');
+
+      btn.click();
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe(section);
+      expect(btn.getAttribute('aria-pressed')).toBe('true');
+
+      btn.click();
       fixture.detectChanges();
       expect(component.activeSection()).toBe('all');
+      expect(btn.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('KPI 1 is a container, not a button (its rows are the buttons)', () => {
+      expect(q('overview-kpi-total')!.tagName).toBe('DIV');
     });
   });
 

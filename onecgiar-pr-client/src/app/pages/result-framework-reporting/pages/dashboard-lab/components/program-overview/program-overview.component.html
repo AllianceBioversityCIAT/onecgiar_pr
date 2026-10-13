@@ -28,13 +28,14 @@
 <div class="grid grid-cols-12 content-start gap-[12px] sm:gap-[16px] p-[16px] sm:p-[24px] lg:p-[32px]">
   <!-- KPI Summary Cards: Totals and key health metrics -->
   <div class="col-span-12 grid grid-cols-1 gap-[16px] sm:grid-cols-2 xl:grid-cols-3">
-    <!-- KPI 1: Total General (program-wide W1/W2 replicated + new, with pending-review W3/Bilateral row) -->
-    <button
-      type="button"
+    <!--
+      KPI 1: Total General (program-wide W1/W2 replicated + new, with pending-review W3/Bilateral row).
+      SR-164368: a container, not a button — each breakdown row is its own button that toggles the
+      section the removed W1/W2 and W3/Bilateral cards used to open (rows can't nest in a button).
+    -->
+    <div
       data-testid="overview-kpi-total"
-      (click)="setActiveSection('all')"
-      class="group relative flex min-h-[135px] cursor-pointer flex-col justify-between gap-[12px] overflow-hidden rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[18px] text-left transition-all duration-200 shadow-md hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 hover:-translate-y-0.5 focus-visible:outline-none xl:col-span-2"
-      [class]="activeSection() === 'all' ? 'ring-2 ring-purple-300 shadow-lg' : ''">
+      class="relative flex min-h-[135px] flex-col justify-between gap-[12px] overflow-hidden rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[18px] text-left shadow-md xl:col-span-2">
       <div class="pointer-events-none absolute -right-[24px] -top-[24px] h-[110px] w-[110px] rounded-full bg-white/15 blur-[20px]"></div>
       <div class="pointer-events-none absolute -left-[20px] -bottom-[20px] h-[90px] w-[90px] rounded-full bg-purple-900/40 blur-[18px]"></div>
 
@@ -60,21 +61,27 @@
           <span class="text-[13px] font-medium text-purple-200">results</span>
         </div>
         <div class="relative z-10 mt-[12px] flex flex-col gap-[6px] border-t border-white/20 pt-[10px] text-[12px] text-purple-100" data-testid="overview-kpi-total-breakdown">
-          <div class="flex items-center justify-between gap-[8px]" data-testid="overview-kpi-total-breakdown-replicated" title="W1/W2 results carried over from a previous phase for update">
+          <button type="button" (click)="setActiveSection('w1w2')" [attr.aria-pressed]="activeSection() === 'w1w2'" [class.bg-white/15]="activeSection() === 'w1w2'"
+            class="-mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            data-testid="overview-kpi-total-breakdown-replicated" title="W1/W2 results carried over from a previous phase for update">
             <span class="min-w-0 truncate">Innovations replicated for update</span>
             <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().replicated }}</span>
-          </div>
-          <div class="flex items-center justify-between gap-[8px]" data-testid="overview-kpi-total-breakdown-new" title="W1/W2 results created in this phase">
+          </button>
+          <button type="button" (click)="setActiveSection('w1w2')" [attr.aria-pressed]="activeSection() === 'w1w2'" [class.bg-white/15]="activeSection() === 'w1w2'"
+            class="-mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            data-testid="overview-kpi-total-breakdown-new" title="W1/W2 results created in this phase">
             <span class="min-w-0 truncate">New results</span>
             <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().new }}</span>
-          </div>
-          <div class="flex items-center justify-between gap-[8px]" data-testid="overview-kpi-total-breakdown-pending-review" title="W3/Bilateral results tagged to this program waiting for your review (Pending Review)">
+          </button>
+          <button type="button" (click)="setActiveSection('bilateral')" [attr.aria-pressed]="activeSection() === 'bilateral'" [class.bg-white/15]="activeSection() === 'bilateral'"
+            class="-mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            data-testid="overview-kpi-total-breakdown-pending-review" title="W3/Bilateral results tagged to this program waiting for your review (Pending Review)">
             <span class="min-w-0 truncate">W3/Bilateral results awaiting review</span>
             <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().pendingReview }}</span>
-          </div>
+          </button>
         </div>
       }
-    </button>
+    </div>
 
     <!-- KPI 2: Areas of Work Progress -->
     <button
