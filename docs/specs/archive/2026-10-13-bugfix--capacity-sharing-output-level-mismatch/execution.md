@@ -31,7 +31,7 @@
 
 **Final verification result:** red test confirmed, matching the falsifier exactly; lint clean.
 
-**Not yet done:** commit — deferred to land together with `BIL-T-2` in one PR per `tasks.md` §8 Roll-back plan; held pending explicit user go-ahead per the project's standing "do not commit unless explicitly asked" rule (root `AGENTS.md` §6).
+**Commit:** landed together with `BIL-T-2` — see below.
 
 ### BIL-T-2 — Fix the inverted `resultLevelName` mapping
 
@@ -59,7 +59,9 @@
 
 **Final verification result:** full spec file green (151/151), lint clean, Reviewer PASS.
 
-**Not yet done:** commit (both `BIL-T-1` + `BIL-T-2`, one PR per `tasks.md` §8) and the folder-doc re-stamp (ADVISORY 1 above) — both held pending explicit user go-ahead to commit (root `AGENTS.md` §6). Manual QA on staging/test (`tasks.md` §6 Rollout) also not yet run — requires a deployed environment, out of this session's reach.
+**Commit:** `3c53f26b7` — `🔧 fix(bilateral-result-creator): correct inverted result-level breadcrumb label (3=Outcome, 4=Output)` — single commit covering `BIL-T-1` + `BIL-T-2`, per explicit user instruction (root `AGENTS.md` §6 standing rule otherwise holds commits for explicit ask). Includes the folder-doc re-stamp (ADVISORY 1) in `onecgiar-pr-result-creator/CLAUDE.md`. `onecgiar-pr-client/package-lock.json` deliberately excluded from staging (unrelated pre-existing modification, per Reviewer ADVISORY 2).
+
+**Not yet done:** manual QA on staging/test (`tasks.md` §6 Rollout) — requires a deployed environment, out of this session's reach. PR not yet opened.
 
 ---
 
@@ -67,5 +69,5 @@
 
 - **BIL-T-1: DONE.** Regression test added, confirmed red against the unmodified buggy code, Reviewer PASS on attempt 1.
 - **BIL-T-2: DONE.** `case 3`/`case 4` swap applied, `BIL-T-1`'s test now green, full spec file green (151/151), Reviewer PASS on attempt 1.
-- Both tasks in `tasks.md` are `[x]` with matching PASS evidence above. Spec implementation is complete.
-- **Not yet done (held for explicit user go-ahead):** git commit (per root `AGENTS.md` §6, "do not commit unless the user explicitly asks") and the folder-doc re-stamp that should land in the same commit (see BIL-T-2 ADVISORY). `tasks.md` §6 Rollout checklist (PR, CI, manual QA on staging/test) has not run — none of that is reachable from this session.
+- Both tasks in `tasks.md` are `[x]` with matching PASS evidence above, and both landed in commit `3c53f26b7`. Spec implementation is complete.
+- **Not yet done:** PR not opened; `tasks.md` §6 Rollout checklist (CI, manual QA on staging/test) has not run — none of that is reachable from this session.
