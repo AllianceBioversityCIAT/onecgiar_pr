@@ -18,6 +18,11 @@ import 'dotenv/config';
  * `--programs` takes PRMS official codes or names (the server matches either); the
  * default is the 13 science programs. `PRMS_AUTH_TOKEN` goes in the `auth` header and
  * is never printed.
+ *
+ * Long runs: PRMS re-signs the JWT on every authenticated response and returns it in the
+ * `auth` response header (`JwtMiddleware`). The script adopts that token for the next
+ * request, so a fill that outlives the initial token's expiry keeps working. Only the
+ * in-memory copy is replaced; nothing is written to disk or printed.
  */
 
 const DEFAULT_PROGRAMS = Array.from(
@@ -30,6 +35,7 @@ const REQUEST_TIMEOUT_MS = 35_000;
 
 interface Options {
   baseUrl: string;
+  /** Replaced in place by the renewed token each successful response carries. */
   token: string;
   programs: string[];
   limit: number;
@@ -85,6 +91,15 @@ function parseArgs(argv: string[]): Options {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Takes the re-signed JWT PRMS returns in the `auth` response header. A gateway error page
+ * carries none, so the current token is kept.
+ */
+function adoptRenewedToken(opts: Options, res: Response): void {
+  const renewed = res.headers.get('auth')?.trim();
+  if (renewed) opts.token = renewed;
+}
+
 /** One batch request. Returns `null` for a retryable failure (gateway timeout, dropped connection). */
 async function postBatch(
   opts: Options,
@@ -111,6 +126,8 @@ async function postBatch(
   } catch {
     return null;
   }
+
+  adoptRenewedToken(opts, res);
 
   if (RETRYABLE_STATUSES.has(res.status)) return null;
   if (!res.ok) {
