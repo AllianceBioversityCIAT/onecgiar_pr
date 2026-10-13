@@ -31,8 +31,9 @@ import { toPtCenterName } from './pt-center-name';
  * `candidates[]` array is a picker suggestion list, not a resolution — promoting its
  * first entry to a stored mapping is exactly the `D-7` defect class this task exists
  * to close. The only place `candidates[]` is read at all is the `exact`/`fuzzy`
- * branch, and only to recover the **score** of the entry whose `indicator_id` already
- * equals the top-level `data.indicator_id` PT itself resolved — never to source the id.
+ * branch: to recover the **score** of the entry PT itself resolved, and — `fuzzy` only —
+ * for the center tie-break ({@link pickFuzzyCandidate}), which may swap PT's pick for a
+ * near-tied candidate of the row's own center. A `none` answer never reaches it.
  *
  * Idempotency (`PTM-R-21`, `PTM-AC-11`): upserts on
  * (`toc_results_indicator_id`, `version_id`, `center`) — the same tuple the migration's
@@ -85,8 +86,78 @@ const RESOLVE_MESSAGES: Record<PtResolveRunStatus, string> = {
 /** One `/resolve` outcome, per row — what {@link resolveOneRow} reports back to the loop. */
 type RowOutcome = 'exact' | 'fuzzy' | 'unmapped' | 'skipped';
 
-/** Top two candidate scores closer than this are a tie — flagged for review. */
-export const PT_CANDIDATE_TIE_EPSILON = 0.005;
+/**
+ * Fuzzy candidates scoring within this of the top score are near-tied: the tie is broken
+ * by center ({@link pickFuzzyCandidate}), and flagged for review when the center cannot
+ * break it.
+ */
+export const PT_CANDIDATE_TIE_EPSILON = 0.03;
+
+/** Absorbs float noise so a gap of exactly {@link PT_CANDIDATE_TIE_EPSILON} (e.g. 0.99 − 0.96) counts as tied. */
+const SCORE_TOLERANCE = 1e-9;
+
+export interface PtCandidatePick {
+  indicatorId: string;
+  score: number | null;
+  /** True when several candidates are near-tied and none of them shares the row's center. */
+  unresolvedTie: boolean;
+}
+
+/**
+ * Chooses the PT indicator for a `fuzzy` answer.
+ *
+ * Candidates within {@link PT_CANDIDATE_TIE_EPSILON} of the top score are near-tied. When
+ * there is such a tie, the candidate whose `center` equals the row's center (both sides
+ * through {@link toPtCenterName}) wins — PT's own pick if it is one of them, otherwise the
+ * highest-scoring one. When none of the near-tied candidates shares the center, PT's pick
+ * (the top candidate) is kept and `unresolvedTie` is set, so the row goes to review.
+ * Without a tie, PT's pick stands unchanged.
+ */
+export function pickFuzzyCandidate(
+  ptIndicatorId: string,
+  candidates: any[],
+  rowCenter: string | null | undefined,
+): PtCandidatePick {
+  const scoreOf = (id: string): number | null => {
+    const score = candidates.find((c) => c?.indicator_id === id)?.score;
+    return typeof score === 'number' ? score : null;
+  };
+  const ptPick: PtCandidatePick = {
+    indicatorId: ptIndicatorId,
+    score: scoreOf(ptIndicatorId),
+    unresolvedTie: false,
+  };
+
+  const scored = candidates
+    .filter(
+      (c) =>
+        typeof c?.score === 'number' &&
+        typeof c?.indicator_id === 'string' &&
+        c.indicator_id.length > 0,
+    )
+    .sort((a, b) => b.score - a.score);
+  if (scored.length < 2) return ptPick;
+
+  const topScore = scored[0].score;
+  const nearTied = scored.filter(
+    (c) => topScore - c.score <= PT_CANDIDATE_TIE_EPSILON + SCORE_TOLERANCE,
+  );
+  if (nearTied.length < 2) return ptPick;
+
+  const center = toPtCenterName(rowCenter);
+  const sameCenter = center
+    ? nearTied.filter((c) => toPtCenterName(c.center) === center)
+    : [];
+  if (!sameCenter.length) return { ...ptPick, unresolvedTie: true };
+
+  const chosen =
+    sameCenter.find((c) => c.indicator_id === ptIndicatorId) ?? sameCenter[0];
+  return {
+    indicatorId: chosen.indicator_id,
+    score: chosen.score,
+    unresolvedTie: false,
+  };
+}
 
 @Injectable()
 export class ProgressTrackerResolveService {
@@ -295,15 +366,18 @@ export class ProgressTrackerResolveService {
    * Upserts on (`toc_results_indicator_id`, `version_id`, `center`) —
    * `PTM-R-21`/`PTM-AC-11`.
    *
-   * `needs_review`: `exact` → false; `none` → true; `fuzzy` → true when its score is
-   * below {@link getPtReviewThreshold} (env `PT_INTEROP_REVIEW_THRESHOLD`, or unknown) or the top two candidates tie
-   * within {@link PT_CANDIDATE_TIE_EPSILON}.
+   * `needs_review`: `exact` → false; `none` → true; `fuzzy` → true when the chosen
+   * candidate's score is below {@link getPtReviewThreshold} (env
+   * `PT_INTEROP_REVIEW_THRESHOLD`, or unknown), or when near-tied candidates cannot be
+   * split by center ({@link pickFuzzyCandidate}).
+   *
+   * An `exact` answer is a hash hit that already encodes the center, so it is stored as
+   * PT resolved it; the center tie-break applies to `fuzzy` only.
    *
    * 🛑 `PTM-R-11`/`PTM-AC-10`: `candidates[]` is read **only** inside the
-   * `match !== 'none'` branch, and only to find the score of the entry whose
-   * `indicator_id` matches the top-level `data.indicator_id` — never to source the id
-   * itself. When `match === 'none'`, `pt_indicator_id` and `match_score` are `null`
-   * unconditionally; `data.candidates` is never touched in that branch.
+   * `match !== 'none'` branch. When `match === 'none'`, `pt_indicator_id` and
+   * `match_score` are `null` unconditionally; `data.candidates` is never touched in that
+   * branch.
    */
   private async upsertMapping(
     row: PtPorbRow,
@@ -338,19 +412,23 @@ export class ProgressTrackerResolveService {
       }
 
       const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
-      const matchedCandidate = candidates.find(
-        (c: any) => c?.indicator_id === ptIndicatorId,
-      );
-      matchScore =
-        typeof matchedCandidate?.score === 'number'
-          ? matchedCandidate.score
-          : null;
 
       if (match === 'fuzzy') {
+        const pick = pickFuzzyCandidate(ptIndicatorId, candidates, row.center);
+        ptIndicatorId = pick.indicatorId;
+        matchScore = pick.score;
         needsReview =
           matchScore === null ||
           matchScore < getPtReviewThreshold() ||
-          this.topCandidatesTie(candidates);
+          pick.unresolvedTie;
+      } else {
+        const matchedCandidate = candidates.find(
+          (c: any) => c?.indicator_id === ptIndicatorId,
+        );
+        matchScore =
+          typeof matchedCandidate?.score === 'number'
+            ? matchedCandidate.score
+            : null;
       }
     }
 
@@ -397,18 +475,6 @@ export class ProgressTrackerResolveService {
     }
 
     return match === 'none' ? 'unmapped' : match;
-  }
-
-  /** True when the two highest candidate scores are within {@link PT_CANDIDATE_TIE_EPSILON}. */
-  private topCandidatesTie(candidates: any[]): boolean {
-    const scores = candidates
-      .map((c) => c?.score)
-      .filter((s): s is number => typeof s === 'number')
-      .sort((a, b) => b - a);
-    return (
-      scores.length >= 2 &&
-      Math.abs(scores[0] - scores[1]) < PT_CANDIDATE_TIE_EPSILON
-    );
   }
 
   private emptyCounts(): PtResolveCounts {
