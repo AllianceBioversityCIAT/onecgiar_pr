@@ -130,6 +130,9 @@ describe('ProgressTrackerResolveService', () => {
 
   function makeMappingRepository() {
     return {
+      find: jest.fn(async ({ where }: any) =>
+        table.filter((row) => row.version_id === where.version_id),
+      ),
       findOne: jest.fn(
         async ({ where }: any) =>
           table.find((row) => sameKey(row, where)) ?? null,
@@ -321,6 +324,7 @@ describe('ProgressTrackerResolveService', () => {
 
       const result = await service.resolveIndicatorMappings({
         versionId: VERSION_ID,
+        force: true,
       });
 
       expect(table).toHaveLength(1); // still one row — no duplicate
@@ -336,7 +340,10 @@ describe('ProgressTrackerResolveService', () => {
       expect(table[0].match_quality).toBe('none');
 
       httpService.get.mockReturnValueOnce(of({ data: exactResolveResponse() }));
-      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        force: true,
+      });
 
       expect(table).toHaveLength(1);
       expect(table[0].match_quality).toBe('exact');
@@ -353,7 +360,10 @@ describe('ProgressTrackerResolveService', () => {
       httpService.get.mockReturnValue(of({ data: exactResolveResponse() }));
 
       await service.resolveIndicatorMappings({ versionId: VERSION_ID });
-      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        force: true,
+      });
 
       expect(table.map((r) => r.center).sort()).toEqual(['CIAT', 'IFPRI']);
       expect(httpService.get.mock.calls.map(([, c]) => c.params.center)).toEqual(
@@ -374,6 +384,153 @@ describe('ProgressTrackerResolveService', () => {
     });
   });
 
+  describe('resumable batches (limit / cursor / force)', () => {
+    const rows = (n: number): PtPorbRow[] =>
+      Array.from({ length: n }, (_, i) => ({
+        ...PORB_ROW,
+        tocResultsIndicatorId: `ind-${i}`,
+      }));
+
+    beforeEach(() => {
+      httpService.get.mockReturnValue(of({ data: exactResolveResponse() }));
+    });
+
+    it('makes at most `limit` upstream calls and answers the next cursor', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(5));
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 2,
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(result.response).toMatchObject({
+        status: 'ok',
+        processed: 2,
+        total: 5,
+        cursor: 0,
+        next_cursor: 2,
+      });
+      expect(table.map((r) => r.toc_results_indicator_id)).toEqual([
+        'ind-0',
+        'ind-1',
+      ]);
+    });
+
+    it('resumes at the cursor and answers next_cursor = null on the last batch', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(5));
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 10,
+        cursor: 3,
+      });
+
+      expect(result.response.processed).toBe(2);
+      expect(result.response.next_cursor).toBeNull();
+      expect(table.map((r) => r.toc_results_indicator_id)).toEqual([
+        'ind-3',
+        'ind-4',
+      ]);
+    });
+
+    it('defaults to a batch of 15', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(20));
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(15);
+      expect(result.response.next_cursor).toBe(15);
+    });
+
+    it('passes over rows already in the map without an upstream call, and they do not count against the limit', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(4));
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID, limit: 2 });
+      httpService.get.mockClear();
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 2,
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(result.response).toMatchObject({
+        already_resolved: 2,
+        processed: 2,
+        next_cursor: null,
+      });
+      expect(table).toHaveLength(4);
+    });
+
+    it('treats the same indicator under another center as unresolved', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue([PORB_ROW]);
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      porbRepository.findPorbRowsForPhase.mockResolvedValue([
+        PORB_ROW,
+        { ...PORB_ROW, center: 'IFPRI' },
+      ]);
+      httpService.get.mockClear();
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+      });
+
+      expect(result.response.already_resolved).toBe(1);
+      expect(httpService.get).toHaveBeenCalledTimes(1);
+      expect(httpService.get.mock.calls[0][1].params.center).toBe('IFPRI');
+    });
+
+    it('re-resolves mapped rows when force is true', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(2));
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      httpService.get.mockClear();
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        force: true,
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(result.response.already_resolved).toBe(0);
+      expect(table).toHaveLength(2);
+    });
+
+    it('retrying the same cursor after a partial batch (gateway 504) only calls the rows not yet written', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(3));
+      // First attempt: the gateway gave up after ind-0 was written; the client never saw next_cursor.
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID, limit: 1 });
+      httpService.get.mockClear();
+
+      const retry = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 3,
+        cursor: 0,
+      });
+
+      expect(retry.response.already_resolved).toBe(1);
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(table).toHaveLength(3);
+    });
+
+    it('a cursor past the end answers an empty, finished batch', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(2));
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        cursor: 99,
+      });
+
+      expect(httpService.get).not.toHaveBeenCalled();
+      expect(result.response).toMatchObject({
+        processed: 0,
+        cursor: 2,
+        next_cursor: null,
+      });
+    });
+  });
+
   describe('needs_review', () => {
     function fuzzyWith(candidates: { indicator_id: string; score: number }[]) {
       return { ...fuzzyResolveResponse(), candidates };
@@ -381,7 +538,10 @@ describe('ProgressTrackerResolveService', () => {
 
     async function resolveWith(data: unknown) {
       httpService.get.mockReturnValue(of({ data }));
-      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        force: true,
+      });
       return table[0];
     }
 
