@@ -444,9 +444,16 @@ export class ResultsApiService {
    * `params` is a plain object — pass `refresh` as a literal `true`/`false` only, never `1`/`0`:
    * the server DTO uses a strict boolean with `forbidNonWhitelisted: true` and rejects anything
    * else with 400.
+   *
+   * `center` is the PRMS center acronym of the row being reported (PT keeps one KPI per indicator
+   * and center). Sent as the `center` query param only when non-empty; the server uses it to pick
+   * the mapping row and never forwards it upstream.
    */
-  GET_progressTrackerResults(tocIndicatorId: string | number, params: any): Observable<any> {
-    return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/indicators/${tocIndicatorId}/results`, { params });
+  GET_progressTrackerResults(tocIndicatorId: string | number, params: any, center?: string | null): Observable<any> {
+    const trimmed = (center ?? '').trim();
+    return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/indicators/${tocIndicatorId}/results`, {
+      params: trimmed ? { ...params, center: trimmed } : params
+    });
   }
 
   // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-1, PTB-R-6a/6b/7)

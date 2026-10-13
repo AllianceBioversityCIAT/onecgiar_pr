@@ -62,6 +62,7 @@ describe('BilateralAnnualUpdatingComponent', () => {
     };
 
     autoSave = {
+      isReadOnly: signal(false), // R2B-1/2 — the editor lock the sections read
       updateFieldsBatch: jest.fn(),
       flush: jest.fn().mockResolvedValue(undefined),
       hasErrorFor: jest.fn().mockReturnValue(false),
@@ -395,6 +396,15 @@ describe('BilateralAnnualUpdatingComponent', () => {
 
     creation.resultStatusId.set(4);
     expect(component.context().editable).toBe(true);
+  });
+
+  it('R2B-1: a non-admin whose editor lock is up (not the lead centre) gets editable=false; an admin is unaffected', () => {
+    build();
+    fixture.detectChanges();
+    expect(component.context().editable).toBe(true);
+
+    autoSave.isReadOnly.set(true);
+    expect(component.context().editable).toBe(false);
   });
 
   it('merges the stored reasons into the catalogue', () => {

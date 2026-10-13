@@ -18,8 +18,11 @@ import { env } from 'node:process';
  * (`env.BILATERAL_AI_TEXT_MINING_TIMEOUT_MS || 600_000`), the precedent recorded at
  * `design.md` §1A `P-11`. No consumer reads this yet — `PTM-T-3`'s service is the
  * first caller.
+ *
+ * 27 000 ms (raised from 25 000): PT's cold `/results` generation regularly runs past
+ * 25 s, and 27 s still leaves 2 s under the gateway ceiling.
  */
-export const PT_INTEROP_TIMEOUT_MS_DEFAULT = 25_000;
+export const PT_INTEROP_TIMEOUT_MS_DEFAULT = 27_000;
 
 /**
  * The API Gateway integration ceiling confirmed against the deployed stack
@@ -59,4 +62,27 @@ export function getProgressTrackerTimeoutMs(): number {
     return PT_INTEROP_TIMEOUT_MS_DEFAULT;
   }
   return Math.min(parsed, PT_INTEROP_TIMEOUT_MS_MAX);
+}
+
+/**
+ * A fuzzy `/resolve` match scoring below this is stored with `needs_review = true`.
+ * 0.95 (decided 2026-10-13, lowered from 0.97). `serverless.yaml` passes the same value as
+ * the `${env:PT_INTEROP_REVIEW_THRESHOLD, '0.95'}` fallback so a deploy without the variable
+ * keeps working — change both together.
+ */
+export const PT_INTEROP_REVIEW_THRESHOLD_DEFAULT = 0.95;
+
+/**
+ * The fuzzy-match review threshold (`PT_INTEROP_REVIEW_THRESHOLD`, default
+ * {@link PT_INTEROP_REVIEW_THRESHOLD_DEFAULT}). Read at call time. Anything that is not
+ * a finite number in `(0, 1]` falls back to the default — a typo must never silently
+ * accept every fuzzy match (`0`) or flag every one (`> 1`).
+ */
+export function getPtReviewThreshold(): number {
+  const raw = env.PT_INTEROP_REVIEW_THRESHOLD;
+  const parsed = raw?.trim() ? Number(raw) : NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 1) {
+    return PT_INTEROP_REVIEW_THRESHOLD_DEFAULT;
+  }
+  return parsed;
 }

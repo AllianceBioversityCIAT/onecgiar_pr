@@ -23,9 +23,11 @@ import { Version } from '../../versioning/entities/version.entity';
  * which one the runtime lookup (`PTM-T-3`) joins on is that task's decision, not this
  * migration's (`design.md` §14 watch item).
  *
- * `UNIQUE (toc_results_indicator_id(255), version_id)` — created by the migration, not
- * repeated here as a TypeORM index decorator, matching the house convention of leaving
- * schema constraints to the raw-SQL migration (`P-12`).
+ * `UNIQUE (toc_results_indicator_id(255), version_id, center)` — one row per center,
+ * since PT keeps one KPI per (indicator, center). Created by the migrations
+ * (`1791400000000-ProgressTrackerIndicatorMapCenter`), not repeated here as a TypeORM
+ * index decorator, matching the house convention of leaving schema constraints to the
+ * raw-SQL migration (`P-12`).
  */
 @Entity('progress_tracker_indicator_map')
 export class ProgressTrackerIndicatorMap extends BaseEntity {
@@ -59,6 +61,38 @@ export class ProgressTrackerIndicatorMap extends BaseEntity {
   @ManyToOne(() => Version, (v) => v.id)
   @JoinColumn({ name: 'version_id' })
   obj_version: Version;
+
+  /**
+   * PRMS-side center acronym (`clarisa_institutions.acronym`), **not** the PT spelling —
+   * the runtime lookup keys on what PRMS holds. `''` when the indicator has no center
+   * target. The normalized PT name is only sent on the wire (`toPtCenterName`).
+   */
+  @Column({
+    name: 'center',
+    type: 'varchar',
+    length: 64,
+    nullable: false,
+    default: '',
+  })
+  center: string;
+
+  /** The ToC indicator's `type_value`. */
+  @Column({
+    name: 'kpi_type',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  kpi_type: string | null;
+
+  /** True for a weak fuzzy match, tied top candidates, or no match at all. */
+  @Column({
+    name: 'needs_review',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  needs_review: boolean;
 
   @Column({
     name: 'pt_indicator_id',

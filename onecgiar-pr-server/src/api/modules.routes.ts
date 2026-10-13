@@ -17,6 +17,7 @@ import { UserNotificationSettingsModule } from './user-notification-settings/use
 import { AdUsersModule } from './ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './initiative_entity_map/initiative_entity_map.module';
 import { BilateralModule } from './bilateral/bilateral.module';
+import { QaCatalogModule } from './qa-catalog/qa-catalog.module';
 import { ResultsFrameworkReportingModule } from './results-framework-reporting/results-framework-reporting.module';
 import { ContributorsPartnersModule } from './results-framework-reporting/contributors-partners/contributors-partners.module';
 import { InnovationDevModule } from './results-framework-reporting/innovation_dev/innovation_dev.module';
@@ -128,5 +129,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'progress-tracker',
     module: ProgressTrackerModule,
+  },
+  {
+    path: 'qa',
+    module: QaCatalogModule,
   },
 ];

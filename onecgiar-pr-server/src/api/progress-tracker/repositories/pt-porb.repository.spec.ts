@@ -1,5 +1,8 @@
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-indicator-mapping
-import { PtPorbRepository } from './pt-porb.repository';
+import {
+  dropCenterlessDuplicates,
+  PtPorbRepository,
+} from './pt-porb.repository';
 
 /**
  * `PTM-T-5` — `PtPorbRepository` is a thin, read-only wrapper around
@@ -35,7 +38,8 @@ describe('PtPorbRepository', () => {
         toc_indicator_integration_id: '900123',
         program: 'Food Frontiers and Security',
         aow: 'AOW02: Fragile and Conflict-affected Food Systems',
-        center: 'CIAT (Alliance)',
+        center: 'CIAT',
+        kpi_type: 'Number of innovations',
         hlo_title: '2.1.1 Prevent',
         description: 'AW2P3: Fragility and Conflict Sensitivity Hub',
       },
@@ -45,6 +49,7 @@ describe('PtPorbRepository', () => {
         program: null,
         aow: null,
         center: null,
+        kpi_type: null,
         hlo_title: null,
         description: null,
       },
@@ -58,7 +63,9 @@ describe('PtPorbRepository', () => {
       tocIndicatorIntegrationId: 900123,
       program: 'Food Frontiers and Security',
       aow: 'AOW02: Fragile and Conflict-affected Food Systems',
-      center: 'CIAT (Alliance)',
+      // The PRMS-side acronym, unnormalized — normalization happens at the /resolve call.
+      center: 'CIAT',
+      kpiType: 'Number of innovations',
       hloTitle: '2.1.1 Prevent',
       description: 'AW2P3: Fragility and Conflict Sensitivity Hub',
     });
@@ -68,6 +75,7 @@ describe('PtPorbRepository', () => {
       program: '',
       aow: '',
       center: '',
+      kpiType: null,
       hloTitle: '',
       description: '',
     });
@@ -129,5 +137,114 @@ describe('PtPorbRepository', () => {
     expect(groupByClause).toBeDefined();
     expect(groupByClause).not.toMatch(/wp\./);
     expect(groupByClause).not.toMatch(/\baow\b/);
+  });
+
+  it('returns one row per (indicator, center): center is selected un-aggregated and grouped on ci.acronym, never MIN(center)', async () => {
+    const { repository, dataSource } = makeRepository([]);
+
+    await repository.findPorbRowsForPhase('phase-uuid', 2026);
+
+    const [sql] = dataSource.query.mock.calls[0];
+    expect(sql).not.toMatch(/MIN\(\s*ci\.acronym\s*\)/i);
+    expect(sql).toMatch(/COALESCE\(ci\.acronym, ''\) AS center/);
+    const groupByClause = sql.match(/GROUP BY([\s\S]*?)ORDER BY/i)?.[1];
+    expect(groupByClause).toMatch(/ci\.acronym/);
+    expect(groupByClause).toMatch(/tri\.type_value/);
+  });
+
+  it('selects kpi_type from tri.type_value', async () => {
+    const { repository, dataSource } = makeRepository([]);
+
+    await repository.findPorbRowsForPhase('phase-uuid', 2026);
+
+    expect(dataSource.query.mock.calls[0][0]).toMatch(
+      /tri\.type_value AS kpi_type/,
+    );
+  });
+
+  it('orders deterministically by indicator id, then center', async () => {
+    const { repository, dataSource } = makeRepository([]);
+
+    await repository.findPorbRowsForPhase('phase-uuid', 2026);
+
+    expect(dataSource.query.mock.calls[0][0]).toMatch(
+      /ORDER BY tri\.id ASC, center ASC\s*$/,
+    );
+  });
+
+  it('keeps one mapped row per center for the same indicator', async () => {
+    const { repository } = makeRepository([
+      { toc_results_indicator_id: 'ind-1', center: 'CIAT', kpi_type: 'k' },
+      { toc_results_indicator_id: 'ind-1', center: 'IFPRI', kpi_type: 'k' },
+    ]);
+
+    const rows = await repository.findPorbRowsForPhase('phase-uuid', 2026);
+
+    expect(rows.map((r) => [r.tocResultsIndicatorId, r.center])).toEqual([
+      ['ind-1', 'CIAT'],
+      ['ind-1', 'IFPRI'],
+    ]);
+  });
+
+  describe('findProgramName', () => {
+    it('reads the name for an official code from clarisa_initiatives', async () => {
+      const { repository, dataSource } = makeRepository([
+        { name: ' Breeding for Tomorrow ' },
+      ]);
+
+      await expect(repository.findProgramName('SP01')).resolves.toBe(
+        'Breeding for Tomorrow',
+      );
+      const [sql, params] = dataSource.query.mock.calls[0];
+      expect(sql).toMatch(/clarisa_initiatives/);
+      expect(sql).toMatch(/official_code = \?/);
+      expect(params).toEqual(['SP01']);
+    });
+
+    it('answers null when the code is unknown', async () => {
+      const { repository } = makeRepository([]);
+      await expect(repository.findProgramName('SP99')).resolves.toBeNull();
+    });
+  });
+
+  describe('dropCenterlessDuplicates', () => {
+    const row = (id: string, center: string) =>
+      ({ tocResultsIndicatorId: id, center }) as any;
+
+    it("drops an indicator's '' row when it also has centered rows, keeping order", () => {
+      expect(
+        dropCenterlessDuplicates([
+          row('a', ''),
+          row('a', 'CIAT'),
+          row('a', 'IFPRI'),
+          row('b', ''),
+          row('c', 'ILRI'),
+        ]).map((r) => [r.tocResultsIndicatorId, r.center]),
+      ).toEqual([
+        ['a', 'CIAT'],
+        ['a', 'IFPRI'],
+        ['b', ''],
+        ['c', 'ILRI'],
+      ]);
+    });
+  });
+
+  it("findPorbRowsForPhase drops the '' row of an indicator that has centers", async () => {
+    const base = {
+      toc_indicator_integration_id: 1,
+      program: 'P',
+      aow: 'AOW01: A',
+      kpi_type: null,
+      hlo_title: 'H',
+      description: 'D',
+    };
+    const { repository } = makeRepository([
+      { ...base, toc_results_indicator_id: 'ind-1', center: '' },
+      { ...base, toc_results_indicator_id: 'ind-1', center: 'CIAT' },
+    ]);
+
+    const rows = await repository.findPorbRowsForPhase('phase', 2026);
+
+    expect(rows.map((r) => r.center)).toEqual(['CIAT']);
   });
 });

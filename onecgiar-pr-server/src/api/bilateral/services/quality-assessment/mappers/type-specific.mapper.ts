@@ -193,14 +193,11 @@ function mapActorTypeLabel(actor: Record<string, any>): string | null {
 }
 
 /**
- * One `result_actors` row's un-post-processed `how_many`, keyed by `result_actors_id`
- * (`BIL-QAI-T-4b` gate fix). `formDetail.resultTypeResponse[0].actors` comes from
- * `InnovationUseService.getBilateralInnovationUseData` → `getActorsData`, whose `forEach`
- * overwrites `how_many = women + men` for every row whose `sex_and_age_disaggregation !== true`
- * (`innovation-use.service.ts:901-933`) — exactly the rows this mapper needs `how_many` from, so
- * that field can never be trusted off `container.actors`. The payload builder's `build()` reads
- * the raw `result_actors` rows directly (before `getActorsData` runs) and passes them here;
- * `project()` stays pure and defaults this to `[]`.
+ * One `result_actors` row's raw `how_many`, keyed by `result_actors_id` (`BIL-QAI-T-4b`). The
+ * payload builder's `build()` reads it straight from `result_actors` and passes it here;
+ * `project()` stays pure and defaults it to `[]`. Only the NOT-disaggregated rows
+ * (`sex_and_age_disaggregation === true`) read it — `getActorsData` leaves those rows' `how_many`
+ * untouched, so `actor.how_many` is the fallback when no raw row is supplied.
  */
 export interface RawInnovationUseActorHowMany {
   result_actors_id: number;
@@ -217,17 +214,18 @@ interface InnovationUseTotals {
 }
 
 /**
- * A row saved with `sex_and_age_disaggregation = false` contributes its `how_many` to `total`
- * only — the four parts never see it (design.md §4.5 "Notes the AI side depends on"; `BIL-QAI-
- * T-4b` verification: `sex_and_age_disaggregation: false` + `how_many: 9` ⇒ `total` includes 9
- * and the four parts do not). A disaggregated row contributes its women/men/*_youth AND their
- * sum to `total`.
+ * `sex_and_age_disaggregation` means "sex and age disaggregation does NOT apply" — the classic
+ * form's checkbox label, the W3/bilateral form, the create handler and the contract change log
+ * all agree (`innovation-use.handler.ts:242-248`; `InnovationUseService.getActorsData` keeps
+ * `how_many` only for `true` rows and recomputes `women + men` for the rest).
  *
- * The non-disaggregated branch reads `how_many` from `rawHowManyByActorId` — the un-post-
- * processed `result_actors` row (see {@link RawInnovationUseActorHowMany}) — never from
- * `actor.how_many`, which `getActorsData` has already overwritten to `women + men` (`0` for
- * exactly these rows) by the time it reaches `container.actors`. A row with no match in the raw
- * map contributes `0`, never the corrupted value.
+ * - `true` (not disaggregated): the row contributes its `how_many` to `total` only; the four
+ *   parts never see it.
+ * - `false` / `null` (disaggregated): the row contributes women/men/*_youth AND `women + men`
+ *   to `total`.
+ *
+ * This used to be inverted, so every disaggregated row reached the AI as women/men 0
+ * (production result 31084: 25 women / 55 men sent as 0 / 0).
  */
 function sumInnovationUseActors(
   actors: any[],
@@ -236,6 +234,12 @@ function sumInnovationUseActors(
   return actors.reduce<InnovationUseTotals>(
     (acc, actor) => {
       if (actor?.sex_and_age_disaggregation === true) {
+        const actorId = Number(actor?.result_actors_id);
+        const howMany = rawHowManyByActorId.has(actorId)
+          ? rawHowManyByActorId.get(actorId)
+          : actor?.how_many;
+        acc.total += numberOrZero(howMany);
+      } else {
         const women = numberOrZero(actor?.women);
         const men = numberOrZero(actor?.men);
         acc.women += women;
@@ -243,11 +247,6 @@ function sumInnovationUseActors(
         acc.women_youth += numberOrZero(actor?.women_youth);
         acc.men_youth += numberOrZero(actor?.men_youth);
         acc.total += women + men;
-      } else {
-        const rawHowMany = rawHowManyByActorId.get(
-          Number(actor?.result_actors_id),
-        );
-        acc.total += numberOrZero(rawHowMany);
       }
       return acc;
     },

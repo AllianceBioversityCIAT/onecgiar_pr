@@ -9,6 +9,8 @@ import { ProgressTrackerIndicatorMap } from './entities/progress-tracker-indicat
 import { Version } from '../versioning/entities/version.entity';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { getProgressTrackerTimeoutMs } from './progress-tracker.config';
+import { PtPorbRepository } from './repositories/pt-porb.repository';
+import { toPtCenterName } from './pt-center-name';
 
 /**
  * `PTM-T-3` — the proxy service: mapping lookup, upstream call, total status
@@ -49,6 +51,8 @@ export interface ProgressTrackerResultsQuery {
   max_results?: number;
   refresh?: boolean;
   mode?: string;
+  /** PRMS center acronym of the reported row — selects the mapping row, never sent upstream. */
+  center?: string;
 }
 
 /**
@@ -188,6 +192,9 @@ const READY_COUNTS_MESSAGES: Record<ProgressTrackerProposalsStatus, string> = {
   unavailable: 'Progress Tracker ready counts are temporarily unavailable',
 };
 
+/** A PRMS science-program official code (`SP01`…`SP13`) — never a PT program key. */
+const PRMS_PROGRAM_CODE = /^SP\d{1,2}$/i;
+
 @Injectable()
 export class ProgressTrackerService {
   private readonly logger = new Logger(ProgressTrackerService.name);
@@ -198,6 +205,7 @@ export class ProgressTrackerService {
     private readonly mappingRepository: Repository<ProgressTrackerIndicatorMap>,
     @InjectRepository(Version)
     private readonly versionRepository: Repository<Version>,
+    private readonly porbRepository: PtPorbRepository,
   ) {}
 
   /**
@@ -223,25 +231,52 @@ export class ProgressTrackerService {
       return this.buildEnvelope({ status: 'not_found' });
     }
 
-    const mapping = await this.mappingRepository.findOne({
-      where: {
-        toc_results_indicator_id: tocIndicatorId,
-        version_id: activeVersion.id,
-      },
-    });
+    const mapping = this.pickMapping(
+      await this.mappingRepository.find({
+        where: {
+          toc_results_indicator_id: tocIndicatorId,
+          version_id: activeVersion.id,
+        },
+      }),
+      query.center,
+    );
 
     // `PTM-AC-2` / design.md §5 rule 1: an unmapped indicator, or one whose row is
-    // match_quality='none' (or otherwise carries no PT id), returns `not_found`
-    // WITHOUT any HTTP call — zero calls to `HttpService.get` is the assertion.
+    // match_quality='none', otherwise carries no PT id, or still needs review, returns
+    // `not_found` WITHOUT any HTTP call — zero calls to `HttpService.get` is the
+    // assertion.
     if (
       !mapping ||
       mapping.match_quality === 'none' ||
-      !mapping.pt_indicator_id
+      !mapping.pt_indicator_id ||
+      mapping.needs_review
     ) {
       return this.buildEnvelope({ status: 'not_found' });
     }
 
     return this.fetchUpstreamResults(mapping.pt_indicator_id, query);
+  }
+
+  /**
+   * The mapping row for the reported center. PT keeps one KPI per (indicator, center),
+   * so the map holds one row per center (`center` = PRMS acronym). Both sides are
+   * compared through {@link toPtCenterName}, so `CIAT` matches a row stored as
+   * `CIAT (Alliance)` and vice versa.
+   *
+   * - center given → the row for that center, or none;
+   * - no center → the indicator's only row; several rows are ambiguous → none (never
+   *   a guess between centers).
+   */
+  private pickMapping(
+    rows: ProgressTrackerIndicatorMap[] | null | undefined,
+    center: string | undefined,
+  ): ProgressTrackerIndicatorMap | null {
+    const list = rows ?? [];
+    const wanted = toPtCenterName(center);
+    if (wanted) {
+      return list.find((r) => toPtCenterName(r.center) === wanted) ?? null;
+    }
+    return list.length === 1 ? list[0] : null;
   }
 
   /**
@@ -263,6 +298,10 @@ export class ProgressTrackerService {
    *   a record of what `/resolve` returned per indicator, for audit. It is
    *   deliberately **not** read by this method. It is neither dead code nor a
    *   missing wire-up.
+   * - **Amended 2026-10-13:** the upstream does **not** recognise PRMS official codes
+   *   (`SP01`…`SP13`) — only the name or the PT hash. A code is therefore translated to
+   *   the program name ({@link toPtProgram}) before the call; a name or a PT hash still
+   *   passes through unchanged. An unknown code answers `not_found` with no call.
    */
   public async getProgramReadyCounts(
     programId: string,
@@ -283,6 +322,11 @@ export class ProgressTrackerService {
     const apiKey = env.PT_INTEROP_API_KEY;
     const headers = apiKey ? { 'X-API-Key': apiKey } : undefined;
 
+    const ptProgram = await this.toPtProgram(programId);
+    if (!ptProgram) {
+      return this.buildReadyCountsEnvelope({ status: 'not_found' });
+    }
+
     const params: Record<string, unknown> = {};
     if (query.min_evidence !== undefined) {
       params.min_evidence = query.min_evidence;
@@ -292,7 +336,7 @@ export class ProgressTrackerService {
     try {
       const res = await firstValueFrom(
         this.httpService.get(
-          `${baseUrl}/api/prms/programs/${programId}/ready-counts`,
+          `${baseUrl}/api/prms/programs/${encodeURIComponent(ptProgram)}/ready-counts`,
           {
             params,
             timeout: getProgressTrackerTimeoutMs(),
@@ -317,6 +361,17 @@ export class ProgressTrackerService {
       });
       return this.buildReadyCountsEnvelope({ status: failure.status });
     }
+  }
+
+  /**
+   * What the upstream accepts as a program key: a PRMS official code (`SP01`) becomes
+   * the program name; anything else (a name, a PT hash) is passed through trimmed.
+   * `null` for an official code PRMS cannot name.
+   */
+  private async toPtProgram(programId: string): Promise<string | null> {
+    const trimmed = (programId ?? '').trim();
+    if (!PRMS_PROGRAM_CODE.test(trimmed)) return trimmed || null;
+    return this.porbRepository.findProgramName(trimmed.toUpperCase());
   }
 
   /** Same shape as {@link sanitizeProposals}, whitelisted to the Guide §4.3 fields. */

@@ -231,6 +231,38 @@ describe('BilateralManualCreateFlowService', () => {
   // `ASC-T-5` rework (`ASC-R-15`, `ASC-AC-13`): the reviewer-found gap. This service's `canUseAi`
   // is the REAL entry point both the bilateral-home "+ Create result" and the in-wizard drawer
   // read from — hiding only the wizard's own inline selector left this one wide open.
+  // RNB-2 (P2-3941, PO decision option A): a user not assigned to the centre cannot generate results.
+  describe('canCreateResults — centre membership gate (RNB-2)', () => {
+    it('is true for a member of the current centre and the drawer opens', () => {
+      expect(service.canCreateResults()).toBe(true);
+      service.beginFromProject(singleSpProject);
+      expect(service.drawerOpen()).toBe(true);
+    });
+
+    it('is true for an admin with no assignment', () => {
+      rolesSE.getMyCenters.mockReturnValue([]);
+      rolesSE.isAdmin = true;
+      expect(service.canCreateResults()).toBe(true);
+    });
+
+    it('is false for a user with no centres: no drawer from the home entry, the wizard or a submit', () => {
+      rolesSE.getMyCenters.mockReturnValue([]);
+      rolesSE.isAdmin = false;
+      expect(service.canCreateResults()).toBe(false);
+      service.beginFromProject(singleSpProject);
+      service.openDrawerForManual();
+      expect(service.drawerOpen()).toBe(false);
+      service.submitCreate({ levelId: 4, typeId: 8, title: 'Manual title' });
+      expect(creationService.createResult).not.toHaveBeenCalled();
+    });
+
+    it('is false for a member of ANOTHER centre', () => {
+      rolesSE.getMyCenters.mockReturnValue([{ center_id: 'CENTER-99', center_acronym: 'IRRI' }]);
+      rolesSE.isAdmin = false;
+      expect(service.canCreateResults()).toBe(false);
+    });
+  });
+
   describe('canUseAi — membership gate (ASC-T-5 rework)', () => {
     it('is true for a Center User of the current centre, project and SP selected', () => {
       service.beginFromProject(singleSpProject);

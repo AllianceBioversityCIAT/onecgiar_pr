@@ -35,7 +35,7 @@ describe('SectionGeographyComponent shipped template', () => {
         { provide: BilateralApiService, useValue: { GET_geographic: () => of({ response: geographicResponse }) } },
         { provide: RegionsCountriesService, useValue: { regionsList: [], countriesList: [] } },
         { provide: BilateralCreationService, useValue: { currentResultId, isLoadingResult: signal(false), resultTypeId: signal(7), isEditableByCenterUser: () => false } },
-        { provide: BilateralAutoSaveService, useValue: { fieldStatus: signal({}), schedulePayload: jest.fn() } },
+        { provide: BilateralAutoSaveService, useValue: { isReadOnly: signal(false), fieldStatus: signal({}), schedulePayload: jest.fn() } },
         { provide: BilateralMdsTrackerService, useValue: { setSectionFields: jest.fn() } },
         { provide: BilateralExpandableStateService, useValue: { getShowAllFields: () => false, setShowAllFields: jest.fn() } }
         ,{ provide: RolesService, useValue: { readOnly: true } }

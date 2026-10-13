@@ -165,7 +165,9 @@ describe('BilateralResultCreatorComponent', () => {
       hasPendingSaves: signal(false),
       globalSaveState: signal('idle'),
       setResultId: jest.fn(),
-      setReadOnly: jest.fn(),
+      // RNB-1 — the sections read the editor's lock back from here (`isReadOnly`), so keep it live.
+      isReadOnly: signal(false),
+      setReadOnly: jest.fn((v: boolean) => autoSaveService.isReadOnly.set(v)),
       setReadOnlyExemptions: jest.fn(),
       registerField: jest.fn(),
       updateField: jest.fn(),
@@ -191,7 +193,8 @@ describe('BilateralResultCreatorComponent', () => {
      * non-reactive, and a test could then pass or fail for a reason production does not have.
      * `readOnly` starts TRUE: that is the state every non-admin arrives in.
      */
-    const isAdminSignal = signal(false);
+    // RNB-1 — default to an admin so the form is editable; the lead-centre rule has its own describe.
+    const isAdminSignal = signal(true);
     const readOnlySignal = signal(true);
     const rolesVersionSignal = signal(0);
     rolesService = {
@@ -753,6 +756,9 @@ describe('BilateralResultCreatorComponent', () => {
 
     it('setResultStatus(1) from 4 flips the read-only gate to editable with no reload (D9/DD-9)', () => {
       rolesService.isAdmin = false;
+      // RNB-1: a non-admin only edits as Center User of the lead centre.
+      rolesService.getMyCenters.mockReturnValue([{ center_id: 'CENTER-12', center_acronym: 'ILRI', role_id: 9 }]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
       creationService.resultStatusId.set(4);
       creationService.isEditableByCenterUser.set(false);
       fixture.detectChanges();
@@ -1707,11 +1713,80 @@ describe('BilateralResultCreatorComponent', () => {
     const ILRI = { center_id: 'CENTER-12', center_acronym: 'ILRI', role_id: 9 };
     const OTHER_CENTER = { center_id: 'CENTER-03', center_acronym: 'CIAT', role_id: 9 };
 
+    // The suite default is an admin (RNB-1); this block is about everyone else.
+    beforeEach(() => {
+      rolesService.isAdmin = false;
+    });
+
     function enterEditor(id = 42): void {
       component.isCreating.set(false);
       component.resultId.set(id);
       fixture.detectChanges();
     }
+
+    // RNB-1 — Save draft, Submit, the sections and the contributors pickers follow `isFormReadOnly`,
+    // which used to ask only about the status: a Center User of ANOTHER centre could edit and save.
+    describe('RNB-1: who may edit, not only the status', () => {
+      function saveDraft(): HTMLButtonElement {
+        return fixture.nativeElement.querySelector('[data-testid="bilateral-footer-save"]');
+      }
+
+      it('locks the form, the autosave and Save draft for a Center User of a DIFFERENT centre in Editing', () => {
+        rolesService.getMyCenters.mockReturnValue([OTHER_CENTER]);
+        creationService.resultLeadCenterCode.set('CENTER-12');
+        creationService.isEditableByCenterUser.set(true);
+        enterEditor();
+        TestBed.flushEffects();
+        fixture.detectChanges();
+
+        expect(component.canEditResult()).toBe(false);
+        expect(component.isFormReadOnly()).toBe(true);
+        expect(autoSaveService.setReadOnly).toHaveBeenLastCalledWith(true);
+        expect(autoSaveService.isReadOnly()).toBe(true);
+        expect(saveDraft()?.disabled).toBe(true);
+      });
+
+      it('locks it for an account without any centre', () => {
+        rolesService.getMyCenters.mockReturnValue([]);
+        creationService.resultLeadCenterCode.set('CENTER-12');
+        creationService.isEditableByCenterUser.set(true);
+        enterEditor();
+
+        expect(component.isFormReadOnly()).toBe(true);
+      });
+
+      it('keeps it editable for the Center User of the LEAD centre in Editing', () => {
+        rolesService.getMyCenters.mockReturnValue([ILRI]);
+        creationService.resultLeadCenterCode.set('CENTER-12');
+        creationService.isEditableByCenterUser.set(true);
+        enterEditor();
+        TestBed.flushEffects();
+        fixture.detectChanges();
+
+        expect(component.isFormReadOnly()).toBe(false);
+        expect(autoSaveService.setReadOnly).toHaveBeenLastCalledWith(false);
+        expect(saveDraft()?.disabled).toBe(false);
+      });
+
+      it('keeps it editable for an admin who is not a Center User of the centre', () => {
+        rolesService.isAdmin = true;
+        rolesService.getMyCenters.mockReturnValue([OTHER_CENTER]);
+        creationService.resultLeadCenterCode.set('CENTER-12');
+        creationService.isEditableByCenterUser.set(true);
+        enterEditor();
+
+        expect(component.isFormReadOnly()).toBe(false);
+      });
+
+      it('stays locked for the lead-centre user once the result leaves Editing (status half unchanged)', () => {
+        rolesService.getMyCenters.mockReturnValue([ILRI]);
+        creationService.resultLeadCenterCode.set('CENTER-12');
+        creationService.isEditableByCenterUser.set(false);
+        enterEditor();
+
+        expect(component.isFormReadOnly()).toBe(true);
+      });
+    });
 
     it('unlocks the form for the Center User of the lead centre while the result is in Editing', () => {
       rolesService.getMyCenters.mockReturnValue([ILRI]);

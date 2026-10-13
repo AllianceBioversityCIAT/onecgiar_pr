@@ -70,7 +70,7 @@
       @if (!this.evidencesBody.evidences.length) {
         <app-no-data-text title="No evidence added"> </app-no-data-text>
       }
-      <app-add-button name="Add evidence" (clickEvent)="addEvidence()" [disabled]="savingSection" *ngIf="this.evidencesBody.evidences.length < 6">
+      <app-add-button name="Add evidence" (clickEvent)="addEvidence()" [disabled]="savingSection" *ngIf="!this.api.rolesSE.readOnly && this.evidencesBody.evidences.length < 6">
       </app-add-button>
     </div>
   }

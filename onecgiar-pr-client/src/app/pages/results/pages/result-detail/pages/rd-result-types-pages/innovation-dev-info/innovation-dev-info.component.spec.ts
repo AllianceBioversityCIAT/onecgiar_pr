@@ -880,6 +880,26 @@ describe('InnovationDevInfoComponent', () => {
     });
   });
 
+  describe('addEvidence for a read-only (non-admin) user', () => {
+    afterEach(() => {
+      mockApiService.rolesSE.readOnly = false;
+    });
+
+    it('does not push an empty evidence card', () => {
+      mockApiService.rolesSE.readOnly = true;
+      component.evidencesBody.evidences = [];
+      component.addEvidence();
+      expect(component.evidencesBody.evidences.length).toBe(0);
+    });
+
+    it('hides the Add evidence button, like the other add buttons of the form', () => {
+      const { readFileSync } = require('fs');
+      const { join } = require('path');
+      const html = readFileSync(join(__dirname, 'innovation-dev-info.component.html'), 'utf8');
+      expect(html).toMatch(/<app-add-button name="Add evidence"[^>]*\*ngIf="!this\.api\.rolesSE\.readOnly &&/);
+    });
+  });
+
   describe('deleteEvidence', () => {
     it('should remove evidence at given index', () => {
       component.evidencesBody.evidences = [{ is_sharepoint: false } as any, { is_sharepoint: true } as any];

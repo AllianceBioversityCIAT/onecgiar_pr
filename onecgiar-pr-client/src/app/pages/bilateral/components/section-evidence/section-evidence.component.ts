@@ -48,7 +48,8 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
    * Read straight from the service, the way this section already reads the rest of the result state.
    */
-  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+  // R2B-2 — status AND who (RNB-1 lock): "Add evidence" is not offered to users outside the lead centre.
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser() || this.autoSave.isReadOnly());
 
   /** CapDev: evidence may still be added, but the section never counts as missing. */
   readonly isEvidenceOptional = computed(() => Number(this.creationService.resultTypeId()) === CAP_DEV_TYPE_ID);

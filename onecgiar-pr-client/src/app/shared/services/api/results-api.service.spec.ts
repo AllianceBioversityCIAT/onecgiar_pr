@@ -5686,6 +5686,23 @@ describe('ResultsApiService', () => {
       expect(req.request.params.get('mode')).toBe('auto');
       req.flush(mockResponse);
     });
+
+    it('adds the trimmed center acronym as a query param when given', done => {
+      service.GET_progressTrackerResults(123, { max_results: 5 }, ' CIAT ').subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/progress-tracker/indicators/123/results`);
+      expect(req.request.params.get('center')).toBe('CIAT');
+      expect(req.request.params.get('max_results')).toBe('5');
+      req.flush(mockResponse);
+    });
+
+    it('sends no center param when the center is empty or null', done => {
+      service.GET_progressTrackerResults(123, {}, '  ').subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/progress-tracker/indicators/123/results`);
+      expect(req.request.params.has('center')).toBe(false);
+      req.flush(mockResponse);
+    });
   });
 
   // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-1)

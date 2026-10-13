@@ -14,6 +14,17 @@
   animation-fill-mode: both;
 }
 
+// P2-3874: the screen containers' fade-in used to keep `animation-fill-mode: both`, which pins a
+// stacking context on them for the life of the page. That stacking context traps any
+// `app-pr-dialog` (fixed mask/panel, z-index 1100) rendered inside the container underneath the
+// topbar and sidebar. `backwards` keeps the 0-opacity start only; the end state equals the
+// default `opacity: 1`, so the visible fade-in is unchanged. Plain `.fadeIn` is untouched.
+.section_container,
+.detail_container {
+  -webkit-animation-fill-mode: backwards;
+  animation-fill-mode: backwards;
+}
+
 @media print, (prefers-reduced-motion: reduce) {
   .fadeIn {
     -webkit-animation-duration: 1ms !important;

@@ -148,6 +148,43 @@ describe('PtResultsBrowseComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-test="pt-proposal-A:1"]')).toBeNull();
   });
 
+  describe('center of the reported row (PT keeps one KPI per indicator and center)', () => {
+    it('sends the center with the request when the host gives one', () => {
+      fixture.componentRef.setInput('center', 'CIAT');
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults).toHaveBeenCalledWith(123, {}, 'CIAT');
+    });
+
+    it('while awaiting a center, shows the prompt and fetches nothing; fetches once it arrives', () => {
+      fixture.componentRef.setInput('awaitingCenter', true);
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('choose_center');
+      expect(mockResultsApiService.GET_progressTrackerResults).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('[data-test="pt-choose-center"]')).toBeTruthy();
+
+      fixture.componentRef.setInput('awaitingCenter', false);
+      fixture.componentRef.setInput('center', 'IFPRI');
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults).toHaveBeenCalledWith(123, {}, 'IFPRI');
+      expect(component.status()).toBe('not_found');
+    });
+
+    it('re-fetches when the center changes for the same indicator', () => {
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.componentRef.setInput('center', 'CIAT');
+      fixture.detectChanges();
+      fixture.componentRef.setInput('center', 'IFPRI');
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults.mock.calls.map(c => c[2])).toEqual(['CIAT', 'IFPRI']);
+    });
+  });
+
   describe('loading state (PTB-AC-3)', () => {
     it('renders the loading state with the Manual escape reachable next to the spinner, not hidden behind it', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(new Subject());
@@ -277,6 +314,30 @@ describe('PtResultsBrowseComponent', () => {
   });
 
   describe('empty state (PTB-AC-5)', () => {
+    it('treats generated_by.mode === template as no proposals, even when results[] is filled', () => {
+      const envelope: any = okEnvelope([sampleProposal]);
+      envelope.response.generated_by = { mode: 'template', fallback_reason: 'no_evidence' };
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(envelope));
+
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('empty');
+      expect(component.proposals()).toEqual([]);
+      expect(fixture.nativeElement.querySelector('[data-test="pt-empty"]')).toBeTruthy();
+    });
+
+    it('still lists the proposals of an ai-generated envelope', () => {
+      const envelope: any = okEnvelope([sampleProposal]);
+      envelope.response.generated_by = { mode: 'ai' };
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(envelope));
+
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('results');
+    });
+
     it('renders the empty state, not an error, when status is ok with zero results', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([])));
 

@@ -729,4 +729,14 @@ describe('ShareRequestModalComponent', () => {
       expect(item.result_toc_results[1].toc_result_id).toBeNull();
     });
   });
+
+  // Requesting to be a contributor is an action, not a form of a result the user edits: without
+  // [editable]="true" pr-select inherits RolesService.readOnly (true for a non-admin who has not opened
+  // an own result) and renders "Not provided", so the request could never be sent.
+  it('keeps the Select entity field usable for non-admin users', () => {
+    const { readFileSync } = require('fs');
+    const { join } = require('path');
+    const html = readFileSync(join(__dirname, 'share-request-modal.component.html'), 'utf8');
+    expect(html).toMatch(/<app-pr-select\s+label="Select entity"[^>]*\[editable\]="true"/);
+  });
 });

@@ -1,6 +1,6 @@
 # report-result
 
-**Verified:** 2026-09-15 · branch qa-development-2026-mc · 7de6ad2fb
+**Verified:** 2026-10-13 · JuankCadavid/pt-center-mapping (Progress Tracker draft → `result.description`); prior: 2026-09-15 · branch qa-development-2026-mc · 7de6ad2fb
 
 ## Qué es
 Las piezas puras que comparten las tres superficies que crean un resultado contra un indicador del
@@ -66,7 +66,10 @@ Una sola bifurcación en todo el formulario: **Knowledge product vs todo lo dem�
 - `result_level_id` **nunca** lo elige el usuario: sale del indicador, luego del nodo.
 - `from_toc: true` para lo que viene del ToC, `false` para lo del segundo desplegable. El backend lo
   usa para clasificar contribuyentes (P2-3114).
-- `toc_progressive_narrative` se envía siempre `''`, como hace el modal. No hay campo que lo llene.
+- `toc_progressive_narrative` se envía `''`, como hace el modal — salvo con un pick de Progress
+  Tracker (`ptProposal`): entonces lleva **solo** la nota de origen (`buildPtProvenanceTail`) y el
+  borrador va a `result.description` (el server lo guarda en `createOwnerResult`). Sin pick,
+  `result` no lleva la clave `description`.
 
 ## Pendiente / Coming soon
 - Migrar el modal y `guided-creation` a `buildCreateResultPayload()` — solo después de verificar el

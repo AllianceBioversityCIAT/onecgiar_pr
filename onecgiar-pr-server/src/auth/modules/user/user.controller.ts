@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  UseGuards,
   UseInterceptors,
   Patch,
   Query,
@@ -12,6 +13,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { UserService } from './user.service';
+import { ApplicationAdminGuard } from '../../../shared/guards/application-admin.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
@@ -50,6 +52,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post('create')
+  @UseGuards(ApplicationAdminGuard)
   @ApiOperation({
     summary: 'Create complete user with role',
     description:
@@ -385,6 +388,7 @@ export class UserController {
   }
 
   @Patch('change/status')
+  @UseGuards(ApplicationAdminGuard)
   @ApiOperation({
     summary: 'Activate or deactivate a user',
     description:
@@ -468,6 +472,7 @@ export class UserController {
   }
 
   @Patch('update/roles')
+  @UseGuards(ApplicationAdminGuard)
   @ApiOperation({
     summary: 'Update user role assignments',
     description:
