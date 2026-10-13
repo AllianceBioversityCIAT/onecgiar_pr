@@ -631,6 +631,14 @@ export class ResultsService {
         saveResult['source'] = source;
       }
 
+      const trimmedDescription =
+        typeof createResultDto.description === 'string'
+          ? createResultDto.description.trim()
+          : '';
+      if (trimmedDescription) {
+        saveResult.description = trimmedDescription;
+      }
+
       const newResultHeader: Result =
         await this._resultRepository.save(saveResult);
 

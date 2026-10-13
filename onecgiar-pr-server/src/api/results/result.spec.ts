@@ -4474,6 +4474,42 @@ describe('ResultsService (unit, pure mocks)', () => {
   });
 
   describe('createOwnerResult - additional edge cases', () => {
+    it('stores a trimmed description on the result when the create carries one', async () => {
+      (mockResultRepository.save as jest.Mock).mockClear();
+      const newResult: CreateResultDto = {
+        initiative_id: 1,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
+        result_name: 'Test Result',
+        handler: null,
+        description: '  Drafted from the Progress Tracker evidence.  ',
+      };
+
+      await resultService.createOwnerResult(newResult, userTest);
+
+      const saved = (mockResultRepository.save as jest.Mock).mock.calls[0][0];
+      expect(saved.description).toBe(
+        'Drafted from the Progress Tracker evidence.',
+      );
+    });
+
+    it('leaves description unset when the create carries none or only whitespace', async () => {
+      (mockResultRepository.save as jest.Mock).mockClear();
+      const newResult: CreateResultDto = {
+        initiative_id: 1,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
+        result_name: 'Test Result',
+        handler: null,
+        description: '   ',
+      };
+
+      await resultService.createOwnerResult(newResult, userTest);
+
+      const saved = (mockResultRepository.save as jest.Mock).mock.calls[0][0];
+      expect(saved).not.toHaveProperty('description');
+    });
+
     it('should return error when result type is 3', async () => {
       const newResult: CreateResultDto = {
         initiative_id: 1,
