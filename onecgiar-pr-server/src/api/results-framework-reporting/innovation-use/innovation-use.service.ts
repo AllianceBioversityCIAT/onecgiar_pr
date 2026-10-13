@@ -101,24 +101,35 @@ export class InnovationUseService {
       // id — the pooled client fills it from `response.level`. Callers that hand over
       // an id instead land one row off, or on nothing at all for the top level, where
       // the missing row used to surface as `null.id`. See P2-3359.
-      const use_levels =
-        await this._clarisaInnovationUseLevelRepository.findOne({
-          where: { level: innovation_use_level_id },
-          select: ['id'],
-        });
+      //
+      // 🛑 An absent level stays NULL — the level is optional for the bilateral API since
+      // P2-3785. It must never reach `findOne`: TypeORM drops a `null` condition from WHERE,
+      // so `{ level: null }` returned the FIRST catalogue row (level 0, "Innovation is not
+      // used") and every result sent without a level was stored as "No use".
+      let innovation_use_level: number | null = null;
+      if (
+        innovation_use_level_id !== null &&
+        innovation_use_level_id !== undefined
+      ) {
+        const use_levels =
+          await this._clarisaInnovationUseLevelRepository.findOne({
+            where: { level: innovation_use_level_id },
+            select: ['id'],
+          });
 
-      if (!use_levels) {
-        this.logger.error(
-          `No innovation use level found for level ${innovation_use_level_id} (result ${resultId})`,
-        );
-        throw {
-          response: {},
-          message: `Invalid innovation use level: ${innovation_use_level_id}. Expected a use level between 0 and 9.`,
-          status: HttpStatus.BAD_REQUEST,
-        };
+        if (!use_levels) {
+          this.logger.error(
+            `No innovation use level found for level ${innovation_use_level_id} (result ${resultId})`,
+          );
+          throw {
+            response: {},
+            message: `Invalid innovation use level: ${innovation_use_level_id}. Expected a use level between 0 and 9.`,
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        innovation_use_level = use_levels.id;
       }
-
-      const innovation_use_level = use_levels.id;
 
       if (is_discontinued !== undefined) {
         await this._resultRepository.update(resultId, {
