@@ -146,14 +146,14 @@ describe('progress-tracker.config — serverless.yaml timeout (PTM-AC-15)', () =
     }
   });
 
-  it("PT_INTEROP_REVIEW_THRESHOLD falls back to '0.95' in serverless.yaml, matching the code default", () => {
+  it("PT_INTEROP_REVIEW_THRESHOLD falls back to '0.99' in serverless.yaml, matching the code default", () => {
     const line = readServerlessYaml()
       .split('\n')
       .find((candidate) =>
         candidate.trim().startsWith('PT_INTEROP_REVIEW_THRESHOLD:'),
       );
-    expect(line).toMatch(/\$\{env:PT_INTEROP_REVIEW_THRESHOLD, '0\.95'\}/);
-    expect(Number('0.95')).toBe(PT_INTEROP_REVIEW_THRESHOLD_DEFAULT);
+    expect(line).toMatch(/\$\{env:PT_INTEROP_REVIEW_THRESHOLD, '0\.99'\}/);
+    expect(Number('0.99')).toBe(PT_INTEROP_REVIEW_THRESHOLD_DEFAULT);
   });
 });
 
@@ -174,14 +174,14 @@ describe('progress-tracker.config — fuzzy review threshold', () => {
     }
   });
 
-  it('defaults to 0.95', () => {
-    expect(getPtReviewThreshold()).toBe(0.95);
-    expect(PT_INTEROP_REVIEW_THRESHOLD_DEFAULT).toBe(0.95);
+  it('defaults to 0.99', () => {
+    expect(getPtReviewThreshold()).toBe(0.99);
+    expect(PT_INTEROP_REVIEW_THRESHOLD_DEFAULT).toBe(0.99);
   });
 
-  it('PT_INTEROP_REVIEW_THRESHOLD overrides the default (e.g. 0.97)', () => {
-    process.env[ENV_KEY] = '0.97';
-    expect(getPtReviewThreshold()).toBe(0.97);
+  it('PT_INTEROP_REVIEW_THRESHOLD overrides the default (e.g. 0.95)', () => {
+    process.env[ENV_KEY] = '0.95';
+    expect(getPtReviewThreshold()).toBe(0.95);
   });
 
   it('accepts exactly 1', () => {

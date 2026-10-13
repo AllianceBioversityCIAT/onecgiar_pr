@@ -66,11 +66,11 @@ export function getProgressTrackerTimeoutMs(): number {
 
 /**
  * A fuzzy `/resolve` match scoring below this is stored with `needs_review = true`.
- * 0.95 (decided 2026-10-13, lowered from 0.97). `serverless.yaml` passes the same value as
- * the `${env:PT_INTEROP_REVIEW_THRESHOLD, '0.95'}` fallback so a deploy without the variable
+ * 0.99 (decided 2026-10-13; was 0.95, before that 0.97). `serverless.yaml` passes the same value as
+ * the `${env:PT_INTEROP_REVIEW_THRESHOLD, '0.99'}` fallback so a deploy without the variable
  * keeps working — change both together.
  */
-export const PT_INTEROP_REVIEW_THRESHOLD_DEFAULT = 0.95;
+export const PT_INTEROP_REVIEW_THRESHOLD_DEFAULT = 0.99;
 
 /**
  * The fuzzy-match review threshold (`PT_INTEROP_REVIEW_THRESHOLD`, default
