@@ -1784,6 +1784,70 @@ describe('PrimaryProgramRequestService', () => {
     });
   });
 
+  // `PNR-T-2` (bugfix/primary-notify-on-submit-regression, `PNR-R-2`, `PNR-NFR-1`, `PNR-NFR-3`): the
+  // card re-dating at Submit. Runs on the CALLER's manager (never an injected repository), touches
+  // `requested_date` only, and treats "no active accepted primary row" as a no-op.
+  describe('stampPrimaryCardSubmitted() — PNR-T-2', () => {
+    const RESULT = 100;
+    const arrangeStamp = (affected: number) => {
+      const update = jest.fn().mockResolvedValue({ affected });
+      const manager = {
+        getRepository: jest.fn().mockReturnValue({ update }),
+      } as unknown as EntityManager;
+      return { update, manager };
+    };
+
+    it('1 row: updates ONLY requested_date (to now) on the active ACCEPTED primary row of the result, through the given manager', async () => {
+      const { update, manager } = arrangeStamp(1);
+      const before = Date.now();
+
+      await expect(
+        service.stampPrimaryCardSubmitted(RESULT, manager),
+      ).resolves.toBeUndefined();
+
+      expect((manager as any).getRepository).toHaveBeenCalledWith(
+        ShareResultRequest,
+      );
+      expect(update).toHaveBeenCalledTimes(1);
+      const [where, set] = update.mock.calls[0];
+      expect(where).toEqual({
+        result_id: RESULT,
+        request_type: RequestTypeEnum.PRIMARY,
+        request_status_id: 2,
+        is_active: true,
+      });
+      expect(Object.keys(set)).toEqual(['requested_date']);
+      expect(set.requested_date).toBeInstanceOf(Date);
+      expect(set.requested_date.getTime()).toBeGreaterThanOrEqual(before);
+      expect(set.requested_date.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('0 rows (a pre-PSR legacy result has no primary row): no throw, one ids-only debug line', async () => {
+      const { manager } = arrangeStamp(0);
+      const debug = jest
+        .spyOn((service as any).logger, 'debug')
+        .mockImplementation(() => undefined);
+
+      await expect(
+        service.stampPrimaryCardSubmitted(RESULT, manager),
+      ).resolves.toBeUndefined();
+
+      expect(debug).toHaveBeenCalledTimes(1);
+      expect(String(debug.mock.calls[0][0])).toContain(String(RESULT));
+    });
+
+    it('a query error propagates (the caller transaction rolls back)', async () => {
+      const update = jest.fn().mockRejectedValue(new Error('db down'));
+      const manager = {
+        getRepository: jest.fn().mockReturnValue({ update }),
+      } as unknown as EntityManager;
+
+      await expect(
+        service.stampPrimaryCardSubmitted(RESULT, manager),
+      ).rejects.toThrow('db down');
+    });
+  });
+
   describe('decline() — PDR-R-3 / PDR-R-4 / PDR-R-5 / PDR-R-6 / PDR-R-7 / PDR-R-10 / PDR-R-11 (table-driven)', () => {
     const pendingRow = (overrides: Partial<ShareResultRequest> = {}) => ({
       share_result_request_id: 1,

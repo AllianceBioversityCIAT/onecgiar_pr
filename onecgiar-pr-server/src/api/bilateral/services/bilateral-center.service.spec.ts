@@ -391,6 +391,8 @@ describe('BilateralCenterService', () => {
               previousInitiativeId: null,
             }),
             isAligned: jest.fn().mockResolvedValue(true),
+            // `PNR-T-2` — stamps the primary card's `requested_date` inside the submit tx.
+            stampPrimaryCardSubmitted: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -4488,6 +4490,102 @@ describe('BilateralCenterService', () => {
         ).not.toHaveBeenCalled();
         expect(log).not.toHaveBeenCalled();
         expect(bilateral.announcePendingReview).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    // `PNR-T-2` (bugfix/primary-notify-on-submit-regression, `PNR-R-2`, `PNR-NFR-1`): the primary
+    // card is re-dated at Submit, with the TRANSACTION manager and after the ownership writes (the
+    // transfer retires the row a too-early stamp would have touched).
+    describe('PNR-T-2: stamps the primary card at Submit', () => {
+      it('first submit of an owned Editing result: stamp called once with the tx manager, inside the transaction; announce still fires once', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Editing.value),
+        );
+        const { manager, committed } = arrangeTransaction();
+
+        await service.submitForReview(user, RESULT, decisionDto);
+
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledWith(RESULT, manager);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted.mock
+            .invocationCallOrder[0],
+        ).toBeLessThan(committed.mock.invocationCallOrder[0]);
+        expect(bilateral.announcePendingReview).toHaveBeenCalledTimes(1);
+      });
+
+      it('ownerless submit: the stamp runs AFTER transferPrimary, on the same manager', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Editing.value),
+        );
+        resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+          null,
+        );
+        primaryProgramRequestService.findDraftPrimaryInitiativeId.mockResolvedValue(
+          9,
+        );
+        const { manager } = arrangeTransaction();
+
+        await service.submitForReview(user, RESULT, decisionDto);
+
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledWith(RESULT, manager);
+        expect(
+          primaryProgramRequestService.transferPrimary.mock
+            .invocationCallOrder[0],
+        ).toBeLessThan(
+          primaryProgramRequestService.stampPrimaryCardSubmitted.mock
+            .invocationCallOrder[0],
+        );
+      });
+
+      it('resubmit from Rejected (in-app): stamp called once with the tx manager, inside the transaction', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Rejected.value),
+        );
+        const { manager, committed } = arrangeTransaction();
+
+        await service.submitForReview(user, RESULT, decisionDto);
+
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledWith(RESULT, manager);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted.mock
+            .invocationCallOrder[0],
+        ).toBeLessThan(committed.mock.invocationCallOrder[0]);
+        expect(bilateral.announcePendingReview).toHaveBeenCalledTimes(1);
+      });
+
+      it('a failing stamp rejects the transaction callback: nothing is announced', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Editing.value),
+        );
+        const { committed } = arrangeTransaction();
+        primaryProgramRequestService.stampPrimaryCardSubmitted.mockRejectedValueOnce(
+          new Error('stamp failed'),
+        );
+
+        await expect(
+          service.submitForReview(user, RESULT, decisionDto),
+        ).rejects.toThrow('stamp failed');
+
+        expect(committed).not.toHaveBeenCalled();
+        expect(bilateral.announcePendingReview).not.toHaveBeenCalled();
       });
     });
   });

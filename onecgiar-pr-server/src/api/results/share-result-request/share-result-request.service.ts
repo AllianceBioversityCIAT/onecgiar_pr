@@ -57,6 +57,7 @@ import { EmailNotificationManagementService } from '../../../shared/microservice
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { VersioningService } from '../../versioning/versioning.service';
+import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import {
@@ -71,6 +72,17 @@ const DONE_KEYSET_FIELDS = {
   dateField: 'requested_date',
   idField: 'share_result_request_id',
 } as const;
+
+/**
+ * @akili-spec bugfix/primary-notify-on-submit-regression (PNR-DD-3, PNR-DD-4)
+ * Result statuses in which the Center is still preparing the result: Editing, Rejected, Draft.
+ * A `primary` history card is hidden from `done` while `obj_result.status_id` is in this set.
+ */
+const PRIMARY_PREPARATION_STATUS_IDS = [
+  ResultStatusData.Editing.value,
+  ResultStatusData.Rejected.value,
+  ResultStatusData.Draft.value,
+];
 
 /** Parsed/validated `version_id` + `scope` + `cursor` query params (PAGE-R-1, R-3, R-6). */
 export interface SharedRequestPagingParams {
@@ -1073,6 +1085,9 @@ export class ShareResultRequestService {
       // PAGE-R-1: `obj_result` is read back from `commonConditions` (not re-literaled) so a
       // `version_id` merged into it via `extraConditions` (PAGE-P-2) reaches `done` too, not
       // just the pending buckets above.
+      // @akili-spec bugfix/primary-notify-on-submit-regression (PNR-DD-4): the owner-side /
+      // admin entry is split by `request_type` — contribution rows are untouched, `primary`
+      // rows only show once the result left preparation. Map-to-ToC entry unchanged (PNR-P-7).
       done:
         role !== 1
           ? [
@@ -1083,6 +1098,19 @@ export class ShareResultRequestService {
                 obj_result: commonConditions.obj_result,
                 shared_inititiative_id: In(sharedInitiativeIds),
                 is_map_to_toc: false,
+                request_type: 'contribution',
+              },
+              {
+                ...commonConditions,
+                request_status_id: In([2, 3]),
+                is_active: true,
+                obj_result: {
+                  ...commonConditions.obj_result,
+                  status_id: Not(In(PRIMARY_PREPARATION_STATUS_IDS)),
+                },
+                shared_inititiative_id: In(sharedInitiativeIds),
+                is_map_to_toc: false,
+                request_type: 'primary',
               },
               {
                 ...commonConditions,
@@ -1099,6 +1127,17 @@ export class ShareResultRequestService {
                 request_status_id: In([2, 3]),
                 is_active: true,
                 obj_result: commonConditions.obj_result,
+                request_type: 'contribution',
+              },
+              {
+                ...commonConditions,
+                request_status_id: In([2, 3]),
+                is_active: true,
+                obj_result: {
+                  ...commonConditions.obj_result,
+                  status_id: Not(In(PRIMARY_PREPARATION_STATUS_IDS)),
+                },
+                request_type: 'primary',
               },
             ],
     };
