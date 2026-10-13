@@ -113,6 +113,9 @@ const FIXTURE_ROWS: ResultToReview[] = [
   })
 ];
 
+/** P2-3952: what the program sees — FIXTURE_ROWS without the Editing draft (r7). */
+const FIXTURE_REVIEW_ROWS = FIXTURE_ROWS.filter(r => Number(r.status_id) !== 1);
+
 function groupedResponse(rows: ResultToReview[]): { response: { project_id: string; project_name: string; results: ResultToReview[] }[] } {
   const byProject = new Map<string, { project_id: string; project_name: string; results: ResultToReview[] }>();
   for (const r of rows) {
@@ -323,8 +326,9 @@ describe('BilateralReviewComponent', () => {
       expect(text('kpi-decided-sublabel')).toBe('2 approved · 1 rejected');
     });
 
-    it('renders chip counts All 7 · Pending 3 · Approved 2 · Rejected 1', () => {
-      expect(text('bilateral-review-chip-all')).toContain('7');
+    // P2-3952: the Editing row (r7) is a Center draft — All = Pending + Approved + Rejected = 6.
+    it('renders chip counts All 6 · Pending 3 · Approved 2 · Rejected 1', () => {
+      expect(text('bilateral-review-chip-all')).toContain('6');
       expect(text('bilateral-review-chip-pending')).toContain('3');
       expect(text('bilateral-review-chip-approved')).toContain('2');
       expect(text('bilateral-review-chip-rejected')).toContain('1');
@@ -376,7 +380,7 @@ describe('BilateralReviewComponent', () => {
 
       expect(byTestId('kpi-pending-toggle')?.getAttribute('aria-pressed')).toBe('false');
       expect(byTestId('bilateral-review-chip-all')?.getAttribute('aria-pressed')).toBe('true');
-      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(7);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(6);
 
       // Second click toggles back to Pending
       (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
@@ -411,13 +415,13 @@ describe('BilateralReviewComponent', () => {
       fixture.detectChanges();
 
       expect(text('bilateral-review-filter-count')).toBe('1');
-      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(2);
 
       component.clearFilters();
       fixture.detectChanges();
 
       expect(byTestId('bilateral-review-filter-count')).toBeNull();
-      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(7);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(6);
     });
   });
 
@@ -669,7 +673,7 @@ describe('BilateralReviewComponent', () => {
       fixture.detectChanges();
       expect(component.projects()).toEqual([]);
       expect(betaOption.getAttribute('aria-checked')).toBe('false');
-      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(FIXTURE_ROWS.length);
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(FIXTURE_REVIEW_ROWS.length);
     });
 
     it('toggling a CATEGORY option through the rendered checkbox flips aria-checked and writes ?category=', () => {
@@ -743,6 +747,30 @@ describe('BilateralReviewComponent', () => {
     });
   });
 
+  // P2-3952 (SR-164368): Center drafts (Editing) are never listed or counted for the program.
+  describe('Center drafts are hidden (P2-3952)', () => {
+    it('does not list the Editing row; All equals Pending + Approved + Rejected', () => {
+      component.status.set('all');
+      fixture.detectChanges();
+
+      expect(component.results.tableResults().some(r => Number(r.status_id) === 1)).toBe(false);
+      expect(root().textContent).not.toContain('BR-007');
+      const count = (id: string) => Number(text(id).replace(/\D+/g, ''));
+      expect(count('bilateral-review-chip-all')).toBe(
+        count('bilateral-review-chip-pending') + count('bilateral-review-chip-approved') + count('bilateral-review-chip-rejected')
+      );
+    });
+
+    it('explains an empty list when every tagged result is still a Center draft', () => {
+      fixture.destroy();
+      build({}, of(groupedResponse([FIXTURE_ROWS.find(r => r.id === 'r7')!])));
+
+      expect(byTestId('bilateral-review-empty')).not.toBeNull();
+      expect(root().textContent).toContain('No bilateral results submitted yet');
+      expect(root().textContent).toContain('1 bilateral result is still being edited by its Center');
+    });
+  });
+
   describe('States', () => {
     it('shows the error state with a working Retry action', () => {
       fixture.destroy();
@@ -784,7 +812,8 @@ describe('BilateralReviewComponent', () => {
 
   describe('KPI derivation is discriminated by an all-distinct fixture (KZ-KCR fixture rule)', () => {
     /** projects: P1/P2/P3 = 3 · centers: CIP/IITA/CIAT/ILRI = 4 · pending (status 5): 2 ·
-     *  approved (status 6): 1 · rejected (status 7): 0 → decided 1. No two slots coincide, so
+     *  approved (status 6): 1 · rejected (status 7): 1 → decided 2. (d4 was Editing; P2-3952 hides
+     *  drafts, so it is Rejected now to keep every slot distinct.) No two slots coincide, so
      *  swapping any pair in the page's `kpis` computed would be caught here. */
     const DISTINCT_KPI_ROWS: ResultToReview[] = [
       row({ id: 'd1', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-101', result_title: 'Distinct one', lead_center: 'CIP', status_id: 5 }),
@@ -797,20 +826,20 @@ describe('BilateralReviewComponent', () => {
         result_code: 'BR-104',
         result_title: 'Distinct four',
         lead_center: 'ILRI',
-        status_id: 1,
-        status_name: 'Editing'
+        status_id: 7,
+        status_name: 'Rejected'
       })
     ];
 
-    it('renders projects 3 / centers 4 / pending 2 / decided 1 ("1 approved · 0 rejected")', () => {
+    it('renders projects 3 / centers 4 / pending 2 / decided 2 ("1 approved · 1 rejected")', () => {
       fixture.destroy();
       build({}, of(groupedResponse(DISTINCT_KPI_ROWS)));
 
       expect(text('kpi-projects')).toBe('3');
       expect(text('kpi-centers')).toBe('4');
       expect(text('kpi-pending')).toBe('2');
-      expect(text('kpi-decided')).toBe('1');
-      expect(text('kpi-decided-sublabel')).toBe('1 approved · 0 rejected');
+      expect(text('kpi-decided')).toBe('2');
+      expect(text('kpi-decided-sublabel')).toBe('1 approved · 1 rejected');
     });
   });
 
@@ -833,7 +862,7 @@ describe('BilateralReviewComponent', () => {
 
   describe('Program switch clears stale rows (Reliability fix)', () => {
     it("clears the previous programme's rows before the new programme's response resolves", () => {
-      expect(component.results.tableResults().length).toBe(7);
+      expect(component.results.tableResults().length).toBe(6);
 
       const secondResponse$ = new Subject<{ response: unknown }>();
       GET_ResultToReview.mockReturnValueOnce(secondResponse$ as never);
@@ -849,7 +878,7 @@ describe('BilateralReviewComponent', () => {
       secondResponse$.next(groupedResponse(FIXTURE_ROWS));
       fixture.detectChanges();
 
-      expect(component.results.tableResults().length).toBe(7);
+      expect(component.results.tableResults().length).toBe(6);
       expect(byTestId('bilateral-review-skeleton')).toBeNull();
     });
   });

@@ -467,13 +467,14 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       });
 
       it('KZ-MWB-3: clicking the group TOGGLER node (not the row center) collapses only that group’s rows', () => {
-        // P1 - Alpha Project: 4 rows (r1, r2, r4, r7). P2 - DESIRA Beta: 3 rows (r3, r5, r6).
-        cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 7);
+        // P1 - Alpha Project: 3 rows (r1, r2, r4 — r7 is an Editing draft, hidden since P2-3952).
+        // P2 - DESIRA Beta: 3 rows (r3, r5, r6).
+        cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 6);
 
         cy.get('[data-testid="bilateral-review-group-toggle"]').first().should('have.attr', 'aria-expanded', 'true').as('p1Toggle');
         cy.get('@p1Toggle').click();
 
-        // P1's 4 rows are gone; P2's 3 remain untouched.
+        // P1's 3 rows are gone; P2's 3 remain untouched.
         cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 3);
         cy.get('@p1Toggle').should('have.attr', 'aria-expanded', 'false');
 
@@ -481,10 +482,10 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         cy.get('[data-testid="bilateral-review-group-toggle"]').eq(1).click();
         cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 0);
 
-        // Re-expanding P1 restores exactly its own 4 rows (the click landed on the toggler, not a
+        // Re-expanding P1 restores exactly its own 3 rows (the click landed on the toggler, not a
         // row center — KZ-MWB-3 — so the OTHER group's collapsed state is unaffected).
         cy.get('@p1Toggle').click();
-        cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 4);
+        cy.get('[data-testid="bilateral-review-row-action"]').should('have.length', 3);
       });
 
       // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN /

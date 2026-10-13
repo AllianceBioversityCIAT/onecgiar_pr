@@ -583,8 +583,8 @@
           <app-sp-tab-empty-state
             testId="bilateral-review-empty"
             icon="handshake"
-            [title]="copy.states.emptyTitle"
-            [description]="copy.states.emptyDescription"
+            [title]="draftsHiddenCount() > 0 ? copy.states.draftsOnlyTitle : copy.states.emptyTitle"
+            [description]="draftsHiddenCount() > 0 ? copy.states.draftsOnlyDescription(draftsHiddenCount()) : copy.states.emptyDescription"
             [primaryLabel]="canReportEmerging() ? copy.states.emptyPrimary : null"
             [secondaryLabel]="copy.states.emptySecondary"
             (primaryAction)="openEmergingReport()"
