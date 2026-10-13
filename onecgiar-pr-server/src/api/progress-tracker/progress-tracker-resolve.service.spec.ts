@@ -575,28 +575,28 @@ describe('ProgressTrackerResolveService', () => {
       expect(row.pt_indicator_id).toBeNull();
     });
 
-    it('is true for a fuzzy match scoring below 0.97', async () => {
+    it('is true for a fuzzy match scoring below 0.95', async () => {
       const row = await resolveWith(
         fuzzyWith([
-          { indicator_id: '8006329bfd49', score: 0.969 },
+          { indicator_id: '8006329bfd49', score: 0.949 },
           { indicator_id: '22ba725f9423', score: 0.5 },
         ]),
       );
       expect(row.needs_review).toBe(true);
     });
 
-    it('is false for a clear fuzzy match at or above 0.97', async () => {
+    it('is false for a clear fuzzy match at or above 0.95', async () => {
       const row = await resolveWith(
         fuzzyWith([
           { indicator_id: '22ba725f9423', score: 0.6 },
-          { indicator_id: '8006329bfd49', score: 0.97 },
+          { indicator_id: '8006329bfd49', score: 0.95 },
         ]),
       );
       expect(row.needs_review).toBe(false);
     });
 
-    it('honours PT_INTEROP_REVIEW_THRESHOLD (0.95 accepts a 0.96 fuzzy match)', async () => {
-      process.env.PT_INTEROP_REVIEW_THRESHOLD = '0.95';
+    it('honours PT_INTEROP_REVIEW_THRESHOLD (0.97 flags a 0.96 fuzzy match)', async () => {
+      process.env.PT_INTEROP_REVIEW_THRESHOLD = '0.97';
       try {
         const row = await resolveWith(
           fuzzyWith([
@@ -604,7 +604,7 @@ describe('ProgressTrackerResolveService', () => {
             { indicator_id: '22ba725f9423', score: 0.5 },
           ]),
         );
-        expect(row.needs_review).toBe(false);
+        expect(row.needs_review).toBe(true);
       } finally {
         delete process.env.PT_INTEROP_REVIEW_THRESHOLD;
       }
