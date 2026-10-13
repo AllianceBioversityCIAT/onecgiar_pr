@@ -457,8 +457,9 @@ export class InnovationUseActorDto {
   other_actor_type?: string | null;
 
   @ApiPropertyOptional({
-    description: 'Whether sex and age disaggregation is provided',
-    example: true,
+    description:
+      'true = sex and age disaggregation does NOT apply: only how_many is reported. false = disaggregated: send women, men, women_youth, men_youth.',
+    example: false,
   })
   @IsOptional()
   @IsBoolean()
