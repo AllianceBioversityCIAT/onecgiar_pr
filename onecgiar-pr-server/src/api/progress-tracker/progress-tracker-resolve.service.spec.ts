@@ -366,9 +366,9 @@ describe('ProgressTrackerResolveService', () => {
       });
 
       expect(table.map((r) => r.center).sort()).toEqual(['CIAT', 'IFPRI']);
-      expect(httpService.get.mock.calls.map(([, c]) => c.params.center)).toEqual(
-        ['CIAT (Alliance)', 'IFPRI', 'CIAT (Alliance)', 'IFPRI'],
-      );
+      expect(
+        httpService.get.mock.calls.map(([, c]) => c.params.center),
+      ).toEqual(['CIAT (Alliance)', 'IFPRI', 'CIAT (Alliance)', 'IFPRI']);
     });
 
     it('omits kpi_type from the query when the indicator has none', async () => {
@@ -447,7 +447,10 @@ describe('ProgressTrackerResolveService', () => {
 
     it('passes over rows already in the map without an upstream call, and they do not count against the limit', async () => {
       porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(4));
-      await service.resolveIndicatorMappings({ versionId: VERSION_ID, limit: 2 });
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 2,
+      });
       httpService.get.mockClear();
 
       const result = await service.resolveIndicatorMappings({
@@ -500,7 +503,10 @@ describe('ProgressTrackerResolveService', () => {
     it('retrying the same cursor after a partial batch (gateway 504) only calls the rows not yet written', async () => {
       porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(3));
       // First attempt: the gateway gave up after ind-0 was written; the client never saw next_cursor.
-      await service.resolveIndicatorMappings({ versionId: VERSION_ID, limit: 1 });
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 1,
+      });
       httpService.get.mockClear();
 
       const retry = await service.resolveIndicatorMappings({

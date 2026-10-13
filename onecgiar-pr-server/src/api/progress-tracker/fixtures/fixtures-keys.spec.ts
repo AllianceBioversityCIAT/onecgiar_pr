@@ -64,7 +64,7 @@ function mappedRow(): ProgressTrackerIndicatorMap {
 describe('progress-tracker fixtures — staging contract key projection (PTM-T-8)', () => {
   let service: ProgressTrackerService;
   let httpService: { get: jest.Mock };
-  let mappingRepository: { findOne: jest.Mock };
+  let mappingRepository: { find: jest.Mock };
   let versionRepository: { findOne: jest.Mock };
 
   beforeEach(async () => {
@@ -73,7 +73,7 @@ describe('progress-tracker fixtures — staging contract key projection (PTM-T-8
     delete process.env.PT_INTEROP_TIMEOUT_MS;
 
     httpService = { get: jest.fn() };
-    mappingRepository = { findOne: jest.fn().mockResolvedValue(mappedRow()) };
+    mappingRepository = { find: jest.fn().mockResolvedValue([mappedRow()]) };
     versionRepository = {
       findOne: jest.fn().mockResolvedValue(ACTIVE_VERSION),
     };

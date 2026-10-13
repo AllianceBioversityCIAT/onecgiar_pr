@@ -179,7 +179,9 @@ export class ProgressTrackerResolveService {
     while (index < total && counts.processed < limit) {
       const row = porbRows[index];
       index += 1;
-      if (resolvedKeys.has(this.rowKey(row.tocResultsIndicatorId, row.center))) {
+      if (
+        resolvedKeys.has(this.rowKey(row.tocResultsIndicatorId, row.center))
+      ) {
         counts.already_resolved += 1;
         continue;
       }
@@ -218,7 +220,9 @@ export class ProgressTrackerResolveService {
       select: { toc_results_indicator_id: true, center: true },
     });
     return new Set(
-      (rows ?? []).map((r) => this.rowKey(r.toc_results_indicator_id, r.center)),
+      (rows ?? []).map((r) =>
+        this.rowKey(r.toc_results_indicator_id, r.center),
+      ),
     );
   }
 

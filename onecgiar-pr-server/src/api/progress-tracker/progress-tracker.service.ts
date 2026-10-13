@@ -10,6 +10,7 @@ import { Version } from '../versioning/entities/version.entity';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { getProgressTrackerTimeoutMs } from './progress-tracker.config';
 import { PtPorbRepository } from './repositories/pt-porb.repository';
+import { toPtCenterName } from './pt-center-name';
 
 /**
  * `PTM-T-3` — the proxy service: mapping lookup, upstream call, total status
@@ -50,6 +51,8 @@ export interface ProgressTrackerResultsQuery {
   max_results?: number;
   refresh?: boolean;
   mode?: string;
+  /** PRMS center acronym of the reported row — selects the mapping row, never sent upstream. */
+  center?: string;
 }
 
 /**
@@ -228,25 +231,52 @@ export class ProgressTrackerService {
       return this.buildEnvelope({ status: 'not_found' });
     }
 
-    const mapping = await this.mappingRepository.findOne({
-      where: {
-        toc_results_indicator_id: tocIndicatorId,
-        version_id: activeVersion.id,
-      },
-    });
+    const mapping = this.pickMapping(
+      await this.mappingRepository.find({
+        where: {
+          toc_results_indicator_id: tocIndicatorId,
+          version_id: activeVersion.id,
+        },
+      }),
+      query.center,
+    );
 
     // `PTM-AC-2` / design.md §5 rule 1: an unmapped indicator, or one whose row is
-    // match_quality='none' (or otherwise carries no PT id), returns `not_found`
-    // WITHOUT any HTTP call — zero calls to `HttpService.get` is the assertion.
+    // match_quality='none', otherwise carries no PT id, or still needs review, returns
+    // `not_found` WITHOUT any HTTP call — zero calls to `HttpService.get` is the
+    // assertion.
     if (
       !mapping ||
       mapping.match_quality === 'none' ||
-      !mapping.pt_indicator_id
+      !mapping.pt_indicator_id ||
+      mapping.needs_review
     ) {
       return this.buildEnvelope({ status: 'not_found' });
     }
 
     return this.fetchUpstreamResults(mapping.pt_indicator_id, query);
+  }
+
+  /**
+   * The mapping row for the reported center. PT keeps one KPI per (indicator, center),
+   * so the map holds one row per center (`center` = PRMS acronym). Both sides are
+   * compared through {@link toPtCenterName}, so `CIAT` matches a row stored as
+   * `CIAT (Alliance)` and vice versa.
+   *
+   * - center given → the row for that center, or none;
+   * - no center → the indicator's only row; several rows are ambiguous → none (never
+   *   a guess between centers).
+   */
+  private pickMapping(
+    rows: ProgressTrackerIndicatorMap[] | null | undefined,
+    center: string | undefined,
+  ): ProgressTrackerIndicatorMap | null {
+    const list = rows ?? [];
+    const wanted = toPtCenterName(center);
+    if (wanted) {
+      return list.find((r) => toPtCenterName(r.center) === wanted) ?? null;
+    }
+    return list.length === 1 ? list[0] : null;
   }
 
   /**

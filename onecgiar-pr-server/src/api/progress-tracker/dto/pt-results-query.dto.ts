@@ -1,5 +1,14 @@
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-indicator-mapping
-import { IsBoolean, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -50,4 +59,13 @@ export class PtResultsQueryDto {
   @IsOptional()
   @IsIn(PT_RESULTS_MODES)
   mode?: PtResultsMode;
+
+  @ApiPropertyOptional({
+    description:
+      'PRMS center acronym of the row being reported (e.g. `CIAT`). Selects the per-center mapping; PRMS-side only, never forwarded upstream.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  center?: string;
 }
