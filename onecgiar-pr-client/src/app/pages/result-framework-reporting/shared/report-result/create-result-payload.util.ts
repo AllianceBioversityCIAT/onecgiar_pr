@@ -170,7 +170,7 @@ export interface CreateResultPayloadOptions {
  * `result_type`, `knowledge_product_handle`).
  */
 export interface PtProvenanceInput {
-  /** The draft narrative — becomes the body of `toc_progressive_narrative` (`PTB-R-16`). */
+  /** The draft description — becomes `result.description` (the narrative carries only the origin note). */
   description: string;
   /** `<indicator_id>:<n>` — sent back verbatim so the server can persist the provenance link. */
   result_key: string;
@@ -190,16 +190,6 @@ export function buildPtProvenanceTail(proposal: PtProvenanceInput): string {
   const parts = [`Drafted from Progress Tracker proposal ${proposal.result_key}`];
   if (proposal.generated_at) parts.push(`generated ${proposal.generated_at}`);
   return `${parts.join(', ')}.`;
-}
-
-/**
- * `PTB-R-16` — the draft description plus the provenance tail. Only the Progress Tracker path ever
- * calls this; every other caller keeps sending `''` (`PTB-R-17`, `PTB-AC-13`).
- */
-export function buildPtProgressiveNarrative(proposal: PtProvenanceInput): string {
-  const description = (proposal.description ?? '').trim();
-  const tail = buildPtProvenanceTail(proposal);
-  return description ? `${description}\n\n${tail}` : tail;
 }
 
 /**
@@ -260,10 +250,21 @@ function resolveInnovationLink(options: CreateResultPayloadOptions): Record<stri
 
 /**
  * `PTB-R-17` / `PTB-AC-13`: every caller that never went through the Progress Tracker tab keeps
- * sending exactly `''`, as the legacy modal always has.
+ * sending exactly `''`, as the legacy modal always has. A Progress Tracker pick sends only the
+ * origin note — the draft text itself is the result description ({@link resolvePtDescription}).
  */
 function resolveProgressiveNarrative(options: CreateResultPayloadOptions): string {
-  return options.ptProposal ? buildPtProgressiveNarrative(options.ptProposal) : '';
+  return options.ptProposal ? buildPtProvenanceTail(options.ptProposal) : '';
+}
+
+/**
+ * The Progress Tracker draft is the result's description (`result.description`, stored by the
+ * server at create). Spread only when there is a non-empty draft, so every other caller posts the
+ * exact `result` it posts today.
+ */
+function resolvePtDescription(options: CreateResultPayloadOptions): Record<string, string> {
+  const description = (options.ptProposal?.description ?? '').trim();
+  return description ? { description } : {};
 }
 
 /**
@@ -299,6 +300,7 @@ export function buildCreateResultPayload(options: CreateResultPayloadOptions): R
       initiative_id: options.initiativeId,
       result_name: options.body.result_name,
       handler: resolveHandler(options, resultTypeId),
+      ...resolvePtDescription(options),
       // P2-3420 — the answer rides INSIDE the create. Chaining the innovation-use PATCH afterwards
       // does not work: it rejects a body without a valid `innovation_use_level_id`, which a result
       // created a moment ago does not have yet. The server stores it where Contributors and

@@ -1,6 +1,5 @@
 import {
   buildCreateResultPayload,
-  buildPtProgressiveNarrative,
   buildPtProvenanceTail,
   CreateResultPayloadOptions,
   isKnowledgeProductResultType,
@@ -438,26 +437,33 @@ describe('buildCreateResultPayload — Progress Tracker provenance (PTB-T-5)', (
     expect(Object.keys(payload)).not.toContain('progress_tracker_provenance');
   });
 
-  it('PTB-AC-12 — carries the draft description plus the provenance tail in toc_progressive_narrative', () => {
+  it('puts the draft in result.description and only the origin note in toc_progressive_narrative', () => {
     const payload = buildCreateResultPayload(
       options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptProposal })
     );
 
+    expect(payload['result']['description']).toBe('A conflict sensitivity hub established as a strategic mechanism.');
     expect(payload['toc_progressive_narrative']).toBe(
-      'A conflict sensitivity hub established as a strategic mechanism.\n\n' +
-        'Drafted from Progress Tracker proposal 8006329bfd49:1, generated 2026-09-22T18:47:26.657864+00:00.'
+      'Drafted from Progress Tracker proposal 8006329bfd49:1, generated 2026-09-22T18:47:26.657864+00:00.'
+    );
+  });
+
+  it('omits result.description when there is no pick or the draft is blank', () => {
+    const noPick = buildCreateResultPayload(options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' } }));
+    const blank = buildCreateResultPayload(
+      options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptProposal: { ...ptProposal, description: '  ' } })
+    );
+
+    expect(noPick['result']).not.toHaveProperty('description');
+    expect(blank['result']).not.toHaveProperty('description');
+    expect(blank['toc_progressive_narrative']).toBe(
+      'Drafted from Progress Tracker proposal 8006329bfd49:1, generated 2026-09-22T18:47:26.657864+00:00.'
     );
   });
 
   it('PTB-AC-12 — the tail degrades gracefully when generated_at is missing', () => {
     const tail = buildPtProvenanceTail({ description: '', result_key: '8006329bfd49:2' });
     expect(tail).toBe('Drafted from Progress Tracker proposal 8006329bfd49:2.');
-  });
-
-  it('buildPtProgressiveNarrative falls back to the tail alone when the draft has no description', () => {
-    expect(buildPtProgressiveNarrative({ description: '  ', result_key: '8006329bfd49:2' })).toBe(
-      'Drafted from Progress Tracker proposal 8006329bfd49:2.'
-    );
   });
 
   it('PTB-R-16 — sends result_key, evidence_fingerprint and generated_at as a sibling of result, never inside it', () => {

@@ -2098,9 +2098,8 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
 
       expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
       const body = api.resultsSE.POST_createResult.mock.calls[0][0];
-      expect(body.toc_progressive_narrative).toBe(
-        'Draft description\n\nDrafted from Progress Tracker proposal toc-node-1:1, generated 2026-09-22T00:00:00.000Z.'
-      );
+      expect(body.result.description).toBe('Draft description');
+      expect(body.toc_progressive_narrative).toBe('Drafted from Progress Tracker proposal toc-node-1:1, generated 2026-09-22T00:00:00.000Z.');
       expect(body.progress_tracker_provenance).toEqual({
         result_key: 'toc-node-1:1',
         evidence_fingerprint: 'fingerprint-1',
@@ -2121,6 +2120,7 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
 
       const body = api.resultsSE.POST_createResult.mock.calls[0][0];
       expect(body.toc_progressive_narrative).toBe('');
+      expect(body.result).not.toHaveProperty('description');
       expect(body).not.toHaveProperty('progress_tracker_provenance');
     });
   });

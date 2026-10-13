@@ -1055,7 +1055,8 @@ export class LabReportFormComponent {
     // PTB-R-16/17: a payload only ever carries `ptProposal` when a Progress Tracker pick actually
     // happened on THIS form instance (`ptDraft() !== null`) — independent of which tab is active at
     // submit time. Every other create path passes `null`, which keeps `toc_progressive_narrative`
-    // `''` and omits `progress_tracker_provenance` entirely (`PTB-AC-13`). Only the four fields the
+    // `''` and omits `progress_tracker_provenance` and `result.description` entirely (`PTB-AC-13`).
+    // With a pick, the draft becomes `result.description`; the narrative carries only the origin note. Only the four fields the
     // builder reads travel — never `countries` / `impact_areas` / `gender_split` (`PTB-R-18`,
     // `PTB-AC-17`), which this file never even destructures off `ptDraft()`.
     const ptDraft = this.ptDraft();
