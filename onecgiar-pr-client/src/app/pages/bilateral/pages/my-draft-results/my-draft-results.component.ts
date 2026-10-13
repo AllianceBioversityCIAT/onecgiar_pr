@@ -333,8 +333,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
 
   /** Centers `el` within its nearest scrollable ancestor (the `scrollIntoView({block:'center'})`
    * this replaces), respecting `prefers-reduced-motion` (`AIQ-R-9` D kept `behavior:'smooth'`; a
-   * reduced-motion user gets the jump instead, same convention as `bilateral-overview`'s
-   * `scrollToAttention()`). No-ops when no scrollable ancestor is found — never falls back to
+   * reduced-motion user gets the jump instead, same convention the Overview scroll used before it was removed).
+   * No-ops when no scrollable ancestor is found — never falls back to
    * `scrollIntoView`, which is exactly the bug this exists to avoid. */
   private scrollWithinNearestScrollContainer(el: HTMLElement, instant = false): void {
     const container = this.findNearestScrollContainer(el);

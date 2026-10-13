@@ -12,7 +12,7 @@
       [sortOrder]="-1"
       [value]="dataTable | filterByText: searchText"
       [paginator]="!!(dataTable | filterByText: searchText)?.length"
-      [rows]="10"
+      [rows]="100"
       selectionMode="single"
       [rowsPerPageOptions]="[10, 50, 100]">
       <ng-template prTableHeader>

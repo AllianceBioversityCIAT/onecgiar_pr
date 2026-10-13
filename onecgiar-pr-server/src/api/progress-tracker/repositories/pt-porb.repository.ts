@@ -16,7 +16,14 @@ export interface PtPorbRow {
   tocIndicatorIntegrationId: number | null;
   program: string;
   aow: string;
+  /**
+   * PRMS-side center acronym (`clarisa_institutions.acronym`), `''` when the indicator
+   * has no center target. Stored as-is on the map row; normalized to PT's spelling only
+   * when sent to `/resolve` (`toPtCenterName`).
+   */
   center: string;
+  /** The ToC indicator's `type_value`; `null` when unset. */
+  kpiType: string | null;
   hloTitle: string;
   description: string;
 }
@@ -51,9 +58,10 @@ export interface PtPorbRow {
  *   comment on `TocResultResponse.progress`, "this HLO's own progress").
  * - `center` — `clarisa_institutions.acronym` via the same
  *   `toc_result_indicator_target` → `toc_result_indicator_target_center` chain
- *   `aow-bilateral.repository.ts:602-606` joins, taking the first center alphabetically
- *   when more than one holds the same target (documented simplification — the Guide's
- *   `/resolve` call takes one `center` string, not a list).
+ *   `aow-bilateral.repository.ts:602-606` joins. `center` is part of the `GROUP BY`, so
+ *   an indicator with targets for N centers yields N rows — PT keeps one KPI per
+ *   (indicator, center), and `/resolve` takes one `center` string per call.
+ * - `kpi_type` — `toc_results_indicators.type_value`.
  * - `description` — `toc_results_indicators.indicator_description`, the same column
  *   `toc-indicator-description-resolver.service.ts:54` and
  *   `results.service.ts:3257-3313`'s `getTocMetadata` both read.
@@ -63,6 +71,23 @@ export interface PtPorbRow {
  * the SQL's precision, only on the shape `{ tocResultsIndicatorId, program, aow,
  * center, hloTitle, description }` being populated from *some* PORB source.
  */
+/**
+ * Drops an indicator's center-less row (`center = ''`) when the same indicator also has
+ * rows with a center. The `LEFT JOIN` to the target-center chain yields a `''` row for
+ * a target with no center next to the real per-center rows; resolving it would ask PT
+ * for a center-less KPI that does not exist and store a stray `none`/fuzzy row. An
+ * indicator with **only** a `''` row keeps it — that is a genuinely center-less KPI.
+ * Order is preserved.
+ */
+export function dropCenterlessDuplicates(rows: PtPorbRow[]): PtPorbRow[] {
+  const withCenter = new Set(
+    rows.filter((r) => r.center !== '').map((r) => r.tocResultsIndicatorId),
+  );
+  return rows.filter(
+    (r) => r.center !== '' || !withCenter.has(r.tocResultsIndicatorId),
+  );
+}
+
 @Injectable()
 export class PtPorbRepository {
   constructor(private readonly dataSource: DataSource) {}
@@ -82,6 +107,13 @@ export class PtPorbRepository {
    * first, year predicate second: a wrong year alone would otherwise only quietly empty
    * `aow` via the `LEFT JOIN`, never break the one-row-per-indicator guarantee `PTM-R-10`
    * needs).
+   *
+   * The guarantee is now one row per (indicator, center): `ci.acronym` is grouped on
+   * (by column, not the `center` alias — MySQL resolves `GROUP BY` names against the
+   * `FROM` columns first) and the order is `tri.id, center` so runs are deterministic.
+   * Several targets for the same center collapse into that center's single row, and a
+   * center-less row is dropped when the indicator has centered ones
+   * ({@link dropCenterlessDuplicates}).
    */
   async findPorbRowsForPhase(
     phaseUuid: string,
@@ -105,7 +137,8 @@ export class PtPorbRepository {
             THEN CONCAT(UPPER(TRIM(wp.acronym)), ': ', wp.name)
           ELSE NULL
         END) AS aow,
-        MIN(ci.acronym) AS center,
+        COALESCE(ci.acronym, '') AS center,
+        tri.type_value AS kpi_type,
         tr.result_title AS hlo_title,
         tri.indicator_description AS description
       FROM ${env.DB_TOC}.toc_results_indicators tri
@@ -130,31 +163,57 @@ export class PtPorbRepository {
         tri.id,
         tri.related_node_id,
         program,
+        ci.acronym,
+        tri.type_value,
         tr.result_title,
         tri.indicator_description
-      ORDER BY tri.id ASC
+      ORDER BY tri.id ASC, center ASC
     `;
 
     const rows = await this.dataSource.query(query, params);
 
-    return (rows ?? [])
-      .filter(
-        (row: any) =>
-          typeof row?.toc_results_indicator_id === 'string' &&
-          row.toc_results_indicator_id.length > 0,
-      )
-      .map((row: any) => ({
-        tocResultsIndicatorId: row.toc_results_indicator_id,
-        tocIndicatorIntegrationId:
-          row.toc_indicator_integration_id !== null &&
-          row.toc_indicator_integration_id !== undefined
-            ? Number(row.toc_indicator_integration_id)
-            : null,
-        program: row.program ?? '',
-        aow: row.aow ?? '',
-        center: row.center ?? '',
-        hloTitle: row.hlo_title ?? '',
-        description: row.description ?? '',
-      }));
+    return dropCenterlessDuplicates(
+      (rows ?? [])
+        .filter(
+          (row: any) =>
+            typeof row?.toc_results_indicator_id === 'string' &&
+            row.toc_results_indicator_id.length > 0,
+        )
+        .map((row: any) => ({
+          tocResultsIndicatorId: row.toc_results_indicator_id,
+          tocIndicatorIntegrationId:
+            row.toc_indicator_integration_id !== null &&
+            row.toc_indicator_integration_id !== undefined
+              ? Number(row.toc_indicator_integration_id)
+              : null,
+          program: row.program ?? '',
+          aow: row.aow ?? '',
+          center: row.center ?? '',
+          kpiType:
+            typeof row.kpi_type === 'string' && row.kpi_type.length > 0
+              ? row.kpi_type
+              : null,
+          hloTitle: row.hlo_title ?? '',
+          description: row.description ?? '',
+        })),
+    );
+  }
+
+  /**
+   * The program name for a PRMS official code (`SP01` → `Breeding for Tomorrow`), from
+   * the PRMS-owned `clarisa_initiatives` cache. The Progress Tracker keys programs on
+   * the name (its id is `md5("PROGRAM|{name}")[:12]`) and does not know SP codes.
+   * `null` when the code is not in the cache.
+   */
+  async findProgramName(officialCode: string): Promise<string | null> {
+    const rows = await this.dataSource.query(
+      `SELECT ci.name AS name
+         FROM ${env.DB_NAME}.clarisa_initiatives ci
+        WHERE ci.official_code = ?
+        LIMIT 1`,
+      [officialCode],
+    );
+    const name = rows?.[0]?.name;
+    return typeof name === 'string' && name.trim() ? name.trim() : null;
   }
 }

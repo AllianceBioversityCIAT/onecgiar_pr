@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { catchError, distinctUntilChanged, filter, of, switchMap, tap } from 'rxjs';
+import { EMPTY, catchError, distinctUntilChanged, filter, of, switchMap, tap } from 'rxjs';
 import { ResultsApiService } from '../../../../../../../../shared/services/api/results-api.service';
 
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-2)
@@ -65,7 +65,14 @@ export interface PtResultsEnvelope {
 }
 
 /** The component's own rendered states. `picked` (`PTB-R-3`) is the host's banner, not a seventh value here (`design.md` §6.1). */
-export type PtResultsBrowseStatus = 'idle' | 'loading' | 'results' | 'empty' | 'not_found' | 'unavailable';
+export type PtResultsBrowseStatus = 'idle' | 'choose_center' | 'loading' | 'results' | 'empty' | 'not_found' | 'unavailable';
+
+/** One fetch key: the PRMS indicator plus the center whose PT KPI is wanted. */
+interface PtRequest {
+  id: string | number;
+  center: string | null;
+  needsCenterChoice: boolean;
+}
 
 /**
  * Shape of one raw `results[]` item as child 1's envelope carries it (staging fixture
@@ -107,6 +114,14 @@ export class PtResultsBrowseComponent {
   readonly indicatorFixesResultType = input<boolean>(false);
   readonly isKnowledgeProduct = input<boolean>(false);
   readonly busy = input<boolean>(false);
+  /**
+   * PRMS center acronym of the row being reported — PT keeps one KPI per (indicator, center), so
+   * it is sent with the request. `null` sends none (the server then uses the indicator's only
+   * mapping row). The host resolves it (`LabReportFormComponent.ptCenter`).
+   */
+  readonly center = input<string | null>(null);
+  /** True while a target shared by several centers has no center chosen yet: nothing is fetched. */
+  readonly awaitingCenter = input<boolean>(false);
 
   // Outputs — design.md §6.1
   readonly proposalSelected = output<PtProposalDto>();
@@ -118,6 +133,11 @@ export class PtResultsBrowseComponent {
   readonly selectedKey = signal<string | null>(null);
   /** `source.pt_url` from the last envelope — display-only deep link (`PTB-R-6c`, `PTB-R-23`). */
   readonly ptUrl = signal<string | null>(null);
+  private readonly request = computed<PtRequest | null>(() => {
+    const id = this.tocIndicatorId();
+    if (id === null || id === undefined || id === '') return null;
+    return { id, center: (this.center() ?? '').trim() || null, needsCenterChoice: this.awaitingCenter() };
+  });
 
   constructor() {
     // PTB-T-2 Leader clarification: fetch is driven by `tocIndicatorId` becoming set/changing —
@@ -136,23 +156,31 @@ export class PtResultsBrowseComponent {
     // one fetch (the two `A` values are consecutive once the intervening `null` is filtered out),
     // while A → B always fetches twice. `takeUntilDestroyed()` releases the subscription with the
     // component instead of leaking it past teardown.
-    toObservable(this.tocIndicatorId)
+    //
+    // The key is (indicator, center): a different center of the same indicator is a different PT
+    // KPI and fetches again; a shared target with no center chosen yet fetches nothing.
+    toObservable(this.request)
       .pipe(
-        filter((id): id is string | number => id !== null && id !== undefined && id !== ''),
-        distinctUntilChanged(),
-        tap(() => {
-          this.status.set('loading');
+        filter((req): req is PtRequest => req !== null),
+        distinctUntilChanged((a, b) => a.id === b.id && a.center === b.center && a.needsCenterChoice === b.needsCenterChoice),
+        tap(req => {
+          this.status.set(req.needsCenterChoice ? 'choose_center' : 'loading');
+          this.proposals.set([]);
           this.ptUrl.set(null);
           this.selectedKey.set(null);
         }),
-        switchMap(id =>
-          this.resultsApiSE.GET_progressTrackerResults(id, {}).pipe(
+        switchMap(req => {
+          if (req.needsCenterChoice) return EMPTY;
+          const call = req.center
+            ? this.resultsApiSE.GET_progressTrackerResults(req.id, {}, req.center)
+            : this.resultsApiSE.GET_progressTrackerResults(req.id, {});
+          return call.pipe(
             // PTB-R-8: a transport-level failure maps to the same 'unavailable' branch as an
             // HTTP-200 envelope carrying status 'unavailable' — see applyEnvelope() below. Never
             // echoes the caught error into the UI (`PTB-AC-7`, `.cursorrules`).
             catchError(() => of<PtResultsEnvelope>({ response: { status: 'unavailable' } }))
-          )
-        ),
+          );
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(envelope => this.applyEnvelope(envelope));
@@ -169,7 +197,10 @@ export class PtResultsBrowseComponent {
     this.ptUrl.set(body.source?.pt_url ?? null);
 
     if (body.status === 'ok') {
-      const raw = Array.isArray(body.results) ? body.results : [];
+      // `generated_by.mode === 'template'`: PT had no evidence to draft from and returned blank
+      // templates — those are not proposals, so the panel shows "nothing to propose".
+      const isTemplate = (body.generated_by as { mode?: unknown } | null | undefined)?.mode === 'template';
+      const raw = !isTemplate && Array.isArray(body.results) ? body.results : [];
       const mapped = raw.map(item => this.toProposal(item, body));
       this.proposals.set(mapped);
       this.status.set(mapped.length > 0 ? 'results' : 'empty');

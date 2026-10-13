@@ -655,6 +655,27 @@ describe('ResultsListComponent', () => {
     });
   });
 
+  describe('programLabel()', () => {
+    it('renders CODE - Name and keeps programCode (dot key) as the bare code', () => {
+      const r = { submitter: 'SP10', submitter_name: 'Gender' } as any;
+      expect(component.programLabel(r)).toBe('SP10 - Gender');
+      expect(component.programCode(r)).toBe('SP10');
+    });
+    it('renders the code only when the name is missing and empty when neither exists', () => {
+      expect(component.programLabel({ submitter: 'SP10' } as any)).toBe('SP10');
+      expect(component.programLabel({} as any)).toBe('');
+    });
+    it('falls back to initiative_official_code and initiative_name when submitter is null', () => {
+      const r = { submitter: null, initiative_official_code: 'SGP-02', initiative_name: 'X' } as any;
+      expect(component.programLabel(r)).toBe('SGP-02 - X');
+    });
+    it('Program column is 200px wide with minPx 120', () => {
+      const col = RC_COLUMNS.find(c => c.key === 'program');
+      expect(col.width).toBe('200px');
+      expect(col.minPx).toBe(120);
+    });
+  });
+
   describe('isW3BilateralsAvisa() (private)', () => {
     it('should return false when source_name is not W3/Bilaterals', () => {
       const result = { source_name: 'Other', submitter: 'SGP-02' } as any;

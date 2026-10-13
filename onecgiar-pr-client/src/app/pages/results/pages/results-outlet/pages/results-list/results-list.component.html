@@ -202,7 +202,7 @@
       dataKey="result_code"
       [loading]="this.resultsListService.showDeletingResultSpinner || (this.resultsListService.showLoadingResultSpinner && !filteredResults?.length)"
       [paginator]="filteredResults?.length"
-      [rows]="10"
+      [rows]="100"
       styleClass="rc-pr-table"
       selectionMode="single"
       [first]="this.resultsListFilterSE.text_to_search() && 0"
@@ -302,7 +302,7 @@
                     [queryParams]="getResultQueryParams(subResult)"
                     (click)="onResultLinkClick($event, subResult)">
                     <span class="rc-program__dot" [style.background]="programDotColor(programCode(subResult))"></span>
-                    <span class="rc-program__code">{{ programCode(subResult) || '—' }}</span>
+                    <span class="rc-program__code" [attr.title]="programLabel(subResult) || null">{{ programLabel(subResult) || '—' }}</span>
                   </a>
                 } @else if (column.attr === 'lead_center') {
                   <a

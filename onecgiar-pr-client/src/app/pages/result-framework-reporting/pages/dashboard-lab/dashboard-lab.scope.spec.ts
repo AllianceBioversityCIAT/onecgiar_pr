@@ -354,7 +354,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
         initiative_role_id: '1',
         indicator_category: 'Cat B',
         lead_center: 'CenterY',
-        status_name: 'Editing'
+        status_name: 'Rejected'
       });
       const ROW_AOW02_PRIMARY = mkRow({
         acronym: 'AOW02',
@@ -374,10 +374,9 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
         expect(component.overviewBilateralCategories()).toEqual([{ name: 'Cat B', count: 1, link: { origin: 'W3/Bilaterals', category: 'Cat B' } }]);
         const segments = component.overviewBilateralStatusSegments().map(s => ({ key: s.key, count: s.count }));
         expect(segments).toEqual([
-          { key: 'editing', count: 1 },
           { key: 'pending', count: 0 },
           { key: 'approved', count: 0 },
-          { key: 'rejected', count: 0 }
+          { key: 'rejected', count: 1 }
         ]);
       });
 
@@ -394,7 +393,6 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
         expect(component.overviewBilateralCategories()).toEqual([{ name: 'Cat A', count: 1, link: { origin: 'W3/Bilaterals', category: 'Cat A' } }]);
         const segments = component.overviewBilateralStatusSegments().map(s => ({ key: s.key, count: s.count }));
         expect(segments).toEqual([
-          { key: 'editing', count: 0 },
           { key: 'pending', count: 1 },
           { key: 'approved', count: 1 },
           { key: 'rejected', count: 0 }
@@ -407,7 +405,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
           cols: ['Cat A'],
           cells: [{ r: 0, c: 0, value: 2, link: { origin: 'W3/Bilaterals', center: 'CenterX', category: 'Cat A' } }],
           caption: 'W3/Bilateral results by center and category',
-          subtitle: 'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)',
+          subtitle: 'Bilateral results tagged to this program, excluding Editing (handled by centers)',
           shownOf: undefined
         });
       });
@@ -426,6 +424,33 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
         expect(heatmap.cells.reduce((sum, cell) => sum + cell.value, 0)).toBe(4);
       });
 
+      it('Editing rows (center-only) are left out of all four cards', async () => {
+        const component = await createComponent();
+        const ROW_EDITING_PRIMARY = mkRow({
+          acronym: 'AOW01',
+          initiative_role_id: '1',
+          indicator_category: 'Cat E',
+          lead_center: 'CenterE',
+          status_name: 'Editing'
+        });
+        const ROW_DRAFT_BY_ID = mkRow({
+          acronym: 'AOW01',
+          initiative_role_id: '1',
+          indicator_category: 'Cat E',
+          lead_center: 'CenterE',
+          status_id: 8
+        } as Partial<ResultToReview>);
+        seedBilateralRows(component, [ROW_AOW01_PRIMARY, ROW_AOW01_CONTRIBUTOR, ROW_EDITING_PRIMARY, ROW_DRAFT_BY_ID]);
+
+        expect(component.overviewBilateralCenters().map(c => c.name)).toEqual(['CenterX']);
+        expect(component.overviewBilateralCategories().map(c => c.name)).toEqual(['Cat A']);
+        expect(component.overviewBilateralStatusSegments().reduce((sum, s) => sum + s.count, 0)).toBe(2);
+        const heatmap = component.overviewBilateralHeatmap();
+        expect(heatmap.rows).toEqual(['CenterX']);
+        expect(heatmap.cols).toEqual(['Cat A']);
+        expect(heatmap.cells.reduce((sum, cell) => sum + cell.value, 0)).toBe(2);
+      });
+
       it('a scope this program has no bilateral rows for returns [] on all four cards, never throwing', async () => {
         const component = await createComponent();
         seedBilateralRows(component, [ROW_AOW01_PRIMARY, ROW_AOW02_PRIMARY]);
@@ -440,7 +465,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
           cols: [],
           cells: [],
           caption: 'W3/Bilateral results by center and category',
-          subtitle: 'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)'
+          subtitle: 'Bilateral results tagged to this program, excluding Editing (handled by centers)'
         });
       });
 
@@ -456,7 +481,7 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
           cols: ['Cat C'],
           cells: [{ r: 0, c: 0, value: 1, link: { origin: 'W3/Bilaterals', center: 'CenterZ', category: 'Cat C' } }],
           caption: 'W3/Bilateral results by center and category',
-          subtitle: 'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)',
+          subtitle: 'Bilateral results tagged to this program, excluding Editing (handled by centers)',
           shownOf: undefined
         });
       });

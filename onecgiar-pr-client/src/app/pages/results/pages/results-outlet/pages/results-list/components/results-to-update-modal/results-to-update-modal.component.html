@@ -80,7 +80,7 @@
               </div>
               <div class="rtu-card__meta-row">
                 <dt>Submitter</dt>
-                <dd class="rtu-mono">{{ result.submitter || '—' }}</dd>
+                <dd class="rtu-mono">{{ submitterLabel(result) || '—' }}</dd>
               </div>
               <div class="rtu-card__meta-row">
                 <dt>Status</dt>
@@ -153,7 +153,7 @@
         [sortOrder]="-1"
         [value]="filteredResults"
         [paginator]="!!filteredResults?.length"
-        [rows]="10"
+        [rows]="100"
         styleClass="rtu-pr-table"
         selectionMode="single"
         [rowsPerPageOptions]="[10, 50, 100]">
@@ -207,7 +207,7 @@
                 } @else if (column.attr === 'created_date') {
                   <span class="rtu-date">{{ result[column.attr] | date: 'yyyy-MM-dd' }}</span>
                 } @else if (column.attr === 'submitter') {
-                  <span class="rtu-mono">{{ result[column.attr] || '—' }}</span>
+                  <span class="rtu-mono">{{ submitterLabel(result) || '—' }}</span>
                 } @else {
                   <span class="rtu-plain">{{ result[column.attr] || '—' }}</span>
                 }

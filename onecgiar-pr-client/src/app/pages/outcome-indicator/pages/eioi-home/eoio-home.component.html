@@ -30,8 +30,8 @@
   sortField="toc_result_title"
   [sortOrder]="1"
   styleClass="p-datatable-gridlines p-datatable-sm"
-  [rows]="8"
-  [rowsPerPageOptions]="[8, 12, 20]"
+  [rows]="100"
+  [rowsPerPageOptions]="[8, 12, 20, 100]"
   [loading]="this.outcomeIService.loading()"
   [first]="this.outcomeIService.searchText() && 0"
   [paginator]="(this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length > 8">

@@ -1,6 +1,6 @@
 # program-overview
 
-**Verified:** 2026-10-02 · qa-development-2026-ss · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit` on the hero and AoW rows — see "QA/Prel split hidden" below) · prior: 2026-09-04 · branch qa-development-2026 · 6a9a45b5e
+**Verified:** 2026-10-13 · qa-development-2026-ss · SR-164368 (KPI row is now Total General + Areas of Work only — W1/W2, W3/Bilateral and Contributing Centers cards removed; Total General rows now toggle the W1/W2 / W3/Bilateral sections) · prior: quick/sp-overview-bilateral-review-card (KPI 3 + W3/Bilateral tab badge = Pending Review + Approved + Rejected — see "W3/Bilateral (KPI 3)" in Data flow; heatmap subtitle now says Editing is excluded — the host drops Editing rows from every W3/Bilateral card, SR-164368 requested by Nicoleta) · prior: 2026-10-08 · changes/sp-overview-total-general-card (KPI 1 "Total General" = replicated + new, program-wide — see "Total General" in Data flow) · prior: 2026-10-02 bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit` on the hero and AoW rows — see "QA/Prel split hidden" below) · prior: 2026-09-04 · branch qa-development-2026 · 6a9a45b5e
 
 **What this owns:** the **Overview** tab of the programme shell — the six cards under
 `entity-details/:entityId/overview`. Purely presentational: every figure arrives as a signal input.
@@ -84,6 +84,15 @@ Every input is a `computed()` on the parent (`dashboard-lab.component.ts`):
 | `aowProgress` / `xcutProgress` | `overviewAowProgress` / `overviewXcutProgress` | `GET_ClarisaGlobalUnits`, ToC loads |
 | `categories` | `overviewCategories` | `GET_IndicatorContributionSummary(code)` |
 | `bilateralCategories` / `bilateralRoles` | `overviewBilateralCategories` / `overviewBilateralRoles` | `GET_ResultToReview(code)`, loaded by an **overview-gated** effect |
+| `totalBreakdown` | `overviewTotalBreakdown` | meter Version (`replicated`/`new`) + unscoped `bilateralRows()` (status 5) |
+
+**Total General (KPI 1):** replicated + new from the meter Version, program-wide, plus `pendingReview` from unscoped bilateral rows. `programResultsTotal` = replicated + new only (never adds bilateral); it equals the W1/W2 status total with no scope set. The scope selector does NOT narrow KPI 1 (tooltip says "Program-wide"); The old `W1/W2 · W3/Bilateral` sub-line is gone.
+
+**KPI row (SR-164368, 2026-10-13):** only Total General (`xl:col-span-2`) + Areas of Work. The W1/W2, W3/Bilateral and Contributing Centers cards were removed at Nicoleta's request — Total General carries their figures; section filtering lives in the host's Filter popover (`hideInlineFilters` is `true`). `bilateralReviewCategoryCount` is still bound by the host but no longer rendered.
+
+**Total General rows are section buttons (SR-164368, 2026-10-13):** the card is a `<div>` (rows can't nest in a button). "Innovations replicated for update" and "New results" call `setActiveSection('w1w2')`, "W3/Bilateral results awaiting review" calls `setActiveSection('bilateral')` — the views the removed cards opened. Same toggle as the cards had: a second click returns to `'all'`; active row gets `bg-white/15` + `aria-pressed`. `activeSection` is a `model()` two-way bound to the host `overviewSection`, so the Filter popover stays in sync.
+
+**W3/Bilateral section-tab badge** (`quick/sp-overview-bilateral-review-card`): `bilateralReviewCount` = `pending` + `approved` + `rejected` segments only — Editing (centers only edit bilateral results) and Discontinued are left out. Sub-line = `bilateralReviewCategoryCount` input (host `overviewBilateralReviewCategoryCount`, scoped rows with status 5/6/7, all roles); the old "% approved" is gone. Both follow the AoW scope; KPI 1 does not. `bilateralStatusTotal` still feeds the W3/Bilateral status card below (every status except Editing, which the host drops).
 
 ## Gotchas
 

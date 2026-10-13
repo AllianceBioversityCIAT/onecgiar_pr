@@ -1,3 +1,4 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PrTableComponent } from './pr-table.component';
 
 /**
@@ -9,6 +10,44 @@ describe('PrTableComponent', () => {
 
   beforeEach(() => {
     table = new PrTableComponent();
+  });
+
+  // ---------------------------------------------------- paginator <select> DOM (PTD-T-1)
+  describe('paginator rows-per-page <select> rendered DOM value', () => {
+    let fixture: ComponentFixture<PrTableComponent>;
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({ imports: [PrTableComponent] }).compileComponents();
+      fixture = TestBed.createComponent(PrTableComponent);
+    });
+
+    it('PTD-AC-1: shows the bound rows value even when it is not the first rowsPerPageOptions entry (bilateral case)', () => {
+      const cmp = fixture.componentInstance;
+      cmp.paginator = true;
+      cmp.rowsPerPageOptions = [10, 25, 50, 100];
+      cmp.rows = 100;
+      cmp.value = Array.from({ length: 150 }, (_v, i) => ({ i }));
+      fixture.detectChanges();
+
+      const select: HTMLSelectElement = fixture.nativeElement.querySelector('select.pr-paginator__size');
+      expect(select).toBeTruthy();
+      expect(select.value).toBe('100');
+      const selectedOption = select.querySelector('option[value="100"]') as HTMLOptionElement;
+      expect(selectedOption.selected).toBe(true);
+    });
+
+    it('PTD-AC-2: still shows "10" when it is the first rowsPerPageOptions entry (no regression)', () => {
+      const cmp = fixture.componentInstance;
+      cmp.paginator = true;
+      cmp.rowsPerPageOptions = [10, 25, 50];
+      cmp.rows = 10;
+      cmp.value = Array.from({ length: 15 }, (_v, i) => ({ i }));
+      fixture.detectChanges();
+
+      const select: HTMLSelectElement = fixture.nativeElement.querySelector('select.pr-paginator__size');
+      expect(select).toBeTruthy();
+      expect(select.value).toBe('10');
+    });
   });
 
   // ---------------------------------------------------------------- value input

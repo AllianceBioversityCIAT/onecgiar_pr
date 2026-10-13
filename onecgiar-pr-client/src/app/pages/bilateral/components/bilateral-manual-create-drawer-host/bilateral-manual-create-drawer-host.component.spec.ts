@@ -51,6 +51,10 @@ describe('BilateralManualCreateDrawerHostComponent', () => {
     fixture = TestBed.createComponent(BilateralManualCreateDrawerHostComponent);
     flow = TestBed.inject(BilateralManualCreateFlowService);
     creationService = TestBed.inject(BilateralCreationService);
+    // RNB-2 (P2-3941): the drawer only opens for an admin or a member of the centre. These cases are
+    // about what the drawer renders once open, so they run as an admin (the gate itself is pinned in
+    // `bilateral-manual-create-flow.service.spec.ts`); the AI-card cases below set their own roles.
+    TestBed.inject(RolesService).isAdmin = true;
   });
 
   it('should create', () => {

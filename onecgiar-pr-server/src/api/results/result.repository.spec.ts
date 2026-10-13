@@ -489,6 +489,71 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
+  // SR-164368: result 8641 has two active results_center rows for the same center, and the plain
+  // JOIN listed it twice — every center Overview count went up by one. results_center is now
+  // collapsed to one row per result before the join; params and placeholders are unchanged.
+  it('joins results_center collapsed to one row per result so a duplicated center row cannot list a result twice', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('MAX(rcx.is_leading_result) AS is_leading_result');
+    expect(sql).toContain('GROUP BY rcx.result_id');
+    expect(sql).toContain(') rc ON rc.result_id = r.id');
+    expect(sql).not.toMatch(/INNER JOIN results_center rc\s+ON/);
+    expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
+  describe('getBilateralCenterOverviewTotals (SR-164368)', () => {
+    it('counts distinct results per figure and binds one parameter per placeholder', async () => {
+      queryMock.mockResolvedValueOnce([
+        {
+          replicated_count: '34',
+          new_w3_count: '57',
+          w1w2_tagging_count: '6',
+          total_count: '97',
+        },
+      ]);
+
+      const totals = await repo.getBilateralCenterOverviewTotals('IITA', 36);
+
+      expect(totals).toEqual({
+        replicated_count: 34,
+        new_w3_count: 57,
+        w1w2_tagging_count: 6,
+        total_count: 97,
+      });
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('SELECT DISTINCT r.id, r.source');
+      expect(sql).toContain("source = 'API' AND is_replicated = 0");
+      expect(sql).toContain("r.source = 'Result'");
+      expect(sql).toContain('cp.organization_code = c.institutionId');
+      expect(sql).toContain('UNION');
+      expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+      expect(params.slice(0, 3)).toEqual(['IITA', 'IITA', 36]);
+      // Alias pairs bound as separate column-to-value comparisons (no CONCAT: collation mix).
+      expect(sql).not.toContain('CONCAT(cp.source_center_acronym');
+      expect(sql).toContain('(cp.source_center_acronym = ? AND c.code = ?)');
+      expect(params.join(',')).toContain('IITA,CENTER-11');
+      expect(params[params.length - 1]).toBe(36);
+    });
+
+    it('returns zeros when the query yields no row', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await expect(
+        repo.getBilateralCenterOverviewTotals('IITA', 36),
+      ).resolves.toEqual({
+        replicated_count: 0,
+        new_w3_count: 0,
+        w1w2_tagging_count: 0,
+        total_count: 0,
+      });
+    });
+  });
+
   // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
   // (initiative_role_id=1) results in the requested version, with the meter's status/type
   // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/

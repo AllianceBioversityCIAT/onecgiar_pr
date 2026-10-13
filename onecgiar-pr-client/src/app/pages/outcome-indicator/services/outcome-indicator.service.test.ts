@@ -222,11 +222,14 @@ describe('OutcomeIndicatorService', () => {
   });
 
   it('should load all initiatives', () => {
-    const mockResponse = ['initiative1', 'initiative2'];
+    const mockResponse: any[] = [{ id: 1, official_code: 'SP01', name: 'Breeding' }, { id: 2, official_code: 'SP02' }];
     jest.spyOn(apiServiceMock.resultsSE, 'GET_AllInitiatives').mockReturnValue(of({ response: mockResponse }));
 
     service.loadAllInitiatives();
 
-    expect(service.allInitiatives()).toEqual(mockResponse);
+    expect(service.allInitiatives()).toEqual([
+      { id: 1, official_code: 'SP01', name: 'Breeding', sp_label: 'SP01 - Breeding' },
+      { id: 2, official_code: 'SP02', sp_label: 'SP02' }
+    ]);
   });
 });

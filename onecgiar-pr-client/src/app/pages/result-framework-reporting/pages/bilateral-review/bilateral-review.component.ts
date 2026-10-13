@@ -88,6 +88,17 @@ function optionsOf(rows: ResultToReview[], pick: (row: ResultToReview) => string
  *  `lead_center` rows are recovered from it explicitly in `selectedCenterAcronyms` below. */
 const UNASSIGNED_CENTER_CODE = '__unassigned__';
 
+/**
+ * P2-3952 (SR-164368): the statuses a Science Program acts on — Pending Review, Approved, Rejected.
+ * Editing (and any other status) is the Center's draft: never listed or counted here, so All is
+ * exactly Pending + Approved + Rejected. Centers keep seeing their drafts in their own views.
+ */
+const PROGRAM_REVIEW_STATUS_IDS = new Set<number>([5, 6, 7]);
+
+function isProgramReviewRow(row: ResultToReview): boolean {
+  return PROGRAM_REVIEW_STATUS_IDS.has(Number(row.status_id));
+}
+
 @Component({
   selector: 'app-bilateral-review',
   standalone: true,
@@ -823,6 +834,8 @@ export class BilateralReviewComponent {
   readonly showError = computed(() => this.error() || this.phaseCatalogState() === 'failed' || this.currentPhaseUnresolvable());
   readonly showSkeleton = computed(() => !this.showError() && this.loading() && this.results.tableResults().length === 0);
   readonly showWholeEmpty = computed(() => !this.showError() && !this.loading() && this.results.tableResults().length === 0);
+  /** P2-3952: Center drafts (Editing) hidden from the last load — explains an empty list. */
+  readonly draftsHiddenCount = signal(0);
   readonly showFilteredEmpty = computed(
     () => !this.showError() && !this.loading() && this.results.tableResults().length > 0 && this.visibleRows().length === 0
   );
@@ -1111,9 +1124,15 @@ export class BilateralReviewComponent {
     this.listSettled.set(false);
     this.api.resultsSE.GET_ResultToReview(code, undefined, versionId).subscribe({
       next: (res: { response?: GroupedResult[] }) => {
-        const groups = Array.isArray(res?.response) ? res.response : [];
+        const loadedGroups = Array.isArray(res?.response) ? res.response : [];
+        const allRows = loadedGroups.flatMap(group => group.results ?? []);
+        // P2-3952: drop Center drafts before anything (list, chips, KPIs, tab badge) reads the rows.
+        const groups = loadedGroups
+          .map(group => ({ ...group, results: (group.results ?? []).filter(isProgramReviewRow) }))
+          .filter(group => group.results.length > 0);
+        const rows = groups.flatMap(group => group.results);
+        this.draftsHiddenCount.set(allRows.length - rows.length);
         this.results.tableData.set(groups);
-        const rows = groups.flatMap(group => group.results ?? []);
         this.results.tableResults.set(rows);
         if (this.currentPhaseId() !== null && Number(versionId) === this.currentPhaseId()) {
           this.countService.setFromRows(code, versionId, rows);

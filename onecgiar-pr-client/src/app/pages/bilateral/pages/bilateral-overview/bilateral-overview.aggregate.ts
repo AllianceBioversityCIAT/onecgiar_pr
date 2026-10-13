@@ -136,13 +136,6 @@ export interface OverviewApprovedKpi {
   rejectedCount: number;
 }
 
-export interface OverviewNeedsAttentionKpi {
-  count: number;
-  editingCount: number;
-  rejectedCount: number;
-  aiDraftCount: number;
-}
-
 export interface OverviewProjectsCoveredKpi {
   coveredCount: number;
   totalCount: number;
@@ -153,7 +146,6 @@ export interface OverviewKpisModel {
   totalResults: OverviewTotalResultsKpi;
   pendingReview: OverviewPendingReviewKpi;
   approved: OverviewApprovedKpi;
-  needsAttention: OverviewNeedsAttentionKpi;
   projectsCovered: OverviewProjectsCoveredKpi;
 }
 
@@ -213,21 +205,6 @@ export function buildApprovedKpi(rows: readonly BilateralCenterResult[]): Overvi
   };
 }
 
-export function buildNeedsAttentionKpi(
-  rows: readonly BilateralCenterResult[],
-  drafts: readonly BilateralAiDraft[],
-): OverviewNeedsAttentionKpi {
-  let editingCount = 0;
-  let rejectedCount = 0;
-  for (const row of rows) {
-    const statusId = Number(row.status_id);
-    if (statusId === STATUS.EDITING) editingCount++;
-    else if (statusId === STATUS.REJECTED) rejectedCount++;
-  }
-  const aiDraftCount = drafts.filter(isActiveDraft).length;
-  return { count: editingCount + rejectedCount + aiDraftCount, editingCount, rejectedCount, aiDraftCount };
-}
-
 /** Aggregated per-project rollup shared by the KPI "Projects covered" card and `byProject` — one
  *  computation, so the two never drift on what "covered" means. */
 interface ProjectRollup {
@@ -283,14 +260,12 @@ export function buildProjectsCoveredKpi(
 export function buildOverviewKpis(
   rows: readonly BilateralCenterResult[],
   projects: readonly BilateralProject[],
-  drafts: readonly BilateralAiDraft[],
   today: Date,
 ): OverviewKpisModel {
   return {
     totalResults: buildTotalResultsKpi(rows),
     pendingReview: buildPendingReviewKpi(rows, today),
     approved: buildApprovedKpi(rows),
-    needsAttention: buildNeedsAttentionKpi(rows, drafts),
     projectsCovered: buildProjectsCoveredKpi(rows, projects),
   };
 }
@@ -695,7 +670,7 @@ export function buildOverviewModel(
   today: Date,
 ): OverviewModel {
   return {
-    kpis: buildOverviewKpis(rows, projects, drafts, today),
+    kpis: buildOverviewKpis(rows, projects, today),
     status: buildStatusModel(rows),
     attention: buildAttentionModel(rows, drafts, today),
     byProject: buildByProjectModel(rows, projects),

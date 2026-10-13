@@ -85,6 +85,13 @@ export interface StatusSegment {
   link: OverviewLink | null;
 }
 
+/** Program-wide Total General breakdown (sp-overview-total-general-card, STG-R-2/R-4). */
+export interface OverviewTotalBreakdown {
+  replicated: number;
+  new: number;
+  pendingReview: number;
+}
+
 export type OverviewSection = 'all' | 'w1w2' | 'bilateral' | 'aow';
 
 export interface AowProgressRow {
@@ -238,6 +245,7 @@ export class ProgramOverviewComponent {
   /** Long About copy. Empty → short stand-in using the program name. */
   readonly programDescription = input<string>('');
   readonly statusSegments = input<StatusSegment[]>([]);
+  readonly totalBreakdown = input<OverviewTotalBreakdown>({ replicated: 0, new: 0, pendingReview: 0 });
   /** AoW rows already sorted ascending by completion (least complete first). */
   readonly aowProgress = input<AowProgressRow[]>([]);
 
@@ -286,6 +294,8 @@ export class ProgramOverviewComponent {
   readonly bilateralCategories = input<CategoryBar[]>([]);
   /** W3/Bilateral results reporting status segments. */
   readonly bilateralStatusSegments = input<StatusSegment[]>([]);
+  /** Distinct categories among the W3/Bilateral rows in the review path — KPI 3's sub-line. */
+  readonly bilateralReviewCategoryCount = input<number>(0);
   /** Centers with reported W3/bilateral results. */
   readonly bilateralCenters = input<OverviewCenterBar[]>([]);
   /** W1/W2 category × status matrix (`OVW-R-2`). `null`/empty `rows` → card shows its empty state. */
@@ -518,13 +528,15 @@ export class ProgramOverviewComponent {
     if (row.code) this.openAow.emit(row.code);
   }
 
-  readonly contributingCentersCount = computed(() => {
-    const centers = this.bilateralCenters();
-    return centers.filter(c => c.name !== 'Not specified').length || centers.length;
-  });
-
-  readonly w1w2SubmittedCount = computed(() =>
-    this.statusSegments().find(s => s.key === 'submitted')?.count ?? 0
+  /**
+   * W3/Bilateral results in the review path (Pending Review + Approved + Rejected). KPI 3 and the
+   * W3/Bilateral section-tab badge show only this: a Science Program reviews bilateral results, it
+   * never edits them (Editing belongs to the centers), so Editing and Discontinued are left out.
+   */
+  readonly bilateralReviewCount = computed(() =>
+    this.bilateralStatusSegments()
+      .filter(s => s.key === 'pending' || s.key === 'approved' || s.key === 'rejected')
+      .reduce((sum, s) => sum + s.count, 0)
   );
 
   readonly bilateralApprovedCount = computed(() =>
@@ -663,7 +675,7 @@ export class ProgramOverviewComponent {
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
 
-  readonly programResultsTotal = computed(() => this.statusTotal() + this.bilateralStatusTotal());
+  readonly programResultsTotal = computed(() => this.totalBreakdown().replicated + this.totalBreakdown().new);
 
   readonly programResultsLoading = computed(() => this.meterLoading() || this.bilateralLoading());
 

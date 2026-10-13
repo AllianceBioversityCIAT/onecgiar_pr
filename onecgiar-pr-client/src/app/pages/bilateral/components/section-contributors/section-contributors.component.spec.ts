@@ -59,7 +59,9 @@ describe('SectionContributorsComponent', () => {
 
     autoSave = {
       saveContributors: jest.fn(),
-      fieldStatus: signal<Record<string, string>>({})
+      fieldStatus: signal<Record<string, string>>({}),
+      // RNB-1 — the editor's "may this user edit at all" lock, handed down through the shared service.
+      isReadOnly: signal(false)
     };
 
     centersService = {

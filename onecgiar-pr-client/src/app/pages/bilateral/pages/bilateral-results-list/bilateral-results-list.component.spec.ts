@@ -92,6 +92,7 @@ describe('BilateralResultsListComponent', () => {
 
     bilateralApiService = {
       GET_bilateralCenterResults: jest.fn().mockReturnValue(of({ response: [result()] })),
+      GET_bilateralCenterOverviewTotals: jest.fn().mockReturnValue(of({ response: null })),
       // `PMF-T-1` wave 2 — the Project options' source (the center's own catalog, per
       // selected phase year). Default: answers empty, so the option list starts empty like
       // a center with no reportable projects for the selected phase.

@@ -6,6 +6,8 @@ import {
   PT_INTEROP_API_GATEWAY_CEILING_MS,
   PT_INTEROP_TIMEOUT_MS_MAX,
   getProgressTrackerTimeoutMs,
+  PT_INTEROP_REVIEW_THRESHOLD_DEFAULT,
+  getPtReviewThreshold,
 } from './progress-tracker.config';
 
 /**
@@ -64,7 +66,8 @@ describe('progress-tracker.config — serverless.yaml timeout (PTM-AC-15)', () =
     expect(typeof timeoutSeconds).toBe('number');
   });
 
-  it('defaults the call timeout to 25 000 ms, strictly below the 29 000 ms API Gateway ceiling (P-5)', () => {
+  it('defaults the call timeout to 27 000 ms, strictly below the 29 000 ms API Gateway ceiling (P-5)', () => {
+    expect(getProgressTrackerTimeoutMs()).toBe(27_000);
     expect(getProgressTrackerTimeoutMs()).toBe(PT_INTEROP_TIMEOUT_MS_DEFAULT);
     expect(getProgressTrackerTimeoutMs()).toBeLessThan(
       PT_INTEROP_API_GATEWAY_CEILING_MS,
@@ -142,4 +145,55 @@ describe('progress-tracker.config — serverless.yaml timeout (PTM-AC-15)', () =
       expect(line).toMatch(new RegExp(`\\$\\{env:${key}\\}`));
     }
   });
+
+  it("PT_INTEROP_REVIEW_THRESHOLD falls back to '0.95' in serverless.yaml, matching the code default", () => {
+    const line = readServerlessYaml()
+      .split('\n')
+      .find((candidate) =>
+        candidate.trim().startsWith('PT_INTEROP_REVIEW_THRESHOLD:'),
+      );
+    expect(line).toMatch(/\$\{env:PT_INTEROP_REVIEW_THRESHOLD, '0\.95'\}/);
+    expect(Number('0.95')).toBe(PT_INTEROP_REVIEW_THRESHOLD_DEFAULT);
+  });
+});
+
+describe('progress-tracker.config — fuzzy review threshold', () => {
+  const ENV_KEY = 'PT_INTEROP_REVIEW_THRESHOLD';
+  let originalEnv: string | undefined;
+
+  beforeEach(() => {
+    originalEnv = process.env[ENV_KEY];
+    delete process.env[ENV_KEY];
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env[ENV_KEY];
+    } else {
+      process.env[ENV_KEY] = originalEnv;
+    }
+  });
+
+  it('defaults to 0.95', () => {
+    expect(getPtReviewThreshold()).toBe(0.95);
+    expect(PT_INTEROP_REVIEW_THRESHOLD_DEFAULT).toBe(0.95);
+  });
+
+  it('PT_INTEROP_REVIEW_THRESHOLD overrides the default (e.g. 0.97)', () => {
+    process.env[ENV_KEY] = '0.97';
+    expect(getPtReviewThreshold()).toBe(0.97);
+  });
+
+  it('accepts exactly 1', () => {
+    process.env[ENV_KEY] = '1';
+    expect(getPtReviewThreshold()).toBe(1);
+  });
+
+  it.each(['', '   ', 'abc', '0', '-0.5', '1.5', 'NaN'])(
+    'falls back to the default on %p',
+    (value) => {
+      process.env[ENV_KEY] = value;
+      expect(getPtReviewThreshold()).toBe(PT_INTEROP_REVIEW_THRESHOLD_DEFAULT);
+    },
+  );
 });

@@ -48,6 +48,7 @@ describe('TypeCapacitySharingComponent', () => {
   const makeMocks = () => {
     mdsTracker = { setSectionFields: jest.fn() };
     autoSave = {
+      isReadOnly: signal(false), // R2B-1/2 — the editor lock the sections read
       fieldStatus: signal<Record<string, string>>({}),
       schedulePayload: jest.fn()
     };

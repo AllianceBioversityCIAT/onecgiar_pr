@@ -463,7 +463,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
      * is ALREADY out of Editing when the page loads is locked too.
      */
     effect(() => {
-      this.autoSaveService.setReadOnly(!this.creationService.isEditableByCenterUser());
+      this.autoSaveService.setReadOnly(this.isFormReadOnly());
     });
 
     /**
@@ -569,8 +569,20 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** P2-3520 — single gate the sections and the Submit button read, so no template knows the status numbers. */
-  readonly isFormReadOnly = computed(() => !this.creationService.isEditableByCenterUser());
+  /**
+   * RNB-1 — WHO may edit the result: an application admin, or a Center User of its LEAD centre
+   * (the rule the title/description already follow through `RolesService.readOnly`, and the server
+   * enforces on every Center write). `isCenterUserOfLeadCenter()` alone is not enough here: it is
+   * deliberately `false` for an admin (ASC-R-15), who still edits the whole form.
+   */
+  readonly canEditResult = computed(() => !!this.api.rolesSE.isAdmin || this.isCenterUserOfLeadCenter());
+
+  /**
+   * P2-3520 — single gate the sections and the Submit button read, so no template knows the status numbers.
+   * RNB-1 — and, with the status, whether this user may edit at all: Save draft, Submit, the sections
+   * (through the auto-save lock) and the contributors pickers all follow this one computed.
+   */
+  readonly isFormReadOnly = computed(() => !this.creationService.isEditableByCenterUser() || !this.canEditResult());
 
   /**
    * Center User role id, as `validationCenterPermissions` hard-codes it server-side

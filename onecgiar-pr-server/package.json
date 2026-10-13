@@ -25,7 +25,9 @@
     "migration:revert": "npm run typeorm migration:revert -- -d ./src/config/orm.config.ts",
     "migration:run": "npm run typeorm migration:run -- -d ./src/config/orm.config.ts",
     "migration:check": "ts-node -r tsconfig-paths/register ./scripts/check-pending-migrations.ts",
+    "qa-catalog:snapshot": "ts-node -r tsconfig-paths/register ./src/api/qa-catalog/scripts/qa-catalog-snapshot.ts",
     "migration:check:ci": "ts-node -r tsconfig-paths/register ./scripts/check-pending-migrations.ts --quiet",
+    "pt:resolve-fill": "ts-node -r tsconfig-paths/register ./scripts/pt-resolve-fill.ts",
     "lambda:test": "sls offline start",
     "lambda:deploy": "sls deploy -v"
   },

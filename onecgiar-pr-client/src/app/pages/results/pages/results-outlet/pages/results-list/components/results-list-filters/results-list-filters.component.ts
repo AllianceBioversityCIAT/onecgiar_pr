@@ -18,6 +18,7 @@ import {
 } from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { scienceProgramLabel } from '../../../../../../../../shared/utils/science-program-label.util';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -422,7 +423,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
     // Submitters
     const submitterChips = this.resultsListFilterSE.selectedSubmittersAdmin().map(submitter => ({
-      label: submitter.official_code,
+      label: scienceProgramLabel(submitter.official_code, submitter.name, submitter.initiative_name, submitter.short_name),
       filterType: 'submitter',
       item: submitter
     }));
@@ -569,7 +570,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
         // Add displayName property to each submitter for use with optionLabel
         const mappedResponse = response.map(submitter => ({
           ...submitter,
-          displayName: `${submitter.official_code} ${submitter.name}`
+          displayName: scienceProgramLabel(submitter.official_code, submitter.name, submitter.initiative_name, submitter.short_name)
         }));
         this.resultsListFilterSE.submittersOptionsAdminOld.set(mappedResponse);
       },

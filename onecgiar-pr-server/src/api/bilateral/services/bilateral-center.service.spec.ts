@@ -91,6 +91,8 @@ describe('BilateralCenterService', () => {
           provide: BilateralService,
           useValue: {
             handleLeadCenter: jest.fn().mockResolvedValue(undefined),
+            // RNB-2: read-only lookup of the CLARISA code a `lead_center` payload resolves to.
+            resolveLeadCenterCode: jest.fn().mockResolvedValue('CENTER-1'),
             // 2026-09-05: submitForReview announces the arrival to the primary SP post-commit.
             emitBilateralSubmittedNotification: jest
               .fn()
@@ -391,6 +393,8 @@ describe('BilateralCenterService', () => {
               previousInitiativeId: null,
             }),
             isAligned: jest.fn().mockResolvedValue(true),
+            // `PNR-T-2` — stamps the primary card's `requested_date` inside the submit tx.
+            stampPrimaryCardSubmitted: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -543,6 +547,15 @@ describe('BilateralCenterService', () => {
       first_name: 'Test',
       last_name: 'User',
     };
+
+    // RNB-2: the pre-existing cases below are about what the header writes, not about who may
+    // create it, so they run as an admin; the permission gate has its own describe further down.
+    beforeEach(() => {
+      (
+        module.get<RoleByUserRepository>(RoleByUserRepository)
+          .isUserAdmin as jest.Mock
+      ).mockResolvedValue(true);
+    });
 
     // P2-3166. This flow writes `source = SourceEnum.Bilateral` ('API') but has no API key and so
     // no CLARISA `mis` — so 'API' means "is W3/bilateral", NOT "arrived through the external API".
@@ -945,6 +958,92 @@ describe('BilateralCenterService', () => {
         expect(
           resultsKnowledgeProductsService.populateKPFromCGSpace,
         ).not.toHaveBeenCalled();
+      });
+    });
+
+    // RNB-2 (P2-3941): option A by the PO — a user who is not assigned to a centre cannot
+    // generate bilateral results. Only an admin or a Center User of the result's lead centre.
+    describe('center permission (RNB-2)', () => {
+      let roleByUserRepository: RoleByUserRepository;
+      const dto = {
+        result_level_id: 2,
+        result_type_id: 7,
+        lead_center: { name: 'IFPRI', acronym: 'IFPRI' },
+      } as any;
+
+      beforeEach(() => {
+        roleByUserRepository =
+          module.get<RoleByUserRepository>(RoleByUserRepository);
+        (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValue(
+          false,
+        );
+      });
+
+      it('lets an admin create without being a member of the centre', async () => {
+        (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValue(true);
+
+        const result = await service.createResultHeader(user, dto);
+
+        expect(result.response.id).toBe(99);
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('lets a Center User of the lead centre create', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(1);
+
+        const result = await service.createResultHeader(user, dto);
+
+        expect(result.response.id).toBe(99);
+        expect(bilateralService.resolveLeadCenterCode).toHaveBeenCalledWith(
+          dto.lead_center,
+        );
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).toHaveBeenCalledWith(42, 'CENTER-1');
+      });
+
+      it('rejects a Center User of ANOTHER centre with 403 and writes nothing', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(0);
+
+        await expect(service.createResultHeader(user, dto)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(resultRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('rejects a user with no centre at all (no Center User role anywhere)', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(0);
+
+        await expect(
+          service.createResultHeader(user, {
+            result_level_id: 2,
+            result_type_id: 7,
+            project_id: 1443,
+          } as any),
+        ).rejects.toThrow(ForbiddenException);
+        expect(resultRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('rejects a non-admin when the lead centre cannot be resolved', async () => {
+        (
+          bilateralService.resolveLeadCenterCode as jest.Mock
+        ).mockResolvedValueOnce(null);
+
+        await expect(service.createResultHeader(user, dto)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).not.toHaveBeenCalled();
+        expect(resultRepository.save).not.toHaveBeenCalled();
       });
     });
   });
@@ -2218,6 +2317,98 @@ describe('BilateralCenterService', () => {
           user,
         );
         expect(resultsCenterRepository.updateCenter).toHaveBeenCalled();
+      });
+    });
+
+    // RNB-1 — `assertCenterWrite` only gates on status; the lead-centre rule is its own check.
+    describe('Lead-center permission (RNB-1)', () => {
+      let roleByUserRepository: RoleByUserRepository;
+      let resultsCenterRepository: ResultsCenterRepository;
+
+      beforeEach(() => {
+        roleByUserRepository =
+          module.get<RoleByUserRepository>(RoleByUserRepository);
+        resultsCenterRepository = module.get<ResultsCenterRepository>(
+          ResultsCenterRepository,
+        );
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          status_id: ResultStatusData.Editing.value,
+          source: SourceEnum.Bilateral,
+        } as any);
+        (
+          resultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
+        ).mockResolvedValue([{ code: 'AFRICARICE', is_leading_result: 1 }]);
+        jest
+          .spyOn(resultsCenterRepository, 'find')
+          .mockResolvedValue([
+            { center_id: 'AFRICARICE', is_leading_result: true },
+          ] as any);
+        (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValue(
+          false,
+        );
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockClear();
+        (resultsCenterRepository.updateCenter as jest.Mock).mockClear();
+      });
+
+      it('allows an admin without asking for a centre role', async () => {
+        (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValue(true);
+
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).not.toHaveBeenCalled();
+        expect(resultsCenterRepository.updateCenter).toHaveBeenCalled();
+      });
+
+      it('allows a Center User of the lead centre (checked against the lead centre code)', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(1);
+
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).toHaveBeenCalledWith(user.id, 'AFRICARICE');
+        expect(resultsCenterRepository.updateCenter).toHaveBeenCalled();
+      });
+
+      it('rejects with 403 a Center User of ANOTHER centre, before any write', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(0);
+
+        await expect(
+          service.saveContributors(
+            10,
+            { contributing_center: [{ center_id: 'ICARDA' } as any] },
+            user,
+          ),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(
+          roleByUserRepository.validationCenterPermissions,
+        ).toHaveBeenCalledWith(user.id, 'AFRICARICE');
+        expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
+      });
+
+      it('rejects with 403 a user without any centre assignment', async () => {
+        (
+          roleByUserRepository.validationCenterPermissions as jest.Mock
+        ).mockResolvedValue(0);
+
+        await expect(
+          service.saveContributors(10, { contributing_center: [] }, {
+            id: 905,
+            email: 'nocenters@cgiar.org',
+          } as TokenDto),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
       });
     });
   });
@@ -4488,6 +4679,102 @@ describe('BilateralCenterService', () => {
         ).not.toHaveBeenCalled();
         expect(log).not.toHaveBeenCalled();
         expect(bilateral.announcePendingReview).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    // `PNR-T-2` (bugfix/primary-notify-on-submit-regression, `PNR-R-2`, `PNR-NFR-1`): the primary
+    // card is re-dated at Submit, with the TRANSACTION manager and after the ownership writes (the
+    // transfer retires the row a too-early stamp would have touched).
+    describe('PNR-T-2: stamps the primary card at Submit', () => {
+      it('first submit of an owned Editing result: stamp called once with the tx manager, inside the transaction; announce still fires once', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Editing.value),
+        );
+        const { manager, committed } = arrangeTransaction();
+
+        await service.submitForReview(user, RESULT, decisionDto);
+
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledWith(RESULT, manager);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted.mock
+            .invocationCallOrder[0],
+        ).toBeLessThan(committed.mock.invocationCallOrder[0]);
+        expect(bilateral.announcePendingReview).toHaveBeenCalledTimes(1);
+      });
+
+      it('ownerless submit: the stamp runs AFTER transferPrimary, on the same manager', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Editing.value),
+        );
+        resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+          null,
+        );
+        primaryProgramRequestService.findDraftPrimaryInitiativeId.mockResolvedValue(
+          9,
+        );
+        const { manager } = arrangeTransaction();
+
+        await service.submitForReview(user, RESULT, decisionDto);
+
+        expect(
+          primaryProgramRequestService.transferPrimary,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledWith(RESULT, manager);
+        expect(
+          primaryProgramRequestService.transferPrimary.mock
+            .invocationCallOrder[0],
+        ).toBeLessThan(
+          primaryProgramRequestService.stampPrimaryCardSubmitted.mock
+            .invocationCallOrder[0],
+        );
+      });
+
+      it('resubmit from Rejected (in-app): stamp called once with the tx manager, inside the transaction', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Rejected.value),
+        );
+        const { manager, committed } = arrangeTransaction();
+
+        await service.submitForReview(user, RESULT, decisionDto);
+
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledWith(RESULT, manager);
+        expect(
+          primaryProgramRequestService.stampPrimaryCardSubmitted.mock
+            .invocationCallOrder[0],
+        ).toBeLessThan(committed.mock.invocationCallOrder[0]);
+        expect(bilateral.announcePendingReview).toHaveBeenCalledTimes(1);
+      });
+
+      it('a failing stamp rejects the transaction callback: nothing is announced', async () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          resultAt(ResultStatusData.Editing.value),
+        );
+        const { committed } = arrangeTransaction();
+        primaryProgramRequestService.stampPrimaryCardSubmitted.mockRejectedValueOnce(
+          new Error('stamp failed'),
+        );
+
+        await expect(
+          service.submitForReview(user, RESULT, decisionDto),
+        ).rejects.toThrow('stamp failed');
+
+        expect(committed).not.toHaveBeenCalled();
+        expect(bilateral.announcePendingReview).not.toHaveBeenCalled();
       });
     });
   });

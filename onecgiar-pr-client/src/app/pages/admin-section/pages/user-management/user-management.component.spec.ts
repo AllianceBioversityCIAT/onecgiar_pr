@@ -839,6 +839,40 @@ describe('UserManagementComponent', () => {
       expect(component.orderedEntityGroups().map(group => group.name)).toEqual(['P25', 'P22']);
     });
 
+    it('PFN-T-3: entities expose sp_label while keeping id and official_code', () => {
+      mockInitiativesService.allInitiatives.mockReturnValue([{ name: 'P25', entities: [{ id: 5, official_code: 'SP01', name: 'Breeding' }, { id: 6, official_code: 'SP02' }] }]);
+
+      const [group] = component.orderedEntityGroups();
+      expect(group.entities.map((e: any) => [e.id, e.official_code, e.sp_label])).toEqual([
+        [5, 'SP01', 'SP01 - Breeding'],
+        [6, 'SP02', 'SP02']
+      ]);
+    });
+
+    it('PFN-T-3: an entity selected through the real control renders its chip as CODE - Name', () => {
+      const entity = { id: 5, official_code: 'SP01', name: 'Breeding' };
+      mockInitiativesService.allInitiatives.mockReturnValue([{ name: 'P25', entities: [entity] }]);
+      component.showFiltersPanel.set(true);
+      fixture.detectChanges();
+      const multiselects = fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+      const entitiesMultiselect = multiselects[2].componentInstance as PrFilterMultiselectComponent;
+      const option = component.orderedEntityGroups()[0].entities[0];
+
+      entitiesMultiselect.toggle(option);
+
+      const chip = component.activeFilterChips().find(c => c.filterType === 'entity');
+      expect(chip?.label).toBe('SP01 - Breeding');
+      expect(chip?.value).toBe(option);
+      expect(component.selectedEntities()).toEqual([option]);
+    });
+
+    it('PFN-T-3: the entity chip uses the label rule', () => {
+      mockInitiativesService.allInitiatives.mockReturnValue([{ name: 'P25', entities: [{ id: 5, official_code: 'SP01', name: 'Breeding' }] }]);
+      component.selectedEntities.set([5]);
+
+      expect(component.activeFilterChips()[0].label).toBe('SP01 - Breeding');
+    });
+
     it('is a real sort and not a fixed two-item swap: a higher portfolio leads', () => {
       mockInitiativesService.allInitiatives.mockReturnValue([P22_GROUP, P25_GROUP, { name: 'P28', entities: [] }]);
 

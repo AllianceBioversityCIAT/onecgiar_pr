@@ -487,6 +487,43 @@ export class BilateralCenterService {
       throw new BadRequestException('CAPACITY_CHANGE is no longer accepted.');
     }
 
+    // The lead centre is resolved server-side rather than trusted from the payload.
+    // The client builds `lead_center` from `obj_organization`, a join on the project's
+    // `organization_code` — which CLARISA's W3 sync leaves NULL for the Alliance-descended
+    // centres. When it is null the client sends nothing, and the result used to be created
+    // with no lead centre and no warning, leaving the Contributors & Partners green check
+    // permanently red. `resolveProjectLeadCenter` applies the same acronym fallback that
+    // `getProjectsByCenter` already uses to list those very projects.
+    const leadCenter =
+      dto.lead_center ??
+      (dto.project_id
+        ? await this.bilateralProjectsService.resolveProjectLeadCenter(
+            Number(dto.project_id),
+          )
+        : null);
+
+    // RNB-2 (P2-3941, decision by the PO 2026-10-09: option A) — a user who is not assigned to a
+    // centre cannot generate bilateral results. Checked BEFORE anything is written, against the
+    // result's lead centre (the one the new row will be created under). Only an admin or a Center
+    // User (role 9) of that centre passes; a lead centre that cannot be resolved cannot be proven
+    // to be the caller's, so it is refused too (same posture as `assertCenterPermission`).
+    const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+    if (!isAdmin) {
+      const leadCenterCode =
+        await this.bilateralService.resolveLeadCenterCode(leadCenter);
+      const isCenterUser = leadCenterCode
+        ? await this.roleByUserRepository.validationCenterPermissions(
+            user.id,
+            leadCenterCode,
+          )
+        : 0;
+      if (!isCenterUser) {
+        throw new ForbiddenException(
+          'You do not have permission to create results for this center: only a Center User of the center can.',
+        );
+      }
+    }
+
     const resultByLevel = await this.resultByLevelRepository.getByTypeAndLevel(
       dto.result_level_id,
       dto.result_type_id,
@@ -602,21 +639,6 @@ export class BilateralCenterService {
         true,
       );
     }
-
-    // The lead centre is resolved server-side rather than trusted from the payload.
-    // The client builds `lead_center` from `obj_organization`, a join on the project's
-    // `organization_code` — which CLARISA's W3 sync leaves NULL for the Alliance-descended
-    // centres. When it is null the client sends nothing, and the result used to be created
-    // with no lead centre and no warning, leaving the Contributors & Partners green check
-    // permanently red. `resolveProjectLeadCenter` applies the same acronym fallback that
-    // `getProjectsByCenter` already uses to list those very projects.
-    const leadCenter =
-      dto.lead_center ??
-      (dto.project_id
-        ? await this.bilateralProjectsService.resolveProjectLeadCenter(
-            Number(dto.project_id),
-          )
-        : null);
 
     if (leadCenter) {
       await this.bilateralService.handleLeadCenter(
@@ -1591,6 +1613,19 @@ export class BilateralCenterService {
         user,
       );
 
+      // RNB-1 — `assertCenterWrite` only gates on the review status, so a Center User of ANOTHER
+      // centre (or an account with no centre at all) could rewrite the contributors of a result
+      // they do not own. Same rule the editor applies to title/description and `updatePrimaryAssignment`
+      // applies here: an admin, or a Center User (role 9) of the result's LEAD centre.
+      const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+      if (!isAdmin) {
+        await this.assertCenterPermission(
+          user,
+          resultId,
+          'You do not have permission to edit the contributors of this result: only a Center User of the lead center can.',
+        );
+      }
+
       if (dto.contributing_center !== undefined) {
         await this.syncContributingCenters(
           resultId,
@@ -2534,6 +2569,15 @@ export class BilateralCenterService {
         );
       }
 
+      // `PNR-T-2` / `PNR-R-2` — re-date the primary card in this transaction so the owning SP's
+      // Received inbox lists it as new (first submit and resubmit alike). AFTER the ownerless
+      // `transferPrimary` above, whose retire-and-insert would otherwise leave this stamp on a
+      // retired row. Same `manager`: a failure here rolls the whole submit back (`PNR-NFR-1`).
+      await this.primaryProgramRequestService.stampPrimaryCardSubmitted(
+        parsedResultId,
+        manager,
+      );
+
       // `RRC-R-8` / `RRC-DD-5` — contributors saved while the result sat in Rejected were held
       // (`syncContributingPrograms` never releases at 7). They are sent now, with this
       // transaction's manager, so a failure here rolls the whole resubmission back. Idempotent
@@ -2882,6 +2926,7 @@ export class BilateralCenterService {
   private async assertCenterPermission(
     user: TokenDto,
     resultId: number,
+    message = 'You do not have permission to submit results for this center.',
   ): Promise<void> {
     const leadCenter = await this.getLeadCenter(resultId);
 
@@ -2892,9 +2937,7 @@ export class BilateralCenterService {
       );
 
     if (!isAllowed) {
-      throw new ForbiddenException(
-        'You do not have permission to submit results for this center.',
-      );
+      throw new ForbiddenException(message);
     }
   }
 

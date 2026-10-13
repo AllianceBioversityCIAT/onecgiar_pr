@@ -186,7 +186,7 @@ export class BilateralOverviewComponent implements OnInit {
   readonly showAllProjects = signal(false);
 
   readonly attentionRowCopy = ATTENTION_ROW_COPY;
-  readonly kpiSkeletonSlots = [1, 2, 3, 4, 5];
+  readonly kpiSkeletonSlots = [1, 2, 3, 4];
   readonly attentionSkeletonSlots = [1, 2, 3, 4];
   readonly statusTileMeta = STATUS_TILE_META;
   readonly statusTileLabels = STATUS_TILE_LABELS;
@@ -236,6 +236,14 @@ export class BilateralOverviewComponent implements OnInit {
    * second computed. Reading the current key only is also what keeps a late response for a
    * superseded phase off the screen (`COV-R-2` B / `COV-R-21`).
    */
+  /** SR-164368 — Total results card figures, counted server-side for the current center and phase. */
+  readonly overviewTotals = computed(() => {
+    const centerKey = this.centerKey();
+    const versionId = this.effectiveVersionId();
+    if (!centerKey || versionId === null) return null;
+    return this.overviewService.totalsData(centerKey, versionId)();
+  });
+
   private readonly entrySignal = computed<Signal<BilateralOverviewEntry> | null>(() => {
     const centerKey = this.centerKey();
     const versionId = this.effectiveVersionId();
@@ -608,20 +616,6 @@ export class BilateralOverviewComponent implements OnInit {
     if (!centerKey || versionId === null) return;
     this.overviewService.invalidate(centerKey, versionId);
     this.overviewService.load(centerKey, versionId);
-  }
-
-  /**
-   * `COV-R-6` #4 — the Needs-attention KPI scrolls to its card rather than leaving the page.
-   * `COV-R-18` — a reduced-motion user gets the jump, not the animated scroll.
-   */
-  scrollToAttention(): void {
-    const reduceMotion =
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document
-      .getElementById('overview-attention')
-      ?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   }
 
   // ── Chart clicks (COV-R-9 A, COV-R-10, COV-R-11) ─────────────────────────────────────────

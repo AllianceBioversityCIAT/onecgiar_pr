@@ -29,6 +29,7 @@ import { BasicReportFiltersNormalized } from './dto/basic-report-filters.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE } from '../bilateral/constants/w3-center-alias.constants';
 
 /**
  * P2-3420 / P2-3421 — THE ONE PLACE that decides which Innovation Development results may be
@@ -4260,19 +4261,25 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rc.is_leading_result
       FROM result r
-      INNER JOIN results_center rc
-             ON rc.result_id = r.id
-            AND rc.is_active = 1
-            AND (
-              rc.center_id = ?
-              OR EXISTS (
-                SELECT 1
-                FROM clarisa_center cc
-                INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
-                WHERE cc.code = rc.center_id
-                  AND ci.acronym = ?
-              )
+      -- SR-164368: one row per result. A result can carry two active results_center rows for
+      -- the same center (8641 in Reporting 2026); a plain JOIN listed it twice and every
+      -- overview count went up by one. MAX keeps lead = 1 when any of the rows says so.
+      INNER JOIN (
+        SELECT rcx.result_id, MAX(rcx.is_leading_result) AS is_leading_result
+        FROM results_center rcx
+        WHERE rcx.is_active = 1
+          AND (
+            rcx.center_id = ?
+            OR EXISTS (
+              SELECT 1
+              FROM clarisa_center cc
+              INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+              WHERE cc.code = rcx.center_id
+                AND ci.acronym = ?
             )
+          )
+        GROUP BY rcx.result_id
+      ) rc ON rc.result_id = r.id
       INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
       INNER JOIN result_status rs ON rs.result_status_id = r.status_id
       WHERE r.version_id = ?
@@ -4283,6 +4290,112 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
     try {
       return await this.query(query, [centerId, centerId, versionId]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * SR-164368 — the three figures of the center Overview "Total results" card, counted in SQL,
+   * one row per result:
+   * - `replicated_count`: results the center is on (results_center) with `is_replicated = 1`.
+   * - `new_w3_count`: W3/Bilateral (`source = 'API'`) results the center is on, not replicated.
+   * - `w1w2_tagging_count`: W1/W2 (`source = 'Result'`) results that tag any bilateral project of
+   *   the center, whether or not the center is on the result. Project ownership is the rule of
+   *   `BilateralProjectsService.getProjectsByCenter`: `organization_code` = the center institution,
+   *   or `organization_code` NULL and `source_center_acronym` aliased to the center code.
+   * - `total_count`: distinct results across the three sets.
+   * `centerId` is the center code or its institution acronym, like `getResultsByBilateralCenter`.
+   */
+  async getBilateralCenterOverviewTotals(
+    centerId: string,
+    versionId: number,
+  ): Promise<{
+    replicated_count: number;
+    new_w3_count: number;
+    w1w2_tagging_count: number;
+    total_count: number;
+  }> {
+    // One `(acronym = ? AND code = ?)` per alias. Column-to-value comparisons on purpose: a
+    // CONCAT of source_center_acronym and code mixes their collations and MySQL rejects the IN.
+    const aliasEntries = Object.entries(
+      W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE,
+    );
+    const aliasCondition = aliasEntries.length
+      ? aliasEntries
+          .map(() => '(cp.source_center_acronym = ? AND c.code = ?)')
+          .join(' OR ')
+      : 'FALSE';
+    const aliasParams = aliasEntries.flat();
+
+    const query = `
+      WITH center AS (
+        SELECT cc.code, cc.institutionId
+        FROM clarisa_center cc
+        INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+        WHERE cc.code = ? OR ci.acronym = ?
+        LIMIT 1
+      ),
+      center_results AS (
+        SELECT DISTINCT r.id, r.source, COALESCE(r.is_replicated, 0) AS is_replicated
+        FROM result r
+        INNER JOIN results_center rc ON rc.result_id = r.id AND rc.is_active = 1
+        INNER JOIN center c ON c.code = rc.center_id
+        INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
+        INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+        WHERE r.version_id = ?
+          AND r.source IN ('API', 'Result')
+          AND r.is_active = 1
+      ),
+      tagging AS (
+        SELECT DISTINCT r.id
+        FROM result r
+        INNER JOIN results_by_projects rbp ON rbp.result_id = r.id AND rbp.is_active = 1
+        INNER JOIN clarisa_projects cp ON cp.id = rbp.project_id
+        INNER JOIN center c
+                ON cp.organization_code = c.institutionId
+                OR (
+                  cp.organization_code IS NULL
+                  AND (${aliasCondition})
+                )
+        INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
+        INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+        WHERE r.version_id = ?
+          AND r.source = 'Result'
+          AND r.is_active = 1
+      )
+      SELECT
+        (SELECT COUNT(*) FROM center_results WHERE is_replicated = 1) AS replicated_count,
+        (SELECT COUNT(*) FROM center_results WHERE source = 'API' AND is_replicated = 0) AS new_w3_count,
+        (SELECT COUNT(*) FROM tagging) AS w1w2_tagging_count,
+        (
+          SELECT COUNT(*) FROM (
+            SELECT id FROM center_results
+            WHERE is_replicated = 1 OR (source = 'API' AND is_replicated = 0)
+            UNION
+            SELECT id FROM tagging
+          ) totals
+        ) AS total_count
+    `;
+
+    try {
+      const [row] = await this.query(query, [
+        centerId,
+        centerId,
+        versionId,
+        ...aliasParams,
+        versionId,
+      ]);
+      return {
+        replicated_count: Number(row?.replicated_count ?? 0),
+        new_w3_count: Number(row?.new_w3_count ?? 0),
+        w1w2_tagging_count: Number(row?.w1w2_tagging_count ?? 0),
+        total_count: Number(row?.total_count ?? 0),
+      };
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

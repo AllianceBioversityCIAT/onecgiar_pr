@@ -3,26 +3,31 @@
 **What this owns:** the center Overview tab (`/bilateral/:acronym/overview`) — a KPI deck plus six
 cards (Reporting status, Needs attention, Results by project, Science Program contribution, Results
 by result type, Reporting pace) computed from the center's filtered result set for the selected phase.
+The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, `scrollToAttention()`) was removed
+2026-10-08 at reviewer request; the Needs attention panel next to Reporting status stays.
 
 ## Invariants
 
-- **The Total results card's `newCount` is unconditional, NOT status-gated — deliberately
-  different from the Reporting tab's per-project "new for review" (`BOV-DD-1`).** The Reporting
-  tab's `bilateral-projects-panel` "new for review" count additionally requires `status_id ===
-  pending`; this card's `newCount` is simply "not replicated" (`Number(row.is_replicated) !== 1`),
-  regardless of status, so `replicatedCount + newCount` always equals `totalResults.count`
-  (`BOV-R-2`/`BOV-R-2.1`). **Do not "fix" one to match the other** — intentionally different numbers
-  for the same center/phase. Badges are non-interactive `<span>`s (whole card is one `<a>`, `BOV-DD-4`);
-  tokens copied from `bilateral-projects-panel.component.html:265-299`, all counts computed in one
-  loop (`BOV-DD-2`).
-- **`w1w2ContributorCount`/`w1w2LeadCount` (`BOV2-R-1`) render INLINE next to `w1w2Count`** —
-  `"N W1/W2 (X contributing · Y lead)"` — not as a standalone badge. A standalone "N of M W1/W2"
-  pill shipped first and confused users twice (lived apart from the number it explained, reused
-  words already on the line above); moved inline as a direct UX fix. Filter: `source !== 'API'`
-  AND `is_leading_result !== 1` = contributing; `w1w2LeadCount = w1w2Count - w1w2ContributorCount`.
-  **A progress-bar-panel redesign of this card was tried and reverted same-day** (`overview-total-
-  results-progress-bars` spec, task `OTR-T-1`) — user preferred the plain-text card once seeing it
-  next to the deck's other plain-white cards. Don't re-attempt without re-confirming visual direction.
+- **The Total results card figures come from the server (SR-164368, 2026-10-13), not from the rows.**
+  `GET /api/results/bilateral-center-overview-totals` (`ResultRepository.getBilateralCenterOverviewTotals`),
+  cached per `center::version` in `BilateralOverviewService.totalsData`, read via `overviewTotals()`.
+  Nicoleta's definitions, one row per result: *Innovations replicated for update* = center on the result
+  and `is_replicated = 1`; *New W3/Bilateral results* = `source = 'API'`, center on the result, not
+  replicated; *W1/W2 results tagging Center bilateral project* = `source = 'Result'` tagging ANY project
+  owned by the center (org code or W3 alias), center on the result or not; headline = distinct union.
+  Validated against prdb for IITA / Reporting 2026: 34 / 57 / 6 = 97. The client cannot derive these:
+  the W1/W2 tagging rows are not in `bilateral-center-results`. The card is **center-wide — the
+  Overview filters do not narrow it**; '—' until the totals load. The replicated / `+ N new` pills
+  (`BOV-R-3/4`) were **removed** — their "new" counted W1/W2 too and contradicted the row.
+  `kpis.totalResults` (`buildTotalResultsKpi`) is no longer rendered by this card.
+- **`bilateral-center-results` returns one row per result** (SR-164368): `results_center` is grouped
+  per result (`MAX(is_leading_result)`) before the join — result 8641 had two active IITA rows and was
+  listed twice.
+- **Card style (`quick/overview-total-results-mockup`, 2026-10-08):** count, divider, three label +
+  count-chip rows. **Since 2026-10-13 (SR-164368, user's call) the card uses the SP Overview Total
+  General purple** (`from-[#4a1d96] via-[#5c24b8] to-[#793ce8]` + two blurred glows, children
+  `relative z-10`) — keep both cards in lockstep. A progress-bar redesign (`OTR-T-1`) was tried and
+  reverted earlier; don't re-attempt without re-confirming visual direction.
 - **The page computes no figure itself** (`COV-DD-1`). Every number rendered comes out of
   `bilateral-overview.aggregate.ts`'s `buildOverviewModel` — the component only wires signals and
   renders. If a card shows a wrong number, the bug is in `aggregate.ts` or in the row set fed to it,
@@ -75,10 +80,6 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
 - `OverviewControlsComponent` is purely presentational — it owns no data, no URL, no service. Don't
   add a fetch or a router call there; emit `phaseChange` / `filtersChange` / `clearFilters` and let
   the page reconcile.
-- `scrollToAttention()` reads `window.matchMedia('(prefers-reduced-motion: reduce)')` directly, not
-  an Angular CDK layout service — jsdom implements neither `matchMedia` nor
-  `HTMLElement.prototype.scrollIntoView`, so a Jest spec must assign both by hand (not `jest.spyOn`,
-  which requires a pre-existing property) and restore the originals afterward.
 - `BilateralAiService.loadAllDrafts()` sets `draftList` from the HTTP response body **directly**
   (`data ?? []`, no `.response` unwrap) — the opposite envelope shape from
   `GET_bilateralCenterResults`/`GET_bilateralProjects`. A CT/manual stub of `GET_bilateralAiDrafts`
@@ -111,6 +112,6 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
 
 - Whether the `sm:`/arbitrary-breakpoint cascade defect above also affects other mixed-breakpoint
   pages — not audited beyond this folder.
-- Visual-parity vs `bilateral-projects-panel`'s badges: human check at browser-verification (`BOV-T-1`).
+- Visual parity vs the center mockup (Total results card): human browser check pending.
 
-**Verified:** 2026-09-29 · qa-development-2026-ss · bd37a0f31 (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-w1w2-breakdown-inline`)
+**Verified:** 2026-10-13 · qa-development-2026-ss · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)

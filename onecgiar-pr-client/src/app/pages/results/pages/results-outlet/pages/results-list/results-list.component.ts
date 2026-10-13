@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked, signal, HostListener, viewChild, ElementRef } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { scienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -83,7 +84,7 @@ export const RC_INFO_OVERVIEW =
 export const RC_COLUMNS: readonly RcColumnDef[] = [
   { key: 'code', title: 'Code', attr: 'result_code', width: '88px', minPx: 72, defaultOn: true },
   { key: 'title', title: 'Title', attr: 'title', width: '280px', minPx: 160, defaultOn: true, class: 'notCenter' },
-  { key: 'program', title: 'Program', attr: 'submitter', width: '88px', minPx: 72, defaultOn: true },
+  { key: 'program', title: 'Program', attr: 'submitter', width: '200px', minPx: 120, defaultOn: true },
   { key: 'center', title: 'Center', attr: 'lead_center', width: '110px', minPx: 90, defaultOn: true },
   { key: 'phase', title: 'Phase', attr: 'phase_name', width: '100px', minPx: 80, defaultOn: true },
   { key: 'category', title: 'Indicator category', attr: 'result_type', width: '140px', minPx: 100, defaultOn: true },
@@ -482,6 +483,11 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Program / submitter official code for the Program column. */
   programCode(result: CurrentResult): string {
     return String(result?.submitter ?? result?.initiative_official_code ?? '').trim();
+  }
+
+  /** P/A label `CODE - Name` for the Program column (dot colour keeps keying off `programCode`). */
+  programLabel(result: CurrentResult): string {
+    return scienceProgramLabel(this.programCode(result), result?.submitter_name, result?.initiative_name, result?.submitter_short_name, result?.initiative_short_name);
   }
 
   programDotColor(code: string | null | undefined): string {

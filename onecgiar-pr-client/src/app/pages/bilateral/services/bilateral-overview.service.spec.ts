@@ -9,7 +9,12 @@ describe('BilateralOverviewService', () => {
   let service: BilateralOverviewService;
   let resultsSubjects: Subject<any>[];
   let projectsSubjects: Subject<any>[];
-  let mockApi: { GET_bilateralCenterResults: jest.Mock; GET_bilateralProjects: jest.Mock };
+  let totalsSubjects: Subject<any>[];
+  let mockApi: {
+    GET_bilateralCenterResults: jest.Mock;
+    GET_bilateralProjects: jest.Mock;
+    GET_bilateralCenterOverviewTotals: jest.Mock;
+  };
 
   /** The real `GET_bilateralCenterResults` envelope: `{ response: [...] }`. */
   function respondResults(index: number, rows: unknown[]) {
@@ -27,6 +32,7 @@ describe('BilateralOverviewService', () => {
   beforeEach(() => {
     resultsSubjects = [];
     projectsSubjects = [];
+    totalsSubjects = [];
     mockApi = {
       GET_bilateralCenterResults: jest.fn(() => {
         const subject = new Subject<any>();
@@ -38,12 +44,36 @@ describe('BilateralOverviewService', () => {
         projectsSubjects.push(subject);
         return subject.asObservable();
       }),
+      GET_bilateralCenterOverviewTotals: jest.fn(() => {
+        const subject = new Subject<any>();
+        totalsSubjects.push(subject);
+        return subject.asObservable();
+      }),
     };
 
     TestBed.configureTestingModule({
       providers: [BilateralOverviewService, { provide: BilateralApiService, useValue: mockApi }],
     });
     service = TestBed.inject(BilateralOverviewService);
+  });
+
+  // SR-164368: the Total results card figures are a third, independently cached stream.
+  it('load() fetches the overview totals per center::version and caches them; invalidate() refetches', () => {
+    const totals = { replicated_count: 34, new_w3_count: 57, w1w2_tagging_count: 6, total_count: 97 };
+    service.load('IITA', 36);
+    expect(mockApi.GET_bilateralCenterOverviewTotals).toHaveBeenCalledWith('IITA', 36);
+    expect(service.totalsData('IITA', 36)()).toBeNull();
+
+    totalsSubjects[0].next({ response: totals });
+    totalsSubjects[0].complete();
+    expect(service.totalsData('IITA', 36)()).toEqual(totals);
+
+    service.load('IITA', 36);
+    expect(mockApi.GET_bilateralCenterOverviewTotals).toHaveBeenCalledTimes(1);
+
+    service.invalidate('IITA', 36);
+    expect(service.totalsData('IITA', 36)()).toBeNull();
+    expect(mockApi.GET_bilateralCenterOverviewTotals).toHaveBeenCalledTimes(2);
   });
 
   it('load() fetches results + projects independently and stores them under the real envelope shapes', () => {

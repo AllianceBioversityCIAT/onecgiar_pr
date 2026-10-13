@@ -7,6 +7,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { WordCounterService } from '../../../../../../shared/services/word-counter.service';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
+import { scienceProgramLabel, withScienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
 import {
   KNOWLEDGE_PRODUCT_TYPE_ID,
@@ -383,6 +384,30 @@ export class LabReportFormComponent {
   /** `related_node_id` is the string the Progress Tracker route expects (server decision block, `progress-tracker.service.ts`). */
   readonly ptTocIndicatorId = computed<string | number | null>(() => this.indicator()?.related_node_id ?? null);
   /**
+   * Centers the Progress Tracker request can be made for. PT keeps one KPI per (indicator, center):
+   * the row's own `center_acronym` when it has one; otherwise the centers of a shared target
+   * (`targets_by_center.centers[]`) — one is used directly, several make `app-pt-results-browse`
+   * ask which one the user reports for.
+   */
+  readonly ptCenterOptions = computed<string[]>(() => {
+    const ind = this.indicator();
+    const own = (ind?.center_acronym ?? '').trim();
+    if (own) return [own];
+    const shared = (ind?.targets_by_center?.centers ?? []).map((c: any) => (c?.center_acronym ?? '').trim()).filter(Boolean);
+    return [...new Set<string>(shared)];
+  });
+  readonly ptCenterSelectOptions = computed(() => this.ptCenterOptions().map(acronym => ({ acronym })));
+  /** The user's pick among several shared-target centers; kept across indicators while it is still an option. */
+  readonly ptChosenCenter = signal<string | null>(null);
+  /** The center sent to the Progress Tracker request; `null` = none needed, or not chosen yet. */
+  readonly ptCenter = computed<string | null>(() => {
+    const options = this.ptCenterOptions();
+    if (options.length === 1) return options[0];
+    const chosen = this.ptChosenCenter();
+    return chosen && options.includes(chosen) ? chosen : null;
+  });
+  readonly ptAwaitingCenter = computed(() => this.ptCenterOptions().length > 1 && !this.ptCenter());
+  /**
    * Whether the indicator already fixes its result type — same rule the picker itself uses
    * (`resolvedIndicatorResultTypeId`, `needsCategoryChoice`). `PTB-T-5` is the actual type guard on
    * pre-fill; here it is only passed through as an input.
@@ -731,7 +756,7 @@ export class LabReportFormComponent {
 
   private loadInitiatives(): void {
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
-      const all = filterOutAvisaInitiatives(response.filter((item: any) => item.initiative_id !== this.initiativeId()));
+      const all = filterOutAvisaInitiatives(response.filter((item: any) => item.initiative_id !== this.initiativeId())).map(withScienceProgramLabel);
       this.allInitiatives.set(all);
       const tocSpIds: number[] = this.tocNode()?.contributing_synergy_program_initiative_ids ?? [];
       const preselected = all.filter((sp: any) => tocSpIds.includes(sp.id)).map((sp: any) => ({ ...sp, from_toc: true }));
@@ -991,7 +1016,7 @@ export class LabReportFormComponent {
   }
 
   scienceChipLabel(sp: any): string {
-    return sp?.official_code ?? sp?.short_name ?? sp?.name ?? '';
+    return scienceProgramLabel(sp?.official_code, sp?.name, sp?.initiative_name, sp?.short_name);
   }
 
   /** Requiredness contract — each label maps to a `ReportFormFieldKey` via `MISSING_FIELD_KEY`. */
@@ -1031,7 +1056,8 @@ export class LabReportFormComponent {
     // PTB-R-16/17: a payload only ever carries `ptProposal` when a Progress Tracker pick actually
     // happened on THIS form instance (`ptDraft() !== null`) — independent of which tab is active at
     // submit time. Every other create path passes `null`, which keeps `toc_progressive_narrative`
-    // `''` and omits `progress_tracker_provenance` entirely (`PTB-AC-13`). Only the four fields the
+    // `''` and omits `progress_tracker_provenance` and `result.description` entirely (`PTB-AC-13`).
+    // With a pick, the draft becomes `result.description`; the narrative carries only the origin note. Only the four fields the
     // builder reads travel — never `countries` / `impact_areas` / `gender_split` (`PTB-R-18`,
     // `PTB-AC-17`), which this file never even destructures off `ptDraft()`.
     const ptDraft = this.ptDraft();

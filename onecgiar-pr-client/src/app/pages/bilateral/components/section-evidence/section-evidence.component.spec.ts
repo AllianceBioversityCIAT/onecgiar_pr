@@ -63,6 +63,7 @@ describe('SectionEvidenceComponent', () => {
     };
 
     autoSave = {
+      isReadOnly: signal(false), // R2B-1/2 — the editor lock the sections read
       manualSave$: new Subject<any>(),
       runImmediate: jest.fn().mockImplementation((_key: string, factory: () => any) => {
         factory().subscribe({ error: () => {} });
@@ -94,6 +95,14 @@ describe('SectionEvidenceComponent', () => {
 
   it('should create', () => {
     expect(build()).toBeTruthy();
+  });
+
+  it('R2B-2: readOnly() is true when the editor locked the form for this user, even if the status is editable', () => {
+    const c = build();
+    (creation as any).isEditableByCenterUser = signal(true);
+    expect(c.readOnly()).toBe(false);
+    autoSave.isReadOnly.set(true);
+    expect(c.readOnly()).toBe(true);
   });
 
   // ── getters ──────────────────────────────────────────────────────────

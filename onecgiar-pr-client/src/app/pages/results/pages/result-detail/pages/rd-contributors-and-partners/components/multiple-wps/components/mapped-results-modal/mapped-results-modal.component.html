@@ -32,8 +32,8 @@
         <h1 class="target_info_content_title">Results contributing to the target:</h1>
       </div>
 
-      <app-pr-table id="mappedResultTable" sortField="result_code" [sortOrder]="-1" [rows]="5"
-        selectionMode="single" [rowsPerPageOptions]="[5,10,15]"
+      <app-pr-table id="mappedResultTable" sortField="result_code" [sortOrder]="-1" [rows]="100"
+        selectionMode="single" [rowsPerPageOptions]="[5,10,15,100]"
         [value]="this.mappedResultService.isTarget ? this.mappedResultService.targetData.contributors : activeTab?.wpinformation?.wp_info"
         [paginator]="this.mappedResultService.targetData.contributors.length > 5">
 

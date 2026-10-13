@@ -190,6 +190,26 @@ describe('LabReportFormComponent', () => {
       { id: 202, official_code: 'SP02', full_name: 'Science Program 2' }
     ];
 
+    it('PFN-T-3: scienceChipLabel follows the CODE - Name rule', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      expect(component.scienceChipLabel({ official_code: 'SP01', name: 'Breeding' })).toBe('SP01 - Breeding');
+      expect(component.scienceChipLabel({ official_code: 'SP02' })).toBe('SP02');
+    });
+
+    it('PFN-T-3: loaded Science Programs carry sp_label and keep id/official_code', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      api.resultsSE.GET_AllInitiatives = jest.fn().mockReturnValue(
+        of({ response: [{ id: 1, official_code: 'SP01', name: 'Breeding' }, { id: 2, official_code: 'SP02' }] })
+      );
+
+      (component as any).loadInitiatives();
+
+      expect(component.allInitiatives().map((sp: any) => [sp.id, sp.official_code, sp.sp_label])).toEqual([
+        [1, 'SP01', 'SP01 - Breeding'],
+        [2, 'SP02', 'SP02']
+      ]);
+    });
+
     it('reports no ToC reference centers/science and exposes the full catalogue via the otherX computeds (emerging, tocNode: null)', async () => {
       await setup(
         { emergingMode: true, emergingCategory: null, indicator: null, tocNode: null },
@@ -1681,6 +1701,51 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
     missing_info: []
   };
 
+  describe('Progress Tracker center of the row', () => {
+    it('uses the row center_acronym', async () => {
+      const fix = await mountPt({ indicator: { ...nonKpIndicator, center_acronym: ' CIAT ' }, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      expect(fix.componentInstance.ptCenterOptions()).toEqual(['CIAT']);
+      expect(fix.componentInstance.ptCenter()).toBe('CIAT');
+      expect(fix.componentInstance.ptAwaitingCenter()).toBe(false);
+    });
+
+    it('uses the only center of a shared target', async () => {
+      const fix = await mountPt({
+        indicator: { ...nonKpIndicator, targets_by_center: { centers: [{ center_acronym: 'IFPRI' }, { center_acronym: 'IFPRI' }] } },
+        tocNode: { result_level_id: OUTPUT_LEVEL }
+      });
+      expect(fix.componentInstance.ptCenter()).toBe('IFPRI');
+    });
+
+    it('with several shared-target centers, awaits the chosen one and shows the picker on the Progress Tracker tab', async () => {
+      stubPtResults();
+      const fix = await mountPt({
+        indicator: { ...nonKpIndicator, targets_by_center: { centers: [{ center_acronym: 'CIAT' }, { center_acronym: 'ILRI' }] } },
+        tocNode: { result_level_id: OUTPUT_LEVEL }
+      });
+      const c = fix.componentInstance;
+      expect(c.ptCenter()).toBeNull();
+      expect(c.ptAwaitingCenter()).toBe(true);
+
+      c.onOpenProgressTrackerTab();
+      fix.detectChanges();
+      expect(fix.nativeElement.querySelector('[data-testid="pt-center-picker"]')).toBeTruthy();
+
+      c.ptChosenCenter.set('ILRI');
+      expect(c.ptCenter()).toBe('ILRI');
+      expect(c.ptAwaitingCenter()).toBe(false);
+
+      c.ptChosenCenter.set('IRRI'); // not an option of this row
+      expect(c.ptCenter()).toBeNull();
+    });
+
+    it('with no center anywhere, sends none and does not wait', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      expect(fix.componentInstance.ptCenter()).toBeNull();
+      expect(fix.componentInstance.ptAwaitingCenter()).toBe(false);
+    });
+  });
+
   it('PTB-AC-1: non-KP indicator renders exactly two tabs, no Browse repositories, defaulted to Manual entry with a non-empty tab body', async () => {
     const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
 
@@ -2053,9 +2118,8 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
 
       expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
       const body = api.resultsSE.POST_createResult.mock.calls[0][0];
-      expect(body.toc_progressive_narrative).toBe(
-        'Draft description\n\nDrafted from Progress Tracker proposal toc-node-1:1, generated 2026-09-22T00:00:00.000Z.'
-      );
+      expect(body.result.description).toBe('Draft description');
+      expect(body.toc_progressive_narrative).toBe('Drafted from Progress Tracker proposal toc-node-1:1, generated 2026-09-22T00:00:00.000Z.');
       expect(body.progress_tracker_provenance).toEqual({
         result_key: 'toc-node-1:1',
         evidence_fingerprint: 'fingerprint-1',
@@ -2076,6 +2140,7 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
 
       const body = api.resultsSE.POST_createResult.mock.calls[0][0];
       expect(body.toc_progressive_narrative).toBe('');
+      expect(body.result).not.toHaveProperty('description');
       expect(body).not.toHaveProperty('progress_tracker_provenance');
     });
   });

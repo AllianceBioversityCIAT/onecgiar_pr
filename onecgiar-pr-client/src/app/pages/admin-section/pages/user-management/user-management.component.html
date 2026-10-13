@@ -139,7 +139,7 @@
                       #entitiesSelect
                       id="entitiesSelect"
                       [options]="orderedEntityGroups()"
-                      optionLabel="official_code"
+                      optionLabel="sp_label"
                       placeholder="All"
                       [ngModel]="selectedEntities()"
                       (ngModelChange)="onEntitiesChange($event)"
@@ -225,8 +225,8 @@
       [value]="this.users()"
       [loading]="this.loading()"
       [paginator]="true"
-      [rows]="10"
-      [rowsPerPageOptions]="[10, 25, 50]"
+      [rows]="100"
+      [rowsPerPageOptions]="[10, 25, 50, 100]"
       styleClass="user-table"
       [style]="{
         'min-width': '200px',
@@ -236,7 +236,11 @@
       <ng-template prTableHeader>
         <tr style="height: 54px">
           @for (column of columns; track column.key) {
-            <th [style.width]="column.width" [prSortableColumn]="column.key" scope="col">
+            <th
+              [style.width]="column.width"
+              [class.col-actions]="column.key === 'actions'"
+              [prSortableColumn]="column.key"
+              scope="col">
               <div class="header-content">
                 {{ column.label }}
                 <pr-sort-icon [field]="column.key"></pr-sort-icon>
@@ -316,7 +320,7 @@
               {{ user.userStatus }}
             </span>
           </td>
-          <td>
+          <td class="col-actions">
             <div class="action-buttons" [class.inactive-user]="!user.isActive">
               @if (user.isActive) {
                 <button type="button" class="action-btn" (click)="onEditUser(user)" prTooltip="Edit user" prTooltipPosition="top">

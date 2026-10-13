@@ -52,11 +52,10 @@
       @if (rowsPerPageOptions?.length) {
         <select
           class="pr-paginator__size"
-          [value]="effectiveRows()"
           (change)="setPageSize(+$any($event.target).value)"
           aria-label="Rows per page">
           @for (opt of rowsPerPageOptions; track opt) {
-            <option [value]="opt">{{ opt }}</option>
+            <option [value]="opt" [selected]="opt === effectiveRows()">{{ opt }}</option>
           }
         </select>
       }

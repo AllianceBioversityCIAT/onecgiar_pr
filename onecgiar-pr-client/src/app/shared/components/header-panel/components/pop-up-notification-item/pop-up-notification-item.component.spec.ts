@@ -100,6 +100,45 @@ describe('PopUpNotificationItemComponent', () => {
     });
   });
 
+  describe('PFN-R-1 S8: SP label in the rendered request text', () => {
+    const requestFixture = (shared: any, owner: any, mapToToc: boolean) => ({
+      requested_date: new Date().toISOString(),
+      is_map_to_toc: mapToToc,
+      obj_requested_by: { first_name: 'Alice', last_name: 'Johnson' },
+      obj_result: { result_code: 'R005', title: 'Some Result', obj_version: { id: 1 } },
+      obj_shared_inititiative: shared,
+      obj_owner_initiative: owner
+    });
+    const flatText = (n: any) => {
+      const fresh = TestBed.createComponent(PopUpNotificationItemComponent);
+      fresh.componentInstance.notification = n;
+      fresh.detectChanges();
+      return (fresh.nativeElement.textContent as string).replace(/\s+/g, ' ');
+    };
+
+    it('shows code - name for shared and owner programs', () => {
+      const flat = flatText(requestFixture({ official_code: 'SP01', name: 'X' }, { official_code: 'SP02', name: 'Y' }, true));
+      expect(flat).toContain('from SP01 - X has requested contribution');
+      expect(flat).toContain('submitted by SP02 - Y');
+      expect(flatText(requestFixture({ official_code: 'SP01', name: 'X' }, { official_code: 'SP02', name: 'Y' }, false))).toContain(
+        'inclusion of SP01 - X'
+      );
+    });
+
+    it('primary request mention uses the label, code only without a name', () => {
+      const primary = (shared: any) => component.primaryRequestParts({ obj_shared_inititiative: shared, obj_result: {} }).code;
+      expect(primary({ official_code: 'SP01', name: 'X' })).toBe('SP01 - X');
+      expect(primary({ official_code: 'SP01' })).toBe('SP01');
+    });
+
+    it('falls back to the code only when the name is missing', () => {
+      const flat = flatText(requestFixture({ official_code: 'SP01' }, { official_code: 'SP02' }, true));
+      expect(flat).toContain('from SP01 has requested');
+      expect(flat).toContain('submitted by SP02');
+      expect(flat).not.toContain('undefined');
+    });
+  });
+
   describe('generateNotificationTextRequest', () => {
     it('should return correct text when is_map_to_toc is true', () => {
       const notification = {

@@ -631,6 +631,14 @@ export class ResultsService {
         saveResult['source'] = source;
       }
 
+      const trimmedDescription =
+        typeof createResultDto.description === 'string'
+          ? createResultDto.description.trim()
+          : '';
+      if (trimmedDescription) {
+        saveResult.description = trimmedDescription;
+      }
+
       const newResultHeader: Result =
         await this._resultRepository.save(saveResult);
 
@@ -1172,6 +1180,47 @@ export class ResultsService {
    * @returns
    */
 
+  /**
+   * P2-3946 — who may delete a result: an Admin (any result), the Lead / Co-Lead / Coordinator of
+   * the result's owner Science Program (`validationRolePermissions` already treats Admin as
+   * allowed), or a Center User (role 9) of the result's lead Center. Members and anyone else: 403.
+   */
+  private async assertCanDeleteResult(
+    user: TokenDto,
+    resultId: number,
+  ): Promise<void> {
+    const hasProgramRole =
+      await this._roleByUserRepository.validationRolePermissions(
+        user.id,
+        resultId,
+        [RoleEnum.ADMIN, RoleEnum.LEAD, RoleEnum.CO_LEAD, RoleEnum.COORDINATOR],
+      );
+    if (hasProgramRole) return;
+
+    const centers =
+      await this._resultsCenterRepository.getAllResultsCenterByResultId(
+        resultId,
+      );
+    const leadCenter = (centers ?? []).find(
+      (center) => Number(center?.is_leading_result) === 1,
+    );
+    if (leadCenter?.code) {
+      const isCenterUser =
+        await this._roleByUserRepository.validationCenterPermissions(
+          user.id,
+          String(leadCenter.code),
+        );
+      if (isCenterUser) return;
+    }
+
+    throw {
+      response: {},
+      message:
+        "Only an Admin, the Lead, Co-Lead or Coordinator of the result's program, or a Center User of its lead center can delete a result.",
+      status: HttpStatus.FORBIDDEN,
+    };
+  }
+
   async deleteResult(resultId: number, user: TokenDto, justification?: string) {
     try {
       const result: Result = await this._resultRepository.findOne({
@@ -1184,6 +1233,8 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      await this.assertCanDeleteResult(user, result.id);
 
       if (result.status_id == 2)
         throw this._returnResponse.format({
@@ -5978,6 +6029,43 @@ export class ResultsService {
           status: error.getStatus(),
         };
       }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /** SR-164368 — figures of the center Overview "Total results" card (see the repository method). */
+  async getBilateralCenterOverviewTotals(centerId: string, versionId: string) {
+    try {
+      const parsedVersionId = Number(versionId);
+
+      if (!centerId?.trim()) {
+        return {
+          response: null,
+          message: 'centerId is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!parsedVersionId || isNaN(parsedVersionId)) {
+        return {
+          response: null,
+          message: 'versionId is required and must be a valid number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const totals =
+        await this._resultRepository.getBilateralCenterOverviewTotals(
+          centerId,
+          parsedVersionId,
+        );
+
+      return {
+        response: totals,
+        message: 'Bilateral center overview totals retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
