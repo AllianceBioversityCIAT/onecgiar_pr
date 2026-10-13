@@ -1,6 +1,12 @@
 # bilateral-result-creator
 
-**Verified:** 2026-10-08 · quick/footer-capsules-align: las cápsulas Back/Next y Save draft del pie
+**Verified:** 2026-10-13 · `bugfix/capacity-sharing-output-level-mismatch` (`BIL-T-1`/`BIL-T-2`):
+`resultLevelName` (the computed behind the W3/Bilateral breadcrumb's level label) had `case 3`/`case 4`
+inverted relative to `ResultLevelEnum` (`INITIATIVE_OUTCOME=3`, `INITIATIVE_OUTPUT=4`) and every other
+level mapping in the repo (`BilateralResultLevelSelectorComponent`, `RESULT_LEVEL_LABELS`) — every
+bilateral result at level 3 or 4 showed the opposite label on its detail page. Fixed by swapping only
+the two return values (`3 → 'Outcome'`, `4 → 'Output'`); `case 1`/`case 2` untouched (unreachable from
+this flow). Display-only, no backend/payload change; prior: 2026-10-08 · quick/footer-capsules-align: las cápsulas Back/Next y Save draft del pie
 comparten fila mientras quepan (flex-wrap en vez del umbral fijo de 820px); prior: 2026-09-30 · `ARM-T-2` (bilateral/ai-queue-report-manually, single-mount rework): this
 page no longer mounts `<app-bilateral-manual-create-drawer-host>` — neither in its template nor in
 its `imports:` array. The host now mounts exactly once, in the bilateral shell

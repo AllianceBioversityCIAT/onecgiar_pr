@@ -198,9 +198,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     const levelId = this.creationService.resultLevelId();
     switch (Number(levelId)) {
       case 3:
-        return 'Output';
-      case 4:
         return 'Outcome';
+      case 4:
+        return 'Output';
       case 2:
         return 'End of Initiative Outcome';
       case 1:

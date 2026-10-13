@@ -2402,4 +2402,25 @@ describe('BilateralResultCreatorComponent', () => {
       expect(component.giSavedSinceOpen()).toBe(false);
     });
   });
+
+  /**
+   * `BIL-T-1` (bugfix/capacity-sharing-output-level-mismatch) — regression test written BEFORE the
+   * fix (`BIL-T-2`). `resultLevelName`'s switch is currently inverted relative to `ResultLevelEnum`
+   * (3 = Outcome, 4 = Output): it returns 'Output' for 3 and 'Outcome' for 4. These assertions use
+   * the CORRECT mapping, so they MUST fail (red) against today's code (requirements.md BIL-AC-1,
+   * BIL-AC-2; design.md §10).
+   */
+  describe('resultLevelName (bugfix: capacity-sharing-output-level-mismatch)', () => {
+    it('BIL-AC-2: returns \'Outcome\' when resultLevelId is 3', () => {
+      creationService.resultLevelId.set(3);
+
+      expect(component.resultLevelName()).toBe('Outcome');
+    });
+
+    it('BIL-AC-1: returns \'Output\' when resultLevelId is 4', () => {
+      creationService.resultLevelId.set(4);
+
+      expect(component.resultLevelName()).toBe('Output');
+    });
+  });
 });
