@@ -101,6 +101,19 @@ describe('OutcomeIndicatorComponent', () => {
     expect(component.handleInitiativeQueryParam).toHaveBeenCalled();
   });
 
+  it('PFN-T-3: mapInitiativeData adds sp_label and keeps id/official_code', () => {
+    const mapped = (component as any).mapInitiativeData({
+      id: 1,
+      official_code: 'SP01',
+      name: 'Breeding',
+      obj_cgiar_entity_type: { code: 'T', name: 'Type' }
+    });
+    expect(mapped.sp_label).toBe('SP01 - Breeding');
+    expect(mapped.id).toBe(1);
+    expect(mapped.official_code).toBe('SP01');
+    expect(mapped.typeCode).toBe('T');
+  });
+
   it('should handle error when loading initiatives', async () => {
     component.api.rolesSE.isAdmin = true;
     jest.spyOn(console, 'error');

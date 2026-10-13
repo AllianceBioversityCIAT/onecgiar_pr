@@ -119,3 +119,18 @@ Escalated to the user at the T-2 gate (gated mode pauses there anyway).
 **Budget:** review rounds 4 total against 1 budgeted (T-1: 1, T-2: 2, T-3: 2). Diff is ~190 LOC against ~140 budgeted.
 
 **HITL 2026-10-08:** the user approved committing and pushing to `qa-development-2026-ss` ("subamos cambios a mi rama y despues validamos para poder subir a performance-refactor"). Code and both CLAUDE.md files go in one commit, as T-3 Done requires. T-3 stays `[~]` until the user validates, ahead of the merge to `performance-refactor`. `ng build` is still pending (RAM rule).
+
+**HITL 2026-10-08, closed:** the user validated the change locally ("si funciona bien procede"). Commit `3b1367cde` was pushed to `qa-development-2026-ss`, then `performance-refactor` was fast-forwarded `1753260f1..5891f5fa5` (it also carries the unrelated `5891f5fa5`, which removes the center Overview Needs attention KPI tile). T-3 → `[x]`.
+
+## Summary
+
+| Task | Result | Attempts |
+|---|---|---|
+| T-1 Host computed `overviewTotalBreakdown` | PASS | 1 |
+| T-2 Card markup + child input | PASS | 2 (attempt 1: a test could not detect its Fail input) |
+| T-3 Folder doc + live verification | PASS + user validation | 2 (attempt 1: `dashboard-lab/CLAUDE.md` `Verified:` not re-stamped) |
+
+- Live (SP01): KPI 1 = 168 = KPI 2 (8 replicated + 160 new). The awaiting-review count of 33 matches Pending Review. Scope AOW02 leaves KPI 1 unchanged.
+- Budget overrun: 5 review rounds against 1, ~190 LOC against ~140. The cause is test explicitness; the production change is small.
+- **Open:** `ng build` was never run (free RAM < 4 GB every time); the dev-server AOT compile and the user's validation are the substitute evidence. Also open: the narrow-width (~360px) visual and the side-by-side with the center card were not agent-verified.
+- Next: `/akili-archive changes/sp-overview-total-general-card` (kaizen + CodeGraph sync).

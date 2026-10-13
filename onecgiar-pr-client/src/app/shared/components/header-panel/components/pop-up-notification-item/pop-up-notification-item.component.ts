@@ -13,6 +13,8 @@ import { ApiService } from '../../../../services/api/api.service';
 import { HlmButton } from '@spartan/button';
 import { HlmTooltip } from '@spartan/tooltip';
 import { HlmBadge } from '@spartan/badge';
+import { SpLabelPipe } from '../../../../pipes/sp-label.pipe';
+import { scienceProgramLabel } from '../../../../utils/science-program-label.util';
 import { ResultsNotificationsService } from '../../../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { BellAcceptConfirmService, BellConfirmAction } from './bell-accept-confirm.service';
 import {
@@ -46,7 +48,7 @@ import {
 
 @Component({
   selector: 'app-pop-up-notification-item',
-  imports: [CommonModule, HlmButton, HlmTooltip, HlmBadge, NgIcon],
+  imports: [CommonModule, HlmButton, HlmTooltip, HlmBadge, NgIcon, SpLabelPipe],
   providers: [provideIcons({ lucideCheck, lucideInfo, lucideX })],
   templateUrl: './pop-up-notification-item.component.html',
   styleUrl: './pop-up-notification-item.component.scss'
@@ -504,7 +506,10 @@ export class PopUpNotificationItemComponent implements OnDestroy {
     return {
       center: creatingCenterLabelOf(notification),
       verb: CONTRIBUTION_REQUEST_DRAWER_COPY.header.primaryVerb,
-      code: notification?.obj_shared_inititiative?.official_code,
+      code: scienceProgramLabel(
+        notification?.obj_shared_inititiative?.official_code,
+        notification?.obj_shared_inititiative?.name
+      ),
       tail: CONTRIBUTION_REQUEST_DRAWER_COPY.header.primaryTail
     };
   }

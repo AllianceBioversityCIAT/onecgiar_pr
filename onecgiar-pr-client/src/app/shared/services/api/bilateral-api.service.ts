@@ -37,6 +37,14 @@ export class BilateralApiService {
     );
   }
 
+  /** SR-164368 — figures of the center Overview "Total results" card, counted server-side. */
+  GET_bilateralCenterOverviewTotals(centerId: string, versionId: number) {
+    return this.http.get<any>(
+      `${this.resultsApiBaseUrl}bilateral-center-overview-totals`,
+      { params: { centerId, versionId: String(versionId) } }
+    );
+  }
+
   POST_createBilateralHeader(body: Record<string, unknown>) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/create-header`, body);
   }

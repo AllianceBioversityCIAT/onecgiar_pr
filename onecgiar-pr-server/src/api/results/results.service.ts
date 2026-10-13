@@ -6033,6 +6033,43 @@ export class ResultsService {
     }
   }
 
+  /** SR-164368 — figures of the center Overview "Total results" card (see the repository method). */
+  async getBilateralCenterOverviewTotals(centerId: string, versionId: string) {
+    try {
+      const parsedVersionId = Number(versionId);
+
+      if (!centerId?.trim()) {
+        return {
+          response: null,
+          message: 'centerId is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!parsedVersionId || isNaN(parsedVersionId)) {
+        return {
+          response: null,
+          message: 'versionId is required and must be a valid number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const totals =
+        await this._resultRepository.getBilateralCenterOverviewTotals(
+          centerId,
+          parsedVersionId,
+        );
+
+      return {
+        response: totals,
+        message: 'Bilateral center overview totals retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async getBilateralCenterResults(centerId: string, versionId: string) {
     try {
       const parsedVersionId = Number(versionId);

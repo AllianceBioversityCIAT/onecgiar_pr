@@ -2569,6 +2569,15 @@ export class BilateralCenterService {
         );
       }
 
+      // `PNR-T-2` / `PNR-R-2` — re-date the primary card in this transaction so the owning SP's
+      // Received inbox lists it as new (first submit and resubmit alike). AFTER the ownerless
+      // `transferPrimary` above, whose retire-and-insert would otherwise leave this stamp on a
+      // retired row. Same `manager`: a failure here rolls the whole submit back (`PNR-NFR-1`).
+      await this.primaryProgramRequestService.stampPrimaryCardSubmitted(
+        parsedResultId,
+        manager,
+      );
+
       // `RRC-R-8` / `RRC-DD-5` — contributors saved while the result sat in Rejected were held
       // (`syncContributingPrograms` never releases at 7). They are sent now, with this
       // transaction's manager, so a failure here rolls the whole resubmission back. Idempotent

@@ -415,6 +415,20 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     expect(bilateralSegments.find(s => s.label === 'Approved')?.link).toEqual({ origin: 'W3/Bilaterals', status: 'Approved' });
   });
 
+  it('W3/Bilateral status segments leave Editing out (center-only) and never resurface it as a fallback', async () => {
+    const component = await createComponent();
+    const row = (id: string, statusId: number) =>
+      ({ id, result_code: `R${id}`, indicator_category: 'KP', status_id: statusId, acronym: 'A', lead_center: 'IITA' }) as unknown as ResultToReview;
+    (component as unknown as { bilateralRowsByKey: { set: (v: Map<string, ResultToReview[]>) => void } }).bilateralRowsByKey.set(
+      new Map([['SP02::1', [row('1', 1), row('2', 8), row('3', 5), row('4', 6), row('5', 7)]]])
+    );
+
+    const segments = component.overviewBilateralStatusSegments();
+
+    expect(segments.map(s => s.key)).toEqual(['pending', 'approved', 'rejected']);
+    expect(segments.reduce((sum, s) => sum + s.count, 0)).toBe(3);
+  });
+
   it('onOverviewLink navigates once with the entity-details commands and exact query params (origin+center)', async () => {
     const component = await createComponent();
 

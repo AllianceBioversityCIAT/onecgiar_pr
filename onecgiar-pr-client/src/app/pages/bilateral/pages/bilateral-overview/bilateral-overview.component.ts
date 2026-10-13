@@ -236,6 +236,14 @@ export class BilateralOverviewComponent implements OnInit {
    * second computed. Reading the current key only is also what keeps a late response for a
    * superseded phase off the screen (`COV-R-2` B / `COV-R-21`).
    */
+  /** SR-164368 — Total results card figures, counted server-side for the current center and phase. */
+  readonly overviewTotals = computed(() => {
+    const centerKey = this.centerKey();
+    const versionId = this.effectiveVersionId();
+    if (!centerKey || versionId === null) return null;
+    return this.overviewService.totalsData(centerKey, versionId)();
+  });
+
   private readonly entrySignal = computed<Signal<BilateralOverviewEntry> | null>(() => {
     const centerKey = this.centerKey();
     const versionId = this.effectiveVersionId();

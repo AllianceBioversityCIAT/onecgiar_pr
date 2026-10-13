@@ -87,11 +87,11 @@ Test rule for every task (machine rule): Jest **always** `--maxWorkers=2` and sc
 
 ---
 
-## [~] T-3 — Folder doc + live verification (HITL)
+## [x] T-3 — Folder doc + live verification (HITL)
 
 | Field | Value |
 |---|---|
-| Status | [~] Reviewer PASS 2026-10-08 — commit approved by user 2026-10-08 (code + docs in one commit); pending: user validation before performance-refactor + ng build |
+| Status | [x] done (Reviewer PASS + user validation 2026-10-08) |
 | Size | XS (~25 LOC doc) |
 | Depends on | T-1, T-2 |
 | Requirements | STG-R-2 (live reconcile), R-4 S-4.2, R-5, NFR-4 |

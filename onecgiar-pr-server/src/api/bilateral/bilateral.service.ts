@@ -4816,6 +4816,12 @@ export class BilateralService {
           manager,
           { releaseContributors: true },
         ),
+      // `PNR-T-2`: re-dates the primary card inside the resubmission's final transaction.
+      stampPrimaryCardSubmitted: (resultId, manager) =>
+        this._primaryProgramRequestService.stampPrimaryCardSubmitted(
+          resultId,
+          manager,
+        ),
       announcePendingReview: (resultId, emitterUserId) =>
         this.announcePendingReview(resultId, emitterUserId),
     };

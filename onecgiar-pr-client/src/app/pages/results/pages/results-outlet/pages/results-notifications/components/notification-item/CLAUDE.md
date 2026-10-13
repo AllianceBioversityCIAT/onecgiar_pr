@@ -613,3 +613,8 @@ shared fallback; legacy/other types render no line. Copy in `bilateral-rejection
 - **Update rows (attempt 3):** the inbox renders every regular update through THIS component's `isUpdateSource` branch (`app-update-notification` only renders announcements). For `BILATERAL_RESULT_SUBMITTED` `submittedReviewUrl` (= `reviewRequestUrl`, null without an SP code) feeds the link `href` (`primaryResultHref()`), `onResultLinkClick()` (checked BEFORE the `isBilateralResult` center-editor path; modifier clicks keep the href), `onDrawerResult()` and the CTA. `reviewLinkUrl` = `primaryReviewUrl ?? submittedReviewUrl`. Before this the click went through `onResultLinkClick()` -> `openCenterEditorInNewTab()` (center editor in a new tab).
 
 **Verified:** 2026-10-07 · qa-development-2026-ss · attempt 3: `submittedReviewUrl` / `reviewLinkUrl` route the BILATERAL_RESULT_SUBMITTED update row link, drawer result card and CTA to the review drawer.
+
+## P/A mentions use the shared label (PFN-T-3)
+Every `obj_owner_initiative` / `obj_shared_inititiative` mention in the template renders through the standalone `SpLabelPipe` (`| spLabel`, imported in `notification-item.module.ts`): `SP01 - Name`, or the code alone when the payload has no `name` (the server select returns `id, official_code, name`). Add the pipe to any new P/A mention; keep routing/ids on the raw objects.
+
+**Verified:** 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels` PFN-T-3

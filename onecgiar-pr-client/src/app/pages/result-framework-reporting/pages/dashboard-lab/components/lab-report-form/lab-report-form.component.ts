@@ -7,6 +7,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { WordCounterService } from '../../../../../../shared/services/word-counter.service';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
+import { scienceProgramLabel, withScienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
 import {
   KNOWLEDGE_PRODUCT_TYPE_ID,
@@ -755,7 +756,7 @@ export class LabReportFormComponent {
 
   private loadInitiatives(): void {
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
-      const all = filterOutAvisaInitiatives(response.filter((item: any) => item.initiative_id !== this.initiativeId()));
+      const all = filterOutAvisaInitiatives(response.filter((item: any) => item.initiative_id !== this.initiativeId())).map(withScienceProgramLabel);
       this.allInitiatives.set(all);
       const tocSpIds: number[] = this.tocNode()?.contributing_synergy_program_initiative_ids ?? [];
       const preselected = all.filter((sp: any) => tocSpIds.includes(sp.id)).map((sp: any) => ({ ...sp, from_toc: true }));
@@ -1015,7 +1016,7 @@ export class LabReportFormComponent {
   }
 
   scienceChipLabel(sp: any): string {
-    return sp?.official_code ?? sp?.short_name ?? sp?.name ?? '';
+    return scienceProgramLabel(sp?.official_code, sp?.name, sp?.initiative_name, sp?.short_name);
   }
 
   /** Requiredness contract — each label maps to a `ReportFormFieldKey` via `MISSING_FIELD_KEY`. */
