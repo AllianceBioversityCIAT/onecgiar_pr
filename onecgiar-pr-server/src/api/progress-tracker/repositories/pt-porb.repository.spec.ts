@@ -1,5 +1,8 @@
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-indicator-mapping
-import { PtPorbRepository } from './pt-porb.repository';
+import {
+  dropCenterlessDuplicates,
+  PtPorbRepository,
+} from './pt-porb.repository';
 
 /**
  * `PTM-T-5` — `PtPorbRepository` is a thin, read-only wrapper around
@@ -202,5 +205,46 @@ describe('PtPorbRepository', () => {
       const { repository } = makeRepository([]);
       await expect(repository.findProgramName('SP99')).resolves.toBeNull();
     });
+  });
+
+  describe('dropCenterlessDuplicates', () => {
+    const row = (id: string, center: string) =>
+      ({ tocResultsIndicatorId: id, center }) as any;
+
+    it("drops an indicator's '' row when it also has centered rows, keeping order", () => {
+      expect(
+        dropCenterlessDuplicates([
+          row('a', ''),
+          row('a', 'CIAT'),
+          row('a', 'IFPRI'),
+          row('b', ''),
+          row('c', 'ILRI'),
+        ]).map((r) => [r.tocResultsIndicatorId, r.center]),
+      ).toEqual([
+        ['a', 'CIAT'],
+        ['a', 'IFPRI'],
+        ['b', ''],
+        ['c', 'ILRI'],
+      ]);
+    });
+  });
+
+  it("findPorbRowsForPhase drops the '' row of an indicator that has centers", async () => {
+    const base = {
+      toc_indicator_integration_id: 1,
+      program: 'P',
+      aow: 'AOW01: A',
+      kpi_type: null,
+      hlo_title: 'H',
+      description: 'D',
+    };
+    const { repository } = makeRepository([
+      { ...base, toc_results_indicator_id: 'ind-1', center: '' },
+      { ...base, toc_results_indicator_id: 'ind-1', center: 'CIAT' },
+    ]);
+
+    const rows = await repository.findPorbRowsForPhase('phase', 2026);
+
+    expect(rows.map((r) => r.center)).toEqual(['CIAT']);
   });
 });

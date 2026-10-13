@@ -71,6 +71,23 @@ export interface PtPorbRow {
  * the SQL's precision, only on the shape `{ tocResultsIndicatorId, program, aow,
  * center, hloTitle, description }` being populated from *some* PORB source.
  */
+/**
+ * Drops an indicator's center-less row (`center = ''`) when the same indicator also has
+ * rows with a center. The `LEFT JOIN` to the target-center chain yields a `''` row for
+ * a target with no center next to the real per-center rows; resolving it would ask PT
+ * for a center-less KPI that does not exist and store a stray `none`/fuzzy row. An
+ * indicator with **only** a `''` row keeps it — that is a genuinely center-less KPI.
+ * Order is preserved.
+ */
+export function dropCenterlessDuplicates(rows: PtPorbRow[]): PtPorbRow[] {
+  const withCenter = new Set(
+    rows.filter((r) => r.center !== '').map((r) => r.tocResultsIndicatorId),
+  );
+  return rows.filter(
+    (r) => r.center !== '' || !withCenter.has(r.tocResultsIndicatorId),
+  );
+}
+
 @Injectable()
 export class PtPorbRepository {
   constructor(private readonly dataSource: DataSource) {}
@@ -94,7 +111,9 @@ export class PtPorbRepository {
    * The guarantee is now one row per (indicator, center): `ci.acronym` is grouped on
    * (by column, not the `center` alias — MySQL resolves `GROUP BY` names against the
    * `FROM` columns first) and the order is `tri.id, center` so runs are deterministic.
-   * Several targets for the same center collapse into that center's single row.
+   * Several targets for the same center collapse into that center's single row, and a
+   * center-less row is dropped when the indicator has centered ones
+   * ({@link dropCenterlessDuplicates}).
    */
   async findPorbRowsForPhase(
     phaseUuid: string,
@@ -153,29 +172,31 @@ export class PtPorbRepository {
 
     const rows = await this.dataSource.query(query, params);
 
-    return (rows ?? [])
-      .filter(
-        (row: any) =>
-          typeof row?.toc_results_indicator_id === 'string' &&
-          row.toc_results_indicator_id.length > 0,
-      )
-      .map((row: any) => ({
-        tocResultsIndicatorId: row.toc_results_indicator_id,
-        tocIndicatorIntegrationId:
-          row.toc_indicator_integration_id !== null &&
-          row.toc_indicator_integration_id !== undefined
-            ? Number(row.toc_indicator_integration_id)
-            : null,
-        program: row.program ?? '',
-        aow: row.aow ?? '',
-        center: row.center ?? '',
-        kpiType:
-          typeof row.kpi_type === 'string' && row.kpi_type.length > 0
-            ? row.kpi_type
-            : null,
-        hloTitle: row.hlo_title ?? '',
-        description: row.description ?? '',
-      }));
+    return dropCenterlessDuplicates(
+      (rows ?? [])
+        .filter(
+          (row: any) =>
+            typeof row?.toc_results_indicator_id === 'string' &&
+            row.toc_results_indicator_id.length > 0,
+        )
+        .map((row: any) => ({
+          tocResultsIndicatorId: row.toc_results_indicator_id,
+          tocIndicatorIntegrationId:
+            row.toc_indicator_integration_id !== null &&
+            row.toc_indicator_integration_id !== undefined
+              ? Number(row.toc_indicator_integration_id)
+              : null,
+          program: row.program ?? '',
+          aow: row.aow ?? '',
+          center: row.center ?? '',
+          kpiType:
+            typeof row.kpi_type === 'string' && row.kpi_type.length > 0
+              ? row.kpi_type
+              : null,
+          hloTitle: row.hlo_title ?? '',
+          description: row.description ?? '',
+        })),
+    );
   }
 
   /**
