@@ -73,3 +73,4 @@
   2. Commit on user go-ahead only, with explicit paths for this spec's files. Exclude the other session's `program-overview/*`, `bilateral-overview/*` and `dashboard-lab/CLAUDE.md`.
 - **Recorded, not actioned (advisories → candidates for Part 2 or a later proposal):** the old-format comment in `ipsr-list-filter.service.ts:6-7`; the lab-report-form ToC-branch select still uses `full_name` (two formats on one form); acronym search lost in lab-report-form; the palette mapper has no `initiative_*` fallback; `sp_label` travels in the create body (harmless, already the case for the AOW modal).
 - **Tooling note:** `ng lint --lint-file-patterns` is rejected by this CLI and plain `npx eslint` finds no flat config. `ESLINT_USE_FLAT_CONFIG=false npx eslint <files> --quiet` is the working file-scoped lint. The T-1 lint line above should be read in that light.
+- Archived 2026-10-13 → `docs/specs/archive/2026-10-13-results--program-full-names-labels/` (see archive-summary.md).
