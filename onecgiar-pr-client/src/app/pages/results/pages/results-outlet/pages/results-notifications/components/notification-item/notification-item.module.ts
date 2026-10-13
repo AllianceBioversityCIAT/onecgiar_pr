@@ -3,6 +3,7 @@ import { NotificationItemComponent } from './notification-item.component';
 import { CommonModule } from '@angular/common';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { FilterNotificationByPhasePipe } from '../../pipes/filter-notification-by-phase.pipe';
+import { SpLabelPipe } from '../../../../../../../../shared/pipes/sp-label.pipe';
 import { FilterNotificationByInitiativePipe } from '../../pipes/filter-notification-by-initiative.pipe';
 import { FilterNotificationBySearchPipe } from '../../pipes/filter-notification-by-search.pipe';
 import { GroupNotificationsByRecencyPipe } from '../../pipes/group-notifications-by-recency.pipe';
@@ -56,6 +57,7 @@ const modules = [
     CommonModule,
     CustomFieldsModule,
     FormatTimeAgoPipe,
+    SpLabelPipe,
     PrDialogComponent,
     RdContributorsAndPartnersModule,
     ContributionRequestDrawerComponent,

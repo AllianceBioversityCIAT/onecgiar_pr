@@ -110,12 +110,12 @@
       } @else {
       <b>
         {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
-        {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
+        {{ notification?.is_map_to_toc ? (notification?.obj_shared_inititiative | spLabel) : (notification?.obj_owner_initiative | spLabel) }}
         has requested {{ notification?.is_map_to_toc ? 'contribution' : 'inclusion of' }}
       </b>
 
       <b *ngIf="!notification?.is_map_to_toc">
-        {{ notification?.obj_shared_inititiative?.official_code }}
+        {{ (notification?.obj_shared_inititiative | spLabel) }}
       </b>
 
       <b *ngIf="!notification?.is_map_to_toc"> as a contributor </b>
@@ -126,7 +126,7 @@
         {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
       </span>
 
-      <b *ngIf="notification?.is_map_to_toc"> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+      <b *ngIf="notification?.is_map_to_toc"> submitted by {{ (notification?.obj_owner_initiative | spLabel) }} </b>
       }
     </p>
   }

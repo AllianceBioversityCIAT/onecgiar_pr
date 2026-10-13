@@ -494,8 +494,8 @@ describe('ResultsListFiltersComponent', () => {
 
       expect(mockApiService.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
       expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([
-        { id: 1, name: 'Initiative A', official_code: 'INIT-01', displayName: 'INIT-01 Initiative A' },
-        { id: 2, name: 'Initiative B', official_code: 'INIT-02', displayName: 'INIT-02 Initiative B' }
+        { id: 1, name: 'Initiative A', official_code: 'INIT-01', displayName: 'INIT-01 - Initiative A' },
+        { id: 2, name: 'Initiative B', official_code: 'INIT-02', displayName: 'INIT-02 - Initiative B' }
       ]);
     });
 
@@ -558,7 +558,7 @@ describe('ResultsListFiltersComponent', () => {
       component.getAllInitiatives();
 
       expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([
-        { id: 1, name: 'Test Initiative', official_code: 'TST-01', displayName: 'TST-01 Test Initiative' }
+        { id: 1, name: 'Test Initiative', official_code: 'TST-01', displayName: 'TST-01 - Test Initiative' }
       ]);
     });
   });
@@ -768,6 +768,20 @@ describe('ResultsListFiltersComponent', () => {
   });
 
   describe('filterChipGroups', () => {
+    it('submitter chip reads CODE - Name while keeping the selected item untouched', () => {
+      const item = { id: 7, official_code: 'SP10', name: 'Gender' };
+      mockResultsListFilterService.selectedSubmittersAdmin.set([item]);
+      const group = component.filterChipGroups().find(g => g.chips.some((c: any) => c.filterType === 'submitter'));
+      expect(group.chips[0].label).toBe('SP10 - Gender');
+      expect(group.chips[0].item).toBe(item);
+    });
+
+    it('submitter chip falls back to the code when the name is missing', () => {
+      mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 7, official_code: 'SP10' }]);
+      const group = component.filterChipGroups().find(g => g.chips.some((c: any) => c.filterType === 'submitter'));
+      expect(group.chips[0].label).toBe('SP10');
+    });
+
     it('should return empty groups when no filters are selected', () => {
       clearAllFilters();
       mockResultsListFilterService.selectedClarisaPortfolios.set([]);

@@ -8,6 +8,7 @@ import { ShareRequestModalService } from '../../../../../result-detail/component
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { of, throwError, Subject } from 'rxjs';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
+import { SpLabelPipe } from '../../../../../../../../shared/pipes/sp-label.pipe';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { TemplatePortal } from '@angular/cdk/portal';
 import { CommonModule } from '@angular/common';
@@ -156,6 +157,7 @@ describe('NotificationItemComponent', () => {
       imports: [
         HttpClientTestingModule,
         FormatTimeAgoPipe,
+        SpLabelPipe,
         CommonModule,
         ContributionRequestDrawerComponent,
         NotificationDetailContentComponent,
@@ -953,6 +955,26 @@ describe('NotificationItemComponent', () => {
       expect(chip).toBeTruthy();
       expect(chip?.textContent?.trim()).toBe('Accepted');
       expect(chip?.className).toContain('notification_decision_chip_accepted');
+    });
+
+    it('PFN-R-1 S8: renders SP code and name for the owner program', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 1 });
+      fixture.detectChanges();
+      const flat = fixture.nativeElement.textContent.replace(/\s+/g, ' ');
+      expect(flat).toContain('INIT-31 - Owner program');
+      expect(flat).not.toContain('undefined');
+    });
+
+    it('PFN-R-2 S8: falls back to the code only when the owner program has no name', () => {
+      component.notification = buildRenderableNotification({
+        request_status_id: 1,
+        obj_owner_initiative: { id: 31, official_code: 'INIT-31' }
+      });
+      fixture.detectChanges();
+      const flat2 = fixture.nativeElement.textContent.replace(/\s+/g, ' ');
+      expect(flat2).toContain('INIT-31');
+      expect(flat2).not.toContain('INIT-31 -');
+      expect(flat2).not.toContain('undefined');
     });
 
     it('renders both the "Declined by …" text and the decision chip for request_status_id 3', () => {

@@ -4,6 +4,7 @@ import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, swi
 import { ApiService } from '../../services/api/api.service';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress } from '../../interfaces/SP-progress.interface';
+import { scienceProgramLabel } from '../../utils/science-program-label.util';
 
 /** Below this, no request is issued — a 1-char `LIKE '%a%'` scans effectively the whole table. */
 export const PALETTE_MIN_QUERY = 2;
@@ -46,6 +47,8 @@ export interface PaletteResultRow {
   title: string;
   /** Submitter official code — `SP01` for 2026 science programmes, `INIT-01` for legacy portfolios. */
   submitterCode: string;
+  /** P/A label `CODE - Name` shown in the row chip and aria string (`submitterCode` stays the routing key). */
+  submitterLabel: string;
   statusId: number;
   statusName: string;
   versionId: number;
@@ -221,6 +224,7 @@ export function toPaletteResultRow(item: any): PaletteResultRow {
     code: Number(item?.result_code),
     title: item?.title ?? '',
     submitterCode: item?.submitter ?? '',
+    submitterLabel: scienceProgramLabel(item?.submitter, item?.submitter_name, item?.submitter_short_name),
     statusId: Number(item?.status_id),
     statusName: item?.status_name ?? '',
     versionId: Number(item?.version_id),

@@ -190,6 +190,26 @@ describe('LabReportFormComponent', () => {
       { id: 202, official_code: 'SP02', full_name: 'Science Program 2' }
     ];
 
+    it('PFN-T-3: scienceChipLabel follows the CODE - Name rule', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      expect(component.scienceChipLabel({ official_code: 'SP01', name: 'Breeding' })).toBe('SP01 - Breeding');
+      expect(component.scienceChipLabel({ official_code: 'SP02' })).toBe('SP02');
+    });
+
+    it('PFN-T-3: loaded Science Programs carry sp_label and keep id/official_code', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      api.resultsSE.GET_AllInitiatives = jest.fn().mockReturnValue(
+        of({ response: [{ id: 1, official_code: 'SP01', name: 'Breeding' }, { id: 2, official_code: 'SP02' }] })
+      );
+
+      (component as any).loadInitiatives();
+
+      expect(component.allInitiatives().map((sp: any) => [sp.id, sp.official_code, sp.sp_label])).toEqual([
+        [1, 'SP01', 'SP01 - Breeding'],
+        [2, 'SP02', 'SP02']
+      ]);
+    });
+
     it('reports no ToC reference centers/science and exposes the full catalogue via the otherX computeds (emerging, tocNode: null)', async () => {
       await setup(
         { emergingMode: true, emergingCategory: null, indicator: null, tocNode: null },

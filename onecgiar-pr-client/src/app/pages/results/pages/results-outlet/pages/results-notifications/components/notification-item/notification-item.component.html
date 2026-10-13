@@ -227,7 +227,7 @@
               </b>
 
               @if (!notification?.is_map_to_toc) {
-                <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+                <b>{{ (notification?.obj_shared_inititiative | spLabel) }}</b>
 
                 <b> as a contributor </b>
               }
@@ -245,7 +245,7 @@
               </a>
 
               @if (notification?.is_map_to_toc) {
-                <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+                <b> submitted by {{ (notification?.obj_owner_initiative | spLabel) }} </b>
               }
             </p>
           }
@@ -429,7 +429,7 @@
             </b>
 
             @if (!notification?.is_map_to_toc) {
-              <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+              <b>{{ (notification?.obj_shared_inititiative | spLabel) }}</b>
 
               <b> as a contributor </b>
             }
@@ -447,7 +447,7 @@
             </a>
 
             @if (notification?.is_map_to_toc) {
-              <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+              <b> submitted by {{ (notification?.obj_owner_initiative | spLabel) }} </b>
             }
           </p>
           }
@@ -583,7 +583,7 @@
             </b>
 
             @if (!notification?.is_map_to_toc) {
-              <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+              <b>{{ (notification?.obj_shared_inititiative | spLabel) }}</b>
 
               <b> as a contributor </b>
             }
@@ -601,7 +601,7 @@
             </a>
 
             @if (notification?.is_map_to_toc) {
-              <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+              <b> submitted by {{ (notification?.obj_owner_initiative | spLabel) }} </b>
             }
           </p>
           }
@@ -688,7 +688,7 @@
       </b>
 
       @if (!notification?.is_map_to_toc) {
-        <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+        <b>{{ (notification?.obj_shared_inititiative | spLabel) }}</b>
 
         <b> as a contributor </b>
       }
@@ -700,7 +700,7 @@
       </span>
 
       @if (notification?.is_map_to_toc) {
-        <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+        <b> submitted by {{ (notification?.obj_owner_initiative | spLabel) }} </b>
       }
     </p>
   </div>
@@ -800,7 +800,7 @@
         <span style="text-decoration: underline; color: var(--pr-color-black)">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </span>
-        as <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+        as <b>{{ (notification?.obj_shared_inititiative | spLabel) }}</b>
       </p>
 
       <app-pr-yes-or-not
