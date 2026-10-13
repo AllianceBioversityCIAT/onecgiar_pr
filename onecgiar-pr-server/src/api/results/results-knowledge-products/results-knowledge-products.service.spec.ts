@@ -1,5 +1,8 @@
 import { HttpStatus } from '@nestjs/common';
-import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
+import {
+  resolveKpResultDescription,
+  ResultsKnowledgeProductsService,
+} from './results-knowledge-products.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 /**
@@ -565,5 +568,34 @@ describe('ResultsKnowledgeProductsService — create with no CGSpace metadata (P
       expect(message).not.toContain('from null');
       expect(message).not.toContain('from undefined');
     });
+  });
+});
+
+describe('resolveKpResultDescription — the description a new KP result keeps', () => {
+  it('keeps the CGSpace abstract when the create carries no description', () => {
+    expect(
+      resolveKpResultDescription({
+        description: 'CGSpace abstract',
+        result_data: { result_name: 'x' },
+      } as any),
+    ).toBe('CGSpace abstract');
+  });
+
+  it('prefers an explicit result_data.description (Progress Tracker draft), trimmed', () => {
+    expect(
+      resolveKpResultDescription({
+        description: 'CGSpace abstract',
+        result_data: { description: '  Drafted from PT  ' },
+      } as any),
+    ).toBe('Drafted from PT');
+  });
+
+  it('ignores a blank result_data.description', () => {
+    expect(
+      resolveKpResultDescription({
+        description: 'CGSpace abstract',
+        result_data: { description: '   ' },
+      } as any),
+    ).toBe('CGSpace abstract');
   });
 });
