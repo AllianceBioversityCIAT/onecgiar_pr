@@ -12,6 +12,7 @@ import { getProgressTrackerTimeoutMs } from './progress-tracker.config';
 import { classifyUpstreamFailure } from './progress-tracker.service';
 import { PtPorbRepository, PtPorbRow } from './repositories/pt-porb.repository';
 import { PtResolveTriggerDto } from './dto/pt-resolve-trigger.dto';
+import { toPtCenterName } from './pt-center-name';
 
 /**
  * `PTM-T-5` — the `/resolve` fill routine (`design.md` §4.1 "fill trigger", §5 rule 4,
@@ -28,9 +29,13 @@ import { PtResolveTriggerDto } from './dto/pt-resolve-trigger.dto';
  * equals the top-level `data.indicator_id` PT itself resolved — never to source the id.
  *
  * Idempotency (`PTM-R-21`, `PTM-AC-11`): upserts on
- * (`toc_results_indicator_id`, `version_id`) — the same tuple the migration's unique
- * key enforces (`PTM-T-1`). A second run over unchanged upstream answers updates the
- * existing row's `resolved_at` rather than inserting a duplicate.
+ * (`toc_results_indicator_id`, `version_id`, `center`) — the same tuple the migration's
+ * unique key enforces (`1791400000000-ProgressTrackerIndicatorMapCenter`). A second run
+ * over unchanged upstream answers updates the existing row's `resolved_at` rather than
+ * inserting a duplicate.
+ *
+ * Center: the row stores the PRMS-side acronym (what the lookup keys on); `/resolve` is
+ * sent PT's own spelling (`toPtCenterName`), because PT ranks on it rather than filtering.
  *
  * `PTM-R-12` (read-only `env.DB_TOC`): the only `env.DB_TOC` access in this file is
  * inside {@link PtPorbRepository}, and it is `SELECT`-only
@@ -65,6 +70,11 @@ const RESOLVE_MESSAGES: Record<PtResolveRunStatus, string> = {
 
 /** One `/resolve` outcome, per row — what {@link resolveOneRow} reports back to the loop. */
 type RowOutcome = 'exact' | 'fuzzy' | 'unmapped' | 'skipped';
+
+/** A fuzzy match scoring below this is flagged for review. */
+export const PT_FUZZY_REVIEW_THRESHOLD = 0.97;
+/** Top two candidate scores closer than this are a tie — flagged for review. */
+export const PT_CANDIDATE_TIE_EPSILON = 0.005;
 
 @Injectable()
 export class ProgressTrackerResolveService {
@@ -184,7 +194,8 @@ export class ProgressTrackerResolveService {
           params: {
             program: row.program,
             aow: row.aow,
-            center: row.center,
+            center: toPtCenterName(row.center),
+            kpi_type: row.kpiType ?? undefined,
             hlo_title: row.hloTitle,
             description: row.description,
           },
@@ -209,7 +220,12 @@ export class ProgressTrackerResolveService {
   }
 
   /**
-   * Upserts on (`toc_results_indicator_id`, `version_id`) — `PTM-R-21`/`PTM-AC-11`.
+   * Upserts on (`toc_results_indicator_id`, `version_id`, `center`) —
+   * `PTM-R-21`/`PTM-AC-11`.
+   *
+   * `needs_review`: `exact` → false; `none` → true; `fuzzy` → true when its score is
+   * below {@link PT_FUZZY_REVIEW_THRESHOLD} (or unknown) or the top two candidates tie
+   * within {@link PT_CANDIDATE_TIE_EPSILON}.
    *
    * 🛑 `PTM-R-11`/`PTM-AC-10`: `candidates[]` is read **only** inside the
    * `match !== 'none'` branch, and only to find the score of the entry whose
@@ -234,6 +250,7 @@ export class ProgressTrackerResolveService {
 
     let ptIndicatorId: string | null = null;
     let matchScore: number | null = null;
+    let needsReview = match !== 'exact';
 
     if (match !== 'none') {
       ptIndicatorId =
@@ -256,6 +273,13 @@ export class ProgressTrackerResolveService {
         typeof matchedCandidate?.score === 'number'
           ? matchedCandidate.score
           : null;
+
+      if (match === 'fuzzy') {
+        needsReview =
+          matchScore === null ||
+          matchScore < PT_FUZZY_REVIEW_THRESHOLD ||
+          this.topCandidatesTie(candidates);
+      }
     }
 
     const ptProgramId =
@@ -265,6 +289,7 @@ export class ProgressTrackerResolveService {
       where: {
         toc_results_indicator_id: row.tocResultsIndicatorId,
         version_id: versionId,
+        center: row.center,
       },
     });
 
@@ -277,6 +302,8 @@ export class ProgressTrackerResolveService {
       existing.pt_program_id = ptProgramId;
       existing.match_quality = match;
       existing.match_score = matchScore;
+      existing.kpi_type = row.kpiType;
+      existing.needs_review = needsReview;
       existing.resolved_at = resolvedAt;
       await this.mappingRepository.save(existing);
     } else {
@@ -285,6 +312,9 @@ export class ProgressTrackerResolveService {
           toc_results_indicator_id: row.tocResultsIndicatorId,
           toc_indicator_integration_id: row.tocIndicatorIntegrationId ?? null,
           version_id: versionId,
+          center: row.center,
+          kpi_type: row.kpiType,
+          needs_review: needsReview,
           pt_indicator_id: ptIndicatorId,
           pt_program_id: ptProgramId,
           match_quality: match,
@@ -295,6 +325,18 @@ export class ProgressTrackerResolveService {
     }
 
     return match === 'none' ? 'unmapped' : match;
+  }
+
+  /** True when the two highest candidate scores are within {@link PT_CANDIDATE_TIE_EPSILON}. */
+  private topCandidatesTie(candidates: any[]): boolean {
+    const scores = candidates
+      .map((c) => c?.score)
+      .filter((s): s is number => typeof s === 'number')
+      .sort((a, b) => b - a);
+    return (
+      scores.length >= 2 &&
+      Math.abs(scores[0] - scores[1]) < PT_CANDIDATE_TIE_EPSILON
+    );
   }
 
   private emptyCounts(): PtResolveCounts {
