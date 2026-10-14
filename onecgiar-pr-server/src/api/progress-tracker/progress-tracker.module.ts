@@ -10,6 +10,7 @@ import { PtPorbRepository } from './repositories/pt-porb.repository';
 import { ProgressTrackerController } from './progress-tracker.controller';
 import { ProgressTrackerResultProvenance } from './entities/progress-tracker-result-provenance.entity';
 import { ProgressTrackerProvenanceService } from './progress-tracker-provenance.service';
+import { ProgressTrackerActivityService } from './progress-tracker-activity.service';
 
 /**
  * `PTM-T-2` — module skeleton for the Progress Tracker Interoperability surface
@@ -37,6 +38,9 @@ import { ProgressTrackerProvenanceService } from './progress-tracker-provenance.
  *
  * `PTM-T-7` adds `ProgressTrackerProvenanceService` over `ProgressTrackerResultProvenance`,
  * exported for `ResultsFrameworkReportingModule`'s create handler (`design.md` §2.3).
+ *
+ * `ProgressTrackerActivityService` joins ready-counts with the map for the Reporting tab's
+ * per-row `PT · N` badges (`GET programs/:programId/indicator-activity`).
  */
 @Module({
   imports: [
@@ -53,6 +57,7 @@ import { ProgressTrackerProvenanceService } from './progress-tracker-provenance.
     ProgressTrackerResolveService,
     PtPorbRepository,
     ProgressTrackerProvenanceService,
+    ProgressTrackerActivityService,
   ],
   exports: [ProgressTrackerService, ProgressTrackerProvenanceService],
 })

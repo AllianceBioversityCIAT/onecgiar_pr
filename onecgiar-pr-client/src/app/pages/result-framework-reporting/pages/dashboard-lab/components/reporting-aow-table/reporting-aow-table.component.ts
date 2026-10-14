@@ -16,6 +16,7 @@ import {
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
 import { buildRatio, pendingOf } from '../../reporting-burndown';
+import { PtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityTooltip } from '../../pt-activity';
 import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
 
 /**
@@ -65,6 +66,8 @@ export interface ReportingIndicator {
    */
   centers?: Array<{ center_id?: number | null; center_acronym?: string | null }>;
   toc_result_id?: number;
+  /** Integration `related_node_id` of the indicator, when the payload carries it — PT activity falls back to it. */
+  indicator_related_node_id?: string | null;
   /**
    * RRC-R-10 — the combination-group this row represents (ToC `toc_result_indicator_target`). Rides
    * through `manageIndicator` → drawer → `buildCreateResultPayload` inside `indicators` so the
@@ -311,6 +314,12 @@ export class ReportingAowTableComponent {
    * @akili-spec changes/reporting-favorite-indicators
    */
   readonly favoritesOnly = input<boolean>(false);
+  /**
+   * Progress Tracker activity of the current programme, built by the host from ONE
+   * `indicator-activity` call. `null` (default, call failed or timed out) renders no badge at all —
+   * the table looks exactly as it did before the feature.
+   */
+  readonly ptActivity = input<PtActivityIndex | null>(null);
 
   readonly openAow = output<string>();
   readonly openRow = output<ReportingIndicator>();
@@ -847,14 +856,17 @@ export class ReportingAowTableComponent {
    * is the list; the scalar is only a fallback for payloads that predate it.
    */
   centerAcronymsOf(row: ReportingIndicator): string[] {
-    const fromList = (row?.centers ?? [])
-      .map(c => c?.center_acronym?.trim())
-      .filter((c): c is string => !!c && c !== '—');
+    // Shared with the PT badge (`pt-activity.ts`) so chips, centre filter and badge agree.
+    return centerAcronymsOfRow(row);
+  }
 
-    if (fromList.length > 0) return fromList;
+  /** Evidence items Progress Tracker holds for this row's KPI(s); `0` renders no badge. */
+  ptCountOf(row: ReportingIndicator): number {
+    return ptActivityCountOf(row, this.ptActivity());
+  }
 
-    const scalar = row?.center_acronym?.trim();
-    return scalar && scalar !== '—' ? [scalar] : [];
+  ptTooltipOf(count: number): string {
+    return ptActivityTooltip(count);
   }
 
   /**

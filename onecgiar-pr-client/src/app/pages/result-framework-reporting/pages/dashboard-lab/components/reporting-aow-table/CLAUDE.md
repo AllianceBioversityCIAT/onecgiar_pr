@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-10-13 · qa-development-2026-ss · quick/aow-row-remove-outcomes-figures (P2-3955: AoW header outcomes achievement block + its `rowTitle` text removed — see the 🗑️ bullet in Trampas) · prior: 2026-10-02 · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit`, branches the QA/Preliminary tooltip sentences — see "QA/Prel split hidden" below) · prior: 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
+**Verified:** 2026-10-14 · JuankCadavid/pt-center-mapping (`ptActivity` input + `PT · N` badge) · prior: 2026-10-13 · qa-development-2026-ss · quick/aow-row-remove-outcomes-figures (P2-3955: AoW header outcomes achievement block + its `rowTitle` text removed — see the 🗑️ bullet in Trampas) · prior: 2026-10-02 · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit`, branches the QA/Preliminary tooltip sentences — see "QA/Prel split hidden" below) · prior: 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -20,6 +20,8 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
   `favoriteKeys` (`ReadonlySet<string>`, por defecto vacío — claves `rowKey`-shaped de las filas
   marcadas en la programa actual), `favoritesOnly` (host indica si el switch de foco está activo,
   solo para la copia del empty state; `changes/reporting-favorite-indicators`).
+  `ptActivity` (`PtActivityIndex | null`, default `null` — Progress Tracker activity built by the
+  host; `null` renders no badge).
 - Outputs: `openRow`, `reportRow`, `openTarget`, `openAchieved`, `openAow`, `allOpenChange`,
   `clearFilters`, `copyLink`, `toggleFavorite` (host hace el toggle en su store), `exitFavoritesOnly`
   (empty state's `Show all indicators` pide apagar el switch — `changes/reporting-favorite-indicators`).
@@ -39,6 +41,14 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
   `bugfix/reported-results-center-scoping` RRC-T-3): the row's combination-group id rides the row
   spread into the create payload and the drawer's existing-contributors call. Presentation-inert
   here — this component never reads it.
+
+## Badge `PT · N` (Progress Tracker activity, 2026-10-14)
+- Chip in the title chips row of BOTH layouts (grouped `#indicatorRow` after the centre chips, flat
+  title cell after `__centerLabel`), `data-testid="pt-activity-badge"`, tooltip + `sr-only` copy
+  "Progress Tracker has N evidence items for this KPI". Only when `ptCountOf(row) > 0` (mapped,
+  `matched`, evidence > 0); nothing otherwise.
+- `centerAcronymsOf` now delegates to `pt-activity.ts`'s `centerAcronymsOfRow` so chips, centre
+  filter and badge agree on a row's centres — change the rule there, not here.
 
 ## QA/Prel split hidden behind `showQaPrelSplit` (ACS-R-5, spec `bugfix/achieved-counts-submitted`)
 

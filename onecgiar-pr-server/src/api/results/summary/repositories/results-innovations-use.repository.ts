@@ -15,6 +15,17 @@ export class ResultsInnovationsUseRepository
   extends BaseRepository<ResultsInnovationsUse>
   implements LogicalDelete<ResultsInnovationsUse>
 {
+  /**
+   * Phase change copies the reporter's ANSWERS too — the use level, both "to be determined"
+   * flags, the readiness explanation, the innovation link and the 2030 justification — so the new phase starts pre-filled and editable (decision 2026-10-14).
+   * Copying only male_using / female_using left the new row with NULL flags and level, and the
+   * W3/bilateral form hid every field behind a NULL "to be determined".
+   *
+   * 🛑 `new_users_added` and `use_expansion_narrative` are NOT copied: they are the P2-3537
+   * per-period update ("how many new users THIS period"), so the new phase must ask them fresh.
+   * Nor is `has_scaling_studies`: its URLs live in another table this copy does not carry, and a
+   * copied "yes" with no URL would be worse than asking again.
+   */
   createQueries(
     config: ReplicableConfigInterface<ResultsInnovationsUse>,
   ): ConfigCustomQueryInterface {
@@ -23,6 +34,12 @@ export class ResultsInnovationsUseRepository
       null as result_innovation_use_id,
       riu.male_using,
       riu.female_using,
+      riu.has_innovation_link,
+      riu.readiness_level_explanation,
+      riu.innov_use_2030_justification,
+      riu.innov_use_to_be_determined,
+      riu.innov_use_2030_to_be_determined,
+      riu.innovation_use_level_id,
       riu.is_active,
       ${predeterminedDateValidation(
         config?.predetermined_date,
@@ -38,6 +55,12 @@ export class ResultsInnovationsUseRepository
       (
       male_using,
       female_using,
+      has_innovation_link,
+      readiness_level_explanation,
+      innov_use_2030_justification,
+      innov_use_to_be_determined,
+      innov_use_2030_to_be_determined,
+      innovation_use_level_id,
       is_active,
       created_date,
       last_updated_date,
@@ -48,6 +71,12 @@ export class ResultsInnovationsUseRepository
       select 
         riu.male_using,
         riu.female_using,
+        riu.has_innovation_link,
+        riu.readiness_level_explanation,
+        riu.innov_use_2030_justification,
+        riu.innov_use_to_be_determined,
+        riu.innov_use_2030_to_be_determined,
+        riu.innovation_use_level_id,
         riu.is_active,
         ${predeterminedDateValidation(
           config?.predetermined_date,

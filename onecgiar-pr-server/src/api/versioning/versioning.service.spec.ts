@@ -1619,6 +1619,121 @@ describe('VersioningService', () => {
         devRow.mock.invocationCallOrder[0],
       );
     });
+
+    it('copies the actors and the P25 measures under case 2 (Innovation Use) — W3 27270, 2026-10-14', async () => {
+      const mockResult: any = {
+        id: 7001,
+        result_code: 100,
+        result_type_id: ResultTypeEnum.INNOVATION_USE,
+      };
+      const mockPhase: any = {
+        id: 36,
+        phase_name: 'Reporting 2026',
+        phase_year: 2026,
+      };
+      const mockNewResult: any = {
+        id: 8001,
+        result_code: 100,
+      };
+
+      const mockManager: any = {
+        update: jest.fn().mockResolvedValue({}),
+      };
+
+      (service as any).dataSource = {
+        transaction: jest.fn(async (callback: any) => callback(mockManager)),
+      };
+      (service as any)._resultRepository = {
+        replicate: jest.fn().mockResolvedValue([mockNewResult]),
+      };
+      (service as any)._resultByInitiativesRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._shareResultRequestRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultInitiativeBudgetRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+        ensureMissingBudgetsForPrimaryInitiatives: jest
+          .fn()
+          .mockResolvedValue(undefined),
+      };
+      (service as any)._resultNonPooledProjectBudgetRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultsInnovationsUseRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultsInnovationsUseMeasuresRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultAnswerRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultActorRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultIpMeasureRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultCountrySubnationalRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._nonPooledProjectRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultsCenterRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultByIntitutionsRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultByInstitutionsByDeliveriesTypeRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultByIntitutionsTypeRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultInstitutionsBudgetRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultCountryRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultRegionRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._linkedResultRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._evidencesRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._evidenceSharepointRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._evidencesService = {
+        replicateSPFiles: jest.fn().mockResolvedValue(undefined),
+      };
+
+      await service.$_phaseChangeReporting(mockResult, mockPhase, mockUser);
+
+      const expectedConfig = expect.objectContaining({
+        old_result_id: mockResult.id,
+        new_result_id: mockNewResult.id,
+      });
+      expect(
+        (service as any)._resultsInnovationsUseRepository.replicate,
+      ).toHaveBeenCalledWith(mockManager, expectedConfig);
+      // Before 2026-10-14 neither of these ran for Innovation Use, and the new phase opened with
+      // no actors and no measures.
+      expect(
+        (service as any)._resultActorRepository.replicate,
+      ).toHaveBeenCalledWith(mockManager, expectedConfig);
+      expect(
+        (service as any)._resultIpMeasureRepository.replicate,
+      ).toHaveBeenCalledWith(mockManager, expectedConfig);
+    });
   });
 
   // `PSR-T-6` / `PSR-R-16` (SHOULD) — regression: current `$_phaseChangeReporting` replicates a

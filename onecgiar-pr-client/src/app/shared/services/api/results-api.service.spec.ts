@@ -5756,4 +5756,18 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('GET_progressTrackerIndicatorActivity', () => {
+    it('builds the full URL under baseApiBaseUrl and encodes the program id', done => {
+      service.GET_progressTrackerIndicatorActivity('SP 01').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const expectedUrl = `${environment.apiBaseUrl}api/progress-tracker/programs/SP%2001/indicator-activity`;
+      const req = httpMock.expectOne(r => r.url === expectedUrl);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
 });

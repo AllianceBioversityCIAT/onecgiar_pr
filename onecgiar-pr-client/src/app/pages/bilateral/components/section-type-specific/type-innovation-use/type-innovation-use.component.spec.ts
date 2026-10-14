@@ -886,11 +886,11 @@ describe('TypeInnovationUseComponent', () => {
       expect(ladder).toBeLessThan(html.indexOf('@if (showUseLevelExplanation)'));
     });
 
-    it('keeps optional Organizations in full metadata and gates current-use measures on TBD = No', () => {
+    it('keeps optional Organizations in full metadata and gates current-use measures on TBD (hidden only on Yes)', () => {
       const template = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
       const organizations = template.indexOf('label="Organizations" description="Types of organizations involved in innovation use');
       const fullMetadataToggle = template.indexOf('@if (showAllFields())');
-      const useTbdGates = [...template.matchAll(/@if \(body\.innov_use_to_be_determined === false\)/g)];
+      const useTbdGates = [...template.matchAll(/@if \(body\.innov_use_to_be_determined !== true\)/g)];
       const measureLabel = template.indexOf('label="Other quantitative measures of innovation use"');
       const measuresGate = useTbdGates[1]?.index ?? -1;
 
@@ -1146,6 +1146,25 @@ describe('TypeInnovationUseComponent', () => {
       };
 
       expect(component.hasActorMissingType).toBe(true);
+    });
+
+    it('a result rolled over with the question UNANSWERED (null) still counts its visible current actors', () => {
+      // 2026-10-14 (27270): the phase copy left `innov_use_to_be_determined` NULL and the carried-over
+      // actors were hidden. The gate now hides current use only on an explicit "Yes", like W1/W2.
+      build();
+      component.body = {
+        innov_use_to_be_determined: null,
+        actors: [{ actor_type_id: null, women: 5, is_active: true }]
+      };
+
+      expect(component.hasActorMissingType).toBe(true);
+    });
+
+    it('2026-10-14 — current-use actors and measures hide only on an explicit "Yes" (null shows them, like W1/W2)', () => {
+      const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+
+      expect(html.match(/@if \(body\.innov_use_to_be_determined !== true\)/g)?.length).toBe(2);
+      expect(html).not.toContain('innov_use_to_be_determined === false');
     });
 
     it('the row carries the message in the template', () => {
