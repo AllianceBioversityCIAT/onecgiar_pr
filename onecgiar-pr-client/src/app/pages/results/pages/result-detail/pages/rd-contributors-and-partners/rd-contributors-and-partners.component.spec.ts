@@ -282,6 +282,14 @@ describe('RdContributorsAndPartnersComponent', () => {
    * Contributing Science Program (combined across `scienceSelected` minus the `OTHER_SP_CODE`
    * sentinel, and `otherScienceSelected`) while the result's ToC has planned Science Programs.
    */
+  describe('PF2-T-6 — Science Program chip label', () => {
+    it('uses the shared CODE - Name rule and keeps the Other(s) sentinel text', () => {
+      expect(component.spChipLabel({ id: 1, official_code: 'SP01', name: 'Breeding' })).toBe('SP01 - Breeding');
+      expect(component.spChipLabel({ id: 2, official_code: 'SP02' })).toBe('SP02');
+      expect(component.spChipLabel({ id: component.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)' })).toBe('Other(s)');
+    });
+  });
+
   describe('TOC-SP-T-1 — minimum Science Program guard', () => {
     const SP01 = { id: 1, official_code: 'SP01' };
     const SP02 = { id: 2, official_code: 'SP02' };

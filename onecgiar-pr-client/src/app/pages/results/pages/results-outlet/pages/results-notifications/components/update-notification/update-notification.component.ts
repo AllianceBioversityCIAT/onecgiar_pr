@@ -6,6 +6,7 @@ import { DECISION_URL_TIMEOUT_MS, NotificationNavigationService } from '../../..
 import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
 import { ResultsNotificationsService } from '../../results-notifications.service';
 import type { TNotificationResult } from './model/update-notification.model';
+import { SpLabelPipe } from '../../../../../../../../shared/pipes/sp-label.pipe';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
 import {
   getNotificationActionVerb,
@@ -19,7 +20,7 @@ import {
 
 @Component({
   selector: 'app-update-notification',
-  imports: [CommonModule, FormatTimeAgoPipe],
+  imports: [CommonModule, FormatTimeAgoPipe, SpLabelPipe],
   templateUrl: './update-notification.component.html',
   styleUrl: './update-notification.component.scss'
 })

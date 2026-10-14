@@ -13,6 +13,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { InnovationPackageListFilterPipe } from '../innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
 import { of, throwError } from 'rxjs';
+import { buildIpsrProgramOptions } from '../../services/ipsr-list-filter.service';
 
 describe('IpsrListFiltersComponent', () => {
   let component: IpsrListFiltersComponent;
@@ -65,6 +66,21 @@ describe('IpsrListFiltersComponent', () => {
       fixture.detectChanges();
 
       expect(ipsrListFilterSE.selectedPrograms()).toEqual([programOption]);
+    });
+
+    it('PF2-T-6: options built from real data show CODE - Name, and a selection through the real control keeps id and official_code', () => {
+      const [programOption] = buildIpsrProgramOptions([{ id: 1, official_code: 'SP01', name: 'Breeding' }]);
+      ipsrListFilterSE.programOptions.set([programOption]);
+      fixture.detectChanges();
+
+      const multiselects = fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+      (multiselects[0].componentInstance as PrFilterMultiselectComponent).toggle(programOption);
+      fixture.detectChanges();
+
+      const [selected] = ipsrListFilterSE.selectedPrograms();
+      expect(selected.displayName).toBe('SP01 - Breeding');
+      expect(selected.id).toBe(1);
+      expect(selected.official_code).toBe('SP01');
     });
 
     it('selecting two Program options produces a chip pair (IPSR-AC-1)', () => {

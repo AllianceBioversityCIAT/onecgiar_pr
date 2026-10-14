@@ -105,4 +105,35 @@ describe('ReportingProgramBandComponent — favorites switch', () => {
     expect(onlyPendingEl).toBeTruthy();
     expect(onlyPendingEl!.nextElementSibling).toBe(switchEl());
   });
+
+  describe('With Progress Tracker activity switch', () => {
+    const ptSwitch = () => root().querySelector<HTMLButtonElement>('[data-testid="pt-activity-switch"]');
+
+    it('is not rendered while no activity is available (call failed, timed out or empty)', async () => {
+      await build({ ptActivityAvailable: false });
+      expect(ptSwitch()).toBeNull();
+    });
+
+    it('renders as a switch when activity is available and emits the flipped value', async () => {
+      await build({ ptActivityAvailable: true, ptActivityOnly: false });
+      const emitted: boolean[] = [];
+      component.ptActivityOnlyChange.subscribe((v: boolean) => emitted.push(v));
+
+      const el = ptSwitch()!;
+      expect(el.getAttribute('role')).toBe('switch');
+      expect(el.getAttribute('aria-checked')).toBe('false');
+      expect(el.textContent).toContain('With Progress Tracker activity');
+      el.click();
+      expect(emitted).toEqual([true]);
+    });
+
+    it('reflects the on state and is hidden in the By-AOW compact view', async () => {
+      await build({ ptActivityAvailable: true, ptActivityOnly: true });
+      expect(ptSwitch()!.getAttribute('aria-checked')).toBe('true');
+
+      fixture.componentRef.setInput('compactFilters', true);
+      fixture.detectChanges();
+      expect(ptSwitch()).toBeNull();
+    });
+  });
 });

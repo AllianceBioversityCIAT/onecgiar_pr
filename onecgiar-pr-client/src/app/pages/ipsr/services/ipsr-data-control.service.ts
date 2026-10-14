@@ -25,6 +25,8 @@ interface DetailData {
   result_code: string;
   title: string;
   official_code: string;
+  initiative_official_code?: string;
+  initiative_name?: string;
   result_level: string;
   result_type: string;
   inititiative_id: string;

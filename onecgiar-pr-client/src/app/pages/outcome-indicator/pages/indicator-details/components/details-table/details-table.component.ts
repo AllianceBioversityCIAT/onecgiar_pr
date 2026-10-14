@@ -10,6 +10,7 @@ import {
 } from 'src/app/shared/components/pr-table';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
+import { scienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 
 @Component({
     selector: 'app-details-table',
@@ -29,6 +30,10 @@ import { IndicatorDetailsService } from '../../services/indicator-details.servic
 })
 export class DetailsTableComponent {
   indicatorDetailsService = inject(IndicatorDetailsService);
+
+  submitterLabel(item: { result_submitter?: string | null; result_submitter_name?: string | null }): string {
+    return scienceProgramLabel(item?.result_submitter, item?.result_submitter_name);
+  }
 
   openInNewPage(result_code: string, version_id: string) {
     const url = `/result/result-detail/${result_code}/general-information?phase=${version_id}`;

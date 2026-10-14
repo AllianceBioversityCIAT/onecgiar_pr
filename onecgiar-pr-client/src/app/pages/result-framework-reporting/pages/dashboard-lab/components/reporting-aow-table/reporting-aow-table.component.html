@@ -115,6 +115,17 @@
                     [innerHTML]="row.__centerLabel | highlightSearch: search()">
                   </span>
                 }
+                @let ptCount = ptCountOf(row);
+                @if (ptCount > 0) {
+                  <span
+                    data-testid="pt-activity-badge"
+                    class="inline-flex h-[20px] items-center rounded-[5px] border border-sky-200 bg-sky-50 px-[6px] text-[11px] font-semibold tabular-nums text-sky-700"
+                    [prTooltip]="ptTooltipOf(ptCount)"
+                    prTooltipPosition="top">
+                    <span aria-hidden="true">PT · {{ ptCount }}</span>
+                    <span class="sr-only">{{ ptTooltipOf(ptCount) }}</span>
+                  </span>
+                }
               </div>
             </div>
           </td>
@@ -452,60 +463,8 @@
             </div>
           }
 
-          <!-- Right zone: QA / Prel achievement & By-AOW action -->
+          <!-- Right zone: By-AOW action (outcomes achievement block removed, P2-3955) -->
           <div class="ml-auto flex items-center gap-[12px] shrink-0">
-            @if (group.achievement) {
-              <!-- @akili-spec bugfix/achieved-counts-submitted -->
-              <span
-                class="flex w-[168px] shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[12px] leading-tight max-[1100px]:sr-only"
-                [prTooltip]="achievementTooltip(group.achievement)"
-                prTooltipPosition="top">
-                @if (showQaPrelSplit) {
-                  <span class="flex items-baseline gap-[10px] whitespace-nowrap">
-                    <span class="flex items-baseline gap-[4px]">
-                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
-                      <span class="text-[13.5px] font-bold tabular-nums text-[var(--pr-text-heading)]">
-                        {{ achievementLabel(group.achievement) }}
-                      </span>
-                    </span>
-                    <span class="flex items-baseline gap-[4px]">
-                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
-                      <span class="text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
-                        {{ preliminaryAchievementLabel(group.achievement) }}
-                      </span>
-                    </span>
-                  </span>
-                } @else {
-                  <span class="flex items-baseline gap-[10px] whitespace-nowrap">
-                    <span class="text-[13.5px] font-bold tabular-nums text-[var(--pr-text-heading)]">
-                      {{ achievementLabel(group.achievement) }}
-                    </span>
-                  </span>
-                }
-                @if (achievementCoverage(group.achievement)) {
-                  <span class="whitespace-nowrap text-[10px] font-medium text-[var(--pr-text-muted)]">
-                    {{ achievementCoverage(group.achievement) }}
-                  </span>
-                }
-              </span>
-            } @else if (isAchievementLoading(group)) {
-              <span
-                class="flex w-[168px] shrink-0 flex-col items-end justify-center border-l border-[var(--pr-border)] pl-[12px] leading-tight gap-[4px] max-[1100px]:sr-only"
-                aria-hidden="true">
-                <span class="flex items-center gap-[10px] whitespace-nowrap">
-                  <span class="flex items-center gap-[4px]">
-                    <span class="h-[10px] w-[18px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
-                    <span class="h-[14px] w-[36px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
-                  </span>
-                  <span class="flex items-center gap-[4px]">
-                    <span class="h-[10px] w-[24px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
-                    <span class="h-[14px] w-[36px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
-                  </span>
-                </span>
-                <span class="h-[10px] w-[76px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
-              </span>
-            }
-
             <!-- Jump to the focused By-AOW view — the inverse of that view's "All Areas of Work"
                  button (same recipe). Real AoWs only: buckets have no By-AOW view. Nested-control
                  pattern, like the ⓘ above: emitAndStop keeps the click from toggling the card. -->
@@ -1034,6 +993,17 @@
             (click)="toggleRowCenters(row, $event)">
             Show less
           </button>
+        }
+        @let ptCount = ptCountOf(row);
+        @if (ptCount > 0) {
+          <span
+            data-testid="pt-activity-badge"
+            class="inline-flex h-[20px] items-center rounded-[5px] border border-sky-200 bg-sky-50 px-[6px] text-[11px] font-semibold tabular-nums text-sky-700"
+            [prTooltip]="ptTooltipOf(ptCount)"
+            prTooltipPosition="top">
+            <span aria-hidden="true">PT · {{ ptCount }}</span>
+            <span class="sr-only">{{ ptTooltipOf(ptCount) }}</span>
+          </span>
         }
       </div>
     </div>

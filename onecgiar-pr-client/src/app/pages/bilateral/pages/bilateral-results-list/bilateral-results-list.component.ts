@@ -26,6 +26,7 @@ import { BilateralApiService } from '../../../../shared/services/api/bilateral-a
 import {
   ReviewHistoryEntry,
   isRejectAction,
+  reviewEntryProgramLabel,
   sortReviewHistoryNewestFirst,
 } from '../../services/bilateral-review-history.interface';
 import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../internationalization/bilateral-rejection-notice.copy';
@@ -1586,6 +1587,10 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
   );
 
   readonly historyCopy = BILATERAL_REJECTION_NOTICE_COPY;
+
+  programLabel(entry: ReviewHistoryEntry): string {
+    return reviewEntryProgramLabel(entry);
+  }
 
   isResubmit(entry: ReviewHistoryEntry): boolean {
     return entry?.action === 'RESUBMIT';

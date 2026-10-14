@@ -12,7 +12,7 @@
         <span>{{ copy.title }}</span>
         @if (entry(); as e) {
           @if (e.initiative_code) {
-            <span class="font-mono font-medium">{{ e.initiative_code }}</span>
+            <span class="font-mono font-medium">{{ programLabel(e) }}</span>
           }
           <span class="font-normal">{{ e.created_at | date: 'dd MMM yyyy' }}</span>
         }

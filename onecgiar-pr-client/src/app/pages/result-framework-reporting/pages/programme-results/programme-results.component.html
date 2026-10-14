@@ -387,7 +387,8 @@
           styleClass="pgr-table"
           sortField="code"
           [sortOrder]="-1"
-          [value]="filteredRows()"
+          groupBy="code"
+          [value]="groupedRows()"
           [loading]="data.loading()"
           [paginator]="filteredRows().length"
           [rows]="100"
@@ -424,9 +425,11 @@
 
           <!-- ROWS. One @for over the SAME visible-column list as the header, so a column toggle
                can never leave header and cells out of step. -->
-          <ng-template prTableBody let-row>
+          <ng-template prTableBody let-row let-i="index">
             <tr
               class="pgr-row pgr-data-row"
+              [class.pgr-group-start]="isGroupStart(tbl, i)"
+              [class.pgr-group-cont]="isGroupCont(tbl, i)"
               [style.grid-template-columns]="grid()"
               [style.min-width]="minWidth()"
               tabindex="0"
@@ -445,8 +448,18 @@
                     <!-- 3 · RESULT — two lines at 2px: title, then the indicator / KPI line. -->
                     <td class="pgr-td">
                       <span class="flex w-full min-w-0 flex-col gap-[2px]">
-                        <span class="truncate text-[14px] font-medium text-[var(--pr-text-heading)]" [attr.title]="row.title">
-                          {{ row.title }}
+                        <span class="flex min-w-0 items-center gap-[6px]">
+                          @if (row.isReplicated) {
+                            <span
+                              class="pgr-badge-replicated"
+                              prTooltip="Previously reported in an earlier phase"
+                              prTooltipPosition="top"
+                              >Previously reported</span
+                            >
+                          }
+                          <span class="min-w-0 truncate text-[14px] font-medium text-[var(--pr-text-heading)]" [attr.title]="row.title">
+                            {{ row.title }}
+                          </span>
                         </span>
                         <span
                           class="flex min-w-0 items-center gap-[6px] text-[13px] font-normal text-[var(--pr-text-secondary)]"

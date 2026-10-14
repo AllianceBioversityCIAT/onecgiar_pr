@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-10-06 · branch qa-development-2026-ss · `bilateral/rejected-result-correction` RRC-T-8 (history modal lists every rejection + resubmission)
+**Verified:** 2026-10-13 · branch qa-development-2026-ss · program-full-names-labels-part-2 PF2-T-5
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -163,3 +163,4 @@ found.
 ## Pending / not implemented here
 - P2-3152 AC5 (automatic notification to the Science Program on submit) is blocked on business —
   the system cannot resolve "the Science Program users" today.
+- Review-history entries show the deciding SP as `reviewEntryProgramLabel(entry)` (`initiative_code` + `initiative_name`; code alone when no name).

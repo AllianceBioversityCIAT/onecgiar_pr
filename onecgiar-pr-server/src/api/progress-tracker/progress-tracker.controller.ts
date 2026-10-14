@@ -13,6 +13,7 @@ import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { ProgressTrackerService } from './progress-tracker.service';
 import { ProgressTrackerResolveService } from './progress-tracker-resolve.service';
+import { ProgressTrackerActivityService } from './progress-tracker-activity.service';
 import { PtResultsQueryDto } from './dto/pt-results-query.dto';
 import { PtReadyCountsQueryDto } from './dto/pt-ready-counts-query.dto';
 import { PtResolveTriggerDto } from './dto/pt-resolve-trigger.dto';
@@ -39,6 +40,7 @@ export class ProgressTrackerController {
   constructor(
     private readonly progressTrackerService: ProgressTrackerService,
     private readonly progressTrackerResolveService: ProgressTrackerResolveService,
+    private readonly progressTrackerActivityService: ProgressTrackerActivityService,
   ) {}
 
   @ApiTags('Progress Tracker')
@@ -93,6 +95,23 @@ export class ProgressTrackerController {
     query: PtReadyCountsQueryDto,
   ) {
     return this.progressTrackerService.getProgramReadyCounts(programId, query);
+  }
+
+  @ApiTags('Progress Tracker')
+  @ApiOperation({
+    summary: 'Progress Tracker activity per indicator row for one program',
+    description:
+      'Joins the upstream ready-counts with the server-side indicator mapping of the active reporting version and returns, per mapped (ToC indicator, center), whether the mapping is usable (`matched`) and its evidence count. Cached in memory for a few minutes. Always answers HTTP 200 with a classified `status` (`ok` | `not_found` | `unavailable`).',
+  })
+  @ApiParam({
+    name: 'programId',
+    description: 'PRMS program official code (e.g. `SP01`) or name',
+  })
+  @Get('programs/:programId/indicator-activity')
+  getProgramIndicatorActivity(@Param('programId') programId: string) {
+    return this.progressTrackerActivityService.getProgramIndicatorActivity(
+      programId,
+    );
   }
 
   /**

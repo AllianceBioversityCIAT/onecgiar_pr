@@ -223,6 +223,70 @@ describe('PrTableComponent', () => {
     });
   });
 
+  // -------------------------------------------------------------------- groupBy
+  describe('groupBy (PRP-TEST-3)', () => {
+    // Input order: G2 block (s=Z then s=A), singleton G1 (s=M), G3 block (s=B then s=Y).
+    // First members: G2 -> Z, G1 -> M, G3 -> B.
+    const rows = [
+      { id: 1, g: 'G2', s: 'Z' },
+      { id: 2, g: 'G1', s: 'M' },
+      { id: 3, g: 'G3', s: 'B' },
+      { id: 4, g: 'G2', s: 'A' },
+      { id: 5, g: 'G3', s: 'Y' }
+    ];
+    const ids = () => (table.pagedValue() as any[]).map(r => r.id);
+
+    it('keeps members consecutive in input order and places the block by its first member (asc)', () => {
+      table.value = rows;
+      table.groupBy = 'g';
+      table.sortField = 's';
+      table.sortOrder = 1;
+      // G3 (B) < G1 (M) < G2 (Z); members keep input order (G2: 1 then 4, G3: 3 then 5)
+      expect(ids()).toEqual([3, 5, 2, 1, 4]);
+    });
+
+    it('keeps members consecutive in input order and places the block by its first member (desc)', () => {
+      table.value = rows;
+      table.groupBy = 'g';
+      table.sortField = 's';
+      table.sortOrder = -1;
+      expect(ids()).toEqual([1, 4, 2, 3, 5]);
+    });
+
+    it('preserves input order (buckets by first appearance) when there is no sortField', () => {
+      table.value = rows;
+      table.groupBy = 'g';
+      expect(ids()).toEqual([1, 4, 2, 3, 5]);
+    });
+
+    it('without groupBy the same data sorts flat, exactly as before', () => {
+      table.value = rows;
+      table.sortField = 's';
+      table.sortOrder = 1;
+      expect(ids()).toEqual([4, 3, 2, 5, 1]);
+    });
+
+    it('treats an empty groupBy as absent', () => {
+      table.value = rows;
+      table.groupBy = '';
+      table.sortField = 's';
+      table.sortOrder = 1;
+      expect(ids()).toEqual([4, 3, 2, 5, 1]);
+    });
+
+    it('totalRecords equals the row count and paging still slices rows', () => {
+      table.value = rows;
+      table.groupBy = 'g';
+      table.sortField = 's';
+      table.paginator = true;
+      table.rows = 2;
+      expect(table.totalRecords()).toBe(5);
+      expect(ids()).toEqual([3, 5]);
+      table.goToPage(1);
+      expect(ids()).toEqual([2, 1]);
+    });
+  });
+
   // ------------------------------------------------------------------ pagination
   describe('pagination', () => {
     beforeEach(() => {

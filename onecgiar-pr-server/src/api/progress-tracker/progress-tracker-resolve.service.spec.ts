@@ -3,7 +3,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { defer, of } from 'rxjs';
-import { ProgressTrackerResolveService } from './progress-tracker-resolve.service';
+import {
+  ProgressTrackerResolveService,
+  pickFuzzyCandidate,
+} from './progress-tracker-resolve.service';
 import { ProgressTrackerIndicatorMap } from './entities/progress-tracker-indicator-map.entity';
 import { Version } from '../versioning/entities/version.entity';
 import { PtPorbRepository, PtPorbRow } from './repositories/pt-porb.repository';
@@ -538,7 +541,9 @@ describe('ProgressTrackerResolveService', () => {
   });
 
   describe('needs_review', () => {
-    function fuzzyWith(candidates: { indicator_id: string; score: number }[]) {
+    function fuzzyWith(
+      candidates: { indicator_id: string; score: number; center?: string }[],
+    ) {
       return { ...fuzzyResolveResponse(), candidates };
     }
 
@@ -575,28 +580,28 @@ describe('ProgressTrackerResolveService', () => {
       expect(row.pt_indicator_id).toBeNull();
     });
 
-    it('is true for a fuzzy match scoring below 0.95', async () => {
+    it('is true for a fuzzy match scoring below 0.99', async () => {
       const row = await resolveWith(
         fuzzyWith([
-          { indicator_id: '8006329bfd49', score: 0.949 },
+          { indicator_id: '8006329bfd49', score: 0.989 },
           { indicator_id: '22ba725f9423', score: 0.5 },
         ]),
       );
       expect(row.needs_review).toBe(true);
     });
 
-    it('is false for a clear fuzzy match at or above 0.95', async () => {
+    it('is false for a clear fuzzy match at or above 0.99', async () => {
       const row = await resolveWith(
         fuzzyWith([
           { indicator_id: '22ba725f9423', score: 0.6 },
-          { indicator_id: '8006329bfd49', score: 0.95 },
+          { indicator_id: '8006329bfd49', score: 0.99 },
         ]),
       );
       expect(row.needs_review).toBe(false);
     });
 
-    it('honours PT_INTEROP_REVIEW_THRESHOLD (0.97 flags a 0.96 fuzzy match)', async () => {
-      process.env.PT_INTEROP_REVIEW_THRESHOLD = '0.97';
+    it('honours PT_INTEROP_REVIEW_THRESHOLD (0.95 accepts a 0.96 fuzzy match the default flags)', async () => {
+      process.env.PT_INTEROP_REVIEW_THRESHOLD = '0.95';
       try {
         const row = await resolveWith(
           fuzzyWith([
@@ -604,30 +609,34 @@ describe('ProgressTrackerResolveService', () => {
             { indicator_id: '22ba725f9423', score: 0.5 },
           ]),
         );
-        expect(row.needs_review).toBe(true);
+        expect(row.needs_review).toBe(false);
       } finally {
         delete process.env.PT_INTEROP_REVIEW_THRESHOLD;
       }
     });
 
-    it('is true for a high-scoring fuzzy match whose top two candidates tie (diff < 0.005)', async () => {
+    it('is true for a high-scoring fuzzy match whose near-tied candidates (within 0.03) share no center with the row', async () => {
       const row = await resolveWith(
         fuzzyWith([
-          { indicator_id: '22ba725f9423', score: 0.981 },
-          { indicator_id: '8006329bfd49', score: 0.985 },
+          { indicator_id: '22ba725f9423', score: 0.991, center: 'IFPRI' },
+          { indicator_id: '8006329bfd49', score: 0.995, center: 'ILRI' },
         ]),
       );
       expect(row.needs_review).toBe(true);
+      // PT's pick (the top candidate) is kept.
+      expect(row.pt_indicator_id).toBe('8006329bfd49');
+      expect(row.match_score).toBe(0.995);
     });
 
     it('is false when the top two fuzzy candidates differ by more than the epsilon', async () => {
       const row = await resolveWith(
         fuzzyWith([
-          { indicator_id: '8006329bfd49', score: 0.99 },
-          { indicator_id: '22ba725f9423', score: 0.98 },
+          { indicator_id: '8006329bfd49', score: 0.999, center: 'ILRI' },
+          { indicator_id: '22ba725f9423', score: 0.95, center: 'IFPRI' },
         ]),
       );
       expect(row.needs_review).toBe(false);
+      expect(row.pt_indicator_id).toBe('8006329bfd49');
     });
 
     it('is true for a fuzzy match whose score cannot be found among the candidates', async () => {
@@ -635,6 +644,88 @@ describe('ProgressTrackerResolveService', () => {
         fuzzyWith([{ indicator_id: '22ba725f9423', score: 0.99 }]),
       );
       expect(row.needs_review).toBe(true);
+    });
+
+    describe('center tie-break (row center CIAT -> PT CIAT (Alliance))', () => {
+      it('swaps PT pick for a near-tied candidate of the row center, not flagged when it clears the threshold', async () => {
+        const row = await resolveWith(
+          fuzzyWith([
+            { indicator_id: '8006329bfd49', score: 0.999, center: 'IFPRI' },
+            {
+              indicator_id: '22ba725f9423',
+              score: 0.995,
+              center: 'CIAT (Alliance)',
+            },
+          ]),
+        );
+        expect(row.pt_indicator_id).toBe('22ba725f9423');
+        expect(row.match_score).toBe(0.995);
+        expect(row.match_quality).toBe('fuzzy');
+        expect(row.needs_review).toBe(false);
+      });
+
+      it('keeps PT pick when it already shares the row center', async () => {
+        const row = await resolveWith(
+          fuzzyWith([
+            {
+              indicator_id: '8006329bfd49',
+              score: 0.999,
+              center: 'CIAT (Alliance)',
+            },
+            { indicator_id: '22ba725f9423', score: 0.998, center: 'IFPRI' },
+          ]),
+        );
+        expect(row.pt_indicator_id).toBe('8006329bfd49');
+        expect(row.needs_review).toBe(false);
+      });
+
+      it('still flags the swapped candidate when its score is below the threshold', async () => {
+        const row = await resolveWith(
+          fuzzyWith([
+            { indicator_id: '8006329bfd49', score: 0.999, center: 'IFPRI' },
+            {
+              indicator_id: '22ba725f9423',
+              score: 0.97,
+              center: 'CIAT (Alliance)',
+            },
+          ]),
+        );
+        expect(row.pt_indicator_id).toBe('22ba725f9423');
+        expect(row.match_score).toBe(0.97);
+        expect(row.needs_review).toBe(true);
+      });
+
+      it('ignores a same-center candidate outside the 0.03 window', async () => {
+        const row = await resolveWith(
+          fuzzyWith([
+            { indicator_id: '8006329bfd49', score: 0.999, center: 'IFPRI' },
+            {
+              indicator_id: '22ba725f9423',
+              score: 0.95,
+              center: 'CIAT (Alliance)',
+            },
+          ]),
+        );
+        expect(row.pt_indicator_id).toBe('8006329bfd49');
+        expect(row.needs_review).toBe(false);
+      });
+
+      it('never applies to an exact match', async () => {
+        const row = await resolveWith(
+          exactResolveResponse({
+            candidates: [
+              { indicator_id: '8006329bfd49', score: 1.0, center: 'IFPRI' },
+              {
+                indicator_id: '22ba725f9423',
+                score: 0.99,
+                center: 'CIAT (Alliance)',
+              },
+            ],
+          }),
+        );
+        expect(row.pt_indicator_id).toBe('8006329bfd49');
+        expect(row.needs_review).toBe(false);
+      });
     });
 
     it('is cleared on re-resolution when a fuzzy row becomes exact', async () => {
@@ -756,6 +847,102 @@ describe('ProgressTrackerResolveService', () => {
       const serializedLogCalls = JSON.stringify(logSpy.mock.calls);
       expect(serializedLogCalls).not.toContain('SENTINEL-API-KEY-VALUE');
       expect(serializedLogCalls).not.toContain(process.env.PT_INTEROP_BASE_URL);
+    });
+  });
+});
+
+describe('pickFuzzyCandidate', () => {
+  const PT_PICK = 'aaaaaaaaaaaa';
+
+  it('keeps PT pick with its score when there is a single candidate', () => {
+    expect(
+      pickFuzzyCandidate(
+        PT_PICK,
+        [{ indicator_id: PT_PICK, score: 0.9 }],
+        'CIAT',
+      ),
+    ).toEqual({ indicatorId: PT_PICK, score: 0.9, unresolvedTie: false });
+  });
+
+  it('treats a gap of exactly 0.03 as a tie (float noise absorbed)', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'IFPRI' },
+        {
+          indicator_id: 'bbbbbbbbbbbb',
+          score: 0.96,
+          center: 'CIAT (Alliance)',
+        },
+      ],
+      'CIAT',
+    );
+    expect(pick).toEqual({
+      indicatorId: 'bbbbbbbbbbbb',
+      score: 0.96,
+      unresolvedTie: false,
+    });
+  });
+
+  it('does not treat a gap just over 0.03 as a tie', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'IFPRI' },
+        {
+          indicator_id: 'bbbbbbbbbbbb',
+          score: 0.959,
+          center: 'CIAT (Alliance)',
+        },
+      ],
+      'CIAT',
+    );
+    expect(pick.indicatorId).toBe(PT_PICK);
+    expect(pick.unresolvedTie).toBe(false);
+  });
+
+  it('normalises both sides with toPtCenterName (Bioversity alias, case)', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'CIAT (Alliance)' },
+        {
+          indicator_id: 'bbbbbbbbbbbb',
+          score: 0.98,
+          center: 'bioversity (alliance)',
+        },
+      ],
+      'Bioversity International',
+    );
+    expect(pick.indicatorId).toBe('bbbbbbbbbbbb');
+  });
+
+  it('picks the highest-scoring same-center candidate among several', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'IFPRI' },
+        { indicator_id: 'cccccccccccc', score: 0.97, center: 'ILRI' },
+        { indicator_id: 'bbbbbbbbbbbb', score: 0.98, center: 'ILRI' },
+      ],
+      'ILRI',
+    );
+    expect(pick.indicatorId).toBe('bbbbbbbbbbbb');
+  });
+
+  it('flags an unresolved tie when the row has no center', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'IFPRI' },
+        { indicator_id: 'bbbbbbbbbbbb', score: 0.98, center: 'ILRI' },
+      ],
+      null,
+    );
+    expect(pick).toEqual({
+      indicatorId: PT_PICK,
+      score: 0.99,
+      unresolvedTie: true,
     });
   });
 });

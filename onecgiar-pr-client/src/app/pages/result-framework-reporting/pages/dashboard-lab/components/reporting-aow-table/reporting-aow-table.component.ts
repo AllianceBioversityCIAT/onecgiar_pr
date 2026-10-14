@@ -16,6 +16,7 @@ import {
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
 import { buildRatio, pendingOf } from '../../reporting-burndown';
+import { PtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityTooltip } from '../../pt-activity';
 import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
 
 /**
@@ -65,6 +66,8 @@ export interface ReportingIndicator {
    */
   centers?: Array<{ center_id?: number | null; center_acronym?: string | null }>;
   toc_result_id?: number;
+  /** Integration `related_node_id` of the indicator, when the payload carries it — PT activity falls back to it. */
+  indicator_related_node_id?: string | null;
   /**
    * RRC-R-10 — the combination-group this row represents (ToC `toc_result_indicator_target`). Rides
    * through `manageIndicator` → drawer → `buildCreateResultPayload` inside `indicators` so the
@@ -311,6 +314,12 @@ export class ReportingAowTableComponent {
    * @akili-spec changes/reporting-favorite-indicators
    */
   readonly favoritesOnly = input<boolean>(false);
+  /**
+   * Progress Tracker activity of the current programme, built by the host from ONE
+   * `indicator-activity` call. `null` (default, call failed or timed out) renders no badge at all —
+   * the table looks exactly as it did before the feature.
+   */
+  readonly ptActivity = input<PtActivityIndex | null>(null);
 
   readonly openAow = output<string>();
   readonly openRow = output<ReportingIndicator>();
@@ -753,16 +762,6 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Whether this Area of Work's achievement metric is currently being loaded from the server.
-   * True during initial group loading or while the async ToC achievement fetch is in-flight.
-   */
-  isAchievementLoading(group: ReportingAowGroup): boolean {
-    if (this.isBucket(group)) return false;
-    if (group.achievement) return false;
-    return !!(group.loading || group.achievementLoading);
-  }
-
-  /**
    * Chip label in the 68px header. AoW → code (AOW01). Buckets → the short tag ("Intermediate",
    * "2030"), exactly as the reference (:4248).
    *
@@ -857,14 +856,17 @@ export class ReportingAowTableComponent {
    * is the list; the scalar is only a fallback for payloads that predate it.
    */
   centerAcronymsOf(row: ReportingIndicator): string[] {
-    const fromList = (row?.centers ?? [])
-      .map(c => c?.center_acronym?.trim())
-      .filter((c): c is string => !!c && c !== '—');
+    // Shared with the PT badge (`pt-activity.ts`) so chips, centre filter and badge agree.
+    return centerAcronymsOfRow(row);
+  }
 
-    if (fromList.length > 0) return fromList;
+  /** Evidence items Progress Tracker holds for this row's KPI(s); `0` renders no badge. */
+  ptCountOf(row: ReportingIndicator): number {
+    return ptActivityCountOf(row, this.ptActivity());
+  }
 
-    const scalar = row?.center_acronym?.trim();
-    return scalar && scalar !== '—' ? [scalar] : [];
+  ptTooltipOf(count: number): string {
+    return ptActivityTooltip(count);
   }
 
   /**
@@ -1111,20 +1113,6 @@ export class ReportingAowTableComponent {
     return achievement?.preliminary_progress_percentage ?? '—';
   }
 
-  /**
-   * Always rendered next to the number, never tucked into a tooltip: a figure averaged over 2 of
-   * 10 indicators must not read like one averaged over all 10, and the visible fraction is what
-   * shows the team where targets are still missing.
-   */
-  achievementCoverage(achievement: TocAchievement | null | undefined): string {
-    const counted = achievement?.counted;
-    const total = achievement?.total;
-
-    if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
-
-    return counted === total ? `${total} Int. outcomes` : `${counted} of ${total} Int. outcomes`;
-  }
-
   achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
     if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
 
@@ -1215,19 +1203,13 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * `title` for the ratio+achievement group. Below `1100px` the achievement block itself goes
-   * `max-[1100px]:sr-only` (`OSF-T-16`) — `OSF-DD-8`'s ladder ranks shedding it first, and its own
-   * text says the shed content "stays available in the row tooltip". `sr-only`, not `hidden`:
-   * the figures must not leave the accessibility tree (`OSF-R-8`), only the visual column does.
-   * This `title` is the sighted-hover fallback for the same content, carried onto the group span
-   * that stays visible at every width — the achievement block itself is 1x1px there and
-   * unreachable by a pointer, so the fallback cannot live on it (mirrors `OSF-T-12`'s "By AOW"
-   * `title`, carried on the still-visible control rather than the thing that shrank away).
+   * `title` for the KPI ratio group in the AoW header. It used to also carry the outcomes
+   * achievement figure as the sighted-hover fallback for the achievement block (`OSF-T-16`); that
+   * block was removed from the AoW header (P2-3955, "not accurate and induce confusion").
    */
   rowTitle(group: ReportingAowGroup): string {
-    const parts = [this.ratioTitle(group)];
-    if (group.achievement) parts.push(this.achievementTooltip(group.achievement));
-    return parts.filter(Boolean).join(' ');
+    // P2-3955: the outcomes achievement block left the AoW header, and its figure left this title with it.
+    return this.ratioTitle(group);
   }
 
   /**

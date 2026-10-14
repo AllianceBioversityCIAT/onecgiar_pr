@@ -1,6 +1,6 @@
 # section-zero-dashboard (bilateral)
 
-**Verified:** 2026-10-07 · spec `notifications/primary-review-not-accept` PRA-R-5 / PRA-T-2: `pending` (no owner) no longer sets `submitBlockedReason`, and the `draft` / `pending` banner reads "{code} will review this result when you submit it for review"; prior: 2026-10-06 · spec `bilateral/rejected-result-correction` RRC-R-11 / RRC-T-7; prior: 2026-10-01 · spec `notifications/primary-decline-rejects-result` PDR-R-9 / PDR-DD-8
+**Verified:** 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: primary-request banners render `CODE - Name` via `programBannerLabel` / `bilateralProgramLabel` (name from the loaded project / primary / secondary SPs, code on a miss); prior: 2026-10-07 · spec `notifications/primary-review-not-accept` PRA-R-5 / PRA-T-2: `pending` (no owner) no longer sets `submitBlockedReason`, and the `draft` / `pending` banner reads "{code} will review this result when you submit it for review"; prior: 2026-10-06 · spec `bilateral/rejected-result-correction` RRC-R-11 / RRC-T-7; prior: 2026-10-01 · spec `notifications/primary-decline-rejects-result` PDR-R-9 / PDR-DD-8
 
 - **PRA-R-5:** `submitBlockedReason` is null for `pending` when there is no owner (`selectedPrimarySp()` empty); `pending` with an owner still blocks. `sentBack`, `noneUnpicked` and `rejected` banners unchanged.
 

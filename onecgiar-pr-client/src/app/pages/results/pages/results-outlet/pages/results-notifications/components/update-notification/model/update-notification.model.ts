@@ -39,6 +39,7 @@ export type TNotificationResult = {
         obj_initiative: {
           id: number;
           official_code: string;
+          name?: string;
         };
       }
     ];

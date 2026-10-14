@@ -196,6 +196,14 @@ describe('LabReportFormComponent', () => {
       expect(component.scienceChipLabel({ official_code: 'SP02' })).toBe('SP02');
     });
 
+    it('PF2-T-6: the ToC-branch select binds sp_label and its Other(s) sentinel carries one', async () => {
+      await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
+      const template = readFileSync(join(__dirname, 'lab-report-form.component.html'), 'utf8');
+      expect(template).toMatch(/\[options\]="dropdown1ScienceOptions\(\)"\s+optionLabel="sp_label"/);
+      const sentinel = component.dropdown1ScienceOptions().find((sp: any) => sp.id === component.OTHER_SP_ID);
+      expect(sentinel.sp_label).toBe('Other(s) - Science Program(s)/Accelerator(s)');
+    });
+
     it('PFN-T-3: loaded Science Programs carry sp_label and keep id/official_code', async () => {
       await setup({ emergingMode: true, emergingCategory: null, indicator: null, tocNode: null });
       api.resultsSE.GET_AllInitiatives = jest.fn().mockReturnValue(

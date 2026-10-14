@@ -456,7 +456,7 @@
         <div class="medal_selector selected_container" selectedItems>
           <div class="centers chips_container">
             <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
-              <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+              <div class="name">{{ spChipLabel(sp) }}</div>
               <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
             </div>
           </div>
@@ -498,7 +498,7 @@
         <div class="medal_selector selected_container" selectedItems>
           <div class="centers chips_container">
             <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.otherScienceSelected; let i = index">
-              <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+              <div class="name">{{ spChipLabel(sp) }}</div>
               <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteOtherScience(i)">cancel</i>
             </div>
           </div>

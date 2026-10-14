@@ -3,6 +3,9 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { InnovationPackageCustomTableComponent } from './innovation-package-custom-table.component';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { RouterTestingModule } from '@angular/router/testing';
+import { PrTableComponent, PrSortIconComponent, PrSortableColumnDirective, PrTableHeaderDirective, PrTableBodyDirective } from 'src/app/shared/components/pr-table';
 
 describe('InnovationPackageCustomTableComponent', () => {
   let component: InnovationPackageCustomTableComponent;
@@ -53,7 +56,8 @@ describe('InnovationPackageCustomTableComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [InnovationPackageCustomTableComponent],
-      imports: [HttpClientTestingModule],
+      imports: [HttpClientTestingModule, RouterTestingModule, PrTableComponent, PrSortIconComponent, PrSortableColumnDirective, PrTableHeaderDirective, PrTableBodyDirective],
+      schemas: [NO_ERRORS_SCHEMA],
       providers: [{ provide: ApiService, useValue: mockApiService }]
     }).compileComponents();
 
@@ -596,6 +600,37 @@ describe('InnovationPackageCustomTableComponent', () => {
 
       expect(Boolean(replicated.is_replicated)).toBe(true);
       expect(Boolean(original.is_replicated)).toBe(false);
+    });
+  });
+
+  describe('submitterLabel (PF2 M1)', () => {
+    it('builds `CODE - Name` for a package row', () => {
+      expect(component.submitterLabel({ official_code: 'SP05', submitter_name: 'Better Diets' })).toBe('SP05 - Better Diets');
+    });
+
+    it('falls back to the code, then to the short name, and keeps sorting on official_code', () => {
+      expect(component.submitterLabel({ official_code: 'SP05' })).toBe('SP05');
+      expect(component.submitterLabel({ official_code: 'SP05', submitter_short_name: 'Diets' })).toBe('SP05 - Diets');
+      expect(component.columnOrder.find(c => c.title === 'Submitter').attr).toBe('official_code');
+    });
+  });
+
+  describe('Submitter cell render (PF2 M1)', () => {
+    const cells = (rows: any[]) => {
+      component.tableData = rows;
+      fixture.detectChanges();
+      return Array.from(fixture.nativeElement.querySelectorAll('td.official_code .sp-label-text')) as HTMLElement[];
+    };
+
+    it('renders `SP05 - Better Diets` with a title equal to it', () => {
+      const [cell] = cells([{ result_code: 1, results: [{ id: 1, result_code: 1, official_code: 'SP05', submitter_name: 'Better Diets' }] }]);
+      expect(cell.textContent.trim()).toBe('SP05 - Better Diets');
+      expect(cell.getAttribute('title')).toBe('SP05 - Better Diets');
+    });
+
+    it('renders only the code for a row with no name', () => {
+      const [cell] = cells([{ result_code: 2, results: [{ id: 2, result_code: 2, official_code: 'SP05' }] }]);
+      expect(cell.textContent.trim()).toBe('SP05');
     });
   });
 });
