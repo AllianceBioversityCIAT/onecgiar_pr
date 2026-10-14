@@ -409,8 +409,39 @@ describe('ResultDetailComponent', () => {
       expect(component.requestedPhaseName).toBe('');
     });
 
-    it('keeps the route and swaps only the phase in the recovery links', () => {
-      expect(component.phaseLink(34)).toBe(`${(component as any).router.url.split('?')[0]}?phase=34`);
+    // @akili-spec bugfix/result-detail-not-found-navigation RDN-R-2
+    it('keeps the route and swaps only the phase in the recovery links for a Reporting phase', () => {
+      const routerPath = (component as any).router.url.split('?')[0];
+      expect(component.phaseLink({ id: 34, app_module_id: 1 })).toBe(`${routerPath}?phase=34`);
+    });
+
+    it('falls back to the Reporting route when the phase row has no app_module_id', () => {
+      const routerPath = (component as any).router.url.split('?')[0];
+      expect(component.phaseLink({ id: 34 })).toBe(`${routerPath}?phase=34`);
+    });
+
+    it('points an IPSR phase at IPSR general information, not at the Reporting route', () => {
+      mockApiService.resultsSE.currentResultCode = 11719;
+      expect(component.phaseLink({ id: 9, app_module_id: 2 })).toBe('/ipsr/detail/11719/general-information?phase=9');
+    });
+
+    it('renders each chip href by the module of its phase', async () => {
+      // First pass runs ngOnInit -> getData(), which resets the failure state and the code; settle it, then set ours.
+      fixture.detectChanges();
+      await fixture.whenStable();
+      mockApiService.resultsSE.currentResultCode = 11719;
+      mockCurrentResultService.resultIdIsconverted = false;
+      mockCurrentResultService.resultLoadFailure.set('not-found');
+      component.availablePhases.set([
+        { id: 9, phase_name: 'IPSR 2026', status: true, app_module_id: 2 } as any,
+        { id: 34, phase_name: 'Reporting 2025', status: false, app_module_id: 1 } as any
+      ]);
+      fixture.detectChanges();
+
+      const anchors = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="result-detail-not-found-phases"] a')) as HTMLAnchorElement[];
+      expect(anchors.length).toBe(2);
+      const routerPath = (component as any).router.url.split('?')[0];
+      expect(anchors.map(a => a.getAttribute('href'))).toEqual(['/ipsr/detail/11719/general-information?phase=9', `${routerPath}?phase=34`]);
     });
   });
 

@@ -243,8 +243,14 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
    * strategy keeps this component alive when only `?phase=` changes, so an in-app navigation would
    * leave the old, already-failed state on screen.
    */
-  phaseLink(phaseId: number | string): string {
-    return `${this.router.url.split('?')[0]}?phase=${phaseId}`;
+  // @akili-spec bugfix/result-detail-not-found-navigation RDN-R-2 (RDN-DD-2)
+  // The two modules do not share section paths, so an IPSR phase goes to IPSR general information;
+  // any other phase, or a row without `app_module_id`, keeps the current Reporting path.
+  phaseLink(phase: Pick<Phases, 'id'> & Partial<Pick<Phases, 'app_module_id'>>): string {
+    if (phase.app_module_id == 2) {
+      return `/ipsr/detail/${this.api.resultsSE.currentResultCode}/general-information?phase=${phase.id}`;
+    }
+    return `${this.router.url.split('?')[0]}?phase=${phase.id}`;
   }
 
   reload(): void {
