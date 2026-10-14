@@ -221,7 +221,8 @@ export class TypeInnovationUseComponent implements OnInit {
 
   /** BIL-1 — any VISIBLE actor list (current use, or the 2030 projection while shown) holds such a row. */
   get hasActorMissingType(): boolean {
-    const current = this.body.innov_use_to_be_determined === false ? (this.body.actors ?? []) : [];
+    // Same gate as the template: only an explicit "Yes" hides current use (NULL shows it).
+    const current = this.body.innov_use_to_be_determined !== true ? (this.body.actors ?? []) : [];
     const projection = this.showProjection2030Lists ? (this.body.innovation_use_2030?.actors ?? []) : [];
     return [...current, ...projection].some((actor: any) => this.actorMissingType(actor));
   }
