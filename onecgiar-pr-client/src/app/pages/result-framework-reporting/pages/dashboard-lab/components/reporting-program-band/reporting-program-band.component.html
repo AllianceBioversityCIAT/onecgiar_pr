@@ -665,6 +665,27 @@
       </button>
     }
 
+    <!-- With Progress Tracker activity switch — only once the activity call answered with something to filter on. -->
+    @if (!compactFilters() && ptActivityAvailable()) {
+      <button
+        type="button"
+        role="switch"
+        [attr.aria-checked]="ptActivityOnly()"
+        data-testid="pt-activity-switch"
+        aria-label="With Progress Tracker activity"
+        title="With Progress Tracker activity"
+        class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors max-[1366px]:px-[8px]"
+        [class]="
+          ptActivityOnly()
+            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
+        "
+        (click)="ptActivityOnlyChange.emit(!ptActivityOnly())">
+        <span class="material-icons-round text-[16px]" aria-hidden="true">insights</span>
+        <span class="max-[1366px]:hidden">With Progress Tracker activity</span>
+      </button>
+    }
+
     <!-- Clear filters button -->
     @if (filtersActive() || hasActiveFilters()) {
       <button

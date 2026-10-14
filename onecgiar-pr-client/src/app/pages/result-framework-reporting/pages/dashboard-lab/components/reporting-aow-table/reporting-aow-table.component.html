@@ -115,6 +115,17 @@
                     [innerHTML]="row.__centerLabel | highlightSearch: search()">
                   </span>
                 }
+                @let ptCount = ptCountOf(row);
+                @if (ptCount > 0) {
+                  <span
+                    data-testid="pt-activity-badge"
+                    class="inline-flex h-[20px] items-center rounded-[5px] border border-sky-200 bg-sky-50 px-[6px] text-[11px] font-semibold tabular-nums text-sky-700"
+                    [prTooltip]="ptTooltipOf(ptCount)"
+                    prTooltipPosition="top">
+                    <span aria-hidden="true">PT · {{ ptCount }}</span>
+                    <span class="sr-only">{{ ptTooltipOf(ptCount) }}</span>
+                  </span>
+                }
               </div>
             </div>
           </td>
@@ -982,6 +993,17 @@
             (click)="toggleRowCenters(row, $event)">
             Show less
           </button>
+        }
+        @let ptCount = ptCountOf(row);
+        @if (ptCount > 0) {
+          <span
+            data-testid="pt-activity-badge"
+            class="inline-flex h-[20px] items-center rounded-[5px] border border-sky-200 bg-sky-50 px-[6px] text-[11px] font-semibold tabular-nums text-sky-700"
+            [prTooltip]="ptTooltipOf(ptCount)"
+            prTooltipPosition="top">
+            <span aria-hidden="true">PT · {{ ptCount }}</span>
+            <span class="sr-only">{{ ptTooltipOf(ptCount) }}</span>
+          </span>
         }
       </div>
     </div>

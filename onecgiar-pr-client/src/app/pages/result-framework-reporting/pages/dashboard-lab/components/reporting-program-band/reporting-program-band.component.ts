@@ -230,6 +230,14 @@ export class ReportingProgramBandComponent {
   readonly favoritesOnly = input<boolean>(false);
   /** Live count of the programme's favorites, rendered as `Favorites (N)`. @akili-spec changes/reporting-favorite-indicators */
   readonly favoritesCount = input<number>(0);
+  /**
+   * "With Progress Tracker activity" switch: keeps only rows whose KPI has PT evidence. Offered
+   * only when the host's single `indicator-activity` call succeeded with at least one active row
+   * (`ptActivityAvailable`) — if the call fails or times out the band looks as it did before.
+   * Hidden in By-AOW like Favorites (the badges render in the grouped/flat table only).
+   */
+  readonly ptActivityOnly = input<boolean>(false);
+  readonly ptActivityAvailable = input<boolean>(false);
   /** By-AOW mode: the active AoW + flat options for the single-select switcher (a multiselect is meaningless when exactly one AoW renders). @akili-spec changes/reporting-entry-hub */
   readonly activeAowCode = input<string | null>(null);
   readonly aowSingleOptions = input<{ label: string; value: string }[]>([]);
@@ -279,6 +287,7 @@ export class ReportingProgramBandComponent {
   readonly burndownSortChange = output<'catalogue' | 'remaining'>();
   /** @akili-spec changes/reporting-favorite-indicators */
   readonly favoritesOnlyChange = output<boolean>();
+  readonly ptActivityOnlyChange = output<boolean>();
   readonly viewModeChange = output<'grouped' | 'flat'>();
   readonly clearAllFilters = output<void>();
   readonly aowSwitch = output<string>();

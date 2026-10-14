@@ -21,7 +21,7 @@ import {DecimalPipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Subscription, forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, timeout } from 'rxjs/operators';
 import { map } from 'rxjs/operators';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
@@ -81,6 +81,7 @@ import { ReportingGuideService, TutorialId } from './services/reporting-guide.se
 import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
 // @akili-spec changes/reporting-favorite-indicators
 import { ReportingFavoritesService, favoriteKeyOf } from './services/reporting-favorites.service';
+import { PT_ACTIVITY_TIMEOUT_MS, PtActivityIndex, buildPtActivityIndex, ptActivityCountOf, ptActivityHasAny } from './pt-activity';
 import { HlmButton } from '@spartan/button';
 // @akili-spec changes/reporting-entry-hub
 import {
@@ -1119,6 +1120,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const code = this.selected()?.initiativeCode || '';
       const phase = this.myWorkPhaseLabel();
       if (code && phase) this.myWorkCountSE.ensure(code, phase);
+    });
+
+    // Progress Tracker activity: ONE call per program load, keyed on the program code so the
+    // identity churn of `selected()` during a cold load does not re-issue it.
+    effect(() => {
+      const code = this.selected()?.initiativeCode || '';
+      untracked(() => this.loadPtActivity(code));
     });
 
     effect(() => {
@@ -3122,6 +3130,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.spParamSub?.unsubscribe();
     this.entityParamSub?.unsubscribe();
     this.phasesSub?.unsubscribe();
+    this.ptActivitySub?.unsubscribe();
     if (this.centerTimer) clearInterval(this.centerTimer);
   }
 
@@ -3737,7 +3746,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * @akili-spec changes/mass-reporting-flow
    */
   readonly reportingGroupsForTable = computed<ReportingAowGroup[]>(() =>
-    this.applyFavoritesFilter(this.applyBurndownFilterAndSort(this.reportingGroups()))
+    this.applyPtActivityFilter(this.applyFavoritesFilter(this.applyBurndownFilterAndSort(this.reportingGroups())))
   );
 
   readonly reportingMatchingCount = computed<number>(() => {
@@ -3985,6 +3994,62 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Progress Tracker activity of the selected programme (`pt-activity.ts`), from ONE
+   * `indicator-activity` call per program load. `null` while loading, and for good when the call
+   * fails or exceeds `PT_ACTIVITY_TIMEOUT_MS` — the Reporting tab then renders exactly as it did
+   * before the feature: no badge, no toggle, no filter.
+   */
+  readonly ptActivity = signal<PtActivityIndex | null>(null);
+  /** The toggle is offered only when at least one row would carry a badge. */
+  readonly ptActivityAvailable = computed(() => ptActivityHasAny(this.ptActivity()));
+  /** "With Progress Tracker activity" switch — per programme, reset on a programme switch. */
+  readonly ptActivityOnly = signal(false);
+  private ptActivitySub: Subscription | null = null;
+  private ptActivityProgram: string | null = null;
+
+  private loadPtActivity(code: string): void {
+    if (code === this.ptActivityProgram) return;
+    this.ptActivityProgram = code;
+    this.ptActivitySub?.unsubscribe();
+    this.ptActivitySub = null;
+    this.ptActivity.set(null);
+    this.ptActivityOnly.set(false);
+    if (!code) return;
+
+    const call = this.api.resultsSE?.GET_progressTrackerIndicatorActivity?.(code);
+    if (!call) return;
+    this.ptActivitySub = call
+      .pipe(
+        timeout(PT_ACTIVITY_TIMEOUT_MS),
+        map((res: any) => {
+          const body = res?.response;
+          return body?.status === 'ok' ? buildPtActivityIndex(body.items) : null;
+        }),
+        catchError(() => of(null))
+      )
+      .subscribe(index => this.ptActivity.set(index));
+  }
+
+  /**
+   * PT-activity step: runs LAST, after favorites, with the same contract — identity when off (or
+   * when there is no activity data, so a failed call can never empty the table), otherwise each
+   * group keeps only rows with a badge and `__allIndicators` keeps the header ratio on the
+   * pre-filter universe.
+   */
+  private applyPtActivityFilter<G extends { indicators: any[]; count: number; loading?: boolean; __allIndicators?: any[] }>(
+    groups: G[]
+  ): (G & { __allIndicators?: any[] })[] {
+    if (!this.ptActivityOnly() || !this.ptActivityAvailable()) return groups;
+    const index = this.ptActivity();
+    return groups
+      .map(g => {
+        const kept = g.indicators.filter(r => ptActivityCountOf(r, index) > 0);
+        return { ...g, indicators: kept, count: kept.length, __allIndicators: g.__allIndicators ?? g.indicators };
+      })
+      .filter(g => g.indicators.length > 0 || g.loading);
+  }
+
+  /**
    * Global disclosure switch of the Reporting tab (P2-3252). The toolbar's single control flips it
    * and the grouped table takes it as the level default for BOTH AoW cards and their HLO sub-groups.
    *
@@ -4056,7 +4121,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.reportingStatusFilter().length > 0 ||
       !!this.byAowSelectedCenter() ||
       !!this.byAowSelectedType() ||
-      (this.favoritesOnly() && this.plannedBrowseView() === 'aows')
+      (this.favoritesOnly() && this.plannedBrowseView() === 'aows') ||
+      (this.ptActivityOnly() && this.ptActivityAvailable() && this.plannedBrowseView() === 'aows')
   );
 
   /** `Clear filters` in the Reporting tab's empty state. Resets the same five signals, together. */
@@ -4076,6 +4142,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // only writes the scalar sessionStorage flag; `ReportingFavoritesService` is untouched.
     // @akili-spec changes/reporting-favorite-indicators
     this.setFavoritesOnly(false);
+    this.ptActivityOnly.set(false);
   }
 
   onReportingSearchChange(query: string): void {
