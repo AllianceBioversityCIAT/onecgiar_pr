@@ -1034,116 +1034,60 @@ describe('ReportingAowTableComponent', () => {
     });
   });
 
-  // ── achievement column (OSF-T-16: Reporting @900px overflow) ────────────────
-  describe('achievement column, OSF-T-16', () => {
-    // OSF-DD-8's ladder sheds the achievement block first. It must go `sr-only` below 1100px,
-    // never `hidden` — `OSF-R-8` forbids removing it from the accessibility tree to fix layout.
-    it('keeps the achievement block in the DOM, marked sr-only below 1100px — never hidden', async () => {
+  // ── AoW header: outcomes achievement block removed (P2-3955) ─────────────────
+  describe('AoW header without the outcomes achievement block, P2-3955', () => {
+    const achievementBlock = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el => el.className.includes('w-[168px]'));
+
+    it('renders no outcomes percentage or "Int. outcomes" line, even when the group carries an achievement', async () => {
       const g = group([row()], { achievement: achievement() });
       await build([g]);
       openAow();
 
-      // Query by the class the template actually renders on the achievement block.
-      const achievementEl = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
-        el.className.includes('w-[168px]')
-      );
-      expect(achievementEl).toBeTruthy();
-      expect(achievementEl!.className).toContain('max-[1100px]:sr-only');
-      expect(achievementEl!.className).not.toContain('hidden');
-      // Its figure is still a real text node in the DOM — an AT user reading the block gets it.
-      // @akili-spec bugfix/achieved-counts-submitted — ACS-S-9: the Preliminary figure is hidden by default.
-      expect(achievementEl!.textContent).toContain('40%');
+      expect(achievementBlock()).toBeUndefined();
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Int. outcomes');
     });
 
-    // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: the flag restores both figures.
-    it('restores both QA and Preliminary figures when the split flag is on (ACS-S-10)', async () => {
+    it('renders no outcomes block with the QA/Prel split flag on either', async () => {
       const g = group([row()], { achievement: achievement() });
       await build([g]);
       (component as any).showQaPrelSplit = true;
-      openAow();
+      fixture.detectChanges();
 
-      const achievementEl = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
-        el.className.includes('w-[168px]')
-      );
-      expect(achievementEl!.textContent).toContain('40%');
-      expect(achievementEl!.textContent).toContain('55%');
+      expect(achievementBlock()).toBeUndefined();
     });
 
-    it('omits the achievement block entirely when the group carries none — unaffected by OSF-T-16', async () => {
-      await build([group([row()])]);
-      const achievementEl = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
-        el.className.includes('w-[168px]')
-      );
-      expect(achievementEl).toBeUndefined();
+    it('renders no achievement skeleton while the group or its achievement is loading', async () => {
+      await build([group([], { loading: true }), group([row()], { loading: false, achievementLoading: true })]);
+
+      expect(achievementBlock()).toBeUndefined();
     });
 
-    // The sighted-hover fallback the ladder promises ("available in the row tooltip"): once the
-    // achievement block is sr-only (unreachable by a pointer), its content must still be
-    // discoverable by hovering the group that stays visible.
-    it('carries the achievement figure into the group title when the block is present', async () => {
+    it('keeps the KPI ratio and the By AOW button on the row', async () => {
+      const g = group([row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }), row({ indicator_id: 2 })], {
+        achievement: achievement()
+      });
+      await build([g]);
+
+      const header = (fixture.nativeElement as HTMLElement).querySelector('section > button[aria-expanded]')!;
+      expect(header.textContent).toContain('of 2');
+      expect(header.querySelector('[title="By AOW"]')).toBeTruthy();
+    });
+
+    it('rowTitle no longer carries the outcomes achievement figure', async () => {
       const g = group([row()], { achievement: achievement() });
       await build([g]);
 
-      expect(component.rowTitle(g)).toContain('ToC achievement — 40%');
-      const titled = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[title]')).find(el =>
-        (el.getAttribute('title') || '').includes('ToC achievement — 40%')
-      );
-      expect(titled).toBeTruthy();
+      expect(component.rowTitle(g)).not.toContain('ToC achievement');
+      expect(component.rowTitle(g)).not.toContain('QA 40%');
     });
 
-    it('rowTitle is empty when there is no achievement and no exclusion copy', async () => {
+    it('rowTitle is empty when there is no exclusion copy', async () => {
       const withZeros = group([
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' })
       ]);
       expect(component.rowTitle(withZeros)).toBe('');
-    });
-
-    it('rowTitle carries achievement figures when present, without a zero-target exclusion clause', async () => {
-      const g = group(
-        [
-          row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
-          row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' })
-        ],
-        { achievement: achievement() }
-      );
-      const title = component.rowTitle(g);
-      expect(title).not.toContain('zero-target');
-      expect(title).toContain('ToC achievement — 40%');
-    });
-
-    // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: the flag restores the QA/Prel sentence.
-    it('rowTitle carries the QA/Preliminary sentence when the split flag is on (ACS-S-10)', async () => {
-      const g = group([row()], { achievement: achievement() });
-      await build([g]);
-      (component as any).showQaPrelSplit = true;
-
-      expect(component.rowTitle(g)).toContain('QA 40%');
-      expect(component.rowTitle(g)).toContain('Preliminary 55%');
-    });
-
-    it('renders an achievement skeleton when group is loading', async () => {
-      const g = group([], { loading: true });
-      await build([g]);
-
-      const achievementSkeleton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
-        el.className.includes('w-[168px]')
-      );
-      expect(achievementSkeleton).toBeTruthy();
-      expect(achievementSkeleton!.className).toContain('max-[1100px]:sr-only');
-      expect(achievementSkeleton!.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('renders an achievement skeleton when group achievement is loading asynchronously', async () => {
-      const g = group([row()], { loading: false, achievementLoading: true });
-      await build([g]);
-
-      const achievementSkeleton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
-        el.className.includes('w-[168px]')
-      );
-      expect(achievementSkeleton).toBeTruthy();
-      expect(achievementSkeleton!.className).toContain('max-[1100px]:sr-only');
-      expect(achievementSkeleton!.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1);
     });
 
     it('renders center zone progress and ratio skeletons while group is loading', async () => {
@@ -1153,16 +1097,6 @@ describe('ReportingAowTableComponent', () => {
       const centerSkeleton = (fixture.nativeElement as HTMLElement).querySelector('.mx-auto');
       expect(centerSkeleton).toBeTruthy();
       expect(centerSkeleton!.querySelectorAll('.animate-pulse').length).toBe(3);
-    });
-
-    it('omits achievement skeleton for bucket groups even when loading', async () => {
-      const g = group([], { loading: true, kind: 'intermediate' });
-      await build([g]);
-
-      const achievementEl = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
-        el.className.includes('w-[168px]')
-      );
-      expect(achievementEl).toBeUndefined();
     });
   });
 
