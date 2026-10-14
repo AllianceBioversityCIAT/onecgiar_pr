@@ -352,43 +352,191 @@ describe('CgspaceDiscoveryService', () => {
       ]);
     });
 
-    it('(a1b) forwards project filter as f.project on hosts that expose a project facet (KPPJ bilateral repository filter)', async () => {
-      mockSources({
-        cgspace: {
-          data: halPage('cgspace', [
-            { uuid: 'cg-1', handle: '10568/1', title: 'AICCRA paper' },
-          ]),
-        },
-        melspace: {
-          data: halPage('melspace', [
-            { uuid: 'mel-1', handle: '20.500.11766/1', title: 'AICCRA note' },
-          ]),
-        },
-        worldfish: {
-          data: halPage('worldfish', [
-            { uuid: 'wf-1', handle: '20.500.12348/1', title: 'AICCRA brief' },
-          ]),
-        },
-      });
+    describe('(a1b) project scope (KPSF-R-1, R-4, R-7, R-9, R-11)', () => {
+      const AID_I_TITLE =
+        'IITA Accelerated Innovation Delivery Initiative (AID-I) for Mozambique';
+      const aidProject = {
+        projectCode: 'T-PJ-003942',
+        projectTitle: AID_I_TITLE,
+        projectLeadCenter: 'IITA',
+      };
+      const aidWords =
+        '(accelerated AND innovation AND delivery AND initiative AND aid AND mozambique)';
 
-      const projectLabel =
-        'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa';
-
-      await service.search({
-        project: projectLabel,
-        page: 0,
-        size: 10,
-        year: '2026',
-        repository: [...ALL],
-      });
-
-      for (const repo of ['melspace', 'worldfish'] as KpRepository[]) {
-        const [, config] = callFor(repo);
-        expect(config.params['f.project']).toBe(`${projectLabel},equals`);
+      function emptyAll() {
+        mockSources({
+          cgspace: { data: halPage('cgspace', []) },
+          melspace: { data: halPage('melspace', []) },
+          worldfish: { data: halPage('worldfish', []) },
+        });
       }
 
-      const [, cgConfig] = callFor('cgspace');
-      expect(cgConfig.params['f.project']).toBeUndefined();
+      it('linked: each repository gets its own project field, no f.project param, and the echo says applied', async () => {
+        emptyAll();
+
+        const result = await service.search({
+          ...aidProject,
+          projectScope: 'linked',
+          page: 0,
+          size: 10,
+          year: '2026',
+          repository: [...ALL],
+        });
+
+        const [, cgConfig] = callFor('cgspace');
+        expect(cgConfig.params.query).toContain(
+          `cg.identifier.project:${aidWords}`,
+        );
+        for (const repo of ['melspace', 'worldfish'] as KpRepository[]) {
+          const [, config] = callFor(repo);
+          expect(config.params.query).toContain(
+            `cg.contributor.project:${aidWords}`,
+          );
+          expect(config.params.query).not.toContain('cg.identifier.project');
+        }
+        for (const [, config] of httpService.get.mock.calls) {
+          expect(Object.keys(config.params)).not.toContain('f.project');
+        }
+        expect(result.response.projectScope).toEqual({
+          scope: 'linked',
+          applied: true,
+        });
+      });
+
+      it('related: AND NOT on every repository, echo scope=related', async () => {
+        emptyAll();
+
+        const result = await service.search({
+          ...aidProject,
+          projectScope: 'related',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        });
+
+        for (const repo of ALL) {
+          const [, config] = callFor(repo);
+          expect(config.params.query).toMatch(/^\*:\* AND NOT \(/);
+        }
+        expect(result.response.projectScope).toEqual({
+          scope: 'related',
+          applied: true,
+        });
+      });
+
+      it('no project params: the response carries no projectScope echo', async () => {
+        emptyAll();
+        const result = await service.search({
+          query: 'maize',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        });
+        expect(result.response.projectScope).toBeUndefined();
+      });
+
+      it('linked with an unusable project: empty page, applied=false, NO upstream call', async () => {
+        emptyAll();
+
+        const result = await service.search({
+          projectTitle: 'Soil',
+          projectScope: 'linked',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        });
+
+        expect(httpService.get).not.toHaveBeenCalled();
+        expect(result.status).toBe(200);
+        expect(result.response.items).toEqual([]);
+        expect(result.response.page.totalElements).toBe(0);
+        expect(result.response.page.hasMore).toBe(false);
+        expect(result.response.projectScope).toEqual({
+          scope: 'linked',
+          applied: false,
+        });
+        expect(result.response.sources.map((s) => s.status)).toEqual([
+          'ok',
+          'ok',
+          'ok',
+        ]);
+      });
+
+      it('related with an unusable project: base query only, applied=false', async () => {
+        emptyAll();
+
+        const result = await service.search({
+          projectTitle: 'Soil',
+          projectScope: 'related',
+          query: 'seed',
+          page: 0,
+          size: 10,
+          repository: ['cgspace'],
+        });
+
+        const [, config] = callFor('cgspace');
+        expect(config.params.query).toBe('seed');
+        expect(result.response.projectScope).toEqual({
+          scope: 'related',
+          applied: false,
+        });
+      });
+
+      it('the cache key differs between linked and related (and between projects)', async () => {
+        emptyAll();
+        const base = {
+          page: 0,
+          size: 10,
+          repository: ['cgspace'] as KpRepository[],
+        };
+
+        await service.search({
+          ...base,
+          ...aidProject,
+          projectScope: 'linked',
+        });
+        await service.search({
+          ...base,
+          ...aidProject,
+          projectScope: 'related',
+        });
+        await service.search({
+          ...base,
+          projectCode: 'T-PJ-000001',
+          projectTitle: 'Another Project Entirely Different',
+          projectScope: 'linked',
+        });
+
+        expect(httpService.get).toHaveBeenCalledTimes(3);
+        const keys = [...service.searchCache.keys()];
+        expect(new Set(keys).size).toBe(3);
+
+        // An identical linked call is a cache hit.
+        await service.search({
+          ...base,
+          ...aidProject,
+          projectScope: 'linked',
+        });
+        expect(httpService.get).toHaveBeenCalledTimes(3);
+      });
+
+      it('special characters in the project title still yield a well-formed query (no raw text)', async () => {
+        emptyAll();
+
+        await service.search({
+          projectCode: 'T-PJ-003942',
+          projectTitle: 'Soil " : ( ) * ? \\ AND OR carbon storage',
+          projectScope: 'linked',
+          page: 0,
+          size: 10,
+          repository: ['melspace'],
+        });
+
+        const [, config] = callFor('melspace');
+        expect(config.params.query).toBe(
+          '*:* AND (cg.contributor.project:(soil AND carbon AND storage) OR cg.contributor.project:"pj 003942" OR cg.contributor.project:"pj 3942")',
+        );
+      });
     });
 
     it('(a2) a selection of two queries only those two sources, in selection order (scenario KPM-R-8)', async () => {
@@ -956,6 +1104,10 @@ describe('CgspaceDiscoveryService', () => {
         center: '',
         year: '',
         project: '',
+        projectCode: '',
+        projectTitle: '',
+        projectLeadCenter: '',
+        projectScope: '',
         repository: 'cgspace',
       });
       expect(service.searchCache.has(oldestKey)).toBe(true);

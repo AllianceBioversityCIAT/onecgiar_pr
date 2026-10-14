@@ -82,10 +82,16 @@ export class CgspaceDiscoveryMapper {
       metadata['cg.contributor.programAccelerator']
         ?.map((m: any) => m?.value)
         ?.filter(Boolean) || [];
-    const projects =
-      metadata['cg.identifier.project']
-        ?.map((m: any) => m?.value)
-        ?.filter(Boolean) || [];
+    // `KPSF-R-7`: the adapter's own project field (cg.contributor.project on MEL/WorldFish) plus
+    // the legacy cg.identifier.project, unioned and deduped (adapter field first).
+    const projects = Array.from(
+      new Set<string>(
+        [adapter.fields.project, 'cg.identifier.project'].flatMap(
+          (field) =>
+            metadata[field]?.map((m: any) => m?.value)?.filter(Boolean) || [],
+        ),
+      ),
+    );
 
     return {
       uuid,

@@ -218,4 +218,88 @@ describe('CgspaceSearchQueryDto', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('project scope params (KPSF-R-1, R-9, R-11)', () => {
+    const pipe = () => controllerValidationPipe();
+    const aid = {
+      projectCode: 'T-PJ-003942',
+      projectTitle:
+        'IITA Accelerated Innovation Delivery Initiative (AID-I) for Mozambique',
+      projectLeadCenter: 'IITA',
+    };
+
+    it('accepts projectScope alone with a code/title and no query, type, year or center', async () => {
+      for (const projectScope of ['linked', 'related']) {
+        const result = await pipe().transform(
+          { ...aid, projectScope },
+          queryMetadata,
+        );
+        expect(result.projectScope).toBe(projectScope);
+        expect(result.projectCode).toBe('T-PJ-003942');
+        expect(result.projectLeadCenter).toBe('IITA');
+      }
+    });
+
+    it('still requires a query when no filter and no projectScope is set', async () => {
+      await expect(
+        pipe().transform({ ...aid }, queryMetadata),
+      ).rejects.toThrow();
+    });
+
+    it('rejects a projectScope that is neither linked nor related', async () => {
+      await expect(
+        pipe().transform({ ...aid, projectScope: 'all' }, queryMetadata),
+      ).rejects.toThrow();
+    });
+
+    it('rejects projectScope without projectCode or projectTitle', async () => {
+      await expect(
+        pipe().transform({ projectScope: 'linked' }, queryMetadata),
+      ).rejects.toThrow();
+    });
+
+    it('rejects over-long values (code 50, title 300, lead center 20)', async () => {
+      for (const over of [
+        { projectCode: 'x'.repeat(51), projectTitle: 'ok title here' },
+        { projectCode: 'T-PJ-1', projectTitle: 'x'.repeat(301) },
+        { ...aid, projectLeadCenter: 'x'.repeat(21) },
+      ]) {
+        await expect(
+          pipe().transform({ ...over, projectScope: 'linked' }, queryMetadata),
+        ).rejects.toThrow();
+      }
+    });
+
+    it('rejects a repeated (array) project param instead of crashing later', async () => {
+      await expect(
+        pipe().transform(
+          {
+            ...aid,
+            projectTitle: ['a title', 'b title'],
+            projectScope: 'linked',
+          },
+          queryMetadata,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('keeps forbidNonWhitelisted on: an unknown param is still rejected', async () => {
+      await expect(
+        pipe().transform(
+          { ...aid, projectScope: 'linked', projectFoo: 'x' },
+          queryMetadata,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('still accepts the legacy `project` param alone', async () => {
+      const result = await pipe().transform(
+        { project: 'T-PJ-003942 - Accelerated Innovation Delivery' },
+        queryMetadata,
+      );
+      expect(result.project).toBe(
+        'T-PJ-003942 - Accelerated Innovation Delivery',
+      );
+    });
+  });
 });
