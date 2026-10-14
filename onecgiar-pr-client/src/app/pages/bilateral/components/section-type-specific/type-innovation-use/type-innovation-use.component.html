@@ -35,8 +35,10 @@
     </app-pr-radio-button>
 
     <!-- P2-3428 AC4 / P2-3331 AC1: the "to be determined" gate. When the use is still to be determined no
-       actor is requested and its absence must not hold the section back. Same rule as the W1/W2 form. -->
-    @if (body.innov_use_to_be_determined === false) {
+       actor is requested and its absence must not hold the section back. Same rule as the W1/W2 form,
+       which hides the fields only on an explicit "Yes": an UNANSWERED question (NULL — every result rolled
+       over to a new phase before 2026-10-14) used to hide the actors the copy had carried over (27270). -->
+    @if (body.innov_use_to_be_determined !== true) {
       <div>
         <app-pr-field-header label="Actors" description="Describe the actors involved in innovation use" [required]="true"></app-pr-field-header>
 
@@ -57,7 +59,7 @@
     <!-- P2-3428: this optional field used to live inside the full-metadata toggle. It stays above the
        toggle, with row-level unit and quantity required whenever a measure is added. It only applies
        when current innovation use is known, matching the W1/W2 current-use gate. -->
-    @if (body.innov_use_to_be_determined === false) {
+    @if (body.innov_use_to_be_determined !== true) {
       <div>
         <app-pr-field-header label="Other quantitative measures of innovation use" description="E.g. # of hectares." [required]="false">
         </app-pr-field-header>
