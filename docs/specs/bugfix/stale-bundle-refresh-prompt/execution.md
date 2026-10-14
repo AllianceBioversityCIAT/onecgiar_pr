@@ -146,7 +146,7 @@ All tasks in this spec (`SBR-T-1`, the spec's only task) are complete.
   - Manual smoke check on TEST (tasks.md Rollout & verification) — the one check nothing in CI can substitute for; still pending human execution.
   - 3 ADVISORY findings from the attempt-2 Reviewer (toast-host visual stacking, test-only duplicate-subscription reliability note, a minor test-assertion tightening) — recorded, not actioned, never gating.
   - `onecgiar-pr-client/src/CLAUDE.md` §2.1's stale "Toast = MessageService/ToastModule" documentation-drift note (flagged in `design.md`'s Required cross-references) — not actioned here per shared-file write discipline; flagged for `/akili-audit`.
-- **Commit:** pending (see below).
+- **Commit:** `00a85e029` on `qa-development-2026-mc-2` — `🔧 fix(app-shell): detect stale lazy-chunk imports and prompt refresh`.
 
 **ADR impact:** none — no TRD architecture decision is overturned; this is a spec-local design correction, not a system-architecture reversal.
 
