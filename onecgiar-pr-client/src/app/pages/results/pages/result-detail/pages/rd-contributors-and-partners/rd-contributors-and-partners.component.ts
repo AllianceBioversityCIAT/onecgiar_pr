@@ -19,6 +19,7 @@ import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } 
 import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 import { PROJECT_CENTER_FILTER_COPY } from '../../../../../../internationalization/project-center-filter.copy';
+import { scienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 import {
   ALL_PROJECT_CENTERS,
   ProjectCenterFilter,
@@ -750,6 +751,12 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     ...this.referenceScience(),
     { id: this.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)', full_name: '<strong>Other(s) Science Program(s)</strong>' }
   ]);
+
+  /** Chip text: the shared P/A label (`SP01 - Name`); the "Other(s)" sentinel keeps its own text. */
+  spChipLabel(sp: any): string {
+    if (sp?.id === this.OTHER_SP_CODE) return sp?.official_code ?? '';
+    return scienceProgramLabel(sp?.official_code, sp?.name, sp?.initiative_name, sp?.short_name);
+  }
 
   get showOtherScience(): boolean {
     return (this.rdPartnersSE.scienceSelected || []).some(sp => sp.id === this.OTHER_SP_CODE);

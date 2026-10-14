@@ -534,6 +534,32 @@ function formatDate(value: string): string {
         transition: background 0.2s ease-out;
       }
 
+      /* PRP-R-5: versions of one code read as ONE block — the divider sits only above the first and
+         below the last member, and the members sit closer together. Neutral: no violet (UI rule 7). */
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-start {
+        border-bottom-color: transparent;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-start,
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-cont {
+        min-height: 40px;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-start td.pgr-td,
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-cont td.pgr-td {
+        min-height: 40px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-start:not(.pgr-group-cont) td.pgr-td {
+        padding-top: 8px;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-cont:not(.pgr-group-start) td.pgr-td {
+        padding-bottom: 8px;
+      }
+
       :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:hover,
       :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:focus-visible {
         background: var(--pr-surface-ground, #efeef3);
@@ -797,6 +823,34 @@ export class ProgrammeResultsComponent implements OnDestroy {
 
   // ── Rows ────────────────────────────────────────────────────────────────────────────────
   readonly filteredRows = computed(() => this.filter.filterRows(this.data.rows()));
+
+  /**
+   * Table feed (PRP-R-5): `filteredRows()` with the versions of one `code` ordered newest phase
+   * first (`phaseSort` descending). Blocks keep the order in which their code first appears, so
+   * counters, search and CSV (all fed by `filteredRows()`) are untouched. `app-pr-table`'s
+   * `groupBy="code"` then keeps each block together under any sort.
+   */
+  readonly groupedRows = computed(() => {
+    const blocks = new Map<string, ProgrammeResultRow[]>();
+    for (const row of this.filteredRows()) {
+      const block = blocks.get(row.code);
+      if (block) block.push(row);
+      else blocks.set(row.code, [row]);
+    }
+    return [...blocks.values()].flatMap(block => (block.length > 1 ? [...block].sort((a, b) => b.phaseSort.localeCompare(a.phaseSort)) : block));
+  });
+
+  /** Row `i` of the current page is followed by a version of the same result (starts/continues a block). */
+  isGroupStart(tbl: PrTableComponent, i: number): boolean {
+    const page = tbl.pagedValue() as ProgrammeResultRow[];
+    return !!page[i + 1] && page[i + 1].code === page[i]?.code;
+  }
+
+  /** Row `i` of the current page follows a version of the same result. */
+  isGroupCont(tbl: PrTableComponent, i: number): boolean {
+    const page = tbl.pagedValue() as ProgrammeResultRow[];
+    return i > 0 && !!page[i] && page[i - 1].code === page[i].code;
+  }
 
   /**
    * Status counters over the rows filtered by EVERYTHING EXCEPT status — the only way each pill

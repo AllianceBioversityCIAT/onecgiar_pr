@@ -360,6 +360,13 @@ export class VersioningService {
             manager,
             config,
           );
+          // Same rows case 7 copies: the actors and the P25 quantitative measures (both carry
+          // their `section_id`, so current use and the 2030 projection stay apart). Without them
+          // every Innovation Use reached the new phase with no actors or measures and the
+          // reporter saw last year's figures as gone (W3 result 27270, 2026-10-14). Decision:
+          // the new phase starts PRE-FILLED and editable, for W1/W2 and W3 alike.
+          await this._resultActorRepository.replicate(manager, config);
+          await this._resultIpMeasureRepository.replicate(manager, config);
           break;
         case 5:
           await this._resultsCapacityDevelopmentsRepository.replicate(

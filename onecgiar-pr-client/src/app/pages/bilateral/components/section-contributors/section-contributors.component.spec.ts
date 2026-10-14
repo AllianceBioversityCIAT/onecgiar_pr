@@ -127,6 +127,16 @@ describe('SectionContributorsComponent', () => {
       expect(component.pendingPrimaryTocNotice()).toContain('Available once the primary Science Program accepts.');
     });
 
+    it('PF2-T-6: names the SP from the catalogue when it is loaded, the code when it is not', () => {
+      bilateralApi.GET_resultInitiativeId.mockReturnValue(draftRequest('SP03'));
+      build();
+      fixture.detectChanges();
+      expect(component.pendingPrimaryTocNotice()).toContain('(SP03)');
+
+      component.sciencePrograms.set([{ programId: 3, programCode: 'SP03', name: 'Animal' }]);
+      expect(component.pendingPrimaryTocNotice()).toContain('(SP03 - Animal)');
+    });
+
     it('shows nothing and does not ask when the result already has an owner', () => {
       creation.selectedPrimarySp.set({ programId: 7, programCode: 'SP07', allocation: '100' });
       build();

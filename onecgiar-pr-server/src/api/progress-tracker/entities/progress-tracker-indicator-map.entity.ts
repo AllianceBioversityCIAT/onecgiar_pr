@@ -85,7 +85,7 @@ export class ProgressTrackerIndicatorMap extends BaseEntity {
   })
   kpi_type: string | null;
 
-  /** True for a weak fuzzy match, tied top candidates, or no match at all. */
+  /** True for a weak fuzzy match, near-tied candidates the center cannot split, or no match at all. */
   @Column({
     name: 'needs_review',
     type: 'boolean',

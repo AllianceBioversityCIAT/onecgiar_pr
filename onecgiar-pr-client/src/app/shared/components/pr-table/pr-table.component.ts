@@ -47,6 +47,15 @@ export class PrTableComponent {
   /** Snapshot of the bound default, restored by reset(). */
   private _defaultSortField = '';
 
+  /**
+   * Opt-in row grouping. Field name (dot paths allowed); rows sharing its value stay
+   * consecutive in input order and each block is sorted by its first member. Empty = off.
+   */
+  @Input() set groupBy(f: string | null | undefined) {
+    this._groupBy.set(f ?? '');
+  }
+  private readonly _groupBy = signal('');
+
   /** 1 = ascending, -1 = descending (matches PrimeNG). */
   @Input() set sortOrder(o: number) {
     const v = Number(o) === -1 ? -1 : 1;
@@ -107,24 +116,26 @@ export class PrTableComponent {
   private readonly sortedValue = computed(() => {
     const data = this._value();
     const field = this._sortField();
-    if (!field) return data;
-    const order = this._sortOrder();
-    return [...data].sort((a, b) => {
-      const av = this.resolve(a, field);
-      const bv = this.resolve(b, field);
-      if (av == null && bv == null) return 0;
-      if (av == null) return -1 * order;
-      if (bv == null) return 1 * order;
-      if (typeof av === 'string' && typeof bv === 'string') {
-        return av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' }) * order;
-      }
-      if (typeof av === 'number' && typeof bv === 'number') {
-        return (av - bv) * order;
-      }
-      if (av < bv) return -1 * order;
-      if (av > bv) return 1 * order;
-      return 0;
-    });
+    const groupBy = this._groupBy();
+    if (!groupBy) {
+      if (!field) return data;
+      const order = this._sortOrder();
+      return [...data].sort((a, b) => this.compare(a, b, field, order));
+    }
+    // Grouped: bucket by groupBy (members keep input order), sort buckets by their first member, flatten.
+    const buckets = new Map<unknown, unknown[]>();
+    for (const row of data) {
+      const key = this.resolve(row, groupBy);
+      const bucket = buckets.get(key);
+      if (bucket) bucket.push(row);
+      else buckets.set(key, [row]);
+    }
+    let groups = [...buckets.values()];
+    if (field) {
+      const order = this._sortOrder();
+      groups = groups.sort((a, b) => this.compare(a[0], b[0], field, order));
+    }
+    return groups.flat();
   });
 
   readonly pagedValue = computed(() => {
@@ -188,6 +199,23 @@ export class PrTableComponent {
   setPageSize(size: number): void {
     this.pageSizeOverride.set(size);
     this.page.set(0);
+  }
+
+  private compare(a: unknown, b: unknown, field: string, order: number): number {
+    const av = this.resolve(a, field);
+    const bv = this.resolve(b, field);
+    if (av == null && bv == null) return 0;
+    if (av == null) return -1 * order;
+    if (bv == null) return 1 * order;
+    if (typeof av === 'string' && typeof bv === 'string') {
+      return av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' }) * order;
+    }
+    if (typeof av === 'number' && typeof bv === 'number') {
+      return (av - bv) * order;
+    }
+    if (av < bv) return -1 * order;
+    if (av > bv) return 1 * order;
+    return 0;
   }
 
   private resolve(row: unknown, field: string): unknown {

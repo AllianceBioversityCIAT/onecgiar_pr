@@ -18,6 +18,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideRefreshCw } from '@ng-icons/lucide';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 import { BILATERAL_CONTRIBUTORS_COPY } from '../../../../internationalization/bilateral-contributors.copy';
+import { bilateralProgramLabel } from '../../shared/bilateral-program-label.util';
 import { BILATERAL_PRIMARY_ASSIGNMENT_COPY } from '../../../../internationalization/bilateral-primary-assignment.copy';
 import { CLARISA_GLOSSARY_URL } from '../../../../shared/constants/clarisa-links.constants';
 
@@ -94,7 +95,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly pendingPrimaryCode = signal<string | null>(null);
   readonly pendingPrimaryTocNotice = computed(() => {
     const code = this.pendingPrimaryCode();
-    return code ? BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsTocNotice(code) : '';
+    return code ? BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsTocNotice(bilateralProgramLabel(code, this.creationService, this.sciencePrograms())) : '';
   });
   private readonly loadPendingPrimary = effect(() => {
     const resultId = this.creationService.currentResultId();

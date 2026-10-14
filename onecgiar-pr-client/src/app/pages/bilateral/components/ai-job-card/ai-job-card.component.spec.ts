@@ -32,6 +32,16 @@ describe('AiJobCardComponent', () => {
     return (fixture.nativeElement as HTMLElement).querySelector(`[data-testid="${testId}"]`);
   }
 
+  it('PF2-R-2 S3: renders "SP01 - Breeding" when program_name is present and the bare code when it is null', () => {
+    mount({ program_code: 'SP01', program_name: 'Breeding', status: 'PROCESSING', stage: 'extracting' });
+    expect(text()).toContain('SP01 - Breeding');
+
+    TestBed.resetTestingModule();
+    mount({ program_code: 'SP01', program_name: null, status: 'PROCESSING', stage: 'extracting' });
+    expect(text()).toContain('SP01');
+    expect(text()).not.toContain('SP01 -');
+  });
+
   it('running: shows the card, no percentage, no ETA regex', () => {
     mount({ status: 'PROCESSING', stage: 'extracting', document_count: '1', audio_count: '0' });
 

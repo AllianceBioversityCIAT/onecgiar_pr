@@ -62,6 +62,7 @@ export class ResultReviewHistoryRepository extends Repository<ResultReviewHistor
       rrh.created_by,
       rrh.initiative_id,
       ci.official_code AS initiative_code,
+      ci.name AS initiative_name,
       u.first_name,
       u.last_name,
       u.email

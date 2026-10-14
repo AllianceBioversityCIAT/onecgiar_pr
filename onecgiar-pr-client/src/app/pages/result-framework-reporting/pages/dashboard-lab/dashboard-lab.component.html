@@ -1500,6 +1500,9 @@
             [favoritesOnly]="favoritesOnly()"
             [favoritesCount]="programFavoritesCount()"
             (favoritesOnlyChange)="setFavoritesOnly($event)"
+            [ptActivityOnly]="ptActivityOnly()"
+            [ptActivityAvailable]="ptActivityAvailable()"
+            (ptActivityOnlyChange)="ptActivityOnly.set($event)"
             [showInsightsToggle]="plannedBrowseView() === 'aows'"
             [insightsOpen]="reportingInsightsOpen()"
             (insightsToggle)="toggleReportingInsights()"
@@ -1589,7 +1592,8 @@
                 [favoriteKeys]="programFavoriteKeys()"
                 [favoritesOnly]="favoritesOnly()"
                 (toggleFavorite)="toggleFavorite($event)"
-                (exitFavoritesOnly)="setFavoritesOnly(false)" />
+                (exitFavoritesOnly)="setFavoritesOnly(false)"
+                [ptActivity]="ptActivity()" />
               <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
                    (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
             } @else if (plannedBrowseView() === 'byAow') {

@@ -646,7 +646,7 @@
                 {{ isResubmit(entry) ? historyCopy.history.actionResubmit : historyCopy.history.actionReject }}
               </span>
               @if (entry.initiative_code) {
-                <span class="font-mono" data-testid="brl-history-sp">{{ entry.initiative_code }}</span>
+                <span class="font-mono" data-testid="brl-history-sp">{{ programLabel(entry) }}</span>
               }
               <span>{{ reviewerName(entry) }}</span>
               <span>{{ entry.created_at | date: 'dd MMM yyyy' }}</span>

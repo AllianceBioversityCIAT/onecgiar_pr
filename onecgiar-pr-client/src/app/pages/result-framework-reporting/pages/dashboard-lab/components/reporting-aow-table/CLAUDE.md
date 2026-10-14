@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-10-02 · qa-development-2026-ss · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit`, branches the QA/Preliminary tooltip sentences — see "QA/Prel split hidden" below) · prior: 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
+**Verified:** 2026-10-14 · JuankCadavid/pt-center-mapping (`ptActivity` input + `PT · N` badge) · prior: 2026-10-13 · qa-development-2026-ss · quick/aow-row-remove-outcomes-figures (P2-3955: AoW header outcomes achievement block + its `rowTitle` text removed — see the 🗑️ bullet in Trampas) · prior: 2026-10-02 · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit`, branches the QA/Preliminary tooltip sentences — see "QA/Prel split hidden" below) · prior: 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -20,6 +20,8 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
   `favoriteKeys` (`ReadonlySet<string>`, por defecto vacío — claves `rowKey`-shaped de las filas
   marcadas en la programa actual), `favoritesOnly` (host indica si el switch de foco está activo,
   solo para la copia del empty state; `changes/reporting-favorite-indicators`).
+  `ptActivity` (`PtActivityIndex | null`, default `null` — Progress Tracker activity built by the
+  host; `null` renders no badge).
 - Outputs: `openRow`, `reportRow`, `openTarget`, `openAchieved`, `openAow`, `allOpenChange`,
   `clearFilters`, `copyLink`, `toggleFavorite` (host hace el toggle en su store), `exitFavoritesOnly`
   (empty state's `Show all indicators` pide apagar el switch — `changes/reporting-favorite-indicators`).
@@ -40,12 +42,20 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
   spread into the create payload and the drawer's existing-contributors call. Presentation-inert
   here — this component never reads it.
 
+## Badge `PT · N` (Progress Tracker activity, 2026-10-14)
+- Chip in the title chips row of BOTH layouts (grouped `#indicatorRow` after the centre chips, flat
+  title cell after `__centerLabel`), `data-testid="pt-activity-badge"`, tooltip + `sr-only` copy
+  "Progress Tracker has N evidence items for this KPI". Only when `ptCountOf(row) > 0` (mapped,
+  `matched`, evidence > 0); nothing otherwise.
+- `centerAcronymsOf` now delegates to `pt-activity.ts`'s `centerAcronymsOfRow` so chips, centre
+  filter and badge agree on a row's centres — change the rule there, not here.
+
 ## QA/Prel split hidden behind `showQaPrelSplit` (ACS-R-5, spec `bugfix/achieved-counts-submitted`)
 
 - `showQaPrelSplit = SHOW_QA_PREL_SPLIT` (imported from `shared/constants/achieved-display-basis.ts`,
   default `false`). Every `@if (showQaPrelSplit) … @else …` pair in the template hides the QA/Prel.
   two-track markup in favour of a single union ("Achieved") figure — the row cell (both the flat and
-  grouped layouts), the AoW header's achievement block, and the HLO header's achievement block. The
+  grouped layouts), the AoW header's achievement block (removed by P2-3955), and the HLO header's achievement block. The
   two-track markup is kept verbatim inside the `@if` branch, not deleted — flip the constant to
   restore it with zero server change (ACS-S-10).
 - `achievementTooltip()` and `progressTracksTooltip()` branch the same way: with the flag off they
@@ -87,7 +97,7 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
 
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **El botón "By AOW" (`:441-455`) colapsa a solo-icono bajo 900px** (`max-[900px]:w-[30px]` + `title="By AOW"`) — ya rompió algo: desbordó la página 48px a 768px (798≠750) sin que dos pases de verificación lo notaran. No faltaba ningún `min-w-0`: el nombre (`:313`) ya estaba en 0px y cada hermano restante es `shrink-0`. El `aria-label` queda INCONDICIONAL a propósito — es lo que hace defendible ocultar solo la etiqueta visible; no lo condiciones al breakpoint. Tailwind v4: `max-[900px]:` compila a `width < 900` (exclusivo), encajando exacto con `min-[900px]` — ya mordió a `OSF-T-2b` en un componente hermano.
-- ⚠️ **El bloque de achievement (`:409-434`, `w-[168px] shrink-0`) va `max-[1100px]:sr-only`, NUNCA `max-[1100px]:hidden`** (`OSF-T-16`) — a exactamente 900px desbordaba 177px, idéntico banda colapsada/expandida (no era la banda; era el grupo ratio+achievement de 444px que `OSF-T-12` ya había señalado). `hidden` sacaría las cifras QA/Prel/coverage del árbol de accesibilidad sin que nada más las nombre (viola `OSF-R-8`); `sr-only` las deja leíbles por lector de pantalla y solo les quita su hueco en el flex. `1100`, no `900`: a 900px exacto `max-[900px]` no aplica (ver arriba), y `1100` es el límite que el propio ladder de `OSF-DD-8` usa para soltar este mismo bloque. El fallback sighted-hover vive en el `title` del `<span>` que lo envuelve (`rowTitle()`), no en el bloque — a 1px es inalcanzable con el puntero.
+- 🗑️ **El bloque de achievement del header de AoW (`w-[168px]`, `OSF-T-16`, `max-[1100px]:sr-only`) ya NO existe** (P2-3955, 2026-10-13): Nicoleta pidió quitar el % de outcomes y la línea `x of X Int. outcomes` por inexactos. Se fueron con él su skeleton, `achievementCoverage()`, `isAchievementLoading()` y su texto en `rowTitle()` (que ahora es solo `ratioTitle`). La barra de KPIs, su `x of X` y su % no cambiaron. El bloque de achievement del header de **HLO** sigue vivo. No lo reintroduzcas sin pedido de producto.
 - ⚠️ **`filtersActive` NO se puede deducir aquí.** Solo llegan `search` y `statusFilter`; los filtros
   **Section / Type / Category** los aplica el host al construir `groups`. Una tarjeta vaciada por
   Category llegaba idéntica a un AoW sin nada planeado, y el estado vacío afirmaba *"this area of work

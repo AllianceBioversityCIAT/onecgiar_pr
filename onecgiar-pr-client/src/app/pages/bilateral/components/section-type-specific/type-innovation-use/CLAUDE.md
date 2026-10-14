@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
+**Verified:** 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
 
 ## What it is
 BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
@@ -105,8 +105,10 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   `INNOVATION_LINK_MIN_PHASE_YEAR`), **not** `isP25()`: prtest holds 2025-phase results inside the P25
   portfolio and a portfolio gate would switch the field on for them.
 - ⚠️ **"Innovation Use to be Determined" reads backwards:** `=== true` means the use is still to be
-  determined → no actor is requested and the Actors MDS item counts as satisfied (AC4). The actors block
-  renders on `=== false` only.
+  determined → no actor is requested and the Actors MDS item counts as satisfied (AC4). The actors and
+  measures blocks hide **only on `=== true`** (2026-10-14, same as W1/W2): a NULL answer — every result the
+  phase copy rolled over — used to hide the actors it had carried (27270). The MDS item still needs the
+  question answered.
 - ⚠️ **Raising the use level to 6+ makes `onUseLevelChange()` CLEAR `has_scaling_studies` and
   `scaling_studies_urls`.** The question disappears from 6 up, and without the clear a "Yes" plus three URLs
   kept being saved behind a control the user can no longer see or correct.
@@ -121,7 +123,7 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 - The use-level ladder is **not MDS** (P2-3785 AC1) and lives under **full metadata**, right before the
   scaling-studies and explanation questions it gates (quick/innov-use-level-to-full-metadata, 7-Oct-2026).
 - Quantitative measures are optional. When a row is added, it only counts as complete with **both unit AND quantity** (AC6).
-- Organizations are optional and remain under the full-metadata toggle; the Fetcher schema and MDS do not require an organization row. Current-use measures are optional and shown only when `innov_use_to_be_determined === false`; they do not count toward the MDS.
+- Organizations are optional and remain under the full-metadata toggle; the Fetcher schema and MDS do not require an organization row. Current-use measures are optional and shown unless `innov_use_to_be_determined === true`; they do not count toward the MDS.
 
 - **P2-3785 (4b) — actors use the POOLED meaning of `sex_and_age_disaggregation`**: ticked (`true`) =
   the breakdown does NOT apply, only "How many". The old "Sex and age disaggregated data available?"
@@ -134,7 +136,10 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   `InnoDevService.saveAnticipatedInnoUser(…, 2)`). "This is yet to be determined" retires the section-2
   rows server-side. Copy (title, guidance note link, question, tooltip) comes from
   `internationalization/innovation-use-2030-projection.copy.ts`, shared with W1/W2. The annual-review
-  part of P2-3295 is deliberately absent: bilateral results are never rolled over.
+  part of P2-3295 is absent. ⚠️ The old reason given here — "bilateral results are never rolled over" — is
+  FALSE: they are (`/api/bilateral/version`, the create with `result_code`, the phase copy; 145 pairs in TEST
+  on 14-Oct-2026). Since 14-Oct the copy carries actors, measures, both "to be determined" flags and the
+  level, so the new phase opens pre-filled and editable (decision: Juan David).
   ⚠️ Current-use lookups by type/unit now skip section-2 rows, and the legacy GET splits them out; before
   this, a section-2 row would have shown up (and been re-saved) as current use.
 

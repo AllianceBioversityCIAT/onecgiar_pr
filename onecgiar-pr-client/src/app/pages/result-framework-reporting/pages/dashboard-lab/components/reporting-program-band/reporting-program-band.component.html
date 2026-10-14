@@ -403,10 +403,10 @@
     data-guide="sp-actions-toolbar">
     <!-- Row 1 — primary controls: filters left, view/sort right -->
     <div
-      class="flex items-center gap-[10px] max-sm:flex-col max-sm:items-stretch max-sm:gap-[8px]"
+      class="flex flex-wrap items-center gap-x-[10px] gap-y-[8px] max-sm:flex-col max-sm:items-stretch max-sm:gap-[8px]"
       data-testid="reporting-toolbar-primary">
       <div
-        class="flex min-w-0 flex-1 items-center gap-[10px] max-sm:w-full max-sm:flex-wrap"
+        class="flex min-w-0 flex-1 flex-wrap items-center gap-x-[10px] gap-y-[8px] max-sm:w-full"
         data-testid="reporting-filter-group">
     <!-- Search Input -->
     <div class="relative h-[34px] w-[220px] min-w-[140px] shrink max-[1366px]:w-[min(100%,200px)] max-sm:w-full max-sm:min-w-0 max-sm:shrink-0">
@@ -662,6 +662,29 @@
           aria-hidden="true">
           {{ favoritesCount() }}
         </span>
+      </button>
+    }
+
+    <!-- With Progress Tracker activity switch — only once the activity call answered with something to filter on. -->
+    @if (!compactFilters() && ptActivityAvailable()) {
+      <button
+        type="button"
+        role="switch"
+        [attr.aria-checked]="ptActivityOnly()"
+        data-testid="pt-activity-switch"
+        aria-label="With Progress Tracker activity"
+        title="With Progress Tracker activity"
+        class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors max-[1366px]:px-[8px]"
+        [class]="
+          ptActivityOnly()
+            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
+        "
+        (click)="ptActivityOnlyChange.emit(!ptActivityOnly())">
+        <span class="material-icons-round text-[16px]" aria-hidden="true">insights</span>
+        <!-- Full copy from 1280px; below that the short label keeps the toolbar from crowding the view controls. -->
+        <span class="hidden min-[1280px]:inline" data-testid="pt-activity-label-full">With Progress Tracker activity</span>
+        <span class="min-[1280px]:hidden" data-testid="pt-activity-label-short">PT activity</span>
       </button>
     }
 

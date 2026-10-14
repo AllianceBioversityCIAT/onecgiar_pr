@@ -117,4 +117,4 @@ as `isInNotificationsRoute()`.
 | `app-global-search-palette` | the palette overlay | has its own `CLAUDE.md` — read it before touching the trigger |
 | `app-pop-up-notification-item` | one bell row (decision or update), emits `handoff` | lives under `header-panel/components/`; has inline Accept/Decline (BELL-T-3) |
 
-**Verified:** 2026-10-07 · qa-development-2026-ss · `notifications/admin-pending-paging` PPG-T-4 on top of `quick/bell-popover-hidden`, `notifications/bell-read-state` BRS-T-6, `BELL-T-10`, `BELL-T-8`, `BELL-T-4`
+**Verified:** 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: account-menu Science programs rows render `initiativeLabel(item)` (`CODE - Name`, code alone when the name is missing); prior: 2026-10-07 · qa-development-2026-ss · `notifications/admin-pending-paging` PPG-T-4 on top of `quick/bell-popover-hidden`, `notifications/bell-read-state` BRS-T-6, `BELL-T-10`, `BELL-T-8`, `BELL-T-4`

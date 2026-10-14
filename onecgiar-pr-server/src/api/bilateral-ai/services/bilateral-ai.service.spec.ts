@@ -110,6 +110,10 @@ describe('BilateralAiService (unit)', () => {
     const clarisaProjectsRepository = {
       find: jest.fn().mockResolvedValue([]),
     };
+    // `PF2-T-3` (S3): batched `official_code -> name` lookup for the job's `program_name`.
+    const clarisaInitiativeRepository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
     const notificationsService = {
       notifyTerminal: jest.fn().mockResolvedValue(undefined),
     };
@@ -139,6 +143,7 @@ describe('BilateralAiService (unit)', () => {
       clarisaCentersRepository as any,
       clarisaInstitutionsRepository as any,
       clarisaProjectsRepository as any,
+      clarisaInitiativeRepository as any,
       notificationsService as any,
       evidenceTransferService as any,
       dispatchService as any,
@@ -166,6 +171,7 @@ describe('BilateralAiService (unit)', () => {
         clarisaCentersRepository,
         clarisaInstitutionsRepository,
         clarisaProjectsRepository,
+        clarisaInitiativeRepository,
         notificationsService,
         evidenceTransferService,
         dispatchService,
@@ -323,6 +329,7 @@ describe('BilateralAiService (unit)', () => {
       expect(result).toEqual({
         response: {
           ...mockJob,
+          program_name: null,
           queue_position: null,
           jobs_ahead: null,
           wait_reason: null,
@@ -436,6 +443,70 @@ describe('BilateralAiService (unit)', () => {
       const result = await service.getJob('j1', 42);
 
       expect(result.response.wait_reason).toBe('no_free_lane');
+    });
+
+    // `PF2-T-3` (S3, `PF2-R-4`): `program_name` on the single-job read.
+    it('adds program_name from the batched initiative lookup and leaves every other field untouched', async () => {
+      const { service, stubs } = makeService();
+      const mockJob = {
+        job_id: 'j1',
+        user_id: 42,
+        status: BilateralAiJobStatus.PROCESSING,
+        program_code: 'SP01',
+        project_id: 5,
+      };
+      stubs.jobRepository.findOne.mockResolvedValue(mockJob);
+      stubs.clarisaInitiativeRepository.find.mockResolvedValue([
+        {
+          id: 1,
+          official_code: 'SP01',
+          name: 'Breeding for Tomorrow',
+          active: true,
+        },
+      ]);
+
+      const result = await service.getJob('j1', 42);
+
+      expect(result.response).toEqual({
+        ...mockJob,
+        program_name: 'Breeding for Tomorrow',
+        queue_position: null,
+        jobs_ahead: null,
+        wait_reason: null,
+        max_attempts: 3,
+      });
+      expect(stubs.clarisaInitiativeRepository.find).toHaveBeenCalledTimes(1);
+    });
+
+    it('program_name is null on a miss and the job is still returned', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        user_id: 42,
+        status: BilateralAiJobStatus.FAILED,
+        program_code: 'XX9',
+      });
+      stubs.clarisaInitiativeRepository.find.mockResolvedValue([]);
+
+      const result = await service.getJob('j1', 42);
+
+      expect(result.response.program_name).toBeNull();
+      expect(result.response.program_code).toBe('XX9');
+    });
+
+    it('does not query initiatives when the job has no program_code', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        user_id: 42,
+        status: BilateralAiJobStatus.FAILED,
+        program_code: null,
+      });
+
+      const result = await service.getJob('j1', 42);
+
+      expect(result.response.program_name).toBeNull();
+      expect(stubs.clarisaInitiativeRepository.find).not.toHaveBeenCalled();
     });
 
     it('reads max_attempts from BILATERAL_AI_MAX_ATTEMPTS', async () => {
@@ -625,6 +696,7 @@ describe('BilateralAiService (unit)', () => {
           'project_id',
           'project_name',
           'program_code',
+          'program_name',
           'center_id',
           'center_acronym',
           'document_count',
@@ -741,6 +813,136 @@ describe('BilateralAiService (unit)', () => {
       expect(
         third.response.jobs.find((j: any) => j.job_id === 'mine').jobs_ahead,
       ).toBe(0);
+    });
+
+    // `PF2-T-3` (S3, `PF2-R-4`, `DD-4`): `program_name` from ONE batched lookup per response.
+    describe('program_name (PF2-T-3)', () => {
+      const initiative = (
+        id: number,
+        official_code: string,
+        name: string,
+        active: boolean,
+      ) => ({ id, official_code, name, active });
+
+      const callerJobs = () => [
+        baseJob({ job_id: 'a', user_id: 42, program_code: 'SP01' }),
+        baseJob({ job_id: 'b', user_id: 42, program_code: 'SP01' }),
+        baseJob({ job_id: 'c', user_id: 42, program_code: 'XX9' }),
+      ];
+
+      it('issues ONE lookup for [SP01, SP01, XX9] and yields Breeding, Breeding, null', async () => {
+        const { service, stubs } = makeService();
+        wireFixture(stubs, callerJobs());
+        stubs.clarisaInitiativeRepository.find.mockResolvedValue([
+          initiative(1, 'SP01', 'Breeding for Tomorrow', true),
+        ]);
+
+        const result = await service.listJobs({ id: 42 } as any);
+
+        expect(stubs.clarisaInitiativeRepository.find).toHaveBeenCalledTimes(1);
+        const arg = stubs.clarisaInitiativeRepository.find.mock.calls[0][0];
+        expect(arg.where.official_code.type).toBe('in');
+        expect([...arg.where.official_code.value].sort()).toEqual([
+          'SP01',
+          'XX9',
+        ]);
+        const byId = Object.fromEntries(
+          result.response.jobs.map((j: any) => [j.job_id, j.program_name]),
+        );
+        expect(byId).toEqual({
+          a: 'Breeding for Tomorrow',
+          b: 'Breeding for Tomorrow',
+          c: null,
+        });
+      });
+
+      it('prefers the active initiative when a code matches several portfolios', async () => {
+        const { service, stubs } = makeService();
+        wireFixture(stubs, [callerJobs()[0]]);
+        stubs.clarisaInitiativeRepository.find.mockResolvedValue([
+          initiative(1, 'SP01', 'Old Portfolio Name', false),
+          initiative(2, 'SP01', 'Breeding for Tomorrow', true),
+        ]);
+
+        const result = await service.listJobs({ id: 42 } as any);
+
+        expect(result.response.jobs[0].program_name).toBe(
+          'Breeding for Tomorrow',
+        );
+      });
+
+      it('gives null when two initiatives share the code and neither is active', async () => {
+        const { service, stubs } = makeService();
+        wireFixture(stubs, [callerJobs()[0]]);
+        stubs.clarisaInitiativeRepository.find.mockResolvedValue([
+          initiative(1, 'SP01', 'Name One', false),
+          initiative(2, 'SP01', 'Name Two', false),
+        ]);
+
+        const result = await service.listJobs({ id: 42 } as any);
+
+        expect(result.response.jobs[0].program_name).toBeNull();
+      });
+
+      it('gives null when two initiatives sharing the code are both active (still ambiguous)', async () => {
+        const { service, stubs } = makeService();
+        wireFixture(stubs, [callerJobs()[0]]);
+        stubs.clarisaInitiativeRepository.find.mockResolvedValue([
+          initiative(1, 'SP01', 'Name One', true),
+          initiative(2, 'SP01', 'Name Two', true),
+        ]);
+
+        const result = await service.listJobs({ id: 42 } as any);
+
+        expect(result.response.jobs[0].program_name).toBeNull();
+      });
+
+      it('keeps every existing job field deep-equal and adds program_name only', async () => {
+        const { service, stubs } = makeService();
+        const job = baseJob({
+          job_id: 'only',
+          user_id: 42,
+          program_code: 'SP01',
+          project_id: 10,
+          center_id: 7,
+        });
+        wireFixture(stubs, [job]);
+        stubs.clarisaProjectsRepository.find.mockResolvedValue([
+          { id: 10, shortName: 'Short', fullName: 'Full Project Name' },
+        ]);
+        stubs.clarisaInstitutionsRepository.find.mockResolvedValue([
+          { id: 7, acronym: 'AfricaRice' },
+        ]);
+
+        // Baseline: no initiative resolves -> program_name null, every other field as before.
+        stubs.clarisaInitiativeRepository.find.mockResolvedValue([]);
+        const before = (await service.listJobs({ id: 42 } as any)).response
+          .jobs[0];
+        stubs.clarisaInitiativeRepository.find.mockResolvedValue([
+          initiative(1, 'SP01', 'Breeding for Tomorrow', true),
+        ]);
+        const after = (await service.listJobs({ id: 42 } as any)).response
+          .jobs[0];
+
+        const { program_name: beforeName, ...beforeRest } = before;
+        const { program_name: afterName, ...afterRest } = after;
+        expect(beforeName).toBeNull();
+        expect(afterName).toBe('Breeding for Tomorrow');
+        expect(afterRest).toEqual(beforeRest);
+        // The pre-existing keys keep their order; program_name sits right after program_code.
+        expect(Object.keys(after).indexOf('program_name')).toBe(
+          Object.keys(after).indexOf('program_code') + 1,
+        );
+      });
+
+      it('skips the lookup entirely when the response has no jobs', async () => {
+        const { service, stubs } = makeService();
+        wireFixture(stubs, []);
+
+        await service.listJobs({ id: 42 } as any);
+
+        expect(stubs.clarisaInitiativeRepository.find).not.toHaveBeenCalled();
+      });
     });
 
     it('agrees with getJob on jobs_ahead, wait_reason and queue_position for the same PENDING job', async () => {

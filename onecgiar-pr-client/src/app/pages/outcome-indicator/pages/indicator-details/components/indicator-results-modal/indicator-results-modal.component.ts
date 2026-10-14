@@ -89,6 +89,7 @@ export class IndicatorResultsModalComponent {
             ...result,
             result_id: result.id,
             result_submitter: result.submitter,
+            result_submitter_name: result.submitter_name,
             is_active: true
           }
         ]

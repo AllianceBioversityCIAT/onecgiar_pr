@@ -467,6 +467,17 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/programs/${programId}/ready-counts`, { params });
   }
 
+  /**
+   * Progress Tracker activity per Reporting row for one program: every mapped (ToC indicator,
+   * center) of the active reporting version with its `matched` flag and evidence count, in ONE
+   * call (server-cached a few minutes). Feeds the Reporting tab's `PT · N` badges.
+   *
+   * ⚠️ Same `baseApiBaseUrl` note as `GET_progressTrackerResults` above.
+   */
+  GET_progressTrackerIndicatorActivity(programId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/programs/${encodeURIComponent(programId)}/indicator-activity`);
+  }
+
   // @akili-spec changes/kp-multi-repository-browse — KPM-R-9 / design §6.2
   /**
    * Facet values for one logical name, unioned over the selected repositories.
@@ -967,7 +978,7 @@ export class ResultsApiService {
     return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives, phases }).pipe(
       map(resp => {
         resp?.response.map(result => {
-          result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
+          result.full_name = `${result.result_title} ${result.result_code} ${result.official_code}${result.initiative_name ? ` ${result.initiative_name}` : ''} ${result.result_type_name}`;
           result.result_code = Number(result.result_code);
           result.completeness = Number(result.completeness);
           result.general_information_value = Number(result?.general_information?.value);

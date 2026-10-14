@@ -34,6 +34,13 @@ describe('ContributionToIndicatorsRepository', () => {
     expect(sql).toContain('from (SELECT 1) inner_q');
   });
 
+  it('_flattenedResultsQuery json_object does not expose result_submitter_name (PF2 DD-3)', () => {
+    const { repo } = makeRepo();
+    expect(repo._flattenedResultsQuery()).not.toContain(
+      'result_submitter_name',
+    );
+  });
+
   it('_getTocResultSubquery should generate SQL with outerRelationName', () => {
     const { repo } = makeRepo();
     const q = repo._getTocResultSubquery('eoi');

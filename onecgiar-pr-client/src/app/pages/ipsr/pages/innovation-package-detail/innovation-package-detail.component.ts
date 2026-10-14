@@ -7,6 +7,7 @@ import { SaveButtonService } from '../../../../custom-fields/save-button/save-bu
 import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-status.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { PrToastService } from 'src/app/shared/components/pr-toast';
+import { scienceProgramLabel } from '../../../../shared/utils/science-program-label.util';
 import { FieldsManagerService } from '../../../../shared/services/fields-manager.service';
 
 @Component({
@@ -29,6 +30,12 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     public dataControlSE: DataControlService,
     private readonly router: Router
   ) {}
+  /** P/A label `CODE - Name` for the header Submitter (the detail API returns `initiative_*`, not `official_code`). */
+  submitterLabel(): string {
+    const detail = this.ipsrDataControlSE.detailData;
+    return scienceProgramLabel(detail?.initiative_official_code ?? detail?.official_code, detail?.initiative_name);
+  }
+
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');

@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
+import { scienceProgramLabel } from '../../../../../../../../shared/utils/science-program-label.util';
 import { ScienceProgramAccess, PhaseDetailData } from './phase-detail.interface';
 
 @Component({
@@ -87,7 +88,7 @@ export class PhaseDetailComponent implements OnInit {
         this.api.dataControlSE.notifyReportingStatusChanged();
         this.customizedAlertsFeSE.show({
           id: 'sp-toggle',
-          title: `${program.official_code} ${program.reporting_enabled ? 'opened' : 'closed'}`,
+          title: `${scienceProgramLabel(program.official_code, program.name)} ${program.reporting_enabled ? 'opened' : 'closed'}`,
           status: 'success',
           closeIn: 500
         });

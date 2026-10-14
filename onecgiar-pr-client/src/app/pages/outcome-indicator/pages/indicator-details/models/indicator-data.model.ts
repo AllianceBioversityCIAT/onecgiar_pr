@@ -27,6 +27,7 @@ export class ContributingResult {
   phase_name: string;
   result_type: string;
   result_submitter: string;
+  result_submitter_name?: string | null;
   status_name: string;
   created_date: Date;
 }

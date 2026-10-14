@@ -204,6 +204,27 @@ export class IpsrRepository
                         ci.id = rbi.inititiative_id
                 )
             ) AS official_code,
+            IF(
+                (rbi.initiative_role_id = 2),
+                (
+                    SELECT
+                        ci2.name
+                    FROM
+                        clarisa_initiatives ci2
+                        LEFT JOIN results_by_inititiative rbi2 ON rbi2.inititiative_id = ci2.id
+                    WHERE
+                        rbi2.initiative_role_id = 1
+                        AND rbi2.result_id = r.id
+                ),
+                (
+                    SELECT
+                        ci.name
+                    FROM
+                        clarisa_initiatives ci
+                    WHERE
+                        ci.id = rbi.inititiative_id
+                )
+            ) AS initiative_name,
             r.created_date AS creation_date,
             (
                 SELECT
@@ -342,6 +363,14 @@ export class IpsrRepository
                 WHERE
                     ci.id = rbi.inititiative_id
             ) AS official_code,
+            (
+                SELECT
+                    ci.name
+                FROM
+                    clarisa_initiatives ci
+                WHERE
+                    ci.id = rbi.inititiative_id
+            ) AS initiative_name,
             r.created_date AS creation_date,
             (
                 SELECT
@@ -645,6 +674,8 @@ export class IpsrRepository
                     ci.id = rbi.inititiative_id
             ) AS official_code,
             ci.id AS submitter_id,
+            ci.name AS submitter_name,
+            ci.short_name AS submitter_short_name,
             rbi.inititiative_id AS initiative_id,
             rs.status_name AS status,
             r.reported_year_id,
@@ -861,6 +892,7 @@ export class IpsrRepository
             r.version_id,
         	rbi.inititiative_id as initiative_id,
         	ci.official_code as initiative_official_code,
+        	ci.name as initiative_name,
             rbi.is_active
         FROM
         	result_by_innovation_package rbip
@@ -913,6 +945,13 @@ export class IpsrRepository
                     clarisa_initiatives ci
                 WHERE ci.id = rbi.inititiative_id
             ) AS official_code,
+            (
+                SELECT
+                    ci.name
+                FROM
+                    clarisa_initiatives ci
+                WHERE ci.id = rbi.inititiative_id
+            ) AS initiative_name,
             r.version_id
         FROM
             result r

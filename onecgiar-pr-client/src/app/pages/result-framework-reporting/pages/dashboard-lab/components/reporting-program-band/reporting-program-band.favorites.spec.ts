@@ -105,4 +105,72 @@ describe('ReportingProgramBandComponent — favorites switch', () => {
     expect(onlyPendingEl).toBeTruthy();
     expect(onlyPendingEl!.nextElementSibling).toBe(switchEl());
   });
+
+  describe('With Progress Tracker activity switch', () => {
+    const ptSwitch = () => root().querySelector<HTMLButtonElement>('[data-testid="pt-activity-switch"]');
+
+    it('is not rendered while no activity is available (call failed, timed out or empty)', async () => {
+      await build({ ptActivityAvailable: false });
+      expect(ptSwitch()).toBeNull();
+    });
+
+    it('renders as a switch when activity is available and emits the flipped value', async () => {
+      await build({ ptActivityAvailable: true, ptActivityOnly: false });
+      const emitted: boolean[] = [];
+      component.ptActivityOnlyChange.subscribe((v: boolean) => emitted.push(v));
+
+      const el = ptSwitch()!;
+      expect(el.getAttribute('role')).toBe('switch');
+      expect(el.getAttribute('aria-checked')).toBe('false');
+      expect(el.textContent).toContain('With Progress Tracker activity');
+      el.click();
+      expect(emitted).toEqual([true]);
+    });
+
+    it('reflects the on state and is hidden in the By-AOW compact view', async () => {
+      await build({ ptActivityAvailable: true, ptActivityOnly: true });
+      expect(ptSwitch()!.getAttribute('aria-checked')).toBe('true');
+
+      fixture.componentRef.setInput('compactFilters', true);
+      fixture.detectChanges();
+      expect(ptSwitch()).toBeNull();
+    });
+
+    it('carries the full copy as tooltip and accessible name, with a short label below 1280px', async () => {
+      await build({ ptActivityAvailable: true });
+      const el = ptSwitch()!;
+      const full = el.querySelector('[data-testid="pt-activity-label-full"]')!;
+      const short = el.querySelector('[data-testid="pt-activity-label-short"]')!;
+
+      expect(el.getAttribute('aria-label')).toBe('With Progress Tracker activity');
+      expect(el.getAttribute('title')).toBe('With Progress Tracker activity');
+      expect(full.textContent!.trim()).toBe('With Progress Tracker activity');
+      expect(full.className).toContain('hidden');
+      expect(full.className).toContain('min-[1280px]:inline');
+      expect(short.textContent!.trim()).toBe('PT activity');
+      expect(short.className).toContain('min-[1280px]:hidden');
+    });
+  });
+
+  describe('toolbar layout', () => {
+    it('wraps the primary row and the filter group with a gap so controls never overlap the view controls', async () => {
+      await build({ ptActivityAvailable: true });
+      const row = root().querySelector<HTMLElement>('[data-testid="reporting-toolbar-primary"]')!;
+      const group = root().querySelector<HTMLElement>('[data-testid="reporting-filter-group"]')!;
+
+      for (const el of [row, group]) {
+        expect(el.classList).toContain('flex-wrap');
+        expect(el.classList).toContain('gap-x-[10px]');
+        expect(el.classList).toContain('gap-y-[8px]');
+      }
+    });
+
+    it('keeps the Video Guide button in the view-controls flow (not absolutely positioned)', async () => {
+      await build({ ptActivityAvailable: true });
+      const video = root().querySelector<HTMLElement>('[data-testid="reporting-video-guide-btn"]')!;
+
+      expect(video.parentElement!.getAttribute('data-testid')).toBe('reporting-view-controls');
+      expect(video.className).not.toMatch(/\b(absolute|fixed)\b/);
+    });
+  });
 });

@@ -1,5 +1,6 @@
 @let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name;
-@let initOfficialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
+<!-- The notification payload selects only `id` + `official_code` for `obj_initiative` (server `notification.service.ts`), so this is the code until the server also selects `name`. -->
+@let initOfficialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative | spLabel;
 <!-- resultUrl (component): review request = full review-drawer URL; decision = Result Detail, upgraded
      to the lead-center editor by (click); others unchanged. -->
 
