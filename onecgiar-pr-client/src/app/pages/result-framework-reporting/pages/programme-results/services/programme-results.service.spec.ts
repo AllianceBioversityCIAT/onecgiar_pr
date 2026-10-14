@@ -152,7 +152,9 @@ describe('ProgrammeResultsService', () => {
           submitterCode: 'SP01',
           // P2-3508 — the untouched item rides along so the "Update result" eligibility rule and
           // the phase modal can read the same object the old Results list reads.
-          raw: expect.objectContaining({ id: '8101', result_code: '5834' })
+          raw: expect.objectContaining({ id: '8101', result_code: '5834' }),
+          // PRP-T-1 — the mapper always sets it; the fixture carries no `is_replicated`.
+          isReplicated: false
         }
       ]);
     });
@@ -602,6 +604,34 @@ describe('ProgrammeResultsService', () => {
 
       const withoutFlag = toProgrammeResultRow(rawResult());
       expect(Object.prototype.hasOwnProperty.call(withoutFlag, 'plannedResult')).toBe(false);
+    });
+
+    // @akili-spec result-framework-reporting/programme-results-previously-reported (PRP-T-1, PRP-TEST-1, S-1.2, S-1.3)
+    describe('isReplicated', () => {
+      it.each([[1], ['1'], [true]])('maps is_replicated %p to true', value => {
+        expect(toProgrammeResultRow(rawResult({ is_replicated: value } as any)).isReplicated).toBe(true);
+      });
+
+      it.each([[0], ['0'], [null], [false], [2], ['']])('maps is_replicated %p to false', value => {
+        expect(toProgrammeResultRow(rawResult({ is_replicated: value } as any)).isReplicated).toBe(false);
+      });
+
+      it('maps an absent is_replicated key to false (always set, never undefined)', () => {
+        const row = toProgrammeResultRow(rawResult());
+        expect(row.isReplicated).toBe(false);
+      });
+
+      it('does not depend on the result category (S-1.3)', () => {
+        const innovation = toProgrammeResultRow(rawResult({ result_type: 'Innovation development', is_replicated: 1 } as any));
+        const knowledge = toProgrammeResultRow(rawResult({ result_type: 'Knowledge product', is_replicated: 1 } as any));
+        expect(innovation.isReplicated).toBe(true);
+        expect(knowledge.isReplicated).toBe(true);
+
+        const innovationOff = toProgrammeResultRow(rawResult({ result_type: 'Innovation development', is_replicated: '0' } as any));
+        const knowledgeOff = toProgrammeResultRow(rawResult({ result_type: 'Knowledge product', is_replicated: '0' } as any));
+        expect(innovationOff.isReplicated).toBe(false);
+        expect(knowledgeOff.isReplicated).toBe(false);
+      });
     });
   });
 });
