@@ -6,12 +6,27 @@ import { RolesService } from './shared/services/global/roles.service';
 import { ApiService } from './shared/services/api/api.service';
 import { FooterService } from './shared/components/footer/footer.service';
 import { LayoutService, SidebarLayout } from './shared/services/layout.service';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, NavigationError, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { ResultsNotificationsService } from './pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { SmartNavigationService } from './shared/services/smart-navigation.service';
 import { ScrollChromeService } from './shared/services/scroll-chrome.service';
+import { PrToastService } from './shared/components/pr-toast/pr-toast.service';
+import { LoggerService } from './shared/services/logger.service';
+import { STALE_BUNDLE_REFRESH_COPY } from './internationalization/stale-bundle-refresh.copy';
 // import { WebsocketService } from './sockets/websocket.service';
+
+/** `bugfix/stale-bundle-refresh-prompt` (`SBR-R-1`): key for the de-duped, sticky toast shown
+ *  when a browser tab still running a stale bundle fails to lazy-load a route chunk. */
+const STALE_BUNDLE_TOAST_KEY = 'stale-bundle-refresh';
+
+/** Known dynamic-import/chunk-load failure phrasings (design.md §6.2, `SBR-DD-1`). Regex-matched
+ *  against the error's message — not exhaustive of every browser's wording (design.md §13). */
+const STALE_BUNDLE_ERROR_PATTERNS: RegExp[] = [
+  /failed to fetch dynamically imported module/i,
+  /importing a module script failed/i,
+  /loading chunk [\w.-]+ failed/i
+];
 
 @Component({
   selector: 'app-root',
@@ -37,6 +52,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly resultsNotificationsSE = inject(ResultsNotificationsService);
   /** Constructed at bootstrap so result-detail Back can see the page the user left. */
   private readonly smartNav = inject(SmartNavigationService);
+  private readonly prToastSE = inject(PrToastService);
+  private readonly logger = inject(LoggerService);
 
   constructor(
     public AuthService: AuthService,
@@ -58,6 +75,18 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     // Sync once on bootstrap (first load may precede the first NavigationEnd).
     this.layoutSE.setSidebar(this.resolveSidebarFromRoute());
+
+    // SBR-T-1 (`bugfix/stale-bundle-refresh-prompt`, SBR-R-1/R-4): a tab still running a previous
+    // deploy's bundle has a lazy route chunk whose content-hashed filename no longer exists on the
+    // server once a new deploy ships; the Router surfaces the failed dynamic import() as a
+    // NavigationError. Re-evaluated on every qualifying event, not just the first in the session.
+    this.router.events.pipe(filter(event => event instanceof NavigationError)).subscribe((event: NavigationError) => {
+      if (!this.isStaleBundleError(event.error)) return;
+      this.logger.error(
+        `[StaleBundleRefresh] chunk-load failure navigating to "${event.url}": ${this.extractErrorMessage(event.error)}`
+      );
+      this.showStaleBundleBanner();
+    });
 
     Hotjar.init(environment.hotjarSiteId, environment.hotjarVersion);
     this.getGlobalParametersByCategory();
@@ -134,6 +163,34 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       this.resultsNotificationsSE.refreshBell();
     });
     this.api.dataControlSE.getCurrentPhases().subscribe();
+  }
+
+  /** `SBR-DD-1`: true when `error`'s message matches a known dynamic-import/chunk-load failure. */
+  private isStaleBundleError(error: unknown): boolean {
+    const message = this.extractErrorMessage(error);
+    return STALE_BUNDLE_ERROR_PATTERNS.some(pattern => pattern.test(message));
+  }
+
+  private extractErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    return typeof error === 'string' ? error : String(error ?? '');
+  }
+
+  /** `SBR-DD-2`/`SBR-DD-3`: reuse `PrToastService`, de-dup at the call site via the fixed key. */
+  private showStaleBundleBanner(): void {
+    const alreadyVisible = this.prToastSE.toasts().some(toast => toast.key === STALE_BUNDLE_TOAST_KEY);
+    if (alreadyVisible) return;
+
+    this.prToastSE.add({
+      key: STALE_BUNDLE_TOAST_KEY,
+      severity: 'warn',
+      sticky: true,
+      detail: STALE_BUNDLE_REFRESH_COPY.message,
+      action: {
+        label: STALE_BUNDLE_REFRESH_COPY.actionLabel,
+        run: () => window.location.reload()
+      }
+    });
   }
 
   private resolveSidebarFromRoute(): SidebarLayout | null {
