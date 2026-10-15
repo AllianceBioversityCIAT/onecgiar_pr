@@ -1,10 +1,10 @@
 # portfolio-overview
 
-**Verified:** 2026-09-14 · branch qa-development-2026-ss · spec bugfix/portfolio-overview-partial-counts
+**Verified:** 2026-10-14 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/remove-rankings-status-copy
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — reporting figures for the WHOLE
-portfolio in the open phase: a status strip, results by indicator category, a bilateral summary, and
-a science-program × category matrix. Ticket **P2-3304**; design block `showPortfolio` of
+portfolio in the open phase: a KPI deck, the status section, results by indicator category, a
+science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304**; design block `showPortfolio` of
 `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Contract
@@ -23,6 +23,21 @@ a science-program × category matrix. Ticket **P2-3304**; design block `showPort
 - Route: `extraRoutingApp` in `shared/routing/routing-data.ts`, `path: 'portfolio-overview'`,
   `canActivate: [CheckAdminGuard]`. **Guarded, not merely hidden** — the design gates it on
   `isAdmin`, and hiding a nav entry is never enough (client CLAUDE.md §7).
+
+- `kpis()` adds 8 breakdown fields: `w1w2New`, `w1w2NewSubmitted`, `w1w2NewEditing`, `w1w2Replicated` and the
+  same four as `bilateralNew…` / `bilateralReplicated`. **Replicated** = `is_replicated` ∈ `1 | '1' | true`;
+  anything else is **New**. **Editing** = `Number(status_id) === 1`; every other status (missing too) is
+  **Submitted**. Submitted + Editing = New, so New + Replicated reconciles to the source's count.
+
+## KPI deck (2026-10-14, spec `changes/portfolio-overview-kpi-breakdown`)
+
+- Three cards (the 4th, "Science programs", and `scrollToMatrixSection()` were removed):
+  1. **Total** — W1/W2 new, W3/Bilateral new, W1/W2 replicated, W3/Bilateral replicated (4 parts that
+     reconcile to the total), a translucent separator between the new and replicated pairs.
+  2. **W1/W2** — New → Submitted / Editing, separator, "Replicated from previous years".
+  3. **W3/Bilateral** — same shape, last line "Innovations replicated from 2025".
+- All 3 cards keep their click targets: card 1 `navigateToResultsCenter('all')`, card 2 `'w1w2'`, card 3 `'bilateral'`; test ids are `kpi-total-*`, `kpi-w1w2-*`,
+  `kpi-bilateral-*`.
 
 ## CGIAR Centers block (P2-3928, 7-Oct-2026)
 
@@ -85,6 +100,20 @@ a science-program × category matrix. Ticket **P2-3304**; design block `showPort
   spec `bugfix/portfolio-overview-partial-counts` (2026-09-14): with historical volume exceeding the
   page `LIMIT`, `total()` could read far lower than what was actually fetched, understating the
   banner's own "first N" claim.
+- ⚠️ **"Replicated" means `is_replicated`, not "innovation".** The card-3 label "Innovations replicated from
+  2025" assumes replicated W3 rows are innovations only (premise P-3, checked on prod 2026-10-14). If that
+  stops holding, change the label — the counter itself does not filter by result type.
+- 🛑 **`tests/mocks/spartanBrainMock.ts` must declare every input a Helm host directive re-exposes**, or NG0311:
+  `BrnSeparator` (`orientation`/`decorative`, deck) and `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/
+  `showDelay`/`tooltipDisabled`, Rejected tile).
+
+## Status section & removed rankings (2026-10-14, spec `…/remove-rankings-status-copy`)
+
+- Copy: `internationalization/portfolio-overview.copy.ts` (only what that spec added); donut caption is a
+  parameter. Rejected-tile hint: `statusHints` + `hlmTooltip`.
+- Guide link: `STATUS_GUIDE_URL` (`shared/constants/portfolio-links.constants.ts`), typed `string` (not `''`,
+  or templates narrow it to `never`). Empty = not rendered. Pending OQ-1: set it when the guide exists.
+- 🛑 **Removed on purpose:** the Program and Center ranking cards (stakeholder "competition" feedback). Do not re-add.
 
 ## Pending
 

@@ -16,6 +16,7 @@ import {
   KpRepository,
   RepositoryAdapter,
   escapeSolrQuery,
+  resolveProjectScope,
   translateParams,
 } from './repositories.config';
 import { dedupe, interleave } from './merge';
@@ -226,6 +227,11 @@ export class CgspaceDiscoveryService {
       center: dto.center ?? '',
       year: dto.year ?? '',
       project: dto.project ?? '',
+      // @akili-spec changes/kp-project-strict-filter
+      projectCode: dto.projectCode ?? '',
+      projectTitle: dto.projectTitle ?? '',
+      projectLeadCenter: dto.projectLeadCenter ?? '',
+      projectScope: dto.projectScope ?? '',
       repository,
     });
   }
@@ -352,6 +358,24 @@ export class CgspaceDiscoveryService {
       return {
         repository: adapter.key,
         status: 'unconfigured',
+        durationMs: Date.now() - start,
+      };
+    }
+
+    // @akili-spec changes/kp-project-strict-filter
+    // `linked` with a project too generic to constrain: deterministic empty page, no upstream call.
+    const projectScope = resolveProjectScope(dto);
+    if (projectScope?.scope === 'linked' && !projectScope.applied) {
+      return {
+        repository: adapter.key,
+        status: 'ok',
+        items: [],
+        page: {
+          number: dto.page ?? 0,
+          size: dto.size ?? 10,
+          totalElements: 0,
+          totalPages: 0,
+        },
         durationMs: Date.now() - start,
       };
     }
@@ -523,6 +547,8 @@ export class CgspaceDiscoveryService {
       outcome,
     });
 
+    const projectScope = resolveProjectScope(dto);
+
     // With no ok source, `items` is already empty and every total is 0 — the 502 branch differs
     // only in message/status, so the body is assembled once.
     return {
@@ -536,6 +562,14 @@ export class CgspaceDiscoveryService {
           hasMore: sources.some((source) => source.hasMore),
         },
         sources,
+        ...(projectScope
+          ? {
+              projectScope: {
+                scope: projectScope.scope,
+                applied: projectScope.applied,
+              },
+            }
+          : {}),
       },
       message: allFailed ? UNAVAILABLE_MESSAGE : SEARCH_RESULTS_MESSAGE,
       status: allFailed ? 502 : 200,

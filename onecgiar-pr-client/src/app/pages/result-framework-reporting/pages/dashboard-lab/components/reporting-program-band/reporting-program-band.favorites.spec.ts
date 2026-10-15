@@ -135,5 +135,42 @@ describe('ReportingProgramBandComponent — favorites switch', () => {
       fixture.detectChanges();
       expect(ptSwitch()).toBeNull();
     });
+
+    it('carries the full copy as tooltip and accessible name, with a short label below 1280px', async () => {
+      await build({ ptActivityAvailable: true });
+      const el = ptSwitch()!;
+      const full = el.querySelector('[data-testid="pt-activity-label-full"]')!;
+      const short = el.querySelector('[data-testid="pt-activity-label-short"]')!;
+
+      expect(el.getAttribute('aria-label')).toBe('With Progress Tracker activity');
+      expect(el.getAttribute('title')).toBe('With Progress Tracker activity');
+      expect(full.textContent!.trim()).toBe('With Progress Tracker activity');
+      expect(full.className).toContain('hidden');
+      expect(full.className).toContain('min-[1280px]:inline');
+      expect(short.textContent!.trim()).toBe('PT activity');
+      expect(short.className).toContain('min-[1280px]:hidden');
+    });
+  });
+
+  describe('toolbar layout', () => {
+    it('wraps the primary row and the filter group with a gap so controls never overlap the view controls', async () => {
+      await build({ ptActivityAvailable: true });
+      const row = root().querySelector<HTMLElement>('[data-testid="reporting-toolbar-primary"]')!;
+      const group = root().querySelector<HTMLElement>('[data-testid="reporting-filter-group"]')!;
+
+      for (const el of [row, group]) {
+        expect(el.classList).toContain('flex-wrap');
+        expect(el.classList).toContain('gap-x-[10px]');
+        expect(el.classList).toContain('gap-y-[8px]');
+      }
+    });
+
+    it('keeps the Video Guide button in the view-controls flow (not absolutely positioned)', async () => {
+      await build({ ptActivityAvailable: true });
+      const video = root().querySelector<HTMLElement>('[data-testid="reporting-video-guide-btn"]')!;
+
+      expect(video.parentElement!.getAttribute('data-testid')).toBe('reporting-view-controls');
+      expect(video.className).not.toMatch(/\b(absolute|fixed)\b/);
+    });
   });
 });

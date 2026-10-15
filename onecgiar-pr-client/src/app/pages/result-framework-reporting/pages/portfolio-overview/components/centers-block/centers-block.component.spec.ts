@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { PortfolioCentersBlockComponent } from './centers-block.component';
@@ -118,6 +119,37 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
     fixture.detectChanges();
     expect(component.selectedStatus()).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-testid="active-filter"]')).toBeNull();
+  });
+
+  it('the Centers ranking card is gone (no ranking-modes switch)', async () => {
+    const fixture = await create();
+    expect(fixture.nativeElement.querySelector('[data-testid="ranking-modes"]')).toBeNull();
+  });
+
+  it('the detail chart view is bound to detailTable() and a height from the rows (>= 10 Centers)', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ code: `CENTER-${i + 1}`, acronym: `C${i + 1}`, name: `Center ${i + 1}` }));
+    getCenters = jest.fn(() => Promise.resolve(many));
+    const fixture = await create();
+    const component = fixture.componentInstance;
+    component.detailMode.set('chart');
+    fixture.detectChanges();
+    const chart = fixture.debugElement.query(By.css('[data-testid="centers-detail-chart"]'));
+    expect(chart).not.toBeNull();
+    expect(component.loadedCenterRows()).toHaveLength(12);
+    expect(chart.componentInstance.tableModel()).toEqual(component.detailTable());
+    expect(chart.componentInstance.tableModel().caption).toBe('Progress by Center');
+    expect(component.detailHeight()).toBe('372px');
+    expect(chart.componentInstance.height()).toBe('372px');
+  });
+
+  it('toggling a status highlights its column in the default table view', async () => {
+    const fixture = await create();
+    fixture.componentInstance.toggleStatus(5);
+    fixture.detectChanges();
+    const headers: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="centers-table"] thead th'));
+    const index = 2 + fixture.componentInstance.columns().findIndex(column => column.id === 5);
+    expect(headers[index].className).toContain('bg-[var(--pr-color-primary-50)]');
+    expect(headers.filter(th => th.className.includes('bg-[var(--pr-color-primary-50)]'))).toHaveLength(1);
   });
 
   it('uses the four status columns of the Center Overview', async () => {

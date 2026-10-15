@@ -24,6 +24,8 @@ export interface RawResult {
   phase_name?: string;
   acronym?: string;
   version_id?: number | string;
+  /** Result already existed in an earlier phase. Same encodings as `programme-results.service.ts`. */
+  is_replicated?: number | string | boolean | null;
 }
 
 export interface AllResultsEnvelope {
@@ -42,6 +44,14 @@ export interface PortfolioKpis {
   activeProgramsCount: number;
   totalProgramsCount: number;
   portfolioProgressPercent: number;
+  w1w2New: number;
+  w1w2NewSubmitted: number;
+  w1w2NewEditing: number;
+  w1w2Replicated: number;
+  bilateralNew: number;
+  bilateralNewSubmitted: number;
+  bilateralNewEditing: number;
+  bilateralReplicated: number;
 }
 
 export interface PortfolioStatusSegment {
@@ -57,15 +67,6 @@ export interface CategoryOriginRow {
   category: string;
   w1w2Count: number;
   bilateralCount: number;
-  total: number;
-}
-
-export interface ProgramRankingRow {
-  code: string;
-  name: string;
-  editing: number;
-  submittedOrQa: number;
-  approved: number;
   total: number;
 }
 
@@ -236,6 +237,24 @@ export class PortfolioOverviewService {
     );
     const bilateralCentersCount = bilateralCenters.size;
 
+    const isReplicated = (r: RawResult): boolean =>
+      r.is_replicated === 1 || r.is_replicated === '1' || r.is_replicated === true;
+    const tally = (rows: RawResult[]) => {
+      let newRows = 0;
+      let newEditing = 0;
+      let replicated = 0;
+      for (const r of rows) {
+        if (isReplicated(r)) replicated++;
+        else {
+          newRows++;
+          if (Number(r.status_id) === 1) newEditing++;
+        }
+      }
+      return { newRows, newEditing, newSubmitted: newRows - newEditing, replicated };
+    };
+    const w1w2Tally = tally(w1w2Rows);
+    const bilateralTally = tally(bilateralRows);
+
     const activePrograms = new Set(allRows.map(r => text(r.submitter)).filter(Boolean));
     const activeProgramsCount = activePrograms.size;
     const totalProgramsCount = 13;
@@ -266,7 +285,15 @@ export class PortfolioOverviewService {
       bilateralCentersCount,
       activeProgramsCount,
       totalProgramsCount,
-      portfolioProgressPercent
+      portfolioProgressPercent,
+      w1w2New: w1w2Tally.newRows,
+      w1w2NewSubmitted: w1w2Tally.newSubmitted,
+      w1w2NewEditing: w1w2Tally.newEditing,
+      w1w2Replicated: w1w2Tally.replicated,
+      bilateralNew: bilateralTally.newRows,
+      bilateralNewSubmitted: bilateralTally.newSubmitted,
+      bilateralNewEditing: bilateralTally.newEditing,
+      bilateralReplicated: bilateralTally.replicated
     };
   });
 
@@ -315,46 +342,6 @@ export class PortfolioOverviewService {
         total: w1w2Count + bilateralCount
       };
     });
-  });
-
-  /**
-   * Science Programs Output Ranking (POV-R-4)
-   */
-  readonly programRankingRows = computed<ProgramRankingRow[]>(() => {
-    const byProgramme = new Map<string, RawResult[]>();
-    for (const row of this.rows()) {
-      const code = text(row.submitter);
-      if (!code) continue;
-      byProgramme.set(code, [...(byProgramme.get(code) ?? []), row]);
-    }
-
-    return [...byProgramme.entries()]
-      .map(([code, items]) => {
-        let editing = 0;
-        let submittedOrQa = 0;
-        let approved = 0;
-
-        for (const item of items) {
-          const slot = resolveStatusSlot(item);
-          if (slot === 'editing') {
-            editing++;
-          } else if (slot === 'in-qa' || slot === 'submitted') {
-            submittedOrQa++;
-          } else if (slot === 'approved') {
-            approved++;
-          }
-        }
-
-        return {
-          code,
-          name: this.programmeName(code),
-          editing,
-          submittedOrQa,
-          approved,
-          total: items.length
-        };
-      })
-      .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
   });
 
   /**

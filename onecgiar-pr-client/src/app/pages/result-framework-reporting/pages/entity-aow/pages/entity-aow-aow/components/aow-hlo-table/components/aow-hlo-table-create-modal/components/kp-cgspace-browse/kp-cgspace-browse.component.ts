@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideCircleCheck, lucideGlobe, lucideRefreshCw, lucideSplit, lucideTriangleAlert } from '@ng-icons/lucide';
-import { catchError, debounceTime, defer, distinctUntilChanged, finalize, map, of, retry, Subject, Subscription, switchMap, tap, timer } from 'rxjs';
+import { catchError, debounceTime, defer, distinctUntilChanged, finalize, map, merge, of, retry, Subject, Subscription, switchMap, tap, timer } from 'rxjs';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
 import {
@@ -70,15 +70,6 @@ function compactMatchString(str: string): string {
   return str.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-/** Repository metadata field bilateral project highlight reads (KPPJ). */
-export const REPOSITORY_PROJECT_METADATA_FIELD = 'cg.identifier.project';
-
-/** User-facing label for bilateral project card fields (code, title, summary, …). */
-export const BILATERAL_PROJECT_SOURCE_LABEL = 'Bilateral Mapping Tool';
-
-/** Hosts that expose a Discovery `f.project` facet for the strict bilateral tag filter. */
-export const REPOSITORY_PROJECT_FACET_HOSTS = 'MELSpace and WorldFish';
-
 /** Repository metadata field Science Program highlight reads (KPAM). */
 export const REPOSITORY_PROGRAM_METADATA_FIELD = 'cg.contributor.programAccelerator';
 
@@ -87,75 +78,6 @@ export interface KpBrowseActiveFilterDescriptor {
   label: string;
   detail: string;
   tone: 'locked' | 'active' | 'inactive' | 'neutral';
-}
-
-/** Expands a CLARISA text field into phrases worth fuzzy-matching against repository tags. */
-function deriveMatchPhrases(value: string): string[] {
-  const expanded = expandCompactIdentifiers(value.trim());
-  if (!expanded) {
-    return [];
-  }
-
-  const phrases = new Set<string>([expanded]);
-  const words = normalizeMatchString(expanded).split(' ').filter(Boolean);
-  if (words.length >= 2) {
-    phrases.add(words.slice(0, 2).join(' '));
-  }
-  if (words.length >= 3) {
-    phrases.add(words.slice(0, 3).join(' '));
-  }
-
-  return [...phrases];
-}
-
-/** Bilateral-only — CLARISA project fields that may align with cg.identifier.project labels. */
-export function buildProjectMatchCandidates(options: {
-  projectCode?: string;
-  projectTitle?: string;
-  projectSummary?: string;
-  projectDescription?: string;
-  leadCenterAcronym?: string;
-}): string[] {
-  const seen = new Set<string>();
-  const candidates: string[] = [];
-
-  const push = (raw: string | undefined | null) => {
-    for (const phrase of deriveMatchPhrases(raw ?? '')) {
-      const key = phrase.toLowerCase();
-      if (phrase.length >= 3 && !seen.has(key)) {
-        seen.add(key);
-        candidates.push(phrase);
-      }
-    }
-  };
-
-  push(options.projectCode);
-  push(options.projectTitle);
-  push(options.projectSummary);
-  push(options.projectDescription);
-
-  const acronym = (options.leadCenterAcronym ?? '').trim();
-  const title = expandCompactIdentifiers((options.projectTitle ?? '').trim());
-  const summary = expandCompactIdentifiers((options.projectSummary ?? '').trim());
-  if (acronym && title) {
-    push(`${acronym} - ${title}`);
-  }
-  if (acronym && summary) {
-    push(`${acronym} - ${summary}`);
-  }
-
-  return candidates;
-}
-
-export function matchesProjectTags(tags: string[] | undefined, candidates: string[]): boolean {
-  if (!tags?.length || !candidates.length) {
-    return false;
-  }
-
-  return candidates.some(
-    candidate =>
-      matchesTaggedMetadata(tags, candidate, '') || matchesTaggedMetadata(tags, '', candidate)
-  );
 }
 
 function matchesTaggedMetadata(
@@ -234,6 +156,30 @@ export interface KpRepositoryChip {
 
 /** `KPM-R-2` — accessible reason why the last selected chip cannot be turned off. */
 export const KP_LAST_REPOSITORY_TITLE = 'At least one repository must stay selected';
+
+/** Lifecycle of one result list (the related list and, in the project-scoped browse, the linked list). */
+export type KpBrowseStatus = 'idle' | 'loading' | 'empty' | 'error' | 'results';
+
+/** `projectScope` request value and response echo (`KPSF` design §7). */
+export type KpProjectScope = 'linked' | 'related';
+
+// @akili-spec changes/kp-project-strict-filter — KPSF-R-3 / R-5 / R-11 / R-12: copy of the two-section browse
+export const KP_BROWSE_COPY = {
+  linkedHeading: 'KPs linked to the project',
+  relatedHeading: 'Other KPs potentially related',
+  linkedInfo: "Linked KPs are repository items whose project field contains this project's title words or PJ code.",
+  proxyNote: 'These KPs are not tagged with this project. They match your search, so the relation is approximate.',
+  proxyMarker: 'Proxy',
+  linkedEmptyTitle: 'No linked KPs',
+  relatedEmptyTitle: 'No other KPs found for this search',
+  linkedNotApplied: 'This project has no title words or PJ code the repositories can be matched on, so no linked KPs can be listed. See the potentially related KPs below.',
+  linkedLoading: 'Searching KPs linked to the project…',
+  relatedLoading: 'Searching potentially related KPs…',
+  sectionError: 'This list is temporarily unavailable.',
+  minChars: 'Please enter at least 3 characters to search the selected repositories.',
+  minCharsClear: 'Clear the text to see the KPs linked to this project.',
+  scopedIdle: 'Search CGSpace, MELSpace and WorldFish by title, author, or DOI.'
+} as const;
 
 export interface FacetOption {
   label: string;
@@ -385,11 +331,18 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   // @akili-spec changes/kp-project-match — KPPJ-R-3
   readonly projectCode = input<string>('');
   readonly projectTitle = input<string>('');
-  /** Bilateral-only CLARISA fields used to fuzzy-match cg.identifier.project. */
+  /**
+   * Kept so existing bilateral consumers still compile; the browse no longer reads them
+   * (the project fuzzy matcher was removed, `KPSF-DD-5`).
+   */
   readonly projectSummary = input<string>('');
   readonly projectDescription = input<string>('');
+  /** Bilateral-only; sent as `projectLeadCenter` (excluded server-side from the distinctive words). */
   readonly leadCenterAcronym = input<string>('');
-  /** Bilateral/W3 only — shows the repository `f.project` facet filter chip. */
+  /**
+   * Bilateral/W3 only — turns on the project-scoped (linked / related) browse.
+   * Input name kept for the existing bilateral bindings; it no longer shows a facet chip.
+   */
   readonly enableProjectRepositoryFilter = input<boolean>(false);
 
   // Outputs
@@ -403,13 +356,26 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly selectedYear = signal<number | string | null>(null);
   // @akili-spec changes/kp-program-accelerator-match — KPAM-R-7 / KPAM-DD-4
   readonly onlyMatches = signal<boolean>(false);
-  // @akili-spec changes/kp-project-match — bilateral Solr project facet filter (opt-in: CLARISA labels rarely match repository facets)
-  readonly projectRepositoryFilterOn = signal<boolean>(false);
+  // @akili-spec changes/kp-project-strict-filter — KPSF-DD-4: `items` / `total` / `page` / `status` / `hasMore` /
+  // `sources` are the RELATED (unconstrained, minus linked) list in the project-scoped browse, and the single
+  // list everywhere else. The linked-scope state below is only ever filled in the project-scoped browse.
   readonly items = signal<CgspaceItemDto[]>([]);
   readonly total = signal<number>(0);
   readonly page = signal<number>(0);
-  readonly status = signal<'idle' | 'loading' | 'empty' | 'error' | 'results'>('idle');
+  readonly status = signal<KpBrowseStatus>('idle');
   readonly loadingMore = signal<boolean>(false);
+  // @akili-spec changes/kp-project-strict-filter — design §9 client state (linked scope)
+  /** Section 1: items tagged with the project (`projectScope=linked`). */
+  readonly linkedItems = signal<CgspaceItemDto[]>([]);
+  readonly linkedTotal = signal<number>(0);
+  readonly linkedPage = signal<number>(0);
+  readonly linkedHasMore = signal<boolean>(false);
+  readonly linkedStatus = signal<KpBrowseStatus>('idle');
+  readonly linkedLoadingMore = signal<boolean>(false);
+  /** `projectScope.applied` of the last linked response; `false` = the project is not usable server-side (KPSF-R-9). */
+  readonly linkedApplied = signal<boolean>(true);
+  /** `sources[]` of the last linked response (KPM-R-6 per scope). */
+  readonly linkedSources = signal<SourceStatusDto[]>([]);
   // @akili-spec changes/kp-multi-repository-browse — KPM-R-20
   /** `page.hasMore` of the last response; drives *Load more* visibility (never `items().length < total()`). */
   readonly hasMore = signal<boolean>(false);
@@ -443,13 +409,18 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly repositoryChips = computed<KpRepositoryChip[]>(() => {
     const selected = this.selectedRepositories();
     const sources = this.sources();
+    // KPSF-R-4: in the two-scope browse a repository is unavailable if it failed in EITHER scope,
+    // and its count is linked + related (the related list already excludes the linked items).
+    const linkedSources = this.isProjectScoped() ? this.linkedSources() : [];
     const isLastSelected = selected.length === 1;
 
     return this.allRepositories.map(key => {
       const meta = KP_REPOSITORIES[key];
       const isSelected = selected.includes(key);
-      const source = isSelected ? sources.find(s => s.repository === key) : undefined;
-      const status = source?.status ?? null;
+      const answers = isSelected
+        ? [sources.find(s => s.repository === key), linkedSources.find(s => s.repository === key)].filter((s): s is SourceStatusDto => !!s)
+        : [];
+      const status = (answers.find(s => s.status !== 'ok') ?? answers[0])?.status ?? null;
       // KPM-R-6: a failed source reads "unavailable", never "0".
       const unavailable = status !== null && status !== 'ok';
       const disabled = isSelected && isLastSelected;
@@ -457,8 +428,8 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       let countLabel: string | null = null;
       if (unavailable) {
         countLabel = 'unavailable';
-      } else if (status === 'ok' && source) {
-        countLabel = String(source.total ?? 0);
+      } else if (status === 'ok') {
+        countLabel = String(answers.reduce((sum, s) => sum + (s.total ?? 0), 0));
       }
 
       let title: string | null = null;
@@ -496,7 +467,14 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   /** Selected repositories whose last response failed (`timeout | error | unconfigured`), KPM-R-7. */
   readonly failedSources = computed<SourceStatusDto[]>(() => {
     const selected = this.selectedRepositories();
-    return this.sources().filter(source => selected.includes(source.repository) && source.status !== 'ok');
+    const failed = this.sources().filter(source => selected.includes(source.repository) && source.status !== 'ok');
+    // KPSF design §10: each scope keeps its own `sources[]`; a repository failing in either one is unavailable.
+    for (const source of this.linkedSources()) {
+      if (selected.includes(source.repository) && source.status !== 'ok' && !failed.some(f => f.repository === source.repository)) {
+        failed.push(source);
+      }
+    }
+    return failed;
   });
 
   /** `<Repo> a · <Repo> b …` over the selected repositories that answered `ok` (`KPM-R-4`). */
@@ -524,96 +502,34 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     );
   }
 
-  readonly projectMatchCandidates = computed(() =>
-    buildProjectMatchCandidates({
-      projectCode: this.projectCode(),
-      projectTitle: this.projectTitle(),
-      projectSummary: this.projectSummary(),
-      projectDescription: this.projectDescription(),
-      leadCenterAcronym: this.leadCenterAcronym()
-    })
-  );
-
-  // @akili-spec changes/kp-project-match — KPPJ-R-4
-  matchesProject(item: CgspaceItemDto): boolean {
-    return matchesProjectTags(item?.projects, this.projectMatchCandidates());
-  }
-
-  readonly hasProjectContext = computed(
-    () =>
-      this.projectMatchCandidates().length > 0 ||
-      !!(this.projectCode()?.trim() || this.projectTitle()?.trim())
-  );
+  /** The bilateral project has something the server can scope by (KPSF-R-9: `projectScope` needs a code or a title). */
+  readonly hasProjectContext = computed(() => !!(this.projectCode()?.trim() || this.projectTitle()?.trim()));
 
   readonly hasProgramContext = computed(
     () => !!(this.programCode()?.trim() || this.programName()?.trim())
   );
 
+  /** Short project label for the linked badge (T-4): the code, else the title. */
   readonly projectMatchLabel = computed(
     () => this.projectCode()?.trim() || this.projectTitle()?.trim() || ''
   );
 
-  /** Exact Discovery facet label sent as `project=` when the bilateral filter is active. */
-  readonly projectRepositoryFilterValue = computed(() => {
-    const code = this.projectCode()?.trim() ?? '';
-    const title = this.projectTitle()?.trim() ?? '';
-    if (code && title) {
-      return `${code} - ${title}`;
-    }
-    return code || title;
-  });
-
-  readonly showProjectRepositoryFilterChip = computed(
-    () =>
-      this.enableProjectRepositoryFilter() &&
-      !!this.projectRepositoryFilterValue()
-  );
-
   /** Bilateral manual-create drawer only — Programme Results browse leaves this false. */
+  /** Full project name for the empty-linked state (KPSF-R-5): code · title. */
+  readonly projectDisplayLabel = computed(() => [this.projectCode()?.trim(), this.projectTitle()?.trim()].filter(Boolean).join(' · '));
+
+  /** Copy constants for the template. */
+  readonly copy = KP_BROWSE_COPY;
+
   readonly isBilateralBrowse = computed(() => this.enableProjectRepositoryFilter());
 
-  readonly repositoryProjectMetadataField = REPOSITORY_PROJECT_METADATA_FIELD;
-  readonly bilateralProjectSourceLabel = BILATERAL_PROJECT_SOURCE_LABEL;
-
-  readonly projectMatchMetadataExplanation = computed(
-    () =>
-      `Project highlight applies only when repository metadata includes ${REPOSITORY_PROJECT_METADATA_FIELD}. ` +
-      `Repository labels are often free text (for example "IRRI - USDA Fertilize Right Project") and may not include your ${BILATERAL_PROJECT_SOURCE_LABEL} project code or title.`
-  );
-
-  /** Info notice when results exist but none carry a matching project tag. */
-  readonly projectMatchZeroNoticeBody = computed(() => {
-    const queryText = (this.query() || '').trim();
-    const parts: string[] = [
-      'The items below still matched your search and filters — only the project tag highlight found no matches.'
-    ];
-
-    if (queryText) {
-      parts.push(
-        `Search text "${queryText}" matches title, author, or DOI in the selected repositories; it does not require a project tag.`
-      );
-    }
-
-    parts.push(this.projectMatchMetadataExplanation());
-
-    if (this.matchCount() > 0) {
-      const programLabel = this.programName()?.trim() || this.programCode()?.trim() || 'your Science Program';
-      parts.push(
-        `Badges such as "Matches ${programLabel}" refer to your Science Program highlight (${REPOSITORY_PROGRAM_METADATA_FIELD}), not project tags.`
-      );
-    }
-
-    return parts.join(' ');
-  });
-
-  readonly showProjectMatchZeroNotice = computed(
-    () =>
-      this.isBilateralBrowse() &&
-      this.hasProjectContext() &&
-      this.status() === 'results' &&
-      this.items().length > 0 &&
-      this.projectMatchCount() === 0
-  );
+  // @akili-spec changes/kp-project-strict-filter — KPSF-R-3 / KPSF-R-10
+  /**
+   * Two-scope (linked + related) browse. Needs the bilateral context AND a usable project:
+   * a `projectScope` without code or title is a 400 server-side. Everything else is a single list
+   * that sends no project parameter (KPSF-R-10).
+   */
+  readonly isProjectScoped = computed(() => this.isBilateralBrowse() && this.hasProjectContext());
 
   readonly activeFilterDescriptors = computed<KpBrowseActiveFilterDescriptor[]>(() => {
     const filters: KpBrowseActiveFilterDescriptor[] = [];
@@ -665,38 +581,11 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       const code = this.projectCode()?.trim() ?? '';
       const title = this.projectTitle()?.trim() ?? '';
       const contextDetail = [code, title].filter(Boolean).join(' · ');
-      const bmtProjectFields = [
-        this.projectCode()?.trim() && 'code',
-        this.projectTitle()?.trim() && 'title',
-        this.projectSummary()?.trim() && 'summary',
-        this.projectDescription()?.trim() && 'description',
-        this.leadCenterAcronym()?.trim() && 'lead center'
-      ]
-        .filter(Boolean)
-        .join(', ');
       filters.push({
-        key: 'project-highlight',
-        label: 'Project highlight',
-        detail: `${contextDetail} — fuzzy match on ${REPOSITORY_PROJECT_METADATA_FIELD} using ${BILATERAL_PROJECT_SOURCE_LABEL} ${bmtProjectFields || 'fields'}; ranks tagged items first; does not hide other items`,
+        key: 'project-scope',
+        label: 'Project',
+        detail: `${contextDetail} — KPs tagged with this project are listed first; other KPs follow separately as potentially related (proxy)`,
         tone: 'neutral'
-      });
-    }
-
-    if (this.isProjectRepositoryFilterActive()) {
-      filters.push({
-        key: 'project-repository-tag',
-        label: 'Filter by project tag',
-        detail:
-          `ON — exact tag "${this.projectRepositoryFilterValue()}" on ${REPOSITORY_PROJECT_FACET_HOSTS}; ` +
-          'CGSpace uses highlight matching only',
-        tone: 'active'
-      });
-    } else {
-      filters.push({
-        key: 'project-repository-tag',
-        label: 'Filter by project tag',
-        detail: 'OFF — search is not limited to an exact project tag in the repository index',
-        tone: 'inactive'
       });
     }
 
@@ -722,21 +611,8 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       );
     }
 
-    if (this.isProjectRepositoryFilterActive()) {
-      hints.push(
-        'Filter by project tag is ON and requires an exact project label in the repository index. Turn it OFF to search more broadly.'
-      );
-    }
-
     if (!this.isAdmin()) {
       hints.push(`Reporting year ${this.phaseYear()} is always applied for bilateral results.`);
-    }
-
-    if (this.isBilateralBrowse() && this.hasProjectContext()) {
-      hints.push(this.projectMatchMetadataExplanation());
-      hints.push(
-        `Science Program highlights use ${REPOSITORY_PROGRAM_METADATA_FIELD} and often match more often than project tags.`
-      );
     }
 
     const queryText = (this.query() || '').trim();
@@ -754,72 +630,30 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     if (!this.hasProgramContext()) {
       return 0;
     }
-    return this.items().filter(item => this.matchesProgram(item)).length;
+    // KPSF design §9: the SP match counts over both lists (the linked list is empty outside the project-scoped browse).
+    return [...this.items(), ...this.linkedItems()].filter(item => this.matchesProgram(item)).length;
   });
-
-  // @akili-spec changes/kp-project-match — KPPJ-R-6
-  readonly projectMatchCount = computed<number>(() => {
-    if (!this.hasProjectContext()) {
-      return 0;
-    }
-    return this.items().filter(item => this.matchesProject(item)).length;
-  });
-
-  readonly contextualMatchCount = computed<number>(() => {
-    const raw = this.items();
-    if (this.hasProjectContext() && this.hasProgramContext()) {
-      return raw.filter(item => this.matchesProject(item) || this.matchesProgram(item)).length;
-    }
-    if (this.hasProjectContext()) {
-      return this.projectMatchCount();
-    }
-    return this.matchCount();
-  });
-
-  matchesContextually(item: CgspaceItemDto): boolean {
-    if (this.hasProjectContext() && this.hasProgramContext()) {
-      return this.matchesProject(item) || this.matchesProgram(item);
-    }
-    if (this.hasProjectContext()) {
-      return this.matchesProject(item);
-    }
-    return this.matchesProgram(item);
-  }
 
   // @akili-spec changes/kp-program-accelerator-match — KPAM-R-5 / KPAM-R-6 / KPAM-DD-1
-  // @akili-spec changes/kp-project-match — KPPJ-R-7 / KPPJ-R-8 / KPPJ-DD-4
-  readonly displayItems = computed<CgspaceItemDto[]>(() => {
-    const raw = this.items();
+  // @akili-spec changes/kp-project-strict-filter — design §9: SP soft-sort and "matches only" stay SP-only, within each list
+  /** SP matches first (order preserved), or only the SP matches when "Show matches only" is on. */
+  private applyProgramMatch(raw: CgspaceItemDto[]): CgspaceItemDto[] {
     if (this.onlyMatches()) {
-      if (this.hasProjectContext() && this.hasProgramContext()) {
-        return raw.filter(item => this.matchesProject(item) || this.matchesProgram(item));
-      }
-      if (this.hasProjectContext()) {
-        return raw.filter(item => this.matchesProject(item));
-      }
       return raw.filter(item => this.matchesProgram(item));
     }
-
-    if (this.contextualMatchCount() === 0) {
-      return raw;
-    }
-
-    const projectMatches: CgspaceItemDto[] = [];
-    const spOnlyMatches: CgspaceItemDto[] = [];
+    const matches: CgspaceItemDto[] = [];
     const others: CgspaceItemDto[] = [];
-
     for (const item of raw) {
-      if (this.hasProjectContext() && this.matchesProject(item)) {
-        projectMatches.push(item);
-      } else if (this.hasProgramContext() && this.matchesProgram(item)) {
-        spOnlyMatches.push(item);
-      } else {
-        others.push(item);
-      }
+      (this.matchesProgram(item) ? matches : others).push(item);
     }
+    return matches.length === 0 ? raw : [...matches, ...others];
+  }
 
-    return [...projectMatches, ...spOnlyMatches, ...others];
-  });
+  /** Related list (and the single list outside the project-scoped browse). */
+  readonly displayItems = computed<CgspaceItemDto[]>(() => this.applyProgramMatch(this.items()));
+
+  /** Linked list (section 1 of the project-scoped browse). */
+  readonly displayLinkedItems = computed<CgspaceItemDto[]>(() => this.applyProgramMatch(this.linkedItems()));
 
   /** Natural-language join ("A", "A and B", "A, B and C") for the error/empty copy (`KPM-R-7`, `KPM-R-11`). */
   private formatRepositoryList(labels: string[]): string {
@@ -844,7 +678,13 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   /** Minimum free-text length before a query is sent upstream (R-2, AC-8). */
   readonly MIN_QUERY_LENGTH = 3;
 
-  private readonly searchTrigger$ = new Subject<{ page: number; append: boolean; immediate: boolean }>();
+  /** `scope`: `all` = a reset (both lists in the project-scoped browse); `linked` / `related` = one list's *Load more*. */
+  private readonly searchTrigger$ = new Subject<{
+    page: number;
+    append: boolean;
+    immediate: boolean;
+    scope: KpProjectScope | 'all';
+  }>();
   private searchSubscription?: Subscription;
 
   /** Center prefix type-ahead (design §4.1): debounced facet reload with `prefix`. */
@@ -873,6 +713,11 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     this.initCenterTypeAhead();
     this.initFacetReloadPipeline();
     this.initSearchPipeline();
+
+    // @akili-spec changes/kp-project-strict-filter — KPSF-R-13: the linked KPs show on open, no text or type needed.
+    if (this.isProjectScoped() && this.canSearch()) {
+      this.runSearch(0, false);
+    }
   }
 
   ngOnDestroy(): void {
@@ -977,6 +822,48 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       });
   }
 
+  // @akili-spec changes/kp-project-strict-filter — design §4 / §9: scoped fetch
+  /**
+   * The requests one trigger issues. Project-scoped browse: a reset fires linked + related in parallel
+   * (both page 0, same text/type/center/year); *Load more* fires only its own scope. Otherwise: one request,
+   * with no project parameter (KPSF-R-10).
+   */
+  private buildScopedRequests(req: { page: number; scope: KpProjectScope | 'all' }): { scope: KpProjectScope; params: Record<string, any> }[] {
+    if (!this.isProjectScoped()) {
+      return [{ scope: 'related', params: this.buildSearchParams(req.page) }];
+    }
+    if (req.scope === 'all') {
+      return [
+        { scope: 'linked', params: this.buildSearchParams(0, 'linked') },
+        { scope: 'related', params: this.buildSearchParams(0, 'related') }
+      ];
+    }
+    return [{ scope: req.scope, params: this.buildSearchParams(req.page, req.scope) }];
+  }
+
+  /** The signals one scope writes to: the related list doubles as the single list outside the project-scoped browse. */
+  private scopeState(scope: KpProjectScope) {
+    return scope === 'linked'
+      ? {
+          items: this.linkedItems,
+          total: this.linkedTotal,
+          page: this.linkedPage,
+          hasMore: this.linkedHasMore,
+          status: this.linkedStatus,
+          loadingMore: this.linkedLoadingMore,
+          sources: this.linkedSources
+        }
+      : {
+          items: this.items,
+          total: this.total,
+          page: this.page,
+          hasMore: this.hasMore,
+          status: this.status,
+          loadingMore: this.loadingMore,
+          sources: this.sources
+        };
+  }
+
   private initSearchPipeline(): void {
     this.searchSubscription = this.searchTrigger$
       .pipe(
@@ -986,81 +873,96 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
           }
           return timer(400).pipe(map(() => req));
         }),
-        map(req => ({ req, params: this.buildSearchParams(req.page) })),
+        map(req => ({ req, requests: this.buildScopedRequests(req) })),
         // Design §6.2: identical debounced params do not re-fire; an explicit Enter/Load more always runs.
         distinctUntilChanged(
-          (prev, curr) => !curr.req.immediate && JSON.stringify(prev.params) === JSON.stringify(curr.params)
+          (prev, curr) =>
+            !curr.req.immediate &&
+            JSON.stringify(prev.requests.map(r => r.params)) === JSON.stringify(curr.requests.map(r => r.params))
         ),
-        switchMap(({ req, params }) => {
-          if (!req.append) {
-            this.status.set('loading');
-          }
-          this.page.set(req.page);
-
-          // @akili-spec changes/kp-cgspace-search-retry
-          return defer(() => this.resultsApiSE.GET_cgspaceSearch(params)).pipe(
-            map(res => {
-              // KCSR-R-1: proxy returns HTTP 200 with body { status: 502 } — treat as failure
-              const bodyStatus: number | undefined = (res as any)?.response?.status ?? (res as any)?.response?.statusCode ?? (res as any)?.status ?? (res as any)?.statusCode;
-              if (bodyStatus !== undefined && bodyStatus >= 400) {
-                throw new Error(`Repository proxy error: ${bodyStatus}`);
+        switchMap(({ req, requests }) => {
+          for (const { scope, params } of requests) {
+            const state = this.scopeState(scope);
+            if (!req.append) {
+              state.status.set('loading');
+              if (scope === 'linked') {
+                this.linkedApplied.set(true);
               }
-              return res;
-            }),
-            retry({
-              count: KpCgspaceBrowseComponent.RETRY_COUNT,
-              delay: () => timer(this.retryDelayMs)
-            }),
-            map(res => ({ res, req, error: null })),
-            catchError(err => of({ res: null, req, error: err }))
-          );
+            }
+            state.page.set(params['page']);
+          }
+
+          // Linked and related run side by side; each paints as soon as it answers.
+          return merge(...requests.map(({ scope, params }) => this.fetchScope(scope, params, req.append)));
         })
       )
-      .subscribe(({ res, req, error }) => {
-        this.loadingMore.set(false);
-
-        if (error || (res && res.status && res.status >= 400)) {
-          this.status.set('error');
-          this.items.set([]);
-          this.total.set(0);
-          this.sources.set([]);
-          this.hasMore.set(false);
-          return;
-        }
-
-        // KPM-R-6: chip counts and unavailable states come from every response's sources[].
-        const sources: unknown = res?.response?.sources;
-        this.sources.set(Array.isArray(sources) ? (sources as SourceStatusDto[]) : []);
-        // KPM-R-20: *Load more* renders iff the last response reports page.hasMore.
-        this.hasMore.set(Boolean(res?.response?.page?.hasMore));
-
-        const items: CgspaceItemDto[] = res?.response?.items ?? [];
-        const total: number =
-          res?.response?.page?.totalElements ??
-          res?.response?.total ??
-          (items.length > 0 ? items.length : 0);
-
-        if (items.length > 0) {
-          this.status.set('results');
-          if (req.append) {
-            this.items.set([...this.items(), ...items]);
-          } else {
-            this.items.set(items);
-          }
-          this.total.set(total);
-        } else {
-          if (req.append) {
-            // Reached end of pagination
-          } else {
-            this.status.set('empty');
-            this.items.set([]);
-            this.total.set(0);
-          }
-        }
-      });
+      .subscribe(outcome => this.applyScopeOutcome(outcome));
   }
 
-  private buildSearchParams(page: number): Record<string, any> {
+  // @akili-spec changes/kp-cgspace-search-retry
+  private fetchScope(scope: KpProjectScope, params: Record<string, any>, append: boolean) {
+    return defer(() => this.resultsApiSE.GET_cgspaceSearch(params)).pipe(
+      map(res => {
+        // KCSR-R-1: proxy returns HTTP 200 with body { status: 502 } — treat as failure
+        const bodyStatus: number | undefined = (res as any)?.response?.status ?? (res as any)?.response?.statusCode ?? (res as any)?.status ?? (res as any)?.statusCode;
+        if (bodyStatus !== undefined && bodyStatus >= 400) {
+          throw new Error(`Repository proxy error: ${bodyStatus}`);
+        }
+        return res;
+      }),
+      retry({
+        count: KpCgspaceBrowseComponent.RETRY_COUNT,
+        delay: () => timer(this.retryDelayMs)
+      }),
+      map(res => ({ res, scope, append, error: null as unknown })),
+      catchError(err => of({ res: null as any, scope, append, error: err as unknown }))
+    );
+  }
+
+  private applyScopeOutcome({ res, scope, append, error }: { res: any; scope: KpProjectScope; append: boolean; error: unknown }): void {
+    const state = this.scopeState(scope);
+    state.loadingMore.set(false);
+
+    if (error || (res && res.status && res.status >= 400)) {
+      state.status.set('error');
+      state.items.set([]);
+      state.total.set(0);
+      state.sources.set([]);
+      state.hasMore.set(false);
+      return;
+    }
+
+    // KPM-R-6: chip counts and unavailable states come from every response's sources[].
+    const sources: unknown = res?.response?.sources;
+    state.sources.set(Array.isArray(sources) ? (sources as SourceStatusDto[]) : []);
+    // KPM-R-20: *Load more* renders iff the last response reports page.hasMore.
+    state.hasMore.set(Boolean(res?.response?.page?.hasMore));
+
+    if (scope === 'linked') {
+      // KPSF-R-9: `applied=false` = the project is not usable; the server answers an empty linked page.
+      const echo = res?.response?.projectScope;
+      this.linkedApplied.set(echo ? echo.applied !== false : true);
+    }
+
+    const items: CgspaceItemDto[] = res?.response?.items ?? [];
+    const total: number =
+      res?.response?.page?.totalElements ??
+      res?.response?.total ??
+      (items.length > 0 ? items.length : 0);
+
+    if (items.length > 0) {
+      state.status.set('results');
+      state.items.set(append ? [...state.items(), ...items] : items);
+      state.total.set(total);
+    } else if (!append) {
+      // (append + empty = reached the end of pagination)
+      state.status.set('empty');
+      state.items.set([]);
+      state.total.set(0);
+    }
+  }
+
+  private buildSearchParams(page: number, scope?: KpProjectScope): Record<string, any> {
     // KPM-R-3 / KPM-R-8: one request covers every selected repository (comma-joined).
     const params: Record<string, any> = { page, size: 10, repository: this.selectedRepositories().join(',') };
 
@@ -1084,36 +986,42 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       params['year'] = this.selectedYear();
     }
 
-    if (this.isProjectRepositoryFilterActive()) {
-      params['project'] = this.projectRepositoryFilterValue();
+    if (scope) {
+      // @akili-spec changes/kp-project-strict-filter — design §7. Lengths match the server DTO limits (50 / 300 / 20).
+      const code = (this.projectCode() ?? '').trim().slice(0, 50);
+      const title = (this.projectTitle() ?? '').trim().slice(0, 300);
+      const leadCenter = (this.leadCenterAcronym() ?? '').trim().slice(0, 20);
+      if (code) params['projectCode'] = code;
+      if (title) params['projectTitle'] = title;
+      if (leadCenter) params['projectLeadCenter'] = leadCenter;
+      params['projectScope'] = scope;
     }
 
     return params;
   }
 
-  isProjectRepositoryFilterActive(): boolean {
-    return (
-      this.showProjectRepositoryFilterChip() &&
-      this.projectRepositoryFilterOn() &&
-      !!this.projectRepositoryFilterValue()
-    );
-  }
-
-  toggleProjectRepositoryFilter(): void {
-    this.projectRepositoryFilterOn.update(active => !active);
-    this.onFilterChange();
-  }
-
   /**
    * An explicit filter chosen by the user: Type, Center, or (admin only) a Year that differs from the
    * default `phaseYear`. The admin default year is NOT a filter for the min-length rule (AC-8).
+   * The project of a project-scoped browse counts as a filter: the linked KPs load without any text (KPSF-R-13).
    */
   hasActiveFilter(): boolean {
     if (this.selectedType() !== null && this.selectedType() !== '') return true;
     if (this.selectedCenter() !== null && this.selectedCenter() !== '') return true;
     if (this.isAdmin() && this.selectedYear() !== this.phaseYear()) return true;
-    if (this.isProjectRepositoryFilterActive()) return true;
+    if (this.isProjectScoped()) return true;
     return false;
+  }
+
+  /** Back to the idle panel (nothing searchable): clears both lists. */
+  private resetResults(): void {
+    for (const scope of ['related', 'linked'] as const) {
+      const state = this.scopeState(scope);
+      state.status.set('idle');
+      state.items.set([]);
+      state.total.set(0);
+      state.sources.set([]);
+    }
   }
 
   /** Search runs when the text has ≥ 3 chars, or when it is empty and an explicit filter is set. */
@@ -1132,24 +1040,18 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
 
   onQueryChange(): void {
     if (!this.canSearch()) {
-      this.status.set('idle');
-      this.items.set([]);
-      this.total.set(0);
-      this.sources.set([]);
+      this.resetResults();
       return;
     }
-    this.searchTrigger$.next({ page: 0, append: false, immediate: false });
+    this.searchTrigger$.next({ page: 0, append: false, immediate: false, scope: 'all' });
   }
 
   onFilterChange(): void {
     if (!this.canSearch()) {
-      this.status.set('idle');
-      this.items.set([]);
-      this.total.set(0);
-      this.sources.set([]);
+      this.resetResults();
       return;
     }
-    this.searchTrigger$.next({ page: 0, append: false, immediate: false });
+    this.searchTrigger$.next({ page: 0, append: false, immediate: false, scope: 'all' });
   }
 
   onTypeSelect(option: any): void {
@@ -1234,22 +1136,33 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     this.runSearch(0, false);
   }
 
-  runSearch(page: number = 0, append: boolean = false): void {
+  runSearch(page: number = 0, append: boolean = false, scope: KpProjectScope | 'all' = 'all'): void {
     if (!this.canSearch()) {
-      this.status.set('idle');
-      this.items.set([]);
-      this.total.set(0);
-      this.sources.set([]);
+      this.resetResults();
       return;
     }
-    this.searchTrigger$.next({ page, append, immediate: true });
+    this.searchTrigger$.next({ page, append, immediate: true, scope });
   }
 
+  /** True while any list is fetching: a second trigger would cancel it (`switchMap`), so *Load more* waits. */
+  private isFetching(): boolean {
+    return this.loadingMore() || this.linkedLoadingMore() || this.status() === 'loading' || this.linkedStatus() === 'loading';
+  }
+
+  /** Related list (section 2 in the project-scoped browse): fetches only the related scope; never re-queries linked. */
   loadMore(): void {
-    if (this.loadingMore() || this.status() === 'loading') return;
+    if (this.isFetching()) return;
     const nextPage = this.page() + 1;
     this.loadingMore.set(true);
-    this.runSearch(nextPage, true);
+    this.runSearch(nextPage, true, 'related');
+  }
+
+  /** Linked list (section 1): fetches only the linked scope; never re-queries related. */
+  loadMoreLinked(): void {
+    if (this.isFetching()) return;
+    const nextPage = this.linkedPage() + 1;
+    this.linkedLoadingMore.set(true);
+    this.runSearch(nextPage, true, 'linked');
   }
 
   onSelect(item: CgspaceItemDto): void {

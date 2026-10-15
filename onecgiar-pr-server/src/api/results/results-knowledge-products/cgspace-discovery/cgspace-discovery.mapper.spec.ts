@@ -450,6 +450,58 @@ describe('CgspaceDiscoveryMapper', () => {
     });
   });
 
+  describe('toItem — MEL/WorldFish project labels (KPSF-R-7)', () => {
+    it('MELSpace fixture: first item carries its cg.contributor.project label', () => {
+      const result = mapper.toPage(melspaceHal, melspaceAdapter);
+      expect(result.items[0].projects).toEqual(['CRP WHEAT Phase II']);
+    });
+
+    it('WorldFish fixture: an item carries its cg.contributor.project label', () => {
+      const result = mapper.toPage(worldfishHal, worldfishAdapter);
+      expect(result.items.flatMap((item) => item.projects ?? [])).toEqual(
+        expect.arrayContaining([
+          'Youth Employment in Aswan Governorate (YEAG) project',
+        ]),
+      );
+    });
+
+    it('unions cg.contributor.project with cg.identifier.project, deduped, adapter field first', () => {
+      const node = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'u',
+            handle: 'h',
+            metadata: {
+              'cg.contributor.project': [{ value: 'A' }, { value: 'B' }],
+              'cg.identifier.project': [{ value: 'B' }, { value: 'C' }],
+            },
+          },
+        },
+      };
+      expect(mapper.toItem(node, melspaceAdapter).projects).toEqual([
+        'A',
+        'B',
+        'C',
+      ]);
+    });
+
+    it('CGSpace keeps reading cg.identifier.project only (its adapter field), no duplicates', () => {
+      const node = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'u',
+            handle: 'h',
+            metadata: {
+              'cg.identifier.project': [{ value: 'X' }],
+              'cg.contributor.project': [{ value: 'IGNORED' }],
+            },
+          },
+        },
+      };
+      expect(mapper.toItem(node, cgspaceAdapter).projects).toEqual(['X']);
+    });
+  });
+
   describe('toPage — empty/malformed HAL responses', () => {
     it('returns an empty page for null or empty HAL responses', () => {
       const emptyResult = mapper.toPage(null, cgspaceAdapter);
