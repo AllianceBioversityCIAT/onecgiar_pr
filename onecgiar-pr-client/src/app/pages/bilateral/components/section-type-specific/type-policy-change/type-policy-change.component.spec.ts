@@ -616,5 +616,40 @@ describe('TypePolicyChangeComponent', () => {
       const usdAmountInputs = allInputs.filter(d => read(d.componentInstance.label) === 'USD amount');
       expect(usdAmountInputs).toHaveLength(1);
     });
+
+    // PCP-T-1 (policy-change-usd-amount-position) — PCP-R-1/PCP-AC-1: Policy type, USD amount and
+    // Status must be three SIBLINGS inside the SAME shared grid container, in that order, matching
+    // Pool Funding's structure (policy-change-info.component.html:6-40). Falsifier (per the task):
+    // on the prior-fix template, Policy type stood alone BEFORE the grid container that only held
+    // USD amount/Status, so querying "Policy type as a child of the shared grid container" found
+    // nothing. This asserts the grid container's direct children, in order, and that Stage is a
+    // later sibling, never a child of that container.
+    it('PCP-T-1: groups Policy type, USD amount and Status as siblings inside one shared grid container, before Stage', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(of({ response: { policy_type_id: 1 } }));
+      render();
+
+      const allDivs = fixture.debugElement.queryAll(By.css('div'));
+      const gridContainer = allDivs.find(d =>
+        (d.nativeElement as HTMLElement).className.includes('grid-cols-[repeat(auto-fit,minmax(190px,1fr))]')
+      );
+      expect(gridContainer).toBeTruthy();
+
+      const childSiblings = gridContainer!.children.map(child => ({
+        tag: (child.nativeElement as HTMLElement).tagName.toLowerCase(),
+        label: read(child.componentInstance?.label)
+      }));
+
+      expect(childSiblings).toEqual([
+        { tag: 'app-pr-select', label: 'Policy type' },
+        { tag: 'app-pr-input', label: 'USD amount' },
+        { tag: 'app-pr-select', label: 'Status' }
+      ]);
+
+      const stageSelect = fixture.debugElement.queryAll(By.css('app-pr-select')).find(d => read(d.componentInstance.label) === 'Stage');
+      expect(stageSelect).toBeDefined();
+
+      const gridChildNativeEls = gridContainer!.children.map(c => c.nativeElement);
+      expect(gridChildNativeEls).not.toContain(stageSelect!.nativeElement);
+    });
   });
 });

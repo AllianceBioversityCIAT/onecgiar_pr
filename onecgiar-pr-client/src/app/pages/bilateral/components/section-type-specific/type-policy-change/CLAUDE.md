@@ -1,13 +1,15 @@
 # type-policy-change (bilateral)
 
-**Verified:** 2026-10-15 · branch qa-development-2026-mc-2 · 4ed4f6520
+**Verified:** 2026-10-15 · branch qa-development-2026-mc-2 · 68889f292
 
 ## What it is
 Section 5 of the bilateral form: Policy Change. Shows the **MDS** (3 mandatory fields), plus USD
 amount + Status always-visible whenever `policy_type_id == 1` (`PCL-R-2`/`PCL-DD-2`,
 `docs/specs/bugfix/policy-change-usd-amount-layout/`). Only the **"Is this result related to:"**
 question still hides behind the **Complete full metadata** button — USD amount/Status are no longer
-part of that toggle.
+part of that toggle. USD amount/Status render as siblings of **Policy type itself**, inside one
+shared grid row (`PCP-R-1`/`PCP-DD-1`, `docs/specs/bugfix/policy-change-usd-amount-position/`) —
+not merely always-visible, grouped with the field that gates them, matching Pool Funding's layout.
 
 ## Contract
 - Endpoints: **the same ones pooled funding's summary uses** —
