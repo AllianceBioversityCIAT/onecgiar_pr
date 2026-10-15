@@ -631,7 +631,7 @@ describe('TypePolicyChangeComponent', () => {
 
       const allDivs = fixture.debugElement.queryAll(By.css('div'));
       const gridContainer = allDivs.find(d =>
-        (d.nativeElement as HTMLElement).className.includes('grid-cols-[repeat(auto-fit,minmax(190px,1fr))]')
+        (d.nativeElement as HTMLElement).className.includes('grid-cols-[repeat(auto-fit,minmax(min(390px,100%),1fr))]')
       );
       expect(gridContainer).toBeTruthy();
 
