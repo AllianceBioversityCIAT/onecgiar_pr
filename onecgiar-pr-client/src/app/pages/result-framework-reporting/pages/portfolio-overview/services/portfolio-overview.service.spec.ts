@@ -111,7 +111,6 @@ describe('PortfolioOverviewService', () => {
 
     it('initializes empty arrays for breakdown computeds', () => {
       expect(service.categoryOriginRows()).toEqual([]);
-      expect(service.programRankingRows()).toEqual([]);
       expect(service.centerDistributionRows()).toEqual([]);
     });
   });
@@ -251,43 +250,6 @@ describe('PortfolioOverviewService', () => {
     });
   });
 
-  describe('Program Ranking Rows (POV-R-4)', () => {
-    beforeEach(() => {
-      setupService(MOCK_RESULTS);
-      service.load();
-    });
-
-    it('ranks programs descending by total results with status breakdowns', () => {
-      const rankings = service.programRankingRows();
-      expect(rankings.length).toBe(4);
-
-      // SP01 has 3 items: 1 editing, 2 submittedOrQa (1 submitted + 1 QA), 0 approved, total 3
-      const sp01 = rankings.find(r => r.code === 'SP01');
-      expect(sp01).toEqual({
-        code: 'SP01',
-        name: 'Breeding for Tomorrow',
-        editing: 1,
-        submittedOrQa: 2,
-        approved: 0,
-        total: 3
-      });
-
-      // SP06 has 3 items: 0 editing, 0 submittedOrQa, 1 approved (plus 1 rejected, 1 discontinued), total 3
-      const sp06 = rankings.find(r => r.code === 'SP06');
-      expect(sp06).toEqual({
-        code: 'SP06',
-        name: 'Climate Action',
-        editing: 0,
-        submittedOrQa: 0,
-        approved: 1,
-        total: 3
-      });
-
-      // Sorted by total desc
-      expect(rankings[0].total).toBeGreaterThanOrEqual(rankings[1].total);
-    });
-  });
-
   describe('Center Distribution Rows (POV-R-5)', () => {
     beforeEach(() => {
       setupService(MOCK_RESULTS);
@@ -417,14 +379,12 @@ describe('PortfolioOverviewService', () => {
       const kpis = service.kpiTotals();
       const segments = service.statusSegments();
       const origins = service.categoryOriginRows();
-      const rankings = service.programRankingRows();
       const centers = service.centerDistributionRows();
       const elapsed = performance.now() - start;
 
       expect(kpis.totalResults).toBe(20000);
       expect(segments.length).toBe(6);
       expect(origins.length).toBe(4);
-      expect(rankings.length).toBe(13);
       expect(centers.length).toBe(13);
       // Wall clock on a shared CI runner measures the runner, not the aggregation: this ran in
       // ~1.08s on staging under 550 suites of parallel-worker contention against a 1s budget,

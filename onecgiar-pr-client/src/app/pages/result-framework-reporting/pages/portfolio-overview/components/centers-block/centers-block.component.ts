@@ -14,13 +14,9 @@ import { resultStatusLabel } from '../../../../../../shared/constants/result-sta
 import { PORTFOLIO_CENTERS_BLOCK_COPY } from '../../../../../../internationalization/portfolio-centers-block.copy';
 import {
   DONUT_PALETTE_TOKENS,
-  HEATMAP_RAMP_TOKENS,
-  RankingMode,
   STATUS_CHART_TOKEN,
   STATUS_TILE_TOKEN,
   StatusColumn,
-  buildHeatmapOption,
-  buildRankingOption,
   buildRowsTable,
   buildSegments,
   buildSegmentsTable,
@@ -54,7 +50,7 @@ function resolveCssColor(value: string): string {
 /**
  * P2-3928 — the CGIAR Centers (W3/Bilateral) block of the Portfolio overview. Built for P2-3858 as Admin ›
  * All P/As and Centers; moved here as one more section (Ángel, 7-Oct-2026: "La respuesta son las 3") with
- * the same figures and presentation: KPI cards, status donut + tiles, ranking (three modes) and a detail
+ * the same figures and presentation: KPI cards, status donut + tiles, and a detail
  * table with a chart view, for the open P25 reporting phase. Read-only: it only issues GETs. Admin-only
  * because its host route (`portfolio-overview`) carries `CheckAdminGuard`.
  */
@@ -86,7 +82,6 @@ export class PortfolioCentersBlockComponent {
   readonly centersLoading = computed(() => this.centerRows().some(center => center.state === 'loading'));
 
   readonly selectedStatus = signal<number | null>(null);
-  readonly rankingMode = signal<RankingMode>('horizontal');
   readonly detailMode = signal<'table' | 'chart'>('table');
   readonly search = signal('');
   readonly sortKey = signal<SortKey>('total');
@@ -118,16 +113,8 @@ export class PortfolioCentersBlockComponent {
 
   readonly donutOption = computed(() => buildStatusDonutOption(this.segments(), this.centerTotals().total, this.selectedStatus(), this.donutPalette()));
   readonly donutTable = computed(() => buildSegmentsTable(this.copy.statusTitle, this.segments()));
-  readonly rankingOption = computed(() => {
-    const mode = this.rankingMode();
-    if (mode === 'heatmap') {
-      const ramp = HEATMAP_RAMP_TOKENS.map(token => resolveCssColor(`var(${token})`));
-      return buildHeatmapOption(this.loadedCenterRows(), this.columns(), ramp);
-    }
-    return buildRankingOption(this.loadedCenterRows(), this.columns(), this.selectedStatus(), mode);
-  });
-  readonly rankingTable = computed(() => buildRowsTable(this.copy.rankingCentersTitle, this.loadedCenterRows(), this.columns()));
-  readonly rankingHeight = computed(() => `${Math.max(260, this.loadedCenterRows().length * (this.rankingMode() === 'vertical' ? 0 : 26) + 60)}px`);
+  readonly detailTable = computed(() => buildRowsTable(this.copy.detailCentersTitle, this.loadedCenterRows(), this.columns()));
+  readonly detailHeight = computed(() => `${Math.max(260, this.loadedCenterRows().length * 26 + 60)}px`);
   readonly shareOption = computed(() => buildShareOption(this.filteredDetail().map(c => c.row!).filter(Boolean), this.columns()));
 
   /** Rows of the detail table, filtered by the search box, sorted by the clicked header. */

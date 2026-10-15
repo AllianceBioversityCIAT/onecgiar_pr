@@ -1,10 +1,10 @@
 # portfolio-overview
 
-**Verified:** 2026-10-14 · branch qa-development-2026-ss · spec changes/portfolio-overview-kpi-breakdown
+**Verified:** 2026-10-14 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/remove-rankings-status-copy
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — reporting figures for the WHOLE
-portfolio in the open phase: a status strip, results by indicator category, a bilateral summary, and
-a science-program × category matrix. Ticket **P2-3304**; design block `showPortfolio` of
+portfolio in the open phase: a KPI deck, the status section, results by indicator category, a
+science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304**; design block `showPortfolio` of
 `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Contract
@@ -100,12 +100,20 @@ a science-program × category matrix. Ticket **P2-3304**; design block `showPort
   spec `bugfix/portfolio-overview-partial-counts` (2026-09-14): with historical volume exceeding the
   page `LIMIT`, `total()` could read far lower than what was actually fetched, understating the
   banner's own "first N" claim.
-
 - ⚠️ **"Replicated" means `is_replicated`, not "innovation".** The card-3 label "Innovations replicated from
   2025" assumes replicated W3 rows are innovations only (premise P-3, checked on prod 2026-10-14). If that
   stops holding, change the label — the counter itself does not filter by result type.
-- 🛑 **`tests/mocks/spartanBrainMock.ts` — the `BrnSeparator` mock must declare `orientation` / `decorative`
-  inputs**, or any spec rendering `hlm-separator` (the deck uses it) fails with NG0311.
+- 🛑 **`tests/mocks/spartanBrainMock.ts` must declare every input a Helm host directive re-exposes**, or NG0311:
+  `BrnSeparator` (`orientation`/`decorative`, deck) and `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/
+  `showDelay`/`tooltipDisabled`, Rejected tile).
+
+## Status section & removed rankings (2026-10-14, spec `…/remove-rankings-status-copy`)
+
+- Copy: `internationalization/portfolio-overview.copy.ts` (only what that spec added); donut caption is a
+  parameter. Rejected-tile hint: `statusHints` + `hlmTooltip`.
+- Guide link: `STATUS_GUIDE_URL` (`shared/constants/portfolio-links.constants.ts`), typed `string` (not `''`,
+  or templates narrow it to `never`). Empty = not rendered. Pending OQ-1: set it when the guide exists.
+- 🛑 **Removed on purpose:** the Program and Center ranking cards (stakeholder "competition" feedback). Do not re-add.
 
 ## Pending
 

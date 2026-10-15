@@ -139,7 +139,14 @@ export class BrnDialog {
 }
 
 @Directive({ selector: '[brnTooltip]', standalone: true })
-export class BrnTooltip {}
+export class BrnTooltip {
+  // Inputs the generated Helm tooltip re-exposes through `hostDirectives`; Angular validates them (NG0311).
+  @Input() brnTooltip: unknown;
+  @Input() position: string | undefined;
+  @Input() hideDelay: number | string | undefined;
+  @Input() showDelay: number | string | undefined;
+  @Input() tooltipDisabled: boolean | string | undefined;
+}
 
 export type BrnTooltipPosition = string;
 

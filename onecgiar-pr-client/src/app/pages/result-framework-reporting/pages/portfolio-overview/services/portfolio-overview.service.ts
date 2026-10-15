@@ -70,15 +70,6 @@ export interface CategoryOriginRow {
   total: number;
 }
 
-export interface ProgramRankingRow {
-  code: string;
-  name: string;
-  editing: number;
-  submittedOrQa: number;
-  approved: number;
-  total: number;
-}
-
 export interface CenterDistributionRow {
   centerId: string;
   centerName: string;
@@ -351,46 +342,6 @@ export class PortfolioOverviewService {
         total: w1w2Count + bilateralCount
       };
     });
-  });
-
-  /**
-   * Science Programs Output Ranking (POV-R-4)
-   */
-  readonly programRankingRows = computed<ProgramRankingRow[]>(() => {
-    const byProgramme = new Map<string, RawResult[]>();
-    for (const row of this.rows()) {
-      const code = text(row.submitter);
-      if (!code) continue;
-      byProgramme.set(code, [...(byProgramme.get(code) ?? []), row]);
-    }
-
-    return [...byProgramme.entries()]
-      .map(([code, items]) => {
-        let editing = 0;
-        let submittedOrQa = 0;
-        let approved = 0;
-
-        for (const item of items) {
-          const slot = resolveStatusSlot(item);
-          if (slot === 'editing') {
-            editing++;
-          } else if (slot === 'in-qa' || slot === 'submitted') {
-            submittedOrQa++;
-          } else if (slot === 'approved') {
-            approved++;
-          }
-        }
-
-        return {
-          code,
-          name: this.programmeName(code),
-          editing,
-          submittedOrQa,
-          approved,
-          total: items.length
-        };
-      })
-      .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
   });
 
   /**
