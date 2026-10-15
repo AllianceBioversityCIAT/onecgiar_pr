@@ -216,8 +216,6 @@ Integration Branch: staging
 
 `staging` is the team's single integration point: spec branches merge into it, and it reaches `master` on a release cadence. Every AKILI command's branch test compares the checked-out branch against the `Default Branch:` pin. The `Integration Branch:` pin resolves the **apply-capable branch** for the `kaizen` skill's Branch Context — pending standardizations are applied on `staging` (serially), and its merges to `master` carry them forward; `master` itself **records** pending items rather than applying them, the same non-writing behavior a spec branch has.
 
-> Personas already deployed under `.agents/` still phrase this as "apply on the default branch". They keep that wording until re-scaffolded; the next `/akili-audit` reports it as persona drift.
-
 ## Module Guides
 
 Root guides are the parent; child guides add or narrow, never duplicate.
@@ -226,8 +224,9 @@ Root guides are the parent; child guides add or narrow, never duplicate.
 - `onecgiar-pr-server/src/CLAUDE.md` · `onecgiar-pr-server/src/AGENTS.md` — backend source-tree navigation and patterns.
 - `onecgiar-pr-client/CLAUDE.md` · `onecgiar-pr-client/AGENTS.md` — Angular 21 client package guide (`auth` header, base URLs, API naming, commit format).
 - `onecgiar-pr-client/src/CLAUDE.md` · `onecgiar-pr-client/src/AGENTS.md` — client source-tree navigation and patterns.
-- `.agents/leader.md` · `implementer.md` · `reviewer.md` · `tester.md` — AKILI personas (tool-agnostic source of truth; wrappers in `.claude/agents/`, `.opencode/agent/`, `.agents/agents/`).
+- `.agents/leader.md` · `implementer.md` · `reviewer.md` · `tester.md` — AKILI personas (tool-agnostic source of truth; wrappers in `.claude/agents/`, `.opencode/agent/`, `.agents/agents/`, `.codex/agents/`, `.cursor/agents/`; owned sections fenced with `akili:section` markers since 2026-10-14 — upgrade with `akili doctor --agents --fix`).
 
+<!-- akili:section id=model-routing since=v2.32.0 -->
 ## Model Routing
 
 Criteria-first: match the model to the phase's dominant demand. Principles — ARCHITECT = BUILDER (the tier that designs also decomposes); **author ≠ auditor** (Reviewer never runs on the Implementer's model; prefer a different Tester model too); reserve deep reasoning for propose/specify/verify **and the orchestrating Leader**; fast & cheap only for archive/formatting — `tasks.md` decomposition is T1, not formatting.
@@ -254,21 +253,23 @@ Criteria-first: match the model to the phase's dominant demand. Principles — A
 | `/akili-archive`, `/akili-quick` | T5 |
 | UI screenshot / visual checks | T6 |
 
-**Registry** — Updated: 2026-09
+**Registry** — Updated: 2026-10
 
-| Tier | Claude Code | OpenCode | Antigravity | Codex | Fallback |
-|---|---|---|---|---|---|
-| T1 Architect | `opus` | `opencode-go/deepseek-v4-pro` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `sonnet` |
-| T2 Coder | `sonnet` | `opencode-go/deepseek-v4.1-flash` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `opencode-go/deepseek-v4-flash` |
-| T3 Auditor | `opus` | `opencode-go/deepseek-v4-pro` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `sonnet` |
-| T4 Context-Ingest | `sonnet` | `opencode-go/deepseek-v4-pro` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `haiku` |
-| T5 Fast-Cheap | `haiku` | `opencode-go/deepseek-v4.1-flash` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `sonnet` |
-| T6 Multimodal | `sonnet` | `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | — |
+| Tier | Claude Code | OpenCode | Antigravity | Codex | Cursor | Fallback |
+|---|---|---|---|---|---|---|
+| T1 Architect | `opus` | `opencode-go/deepseek-v4-pro` | `gemini-3.8-flash-high` (wrapper `pro`) | `gpt-5.6-terra` `<CONFIRM SLUG>` | `claude-opus-5-thinking-high` | `sonnet` |
+| T2 Coder | `sonnet` | `opencode-go/glm-5.2` (Tester: `opencode-go/deepseek-v4-flash`) | `gemini-3.8-flash-medium` (wrapper `flash`) | `gpt-5.6-luna` `<CONFIRM SLUG>` | `composer-2.5` | `opencode-go/deepseek-v4-flash` |
+| T3 Auditor | `opus` | `opencode-go/deepseek-v4-pro` | `claude-opus-5-5-high` (session `--model` only — see note) | `gpt-5.6-terra` `<CONFIRM SLUG>` | `gpt-5.6-sol-high` | `sonnet` |
+| T4 Context-Ingest | `sonnet` | `opencode-go/deepseek-v4-pro` | `gemini-3.8-flash-high` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `claude-sonnet-5-thinking-high` | `haiku` |
+| T5 Fast-Cheap | `haiku` | `opencode-go/deepseek-v4.1-flash` | `gemini-3.8-flash-low` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `composer-2.5-fast` | `sonnet` |
+| T6 Multimodal | `sonnet` | `opencode-go/deepseek-v4-flash-vision-exp` (Exp) | `gemini-3.8-flash-high` (vision) | `gpt-5.6-terra` `<CONFIRM SLUG>` | `gemini-3.8-flash-high` | — |
 
-Host CLI invocations: Claude Code `claude` · OpenCode `opencode` `<CONFIRM>` · Antigravity `agy` `<CONFIRM>` · Codex `codex` `<CONFIRM>`.
+Host CLI invocations: Claude Code `claude` · OpenCode `opencode` (v1.18.33) · Antigravity `agy` (v1.3.5) · Codex `codex` · Cursor `agent` (symlink `cursor-agent`).
+OpenCode: never bind `opencode-go/kimi-k3` to any role (cost). Cursor slugs confirmed 2026-10-14 against `cursor-agent models`; effort is carried in the slug, so no `[effort=…]` bracket.
+OpenCode and Antigravity slugs confirmed 2026-10-14 against `opencode models` / `agy models`. **Antigravity caveat (probed, agy 1.3.5):** the roster has no Gemini Pro; wrapper `model:` accepts only `inherit`/`flash`/`pro` (a full ID makes the agent fail to load), and on this account both `pro` and `flash` resolve to Gemini 3.8 Flash (High) — so the Antigravity Reviewer and Implementer wrappers share one model. author ≠ auditor holds on Antigravity only when the session is started with `agy --model claude-opus-5-5-high`, or by dispatching review to another host.
 **Cross-host dispatch:** T6 Multimodal → Antigravity (Gemini vision). Reach across hosts only for a real capability gap — a cross-host spawn costs a fresh context, which a one-tier difference does not repay.
 
-To change models, edit only this registry table. Never pin a dated model name where a floating alias exists. Model selection is guidance only in command prompts — never add `model:` to command frontmatter; enforced bindings live only in the agent wrappers (`.claude/agents/akili-*.md`, `.opencode/agent/akili-*.md`, `.agents/agents/akili-*/agent.md`).
+To change models, edit only this registry table. Never pin a dated model name where a floating alias exists. Model selection is guidance only in command prompts — never add `model:` to command frontmatter; enforced bindings live only in the agent wrappers (`.claude/agents/akili-*.md`, `.opencode/agent/akili-*.md`, `.agents/agents/akili-*/agent.md`, `.codex/agents/akili-*.toml`, `.cursor/agents/akili-*.md`). This fence is hand-maintained (Safe Update, 2026-10-14) — `akili routing` reads it as hand-edited, so regenerate only with `--force`.
 
 ### Effort dial
 
@@ -282,6 +283,7 @@ Effort is the second, per-task routing dimension — the tier picks the model, e
 | Correctness-critical (migrations, payload contracts, auth) | `max` |
 
 Defaults by role: T1 propose/specify/Leader `high` · T2 Implementer/Tester `medium` (flex by task) · T3 Reviewer `high` · T5 archive `low`. Rules: bump effort one level on every rework retry; never `max` a cheaper tier — escalate the tier instead; re-baseline these defaults (sweep `medium`/`high`/`xhigh` on a real spec) whenever the model generation changes, and start one level higher for a `[~]` resume or post-Pivot retry; effort is **not** a verbosity dial — fix long reports via `caveman` / `cognitive-doc-design`, never by lowering effort.
+<!-- /akili:section -->
 
 ## Skill Map
 
