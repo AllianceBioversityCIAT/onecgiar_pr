@@ -16,7 +16,7 @@
 |---|---|---|---|---|
 | 1 | `changes/portfolio-overview-kpi-breakdown` | none | no | done |
 | 2 | `changes/portfolio-overview-revamp/remove-rankings-status-copy` | `changes/portfolio-overview-kpi-breakdown` (must be **committed**, because both edit the same component and service files) | no | done |
-| 3 | `changes/portfolio-overview-revamp/centers-new-vs-replicated` | `changes/portfolio-overview-revamp/remove-rankings-status-copy` (centers-block slice); `changes/portfolio-overview-revamp/remove-centers-progress` (same `centers-block/` files — run #7 first) | no | pending |
+| 3 | `changes/portfolio-overview-revamp/centers-new-vs-replicated` | `changes/portfolio-overview-revamp/remove-rankings-status-copy` (centers-block slice); `changes/portfolio-overview-revamp/remove-centers-progress` (same `centers-block/` files — run #7 first) | no | done |
 | 4 | `changes/portfolio-overview-revamp/typology-view` | `changes/portfolio-overview-revamp/remove-rankings-status-copy` | no | pending |
 | 5 | `changes/portfolio-overview-revamp/toc-kpi-progress` | `changes/portfolio-overview-revamp/typology-view` (client half only; the server half has no dependency) | no | pending |
 | 6 | `changes/portfolio-overview-revamp/global-filters` | #1–#5, #7, #8 | no | pending |
@@ -38,4 +38,5 @@ Notes:
 | 2026-10-15 | Child #2 `remove-rankings-status-copy` done: committed `6504812b8`, T-H browser check passed on PRTest, archived to `archive/2026-10-15-changes--portfolio-overview-revamp--remove-rankings-status-copy/` | santiago.sanchez@cgiar.org |
 | 2026-10-15 | Added children #7 `remove-centers-progress`, #8 `w3-projects-section` and #9 `filtered-detail-export`, from stakeholder email items 9–11. The user asked for the proposals ("puedes hacer el propose del 9, 10 y 11?"). #3 is now `Parallel-safe: no`, and #6 now also depends on #7 and #8. All 3 proposals approved; the open questions take the recommended defaults (user: "haz lo que mejor recomiendes y procedamos con el specify") | santiago.sanchez@cgiar.org |
 | 2026-10-15 | Child #7 `remove-centers-progress` done: committed `92bd0aa5b`, browser check at 1280 and 768 accepted by the user, archived to `archive/2026-10-15-changes--portfolio-overview-revamp--remove-centers-progress/`. #3 is unblocked on `centers-block/` | santiago.sanchez@cgiar.org |
+| 2026-10-15 | Child #3 `centers-new-vs-replicated` done: committed `a91e9ad39`, browser check at 1280 / 768 / 375 passed locally (712 = 548 + 164), archived to `archive/2026-10-15-changes--portfolio-overview-revamp--centers-new-vs-replicated/`. PRTest smoke pending | santiago.sanchez@cgiar.org |
 | 2026-10-14 | Reordered: `kpi-breakdown` moves to #1 because it is already being implemented in the working tree. The rankings child moves to #2 and depends on it (Judgment Day JD-10) | santiago.sanchez@cgiar.org |
