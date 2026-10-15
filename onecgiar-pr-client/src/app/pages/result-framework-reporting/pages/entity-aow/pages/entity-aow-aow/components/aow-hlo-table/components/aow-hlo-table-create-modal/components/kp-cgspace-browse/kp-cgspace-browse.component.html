@@ -1,3 +1,130 @@
+<ng-template #kpCard let-item let-variant="variant">
+            <div
+              class="border border-gray-200 rounded-xl p-4 bg-white hover:border-gray-300 shadow-sm transition-all flex flex-col gap-2"
+              [class.border-l-4]="matchesProgram(item)"
+              [class.border-l-[var(--pr-color-primary-300)]]="matchesProgram(item)">
+              <div class="flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between min-[480px]:gap-4">
+                <div class="min-w-0 flex-1">
+                  <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-4 / KPM-R-5: repository badge + "Also in" -->
+                  <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                    @if (item.repository) {
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                        [ngClass]="repoMeta(item.repository)?.badgeClass"
+                        [attr.data-test]="'kp-item-badge-' + item.repository">
+                        <span class="size-[7px] rounded-full" [ngClass]="repoMeta(item.repository)?.dotClass"></span>
+                        {{ kpRepositoryLabel(item.repository) }}
+                      </span>
+                    }
+                    @if (item.alsoIn && item.alsoIn.length) {
+                      @for (also of item.alsoIn; track also.repository) {
+                        <span
+                          class="inline-flex items-center gap-1 rounded-full border border-[var(--pr-border)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--pr-text-secondary)]"
+                          [attr.data-test]="'kp-also-in-' + also.repository">
+                          <ng-icon name="lucideSplit" class="text-[11px]" aria-hidden="true" />
+                          Also in {{ kpRepositoryLabel(also.repository) }}
+                        </span>
+                      }
+                    }
+                    @if (variant === 'linked') {
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800"
+                        [attr.data-test]="'kp-linked-badge-' + (item.uuid || item.handle)">
+                        <ng-icon name="lucideCircleCheck" class="text-[12px]" aria-hidden="true" />
+                        Linked to {{ projectMatchLabel() }}
+                      </span>
+                    }
+                    @if (variant === 'related') {
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-400 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                        [attr.data-test]="'kp-proxy-marker-' + (item.uuid || item.handle)"
+                        aria-label="Proxy: not tagged with this project, relation is approximate">
+                        {{ copy.proxyMarker }}
+                      </span>
+                    }
+                    @if (matchesProgram(item)) {
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 kp-sp-match-badge"
+                        [attr.data-test]="'kp-sp-match-' + (item.uuid || item.handle)"
+                        [attr.aria-label]="'Matches Science Program: ' + (programName() || programCode())">
+                        <i class="pi pi-sparkles text-[10px]" aria-hidden="true"></i>
+                        Matches {{ programName() || programCode() }}
+                      </span>
+                    }
+                  </div>
+
+                  <!-- Title -->
+                  <h4 class="text-sm font-semibold text-gray-900 leading-snug">
+                    {{ item.title }}
+                  </h4>
+
+                  <!-- Meta line: type · year · authors · affiliation -->
+                  <div class="text-xs text-gray-500 mt-1">
+                    {{ formatMeta(item) }}
+                  </div>
+
+                  @if (variant === 'linked' && item.projects?.length) {
+                    <div class="mt-1 text-xs text-gray-600" [attr.data-test]="'kp-linked-project-labels-' + (item.uuid || item.handle)">
+                      <span class="font-semibold">{{ item.projects.length > 1 ? 'Projects:' : 'Project:' }}</span>
+                      <ul class="m-0 mt-0.5 flex list-none flex-col gap-0.5 p-0">
+                        @for (label of item.projects; track $index) {
+                          <li class="break-words" data-test="kp-linked-project-label">{{ label }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+
+                  <!-- Country chips (up to 3) -->
+                  @if (item.countries && item.countries.length > 0) {
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                      @for (country of item.countries.slice(0, 3); track country) {
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                          {{ country }}
+                        </span>
+                      }
+                    </div>
+                  }
+
+                  <!-- Monospace handle (primary + secondary handles from item.alsoIn) -->
+                  <div class="mt-2 text-xs font-mono text-gray-500">
+                    {{ item.handle }}
+                  </div>
+                  @if (item.alsoIn && item.alsoIn.length) {
+                    @for (also of item.alsoIn; track also.repository) {
+                      <div class="mt-0.5 text-xs font-mono text-gray-400" [attr.data-test]="'kp-also-in-handle-' + also.repository">
+                        {{ also.handle }}
+                      </div>
+                    }
+                  }
+                </div>
+
+                <!-- Right actions: Use this item button & View details link -->
+                <div class="flex w-full shrink-0 flex-col items-stretch gap-2 min-[480px]:w-auto min-[480px]:items-end">
+                  <button
+                    type="button"
+                    class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border-0 bg-[var(--pr-color-primary-300)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--pr-color-primary-400)] disabled:cursor-not-allowed disabled:opacity-60 min-[480px]:w-auto min-[480px]:min-w-[100px] cursor-pointer"
+                    [disabled]="busy()"
+                    [attr.aria-label]="'Use this item: ' + item.title"
+                    (click)="onSelect(item)">
+                    @if (busy() && selectingItem() === (item.uuid || item.handle)) {
+                      <i class="pi pi-spin pi-spinner text-[13px]"></i>
+                      <span>Retrieving…</span>
+                    } @else {
+                      <span>Use this item</span>
+                    }
+                  </button>
+
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 text-xs text-[var(--pr-color-primary-300)] hover:underline font-medium cursor-pointer bg-transparent border-0 p-0"
+                    (click)="openItemDetails(item)">
+                    View details
+                    <i class="pi pi-external-link text-[10px]"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+</ng-template>
 <div class="flex w-full min-w-0 flex-col gap-4">
   <!-- Search bar & Filters container -->
   <div class="flex flex-col gap-3">
@@ -150,48 +277,7 @@
         </div>
       }
 
-      @if (showProjectRepositoryFilterChip()) {
-        <button
-          type="button"
-          class="inline-flex h-[38px] w-full min-w-0 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold shadow-2xs transition-colors cursor-pointer min-[480px]:w-auto min-[480px]:justify-start"
-          [ngClass]="projectRepositoryFilterOn()
-            ? 'border-amber-400 bg-amber-50 text-amber-900'
-            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'"
-          [attr.aria-pressed]="projectRepositoryFilterOn()"
-          [attr.aria-label]="projectRepositoryFilterOn()
-            ? 'Filter by project tag is on for ' + projectRepositoryFilterValue()
-            : 'Filter by project tag is off — search is broader'"
-          [attr.title]="projectRepositoryFilterOn()
-            ? 'Exact project tag on MELSpace and WorldFish only; CGSpace uses highlight matching only'
-            : 'Recommended — limits search to items tagged with your exact project label in MELSpace and WorldFish'"
-          data-test="kp-project-repository-filter"
-          (click)="toggleProjectRepositoryFilter()">
-          <i class="pi pi-filter shrink-0 text-[10px]" aria-hidden="true"></i>
-          <span class="truncate">
-            Filter by project tag:
-            <span [ngClass]="projectRepositoryFilterOn() ? 'text-amber-800' : 'text-gray-600'">
-              {{ projectRepositoryFilterOn() ? 'ON' : 'OFF' }}
-            </span>
-          </span>
-        </button>
-      }
-
       </div>
-
-      @if (showProjectRepositoryFilterChip()) {
-        <div
-          class="box-border flex w-full min-w-0 items-start gap-1.5 rounded-md border border-dashed border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-25)] px-3 py-2 text-xs text-[var(--pr-color-primary-700)]"
-          data-test="kp-project-match-context">
-          <i class="pi pi-bookmark mt-0.5 shrink-0 text-[10px]" aria-hidden="true"></i>
-          <span class="min-w-0 flex-1 text-left leading-snug break-words">
-            <span class="font-semibold">Project highlight:</span>
-            {{ projectCode() }}@if (projectCode() && projectTitle()) { · }{{ projectTitle() }}.
-            <span class="font-normal text-[var(--pr-color-primary-600)]">
-              Matches {{ repositoryProjectMetadataField }} using {{ bilateralProjectSourceLabel }} code, title, summary, description, and lead center. Ranks tagged items first; does not hide other items.
-            </span>
-          </span>
-        </div>
-      }
     </div>
 
     @if (isBilateralBrowse() && activeFilterDescriptors().length) {
@@ -238,6 +324,7 @@
         <p class="m-0 max-w-[280px] text-center text-xs text-gray-500">Fetching the title and repository details for this item.</p>
       </div>
     }
+    @if (!isProjectScoped()) {
     <!-- Loading State -->
     @if (status() === 'loading') {
       <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-500" data-test="cgspace-loading">
@@ -254,7 +341,7 @@
           <p class="text-[14.5px] text-gray-700 font-medium">Please enter at least 3 characters to search the selected repositories.</p>
         } @else if (isBilateralBrowse()) {
           <p class="text-[15px] text-gray-700 font-medium">Search CGSpace, MELSpace and WorldFish by title, author, or DOI.</p>
-          <p class="text-[13px] text-gray-500 mt-1">Type at least 3 characters to start. Project highlights compare your bilateral project to {{ repositoryProjectMetadataField }} on each item — many projects never tag that field.</p>
+          <p class="text-[13px] text-gray-500 mt-1">Type at least 3 characters to start, or select a filter above.</p>
         } @else {
           <p class="text-[15px] text-gray-700 font-medium">Search CGSpace, MELSpace and WorldFish by title, author, or DOI to find a Knowledge Product.</p>
           <p class="text-[13px] text-gray-500 mt-1">Type at least 3 characters or select a filter above.</p>
@@ -339,9 +426,9 @@
         <div aria-live="polite" class="flex flex-col gap-2">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="text-xs text-gray-500 font-medium" data-test="kp-results-counter">
-              {{ resultsCounterText() }}@if (projectMatchCount() > 0) { · {{ projectMatchCount() }} match {{ projectMatchLabel() }} }@if (matchCount() > 0) { · {{ matchCount() }} match {{ programName() || programCode() }}}
+              {{ resultsCounterText() }}@if (matchCount() > 0) { · {{ matchCount() }} match {{ programName() || programCode() }}}
             </div>
-            @if (contextualMatchCount() > 0) {
+            @if (matchCount() > 0) {
               <button
                 type="button"
                 class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer border"
@@ -350,28 +437,10 @@
                 data-test="kp-only-matches-toggle"
                 (click)="onlyMatches.update(v => !v)">
                 <i class="pi pi-sparkles text-[10px]" aria-hidden="true"></i>
-                <span>{{ onlyMatches() ? 'Show all results' : 'Show matches only (' + contextualMatchCount() + ')' }}</span>
+                <span>{{ onlyMatches() ? 'Show all results' : 'Show matches only (' + matchCount() + ')' }}</span>
               </button>
             }
           </div>
-
-          @if (showProjectMatchZeroNotice()) {
-            <div
-              role="status"
-              class="rounded-lg border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-25)] px-3 py-2.5 text-left"
-              data-test="kp-project-match-zero-notice">
-              <div class="flex min-w-0 flex-col gap-1 min-[480px]:flex-row min-[480px]:flex-wrap min-[480px]:items-baseline min-[480px]:gap-x-1.5">
-                <span
-                  class="inline-flex w-fit shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-700)]">
-                  Info
-                </span>
-                <p class="m-0 min-w-0 flex-1 text-xs leading-snug text-[var(--pr-color-primary-700)]">
-                  <span class="font-semibold text-[var(--pr-color-primary-800)]">No project tags matched in these results.</span>
-                  {{ projectMatchZeroNoticeBody() }}
-                </p>
-              </div>
-            </div>
-          }
 
           <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-7: partial notice + per-repo retry -->
           @if (failedSources().length && items().length) {
@@ -401,113 +470,7 @@
         <!-- Cards list -->
         <div class="flex flex-col gap-3">
           @for (item of displayItems(); track item.uuid || item.handle || $index) {
-            <div
-              class="border border-gray-200 rounded-xl p-4 bg-white hover:border-gray-300 shadow-sm transition-all flex flex-col gap-2"
-              [class.border-l-4]="matchesProgram(item) || matchesProject(item)"
-              [class.border-l-[var(--pr-color-primary-300)]]="matchesProgram(item) || matchesProject(item)">
-              <div class="flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between min-[480px]:gap-4">
-                <div class="min-w-0 flex-1">
-                  <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-4 / KPM-R-5: repository badge + "Also in" -->
-                  <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
-                    @if (item.repository) {
-                      <span
-                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                        [ngClass]="repoMeta(item.repository)?.badgeClass"
-                        [attr.data-test]="'kp-item-badge-' + item.repository">
-                        <span class="size-[7px] rounded-full" [ngClass]="repoMeta(item.repository)?.dotClass"></span>
-                        {{ kpRepositoryLabel(item.repository) }}
-                      </span>
-                    }
-                    @if (item.alsoIn && item.alsoIn.length) {
-                      @for (also of item.alsoIn; track also.repository) {
-                        <span
-                          class="inline-flex items-center gap-1 rounded-full border border-[var(--pr-border)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--pr-text-secondary)]"
-                          [attr.data-test]="'kp-also-in-' + also.repository">
-                          <ng-icon name="lucideSplit" class="text-[11px]" aria-hidden="true" />
-                          Also in {{ kpRepositoryLabel(also.repository) }}
-                        </span>
-                      }
-                    }
-                    @if (matchesProject(item)) {
-                      <span
-                        class="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 kp-project-match-badge"
-                        [attr.data-test]="'kp-project-match-' + (item.uuid || item.handle)"
-                        [attr.aria-label]="'Matches project: ' + (projectTitle() || projectCode())">
-                        <i class="pi pi-sparkles text-[10px]" aria-hidden="true"></i>
-                        Matches {{ projectMatchLabel() }}
-                      </span>
-                    }
-                    @if (matchesProgram(item)) {
-                      <span
-                        class="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 kp-sp-match-badge"
-                        [attr.data-test]="'kp-sp-match-' + (item.uuid || item.handle)"
-                        [attr.aria-label]="'Matches Science Program: ' + (programName() || programCode())">
-                        <i class="pi pi-sparkles text-[10px]" aria-hidden="true"></i>
-                        Matches {{ programName() || programCode() }}
-                      </span>
-                    }
-                  </div>
-
-                  <!-- Title -->
-                  <h4 class="text-sm font-semibold text-gray-900 leading-snug">
-                    {{ item.title }}
-                  </h4>
-
-                  <!-- Meta line: type · year · authors · affiliation -->
-                  <div class="text-xs text-gray-500 mt-1">
-                    {{ formatMeta(item) }}
-                  </div>
-
-                  <!-- Country chips (up to 3) -->
-                  @if (item.countries && item.countries.length > 0) {
-                    <div class="flex flex-wrap gap-1.5 mt-2">
-                      @for (country of item.countries.slice(0, 3); track country) {
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                          {{ country }}
-                        </span>
-                      }
-                    </div>
-                  }
-
-                  <!-- Monospace handle (primary + secondary handles from item.alsoIn) -->
-                  <div class="mt-2 text-xs font-mono text-gray-500">
-                    {{ item.handle }}
-                  </div>
-                  @if (item.alsoIn && item.alsoIn.length) {
-                    @for (also of item.alsoIn; track also.repository) {
-                      <div class="mt-0.5 text-xs font-mono text-gray-400" [attr.data-test]="'kp-also-in-handle-' + also.repository">
-                        {{ also.handle }}
-                      </div>
-                    }
-                  }
-                </div>
-
-                <!-- Right actions: Use this item button & View details link -->
-                <div class="flex w-full shrink-0 flex-col items-stretch gap-2 min-[480px]:w-auto min-[480px]:items-end">
-                  <button
-                    type="button"
-                    class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border-0 bg-[var(--pr-color-primary-300)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--pr-color-primary-400)] disabled:cursor-not-allowed disabled:opacity-60 min-[480px]:w-auto min-[480px]:min-w-[100px] cursor-pointer"
-                    [disabled]="busy()"
-                    [attr.aria-label]="'Use this item: ' + item.title"
-                    (click)="onSelect(item)">
-                    @if (busy() && selectingItem() === (item.uuid || item.handle)) {
-                      <i class="pi pi-spin pi-spinner text-[13px]"></i>
-                      <span>Retrieving…</span>
-                    } @else {
-                      <span>Use this item</span>
-                    }
-                  </button>
-
-                  <button
-                    type="button"
-                    class="inline-flex items-center gap-1 text-xs text-[var(--pr-color-primary-300)] hover:underline font-medium cursor-pointer bg-transparent border-0 p-0"
-                    (click)="openItemDetails(item)">
-                    View details
-                    <i class="pi pi-external-link text-[10px]"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ng-container *ngTemplateOutlet="kpCard; context: { $implicit: item, variant: 'single' }" />
           }
         </div>
 
@@ -524,6 +487,213 @@
           </div>
         }
       </div>
+    }
+    } @else {
+      <!-- @akili-spec changes/kp-project-strict-filter — KPSF-R-3 / R-5 / R-6 / R-9: two-section bilateral browse -->
+      @if (status() === 'idle' && linkedStatus() === 'idle') {
+        <div
+          class="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50"
+          role="status"
+          data-test="cgspace-idle">
+          <i class="pi pi-search text-2xl text-gray-400 mb-2" aria-hidden="true"></i>
+          @if (query().trim().length > 0 && query().trim().length < 3) {
+            <p class="m-0 text-[14.5px] text-gray-700 font-medium">{{ copy.minChars }}</p>
+            <p class="m-0 mt-1 text-[13px] text-gray-500">{{ copy.minCharsClear }}</p>
+          } @else {
+            <p class="m-0 text-[15px] text-gray-700 font-medium">{{ copy.scopedIdle }}</p>
+          }
+        </div>
+      } @else {
+        <div class="flex flex-col gap-5">
+          <!-- Global controls: partial-failure notice (KPM-R-7) and the Science Program match toggle (KPAM, both lists) -->
+          <div aria-live="polite" class="flex flex-col gap-2">
+            @if (matchCount() > 0) {
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="text-xs text-gray-500 font-medium" data-test="kp-results-counter">
+                  {{ matchCount() }} match {{ programName() || programCode() }} (across both lists)
+                </div>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer border"
+                  [ngClass]="onlyMatches() ? 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-400)] border-[var(--pr-color-primary-300)]' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                  [attr.aria-pressed]="onlyMatches()"
+                  data-test="kp-only-matches-toggle"
+                  (click)="onlyMatches.update(v => !v)">
+                  <i class="pi pi-sparkles text-[10px]" aria-hidden="true"></i>
+                  <span>{{ onlyMatches() ? 'Show all results' : 'Show matches only (' + matchCount() + ')' }}</span>
+                </button>
+              </div>
+            }
+            @if (failedSources().length) {
+              <div
+                role="status"
+                class="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+                data-test="kp-partial-notice">
+                <span data-test="kp-partial-notice-copy">
+                  {{ failedRepositoriesText() }} did not respond. Results below exclude {{ failedSources().length === 1 ? 'it' : 'them' }}.
+                </span>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (source of failedSources(); track source.repository) {
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 cursor-pointer"
+                      [attr.data-test]="'kp-retry-' + source.repository"
+                      (click)="retrySearch()">
+                      <ng-icon name="lucideRefreshCw" class="text-[12px]" aria-hidden="true" />
+                      Retry {{ kpRepositoryLabel(source.repository) }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Section 1: KPs linked to the project -->
+          <section class="flex flex-col gap-3" aria-label="KPs linked to the project" data-test="kp-linked-section">
+            <div class="flex flex-col gap-1">
+              <h3 class="m-0 text-[15px] font-bold text-gray-900" data-test="kp-linked-heading">
+                {{ copy.linkedHeading }}@if (linkedStatus() !== 'loading' && linkedStatus() !== 'error') { · {{ linkedTotal() }}}
+              </h3>
+              <p class="m-0 text-xs text-gray-500" data-test="kp-linked-info">{{ copy.linkedInfo }}</p>
+            </div>
+
+            @if (linkedStatus() === 'loading') {
+              <div class="flex items-center gap-2 py-4 text-sm text-gray-500" role="status" data-test="kp-linked-loading">
+                <i class="pi pi-spin pi-spinner text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
+                <span>{{ copy.linkedLoading }}</span>
+              </div>
+            } @else if (linkedStatus() === 'error') {
+              <div
+                class="flex flex-wrap items-center gap-3 rounded-lg border border-red-200 bg-red-50/60 px-3 py-2.5 text-xs text-red-900"
+                role="alert"
+                data-test="kp-linked-error">
+                <span class="font-semibold">{{ copy.sectionError }}</span>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 rounded-lg border-0 bg-[var(--pr-color-primary-300)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--pr-color-primary-400)] cursor-pointer"
+                  data-test="kp-linked-retry-btn"
+                  (click)="retrySearch()">
+                  <i class="pi pi-refresh text-[12px]" aria-hidden="true"></i>
+                  <span>Try again</span>
+                </button>
+              </div>
+            } @else if (!linkedApplied()) {
+              <div
+                class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700"
+                tabindex="0"
+                role="status"
+                data-test="kp-linked-not-applied">
+                {{ copy.linkedNotApplied }}
+              </div>
+            } @else if (linkedStatus() === 'empty' || linkedStatus() === 'idle') {
+              <div
+                class="flex flex-col gap-1 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-xs text-gray-700"
+                tabindex="0"
+                role="status"
+                data-test="kp-linked-empty">
+                <span class="text-sm font-semibold text-gray-800">{{ copy.linkedEmptyTitle }}</span>
+                <span>No KP in the selected repositories is tagged with <strong>{{ projectDisplayLabel() }}</strong>.</span>
+                @if (failedSources().length) {
+                  <span class="text-amber-900" data-test="kp-linked-empty-unavailable">
+                    {{ failedRepositoriesText() }} did not respond, so linked KPs may be missing from it.
+                  </span>
+                }
+              </div>
+            } @else {
+              <div class="flex flex-col gap-3">
+                <div class="text-xs text-gray-500 font-medium" aria-live="polite" data-test="kp-linked-counter">
+                  Showing {{ linkedItems().length }} of {{ linkedTotal() }} items
+                </div>
+                @for (item of displayLinkedItems(); track item.uuid || item.handle || $index) {
+                  <ng-container *ngTemplateOutlet="kpCard; context: { $implicit: item, variant: 'linked' }" />
+                }
+                @if (linkedHasMore()) {
+                  <div class="flex justify-center mt-1 mb-2">
+                    <button
+                      type="button"
+                      class="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none cursor-pointer disabled:opacity-50"
+                      data-test="kp-linked-load-more"
+                      aria-label="Load more linked KPs"
+                      [disabled]="linkedLoadingMore()"
+                      (click)="loadMoreLinked()">
+                      {{ linkedLoadingMore() ? 'Loading...' : 'Load more' }}
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+
+          <!-- Section 2: Other KPs potentially related (proxy) -->
+          <section class="flex flex-col gap-3" aria-label="Other KPs potentially related" data-test="kp-related-section">
+            <div class="flex flex-col gap-1">
+              <h3 class="m-0 text-[15px] font-bold text-gray-900" data-test="kp-related-heading">
+                {{ copy.relatedHeading }}@if (status() !== 'loading' && status() !== 'error') { · {{ total() }}}
+              </h3>
+              <p class="m-0 flex items-start gap-1.5 text-xs text-amber-900" data-test="kp-proxy-note">
+                <ng-icon name="lucideTriangleAlert" class="mt-px shrink-0 text-[13px]" aria-hidden="true" />
+                <span><strong>Proxy:</strong> {{ copy.proxyNote }}</span>
+              </p>
+            </div>
+
+            @if (status() === 'loading') {
+              <div class="flex items-center gap-2 py-4 text-sm text-gray-500" role="status" data-test="kp-related-loading">
+                <i class="pi pi-spin pi-spinner text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
+                <span>{{ copy.relatedLoading }}</span>
+              </div>
+            } @else if (status() === 'error') {
+              <div
+                class="flex flex-wrap items-center gap-3 rounded-lg border border-red-200 bg-red-50/60 px-3 py-2.5 text-xs text-red-900"
+                role="alert"
+                data-test="kp-related-error">
+                <span class="font-semibold">{{ copy.sectionError }}</span>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 rounded-lg border-0 bg-[var(--pr-color-primary-300)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--pr-color-primary-400)] cursor-pointer"
+                  data-test="cgspace-retry-btn"
+                  (click)="retrySearch()">
+                  <i class="pi pi-refresh text-[12px]" aria-hidden="true"></i>
+                  <span>Try again</span>
+                </button>
+              </div>
+            } @else if (status() === 'empty' || status() === 'idle') {
+              <div
+                class="flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 text-xs text-gray-700"
+                tabindex="0"
+                role="status"
+                data-test="kp-related-empty">
+                <span class="text-sm font-semibold text-gray-800">{{ copy.relatedEmptyTitle }}</span>
+                <span>
+                  Adjust the filters, try different terms, or use
+                  <button type="button" data-test="switch-to-manual-empty" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.
+                </span>
+              </div>
+            } @else {
+              <div class="flex flex-col gap-3">
+                <div class="text-xs text-gray-500 font-medium" aria-live="polite" data-test="kp-related-counter">
+                  {{ resultsCounterText() }}
+                </div>
+                @for (item of displayItems(); track item.uuid || item.handle || $index) {
+                  <ng-container *ngTemplateOutlet="kpCard; context: { $implicit: item, variant: 'related' }" />
+                }
+                @if (hasMore()) {
+                  <div class="flex justify-center mt-1 mb-2">
+                    <button
+                      type="button"
+                      class="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none cursor-pointer disabled:opacity-50"
+                      data-test="kp-related-load-more"
+                      aria-label="Load more potentially related KPs"
+                      [disabled]="loadingMore()"
+                      (click)="loadMore()">
+                      {{ loadingMore() ? 'Loading...' : 'Load more' }}
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        </div>
+      }
     }
   </div>
 </div>

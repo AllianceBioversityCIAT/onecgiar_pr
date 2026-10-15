@@ -34,7 +34,7 @@ export class ResultsKnowledgeProductsController {
     summary:
       'Search CGSpace, MELSpace and WorldFish (DSpace 7 discovery) for knowledge products',
     description:
-      'Proxies the discovery search across the `repository` list (repeatable or comma-separated; default all three; any other value is rejected with 400). `query` (3-200 chars) is required unless at least one of `type`, `year`, `center`, `project` is set. Optional `project` applies the Discovery `f.project` facet (W3/bilateral). `size` is capped at 25 and applies PER SOURCE (merged page holds at most size × selected repositories). Response adds `sources[]` (one entry per selected repository with its status) next to `items`/`page`. Unknown query params are rejected with 400.',
+      'Proxies the discovery search across the `repository` list (repeatable or comma-separated; default all three; any other value is rejected with 400). `query` (3-200 chars) is required unless at least one of `type`, `year`, `center`, `projectScope` (or the deprecated `project`) is set. Optional W3/bilateral project context: `projectCode`, `projectTitle`, `projectLeadCenter` plus `projectScope` = `linked` (items whose repository project field matches the project by title words or PJ code) or `related` (the same search excluding those items); the response echoes `projectScope: { scope, applied }`, with `applied=false` when the project is too generic to constrain. `size` is capped at 25 and applies PER SOURCE (merged page holds at most size × selected repositories). Response adds `sources[]` (one entry per selected repository with its status) next to `items`/`page`. Unknown query params are rejected with 400.',
   })
   @Get('cgspace/search')
   cgspaceSearch(

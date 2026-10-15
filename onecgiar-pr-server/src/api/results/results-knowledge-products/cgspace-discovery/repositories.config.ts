@@ -1,3 +1,9 @@
+import {
+  ProjectMatchContext,
+  buildProjectClause,
+  buildProjectMatch,
+} from './project-match';
+
 /**
  * Static adapter registry for the multi-repository Discovery-API proxy (`KPM-DD-1`).
  * One entry per repository (DSpace 7 Discovery-API host); the service/mapper take the adapter
@@ -34,6 +40,13 @@ export interface RepositoryAdapterFields {
   affiliation?: string;
   doi: string;
   uri: string;
+  /**
+   * Project label field, queried by the scoped linked/related search and read by the mapper
+   * (`KPSF-DD-3`): `cg.identifier.project` on CGSpace, `cg.contributor.project` on
+   * MELSpace/WorldFish. It is interpolated into the Solr clause, so it must only ever be this
+   * adapter constant, never a request value.
+   */
+  project: string;
 }
 
 export interface RepositoryAdapterFacets {
@@ -41,8 +54,6 @@ export interface RepositoryAdapterFacets {
   type: string;
   /** `f.<center>` facet name (affiliation / center). Undefined -> Center filter unconstrained (`KPM-OQ-3`). */
   center?: string;
-  /** `f.<project>` facet name (cg.identifier.project). Undefined -> project filter skipped on that host. */
-  project?: string;
 }
 
 export interface RepositoryAdapter {
@@ -77,12 +88,11 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
       affiliation: 'cg.contributor.affiliation',
       doi: 'cg.identifier.doi',
       uri: 'dc.identifier.uri',
+      project: 'cg.identifier.project',
     },
     facets: {
       type: 'itemtype',
       center: 'affiliation',
-      // CGSpace Discovery exposes no `project` facet (2026-09 live `/discover/facets` audit).
-      // Sending `f.project=` returns HTTP 400 — strict bilateral tag filter applies to MEL/WorldFish only.
     },
     yearFilterField: 'dateIssued',
   },
@@ -99,11 +109,11 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
       affiliation: 'cg.contributor.center',
       doi: 'cg.identifier.doi',
       uri: 'dc.identifier.uri',
+      project: 'cg.contributor.project',
     },
     facets: {
       type: 'itemtype',
       center: 'institute',
-      project: 'project',
     },
     yearFilterField: 'dateIssued',
   },
@@ -120,11 +130,11 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
       affiliation: 'cg.contributor.affiliation',
       doi: 'dc.identifier.doi',
       uri: 'dc.identifier.uri',
+      project: 'cg.contributor.project',
     },
     facets: {
       type: 'itemtype',
       center: 'institute',
-      project: 'project',
     },
     yearFilterField: 'dateIssued',
   },
@@ -189,7 +199,57 @@ export interface TranslatableSearchParams {
   type?: string;
   year?: string;
   center?: string;
+  /** Legacy `<code> - <title>` label; mapped to `projectScope=linked` (`KPSF-R-11`). */
   project?: string;
+  projectCode?: string;
+  projectTitle?: string;
+  projectLeadCenter?: string;
+  projectScope?: ProjectScope;
+}
+
+export type ProjectScope = 'linked' | 'related';
+
+/** Result of resolving the project inputs of a search (`design.md` §7). */
+export interface ResolvedProjectScope {
+  scope: ProjectScope;
+  /** False when the project yields neither >= 2 distinctive words nor a code (`KPSF-R-9`). */
+  applied: boolean;
+  ctx: ProjectMatchContext;
+}
+
+/**
+ * Resolves the scoped-project inputs of a search, or `null` when the search carries none (the
+ * non-bilateral path, byte-identical to before). An explicit `projectScope` wins; otherwise the
+ * legacy `project` (`<code> - <title>`) is accepted for one release as `linked` (`KPSF-R-11`).
+ */
+export function resolveProjectScope(
+  dto: TranslatableSearchParams,
+): ResolvedProjectScope | null {
+  let scope: ProjectScope;
+  let ctx: ProjectMatchContext;
+
+  if (dto.projectScope) {
+    scope = dto.projectScope;
+    ctx = {
+      code: dto.projectCode,
+      title: dto.projectTitle,
+      leadCenter: dto.projectLeadCenter,
+    };
+  } else if (dto.project) {
+    scope = 'linked';
+    const separator = dto.project.indexOf(' - ');
+    ctx =
+      separator >= 0
+        ? {
+            code: dto.project.slice(0, separator),
+            title: dto.project.slice(separator + 3),
+          }
+        : { title: dto.project };
+  } else {
+    return null;
+  }
+
+  return { scope, applied: buildProjectMatch(ctx).usable, ctx };
 }
 
 /**
@@ -204,7 +264,10 @@ export interface TranslatableSearchParams {
  *   leaving that repository unconstrained by the Center filter (`KPM-OQ-3`);
  * - `f.<yearFilterField>=[Y TO Y],equals` — when the adapter declares no year filter field the
  *   param is omitted and the service post-filters the mapped `year` instead (`KPM-DD-7`).
- * - `f.<facets.project>=<project>,equals` — skipped when the adapter declares no project facet.
+ * - project scope (`KPSF-T-2`): `linked` -> `<base> AND (<clause>)`, `related` ->
+ *   `<base> AND NOT (<clause>)` on `adapter.fields.project`; an unusable project leaves the base
+ *   query untouched (the service short-circuits `linked` before ever calling this). No `f.project`
+ *   facet is ever emitted (`KPSF-R-11`).
  *
  * Pure: no env reads, no logging, no host/base-URL knowledge.
  */
@@ -238,8 +301,21 @@ export function translateParams(
       `[${dto.year} TO ${dto.year}],equals`;
   }
 
-  if (dto.project && adapter.facets.project) {
-    params[`f.${adapter.facets.project}`] = `${dto.project},equals`;
+  // @akili-spec changes/kp-project-strict-filter
+  // Scoped project split (`KPSF-DD-2`): linked = base AND (clause), related = base AND NOT
+  // (clause). The field is the adapter constant; only sanitized tokens come from the project.
+  // Residual risk (recorded, no post-filter so counts stay exact): on multi-valued project
+  // fields the Solr word group matches at item level, so an item can match across two labels.
+  const project = resolveProjectScope(dto);
+  if (project?.applied) {
+    const clause = buildProjectClause(adapter.fields.project, project.ctx);
+    if (clause) {
+      const base = escapedQuery ? `(${escapedQuery})` : '*:*';
+      params.query =
+        project.scope === 'linked'
+          ? `${base} AND (${clause})`
+          : `${base} AND NOT (${clause})`;
+    }
   }
 
   return params;

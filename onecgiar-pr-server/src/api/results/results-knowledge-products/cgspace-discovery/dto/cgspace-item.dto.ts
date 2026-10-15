@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { KpRepository } from '../repositories.config';
+import { KpRepository, ProjectScope } from '../repositories.config';
 
 export class CgspacePageMetaDto {
   number: number;
@@ -69,7 +69,7 @@ export class CgspaceItemDto {
 
   @ApiPropertyOptional({
     description:
-      'Project identifiers tagged on the item from cg.identifier.project',
+      'Project labels tagged on the item: cg.identifier.project (CGSpace) or cg.contributor.project (MELSpace/WorldFish), unioned and deduped',
     type: [String],
   })
   projects?: string[];
@@ -96,6 +96,18 @@ export class SourceStatusDto {
   hasMore: boolean;
 }
 
+/** `projectScope` echo (`design.md` §7): `applied=false` when the project is too generic to constrain. */
+export class CgspaceProjectScopeDto {
+  @ApiProperty({ enum: ['linked', 'related'] })
+  scope: ProjectScope;
+
+  @ApiProperty({
+    description:
+      'False when the project yields neither >= 2 distinctive title words nor a PJ code.',
+  })
+  applied: boolean;
+}
+
 export class CgspaceSearchPageDto {
   items: CgspaceItemDto[];
   page: CgspacePageMetaDto;
@@ -109,6 +121,13 @@ export class CgspaceSearchPageDto {
    */
   @ApiProperty({ type: () => [SourceStatusDto] })
   sources?: SourceStatusDto[];
+
+  /**
+   * Echo of the project scope the search ran with (`KPSF-R-9`). Present only when the request
+   * carried a project scope (or the legacy `project`); absent on the non-bilateral path.
+   */
+  @ApiPropertyOptional({ type: () => CgspaceProjectScopeDto })
+  projectScope?: CgspaceProjectScopeDto;
 }
 
 /**
