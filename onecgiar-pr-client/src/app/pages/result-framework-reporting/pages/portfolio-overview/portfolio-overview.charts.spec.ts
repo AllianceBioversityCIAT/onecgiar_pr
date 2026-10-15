@@ -7,11 +7,6 @@ import {
   statusPipelineOption,
   categoryOriginBarOption,
   categoryOriginBarTable,
-  programRankingOption,
-  programRankingTable,
-  programRankingVerticalOption,
-  programRankingHeatmapOption,
-  programRankingHeatmapTable,
   centerBilateralOption,
   centerBilateralTable,
   matrixTableChartOption,
@@ -22,7 +17,6 @@ import {
 import type {
   PortfolioStatusSegment,
   CategoryOriginRow,
-  ProgramRankingRow,
   CenterDistributionRow
 } from './services/portfolio-overview.service';
 
@@ -35,7 +29,7 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
     it('appends ellipsis when the programme name exceeds the limit', () => {
       const longName =
         'Accelerated varietal improvement and seed delivery of legumes and dryland cereals in Africa (AVISA)';
-      expect(truncateProgramAxisLabel(longName, PROGRAM_AXIS_LABEL_MAX_CHARS.vertical)).toBe(
+      expect(truncateProgramAxisLabel(longName, PROGRAM_AXIS_LABEL_MAX_CHARS.matrix)).toBe(
         'Accelerated var...'
       );
     });
@@ -166,9 +160,9 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
 
     describe('portfolioStatusDonutTable', () => {
       it('builds table model with caption, headers, and all segment rows including zero-count', () => {
-        const table = portfolioStatusDonutTable(segments);
+        const table = portfolioStatusDonutTable(segments, 'X');
 
-        expect(table.caption).toBe('Portfolio reporting status breakdown');
+        expect(table.caption).toBe('X');
         expect(table.headers).toEqual(['Status', 'Results', 'Share']);
         expect(table.rows).toEqual([
           ['Editing', 12, '30%'],
@@ -181,7 +175,7 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
       });
 
       it('handles empty array producing empty rows', () => {
-        const table = portfolioStatusDonutTable([]);
+        const table = portfolioStatusDonutTable([], 'X');
         expect(table.rows).toEqual([]);
       });
     });
@@ -272,164 +266,6 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
           ['Knowledge product', 25, 15, 40],
           ['Capacity sharing for development', 20, 10, 30],
           ['Innovation development', 10, 5, 15]
-        ]);
-      });
-    });
-  });
-
-  describe('programRankingOption & programRankingTable (POV-R-4)', () => {
-    const programRows: ProgramRankingRow[] = [
-      { code: 'SP01', name: 'Plant Health', editing: 5, submittedOrQa: 15, approved: 30, total: 50 },
-      { code: 'SP02', name: 'Livestock Genetics', editing: 8, submittedOrQa: 12, approved: 20, total: 40 }
-    ];
-
-    describe('programRankingOption', () => {
-      it('configures a horizontal stacked bar chart with program names on yAxis', () => {
-        const option = programRankingOption(programRows, mockTokens) as {
-          xAxis: { type: string };
-          yAxis: { type: string; data: string[]; inverse: boolean };
-        };
-
-        expect(option.xAxis.type).toBe('value');
-        expect(option.yAxis.type).toBe('category');
-        expect(option.yAxis.data).toEqual(['Plant Health', 'Livestock Genetics']);
-        expect(option.yAxis.inverse).toBe(true);
-      });
-
-      it('emits three stacked bar series: Editing, Submitted / In QA, Approved', () => {
-        const option = programRankingOption(programRows, mockTokens);
-        const series = option.series as {
-          name: string;
-          type: string;
-          stack: string;
-          color?: string;
-          itemStyle?: { color?: string };
-          data: number[];
-        }[];
-
-        expect(series.length).toBe(4);
-
-        expect(series[0].name).toBe('Editing');
-        expect(series[0].stack).toBe('status');
-        expect(series[0].data).toEqual([5, 8]);
-        expect(series[0].color || series[0].itemStyle?.color).toBe(mockTokens.ramp[3]);
-
-        expect(series[1].name).toBe('Submitted / In QA');
-        expect(series[1].stack).toBe('status');
-        expect(series[1].data).toEqual([15, 12]);
-        expect(series[1].color || series[1].itemStyle?.color).toBe(mockTokens.primaryStrong);
-
-        expect(series[2].name).toBe('Approved');
-        expect(series[2].stack).toBe('status');
-        expect(series[2].data).toEqual([30, 20]);
-        expect(series[2].color || series[2].itemStyle?.color).toBe(mockTokens.ramp[0]);
-
-        expect(series[3].name).toBe('Total');
-      });
-
-      it('formats tooltip showing program name, total, and status breakdown', () => {
-        const option = programRankingOption(programRows, mockTokens);
-        const tooltip = option.tooltip as { formatter: (p: unknown) => string };
-
-        expect(tooltip.formatter({ dataIndex: 0 })).toContain('Plant Health');
-        expect(tooltip.formatter({ dataIndex: 0 })).not.toContain('SP01');
-        expect(tooltip.formatter({ dataIndex: 0 })).toContain('50 total');
-        expect(tooltip.formatter({ dataIndex: 1 })).toContain('Livestock Genetics');
-        expect(tooltip.formatter({ dataIndex: 1 })).toContain('40 total');
-        expect(tooltip.formatter({ dataIndex: 99 })).toBe('');
-      });
-
-      it('handles empty program rows array', () => {
-        const option = programRankingOption([], mockTokens);
-        const series = option.series as { data: number[] }[];
-
-        expect(series[0].data).toEqual([]);
-        expect(series[1].data).toEqual([]);
-        expect(series[2].data).toEqual([]);
-      });
-    });
-
-    describe('programRankingTable', () => {
-      it('builds table model with caption, headers, and mapped program ranking rows', () => {
-        const table = programRankingTable(programRows);
-
-        expect(table.caption).toBe('Results progress ranked by Science Program');
-        expect(table.headers).toEqual(['Science Program', 'Program Name', 'Editing', 'Submitted / QA', 'Approved', 'Total']);
-        expect(table.rows).toEqual([
-          ['SP01', 'Plant Health', 5, 15, 30, 50],
-          ['SP02', 'Livestock Genetics', 8, 12, 20, 40]
-        ]);
-      });
-    });
-
-    describe('programRankingVerticalOption', () => {
-      it('builds vertical column chart with science programs on xAxis and value on yAxis', () => {
-        const option = programRankingVerticalOption(programRows, mockTokens) as {
-          xAxis: { type: string; data: string[] };
-          yAxis: { type: string };
-          series: { name: string; type: string; stack: string; data: number[] }[];
-        };
-
-        expect(option.xAxis.type).toBe('category');
-        expect(option.xAxis.data).toEqual(['Plant Health', 'Livestock Genetics']);
-        const axisLabel = (option.xAxis as { axisLabel?: { formatter?: (v: string) => string; tooltip?: { show?: boolean } } })
-          .axisLabel;
-        expect(axisLabel?.formatter?.('Breeding for Tomorrow')).toBe('Breeding for To...');
-        expect(axisLabel?.tooltip?.show).toBe(true);
-        expect(option.yAxis.type).toBe('value');
-        expect(option.series.length).toBe(4);
-        expect(option.series[0].name).toBe('Editing');
-        expect(option.series[0].data).toEqual([5, 8]);
-        expect(option.series[1].name).toBe('Submitted / In QA');
-        expect(option.series[1].data).toEqual([15, 12]);
-        expect(option.series[2].name).toBe('Approved');
-        expect(option.series[2].data).toEqual([30, 20]);
-        expect(option.series[3].name).toBe('Total');
-      });
-    });
-
-    describe('programRankingHeatmapOption & programRankingHeatmapTable', () => {
-      const heatmapRows = [
-        { code: 'SP01', name: 'Plant Health', cells: [10, 5, 2] },
-        { code: 'SP02', name: 'Livestock Genetics', cells: [8, 12, 0] }
-      ];
-      const categories = ['Innovation development', 'Knowledge product', 'Policy change'];
-
-      it('builds heatmap series with mapped coordinates and visualMap in purple scale', () => {
-        const option = programRankingHeatmapOption(heatmapRows, categories, mockTokens) as {
-          xAxis: { type: string; data: string[] };
-          yAxis: { type: string; data: string[] };
-          visualMap: { min: number; max: number; inRange: { color: string[] } };
-          series: { type: string; data: [number, number, number][] }[];
-        };
-
-        expect(option.xAxis.type).toBe('category');
-        expect(option.xAxis.data).toEqual(['Inno-Dev', 'KP', 'Policy']);
-        expect(option.yAxis.type).toBe('category');
-        expect(option.yAxis.data).toEqual(['Plant Health', 'Livestock Genetics']);
-
-        expect(option.visualMap.max).toBe(12);
-        expect(option.visualMap.inRange.color.length).toBeGreaterThan(1);
-
-        expect(option.series[0].type).toBe('heatmap');
-        expect(option.series[0].data).toEqual([
-          [0, 0, 10],
-          [1, 0, 5],
-          [2, 0, 2],
-          [0, 1, 8],
-          [1, 1, 12],
-          [2, 1, 0]
-        ]);
-      });
-
-      it('builds accessible table model for the heatmap matrix', () => {
-        const table = programRankingHeatmapTable(heatmapRows, categories);
-
-        expect(table.caption).toBe('Science Programs results heatmap across indicator categories');
-        expect(table.headers).toEqual(['Science Program', 'Program Name', 'Innovation development', 'Knowledge product', 'Policy change']);
-        expect(table.rows).toEqual([
-          ['SP01', 'Plant Health', 10, 5, 2],
-          ['SP02', 'Livestock Genetics', 8, 12, 0]
         ]);
       });
     });

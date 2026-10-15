@@ -90,7 +90,15 @@ describe('PortfolioOverviewService', () => {
         bilateralCentersCount: 0,
         activeProgramsCount: 0,
         totalProgramsCount: 13,
-        portfolioProgressPercent: 0
+        portfolioProgressPercent: 0,
+        w1w2New: 0,
+        w1w2NewSubmitted: 0,
+        w1w2NewEditing: 0,
+        w1w2Replicated: 0,
+        bilateralNew: 0,
+        bilateralNewSubmitted: 0,
+        bilateralNewEditing: 0,
+        bilateralReplicated: 0
       });
     });
 
@@ -103,7 +111,6 @@ describe('PortfolioOverviewService', () => {
 
     it('initializes empty arrays for breakdown computeds', () => {
       expect(service.categoryOriginRows()).toEqual([]);
-      expect(service.programRankingRows()).toEqual([]);
       expect(service.centerDistributionRows()).toEqual([]);
     });
   });
@@ -243,43 +250,6 @@ describe('PortfolioOverviewService', () => {
     });
   });
 
-  describe('Program Ranking Rows (POV-R-4)', () => {
-    beforeEach(() => {
-      setupService(MOCK_RESULTS);
-      service.load();
-    });
-
-    it('ranks programs descending by total results with status breakdowns', () => {
-      const rankings = service.programRankingRows();
-      expect(rankings.length).toBe(4);
-
-      // SP01 has 3 items: 1 editing, 2 submittedOrQa (1 submitted + 1 QA), 0 approved, total 3
-      const sp01 = rankings.find(r => r.code === 'SP01');
-      expect(sp01).toEqual({
-        code: 'SP01',
-        name: 'Breeding for Tomorrow',
-        editing: 1,
-        submittedOrQa: 2,
-        approved: 0,
-        total: 3
-      });
-
-      // SP06 has 3 items: 0 editing, 0 submittedOrQa, 1 approved (plus 1 rejected, 1 discontinued), total 3
-      const sp06 = rankings.find(r => r.code === 'SP06');
-      expect(sp06).toEqual({
-        code: 'SP06',
-        name: 'Climate Action',
-        editing: 0,
-        submittedOrQa: 0,
-        approved: 1,
-        total: 3
-      });
-
-      // Sorted by total desc
-      expect(rankings[0].total).toBeGreaterThanOrEqual(rankings[1].total);
-    });
-  });
-
   describe('Center Distribution Rows (POV-R-5)', () => {
     beforeEach(() => {
       setupService(MOCK_RESULTS);
@@ -409,14 +379,12 @@ describe('PortfolioOverviewService', () => {
       const kpis = service.kpiTotals();
       const segments = service.statusSegments();
       const origins = service.categoryOriginRows();
-      const rankings = service.programRankingRows();
       const centers = service.centerDistributionRows();
       const elapsed = performance.now() - start;
 
       expect(kpis.totalResults).toBe(20000);
       expect(segments.length).toBe(6);
       expect(origins.length).toBe(4);
-      expect(rankings.length).toBe(13);
       expect(centers.length).toBe(13);
       // Wall clock on a shared CI runner measures the runner, not the aggregation: this ran in
       // ~1.08s on staging under 550 suites of parallel-worker contention against a 1s budget,
@@ -424,6 +392,96 @@ describe('PortfolioOverviewService', () => {
       // to catch the regression that matters — an accidental O(n^2) pass over the 20k rows, which
       // costs seconds, not milliseconds — rather than to police the machine.
       expect(elapsed).toBeLessThan(5000);
+    });
+  });
+
+  describe('KPI breakdown — new/replicated × submitted/editing (POVKB-R-1..R-3, R-6)', () => {
+    const w12 = (over: Partial<RawResult> = {}) => raw({ source_name: 'W1/W2', ...over });
+    const w3 = (over: Partial<RawResult> = {}) => raw({ source_name: 'W3/Bilaterals', ...over });
+
+    it('classifies is_replicated encodings: 1, "1", true are replicated; 0, "0", null, absent are new', () => {
+      const flags: unknown[] = [1, '1', true, 0, '0', null, undefined];
+      setupService(flags.map(f => w12({ is_replicated: f as RawResult['is_replicated'] })));
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.w1w2Replicated).toBe(3);
+      expect(k.w1w2New).toBe(4);
+    });
+
+    it('R-2 fixture: W1/W2 7 = New 4 (Submitted 2 + Editing 2) + Replicated 3', () => {
+      setupService([
+        w12({ status_id: 1, status_name: 'Editing', is_replicated: 0 }),
+        w12({ status_id: 1, status_name: 'Editing', is_replicated: '0' }),
+        w12({ status_id: 3, status_name: 'Submitted', is_replicated: 0 }),
+        w12({ status_id: 2, status_name: 'Quality Assessed', is_replicated: 0 }),
+        w12({ status_id: 1, status_name: 'Editing', is_replicated: 1 }),
+        w12({ status_id: 3, status_name: 'Submitted', is_replicated: '1' }),
+        w12({ status_id: 2, status_name: 'Quality Assessed', is_replicated: true })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.w1w2Count).toBe(7);
+      expect(k.w1w2New).toBe(4);
+      expect(k.w1w2NewSubmitted).toBe(2);
+      expect(k.w1w2NewEditing).toBe(2);
+      expect(k.w1w2Replicated).toBe(3);
+    });
+
+    it('R-3 fixture: W3 4 = New 2 (Submitted 1 + Editing 1) + Replicated 2', () => {
+      setupService([
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 0 }),
+        w3({ status_id: 6, status_name: 'Approved', is_replicated: 0 }),
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 1 }),
+        w3({ status_id: 6, status_name: 'Approved', is_replicated: '1' })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.bilateralCount).toBe(4);
+      expect(k.bilateralNew).toBe(2);
+      expect(k.bilateralNewSubmitted).toBe(1);
+      expect(k.bilateralNewEditing).toBe(1);
+      expect(k.bilateralReplicated).toBe(2);
+    });
+
+    it('keeps every row in exactly one bucket on mixed data (invariants + 4-part total)', () => {
+      setupService([
+        ...MOCK_RESULTS,
+        w12({ status_id: 1, is_replicated: 1 }),
+        w12({ status_id: undefined, is_replicated: 0 }),
+        w3({ status_id: 1, is_replicated: '1' }),
+        w3({ status_id: 3, is_replicated: null })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.w1w2New + k.w1w2Replicated).toBe(k.w1w2Count);
+      expect(k.w1w2NewSubmitted + k.w1w2NewEditing).toBe(k.w1w2New);
+      expect(k.bilateralNew + k.bilateralReplicated).toBe(k.bilateralCount);
+      expect(k.bilateralNewSubmitted + k.bilateralNewEditing).toBe(k.bilateralNew);
+      expect(k.w1w2New + k.w1w2Replicated + k.bilateralNew + k.bilateralReplicated).toBe(k.totalResults);
+      expect(k.w1w2Count + k.bilateralCount).toBe(k.totalResults);
+    });
+
+    it('returns 0 (not NaN/undefined) for every bilateral field when there are no W3 rows', () => {
+      setupService([w12({ is_replicated: 0 })]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.bilateralNew).toBe(0);
+      expect(k.bilateralNewSubmitted).toBe(0);
+      expect(k.bilateralNewEditing).toBe(0);
+      expect(k.bilateralReplicated).toBe(0);
+    });
+
+    it('closed-phase fallback tallies only the newest version', () => {
+      setupService([
+        w12({ phase_status: 0, version_id: '34', is_replicated: 1 }),
+        w12({ phase_status: 0, version_id: '1', is_replicated: 0 }),
+        w12({ phase_status: 0, version_id: '1', is_replicated: 0 })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(service.closedPhase()).toBe(true);
+      expect(k.w1w2Replicated).toBe(1);
+      expect(k.w1w2New).toBe(0);
     });
   });
 });

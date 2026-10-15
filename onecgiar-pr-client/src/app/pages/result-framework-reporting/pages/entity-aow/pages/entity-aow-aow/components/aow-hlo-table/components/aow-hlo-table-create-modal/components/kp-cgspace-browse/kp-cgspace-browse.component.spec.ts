@@ -1647,13 +1647,12 @@ describe('KpCgspaceBrowseComponent', () => {
     });
   });
 
-  describe('KPPJ: Project Match and Badging', () => {
-    const createProjectItem = (
-      id: string,
-      title: string,
-      projects?: string[],
-      accelerators?: string[]
-    ): CgspaceItemDto => ({
+  // @akili-spec changes/kp-project-strict-filter — KPSF-T-3: two-scope fetch and state
+  describe('KPSF: bilateral two-scope fetch and state (KPSF-T-3)', () => {
+    const PROJECT_CODE = 'T-PJ-003942';
+    const PROJECT_TITLE = 'IITA Accelerated Innovation Delivery Initiative (AID-I) for Mozambique';
+
+    const createProjectItem = (id: string, title: string, projects?: string[], accelerators?: string[]): CgspaceItemDto => ({
       uuid: `uuid-${id}`,
       handle: `10568/${id}`,
       handleUrl: `https://hdl.handle.net/10568/${id}`,
@@ -1662,8 +1661,8 @@ describe('KpCgspaceBrowseComponent', () => {
       type: 'Report',
       year: 2026,
       authors: ['Author One'],
-      affiliations: ['International Rice Research Institute'],
-      countries: ['Kenya'],
+      affiliations: ['International Institute of Tropical Agriculture'],
+      countries: ['Mozambique'],
       doi: null,
       uri: `https://hdl.handle.net/10568/${id}`,
       repository: 'cgspace',
@@ -1671,301 +1670,591 @@ describe('KpCgspaceBrowseComponent', () => {
       programAccelerators: accelerators
     });
 
-    describe('Gate D3 / KPPJ-R-4: matchesProject normalization', () => {
-      beforeEach(() => {
-        fixture.componentRef.setInput('projectCode', 'A-AG10156');
-        fixture.componentRef.setInput(
-          'projectTitle',
-          'Accelerating Impacts of CGIAR Climate Research for Africa'
+    const sourceOk = (repository: string, total: number) => ({ repository, status: 'ok', total, hasMore: false });
+
+    const pageResponse = (
+      items: CgspaceItemDto[],
+      totalElements: number,
+      hasMore: boolean,
+      extra: Record<string, unknown> = {}
+    ) => ({
+      response: { items, page: { number: 0, size: 10, totalElements, hasMore }, ...extra },
+      status: 200
+    });
+
+    const linkedItem = createProjectItem('182744', 'Strengthening bean seed systems to reach 78,000 farmers', [
+      'T-PJ-003942 - IITA Accelerated Innovation Delivery Initiative (AID-I) for Mozambique'
+    ]);
+    const relatedItems = Array.from({ length: 10 }, (_, i) => createProjectItem(`r${i}`, `Related paper ${i}`, []));
+
+    /** Answers each request by its projectScope, like the server does. */
+    const answerByScope = (linked: unknown, related: unknown) =>
+      mockResultsApiService.GET_cgspaceSearch.mockImplementation((params: Record<string, unknown>) =>
+        of(params['projectScope'] === 'linked' ? linked : related)
+      );
+
+    const setBilateral = (overrides: Record<string, unknown> = {}) => {
+      const inputs: Record<string, unknown> = {
+        enableProjectRepositoryFilter: true,
+        projectCode: PROJECT_CODE,
+        projectTitle: PROJECT_TITLE,
+        leadCenterAcronym: 'IITA',
+        phaseYear: 2026,
+        ...overrides
+      };
+      for (const [key, value] of Object.entries(inputs)) {
+        fixture.componentRef.setInput(key, value);
+      }
+    };
+
+    const searchCalls = (): Record<string, any>[] => mockResultsApiService.GET_cgspaceSearch.mock.calls.map(call => call[0]);
+
+    describe('KPSF-R-3 / KPSF-R-13: a bilateral search reset issues exactly two scoped requests', () => {
+      it('opens with project context: one linked and one related request at page 0, no text or type needed', fakeAsync(() => {
+        answerByScope(pageResponse([linkedItem], 1, false), pageResponse(relatedItems, 80, true));
+        setBilateral();
+        fixture.detectChanges();
+        flush();
+
+        const calls = searchCalls();
+        expect(calls.length).toBe(2);
+        expect(calls.map(c => c['projectScope']).sort()).toEqual(['linked', 'related']);
+        for (const call of calls) {
+          expect(call).toEqual(
+            expect.objectContaining({
+              page: 0,
+              size: 10,
+              year: 2026,
+              repository: 'cgspace,melspace,worldfish',
+              projectCode: PROJECT_CODE,
+              projectTitle: PROJECT_TITLE,
+              projectLeadCenter: 'IITA'
+            })
+          );
+          expect(call['query']).toBeUndefined();
+          expect(call['type']).toBeUndefined();
+          expect(call['project']).toBeUndefined();
+        }
+        expect(component.query()).toBe('');
+      }));
+
+      it('both scopes carry the same query, type, center and year', fakeAsync(() => {
+        answerByScope(pageResponse([linkedItem], 1, false), pageResponse(relatedItems, 80, true));
+        setBilateral();
+        fixture.detectChanges();
+        flush();
+        mockResultsApiService.GET_cgspaceSearch.mockClear();
+
+        component.query.set('mozambique');
+        component.selectedType.set('Case Study');
+        component.selectedCenter.set('International Institute of Tropical Agriculture');
+        component.runSearch(0);
+        flush();
+
+        const calls = searchCalls();
+        expect(calls.length).toBe(2);
+        const [linked, related] = ['linked', 'related'].map(scope => calls.find(c => c['projectScope'] === scope)!);
+        const shared = {
+          query: 'mozambique',
+          type: 'Case Study',
+          center: 'International Institute of Tropical Agriculture',
+          year: 2026,
+          page: 0
+        };
+        expect(linked).toEqual(expect.objectContaining(shared));
+        expect(related).toEqual(expect.objectContaining(shared));
+      }));
+
+      it('a bilateral browse whose project has neither code nor title sends no project params (the server would answer 400)', fakeAsync(() => {
+        setBilateral({ projectCode: '', projectTitle: '', leadCenterAcronym: '' });
+        fixture.detectChanges();
+        component.query.set('maize');
+        component.runSearch(0);
+        flush();
+
+        const calls = searchCalls();
+        expect(calls.length).toBe(1);
+        expect(Object.keys(calls[0]).filter(key => key.startsWith('project'))).toEqual([]);
+      }));
+
+      it('keeps project fields inside the server limits (code 50, title 300, lead center 20)', fakeAsync(() => {
+        answerByScope(pageResponse([], 0, false), pageResponse([], 0, false));
+        setBilateral({ projectCode: 'C'.repeat(80), projectTitle: 'T'.repeat(500), leadCenterAcronym: 'L'.repeat(40) });
+        fixture.detectChanges();
+        flush();
+
+        const call = searchCalls()[0];
+        expect(call['projectCode'].length).toBe(50);
+        expect(call['projectTitle'].length).toBe(300);
+        expect(call['projectLeadCenter'].length).toBe(20);
+      }));
+    });
+
+    describe('KPSF-R-4: each scope keeps its own state', () => {
+      it('linked and related lists, totals, hasMore and status are independent', fakeAsync(() => {
+        answerByScope(
+          pageResponse([linkedItem], 1, false, { projectScope: { scope: 'linked', applied: true }, sources: [sourceOk('cgspace', 1)] }),
+          pageResponse(relatedItems, 80, true, { projectScope: { scope: 'related', applied: true }, sources: [sourceOk('cgspace', 80)] })
         );
+        setBilateral();
         fixture.detectChanges();
-      });
+        flush();
 
-      it('should match project code token in metadata tag', () => {
-        const item = createProjectItem('code', 'Code match', ['A-AG10156 - AICCRA Project']);
-        expect(component.matchesProject(item)).toBe(true);
-      });
+        expect(component.linkedItems()).toEqual([linkedItem]);
+        expect(component.linkedTotal()).toBe(1);
+        expect(component.linkedHasMore()).toBe(false);
+        expect(component.linkedStatus()).toBe('results');
+        expect(component.linkedApplied()).toBe(true);
 
-      it('should match project title substring in metadata tag', () => {
-        const item = createProjectItem('title', 'Title match', [
-          'AICCRA - Accelerating Impacts of CGIAR Climate Research for Africa'
-        ]);
-        expect(component.matchesProject(item)).toBe(true);
-      });
+        expect(component.items().length).toBe(10);
+        expect(component.total()).toBe(80);
+        expect(component.hasMore()).toBe(true);
+        expect(component.status()).toBe('results');
+        expect(component.items().some(item => item.handle === linkedItem.handle)).toBe(false);
+        expect(component.linkedSources()).toEqual([sourceOk('cgspace', 1)]);
+        expect(component.sources()).toEqual([sourceOk('cgspace', 80)]);
+      }));
 
-      it('should return false for unrelated project tag', () => {
-        const item = createProjectItem('other', 'Other project', ['IRRI - USDA Fertilize Right Project']);
-        expect(component.matchesProject(item)).toBe(false);
-        expect(component.projectMatchCount()).toBe(0);
-      });
-
-      it('should return false when project inputs are empty', () => {
-        fixture.componentRef.setInput('projectCode', '');
-        fixture.componentRef.setInput('projectTitle', '');
+      it('section 2 Load more issues one related request and never re-queries linked', fakeAsync(() => {
+        answerByScope(pageResponse([linkedItem], 1, false), pageResponse(relatedItems, 80, true));
+        setBilateral();
         fixture.detectChanges();
+        flush();
+        mockResultsApiService.GET_cgspaceSearch.mockClear();
 
-        const item = createProjectItem('test', 'Tagged', ['A-AG10156 - AICCRA Project']);
-        expect(component.matchesProject(item)).toBe(false);
-      });
+        component.loadMore();
+        flush();
 
-      it('should match repository project tag via camelCase project title (FertilizeRight)', () => {
-        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
-        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
+        const calls = searchCalls();
+        expect(calls.length).toBe(1);
+        expect(calls[0]).toEqual(expect.objectContaining({ projectScope: 'related', page: 1 }));
+        expect(component.items().length).toBe(20);
+        expect(component.linkedItems()).toEqual([linkedItem]);
+        expect(component.linkedPage()).toBe(0);
+      }));
+
+      it('section 1 Load more issues one linked request and never re-queries related', fakeAsync(() => {
+        answerByScope(pageResponse([linkedItem], 12, true), pageResponse(relatedItems, 80, true));
+        setBilateral();
         fixture.detectChanges();
+        flush();
+        mockResultsApiService.GET_cgspaceSearch.mockClear();
 
-        const plainTag = createProjectItem('plain', 'Plain tag', [
-          'IRRI - USDA Fertilize Right Project'
-        ]);
-        const prefixedTag = createProjectItem('prefixed', 'Prefixed tag', [
-          'KP1058 - IRRI - USDA Fertilize Right Project'
-        ]);
+        component.loadMoreLinked();
+        flush();
 
-        expect(component.matchesProject(plainTag)).toBe(true);
-        expect(component.matchesProject(prefixedTag)).toBe(true);
-      });
+        const calls = searchCalls();
+        expect(calls.length).toBe(1);
+        expect(calls[0]).toEqual(expect.objectContaining({ projectScope: 'linked', page: 1 }));
+        expect(component.linkedItems().length).toBe(2);
+        expect(component.items().length).toBe(10);
+        expect(component.page()).toBe(0);
+      }));
 
-      it('should match via CLARISA summary when fullName typo misses repository tag (FetilizeRight)', () => {
-        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
-        fixture.componentRef.setInput('projectTitle', 'FetilizeRight');
-        fixture.componentRef.setInput('projectSummary', 'Fertilize Right Vietnam');
-        fixture.componentRef.setInput('leadCenterAcronym', 'IRRI');
+      it('applied=false on the linked response leaves linked empty and related untouched (KPSF-R-9 client half)', fakeAsync(() => {
+        answerByScope(
+          pageResponse([], 0, false, { projectScope: { scope: 'linked', applied: false } }),
+          pageResponse(relatedItems, 80, true, { projectScope: { scope: 'related', applied: false } })
+        );
+        setBilateral();
         fixture.detectChanges();
+        flush();
 
-        const tagged = createProjectItem('tagged', 'Tagged', [
-          'IRRI - USDA Fertilize Right Project'
-        ]);
+        expect(component.linkedApplied()).toBe(false);
+        expect(component.linkedStatus()).toBe('empty');
+        expect(component.linkedItems()).toEqual([]);
+        expect(component.status()).toBe('results');
+        expect(component.items().length).toBe(10);
+      }));
 
-        expect(component.matchesProject(tagged)).toBe(true);
-      });
+      it('a failed linked request errors only the linked scope; related still renders', fakeAsync(() => {
+        mockResultsApiService.GET_cgspaceSearch.mockImplementation((params: Record<string, unknown>) =>
+          params['projectScope'] === 'linked'
+            ? throwError(() => new Error('CGSpace timeout'))
+            : of(pageResponse(relatedItems, 80, true))
+        );
+        setBilateral();
+        fixture.detectChanges();
+        tick(0); // retry 2 (RxJS timers are intervals: flush() does not drain them)
+        tick(0); // retry 3 exhausted -> error
+
+        expect(component.linkedStatus()).toBe('error');
+        expect(component.linkedItems()).toEqual([]);
+        expect(component.status()).toBe('results');
+        expect(component.items().length).toBe(10);
+      }));
+
+      it('a repository failing in either scope is reported as unavailable, not zero (KPM-R-6 per scope)', fakeAsync(() => {
+        answerByScope(
+          pageResponse([], 0, false, {
+            sources: [sourceOk('cgspace', 0), sourceOk('melspace', 0), { repository: 'worldfish', status: 'timeout', total: 0, hasMore: false }]
+          }),
+          pageResponse(relatedItems, 80, true, { sources: [sourceOk('cgspace', 80), sourceOk('melspace', 0), sourceOk('worldfish', 0)] })
+        );
+        setBilateral();
+        fixture.detectChanges();
+        flush();
+
+        expect(component.failedSources().map(source => source.repository)).toEqual(['worldfish']);
+      }));
+
+      it('a new reset clears both lists when nothing is searchable', fakeAsync(() => {
+        answerByScope(pageResponse([linkedItem], 1, false), pageResponse(relatedItems, 80, true));
+        setBilateral({ projectCode: '', projectTitle: '' });
+        fixture.detectChanges();
+        component.query.set('maize');
+        component.runSearch(0);
+        flush();
+        component.linkedItems.set([linkedItem]);
+        component.linkedStatus.set('results');
+
+        component.query.set('');
+        component.onQueryChange();
+
+        expect(component.status()).toBe('idle');
+        expect(component.items()).toEqual([]);
+        expect(component.linkedItems()).toEqual([]);
+        expect(component.linkedStatus()).toBe('idle');
+        expect(component.linkedTotal()).toBe(0);
+      }));
     });
 
-    describe('Gate D3 / KPPJ-R-8: combined soft-sort with SP context', () => {
-      beforeEach(() => {
-        fixture.componentRef.setInput('projectCode', 'A-AG10156');
-        fixture.componentRef.setInput('projectTitle', 'AICCRA Project');
-        fixture.componentRef.setInput('programCode', 'SP06');
-        fixture.componentRef.setInput('programName', 'Climate Action');
+    describe('KPSF-R-10: non-bilateral browse sends no project params and renders no project logic', () => {
+      it('sends one request without any project* param even when project inputs are present', fakeAsync(() => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', false);
+        fixture.componentRef.setInput('projectCode', PROJECT_CODE);
+        fixture.componentRef.setInput('projectTitle', PROJECT_TITLE);
+        fixture.componentRef.setInput('phaseYear', 2026);
         fixture.detectChanges();
-      });
 
-      it('should order project match, then SP-only, then neither', () => {
-        const both = createProjectItem('both', 'Both', ['A-AG10156 - AICCRA Project'], ['SP06 - Climate Action']);
-        const projectOnly = createProjectItem('proj', 'Project only', ['A-AG10156 - AICCRA Project']);
-        const spOnly = createProjectItem('sp', 'SP only', ['Other'], ['SP06 - Climate Action']);
-        const neither = createProjectItem('none', 'Neither', ['Unrelated']);
+        component.query.set('maize');
+        component.runSearch(0);
+        flush();
 
-        component.items.set([neither, spOnly, projectOnly, both]);
+        const calls = searchCalls();
+        expect(calls.length).toBe(1);
+        expect(Object.keys(calls[0]).filter(key => key.startsWith('project'))).toEqual([]);
+        expect(calls[0]).toEqual({ query: 'maize', page: 0, size: 10, year: 2026, repository: 'cgspace,melspace,worldfish' });
+        expect(component.linkedItems()).toEqual([]);
+        expect(component.linkedStatus()).toBe('idle');
+      }));
 
-        expect(component.displayItems()).toEqual([projectOnly, both, spOnly, neither]);
-      });
-    });
-
-    describe('Gate D5 / bilateral browse UX (filter clarity, no auto-search)', () => {
-      it('should not pre-fill the search box or auto-query on bilateral open', fakeAsync(() => {
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
-        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
-        fixture.componentRef.setInput('projectTitle', 'FetilizeRight');
+      it('does not auto-search on open outside bilateral browse', fakeAsync(() => {
         fixture.componentRef.setInput('phaseYear', 2026);
         fixture.detectChanges();
         tick(500);
-        fixture.detectChanges();
 
-        expect(component.query()).toBe('');
-        expect(component.status()).toBe('idle');
         expect(mockResultsApiService.GET_cgspaceSearch).not.toHaveBeenCalled();
-
-        const idleEl = fixture.nativeElement.querySelector('[data-test="cgspace-idle"]');
-        expect(idleEl.textContent).toContain('cg.identifier.project');
+        expect(component.status()).toBe('idle');
       }));
 
-      it('should explain cg.identifier.project when results have no project tag matches', () => {
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
-        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
-        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
+      it('renders no project badge for items that carry projects[] (MEL/WorldFish expose them in plain browse)', fakeAsync(() => {
+        mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+          of(pageResponse([createProjectItem('1', 'MEL paper', ['IITA - T-PJ-003763 something']), createProjectItem('2', 'Plain paper', [])], 2, false))
+        );
         fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.componentRef.setInput('projectCode', PROJECT_CODE);
+        fixture.componentRef.setInput('projectTitle', PROJECT_TITLE);
         fixture.detectChanges();
 
-        const item = createProjectItem('1', 'Untagged', []);
-        component.status.set('results');
-        component.items.set([item]);
-        component.total.set(1);
+        component.query.set('paper');
+        component.runSearch(0);
+        flush();
         fixture.detectChanges();
 
-        const notice = fixture.nativeElement.querySelector('[data-test="kp-project-match-zero-notice"]');
-        expect(notice).toBeTruthy();
-        expect(notice.textContent).toContain('Info');
-        expect(notice.textContent).toContain('cg.identifier.project');
-        expect(notice.textContent).toContain('No project tags matched');
-        expect(notice.textContent).toContain('still matched your search and filters');
+        expect(component.status()).toBe('results');
+        expect(fixture.nativeElement.querySelector('[data-test^="kp-project"]')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.kp-project-match-badge')).toBeNull();
+        expect(fixture.nativeElement.textContent).not.toContain('Filter by project tag');
+      }));
+    });
+
+    describe('KPAM kept: Science Program soft-sort within each list (KPSF-DD-5 kept)', () => {
+      it('sorts SP matches first inside the linked list and inside the related list independently', () => {
+        setBilateral({ programCode: 'SP01', programName: 'Sustainable Farming' });
+        fixture.detectChanges();
+
+        const mk = (id: string, accelerators: string[]) => createProjectItem(id, id, [], accelerators);
+        const linkedPlain = mk('l1', ['Agroecology']);
+        const linkedMatch = mk('l2', ['SP01 - Sustainable Farming']);
+        const relatedPlain = mk('r1', []);
+        const relatedMatch = mk('r2', ['Sustainable Farming']);
+
+        component.items.set([relatedPlain, relatedMatch]);
+        component.linkedItems.set([linkedPlain, linkedMatch]);
+
+        expect(component.displayLinkedItems()).toEqual([linkedMatch, linkedPlain]);
+        expect(component.displayItems()).toEqual([relatedMatch, relatedPlain]);
+        expect(component.matchCount()).toBe(2);
+
+        component.onlyMatches.set(true);
+        expect(component.displayLinkedItems()).toEqual([linkedMatch]);
+        expect(component.displayItems()).toEqual([relatedMatch]);
       });
 
-      it('should explain search text vs project tags when query is present and SP matches exist', () => {
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
-        fixture.componentRef.setInput('projectCode', 'R-A-2022-8');
-        fixture.componentRef.setInput('projectTitle', 'Salt-Drought Tolerant Rice Cultivars');
-        fixture.componentRef.setInput('programCode', 'SP01');
-        fixture.componentRef.setInput('programName', 'Breeding for Tomorrow');
-        fixture.componentRef.setInput('phaseYear', 2026);
+      it('no project tag ever reorders or filters items any more (the project fuzzy matcher is gone)', () => {
+        setBilateral();
         fixture.detectChanges();
 
-        component.query.set('IRRI - USDA Fertilize Right');
-        component.status.set('results');
-        component.items.set([
-          createProjectItem('1', 'Tagged SP only', [], ['SP01 - Breeding for Tomorrow']),
-          createProjectItem('2', 'Untagged', [])
-        ]);
-        component.total.set(2);
-        fixture.detectChanges();
+        const tagged = createProjectItem('tagged', 'Tagged', ['T-PJ-003942 - IITA Accelerated Innovation Delivery Initiative (AID-I) for Mozambique']);
+        const plain = createProjectItem('plain', 'Plain', []);
+        component.items.set([plain, tagged]);
 
-        const notice = fixture.nativeElement.querySelector('[data-test="kp-project-match-zero-notice"]');
-        expect(notice?.textContent).toContain('IRRI - USDA Fertilize Right');
-        expect(notice?.textContent).toContain('title, author, or DOI');
-        expect(notice?.textContent).toContain('Matches Breeding for Tomorrow');
-        expect(notice?.textContent).toContain('Science Program highlight');
+        expect(component.displayItems()).toEqual([plain, tagged]);
+        component.onlyMatches.set(true);
+        expect(component.displayItems()).toEqual([]);
       });
+    });
 
-      it('should render applied filters summary only in bilateral browse', () => {
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
-        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
-        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
+    describe('KPSF-T-4: two-section template', () => {
+      const q = (sel: string): HTMLElement | null => fixture.nativeElement.querySelector(sel);
+      const text = (sel: string): string => q(sel)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+
+      const open = (linked: unknown, related: unknown) => {
+        answerByScope(linked, related);
+        setBilateral();
+        fixture.detectChanges();
+        flush();
+        fixture.detectChanges();
+      };
+
+      const okSources = (total: number) => ({ sources: [sourceOk('cgspace', total)], projectScope: { scope: 'x', applied: true } });
+      const relatedMock = () => Array.from({ length: 80 }, (_, i) => createProjectItem(`r${i}`, `Related paper ${i}`, []));
+
+      it('R-3 / R-6: linked [182744] is in section 1 with the linked badge and its project label; section 2 has the proxy note and a marker on every card, without 182744', fakeAsync(() => {
+        open(pageResponse([linkedItem], 1, false, okSources(1)), pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80)));
+
+        const linked = q('[data-test="kp-linked-section"]')!;
+        const related = q('[data-test="kp-related-section"]')!;
+        expect(linked.querySelectorAll('h3').length).toBe(1);
+        expect(text('[data-test="kp-linked-heading"]')).toBe('KPs linked to the project · 1');
+        expect(text('[data-test="kp-related-heading"]')).toBe('Other KPs potentially related · 80');
+        expect(linked.getAttribute('aria-label')).toBe('KPs linked to the project');
+        expect(related.getAttribute('aria-label')).toBe('Other KPs potentially related');
+
+        expect(linked.textContent).toContain('Strengthening bean seed systems');
+        expect(related.textContent).not.toContain('Strengthening bean seed systems');
+        expect(related.textContent).not.toContain('10568/182744');
+        expect(linked.querySelectorAll('[data-test^="kp-linked-badge-"]').length).toBe(1);
+        expect(linked.querySelector('[data-test^="kp-linked-badge-"]')!.textContent).toContain('Linked to T-PJ-003942');
+        expect(linked.querySelector('[data-test^="kp-linked-project-labels-"]')!.textContent).toContain('Accelerated Innovation Delivery Initiative');
+        expect(linked.querySelector('[data-test^="kp-proxy-marker-"]')).toBeNull();
+
+        expect(related.querySelectorAll('[data-test^="kp-proxy-marker-"]').length).toBe(10);
+        expect(related.querySelectorAll('h4').length).toBe(10);
+        expect(related.querySelector('[data-test^="kp-linked-badge-"]')).toBeNull();
+        expect(text('[data-test="kp-proxy-note"]')).toContain('not tagged with this project');
+        expect(text('[data-test="kp-linked-info"]')).toBe(
+          "Linked KPs are repository items whose project field contains this project's title words or PJ code."
+        );
+      }));
+
+      it('R-1: a linked card with the 4 real labels (matching one last) shows every label, uncapped, in live order', fakeAsync(() => {
+        const labels = [
+          'PABRA Al Sumait Prize Award (Kuwait)',
+          'CIMMYT (USA-USAID) - Accelerated Innovation Delivery Initiative (AIDI)',
+          'AGRA -PABRA 2023 Africa Food Prize',
+          'IITA (USA-USAID) - Accelerated Innovation Delivery Initiative (AID-I) for Mozambique'
+        ];
+        const fourLabelItem = createProjectItem('182744', 'Strengthening bean seed systems to reach 78,000 farmers', labels);
+        open(pageResponse([fourLabelItem], 1, false, okSources(1)), pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80)));
+
+        const block = q('[data-test^="kp-linked-project-labels-"]')!;
+        const content = block.textContent!;
+        labels.forEach(label => expect(content).toContain(label));
+        const positions = labels.map(label => content.indexOf(label));
+        expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+        expect(block.querySelectorAll('[data-test="kp-linked-project-label"]').length).toBe(4);
+      }));
+
+      it('R-4: each section has its own Load more; section 2 Load more never fires a linked request', fakeAsync(() => {
+        open(pageResponse([linkedItem], 1, false, okSources(1)), pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80)));
+
+        expect(q('[data-test="kp-linked-load-more"]')).toBeNull();
+        mockResultsApiService.GET_cgspaceSearch.mockClear();
+        q('[data-test="kp-related-load-more"]')!.click();
+        flush();
+
+        const calls = searchCalls();
+        expect(calls.length).toBe(1);
+        expect(calls[0]['projectScope']).toBe('related');
+        expect(calls[0]['page']).toBe(1);
+      }));
+
+      it('R-4: section 1 Load more fetches only the linked scope', fakeAsync(() => {
+        open(pageResponse([linkedItem], 12, true, okSources(12)), pageResponse(relatedMock().slice(0, 10), 80, false, okSources(80)));
+
+        mockResultsApiService.GET_cgspaceSearch.mockClear();
+        q('[data-test="kp-linked-load-more"]')!.click();
+        flush();
+
+        const calls = searchCalls();
+        expect(calls.length).toBe(1);
+        expect(calls[0]['projectScope']).toBe('linked');
+        expect(q('[data-test="kp-related-load-more"]')).toBeNull();
+      }));
+
+      it('R-5: linked = [] shows the compact empty state naming the project, never the generic no-results copy, and keeps section 2 visible', fakeAsync(() => {
+        open(pageResponse([], 0, false, okSources(0)), pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80)));
+
+        const empty = q('[data-test="kp-linked-empty"]')!;
+        expect(empty).toBeTruthy();
+        expect(empty.getAttribute('tabindex')).toBe('0');
+        expect(empty.textContent).toContain(PROJECT_CODE);
+        expect(empty.textContent).toContain(PROJECT_TITLE);
+        expect(empty.textContent).toContain('No KP in the selected repositories is tagged with');
+        expect(text('[data-test="kp-linked-heading"]')).toBe('KPs linked to the project · 0');
+        expect(fixture.nativeElement.textContent).not.toContain('No items found for this search');
+        expect(q('[data-test="cgspace-empty"]')).toBeNull();
+        expect(q('[data-test="kp-related-section"]')!.querySelectorAll('[data-test^="kp-proxy-marker-"]').length).toBe(10);
+        expect(q('[data-test="kp-proxy-note"]')).toBeTruthy();
+      }));
+
+      it('R-9: applied=false shows a one-line notice in section 1 and section 2 as normal', fakeAsync(() => {
+        open(
+          pageResponse([], 0, false, { projectScope: { scope: 'linked', applied: false }, sources: [] }),
+          pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80))
+        );
+
+        expect(text('[data-test="kp-linked-not-applied"]')).toContain('no title words or PJ code');
+        expect(q('[data-test="kp-linked-empty"]')).toBeNull();
+        expect(q('[data-test="kp-related-section"]')!.querySelectorAll('[data-test^="kp-proxy-marker-"]').length).toBe(10);
+      }));
+
+      it('R-5 / KPM-R-6: a CGSpace source failing only in the linked scope reads unavailable (not 0 / 80) and is named in the empty state', fakeAsync(() => {
+        open(
+          pageResponse([], 0, false, { sources: [{ repository: 'cgspace', status: 'timeout', total: 0, hasMore: false }, sourceOk('melspace', 0)] }),
+          pageResponse(relatedMock().slice(0, 10), 80, true, { sources: [sourceOk('cgspace', 80), sourceOk('melspace', 0)] })
+        );
+
+        const chip = q('[data-test="kp-repo-chip-cgspace"]')!;
+        expect(chip.textContent).toContain('unavailable');
+        expect(chip.textContent).not.toMatch(/\b0\b|\b80\b/);
+        expect(text('[data-test="kp-linked-empty-unavailable"]')).toContain('CGSpace did not respond');
+        expect(text('[data-test="kp-partial-notice-copy"]')).toContain('CGSpace did not respond');
+      }));
+
+      it('chips in two-scope mode count linked + related (1 + 80 = 81)', fakeAsync(() => {
+        open(pageResponse([linkedItem], 1, false, okSources(1)), pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80)));
+
+        const chip = q('[data-test="kp-repo-chip-cgspace"]')!;
+        expect(chip.textContent).toContain('81');
+        expect(chip.textContent).not.toContain('unavailable');
+      }));
+
+      it('a CGSpace source failing only in the related scope reads unavailable in the chip', fakeAsync(() => {
+        open(
+          pageResponse([linkedItem], 1, false, okSources(1)),
+          pageResponse(relatedMock().slice(0, 10), 0, false, { sources: [{ repository: 'cgspace', status: 'error', total: 0, hasMore: false }] })
+        );
+
+        expect(q('[data-test="kp-repo-chip-cgspace"]')!.textContent).toContain('unavailable');
+      }));
+
+      it('typing 1-2 characters keeps the user informed: the at-least-3-characters hint renders', fakeAsync(() => {
+        open(pageResponse([linkedItem], 1, false, okSources(1)), pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80)));
+
+        component.query.set('ma');
+        component.onQueryChange();
+        fixture.detectChanges();
+
+        const idle = q('[data-test="cgspace-idle"]')!;
+        expect(idle.textContent).toContain('at least 3 characters');
+        expect(idle.textContent).toContain('Clear the text');
+      }));
+
+      it('the Science Program match count is global and sits outside both sections', fakeAsync(() => {
+        const spLinked = createProjectItem('sp1', 'SP linked', [], ['SP01 - Sustainable Farming']);
+        answerByScope(pageResponse([spLinked], 1, false, okSources(1)), pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80)));
+        setBilateral({ programCode: 'SP01', programName: 'Sustainable Farming' });
+        fixture.detectChanges();
+        flush();
+        fixture.detectChanges();
+
+        const counter = q('[data-test="kp-results-counter"]')!;
+        expect(counter.textContent).toContain('1 match Sustainable Farming');
+        expect(counter.textContent).toContain('across both lists');
+        expect(q('[data-test="kp-linked-section"]')!.contains(counter)).toBe(false);
+        expect(q('[data-test="kp-related-section"]')!.contains(counter)).toBe(false);
+        expect(fixture.nativeElement.querySelectorAll('[data-test^="kp-sp-match-"]').length).toBe(1);
+      }));
+
+      it('removed copy never renders in the bilateral template', fakeAsync(() => {
+        open(pageResponse([linkedItem], 1, false, okSources(1)), pageResponse(relatedMock().slice(0, 10), 80, true, okSources(80)));
+
+        const content = fixture.nativeElement.textContent;
+        expect(content).not.toContain('highlight matching only');
+        expect(content).not.toContain('does not hide other items');
+        expect(q('[data-test="kp-project-repository-filter"]')).toBeNull();
+      }));
+
+      it('R-10: a non-bilateral browse renders a single list without sections, badges or proxy markers', fakeAsync(() => {
         fixture.componentRef.setInput('phaseYear', 2026);
+        mockResultsApiService.GET_cgspaceSearch.mockReturnValue(of(pageResponse(relatedMock().slice(0, 3), 3, false)));
+        fixture.detectChanges();
+        component.query.set('paper');
+        component.runSearch(0);
+        flush();
+        fixture.detectChanges();
+
+        expect(q('[data-test="kp-linked-section"]')).toBeNull();
+        expect(q('[data-test="kp-related-section"]')).toBeNull();
+        expect(q('[data-test^="kp-proxy-marker-"]')).toBeNull();
+        expect(q('[data-test^="kp-linked-badge-"]')).toBeNull();
+        expect(fixture.nativeElement.querySelectorAll('h4').length).toBe(3);
+      }));
+    });
+
+    describe('Bilateral empty and filter-summary states (kept behavior)', () => {
+      it('explains unavailable repositories when both scopes are empty: section 1 and section 2 empty states, no generic copy in section 1', fakeAsync(() => {
+        mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+          of(
+            pageResponse([], 0, false, {
+              sources: [
+                { repository: 'cgspace', status: 'timeout', total: 0 },
+                { repository: 'melspace', status: 'ok', total: 0 },
+                { repository: 'worldfish', status: 'ok', total: 0 }
+              ]
+            })
+          )
+        );
+        setBilateral();
+        fixture.detectChanges();
+
+        component.query.set('Fertilize Right');
+        component.runSearch(0);
+        flush();
+        fixture.detectChanges();
+
+        const linkedEmpty = fixture.nativeElement.querySelector('[data-test="kp-linked-empty"]');
+        expect(linkedEmpty.textContent).not.toContain('No items found for this search');
+        expect(fixture.nativeElement.querySelector('[data-test="kp-linked-empty-unavailable"]')?.textContent).toContain('CGSpace did not respond');
+        expect(fixture.nativeElement.querySelector('[data-test="kp-related-empty"]')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('[data-test="kp-active-filters-summary"]')).toBeTruthy();
+      }));
+
+      it('renders the applied-filters summary only in bilateral browse, without the removed facet chip copy', () => {
+        setBilateral();
         component.query.set('Fertilize Right');
         fixture.detectChanges();
 
         const summary = fixture.nativeElement.querySelector('[data-test="kp-active-filters-summary"]');
         expect(summary).toBeTruthy();
         expect(summary.textContent).toContain('Applied filters');
-        expect(summary.textContent).toContain('Filter by project tag');
-        expect(summary.textContent).toContain('OFF');
-        expect(summary.textContent).toContain('Project highlight');
-        expect(summary.textContent).toContain('R-A-2023-56');
+        expect(summary.textContent).toContain(PROJECT_CODE);
+        expect(summary.textContent).not.toContain('Filter by project tag');
+        expect(summary.textContent).not.toContain('highlight matching only');
+        expect(summary.textContent).not.toContain('does not hide other items');
+        expect(fixture.nativeElement.querySelector('[data-test="kp-project-repository-filter"]')).toBeNull();
       });
 
-      it('should not render applied filters summary outside bilateral browse', () => {
+      it('does not render the applied-filters summary outside bilateral browse', () => {
         fixture.componentRef.setInput('enableProjectRepositoryFilter', false);
         fixture.componentRef.setInput('phaseYear', 2026);
         component.query.set('maize');
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelector('[data-test="kp-active-filters-summary"]')).toBeFalsy();
-      });
-
-      it('should explain unavailable repositories and active filters in bilateral empty state', fakeAsync(() => {
-        mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
-          of({
-            response: {
-              items: [],
-              page: { totalElements: 0 },
-              sources: [
-                { repository: 'cgspace', status: 'timeout', total: 0 },
-                { repository: 'melspace', status: 'ok', total: 0 },
-                { repository: 'worldfish', status: 'ok', total: 0 }
-              ]
-            },
-            status: 200
-          })
-        );
-
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
-        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
-        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
-        fixture.componentRef.setInput('phaseYear', 2026);
-        fixture.detectChanges();
-
-        component.query.set('Fertilize Right');
-        component.runSearch(0);
-        tick();
-        fixture.detectChanges();
-
-        const emptyEl = fixture.nativeElement.querySelector('[data-test="cgspace-empty"]');
-        expect(emptyEl.textContent).toContain('No items found for this search');
-        expect(fixture.nativeElement.querySelector('[data-test="kp-empty-partial-notice"]')?.textContent).toContain(
-          'CGSpace did not respond'
-        );
-        expect(fixture.nativeElement.querySelector('[data-test="kp-empty-active-filters"]')).toBeTruthy();
-        expect(fixture.nativeElement.querySelector('[data-test="kp-empty-hints"]')).toBeTruthy();
-      }));
-    });
-
-    describe('Gate D4 / bilateral repository project facet filter', () => {
-      it('should omit project param by default so soft-match can surface repository-tagged items', () => {
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
-        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
-        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
-        fixture.detectChanges();
-
-        expect(component.projectRepositoryFilterOn()).toBe(false);
-
-        const params = (component as any).buildSearchParams(0);
-        expect(params.project).toBeUndefined();
-      });
-
-      it('should send project param when bilateral filter chip is opted in', () => {
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
-        fixture.componentRef.setInput('projectCode', 'A-AG10156');
-        fixture.componentRef.setInput(
-          'projectTitle',
-          'Accelerating Impacts of CGIAR Climate Research for Africa'
-        );
-        component.projectRepositoryFilterOn.set(true);
-        fixture.detectChanges();
-
-        const params = (component as any).buildSearchParams(0);
-        expect(params.project).toBe(
-          'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa'
-        );
-      });
-
-      it('should omit project param when bilateral filter chip is toggled off', () => {
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
-        fixture.componentRef.setInput('projectCode', 'A-AG10156');
-        fixture.componentRef.setInput('projectTitle', 'AICCRA Project');
-        component.projectRepositoryFilterOn.set(false);
-        fixture.detectChanges();
-
-        const params = (component as any).buildSearchParams(0);
-        expect(params.project).toBeUndefined();
-      });
-
-      it('should not show project filter chip outside bilateral context', () => {
-        fixture.componentRef.setInput('enableProjectRepositoryFilter', false);
-        fixture.componentRef.setInput('projectCode', 'A-AG10156');
-        fixture.detectChanges();
-
-        expect(component.showProjectRepositoryFilterChip()).toBe(false);
-      });
-    });
-
-    describe('Gate D3 / KPPJ-R-5 / KPPJ-R-6 / KPPJ-R-7: project badge, counter, toggle', () => {
-      it('should render project badge and filter with contextual toggle', () => {
-        fixture.componentRef.setInput('phaseYear', 2026);
-        fixture.componentRef.setInput('projectCode', 'A-AG10156');
-        fixture.componentRef.setInput('projectTitle', 'AICCRA Project');
-        fixture.detectChanges();
-
-        const match = createProjectItem('1', 'Match', ['A-AG10156 - AICCRA Project']);
-        const other = createProjectItem('2', 'Other', ['Unrelated']);
-        const other2 = createProjectItem('3', 'Other 2', []);
-
-        component.status.set('results');
-        component.items.set([other, match, other2]);
-        component.total.set(3);
-        fixture.detectChanges();
-
-        const counter = fixture.nativeElement.querySelector('[data-test="kp-results-counter"]');
-        expect(counter.textContent).toContain('1 match A-AG10156');
-
-        const firstCard = fixture.nativeElement.querySelectorAll('.rounded-xl.p-4.bg-white')[0];
-        const projectBadge = firstCard.querySelector('.kp-project-match-badge');
-        expect(projectBadge).toBeTruthy();
-        expect(projectBadge.textContent.trim()).toContain('Matches A-AG10156');
-        expect(projectBadge.getAttribute('aria-label')).toBe('Matches project: AICCRA Project');
-
-        const toggleBtn = fixture.nativeElement.querySelector('[data-test="kp-only-matches-toggle"]');
-        toggleBtn.click();
-        fixture.detectChanges();
-
-        expect(component.displayItems()).toEqual([match]);
       });
     });
   });

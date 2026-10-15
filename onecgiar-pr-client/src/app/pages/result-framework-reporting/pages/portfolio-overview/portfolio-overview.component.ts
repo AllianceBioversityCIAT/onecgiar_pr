@@ -7,11 +7,16 @@ import {
   lucideChevronRight,
   lucideCog,
   lucideDownload,
+  lucideExternalLink,
   lucideSearch,
   lucideX
 } from '@ng-icons/lucide';
 
 import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
+import { HlmSeparatorImports } from '@spartan/separator';
+import { HlmTooltip } from '@spartan/tooltip';
+import { PORTFOLIO_OVERVIEW_COPY } from '../../../../internationalization/portfolio-overview.copy';
+import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.constants';
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
@@ -25,11 +30,6 @@ import {
   portfolioStatusDonutOption,
   portfolioStatusDonutTable,
   statusPipelineOption,
-  programRankingOption,
-  programRankingTable,
-  programRankingVerticalOption,
-  programRankingHeatmapOption,
-  programRankingHeatmapTable,
   matrixTableChartOption,
   matrixTableChartTable
 } from './portfolio-overview.charts';
@@ -96,7 +96,7 @@ type SortKey = 'programme' | 'total' | number;
   standalone: true,
   templateUrl: './portfolio-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgIcon, PrVizChartComponent, PortfolioCentersBlockComponent],
+  imports: [NgIcon, PrVizChartComponent, PortfolioCentersBlockComponent, HlmSeparatorImports, HlmTooltip],
   providers: [
     PortfolioOverviewService,
     provideIcons({
@@ -105,6 +105,7 @@ type SortKey = 'programme' | 'total' | number;
       lucideChevronRight,
       lucideCog,
       lucideDownload,
+      lucideExternalLink,
       lucideSearch,
       lucideX
     })
@@ -201,6 +202,12 @@ export class PortfolioOverviewComponent {
     return ['PORTFOLIO', year ? `REPORTING CYCLE ${year}` : '', acronym].filter(Boolean).join(' · ');
   });
 
+  readonly copy = PORTFOLIO_OVERVIEW_COPY;
+  /** Status guide URL; the link renders only when non-empty (OQ-1). A plain field so a spec can assign it. */
+  statusGuideUrl: string = STATUS_GUIDE_URL;
+  /** Per-status accessible hint, keyed by segment key (kept out of the service definitions, DD-4). */
+  readonly statusHints: Record<string, string> = { rejected: PORTFOLIO_OVERVIEW_COPY.rejectedHint };
+
   readonly kpis = computed(() => this.data.kpiTotals());
   readonly statusSegments = computed(() => this.data.statusSegments());
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
@@ -213,7 +220,7 @@ export class PortfolioOverviewComponent {
   readonly statusDonutOption = computed(() =>
     portfolioStatusDonutOption(this.statusSegments(), this.donutPalette())
   );
-  readonly statusDonutTable = computed(() => portfolioStatusDonutTable(this.statusSegments()));
+  readonly statusDonutTable = computed(() => portfolioStatusDonutTable(this.statusSegments(), this.copy.statusTableCaption));
 
   readonly statusPipelineOption = computed(() =>
     statusPipelineOption(this.statusSegments(), this.donutPalette())
@@ -235,52 +242,6 @@ export class PortfolioOverviewComponent {
     categoryOriginBarOption(this.data.categoryOriginRows(), resolveChartTokens())
   );
   readonly categoryOriginTable = computed(() => categoryOriginBarTable(this.data.categoryOriginRows()));
-
-  readonly programRankingOption = computed(() =>
-    programRankingOption(this.data.programRankingRows(), resolveChartTokens())
-  );
-  readonly programRankingTable = computed(() => programRankingTable(this.data.programRankingRows()));
-
-  readonly programRankingVerticalOption = computed(() =>
-    programRankingVerticalOption(this.data.programRankingRows(), resolveChartTokens())
-  );
-
-  readonly programRankingHeatmapOption = computed(() =>
-    programRankingHeatmapOption(this.data.programmeRows(), this.data.categories(), resolveChartTokens())
-  );
-  readonly programRankingHeatmapTable = computed(() =>
-    programRankingHeatmapTable(this.data.programmeRows(), this.data.categories())
-  );
-
-  /** Active visualization mode for Science Programs ranking analysis (default: horizontal) */
-  readonly analysisViewMode = signal<'horizontal' | 'vertical' | 'heatmap'>('horizontal');
-
-  readonly activeAnalysisOption = computed(() => {
-    switch (this.analysisViewMode()) {
-      case 'vertical':
-        return this.programRankingVerticalOption();
-      case 'heatmap':
-        return this.programRankingHeatmapOption();
-      case 'horizontal':
-      default:
-        return this.programRankingOption();
-    }
-  });
-
-  readonly activeAnalysisTable = computed(() => {
-    switch (this.analysisViewMode()) {
-      case 'heatmap':
-        return this.programRankingHeatmapTable();
-      case 'vertical':
-      case 'horizontal':
-      default:
-        return this.programRankingTable();
-    }
-  });
-
-  setAnalysisViewMode(mode: 'horizontal' | 'vertical' | 'heatmap'): void {
-    this.analysisViewMode.set(mode);
-  }
 
   readonly centerBilateralOption = computed(() =>
     centerBilateralOption(this.data.centerDistributionRows(), resolveChartTokens())
@@ -700,15 +661,6 @@ export class PortfolioOverviewComponent {
     this.navigateToResultsCenter('all', { program: row.code, category: column.label });
   }
 
-  scrollToMatrixSection(): void {
-    if (typeof document !== 'undefined') {
-      const el = document.getElementById('progress-by-science-program');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }
-
   onStatusChartClick(event: any): void {
     if (event?.name) {
       const name = String(event.name).toLowerCase();
@@ -717,23 +669,6 @@ export class PortfolioOverviewComponent {
       );
       if (match) {
         this.toggleStatusFilter(match.key);
-      }
-    }
-  }
-
-  onRankingChartClick(event: any): void {
-    if (this.analysisViewMode() === 'heatmap') {
-      const data = event?.data as [number, number, number] | undefined;
-      if (Array.isArray(data) && typeof data[1] === 'number') {
-        const row = this.data.programmeRows()[data[1]];
-        if (row?.code) {
-          this.navigateToResultsCenter('all', { program: row.code });
-        }
-      }
-    } else if (event?.name) {
-      const row = this.findProgrammeRowByChartLabel(String(event.name));
-      if (row?.code) {
-        this.navigateToResultsCenter('all', { program: row.code });
       }
     }
   }

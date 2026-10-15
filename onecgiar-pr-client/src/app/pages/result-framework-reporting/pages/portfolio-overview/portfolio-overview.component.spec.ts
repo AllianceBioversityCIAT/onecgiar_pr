@@ -1,3 +1,4 @@
+import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
@@ -7,6 +8,7 @@ import { PortfolioOverviewComponent } from './portfolio-overview.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
+import { PORTFOLIO_OVERVIEW_COPY as COPY } from '../../../../internationalization/portfolio-overview.copy';
 
 const mockChartInstance = {
   setOption: jest.fn(),
@@ -73,6 +75,18 @@ const OPEN_PHASE = [
   raw({ status_name: 'Pending Review', status_id: '3', source_name: 'W3/Bilaterals' }),
   raw({ submitter: 'SP06', submitter_short_name: 'Climate Action', result_type: 'Innovation development', source_name: 'W3/Bilaterals' }),
   raw({ submitter: 'SP06', submitter_short_name: 'Climate Action', status_name: 'Approved', status_id: '2' })
+];
+
+/** Distinct count per bucket so a swapped binding is detectable (W1/W2 new 6 = 4 submitted + 2 editing, 5 replicated; W3 new 9 = 8 submitted + 1 editing, 7 replicated; all eight values pairwise distinct). */
+const rows = (n: number, over: Record<string, unknown>) => Array.from({ length: n }, () => raw(over));
+const BREAKDOWN_PHASE = [
+  ...rows(2, { status_id: '1' }),
+  ...rows(4, { status_id: '2' }),
+  ...rows(5, { status_id: '2', is_replicated: 1 }),
+  ...rows(1, { source_name: 'W3/Bilaterals', status_id: '1', is_replicated: 0 }),
+  ...rows(4, { source_name: 'W3/Bilaterals', status_id: '3', is_replicated: null }),
+  ...rows(4, { source_name: 'W3/Bilaterals', status_id: '2' }),
+  ...rows(7, { source_name: 'W3/Bilaterals', status_id: '2', is_replicated: '1' })
 ];
 
 /** Two closed-phase rows that must never reach a counter. */
@@ -145,21 +159,49 @@ describe('PortfolioOverviewComponent', () => {
       expect(kpis.portfolioProgressPercent).toBe(40);
     });
 
-    it('renders 4 KPI cards in the top deck with correct titles and figures', () => {
-      build(OPEN_PHASE);
+    it('renders 3 KPI cards in the top deck with breakdowns and no Science programs card', () => {
+      build(BREAKDOWN_PHASE);
 
       const text = fixture.nativeElement.textContent as string;
       expect(text).toContain('Total portfolio results');
       expect(text).toContain('W1/W2 results');
       expect(text).toContain('W3/Bilateral results');
-      expect(text).toContain('Science programs');
+      expect(text).not.toContain('Science programs');
+      expect(text).not.toContain('% portfolio progress');
+      expect(text).not.toContain('Across 2 result categories');
+      expect(text).toContain('W1/W2 new');
+      expect(text).toContain('W3/Bilateral new');
+      expect(text).toContain('W1/W2 replicated');
+      expect(text).toContain('W3/Bilateral replicated');
+      expect(text).toContain('Replicated from previous years');
+      expect(text).toContain('Innovations replicated from 2025');
+      const cards = fixture.nativeElement.querySelectorAll('button.po-card');
+      expect(cards.length).toBe(3);
+      cards.forEach((card: Element) => expect(card.querySelectorAll('hlm-separator').length).toBe(1));
 
-      expect(text).toContain('3 W1/W2');
-      expect(text).toContain('2 W3/Bilateral');
-      expect(text).toContain('Across 2 result categories');
-      expect(text).toContain('Reported across 2 science programs');
-      expect(text).toContain('2 / 2');
-      expect(text).toContain('40% portfolio progress');
+      // W1/W2: 6 new (4 submitted, 2 editing) + 5 replicated. W3: 9 new (8 submitted, 1 editing) + 7 replicated.
+      const fig = (id: string) => (fixture.nativeElement.querySelector(`[data-testid="${id}"]`)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+      expect(fig('kpi-total-w1w2-new')).toBe('6');
+      expect(fig('kpi-total-bilateral-new')).toBe('9');
+      expect(fig('kpi-total-w1w2-replicated')).toBe('5');
+      expect(fig('kpi-total-bilateral-replicated')).toBe('7');
+      expect(fig('kpi-w1w2-new')).toBe('6');
+      expect(fig('kpi-w1w2-split')).toBe('Submitted 4 · Editing 2');
+      expect(fig('kpi-w1w2-replicated')).toBe('5');
+      expect(fig('kpi-bilateral-new')).toBe('9');
+      expect(fig('kpi-bilateral-split')).toBe('Submitted 8 · Editing 1');
+      expect(fig('kpi-bilateral-replicated')).toBe('7');
+    });
+
+    it('renders 0 (not blank) in every card-3 bucket when there are no W3/Bilateral rows', () => {
+      build([raw({}), raw({ is_replicated: 1 })]);
+
+      const fig = (id: string) => (fixture.nativeElement.querySelector(`[data-testid="${id}"]`)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+      expect(fig('kpi-bilateral-new')).toBe('0');
+      expect(fig('kpi-bilateral-split')).toBe('Submitted 0 · Editing 0');
+      expect(fig('kpi-bilateral-replicated')).toBe('0');
+      expect(fig('kpi-total-bilateral-new')).toBe('0');
+      expect(fig('kpi-total-bilateral-replicated')).toBe('0');
     });
   });
 
@@ -168,12 +210,12 @@ describe('PortfolioOverviewComponent', () => {
       build(OPEN_PHASE);
 
       const text = fixture.nativeElement.textContent as string;
-      expect(text).toContain('Portfolio reporting status');
-      expect(text).toContain('Aggregate progress across all Science Programs in this cycle');
+      expect(text).toContain(COPY.statusTitle);
+      expect(text).toContain(COPY.statusSubtitle);
 
       const chartHost = fixture.debugElement.query(By.css('app-pr-viz-chart'));
       expect(chartHost).toBeTruthy();
-      expect(chartHost.componentInstance.chartTitle()).toBe('Portfolio reporting status');
+      expect(chartHost.componentInstance.chartTitle()).toBe(COPY.statusTitle);
       expect(chartHost.componentInstance.tableModel()).toBeTruthy();
       expect(chartHost.componentInstance.options()).toBeTruthy();
     });
@@ -226,58 +268,69 @@ describe('PortfolioOverviewComponent', () => {
       expect(text).toContain('Rejected');
       expect(text).toContain('Discontinued');
     });
+    it('keeps the donut total equal to the Total portfolio results KPI', () => {
+      build(OPEN_PHASE);
+
+      expect(component.statusTotal()).toBe(component.kpis().totalResults);
+    });
+
+    it('renders no guide link with the default empty URL', () => {
+      build(OPEN_PHASE);
+
+      expect(component.statusGuideUrl).toBe('');
+      expect(fixture.nativeElement.querySelector('[data-testid="status-guide-link"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('a[href=""]')).toBeNull();
+    });
+
+    it('renders the guide link with href, new-tab target and noopener once a URL is set', () => {
+      build(OPEN_PHASE);
+
+      component.statusGuideUrl = 'https://example.org/guide';
+      fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck();
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector('[data-testid="status-guide-link"]') as HTMLAnchorElement;
+      expect(link).toBeTruthy();
+      expect(link.getAttribute('href')).toBe('https://example.org/guide');
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toContain('noopener');
+      expect(link.textContent).toContain(COPY.statusGuideLink);
+      expect(link.textContent).toContain(COPY.opensInNewTab);
+    });
+
+    it('gives the Rejected tile the sr-only hint and the Editing tile none', () => {
+      build(OPEN_PHASE);
+
+      const rejected = fixture.nativeElement.querySelector('[data-testid="status-tile-rejected"]') as HTMLElement;
+      const editing = fixture.nativeElement.querySelector('[data-testid="status-tile-editing"]') as HTMLElement;
+      expect(rejected.querySelector('.sr-only')?.textContent).toContain(COPY.rejectedHint);
+      expect(editing.querySelector('.sr-only')).toBeNull();
+    });
+
+    it('toggles the status filter when the Rejected tile is clicked', () => {
+      build(OPEN_PHASE);
+
+      const rejected = fixture.nativeElement.querySelector('[data-testid="status-tile-rejected"]') as HTMLButtonElement;
+      rejected.click();
+      expect(component.selectedStatusFilter()).toBe('rejected');
+      rejected.click();
+      expect(component.selectedStatusFilter()).toBe('all');
+    });
   });
 
-  describe('ECharts Visualization Suite (POV-R-2, POV-R-4)', () => {
+  describe('ECharts Visualization Suite (POV-R-2)', () => {
     it('renders the ECharts visualizations with valid options and table models', () => {
       build(OPEN_PHASE);
 
       const charts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      expect(charts.length).toBe(3);
+      expect(charts.length).toBe(2);
 
       const titles = charts.map(c => c.componentInstance.chartTitle());
-      expect(titles).toEqual([
-        'Portfolio reporting status',
-        'Status Pipeline',
-        'Science Programs output ranking'
-      ]);
+      expect(titles).toEqual([COPY.statusTitle, 'Status Pipeline']);
 
       for (const chart of charts) {
         expect(chart.componentInstance.options()).toBeTruthy();
       }
-    });
-
-    it('switches between vertical bar, horizontal bar, and heatmap analysis modes', () => {
-      build(OPEN_PHASE);
-
-      // Default is horizontal
-      expect(component.analysisViewMode()).toBe('horizontal');
-      expect(component.activeAnalysisOption()).toBe(component.programRankingOption());
-      expect(component.activeAnalysisTable().caption).toContain('ranked by Science Program');
-
-      // Switch to vertical
-      component.setAnalysisViewMode('vertical');
-      expect(component.analysisViewMode()).toBe('vertical');
-      expect(component.activeAnalysisOption()).toBe(component.programRankingVerticalOption());
-
-      // Switch to heatmap
-      component.setAnalysisViewMode('heatmap');
-      expect(component.analysisViewMode()).toBe('heatmap');
-      expect(component.activeAnalysisOption()).toBe(component.programRankingHeatmapOption());
-      expect(component.activeAnalysisTable().caption).toContain('heatmap');
-    });
-
-    it('computes science program ranking chart options and accessible table model (POV-R-4)', () => {
-      build(OPEN_PHASE);
-
-      const option = component.programRankingOption();
-      expect(option).toBeTruthy();
-      expect(option.series).toBeDefined();
-
-      const table = component.programRankingTable();
-      expect(table.caption).toBe('Results progress ranked by Science Program');
-      expect(table.headers).toEqual(['Science Program', 'Program Name', 'Editing', 'Submitted / QA', 'Approved', 'Total']);
-      expect(table.rows.length).toBe(2);
     });
   });
 
@@ -569,6 +622,7 @@ describe('PortfolioOverviewComponent', () => {
     expect(component.isLoading()).toBe(true);
     const skeletonHost = fixture.debugElement.query(By.css('[data-testid="portfolio-overview-skeleton"]'));
     expect(skeletonHost).toBeTruthy();
+    expect(skeletonHost.nativeElement.querySelectorAll('[data-testid="portfolio-overview-skeleton-kpi-card"]').length).toBe(3);
     const skeletons = fixture.nativeElement.querySelectorAll('.pr-skeleton');
     expect(skeletons.length).toBeGreaterThan(0);
   });
@@ -622,10 +676,6 @@ describe('PortfolioOverviewComponent', () => {
       // Status chart click toggles filter
       component.onStatusChartClick({ name: 'Editing' } as any);
       expect(component.selectedStatusFilter()).toBe('editing');
-
-      // Ranking chart click navigates to Results Center filtered by program (axis shows full name)
-      component.onRankingChartClick({ name: 'Breeding for Tomorrow' } as any);
-      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { program: 'SP01' } });
 
       // Bilateral chart click navigates to bilateral results
       component.onBilateralChartClick();
