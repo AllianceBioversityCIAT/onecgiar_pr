@@ -1,6 +1,6 @@
 # type-policy-change (bilateral)
 
-**Verified:** 2026-10-15 · branch qa-development-2026-mc-2 · 68889f292
+**Verified:** 2026-10-15 · branch qa-development-2026-mc-2 · 52d4b1ad5
 
 ## What it is
 Section 5 of the bilateral form: Policy Change. Shows the **MDS** (3 mandatory fields), plus USD
@@ -90,6 +90,11 @@ not merely always-visible, grouped with the field that gates them, matching Pool
   (lost edit, not data loss) and not fixed.
 - ⚠️ **A null `currentResultId()` leaves `loaded` at `null`**, so Save stays disabled. `loadData()`
   returns early and there is nothing to save against anyway; the section only renders inside a result.
+
+- ⚠️ **Status must not set `[expandSpaceOnOpen]="true"`** — it renders a second, normal-flow spacer
+  div that animates 0→300px on open, pushing Stage and the rest of the form down. The options panel
+  is already an absolutely-positioned overlay and works without it, same as Policy type (`BSD-R-1`,
+  `docs/specs/bugfix/bilateral-status-dropdown-overlay/`).
 
 ## Pending / Coming soon
 - Read-only mode for Pending Review / Approved / Rejected: **not implemented**, and no bilateral
