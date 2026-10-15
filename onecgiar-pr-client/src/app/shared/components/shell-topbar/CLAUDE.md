@@ -112,6 +112,7 @@ as `isInNotificationsRoute()`.
 - ⚠️ `quick/topbar-right-768-overflow` (2026-10-15): with every label shown the right cluster is ~646px and needs a
   ~885px viewport; at 768 it ended at 840px (horizontal scroll, user name cut). The `Release notes` / `Notifications`
   label spans carry `max-lg:hidden` (< 1024px -> icon + badge only; `aria-label`s keep the names). Don't drop it.
+  `quick/topbar-right-375-overflow`: < 640px the Help label + chevron and the Search placeholder + kbd hide too (`max-sm:`, `!` where the SCSS sets `display`); 375 now fits.
 
 ## Children
 
@@ -120,4 +121,4 @@ as `isInNotificationsRoute()`.
 | `app-global-search-palette` | the palette overlay | has its own `CLAUDE.md` — read it before touching the trigger |
 | `app-pop-up-notification-item` | one bell row (decision or update), emits `handoff` | lives under `header-panel/components/`; has inline Accept/Decline (BELL-T-3) |
 
-**Verified:** 2026-10-15 · qa-development-2026-ss · `quick/topbar-right-768-overflow`; prior: 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: account-menu Science programs rows render `initiativeLabel(item)` (`CODE - Name`, code alone when the name is missing); prior: 2026-10-07 · qa-development-2026-ss · `notifications/admin-pending-paging` PPG-T-4 on top of `quick/bell-popover-hidden`, `notifications/bell-read-state` BRS-T-6, `BELL-T-10`, `BELL-T-8`, `BELL-T-4`
+**Verified:** 2026-10-15 · qa-development-2026-ss · `quick/topbar-right-375-overflow`; prior: 2026-10-15 · `quick/topbar-right-768-overflow`; prior: 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: account-menu Science programs rows render `initiativeLabel(item)` (`CODE - Name`, code alone when the name is missing); prior: 2026-10-07 · qa-development-2026-ss · `notifications/admin-pending-paging` PPG-T-4 on top of `quick/bell-popover-hidden`, `notifications/bell-read-state` BRS-T-6, `BELL-T-10`, `BELL-T-8`, `BELL-T-4`

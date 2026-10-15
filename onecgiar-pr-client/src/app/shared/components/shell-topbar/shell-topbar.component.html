@@ -12,8 +12,8 @@
       aria-label="Search"
       (click)="openSearchPalette()">
       <ng-icon name="lucideSearch" class="pr-topbar-search__icon" />
-      <span class="pr-topbar-search__placeholder">Search</span>
-      <kbd class="pr-topbar-search__kbd" aria-hidden="true">{{ shortcutHint }}</kbd>
+      <span class="pr-topbar-search__placeholder max-sm:hidden">Search</span>
+      <kbd class="pr-topbar-search__kbd max-sm:!hidden" aria-hidden="true">{{ shortcutHint }}</kbd>
       <span
         role="tooltip"
         class="pointer-events-none absolute left-1/2 top-full z-[30] mt-[8px] w-max max-w-[240px] -translate-x-1/2 rounded-[8px] bg-[var(--pr-color-secondary-400)] px-[12px] py-[8px] text-[12px] font-normal leading-[1.4] text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover:opacity-100">
@@ -42,10 +42,10 @@
         "
         (click)="supportMenuOpen.set(!supportMenuOpen())">
         <ng-icon name="lucideLifeBuoy" class="text-[17px]" />
-        <span>Help</span>
+        <span class="max-sm:hidden">Help</span>
         <ng-icon
           name="lucideChevronDown"
-          class="text-[15px] transition-transform"
+          class="text-[15px] transition-transform max-sm:!hidden"
           [class.rotate-180]="supportMenuOpen()" />
       </button>
 
