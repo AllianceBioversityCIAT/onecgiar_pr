@@ -20,7 +20,7 @@
 | 4 | `changes/portfolio-overview-revamp/typology-view` | `changes/portfolio-overview-revamp/remove-rankings-status-copy` | no | pending |
 | 5 | `changes/portfolio-overview-revamp/toc-kpi-progress` | `changes/portfolio-overview-revamp/typology-view` (client half only; the server half has no dependency) | no | pending |
 | 6 | `changes/portfolio-overview-revamp/global-filters` | #1–#5, #7, #8 | no | pending |
-| 7 | `changes/portfolio-overview-revamp/remove-centers-progress` | none | no (shares `centers-block/` with #3) | pending |
+| 7 | `changes/portfolio-overview-revamp/remove-centers-progress` | none | no (shares `centers-block/` with #3) | done |
 | 8 | `changes/portfolio-overview-revamp/w3-projects-section` | server half: none · client half: `changes/portfolio-overview-revamp/toc-kpi-progress` (template order) | server half yes · client half no | pending |
 | 9 | `changes/portfolio-overview-revamp/filtered-detail-export` | `changes/portfolio-overview-revamp/global-filters` | no | pending |
 
@@ -37,4 +37,5 @@ Notes:
 | 2026-10-14 | Child #1 `kpi-breakdown` done: committed `3c1f412c3`, archived to `archive/2026-10-14-changes--portfolio-overview-kpi-breakdown/` | santiago.sanchez@cgiar.org |
 | 2026-10-15 | Child #2 `remove-rankings-status-copy` done: committed `6504812b8`, T-H browser check passed on PRTest, archived to `archive/2026-10-15-changes--portfolio-overview-revamp--remove-rankings-status-copy/` | santiago.sanchez@cgiar.org |
 | 2026-10-15 | Added children #7 `remove-centers-progress`, #8 `w3-projects-section` and #9 `filtered-detail-export`, from stakeholder email items 9–11. The user asked for the proposals ("puedes hacer el propose del 9, 10 y 11?"). #3 is now `Parallel-safe: no`, and #6 now also depends on #7 and #8. All 3 proposals approved; the open questions take the recommended defaults (user: "haz lo que mejor recomiendes y procedamos con el specify") | santiago.sanchez@cgiar.org |
+| 2026-10-15 | Child #7 `remove-centers-progress` done: committed `92bd0aa5b`, browser check at 1280 and 768 accepted by the user, archived to `archive/2026-10-15-changes--portfolio-overview-revamp--remove-centers-progress/`. #3 is unblocked on `centers-block/` | santiago.sanchez@cgiar.org |
 | 2026-10-14 | Reordered: `kpi-breakdown` moves to #1 because it is already being implemented in the working tree. The rankings child moves to #2 and depends on it (Judgment Day JD-10) | santiago.sanchez@cgiar.org |
