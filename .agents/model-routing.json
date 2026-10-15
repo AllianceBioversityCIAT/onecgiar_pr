@@ -1,0 +1,334 @@
+{
+  "authorAuditor": {
+    "antigravity": "wrappers collapse: pro and flash both resolve to Gemini 3.8 Flash (High) on this account (probed 2026-10-14, agy 1.3.5)",
+    "claude": "ok",
+    "codex": "ok",
+    "cursor": "ok",
+    "opencode": "ok"
+  },
+  "cli": {
+    "claude": "claude",
+    "codex": "codex",
+    "cursor": "agent",
+    "opencode": "opencode",
+    "antigravity": "agy"
+  },
+  "decisions": {
+    "antigravity": {
+      "restriction": "omitted: names unconfirmed"
+    },
+    "claude": {
+      "restriction": "applied"
+    },
+    "codex": {
+      "restriction": "applied"
+    },
+    "cursor": {
+      "effortBracket": "omitted: rung unconfirmed",
+      "restriction": "applied"
+    },
+    "opencode": {
+      "agentDir": ".opencode/agent",
+      "restriction": "omitted: restriction shape unconfirmed"
+    }
+  },
+  "generatedBy": "2.32.0",
+  "hosts": [
+    "claude",
+    "opencode",
+    "antigravity",
+    "codex",
+    "cursor"
+  ],
+  "mapping": {
+    "antigravity": {
+      "T1": {
+        "fallback": "—",
+        "note": "",
+        "primary": "gemini-3.8-flash-high"
+      },
+      "T2": {
+        "fallback": "—",
+        "note": "",
+        "primary": "gemini-3.8-flash-medium"
+      },
+      "T3": {
+        "fallback": "—",
+        "note": "*(≠ T2 vendor; session `--model` only — wrapper `pro` resolves to Gemini 3.8 Flash (High))*",
+        "primary": "claude-opus-5-5-high"
+      },
+      "T4": {
+        "fallback": "—",
+        "note": "",
+        "primary": "gemini-3.8-flash-high"
+      },
+      "T5": {
+        "fallback": "—",
+        "note": "",
+        "primary": "gemini-3.8-flash-low"
+      },
+      "T6": {
+        "fallback": "—",
+        "note": "vision",
+        "primary": "gemini-3.8-flash-high"
+      }
+    },
+    "claude": {
+      "T1": {
+        "fallback": "sonnet",
+        "note": "*(alias — always latest)*",
+        "primary": "opus"
+      },
+      "T2": {
+        "fallback": "haiku",
+        "note": "",
+        "primary": "sonnet"
+      },
+      "T3": {
+        "fallback": "sonnet",
+        "note": "*(must differ from T2)*",
+        "primary": "opus"
+      },
+      "T4": {
+        "fallback": "opus",
+        "note": "(long context)",
+        "primary": "sonnet"
+      },
+      "T5": {
+        "fallback": "sonnet",
+        "note": "",
+        "primary": "haiku"
+      },
+      "T6": {
+        "fallback": "opus",
+        "note": "(vision)",
+        "primary": "sonnet"
+      }
+    },
+    "codex": {
+      "T1": {
+        "fallback": "—",
+        "note": "Sol where the plan allows",
+        "primary": "gpt-5.6-terra"
+      },
+      "T2": {
+        "fallback": "—",
+        "note": "",
+        "primary": "gpt-5.6-luna"
+      },
+      "T3": {
+        "fallback": "—",
+        "note": "*(≠ Luna)*; Sol where the plan allows",
+        "primary": "gpt-5.6-terra"
+      },
+      "T4": {
+        "fallback": "<CONFIRM SLUG>",
+        "note": "",
+        "primary": "gpt-5.6-terra"
+      },
+      "T5": {
+        "fallback": "—",
+        "note": "",
+        "primary": "gpt-5.6-luna"
+      },
+      "T6": {
+        "fallback": "<CONFIRM SLUG>",
+        "note": "prefer cross-host dispatch",
+        "primary": "gpt-5.6-terra"
+      }
+    },
+    "cursor": {
+      "T1": {
+        "fallback": "<CONFIRM SLUG>",
+        "note": "",
+        "primary": "claude-opus-5-thinking-high"
+      },
+      "T2": {
+        "fallback": "<CONFIRM SLUG>",
+        "note": "",
+        "primary": "composer-2.5"
+      },
+      "T3": {
+        "fallback": "<CONFIRM SLUG>",
+        "note": "",
+        "primary": "gpt-5.6-sol-high"
+      },
+      "T4": {
+        "fallback": "<CONFIRM SLUG>",
+        "note": "",
+        "primary": "claude-sonnet-5-thinking-high"
+      },
+      "T5": {
+        "fallback": "<CONFIRM SLUG>",
+        "note": "",
+        "primary": "composer-2.5-fast"
+      },
+      "T6": {
+        "fallback": "<CONFIRM SLUG>",
+        "note": "",
+        "primary": "gemini-3.8-flash-high"
+      }
+    },
+    "opencode": {
+      "T1": {
+        "fallback": "—",
+        "note": "(5,200 @ $15)",
+        "primary": "opencode-go/deepseek-v4-pro"
+      },
+      "T2": {
+        "fallback": "opencode-go/deepseek-v4.1-flash",
+        "note": "",
+        "primary": "opencode-go/glm-5.2"
+      },
+      "T3": {
+        "fallback": "—",
+        "note": "(5,200 @ $15) *(≠ T2)*",
+        "primary": "opencode-go/deepseek-v4-pro"
+      },
+      "T4": {
+        "fallback": "opencode-go/deepseek-v4.1-flash",
+        "note": "`<CONFIRM>` context window (32,500 @ $15)",
+        "primary": "opencode-go/deepseek-v4-pro"
+      },
+      "T5": {
+        "fallback": "—",
+        "note": "(65,000 @ $30)",
+        "primary": "opencode-go/deepseek-v4.1-flash"
+      },
+      "T6": {
+        "fallback": "—",
+        "note": "→ cross-host dispatch: antigravity (selected); (32,500 @ $15; **Exp**)",
+        "primary": "opencode-go/deepseek-v4-flash-vision-exp"
+      }
+    }
+  },
+  "roster": {
+    "antigravity": [
+      {
+        "id": "gemini-3.1-pro-high",
+        "source": "user",
+        "tiers": [
+          "T1",
+          "T3",
+          "T4",
+          "T6"
+        ]
+      },
+      {
+        "id": "gemini-3.8-flash-medium",
+        "source": "user",
+        "tiers": [
+          "T2",
+          "T5"
+        ]
+      }
+    ],
+    "claude": [
+      {
+        "id": "opus",
+        "source": "packaged"
+      },
+      {
+        "id": "sonnet",
+        "source": "packaged"
+      },
+      {
+        "id": "haiku",
+        "source": "packaged"
+      }
+    ],
+    "codex": [
+      {
+        "id": "gpt-5.6-terra",
+        "source": "user",
+        "tiers": [
+          "T1",
+          "T3",
+          "T4",
+          "T6"
+        ]
+      },
+      {
+        "id": "gpt-5.6-luna",
+        "source": "user",
+        "tiers": [
+          "T2",
+          "T5"
+        ]
+      }
+    ],
+    "cursor": [
+      {
+        "id": "claude-opus-5-thinking-high",
+        "source": "user",
+        "tiers": [
+          "T1"
+        ]
+      },
+      {
+        "id": "composer-2.5",
+        "source": "user",
+        "tiers": [
+          "T2"
+        ]
+      },
+      {
+        "id": "composer-2.5-fast",
+        "source": "user",
+        "tiers": [
+          "T5"
+        ]
+      },
+      {
+        "id": "gpt-5.6-sol-high",
+        "source": "user",
+        "tiers": [
+          "T3"
+        ]
+      },
+      {
+        "id": "claude-sonnet-5-thinking-high",
+        "source": "user",
+        "tiers": [
+          "T4"
+        ]
+      },
+      {
+        "id": "gemini-3.8-flash-high",
+        "source": "user",
+        "tiers": [
+          "T6"
+        ]
+      }
+    ],
+    "opencode": [
+      {
+        "id": "opencode-go/deepseek-v4-pro",
+        "source": "user",
+        "tiers": [
+          "T1",
+          "T3",
+          "T4"
+        ]
+      },
+      {
+        "id": "opencode-go/glm-5.2",
+        "source": "user",
+        "tiers": [
+          "T2"
+        ]
+      },
+      {
+        "id": "opencode-go/deepseek-v4.1-flash",
+        "source": "user",
+        "tiers": [
+          "T5"
+        ]
+      }
+    ]
+  },
+  "unselectedHosts": "keep-previous-else-packaged",
+  "updatedAt": "2026-10-15",
+  "version": 1,
+  "wrappers": "yes"
+}
