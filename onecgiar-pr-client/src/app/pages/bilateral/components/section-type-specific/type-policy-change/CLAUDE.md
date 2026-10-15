@@ -1,6 +1,6 @@
 # type-policy-change (bilateral)
 
-**Verified:** 2026-10-15 · branch qa-development-2026-mc-2 · 52d4b1ad5
+**Verified:** 2026-10-15 · branch qa-development-2026-mc-2 · 846fa3620 (re-stamped, `FCT-T-1` attempt 4)
 
 ## What it is
 Section 5 of the bilateral form: Policy Change. Shows the **MDS** (3 mandatory fields), plus USD
@@ -95,6 +95,18 @@ not merely always-visible, grouped with the field that gates them, matching Pool
   div that animates 0→300px on open, pushing Stage and the rest of the form down. The options panel
   is already an absolutely-positioned overlay and works without it, same as Policy type (`BSD-R-1`,
   `docs/specs/bugfix/bilateral-status-dropdown-overlay/`).
+- ⚠️ **The shared grid's `minmax()` floor is `min(390px,100%)`, not `190px`** (`FCT-T-1`,
+  `docs/specs/bugfix/field-card-save-pill-truncation/`; full rework history in `execution.md`).
+  `190px` floored all three columns below `app-field-card`'s 380px save-pill collapse threshold, so
+  "Unsaved changes" rendered icon-only at ordinary desktop/laptop widths. `auto-fit`/`minmax(F,1fr)`
+  guarantees every rendered column is `≥ F`, so any `F > 380px` is collapse-free at every content
+  width — `390px` is the locked value. The `min(...,100%)` wrapper exists because a BARE `390px`
+  floor can't shrink below itself: content narrower than 390px (phone widths) would force horizontal
+  overflow instead of degrading. `min(390px,100%)` lets the single column shrink to the container's
+  own width there instead, falling through to `app-field-card`'s own 380px/240px collapse rules as
+  the intended last resort — the same graceful behavior `190px` always had at phone widths. Column
+  count varies with content width: 1 below 800px, 2 from 800-1209px (Policy type + USD amount row 1,
+  Status row 2), 3 from 1210px up (the original `PCP-DD-1` grouping restored).
 
 ## Pending / Coming soon
 - Read-only mode for Pending Review / Approved / Rejected: **not implemented**, and no bilateral
