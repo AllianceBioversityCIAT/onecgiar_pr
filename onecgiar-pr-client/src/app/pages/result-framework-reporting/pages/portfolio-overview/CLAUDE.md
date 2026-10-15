@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-10-14 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/remove-rankings-status-copy
+**Verified:** 2026-10-15 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/remove-centers-progress
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — reporting figures for the WHOLE
 portfolio in the open phase: a KPI deck, the status section, results by indicator category, a
@@ -56,6 +56,19 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
   result counts for every Center that leads **or** contributes to it. Two questions, two numbers.
 - The old dead centre code of this page (`centerDistributionRows`, `centerBilateralOption`…) is untouched
   and still unused; the block does not read it.
+
+### Block contents after `remove-centers-progress` (2026-10-15)
+
+- Now three parts only: header + phase chip, the 2 KPI cards (`centers-kpis`), and the **Reporting status**
+  card (donut + status tiles + active-filter strip). The Progress-by-Center table, its detail-mode toggle,
+  search and detail chart are gone.
+- 🛑 **"Retry failed Centers":** when some Centers' requests failed, a `role="status"` region under the tiles
+  shows the partial note (`centers-partial`) and **one** button (`centers-retry-failed`) that re-requests
+  **only** the failed Centers; on success the note and button disappear and the KPI total includes them. No
+  failures = no button. A failed Centers list still shows the block-level error + retry (`centers-error`).
+- Empty catalogue: the donut and tiles are replaced by "Nothing to show." (`centers-empty`), not an empty donut.
+- **Center Overview shortcut is gone from this page.** The per-Center name links went with the table; the
+  Center Overview stays reachable from the W3/Bilateral module page header.
 
 ## Where it is used
 
@@ -114,6 +127,8 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
 - Guide link: `STATUS_GUIDE_URL` (`shared/constants/portfolio-links.constants.ts`), typed `string` (not `''`,
   or templates narrow it to `never`). Empty = not rendered. Pending OQ-1: set it when the guide exists.
 - 🛑 **Removed on purpose:** the Program and Center ranking cards (stakeholder "competition" feedback). Do not re-add.
+- 🛑 **Removed on purpose:** "Progress by Center" (stakeholder item 9, 2026-10-15: no planning data for W3, so
+  no "progress"). Do not re-add.
 
 ## Pending
 

@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideArrowDown, lucideArrowUp, lucideSearch, lucideX } from '@ng-icons/lucide';
 import { take } from 'rxjs';
 import { PrVizChartComponent } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
@@ -17,10 +15,8 @@ import {
   STATUS_CHART_TOKEN,
   STATUS_TILE_TOKEN,
   StatusColumn,
-  buildRowsTable,
   buildSegments,
   buildSegmentsTable,
-  buildShareOption,
   buildStatusDonutOption,
   percentOf,
   statusIdFromChartEvent
@@ -28,14 +24,11 @@ import {
 import { CENTER_STATUS_IDS, EntityOverviewRow, buildCenterRow, sumRows } from './centers-block.aggregate';
 
 type LoadState = 'loading' | 'ready' | 'error';
-type SortKey = 'name' | 'total' | number;
 
-/** One line of the detail table. Center rows load one by one. */
+/** Load state of one Center. Center rows load one by one. */
 export interface CenterRowState {
   code: string;
   acronym: string;
-  fullName: string;
-  link: string;
   state: LoadState;
   row: EntityOverviewRow | null;
 }
@@ -50,14 +43,12 @@ function resolveCssColor(value: string): string {
 /**
  * P2-3928 — the CGIAR Centers (W3/Bilateral) block of the Portfolio overview. Built for P2-3858 as Admin ›
  * All P/As and Centers; moved here as one more section (Ángel, 7-Oct-2026: "La respuesta son las 3") with
- * the same figures and presentation: KPI cards, status donut + tiles, and a detail
- * table with a chart view, for the open P25 reporting phase. Read-only: it only issues GETs. Admin-only
- * because its host route (`portfolio-overview`) carries `CheckAdminGuard`.
+ * the same figures and presentation: KPI cards and status donut + tiles, for the open P25 reporting phase.
+ * Read-only: it only issues GETs. Admin-only because its host route (`portfolio-overview`) carries `CheckAdminGuard`.
  */
 @Component({
   selector: 'app-portfolio-centers-block',
-  imports: [RouterLink, PrVizChartComponent, NgIcon],
-  providers: [provideIcons({ lucideSearch, lucideX, lucideArrowUp, lucideArrowDown })],
+  imports: [RouterLink, PrVizChartComponent],
   templateUrl: './centers-block.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -68,7 +59,6 @@ export class PortfolioCentersBlockComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly copy = PORTFOLIO_CENTERS_BLOCK_COPY;
-  readonly skeletonRows = [1, 2, 3, 4, 5];
 
   readonly phase = signal<Phases | null>(null);
   readonly phaseResolved = signal(false);
@@ -82,10 +72,6 @@ export class PortfolioCentersBlockComponent {
   readonly centersLoading = computed(() => this.centerRows().some(center => center.state === 'loading'));
 
   readonly selectedStatus = signal<number | null>(null);
-  readonly detailMode = signal<'table' | 'chart'>('table');
-  readonly search = signal('');
-  readonly sortKey = signal<SortKey>('total');
-  readonly sortDesc = signal(true);
 
   /** Status columns with the colour the charts paint. */
   readonly columns = computed<StatusColumn[]>(() =>
@@ -113,30 +99,6 @@ export class PortfolioCentersBlockComponent {
 
   readonly donutOption = computed(() => buildStatusDonutOption(this.segments(), this.centerTotals().total, this.selectedStatus(), this.donutPalette()));
   readonly donutTable = computed(() => buildSegmentsTable(this.copy.statusTitle, this.segments()));
-  readonly detailTable = computed(() => buildRowsTable(this.copy.detailCentersTitle, this.loadedCenterRows(), this.columns()));
-  readonly detailHeight = computed(() => `${Math.max(260, this.loadedCenterRows().length * 26 + 60)}px`);
-  readonly shareOption = computed(() => buildShareOption(this.filteredDetail().map(c => c.row!).filter(Boolean), this.columns()));
-
-  /** Rows of the detail table, filtered by the search box, sorted by the clicked header. */
-  readonly filteredDetail = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    const key = this.sortKey();
-    const sign = this.sortDesc() ? -1 : 1;
-    const value = (c: CenterRowState): number | string => {
-      if (key === 'name') return c.acronym.toLowerCase();
-      if (!c.row) return -1;
-      if (key === 'total') return c.row.total;
-      return c.row.counts[this.columns().findIndex(column => column.id === key)] ?? 0;
-    };
-    return this.centerRows()
-      .filter(c => !term || c.acronym.toLowerCase().includes(term) || c.code.toLowerCase().includes(term) || c.fullName.toLowerCase().includes(term))
-      .sort((a, b) => {
-        const va = value(a);
-        const vb = value(b);
-        const cmp = typeof va === 'string' && typeof vb === 'string' ? va.localeCompare(vb) : Number(va) - Number(vb);
-        return cmp * sign || a.acronym.localeCompare(b.acronym);
-      });
-  });
   readonly selectedLabel = computed(() => {
     const id = this.selectedStatus();
     return id === null ? null : resultStatusLabel(id);
@@ -149,28 +111,11 @@ export class PortfolioCentersBlockComponent {
 
   toggleStatus(statusId: number): void {
     this.selectedStatus.update(current => (current === statusId ? null : statusId));
-    if (this.selectedStatus() !== null) {
-      this.sortKey.set(statusId);
-      this.sortDesc.set(true);
-    }
   }
 
   onChartClick(event: unknown): void {
     const id = statusIdFromChartEvent(event as any);
     if (id !== null) this.toggleStatus(id);
-  }
-
-  sortBy(key: SortKey): void {
-    if (this.sortKey() === key) {
-      this.sortDesc.update(desc => !desc);
-      return;
-    }
-    this.sortKey.set(key);
-    this.sortDesc.set(key !== 'name');
-  }
-
-  onSearch(event: Event): void {
-    this.search.set((event.target as HTMLInputElement).value ?? '');
   }
 
   /** The Results Center reads `?status=` (results-list.component); the same deep link the Portfolio overview uses. */
@@ -196,10 +141,13 @@ export class PortfolioCentersBlockComponent {
     void this.loadCenters(this.versionId());
   }
 
-  retryCenter(code: string): void {
-    const center = this.centerRows().find(item => item.code === code);
-    if (!center || center.state === 'loading') return;
-    this.loadCenter(center, this.versionId());
+  /** Re-requests every Center in the error state. loadCenter flips each to 'loading' at once, so a second tap finds none. */
+  retryFailedCenters(): void {
+    if (this.centersListState() !== 'ready') return;
+    const versionId = this.versionId();
+    this.centerRows()
+      .filter(center => center.state === 'error')
+      .forEach(center => this.loadCenter(center, versionId));
   }
 
   private resolvePhase(): void {
@@ -228,14 +176,7 @@ export class PortfolioCentersBlockComponent {
         .filter(center => !!center?.code)
         .map(center => {
           const acronym = center.acronym || center.name || center.code;
-          return {
-            code: center.code,
-            acronym,
-            fullName: center.name || acronym,
-            link: buildCenterRow(center.code, acronym, []).link,
-            state: 'loading' as LoadState,
-            row: null
-          };
+          return { code: center.code, acronym, state: 'loading' as LoadState, row: null };
         })
         .sort((a, b) => a.acronym.localeCompare(b.acronym, undefined, { sensitivity: 'base' }));
       this.centerRows.set(states);
