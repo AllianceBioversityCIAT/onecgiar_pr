@@ -55,11 +55,11 @@
 
 ---
 
-## [ ] CNR-T-1 — Origin and source classifiers (pure functions)
+## [x] CNR-T-1 — Origin and source classifiers (pure functions)
 
 | Field | Value |
 |---|---|
-| Status | [ ] pending |
+| Status | [x] done (2026-10-15, Reviewer PASS attempt 1) |
 | Size | S (≈ 60 LOC incl. spec) |
 | Depends on | Precondition |
 | Requirements | CNR-1, CNR-2 |
@@ -94,11 +94,11 @@
 
 ---
 
-## [ ] CNR-T-2 — Component: W3-only load, origin signal, filter composition
+## [x] CNR-T-2 — Component: W3-only load, origin signal, filter composition
 
 | Field | Value |
 |---|---|
-| Status | [ ] pending |
+| Status | [x] done (2026-10-15, Reviewer PASS attempt 1) |
 | Size | M (≈ 120 LOC incl. spec) |
 | Depends on | CNR-T-1 |
 | Requirements | CNR-1, CNR-2, CNR-3, CNR-4, CNR-7, CNR-N1, CNR-N2, CNR-N3 |
@@ -170,11 +170,11 @@ If any of these differs, **HALT** and report. Do not adapt silently.
 
 ---
 
-## [ ] CNR-T-3 — Template, copy and module guide
+## [x] CNR-T-3 — Template, copy and module guide
 
 | Field | Value |
 |---|---|
-| Status | [ ] pending |
+| Status | [x] done (2026-10-15, Reviewer PASS attempt 1) |
 | Size | S–M (≈ 60 LOC incl. spec) |
 | Depends on | CNR-T-2 |
 | Requirements | CNR-2, CNR-3, CNR-4, CNR-5, CNR-6, CNR-7, CNR-N3, CNR-N4, CNR-N5 |
@@ -228,11 +228,11 @@ If any of these differs, **HALT** and report. Do not adapt silently.
 
 ---
 
-## [ ] CNR-T-H — Browser check (human / T6)
+## [x] CNR-T-H — Browser check (human / T6)
 
 | Field | Value |
 |---|---|
-| Status | [ ] pending |
+| Status | [x] done (2026-10-15, browser evidence in execution.md) |
 | Size | XS (no code) |
 | Depends on | CNR-T-3, and the commit reaching `performance-refactor` if checked on PRTest |
 | Requirements | CNR-2, CNR-3, CNR-4, CNR-5, CNR-7 (visual / real data), layout defect class |

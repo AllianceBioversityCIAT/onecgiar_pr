@@ -6,7 +6,7 @@
 export const PORTFOLIO_CENTERS_BLOCK_COPY = {
   eyebrow: 'W3/Bilateral',
   title: 'CGIAR Centers',
-  subtitle: 'W3/Bilateral results of every CGIAR Center in this phase — the same numbers each Center Overview shows.',
+  subtitle: 'W3/Bilateral results per CGIAR Center in this phase. A result shared by several Centers counts once for each of them.',
   phaseLabel: 'Phase',
   noPhase: 'No open reporting phase',
   retry: 'Retry',
@@ -23,5 +23,8 @@ export const PORTFOLIO_CENTERS_BLOCK_COPY = {
   activeFilter: 'Active filter:',
   viewInResultsCenter: 'View in Results Center',
   clearFilter: 'Clear filter',
-  centersStillLoading: 'Some Centers are still loading; figures update as they arrive.'
+  centersStillLoading: 'Some Centers are still loading; figures update as they arrive.',
+  originNew: 'New',
+  originReplicated: 'Replicated',
+  filterSeparator: ' · '
 } as const;

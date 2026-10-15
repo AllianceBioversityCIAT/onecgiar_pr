@@ -33,6 +33,41 @@
         </span>
         <span class="inline-flex h-[24px] shrink-0 items-center whitespace-nowrap rounded-full bg-purple-50 px-[8px] text-[11px] font-semibold text-purple-700">{{ copy.kpiBilateralChip(kpis().bilateralApproved) }}</span>
       </div>
+      <hlm-separator />
+      <div class="flex flex-col gap-[6px]" data-testid="origin-filter">
+        <button
+          type="button"
+          (click)="toggleOrigin('new')"
+          [attr.aria-pressed]="origin() === 'new'"
+          data-testid="origin-new"
+          class="flex w-full cursor-pointer items-center justify-between gap-[8px] rounded-[8px] border px-[10px] py-[6px] text-left text-[12.5px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          [class]="origin() === 'new'
+            ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-50)] shadow-xs ring-2 ring-[var(--pr-color-primary-500)]/30'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs'">
+          <span class="font-semibold text-[var(--pr-text-heading)]">{{ copy.originNew }}</span>
+          @if (activeState() === 'loading') {
+            <span class="pr-skeleton h-[14px] w-[24px] rounded"></span>
+          } @else {
+            <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums" data-testid="origin-new-count">{{ kpis().bilateralNew }}</span>
+          }
+        </button>
+        <button
+          type="button"
+          (click)="toggleOrigin('replicated')"
+          [attr.aria-pressed]="origin() === 'replicated'"
+          data-testid="origin-replicated"
+          class="flex w-full cursor-pointer items-center justify-between gap-[8px] rounded-[8px] border px-[10px] py-[6px] text-left text-[12.5px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          [class]="origin() === 'replicated'
+            ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-50)] shadow-xs ring-2 ring-[var(--pr-color-primary-500)]/30'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs'">
+          <span class="font-semibold text-[var(--pr-text-heading)]">{{ copy.originReplicated }}</span>
+          @if (activeState() === 'loading') {
+            <span class="pr-skeleton h-[14px] w-[24px] rounded"></span>
+          } @else {
+            <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums" data-testid="origin-replicated-count">{{ kpis().bilateralReplicated }}</span>
+          }
+        </button>
+      </div>
     </div>
     <div class="flex min-h-[110px] flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px]">
       <span class="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.kpiCentersReporting }}</span>
@@ -101,17 +136,19 @@
                   }
                 </div>
 
-                @if (selectedLabel(); as label) {
+                @if (activeFilterLabel(); as label) {
                   <div class="flex flex-col items-start justify-between gap-[8px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-[14px] py-[8px] sm:flex-row sm:items-center" data-testid="active-filter">
                     <span class="text-[12px] font-medium text-[var(--pr-color-primary-800)]">{{ copy.activeFilter }} <strong class="font-bold">{{ label }}</strong></span>
                     <div class="flex flex-wrap items-center gap-[12px] self-end sm:self-auto">
-                      <a
-                        routerLink="/result/results-outlet/results-list"
-                        [queryParams]="resultsCenterParams()"
-                        class="text-[12px] font-bold text-[var(--pr-color-primary-700)] no-underline hover:underline">
-                        {{ copy.viewInResultsCenter }} &rarr;
-                      </a>
-                      <button type="button" (click)="toggleStatus(selectedStatus()!)" class="cursor-pointer border-0 bg-transparent text-[11.5px] font-semibold text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]">
+                      @if (showResultsCenterLink()) {
+                        <a
+                          routerLink="/result/results-outlet/results-list"
+                          [queryParams]="resultsCenterParams()"
+                          class="text-[12px] font-bold text-[var(--pr-color-primary-700)] no-underline hover:underline">
+                          {{ copy.viewInResultsCenter }} &rarr;
+                        </a>
+                      }
+                      <button type="button" (click)="clearFilters()" data-testid="clear-filter" class="cursor-pointer border-0 bg-transparent text-[11.5px] font-semibold text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]">
                         {{ copy.clearFilter }} &times;
                       </button>
                     </div>
