@@ -69,6 +69,40 @@
       [(ngModel)]="body.institutions"
       (ngModelChange)="onFieldChange()">
     </app-pr-multi-select>
+
+    <!--
+      PCL-R-2/PCL-DD-2 (policy-change-usd-amount-layout) — USD amount + Status are the direct,
+      always-visible consequence of the Policy type choice just above, so they render here rather
+      than behind a second "Complete full metadata" click. AC6 (P2-3388, see the toggle block
+      below) was about keeping the RELATED-TO QUESTION ungated by policy_type_id, not about hiding
+      this pair once policy_type_id == 1 is already chosen in this always-visible area — see
+      design.md §2.3 Reversion Challenge. Same grid utility Pool Funding uses for this pair
+      (policy-change-info.component.html:6) so the two renderings match side by side.
+    -->
+    @if (body.policy_type_id == 1) {
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
+        <app-pr-input
+          label="USD amount"
+          type="currency"
+          placeholder="0"
+          [required]="false"
+          [(ngModel)]="body.amount"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-input>
+
+        <app-pr-select
+          [options]="statusOptions"
+          label="Status"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Select status"
+          [required]="false"
+          [expandSpaceOnOpen]="true"
+          [(ngModel)]="body.status_amount"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-select>
+      </div>
+    }
   </div>
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
     <app-alert-status
@@ -84,13 +118,14 @@
 
   <div class="contents" [inert]="readOnly()">
     @if (showAllFields()) {
-      <div class="flex flex-col gap-[18px]">
+      <div class="flex flex-col gap-[18px]" data-testid="type-policy-change-full-metadata-disclosure">
         <!--
-        The policy change question is full metadata per the story, and it sits INSIDE the toggle but
-        OUTSIDE the policy-type gate below. That gate is correct — it is AC6, and W1/W2 does the same
-        with *ngIf in policy-change-info.component.html:22 and :33 — but it only covers USD amount and
-        Status. Nesting the question under it would hide it for policy types 2 and 3, and those are
-        exactly the users who today press the button and see nothing happen.
+        The policy change question is full metadata per the story. It used to sit nested alongside
+        the USD amount/Status gate (AC6, P2-3388) because that pair lived in this same toggle; now
+        that USD amount/Status render always-visible above (PCL-R-2), this is the sole remaining
+        content of the disclosure. Do NOT nest this question under a `policy_type_id` gate the way
+        USD amount/Status are gated — AC6 requires it to stay visible for every policy type, not
+        just type 1, or it would wrongly disappear for types 2 and 3.
       -->
         @if (questions?.optionsWithAnswers?.length) {
           <app-pr-select
@@ -102,29 +137,6 @@
             [required]="false"
             [(ngModel)]="relatedTo"
             (ngModelChange)="onRelatedToChange(relatedTo)">
-          </app-pr-select>
-        }
-
-        @if (body.policy_type_id == 1) {
-          <app-pr-input
-            label="USD amount"
-            type="currency"
-            placeholder="0"
-            [required]="false"
-            [(ngModel)]="body.amount"
-            (ngModelChange)="onFieldChange()">
-          </app-pr-input>
-
-          <app-pr-select
-            [options]="statusOptions"
-            label="Status"
-            optionLabel="name"
-            optionValue="id"
-            placeholder="Select status"
-            [required]="false"
-            [expandSpaceOnOpen]="true"
-            [(ngModel)]="body.status_amount"
-            (ngModelChange)="onFieldChange()">
           </app-pr-select>
         }
       </div>

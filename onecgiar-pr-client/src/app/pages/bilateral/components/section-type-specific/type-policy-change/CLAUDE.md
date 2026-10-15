@@ -1,10 +1,13 @@
 # type-policy-change (bilateral)
 
-**Verified:** 2026-09-02 · branch performance-refactor · 2de8884cd
+**Verified:** 2026-10-15 · branch qa-development-2026-mc-2 · 4ed4f6520
 
 ## What it is
-Section 5 of the bilateral form: Policy Change. Shows the **MDS** (3 mandatory fields) and hides the
-rest of the pooled-funding form behind the **Complete full metadata** button.
+Section 5 of the bilateral form: Policy Change. Shows the **MDS** (3 mandatory fields), plus USD
+amount + Status always-visible whenever `policy_type_id == 1` (`PCL-R-2`/`PCL-DD-2`,
+`docs/specs/bugfix/policy-change-usd-amount-layout/`). Only the **"Is this result related to:"**
+question still hides behind the **Complete full metadata** button — USD amount/Status are no longer
+part of that toggle.
 
 ## Contract
 - Endpoints: **the same ones pooled funding's summary uses** —
@@ -73,9 +76,12 @@ rest of the pooled-funding form behind the **Complete full metadata** button.
   related-to question used to do (P2-3382/P2-3388) — it is full metadata and must never be tracked.
 - ⚠️ **The MDS tracker's stage item is labelled `Stage`, matching the template, not "Policy stage"**
   (P2-3383). The AC calls it "Stage in policy process"; renaming the visible field is P2-3377.
-- ⚠️ **The related-to question sits inside the full-metadata toggle but OUTSIDE the `policy_type_id == 1`
-  gate.** That gate is AC6 and covers only USD amount and Status; nesting the question under it hid it
-  for policy types 2 and 3.
+- ⚠️ **USD amount/Status are no longer inside the full-metadata toggle at all** (reversed by
+  `PCL-R-2`/`PCL-DD-2`, `docs/specs/bugfix/policy-change-usd-amount-layout/`). They render
+  always-visible in the MDS area, gated only on `body.policy_type_id == 1` (AC6, P2-3388) — the same
+  gate as before, just moved outside `@if (showAllFields())`. The toggle now holds **only** the
+  "Is this result related to:" question, and that question stays OUTSIDE the `policy_type_id == 1`
+  gate — do not nest it under that gate, or it disappears for policy types 2 and 3.
 - ⚠️ **If the questions GET fails the section still saves** — `optionsWithAnswers` is then absent, which
   the server ignores, so no data is lost. But `onRelatedToChange` silently does nothing (the `forEach`
   runs on `undefined`), so the user's answer is dropped without a warning. Out of scope for P2-3556
