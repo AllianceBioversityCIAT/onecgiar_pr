@@ -26,6 +26,8 @@ export interface RawResult {
   version_id?: number | string;
   /** Result already existed in an earlier phase. Same encodings as `programme-results.service.ts`. */
   is_replicated?: number | string | boolean | null;
+  /** Acronym of the leading Center, as on the wire (typology view, TYV-P-1). */
+  lead_center?: string | null;
 }
 
 export interface AllResultsEnvelope {
@@ -184,6 +186,8 @@ export class PortfolioOverviewService {
 
   /** Results of the OPEN phase only (`phase_status === 1`). */
   private readonly rows = signal<RawResult[]>([]);
+  /** Read-only view of the open-phase rows, for child blocks that aggregate on their own (TYV-DD-1). */
+  readonly openRows = this.rows.asReadonly();
   /** Label of the phase these figures describe, e.g. `Reporting 2026 - P25`. */
   readonly phaseName = signal<string>('');
   readonly portfolioAcronym = signal<string>('');

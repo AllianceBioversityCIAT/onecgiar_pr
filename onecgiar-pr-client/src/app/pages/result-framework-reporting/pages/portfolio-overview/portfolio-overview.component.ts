@@ -18,6 +18,7 @@ import { HlmTooltip } from '@spartan/tooltip';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../internationalization/portfolio-overview.copy';
 import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.constants';
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
+import { PortfolioTypologyBlockComponent } from './components/typology-block/typology-block.component';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { ResultsListFilterService } from '../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
@@ -96,7 +97,7 @@ type SortKey = 'programme' | 'total' | number;
   standalone: true,
   templateUrl: './portfolio-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgIcon, PrVizChartComponent, PortfolioCentersBlockComponent, HlmSeparatorImports, HlmTooltip],
+  imports: [NgIcon, PrVizChartComponent, PortfolioCentersBlockComponent, PortfolioTypologyBlockComponent, HlmSeparatorImports, HlmTooltip],
   providers: [
     PortfolioOverviewService,
     provideIcons({

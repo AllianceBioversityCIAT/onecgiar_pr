@@ -342,6 +342,8 @@ export type BrnActivationMode = 'automatic' | 'manual';
 export class BrnTabs {
   @Input('brnTabs') activeTab: string | undefined;
   @Input() orientation: 'horizontal' | 'vertical' = 'horizontal';
+  // Re-exposed by `HlmTabs` through hostDirectives (hlm-tabs.ts); missing it raises NG0311 for every hlm-tabs user.
+  @Input() activationMode: 'automatic' | 'manual' = 'automatic';
   @Output() readonly brnTabsChange = new EventEmitter<string>();
   @Output() readonly tabActivated = new EventEmitter<string>();
 

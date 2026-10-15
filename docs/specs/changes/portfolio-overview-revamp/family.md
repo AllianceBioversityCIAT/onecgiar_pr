@@ -6,7 +6,7 @@
 |---|---|
 | **Parent spec path** | `docs/specs/changes/portfolio-overview-revamp/` |
 | **Date created** | 2026-10-14 |
-| **Last updated** | 2026-10-15 (children #7–#9 added) |
+| **Last updated** | 2026-10-15 (#4 specified) |
 | **Spec-family status** | open |
 | **Source proposal** | [`proposal.md`](./proposal.md), from the stakeholder feedback list, items 1–8 (screenshot attached to the request) |
 
@@ -17,7 +17,7 @@
 | 1 | `changes/portfolio-overview-kpi-breakdown` | none | no | done |
 | 2 | `changes/portfolio-overview-revamp/remove-rankings-status-copy` | `changes/portfolio-overview-kpi-breakdown` (must be **committed**, because both edit the same component and service files) | no | done |
 | 3 | `changes/portfolio-overview-revamp/centers-new-vs-replicated` | `changes/portfolio-overview-revamp/remove-rankings-status-copy` (centers-block slice); `changes/portfolio-overview-revamp/remove-centers-progress` (same `centers-block/` files — run #7 first) | no | done |
-| 4 | `changes/portfolio-overview-revamp/typology-view` | `changes/portfolio-overview-revamp/remove-rankings-status-copy` | no | pending |
+| 4 | `changes/portfolio-overview-revamp/typology-view` | `changes/portfolio-overview-revamp/remove-rankings-status-copy` | no | specified (ready for execute) |
 | 5 | `changes/portfolio-overview-revamp/toc-kpi-progress` | `changes/portfolio-overview-revamp/typology-view` (client half only; the server half has no dependency) | no | pending |
 | 6 | `changes/portfolio-overview-revamp/global-filters` | #1–#5, #7, #8 | no | pending |
 | 7 | `changes/portfolio-overview-revamp/remove-centers-progress` | none | no (shares `centers-block/` with #3) | done |
@@ -40,3 +40,4 @@ Notes:
 | 2026-10-15 | Child #7 `remove-centers-progress` done: committed `92bd0aa5b`, browser check at 1280 and 768 accepted by the user, archived to `archive/2026-10-15-changes--portfolio-overview-revamp--remove-centers-progress/`. #3 is unblocked on `centers-block/` | santiago.sanchez@cgiar.org |
 | 2026-10-15 | Child #3 `centers-new-vs-replicated` done: committed `a91e9ad39`, browser check at 1280 / 768 / 375 passed locally (712 = 548 + 164), archived to `archive/2026-10-15-changes--portfolio-overview-revamp--centers-new-vs-replicated/`. PRTest smoke pending | santiago.sanchez@cgiar.org |
 | 2026-10-14 | Reordered: `kpi-breakdown` moves to #1 because it is already being implemented in the working tree. The rankings child moves to #2 and depends on it (Judgment Day JD-10) | santiago.sanchez@cgiar.org |
+| 2026-10-15 | Child #4 `typology-view` specified (Standard; 4 tasks, ≈450 LOC; TYV-OQ-1..4 at recommended defaults). Not yet executed | santiago.sanchez@cgiar.org |

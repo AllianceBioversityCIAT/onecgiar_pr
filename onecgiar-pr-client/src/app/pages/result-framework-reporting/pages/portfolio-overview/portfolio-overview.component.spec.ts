@@ -627,6 +627,62 @@ describe('PortfolioOverviewComponent', () => {
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
+  describe('Results by typology slot (TYV-R-7, S-7.1)', () => {
+    const BLOCK = 'app-portfolio-typology-block';
+
+    const buildWith = (resultsSE: unknown) => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [PortfolioOverviewComponent],
+        providers: [
+          { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE } },
+          { provide: Router, useValue: { navigate: jest.fn() } },
+          { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } }
+        ]
+      });
+      fixture = TestBed.createComponent(PortfolioOverviewComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    };
+
+    it('loading: shows the typology skeleton and no block', () => {
+      buildWith({ GET_AllResultsWithUseRole: () => new Subject() });
+
+      expect(component.isLoading()).toBe(true);
+      expect(fixture.nativeElement.querySelector('[data-testid="portfolio-overview-skeleton-typology"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector(BLOCK)).toBeNull();
+    });
+
+    it('hasFigures: block sits after the status section and before the matrix, skeleton gone', () => {
+      build(OPEN_PHASE);
+
+      expect(component.hasFigures()).toBe(true);
+      const root: HTMLElement = fixture.nativeElement;
+      const block = root.querySelector(BLOCK) as Element;
+      const status = root.querySelector('[data-testid="status-guide-link"], h2')!.closest('.po-card') as Element;
+      const matrix = root.querySelector('#progress-by-science-program') as Element;
+      expect(block).toBeTruthy();
+      expect(root.querySelector('[data-testid="portfolio-overview-skeleton-typology"]')).toBeNull();
+      expect(status.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(block.compareDocumentPosition(matrix) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('error: no block', () => {
+      buildWith({ GET_AllResultsWithUseRole: () => throwError(() => new Error('boom')) });
+
+      expect(component.hasError()).toBe(true);
+      expect(fixture.nativeElement.querySelector(BLOCK)).toBeNull();
+    });
+
+    it('empty: no block', () => {
+      build([]);
+
+      expect(component.isEmpty()).toBe(true);
+      expect(fixture.nativeElement.querySelector(BLOCK)).toBeNull();
+    });
+  });
+
   it('toggles matrixViewMode between table and chart', () => {
     build(OPEN_PHASE);
 

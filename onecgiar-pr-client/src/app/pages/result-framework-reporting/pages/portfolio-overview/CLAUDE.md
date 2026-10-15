@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-10-15 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/centers-new-vs-replicated
+**Verified:** 2026-10-15 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/typology-view (TYV-T-3)
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — reporting figures for the WHOLE
 portfolio in the open phase: a KPI deck, the status section, results by indicator category, a
@@ -10,8 +10,7 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
 ## Contract
 
 - `PortfolioOverviewComponent` is standalone + `OnPush` and **provides its own service**
-  (`portfolio-overview.component.ts:35`), so leaving the screen drops the rows instead of holding a
-  whole portfolio in memory for the rest of the session.
+  (`portfolio-overview.component.ts:35`), so leaving the screen drops the rows.
 - `PortfolioOverviewService` owns **data and every aggregation**: `totals()` (status strip),
   `categories()` / `categoryBars()`, `bilateralTotal()` / `bilateralBars()`, `programmeRows()`
   (the matrix) and `footer()`. All are `computed` off one signal — never accumulated by hand.
@@ -61,8 +60,6 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
 - 🛑 **"Retry failed Centers":** a `role="status"` region shows the partial note (`centers-partial`) and **one**
   button (`centers-retry-failed`) re-requesting only failed Centers. No failures = no button. A failed Centers list
   shows `centers-error`; an empty catalogue shows `centers-empty`.
-- The page's old dead centre code (`centerDistributionRows`, `centerBilateralOption`…) is unused; the block never reads it.
-- Center Overview shortcut is gone from this page; it stays reachable from the W3/Bilateral module page header.
 
 ## Where it is used
 
@@ -84,11 +81,9 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
   TOTAL last silently misaligns every figure against its header.
 - ⚠️ **`cells` is positional** — index `i` of a row is `categories()[i]`. Both come from the same
   `computed`, so they cannot drift; do not sort one without the other.
-- **Categories are derived from the rows**, never hardcoded, so a column can only ever exist if some
-  result has that type. Real data shows seven, including `Other output` / `Other outcome`.
-- **The counters and the category bars are deliberately NOT clickable.** The design makes each a
-  drill-down, but no surface lists the whole portfolio filtered by status or category, so the
-  destination would be invented. Raised on P2-3304 instead of shipping a dead control.
+- **Categories are derived from the rows**, never hardcoded (real data: seven, incl. `Other output` / `Other outcome`).
+- **The counters and the category bars are deliberately NOT clickable**: no surface lists the whole portfolio
+  filtered by status or category, so the destination would be invented (raised on P2-3304).
 - **The bilateral fill uses `--pr-chart-2-muted` (`#8b7cc4`)** — the design's colour, valid here
   because it is a NON-TEXT graphic (3.52:1 on the divider track, WCAG 1.4.11). 🛑 Never use it for
   text: see `docs/DESIGN-DEVIATIONS.md` §1 vs §8, the same hex answering two different questions.
@@ -96,14 +91,13 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
   the figures are partial rather than passing a truncated portfolio off as the whole thing.
 - 🛑 **Two counts, two questions.** `total()` (`services/portfolio-overview.service.ts:195`) is the open-phase
   count (feeds the KPI tile); `fetchedCount()` (`:182`) is the raw server count captured in `load()` before
-  `apply()`'s phase filter. The partial banner ("Showing the first N results") MUST bind to `fetchedCount()`
-  (bug fixed by `bugfix/portfolio-overview-partial-counts`, 2026-09-14).
+  `apply()`'s phase filter. The partial banner ("Showing the first N results") MUST bind to `fetchedCount()`.
 - ⚠️ **"Replicated" means `is_replicated`, not "innovation".** The card-3 label "Innovations replicated from
   2025" assumes replicated W3 rows are innovations only (premise P-3, checked on prod 2026-10-14). If that
   stops holding, change the label — the counter itself does not filter by result type.
 - 🛑 **`tests/mocks/spartanBrainMock.ts` must declare every input a Helm host directive re-exposes**, or NG0311:
-  `BrnSeparator` (`orientation`/`decorative`, deck) and `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/
-  `showDelay`/`tooltipDisabled`, Rejected tile).
+  `BrnSeparator` (`orientation`/`decorative`, deck), `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/
+  `showDelay`/`tooltipDisabled`, Rejected tile) and `BrnTabs` (`activationMode`, typology tabs).
 
 ## Status section & removed rankings (2026-10-14, spec `…/remove-rankings-status-copy`)
 
@@ -111,9 +105,15 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
   parameter. Rejected-tile hint: `statusHints` + `hlmTooltip`.
 - Guide link: `STATUS_GUIDE_URL` (`shared/constants/portfolio-links.constants.ts`), typed `string` (not `''`,
   or templates narrow it to `never`). Empty = not rendered. Pending OQ-1: set it when the guide exists.
-- 🛑 **Removed on purpose:** the Program and Center ranking cards (stakeholder "competition" feedback). Do not re-add.
-- 🛑 **Removed on purpose:** "Progress by Center" (stakeholder item 9, 2026-10-15: no planning data for W3, so
-  no "progress"). Do not re-add.
+- 🛑 **Removed on purpose, do not re-add:** the Program and Center ranking cards ("competition" feedback) and
+  "Progress by Center" (stakeholder item 9: no planning data for W3, so no "progress").
+
+## Results by typology (2026-10-15, spec `changes/portfolio-overview-revamp/typology-view`)
+
+- `components/typology-block/` between the status section and the matrix, inside `hasFigures()` (skeleton testid
+  `portfolio-overview-skeleton-typology`); type -> level map in `typology.aggregate.ts` (pure).
+- Center dimension is lead-only + W3-only; rows A->Z, catch-all last, no ranking. The `rows` input
+  (`data.openRows()`) is the hook for the family #6 global filters.
 
 ## Pending
 
