@@ -1,7 +1,7 @@
 # Module Spec — `bilateral-save-draft-footer` — `tasks.md`
 
 - **Linked spec:** `requirements.md` + `design.md` (same folder).
-- **Status:** not-started
+- **Status:** resolved — `BSF-T-2` shipped, `BSF-T-1` superseded (Pivot), see `execution.md` and `archive-summary.md`
 
 ---
 
@@ -25,7 +25,7 @@
 
 ## 3. Task list
 
-### `BSF-T-1` — Stop the footer's Save draft button from being clipped `[~]` — BLOCKED (Pivot Record), see `execution.md`
+### `BSF-T-1` — Stop the footer's Save draft button from being clipped `[~]` — SUPERSEDED (Pivot resolved: wrong target; real defect moved to `bugfix/field-card-save-pill-truncation`), see `execution.md`
 
 - **Type:** `client`
 - **Description:** Add a `min-width: 0` plus an internal wrap/shrink rule to `.bcr-editor-footer__group` in `bilateral-result-creator.component.scss`, reusing the existing `@container` breakpoint already driving this file's responsive behavior, so the capsule's own content (state text + Save draft button) never overflows past the capsule's box at narrow column widths. Add a rendered-measurement regression test.
