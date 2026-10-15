@@ -34,16 +34,51 @@
       </button>
     </div>
 
-    <app-pr-select
-      [options]="policyControlList.policyTypesList"
-      label="Policy type"
-      optionLabel="name"
-      optionValue="id"
-      placeholder="Select policy type"
-      [required]="true"
-      [(ngModel)]="body.policy_type_id"
-      (ngModelChange)="onPolicyTypeChange()">
-    </app-pr-select>
+    <!--
+      PCP-DD-1 (policy-change-usd-amount-position) — Policy type, USD amount and Status render as
+      three siblings inside one shared grid row, in that order, matching Pool Funding's grid
+      structure byte-for-byte (policy-change-info.component.html:6-40). USD amount/Status stay the
+      direct, always-visible consequence of the Policy type choice right beside them (carried over
+      from PCL-R-2/PCL-DD-2, policy-change-usd-amount-layout — they are NOT behind "Complete full
+      metadata"; see design.md §2.3 Reversion Challenge there). `@if` renders no wrapping element,
+      so when `policy_type_id == 1` the input/select below are direct children of this grid div,
+      not of a nested one.
+    -->
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
+      <app-pr-select
+        [options]="policyControlList.policyTypesList"
+        label="Policy type"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select policy type"
+        [required]="true"
+        [(ngModel)]="body.policy_type_id"
+        (ngModelChange)="onPolicyTypeChange()">
+      </app-pr-select>
+
+      @if (body.policy_type_id == 1) {
+        <app-pr-input
+          label="USD amount"
+          type="currency"
+          placeholder="0"
+          [required]="false"
+          [(ngModel)]="body.amount"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-input>
+
+        <app-pr-select
+          [options]="statusOptions"
+          label="Status"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Select status"
+          [required]="false"
+          [expandSpaceOnOpen]="true"
+          [(ngModel)]="body.status_amount"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-select>
+      }
+    </div>
 
     <app-pr-select
       [options]="policyControlList.policyStages"
@@ -69,40 +104,6 @@
       [(ngModel)]="body.institutions"
       (ngModelChange)="onFieldChange()">
     </app-pr-multi-select>
-
-    <!--
-      PCL-R-2/PCL-DD-2 (policy-change-usd-amount-layout) — USD amount + Status are the direct,
-      always-visible consequence of the Policy type choice just above, so they render here rather
-      than behind a second "Complete full metadata" click. AC6 (P2-3388, see the toggle block
-      below) was about keeping the RELATED-TO QUESTION ungated by policy_type_id, not about hiding
-      this pair once policy_type_id == 1 is already chosen in this always-visible area — see
-      design.md §2.3 Reversion Challenge. Same grid utility Pool Funding uses for this pair
-      (policy-change-info.component.html:6) so the two renderings match side by side.
-    -->
-    @if (body.policy_type_id == 1) {
-      <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
-        <app-pr-input
-          label="USD amount"
-          type="currency"
-          placeholder="0"
-          [required]="false"
-          [(ngModel)]="body.amount"
-          (ngModelChange)="onFieldChange()">
-        </app-pr-input>
-
-        <app-pr-select
-          [options]="statusOptions"
-          label="Status"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="Select status"
-          [required]="false"
-          [expandSpaceOnOpen]="true"
-          [(ngModel)]="body.status_amount"
-          (ngModelChange)="onFieldChange()">
-        </app-pr-select>
-      </div>
-    }
   </div>
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
     <app-alert-status
