@@ -153,6 +153,51 @@ describe('BilateralAutoSaveService explicit section persistence', () => {
     });
   });
 
+  // BSP-T-1 (design.md P-9/P-10, `BSP-R-5`): the one page-wide fact every `savedTick` bump is now
+  // gated on. A direct scan of `fieldStatus()` — every section's entries, including `'evidence'` —
+  // not scoped to any one section's endpoint keys the way `hasPendingFor`/`hasErrorFor` are.
+  describe('hasAnyUnsavedAnywhere (BSP-T-1, BSP-R-5)', () => {
+    it('returns false when fieldStatus() is empty', () => {
+      expect(service.fieldStatus()).toEqual({});
+      expect(service.hasAnyUnsavedAnywhere()).toBe(false);
+    });
+
+    it("returns false when every tracked field is 'saved' or 'idle'", () => {
+      service.fieldStatus.set({ title: 'saved', description: 'idle' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(false);
+    });
+
+    it("returns true for a 'dirty' field in a non-evidence section", () => {
+      service.fieldStatus.set({ title: 'dirty' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it("returns true for a 'saving' field", () => {
+      service.fieldStatus.set({ geo_scope: 'saving' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it("returns true for an 'error' field", () => {
+      service.fieldStatus.set({ title: 'error' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it("returns true for a 'dirty' 'evidence' entry — the key is NOT excluded from the scan (P-10)", () => {
+      service.fieldStatus.set({ evidence: 'dirty' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it("returns true for an 'error' 'evidence' entry, the same as any other section's key", () => {
+      service.fieldStatus.set({ evidence: 'error' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it('returns true when the unsaved field is just ONE entry among several otherwise-clean ones', () => {
+      service.fieldStatus.set({ title: 'saved', description: 'idle', toc_mapping: 'dirty' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+  });
+
   it('does not permit writes after the form becomes read-only', async () => {
     service.setReadOnly(true);
     service.updateField('title', 'Blocked');

@@ -860,7 +860,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   async selectSection(section: BilateralEditorSection): Promise<void> {
     const current = this.openSectionName();
     if (current === section) return;
+    let flushTargets: string[] = [];
     if (!this.isSubmitting() && this.autoSaveService.hasPendingFor(current)) {
+      flushTargets = this.autoSaveService.pendingStatusKeysFor(current);
       await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(current));
       await this.waitForSectionSave(current);
 
@@ -882,6 +884,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         return;
       }
     }
+    this.maybeBumpSavedTick(current, flushTargets.length > 0);
     this.pendingOpen.set(false);
     this.openSectionName.set(section);
   }
@@ -1062,24 +1065,18 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       // (Innovation Developer prefill), never skipped. Never reached on the error/catch paths above.
       this.autoSaveService.manualSave$.next('general-info');
 
-      // Rework, item 1 (attempt 2, owner-approved 2026-09-29): `savedTick` clears EVERY field-card's
-      // "Unsaved changes" pill (`field-card.component.ts:112-131`), not just general-info's — every
-      // section stays mounted under `[hidden]` (`bilateral-result-creator.component.html:269-293`).
-      // Bumping it unconditionally therefore cleared the pill in whichever section the reporter had
-      // open, even with real unsaved edits sitting there untouched by this save.
-      //
-      // Navigating away always flushes the section being left first (BIL-T-2's `selectSection()`),
-      // so a genuinely staged edit can only exist in the section still open. Safe to bump when that
-      // section is general-info (the one this save actually reaches) or it provably has nothing
-      // staged. Evidence is excluded outright: its own draft-item state (`showDraft()` in
-      // `section-evidence.component.ts`) never surfaces through `hasPendingFor('evidence')` — a
-      // reporter can have an evidence draft open, with that field-card already marked "edited" from
-      // the click that opened it, while `hasPendingFor` reads clean.
-      const openSection = this.openSectionName();
-      const safeToBumpSavedTick =
-        openSection === 'general-info' ||
-        (openSection !== 'evidence' && !this.autoSaveService.hasPendingFor(openSection));
-      if (safeToBumpSavedTick) this.saveButtonSE.savedTick.update(count => count + 1);
+      // BSP-T-1 (design.md P-6 refuted, P-11, §6.2): the single-section premise behind the OLD
+      // `safeToBumpSavedTick` guard — "navigating away always flushes the section being left first,
+      // so a genuinely staged edit can only exist in the section still open" — is false (the AI
+      // quality-assessment drawer's own `'refreshing'` window lets `selectSection()` switch sections
+      // without flushing the one being left). Replaced with the shared, page-wide
+      // `maybeBumpSavedTick` helper: it is correct regardless of navigation order because it reads
+      // every section's ACTUAL field status, not an inference about what must have been flushed.
+      // Keyed on `openSectionName()` (the OPEN section), not the fixed `'general-info'` save
+      // target — Evidence's invisible `showDraft()` draft-item state can only be protected by
+      // checking what the reporter currently has open, since the drawer can be opened from any
+      // section via "View AI assessment".
+      this.maybeBumpSavedTick(this.openSectionName(), true);
 
       // P-6/DD-5: the server is the authority on `is_current`, but it only answers on the NEXT
       // read — without this the submit button would stay visible until a reload, and pressing it
@@ -1271,6 +1268,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // BSP-T-1 (design.md P-7/§6.2): `flushTargets.length > 0` — not `hadChanges` — is the "had a
+      // real, dispatchable change" signal for the bump. `hadChanges` (`hasPendingFor`) can be true
+      // from a stale `'error'`-status field alone (P-7) that this flush never touched; `flushTargets`
+      // only ever holds what THIS flush actually dispatched. `hadChanges` itself is untouched below —
+      // it still drives the alert-copy branching, a different concern from the bump's safety.
+      this.maybeBumpSavedTick(activeSection, flushTargets.length > 0);
+
       // Save draft saves a partial draft, as on W1/W2 — but it must say what is still missing.
       // Before this, an untouched section with three empty required fields reported "Success".
       const missing = this.missingFieldsFor(activeSection);
@@ -1336,6 +1340,23 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     ) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
+  }
+
+  /**
+   * BSP-T-1 (design.md §6.2, `BSP-DD-1`): the one shared gate behind every `savedTick` bump, used by
+   * `triggerManualSave()`, `selectSection()`, and `handleGiFieldSaveRequested()`. Bumps iff a real
+   * change was actually dispatched, the SECTION BEING CHECKED isn't Evidence (its own `showDraft()`
+   * draft-item state is invisible to `fieldStatus()` — a pre-existing, explicitly out-of-scope gap
+   * this helper must not worsen), and nothing anywhere on the page — any section, including Evidence
+   * itself — is `'dirty'`, `'saving'`, or `'error'`. The page-wide check is correct regardless of
+   * whether the caller's own flush-before-switch assumption holds, because it reads every field's
+   * ACTUAL status rather than inferring safety from navigation order (the premise the Pivot proved
+   * false — `design.md` P-6).
+   */
+  private maybeBumpSavedTick(section: BilateralEditorSection, hadRealChange: boolean): void {
+    if (!hadRealChange || section === 'evidence') return;
+    if (this.autoSaveService.hasAnyUnsavedAnywhere()) return;
+    this.saveButtonSE.savedTick.update(count => count + 1);
   }
 
   /**

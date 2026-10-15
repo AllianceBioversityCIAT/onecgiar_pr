@@ -189,6 +189,9 @@ describe('BilateralResultCreatorComponent', () => {
       pendingStatusKeysFor: jest.fn().mockReturnValue([]),
       hasErrorForFields: jest.fn().mockReturnValue(false),
       lastErrorMessageForFields: jest.fn().mockReturnValue(undefined),
+      // BSP-T-1: the one page-wide gate behind every `savedTick` bump (`maybeBumpSavedTick`).
+      // Defaults to a clean page so the base "bump on success" cases need no extra setup.
+      hasAnyUnsavedAnywhere: jest.fn().mockReturnValue(false),
       reset: jest.fn(),
     };
 
@@ -979,6 +982,92 @@ describe('BilateralResultCreatorComponent', () => {
     });
   });
 
+  // BSP-T-1 (design.md §6.2, `BSP-R-1`): `triggerManualSave()`'s own `savedTick` bump, gated by the
+  // shared `maybeBumpSavedTick` helper. `flushTargets.length > 0` (the existing `pendingStatusKeysFor`
+  // capture) is the "had a real change" signal here — NOT `hadChanges`/`hasPendingFor`, which P-7
+  // proved can be true from a stale `'error'`-status field alone; `hadChanges` itself is untouched
+  // and still drives the alert-copy branching exercised in the 'Save draft messages' block above.
+  describe('triggerManualSave() — savedTick bump (BSP-T-1, page-wide check)', () => {
+    let saveButtonSE: SaveButtonService;
+
+    beforeEach(() => {
+      component.openSectionName.set('general-info');
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      mdsTracker.sectionStatus.set([{ sectionName: 'general-info', status: 'complete', fields: [] }]);
+      saveButtonSE = TestBed.inject(SaveButtonService);
+    });
+
+    it('a real change, success, page otherwise clean: savedTick bumped (BSP-AC-1)', async () => {
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
+      const before = saveButtonSE.savedTick();
+
+      await component.triggerManualSave();
+
+      expect(saveButtonSE.savedTick()).toBe(before + 1);
+    });
+
+    it('open section is Evidence: savedTick NOT bumped even on a successful save with a real change (BSP-AC-5)', async () => {
+      component.openSectionName.set('evidence');
+      autoSaveService.getEndpointKeys.mockReturnValue([]);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['evidence']);
+      const before = saveButtonSE.savedTick();
+
+      await component.triggerManualSave();
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    it('the flush fails: savedTick NOT bumped (BSP-AC-3/BSP-R-4)', async () => {
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
+      autoSaveService.hasErrorForFields.mockReturnValue(true);
+      const before = saveButtonSE.savedTick();
+
+      await component.triggerManualSave();
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    it('no real change was dispatched (empty flushTargets): savedTick NOT bumped, even though a stale error field makes hadChanges true', async () => {
+      // hasPendingFor reads `true` once (the stale '`error`' field this flush never touched, P-7)
+      // for the `hadChanges` capture, then `false` so `waitForSectionSave`'s poll exits immediately
+      // — the test is about the BUMP gate, not the poll's own timing. flushTargets is what must gate
+      // the bump, not hadChanges.
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue([]);
+      const before = saveButtonSE.savedTick();
+
+      await component.triggerManualSave();
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    // BSP-AC-6: a different section has a genuinely-unsaved field the moment THIS save succeeds.
+    it('a different section has a genuinely-unsaved field (hasAnyUnsavedAnywhere true): savedTick NOT bumped (BSP-AC-6/BSP-R-5)', async () => {
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
+      autoSaveService.hasAnyUnsavedAnywhere.mockReturnValue(true);
+      const before = saveButtonSE.savedTick();
+
+      await component.triggerManualSave();
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    // BSP-AC-7: a DIFFERENT field in the SAME section is stuck in `'error'` from an earlier,
+    // never-retried failed save — this flush's own fields all succeeded, but the page-wide check
+    // must still see the stuck field (via `hasAnyUnsavedAnywhere`) and block the bump.
+    it("a different field in the same section is stuck in 'error' from an earlier save: savedTick NOT bumped (BSP-AC-7/BSP-R-5)", async () => {
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['description']);
+      autoSaveService.hasErrorForFields.mockReturnValue(false); // this flush's own fields all succeeded
+      autoSaveService.hasAnyUnsavedAnywhere.mockReturnValue(true); // the stuck 'title' field, elsewhere
+      const before = saveButtonSE.savedTick();
+
+      await component.triggerManualSave();
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+  });
+
   /**
    * BIL-RTE-T-8 (design.md §6.2, DD-2's reversion-challenge mitigation): a Center "Save draft" or
    * section-navigation flush that races the Submit-for-review PATCH used to write silently at
@@ -1746,6 +1835,114 @@ describe('BilateralResultCreatorComponent', () => {
       expect(autoSaveService.flush).not.toHaveBeenCalled();
     });
   });
+
+  // BSP-T-1 (design.md §6.2, `BSP-R-2`): `selectSection()`'s own `savedTick` bump, same
+  // `maybeBumpSavedTick` gate as `triggerManualSave()`, using a NEW `pendingStatusKeysFor(current)`
+  // capture taken before `flush()` (only when there was something to flush at all — mirroring
+  // `triggerManualSave()`'s existing capture timing).
+  describe("selectSection() — savedTick bump (BSP-T-1, page-wide check)", () => {
+    let saveButtonSE: SaveButtonService;
+
+    beforeEach(() => {
+      component.openSectionName.set('general-info');
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      saveButtonSE = TestBed.inject(SaveButtonService);
+    });
+
+    it('a real change, success, page otherwise clean: savedTick bumped (BSP-AC-2)', async () => {
+      // One `true` for the top-of-method `hasPendingFor` gate, then `false` so
+      // `waitForSectionSave`'s poll exits on its first check — this test is about the bump gate,
+      // not the poll's own timing.
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
+      const before = saveButtonSE.savedTick();
+
+      await component.selectSection('contributors');
+
+      expect(saveButtonSE.savedTick()).toBe(before + 1);
+    });
+
+    it('open (outgoing) section is Evidence: savedTick NOT bumped even on a successful flush with a real change (BSP-AC-5)', async () => {
+      component.openSectionName.set('evidence');
+      autoSaveService.getEndpointKeys.mockReturnValue([]);
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['evidence']);
+      const before = saveButtonSE.savedTick();
+
+      await component.selectSection('contributors');
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    it('the flush fails: savedTick NOT bumped (BSP-AC-3/BSP-R-4)', async () => {
+      autoSaveService.hasPendingFor.mockReturnValue(true);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      const before = saveButtonSE.savedTick();
+
+      await component.selectSection('contributors');
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+      expect(component.openSectionName()).toBe('general-info');
+    });
+
+    it('nothing was pending for the outgoing section: savedTick NOT bumped (no real change to report)', async () => {
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      const before = saveButtonSE.savedTick();
+
+      await component.selectSection('contributors');
+
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    // BSP-AC-6 — the exact scenario the first Pivot's `FATAL_FAIL` found broken: section A is left
+    // with a genuinely-unsaved field while `isSubmitting()` is true (the AI quality-assessment
+    // drawer's `'refreshing'` window), so `selectSection()` skips A's flush entirely and switches
+    // straight to B. A real, successful save in B must NOT clear A's still-pending pill.
+    it("BSP-AC-6: isSubmitting() true skips the outgoing section's flush — a later successful save elsewhere must not bump savedTick while that field is still unsaved", async () => {
+      // Section A ('general-info') is left open with a genuinely-unsaved field — isSubmitting()
+      // true means selectSection() never flushes it (BIL-RTE-T-8), so it is still 'dirty' in
+      // fieldStatus() the whole time. hasAnyUnsavedAnywhere() reflects exactly that live fact.
+      qualityAssessment.isBusy.set(true);
+      autoSaveService.hasAnyUnsavedAnywhere.mockReturnValue(true);
+      const before = saveButtonSE.savedTick();
+
+      // The switch to section B ('contributors') itself bypasses A's flush (isSubmitting() gate) —
+      // selectSection() never attempts a bump here, since flushTargets stays empty.
+      await component.selectSection('contributors');
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
+      expect(component.openSectionName()).toBe('contributors');
+
+      // Now a real, successful save happens in B. If savedTick bumped, it would (per P-2) clear
+      // EVERY mounted field-card's pill, including A's — hasAnyUnsavedAnywhere() must block it.
+      // isSubmitting() has settled back to false by now — a different, unrelated save in B is what
+      // is under test here, not a second drawer-window race.
+      qualityAssessment.isBusy.set(false);
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['description']);
+      await component.selectSection('geography');
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    // BSP-AC-7: a different field in the same outgoing section is stuck in 'error' from an earlier,
+    // never-retried failed save — this flush's own fields all succeed, but the page-wide check must
+    // still see the stuck field and block the bump.
+    it("BSP-AC-7: a different field stuck in 'error' from an earlier save blocks the bump even though this flush's own fields succeeded", async () => {
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['description']);
+      autoSaveService.hasErrorFor.mockReturnValue(false); // this flush's own fields all succeeded
+      autoSaveService.hasAnyUnsavedAnywhere.mockReturnValue(true); // the stuck 'title' field, elsewhere
+      const before = saveButtonSE.savedTick();
+
+      await component.selectSection('contributors');
+
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+  });
+
   /**
    * The GLOBAL read-only flag (`RolesService.readOnly`) is what every custom-field reads before it
    * draws its control (`pr-multi-select.component.html:16`, and the same line in pr-input,
@@ -2237,17 +2434,18 @@ describe('BilateralResultCreatorComponent', () => {
       expect(saveButtonSE.savedTick()).toBe(before);
     });
 
-    // Attempt 2 rework (reviewer FAIL, 2026-09-29): `savedTick` is page-wide — every section stays
-    // mounted under `[hidden]`, so bumping it unconditionally cleared the "Unsaved changes" pill on
-    // whatever OTHER section the reporter had open with real staged edits. `manualSave$` must still
-    // fire every time regardless (design.md DD-3's side effect) — only the `savedTick` bump is guarded.
-    describe('savedTick is scoped to the section actually reached by this save', () => {
-      it('open section evidence: savedTick unchanged even though `hasPendingFor` reads clean (its own draft-item state never surfaces there), manualSave$ still emitted', async () => {
+    // BSP-T-1 rework (second Pivot, `design.md` P-6 refuted, P-11): the OLD `safeToBumpSavedTick`
+    // guard's premise — "navigating away always flushes the section being left first, so a staged
+    // edit can only exist in the section still open" — is false (the AI quality-assessment drawer's
+    // own `'refreshing'` window lets `selectSection()` switch sections without flushing the one
+    // being left). Replaced with the shared, page-wide `maybeBumpSavedTick` helper, keyed on
+    // `openSectionName()` — NOT the save's fixed `'general-info'` persistence target (P-11) — so
+    // Evidence's invisible `showDraft()` state is protected whenever IT is the section the reporter
+    // currently has open, regardless of which section this particular save reaches.
+    describe('savedTick bump is gated by the page-wide check, keyed on the OPEN section (BSP-T-1)', () => {
+      it('open section evidence, page otherwise clean: savedTick unchanged (the section-exclusion half of the gate), manualSave$ still emitted', async () => {
         component.openSectionName.set('evidence');
-        // Evidence's `showDraft()` open-draft state is local to `section-evidence.component.ts` and
-        // never reaches `BilateralAutoSaveService` — this mock mirrors that real gap, not a stub of
-        // convenience: the guard for Evidence must NOT depend on `hasPendingFor` reading dirty.
-        autoSaveService.hasPendingFor.mockReturnValue(false);
+        autoSaveService.hasAnyUnsavedAnywhere.mockReturnValue(false);
         const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
         const before = saveButtonSE.savedTick();
 
@@ -2257,11 +2455,9 @@ describe('BilateralResultCreatorComponent', () => {
         expect(saveButtonSE.savedTick()).toBe(before);
       });
 
-      it('open section general-info: savedTick bumped', async () => {
+      it('open section general-info, page clean: savedTick bumped', async () => {
         component.openSectionName.set('general-info');
-        // `hasPendingFor` is irrelevant here — the guard bumps on `openSection === 'general-info'`
-        // alone — but it must stay `false` or `waitForSectionSave('general-info')` (same key) spins.
-        autoSaveService.hasPendingFor.mockReturnValue(false);
+        autoSaveService.hasAnyUnsavedAnywhere.mockReturnValue(false);
         const before = saveButtonSE.savedTick();
 
         await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
@@ -2269,20 +2465,25 @@ describe('BilateralResultCreatorComponent', () => {
         expect(saveButtonSE.savedTick()).toBe(before + 1);
       });
 
-      it('open section other than general-info with nothing pending there: savedTick bumped', async () => {
+      it('open section other than general-info or evidence, page clean: savedTick bumped', async () => {
         component.openSectionName.set('contributors');
-        autoSaveService.hasPendingFor.mockReturnValue(false);
+        autoSaveService.hasAnyUnsavedAnywhere.mockReturnValue(false);
         const before = saveButtonSE.savedTick();
 
         await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
 
-        expect(autoSaveService.hasPendingFor).toHaveBeenCalledWith('contributors');
         expect(saveButtonSE.savedTick()).toBe(before + 1);
       });
 
-      it('open section other than general-info WITH something genuinely pending there: savedTick unchanged', async () => {
-        component.openSectionName.set('geography');
-        autoSaveService.hasPendingFor.mockImplementation((section: string) => section === 'geography');
+      // BSP-AC-6/BSP-AC-7 (component-level shape): whatever makes `hasAnyUnsavedAnywhere()` read
+      // `true` — a different section's genuinely-unsaved field, or a field anywhere stuck in
+      // `'error'` — must block the bump the same way, even though THIS save itself succeeded and
+      // the open section is not Evidence. The split by underlying field status is covered in
+      // `bilateral-auto-save.service.spec.ts`'s own `hasAnyUnsavedAnywhere` suite; here it is
+      // exercised as the one boolean `maybeBumpSavedTick` actually reads.
+      it('a field anywhere else on the page is genuinely unsaved: savedTick unchanged even on a non-Evidence open section', async () => {
+        component.openSectionName.set('contributors');
+        autoSaveService.hasAnyUnsavedAnywhere.mockReturnValue(true);
         const before = saveButtonSE.savedTick();
 
         await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
