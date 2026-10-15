@@ -339,6 +339,71 @@ export class BilateralAutoSaveService {
     return null;
   }
 
+  /**
+   * BSF-T-2 (design.md §2.3, `BSF-DD-2`): the status keys a section's NEXT `flush()` call will
+   * actually dispatch — the fields currently staged in `_pendingFields` for this section's
+   * endpoints, plus any structured payload (geography/contributors/ToC/type-specific) still
+   * pending for one of those endpoints. Read this BEFORE calling `flush()` — same timing
+   * discipline as `triggerManualSave()`'s existing `hadChanges` capture — because `flush()` drains
+   * `_pendingFields` as it dispatches, regardless of outcome.
+   *
+   * This is what lets a caller scope the post-flush failure check to exactly what THIS flush
+   * covered (`hasErrorForFields`/`lastErrorMessageForFields` below) instead of `hasErrorFor`'s
+   * section-wide scan, which also counts a different field's stale, long-settled `'error'` — one
+   * with no pending data left to retry (P-6) — as if it belonged to the current save.
+   *
+   * Evidence is special-cased the same way `hasErrorFor`/`hasPendingFor` already special-case it:
+   * it never stages into `_pendingFields`/`_pendingPayloads` (`SECTION_ENDPOINT_KEYS.evidence` is
+   * `[]`) — its Save draft runs `runImmediate('evidence', …)` directly from
+   * `section-evidence.component.ts`'s `manualSave$` handler. Without this branch every Evidence
+   * flush captured `[]`, so `hasErrorForFields([])` was always `false` and a genuine Evidence
+   * failure was silently reported as success.
+   */
+  pendingStatusKeysFor(section: BilateralEditorSection): string[] {
+    if (section === 'evidence') return ['evidence'];
+    const keys = new Set(this.getEndpointKeys(section));
+    const result = new Set<string>();
+    for (const entry of this._pendingFields.values()) {
+      const endpoint = FIELD_ENDPOINT_KEYS[entry.fieldPath];
+      if (endpoint && keys.has(endpoint)) result.add(entry.fieldPath);
+    }
+    for (const endpointKey of this._pendingPayloads.keys()) {
+      if (!keys.has(endpointKey)) continue;
+      const statusKeys = this._payloadStatusKeys.get(endpointKey) ?? [ENDPOINT_STATUS_KEY[endpointKey]];
+      statusKeys.forEach(key => result.add(key));
+    }
+    return Array.from(result);
+  }
+
+  /**
+   * BSF-T-2: scoped counterpart to `hasErrorFor` — true only when one of the GIVEN status keys
+   * (typically a `pendingStatusKeysFor` capture) currently reads `'error'`, never every field ever
+   * tracked for the section. Added alongside, not replacing, the section-wide `hasErrorFor`: other
+   * call sites (`selectSection()`, `handleGiFieldSaveRequested()`) still rely on the section-wide
+   * version and are unaffected.
+   */
+  hasErrorForFields(fields: readonly string[]): boolean {
+    const target = new Set(fields);
+    return Object.entries(this.fieldStatus()).some(([field, status]) => status === 'error' && target.has(field));
+  }
+
+  /**
+   * BSF-T-2: scoped counterpart to `lastErrorMessageFor`, resolving the GIVEN status keys to their
+   * endpoints instead of a whole section's.
+   */
+  lastErrorMessageForFields(fields: readonly string[]): string | null {
+    const endpoints = new Set<EndpointKey>();
+    for (const field of fields) {
+      const endpoint = FIELD_ENDPOINT_KEYS[field] ?? this.endpointForStatusKey(field);
+      if (endpoint) endpoints.add(endpoint);
+    }
+    for (const key of endpoints) {
+      const message = this._lastErrorMessages.get(key);
+      if (message) return message;
+    }
+    return null;
+  }
+
   private readonly _lastErrorMessages = new Map<EndpointKey, string>();
 
   private extractErrorMessage(err: unknown): string | null {
