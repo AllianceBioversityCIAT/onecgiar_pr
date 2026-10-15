@@ -326,6 +326,19 @@ export class BilateralAutoSaveService {
   }
 
   /**
+   * BSP-T-1 (design.md P-9/P-10, `BSP-R-5`): true iff ANY tracked field, in ANY section —
+   * including the `'evidence'` key — currently reads `'dirty'`, `'saving'`, or `'error'`. A direct,
+   * page-wide scan of `fieldStatus()`, not scoped to `getEndpointKeys()` the way `hasPendingFor`/
+   * `hasErrorFor` are, and with no `'evidence'` exclusion: a genuinely-pending or failed Evidence
+   * entry must still block another section's `savedTick` bump, exactly like any other section's
+   * would. This replaces the single-section "only the open section can have unsaved data" premise
+   * (refuted — see `design.md` P-6) as the one shared safety check behind every `savedTick` bump.
+   */
+  hasAnyUnsavedAnywhere(): boolean {
+    return Object.values(this.fieldStatus()).some(status => status === 'dirty' || status === 'saving' || status === 'error');
+  }
+
+  /**
    * The server's own explanation of the last failed save for this section, or null. A bare
    * "Save failed" told a QA user nothing when the general-info PATCH answered 400 with
    * "At least one field must be provided" (an emptied required title travelling alone) — the reason
