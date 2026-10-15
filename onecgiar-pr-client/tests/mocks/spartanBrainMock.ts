@@ -144,7 +144,11 @@ export class BrnTooltip {}
 export type BrnTooltipPosition = string;
 
 @Directive({ selector: '[brnSeparator]', standalone: true })
-export class BrnSeparator {}
+export class BrnSeparator {
+  // Inputs the generated Helm separator re-exposes through `hostDirectives`; Angular validates them.
+  @Input() orientation: string = 'horizontal';
+  @Input() decorative: boolean = true;
+}
 
 export function provideBrnDialogDefaultOptions(_opts: any): any {
   return { provide: 'BrnDialogDefaultOptions', useValue: _opts };

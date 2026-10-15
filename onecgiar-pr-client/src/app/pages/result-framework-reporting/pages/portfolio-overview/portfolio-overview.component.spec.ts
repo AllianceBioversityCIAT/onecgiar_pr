@@ -75,6 +75,18 @@ const OPEN_PHASE = [
   raw({ submitter: 'SP06', submitter_short_name: 'Climate Action', status_name: 'Approved', status_id: '2' })
 ];
 
+/** Distinct count per bucket so a swapped binding is detectable (W1/W2 new 6 = 4 submitted + 2 editing, 5 replicated; W3 new 9 = 8 submitted + 1 editing, 7 replicated; all eight values pairwise distinct). */
+const rows = (n: number, over: Record<string, unknown>) => Array.from({ length: n }, () => raw(over));
+const BREAKDOWN_PHASE = [
+  ...rows(2, { status_id: '1' }),
+  ...rows(4, { status_id: '2' }),
+  ...rows(5, { status_id: '2', is_replicated: 1 }),
+  ...rows(1, { source_name: 'W3/Bilaterals', status_id: '1', is_replicated: 0 }),
+  ...rows(4, { source_name: 'W3/Bilaterals', status_id: '3', is_replicated: null }),
+  ...rows(4, { source_name: 'W3/Bilaterals', status_id: '2' }),
+  ...rows(7, { source_name: 'W3/Bilaterals', status_id: '2', is_replicated: '1' })
+];
+
 /** Two closed-phase rows that must never reach a counter. */
 const CLOSED_PHASE = [
   raw({ phase_status: 0, version_id: '34', phase_name: 'Reporting 2025 - P25', result_type: 'Knowledge product' }),
@@ -145,21 +157,49 @@ describe('PortfolioOverviewComponent', () => {
       expect(kpis.portfolioProgressPercent).toBe(40);
     });
 
-    it('renders 4 KPI cards in the top deck with correct titles and figures', () => {
-      build(OPEN_PHASE);
+    it('renders 3 KPI cards in the top deck with breakdowns and no Science programs card', () => {
+      build(BREAKDOWN_PHASE);
 
       const text = fixture.nativeElement.textContent as string;
       expect(text).toContain('Total portfolio results');
       expect(text).toContain('W1/W2 results');
       expect(text).toContain('W3/Bilateral results');
-      expect(text).toContain('Science programs');
+      expect(text).not.toContain('Science programs');
+      expect(text).not.toContain('% portfolio progress');
+      expect(text).not.toContain('Across 2 result categories');
+      expect(text).toContain('W1/W2 new');
+      expect(text).toContain('W3/Bilateral new');
+      expect(text).toContain('W1/W2 replicated');
+      expect(text).toContain('W3/Bilateral replicated');
+      expect(text).toContain('Replicated from previous years');
+      expect(text).toContain('Innovations replicated from 2025');
+      const cards = fixture.nativeElement.querySelectorAll('button.po-card');
+      expect(cards.length).toBe(3);
+      cards.forEach((card: Element) => expect(card.querySelectorAll('hlm-separator').length).toBe(1));
 
-      expect(text).toContain('3 W1/W2');
-      expect(text).toContain('2 W3/Bilateral');
-      expect(text).toContain('Across 2 result categories');
-      expect(text).toContain('Reported across 2 science programs');
-      expect(text).toContain('2 / 2');
-      expect(text).toContain('40% portfolio progress');
+      // W1/W2: 6 new (4 submitted, 2 editing) + 5 replicated. W3: 9 new (8 submitted, 1 editing) + 7 replicated.
+      const fig = (id: string) => (fixture.nativeElement.querySelector(`[data-testid="${id}"]`)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+      expect(fig('kpi-total-w1w2-new')).toBe('6');
+      expect(fig('kpi-total-bilateral-new')).toBe('9');
+      expect(fig('kpi-total-w1w2-replicated')).toBe('5');
+      expect(fig('kpi-total-bilateral-replicated')).toBe('7');
+      expect(fig('kpi-w1w2-new')).toBe('6');
+      expect(fig('kpi-w1w2-split')).toBe('Submitted 4 · Editing 2');
+      expect(fig('kpi-w1w2-replicated')).toBe('5');
+      expect(fig('kpi-bilateral-new')).toBe('9');
+      expect(fig('kpi-bilateral-split')).toBe('Submitted 8 · Editing 1');
+      expect(fig('kpi-bilateral-replicated')).toBe('7');
+    });
+
+    it('renders 0 (not blank) in every card-3 bucket when there are no W3/Bilateral rows', () => {
+      build([raw({}), raw({ is_replicated: 1 })]);
+
+      const fig = (id: string) => (fixture.nativeElement.querySelector(`[data-testid="${id}"]`)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+      expect(fig('kpi-bilateral-new')).toBe('0');
+      expect(fig('kpi-bilateral-split')).toBe('Submitted 0 · Editing 0');
+      expect(fig('kpi-bilateral-replicated')).toBe('0');
+      expect(fig('kpi-total-bilateral-new')).toBe('0');
+      expect(fig('kpi-total-bilateral-replicated')).toBe('0');
     });
   });
 
@@ -569,6 +609,7 @@ describe('PortfolioOverviewComponent', () => {
     expect(component.isLoading()).toBe(true);
     const skeletonHost = fixture.debugElement.query(By.css('[data-testid="portfolio-overview-skeleton"]'));
     expect(skeletonHost).toBeTruthy();
+    expect(skeletonHost.nativeElement.querySelectorAll('[data-testid="portfolio-overview-skeleton-kpi-card"]').length).toBe(3);
     const skeletons = fixture.nativeElement.querySelectorAll('.pr-skeleton');
     expect(skeletons.length).toBeGreaterThan(0);
   });

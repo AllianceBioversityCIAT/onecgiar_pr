@@ -12,6 +12,7 @@ import {
 } from '@ng-icons/lucide';
 
 import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
+import { HlmSeparatorImports } from '@spartan/separator';
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
@@ -96,7 +97,7 @@ type SortKey = 'programme' | 'total' | number;
   standalone: true,
   templateUrl: './portfolio-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgIcon, PrVizChartComponent, PortfolioCentersBlockComponent],
+  imports: [NgIcon, PrVizChartComponent, PortfolioCentersBlockComponent, HlmSeparatorImports],
   providers: [
     PortfolioOverviewService,
     provideIcons({
@@ -698,15 +699,6 @@ export class PortfolioOverviewComponent {
   onCategoryCellClick(row: PortfolioRow, column: PortfolioColumn): void {
     if (!row || !column) return;
     this.navigateToResultsCenter('all', { program: row.code, category: column.label });
-  }
-
-  scrollToMatrixSection(): void {
-    if (typeof document !== 'undefined') {
-      const el = document.getElementById('progress-by-science-program');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
   }
 
   onStatusChartClick(event: any): void {

@@ -29,10 +29,10 @@
     @if (isLoading()) {
       <!-- ── Modern Skeleton Loading State ─────────────────────────────────────────── -->
       <div class="flex flex-col gap-[20px]" aria-busy="true" aria-label="Loading portfolio figures" data-testid="portfolio-overview-skeleton">
-        <!-- Top Deck 4 Skeleton KPI Cards -->
-        <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-4">
-          @for (card of [1, 2, 3, 4]; track card) {
-            <div class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] flex flex-col justify-between gap-[14px] min-h-[135px]">
+        <!-- Top Deck 3 Skeleton KPI Cards -->
+        <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
+          @for (card of [1, 2, 3]; track card) {
+            <div data-testid="portfolio-overview-skeleton-kpi-card" class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] flex flex-col justify-between gap-[14px] min-h-[135px]">
               <div class="flex items-center justify-between gap-[8px]">
                 <div class="pr-skeleton h-[12px] w-[110px] rounded-[4px]"></div>
                 <div class="pr-skeleton h-[22px] w-[75px] rounded-full"></div>
@@ -113,8 +113,8 @@
     }
 
     @if (hasFigures()) {
-      <!-- ── Top Deck 4 Executive KPI Cards (POV-R-1) ────────────────────────────────────── -->
-      <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-4">
+      <!-- ── Top Deck 3 Executive KPI Cards (POV-R-1, POVKB-R-1..4) ─────────────────────── -->
+      <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
         <!-- KPI 1: Total Results (Hero Highlight Card with diffused purple gradient) -->
         <button
           type="button"
@@ -138,12 +138,26 @@
             </span>
             <span class="text-[13px] font-medium text-purple-200">results</span>
           </div>
-          <div class="relative z-10 flex flex-wrap items-center justify-between gap-[6px] text-[12px] w-full">
-            <div class="flex items-center gap-[6px] text-purple-100 font-medium">
-              <span>{{ kpis().w1w2Count }} W1/W2</span>
-              <span class="text-purple-300">·</span>
-              <span>{{ kpis().bilateralCount }} W3/Bilateral</span>
+          <div class="relative z-10 flex flex-col gap-[4px] text-[12px] w-full text-purple-100 font-medium">
+            <div class="flex items-center justify-between gap-[8px]">
+              <span>W1/W2 new</span>
+              <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-w1w2-new">{{ kpis().w1w2New }}</span>
             </div>
+            <div class="flex items-center justify-between gap-[8px]">
+              <span>W3/Bilateral new</span>
+              <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-bilateral-new">{{ kpis().bilateralNew }}</span>
+            </div>
+            <hlm-separator class="bg-white/20" />
+            <div class="flex items-center justify-between gap-[8px]">
+              <span>W1/W2 replicated</span>
+              <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-w1w2-replicated">{{ kpis().w1w2Replicated }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-[8px]">
+              <span>W3/Bilateral replicated</span>
+              <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-bilateral-replicated">{{ kpis().bilateralReplicated }}</span>
+            </div>
+          </div>
+          <div class="relative z-10 flex justify-end w-full">
             <span class="text-[11px] font-bold text-white opacity-90 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
               Results Center &rarr;
             </span>
@@ -169,8 +183,19 @@
             </span>
             <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
           </div>
-          <div class="flex flex-wrap items-center justify-between gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
-            <span>Across {{ kpis().w1w2CategoriesCount }} result categories</span>
+          <div class="flex flex-col gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
+            <div class="flex items-center justify-between gap-[8px]">
+              <span>New</span>
+              <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-w1w2-new">{{ kpis().w1w2New }}</span>
+            </div>
+            <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-w1w2-split">Submitted {{ kpis().w1w2NewSubmitted }} · Editing {{ kpis().w1w2NewEditing }}</span>
+            <hlm-separator />
+            <div class="flex items-center justify-between gap-[8px]">
+              <span>Replicated from previous years</span>
+              <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-w1w2-replicated">{{ kpis().w1w2Replicated }}</span>
+            </div>
+          </div>
+          <div class="flex justify-end w-full">
             <span class="text-[11px] font-semibold text-[var(--pr-color-primary-600)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               Results Center &rarr;
             </span>
@@ -196,37 +221,21 @@
             </span>
             <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
           </div>
-          <div class="flex flex-wrap items-center justify-between gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
-            <span>Reported across {{ kpis().activeProgramsCount }} science programs</span>
+          <div class="flex flex-col gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
+            <div class="flex items-center justify-between gap-[8px]">
+              <span>New</span>
+              <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-bilateral-new">{{ kpis().bilateralNew }}</span>
+            </div>
+            <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-bilateral-split">Submitted {{ kpis().bilateralNewSubmitted }} · Editing {{ kpis().bilateralNewEditing }}</span>
+            <hlm-separator />
+            <div class="flex items-center justify-between gap-[8px]">
+              <span>Innovations replicated from 2025</span>
+              <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-bilateral-replicated">{{ kpis().bilateralReplicated }}</span>
+            </div>
+          </div>
+          <div class="flex justify-end w-full">
             <span class="text-[11px] font-semibold text-purple-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               Bilateral &rarr;
-            </span>
-          </div>
-        </button>
-
-        <!-- KPI 4: Science Programs -->
-        <button
-          type="button"
-          (click)="scrollToMatrixSection()"
-          class="po-card group flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 cursor-pointer hover:border-[var(--pr-color-primary-400)] hover:shadow-md hover:-translate-y-0.5">
-          <div class="flex items-center justify-between gap-[8px] w-full">
-            <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
-              Science programs
-            </span>
-            <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-emerald-50 px-[8px] text-[11px] font-semibold text-emerald-700">
-              Active reporting
-            </span>
-          </div>
-          <div class="flex items-baseline gap-[8px]">
-            <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
-              {{ kpis().activeProgramsCount }} / {{ kpis().activeProgramsCount }}
-            </span>
-            <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">programs</span>
-          </div>
-          <div class="flex flex-wrap items-center justify-between gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
-            <span>{{ kpis().portfolioProgressPercent }}% portfolio progress</span>
-            <span class="text-[11px] font-semibold text-emerald-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-              View Matrix &darr;
             </span>
           </div>
         </button>
