@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { EMPTY, catchError, distinctUntilChanged, filter, of, switchMap, tap } from 'rxjs';
+import { EMPTY, Observable, Subscription, catchError, concat, defer, distinctUntilChanged, filter, interval, map, of, switchMap, take, tap, timer } from 'rxjs';
 import { ResultsApiService } from '../../../../../../../../shared/services/api/results-api.service';
 
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-2)
@@ -48,6 +48,26 @@ export interface PtProposalDto {
   evidence_fingerprint?: string;
 }
 
+/**
+ * `generated_by` as PT sends it. Only the keys the panel reads are named; PT builds older than
+ * 2026-10-15 carry none of `complete` / `more_results_expected` / `notice`.
+ */
+export interface PtGeneratedBy {
+  mode?: string;
+  fallback_reason?: string | null;
+  /** `false` = PT cut drafting short (its 24 s budget) and returned what it had. */
+  complete?: boolean;
+  more_results_expected?: boolean;
+  notice?: string | null;
+}
+
+/** Top-level `preparation` (PT 2026-10-15): the KPI is still being prepared upstream. */
+export interface PtPreparation {
+  status?: string;
+  retry_after_s?: number | null;
+  pending_group_ids?: string[];
+}
+
 /** `child 1`'s house envelope, nested per `design.md` `P-13` — never a top-level `status`. */
 export interface PtResultsEnvelope {
   statusCode?: number;
@@ -57,7 +77,8 @@ export interface PtResultsEnvelope {
     indicator?: Record<string, unknown>;
     results?: unknown[];
     evidence_count?: number;
-    generated_by?: unknown;
+    generated_by?: PtGeneratedBy | null;
+    preparation?: PtPreparation | null;
     source?: { system?: string; environment?: string; pt_url?: string };
     generated_at?: string;
     evidence_fingerprint?: string;
@@ -65,13 +86,52 @@ export interface PtResultsEnvelope {
 }
 
 /** The component's own rendered states. `picked` (`PTB-R-3`) is the host's banner, not a seventh value here (`design.md` §6.1). */
-export type PtResultsBrowseStatus = 'idle' | 'choose_center' | 'loading' | 'results' | 'empty' | 'not_found' | 'unavailable';
+export type PtResultsBrowseStatus =
+  | 'idle'
+  | 'choose_center'
+  | 'loading'
+  | 'results'
+  | 'empty'
+  /** Empty because PT is still preparing this KPI — "check again in a few minutes". */
+  | 'preparing'
+  /** The call ran out of time (proxy 27 s / gateway 29 s) while PT keeps drafting in the background. */
+  | 'still_working'
+  | 'not_found'
+  | 'unavailable';
+
+/** `generated_by.fallback_reason` values that mean "not ready yet", not "nothing to draft from". */
+const PREPARING_FALLBACK_REASONS = new Set(['preparing', 'live_drafting_busy', 'live_draft_in_progress']);
+
+/**
+ * An `unavailable` (or a transport failure) that took at least this long is a timeout: the proxy
+ * aborts at 27 s and API Gateway at 29 s, while a real outage answers in well under a second.
+ */
+export const PT_STILL_WORKING_AFTER_MS = 20_000;
+
+/**
+ * Wait before the single automatic retry after a timeout. PT keeps drafting after the proxy gives
+ * up, so the second call normally answers quickly from PT's cache.
+ */
+export const PT_AUTO_RETRY_DELAY_MS = 8_000;
+
+/** Upper bound for `preparation.retry_after_s`, so a large value never locks Check again for long. */
+const PT_MAX_RETRY_AFTER_S = 300;
+
+const PT_DEFAULT_PARTIAL_NOTICE = 'The Progress Tracker is still drafting more proposals for this KPI. Check again in a moment to see them.';
+
+/** One settled call: the envelope, plus whether it looked like a timeout rather than an outage. */
+interface PtFetchOutcome {
+  envelope: PtResultsEnvelope;
+  stillWorking: boolean;
+}
 
 /** One fetch key: the PRMS indicator plus the center whose PT KPI is wanted. */
 interface PtRequest {
   id: string | number;
   center: string | null;
   needsCenterChoice: boolean;
+  /** Bumped by Check again — makes an identical (indicator, center) request fetch again. */
+  reload: number;
 }
 
 /**
@@ -133,10 +193,26 @@ export class PtResultsBrowseComponent {
   readonly selectedKey = signal<string | null>(null);
   /** `source.pt_url` from the last envelope — display-only deep link (`PTB-R-6c`, `PTB-R-23`). */
   readonly ptUrl = signal<string | null>(null);
+  /** Shown above the proposals when PT returned a partial list (`generated_by.complete === false`). */
+  readonly partialNotice = signal<string | null>(null);
+  /** True while the one automatic retry after a timeout is pending — the spinner stays up. */
+  readonly autoRetrying = signal(false);
+  /** Seconds left before Check again is enabled (`preparation.retry_after_s`); 0 = enabled. */
+  readonly checkAgainCooldownS = signal(0);
+  private readonly reload = signal(0);
+  /** `reload` of the last fetch cycle — a higher value marks a manual Check again. */
+  private lastCycleReload = 0;
+  private cooldownSub: Subscription | null = null;
+
   private readonly request = computed<PtRequest | null>(() => {
     const id = this.tocIndicatorId();
     if (id === null || id === undefined || id === '') return null;
-    return { id, center: (this.center() ?? '').trim() || null, needsCenterChoice: this.awaitingCenter() };
+    return {
+      id,
+      center: (this.center() ?? '').trim() || null,
+      needsCenterChoice: this.awaitingCenter(),
+      reload: this.reload()
+    };
   });
 
   constructor() {
@@ -159,31 +235,101 @@ export class PtResultsBrowseComponent {
     //
     // The key is (indicator, center): a different center of the same indicator is a different PT
     // KPI and fetches again; a shared target with no center chosen yet fetches nothing.
+    //
+    // `reload` (Check again) is part of the key, so a manual re-check of the very same KPI fetches
+    // even though the panel is retained. A timeout gets ONE automatic retry after
+    // PT_AUTO_RETRY_DELAY_MS — only on a cycle the user did not start with Check again, so the
+    // panel never re-queries on its own more than once.
     toObservable(this.request)
       .pipe(
         filter((req): req is PtRequest => req !== null),
-        distinctUntilChanged((a, b) => a.id === b.id && a.center === b.center && a.needsCenterChoice === b.needsCenterChoice),
-        tap(req => {
+        distinctUntilChanged(
+          (a, b) => a.id === b.id && a.center === b.center && a.needsCenterChoice === b.needsCenterChoice && a.reload === b.reload
+        ),
+        map(req => {
+          const manual = req.reload !== this.lastCycleReload;
+          this.lastCycleReload = req.reload;
+          return { req, manual };
+        }),
+        tap(({ req }) => {
           this.status.set(req.needsCenterChoice ? 'choose_center' : 'loading');
           this.proposals.set([]);
           this.ptUrl.set(null);
           this.selectedKey.set(null);
+          this.partialNotice.set(null);
+          this.autoRetrying.set(false);
+          this.stopCooldown();
         }),
-        switchMap(req => {
+        switchMap(({ req, manual }) => {
           if (req.needsCenterChoice) return EMPTY;
-          const call = req.center
-            ? this.resultsApiSE.GET_progressTrackerResults(req.id, {}, req.center)
-            : this.resultsApiSE.GET_progressTrackerResults(req.id, {});
-          return call.pipe(
-            // PTB-R-8: a transport-level failure maps to the same 'unavailable' branch as an
-            // HTTP-200 envelope carrying status 'unavailable' — see applyEnvelope() below. Never
-            // echoes the caught error into the UI (`PTB-AC-7`, `.cursorrules`).
-            catchError(() => of<PtResultsEnvelope>({ response: { status: 'unavailable' } }))
+          return this.fetchOnce(req).pipe(
+            switchMap(first => {
+              if (!first.stillWorking || manual) return of(first);
+              return concat(
+                defer(() => {
+                  this.autoRetrying.set(true);
+                  return EMPTY;
+                }),
+                timer(PT_AUTO_RETRY_DELAY_MS).pipe(switchMap(() => this.fetchOnce(req)))
+              );
+            })
           );
         }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(envelope => this.applyEnvelope(envelope));
+      .subscribe(outcome => this.applyOutcome(outcome));
+
+    this.destroyRef.onDestroy(() => this.stopCooldown());
+  }
+
+  /**
+   * One call to the proxy. PTB-R-8: a transport-level failure maps to the same 'unavailable'
+   * branch as an HTTP-200 envelope carrying status 'unavailable'. Never echoes the caught error
+   * into the UI (`PTB-AC-7`, `.cursorrules`) — only its numeric HTTP status is read.
+   *
+   * There is no client-side timeout on this call (no `timeout()` here or in
+   * `GeneralInterceptorService`): the proxy answers by 27 s and API Gateway cuts at 29 s, so the
+   * classified answer always comes from the server side.
+   */
+  private fetchOnce(req: PtRequest): Observable<PtFetchOutcome> {
+    const started = Date.now();
+    const call = req.center
+      ? this.resultsApiSE.GET_progressTrackerResults(req.id, {}, req.center)
+      : this.resultsApiSE.GET_progressTrackerResults(req.id, {});
+    const tookTooLong = () => Date.now() - started >= PT_STILL_WORKING_AFTER_MS;
+    return call.pipe(
+      map((envelope: PtResultsEnvelope) => ({
+        envelope,
+        stillWorking: envelope?.response?.status === 'unavailable' && tookTooLong()
+      })),
+      catchError((err: unknown) => {
+        const httpStatus = (err as { status?: unknown } | null)?.status;
+        return of<PtFetchOutcome>({
+          envelope: { response: { status: 'unavailable' } },
+          stillWorking: httpStatus === 504 || tookTooLong()
+        });
+      })
+    );
+  }
+
+  private applyOutcome(outcome: PtFetchOutcome): void {
+    this.autoRetrying.set(false);
+    if (outcome.stillWorking) {
+      this.proposals.set([]);
+      this.ptUrl.set(null);
+      this.status.set('still_working');
+      return;
+    }
+    this.applyEnvelope(outcome.envelope);
+  }
+
+  /**
+   * Check again: skips the panel's retained state and asks the proxy again for the same KPI.
+   * No `refresh=true` upstream — PT's own cache is what makes the second answer fast.
+   */
+  checkAgain(): void {
+    if (this.checkAgainCooldownS() > 0) return;
+    this.reload.update(n => n + 1);
   }
 
   /**
@@ -197,13 +343,34 @@ export class PtResultsBrowseComponent {
     this.ptUrl.set(body.source?.pt_url ?? null);
 
     if (body.status === 'ok') {
-      // `generated_by.mode === 'template'`: PT had no evidence to draft from and returned blank
-      // templates — those are not proposals, so the panel shows "nothing to propose".
-      const isTemplate = (body.generated_by as { mode?: unknown } | null | undefined)?.mode === 'template';
+      // `generated_by.mode === 'template'`: PT returned blank templates — those are not proposals.
+      const generatedBy = body.generated_by && typeof body.generated_by === 'object' ? body.generated_by : null;
+      const isTemplate = generatedBy?.mode === 'template';
+      const isPartial = generatedBy?.complete === false || generatedBy?.more_results_expected === true;
       const raw = !isTemplate && Array.isArray(body.results) ? body.results : [];
       const mapped = raw.map(item => this.toProposal(item, body));
       this.proposals.set(mapped);
-      this.status.set(mapped.length > 0 ? 'results' : 'empty');
+
+      if (mapped.length > 0) {
+        const notice = typeof generatedBy?.notice === 'string' ? generatedBy.notice.trim() : '';
+        this.partialNotice.set(isPartial ? notice || PT_DEFAULT_PARTIAL_NOTICE : null);
+        this.status.set('results');
+        return;
+      }
+
+      // Nothing to show: either PT is still preparing this KPI (template fallback for a
+      // "not ready yet" reason, a retry hint, or a partial answer with nothing in it yet), or
+      // there really is nothing to propose.
+      const retryAfter = body.preparation?.retry_after_s;
+      const hasRetryAfter = retryAfter !== null && retryAfter !== undefined;
+      const preparing =
+        (isTemplate && PREPARING_FALLBACK_REASONS.has(String(generatedBy?.fallback_reason ?? ''))) || hasRetryAfter || isPartial;
+      if (preparing) {
+        this.startCooldown(Number(retryAfter));
+        this.status.set('preparing');
+        return;
+      }
+      this.status.set('empty');
       return;
     }
 
@@ -237,6 +404,23 @@ export class PtResultsBrowseComponent {
       generated_at: body.generated_at,
       evidence_fingerprint: body.evidence_fingerprint
     };
+  }
+
+  /** Disables Check again for `seconds` (clamped), counting down once per second. */
+  private startCooldown(seconds: number): void {
+    this.stopCooldown();
+    const total = Number.isFinite(seconds) ? Math.min(Math.max(Math.ceil(seconds), 0), PT_MAX_RETRY_AFTER_S) : 0;
+    this.checkAgainCooldownS.set(total);
+    if (total === 0) return;
+    this.cooldownSub = interval(1000)
+      .pipe(take(total))
+      .subscribe(() => this.checkAgainCooldownS.update(n => Math.max(n - 1, 0)));
+  }
+
+  private stopCooldown(): void {
+    this.cooldownSub?.unsubscribe();
+    this.cooldownSub = null;
+    this.checkAgainCooldownS.set(0);
   }
 
   onSelect(proposal: PtProposalDto): void {
