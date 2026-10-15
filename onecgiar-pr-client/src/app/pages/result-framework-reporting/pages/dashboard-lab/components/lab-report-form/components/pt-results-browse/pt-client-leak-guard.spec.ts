@@ -267,4 +267,15 @@ describe('PT client leak guard (PTB-T-7, static half of PTB-AC-16)', () => {
     const hits = scanForPatterns(filesInFolder, [/indicator_id/i, /pt_indicator_id/i]);
     expect(formatHits(hits)).toBe('');
   });
+
+  it('every new-tab link in pt-results-browse carries rel="noopener" (PT deep link + 2026-10-15 evidence links)', () => {
+    // The panel now renders external URLs it receives from PT (`source.pt_url`, `evidence_links[].url`).
+    // Every `target="_blank"` anchor must drop `window.opener`; http(s)-only filtering is unit-tested
+    // in `pt-results-browse.details.spec.ts` (`isSafeHttpUrl`).
+    const html = fs.readFileSync(path.join(PT_RESULTS_BROWSE_DIR, 'pt-results-browse.component.html'), 'utf8');
+    const anchors = html.match(/<a\b[^>]*>/g) ?? [];
+    const blank = anchors.filter(tag => /target="_blank"/.test(tag));
+    expect(blank.length).toBeGreaterThanOrEqual(3);
+    expect(blank.filter(tag => !/rel="[^"]*\bnoopener\b[^"]*"/.test(tag))).toEqual([]);
+  });
 });

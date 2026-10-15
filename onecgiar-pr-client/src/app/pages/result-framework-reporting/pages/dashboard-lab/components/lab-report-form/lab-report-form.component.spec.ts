@@ -1706,7 +1706,11 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
     knowledge_product_handle: null,
     confidence: 0.87,
     rationale: 'because the evidence lines up',
-    missing_info: []
+    missing_info: [],
+    geo: null,
+    partners: [],
+    impact_area_details: [],
+    evidence_links: []
   };
 
   describe('Progress Tracker center of the row', () => {
@@ -2135,6 +2139,37 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
       });
       // PTB-AC-17: countries / impact areas / gender split are guidance only — never in the payload.
       expect(JSON.stringify(body)).not.toMatch(/Kenya|impact_areas|gender_split/);
+    });
+
+    it('PTB-R-18 (PT 2026-10-15 fields): geography, partners, impact-area details and evidence links never reach the payload', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      fix.componentInstance.onOpenProgressTrackerTab();
+
+      fix.componentInstance.onPtResultSelected(
+        proposal({
+          result_key: 'toc-node-1:2',
+          geo: {
+            level: 'national',
+            countries: [{ name: 'Atlantis', iso_alpha_2: 'AQ', clarisa_id: 999, match_status: 'unmatched' }],
+            regions: [{ name: 'Lost Seas', match_status: 'matched' }],
+            subnational_areas: 'Northern Atlantis province'
+          },
+          partners: [{ name: 'Sentinel Partner Org', acronym: 'SPO', role: 'implementing', match_status: 'suggested', is_cgiar_center: false }],
+          impact_area_details: [{ key: 'climate', label: 'Climate adaptation & mitigation', score: 2, justification: 'Sentinel justification' }],
+          evidence_links: [{ url: 'https://evidence.example.org/sentinel', title: 'Sentinel evidence', kind: 'report' }]
+        })
+      );
+      fix.componentInstance.patch('contribution_to_indicator_target', 3);
+      fix.detectChanges();
+
+      fix.componentInstance.createResult();
+
+      expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
+      const serialized = JSON.stringify(api.resultsSE.POST_createResult.mock.calls[0][0]);
+      expect(serialized).not.toMatch(
+        /Atlantis|Lost Seas|Sentinel Partner|SPO|Sentinel justification|evidence\.example\.org|geo_scope|"geo"|partners|impact_area_details|evidence_links|clarisa_id|match_status/
+      );
     });
 
     it('PTB-AC-13: a manual (non-Progress-Tracker) create still sends an empty narrative and no provenance block', async () => {

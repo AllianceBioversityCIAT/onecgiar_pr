@@ -1788,4 +1788,12 @@ describe('RdGeneralInformationComponent', () => {
       expect(html).toContain('[editable]="saveEditableOnReadOnly"');
     });
   });
+
+  describe('P2-3923 · Lead contact person follows the read-only role', () => {
+    it('passes rolesSE.readOnly to the contact field, so its clear button is locked for view-only users', () => {
+      const html = readFileSync(join(__dirname, 'rd-general-information.component.html'), 'utf8');
+      const field = html.match(/<app-lead-contact-person-field[\s\S]*?<\/app-lead-contact-person-field>/)?.[0] ?? '';
+      expect(field).toContain('[readOnly]="this.rolesSE.readOnly"');
+    });
+  });
 });

@@ -550,5 +550,106 @@ describe('TypePolicyChangeComponent', () => {
       );
       expect(saveButtons).toHaveLength(0);
     });
+
+    // PCL-T-2 (policy-change-usd-amount-layout) — USD Amount/Status must render in the
+    // always-visible Type-Specific Detail area, without expanding "Complete full metadata", once
+    // policy_type_id == 1 is selected. Falsifier: on the pre-fix template (both fields nested
+    // inside `@if (showAllFields())`) this fails because neither control exists while
+    // showAllFields() is false.
+    it('PCL-T-2: shows USD amount and Status without expanding full metadata when policy type is 1', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(of({ response: { policy_type_id: 1 } }));
+      render();
+
+      expect(component.showAllFields()).toBe(false);
+
+      const inputs = fixture.debugElement.queryAll(By.css('app-pr-input'));
+      const selects = fixture.debugElement.queryAll(By.css('app-pr-select'));
+      const usdAmount = inputs.find(d => read(d.componentInstance.label) === 'USD amount');
+      const status = selects.find(d => read(d.componentInstance.label) === 'Status');
+
+      expect(usdAmount).toBeDefined();
+      expect(status).toBeDefined();
+    });
+
+    // Control case (must hold both before and after the fix per the task's Falsifier): the
+    // "Is this result related to:" question never becomes always-visible — it stays gated behind
+    // "Complete full metadata", it just never moves.
+    it('PCL-T-2 control: keeps "Is this result related to" gated behind full metadata when collapsed', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(of({ response: { policy_type_id: 1 } }));
+      render();
+
+      expect(component.showAllFields()).toBe(false);
+      const selects = fixture.debugElement.queryAll(By.css('app-pr-select'));
+      const relatedTo = selects.find(d => read(d.componentInstance.label) === QUESTIONS_RESPONSE.question_text);
+      expect(relatedTo).toBeUndefined();
+    });
+
+    // PCL-AC-3 (policy-change-usd-amount-layout, rework attempt 2) — once the disclosure is open,
+    // it must hold ONLY the related-to question: no USD amount, no Status. Scoped strictly to the
+    // disclosure container (`[data-testid="type-policy-change-full-metadata-disclosure"]`, the
+    // `@if (showAllFields())` region's wrapping `div.flex.flex-col.gap-[18px]`) because an
+    // unscoped "contains QUESTION_TEXT" check also passes on the pre-fix template, which rendered
+    // the question ALONGSIDE USD amount/Status in the same toggle. Falsifier: temporarily re-nest
+    // `@if (body.policy_type_id == 1) { USD amount; Status }` back inside this disclosure and the
+    // `scopedInputs.length` assertion below turns red (1, not 0).
+    it('PCL-AC-3: the full-metadata disclosure holds only the related-to question — no USD amount, no Status', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(of({ response: { policy_type_id: 1 } }));
+      render();
+
+      component.showAllFields.set(true);
+      fixture.detectChanges();
+
+      const disclosure = fixture.debugElement.query(By.css('[data-testid="type-policy-change-full-metadata-disclosure"]'));
+      expect(disclosure).toBeTruthy();
+
+      const scopedSelects = disclosure.queryAll(By.css('app-pr-select'));
+      const scopedInputs = disclosure.queryAll(By.css('app-pr-input'));
+
+      expect(scopedSelects).toHaveLength(1);
+      expect(read(scopedSelects[0].componentInstance.label)).toBe(QUESTIONS_RESPONSE.question_text);
+      expect(scopedInputs).toHaveLength(0);
+
+      // Component-wide (not scoped to the disclosure): exactly one USD-amount app-pr-input total —
+      // catches a copy-instead-of-move regression that would leave a second one behind in the
+      // disclosure while also rendering it always-visible above.
+      const allInputs = fixture.debugElement.queryAll(By.css('app-pr-input'));
+      const usdAmountInputs = allInputs.filter(d => read(d.componentInstance.label) === 'USD amount');
+      expect(usdAmountInputs).toHaveLength(1);
+    });
+
+    // PCP-T-1 (policy-change-usd-amount-position) — PCP-R-1/PCP-AC-1: Policy type, USD amount and
+    // Status must be three SIBLINGS inside the SAME shared grid container, in that order, matching
+    // Pool Funding's structure (policy-change-info.component.html:6-40). Falsifier (per the task):
+    // on the prior-fix template, Policy type stood alone BEFORE the grid container that only held
+    // USD amount/Status, so querying "Policy type as a child of the shared grid container" found
+    // nothing. This asserts the grid container's direct children, in order, and that Stage is a
+    // later sibling, never a child of that container.
+    it('PCP-T-1: groups Policy type, USD amount and Status as siblings inside one shared grid container, before Stage', () => {
+      bilateralApi.GET_policyChanges.mockReturnValue(of({ response: { policy_type_id: 1 } }));
+      render();
+
+      const allDivs = fixture.debugElement.queryAll(By.css('div'));
+      const gridContainer = allDivs.find(d =>
+        (d.nativeElement as HTMLElement).className.includes('grid-cols-[repeat(auto-fit,minmax(190px,1fr))]')
+      );
+      expect(gridContainer).toBeTruthy();
+
+      const childSiblings = gridContainer!.children.map(child => ({
+        tag: (child.nativeElement as HTMLElement).tagName.toLowerCase(),
+        label: read(child.componentInstance?.label)
+      }));
+
+      expect(childSiblings).toEqual([
+        { tag: 'app-pr-select', label: 'Policy type' },
+        { tag: 'app-pr-input', label: 'USD amount' },
+        { tag: 'app-pr-select', label: 'Status' }
+      ]);
+
+      const stageSelect = fixture.debugElement.queryAll(By.css('app-pr-select')).find(d => read(d.componentInstance.label) === 'Stage');
+      expect(stageSelect).toBeDefined();
+
+      const gridChildNativeEls = gridContainer!.children.map(c => c.nativeElement);
+      expect(gridChildNativeEls).not.toContain(stageSelect!.nativeElement);
+    });
   });
 });
