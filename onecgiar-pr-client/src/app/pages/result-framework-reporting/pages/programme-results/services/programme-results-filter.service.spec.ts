@@ -727,3 +727,80 @@ describe('ProgrammeResultsFilterService', () => {
     });
   });
 });
+
+// @akili-spec changes/sp-overview-total-drilldown (STD-T-1, STD-R-4)
+describe('ProgrammeResultsFilterService - Replication dimension (STD-R-4)', () => {
+  let service: ProgrammeResultsFilterService;
+  const rows = [
+    row({ id: 1, code: 'A', isReplicated: false }),
+    row({ id: 2, code: 'B', isReplicated: true }),
+    row({ id: 3, code: 'C', isReplicated: false }),
+    row({ id: 4, code: 'D' }) // flag absent behaves as New
+  ];
+  const ids = (list: ProgrammeResultRow[]) => list.map(r => r.id);
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [ProgrammeResultsFilterService] });
+    service = TestBed.inject(ProgrammeResultsFilterService);
+  });
+
+  it('S-4.1 [new] keeps only isReplicated=false rows', () => {
+    service.selectedReplication.set(['new']);
+    expect(ids(service.filterRows(rows))).toEqual([1, 3, 4]);
+  });
+
+  it('S-4.1 [replicated] keeps only isReplicated=true rows', () => {
+    service.selectedReplication.set(['replicated']);
+    expect(ids(service.filterRows(rows))).toEqual([2]);
+  });
+
+  it('S-4.1 [] and both values keep every row', () => {
+    expect(ids(service.filterRows(rows))).toEqual([1, 2, 3, 4]);
+    service.selectedReplication.set(['new', 'replicated']);
+    expect(ids(service.filterRows(rows))).toEqual([1, 2, 3, 4]);
+  });
+
+  it('S-4.1 AND-combines with other dimensions', () => {
+    const mixed = [row({ id: 1, isReplicated: true, origin: 'W1/W2' }), row({ id: 2, isReplicated: true, origin: 'W3/Bilaterals' })];
+    service.selectedReplication.set(['replicated']);
+    service.selectedOrigins.set(['W3/Bilaterals']);
+    expect(ids(service.filterRows(mixed))).toEqual([2]);
+  });
+
+  it('S-4.2 chips read Replication: New / Previously reported, right after Funding source', () => {
+    service.selectedOrigins.set(['W1/W2']);
+    service.selectedCenters.set(['CIAT']);
+    service.selectedReplication.set(['new', 'replicated']);
+    expect(service.activeChips().map(c => c.label)).toEqual([
+      'Funding source: W1/W2',
+      'Replication: New',
+      'Replication: Previously reported',
+      'Center: CIAT'
+    ]);
+    expect(service.hasActiveFilters()).toBe(true);
+  });
+
+  it('S-4.4 clearChip removes only the replication value; clearAll removes the dimension', () => {
+    service.selectedStatuses.set(['Editing']);
+    service.selectedReplication.set(['new', 'replicated']);
+    const chip = service.activeChips().find(c => c.dimension === 'replication' && c.value === 'new')!;
+    service.clearChip(chip);
+    expect(service.selectedReplication()).toEqual(['replicated']);
+    expect(service.selectedStatuses()).toEqual(['Editing']);
+    service.clearAll();
+    expect(service.selectedReplication()).toEqual([]);
+  });
+
+  it('toggleReplication adds then removes a value', () => {
+    service.toggleReplication('new');
+    expect(service.selectedReplication()).toEqual(['new']);
+    service.toggleReplication('new');
+    expect(service.selectedReplication()).toEqual([]);
+  });
+
+  it('S-4.3 unknown stored values are inert in the predicate (no chip crash, all rows kept)', () => {
+    service.selectedReplication.set([]);
+    expect(() => service.filterRows(rows)).not.toThrow();
+    expect(ids(service.filterRows(rows))).toEqual([1, 2, 3, 4]);
+  });
+});

@@ -68,7 +68,8 @@ import {
   parseListParam,
   sameListParam,
   PROGRAMME_RESULTS_OTHER_CATEGORY,
-  PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL
+  PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL,
+  PROGRAMME_RESULTS_REPLICATION_VALUES
 } from './services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_FIXED_SECTION_LABELS, sectionLabel } from './services/programme-results-section-labels';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
@@ -909,6 +910,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
       ),
     { equal: sameFilterOptions }
   );
+  // @akili-spec changes/sp-overview-total-drilldown (STD-T-1) — static: the value space is fixed.
+  readonly replicationSelectOptions = [
+    { value: 'new', label: 'New' },
+    { value: 'replicated', label: 'Previously reported' }
+  ];
   readonly createdBySelectOptions = computed(() => this.data.createdByOptions().map(value => ({ value, label: value })));
 
   /**
@@ -1173,6 +1179,10 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const createdBy = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy));
         // @akili-spec changes/results-aow-column-filter (RAC-T-3) — multi-value, comma list.
         const sections = toSectionValues(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.section));
+        // @akili-spec changes/sp-overview-total-drilldown (STD-T-1, S-4.3) — whitelist: unknown values drop.
+        const replication = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.replication)).filter(value =>
+          (PROGRAMME_RESULTS_REPLICATION_VALUES as readonly string[]).includes(value)
+        );
 
         if (!sameListParam(phases, this.filter.selectedPhases())) this.filter.selectedPhases.set(phases);
         if (!sameListParam(statuses, this.filter.selectedStatuses())) this.filter.selectedStatuses.set(statuses);
@@ -1181,6 +1191,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
         if (!sameListParam(centers, this.filter.selectedCenters())) this.filter.selectedCenters.set(centers);
         if (!sameListParam(createdBy, this.filter.selectedCreatedBy())) this.filter.selectedCreatedBy.set(createdBy);
         if (!sameListParam(sections, this.filter.selectedSections())) this.filter.selectedSections.set(sections);
+        if (!sameListParam(replication, this.filter.selectedReplication())) this.filter.selectedReplication.set(replication);
       });
     });
 
@@ -1200,6 +1211,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
       // @akili-spec changes/results-aow-column-filter (RAC-T-3) — comma list, `null` (not '')
       // when empty so the param drops from the URL entirely on Clear filters (RAC-R-3).
       const sections = this.filter.selectedSections();
+      const replication = joinListParam(this.filter.selectedReplication());
 
       untracked(() => {
         const current = this.route.snapshot.queryParamMap;
@@ -1210,7 +1222,8 @@ export class ProgrammeResultsComponent implements OnDestroy {
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy,
-          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.section]: sections.length ? sections.join(',') : null
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.section]: sections.length ? sections.join(',') : null,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.replication]: replication
         };
         const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
         if (!changed) return;
