@@ -1,6 +1,28 @@
 # bilateral-result-creator
 
-**Verified:** 2026-10-13 · `bugfix/capacity-sharing-output-level-mismatch` (`BIL-T-1`/`BIL-T-2`):
+**Verified:** 2026-10-15 · `bugfix/bilateral-save-draft-footer` (`BSF-T-2`): `triggerManualSave()`'s
+post-flush failure check and `waitForSectionSave()`'s poll-exit are now scoped to the exact status
+keys THIS flush covers — captured via the new `BilateralAutoSaveService.pendingStatusKeysFor(section)`
+right before `flush()` drains `_pendingFields` (same timing discipline as the pre-existing
+`hadChanges` capture) — instead of `hasErrorFor(section)`'s section-wide scan. A field that once
+failed and was never re-edited keeps its `'error'` status forever (nothing resets it except a later
+successful save of that exact field, and `flush()` already removed it from `_pendingFields` on
+dispatch, win or lose), so the old section-wide scan kept reporting "Save failed" on every later Save
+draft for the section even when the field the user just edited saved fine. The new
+`hasErrorForFields`/`lastErrorMessageForFields` do the scoped read; the section-wide `hasErrorFor`/
+`lastErrorMessageFor` are unchanged and still back `selectSection()` and
+`handleGiFieldSaveRequested()`, which `waitForSectionSave()` still calls without a
+scoped-fields argument — only `triggerManualSave()`'s own call passes one. **Attempt 2 rework
+(Reviewer FAIL):** Evidence is the one section whose Save draft bypasses `_pendingFields`/
+`_pendingPayloads` entirely (`SECTION_ENDPOINT_KEYS.evidence` is `[]`; it saves via
+`runImmediate('evidence', …)` from `section-evidence.component.ts`'s `manualSave$` handler), so
+`pendingStatusKeysFor('evidence')` special-cases it to `['evidence']`, mirroring the evidence
+branches `hasErrorFor`/`hasPendingFor` already had — without it every Evidence flush captured `[]`,
+so `hasErrorForFields([])` was always `false` and a genuine Evidence failure was silently reported
+as success after the full 15s timeout. Confirmed by grep this attempt: Evidence is the ONLY
+`BilateralEditorSection` with an empty `SECTION_ENDPOINT_KEYS` entry and the only caller of
+`runImmediate`; prior: 2026-10-13 ·
+`bugfix/capacity-sharing-output-level-mismatch` (`BIL-T-1`/`BIL-T-2`):
 `resultLevelName` (the computed behind the W3/Bilateral breadcrumb's level label) had `case 3`/`case 4`
 inverted relative to `ResultLevelEnum` (`INITIATIVE_OUTCOME=3`, `INITIATIVE_OUTPUT=4`) and every other
 level mapping in the repo (`BilateralResultLevelSelectorComponent`, `RESULT_LEVEL_LABELS`) — every
@@ -67,6 +89,16 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   `lastErrorMessageFor(section)` que `BilateralAutoSaveService` captura del body del error (p. ej.
   vaciar el título → el 400 de general-info explica que title/description no se pueden vaciar) más
   los faltantes; el "Please try again" pelado queda solo como fallback sin mensaje del server.
+  ⚠️ **`triggerManualSave()` ya NO usa el `hasErrorFor(section)`/`lastErrorMessageFor(section)`
+  de arriba (`BSF-T-2`, 2026-10-15).** Ese par sigue existiendo — section-wide, para
+  `selectSection()`/`handleGiFieldSaveRequested()` — pero un campo que falló una vez y nunca se
+  volvió a editar se queda en `'error'` para siempre (nada lo resetea salvo un guardado exitoso de
+  ESE mismo campo), así que el scan de sección entera marcaba "Save failed" en CUALQUIER Save draft
+  posterior de la sección aunque el campo recién editado se hubiera guardado bien. `triggerManualSave()`
+  ahora captura `pendingStatusKeysFor(activeSection)` ANTES de `flush()` (mismo momento que la captura
+  de `hadChanges`) y usa `hasErrorForFields`/`lastErrorMessageForFields` con ese set exacto — tanto
+  para la alerta como para el exit temprano que le pasa a `waitForSectionSave` (parámetro opcional
+  `scopedFields`, sin el cual sigue leyendo `hasErrorFor` como antes).
 - **Semáforo de calidad IA (P2-3698).** `BilateralQualityAssessmentUiService` (root) es el dueño del
   estado: `assessing` → `deciding` → `submitting`. El riel pinta una card con el veredicto guardado
   (`loadLatest` una vez por result id) y **Submit for review ya no envía directo**: llama

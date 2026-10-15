@@ -1237,18 +1237,24 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     // Read before flushing: flush() empties the staged fields, so afterwards nothing distinguishes
     // "saved" from "there was nothing to save".
     const hadChanges = this.autoSaveService.hasPendingFor(activeSection);
+    // BSF-T-2 (design.md §2.3, `BSF-DD-2`): the exact status keys THIS flush is about to dispatch,
+    // captured before flush() drains `_pendingFields` — same timing discipline as `hadChanges`
+    // above. Scoping the post-flush failure check to this set (not the section-wide `hasErrorFor`)
+    // stops a different, already-settled field's stale `'error'` from misreporting this flush —
+    // which never touched that field — as failed.
+    const flushTargets = this.autoSaveService.pendingStatusKeysFor(activeSection);
     try {
       // Explicit section save: unrelated staged payloads remain in the editor session and are
       // never persisted by navigation, Save draft, destroy, or browser lifecycle hooks.
       await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(activeSection));
       this.autoSaveService.manualSave$.next(activeSection);
-      await this.waitForSectionSave(activeSection);
+      await this.waitForSectionSave(activeSection, flushTargets);
 
-      if (this.autoSaveService.hasErrorFor(activeSection)) {
+      if (this.autoSaveService.hasErrorForFields(flushTargets)) {
         // Say WHY: the server's rejection reason was always in the response body (e.g. clearing the
         // required title leaves nothing savable → 400), but the alert used to swallow it into a bare
         // "Please try again" — which reads as a transient glitch when it is actually a rule.
-        const serverReason = this.autoSaveService.lastErrorMessageFor(activeSection);
+        const serverReason = this.autoSaveService.lastErrorMessageForFields(flushTargets);
         const missing = this.missingFieldsFor(activeSection);
         this.api.alertsFe.show({
           id: 'bilateralManualSave',
@@ -1308,15 +1314,24 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   /**
    * Waits for the section's requests to settle. A failed request leaves its fields in `'error'`,
-   * which `hasPendingFor` counts as pending (the data is still unsaved) — so without the
-   * `hasErrorFor` exit a 400 kept the button on "Saving…" for the whole 15s timeout before the
-   * failure was reported.
+   * which `hasPendingFor` counts as pending (the data is still unsaved) — so without an early exit
+   * a 400 kept the button on "Saving…" for the whole 15s timeout before the failure was reported.
+   *
+   * `scopedFields` (BSF-T-2, design.md §2.3): when given (a `pendingStatusKeysFor` capture, read
+   * before the flush that is being waited on), the early exit is scoped to exactly those status
+   * keys via `hasErrorForFields`, instead of `hasErrorFor(section)`'s section-wide scan — so a
+   * different, already-settled field's stale `'error'` can't trigger (or suppress) an exit based on
+   * data this call never touched. Omitted by `selectSection()` and `handleGiFieldSaveRequested()`,
+   * which keep the original section-wide behavior (other call sites still rely on it, per
+   * `BilateralAutoSaveService`'s `hasErrorFor` doc comment).
    */
-  private async waitForSectionSave(section: BilateralEditorSection): Promise<void> {
+  private async waitForSectionSave(section: BilateralEditorSection, scopedFields?: readonly string[]): Promise<void> {
     const start = Date.now();
     while (
       this.autoSaveService.hasPendingFor(section) &&
-      !this.autoSaveService.hasErrorFor(section) &&
+      !(scopedFields
+        ? this.autoSaveService.hasErrorForFields(scopedFields)
+        : this.autoSaveService.hasErrorFor(section)) &&
       Date.now() - start < BilateralResultCreatorComponent.MANUAL_SAVE_TIMEOUT_MS
     ) {
       await new Promise(resolve => setTimeout(resolve, 100));

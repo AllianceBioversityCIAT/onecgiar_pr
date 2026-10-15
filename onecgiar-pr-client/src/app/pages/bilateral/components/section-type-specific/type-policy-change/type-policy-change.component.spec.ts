@@ -12,6 +12,7 @@ import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { PolicyControlListService } from '../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../shared/services/global/institutions.service';
+import { RolesService } from '../../../../../shared/services/global/roles.service';
 
 describe('TypePolicyChangeComponent', () => {
   let fixture: ComponentFixture<TypePolicyChangeComponent>;
@@ -650,6 +651,53 @@ describe('TypePolicyChangeComponent', () => {
 
       const gridChildNativeEls = gridContainer!.children.map(c => c.nativeElement);
       expect(gridChildNativeEls).not.toContain(stageSelect!.nativeElement);
+    });
+
+    // BSD-AC-1/BSD-AC-2 (bilateral-status-dropdown-overlay) — Status's `app-pr-select` must carry
+    // no `expandSpaceOnOpen`, matching Policy type's default. `expandSpaceOnOpen` renders a second,
+    // normal-flow `.expandable-space` div (pr-select.component.html:111) that pushes later siblings
+    // down when it opens (pr-select.component.scss:84-94, `.expanded { height: 300px }`); the
+    // overlay options panel itself is a SEPARATE, always-absolutely-positioned node
+    // (`custom-fields.scss:116-144`) that does not depend on the flag at all. Falsifier: on the
+    // pre-fix template (`[expandSpaceOnOpen]="true"` present), focusing the Status trigger sets
+    // `isDropdownOpen` true and `*ngIf="expandSpaceOnOpen()"` renders `.expandable-space` — this
+    // assertion fails there. Post-fix, `expandSpaceOnOpen()` is false by default, so the `*ngIf`
+    // never renders the spacer regardless of focus/open state — while `.options` keeps rendering,
+    // proving the overlay mechanism is untouched.
+    it('BSD-AC-1/2: opening the Status dropdown renders no expandable-space spacer, and its own overlay panel is unaffected', async () => {
+      // `app-pr-select`'s `[ngSwitch]` only renders the interactive `a.field` branch when the
+      // switch expression is exactly `false`; `RolesService.readOnly` defaults truthy (`true`) and
+      // neither Policy type nor Status binds `[editable]="true"` here, matching production, so the
+      // real app needs an authenticated, non-read-only role for these to be interactive. Overriding
+      // with an explicit `readOnly: false` renders the real interactive trigger this test needs,
+      // without touching the component's own `readOnly()`/`[inert]` gate (driven by
+      // `BilateralCreationService`/`BilateralAutoSaveService`, untouched here).
+      TestBed.resetTestingModule();
+      makeMocks();
+      await configure()
+        .overrideProvider(RolesService, { useValue: { isAdmin: false, readOnly: false } })
+        .compileComponents();
+
+      bilateralApi.GET_policyChanges.mockReturnValue(of({ response: { policy_type_id: 1 } }));
+      render();
+
+      const selects = fixture.debugElement.queryAll(By.css('app-pr-select'));
+      const status = selects.find(d => read(d.componentInstance.label) === 'Status');
+      expect(status).toBeDefined();
+
+      // Open the dropdown the same way a user does — focus the trigger anchor.
+      const trigger = status!.query(By.css('a.field'));
+      expect(trigger).toBeTruthy();
+      trigger.triggerEventHandler('focus', {});
+      fixture.detectChanges();
+
+      const spacer = status!.query(By.css('.expandable-space'));
+      expect(spacer).toBeNull();
+
+      // The overlay itself (always `position: absolute`, independent of expandSpaceOnOpen) still
+      // renders exactly as Policy type's does — the removal must not affect it.
+      const optionsPanel = status!.query(By.css('.options'));
+      expect(optionsPanel).toBeTruthy();
     });
   });
 });

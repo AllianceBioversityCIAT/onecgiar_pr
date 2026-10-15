@@ -184,6 +184,11 @@ describe('BilateralResultCreatorComponent', () => {
       hasPendingFor: jest.fn().mockReturnValue(false),
       hasErrorFor: jest.fn().mockReturnValue(false),
       lastErrorMessageFor: jest.fn().mockReturnValue(undefined),
+      // BSF-T-2: the scoped counterparts `triggerManualSave()`/`waitForSectionSave()` now call.
+      // `selectSection()`/`handleGiFieldSaveRequested()` still call the section-wide pair above.
+      pendingStatusKeysFor: jest.fn().mockReturnValue([]),
+      hasErrorForFields: jest.fn().mockReturnValue(false),
+      lastErrorMessageForFields: jest.fn().mockReturnValue(undefined),
       reset: jest.fn(),
     };
 
@@ -923,11 +928,54 @@ describe('BilateralResultCreatorComponent', () => {
 
     it('reports a failed request as soon as it fails instead of waiting out the timeout', async () => {
       autoSaveService.hasPendingFor.mockReturnValue(true);
-      autoSaveService.hasErrorFor.mockReturnValue(true);
+      // BSF-T-2: triggerManualSave()'s poll-exit/failure check is now scoped to this flush's
+      // fields (`hasErrorForFields`), not the section-wide `hasErrorFor` this test used to drive.
+      autoSaveService.hasErrorForFields.mockReturnValue(true);
       const start = Date.now();
       await component.triggerManualSave();
       expect(Date.now() - start).toBeLessThan(2000);
       expect(show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Save failed', status: 'error' }));
+    });
+
+    // BSF-T-2 rework (Reviewer FAIL, attempt 2): Evidence saves through `runImmediate('evidence', …)`
+    // instead of the normal `_pendingFields`/`flush()` path this `describe` block otherwise exercises
+    // (`SECTION_ENDPOINT_KEYS.evidence` is `[]`). This end-to-end-shaped test (same structure as
+    // "reports a failed request…" above, scoped to Evidence) locks that `pendingStatusKeysFor`'s
+    // real `['evidence']` capture (proven directly against the real service in
+    // `bilateral-auto-save.service.spec.ts`) actually reaches `triggerManualSave()`'s prompt-exit
+    // wiring for THIS section — before the fix, the real service returned `[]` for Evidence here,
+    // which would have kept this test's `hasErrorForFields` call empty-scoped and the failure
+    // unreported until the full 15s timeout.
+    it('Evidence: reports a failed save as soon as it fails instead of waiting out the timeout', async () => {
+      component.openSectionName.set('evidence');
+      autoSaveService.getEndpointKeys.mockReturnValue([]);
+      autoSaveService.hasPendingFor.mockReturnValue(true);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['evidence']);
+      autoSaveService.hasErrorForFields.mockImplementation((fields: string[]) => fields.includes('evidence'));
+
+      const start = Date.now();
+      await component.triggerManualSave();
+
+      expect(autoSaveService.pendingStatusKeysFor).toHaveBeenCalledWith('evidence');
+      expect(autoSaveService.hasErrorForFields).toHaveBeenCalledWith(['evidence']);
+      expect(Date.now() - start).toBeLessThan(2000);
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Save failed', status: 'error' }));
+    });
+
+    // BSF-T-2 (design.md §2.3, `BSF-DD-2`): locks the actual mechanism — `triggerManualSave()`
+    // must capture `pendingStatusKeysFor(activeSection)` before flushing, then use that exact set
+    // (never the section-wide `hasErrorFor`) to decide pass/fail. This is the fix for the BSF-AC-2
+    // bug: a stale error on a field NOT in this capture would otherwise still poison the result.
+    it('BSF-T-2: scopes the failure check to the fields pendingStatusKeysFor captured for this flush, never the section-wide scan', async () => {
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      autoSaveService.pendingStatusKeysFor.mockReturnValue(['title']);
+
+      await component.triggerManualSave();
+
+      expect(autoSaveService.pendingStatusKeysFor).toHaveBeenCalledWith('general-info');
+      expect(autoSaveService.hasErrorForFields).toHaveBeenCalledWith(['title']);
+      expect(autoSaveService.hasErrorFor).not.toHaveBeenCalled();
+      expect(autoSaveService.lastErrorMessageFor).not.toHaveBeenCalled();
     });
   });
 
