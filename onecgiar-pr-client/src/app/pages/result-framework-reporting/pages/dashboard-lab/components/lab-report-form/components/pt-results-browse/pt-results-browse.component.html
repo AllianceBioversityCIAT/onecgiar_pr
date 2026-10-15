@@ -251,6 +251,28 @@
             </ul>
           }
 
+          <!-- Evidence links: http(s) only (filtered in toEvidenceLinks), always a new tab without opener. -->
+          @if (proposal.evidence_links.length) {
+            <ul class="m-0 flex min-w-0 flex-col gap-1 p-0 text-xs" data-test="pt-proposal-evidence-links">
+              @for (link of proposal.evidence_links; track link.url) {
+                <li class="flex min-w-0 list-none items-baseline gap-1.5">
+                  <i class="pi pi-external-link shrink-0 text-[10px] text-gray-400" aria-hidden="true"></i>
+                  <a
+                    [href]="link.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="min-w-0 break-words font-medium text-[var(--pr-color-primary-300)] hover:underline"
+                    data-test="pt-evidence-link">
+                    {{ link.title }}
+                  </a>
+                  @if (link.kind) {
+                    <span class="shrink-0 text-[11px] text-gray-500">{{ link.kind }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
           @if (proposal.missing_info.length) {
             <ul class="m-0 list-disc pl-4 text-xs text-amber-700" data-test="pt-proposal-missing-info">
               @for (info of proposal.missing_info; track info) {
@@ -260,16 +282,151 @@
           }
 
           <!-- PTB-R-18: guidance only, never written to the create payload. -->
-          @if (proposal.countries.length || proposal.impact_areas || proposal.gender_split) {
+          @if (
+            proposal.geo ||
+            proposal.countries.length ||
+            proposal.partners.length ||
+            proposal.impact_area_details.length ||
+            proposal.impact_areas ||
+            proposal.gender_split
+          ) {
             <div
-              class="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-600"
+              class="flex min-w-0 flex-col gap-2 rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-600"
               data-test="pt-proposal-guidance">
               <p class="m-0 font-semibold text-gray-700">Guidance only — not written to the created result:</p>
-              @if (proposal.countries.length) {
-                <p class="m-0 mt-1">Countries: {{ proposal.countries.join(', ') }}</p>
+
+              @if (proposal.geo; as geo) {
+                <div class="flex min-w-0 flex-col gap-1" data-test="pt-proposal-geo">
+                  <p class="m-0 flex flex-wrap items-center gap-1.5">
+                    <span class="font-semibold text-gray-700">Geography</span>
+                    @if (geo.level) {
+                      <span
+                        class="rounded-full border border-gray-200 bg-white px-2 py-0.5 capitalize text-gray-700"
+                        data-test="pt-geo-level">
+                        {{ geo.level }}
+                      </span>
+                    }
+                  </p>
+                  @if (geo.countries.length) {
+                    <ul class="m-0 flex min-w-0 flex-wrap gap-1 p-0" aria-label="Countries">
+                      @for (country of geo.countries; track country.iso_alpha_2 ?? country.name) {
+                        <li
+                          class="inline-flex max-w-full list-none items-center gap-1 rounded-full border px-2 py-0.5"
+                          [class]="
+                            clarisaBadge(country.match_status) === 'out'
+                              ? 'border-amber-300 bg-amber-50 text-amber-900'
+                              : 'border-gray-200 bg-white text-gray-700'
+                          "
+                          [attr.data-match]="country.match_status"
+                          [attr.title]="clarisaBadge(country.match_status) === 'out' ? 'Not matched to a CLARISA country (' + country.match_status + ')' : null"
+                          data-test="pt-geo-country">
+                          @if (clarisaBadge(country.match_status) === 'out') {
+                            <i class="pi pi-exclamation-triangle text-[10px]" aria-hidden="true"></i>
+                          }
+                          <span class="truncate">{{ country.name }}</span>
+                          @if (country.iso_alpha_2) {
+                            <span class="font-mono text-[10px] text-gray-500">{{ country.iso_alpha_2 }}</span>
+                          }
+                          @if (clarisaBadge(country.match_status) === 'out') {
+                            <span class="sr-only">(not matched in CLARISA)</span>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  }
+                  @if (geo.regions.length) {
+                    <p class="m-0" data-test="pt-geo-regions">
+                      Regions:
+                      @for (region of geo.regions; track region.name; let last = $last) {
+                        <span [class.text-amber-800]="clarisaBadge(region.match_status) === 'out'">{{ region.name }}</span
+                        >{{ last ? '' : ', ' }}
+                      }
+                    </p>
+                  }
+                  @if (geo.subnational_areas) {
+                    <p class="m-0" data-test="pt-geo-subnational">Subnational areas: {{ geo.subnational_areas }}</p>
+                  }
+                </div>
+              } @else if (proposal.countries.length) {
+                <p class="m-0">Countries: {{ proposal.countries.join(', ') }}</p>
               }
-              @if (proposal.impact_areas) {
-                <p class="m-0 mt-1">Impact areas: {{ impactAreaSummary(proposal.impact_areas) }}</p>
+
+              @if (proposal.partners.length) {
+                <div class="flex min-w-0 flex-col gap-1" data-test="pt-proposal-partners">
+                  <span class="font-semibold text-gray-700">Partners</span>
+                  <ul class="m-0 flex min-w-0 flex-col gap-1 p-0">
+                    @for (partner of proposal.partners; track partner.name) {
+                      <li class="flex min-w-0 list-none flex-wrap items-center gap-1.5" data-test="pt-partner">
+                        <span class="min-w-0 break-words text-gray-800">
+                          {{ partner.name }}
+                          @if (partner.acronym && partner.acronym !== partner.name) {
+                            <span class="text-gray-500">({{ partner.acronym }})</span>
+                          }
+                        </span>
+                        @if (partner.role) {
+                          <span class="text-gray-500">· {{ partner.role }}</span>
+                        }
+                        @if (partner.is_cgiar_center) {
+                          <span class="rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-700" data-test="pt-partner-cgiar">
+                            CGIAR center
+                          </span>
+                        }
+                        @switch (clarisaBadge(partner.match_status)) {
+                          @case ('in') {
+                            <span
+                              class="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800"
+                              data-test="pt-partner-in-clarisa">
+                              In CLARISA
+                            </span>
+                          }
+                          @case ('out') {
+                            <span
+                              class="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900"
+                              [attr.title]="'Match status: ' + partner.match_status"
+                              data-test="pt-partner-not-in-clarisa">
+                              Not in CLARISA
+                            </span>
+                          }
+                        }
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+
+              @if (proposal.impact_area_details.length) {
+                <div class="flex min-w-0 flex-col gap-1" data-test="pt-proposal-impact-areas">
+                  <span class="font-semibold text-gray-700">Impact areas</span>
+                  <ul class="m-0 flex min-w-0 flex-col gap-1 p-0">
+                    @for (area of proposal.impact_area_details; track area.key) {
+                      <li class="min-w-0 list-none" [attr.data-test]="'pt-impact-area-' + area.key">
+                        <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+                          <span class="min-w-0 text-gray-800">{{ area.label }}</span>
+                          <span
+                            class="rounded-full border px-1.5 py-0.5 text-[10px] font-semibold"
+                            [class]="
+                              area.score === 2
+                                ? 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-25)] text-[var(--pr-color-primary-700)]'
+                                : area.score === 1
+                                  ? 'border-gray-300 bg-white text-gray-800'
+                                  : 'border-gray-200 bg-gray-100 text-gray-500'
+                            "
+                            data-test="pt-impact-score">
+                            {{ impactScoreLabel(area.score) }}
+                          </span>
+                        </div>
+                        @if (area.justification) {
+                          <details class="mt-0.5" data-test="pt-impact-justification">
+                            <summary class="cursor-pointer text-[var(--pr-color-primary-300)]">Why this score</summary>
+                            <p class="m-0 mt-0.5 break-words text-gray-600">{{ area.justification }}</p>
+                          </details>
+                        }
+                      </li>
+                    }
+                  </ul>
+                </div>
+              } @else if (proposal.impact_areas) {
+                <p class="m-0">Impact areas: {{ impactAreaSummary(proposal.impact_areas) }}</p>
               }
               @if (proposal.gender_split) {
                 <p class="m-0 mt-1">
