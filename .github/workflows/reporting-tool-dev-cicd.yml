@@ -6,8 +6,9 @@
 #   push to feature/reporting-dev-github-actions-cicd
 #       Quality checks, then ONE publish job (common quality barrier: it starts only when every mandatory
 #       check of the backend, the frontend and the deploy script passed) that builds both images and pushes
-#       them to ECR by immutable digest, then AUTOMATICALLY one deploy request for those two digests through
-#       the platform's reusable workflow (owner decision D1: no human approval). The central Executor still
+#       them to ECR by immutable digest, then AUTOMATICALLY one deploy request per Reporting Tool TEST
+#       target (backend digest to reporting-tool-test-backend, frontend digest to reporting-tool-test-frontend)
+#       through the platform's reusable workflow (owner decision D1: no human approval). The central Executor still
 #       authorizes the source repository and the target, deduplicates, orders, locks and applies the target's
 #       deploy window: a request is not a deploy.
 #   workflow_dispatch (manual)
@@ -60,7 +61,7 @@ on:
   workflow_dispatch:
     inputs:
       request-deploy:
-        description: Send ONE deploy request for the images published by this run (explicit authorization)
+        description: Send the deploy requests (one per TEST target) for the images published by this run (explicit authorization)
         type: boolean
         default: false
 
@@ -75,7 +76,6 @@ jobs:
   # No secret and no AWS access: the backend lint, tests and build need no runtime configuration.
   backend-checks:
     name: backend checks (lint, tests)
-    if: ${{ !contains(github.event.head_commit.message, '[pull-only-e2e]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -101,7 +101,6 @@ jobs:
 
   frontend-checks:
     name: frontend checks (lint, typecheck, tests)
-    if: ${{ !contains(github.event.head_commit.message, '[pull-only-e2e]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: reporting-tool-dev-ci
@@ -160,7 +159,6 @@ jobs:
 
   deploy-script-checks:
     name: deploy script checks (bash -n, ShellCheck)
-    if: ${{ !contains(github.event.head_commit.message, '[pull-only-e2e]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -263,11 +261,14 @@ jobs:
           TAG: gha-${{ github.run_id }}-${{ github.run_attempt }}
         run: bash .github/scripts/push-image.sh
 
-  # ---------------------------------------------------------------- automatic deploy request (D1)
-  # ONE DEPLOY_REQUESTED for both images, from the `reporting-tool-dev` environment, only after
-  # `publish-images` succeeded and produced BOTH digests (the reusable workflow re-validates them).
-  deploy-request:
-    name: deploy request (ONECGIAR CI/CD Platform)
+  # ---------------------------------------------------------------- automatic deploy requests (D1)
+  # One DEPLOY_REQUESTED per Reporting Tool TEST target, from the `reporting-tool-dev` environment, only after
+  # `publish-images` succeeded and produced BOTH digests (the reusable workflow re-validates them). One request per
+  # target because the Executor verifies every requested digest against what that target's script reports: each
+  # request carries only its own image. Both requests belong to this run (requestId <run id>-<attempt>, deduplicated
+  # per target). The scripts installed for these targets are, for now, in PULL-ONLY TEST mode.
+  deploy-request-backend:
+    name: deploy request backend (ONECGIAR CI/CD Platform)
     needs: publish-images
     if: >-
       needs.publish-images.result == 'success'
@@ -280,34 +281,21 @@ jobs:
       contents: read
     uses: AllianceBioversityCIAT/onecgiar-cicd-platform/.github/workflows/deploy-request.reusable.yml@3893a882ed8c687b78d4b509252ef55352a87c07
     with:
-      targetId: reporting-tool-dev
-      environment: reporting-tool-dev
-      units: "[]"
-      artifacts: >-
-        {"backend":"${{ needs.publish-images.outputs.backend-digest }}","frontend":"${{ needs.publish-images.outputs.frontend-digest }}"}
-
-  # ---------------------------------------------------------------- PULL-ONLY TEST E2E (temporary, AC-04)
-  # A push whose commit message contains [pull-only-e2e] skips the CI above (the checks are skipped, so
-  # publish-images and deploy-request are skipped too: no build, no push, no request for reporting-tool-dev)
-  # and sends, in this same run, ONE request per Reporting Tool TEST target with an image already in ECR.
-  # One request per target because the Executor verifies every requested digest against what that target
-  # reports. The scripts installed for these targets are in PULL-ONLY TEST mode (pull and verify only).
-  pull-only-e2e-backend:
-    name: PULL-ONLY E2E request (reporting-tool-test-backend)
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pull-only-e2e]')
-    permissions:
-      id-token: write
-      contents: read
-    uses: AllianceBioversityCIAT/onecgiar-cicd-platform/.github/workflows/deploy-request.reusable.yml@3893a882ed8c687b78d4b509252ef55352a87c07
-    with:
       targetId: reporting-tool-test-backend
       environment: reporting-tool-dev
       units: "[]"
-      artifacts: '{"backend":"sha256:e5cbfa3bd39efdfc92b6a970aafd985272b0474fbc32c135177b31e6217ec545"}'
+      artifacts: >-
+        {"backend":"${{ needs.publish-images.outputs.backend-digest }}"}
 
-  pull-only-e2e-frontend:
-    name: PULL-ONLY E2E request (reporting-tool-test-frontend)
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[pull-only-e2e]')
+  deploy-request-frontend:
+    name: deploy request frontend (ONECGIAR CI/CD Platform)
+    needs: publish-images
+    if: >-
+      needs.publish-images.result == 'success'
+      && needs.publish-images.outputs.backend-digest != ''
+      && needs.publish-images.outputs.frontend-digest != ''
+      && (github.event_name == 'push'
+          || (github.event_name == 'workflow_dispatch' && inputs.request-deploy))
     permissions:
       id-token: write
       contents: read
@@ -316,4 +304,5 @@ jobs:
       targetId: reporting-tool-test-frontend
       environment: reporting-tool-dev
       units: "[]"
-      artifacts: '{"frontend":"sha256:355e5974fde000a0971885e5bf3808e924f70b897fbc54fe9edd7c3f0d4f472b"}'
+      artifacts: >-
+        {"frontend":"${{ needs.publish-images.outputs.frontend-digest }}"}
