@@ -70,6 +70,12 @@ export interface ProgressTrackerProposalsBody {
   results?: unknown[];
   evidence_count?: number;
   generated_by?: unknown;
+  /**
+   * Upstream **top-level** `preparation` (PT note, 2026-10-15): tells the client the KPI is
+   * still being prepared — `{ status, retry_after_s, pending_group_ids }`. Passed through
+   * unmodified, like `generated_by`; absent on PT builds older than 2026-10-15.
+   */
+  preparation?: Record<string, unknown>;
   source?: Record<string, unknown>;
   /**
    * `design.md` §4.1, amended 2026-09-22 — upstream **top-level** `generated_at`
@@ -507,7 +513,7 @@ export class ProgressTrackerService {
 
   /**
    * Re-projects the upstream `200` body through the whitelist named in `design.md`
-   * §4.1 (`indicator?, results?, evidence_count?, generated_by?, source?`) — never a
+   * §4.1 (`indicator?, results?, evidence_count?, generated_by?, preparation?, source?`) — never a
    * verbatim spread of the *whole* upstream body (an unlisted top-level field, were
    * one ever added upstream, does not silently pass through). Each whitelisted
    * object's **sub-fields do pass through unmodified** — `PTM-R-3c` permits the
@@ -532,6 +538,9 @@ export class ProgressTrackerService {
     }
     if (data?.generated_by && typeof data.generated_by === 'object') {
       safe.generated_by = data.generated_by;
+    }
+    if (data?.preparation && typeof data.preparation === 'object') {
+      safe.preparation = data.preparation;
     }
     if (data?.source && typeof data.source === 'object') {
       safe.source = data.source;

@@ -342,6 +342,42 @@ describe('ProgressTrackerService', () => {
       expect((result.response as any).debug_internal).toBeUndefined();
     });
 
+    it('passes the top-level preparation object through unmodified, like generated_by (PT 2026-10-15)', async () => {
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
+      const preparation = {
+        status: 'preparing',
+        retry_after_s: 90,
+        pending_group_ids: ['g1', 'g2'],
+      };
+      const generatedBy = {
+        mode: 'template',
+        fallback_reason: 'preparing',
+        complete: false,
+        notice: 'Still drafting the remaining evidence groups.',
+      };
+      httpService.get.mockReturnValue(
+        of({ data: { results: [], generated_by: generatedBy, preparation } }),
+      );
+
+      const result = await service.getIndicatorResults('5d51da6c6916');
+
+      expect(result.response.preparation).toEqual(preparation);
+      expect(result.response.generated_by).toEqual(generatedBy);
+    });
+
+    it('drops a non-object preparation and omits it when absent (pre-2026-10-15 PT builds)', async () => {
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
+      httpService.get.mockReturnValueOnce(
+        of({ data: { results: [], preparation: 'preparing' } }),
+      );
+      const withString = await service.getIndicatorResults('5d51da6c6916');
+      expect('preparation' in withString.response).toBe(false);
+
+      httpService.get.mockReturnValueOnce(of({ data: { results: [] } }));
+      const absent = await service.getIndicatorResults('5d51da6c6916');
+      expect('preparation' in absent.response).toBe(false);
+    });
+
     /**
      * `design.md` §4.1 amendment (2026-09-22) — the projection out of `cache` is
      * deliberately narrow: `evidence_fingerprint` alone, never the whole object. This
