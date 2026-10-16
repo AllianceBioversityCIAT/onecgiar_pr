@@ -1112,7 +1112,9 @@ describe('ReportingProgramBandComponent', () => {
           'Innovation development': 12,
           'Policy change': 8,
           'Innovation use': 6,
-          'Capacity sharing for development': 4
+          'Capacity sharing for development': 4,
+          'Other output': 3,
+          'Other outcome': 2
         }
       });
 
@@ -1120,7 +1122,7 @@ describe('ReportingProgramBandComponent', () => {
       expect(strip).toBeTruthy();
 
       const chips = Array.from(strip!.querySelectorAll('button'));
-      expect(chips.length).toBe(6);
+      expect(chips.length).toBe(8);
 
       const expected = [
         { label: 'All', count: '50' },
@@ -1128,7 +1130,9 @@ describe('ReportingProgramBandComponent', () => {
         { label: 'Innovation Development', count: '12' },
         { label: 'Policy Change', count: '8' },
         { label: 'Innovation Use', count: '6' },
-        { label: 'Capacity Sharing', count: '4' }
+        { label: 'Capacity Sharing', count: '4' },
+        { label: 'Other Output', count: '3' },
+        { label: 'Other Outcome', count: '2' }
       ];
 
       expected.forEach((exp, idx) => {
