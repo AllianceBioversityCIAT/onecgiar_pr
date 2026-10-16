@@ -308,3 +308,11 @@ The size matches Full depth; no change of level. `/akili-execute` stops and esca
 ## Required cross-references
 
 [`requirements.md`](./requirements.md) · `docs/prd.md` · `docs/ux-ui/design.md` · `docs/trd/trd.md` · parent [`../proposal.md`](../proposal.md) · [`../family.md`](../family.md) · `portfolio-overview/CLAUDE.md`
+
+## Amendment (2026-10-16) — target-only KPI rule (P2-3974)
+
+> Additive note. The executed text above is left as written; this note supersedes it where they conflict. See the matching section in [`requirements.md`](./requirements.md).
+
+- The §5 row "No year / target filter on indicators" and its sentence "an indicator without a target this year is still a KPI" are superseded. The KPI total counts only indicators with at least one target row for the reporting year with value > 0 (P2-3974; spec `changes/kpi-progress-target-only`, KTO-R-9 / KTO-DD-6). TKP-DD-2 (KPI = distinct indicator id) still holds; the target condition is added on top of it.
+- The shipped query (`aow-bilateral.repository.ts`, `getPortfolioTocCoverage`, lines 1322-1390) does not yet filter by target. A follow-up code change is owed; none was made here.
+- The user approved this amendment on 2026-10-16.

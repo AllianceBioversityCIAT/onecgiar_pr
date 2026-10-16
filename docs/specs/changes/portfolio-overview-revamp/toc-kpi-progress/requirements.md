@@ -276,3 +276,22 @@ The section "Progress by science program" SHALL be removed with everything only 
 | TKP-OQ-4 | Show a portfolio summary line? | **Yes** (Σ covered / Σ total). It is not competitive, and it answers "how far along is the portfolio" |
 | TKP-OQ-5 | Keep a link from each P/A name? | **Yes**, to the Program's Results tab (TKP-R-6), the destination the matrix name already used. The Results-center jumps from the cells are dropped with the matrix |
 | TKP-OQ-6 | Show the Output / Outcome split per row? | **Yes**, as a muted secondary line. The data is in the same query |
+
+## Amendment (2026-10-16) — target-only KPI rule (P2-3974)
+
+> Additive note. The executed text above is left as written. Where it conflicts with this section, this section wins.
+
+**Decision.** The total ToC KPIs per P/A (TKP-R-1, and the denominator of TKP-R-2 coverage) counts only KPIs that have a target: per distinct indicator (`toc_results_indicators.id`), at least one target row for the reporting year with value > 0. This is the P2-3974 target-only rule (spec `changes/kpi-progress-target-only`, KTO-R-9).
+
+**What it supersedes.**
+
+| Executed text | Status as of 2026-10-16 |
+|---|---|
+| `design.md` §5 row "No year / target filter on indicators" | Superseded: a target filter now applies |
+| `design.md` §5 sentence "an indicator without a target this year is still a KPI" | Superseded: such an indicator is not a KPI |
+| `design.md` §5 mention that `bugfix/kpi-count-reconciliation` dropped the zero-target exclusion | Superseded as the rule; kept as history only |
+| TKP-R-1 / glossary "ToC KPI" (one distinct, active indicator) | Read with the added condition "has a target > 0 for the reporting year" |
+
+**Shipped code status.** The shipped query does NOT apply the rule. `AoWBilateralRepository.getPortfolioTocCoverage` (`onecgiar-pr-server/src/api/results/results-toc-results/repositories/aow-bilateral.repository.ts`, lines 1322-1390) joins `toc_results_indicators` filtered only by `is_active = 1` (lines 1342-1343) and has no target predicate; its docstring (line 1315) states "No year or target filter on indicators". A follow-up code change is owed (not part of this note, and not made here). Until it lands, the block's totals include no-target KPIs and will disagree with the rule above.
+
+**Provenance.** Ticket P2-3974; spec `changes/kpi-progress-target-only` (KTO-R-9, KTO-DD-6). The user approved amending this executed spec on 2026-10-16.
