@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { catchError, filter, finalize, map, of, switchMap, take, tap, throwError, timeout, timer } from 'rxjs';
+import { EMPTY, catchError, defer, filter, finalize, map, of, switchMap, take, tap, throwError, timeout, timer } from 'rxjs';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 
 /** How long the client waits on a `running` row before telling the user to come back. */
@@ -50,8 +50,13 @@ export class BilateralQualityAssessmentUiService {
   /** True only while the AI check itself is in flight — never while the submit PATCH is. */
   readonly isRunning = computed(() => this.state() === 'assessing');
   readonly isSubmitting = computed(() => this.state() === 'submitting');
+  /**
+   * P2-3980: a Knowledge Product submits without the AI dialog, so its in-flight request has its own
+   * flag — `state` would flip `isDialogOpen()` and open the very window a KP must never see.
+   */
+  readonly isKpSubmitting = signal(false);
   /** Any request in flight: what the rail's Submit button disables on. */
-  readonly isBusy = computed(() => this.isRunning() || this.isSubmitting() || this.state() === 'refreshing');
+  readonly isBusy = computed(() => this.isRunning() || this.isSubmitting() || this.state() === 'refreshing' || this.isKpSubmitting());
   /**
    * One surface for the whole flow: it opens the moment the check starts and stays open through the
    * verdict and the submit. Two separate overlays would swap mid-flight, and the rail button alone
@@ -91,6 +96,29 @@ export class BilateralQualityAssessmentUiService {
         if (this.state() === 'assessing') this.state.set('idle');
       }),
     );
+  }
+
+  /**
+   * P2-3980 — submit for a Knowledge Product. The server never calls the AI for a KP (deterministic
+   * `skipped_kp_rule` row), but `submit-for-review` still requires a current assessment id, so the
+   * row is created silently and the PATCH leaves right after with `submitted_anyway`. Nothing here
+   * touches `assessment` or `state`: no dialog, no rail card, no field flags.
+   *
+   * Idempotent: a second call while one is in flight completes empty, so a double tap sends one PATCH.
+   */
+  submitKnowledgeProduct(resultId: number) {
+    return defer(() => {
+      if (this.isKpSubmitting()) return EMPTY;
+      this.isKpSubmitting.set(true);
+      return this.api.POST_bilateralQualityAssessment(resultId).pipe(
+        map((envelope: { response: BilateralQualityAssessmentView }) => envelope.response),
+        switchMap((assessment) => this.api.PATCH_bilateralSubmitForReview(resultId, {
+          assessment_id: assessment.id,
+          decision: 'submitted_anyway',
+        })),
+        finalize(() => this.isKpSubmitting.set(false)),
+      );
+    });
   }
 
   /** Rehydrates the persisted audit row after navigation or a browser refresh. */

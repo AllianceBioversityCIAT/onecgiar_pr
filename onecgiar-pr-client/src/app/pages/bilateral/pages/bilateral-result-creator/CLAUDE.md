@@ -1,6 +1,14 @@
 # bilateral-result-creator
 
-**Verified:** 2026-10-13 · `bugfix/capacity-sharing-output-level-mismatch` (`BIL-T-1`/`BIL-T-2`):
+**Verified:** 2026-10-16 · P2-3980 (`bilateral/kp-pool-parity`): a bilateral Knowledge Product
+(`creationService.isKnowledgeProduct()`, the single predicate) never runs nor shows the AI quality
+check. `submitResult()` keeps its guards, then for a KP opens `KpSubmitConfirmDialogService`
+("This result will be sent to the Science Program for review."); only a confirm calls
+`qualityAssessment.submitKnowledgeProduct(rid)` (silent POST assessment + PATCH `submitted_anyway`,
+no dialog state, one request on a double tap) and then marks Pending review like
+`submitAfterQualityDecision`. The rail's AI card, the "AI quality check runs first" note and the
+`loadLatest` rehydration are skipped for a KP; every other type keeps the flow below. Title and
+Description are read-only and optional for a KP in `section-general-info`; prior: 2026-10-13 · `bugfix/capacity-sharing-output-level-mismatch` (`BIL-T-1`/`BIL-T-2`):
 `resultLevelName` (the computed behind the W3/Bilateral breadcrumb's level label) had `case 3`/`case 4`
 inverted relative to `ResultLevelEnum` (`INITIATIVE_OUTCOME=3`, `INITIATIVE_OUTPUT=4`) and every other
 level mapping in the repo (`BilateralResultLevelSelectorComponent`, `RESULT_LEVEL_LABELS`) — every

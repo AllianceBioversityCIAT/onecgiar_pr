@@ -34,6 +34,7 @@ import { PhaseSwitcherModule } from '../../../../shared/components/phase-switche
 import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-notice/ai-provenance-notice.component';
 import { CopyButtonComponent } from '../../../../shared/components/copy-button/copy-button.component';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
+import { KpSubmitConfirmDialogService } from '../../components/kp-submit-confirm-dialog/kp-submit-confirm-dialog.service';
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { resultStatusBg, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
@@ -90,6 +91,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly ctx = inject(BilateralContextService);
   private readonly smartNav = inject(SmartNavigationService);
   readonly qualityAssessment = inject(BilateralQualityAssessmentUiService);
+  private readonly kpSubmitConfirm = inject(KpSubmitConfirmDialogService);
+  /** P2-3980: true while the KP confirmation is on screen, so a second click on Submit cannot stack another. */
+  private kpConfirmOpen = false;
   private readonly saveButtonSE = inject(SaveButtonService);
 
   isCreating = signal(true);
@@ -98,7 +102,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   /** The rail's Submit is busy for BOTH halves of the flow: the AI check and the PATCH after it. */
   isSubmitting = computed(() => this.qualityAssessment.isBusy());
   /** A spinner with no words told the user nothing — the label names which half is running. */
-  submitButtonLabel = computed(() => (this.qualityAssessment.isSubmitting() ? 'Submitting…' : 'Checking quality…'));
+  submitButtonLabel = computed(() =>
+    this.qualityAssessment.isSubmitting() || this.qualityAssessment.isKpSubmitting() ? 'Submitting…' : 'Checking quality…'
+  );
 
   /**
    * QA feedback (2026-09-21), verbatim. It is accurate as written: `submitResult()` starts the AI
@@ -444,7 +450,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.loadPhasesForSwitcher(id);
         if (this.qualityAssessmentResultId !== id) {
           this.qualityAssessmentResultId = id;
-          this.qualityAssessment.loadLatest(id).subscribe({
+          // P2-3980: a Knowledge Product has no AI quality check to rehydrate (nor to show).
+          if (!this.creationService.isKnowledgeProduct()) this.qualityAssessment.loadLatest(id).subscribe({
             // An assessment is optional history. A failed read must never prevent editing.
             error: () => this.qualityAssessment.reset(),
           });
@@ -965,6 +972,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // P2-3980: a Knowledge Product never runs nor shows the AI quality check. It asks for a
+    // confirmation instead and submits silently; every other type falls through to the AI check below.
+    if (this.creationService.isKnowledgeProduct()) {
+      this.confirmKnowledgeProductSubmit(rid);
+      return;
+    }
+
     this.qualityAssessment.run(rid).subscribe({
       next: () => {
       },
@@ -973,6 +987,38 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         // or the most likely failure of the whole flow reaches the user as "Unknown error".
         const detail = (err as HttpErrorResponse).error?.message || (err as HttpErrorResponse).statusText || err.message || 'Unknown error';
         this.api.alertsFe.show({ id: 'bilateralQualityAssessmentError', title: 'Quality check failed', description: detail, status: 'error', closeIn: 8000 });
+      }
+    });
+  }
+
+  /**
+   * P2-3980: Cancel (or Escape) changes nothing and sends nothing. Confirm re-checks the lock — the
+   * result may have left Editing while the dialog was open — and submits once
+   * (`submitKnowledgeProduct` ignores a call made while one is in flight).
+   */
+  private confirmKnowledgeProductSubmit(rid: number): void {
+    if (this.kpConfirmOpen) return;
+    this.kpConfirmOpen = true;
+    this.kpSubmitConfirm.open().subscribe({
+      next: (decision) => {
+        this.kpConfirmOpen = false;
+        if (decision !== 'submit' || this.isFormReadOnly()) return;
+        this.qualityAssessment.submitKnowledgeProduct(rid).subscribe({
+          next: () => {
+            this.creationService.resultStatusId.set(BILATERAL_STATUS.PendingReview);
+            this.api.alertsFe.show({ id: 'bilateralSubmitSuccess', title: 'Submitted', description: 'Result submitted successfully', status: 'success' });
+          },
+          error: (err: HttpErrorResponse) => {
+            const detail = err.error?.message || err.statusText || 'Unknown error';
+            this.api.alertsFe.show({ id: 'bilateralSubmitError', title: 'Submit failed', description: detail, status: 'error', closeIn: 5000 });
+          }
+        });
+      },
+      error: () => {
+        this.kpConfirmOpen = false;
+      },
+      complete: () => {
+        this.kpConfirmOpen = false;
       }
     });
   }
