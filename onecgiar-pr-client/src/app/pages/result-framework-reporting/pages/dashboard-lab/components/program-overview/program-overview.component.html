@@ -29,9 +29,9 @@
   <!-- KPI Summary Cards: Totals and key health metrics -->
   <div class="col-span-12 grid grid-cols-1 gap-[16px] sm:grid-cols-2 xl:grid-cols-3">
     <!--
-      KPI 1: Total General (program-wide W1/W2 replicated + new, with pending-review W3/Bilateral row).
-      SR-164368: a container, not a button — each breakdown row is its own button that toggles the
-      section the removed W1/W2 and W3/Bilateral cards used to open (rows can't nest in a button).
+      KPI 1: Total General (program-wide W1/W2 replicated + new + W3/Bilateral awaiting review).
+      changes/sp-overview-total-drilldown: a container, not a button — the composition-bar segments and
+      each breakdown row are buttons that emit openTotalSegment(kind) (rows can't nest in a button).
     -->
     <div
       data-testid="overview-kpi-total"
@@ -51,33 +51,66 @@
         <div class="relative z-10 flex items-baseline gap-[8px]" aria-hidden="true">
           <span class="h-[32px] w-[64px] animate-pulse rounded-[6px] bg-white/25"></span>
         </div>
+        <div class="relative z-10 h-[10px] w-full animate-pulse rounded-full bg-white/15" data-testid="overview-kpi-total-bar-skeleton" aria-hidden="true"></div>
         <div class="relative z-10 h-[14px] w-[160px] animate-pulse rounded-[4px] bg-white/15" aria-hidden="true"></div>
         <div class="relative z-10 h-[14px] w-[120px] animate-pulse rounded-[4px] bg-white/15" aria-hidden="true"></div>
       } @else {
-        <div class="relative z-10 flex items-baseline gap-[8px]" title="Program-wide W1/W2 results in this phase">
+        <div class="relative z-10 flex items-baseline gap-[8px]" title="Program-wide: W1/W2 replicated + W1/W2 new + W3/Bilateral awaiting review">
           <span class="pr-figure text-[32px] font-extrabold leading-none text-white tabular-nums drop-shadow-xs">
             {{ programResultsTotal() }}
           </span>
           <span class="text-[13px] font-medium text-purple-200">results</span>
         </div>
+        <!-- STD-R-2: composition bar (plain DOM, TS-computed widths). Empty track when the total is 0. -->
+        <div class="relative z-10 flex h-[10px] w-full gap-[2px] rounded-full bg-white/15" data-testid="overview-kpi-total-bar">
+          @for (seg of totalSegments(); track seg.kind) {
+            <button type="button" (click)="openTotalSegment.emit(seg.kind)"
+              [style.width.%]="seg.widthPct"
+              [attr.aria-label]="'View ' + seg.count + ' ' + seg.label"
+              [attr.title]="seg.count + ' ' + seg.label"
+              [attr.data-testid]="'overview-kpi-total-segment-' + seg.kind"
+              [class]="seg.colorClass + ' h-full min-w-[6px] cursor-pointer rounded-full transition-opacity duration-150 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60'"></button>
+          }
+        </div>
         <div class="relative z-10 mt-[12px] flex flex-col gap-[6px] border-t border-white/20 pt-[10px] text-[12px] text-purple-100" data-testid="overview-kpi-total-breakdown">
-          <button type="button" (click)="setActiveSection('w1w2')" [attr.aria-pressed]="activeSection() === 'w1w2'" [class.bg-white/15]="activeSection() === 'w1w2'"
-            class="-mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          <button type="button" (click)="openTotalSegment.emit('replicated')"
+            [attr.aria-label]="'View ' + totalBreakdown().replicated + ' innovations replicated for update'"
+            class="group -mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             data-testid="overview-kpi-total-breakdown-replicated" title="W1/W2 results carried over from a previous phase for update">
-            <span class="min-w-0 truncate">Innovations replicated for update</span>
-            <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().replicated }}</span>
+            <span class="flex min-w-0 items-center gap-[8px]">
+              <span class="size-[8px] shrink-0 rounded-full bg-white" data-testid="overview-kpi-total-dot-replicated" aria-hidden="true"></span>
+              <span class="min-w-0 truncate">Innovations replicated for update</span>
+            </span>
+            <span class="flex shrink-0 items-center gap-[6px]">
+              <span class="rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().replicated }}</span>
+              <ng-icon name="lucideArrowRight" class="text-[10px] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
+            </span>
           </button>
-          <button type="button" (click)="setActiveSection('w1w2')" [attr.aria-pressed]="activeSection() === 'w1w2'" [class.bg-white/15]="activeSection() === 'w1w2'"
-            class="-mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          <button type="button" (click)="openTotalSegment.emit('new')"
+            [attr.aria-label]="'View ' + totalBreakdown().new + ' new results'"
+            class="group -mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             data-testid="overview-kpi-total-breakdown-new" title="W1/W2 results created in this phase">
-            <span class="min-w-0 truncate">New results</span>
-            <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().new }}</span>
+            <span class="flex min-w-0 items-center gap-[8px]">
+              <span class="size-[8px] shrink-0 rounded-full bg-cyan-300" data-testid="overview-kpi-total-dot-new" aria-hidden="true"></span>
+              <span class="min-w-0 truncate">New results</span>
+            </span>
+            <span class="flex shrink-0 items-center gap-[6px]">
+              <span class="rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().new }}</span>
+              <ng-icon name="lucideArrowRight" class="text-[10px] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
+            </span>
           </button>
-          <button type="button" (click)="setActiveSection('bilateral')" [attr.aria-pressed]="activeSection() === 'bilateral'" [class.bg-white/15]="activeSection() === 'bilateral'"
-            class="-mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          <button type="button" (click)="openTotalSegment.emit('pendingReview')"
+            [attr.aria-label]="'View ' + totalBreakdown().pendingReview + ' W3/Bilateral results awaiting review'"
+            class="group -mx-[6px] flex cursor-pointer items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[2px] text-left transition-colors duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             data-testid="overview-kpi-total-breakdown-pending-review" title="W3/Bilateral results tagged to this program waiting for your review (Pending Review)">
-            <span class="min-w-0 truncate">W3/Bilateral results awaiting review</span>
-            <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().pendingReview }}</span>
+            <span class="flex min-w-0 items-center gap-[8px]">
+              <span class="size-[8px] shrink-0 rounded-full bg-amber-300" data-testid="overview-kpi-total-dot-pendingReview" aria-hidden="true"></span>
+              <span class="min-w-0 truncate">W3/Bilateral results awaiting review</span>
+            </span>
+            <span class="flex shrink-0 items-center gap-[6px]">
+              <span class="rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totalBreakdown().pendingReview }}</span>
+              <ng-icon name="lucideArrowRight" class="text-[10px] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
+            </span>
           </button>
         </div>
       }

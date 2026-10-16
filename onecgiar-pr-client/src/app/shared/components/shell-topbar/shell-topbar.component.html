@@ -57,7 +57,7 @@
         routerLink="/whats-new"
         aria-label="Release notes">
         <ng-icon name="lucideRocket" class="text-[16px]" />
-        <span>Release notes</span>
+        <span class="max-lg:hidden">Release notes</span>
       </a>
 
       <div class="pr-topbar-actions">
@@ -72,7 +72,7 @@
           [class.pr-topbar-icon-btn--active]="notificationsOpen() || isInNotificationsRoute()"
           (click)="onNotificationsClick()">
           <ng-icon name="lucideBell" class="text-[16px]" />
-          <span>Notifications</span>
+          <span class="max-lg:hidden">Notifications</span>
           @if (bellCount() > 0) {
             <span class="pr-topbar-badge" aria-hidden="true">{{ notificationBadgeLength() }}</span>
           }

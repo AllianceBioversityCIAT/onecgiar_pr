@@ -208,11 +208,11 @@
 
 ---
 
-## [ ] T-H — Browser check at the HITL pause (human / T6)
+## [x] T-H — Browser check at the HITL pause (human / T6)
 
 | Field | Value |
 |---|---|
-| Status | [ ] pending |
+| Status | [x] done (2026-10-15, PRTest) |
 | Size | XS (no code) |
 | Depends on | T-A, T-B, T-C |
 | Requirements | PRC-1 (order), PRC-2 (order), PRC-5 (tooltip visible), layout defect class |

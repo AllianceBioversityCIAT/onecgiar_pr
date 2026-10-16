@@ -907,7 +907,7 @@ describe('ProgramOverviewComponent', () => {
     // SR-164368: the W1/W2, W3/Bilateral and Contributing Centers cards were removed; Total General carries those figures.
     it('renders only the Total General and Areas of Work KPI cards', () => {
       const el = fixture.nativeElement as HTMLElement;
-      const ids = Array.from(el.querySelectorAll('[data-testid^="overview-kpi-"]:not([data-testid*="-breakdown"])')).map(c => c.getAttribute('data-testid'));
+      const ids = Array.from(el.querySelectorAll('[data-testid^="overview-kpi-"]:not([data-testid*="-breakdown"]):not([data-testid*="-bar"]):not([data-testid*="-dot-"]):not([data-testid*="-segment-"])')).map(c => c.getAttribute('data-testid'));
       expect(ids).toEqual(['overview-kpi-total', 'overview-kpi-aow']);
       expect(el.querySelector('[data-testid="overview-kpi-w1w2"]')).toBeNull();
       expect(el.querySelector('[data-testid="overview-kpi-bilateral"]')).toBeNull();
@@ -1056,16 +1056,18 @@ describe('ProgramOverviewComponent', () => {
     const q = (id: string) => (fixture.nativeElement as HTMLElement).querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
     const chip = (id: string) => q(id)?.querySelector('.font-mono')?.textContent?.trim();
 
-    it('programResultsTotal = replicated + new from the input; bilateral segments do not change it', () => {
-      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 3 });
+    // STD-R-1 / S-1.1: headline = replicated + new + pendingReview (supersedes STG-R-2's 69).
+    it('programResultsTotal = replicated + new + pendingReview; bilateral status segments do not change it', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 8 });
       fixture.componentRef.setInput('bilateralStatusSegments', [
         { key: 'pending', label: 'Pending Review', count: 9, bg: '', fg: '', statusName: 'Pending Review', link: null }
       ]);
       fixture.detectChanges();
       // Proves the input reaches the summed computed, so the next assertion is able to detect a leak.
       expect(component.bilateralStatusTotal()).toBe(9);
-      expect(component.programResultsTotal()).toBe(69);
-      expect(q('overview-kpi-total')!.querySelector('.pr-figure')!.textContent!.trim()).toBe('69');
+      expect(component.programResultsTotal()).toBe(77);
+      expect(q('overview-kpi-total')!.querySelector('.pr-figure')!.textContent!.trim()).toBe('77');
+      expect(['replicated', 'new', 'pending-review'].map(k => chip(`overview-kpi-total-breakdown-${k}`))).toEqual(['62', '7', '8']);
     });
 
     it('renders three rows in order with chips 62, 7, 0 (zero row present) and headline 69', () => {
@@ -1088,7 +1090,11 @@ describe('ProgramOverviewComponent', () => {
         'W3/Bilateral results tagged to this program waiting for your review (Pending Review)'
       ]);
       expect(q('overview-kpi-total')!.querySelector('.pr-figure')!.textContent!.trim()).toBe('69');
-      expect(q('overview-kpi-total')!.querySelector('[title="Program-wide W1/W2 results in this phase"]')).not.toBeNull();
+      // S-1.3: the headline tooltip names all three parts.
+      const tip = q('overview-kpi-total')!.querySelector('[title^="Program-wide"]')!.getAttribute('title')!;
+      expect(tip).toMatch(/replicated/);
+      expect(tip).toMatch(/new/);
+      expect(tip).toMatch(/awaiting review/);
     });
 
     it('KPI 1 text has no W3/Bilateral other than the awaiting-review label', () => {
@@ -1103,7 +1109,11 @@ describe('ProgramOverviewComponent', () => {
       fixture.detectChanges();
       expect(q('overview-kpi-total')!.querySelector('.pr-figure')).toBeNull();
       expect(q('overview-kpi-total-breakdown')).toBeNull();
-      expect(q('overview-kpi-total')!.querySelectorAll('.animate-pulse').length).toBe(3);
+      expect(q('overview-kpi-total')!.querySelectorAll('.animate-pulse').length).toBe(4);
+      // S-2.5: skeleton track, no segments.
+      expect(q('overview-kpi-total-bar-skeleton')).not.toBeNull();
+      expect(q('overview-kpi-total-bar')).toBeNull();
+      expect(q('overview-kpi-total')!.querySelectorAll('[data-testid^="overview-kpi-total-segment-"]').length).toBe(0);
     });
 
     it('shows no figure and no chip while only bilateral data loads', () => {
@@ -1113,24 +1123,103 @@ describe('ProgramOverviewComponent', () => {
       expect(q('overview-kpi-total-breakdown')).toBeNull();
     });
 
-    // SR-164368: the breakdown rows reopen the sections the removed W1/W2 and W3/Bilateral cards opened.
-    it.each([
-      ['replicated', 'w1w2'],
-      ['new', 'w1w2'],
-      ['pending-review', 'bilateral']
-    ] as const)('clicking the %s row toggles the %s section (second click back to all)', (row, section) => {
+    // STD-R-3 / S-3.5: rows and segments emit the intent; they no longer toggle the section.
+    const kinds = [
+      ['replicated', 'replicated'],
+      ['new', 'new'],
+      ['pending-review', 'pendingReview']
+    ] as const;
+
+    it.each(kinds)('clicking the %s row emits openTotalSegment(%s) and leaves activeSection alone', (row, kind) => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 8 });
+      fixture.detectChanges();
+      const emitted: string[] = [];
+      component.openTotalSegment.subscribe(k => emitted.push(k));
       const btn = q(`overview-kpi-total-breakdown-${row}`)!;
       expect(btn.tagName).toBe('BUTTON');
-
+      expect(btn.hasAttribute('aria-pressed')).toBe(false);
       btn.click();
       fixture.detectChanges();
-      expect(component.activeSection()).toBe(section);
-      expect(btn.getAttribute('aria-pressed')).toBe('true');
-
-      btn.click();
-      fixture.detectChanges();
+      expect(emitted).toEqual([kind]);
       expect(component.activeSection()).toBe('all');
-      expect(btn.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it.each(kinds)('clicking the %s segment emits openTotalSegment(%s) and leaves activeSection alone', (_row, kind) => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 8 });
+      fixture.detectChanges();
+      const emitted: string[] = [];
+      component.openTotalSegment.subscribe(k => emitted.push(k));
+      const seg = q(`overview-kpi-total-segment-${kind}`)!;
+      expect(seg.tagName).toBe('BUTTON');
+      seg.click();
+      fixture.detectChanges();
+      expect(emitted).toEqual([kind]);
+      expect(component.activeSection()).toBe('all');
+    });
+
+    it('no KPI 1 element toggles the section any more (no aria-pressed)', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 8 });
+      fixture.detectChanges();
+      expect(q('overview-kpi-total')!.querySelector('[aria-pressed]')).toBeNull();
+    });
+
+    // STD-R-2: composition bar
+    it('S-2.1 totalSegments widths 80.5 / 9.1 / 10.4 in row order', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 8 });
+      const segs = component.totalSegments();
+      expect(segs.map(s => s.kind)).toEqual(['replicated', 'new', 'pendingReview']);
+      expect(segs[0].widthPct).toBeCloseTo(80.5, 1);
+      expect(segs[1].widthPct).toBeCloseTo(9.1, 1);
+      expect(segs[2].widthPct).toBeCloseTo(10.4, 1);
+    });
+
+    it('S-2.2 a zero count renders no segment for it', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 0, pendingReview: 8 });
+      fixture.detectChanges();
+      expect(component.totalSegments().map(s => s.kind)).toEqual(['replicated', 'pendingReview']);
+      expect(q('overview-kpi-total-segment-new')).toBeNull();
+      expect(q('overview-kpi-total')!.querySelectorAll('[data-testid^="overview-kpi-total-segment-"]').length).toBe(2);
+    });
+
+    it('S-2.3 all zero: empty track, no segment buttons, headline 0', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 0, new: 0, pendingReview: 0 });
+      fixture.detectChanges();
+      expect(q('overview-kpi-total-bar')).not.toBeNull();
+      expect(q('overview-kpi-total')!.querySelectorAll('[data-testid^="overview-kpi-total-segment-"]').length).toBe(0);
+      expect(q('overview-kpi-total')!.querySelector('.pr-figure')!.textContent!.trim()).toBe('0');
+    });
+
+    it('S-2.4 a 1-of-200 segment keeps a min-w-[6px] focusable button', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 1, new: 199, pendingReview: 0 });
+      fixture.detectChanges();
+      const seg = q('overview-kpi-total-segment-replicated')!;
+      expect(seg.tagName).toBe('BUTTON');
+      expect(seg.classList.contains('min-w-[6px]')).toBe(true);
+      expect(seg.getAttribute('aria-label')).toBe('View 1 innovations replicated for update');
+    });
+
+    it('S-2.4 track does not clip the segment focus ring (no overflow-hidden)', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 0, new: 7, pendingReview: 0 });
+      fixture.detectChanges();
+      expect(q('overview-kpi-total-bar')!.classList.contains('overflow-hidden')).toBe(false);
+      expect(q('overview-kpi-total-segment-new')!.className).toContain('focus-visible:ring-2');
+    });
+
+    it('row hover arrows are Lucide icons, not PrimeIcons', () => {
+      fixture.detectChanges();
+      const rows = q('overview-kpi-total-breakdown')!;
+      expect(rows.querySelectorAll('ng-icon[name="lucideArrowRight"]').length).toBe(3);
+      expect(rows.querySelector('.pi-arrow-right')).toBeNull();
+    });
+
+    it('S-2.6 each row dot carries the same color class as its segment', () => {
+      fixture.componentRef.setInput('totalBreakdown', { replicated: 62, new: 7, pendingReview: 8 });
+      fixture.detectChanges();
+      for (const seg of component.totalSegments()) {
+        const dot = q(`overview-kpi-total-dot-${seg.kind}`)!;
+        expect(dot.classList.contains(seg.colorClass)).toBe(true);
+        expect(q(`overview-kpi-total-segment-${seg.kind}`)!.classList.contains(seg.colorClass)).toBe(true);
+      }
     });
 
     it('KPI 1 is a container, not a button (its rows are the buttons)', () => {

@@ -518,6 +518,66 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
 
     expect(navigate).not.toHaveBeenCalled();
   });
+
+  // ---- sp-overview-total-drilldown T-3: `onTotalSegment` host navigation (STD-R-3) ----
+  describe('onTotalSegment (STD-S-3.1 .. S-3.4)', () => {
+    const RESULTS = ['/result-framework-reporting/entity-details', 'SP02', 'results'];
+    const REVIEW = ['/result-framework-reporting/entity-details', 'SP02', 'bilateral-review'];
+
+    it('S-3.1: new opens Results with origin W1/W2, replication=new and the effective phase label', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('new');
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith(RESULTS, { queryParams: { origin: 'W1/W2', replication: 'new', phase: 'Reporting' } });
+    });
+
+    it('S-3.1 AND IT MUST NOT: an active Overview AoW scope is never stamped as section', async () => {
+      const component = await createComponent();
+      component.overviewScope.set('AOW01');
+
+      component.onTotalSegment('new');
+
+      const params = navigate.mock.calls[0][1].queryParams as Record<string, string>;
+      expect(Object.keys(params)).not.toContain('section');
+      expect(params).toEqual({ origin: 'W1/W2', replication: 'new', phase: 'Reporting' });
+    });
+
+    it('S-3.2: replicated uses replication=replicated', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('replicated');
+
+      expect(navigate).toHaveBeenCalledWith(RESULTS, { queryParams: { origin: 'W1/W2', replication: 'replicated', phase: 'Reporting' } });
+    });
+
+    it('S-3.3: pendingReview opens Bilateral review with status=pending and the effective versionId as phase', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('pendingReview');
+
+      expect(navigate).toHaveBeenCalledWith(REVIEW, { queryParams: { status: 'pending', phase: '1' } });
+    });
+
+    it('S-3.3: pendingReview omits phase when no versionId resolves', async () => {
+      const component = await createComponent();
+      (component as unknown as { effectiveVersionId: () => number | null }).effectiveVersionId = () => null;
+
+      component.onTotalSegment('pendingReview');
+
+      expect(navigate).toHaveBeenCalledWith(REVIEW, { queryParams: { status: 'pending' } });
+    });
+
+    it('S-3.4: navigation fires even when every count is 0', async () => {
+      const component = await createComponent();
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, pendingReview: 0 });
+
+      component.onTotalSegment('replicated');
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 /**

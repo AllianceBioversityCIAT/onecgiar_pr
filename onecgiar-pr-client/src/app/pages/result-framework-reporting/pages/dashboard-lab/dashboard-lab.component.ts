@@ -66,6 +66,8 @@ import {
 } from './components/program-overview/program-overview.component';
 import { buildTocMapModel, TocMapModel } from './dashboard-lab.toc-map';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
+import { BILATERAL_REVIEW_QUERY_PARAM_MAP } from '../bilateral-review/bilateral-review.query-params';
+import type { TotalSegmentKind } from './components/program-overview/program-overview.component';
 
 /** Overview Filter popover Section — sibling of `?scope=` (OSF-DD-12). Survives Overview ↔ Reporting remounts. */
 const OVERVIEW_SECTION_QUERY_PARAM = 'section';
@@ -2733,16 +2735,47 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
     if (!queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase]) {
-      const effectivePhase =
-        this.homeSE?.overviewSelectedPhase?.() ||
-        this.latestVersion(this.selected())?.phaseName ||
-        (this.latestVersion(this.selected())?.phaseYear ? `Phase ${this.latestVersion(this.selected())?.phaseYear}` : '') ||
-        this.dataControlSE?.reportingCurrentPhase?.phaseName;
+      const effectivePhase = this.effectivePhaseLabel();
       if (effectivePhase) {
         queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase] = effectivePhase;
       }
     }
     this.router.navigate(['/result-framework-reporting/entity-details', code, 'results'], { queryParams });
+  }
+
+  /** The phase label the Overview is currently showing (shared by `onOverviewLink` / `onTotalSegment`). */
+  private effectivePhaseLabel(): string | undefined {
+    return (
+      this.homeSE?.overviewSelectedPhase?.() ||
+      this.latestVersion(this.selected())?.phaseName ||
+      (this.latestVersion(this.selected())?.phaseYear ? `Phase ${this.latestVersion(this.selected())?.phaseYear}` : '') ||
+      this.dataControlSE?.reportingCurrentPhase?.phaseName
+    );
+  }
+
+  // @akili-spec changes/sp-overview-total-drilldown (STD-R-3, design §8.4, DD-2)
+  /**
+   * Total General card rows/segments. Deliberately does NOT go through `onOverviewLink`: that seam
+   * stamps `overviewScope()` as `section`, and KPI 1 is program-wide (S-3.1 AND IT MUST NOT).
+   */
+  onTotalSegment(kind: TotalSegmentKind): void {
+    const code = this.selected()?.initiativeCode;
+    if (!code) return;
+    const base = ['/result-framework-reporting/entity-details', code];
+    if (kind === 'pendingReview') {
+      const queryParams: Record<string, string> = { [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: 'pending' };
+      const versionId = this.effectiveVersionId();
+      if (versionId !== null) queryParams[BILATERAL_REVIEW_QUERY_PARAM_MAP.phase] = String(versionId);
+      this.router.navigate([...base, 'bilateral-review'], { queryParams });
+      return;
+    }
+    const queryParams: Record<string, string> = {
+      [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: 'W1/W2',
+      [PROGRAMME_RESULTS_QUERY_PARAM_MAP.replication]: kind
+    };
+    const phase = this.effectivePhaseLabel();
+    if (phase) queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase] = phase;
+    this.router.navigate([...base, 'results'], { queryParams });
   }
 
   /** % of results in a "reported" state (QAed / Submitted). */

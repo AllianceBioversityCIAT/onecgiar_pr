@@ -1,7 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { PortfolioCentersBlockComponent } from './centers-block.component';
@@ -57,7 +56,7 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
       { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
       { id: 12, phase_name: 'Reporting 2024', phase_year: 2024, status: true, obj_portfolio: { acronym: 'P22' } }
     ];
-    centerResults = jest.fn((code: string) => of({ response: code === 'CENTER-10' ? [{ status_id: '5' }, { status_id: '1' }] : [{ status_id: '6' }] }));
+    centerResults = jest.fn((code: string) => of({ response: code === 'CENTER-10' ? [{ status_id: '5', source: 'API' }, { status_id: '1', source: 'API' }] : [{ status_id: '6', source: 'API' }] }));
     getCenters = jest.fn(() => Promise.resolve(centers));
   });
 
@@ -71,31 +70,43 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
     expect(centerResults).toHaveBeenCalledTimes(2);
   });
 
-  it('builds one row per Center, sorted by acronym, and a total row', async () => {
+  it('builds one row per Center, sorted by acronym, and the totals sum them (state level)', async () => {
     const fixture = await create();
     const component = fixture.componentInstance;
     expect(component.centerRows().map(center => center.acronym)).toEqual(['IFPRI', 'IRRI']);
-    expect(component.centerRows()[0].row?.counts).toEqual([1, 1, 0, 0]);
+    expect(component.viewRows()[0].counts).toEqual([1, 1, 0, 0]);
     expect(component.centerTotals()).toEqual({ total: 3, counts: [1, 1, 1, 0] });
-    expect(fixture.nativeElement.querySelector('[data-testid="centers-table"]')?.textContent).toContain('IFPRI');
-    expect(fixture.nativeElement.querySelector('[data-testid="centers-table"] tfoot')?.textContent).toContain('3');
+  });
+
+  it('RCP-1: the Progress by Center card, its toggle, search and table are gone', async () => {
+    const fixture = await create();
+    const el: HTMLElement = fixture.nativeElement;
+    ['detail-modes', 'detail-search', 'centers-table', 'centers-detail-chart'].forEach(id => expect(el.querySelector(`[data-testid="${id}"]`)).toBeNull());
+    expect(el.textContent).not.toContain('Progress by Center');
+  });
+
+  it('RCP-4 MUST NOT: with every Center OK there is no partial note and no retry button', async () => {
+    const fixture = await create();
+    expect(fixture.nativeElement.querySelector('[data-testid="centers-partial"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="centers-retry-failed"]')).toBeNull();
   });
 
   it('KPI cards show the W3/Bilateral total, the approved share and the Centers with results', async () => {
     const fixture = await create();
     const kpis = fixture.componentInstance.kpis();
-    expect(kpis).toMatchObject({ bilateral: 3, centersReporting: 2, centersCount: 2 });
+    expect(kpis).toMatchObject({ bilateral: 3, bilateralNew: 3, bilateralReplicated: 0, centersReporting: 2, centersCount: 2 });
     expect(kpis.bilateralApproved).toBeCloseTo(33.3, 1);
     expect(fixture.nativeElement.querySelector('[data-testid="kpi-bilateral"]').textContent.trim()).toBe('3');
     expect(fixture.nativeElement.querySelector('[data-testid="kpi-centers-reporting"]').textContent.trim()).toBe('2 / 2');
   });
 
-  it('with no Centers in the catalogue the table says so and nothing is fetched per Center', async () => {
+  it('RCP-5: with no Centers in the catalogue the block says so and nothing is fetched per Center', async () => {
     getCenters = jest.fn(() => Promise.resolve([]));
     const fixture = await create();
     expect(centerResults).not.toHaveBeenCalled();
     expect(fixture.componentInstance.kpis()).toMatchObject({ bilateral: 0, centersReporting: 0, centersCount: 0 });
-    expect(fixture.nativeElement.querySelector('[data-testid="centers-table"]')?.textContent).toContain('Nothing to show.');
+    expect(fixture.nativeElement.querySelector('[data-testid="centers-empty"]')?.textContent).toContain('Nothing to show.');
+    expect(fixture.nativeElement.querySelector('[data-testid="status-tiles"]')).toBeNull();
   });
 
   it('shows an error with Retry when the Centers list cannot be loaded', async () => {
@@ -105,17 +116,18 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="centers-error"]')).not.toBeNull();
   });
 
-  it('a status tile filters: it sorts the table by that status, shows the Results Center link, and a second tap clears it', async () => {
+  it('RCP-3: a status tile filters, shows the Results Center link with ?status=, and a second tap clears it', async () => {
     const fixture = await create();
     const component = fixture.componentInstance;
-    (fixture.nativeElement.querySelector('[data-testid="status-tile-5"]') as HTMLButtonElement).click();
+    const tile = () => fixture.nativeElement.querySelector('[data-testid="status-tile-5"]') as HTMLButtonElement;
+    tile().click();
     fixture.detectChanges();
     expect(component.selectedStatus()).toBe(5);
-    expect(component.sortKey()).toBe(5);
-    expect(component.filteredDetail().map(item => item.acronym)).toEqual(['IFPRI', 'IRRI']);
-    expect(component.resultsCenterParams()).toEqual({ status: 5 });
+    expect(tile().getAttribute('aria-pressed')).toBe('true');
+    expect(component.resultsCenterParams()).toEqual({ funding: 'bilateral', status: 5 });
     expect(fixture.nativeElement.querySelector('[data-testid="active-filter"]')?.textContent).toContain('Pending review');
-    (fixture.nativeElement.querySelector('[data-testid="status-tile-5"]') as HTMLButtonElement).click();
+    expect(fixture.nativeElement.querySelector('[data-testid="active-filter"] a')?.getAttribute('href')).toContain('status=5');
+    tile().click();
     fixture.detectChanges();
     expect(component.selectedStatus()).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-testid="active-filter"]')).toBeNull();
@@ -126,77 +138,41 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="ranking-modes"]')).toBeNull();
   });
 
-  it('the detail chart view is bound to detailTable() and a height from the rows (>= 10 Centers)', async () => {
-    const many = Array.from({ length: 12 }, (_, i) => ({ code: `CENTER-${i + 1}`, acronym: `C${i + 1}`, name: `Center ${i + 1}` }));
-    getCenters = jest.fn(() => Promise.resolve(many));
-    const fixture = await create();
-    const component = fixture.componentInstance;
-    component.detailMode.set('chart');
-    fixture.detectChanges();
-    const chart = fixture.debugElement.query(By.css('[data-testid="centers-detail-chart"]'));
-    expect(chart).not.toBeNull();
-    expect(component.loadedCenterRows()).toHaveLength(12);
-    expect(chart.componentInstance.tableModel()).toEqual(component.detailTable());
-    expect(chart.componentInstance.tableModel().caption).toBe('Progress by Center');
-    expect(component.detailHeight()).toBe('372px');
-    expect(chart.componentInstance.height()).toBe('372px');
-  });
-
-  it('toggling a status highlights its column in the default table view', async () => {
-    const fixture = await create();
-    fixture.componentInstance.toggleStatus(5);
-    fixture.detectChanges();
-    const headers: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="centers-table"] thead th'));
-    const index = 2 + fixture.componentInstance.columns().findIndex(column => column.id === 5);
-    expect(headers[index].className).toContain('bg-[var(--pr-color-primary-50)]');
-    expect(headers.filter(th => th.className.includes('bg-[var(--pr-color-primary-50)]'))).toHaveLength(1);
-  });
-
   it('uses the four status columns of the Center Overview', async () => {
     const fixture = await create();
     expect(fixture.componentInstance.columns().map(column => column.id)).toEqual([1, 5, 6, 7]);
   });
 
-  it('search narrows the table and hides the All row, which would otherwise not match the rows shown', async () => {
+  it('RCP-4: a failed Center shows the partial note and one button that re-requests only the failed Center', async () => {
+    centerResults = jest.fn((code: string) => (code === 'CENTER-13' ? throwError(() => new Error('503')) : of({ response: [{ status_id: '1', source: 'API' }] })));
     const fixture = await create();
     const component = fixture.componentInstance;
-    component.search.set('rice');
-    fixture.detectChanges();
-    expect(component.filteredDetail().map(item => item.acronym)).toEqual(['IRRI']);
-    expect(fixture.nativeElement.querySelector('[data-testid="centers-table"] tfoot')).toBeNull();
-  });
-
-  it('header click sorts, a second click flips the direction', async () => {
-    const fixture = await create();
-    const component = fixture.componentInstance;
-    component.sortBy('name');
-    expect(component.filteredDetail().map(item => item.acronym)).toEqual(['IFPRI', 'IRRI']);
-    component.sortBy('name');
-    expect(component.filteredDetail().map(item => item.acronym)).toEqual(['IRRI', 'IFPRI']);
-  });
-
-  it('keeps the other Centers when one fails, leaves it out of the total and retries only that one', async () => {
-    centerResults = jest.fn((code: string) => (code === 'CENTER-13' ? throwError(() => new Error('503')) : of({ response: [{ status_id: '1' }] })));
-    const fixture = await create();
-    const component = fixture.componentInstance;
-    expect(component.centerRows().find(center => center.code === 'CENTER-13')?.state).toBe('error');
+    const el: HTMLElement = fixture.nativeElement;
     expect(component.centerTotals().total).toBe(1);
-    expect(component.centersPartial()).toBe(true);
+    expect(el.querySelector('[data-testid="centers-partial"]')?.textContent).toContain('Some Centers could not be loaded, so the totals leave them out.');
+    expect(el.querySelector('[role="status"] [data-testid="centers-partial"]')).not.toBeNull();
+    const button = el.querySelector('[data-testid="centers-retry-failed"]') as HTMLButtonElement;
+    expect(button.tagName).toBe('BUTTON');
+    expect(button.textContent).toContain('Retry failed Centers');
 
-    centerResults.mockImplementation(() => of({ response: [{ status_id: '6' }] }));
-    component.retryCenter('CENTER-13');
-    expect(component.centerRows().find(center => center.code === 'CENTER-13')?.state).toBe('ready');
-    expect(component.centersPartial()).toBe(false);
+    centerResults.mockClear();
+    centerResults.mockImplementation(() => of({ response: [{ status_id: '6', source: 'API' }] }));
+    button.click();
+    fixture.detectChanges();
+    expect(centerResults).toHaveBeenCalledTimes(1);
+    expect(centerResults).toHaveBeenCalledWith('CENTER-13', 36);
+    expect(el.querySelector('[data-testid="centers-partial"]')).toBeNull();
+    expect(el.querySelector('[data-testid="centers-retry-failed"]')).toBeNull();
+    expect(component.centerTotals().total).toBe(2);
   });
 
-  it('ignores a second retry tap while the first one is still loading', async () => {
-    const pending = new Subject<any>();
-    centerResults = jest.fn(() => throwError(() => new Error('503')));
+  it('RCP-4: two quick clicks on Retry failed Centers fire exactly one extra request', async () => {
+    centerResults = jest.fn((code: string) => (code === 'CENTER-13' ? throwError(() => new Error('503')) : of({ response: [{ status_id: '1', source: 'API' }] })));
     const fixture = await create();
-    const component = fixture.componentInstance;
-    centerResults.mockImplementation(() => pending);
-    component.retryCenter('CENTER-10');
-    component.retryCenter('CENTER-10');
+    centerResults.mockImplementation(() => new Subject<any>());
+    const button = fixture.nativeElement.querySelector('[data-testid="centers-retry-failed"]') as HTMLButtonElement;
+    button.click();
+    button.click();
     expect(centerResults).toHaveBeenCalledTimes(3);
   });
 
@@ -206,19 +182,193 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
     expect(fixture.componentInstance.centerRows().map(center => center.acronym)).toEqual(['IFPRI', 'IRRI', 'Test Center']);
   });
 
+  describe('CNR-T-2: W3 only, origin signal, filter composition', () => {
+    // Pairwise distinct buckets: W3 total 9, new 5, replicated 4, W1/W2 6, status 3 (outside the 4 columns) 1.
+    const w3 = (status_id: string, is_replicated: unknown) => ({ status_id, source: 'API', is_replicated });
+    const w1w2 = (status_id: string) => ({ status_id, source: 'Result', is_replicated: 0 });
+    const mixed: Record<string, any[]> = {
+      'CENTER-10': [w3('5', 0), w3('5', 0), w3('1', 0), w3('6', 1), w3('3', '1'), w1w2('6'), w1w2('6'), w1w2('6')],
+      'CENTER-13': [w3('6', null), w3('5', 0), w3('7', true), w3('7', 1), w1w2('1'), w1w2('1'), w1w2('1')]
+    };
+    const mixedResults = () => jest.fn((code: string) => of({ response: mixed[code] ?? [] }));
+
+    it('1: the mixed fixture counts W3 only in kpis(), centerTotals() and segments(); status 3 counts in the total', async () => {
+      centerResults = mixedResults();
+      const component = (await create()).componentInstance;
+      expect(component.kpis()).toMatchObject({ bilateral: 9, bilateralNew: 5, bilateralReplicated: 4, centersReporting: 2, centersCount: 2 });
+      expect(component.kpis().bilateralApproved).toBeCloseTo(22.2, 1);
+      expect(component.centerTotals()).toEqual({ total: 9, counts: [1, 3, 2, 2] });
+      expect(component.segments().map(segment => segment.count)).toEqual([1, 3, 2, 2]);
+    });
+
+    it('2: origin Replicated restricts segments() and centerTotals() while kpis() stays identical to origin All', async () => {
+      centerResults = mixedResults();
+      const component = (await create()).componentInstance;
+      const kpisAll = component.kpis();
+      component.toggleOrigin('replicated');
+      expect(component.centerTotals()).toEqual({ total: 4, counts: [0, 0, 1, 2] });
+      expect(component.segments().map(segment => segment.count)).toEqual([0, 0, 1, 2]);
+      expect(component.kpis()).toEqual(kpisAll);
+      component.toggleOrigin('new');
+      expect(component.centerTotals()).toEqual({ total: 5, counts: [1, 3, 1, 0] });
+      expect(component.kpis()).toEqual(kpisAll);
+    });
+
+    it('3: status and origin compose, and clearFilters() clears both', async () => {
+      centerResults = mixedResults();
+      const component = (await create()).componentInstance;
+      component.toggleStatus(5);
+      component.toggleOrigin('new');
+      expect(component.selectedStatus()).toBe(5);
+      expect(component.origin()).toBe('new');
+      expect(component.activeFilterLabel()).toBe('New · Pending review');
+      component.toggleOrigin('replicated');
+      component.toggleStatus(6);
+      expect(component.origin()).toBe('replicated');
+      expect(component.selectedStatus()).toBe(6);
+      component.clearFilters();
+      expect(component.origin()).toBe('all');
+      expect(component.selectedStatus()).toBeNull();
+      expect(component.activeFilterLabel()).toBeNull();
+    });
+
+    it('4: toggleOrigin("new") twice returns to "all"', async () => {
+      const component = (await create()).componentInstance;
+      component.toggleOrigin('new');
+      expect(component.origin()).toBe('new');
+      component.toggleOrigin('new');
+      expect(component.origin()).toBe('all');
+    });
+
+    it('5: the Results Center link is hidden under an origin filter and shown under All + a status', async () => {
+      const component = (await create()).componentInstance;
+      expect(component.showResultsCenterLink()).toBe(false);
+      component.toggleStatus(5);
+      expect(component.showResultsCenterLink()).toBe(true);
+      component.toggleOrigin('new');
+      expect(component.showResultsCenterLink()).toBe(false);
+      component.toggleOrigin('new');
+      expect(component.showResultsCenterLink()).toBe(true);
+    });
+
+    it('6: a Center with only W1/W2 rows is not reporting but still counts as a Center', async () => {
+      getCenters = jest.fn(() => Promise.resolve([...centers, { code: 'CENTER-77', acronym: 'ZZZ', name: 'W1W2 only' }]));
+      centerResults = jest.fn((code: string) => of({ response: code === 'CENTER-77' ? [w1w2('6'), w1w2('1')] : mixed[code] }));
+      const component = (await create()).componentInstance;
+      expect(component.kpis()).toMatchObject({ bilateral: 9, centersReporting: 2, centersCount: 3 });
+    });
+
+    it('7: under origin New, retryFailedCenters() recovers a Center with only its new W3 rows, one request', async () => {
+      centerResults = jest.fn((code: string) => (code === 'CENTER-13' ? throwError(() => new Error('503')) : of({ response: mixed[code] })));
+      const component = (await create()).componentInstance;
+      component.toggleOrigin('new');
+      expect(component.centerTotals().total).toBe(3);
+      centerResults.mockClear();
+      centerResults.mockImplementation(() => of({ response: mixed['CENTER-13'] }));
+      component.retryFailedCenters();
+      expect(centerResults).toHaveBeenCalledTimes(1);
+      expect(centerResults).toHaveBeenCalledWith('CENTER-13', 36);
+      expect(component.centerTotals()).toEqual({ total: 5, counts: [1, 3, 1, 0] });
+      expect(component.kpis()).toMatchObject({ bilateral: 9, bilateralNew: 5, bilateralReplicated: 4 });
+    });
+
+    it('8: a Center that answers after the first render updates every figure, one call per Center', async () => {
+      const late = new Subject<any>();
+      centerResults = jest.fn((code: string) => (code === 'CENTER-13' ? late : of({ response: mixed[code] })));
+      const fixture = await create();
+      const component = fixture.componentInstance;
+      expect(component.kpis()).toMatchObject({ bilateral: 5, centersReporting: 1, centersCount: 2 });
+      late.next({ response: mixed['CENTER-13'] });
+      late.complete();
+      fixture.detectChanges();
+      expect(component.kpis()).toMatchObject({ bilateral: 9, bilateralNew: 5, bilateralReplicated: 4, centersReporting: 2 });
+      expect(component.centerTotals()).toEqual({ total: 9, counts: [1, 3, 2, 2] });
+      expect(component.segments().map(segment => segment.count)).toEqual([1, 3, 2, 2]);
+      expect(centerResults).toHaveBeenCalledTimes(2);
+    });
+
+    it('9: with no W3 rows at all kpis() reads 0 / 0 / 0 and the approved share is a number', async () => {
+      centerResults = jest.fn(() => of({ response: [w1w2('6'), w1w2('1')] }));
+      const kpis = (await create()).componentInstance.kpis();
+      expect(kpis).toMatchObject({ bilateral: 0, bilateralNew: 0, bilateralReplicated: 0, centersReporting: 0 });
+      expect(typeof kpis.bilateralApproved).toBe('number');
+      expect(Number.isNaN(kpis.bilateralApproved)).toBe(false);
+    });
+  });
+
+  describe('CNR-T-3: origin buttons, active-filter strip and copy (DOM)', () => {
+    const w3 = (status_id: string, is_replicated: unknown) => ({ status_id, source: 'API', is_replicated });
+    const w1w2 = (status_id: string) => ({ status_id, source: 'Result', is_replicated: 0 });
+    const mixed: Record<string, any[]> = {
+      'CENTER-10': [w3('5', 0), w3('5', 0), w3('1', 0), w3('6', 1), w3('3', '1'), w1w2('6'), w1w2('6'), w1w2('6')],
+      'CENTER-13': [w3('6', null), w3('5', 0), w3('7', true), w3('7', 1), w1w2('1'), w1w2('1'), w1w2('1')]
+    };
+    const text = (root: HTMLElement, testId: string) => root.querySelector(`[data-testid="${testId}"]`)?.textContent?.trim();
+
+    beforeEach(() => {
+      centerResults = jest.fn((code: string) => of({ response: mixed[code] ?? [] }));
+    });
+
+    it('1: the card renders total, New and Replicated; clicking Replicated flips aria-pressed and changes the tile counts', async () => {
+      const fixture = await create();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(text(root, 'kpi-bilateral')).toBe('9');
+      expect(text(root, 'origin-new-count')).toBe('5');
+      expect(text(root, 'origin-replicated-count')).toBe('4');
+      const replicated = () => root.querySelector('[data-testid="origin-replicated"]') as HTMLButtonElement;
+      expect(replicated().getAttribute('aria-pressed')).toBe('false');
+      const tileCount = () => text(root, 'status-tile-5');
+      const before = tileCount();
+      replicated().click();
+      fixture.detectChanges();
+      expect(replicated().getAttribute('aria-pressed')).toBe('true');
+      expect(tileCount()).not.toBe(before);
+      expect(text(root, 'kpi-bilateral')).toBe('9');
+      expect(text(root, 'origin-new-count')).toBe('5');
+    });
+
+    it('2: the origin elements are BUTTONs', async () => {
+      const root = (await create()).nativeElement as HTMLElement;
+      expect(root.querySelector('[data-testid="origin-new"]')?.tagName).toBe('BUTTON');
+      expect(root.querySelector('[data-testid="origin-replicated"]')?.tagName).toBe('BUTTON');
+    });
+
+    it('3: with both filters the strip reads "New · Pending review", the link is absent and Clear filter removes the strip', async () => {
+      const fixture = await create();
+      const root = fixture.nativeElement as HTMLElement;
+      (root.querySelector('[data-testid="origin-new"]') as HTMLButtonElement).click();
+      (root.querySelector('[data-testid="status-tile-5"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const strip = root.querySelector('[data-testid="active-filter"]') as HTMLElement;
+      expect(strip.textContent).toContain('New · Pending review');
+      expect(strip.querySelector('a')).toBeNull();
+      (strip.querySelector('[data-testid="clear-filter"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(root.querySelector('[data-testid="active-filter"]')).toBeNull();
+      expect(fixture.componentInstance.origin()).toBe('all');
+      expect(fixture.componentInstance.selectedStatus()).toBeNull();
+    });
+
+    it('4: the rendered block text has neither "Center Overview shows" nor "same numbers"', async () => {
+      const content = ((await create()).nativeElement as HTMLElement).textContent ?? '';
+      expect(content).not.toContain('Center Overview shows');
+      expect(content).not.toContain('same numbers');
+    });
+
+    it('5: with zero W3 rows the card shows 0, 0, 0', async () => {
+      centerResults = jest.fn(() => of({ response: [w1w2('6')] }));
+      const root = (await create()).nativeElement as HTMLElement;
+      expect(text(root, 'kpi-bilateral')).toBe('0');
+      expect(text(root, 'origin-new-count')).toBe('0');
+      expect(text(root, 'origin-replicated-count')).toBe('0');
+    });
+  });
 
   it('markup: status colours come from the shared chart tokens, never a private colour', () => {
     const html = readFileSync(join(__dirname, 'centers-block.component.html'), 'utf8');
     // Rework: dots, tiles and charts share the chart tokens (the Portfolio overview's violet family).
     expect(html).toContain('statusDot(segment.id)');
-    expect(html).toContain('statusDot(column.id)');
     expect(html).not.toMatch(/#[0-9a-f]{3,6}\b/i);
-  });
-
-  it('markup: the search box keeps its visible-to-screen-readers label (a11y fix 2a26a9408)', () => {
-    const html = readFileSync(join(__dirname, 'centers-block.component.html'), 'utf8');
-    expect(html).toContain('<label for="portfolio-centers-detail-search" class="sr-only">');
-    expect(html).toContain('id="portfolio-centers-detail-search"');
   });
 
   it('routing: the old Admin › All P/As and Centers link lands on the Portfolio overview', () => {
