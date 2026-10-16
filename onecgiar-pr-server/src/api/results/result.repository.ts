@@ -4404,4 +4404,78 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       });
     }
   }
+
+  /**
+   * Portfolio Overview global filters (changes/portfolio-overview-revamp/global-filters,
+   * GLF-T-1, GLF-R-11, design §5): the result -> project and result -> Center maps of one
+   * version, as four bound-parameter statements. The result scope is the same in all of
+   * them: `r.version_id = ?`, active, types 10 and 11 excluded, active links only.
+   * `SELECT DISTINCT` removes duplicate active rows (SR-164368) without any string-length
+   * limit, so there is no GROUP_CONCAT. `is_w3` flags a project linked to at least one
+   * `source = 'API'` result.
+   */
+  async getPortfolioResultDimensions(versionId: number) {
+    const projectLinksSql = `
+      SELECT DISTINCT r.id AS result_id, rbp.project_id AS project_id
+      FROM result r
+      INNER JOIN results_by_projects rbp ON rbp.result_id = r.id AND rbp.is_active = 1
+      WHERE r.version_id = ?
+        AND r.is_active = 1
+        AND r.result_type_id NOT IN (10, 11)
+    `;
+    const centerLinksSql = `
+      SELECT DISTINCT r.id AS result_id, rc.center_id AS center_id
+      FROM result r
+      INNER JOIN results_center rc ON rc.result_id = r.id AND rc.is_active = 1
+      WHERE r.version_id = ?
+        AND r.is_active = 1
+        AND r.result_type_id NOT IN (10, 11)
+        AND rc.center_id IS NOT NULL
+    `;
+    const projectLabelsSql = `
+      SELECT
+        cp.id AS id,
+        cp.short_name AS short_name,
+        cp.full_name AS full_name,
+        MAX(CASE WHEN r.source = 'API' THEN 1 ELSE 0 END) AS is_w3
+      FROM clarisa_projects cp
+      INNER JOIN results_by_projects rbp ON rbp.project_id = cp.id AND rbp.is_active = 1
+      INNER JOIN result r ON r.id = rbp.result_id
+      WHERE r.version_id = ?
+        AND r.is_active = 1
+        AND r.result_type_id NOT IN (10, 11)
+      GROUP BY cp.id, cp.short_name, cp.full_name
+    `;
+    const centerLabelsSql = `
+      SELECT cc.code AS code, ci.acronym AS acronym, ci.name AS name
+      FROM clarisa_center cc
+      LEFT JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+      WHERE cc.code IN (
+        SELECT DISTINCT rc.center_id
+        FROM result r
+        INNER JOIN results_center rc ON rc.result_id = r.id AND rc.is_active = 1
+        WHERE r.version_id = ?
+          AND r.is_active = 1
+          AND r.result_type_id NOT IN (10, 11)
+          AND rc.center_id IS NOT NULL
+      )
+    `;
+
+    try {
+      const [projectLinks, centerLinks, projects, centers] = await Promise.all([
+        this.query(projectLinksSql, [versionId]),
+        this.query(centerLinksSql, [versionId]),
+        this.query(projectLabelsSql, [versionId]),
+        this.query(centerLabelsSql, [versionId]),
+      ]);
+      return { projectLinks, centerLinks, projects, centers };
+    } catch (error) {
+      // debug: false: with true the handler logs the query text and bound params.
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: false,
+      });
+    }
+  }
 }

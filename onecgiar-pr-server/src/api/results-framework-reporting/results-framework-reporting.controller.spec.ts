@@ -37,6 +37,7 @@ describe('ResultsFrameworkReportingController', () => {
             getDashboardStats: jest.fn(),
             getPortfolioTocCoverage: jest.fn(),
             getPortfolioBilateralProjects: jest.fn(),
+            getPortfolioResultDimensions: jest.fn(),
           },
         },
         // ValidRoleGuard (TKP-T-2) is instantiated with the controller's module.
@@ -144,6 +145,52 @@ describe('ResultsFrameworkReportingController', () => {
       const payload = { response: {}, status: 200 } as any;
       reportingService.getPortfolioBilateralProjects.mockResolvedValue(payload);
       expect(await controller.getPortfolioBilateralProjects('1')).toBe(payload);
+    });
+  });
+
+  describe('getPortfolioResultDimensions (GLF-T-1)', () => {
+    const handler = () =>
+      ResultsFrameworkReportingController.prototype
+        .getPortfolioResultDimensions;
+
+    it('is mounted at GET portfolio/result-dimensions', () => {
+      expect(Reflect.getMetadata(PATH_METADATA, handler())).toBe(
+        'portfolio/result-dimensions',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler())).toBe(
+        RequestMethod.GET,
+      );
+    });
+
+    it('carries the ValidRoleGuard and the Admin application role metadata (GLF-R-12, presence only)', () => {
+      expect(Reflect.getMetadata(GUARDS_METADATA, handler())).toEqual([
+        ValidRoleGuard,
+      ]);
+      expect(Reflect.getMetadata('role', handler())).toEqual({
+        roles: RoleEnum.ADMIN,
+        type: RoleTypeEnum.APPLICATION,
+      });
+    });
+
+    it.each([
+      ['7', 7],
+      [undefined, undefined],
+      ['', undefined],
+      ['   ', undefined],
+      ['abc', undefined],
+      ['0', undefined],
+      ['-3', undefined],
+    ])('passes versionId %p to the service as %p', (raw, expected) => {
+      controller.getPortfolioResultDimensions(raw as any);
+      expect(
+        reportingService.getPortfolioResultDimensions,
+      ).toHaveBeenCalledWith(expected);
+    });
+
+    it('returns what the service returns', async () => {
+      const payload = { response: {}, status: 200 } as any;
+      reportingService.getPortfolioResultDimensions.mockResolvedValue(payload);
+      expect(await controller.getPortfolioResultDimensions('1')).toBe(payload);
     });
   });
 

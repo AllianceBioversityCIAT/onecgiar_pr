@@ -141,6 +141,7 @@ const mockResultRepository = {
   getIndicatorContributionSummaryByProgram: jest.fn(),
   getActiveResultTypes: jest.fn(),
   getResultById: jest.fn(),
+  getPortfolioResultDimensions: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
   getUserRolesForResults: jest.fn(),
   query: jest.fn(),
@@ -1999,6 +2000,126 @@ describe('ResultsFrameworkReportingService', () => {
 
       expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(JSON.stringify(result)).not.toContain('clarisa_projects');
+    });
+  });
+
+  describe('getPortfolioResultDimensions (GLF-T-1)', () => {
+    const openVersion = {
+      id: '42',
+      phase_name: 'Reporting 2026',
+      phase_year: 2026,
+      status: true,
+    };
+    const rows = () => ({
+      projectLinks: [
+        { result_id: '1', project_id: '5' },
+        { result_id: '2', project_id: '5' },
+        { result_id: '2', project_id: '6' },
+      ],
+      centerLinks: [
+        { result_id: '1', center_id: 'CENTER-03' },
+        { result_id: '2', center_id: 'CENTER-99' },
+      ],
+      projects: [
+        { id: '5', short_name: 'P5', full_name: 'Project 5', is_w3: '1' },
+        { id: '6', short_name: 'P6', full_name: 'Project 6', is_w3: '0' },
+      ],
+      centers: [{ code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' }],
+    });
+
+    beforeEach(() => {
+      mockVersionRepository.findOne.mockReset();
+      mockVersionRepository.findOne.mockResolvedValue(openVersion);
+      mockResultRepository.getPortfolioResultDimensions.mockReset();
+      mockResultRepository.getPortfolioResultDimensions.mockResolvedValue(
+        rows(),
+      );
+    });
+
+    it('shapes positional pairs, labels and the W3 project ids (S-11.1, S-11.2)', async () => {
+      const result = (await service.getPortfolioResultDimensions()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(
+        mockResultRepository.getPortfolioResultDimensions,
+      ).toHaveBeenCalledWith(42);
+      expect(result.response).toEqual({
+        versionId: 42,
+        phaseName: 'Reporting 2026',
+        projectLinks: [
+          [1, 5],
+          [2, 5],
+          [2, 6],
+        ],
+        centerLinks: [
+          [1, 'CENTER-03'],
+          [2, 'CENTER-99'],
+        ],
+        projects: [
+          { id: 5, shortName: 'P5', fullName: 'Project 5' },
+          { id: 6, shortName: 'P6', fullName: 'Project 6' },
+        ],
+        centers: [
+          { code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' },
+          { code: 'CENTER-99', acronym: 'CENTER-99', name: 'CENTER-99' },
+        ],
+        w3ProjectIds: [5],
+      });
+    });
+
+    it('keeps a Center code missing from the catalogue, labelled by its code', async () => {
+      const result = (await service.getPortfolioResultDimensions()) as any;
+
+      expect(result.response.centers).toContainEqual({
+        code: 'CENTER-99',
+        acronym: 'CENTER-99',
+        name: 'CENTER-99',
+      });
+      expect(
+        result.response.centerLinks.some((p: any[]) => p[1] === 'CENTER-99'),
+      ).toBe(true);
+    });
+
+    it('resolves a given versionId through the Reporting version lookup', async () => {
+      await service.getPortfolioResultDimensions(7);
+
+      expect(mockVersionRepository.findOne.mock.calls[0][0].where).toEqual({
+        id: 7,
+        is_active: true,
+        app_module_id: AppModuleIdEnum.REPORTING,
+      });
+    });
+
+    it('an id that is not an active Reporting version is a 404', async () => {
+      mockVersionRepository.findOne.mockResolvedValue(null);
+      const result = (await service.getPortfolioResultDimensions(99)) as any;
+
+      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      expect(
+        mockResultRepository.getPortfolioResultDimensions,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('turns a database failure into a generic 500 with no SQL in the body or the log', async () => {
+      const errorSpy = jest
+        .spyOn((service as any)._logger, 'error')
+        .mockImplementation(() => undefined);
+      mockResultRepository.getPortfolioResultDimensions.mockRejectedValue(
+        Object.assign(new Error('select * from results_center boom'), {
+          code: 'ER_X',
+        }),
+      );
+
+      const result = (await service.getPortfolioResultDimensions()) as any;
+
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(JSON.stringify(result)).not.toContain('results_center');
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const logged = errorSpy.mock.calls.map((c) => String(c[0])).join(' ');
+      expect(logged).not.toContain('results_center');
+      expect(logged).not.toContain('select');
+      expect(logged).toContain('ER_X');
+      errorSpy.mockRestore();
     });
   });
 

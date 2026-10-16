@@ -30,6 +30,7 @@ import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 import { RoleEnum, RoleTypeEnum } from '../../shared/constants/role-type.enum';
 import { PortfolioTocCoverageResponseDto } from './dto/portfolio-toc-coverage.dto';
 import { PortfolioBilateralProjectsResponseDto } from './dto/portfolio-bilateral-projects.dto';
+import { PortfolioResultDimensionsResponseDto } from './dto/portfolio-result-dimensions.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -343,6 +344,45 @@ export class ResultsFrameworkReportingController {
         : undefined;
 
     return this.resultsFrameworkReportingService.getPortfolioBilateralProjects(
+      normalizedVersion,
+    );
+  }
+
+  // @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-1)
+  @Get('portfolio/result-dimensions')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary: 'Portfolio result dimensions map (projects and Centers)',
+    description:
+      'Returns, for one reporting version, the active results paired with each project of an active link and with each Center of an active Center link (lead or contributing), as positional pairs [resultId, projectId] and [resultId, centerCode], each pair once. It also returns the labels of those projects and Centers and the ids of the projects linked to at least one W3 (bilateral) result. W1/W2 and W3 results are included; result types 10 and 11 are excluded, as on the page rows. A Center code with no catalogue row is kept and labelled by its code. Restricted to the Admin application role.',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional reporting version (phase) identifier; a closed phase is accepted. A missing, non-numeric or non-positive value falls back to the open reporting phase, else the newest one.',
+  })
+  @ApiOkResponse({
+    description: 'Portfolio result dimensions retrieved successfully.',
+    type: PortfolioResultDimensionsResponseDto,
+  })
+  getPortfolioResultDimensions(@Query('versionId') versionId?: string) {
+    // Same coercion as portfolio/bilateral-projects: empty, non-numeric or non-positive means absent.
+    const parsedVersion =
+      typeof versionId === 'string' && versionId.trim() !== ''
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' &&
+      Number.isFinite(parsedVersion) &&
+      parsedVersion > 0
+        ? parsedVersion
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getPortfolioResultDimensions(
       normalizedVersion,
     );
   }

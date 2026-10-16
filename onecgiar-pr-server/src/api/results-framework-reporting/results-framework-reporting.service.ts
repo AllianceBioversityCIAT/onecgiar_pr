@@ -50,6 +50,7 @@ import type {
   BilateralProjectsByProgramDto,
   PortfolioBilateralProjectsResponseDto,
 } from './dto/portfolio-bilateral-projects.dto';
+import type { PortfolioResultDimensionsResponseDto } from './dto/portfolio-result-dimensions.dto';
 
 /** One entry of the additive `scopeBuckets[]` partition (design.md §5). */
 export interface ScopeBucketDto {
@@ -1160,6 +1161,102 @@ export class ResultsFrameworkReportingService {
       return this._handlersError.returnErrorRes({
         error: {
           message: 'The portfolio bilateral projects could not be retrieved.',
+          response: { error: true },
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        },
+        debug: false,
+      });
+    }
+  }
+
+  /**
+   * Portfolio Overview global filters
+   * (changes/portfolio-overview-revamp/global-filters, GLF-T-1, design §4.1 / §5).
+   * The result -> project and result -> Center maps of one version, as positional
+   * pairs plus labels. Resolves the version like #8. A Center code with no
+   * catalogue row is kept and labelled by its code.
+   */
+  async getPortfolioResultDimensions(versionId?: number) {
+    try {
+      const version = await this.resolveReportingVersion(versionId);
+
+      // `version.id` is BIGINT and the MySQL driver returns it as a string.
+      const resolvedVersionId = Number(version?.id);
+      if (!Number.isFinite(resolvedVersionId) || resolvedVersionId <= 0) {
+        throwServiceError(
+          'No reporting version could be resolved for the portfolio result dimensions.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const raw =
+        await this._resultRepository.getPortfolioResultDimensions(
+          resolvedVersionId,
+        );
+
+      const projectLinks: Array<[number, number]> = (
+        raw.projectLinks ?? []
+      ).map((row) => [Number(row.result_id), Number(row.project_id)]);
+      const centerLinks: Array<[number, string]> = (raw.centerLinks ?? []).map(
+        (row) => [Number(row.result_id), String(row.center_id)],
+      );
+
+      const projects = (raw.projects ?? []).map((row) => ({
+        id: Number(row.id),
+        shortName: row.short_name ?? '',
+        fullName: row.full_name ?? '',
+      }));
+      const w3ProjectIds = (raw.projects ?? [])
+        .filter((row) => Number(row.is_w3) > 0)
+        .map((row) => Number(row.id));
+
+      const centers = new Map<
+        string,
+        { code: string; acronym: string; name: string }
+      >();
+      for (const row of raw.centers ?? []) {
+        const code = String(row.code);
+        centers.set(code, {
+          code,
+          acronym: row.acronym ?? code,
+          name: row.name ?? code,
+        });
+      }
+      for (const [, code] of centerLinks) {
+        if (!centers.has(code)) {
+          centers.set(code, { code, acronym: code, name: code });
+        }
+      }
+
+      const response: PortfolioResultDimensionsResponseDto = {
+        versionId: resolvedVersionId,
+        phaseName: version.phase_name ?? null,
+        projectLinks,
+        centerLinks,
+        projects,
+        centers: [...centers.values()],
+        w3ProjectIds,
+      };
+
+      return {
+        response,
+        message: 'Portfolio result dimensions retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      // A 4xx is safe to pass through; anything else is replaced by a generic
+      // 500 so no SQL text reaches the body or the log (65e70258f).
+      const status = Number(error?.status);
+      if (Number.isInteger(status) && status >= 400 && status < 500) {
+        return this._handlersError.returnErrorRes({ error, debug: true });
+      }
+
+      const errorCode =
+        typeof error?.code === 'string' ? ` (${error.code})` : '';
+      this._logger.error(`getPortfolioResultDimensions failed${errorCode}`);
+      return this._handlersError.returnErrorRes({
+        error: {
+          message: 'The portfolio result dimensions could not be retrieved.',
           response: { error: true },
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         },
