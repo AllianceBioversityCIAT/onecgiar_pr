@@ -350,6 +350,18 @@
         [centers]="data.selection().center"
         [notAffected]="projectsNotAffected()" />
     }
+
+    <!-- ── Results detail + export (FDE-T-3, #9): last section. Figures gate (R-1); not rendered with 0 filtered rows and nothing pending (R-9, the no-match panel covers). ── -->
+    @if (hasFigures() && (data.filteredTotal() > 0 || data.filtersPending())) {
+      <app-portfolio-results-detail
+        [rows]="data.filteredRows()"
+        [pending]="data.filtersPending()"
+        [dimensionsStatus]="data.dimensions().status"
+        [dimensionsMap]="data.dimensions().map"
+        [partial]="data.isPartial()"
+        [fetchedCount]="data.fetchedCount()"
+        [phaseName]="data.phaseName()" />
+    }
     </div>
 
     <!-- Deck, status and typology skeletons: shown while loading and while a Project / Center selection waits for the map (R-13). -->

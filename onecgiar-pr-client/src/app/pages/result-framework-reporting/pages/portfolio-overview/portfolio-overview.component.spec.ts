@@ -9,6 +9,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { PortfolioOverviewComponent } from './portfolio-overview.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
+import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { PortfolioTocKpiBlockComponent } from './components/toc-kpi-block/toc-kpi-block.component';
@@ -135,6 +136,7 @@ describe('PortfolioOverviewComponent', () => {
         { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(extra.query ?? {}) } } },
         { provide: DataControlService, useValue: { reportingCurrentPhase: { phaseYear: 2026, portfolioAcronym: 'P25' } } },
+        { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } },
         ...projectsProviders(),
         provideHttpClient(),
         provideHttpClientTesting()
@@ -939,6 +941,90 @@ describe('PortfolioOverviewComponent', () => {
       component.toggleStatus('editing');
       refresh();
       expect(fixture.nativeElement.textContent).toContain('Viewing a closed phase. Figures are final.');
+    });
+  });
+
+  describe('Results detail section (FDE-T-3, FDE-R-1/2/9)', () => {
+    const DETAIL = 'app-portfolio-results-detail';
+    const q = <T extends Element = HTMLElement>(sel: string) => fixture.nativeElement.querySelector(sel) as T | null;
+    const listed = () => Number(/^\s*(\d+) results?/.exec(q('[data-testid="detail-count"]')!.textContent ?? '')![1]);
+
+    it('S-2.1 / S-2.2: the listed count equals kpiTotals().totalResults under a selection, and the unfiltered total once cleared', () => {
+      build(OPEN_PHASE);
+      expect(listed()).toBe(component.data.kpiTotals().totalResults);
+      expect(listed()).toBe(5);
+
+      component.data.setSelection({ ...component.data.selection(), program: new Set(['SP06']), status: new Set(['editing']) });
+      fixture.detectChanges();
+      const filtered = component.data.kpiTotals().totalResults;
+      expect(filtered).toBeGreaterThan(0);
+      expect(filtered).toBeLessThan(5);
+      expect(listed()).toBe(filtered);
+
+      component.data.clearAll();
+      fixture.detectChanges();
+      expect(listed()).toBe(component.data.kpiTotals().totalResults);
+      expect(listed()).toBe(5);
+    });
+
+    it('R-9: 0 filtered rows -> the section is absent and only the no-match panel shows', () => {
+      build(OPEN_PHASE);
+      component.data.setSelection({ ...component.data.selection(), program: new Set(['SP06']), status: new Set(['rejected']) });
+      fixture.detectChanges();
+      expect(component.data.filteredTotal()).toBe(0);
+      expect(q(DETAIL)).toBeNull();
+      expect(q('[data-testid="portfolio-no-match"]')).toBeTruthy();
+    });
+
+    it('R-1: absent while loading, on error and when the phase is empty', () => {
+      build([]);
+      expect(q(DETAIL)).toBeNull();
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [PortfolioOverviewComponent],
+        providers: [
+          { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE: { GET_AllResultsWithUseRole: jest.fn().mockReturnValue(throwError(() => new Error('x'))), GET_PortfolioResultDimensions: jest.fn().mockReturnValue(of({ response: EMPTY_MAP })) } } },
+          { provide: Router, useValue: { navigate: jest.fn() } },
+          { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+          { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } },
+          ...projectsProviders(),
+          provideHttpClient(),
+          provideHttpClientTesting()
+        ]
+      });
+      fixture = TestBed.createComponent(PortfolioOverviewComponent);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.hasError()).toBe(true);
+      expect(q(DETAIL)).toBeNull();
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [PortfolioOverviewComponent],
+        providers: [
+          { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE: { GET_AllResultsWithUseRole: jest.fn().mockReturnValue(new Subject()), GET_PortfolioResultDimensions: jest.fn().mockReturnValue(of({ response: EMPTY_MAP })) } } },
+          { provide: Router, useValue: { navigate: jest.fn() } },
+          { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+          { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } },
+          ...projectsProviders(),
+          provideHttpClient(),
+          provideHttpClientTesting()
+        ]
+      });
+      fixture = TestBed.createComponent(PortfolioOverviewComponent);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.isLoading()).toBe(true);
+      expect(q(DETAIL)).toBeNull();
+    });
+
+    it('R-1: the section is the last one in the DOM, after the Projects block', () => {
+      build(OPEN_PHASE);
+      const detail = q(DETAIL)!;
+      const container = detail.parentElement!;
+      expect(container.lastElementChild).toBe(detail);
+      expect(q('app-portfolio-projects-block')!.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
   });
 

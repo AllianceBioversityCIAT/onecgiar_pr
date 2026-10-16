@@ -30,6 +30,8 @@ export const PORTFOLIO_PAGE_LIMIT = 20000;
 export interface RawResult {
   /** Result id: the key of the dimensions map (global filters, GLF-P-1). */
   id?: number | string | null;
+  /** Result code shown and linked in the detail table (filtered-detail-export, FDE-P-1). */
+  result_code?: number | string | null;
   title?: string;
   result_level_name?: string;
   submitter?: string;

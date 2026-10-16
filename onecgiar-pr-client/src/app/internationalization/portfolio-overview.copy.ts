@@ -103,5 +103,40 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     totalLabel: 'Total',
     tableCaptionProgram: 'W3/Bilateral projects by Program / Accelerator',
     tableCaptionCenter: 'W3/Bilateral projects by Center'
+  },
+  // Results detail (spec changes/portfolio-overview-revamp/filtered-detail-export, FDE-R-1..R-10)
+  detail: {
+    title: 'Results detail',
+    count: (n: number) => (n === 1 ? '1 result' : `${n} results`),
+    countOf: (matching: number, total: number) => `${matching} of ${total} results`,
+    searchLabel: 'Search results by code or title',
+    searchPlaceholder: 'Search by code or title',
+    exportLabel: 'Export to Excel',
+    exporting: 'Exporting…',
+    partial: (n: number) => `Showing the first ${n} results the page loaded; the export has the same rows.`,
+    loading: 'Loading the results detail',
+    noResults: 'No results match this search',
+    clearSearch: 'Clear search',
+    tableCaption: 'Results of the current selection',
+    opensInNewTab: '(opens in new tab)',
+    sortBy: (column: string) => `Sort by ${column}`,
+    previous: 'Previous page',
+    next: 'Next page',
+    pagination: 'Results pages',
+    range: (from: number, to: number, total: number) => `${from}–${to} of ${total}`,
+    columns: {
+      code: 'Code',
+      title: 'Title',
+      type: 'Type',
+      level: 'Level',
+      program: 'P/A',
+      source: 'Source',
+      status: 'Status',
+      origin: 'Origin',
+      leadCenter: 'Lead Center',
+      contributingCenters: 'Contributing Centers',
+      projects: 'Projects',
+      phase: 'Phase'
+    }
   }
 } as const;

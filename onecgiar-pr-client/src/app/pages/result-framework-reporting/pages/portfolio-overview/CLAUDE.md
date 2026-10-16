@@ -1,9 +1,9 @@
 # portfolio-overview
 
-**Verified:** 2026-10-16 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/global-filters (GLF-T-5)
+**Verified:** 2026-10-16 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/filtered-detail-export (FDE-T-3)
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
-phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects. Ticket **P2-3304**;
+phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
 design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Contract
@@ -30,6 +30,14 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - 🛑 **DD-7, do not re-add a local status highlight:** the status tiles and donut call `toggleValue('status', key)` (`aria-pressed` from `selection().status`); the old local status-filter signal and its toggle are gone. The strip shows when ANY dimension is active; **View in Results Center** only when `resultsCenterLinkable` (<= 1 Program, <= 1 Status).
 - **Typology Center view is lead-only by design** (it counts the lead Center); the global Center filter matches lead + contributing Centers, so their numbers can differ. Not a bug.
 
+## Results detail + export (2026-10-16, spec `changes/portfolio-overview-revamp/filtered-detail-export`, #9)
+
+- `components/results-detail/` (`app-portfolio-results-detail`): searchable, paged list of the **filtered** results plus an Excel export of exactly what is listed. Pure seam `results-detail.rows.ts` (`toDetailRows`, `resultUrl(code, versionId, origin)`); the row stores `versionId` (not a `url`), and screen link and file share `resultUrl` so they cannot drift.
+- **Data flow (from #6 signals):** `[rows]=data.filteredRows()`, `[pending]=filtersPending()`, `[dimensionsStatus]=dimensions().status`, `[dimensionsMap]=dimensions().map`, `[partial]=isPartial()`, `[fetchedCount]=fetchedCount()`, `[phaseName]=phaseName()`. Labels for Project / Center columns are built from the raw map (no `dimensionIndex`). 🛑 Never bind `[rows]` to the unfiltered rows: the count must equal `kpiTotals().totalResults` under any selection (S-2.1, tested).
+- 🛑 **Mount rule:** its own block **last** on the page, after the Projects block: `@if (hasFigures() && (data.filteredTotal() > 0 || data.filtersPending()))`. Not rendered while loading, on error, phase-empty, or with 0 filtered rows and nothing pending (no-match panel covers, R-9). It sits outside the `hasFigures()` sub-switch because Centers and Projects are outside it (WPS-DD-7).
+- **Export:** `ExportTablesService.exportExcel(..., { exactFileName: true })` saves the name as-is (`PRMS_portfolio_results_<phase>_<YYYY-MM-DD>[_partial].xlsx`); without the flag the service keeps its timestamp suffix (FDE-DD-9). Page specs stub the service (`{ exportExcel: jest.fn() }`).
+- ⚠️ Gotchas: the Brain mock swallows `[disabled]` on `hlmBtn`, so the template also sets `[attr.disabled]`. The component template is only type-checked by `ng build` once mounted (Jest does not type-check it).
+
 ## KPI deck (2026-10-14, spec `changes/portfolio-overview-kpi-breakdown`)
 
 - Three cards: **Total** (W1/W2 new + W3 new + the two replicated, reconciling to the total), **W1/W2** and
@@ -48,7 +56,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## W3/Bilateral projects (2026-10-16, spec `changes/portfolio-overview-revamp/w3-projects-section`)
 
-- `components/projects-block/` (`app-portfolio-projects-block`, input `versionId`), the **last** section, after Centers. Own data path: `GET_PortfolioBilateralProjects(versionId)` -> `GET api/results-framework-reporting/portfolio/bilateral-projects` (admin only, server-side). Copy group `projects` in `portfolio-overview.copy.ts`.
+- `components/projects-block/` (`app-portfolio-projects-block`, input `versionId`), after Centers; followed only by Results detail (#9). Own data path: `GET_PortfolioBilateralProjects(versionId)` -> `GET api/results-framework-reporting/portfolio/bilateral-projects` (admin only, server-side). Copy group `projects` in `portfolio-overview.copy.ts`.
 - Center labels come from `CentersService.getData()` (`acronym || name || code`, same mapping as Centers); it fires HTTP on construction, so page specs must mock it.
 - 🛑 **Mount rule:** under `@if (!data.loading())` (`versionId` is resolved) but **outside** `hasFigures()` (WPS-DD-7): a phase with no result rows must still answer "0 reporting projects". **No page skeleton** (JD-10); the block has its own states.
 - ⚠️ Gotchas: P/A bars can sum to more than the total (a project may map to several P/As; totals count it once). Projects with no Center count under **Unassigned** (last). On a closed phase the year is that phase's, so figures can differ from Center Overview, which reads the active year (WPS-P-7).

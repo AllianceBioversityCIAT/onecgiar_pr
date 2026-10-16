@@ -12,6 +12,7 @@ import { PORTFOLIO_OVERVIEW_COPY } from '../../../../internationalization/portfo
 import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.constants';
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
 import { FilterBarComponent } from './components/filter-bar/filter-bar.component';
+import { PortfolioResultsDetailComponent } from './components/results-detail/results-detail.component';
 import { PortfolioProjectsBlockComponent } from './components/projects-block/projects-block.component';
 import { PortfolioTocKpiBlockComponent } from './components/toc-kpi-block/toc-kpi-block.component';
 import { PortfolioTypologyBlockComponent } from './components/typology-block/typology-block.component';
@@ -93,6 +94,7 @@ export function getCategoryShortName(category: string): string {
     PrVizChartComponent,
     PortfolioCentersBlockComponent,
     PortfolioProjectsBlockComponent,
+    PortfolioResultsDetailComponent,
     PortfolioTocKpiBlockComponent,
     PortfolioTypologyBlockComponent,
     HlmSeparatorImports,
