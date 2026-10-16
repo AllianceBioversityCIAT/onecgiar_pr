@@ -8,7 +8,7 @@
 | Requirements | [`requirements.md`](./requirements.md) (approved 2026-10-16, Phase 1 gate; FDE-OQ-1..3 at defaults) |
 | Depth | Standard |
 | Approval Mode | gated |
-| Status | approved (2026-10-16, Phase 2 gate; user chose Continue, no Judgment Day) |
+| Status | approved (2026-10-16, Phase 2 gate; user chose Continue, no Judgment Day). Implemented and archived 2026-10-16 |
 | Prefix | `FDE-DD-n` decisions · `FDE-P-n` premises |
 | Baseline | `docs/ux-ui/design.md` §7 (tokens), §10 (a11y) · client `CLAUDE.md` §5 |
 | Kaizen | No `kaizen-log.md`. Family lessons applied: scoped Jest `--maxWorkers=2`; `CLAUDE.md` re-stamp in the same commit; browser check at 375 / 768 / 1280; `ng build` in the verification of any task that touches typed models (`KZ-bugfix--lead-center-full-catalog-1`); declare every Helm input in `spartanBrainMock` (NG0311) |
@@ -57,7 +57,7 @@
 
 No entities, no migration, no endpoint.
 
-**Detail row** (client-only view model): `id`, `code` (number for sort, string for display), `title`, `type`, `level` (label), `program`, `source`, `status` (slot label), `origin` (New / Replicated), `leadCenter`, `contributingCenters` (string), `projects` (string), `phase`, `url`.
+**Detail row** (client-only view model): `id`, `code` (number for sort, string for display), `title`, `type`, `level` (label), `program`, `source`, `status` (slot label), `origin` (New / Replicated), `leadCenter`, `contributingCenters` (string), `projects` (string), `phase`, `versionId` (as built: the URL is derived by `resultUrl(code, versionId, origin)` for both screen and file; synced at archive 2026-10-16).
 
 ## 4. API Surface
 
@@ -81,7 +81,7 @@ None. Reads #6's existing endpoint state only.
 
 | Item | Design |
 |---|---|
-| Inputs | `rows: RawResult[]`, `pending: boolean`, `dimensionsStatus`, `dimensionIndex`, `dimensionLabels`, `partial: boolean`, `fetchedCount: number`, `phaseName: string` |
+| Inputs | `rows: RawResult[]`, `pending: boolean`, `dimensionsStatus`, `dimensionsMap` (`PortfolioResultDimensions | null`; labels built once by `buildDetailLabels`), `partial: boolean`, `fetchedCount: number`, `phaseName: string` (as built, synced at archive) |
 | View state | `search` signal, `sort` signal (`{ key: 'code', dir: 'desc' }` default, FDE-OQ-2), `page` as a `linkedSignal` that resets to 1 when `rows`, `search` or `sort` change (R-7), `exporting` signal |
 | Header | Title, count in an `aria-live="polite"` region ("N results" / "M of N results"), Spartan input (labelled) for search, Spartan button for export (disabled when 0 listed or exporting or pending; busy spinner + text while exporting) |
 | Table | Native `<table>` in an `overflow-x-auto` container. Sortable headers are `<button>`s inside `<th aria-sort>`. Title cell clamps to 2 lines with the full text in a Spartan tooltip. Code cell = `<a target="_blank" rel="noopener noreferrer">` + sr-only "opens in new tab" |
@@ -91,7 +91,7 @@ None. Reads #6's existing endpoint state only.
 
 ### 5.3 Page
 
-- Inside `hasFigures()`, after `<app-portfolio-projects-block>`: render `<app-portfolio-results-detail>` when `data.filteredTotal() > 0` or `data.filtersPending()`. With 0 filtered rows and nothing pending it is not rendered (R-9: #6's no-match panel covers).
+- In its own `@if (hasFigures() && …)` block after `<app-portfolio-projects-block>` (as built: Centers and Projects sit outside `hasFigures()`, WPS-DD-7; synced at archive): render `<app-portfolio-results-detail>` when `data.filteredTotal() > 0` or `data.filtersPending()`. With 0 filtered rows and nothing pending it is not rendered (R-9: #6's no-match panel covers).
 - Inputs bound to the service signals from FDE-P-2.
 
 ### 5.4 Tokens

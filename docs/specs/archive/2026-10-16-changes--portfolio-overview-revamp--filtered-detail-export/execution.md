@@ -157,3 +157,28 @@ Run by the Leader through Claude in Chrome on `localhost:4200/portfolio-overview
 - **Design-sync items for archive:** §3 `url` → `versionId`; §5.2 inputs `dimensionsMap`; §5.3 mount point; FDE-P-5 corrected / FDE-DD-9 already amended.
 - **Advisories open:** busy spinner missing; glyphs instead of lucide icons; tooltip not keyboard-reachable; polite live region per keystroke; empty titles sort first ascending; `export-tables.service.spec.ts:57-69` not awaited.
 - **Commit:** none — waiting for the user's go-ahead.
+
+## Post-archive validation — stakeholder email (2026-10-16)
+
+Nicoleta's 11 items re-checked live on `localhost:4200`, version 36. The table below is the filter sweep: every combination agrees across the blocks that take that filter (KPI, status donut, typology, detail).
+
+| Filter | Filtered | KPI total (W1/W2 / W3) | Donut | Typology | Detail | Notes |
+|---|---|---|---|---|---|---|
+| none | 1000 | 1000 (432 / 568) | 1000 | 643 + 357 | 1000 | — |
+| program SP01 | 330 | 330 (169 / 161) | 330 | 217 + 113 | 330 | raw SP01 rows 330; ToC SP01 only; Projects SP01 row |
+| status submitted | 154 | 154 (31 / 123) | 154 (Submitted only) | 88 + 66 | 154 | ToC / Projects "Not affected by: Status" (by design) |
+| center CENTER-03 | 141 | 141 (70 / 71) | 141 | 141 | 141 (all list CIAT as lead or contributor) | Centers block 75 (per-Center counting) |
+| project 1368 | 58 | 58 (0 / 58) | 58 | 58 | 58 | Projects "Not affected by: Project" (by design) |
+| typology outcome | 357 | 357 | 357 | outcome 357 only | 357 (level Outcome) | raw outcome-type rows 357 |
+| SP02 + CENTER-03 + editing | 16 | 16 (15 / 1) | 16 | 16 | 16 | — |
+
+Findings (no code change made):
+- The W3 card label reads "Innovations replicated from 2025: 119", but 2 of the 119 are not innovations (1 Capacity sharing, 1 Policy change). Innovation use 112 + Innovation development 5 = 117.
+- The Centers block total (727 unfiltered, 75 for CIAT, 76 for project 1368) is above the W3 KPI (568 / 71 / 58) because a shared result counts once per Center. The page says so in a note.
+- The status donut's sr-only text includes "Warning: Chart rendered without required accessibility tableModel" (`app-pr-viz-chart`). Screen readers will read it. The donut's input is missing a `tableModel`. This is outside #9.
+
+**DB confirmation (user, DBeaver, 2026-10-16):** independent SQL on version 36 matches the page exactly.
+- Q1, the cards: 1000 / 432 / 568 / 412 / 20 / 449 / 119.
+- Q2, the donut: Editing 790, Submitted 154, Approved 36, Rejected 12, In QA 5, Discontinued 3.
+- Q3, the filters: SP01 330, submitted 154, CIAT 141, project 1368 58, outcome 357, SP02 + CIAT + editing 16.
+- Q4, W3 replicated by type: Innovation use 112, Innovation development 5, Capacity sharing 1, Policy change 1. This confirms finding 1.
