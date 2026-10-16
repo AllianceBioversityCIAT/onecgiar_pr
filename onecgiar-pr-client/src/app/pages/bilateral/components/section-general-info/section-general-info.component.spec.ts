@@ -4,7 +4,7 @@ import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
-import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, computed, signal } from '@angular/core';
 import { of, throwError, Subject } from 'rxjs';
 
 import { SectionGeneralInfoComponent } from './section-general-info.component';
@@ -64,6 +64,8 @@ describe('SectionGeneralInfoComponent', () => {
       isReplicated: signal(false),
       resultTypeId: signal<number | null>(null)
     };
+    // P2-3980: the real service's single KP predicate, derived from the same mocked type signal.
+    creation.isKnowledgeProduct = computed(() => Number(creation.resultTypeId()) === 6);
     userSearch = {
       selectedUser: null,
       searchQuery: '',
@@ -187,7 +189,8 @@ describe('SectionGeneralInfoComponent', () => {
         setResultStatus: jest.fn(),
         isAiGenerated: signal(false),
         resultLevelId: signal<number | null>(1),
-        resultCode: signal<string | number | null>(null)
+        resultCode: signal<string | number | null>(null),
+        isKnowledgeProduct: computed(() => false)
       };
       wrapperAutoSave = {
         isReadOnly: signal(false),
@@ -1062,6 +1065,86 @@ describe('SectionGeneralInfoComponent', () => {
       build();
       expect(component.guidance('[general-info]-title')).toContain('non-specialist reader');
       expect(component.guidance('[general-info]-does-not-exist')).toBe('');
+    });
+  });
+  /**
+   * P2-3980 — a bilateral Knowledge Product mirrors pool funding: Title and Description are
+   * read-only and optional; everything else on the form keeps its behaviour.
+   */
+  describe('P2-3980 · Knowledge Product parity with pool funding', () => {
+    const html = readFileSync(join(__dirname, 'section-general-info.component.html'), 'utf8');
+
+    beforeEach(() => {
+      // Read by `readOnly()`; the shared mock only supplies it in the rendered-markup describe.
+      creation.isEditableByCenterUser = signal(true);
+    });
+
+    it('makes Title and Description read-only for a KP, and only those', () => {
+      creation.resultTypeId.set(6);
+      build();
+      expect(component.titleDescriptionReadOnly()).toBe(true);
+      // Lead contact person (and the impact areas) keep reading the untouched editor lock.
+      expect(component.readOnly()).toBe(false);
+    });
+
+    it('leaves Title and Description editable for every other type', () => {
+      for (const typeId of [1, 2, 3, 4, 5, 7, 8, null]) {
+        creation.resultTypeId.set(typeId);
+        build();
+        expect(component.titleDescriptionReadOnly()).toBe(false);
+      }
+    });
+
+    it('still locks Title and Description for a non-KP when the editor itself is read-only', () => {
+      autoSave.isReadOnly.set(true);
+      creation.resultTypeId.set(7);
+      build();
+      expect(component.titleDescriptionReadOnly()).toBe(true);
+    });
+
+    it('treats a string type id "6" as a KP', () => {
+      creation.resultTypeId.set('6' as any);
+      build();
+      expect(component.isKnowledgeProduct()).toBe(true);
+    });
+
+    it('wires Title and Description to the KP lock and drops "required" for a KP (so empty reads Not applicable)', () => {
+      expect(html).toMatch(/label="Title of Result"[^>]*\[required\]="!isKnowledgeProduct\(\)"[^>]*\[readOnly\]="titleDescriptionReadOnly\(\)"/s);
+      expect(html).toMatch(/label="Description of Result"[^>]*\[required\]="!isKnowledgeProduct\(\)"[^>]*\[readOnly\]="titleDescriptionReadOnly\(\)"/s);
+    });
+
+    it('keeps Lead contact person on the ordinary read-only gate', () => {
+      expect(html).toMatch(/<app-lead-contact-person-field[^>]*\[readOnly\]="readOnly\(\)"/s);
+    });
+
+    it('publishes Title and Description as optional MDS items for a KP, so an empty description never blocks Submit', () => {
+      creation.resultTypeId.set(6);
+      build();
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: false, optional: true },
+        { key: 'description', label: 'Description', filled: false, optional: true },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
+      ], 'core');
+    });
+
+    it('counts a KP with empty title and description as complete once the lead contact is set (real tracker)', () => {
+      const tracker = new BilateralMdsTrackerService();
+      tracker.setSectionFields('general-info', [
+        { key: 'title', label: 'Title', filled: false, optional: true },
+        { key: 'description', label: 'Description', filled: false, optional: true },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true },
+      ], 'core');
+      const section = tracker.sectionStatus().find(s => s.sectionName === 'general-info')!;
+      expect(section.status).toBe('complete');
+    });
+
+    it('keeps Title and Description required in the MDS for a non-KP', () => {
+      creation.resultTypeId.set(7);
+      build();
+      fixture.detectChanges();
+      const items = mdsTracker.setSectionFields.mock.calls.filter((c: any[]) => c[2] === 'core').at(-1)[1];
+      expect(items.some((i: any) => i.optional)).toBe(false);
     });
   });
 });
