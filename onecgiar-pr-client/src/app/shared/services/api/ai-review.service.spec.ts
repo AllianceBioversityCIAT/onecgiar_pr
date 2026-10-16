@@ -30,7 +30,10 @@ describe('AiReviewService', () => {
 
     const dacScoresFromServer = [{ field_name: 'gender', tag_id: 1, impact_area_id: [] }];
 
+    // These cases exercise the dormant impact-areas-only branch, so the KP switch is ON here; the
+    // hotfix that keeps it OFF in production has its own describe below.
     const runWith = async (resultTypeId: number) => {
+      service.knowledgeProductsEnabled = true;
       service.dataControlSE.currentResultSignal.set({ id: 55, result_type_id: resultTypeId } as any);
       service.aiReviewButtonState = 'idle';
       await service.onAIReviewClick();
@@ -101,6 +104,27 @@ describe('AiReviewService', () => {
       await runWith(6);
 
       expect(service.currnetFieldsList()).toEqual([]);
+    });
+  });
+
+  // Hotfix 16-Oct-2026: the AI service does not evaluate Knowledge Products yet. Whatever launches
+  // the review, a KP must not reach the AI nor open the dialog while the switch is off.
+  describe('onAIReviewClick — Knowledge Products switched off (hotfix)', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('makes no request and opens no dialog for a knowledge product by default', async () => {
+      expect(service.knowledgeProductsEnabled).toBe(false);
+      const session = jest.spyOn(service, 'POST_createSession').mockResolvedValue({});
+      const qa = jest.spyOn(service, 'POST_prmsQa').mockResolvedValue({ json_content: {} } as any);
+      service.dataControlSE.currentResultSignal.set({ id: 55, result_type_id: 6 } as any);
+      service.aiReviewButtonState = 'idle';
+
+      await service.onAIReviewClick();
+
+      expect(session).not.toHaveBeenCalled();
+      expect(qa).not.toHaveBeenCalled();
+      expect(service.showAiReview()).toBe(false);
+      expect(service.aiReviewButtonState).toBe('idle');
     });
   });
 
