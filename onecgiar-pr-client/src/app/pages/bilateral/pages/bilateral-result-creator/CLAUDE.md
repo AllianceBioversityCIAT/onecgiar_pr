@@ -105,6 +105,8 @@
 - ⚠️ The submit-lock `effect` must live OUTSIDE `submitResult()` — a result that loads already past
   *Editing* must be locked without anyone pressing Submit.
 
+- ⚠️ **P2-3980 — a bilateral Knowledge Product never runs nor shows the AI quality check.** One predicate, `creationService.isKnowledgeProduct()`. `submitResult()` keeps its guards, then for a KP opens `KpSubmitConfirmDialogService`; only a confirm calls `qualityAssessment.submitKnowledgeProduct(rid)` (silent POST assessment, waits on a `running` row, PATCH `submitted_anyway`, one request on a double tap). Rail AI card, the submit note and `loadLatest` are skipped for a KP; `reloadAfterResultTypeChange()` resets the held assessment. Title/Description are read-only and optional for a KP in `section-general-info`.
+
 ## Wizard — manual-create drawer (BIL-MCD-T-6; single mount ARM-T-2, 2026-09-30)
 - Level/type/title live in `app-bilateral-manual-create-form` inside
   `app-bilateral-manual-create-drawer-host`, mounted ONCE in `bilateral.component.html` (the shell),
@@ -117,4 +119,4 @@
 ## Pending
 - HITL responsive/axe pass on the drawer — see `execution.md` of spec `manual-create-drawer`.
 
-**Verified:** 2026-10-15 · qa-development-2026-mc-2 · 72065f7e6
+**Verified:** 2026-10-16 · P2-3980 bilateral KP pool-funding parity

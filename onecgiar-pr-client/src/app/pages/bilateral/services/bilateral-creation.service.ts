@@ -77,6 +77,13 @@ export class BilateralCreationService {
   resultInitiativeId = signal<number | null>(null);
   resultLevelId = signal<number | null>(null);
   resultTypeId = signal<number | null>(null);
+  /**
+   * P2-3980 — the ONE Knowledge Product predicate of the bilateral layer (`ResultTypeEnum.KNOWLEDGE_PRODUCT = 6`,
+   * server `result-type.enum.ts`). A bilateral KP behaves like a pool-funding KP: title and description come from
+   * the repository (read-only), and the AI quality check neither runs nor shows. `resultTypeId` may arrive as a
+   * string, hence `Number()`. Every KP gate in this layer reads this, never a literal `6`.
+   */
+  readonly isKnowledgeProduct = computed(() => Number(this.resultTypeId()) === 6);
   resultLeadCenterId = signal<number | null>(null);
   /**
    * CLARISA code of the result's LEAD centre (`CENTER-12`), as opposed to `resultLeadCenterId`,

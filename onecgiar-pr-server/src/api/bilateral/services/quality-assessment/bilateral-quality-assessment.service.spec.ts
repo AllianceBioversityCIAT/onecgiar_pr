@@ -249,6 +249,32 @@ describe('BilateralQualityAssessmentService', () => {
       expect((outcome.dto as any).id).toBe(10);
     });
 
+    // P2-3980: a row already used for a submit is spent (assertAssessmentDecision refuses it), so a
+    // result rejected and resubmitted without edits must get a fresh row, not the decided one.
+    it('does not short-circuit on a hash match when the latest row already carries a submit decision', async () => {
+      const payload = buildPayload();
+      const hash = contentHash(payload);
+      (payloadBuilder.build as jest.Mock).mockResolvedValueOnce(payload);
+      (repository.findLatestByResultId as jest.Mock).mockResolvedValueOnce({
+        id: '10',
+        status: 'completed',
+        content_hash: hash,
+        decision: 'submitted_anyway',
+      });
+      (client.assess as jest.Mock).mockResolvedValue({
+        outcome: 'ok',
+        response: buildAiResponse(),
+        ai_status: 'completed',
+        degraded_reason: null,
+        elapsed_ms: 10,
+      });
+
+      const outcome = await service.assess(user, buildResult());
+
+      expect(client.assess).toHaveBeenCalled();
+      expect((outcome.dto as any).id).not.toBe(10);
+    });
+
     it('does not short-circuit on a hash match when the latest row is unavailable (no verdict was produced)', async () => {
       const payload = buildPayload();
       const hash = contentHash(payload);
