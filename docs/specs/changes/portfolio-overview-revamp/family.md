@@ -6,7 +6,7 @@
 |---|---|
 | **Parent spec path** | `docs/specs/changes/portfolio-overview-revamp/` |
 | **Date created** | 2026-10-14 |
-| **Last updated** | 2026-10-16 (#8 specified) |
+| **Last updated** | 2026-10-16 (#8 done and archived) |
 | **Spec-family status** | open |
 | **Source proposal** | [`proposal.md`](./proposal.md), from the stakeholder feedback list, items 1–8 (screenshot attached to the request) |
 
@@ -21,7 +21,7 @@
 | 5 | `changes/portfolio-overview-revamp/toc-kpi-progress` | `changes/portfolio-overview-revamp/typology-view` (client half only; the server half has no dependency) | no | done |
 | 6 | `changes/portfolio-overview-revamp/global-filters` | #1–#5, #7, #8 | no | pending |
 | 7 | `changes/portfolio-overview-revamp/remove-centers-progress` | none | no (shares `centers-block/` with #3) | done |
-| 8 | `changes/portfolio-overview-revamp/w3-projects-section` | server half: none · client half: `changes/portfolio-overview-revamp/toc-kpi-progress` (template order) | server half yes · client half no | pending |
+| 8 | `changes/portfolio-overview-revamp/w3-projects-section` | server half: none · client half: `changes/portfolio-overview-revamp/toc-kpi-progress` (template order) | server half yes · client half no | done |
 | 9 | `changes/portfolio-overview-revamp/filtered-detail-export` | `changes/portfolio-overview-revamp/global-filters` | no | pending |
 | 10 | `changes/portfolio-overview-revamp/toc-kpi-target-filter` | `changes/portfolio-overview-revamp/toc-kpi-progress` (bugfix of its shipped query, P2-3974) | yes (server repository only) | done |
 
@@ -49,3 +49,4 @@ Notes:
 | 2026-10-16 | Child #10 `toc-kpi-target-filter` added: a bugfix of #5 that makes `getPortfolioTocCoverage` count only KPIs with a target for the reporting year (P2-3974, the follow-up the #5 amendment records). Requested by the user through orchestrator onecgiar-pr-92 | santiago.sanchez@cgiar.org |
 | 2026-10-16 | Child #5 `toc-kpi-progress` done: server `154079643`, client `34b9f5ad6`, docs `d56e46103`. The target-only follow-up is #10 `toc-kpi-target-filter` (`e5c2c775b`). PRTest smoke at `38d15a30c` passed: 403 for a non-admin user, and the user accepted the block. Ready to archive | santiago.sanchez@cgiar.org |
 | 2026-10-16 | Children #5 `toc-kpi-progress` and #10 `toc-kpi-target-filter` archived to `archive/2026-10-16-changes--portfolio-overview-revamp--toc-kpi-progress/` and `archive/2026-10-16-changes--portfolio-overview-revamp--toc-kpi-target-filter/`. Kaizen entries recorded; pending items await the apply phase on staging | santiago.sanchez@cgiar.org |
+| 2026-10-16 | Child #8 `w3-projects-section` done and archived to `archive/2026-10-16-changes--portfolio-overview-revamp--w3-projects-section/`. 6/6 tasks PASS; live parity on version 36 / 2026 identical to an independent SQL (911 / 95 / 8, every P/A and Center); p95 0.98 s; non-admin hidden (user-tested). One pivot: chart series remapped + stripe decal (no non-violet chart token exists). Kaizen entry recorded; pending items await the apply phase on staging | santiago.sanchez@cgiar.org |
