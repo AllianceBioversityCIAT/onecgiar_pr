@@ -174,7 +174,7 @@
 - **Type:** client
 - **Description:** Create `components/filter-bar/` per design §6.4:
   - `filter-multi-select`: Spartan Popover + Command; optional search; optional level groups; disabled with a hint; ARIA.
-  - `filter-bar`: 5 controls in bar order; chips with "Remove <value>"; **Clear all** only when something is active; the count "N of M results" / "M results" in a polite live region; the map loading / unavailable line with Retry; the dropped-selection notice; a "Filters (n)" button opening a Spartan Sheet below 768 px.
+  - `filter-bar`: 5 controls in bar order; chips with "Remove <value>"; **Clear all** only when something is active; the count "N of M results" / "M results" in a polite live region; the map loading / unavailable line with Retry; the dropped-selection notice; a "Filters (n)" button opening a Spartan Sheet below the project `md` breakpoint (900 px; amended at archive, it was written as 768 px).
 
   Add the `filters` copy group. Declare any new Helm host-directive input in `tests/mocks/spartanBrainMock.ts`.
 - **Implements:**

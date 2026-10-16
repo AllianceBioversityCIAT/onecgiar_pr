@@ -168,7 +168,7 @@ The type→level map is **imported** from `typology.aggregate.ts` (`levelOf`), n
 | Piece | Design |
 |---|---|
 | `filter-multi-select` | Built from Spartan **Popover + Command**: a trigger button showing the label and the selected count; a command list with checkbox-style items; optional search input (on for Project and Center); optional groups (Typology levels, each with a "select level" item). Disabled state with a hint, for the map loading or failed. ARIA: the trigger has `aria-haspopup="listbox"` and `aria-expanded`; items use `aria-checked`, inside a list marked `aria-multiselectable`. Spartan Brain's `BrnCommandItem` already host-binds `aria-selected` to the keyboard-active row, so the chosen state cannot also use it. This was amended during execution and accepted by the user on 2026-10-16 (GLF-T-4) |
-| `filter-bar` | 5 selects in a wrapping row ≥ 768 px. Below 768 px, one "Filters (n)" button opens a Spartan **Sheet** holding the same 5 selects stacked. Under the row: the chips (Spartan badge + remove button named "Remove <value>"), **Clear all**, the count "N of M results" in an `aria-live="polite"` region, the map-unavailable line with Retry, and the dropped-selection notice |
+| `filter-bar` | 5 selects in a wrapping row from the project `md` breakpoint (900 px, `docs/ux-ui/design.md` §9; amended at archive, it was written as 768 px). Below it, one "Filters (n)" button opens a Spartan **Sheet** holding the same 5 selects stacked. Under the row: the chips (Spartan badge + remove button named "Remove <value>"), **Clear all**, the count "N of M results" in an `aria-live="polite"` region, the map-unavailable line with Retry, and the dropped-selection notice |
 | Inputs / outputs | The bar reads the service directly (it is inside the page's provider scope). It has no inputs, which keeps the page template small |
 | Tokens | Neutral surface `var(--pr-surface…)`, border `var(--pr-border…)`, chips on the existing badge variant, counts `font-mono tabular-nums`. No new colours |
 
@@ -291,7 +291,7 @@ The tiles stay; only the state they write moves.
 
 | # | What it breaks | Addressed by |
 |---|---|---|
-| 1 | Page spec cases asserting the strip, `toggleStatusFilter` and the "Active filter" text | GLF-T-6 rewrites them against the global selection. Memory: run the affected specs before commit |
+| 1 | Page spec cases asserting the strip, `toggleStatusFilter` and the "Active filter" text | GLF-T-5 rewrites them against the global selection (amended at archive; it was written as GLF-T-6). Memory: run the affected specs before commit |
 | 2 | **View in Results Center** with a status was always available before | It is still available whenever only one Status (and optionally one Program) is set, which is a superset of the old case, because the old strip held a single status (P-8) |
 | 3 | The donut click handler (`onStatusChartClick`) | Kept; it calls `toggleValue` |
 | 4 | The strip showing "Active filter: all" when nothing was selected | Intentionally fixed |
