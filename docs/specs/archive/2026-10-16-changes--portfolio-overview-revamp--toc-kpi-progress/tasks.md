@@ -360,10 +360,10 @@ No clause is discharged by citing a different requirement.
 
 ## 7. Rollout & verification
 
-- [ ] Commits on the user's go-ahead only: server first, then client.
-- [ ] Merge to `performance-refactor` for the PRTest smoke, in the user's own checkout (memory). PRTest deploys in about 30 min.
-- [ ] PRTest smoke: the section renders for an admin, and the numbers match the local parity run for the same version.
-- [ ] `family.md`: set #5 to `done` with the commit hashes. #8's client half is unblocked.
+- [x] Commits on the user's go-ahead only: server first, then client.
+- [x] Merge to `performance-refactor` for the PRTest smoke, in the user's own checkout (memory). PRTest deploys in about 30 min.
+- [x] PRTest smoke: the section renders for an admin, and the numbers match the local parity run for the same version.
+- [x] `family.md`: set #5 to `done` with the commit hashes. #8's client half is unblocked.
 
 ## 8. Roll-back plan
 
