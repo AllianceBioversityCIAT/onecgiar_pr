@@ -1312,7 +1312,9 @@ export class AoWBilateralRepository {
    *
    * - Total: distinct active indicators on in-scope nodes of the ToC phase. OUTPUT
    *   keeps nodes in an AoW or without a work package; OUTCOME only nodes in an AoW
-   *   (TKP-P-1, TKP-P-2). No year or target filter on indicators.
+   *   (TKP-P-1, TKP-P-2). Target-only rule (P2-3974, spec toc-kpi-target-filter): an
+   *   indicator counts only when it has at least one target row for the reporting
+   *   year with value > 0, so a no-target indicator leaves both total and covered.
    * - Covered: indicators reached by a pooled result in a counting status of the page
    *   version, through active links that are not marked not-applicable. The covered
    *   set is built first from `result` (version / source / status), then LEFT-joined
@@ -1341,6 +1343,14 @@ export class AoWBilateralRepository {
           AND wp.wp_official_code LIKE CONCAT(tr.official_code, '-%')
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
           AND tri.is_active = 1
+        JOIN (
+          SELECT DISTINCT trit.id_indicator AS indicator_id,
+                 trit.toc_result_indicator_id AS related_node_id
+          FROM ${env.DB_TOC}.toc_result_indicator_target trit
+          WHERE trit.target_date = ?
+            AND CAST(trit.target_value AS DECIMAL(15,2)) > 0
+        ) tgt ON tgt.indicator_id = tri.id
+          AND CONVERT(tgt.related_node_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
         LEFT JOIN (
           SELECT DISTINCT tri2.id AS indicator_id
           FROM ${env.DB_NAME}.result r
@@ -1366,6 +1376,7 @@ export class AoWBilateralRepository {
         GROUP BY tr.official_code, tr.category
       `;
       const rows = await this.dataSource.query(query, [
+        context.reportingYear,
         context.reportingYear,
         ...W1_W2_RESULT_SOURCE_FILTER,
         ...TOC_KPI_COVERAGE_STATUS_IDS,

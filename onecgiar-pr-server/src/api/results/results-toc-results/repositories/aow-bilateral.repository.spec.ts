@@ -1138,22 +1138,40 @@ describe('AoWBilateralRepository', () => {
         expect(sql.slice(outcomeBranch)).not.toContain('wp_id IS NULL');
       });
 
-      it('applies no year or target filter on indicators', async () => {
+      it('keeps only indicators with a target > 0 for the year, through an inner join (TKF-R-1, TKF-R-2)', async () => {
         const { sql } = await captureSql();
 
-        expect(sql).not.toContain('toc_result_indicator_target');
-        expect(sql).not.toContain('target_date');
+        expect(sql).toContain('toc_test.toc_result_indicator_target trit');
+        expect(sql).toContain('trit.target_date = ?');
+        expect(sql).toContain('CAST(trit.target_value AS DECIMAL(15,2)) > 0');
+        expect(sql).toContain('tgt.indicator_id = tri.id');
+        expect(sql).toContain(
+          'CONVERT(tgt.related_node_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)',
+        );
+        // Inner join: the target table is reached through a plain JOIN, so a
+        // no-target indicator leaves both total and covered.
+        expect(sql).toContain('JOIN ( SELECT DISTINCT trit.id_indicator');
+        expect(sql).not.toContain(
+          'LEFT JOIN ( SELECT DISTINCT trit.id_indicator',
+        );
+        // It sits right after the indicators join, before the covered set.
+        const targetIdx = sql.indexOf('toc_result_indicator_target');
+        expect(targetIdx).toBeGreaterThan(
+          sql.indexOf('toc_results_indicators tri '),
+        );
+        expect(targetIdx).toBeLessThan(sql.indexOf('cov ON'));
       });
 
       it('binds every caller value, in placeholder order, and interpolates none', async () => {
         const { sql, params } = await captureSql();
 
-        // year, source, statuses [2, 3], version, phase
-        expect(params).toEqual([2025, 'Result', 2, 3, 8, 'PHASE-1']);
+        // year (work package), year (target), source, statuses [2, 3], version, phase
+        expect(params).toEqual([2025, 2025, 'Result', 2, 3, 8, 'PHASE-1']);
 
         // Placeholder order in the text matches the parameter order above.
         const order = [
           'wp.year = ?',
+          'trit.target_date = ?',
           'r.source IN (?)',
           'r.status_id IN (?, ?)',
           'r.version_id = ?',
