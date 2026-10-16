@@ -6,7 +6,7 @@
 |---|---|
 | **Parent spec path** | `docs/specs/changes/portfolio-overview-revamp/` |
 | **Date created** | 2026-10-14 |
-| **Last updated** | 2026-10-15 (#4 done) |
+| **Last updated** | 2026-10-15 (#4 done, #5 specified) |
 | **Spec-family status** | open |
 | **Source proposal** | [`proposal.md`](./proposal.md), from the stakeholder feedback list, items 1–8 (screenshot attached to the request) |
 
@@ -42,3 +42,4 @@ Notes:
 | 2026-10-14 | Reordered: `kpi-breakdown` moves to #1 because it is already being implemented in the working tree. The rankings child moves to #2 and depends on it (Judgment Day JD-10) | santiago.sanchez@cgiar.org |
 | 2026-10-15 | Child #4 `typology-view` specified (Standard; 4 tasks, ≈450 LOC; TYV-OQ-1..4 at recommended defaults). Not yet executed | santiago.sanchez@cgiar.org |
 | 2026-10-15 | Child #4 `typology-view` done: committed `e68016663`, T-4 browser check passed locally (971 / 971 / 555, Unclassified 0, 375 / 768 / 1280) after a T-2 reopen for the tab-list fit at 375, archived to `archive/2026-10-15-changes--portfolio-overview-revamp--typology-view/`. PRTest smoke pending. #5 `toc-kpi-progress` is unblocked | santiago.sanchez@cgiar.org |
+| 2026-10-15 | Child #5 `toc-kpi-progress` specified (Full; 7 tasks, ≈950 LOC added / ≈900 deleted; TKP-OQ-1..6 at recommended defaults). TKP-T-0 (user-run premise query) blocks execution. Not yet executed | santiago.sanchez@cgiar.org |
