@@ -1241,6 +1241,8 @@ describe('AoWBilateralRepository', () => {
           .calls[0][0];
         expect(arg.error).toBe(failure);
         expect(arg.className).toBe('AoWBilateralRepository');
+        // debug: true would make the handler log the failed query text and its bound params.
+        expect(arg.debug).toBe(false);
         expect(JSON.stringify(arg)).not.toMatch(/SELECT|toc_results/);
         expect(String(failure.message)).not.toMatch(/SELECT|toc_results/);
       });

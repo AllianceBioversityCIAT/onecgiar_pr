@@ -1392,10 +1392,11 @@ export class AoWBilateralRepository {
         }),
       );
     } catch (error) {
+      // debug: false: with true the handler logs the query text and bound params.
       throw this._handlersError.returnErrorRepository({
         error,
         className: AoWBilateralRepository.name,
-        debug: true,
+        debug: false,
       });
     }
   }
