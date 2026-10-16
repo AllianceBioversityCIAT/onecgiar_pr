@@ -45,5 +45,35 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     loading: 'Loading progress against ToC KPIs',
     barLabel: (percent: number, covered: number, total: number) => `${percent}% — ${covered} of ${total} KPIs covered`,
     openProgramme: (name: string) => `Open the Results tab of ${name}`
+  },
+  // W3/Bilateral projects (spec changes/portfolio-overview-revamp/w3-projects-section, WPS-R-4..R-9)
+  projects: {
+    title: 'W3/Bilateral projects',
+    subtitle: (year: string | number) => `Projects mapped to a Program or Accelerator for ${year}, and how many report results`,
+    kpiMapped: 'Mapped projects',
+    kpiWithBilateral: 'With W3/Bilateral results',
+    kpiW1w2: 'Contributing to W1/W2',
+    percentOfMapped: (percent: string) => `${percent}% of mapped`,
+    tabProgram: 'By P/A',
+    tabCenter: 'By Center',
+    dimensionAriaLabel: 'Group the projects by',
+    viewChart: 'Chart',
+    viewTable: 'Table',
+    viewAriaLabel: 'Show the projects as',
+    multiProgramCaption: 'A project mapped to several P/As counts under each, so the bars add up to more than the total.',
+    footnote: (n: number) =>
+      n === 1
+        ? '1 project has W3/Bilateral results but no approved P/A mapping, so it is not counted.'
+        : `${n} projects have W3/Bilateral results but no approved P/A mapping, so they are not counted.`,
+    unassigned: 'Unassigned',
+    empty: (year: string | number) => `No W3/Bilateral projects are mapped to a Program for ${year} yet.`,
+    error: 'W3/Bilateral projects could not be loaded right now.',
+    retry: 'Retry',
+    loading: 'Loading W3/Bilateral projects',
+    colProgram: 'Program / Accelerator',
+    colCenter: 'Center',
+    totalLabel: 'Total',
+    tableCaptionProgram: 'W3/Bilateral projects by Program / Accelerator',
+    tableCaptionCenter: 'W3/Bilateral projects by Center'
   }
 } as const;

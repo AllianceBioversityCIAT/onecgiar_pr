@@ -1,15 +1,15 @@
 # portfolio-overview
 
-**Verified:** 2026-10-15 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-T-5)
+**Verified:** 2026-10-16 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/w3-projects-section (WPS-T-5)
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
-phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers. Ticket **P2-3304**;
+phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects. Ticket **P2-3304**;
 design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Contract
 
 - `PortfolioOverviewComponent` is standalone + `OnPush` and **provides its own service**, so leaving the screen
-  drops the rows. The typology and ToC KPI blocks read from it; the ToC KPI block and the Centers block have **their own** data paths.
+  drops the rows. The typology block reads from it; the ToC KPI, Centers and Projects blocks have **their own** data paths.
 - `PortfolioOverviewService` owns **data and every aggregation**: `totals()` (status strip),
   `categories()` / `categoryBars()`, `bilateralTotal()` / `bilateralBars()` and `versionId()` (first row's
   `version_id`). All are `computed` off one signal — never accumulated by hand.
@@ -30,27 +30,20 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## CGIAR Centers block (P2-3928; W3-only + origin filter by spec `centers-new-vs-replicated`)
 
-- `components/centers-block/` — `PortfolioCentersBlockComponent`, rendered last, **outside** the `hasFigures()`
-  branch (own data and own loading / error / empty states). Old route `admin-module/entities-overview`
-  redirects here (`adminModuleRouting`). Parts: header + phase chip, 2 KPI cards (`centers-kpis`), Reporting
-  status card (donut + tiles + active-filter strip). Progress by Center is gone on purpose; do not re-add.
-- Data path is **its own**: `CentersService.getData()`, then **one** `GET_bilateralCenterResults(code, versionId)`
-  per Center for the open **P25** phase (`resolvePhase()`). Copy: `internationalization/portfolio-centers-block.copy.ts`.
-- ⚠️ **W3 only.** The endpoint returns the Center Overview rows (W1/W2 too); `loadCenter` keeps `isW3Row`
-  (`source === 'API'`) at load, so every figure is W3. A result shared by several Centers counts once per Center.
-  Its total therefore differs from the page's own "W3/Bilateral results" tile (counted per result, not per Center).
-- Classifiers live in `centers-block.aggregate.ts`: `isW3Row`, `isReplicatedRow` (`is_replicated` ∈ 1 | '1' | true),
-  `byOrigin`, `originCounts`. `CenterRowState` stores `w3Rows`; `viewRows` applies the origin per Center.
-- **Origin filter** (`origin`: all | new | replicated): two `<button aria-pressed>` in the W3/Bilateral card
-  (`origin-new`, `origin-replicated`), styled like the status tiles. It composes with the status filter
-  (`toggleOrigin` / `toggleStatus` never touch each other; `clearFilters` resets both) and drives the donut,
-  tiles and `centerTotals`. 🛑 DD-4: `kpis()` (total, % approved, Centers reporting, the New / Replicated counts)
-  read **unfiltered** W3 rows and ignore the origin; the card is the control, so it must not shrink.
-- Strip: `activeFilterLabel()` ("New · Pending review"). "View in Results Center" shows only when a status is set
-  **and** origin is `all` (`showResultsCenterLink`), with `funding=bilateral`: Results Center cannot filter by origin.
-- 🛑 **"Retry failed Centers":** a `role="status"` region shows the partial note (`centers-partial`) and **one**
-  button (`centers-retry-failed`) re-requesting only failed Centers. No failures = no button. A failed Centers list
-  shows `centers-error`; an empty catalogue shows `centers-empty`.
+- `components/centers-block/` — `PortfolioCentersBlockComponent`, rendered before the Projects block, **outside** the `hasFigures()` branch (own data and own loading / error / empty states). Old route `admin-module/entities-overview` redirects here (`adminModuleRouting`). Parts: header + phase chip, 2 KPI cards (`centers-kpis`), Reporting status card (donut + tiles + active-filter strip). Progress by Center is gone on purpose; do not re-add.
+- Data path is **its own**: `CentersService.getData()`, then **one** `GET_bilateralCenterResults(code, versionId)` per Center for the open **P25** phase (`resolvePhase()`). Copy: `internationalization/portfolio-centers-block.copy.ts`.
+- ⚠️ **W3 only.** The endpoint returns the Center Overview rows (W1/W2 too); `loadCenter` keeps `isW3Row` (`source === 'API'`) at load, so every figure is W3. A result shared by several Centers counts once per Center. Its total therefore differs from the page's own "W3/Bilateral results" tile (counted per result, not per Center).
+- Classifiers live in `centers-block.aggregate.ts`: `isW3Row`, `isReplicatedRow` (`is_replicated` ∈ 1 | '1' | true), `byOrigin`, `originCounts`. `CenterRowState` stores `w3Rows`; `viewRows` applies the origin per Center.
+- **Origin filter** (`origin`: all | new | replicated): two `<button aria-pressed>` in the W3/Bilateral card (`origin-new`, `origin-replicated`), styled like the status tiles. It composes with the status filter (`toggleOrigin` / `toggleStatus` never touch each other; `clearFilters` resets both) and drives the donut, tiles and `centerTotals`. 🛑 DD-4: `kpis()` (total, % approved, Centers reporting, the New / Replicated counts) read **unfiltered** W3 rows and ignore the origin; the card is the control, so it must not shrink.
+- Strip: `activeFilterLabel()` ("New · Pending review"). "View in Results Center" shows only when a status is set **and** origin is `all` (`showResultsCenterLink`), with `funding=bilateral`: Results Center cannot filter by origin.
+- 🛑 **"Retry failed Centers":** a `role="status"` region shows the partial note (`centers-partial`) and **one** button (`centers-retry-failed`) re-requesting only failed Centers. No failures = no button. A failed Centers list shows `centers-error`; an empty catalogue shows `centers-empty`.
+
+## W3/Bilateral projects (2026-10-16, spec `changes/portfolio-overview-revamp/w3-projects-section`)
+
+- `components/projects-block/` (`app-portfolio-projects-block`, input `versionId`), the **last** section, after Centers. Own data path: `GET_PortfolioBilateralProjects(versionId)` -> `GET api/results-framework-reporting/portfolio/bilateral-projects` (admin only, server-side). Copy group `projects` in `portfolio-overview.copy.ts`.
+- Center labels come from `CentersService.getData()` (`acronym || name || code`, same mapping as Centers); it fires HTTP on construction, so page specs must mock it.
+- 🛑 **Mount rule:** under `@if (!data.loading())` (`versionId` is resolved) but **outside** `hasFigures()` (WPS-DD-7): a phase with no result rows must still answer "0 reporting projects". **No page skeleton** (JD-10); the block has its own states.
+- ⚠️ Gotchas: P/A bars can sum to more than the total (a project may map to several P/As; totals count it once). Projects with no Center count under **Unassigned** (last). On a closed phase the year is that phase's, so figures can differ from Center Overview, which reads the active year (WPS-P-7).
 
 ## Where it is used
 

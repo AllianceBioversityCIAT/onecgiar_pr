@@ -5796,4 +5796,31 @@ describe('ResultsApiService', () => {
       httpMock.expectOne(base).flush({});
     });
   });
+
+  describe('GET_PortfolioBilateralProjects', () => {
+    const base = `${environment.apiBaseUrl}api/results-framework-reporting/portfolio/bilateral-projects`;
+
+    it('sends versionId as a query parameter and returns the envelope untouched', done => {
+      const envelope = { response: { versionId: 36, byProgram: [], byCenter: [] }, message: 'ok', status: 200 };
+      service.GET_PortfolioBilateralProjects(36).subscribe(res => {
+        expect(res).toEqual(envelope);
+        done();
+      });
+      const req = httpMock.expectOne(`${base}?versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(envelope);
+    });
+
+    it('omits the query string without a versionId', () => {
+      service.GET_PortfolioBilateralProjects().subscribe();
+      const req = httpMock.expectOne(base);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+
+    it('omits the query string for a non-finite versionId', () => {
+      service.GET_PortfolioBilateralProjects(NaN).subscribe();
+      httpMock.expectOne(base).flush({});
+    });
+  });
 });

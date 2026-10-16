@@ -9,6 +9,7 @@ import { HlmTooltip } from '@spartan/tooltip';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../internationalization/portfolio-overview.copy';
 import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.constants';
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
+import { PortfolioProjectsBlockComponent } from './components/projects-block/projects-block.component';
 import { PortfolioTocKpiBlockComponent } from './components/toc-kpi-block/toc-kpi-block.component';
 import { PortfolioTypologyBlockComponent } from './components/typology-block/typology-block.component';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -76,6 +77,7 @@ export function getCategoryShortName(category: string): string {
     NgIcon,
     PrVizChartComponent,
     PortfolioCentersBlockComponent,
+    PortfolioProjectsBlockComponent,
     PortfolioTocKpiBlockComponent,
     PortfolioTypologyBlockComponent,
     HlmSeparatorImports,

@@ -367,5 +367,10 @@
 
     <!-- ── CGIAR Centers (W3/Bilateral) — P2-3928: moved here from Admin › All P/As and Centers ── -->
     <app-portfolio-centers-block />
+
+    <!-- ── W3/Bilateral projects (WPS-T-5): last section, own data path. Under !loading() but OUTSIDE hasFigures() (WPS-DD-7); no page skeleton (JD-10). ── -->
+    @if (!data.loading()) {
+      <app-portfolio-projects-block [versionId]="data.versionId()" />
+    }
     </div>
   </section>

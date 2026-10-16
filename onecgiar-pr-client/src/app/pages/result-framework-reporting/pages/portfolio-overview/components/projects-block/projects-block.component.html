@@ -1,0 +1,151 @@
+<!--
+  W3/Bilateral projects (spec w3-projects-section, design 6.3). Same card as the typology block. Neutral surfaces only
+  (rule 7); series colours come from the chart tokens through the chart option. Interactive: the dimension tabs, the
+  Chart | Table switch and Retry. Counts, percentages and the table are text (no ranking, no sort control: WPS-R-7).
+-->
+<section
+  class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]"
+  data-testid="projects-block"
+  aria-labelledby="projects-title">
+  <div class="mb-[16px]">
+    <h2 id="projects-title" class="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--pr-text)]">{{ copy.title }}</h2>
+    @if (status() === 'ready') {
+      <p class="m-0 mt-[2px] text-[13px] font-normal text-[var(--pr-text-secondary)]" data-testid="projects-subtitle">{{ copy.subtitle(year()) }}</p>
+    }
+  </div>
+
+  @if (status() === 'loading') {
+    <div aria-busy="true" data-testid="projects-skeleton">
+      <span class="sr-only" role="status">{{ copy.loading }}</span>
+      <div class="mb-[16px] grid grid-cols-1 gap-[12px] sm:grid-cols-3">
+        @for (n of [0, 1, 2]; track n) {
+          <span class="pr-skeleton h-[72px] w-full rounded-[10px]"></span>
+        }
+      </div>
+      @for (n of skeletonRows; track n) {
+        <div class="border-b border-[var(--pr-border-divider)] py-[12px] last:border-b-0">
+          <span class="pr-skeleton block h-[14px] w-full rounded"></span>
+        </div>
+      }
+    </div>
+  } @else if (status() === 'error') {
+    <div class="flex flex-wrap items-center justify-between gap-[12px]" data-testid="projects-error">
+      <p role="status" class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="projects-error-text">{{ copy.error }}</p>
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        class="!text-[13px] focus-visible:[box-shadow:var(--pr-focus-ring)]"
+        data-testid="projects-retry"
+        (click)="retry()">
+        {{ copy.retry }}
+      </button>
+    </div>
+  } @else {
+    @if (isEmpty()) {
+      <p role="status" class="m-0 max-h-[160px] text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="projects-empty">{{ copy.empty(year()) }}</p>
+    } @else {
+      <!-- KPI tiles: neutral, figure in mono -->
+      <div class="grid grid-cols-1 gap-[12px] sm:grid-cols-3" data-testid="projects-kpis">
+        <div class="flex flex-col gap-[4px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[14px] py-[12px]" data-testid="projects-kpi-mapped">
+          <span class="text-[12px] font-semibold text-[var(--pr-text-heading)]">{{ copy.kpiMapped }}</span>
+          <span class="font-mono text-[22px] font-bold leading-none tabular-nums text-[var(--pr-text-heading)]" data-testid="projects-kpi-value">{{ totals().mapped }}</span>
+        </div>
+        <div class="flex flex-col gap-[4px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[14px] py-[12px]" data-testid="projects-kpi-with-bilateral">
+          <span class="text-[12px] font-semibold text-[var(--pr-text-heading)]">{{ copy.kpiWithBilateral }}</span>
+          <span class="font-mono text-[22px] font-bold leading-none tabular-nums text-[var(--pr-text-heading)]" data-testid="projects-kpi-value">{{ totals().withBilateralResults }}</span>
+          <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-kpi-percent">{{ copy.percentOfMapped(withBilateralPercent()!) }}</span>
+        </div>
+        <div class="flex flex-col gap-[4px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[14px] py-[12px]" data-testid="projects-kpi-w1w2">
+          <span class="text-[12px] font-semibold text-[var(--pr-text-heading)]">{{ copy.kpiW1w2 }}</span>
+          <span class="font-mono text-[22px] font-bold leading-none tabular-nums text-[var(--pr-text-heading)]" data-testid="projects-kpi-value">{{ totals().w1w2Contributors }}</span>
+          <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-kpi-percent">{{ copy.percentOfMapped(w1w2Percent()!) }}</span>
+        </div>
+      </div>
+
+      <!-- Dimension switch (Spartan Tabs, same markup as the typology block) -->
+      <hlm-tabs [tab]="dimension()" (tabActivated)="setDimension($event)" class="mt-[20px]">
+        <div class="flex flex-wrap items-center justify-between gap-[12px]">
+          <hlm-tabs-list class="max-sm:!h-auto max-sm:!w-full sm:w-auto" [attr.aria-label]="copy.dimensionAriaLabel">
+            <button hlmTabsTrigger="program" type="button" class="!text-[13px] max-sm:!h-auto max-sm:min-w-0 max-sm:!whitespace-normal max-sm:text-center" data-testid="projects-tab-program">{{ copy.tabProgram }}</button>
+            <button hlmTabsTrigger="center" type="button" class="!text-[13px] max-sm:!h-auto max-sm:min-w-0 max-sm:!whitespace-normal max-sm:text-center" data-testid="projects-tab-center">{{ copy.tabCenter }}</button>
+          </hlm-tabs-list>
+
+          <!-- View switch: ghost segmented control, aria-pressed (never a second brand button) -->
+          <div class="inline-flex items-center gap-[2px] rounded-[8px] border border-[var(--pr-border)] p-[2px]" role="group" [attr.aria-label]="copy.viewAriaLabel">
+            <button
+              hlmBtn
+              variant="ghost"
+              type="button"
+              class="!h-[28px] !text-[13px] focus-visible:[box-shadow:var(--pr-focus-ring)]"
+              [class]="viewClass('chart')"
+              [attr.aria-pressed]="view() === 'chart'"
+              data-testid="projects-view-chart"
+              (click)="setView('chart')">
+              {{ copy.viewChart }}
+            </button>
+            <button
+              hlmBtn
+              variant="ghost"
+              type="button"
+              class="!h-[28px] !text-[13px] focus-visible:[box-shadow:var(--pr-focus-ring)]"
+              [class]="viewClass('table')"
+              [attr.aria-pressed]="view() === 'table'"
+              data-testid="projects-view-table"
+              (click)="setView('table')">
+              {{ copy.viewTable }}
+            </button>
+          </div>
+        </div>
+
+        <div [hlmTabsContent]="dimension()" class="!text-[13px]">
+          @if (view() === 'chart') {
+            <app-pr-viz-chart class="mt-[12px] block w-full" [options]="chartOption()" [tableModel]="chartTable()" [chartTitle]="tableCaption()" height="320px" />
+          } @else {
+            <div class="mt-[12px] overflow-x-auto">
+              <table class="w-full border-collapse text-[13px]" data-testid="projects-table">
+                <caption class="sr-only">{{ tableCaption() }}</caption>
+                <thead>
+                  <tr class="border-b border-[var(--pr-border-divider)] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    <th scope="col" class="px-[8px] py-[8px] font-bold">{{ firstColumn() }}</th>
+                    <th scope="col" class="px-[8px] py-[8px] text-right font-bold">{{ copy.kpiMapped }}</th>
+                    <th scope="col" class="px-[8px] py-[8px] text-right font-bold">{{ copy.kpiWithBilateral }}</th>
+                    <th scope="col" class="px-[8px] py-[8px] text-right font-bold">{{ copy.kpiW1w2 }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of rows(); track row.code ?? '__unassigned') {
+                    <tr class="border-b border-[var(--pr-border-divider)]" data-testid="projects-row">
+                      <th scope="row" class="px-[8px] py-[8px] text-left font-semibold text-[var(--pr-text-heading)]">
+                        <span data-testid="projects-row-label">{{ row.label }}</span>
+                        @if (dimension() === 'program' && row.name) {
+                          <span class="ml-[6px] text-[12px] font-normal text-[var(--pr-text-muted)]">{{ row.name }}</span>
+                        }
+                      </th>
+                      <td class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-heading)]">{{ row.mapped }}</td>
+                      <td class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.withBilateralResults }}</td>
+                      <td class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.w1w2Contributors }}</td>
+                    </tr>
+                  }
+                  <tr data-testid="projects-total-row">
+                    <th scope="row" class="px-[8px] py-[8px] text-left font-bold text-[var(--pr-text-heading)]">{{ copy.totalLabel }}</th>
+                    <td class="px-[8px] py-[8px] text-right font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ totals().mapped }}</td>
+                    <td class="px-[8px] py-[8px] text-right font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ totals().withBilateralResults }}</td>
+                    <td class="px-[8px] py-[8px] text-right font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ totals().w1w2Contributors }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          }
+          @if (dimension() === 'program') {
+            <p class="m-0 mt-[10px] text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-multi-caption">{{ copy.multiProgramCaption }}</p>
+          }
+        </div>
+      </hlm-tabs>
+    }
+
+    @if (unmapped() > 0) {
+      <p class="m-0 mt-[12px] text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-footnote">{{ copy.footnote(unmapped()) }}</p>
+    }
+  }
+</section>

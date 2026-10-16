@@ -9,6 +9,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { PortfolioOverviewComponent } from './portfolio-overview.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
+import { CentersService } from '../../../../shared/services/global/centers.service';
 import { PORTFOLIO_OVERVIEW_COPY as COPY } from '../../../../internationalization/portfolio-overview.copy';
 
 const mockChartInstance = {
@@ -96,6 +97,11 @@ const CLOSED_PHASE = [
   raw({ phase_status: 0, version_id: '1', phase_name: 'Reporting 2022 - P22', acronym: 'P22' })
 ];
 
+/** WPS-T-5: the projects block injects CentersService (HTTP on construction) and its own API call; the CentersService is mocked here and its API call goes through HttpTestingController. */
+const projectsProviders = () => [
+  { provide: CentersService, useValue: { getData: jest.fn().mockResolvedValue([]) } }
+];
+
 describe('PortfolioOverviewComponent', () => {
   let fixture: ComponentFixture<PortfolioOverviewComponent>;
   let component: PortfolioOverviewComponent;
@@ -114,6 +120,7 @@ describe('PortfolioOverviewComponent', () => {
         { provide: ApiService, useValue: apiMock },
         { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } },
         { provide: DataControlService, useValue: { reportingCurrentPhase: { phaseYear: 2026, portfolioAcronym: 'P25' } } },
+        ...projectsProviders(),
         provideHttpClient(),
         provideHttpClientTesting()
       ]
@@ -352,6 +359,7 @@ describe('PortfolioOverviewComponent', () => {
           { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE } },
           { provide: Router, useValue: { navigate: jest.fn() } },
           { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          ...projectsProviders(),
           provideHttpClient(),
           provideHttpClientTesting()
         ]
@@ -570,6 +578,7 @@ describe('PortfolioOverviewComponent', () => {
           { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE } },
           { provide: Router, useValue: { navigate: jest.fn() } },
           { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          ...projectsProviders(),
           provideHttpClient(),
           provideHttpClientTesting()
         ]
@@ -647,6 +656,67 @@ describe('PortfolioOverviewComponent', () => {
       component.onCategoryOriginChartClick({ name: 'Knowledge product' } as any);
       expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { category: 'Knowledge product' } });
 
+    });
+  });
+
+  describe('W3/Bilateral projects slot (WPS-T-5, WPS-DD-7, JD-10)', () => {
+    const CENTERS = 'app-portfolio-centers-block';
+    const PROJECTS = 'app-portfolio-projects-block';
+
+    it('hasFigures: projects block renders after the centers block', () => {
+      build(OPEN_PHASE);
+      const root: HTMLElement = fixture.nativeElement;
+      const centers = root.querySelector(CENTERS) as Element;
+      const projects = root.querySelector(PROJECTS) as Element;
+      expect(centers && projects).toBeTruthy();
+      expect(centers.compareDocumentPosition(projects) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('loading: block absent, no request, and no page skeleton with a projects testid', () => {
+      const pending$ = new Subject();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [PortfolioOverviewComponent],
+        providers: [
+          { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE: { GET_AllResultsWithUseRole: () => pending$ } } },
+          { provide: Router, useValue: { navigate: jest.fn() } },
+          { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          ...projectsProviders(),
+          provideHttpClient(),
+          provideHttpClientTesting()
+        ]
+      });
+      fixture = TestBed.createComponent(PortfolioOverviewComponent);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.isLoading()).toBe(true);
+      expect(fixture.nativeElement.querySelector(PROJECTS)).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid*="projects"][data-testid*="skeleton"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid*="skeleton"][data-testid*="projects"]')).toBeNull();
+      expect(TestBed.inject(HttpTestingController).match(r => r.url.includes('bilateral-projects')).length).toBe(0);
+    });
+
+    it('loading done but hasFigures false (empty and error): the block is still present', () => {
+      build([]);
+      expect(fixture.componentInstance.hasFigures()).toBe(false);
+      expect(fixture.nativeElement.querySelector(PROJECTS)).toBeTruthy();
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [PortfolioOverviewComponent],
+        providers: [
+          { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE: { GET_AllResultsWithUseRole: () => throwError(() => new Error('boom')) } } },
+          { provide: Router, useValue: { navigate: jest.fn() } },
+          { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          ...projectsProviders(),
+          provideHttpClient(),
+          provideHttpClientTesting()
+        ]
+      });
+      fixture = TestBed.createComponent(PortfolioOverviewComponent);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.hasFigures()).toBe(false);
+      expect(fixture.nativeElement.querySelector(PROJECTS)).toBeTruthy();
     });
   });
 
