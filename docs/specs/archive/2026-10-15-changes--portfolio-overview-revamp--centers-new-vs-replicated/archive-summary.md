@@ -53,7 +53,7 @@ No `test-report.md` / `validation-report.md`: the spec ran Leader → Implemente
 
 ## Accepted Warnings / Follow-ups
 
-- [ ] PRTest smoke after the commit reaches `performance-refactor` (reference 712 = 548 + 164).
+- [x] PRTest smoke after the commit reaches `performance-refactor` (reference 712 = 548 + 164). Done 2026-10-16, read-only: card 725 = New 561 + Replicated 164 (New grew, invariant holds), 15 / 16 Centers, 6.1 % approved; Replicated filter → donut 164 (Editing 158, Approved 2).
 - [ ] Optional: skeleton on the card total while loading (shows "0 results · 0 % approved").
 - [ ] Optional readability items from the T-2 / T-3 Reviewers (`execution.md` ADVISORY blocks).
 - [ ] Shell topbar still overflows at 375 px (outside this spec).

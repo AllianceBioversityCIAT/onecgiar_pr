@@ -66,7 +66,7 @@ Review history:
 
 ## Accepted Warnings / Follow-ups
 
-- [ ] PRTest smoke after the commit reaches `performance-refactor` (reference: 971 / 971 / 555, Unclassified 0).
+- [x] PRTest smoke after the commit reaches `performance-refactor` (reference: 971 / 971 / 555, Unclassified 0). Done 2026-10-16, read-only: 642 + 357 + 0 = 999 = Total; 14 P/A rows = 999; 14 Center rows = 567 = W3/Bilateral card; no Unclassified (data grew, all reconciliations exact).
 - [ ] The ≥ 4 px segment clamp is not exercisable on real data (no tiny segments; Impact is 0 page-wide).
 - [ ] Advisory: the `typology.aggregate.spec.ts:126` case name still says "page-wide".
 - [ ] Advisory: the Unclassified fill `--pr-color-neutral-800` is mauve-tinted. If that is off-brand, amend design §7.5 instead of swapping the token silently.
