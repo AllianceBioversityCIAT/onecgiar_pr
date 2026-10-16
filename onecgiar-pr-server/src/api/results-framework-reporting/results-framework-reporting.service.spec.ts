@@ -1,6 +1,9 @@
 import { HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/clarisa-projects.repository';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -165,8 +168,21 @@ const mockResultsByInstitutionsService = {
   savePartnersInstitutionsByResultV2: jest.fn(),
 };
 
+const mockVersionRepository = {
+  findOne: jest.fn(),
+};
+
 const mockDataSource = {
   query: jest.fn(),
+  getRepository: jest.fn(() => mockVersionRepository),
+};
+
+const mockClarisaCenterRepository = {
+  find: jest.fn(),
+};
+
+const mockClarisaProjectsRepository = {
+  getPortfolioProjectFacts: jest.fn(),
 };
 
 // W12-R-2: default versionId resolution goes through VersioningService.$_findActivePhase
@@ -207,6 +223,14 @@ describe('ResultsFrameworkReportingService', () => {
           useValue: mockClarisaInitiativesRepository,
         },
         { provide: RoleByUserRepository, useValue: mockRoleByUserRepository },
+        {
+          provide: getRepositoryToken(ClarisaCenter),
+          useValue: mockClarisaCenterRepository,
+        },
+        {
+          provide: ClarisaProjectsRepository,
+          useValue: mockClarisaProjectsRepository,
+        },
         {
           provide: ClarisaGlobalUnitRepository,
           useValue: mockClarisaGlobalUnitRepository,
@@ -1693,6 +1717,288 @@ describe('ResultsFrameworkReportingService', () => {
       ]);
 
       expect(result.response.areas[0].progress.progress_value).toBe(50);
+    });
+  });
+
+  describe('getPortfolioBilateralProjects (WPS-T-2)', () => {
+    const seed = () => [
+      { official_code: 'SP01', short_name: 'One', name: 'Program One' },
+      { official_code: 'SP02', short_name: 'Two', name: 'Program Two' },
+      { official_code: 'SP04', short_name: 'Four', name: 'Program Four' },
+    ];
+    const centers = () => [
+      {
+        code: 'CENTER-03',
+        institutionId: 103,
+        clarisa_institution: {
+          acronym: 'CIAT',
+          name: 'Alliance Bioversity-CIAT',
+        },
+      },
+      {
+        code: 'CENTER-16',
+        institutionId: 221,
+        clarisa_institution: {
+          acronym: 'SMO',
+          name: 'CGIAR System Organization',
+        },
+      },
+      {
+        code: 'CENTER-17',
+        institutionId: 10961,
+        clarisa_institution: { acronym: 'SO', name: 'System Office' },
+      },
+    ];
+    const fact = (o: any) => ({
+      id: 0,
+      organizationCode: null,
+      sourceCenterAcronym: null,
+      approvedProgramCodes: [],
+      hasBilateral: false,
+      hasW1w2: false,
+      ...o,
+    });
+    const falsifierRows = () => [
+      fact({
+        id: 1,
+        organizationCode: 103,
+        approvedProgramCodes: ['SP01'],
+        hasBilateral: true,
+        hasW1w2: true,
+      }),
+      fact({
+        id: 4,
+        sourceCenterAcronym: 'CIAT',
+        approvedProgramCodes: ['SP01', 'SP04'],
+      }),
+      fact({
+        id: 9,
+        sourceCenterAcronym: 'XYZ',
+        approvedProgramCodes: ['SP02'],
+      }),
+      fact({
+        id: 10,
+        organizationCode: 10961,
+        approvedProgramCodes: ['SP01'],
+      }),
+      fact({ id: 2, hasBilateral: true }),
+    ];
+    const openVersion = {
+      id: '42',
+      phase_name: 'Reporting 2026',
+      phase_year: 2026,
+      status: true,
+    };
+
+    beforeEach(() => {
+      mockVersionRepository.findOne.mockReset();
+      mockVersionRepository.findOne.mockResolvedValue(openVersion);
+      mockClarisaInitiativesRepository.find.mockReset();
+      mockClarisaInitiativesRepository.find.mockResolvedValue(seed());
+      mockClarisaCenterRepository.find.mockReset();
+      mockClarisaCenterRepository.find.mockResolvedValue(centers());
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockReset();
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue(
+        falsifierRows(),
+      );
+    });
+
+    const byCode = (list: any[], code: string | null) =>
+      list.find((i) => i.code === code);
+
+    it('aggregates totals, by P/A, by Center and the unmapped count (S-1.1..S-6.1)', async () => {
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(result.response.versionId).toBe(42);
+      expect(result.response.phaseYear).toBe(2026);
+      expect(result.response.phaseName).toBe('Reporting 2026');
+      expect(result.response.totals).toEqual({
+        mapped: 4,
+        withBilateralResults: 1,
+        w1w2Contributors: 1,
+      });
+      const { byProgram, byCenter } = result.response;
+      expect(byCode(byProgram, 'SP01')).toMatchObject({
+        shortName: 'One',
+        name: 'Program One',
+        mapped: 3,
+        withBilateralResults: 1,
+        w1w2Contributors: 1,
+      });
+      expect(byCode(byProgram, 'SP04').mapped).toBe(1);
+      expect(byCode(byProgram, 'SP02').mapped).toBe(1);
+      expect(byProgram).toHaveLength(3);
+
+      expect(byCode(byCenter, 'CENTER-03')).toMatchObject({
+        acronym: 'CIAT',
+        name: 'Alliance Bioversity-CIAT',
+        mapped: 2,
+        withBilateralResults: 1,
+        w1w2Contributors: 1,
+      });
+      expect(byCode(byCenter, 'CENTER-17').mapped).toBe(1);
+      expect(byCode(byCenter, null)).toMatchObject({
+        acronym: null,
+        name: null,
+        mapped: 1,
+      });
+      expect(byCode(byCenter, 'CENTER-16')).toBeUndefined();
+      expect(byCenter.reduce((n: number, c: any) => n + c.mapped, 0)).toBe(4);
+      expect(result.response.unmappedWithBilateralResults).toBe(1);
+    });
+
+    it('keeps a seed P/A with zero mapped projects (S-5.1)', async () => {
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue(
+        [],
+      );
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(result.response.byProgram).toHaveLength(3);
+      expect(byCode(result.response.byProgram, 'SP02')).toMatchObject({
+        mapped: 0,
+        withBilateralResults: 0,
+        w1w2Contributors: 0,
+      });
+      expect(result.response.byCenter).toEqual([]);
+      expect(result.response.unmappedWithBilateralResults).toBe(0);
+    });
+
+    it('drops codes outside the seed and counts a repeated code once', async () => {
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue([
+        fact({ id: 1, approvedProgramCodes: [' sp01 ', 'SP01', 'XX99'] }),
+      ]);
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(byCode(result.response.byProgram, 'SP01').mapped).toBe(1);
+      expect(byCode(result.response.byProgram, 'XX99')).toBeUndefined();
+      expect(result.response.totals.mapped).toBe(1);
+    });
+
+    it('carries null institution fields for an alias Center with no Center row', async () => {
+      mockClarisaCenterRepository.find.mockResolvedValue([]);
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue([
+        fact({
+          id: 1,
+          sourceCenterAcronym: 'CIAT',
+          approvedProgramCodes: ['SP01'],
+        }),
+      ]);
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(byCode(result.response.byCenter, 'CENTER-03')).toMatchObject({
+        acronym: null,
+        name: null,
+        mapped: 1,
+      });
+    });
+
+    it('loads the Centers with their institution relation', async () => {
+      await service.getPortfolioBilateralProjects();
+      expect(mockClarisaCenterRepository.find).toHaveBeenCalledWith({
+        relations: { clarisa_institution: true },
+      });
+    });
+
+    describe('version resolution (WPS-DD-3)', () => {
+      it('calls the repository with the phase year and the numeric version id, never undefined', async () => {
+        await service.getPortfolioBilateralProjects();
+        expect(
+          mockClarisaProjectsRepository.getPortfolioProjectFacts,
+        ).toHaveBeenCalledWith(2026, 42);
+      });
+
+      it('by id: active + Reporting module, with no status filter (closed phase accepted)', async () => {
+        mockVersionRepository.findOne.mockResolvedValue({
+          ...openVersion,
+          id: '7',
+          phase_year: 2025,
+          status: false,
+        });
+        const result = (await service.getPortfolioBilateralProjects(7)) as any;
+
+        expect(result.status).toBe(HttpStatus.OK);
+        expect(result.response.versionId).toBe(7);
+        const where = mockVersionRepository.findOne.mock.calls[0][0].where;
+        expect(where).toEqual({
+          id: 7,
+          is_active: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        });
+        expect(where).not.toHaveProperty('status');
+        expect(
+          mockClarisaProjectsRepository.getPortfolioProjectFacts,
+        ).toHaveBeenCalledWith(2025, 7);
+      });
+
+      it('an id that is not an active Reporting version (e.g. IPSR) is a 404', async () => {
+        mockVersionRepository.findOne.mockResolvedValue(null);
+        const result = (await service.getPortfolioBilateralProjects(99)) as any;
+
+        expect(result.status).toBe(HttpStatus.NOT_FOUND);
+        expect(
+          mockClarisaProjectsRepository.getPortfolioProjectFacts,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('no id: uses the open Reporting version', async () => {
+        await service.getPortfolioBilateralProjects();
+        expect(mockVersionRepository.findOne).toHaveBeenCalledTimes(1);
+        expect(mockVersionRepository.findOne.mock.calls[0][0].where).toEqual({
+          status: true,
+          is_active: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        });
+      });
+
+      it('no id and no open phase: falls back to the newest active Reporting version', async () => {
+        mockVersionRepository.findOne
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({
+            ...openVersion,
+            id: '30',
+            phase_year: 2025,
+            status: false,
+          });
+        const result = (await service.getPortfolioBilateralProjects()) as any;
+
+        expect(result.status).toBe(HttpStatus.OK);
+        expect(result.response.versionId).toBe(30);
+        const fallback = mockVersionRepository.findOne.mock.calls[1][0];
+        expect(fallback.where).toEqual({
+          is_active: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        });
+        expect(fallback.order).toEqual({ phase_year: 'DESC', id: 'DESC' });
+      });
+
+      it('no Reporting version at all is a 404', async () => {
+        mockVersionRepository.findOne.mockResolvedValue(null);
+        const result = (await service.getPortfolioBilateralProjects()) as any;
+        expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      });
+
+      it('a non-positive resolved id is a 404', async () => {
+        mockVersionRepository.findOne.mockResolvedValue({
+          ...openVersion,
+          id: null,
+        });
+        const result = (await service.getPortfolioBilateralProjects()) as any;
+        expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      });
+    });
+
+    it('turns a repository failure into a generic 500 without SQL', async () => {
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockRejectedValue(
+        Object.assign(new Error('select * from clarisa_projects boom'), {
+          code: 'ER_X',
+        }),
+      );
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(JSON.stringify(result)).not.toContain('clarisa_projects');
     });
   });
 

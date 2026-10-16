@@ -36,6 +36,7 @@ describe('ResultsFrameworkReportingController', () => {
             getExistingResultContributorsToIndicators: jest.fn(),
             getDashboardStats: jest.fn(),
             getPortfolioTocCoverage: jest.fn(),
+            getPortfolioBilateralProjects: jest.fn(),
           },
         },
         // ValidRoleGuard (TKP-T-2) is instantiated with the controller's module.
@@ -97,6 +98,52 @@ describe('ResultsFrameworkReportingController', () => {
         user,
         5,
       );
+    });
+  });
+
+  describe('getPortfolioBilateralProjects (WPS-T-2)', () => {
+    const handler = () =>
+      ResultsFrameworkReportingController.prototype
+        .getPortfolioBilateralProjects;
+
+    it('is mounted at GET portfolio/bilateral-projects', () => {
+      expect(Reflect.getMetadata(PATH_METADATA, handler())).toBe(
+        'portfolio/bilateral-projects',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler())).toBe(
+        RequestMethod.GET,
+      );
+    });
+
+    it('carries the ValidRoleGuard and the Admin application role metadata (presence only)', () => {
+      expect(Reflect.getMetadata(GUARDS_METADATA, handler())).toEqual([
+        ValidRoleGuard,
+      ]);
+      expect(Reflect.getMetadata('role', handler())).toEqual({
+        roles: RoleEnum.ADMIN,
+        type: RoleTypeEnum.APPLICATION,
+      });
+    });
+
+    it.each([
+      ['7', 7],
+      [undefined, undefined],
+      ['', undefined],
+      ['   ', undefined],
+      ['abc', undefined],
+      ['0', undefined],
+      ['-3', undefined],
+    ])('passes versionId %p to the service as %p', (raw, expected) => {
+      controller.getPortfolioBilateralProjects(raw as any);
+      expect(
+        reportingService.getPortfolioBilateralProjects,
+      ).toHaveBeenCalledWith(expected);
+    });
+
+    it('returns what the service returns', async () => {
+      const payload = { response: {}, status: 200 } as any;
+      reportingService.getPortfolioBilateralProjects.mockResolvedValue(payload);
+      expect(await controller.getPortfolioBilateralProjects('1')).toBe(payload);
     });
   });
 
