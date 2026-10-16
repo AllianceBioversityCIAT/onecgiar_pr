@@ -1,5 +1,6 @@
 import { buildStatusModel } from '../../../../../bilateral/pages/bilateral-overview/bilateral-overview.aggregate';
 import { BilateralCenterResult } from '../../../../../bilateral/services/bilateral-center-result.interface';
+import { DimensionIndex, FilterRow, PortfolioFilterSelection, isActive, matchesRow } from '../../services/portfolio-filters';
 
 /**
  * P2-3858 — pure aggregation of the CGIAR Centers block (moved from Admin › All P/As and Centers into
@@ -67,4 +68,24 @@ export function byOrigin(rows: readonly BilateralCenterResult[], origin: CenterO
 export function originCounts(rows: readonly BilateralCenterResult[]): { total: number; new: number; replicated: number } {
   const replicated = rows.filter(isReplicatedRow).length;
   return { total: rows.length, new: rows.length - replicated, replicated };
+}
+
+const NO_VALUES: ReadonlySet<string> = new Set<string>();
+
+/**
+ * GLF-R-8 / DD-9 — the page's global selection over a Center's W3 rows. It runs BEFORE `byOrigin` and the status
+ * tile. Program, Typology and Status are decided by the row (`matchesRow`, so the level map and the status slots
+ * are the page's own); Project goes through the dimensions index by `row.id`, and only when `honoursProject`
+ * (the block's phase is the page version). The Center dimension is not a row rule: it limits which Centers feed
+ * the block, so it is dropped here. Project honoured with no index yet is pending: no row is claimed as a match.
+ */
+export function applyGlobal(
+  rows: readonly BilateralCenterResult[],
+  selection: PortfolioFilterSelection,
+  index: DimensionIndex | null | undefined,
+  honoursProject: boolean
+): BilateralCenterResult[] {
+  const effective: PortfolioFilterSelection = { ...selection, center: NO_VALUES, project: honoursProject ? selection.project : NO_VALUES };
+  if (!isActive(effective)) return [...rows];
+  return rows.filter(row => matchesRow(row as unknown as FilterRow, effective, index) === 'match');
 }

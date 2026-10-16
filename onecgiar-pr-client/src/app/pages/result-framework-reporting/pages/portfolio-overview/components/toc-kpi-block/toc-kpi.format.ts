@@ -71,3 +71,13 @@ export function toViewRows(programs: PortfolioTocCoverageProgram[]): TocKpiViewR
 export function toSummary(portfolio: CoverageCount): TocKpiSummary {
   return { covered: portfolio.covered, total: portfolio.total, percent: coveragePercent(portfolio.covered, portfolio.total) };
 }
+
+/** Rows whose code is in `programs`; every row when the set is empty (no Program filter). Does not mutate the input. */
+export function filterRowsByPrograms(rows: readonly TocKpiViewRow[], programs: ReadonlySet<string>): TocKpiViewRow[] {
+  return programs.size ? rows.filter(row => programs.has(row.code)) : [...rows];
+}
+
+/** Sum of the visible rows (GLF-P-5): the summary of a Program-filtered view. */
+export function sumRows(rows: readonly TocKpiViewRow[]): CoverageCount {
+  return rows.reduce((acc, row) => ({ covered: acc.covered + row.covered, total: acc.total + row.total }), { covered: 0, total: 0 });
+}

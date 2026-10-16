@@ -1,5 +1,5 @@
 import { PortfolioTocCoverageProgram } from '../../../../../../shared/interfaces/portfolio-toc-coverage.interface';
-import { coveragePercent, naturalCodeCompare, toSummary, toViewRows } from './toc-kpi.format';
+import { coveragePercent, filterRowsByPrograms, naturalCodeCompare, sumRows, toSummary, toViewRows } from './toc-kpi.format';
 
 const program = (code: string, covered: number, total: number): PortfolioTocCoverageProgram => ({
   code,
@@ -88,6 +88,19 @@ describe('toc-kpi.format (TKP-T-3)', () => {
     });
     it('applies the clamps', () => {
       expect(toSummary({ covered: 999, total: 1000 }).percent).toBe(99);
+    });
+  });
+
+  describe('filterRowsByPrograms / sumRows (GLF-T-6)', () => {
+    const rows = toViewRows([program('SP01', 10, 40), program('SP02', 5, 10), program('SP03', 1, 5)]);
+    it('keeps only the selected codes', () => {
+      expect(filterRowsByPrograms(rows, new Set(['SP01', 'SP02'])).map(r => r.code)).toEqual(['SP01', 'SP02']);
+    });
+    it('an empty set keeps every row', () => {
+      expect(filterRowsByPrograms(rows, new Set())).toHaveLength(3);
+    });
+    it('sums covered and total of the given rows (15 / 50)', () => {
+      expect(sumRows(filterRowsByPrograms(rows, new Set(['SP01', 'SP02'])))).toEqual({ covered: 15, total: 50 });
     });
   });
 });

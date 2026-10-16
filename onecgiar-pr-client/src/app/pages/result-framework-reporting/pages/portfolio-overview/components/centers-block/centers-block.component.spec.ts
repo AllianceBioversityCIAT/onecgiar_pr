@@ -7,6 +7,7 @@ import { PortfolioCentersBlockComponent } from './centers-block.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+import { EMPTY_SELECTION, buildDimensionIndex, type PortfolioFilterSelection } from '../../services/portfolio-filters';
 import { adminModuleRouting } from '../../../../../../shared/routing/routing-data';
 
 
@@ -33,7 +34,7 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
     { code: 'CENTER-10', acronym: 'IFPRI', name: 'International Food Policy Research Institute' }
   ];
 
-  async function create() {
+  async function create(inputs: Record<string, unknown> = {}) {
     TestBed.configureTestingModule({
       imports: [PortfolioCentersBlockComponent],
       providers: [
@@ -44,6 +45,7 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
       ]
     });
     const fixture = TestBed.createComponent(PortfolioCentersBlockComponent);
+    Object.entries(inputs).forEach(([key, value]) => fixture.componentRef.setInput(key, value));
     fixture.detectChanges();
     await flush();
     fixture.detectChanges();
@@ -376,5 +378,100 @@ describe('PortfolioCentersBlockComponent (P2-3858, moved by P2-3928)', () => {
     expect(route?.redirectTo).toBe('/portfolio-overview');
     expect(route?.pathMatch).toBe('full');
     expect((route as any)?.loadComponent).toBeUndefined();
+  });
+  describe('GLF-T-7: global selection (GLF-R-8, GLF-R-9, DD-9)', () => {
+    const sel = (patch: Partial<Record<keyof PortfolioFilterSelection, string[]>>): PortfolioFilterSelection => ({
+      ...EMPTY_SELECTION,
+      ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, new Set(v)]))
+    });
+    const w3 = (id: number, status_id: number, result_type: string, is_replicated: number, submitter = 'SP01') => ({
+      id, status_id, result_type, is_replicated, submitter, source: 'API'
+    });
+    const fifteen = Array.from({ length: 15 }, (_, n) => ({ code: `CENTER-${String(n + 1).padStart(2, '0')}`, acronym: `C${n + 1}`, name: `Center ${n + 1}` }));
+    const byCenter: Record<string, any[]> = {
+      'CENTER-03': [w3(1, 1, 'Knowledge product', 0), w3(2, 6, 'Policy change', 1)],
+      'CENTER-11': [w3(3, 5, 'Other output', 1), w3(4, 7, 'Innovation use', 0, 'SP02')],
+      'CENTER-05': [w3(5, 1, 'Knowledge product', 0)]
+    };
+    const index = buildDimensionIndex({ projectLinks: [[1, 10], [2, 10], [3, 11], [4, 11], [5, 10]], centerLinks: [] });
+    beforeEach(() => {
+      getCenters = jest.fn(() => Promise.resolve(fifteen));
+      centerResults = jest.fn((code: string) => of({ response: byCenter[code] ?? [] }));
+    });
+
+    it('typology = {output}: only Output rows count and New + Replicated = the block total', async () => {
+      const c = (await create({ selection: sel({ typology: ['output'] }) })).componentInstance;
+      const k = c.kpis();
+      expect(k.bilateral).toBe(3);
+      expect(k.bilateralNew + k.bilateralReplicated).toBe(k.bilateral);
+      expect(c.centerTotals().total).toBe(3);
+    });
+
+    it('selecting the local origin "replicated" never changes kpis()', async () => {
+      const c = (await create({ selection: sel({ typology: ['output'] }) })).componentInstance;
+      const before = c.kpis();
+      c.toggleOrigin('replicated');
+      expect(c.kpis()).toEqual(before);
+      expect(c.centerTotals().total).toBe(1);
+    });
+
+    it('center = {CENTER-03, CENTER-11} over 15 Centers: only those codes, denominator 2', async () => {
+      const c = (await create({ selection: sel({ center: ['CENTER-03', 'CENTER-11'] }) })).componentInstance;
+      expect(c.viewRows().map(r => r.code).sort()).toEqual(['CENTER-03', 'CENTER-11']);
+      expect(c.kpis().centersCount).toBe(2);
+      expect(c.kpis().centersReporting).toBe(2);
+      expect(c.kpis().bilateral).toBe(4);
+    });
+
+    it('a selected Center with no rows still counts in the denominator but not as reporting', async () => {
+      const c = (await create({ selection: sel({ center: ['CENTER-03', 'CENTER-01'] }) })).componentInstance;
+      expect(c.kpis()).toMatchObject({ centersReporting: 1, centersCount: 2 });
+    });
+
+    it('the number of GET_bilateralCenterResults calls does not depend on the selection', async () => {
+      await create({ selection: sel({ center: ['CENTER-03'], typology: ['output'] }) });
+      expect(centerResults).toHaveBeenCalledTimes(15);
+    });
+
+    it('changing the selection after load causes no further request', async () => {
+      const fixture = await create();
+      fixture.componentRef.setInput('selection', sel({ center: ['CENTER-03'] }));
+      fixture.detectChanges();
+      fixture.componentRef.setInput('selection', EMPTY_SELECTION);
+      fixture.detectChanges();
+      expect(centerResults).toHaveBeenCalledTimes(15);
+      expect(fixture.componentInstance.kpis().bilateral).toBe(5);
+    });
+
+    it('project is honoured when the block version equals dimensionsVersionId', async () => {
+      const fixture = await create({ selection: sel({ project: ['11'] }), dimensionIndex: index, dimensionsVersionId: 36 });
+      expect(fixture.componentInstance.kpis().bilateral).toBe(2);
+      expect(fixture.nativeElement.querySelector('[data-testid="centers-not-affected"]')).toBeNull();
+    });
+
+    it('between cycles project is not applied and the block says "Not affected by: Project"', async () => {
+      const fixture = await create({ selection: sel({ project: ['11'] }), dimensionIndex: index, dimensionsVersionId: 30 });
+      expect(fixture.componentInstance.kpis().bilateral).toBe(5);
+      expect(fixture.nativeElement.querySelector('[data-testid="centers-not-affected"]').textContent.trim()).toBe('Not affected by: Project');
+    });
+
+    it('without the map version, project is also reported as not affected', async () => {
+      const fixture = await create({ selection: sel({ project: ['11'] }) });
+      expect(fixture.componentInstance.kpis().bilateral).toBe(5);
+      expect(fixture.nativeElement.querySelector('[data-testid="centers-not-affected"]')).not.toBeNull();
+    });
+
+    it('S-9.1: no line when no dimension is active, nor for the other four', async () => {
+      const fixture = await create({ selection: sel({ program: ['SP01'], center: ['CENTER-03'], typology: ['output'], status: ['editing'] }) });
+      expect(fixture.nativeElement.querySelector('[data-testid="centers-not-affected"]')).toBeNull();
+    });
+
+    it('the local origin refines inside the global selection', async () => {
+      const c = (await create({ selection: sel({ program: ['SP01'] }) })).componentInstance;
+      expect(c.centerTotals().total).toBe(4);
+      c.toggleOrigin('replicated');
+      expect(c.centerTotals().total).toBe(2);
+      expect(c.kpis().bilateral).toBe(4);
+    });
   });
 });

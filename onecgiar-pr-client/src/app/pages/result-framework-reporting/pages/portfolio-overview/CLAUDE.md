@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-10-16 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/w3-projects-section (WPS-T-5)
+**Verified:** 2026-10-16 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/global-filters (GLF-T-5)
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects. Ticket **P2-3304**;
@@ -10,17 +10,25 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 - `PortfolioOverviewComponent` is standalone + `OnPush` and **provides its own service**, so leaving the screen
   drops the rows. The typology block reads from it; the ToC KPI, Centers and Projects blocks have **their own** data paths.
-- `PortfolioOverviewService` owns **data and every aggregation**: `totals()` (status strip),
-  `categories()` / `categoryBars()`, `bilateralTotal()` / `bilateralBars()` and `versionId()` (first row's
-  `version_id`). All are `computed` off one signal — never accumulated by hand.
-- The component owns only **view state**: `bilateralExpanded`, `selectedStatusFilter`, the `phaseYear()` shared
-  by the eyebrow and the ToC KPI subtitle, plus the four mutually exclusive states `isLoading` / `hasError` /
-  `isEmpty` / `hasFigures`.
+- `PortfolioOverviewService` owns **data, the global selection and every aggregation**: `totals()`, `categories()`,
+  `bilateralBars()`, `versionId()` (first row's `version_id`), all `computed` off one signal, never accumulated by hand.
+- The component owns only **view state**: `bilateralExpanded`, the `phaseYear()` shared by the eyebrow and the ToC KPI
+  subtitle, the four mutually exclusive states `isLoading` / `hasError` / `isEmpty` / `hasFigures`, and the URL mirror.
 - Page data: **one** `GET_AllResultsWithUseRole(userId, { limit: 20000 })`, no `submitter_id` (all the roles allow).
 - Route: `extraRoutingApp` (`shared/routing/routing-data.ts`), `canActivate: [CheckAdminGuard]`. **Guarded, not
   merely hidden** (client CLAUDE.md §7).
 - `kpis()` has 8 breakdown fields (`w1w2New/NewSubmitted/NewEditing/Replicated`, same four `bilateral…`). **Replicated** = `is_replicated` ∈ `1 | '1' | true`, else **New**. **Editing** = `Number(status_id) === 1`; every
   other status (missing too) is **Submitted**. Submitted + Editing = New, so New + Replicated reconciles.
+
+## Global filters (2026-10-16, spec `changes/portfolio-overview-revamp/global-filters`)
+
+- **Bar** `components/filter-bar/` (`app-portfolio-filter-bar`, no inputs, reads the service): Program, Project, Center, Typology, Status. Mounted inside `hasFigures()` above the deck, so never while loading, on error or phase-empty.
+- **State** lives in the service: `selection` (changed only via `setSelection` / `toggleValue` / `clearDimension` / `clearAll`), `filteredRows()` / `filteredTotal()`, `filtersPending()`, `dimensions` (the Project / Center map, **one** request per load + Retry), `dimensionIndex`. Pure logic in `services/portfolio-filters.ts`.
+- **URL mirror** (DD-11): the page reads `?program=&project=&center=&typology=&status=` **once**, applies it when rows exist (the service sanitizes; Project / Center after the map), then an effect writes `router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true })`. A signal is the only state; never read the URL back.
+- 🛑 **Sub-switch order** inside `hasFigures()`: `filtersPending()` -> section skeletons (testid `portfolio-overview-skeleton-filters`); else `filteredTotal() === 0` -> no-match panel (`portfolio-no-match`, Clear all); else deck, status, typology. The ToC KPI block sits **outside** the sub-switch (renders in every case).
+- **Block inputs:** typology `[rows]=filteredRows()`; ToC KPI `programs` + `notAffected`; Projects `programs`, `centers`, `notAffected` (from `notAffectedBy('toc' | 'projects', selection)`); Centers `selection`, `dimensionIndex`, `[dimensionsVersionId]="data.dimensionIndex() ? data.versionId() : null"` (only once the map is ready, else Project shows as "Not affected by: Project").
+- 🛑 **DD-7, do not re-add a local status highlight:** the status tiles and donut call `toggleValue('status', key)` (`aria-pressed` from `selection().status`); the old local status-filter signal and its toggle are gone. The strip shows when ANY dimension is active; **View in Results Center** only when `resultsCenterLinkable` (<= 1 Program, <= 1 Status).
+- **Typology Center view is lead-only by design** (it counts the lead Center); the global Center filter matches lead + contributing Centers, so their numbers can differ. Not a bug.
 
 ## KPI deck (2026-10-14, spec `changes/portfolio-overview-kpi-breakdown`)
 
@@ -47,9 +55,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Where it is used
 
-- `shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component.ts:218` — `sections()` puts it **first**
-  in PLATFORM for admins (from `extraRoutingApp`), above `Results Center`, as designed. Icon `lucideLayoutGrid` (`:151`).
-- Bilateral and ToC KPI rows navigate to `entity-details/:code/results` (the programme's Results tab).
+- `shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component.ts:218` — first in PLATFORM for admins (`extraRoutingApp`). Bilateral and ToC KPI rows open `entity-details/:code/results`.
 
 ## Gotchas
 
@@ -60,27 +66,22 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
   `programme-results.component.ts:101`; unknown ids fall back to the `not-started` foreground. The
   names in the payload (`Editing`, `Pending Review`, …) are labels only — colouring by name would
   invent a sixth status colour (UI rule 9).
-- **The counters and the category bars are deliberately NOT clickable**: no surface lists the whole portfolio
-  filtered by status or category (raised on P2-3304).
+- **The counters and the category bars are NOT clickable** (no surface lists the portfolio by status or category, P2-3304).
 - **The bilateral fill uses `--pr-chart-2-muted` (`#8b7cc4`)** — the design's colour, valid here
   because it is a NON-TEXT graphic (3.52:1 on the divider track, WCAG 1.4.11). 🛑 Never use it for
   text: see `docs/DESIGN-DEVIATIONS.md` §1 vs §8, the same hex answering two different questions.
-- **`isPartial()` is the honesty guard**: if `meta.total` exceeds what we asked for, the screen says
-  the figures are partial rather than passing a truncated portfolio off as the whole thing.
+- **`isPartial()` is the honesty guard**: if `meta.total` exceeds what we asked for, the screen says the figures are partial.
 - 🛑 **Two counts, two questions.** `total()` (`services/portfolio-overview.service.ts:195`) is the open-phase
   count (feeds the KPI tile); `fetchedCount()` (`:182`) is the raw server count captured in `load()` before
   `apply()`'s phase filter. The partial banner ("Showing the first N results") MUST bind to `fetchedCount()`.
-- ⚠️ **"Replicated" means `is_replicated`, not "innovation".** The card-3 label "Innovations replicated from
-  2025" assumes replicated W3 rows are innovations only (premise P-3, checked on prod 2026-10-14). If that
-  stops holding, change the label — the counter itself does not filter by result type.
+- ⚠️ **"Replicated" means `is_replicated`, not "innovation".** Card-3's "Innovations replicated from 2025" assumes replicated W3 rows are innovations only (P-3, prod 2026-10-14); if that stops holding, change the label.
 - 🛑 **`tests/mocks/spartanBrainMock.ts` must declare every input a Helm host directive re-exposes**, or NG0311:
   `BrnSeparator` (`orientation`/`decorative`, deck), `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/
   `showDelay`/`tooltipDisabled`, Rejected tile) and `BrnTabs` (`activationMode`, typology tabs).
 
 ## Status section & removed rankings (2026-10-14, spec `…/remove-rankings-status-copy`)
 
-- Copy: `internationalization/portfolio-overview.copy.ts` (only what that spec added); donut caption is a
-  parameter. Rejected-tile hint: `statusHints` + `hlmTooltip`.
+- Copy: `internationalization/portfolio-overview.copy.ts`. Rejected-tile hint: `statusHints` + `hlmTooltip`.
 - Guide link: `STATUS_GUIDE_URL` (`shared/constants/portfolio-links.constants.ts`), typed `string` (not `''`,
   or templates narrow it to `never`). Empty = not rendered. Pending OQ-1: set it when the guide exists.
 - 🛑 **Removed on purpose, do not re-add:** the Program and Center ranking cards ("competition" feedback),
@@ -92,8 +93,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 - `components/typology-block/` after the status section, inside `hasFigures()` (skeleton testid
   `portfolio-overview-skeleton-typology`); type -> level map in `typology.aggregate.ts` (pure).
-- Center dimension is lead-only + W3-only; rows A->Z, catch-all last, no ranking. The `rows` input
-  (`data.openRows()`) is the hook for the family #6 global filters.
+- Center dimension is lead-only + W3-only; rows A->Z, catch-all last, no ranking. Its `rows` input is `data.filteredRows()`.
 
 ## Progress against ToC KPIs (2026-10-15, spec `changes/portfolio-overview-revamp/toc-kpi-progress`)
 

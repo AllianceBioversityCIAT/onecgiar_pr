@@ -29,6 +29,331 @@
     @if (isLoading()) {
       <!-- ── Modern Skeleton Loading State ─────────────────────────────────────────── -->
       <div class="flex flex-col gap-[20px]" aria-busy="true" aria-label="Loading portfolio figures" data-testid="portfolio-overview-skeleton">
+        <ng-container *ngTemplateOutlet="sectionSkeletons" />
+
+        <!-- Skeleton: progress against ToC KPIs (TKP-R-7) -->
+        <div data-testid="portfolio-overview-skeleton-toc-kpi" class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] flex flex-col gap-[16px]">
+          <div>
+            <div class="pr-skeleton h-[18px] w-[230px] rounded-[4px] mb-[6px]"></div>
+            <div class="pr-skeleton h-[13px] w-[340px] max-w-full rounded-[4px]"></div>
+          </div>
+          <div class="flex flex-col gap-[8px]">
+            @for (row of [1, 2, 3, 4, 5]; track row) {
+              <div class="pr-skeleton h-[36px] w-full rounded-[6px]"></div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (hasError()) {
+      <p class="text-[14px] font-normal text-[var(--pr-text-muted)]" role="alert">{{ data.error() }}</p>
+    }
+
+    @if (isEmpty()) {
+      <p class="text-[14px] font-normal text-[var(--pr-text-muted)]">No results have been reported in this phase yet.</p>
+    }
+
+    @if (hasFigures()) {
+      <!-- ── Global filter bar (GLF-T-5): inside hasFigures, so never while loading, on error or phase-empty (R-1) ── -->
+      <app-portfolio-filter-bar />
+
+      <!-- Sub-switch: pending map -> skeletons; no match -> one panel; else the sections. Order matters (GLF-T-3 reviewer). -->
+      @if (data.filtersPending()) {
+        <div class="flex flex-col gap-[20px]" aria-busy="true" [attr.aria-label]="copy.filters.applying" data-testid="portfolio-overview-skeleton-filters">
+          <ng-container *ngTemplateOutlet="sectionSkeletons" />
+        </div>
+      } @else if (data.filteredTotal() === 0) {
+        <div class="po-card flex flex-col items-start gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] sm:flex-row sm:items-center sm:justify-between" role="status" data-testid="portfolio-no-match">
+          <p class="text-[14px] font-normal text-[var(--pr-text-muted)]">{{ copy.filters.noResults }}</p>
+          <button hlmBtn type="button" variant="outline" size="sm" (click)="clearFilters()">{{ copy.filters.clearAll }}</button>
+        </div>
+      } @else {
+        <!-- ── Top Deck 3 Executive KPI Cards (POV-R-1, POVKB-R-1..4) ─────────────────────── -->
+        <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
+          <!-- KPI 1: Total Results (Hero Highlight Card with diffused purple gradient) -->
+          <button
+            type="button"
+            (click)="navigateToResultsCenter('all')"
+            class="po-card group relative overflow-hidden flex flex-col justify-between gap-[12px] rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[18px] text-left transition-all duration-200 cursor-pointer shadow-md hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 hover:-translate-y-0.5">
+            <!-- Diffused background glow effect -->
+            <div class="pointer-events-none absolute -right-[24px] -top-[24px] h-[110px] w-[110px] rounded-full bg-white/15 blur-[20px]"></div>
+            <div class="pointer-events-none absolute -left-[20px] -bottom-[20px] h-[90px] w-[90px] rounded-full bg-purple-900/40 blur-[18px]"></div>
+
+            <div class="relative z-10 flex items-center justify-between gap-[8px] w-full">
+              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-purple-200">
+                Total portfolio results
+              </span>
+              <span class="inline-flex h-[24px] max-w-[150px] shrink-0 items-center truncate rounded-full bg-white/15 px-[9px] text-[11px] font-semibold text-white backdrop-blur-xs border border-white/20" [title]="kpis().phaseLabel">
+                {{ kpis().phaseLabel || 'Reporting 2026' }}
+              </span>
+            </div>
+            <div class="relative z-10 flex items-baseline gap-[8px]">
+              <span class="pr-figure text-[30px] font-extrabold leading-none text-white tabular-nums drop-shadow-xs">
+                {{ kpis().totalResults }}
+              </span>
+              <span class="text-[13px] font-medium text-purple-200">results</span>
+            </div>
+            <div class="relative z-10 flex flex-col gap-[4px] text-[12px] w-full text-purple-100 font-medium">
+              <div class="flex items-center justify-between gap-[8px]">
+                <span>W1/W2 new</span>
+                <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-w1w2-new">{{ kpis().w1w2New }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-[8px]">
+                <span>W3/Bilateral new</span>
+                <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-bilateral-new">{{ kpis().bilateralNew }}</span>
+              </div>
+              <hlm-separator class="bg-white/20" />
+              <div class="flex items-center justify-between gap-[8px]">
+                <span>W1/W2 replicated</span>
+                <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-w1w2-replicated">{{ kpis().w1w2Replicated }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-[8px]">
+                <span>W3/Bilateral replicated</span>
+                <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-bilateral-replicated">{{ kpis().bilateralReplicated }}</span>
+              </div>
+            </div>
+            <div class="relative z-10 flex justify-end w-full">
+              <span class="text-[11px] font-bold text-white opacity-90 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+                Results Center &rarr;
+              </span>
+            </div>
+          </button>
+
+          <!-- KPI 2: W1/W2 Results -->
+          <button
+            type="button"
+            (click)="navigateToResultsCenter('w1w2')"
+            class="po-card group flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 cursor-pointer hover:border-[var(--pr-color-primary-400)] hover:shadow-md hover:-translate-y-0.5">
+            <div class="flex items-center justify-between gap-[8px] w-full">
+              <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
+                W1/W2 results
+              </span>
+              <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">
+                {{ kpis().w1w2SubmittedPercent }}% submitted / QA
+              </span>
+            </div>
+            <div class="flex items-baseline gap-[8px]">
+              <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                {{ kpis().w1w2Count }}
+              </span>
+              <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
+            </div>
+            <div class="flex flex-col gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
+              <div class="flex items-center justify-between gap-[8px]">
+                <span>New</span>
+                <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-w1w2-new">{{ kpis().w1w2New }}</span>
+              </div>
+              <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-w1w2-split">Submitted {{ kpis().w1w2NewSubmitted }} · Editing {{ kpis().w1w2NewEditing }}</span>
+              <hlm-separator />
+              <div class="flex items-center justify-between gap-[8px]">
+                <span>Replicated from previous years</span>
+                <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-w1w2-replicated">{{ kpis().w1w2Replicated }}</span>
+              </div>
+            </div>
+            <div class="flex justify-end w-full">
+              <span class="text-[11px] font-semibold text-[var(--pr-color-primary-600)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                Results Center &rarr;
+              </span>
+            </div>
+          </button>
+
+          <!-- KPI 3: W3/Bilateral Results -->
+          <button
+            type="button"
+            (click)="navigateToResultsCenter('bilateral')"
+            class="po-card group flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 cursor-pointer hover:border-[var(--pr-color-primary-400)] hover:shadow-md hover:-translate-y-0.5">
+            <div class="flex items-center justify-between gap-[8px] w-full">
+              <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
+                W3/Bilateral results
+              </span>
+              <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-purple-50 px-[8px] text-[11px] font-semibold text-purple-700">
+                {{ kpis().bilateralApprovedPercent }}% approved
+              </span>
+            </div>
+            <div class="flex items-baseline gap-[8px]">
+              <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                {{ kpis().bilateralCount }}
+              </span>
+              <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
+            </div>
+            <div class="flex flex-col gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
+              <div class="flex items-center justify-between gap-[8px]">
+                <span>New</span>
+                <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-bilateral-new">{{ kpis().bilateralNew }}</span>
+              </div>
+              <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-bilateral-split">Submitted {{ kpis().bilateralNewSubmitted }} · Editing {{ kpis().bilateralNewEditing }}</span>
+              <hlm-separator />
+              <div class="flex items-center justify-between gap-[8px]">
+                <span>Innovations replicated from 2025</span>
+                <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-bilateral-replicated">{{ kpis().bilateralReplicated }}</span>
+              </div>
+            </div>
+            <div class="flex justify-end w-full">
+              <span class="text-[11px] font-semibold text-purple-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                Bilateral &rarr;
+              </span>
+            </div>
+          </button>
+        </div>
+
+        <!-- ── Status section (POV-R-2) ─────────────────────────────────────────── -->
+        <div class="po-card rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+          <div class="mb-[20px]">
+            <h2 class="text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">{{ copy.statusTitle }}</h2>
+            <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+              {{ copy.statusSubtitle }}
+              @if (statusGuideUrl) {
+                <a
+                  data-testid="status-guide-link"
+                  [href]="statusGuideUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="ml-[6px] inline-flex items-center gap-[3px] rounded-[2px] text-[var(--pr-text-muted)] underline-offset-2 hover:text-[var(--pr-color-primary-700)] hover:underline focus-visible:text-[var(--pr-color-primary-700)] focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                  {{ copy.statusGuideLink }}
+                  <ng-icon name="lucideExternalLink" size="13" aria-hidden="true" />
+                  <span class="sr-only">{{ copy.opensInNewTab }}</span>
+                </a>
+              }
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 items-center gap-[24px] lg:grid-cols-12">
+            <!-- Donut chart (using violet scale palette with separated slices and visible values) -->
+            <div class="lg:col-span-4 flex items-center justify-center">
+              <div class="w-[240px] h-[220px] shrink-0">
+                <app-pr-viz-chart
+                  class="w-full h-full block cursor-pointer"
+                  [options]="statusDonutOption()"
+                  [tableModel]="statusDonutTable()"
+                  (chartClick)="onStatusChartClick($event)"
+                  [chartTitle]="copy.statusTitle"
+                  height="220px" />
+              </div>
+            </div>
+
+            <!-- Progress meter + Dynamic Interactive Status Metric Grid -->
+            <div class="flex flex-col gap-[14px] lg:col-span-8">
+              <!-- Dynamic ECharts Status Pipeline Bar -->
+              <div class="w-full h-[28px]">
+                <app-pr-viz-chart
+                  class="w-full h-full block cursor-pointer"
+                  [options]="statusPipelineOption()"
+                  (chartClick)="onStatusChartClick($event)"
+                  chartTitle="Status Pipeline"
+                  height="28px" />
+              </div>
+
+              <!-- Dynamic interactive status metric tiles with mini progress indicators -->
+              <div class="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 gap-[10px]">
+                @for (segment of statusSegments(); track segment.key) {
+                  <button
+                    type="button"
+                    [attr.data-testid]="'status-tile-' + segment.key"
+                    [hlmTooltip]="statusHints[segment.key] ?? ''"
+                    [tooltipDisabled]="!statusHints[segment.key]"
+                    [attr.aria-pressed]="selectedStatuses().has(segment.key)"
+                  (click)="toggleStatus(segment.key)"
+                    class="group relative flex flex-col justify-between rounded-[10px] border px-[12px] py-[9px] text-left transition-all duration-200 cursor-pointer overflow-hidden"
+                    [class]="selectedStatuses().has(segment.key)
+                      ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-50)] shadow-xs ring-2 ring-[var(--pr-color-primary-500)]/30'
+                      : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs hover:-translate-y-0.5'">
+                  
+                    <div class="flex items-center justify-between gap-[8px] w-full mb-[6px]">
+                      <div class="flex min-w-0 items-center gap-[8px]">
+                        <span
+                          class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125"
+                          [style.background]="segment.fg"></span>
+                        <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                          {{ segment.label }}
+                        </span>
+                      </div>
+                      <div class="flex shrink-0 items-baseline gap-[3px]">
+                        <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums">
+                          {{ segment.count }}
+                        </span>
+                        <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">
+                          ({{ segment.percent }}%)
+                        </span>
+                      </div>
+                    </div>
+                    @if (statusHints[segment.key]) {
+                      <span class="sr-only">{{ statusHints[segment.key] }}</span>
+                    }
+
+                    <!-- Mini progress bar on each card -->
+                    <div class="h-[3.5px] w-full overflow-hidden rounded-full bg-[var(--pr-border-divider)]">
+                      <div
+                        class="h-full rounded-full transition-all duration-500 ease-out"
+                        [style.width.%]="segment.percent"
+                        [style.background]="segment.fg"></div>
+                    </div>
+                  </button>
+                }
+              </div>
+
+              @if (filtersActive()) {
+                <div data-testid="portfolio-active-filter" class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-50)] px-[14px] py-[8px] border border-[var(--pr-color-primary-200)]">
+                  <span class="text-[12px] font-medium text-[var(--pr-color-primary-800)]">
+                    {{ copy.filters.activeChips }}:
+                    @for (item of activeSummary(); track item.dimension; let last = $last) {
+                      <strong class="font-bold">{{ item.label }}</strong> {{ item.values }}@if (!last) {<span aria-hidden="true"> · </span>}
+                    }
+                  </span>
+                  <div class="flex flex-wrap items-center gap-[12px] self-end sm:self-auto">
+                    @if (resultsCenterLinkable()) {
+                      <button
+                        type="button"
+                        data-testid="portfolio-active-filter-link"
+                        (click)="viewActiveInResultsCenter()"
+                        class="text-[12px] font-bold text-[var(--pr-color-primary-700)] hover:underline cursor-pointer border-0 bg-transparent">
+                        View in Results Center &rarr;
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="clearFilters()"
+                      class="text-[11.5px] font-semibold text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)] cursor-pointer border-0 bg-transparent"
+                      [attr.aria-label]="copy.filters.clearAll">
+                      {{ copy.filters.clearAll }} &times;
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+        <!-- ── Results by typology (TYV-R-7): between status and the ToC KPI block ─────────── -->
+        <app-portfolio-typology-block [rows]="data.filteredRows()" />
+      }
+
+        <!-- ── Progress against ToC KPIs (TKP-R-7): outside the sub-switch, so it renders in every case (S-10.1). Inside hasFigures so it never requests while loading. ── -->
+        <app-portfolio-toc-kpi-block
+          [versionId]="data.versionId()"
+          [year]="phaseYear()"
+          [programs]="data.selection().program"
+          [notAffected]="tocNotAffected()"
+          (programmeOpen)="openProgramme($event)" />
+      }
+
+    <!-- ── CGIAR Centers (W3/Bilateral) — P2-3928: moved here from Admin › All P/As and Centers ── -->
+    <app-portfolio-centers-block
+      [selection]="data.selection()"
+      [dimensionIndex]="data.dimensionIndex()"
+      [dimensionsVersionId]="centersDimensionsVersionId()" />
+
+    <!-- ── W3/Bilateral projects (WPS-T-5): last section, own data path. Under !loading() but OUTSIDE hasFigures() (WPS-DD-7); no page skeleton (JD-10). ── -->
+    @if (!data.loading()) {
+      <app-portfolio-projects-block
+        [versionId]="data.versionId()"
+        [programs]="data.selection().program"
+        [centers]="data.selection().center"
+        [notAffected]="projectsNotAffected()" />
+    }
+    </div>
+
+    <!-- Deck, status and typology skeletons: shown while loading and while a Project / Center selection waits for the map (R-13). -->
+    <ng-template #sectionSkeletons>
         <!-- Top Deck 3 Skeleton KPI Cards -->
         <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
           @for (card of [1, 2, 3]; track card) {
@@ -85,292 +410,5 @@
             }
           </div>
         </div>
-
-        <!-- Skeleton: progress against ToC KPIs (TKP-R-7) -->
-        <div data-testid="portfolio-overview-skeleton-toc-kpi" class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] flex flex-col gap-[16px]">
-          <div>
-            <div class="pr-skeleton h-[18px] w-[230px] rounded-[4px] mb-[6px]"></div>
-            <div class="pr-skeleton h-[13px] w-[340px] max-w-full rounded-[4px]"></div>
-          </div>
-          <div class="flex flex-col gap-[8px]">
-            @for (row of [1, 2, 3, 4, 5]; track row) {
-              <div class="pr-skeleton h-[36px] w-full rounded-[6px]"></div>
-            }
-          </div>
-        </div>
-      </div>
-    }
-
-    @if (hasError()) {
-      <p class="text-[14px] font-normal text-[var(--pr-text-muted)]" role="alert">{{ data.error() }}</p>
-    }
-
-    @if (isEmpty()) {
-      <p class="text-[14px] font-normal text-[var(--pr-text-muted)]">No results have been reported in this phase yet.</p>
-    }
-
-    @if (hasFigures()) {
-      <!-- ── Top Deck 3 Executive KPI Cards (POV-R-1, POVKB-R-1..4) ─────────────────────── -->
-      <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
-        <!-- KPI 1: Total Results (Hero Highlight Card with diffused purple gradient) -->
-        <button
-          type="button"
-          (click)="navigateToResultsCenter('all')"
-          class="po-card group relative overflow-hidden flex flex-col justify-between gap-[12px] rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[18px] text-left transition-all duration-200 cursor-pointer shadow-md hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 hover:-translate-y-0.5">
-          <!-- Diffused background glow effect -->
-          <div class="pointer-events-none absolute -right-[24px] -top-[24px] h-[110px] w-[110px] rounded-full bg-white/15 blur-[20px]"></div>
-          <div class="pointer-events-none absolute -left-[20px] -bottom-[20px] h-[90px] w-[90px] rounded-full bg-purple-900/40 blur-[18px]"></div>
-
-          <div class="relative z-10 flex items-center justify-between gap-[8px] w-full">
-            <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-purple-200">
-              Total portfolio results
-            </span>
-            <span class="inline-flex h-[24px] max-w-[150px] shrink-0 items-center truncate rounded-full bg-white/15 px-[9px] text-[11px] font-semibold text-white backdrop-blur-xs border border-white/20" [title]="kpis().phaseLabel">
-              {{ kpis().phaseLabel || 'Reporting 2026' }}
-            </span>
-          </div>
-          <div class="relative z-10 flex items-baseline gap-[8px]">
-            <span class="pr-figure text-[30px] font-extrabold leading-none text-white tabular-nums drop-shadow-xs">
-              {{ kpis().totalResults }}
-            </span>
-            <span class="text-[13px] font-medium text-purple-200">results</span>
-          </div>
-          <div class="relative z-10 flex flex-col gap-[4px] text-[12px] w-full text-purple-100 font-medium">
-            <div class="flex items-center justify-between gap-[8px]">
-              <span>W1/W2 new</span>
-              <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-w1w2-new">{{ kpis().w1w2New }}</span>
-            </div>
-            <div class="flex items-center justify-between gap-[8px]">
-              <span>W3/Bilateral new</span>
-              <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-bilateral-new">{{ kpis().bilateralNew }}</span>
-            </div>
-            <hlm-separator class="bg-white/20" />
-            <div class="flex items-center justify-between gap-[8px]">
-              <span>W1/W2 replicated</span>
-              <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-w1w2-replicated">{{ kpis().w1w2Replicated }}</span>
-            </div>
-            <div class="flex items-center justify-between gap-[8px]">
-              <span>W3/Bilateral replicated</span>
-              <span class="font-semibold text-white tabular-nums" data-testid="kpi-total-bilateral-replicated">{{ kpis().bilateralReplicated }}</span>
-            </div>
-          </div>
-          <div class="relative z-10 flex justify-end w-full">
-            <span class="text-[11px] font-bold text-white opacity-90 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
-              Results Center &rarr;
-            </span>
-          </div>
-        </button>
-
-        <!-- KPI 2: W1/W2 Results -->
-        <button
-          type="button"
-          (click)="navigateToResultsCenter('w1w2')"
-          class="po-card group flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 cursor-pointer hover:border-[var(--pr-color-primary-400)] hover:shadow-md hover:-translate-y-0.5">
-          <div class="flex items-center justify-between gap-[8px] w-full">
-            <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
-              W1/W2 results
-            </span>
-            <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">
-              {{ kpis().w1w2SubmittedPercent }}% submitted / QA
-            </span>
-          </div>
-          <div class="flex items-baseline gap-[8px]">
-            <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
-              {{ kpis().w1w2Count }}
-            </span>
-            <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
-          </div>
-          <div class="flex flex-col gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
-            <div class="flex items-center justify-between gap-[8px]">
-              <span>New</span>
-              <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-w1w2-new">{{ kpis().w1w2New }}</span>
-            </div>
-            <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-w1w2-split">Submitted {{ kpis().w1w2NewSubmitted }} · Editing {{ kpis().w1w2NewEditing }}</span>
-            <hlm-separator />
-            <div class="flex items-center justify-between gap-[8px]">
-              <span>Replicated from previous years</span>
-              <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-w1w2-replicated">{{ kpis().w1w2Replicated }}</span>
-            </div>
-          </div>
-          <div class="flex justify-end w-full">
-            <span class="text-[11px] font-semibold text-[var(--pr-color-primary-600)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-              Results Center &rarr;
-            </span>
-          </div>
-        </button>
-
-        <!-- KPI 3: W3/Bilateral Results -->
-        <button
-          type="button"
-          (click)="navigateToResultsCenter('bilateral')"
-          class="po-card group flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 cursor-pointer hover:border-[var(--pr-color-primary-400)] hover:shadow-md hover:-translate-y-0.5">
-          <div class="flex items-center justify-between gap-[8px] w-full">
-            <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
-              W3/Bilateral results
-            </span>
-            <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-purple-50 px-[8px] text-[11px] font-semibold text-purple-700">
-              {{ kpis().bilateralApprovedPercent }}% approved
-            </span>
-          </div>
-          <div class="flex items-baseline gap-[8px]">
-            <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
-              {{ kpis().bilateralCount }}
-            </span>
-            <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
-          </div>
-          <div class="flex flex-col gap-[6px] text-[12px] text-[var(--pr-text-secondary)] w-full">
-            <div class="flex items-center justify-between gap-[8px]">
-              <span>New</span>
-              <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-bilateral-new">{{ kpis().bilateralNew }}</span>
-            </div>
-            <span class="text-[11px] text-[var(--pr-text-muted)]" data-testid="kpi-bilateral-split">Submitted {{ kpis().bilateralNewSubmitted }} · Editing {{ kpis().bilateralNewEditing }}</span>
-            <hlm-separator />
-            <div class="flex items-center justify-between gap-[8px]">
-              <span>Innovations replicated from 2025</span>
-              <span class="font-semibold text-[var(--pr-text-heading)] tabular-nums" data-testid="kpi-bilateral-replicated">{{ kpis().bilateralReplicated }}</span>
-            </div>
-          </div>
-          <div class="flex justify-end w-full">
-            <span class="text-[11px] font-semibold text-purple-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-              Bilateral &rarr;
-            </span>
-          </div>
-        </button>
-      </div>
-
-      <!-- ── Status section (POV-R-2) ─────────────────────────────────────────── -->
-      <div class="po-card rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-        <div class="mb-[20px]">
-          <h2 class="text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">{{ copy.statusTitle }}</h2>
-          <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
-            {{ copy.statusSubtitle }}
-            @if (statusGuideUrl) {
-              <a
-                data-testid="status-guide-link"
-                [href]="statusGuideUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="ml-[6px] inline-flex items-center gap-[3px] rounded-[2px] text-[var(--pr-text-muted)] underline-offset-2 hover:text-[var(--pr-color-primary-700)] hover:underline focus-visible:text-[var(--pr-color-primary-700)] focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                {{ copy.statusGuideLink }}
-                <ng-icon name="lucideExternalLink" size="13" aria-hidden="true" />
-                <span class="sr-only">{{ copy.opensInNewTab }}</span>
-              </a>
-            }
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 items-center gap-[24px] lg:grid-cols-12">
-          <!-- Donut chart (using violet scale palette with separated slices and visible values) -->
-          <div class="lg:col-span-4 flex items-center justify-center">
-            <div class="w-[240px] h-[220px] shrink-0">
-              <app-pr-viz-chart
-                class="w-full h-full block cursor-pointer"
-                [options]="statusDonutOption()"
-                [tableModel]="statusDonutTable()"
-                (chartClick)="onStatusChartClick($event)"
-                [chartTitle]="copy.statusTitle"
-                height="220px" />
-            </div>
-          </div>
-
-          <!-- Progress meter + Dynamic Interactive Status Metric Grid -->
-          <div class="flex flex-col gap-[14px] lg:col-span-8">
-            <!-- Dynamic ECharts Status Pipeline Bar -->
-            <div class="w-full h-[28px]">
-              <app-pr-viz-chart
-                class="w-full h-full block cursor-pointer"
-                [options]="statusPipelineOption()"
-                (chartClick)="onStatusChartClick($event)"
-                chartTitle="Status Pipeline"
-                height="28px" />
-            </div>
-
-            <!-- Dynamic interactive status metric tiles with mini progress indicators -->
-            <div class="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 gap-[10px]">
-              @for (segment of statusSegments(); track segment.key) {
-                <button
-                  type="button"
-                  [attr.data-testid]="'status-tile-' + segment.key"
-                  [hlmTooltip]="statusHints[segment.key] ?? ''"
-                  [tooltipDisabled]="!statusHints[segment.key]"
-                  (click)="toggleStatusFilter(segment.key)"
-                  class="group relative flex flex-col justify-between rounded-[10px] border px-[12px] py-[9px] text-left transition-all duration-200 cursor-pointer overflow-hidden"
-                  [class]="selectedStatusFilter() === segment.key
-                    ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-50)] shadow-xs ring-2 ring-[var(--pr-color-primary-500)]/30'
-                    : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs hover:-translate-y-0.5'">
-                  
-                  <div class="flex items-center justify-between gap-[8px] w-full mb-[6px]">
-                    <div class="flex min-w-0 items-center gap-[8px]">
-                      <span
-                        class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125"
-                        [style.background]="segment.fg"></span>
-                      <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
-                        {{ segment.label }}
-                      </span>
-                    </div>
-                    <div class="flex shrink-0 items-baseline gap-[3px]">
-                      <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums">
-                        {{ segment.count }}
-                      </span>
-                      <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">
-                        ({{ segment.percent }}%)
-                      </span>
-                    </div>
-                  </div>
-                  @if (statusHints[segment.key]) {
-                    <span class="sr-only">{{ statusHints[segment.key] }}</span>
-                  }
-
-                  <!-- Mini progress bar on each card -->
-                  <div class="h-[3.5px] w-full overflow-hidden rounded-full bg-[var(--pr-border-divider)]">
-                    <div
-                      class="h-full rounded-full transition-all duration-500 ease-out"
-                      [style.width.%]="segment.percent"
-                      [style.background]="segment.fg"></div>
-                  </div>
-                </button>
-              }
-            </div>
-
-            @if (selectedStatusFilter()) {
-              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-50)] px-[14px] py-[8px] border border-[var(--pr-color-primary-200)]">
-                <span class="text-[12px] font-medium text-[var(--pr-color-primary-800)]">
-                  Active filter: <strong class="font-bold capitalize">{{ selectedStatusFilter() }}</strong>
-                </span>
-                <div class="flex flex-wrap items-center gap-[12px] self-end sm:self-auto">
-                  <button
-                    type="button"
-                    (click)="navigateToResultsCenter('all', { status: selectedStatusFilter()! })"
-                    class="text-[12px] font-bold text-[var(--pr-color-primary-700)] hover:underline cursor-pointer border-0 bg-transparent">
-                    View in Results Center &rarr;
-                  </button>
-                  <button
-                    type="button"
-                    (click)="toggleStatusFilter(selectedStatusFilter()!)"
-                    class="text-[11.5px] font-semibold text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)] cursor-pointer border-0 bg-transparent"
-                    aria-label="Clear status filter">
-                    Clear filter &times;
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-
-        <!-- ── Results by typology (TYV-R-7): between status and the ToC KPI block ─────────── -->
-        <app-portfolio-typology-block [rows]="data.openRows()" />
-
-        <!-- ── Progress against ToC KPIs (TKP-R-7): after typology, before Centers. Inside hasFigures so it never requests while loading. ── -->
-        <app-portfolio-toc-kpi-block [versionId]="data.versionId()" [year]="phaseYear()" (programmeOpen)="openProgramme($event)" />
-      }
-
-    <!-- ── CGIAR Centers (W3/Bilateral) — P2-3928: moved here from Admin › All P/As and Centers ── -->
-    <app-portfolio-centers-block />
-
-    <!-- ── W3/Bilateral projects (WPS-T-5): last section, own data path. Under !loading() but OUTSIDE hasFigures() (WPS-DD-7); no page skeleton (JD-10). ── -->
-    @if (!data.loading()) {
-      <app-portfolio-projects-block [versionId]="data.versionId()" />
-    }
-    </div>
+    </ng-template>
   </section>

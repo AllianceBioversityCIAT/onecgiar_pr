@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 
 import {
   PortfolioOverviewService,
@@ -8,6 +8,8 @@ import {
   RawResult
 } from './portfolio-overview.service';
 import { ApiService } from '../../../../../shared/services/api/api.service';
+import type { PortfolioResultDimensions } from '../../../../../shared/interfaces/portfolio-result-dimensions.interface';
+import type { PortfolioFilterSelection } from './portfolio-filters';
 
 const raw = (over: Partial<RawResult> = {}): RawResult => ({
   submitter: 'SP01',
@@ -47,17 +49,31 @@ const CLOSED_PHASE_ITEMS: RawResult[] = [
   raw({ phase_status: 0, version_id: '1', phase_name: 'Reporting 2022 - P22', acronym: 'P22' })
 ];
 
+const EMPTY_DIMENSIONS: PortfolioResultDimensions = {
+  versionId: 36,
+  phaseName: 'Reporting 2026 - P25',
+  projectLinks: [],
+  centerLinks: [],
+  projects: [],
+  centers: [],
+  w3ProjectIds: []
+};
+
 describe('PortfolioOverviewService', () => {
   let service: PortfolioOverviewService;
   let apiMock: {
     authSE: { localStorageUser: { id: number } | null };
-    resultsSE: { GET_AllResultsWithUseRole: jest.Mock };
+    resultsSE: { GET_AllResultsWithUseRole: jest.Mock; GET_PortfolioResultDimensions: jest.Mock };
   };
 
   const setupService = (items: RawResult[] = [], meta: Record<string, unknown> = {}) => {
     apiMock = {
       authSE: { localStorageUser: { id: 42 } },
-      resultsSE: { GET_AllResultsWithUseRole: jest.fn().mockReturnValue(of({ response: { items, meta } })) }
+      resultsSE: {
+        GET_AllResultsWithUseRole: jest.fn().mockReturnValue(of({ response: { items, meta } })),
+        // The map request every load() now issues (GLF-T-3); an empty map for the pre-existing cases.
+        GET_PortfolioResultDimensions: jest.fn().mockReturnValue(of({ response: EMPTY_DIMENSIONS }))
+      }
     };
 
     TestBed.resetTestingModule();
@@ -514,6 +530,339 @@ describe('PortfolioOverviewService', () => {
       expect(service.closedPhase()).toBe(true);
       expect(k.w1w2Replicated).toBe(1);
       expect(k.w1w2New).toBe(0);
+    });
+  });
+});
+
+describe('PortfolioOverviewService — global filters (GLF-T-3)', () => {
+  let service: PortfolioOverviewService;
+  let api: {
+    authSE: { localStorageUser: { id: number } | null };
+    resultsSE: { GET_AllResultsWithUseRole: jest.Mock; GET_PortfolioResultDimensions: jest.Mock };
+  };
+
+  // 10 rows, 4 of them Editing (ids 1, 3, 7, 9). Programs SP01/SP02/SP03 for W1/W2, Center codes for W3.
+  const FIXTURE: RawResult[] = [
+    raw({ id: 1, submitter: 'SP01', status_id: 1, status_name: 'Editing', result_type: 'Innovation development', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 2, submitter: 'SP01', status_id: 3, status_name: 'Submitted', result_type: 'Policy change', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 3, submitter: 'SP02', status_id: 1, status_name: 'Editing', result_type: 'Knowledge product', source_name: 'W1/W2', is_replicated: 1 }),
+    raw({ id: 4, submitter: 'SP02', status_id: 6, status_name: 'Approved', result_type: 'Innovation development', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 5, submitter: 'SP02', status_id: 2, status_name: 'Quality Assessed', result_type: 'Policy change', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 6, submitter: 'SP03', status_id: 7, status_name: 'Rejected', result_type: 'Knowledge product', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 7, submitter: 'CIAT', status_id: 1, status_name: 'Editing', result_type: 'Innovation development', source_name: 'W3/Bilaterals', is_replicated: 0 }),
+    raw({ id: 8, submitter: 'CIAT', status_id: 6, status_name: 'Approved', result_type: 'Capacity development', source_name: 'W3/Bilaterals', is_replicated: 1 }),
+    raw({ id: 9, submitter: 'CIMMYT', status_id: 1, status_name: 'Editing', result_type: 'Innovation development', source_name: 'W3/Bilaterals', is_replicated: 0 }),
+    raw({ id: 10, submitter: 'SP03', status_id: 4, status_name: 'Discontinued', result_type: 'Policy change', source_name: 'W1/W2', is_replicated: 0 })
+  ];
+
+  const MAP: PortfolioResultDimensions = {
+    versionId: 36,
+    phaseName: 'Reporting 2026 - P25',
+    projectLinks: [
+      [1, 100],
+      [2, 100],
+      [7, 200]
+    ],
+    centerLinks: [
+      [1, 'CENTER-03'],
+      [7, 'CENTER-03'],
+      [8, 'CENTER-05']
+    ],
+    projects: [
+      { id: 100, shortName: 'P-100', fullName: 'Project one hundred' },
+      { id: 200, shortName: 'P-200', fullName: null }
+    ],
+    centers: [
+      { code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' },
+      { code: 'CENTER-05', acronym: 'CIMMYT', name: 'CIMMYT' }
+    ],
+    w3ProjectIds: [100, 200]
+  };
+
+  type MapEnvelope = { response?: PortfolioResultDimensions };
+
+  const sel = (over: Partial<Record<keyof PortfolioFilterSelection, string[]>>): PortfolioFilterSelection => ({
+    program: new Set(over.program ?? []),
+    project: new Set(over.project ?? []),
+    center: new Set(over.center ?? []),
+    typology: new Set(over.typology ?? []),
+    status: new Set(over.status ?? [])
+  });
+
+  const ids = () => service.filteredRows().map(r => r.id);
+
+  const setup = (items: RawResult[] = FIXTURE, meta: Record<string, unknown> = {}) => {
+    api = {
+      authSE: { localStorageUser: { id: 42 } },
+      resultsSE: {
+        GET_AllResultsWithUseRole: jest.fn().mockReturnValue(of({ response: { items, meta } })),
+        GET_PortfolioResultDimensions: jest.fn().mockReturnValue(of({ response: MAP }))
+      }
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [PortfolioOverviewService, { provide: ApiService, useValue: api }] });
+    service = TestBed.inject(PortfolioOverviewService);
+    return service;
+  };
+
+  describe('S-4.1 reconciliation under a selection', () => {
+    beforeEach(() => {
+      setup();
+      service.load();
+    });
+
+    it('with Status = {editing}, every figure reads the 4 filtered rows', () => {
+      service.setSelection(sel({ status: ['editing'] }));
+      const k = service.kpiTotals();
+      expect(service.filteredTotal()).toBe(4);
+      expect(k.totalResults).toBe(4);
+      expect(service.statusSegments().reduce((n, s) => n + s.count, 0)).toBe(4);
+      expect(k.w1w2New + k.w1w2Replicated + k.bilateralNew + k.bilateralReplicated).toBe(4);
+      expect(k.w1w2Count + k.bilateralCount).toBe(4);
+      expect(service.totals()[0].n).toBe(4);
+      expect(service.categoryBars().reduce((n, b) => n + b.n, 0)).toBe(4);
+      expect(service.categoryOriginRows().reduce((n, r) => n + r.total, 0)).toBe(4);
+      expect(service.bilateralTotal()).toBe(2);
+      expect(service.centerDistributionRows().reduce((n, r) => n + r.count, 0)).toBe(2);
+      expect(service.bilateralBars().reduce((n, b) => n + b.n, 0)).toBe(2);
+    });
+
+    it('keeps the unfiltered guards on the open-phase rows (R-15)', () => {
+      service.setSelection(sel({ status: ['editing'] }));
+      expect(service.total()).toBe(10);
+      expect(service.openRows().length).toBe(10);
+      expect(service.fetchedCount()).toBe(10);
+      expect(service.isPartial()).toBe(false);
+      expect(service.versionId()).toBe(36);
+      expect(service.phaseName()).toBe('Reporting 2026 - P25');
+      expect(service.closedPhase()).toBe(false);
+    });
+
+    it('Clear all restores the unfiltered figures exactly', () => {
+      const before = service.kpiTotals();
+      const beforeSegments = service.statusSegments();
+      service.setSelection(sel({ status: ['editing'], program: ['SP01'] }));
+      expect(service.kpiTotals()).not.toEqual(before);
+      service.clearAll();
+      expect(service.kpiTotals()).toEqual(before);
+      expect(service.statusSegments()).toEqual(beforeSegments);
+      expect(service.filteredTotal()).toBe(10);
+    });
+
+    it('ANDs across dimensions and ORs inside one', () => {
+      service.setSelection(sel({ program: ['SP01', 'SP02'], status: ['editing'] }));
+      expect(ids()).toEqual([1, 3]);
+    });
+
+    it('filters by a normalized type name (Typology)', () => {
+      service.setSelection(sel({ typology: ['policy change'] }));
+      expect(ids()).toEqual([2, 5, 10]);
+    });
+
+    it('is the very same row list when nothing is selected', () => {
+      expect(service.filteredRows()).toBe(service.openRows());
+    });
+  });
+
+  describe('mutators', () => {
+    beforeEach(() => {
+      setup();
+      service.load();
+    });
+
+    it('toggleValue adds, then removes, a value; clearDimension empties one dimension', () => {
+      service.toggleValue('program', 'SP01');
+      service.toggleValue('program', 'SP02');
+      service.toggleValue('status', 'editing');
+      expect([...service.selection().program]).toEqual(['SP01', 'SP02']);
+      service.toggleValue('program', 'SP01');
+      expect([...service.selection().program]).toEqual(['SP02']);
+      service.clearDimension('status');
+      expect(service.selection().status.size).toBe(0);
+      expect(service.selection().program.size).toBe(1);
+    });
+
+    it('never mutates a previously read selection', () => {
+      const first = service.selection();
+      service.toggleValue('program', 'SP01');
+      expect(first.program.size).toBe(0);
+    });
+  });
+
+  describe('R-13 / DD-4 the dimensions map request', () => {
+    it('is requested exactly once after load, for the page version, and once more per retryDimensions()', () => {
+      setup();
+      service.load();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).toHaveBeenCalledTimes(1);
+      expect(api.resultsSE.GET_PortfolioResultDimensions).toHaveBeenCalledWith(36);
+      expect(service.dimensions().status).toBe('ready');
+      service.retryDimensions();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).toHaveBeenCalledTimes(2);
+    });
+
+    it('is not requested when the page has no rows, nor when the session cannot be read', () => {
+      setup([]);
+      service.load();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).not.toHaveBeenCalled();
+      expect(service.dimensions().status).toBe('idle');
+
+      setup();
+      api.authSE.localStorageUser = null;
+      service.load();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).not.toHaveBeenCalled();
+    });
+
+    it('is not requested when the rows request fails', () => {
+      setup();
+      api.resultsSE.GET_AllResultsWithUseRole.mockReturnValue(throwError(() => new Error('boom')));
+      service.load();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).not.toHaveBeenCalled();
+    });
+
+    it('ignores a superseded response (an older token)', () => {
+      setup();
+      const older = new Subject<MapEnvelope>();
+      const newer = new Subject<MapEnvelope>();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValueOnce(older).mockReturnValueOnce(newer);
+      service.load();
+      service.retryDimensions();
+      expect(service.dimensions().status).toBe('loading');
+
+      newer.next({ response: MAP });
+      older.next({ response: { ...MAP, centerLinks: [], centers: [] } });
+
+      expect(service.dimensions().status).toBe('ready');
+      expect(service.dimensions().map?.centerLinks.length).toBe(3);
+    });
+
+    it('a late response of a superseded load() does not land on the new rows', () => {
+      setup();
+      const stale = new Subject<MapEnvelope>();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValueOnce(stale);
+      service.load();
+      service.load();
+      expect(service.dimensions().status).toBe('ready');
+      stale.next({ response: { ...MAP, centerLinks: [] } });
+      expect(service.dimensions().map?.centerLinks.length).toBe(3);
+    });
+  });
+
+  describe('Project and Center through the map (DD-2, DD-5)', () => {
+    it('filtersPending while the map is loading: no row is shown as a match or a miss', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(new Subject<MapEnvelope>());
+      service.load();
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      expect(service.filtersPending()).toBe(true);
+      expect(service.filteredRows()).not.toBe(service.openRows());
+      expect(service.filteredTotal()).toBe(0);
+    });
+
+    it('is not pending for Program, Typology or Status while the map is loading', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(new Subject<MapEnvelope>());
+      service.load();
+      service.setSelection(sel({ status: ['editing'] }));
+      expect(service.filtersPending()).toBe(false);
+      expect(service.filteredTotal()).toBe(4);
+    });
+
+    it('applies Center and Project once the map is ready', () => {
+      setup();
+      service.load();
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      expect(service.filtersPending()).toBe(false);
+      expect(ids()).toEqual([1, 7]);
+      service.setSelection(sel({ center: ['CENTER-03', 'CENTER-05'], status: ['editing'] }));
+      expect(ids()).toEqual([1, 7]);
+      service.setSelection(sel({ project: ['100'] }));
+      expect(ids()).toEqual([1, 2]);
+      service.setSelection(sel({ project: ['100'], center: ['CENTER-03'] }));
+      expect(ids()).toEqual([1]);
+    });
+
+    it('a selection set BEFORE the rows arrive is sanitized when they do, and applied when the map lands', () => {
+      setup();
+      const map = new Subject<MapEnvelope>();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(map);
+      service.setSelection(sel({ program: ['SP01', 'ZZ99'], center: ['CENTER-03'] }));
+      expect(service.filtersPending()).toBe(true);
+
+      service.load();
+      expect([...service.selection().program]).toEqual(['SP01']);
+      expect([...service.selection().center]).toEqual(['CENTER-03']);
+      expect(service.filtersPending()).toBe(true);
+
+      map.next({ response: MAP });
+      expect(service.filtersPending()).toBe(false);
+      expect(ids()).toEqual([1]);
+    });
+
+    it('drops a Center the map does not know once it lands', () => {
+      setup();
+      service.load();
+      service.setSelection(sel({ center: ['CENTER-03', 'CENTER-99'] }));
+      expect([...service.selection().center]).toEqual(['CENTER-03']);
+    });
+
+    it('exposes the options built from the rows and the map', () => {
+      setup();
+      service.load();
+      expect(service.options().program.map(o => o.value).sort()).toEqual(['CIAT', 'CIMMYT', 'SP01', 'SP02', 'SP03']);
+      expect(service.options().center.map(o => o.value).sort()).toEqual(['CENTER-03', 'CENTER-05']);
+      expect(service.options().project.map(o => o.value).sort()).toEqual(['100', '200']);
+      expect(service.options().status.length).toBe(6);
+    });
+  });
+
+  describe('S-13.1 map failure', () => {
+    it('drops Project and Center, sets the notice, and keeps Program / Typology / Status filtering', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(throwError(() => new Error('500')));
+      service.setSelection(sel({ center: ['CENTER-03'], project: ['100'], status: ['editing'] }));
+      service.load();
+
+      expect(service.dimensions().status).toBe('error');
+      expect(service.selection().center.size).toBe(0);
+      expect(service.selection().project.size).toBe(0);
+      expect([...service.selection().status]).toEqual(['editing']);
+      expect(service.dimensionsNotice()).toBe(true);
+      expect(service.filtersPending()).toBe(false);
+      expect(service.filteredTotal()).toBe(4);
+    });
+
+    it('sets no notice when nothing had to be dropped', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(throwError(() => new Error('500')));
+      service.setSelection(sel({ program: ['SP01'] }));
+      service.load();
+      expect(service.dimensions().status).toBe('error');
+      expect(service.dimensionsNotice()).toBe(false);
+      expect(ids()).toEqual([1, 2]);
+    });
+
+    it('a response without a payload counts as a failure', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(of({}));
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      service.load();
+      expect(service.dimensions().status).toBe('error');
+      expect(service.selection().center.size).toBe(0);
+      expect(service.dimensionsNotice()).toBe(true);
+    });
+
+    it('Retry recovers: the notice clears and Center filtering works again', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValueOnce(throwError(() => new Error('500')));
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      service.load();
+      expect(service.dimensionsNotice()).toBe(true);
+
+      service.retryDimensions();
+      expect(service.dimensions().status).toBe('ready');
+      expect(service.dimensionsNotice()).toBe(false);
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      expect(ids()).toEqual([1, 7]);
     });
   });
 });

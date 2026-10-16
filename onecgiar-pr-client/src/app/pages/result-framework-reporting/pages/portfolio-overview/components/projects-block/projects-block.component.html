@@ -12,6 +12,9 @@
     @if (status() === 'ready') {
       <p class="m-0 mt-[2px] text-[13px] font-normal text-[var(--pr-text-secondary)]" data-testid="projects-subtitle">{{ copy.subtitle(year()) }}</p>
     }
+    @if (notAffectedText()) {
+      <p class="m-0 mt-[4px] text-[12px] font-normal text-[var(--pr-text-secondary)]" data-testid="projects-not-affected">{{ notAffectedText() }}</p>
+    }
   </div>
 
   @if (status() === 'loading') {
@@ -62,6 +65,9 @@
           <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-kpi-percent">{{ copy.percentOfMapped(w1w2Percent()!) }}</span>
         </div>
       </div>
+      @if (totalsWholePortfolio()) {
+        <p class="m-0 mt-[8px] text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-totals-caption">{{ filterCopy.totalsWholePortfolio }}</p>
+      }
 
       <!-- Dimension switch (Spartan Tabs, same markup as the typology block) -->
       <hlm-tabs [tab]="dimension()" (tabActivated)="setDimension($event)" class="mt-[20px]">

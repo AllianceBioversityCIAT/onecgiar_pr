@@ -75,3 +75,17 @@ export function footnoteText(n: number): string {
     ? '1 project has W3/Bilateral results but no approved P/A mapping, so it is not counted.'
     : `${n} projects have W3/Bilateral results but no approved P/A mapping, so they are not counted.`;
 }
+
+/**
+ * Narrows the rows of the active dimension (GLF-R-7): By P/A keeps the selected Programs; By Center keeps the
+ * selected Centers and drops Unassigned while any Center is selected. An empty set leaves its dimension untouched.
+ */
+export function filterProjectRows(
+  rows: readonly ProjectsViewRow[],
+  dimension: 'program' | 'center',
+  programs: ReadonlySet<string>,
+  centers: ReadonlySet<string>
+): ProjectsViewRow[] {
+  if (dimension === 'program') return programs.size ? rows.filter(r => r.code !== null && programs.has(r.code)) : [...rows];
+  return centers.size ? rows.filter(r => r.code !== null && centers.has(r.code)) : [...rows];
+}

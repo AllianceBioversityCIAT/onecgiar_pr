@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { HlmSeparatorImports } from '@spartan/separator';
@@ -23,7 +23,8 @@ import {
   statusIdFromChartEvent
 } from './centers-block.charts';
 import { BilateralCenterResult } from '../../../../../bilateral/services/bilateral-center-result.interface';
-import { CENTER_STATUS_IDS, CenterOrigin, EntityOverviewRow, buildCenterRow, byOrigin, isW3Row, originCounts, sumRows } from './centers-block.aggregate';
+import { DimensionIndex, EMPTY_SELECTION, PortfolioFilterSelection, notAffectedBy } from '../../services/portfolio-filters';
+import { CENTER_STATUS_IDS, CenterOrigin, EntityOverviewRow, applyGlobal, buildCenterRow, byOrigin, isW3Row, originCounts, sumRows } from './centers-block.aggregate';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -63,6 +64,11 @@ export class PortfolioCentersBlockComponent {
 
   readonly copy = PORTFOLIO_CENTERS_BLOCK_COPY;
 
+  /** GLF-T-7: the page's global selection, the dimensions index and the version that index was built for. All optional. */
+  readonly selection = input<PortfolioFilterSelection>(EMPTY_SELECTION);
+  readonly dimensionIndex = input<DimensionIndex | null>(null);
+  readonly dimensionsVersionId = input<number | null>(null);
+
   readonly phase = signal<Phases | null>(null);
   readonly phaseResolved = signal(false);
   readonly versionId = computed(() => (this.phase() ? Number(this.phase()!.id) : null));
@@ -72,14 +78,35 @@ export class PortfolioCentersBlockComponent {
   /** Per-Center row over the W3 rows of the selected origin (CNR-3); Centers still loading or failed are absent. */
   readonly viewRows = computed<EntityOverviewRow[]>(() => {
     const origin = this.origin();
-    return this.centerRows()
-      .filter((center): center is CenterRowState & { w3Rows: BilateralCenterResult[] } => center.w3Rows !== null)
-      .map(center => buildCenterRow(center.code, center.acronym, byOrigin(center.w3Rows, origin)));
+    return this.globalCenters().map(center => buildCenterRow(center.code, center.acronym, byOrigin(center.w3Rows, origin)));
   });
   readonly loadedCenterRows = computed(() => this.viewRows());
   readonly centerTotals = computed(() => sumRows(this.loadedCenterRows(), CENTER_STATUS_IDS.length));
   readonly centersPartial = computed(() => this.centerRows().some(center => center.state === 'error'));
   readonly centersLoading = computed(() => this.centerRows().some(center => center.state === 'loading'));
+
+  /** Project is honoured only when this block's phase is the version the dimensions index was built for (GLF-R-8, A-3). */
+  readonly honoursProject = computed(() => this.versionId() !== null && this.versionId() === this.dimensionsVersionId());
+  /** GLF-R-9: the active dimensions this block does not honour (Project between cycles). */
+  readonly notAffected = computed(() => notAffectedBy('centers', this.selection(), this.honoursProject() ? [] : ['project']));
+  readonly notAffectedText = computed(() => {
+    const list = this.notAffected();
+    return list.length ? this.copy.notAffected(list.map(d => this.copy.dimensions[d]).join(', ')) : '';
+  });
+  /** States the Center selection leaves in (all of them when none is selected). In memory only: requests never change. */
+  private readonly visibleCenterRows = computed(() => {
+    const codes = this.selection().center;
+    return codes.size > 0 ? this.centerRows().filter(center => codes.has(center.code)) : this.centerRows();
+  });
+  /** Loaded Centers with their W3 rows under the global selection, before origin and status tile (DD-9). */
+  private readonly globalCenters = computed(() => {
+    const selection = this.selection();
+    const index = this.dimensionIndex();
+    const honoursProject = this.honoursProject();
+    return this.visibleCenterRows()
+      .filter((center): center is CenterRowState & { w3Rows: BilateralCenterResult[] } => center.w3Rows !== null)
+      .map(center => ({ ...center, w3Rows: applyGlobal(center.w3Rows, selection, index, honoursProject) }));
+  });
 
   readonly selectedStatus = signal<number | null>(null);
   readonly origin = signal<CenterOrigin>('all');
@@ -97,9 +124,9 @@ export class PortfolioCentersBlockComponent {
   );
   readonly segments = computed(() => buildSegments(this.tileColumns(), this.centerTotals()));
 
-  /** CNR-DD-4: the KPI card reads ALL W3 rows, whatever the origin filter says. */
+  /** CNR-DD-4: the KPI card reads ALL W3 rows under the global selection, whatever the origin filter says. */
   readonly kpis = computed(() => {
-    const loaded = this.centerRows().filter((center): center is CenterRowState & { w3Rows: BilateralCenterResult[] } => center.w3Rows !== null);
+    const loaded = this.globalCenters();
     const all = loaded.flatMap(center => center.w3Rows);
     const counts = originCounts(all);
     const approved = all.filter(row => Number(row.status_id) === 6).length;
@@ -109,7 +136,7 @@ export class PortfolioCentersBlockComponent {
       bilateralReplicated: counts.replicated,
       bilateralApproved: percentOf(approved, counts.total),
       centersReporting: loaded.filter(center => center.w3Rows.length > 0).length,
-      centersCount: this.centerRows().length
+      centersCount: this.visibleCenterRows().length
     };
   });
 

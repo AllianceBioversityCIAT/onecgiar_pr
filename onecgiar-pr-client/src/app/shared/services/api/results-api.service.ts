@@ -23,6 +23,7 @@ import { BilateralOverviewService } from '../../../pages/bilateral/services/bila
 import { toDisplayBasis } from '../../constants/achieved-display-basis';
 import { PortfolioTocCoverage } from '../../interfaces/portfolio-toc-coverage.interface';
 import { PortfolioBilateralProjects } from '../../interfaces/portfolio-bilateral-projects.interface';
+import { PortfolioResultDimensions } from '../../interfaces/portfolio-result-dimensions.interface';
 import { ReportingApiResponse } from '../../interfaces/reporting-api.response';
 
 /**
@@ -1721,6 +1722,16 @@ export class ResultsApiService {
       url += `?versionId=${encodeURIComponent(String(versionId))}`;
     }
     return this.http.get<ReportingApiResponse<PortfolioBilateralProjects>>(url);
+  }
+
+  // @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-2) — result <-> project and
+  // result <-> Center links of the phase, for the Portfolio overview global filters. Admin only (server-side).
+  GET_PortfolioResultDimensions(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/portfolio/result-dimensions`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<ReportingApiResponse<PortfolioResultDimensions>>(url);
   }
 
   // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis

@@ -30,6 +30,34 @@ export const PORTFOLIO_OVERVIEW_COPY = {
   noType: 'No type',
   centerNote: 'Each W3/Bilateral result counts once, under its lead Center.',
   centerEmpty: 'No W3/Bilateral results in this phase',
+  // Global filters group (design 6.7); GLF-T-4 adds its keys here (spec changes/portfolio-overview-revamp/global-filters, GLF-R-7, GLF-R-9)
+  filters: {
+    dimensions: { program: 'Program', project: 'Project', center: 'Center', typology: 'Typology', status: 'Status' },
+    notAffected: (labels: string) => `Not affected by: ${labels}`,
+    totalsWholePortfolio: 'Totals cover the whole portfolio',
+    // Filter bar (GLF-T-4, design 6.4 / 6.7)
+    barLabel: 'Portfolio filters',
+    clearAll: 'Clear all',
+    noResults: 'No results match these filters.',
+    count: (shown: string, total: string) => `${shown} of ${total} results`,
+    countAll: (total: string, n: number) => (n === 1 ? `${total} result` : `${total} results`),
+    applying: 'Applying filters…',
+    remove: (label: string) => `Remove ${label}`,
+    selectedCount: (n: number) => `${n} selected`,
+    searchPlaceholder: (label: string) => `Search ${label.toLowerCase()}`,
+    searchLabel: (label: string) => `Search ${label}`,
+    noMatches: 'No matches',
+    levelAll: (label: string) => `All ${label} types`,
+    mapLoading: 'Loading the Project and Center filters…',
+    mapError: 'The Project and Center filters are unavailable right now.',
+    retry: 'Retry',
+    hintLoading: 'Available when the Project and Center data has loaded',
+    hintError: 'Unavailable right now. Use Retry.',
+    droppedNotice: 'Your Project and Center selection was removed because their data could not be loaded.',
+    sheetTrigger: (n: number) => (n > 0 ? `Filters (${n})` : 'Filters'),
+    sheetTitle: 'Filters',
+    activeChips: 'Active filters'
+  },
   // Progress against ToC KPIs (spec changes/portfolio-overview-revamp/toc-kpi-progress, TKP-R-4..7)
   tocKpi: {
     title: 'Progress against ToC KPIs',

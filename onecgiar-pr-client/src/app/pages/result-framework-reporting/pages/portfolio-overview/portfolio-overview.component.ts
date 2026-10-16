@@ -1,14 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideExternalLink } from '@ng-icons/lucide';
 
 import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
+import { HlmButton } from '@spartan/button';
 import { HlmSeparatorImports } from '@spartan/separator';
 import { HlmTooltip } from '@spartan/tooltip';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../internationalization/portfolio-overview.copy';
 import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.constants';
 import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
+import { FilterBarComponent } from './components/filter-bar/filter-bar.component';
 import { PortfolioProjectsBlockComponent } from './components/projects-block/projects-block.component';
 import { PortfolioTocKpiBlockComponent } from './components/toc-kpi-block/toc-kpi-block.component';
 import { PortfolioTypologyBlockComponent } from './components/typology-block/typology-block.component';
@@ -24,6 +27,15 @@ import {
   portfolioStatusDonutTable,
   statusPipelineOption
 } from './portfolio-overview.charts';
+import {
+  FILTER_DIMENSIONS,
+  type FilterDimension,
+  isActive,
+  notAffectedBy,
+  parseQueryParams,
+  resultsCenterLinkable,
+  toQueryParams
+} from './services/portfolio-filters';
 import {
   PortfolioBar,
   PortfolioOverviewService,
@@ -75,6 +87,9 @@ export function getCategoryShortName(category: string): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NgIcon,
+    NgTemplateOutlet,
+    FilterBarComponent,
+    HlmButton,
     PrVizChartComponent,
     PortfolioCentersBlockComponent,
     PortfolioProjectsBlockComponent,
@@ -117,6 +132,7 @@ export function getCategoryShortName(category: string): string {
 })
 export class PortfolioOverviewComponent {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly dataControlSE = inject(DataControlService);
   private readonly resultsListFilterSE = inject(ResultsListFilterService, { optional: true });
   readonly data = inject(PortfolioOverviewService);
@@ -124,8 +140,37 @@ export class PortfolioOverviewComponent {
   /** Whether the bilateral card is showing every programme or just the preview. */
   readonly bilateralExpanded = signal<boolean>(false);
 
+  /** The query params as they were on arrival, parsed once (DD-11). Applied through `sanitize` when the rows exist. */
+  private readonly pendingSelection = parseQueryParams(
+    Object.fromEntries(FILTER_DIMENSIONS.map(d => [d, this.route?.snapshot?.queryParamMap?.getAll(d) ?? []]))
+  );
+  /** True once the arrival params were applied: from then on the selection is mirrored to the URL (DD-11). */
+  private readonly urlReady = signal<boolean>(false);
+
   constructor() {
     this.data.load();
+
+    // Read the URL once, when there is something to filter. Program / Typology / Status are sanitized by the service
+    // right away; Project and Center when the map arrives (or dropped if it fails).
+    effect(() => {
+      if (this.urlReady() || !this.hasFigures()) return;
+      untracked(() => {
+        if (isActive(this.pendingSelection)) this.data.setSelection(this.pendingSelection);
+        this.urlReady.set(true);
+      });
+    });
+
+    // Mirror the selection to the URL: replaceUrl (no history entry), other query params kept by `merge`,
+    // an emptied dimension removed with `null`.
+    effect(() => {
+      if (!this.urlReady()) return;
+      const params = toQueryParams(this.data.selection());
+      const queryParams: Record<string, string | null> = {};
+      for (const dimension of FILTER_DIMENSIONS) queryParams[dimension] = params[dimension] ?? null;
+      untracked(() => {
+        void this.router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true });
+      });
+    });
   }
 
   /**
@@ -169,15 +214,54 @@ export class PortfolioOverviewComponent {
     statusPipelineOption(this.statusSegments(), this.donutPalette())
   );
 
-  /** Selected status filter from interactive status metric cards */
-  readonly selectedStatusFilter = signal<string>('all');
+  // ---- Global filters (spec global-filters, GLF-T-5, DD-7) ----------------------------------------
+  // The status tiles and the donut write the GLOBAL Status selection; there is no local highlight state.
 
-  toggleStatusFilter(statusKey: string): void {
-    if (this.selectedStatusFilter() === statusKey) {
-      this.selectedStatusFilter.set('all');
-    } else {
-      this.selectedStatusFilter.set(statusKey);
-    }
+  readonly selectedStatuses = computed(() => this.data.selection().status);
+  readonly filtersActive = computed(() => isActive(this.data.selection()));
+  /** The "View in Results Center" link shows only when the Results Center can apply the selection (R-5). */
+  readonly resultsCenterLinkable = computed(() => resultsCenterLinkable(this.data.selection()));
+  readonly tocNotAffected = computed(() => notAffectedBy('toc', this.data.selection()));
+  readonly projectsNotAffected = computed(() => notAffectedBy('projects', this.data.selection()));
+  /** The Centers block honours Project only once the map is ready (DD-5): until then it says "Not affected by: Project". */
+  readonly centersDimensionsVersionId = computed(() => (this.data.dimensionIndex() ? this.data.versionId() : null));
+
+  /** One entry per active dimension: its label and the labels of the chosen values (the strip's text). */
+  readonly activeSummary = computed(() => {
+    const selection = this.data.selection();
+    const options = this.data.options();
+    const labelOf = (dimension: FilterDimension, value: string): string => {
+      if (dimension === 'typology') {
+        for (const group of options.typology) {
+          if (group.value === value) return group.label;
+          const type = group.types.find(t => t.value === value);
+          if (type) return type.label;
+        }
+        return value;
+      }
+      return options[dimension].find(o => o.value === value)?.label ?? value;
+    };
+    return FILTER_DIMENSIONS.filter(d => selection[d].size > 0).map(d => ({
+      dimension: d,
+      label: this.copy.filters.dimensions[d],
+      values: [...selection[d]].map(v => labelOf(d, v)).join(', ')
+    }));
+  });
+
+  toggleStatus(statusKey: string): void {
+    this.data.toggleValue('status', statusKey);
+  }
+
+  clearFilters(): void {
+    this.data.clearAll();
+  }
+
+  /** The strip's link: the single Status and Program of the selection (the link only shows when each has at most one). */
+  viewActiveInResultsCenter(): void {
+    const selection = this.data.selection();
+    const status = [...selection.status][0];
+    const program = [...selection.program][0];
+    this.navigateToResultsCenter('all', { ...(status ? { status } : {}), ...(program ? { program } : {}) });
   }
 
   readonly categoryOriginOption = computed(() =>
@@ -288,7 +372,7 @@ export class PortfolioOverviewComponent {
         s => s.label.toLowerCase() === name || s.key.toLowerCase() === name
       );
       if (match) {
-        this.toggleStatusFilter(match.key);
+        this.toggleStatus(match.key);
       }
     }
   }

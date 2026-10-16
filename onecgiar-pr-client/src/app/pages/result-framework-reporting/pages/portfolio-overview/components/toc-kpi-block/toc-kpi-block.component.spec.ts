@@ -319,4 +319,66 @@ describe('PortfolioTocKpiBlockComponent (TKP-T-4)', () => {
       expect(html).not.toMatch(/\bprimeicons|pi pi-/);
     });
   });
+
+  describe('global filters (GLF-T-6, GLF-R-6 S-6.1, GLF-R-9)', () => {
+    const three = () => [program('SP01', 10, 40), program('SP02', 5, 10), program('SP03', 1, 5)];
+
+    it('S-6.1: programs = {SP01, SP02} lists only those rows and the summary reads 15 / 50 (30%)', () => {
+      const f = create(36);
+      answer(f, pending()[0], three());
+      f.componentRef.setInput('programs', new Set(['SP01', 'SP02']));
+      f.detectChanges();
+      expect(qa(f, '[data-testid="toc-kpi-row"]').map(li => li.getAttribute('data-code'))).toEqual(['SP01', 'SP02']);
+      expect(text(q(f, '[data-testid="toc-kpi-summary-count"]'))).toBe('15 / 50');
+      expect(text(q(f, '[data-testid="toc-kpi-summary-percent"]'))).toBe('30%');
+    });
+
+    it('S-6.1 AND IT MUST: changing programs makes no new request (match count stays 1 overall)', () => {
+      const f = create(36);
+      const reqs = pending();
+      expect(reqs).toHaveLength(1);
+      answer(f, reqs[0], three());
+      f.componentRef.setInput('programs', new Set(['SP01']));
+      f.detectChanges();
+      f.componentRef.setInput('programs', new Set(['SP01', 'SP03']));
+      f.detectChanges();
+      f.componentRef.setInput('programs', new Set<string>());
+      f.detectChanges();
+      expect(pending()).toHaveLength(0);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('with no program filter the summary is the server portfolio (no filter = unchanged)', () => {
+      const f = create(36);
+      answer(f, pending()[0], three());
+      expect(qa(f, '[data-testid="toc-kpi-row"]')).toHaveLength(3);
+      expect(text(q(f, '[data-testid="toc-kpi-summary-count"]'))).toBe('16 / 55');
+    });
+
+    it('the empty rule applies to the visible rows (selected P/A without KPIs)', () => {
+      const f = create(36);
+      answer(f, pending()[0], [program('SP01', 10, 40), program('A3', 0, 0)]);
+      f.componentRef.setInput('programs', new Set(['A3']));
+      f.detectChanges();
+      expect(q(f, '[data-testid="toc-kpi-empty"]')).not.toBeNull();
+      expect(q(f, '[data-testid="toc-kpi-summary"]')).toBeNull();
+    });
+
+    it('S-9.1: notAffected = [center, status] reads "Not affected by: Center, Status"', () => {
+      const f = create(36);
+      answer(f, pending()[0], three());
+      f.componentRef.setInput('notAffected', ['center', 'status']);
+      f.detectChanges();
+      expect(text(q(f, '[data-testid="toc-kpi-not-affected"]'))).toBe('Not affected by: Center, Status');
+    });
+
+    it('notAffected = [status] reads "Not affected by: Status"; empty list shows no line', () => {
+      const f = create(36);
+      answer(f, pending()[0], three());
+      expect(q(f, '[data-testid="toc-kpi-not-affected"]')).toBeNull();
+      f.componentRef.setInput('notAffected', ['status']);
+      f.detectChanges();
+      expect(text(q(f, '[data-testid="toc-kpi-not-affected"]'))).toBe('Not affected by: Status');
+    });
+  });
 });

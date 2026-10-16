@@ -1,4 +1,5 @@
-import { CENTER_STATUS_IDS, buildCenterRow, byOrigin, isReplicatedRow, isW3Row, originCounts, sumRows } from './centers-block.aggregate';
+import { EMPTY_SELECTION, buildDimensionIndex, type PortfolioFilterSelection } from '../../services/portfolio-filters';
+import { CENTER_STATUS_IDS, applyGlobal, buildCenterRow, byOrigin, isReplicatedRow, isW3Row, originCounts, sumRows } from './centers-block.aggregate';
 
 describe('centers-block.aggregate (P2-3858, moved by P2-3928)', () => {
   describe('buildCenterRow', () => {
@@ -83,6 +84,72 @@ describe('centers-block.aggregate (P2-3858, moved by P2-3928)', () => {
 
     it('originCounts of no rows is all zeros', () => {
       expect(originCounts([])).toEqual({ total: 0, new: 0, replicated: 0 });
+    });
+  });
+  describe('applyGlobal (GLF-R-8, DD-9)', () => {
+    const sel = (patch: Partial<Record<keyof PortfolioFilterSelection, string[]>>): PortfolioFilterSelection => ({
+      ...EMPTY_SELECTION,
+      ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, new Set(v)]))
+    });
+    const rows = [
+      { id: 1, submitter: 'SP01', result_type: 'Knowledge product', status_id: 1, status_name: 'Editing', is_replicated: 0 },
+      { id: 2, submitter: 'SP01', result_type: 'Capacity sharing for development', status_id: 6, status_name: 'Approved', is_replicated: 1 },
+      { id: 3, submitter: 'SP02', result_type: 'Policy change', status_id: 5, status_name: 'Pending Review', is_replicated: 0 },
+      { id: 4, submitter: 'SP02', result_type: 'Other output', status_id: 7, status_name: 'Rejected', is_replicated: 1 }
+    ] as any[];
+    const index = buildDimensionIndex({
+      projectLinks: [[1, 10], [2, 10], [3, 11], [4, 12]],
+      centerLinks: []
+    });
+    const ids = (out: any[]) => out.map(r => r.id);
+
+    it('an empty selection returns every row', () => {
+      expect(ids(applyGlobal(rows, EMPTY_SELECTION, null, true))).toEqual([1, 2, 3, 4]);
+    });
+
+    it('typology matches the level token: only Output rows, and new + replicated = total', () => {
+      const out = applyGlobal(rows, sel({ typology: ['output'] }), null, true);
+      expect(ids(out)).toEqual([1, 2, 4]);
+      const counts = originCounts(out);
+      expect(counts.new + counts.replicated).toBe(counts.total);
+    });
+
+    it('typology also matches a type token', () => {
+      expect(ids(applyGlobal(rows, sel({ typology: ['policy change'] }), null, true))).toEqual([3]);
+    });
+
+    it('program matches through the row submitter', () => {
+      expect(ids(applyGlobal(rows, sel({ program: ['SP02'] }), null, true))).toEqual([3, 4]);
+    });
+
+    it('status resolves through the status slot', () => {
+      expect(ids(applyGlobal(rows, sel({ status: ['approved', 'rejected'] }), null, true))).toEqual([2, 4]);
+    });
+
+    it('project goes through the index by row id when honoured', () => {
+      expect(ids(applyGlobal(rows, sel({ project: ['10'] }), index, true))).toEqual([1, 2]);
+    });
+
+    it('project is ignored when not honoured (between cycles)', () => {
+      expect(ids(applyGlobal(rows, sel({ project: ['10'] }), index, false))).toEqual([1, 2, 3, 4]);
+    });
+
+    it('honoured project without an index is pending: no row is claimed as a match', () => {
+      expect(applyGlobal(rows, sel({ project: ['10'] }), null, true)).toEqual([]);
+    });
+
+    it('dimensions compose with AND', () => {
+      expect(ids(applyGlobal(rows, sel({ program: ['SP01'], status: ['approved'] }), null, true))).toEqual([2]);
+    });
+
+    it('the center dimension is not applied to rows (it limits Centers, not rows)', () => {
+      expect(ids(applyGlobal(rows, sel({ center: ['CENTER-03'] }), index, true))).toEqual([1, 2, 3, 4]);
+    });
+
+    it('does not mutate its input', () => {
+      const copy = [...rows];
+      applyGlobal(rows, sel({ program: ['SP01'] }), null, true);
+      expect(rows).toEqual(copy);
     });
   });
 });

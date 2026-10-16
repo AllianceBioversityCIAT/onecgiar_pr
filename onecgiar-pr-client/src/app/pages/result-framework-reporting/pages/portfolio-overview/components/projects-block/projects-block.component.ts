@@ -11,7 +11,8 @@ import { ResultsApiService } from '../../../../../../shared/services/api/results
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import { buildProjectsOption, buildProjectsTable, ProjectsChartLabels } from './projects.charts';
-import { ProjectsViewRow, shareOfMapped, toCenterRows, toProgramRows } from './projects.format';
+import { FilterDimension } from '../../services/portfolio-filters';
+import { filterProjectRows, ProjectsViewRow, shareOfMapped, toCenterRows, toProgramRows } from './projects.format';
 
 type LoadStatus = 'loading' | 'error' | 'ready';
 export type ProjectsDimension = 'program' | 'center';
@@ -37,8 +38,15 @@ export class PortfolioProjectsBlockComponent {
 
   /** Version (phase) of the page rows. `null` leaves the choice to the server (the open phase). */
   readonly versionId = input<number | null>(null);
+  /** Selected Programs / Accelerators (codes): narrows By P/A. Never refetches (GLF-R-7). */
+  readonly programs = input<ReadonlySet<string>>(new Set<string>());
+  /** Selected Centers (codes): narrows By Center and hides Unassigned. Never refetches (GLF-R-7). */
+  readonly centers = input<ReadonlySet<string>>(new Set<string>());
+  /** Active filter dimensions this block does not honour, in bar order; computed by the page (GLF-R-9). */
+  readonly notAffected = input<readonly FilterDimension[]>([]);
 
   readonly copy = PORTFOLIO_OVERVIEW_COPY.projects;
+  readonly filterCopy = PORTFOLIO_OVERVIEW_COPY.filters;
   readonly skeletonRows = SKELETON_ROWS;
 
   readonly status = signal<LoadStatus>('loading');
@@ -59,9 +67,18 @@ export class PortfolioProjectsBlockComponent {
   readonly rows = computed<ProjectsViewRow[]>(() => {
     const data = this.data();
     if (!data) return [];
-    if (this.dimension() === 'program') return toProgramRows(data.byProgram ?? []);
+    const dimension = this.dimension();
     const labels = this.centerLabels();
-    return toCenterRows(data.byCenter ?? [], code => labels[code], this.copy.unassigned);
+    const all = dimension === 'program' ? toProgramRows(data.byProgram ?? []) : toCenterRows(data.byCenter ?? [], code => labels[code], this.copy.unassigned);
+    return filterProjectRows(all, dimension, this.programs(), this.centers());
+  });
+  /** The KPI figures stay portfolio-wide (a project in several P/As counts once), so say so while a filter narrows the rows. */
+  readonly totalsWholePortfolio = computed(() => this.programs().size > 0 || this.centers().size > 0);
+  readonly notAffectedText = computed(() => {
+    const list = this.notAffected();
+    if (!list.length) return '';
+    const names = this.filterCopy.dimensions;
+    return this.filterCopy.notAffected(list.map(d => names[d]).join(', '));
   });
 
   readonly firstColumn = computed(() => (this.dimension() === 'program' ? this.copy.colProgram : this.copy.colCenter));

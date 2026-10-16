@@ -8,7 +8,8 @@ import { Subject, catchError, map, of, switchMap } from 'rxjs';
 import { PORTFOLIO_OVERVIEW_COPY } from '../../../../../../internationalization/portfolio-overview.copy';
 import { PortfolioTocCoverage } from '../../../../../../shared/interfaces/portfolio-toc-coverage.interface';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
-import { toSummary, toViewRows } from './toc-kpi.format';
+import { FilterDimension } from '../../services/portfolio-filters';
+import { filterRowsByPrograms, sumRows, toSummary, toViewRows } from './toc-kpi.format';
 
 type LoadStatus = 'loading' | 'error' | 'ready';
 
@@ -36,6 +37,10 @@ export class PortfolioTocKpiBlockComponent {
   readonly versionId = input<number | null>(null);
   /** Reporting year shown in the subtitle. */
   readonly year = input<string>('');
+  /** Selected Programs / Accelerators (codes). Empty = no Program filter. Narrows what is held; never refetches (GLF-R-6). */
+  readonly programs = input<ReadonlySet<string>>(new Set<string>());
+  /** Active filter dimensions this block does not honour, in bar order; computed by the page (GLF-R-9). */
+  readonly notAffected = input<readonly FilterDimension[]>([]);
   /** Emits the official code of the Program / Accelerator whose Results tab the user asked to open. */
   readonly programmeOpen = output<string>();
 
@@ -45,8 +50,17 @@ export class PortfolioTocKpiBlockComponent {
   readonly status = signal<LoadStatus>('loading');
   private readonly data = signal<PortfolioTocCoverage | null>(null);
 
-  readonly rows = computed(() => toViewRows(this.data()?.programs ?? []));
-  readonly summary = computed(() => toSummary(this.data()?.portfolio ?? { covered: 0, total: 0 }));
+  readonly rows = computed(() => filterRowsByPrograms(toViewRows(this.data()?.programs ?? []), this.programs()));
+  /** The server portfolio, or (Program filter on) the sum of the visible rows (GLF-P-5). */
+  readonly summary = computed(() =>
+    toSummary(this.programs().size ? sumRows(this.rows()) : (this.data()?.portfolio ?? { covered: 0, total: 0 }))
+  );
+  readonly notAffectedText = computed(() => {
+    const list = this.notAffected();
+    if (!list.length) return '';
+    const names = PORTFOLIO_OVERVIEW_COPY.filters.dimensions;
+    return PORTFOLIO_OVERVIEW_COPY.filters.notAffected(list.map(d => names[d]).join(', '));
+  });
   /** TKP-R-7 Empty: every P/A has total = 0, or there are none. */
   readonly isEmpty = computed(() => this.rows().every(row => row.total === 0) || this.summary().percent === null);
 

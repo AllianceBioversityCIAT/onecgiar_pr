@@ -26,5 +26,8 @@ export const PORTFOLIO_CENTERS_BLOCK_COPY = {
   centersStillLoading: 'Some Centers are still loading; figures update as they arrive.',
   originNew: 'New',
   originReplicated: 'Replicated',
-  filterSeparator: ' · '
+  filterSeparator: ' · ',
+  // GLF-R-9: the line shown when an active global dimension is not honoured by this block.
+  dimensions: { program: 'Program', project: 'Project', center: 'Center', typology: 'Typology', status: 'Status' },
+  notAffected: (labels: string): string => `Not affected by: ${labels}`
 } as const;

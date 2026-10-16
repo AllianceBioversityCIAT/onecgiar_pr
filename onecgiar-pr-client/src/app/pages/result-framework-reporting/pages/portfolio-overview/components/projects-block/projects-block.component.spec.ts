@@ -317,4 +317,83 @@ describe('PortfolioProjectsBlockComponent (WPS-T-4)', () => {
       expect(cell.className).toContain('text-right');
     });
   });
+
+  describe('global filters (GLF-T-6, GLF-R-7 S-7.1, GLF-R-9)', () => {
+    const wide = () =>
+      payload({
+        totals: counts(7, 4, 3),
+        byProgram: [
+          { code: 'SP01', shortName: 'One', name: 'Program One', ...counts(4, 2, 1) },
+          { code: 'SP02', shortName: 'Two', name: 'Program Two', ...counts(4, 2, 2) },
+          { code: 'A1', shortName: 'Acc', name: 'Accelerator One', ...counts(1, 0, 0) }
+        ],
+        byCenter: [
+          { code: null, acronym: null, name: null, ...counts(1, 0, 0) },
+          { code: 'CENTER-03', acronym: 'CIAT-inst', name: 'Alliance', ...counts(3, 2, 1) },
+          { code: 'CENTER-05', acronym: 'IITA', name: 'IITA', ...counts(3, 2, 2) }
+        ]
+      });
+    const labels = (f: Fixture) => qa(f, '[data-testid="projects-row-label"]').map(el => text(el));
+    const kpiValues = (f: Fixture) => qa(f, '[data-testid="projects-kpi-value"]').map(el => text(el));
+
+    it('By P/A lists only the selected programs; the KPI figures stay portfolio-wide', async () => {
+      const f = create(36);
+      await answer(f, pending()[0], wide());
+      f.componentRef.setInput('programs', new Set(['SP01']));
+      f.detectChanges();
+      click(f, 'projects-view-table');
+      expect(labels(f)).toEqual(['SP01']);
+      expect(kpiValues(f)).toEqual(['7', '4', '3']);
+      expect(text(q(f, '[data-testid="projects-total-row"]'))).toContain('7');
+    });
+
+    it('S-7.1: centers = {CENTER-03} shows only that Center, no Unassigned, unchanged totals and the caption', async () => {
+      const f = create(36);
+      await answer(f, pending()[0], wide());
+      f.componentRef.setInput('centers', new Set(['CENTER-03']));
+      f.componentRef.setInput('notAffected', ['status']);
+      f.detectChanges();
+      click(f, 'projects-tab-center');
+      click(f, 'projects-view-table');
+      expect(labels(f)).toEqual(['Alliance']);
+      expect(labels(f)).not.toContain(copy.unassigned);
+      expect(kpiValues(f)).toEqual(['7', '4', '3']);
+      expect(text(q(f, '[data-testid="projects-totals-caption"]'))).toBe('Totals cover the whole portfolio');
+      expect(text(q(f, '[data-testid="projects-not-affected"]'))).toBe('Not affected by: Status');
+    });
+
+    it('Unassigned is shown again when no center is selected', async () => {
+      const f = create(36);
+      await answer(f, pending()[0], wide());
+      click(f, 'projects-tab-center');
+      click(f, 'projects-view-table');
+      expect(labels(f)).toContain(copy.unassigned);
+      expect(q(f, '[data-testid="projects-totals-caption"]')).toBeNull();
+      expect(q(f, '[data-testid="projects-not-affected"]')).toBeNull();
+    });
+
+    it('the caption also shows while only programs is set, and programs does not narrow By Center', async () => {
+      const f = create(36);
+      await answer(f, pending()[0], wide());
+      f.componentRef.setInput('programs', new Set(['SP01']));
+      f.detectChanges();
+      expect(q(f, '[data-testid="projects-totals-caption"]')).not.toBeNull();
+      click(f, 'projects-tab-center');
+      click(f, 'projects-view-table');
+      expect(labels(f)).toHaveLength(3);
+    });
+
+    it('changing programs or centers makes no new request', async () => {
+      const f = create(36);
+      await answer(f, pending()[0], wide());
+      f.componentRef.setInput('programs', new Set(['SP02']));
+      f.detectChanges();
+      f.componentRef.setInput('centers', new Set(['CENTER-05']));
+      f.detectChanges();
+      f.componentRef.setInput('centers', new Set<string>());
+      f.detectChanges();
+      expect(pending()).toHaveLength(0);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
 });

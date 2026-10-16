@@ -3,14 +3,18 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { Router } from '@angular/router';
-import { Subject, of, throwError } from 'rxjs';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { PortfolioOverviewComponent } from './portfolio-overview.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
+import { PortfolioCentersBlockComponent } from './components/centers-block/centers-block.component';
+import { PortfolioTocKpiBlockComponent } from './components/toc-kpi-block/toc-kpi-block.component';
+import { PortfolioProjectsBlockComponent } from './components/projects-block/projects-block.component';
 import { PORTFOLIO_OVERVIEW_COPY as COPY } from '../../../../internationalization/portfolio-overview.copy';
+import { STATUS_GUIDE_URL } from '../../../../shared/constants/portfolio-links.constants';
 
 const mockChartInstance = {
   setOption: jest.fn(),
@@ -107,10 +111,20 @@ describe('PortfolioOverviewComponent', () => {
   let component: PortfolioOverviewComponent;
   let router: Router;
 
-  const build = (items: unknown[], meta: Record<string, unknown> = {}) => {
+  /** GLF-T-5: the page also asks for the result -> project / Center map; `dimensions$` lets a case keep it pending. */
+  const EMPTY_MAP = { versionId: 36, phaseName: null, projectLinks: [], centerLinks: [], projects: [], centers: [], w3ProjectIds: [] };
+
+  const build = (
+    items: unknown[],
+    meta: Record<string, unknown> = {},
+    extra: { query?: Record<string, string>; dimensions$?: Observable<unknown> } = {}
+  ) => {
     const apiMock = {
       authSE: { localStorageUser: { id: 2 } },
-      resultsSE: { GET_AllResultsWithUseRole: jest.fn().mockReturnValue(of({ response: { items, meta } })) }
+      resultsSE: {
+        GET_AllResultsWithUseRole: jest.fn().mockReturnValue(of({ response: { items, meta } })),
+        GET_PortfolioResultDimensions: jest.fn().mockReturnValue(extra.dimensions$ ?? of({ response: EMPTY_MAP }))
+      }
     };
 
     TestBed.resetTestingModule();
@@ -119,6 +133,7 @@ describe('PortfolioOverviewComponent', () => {
       providers: [
         { provide: ApiService, useValue: apiMock },
         { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(extra.query ?? {}) } } },
         { provide: DataControlService, useValue: { reportingCurrentPhase: { phaseYear: 2026, portfolioAcronym: 'P25' } } },
         ...projectsProviders(),
         provideHttpClient(),
@@ -258,12 +273,12 @@ describe('PortfolioOverviewComponent', () => {
     it('renders dynamic status pipeline and interactive status metric cards with filter toggle', () => {
       build(OPEN_PHASE);
 
-      expect(component.selectedStatusFilter()).toBe('all');
-      component.toggleStatusFilter('editing');
-      expect(component.selectedStatusFilter()).toBe('editing');
+      expect(component.data.selection().status.size).toBe(0);
+      component.toggleStatus('editing');
+      expect([...component.data.selection().status]).toEqual(['editing']);
 
-      component.toggleStatusFilter('editing');
-      expect(component.selectedStatusFilter()).toBe('all');
+      component.toggleStatus('editing');
+      expect(component.data.selection().status.size).toBe(0);
     });
 
     it('renders symmetrical status metric grid with counts and percentages', () => {
@@ -283,10 +298,21 @@ describe('PortfolioOverviewComponent', () => {
       expect(component.statusTotal()).toBe(component.kpis().totalResults);
     });
 
-    it('renders no guide link with the default empty URL', () => {
+    it('defaults the guide link to the Notion status guide', () => {
       build(OPEN_PHASE);
 
-      expect(component.statusGuideUrl).toBe('');
+      expect(component.statusGuideUrl).toBe(STATUS_GUIDE_URL);
+      const link = fixture.nativeElement.querySelector('[data-testid="status-guide-link"]') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toBe(STATUS_GUIDE_URL);
+    });
+
+    it('renders no guide link when the URL is empty', () => {
+      build(OPEN_PHASE);
+
+      component.statusGuideUrl = '';
+      fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck();
+      fixture.detectChanges();
+
       expect(fixture.nativeElement.querySelector('[data-testid="status-guide-link"]')).toBeNull();
       expect(fixture.nativeElement.querySelector('a[href=""]')).toBeNull();
     });
@@ -321,9 +347,9 @@ describe('PortfolioOverviewComponent', () => {
 
       const rejected = fixture.nativeElement.querySelector('[data-testid="status-tile-rejected"]') as HTMLButtonElement;
       rejected.click();
-      expect(component.selectedStatusFilter()).toBe('rejected');
+      expect([...component.data.selection().status]).toEqual(['rejected']);
       rejected.click();
-      expect(component.selectedStatusFilter()).toBe('all');
+      expect(component.data.selection().status.size).toBe(0);
     });
   });
 
@@ -646,7 +672,7 @@ describe('PortfolioOverviewComponent', () => {
 
       // Status chart click toggles filter
       component.onStatusChartClick({ name: 'Editing' } as any);
-      expect(component.selectedStatusFilter()).toBe('editing');
+      expect([...component.data.selection().status]).toEqual(['editing']);
 
       // Bilateral chart click navigates to bilateral results
       component.onBilateralChartClick();
@@ -717,6 +743,202 @@ describe('PortfolioOverviewComponent', () => {
       fixture.detectChanges();
       expect(fixture.componentInstance.hasFigures()).toBe(false);
       expect(fixture.nativeElement.querySelector(PROJECTS)).toBeTruthy();
+    });
+  });
+
+  describe('Global filters wiring (GLF-T-5, GLF-R-1/5/10/13/14/15)', () => {
+    const TOC_KPI = 'app-portfolio-toc-kpi-block';
+    const BAR = 'app-portfolio-filter-bar';
+    const NO_MATCH = '[data-testid="portfolio-no-match"]';
+    const STRIP = '[data-testid="portfolio-active-filter"]';
+    const LINK = '[data-testid="portfolio-active-filter-link"]';
+    const q = <T extends Element = HTMLElement>(sel: string) => fixture.nativeElement.querySelector(sel) as T | null;
+    const refresh = () => fixture.detectChanges();
+    const withIds = (items: Record<string, unknown>[]) => items.map((item, i) => ({ ...item, id: i + 1 }));
+
+    it('S-5.1: the Editing tile sets the global Status, narrows the deck to the Editing count, and a second click clears it', () => {
+      build(OPEN_PHASE);
+      const tile = () => q<HTMLButtonElement>('[data-testid="status-tile-editing"]')!;
+      const editing = component.statusSegments().find(s => s.key === 'editing')!.count;
+      expect(tile().getAttribute('aria-pressed')).toBe('false');
+
+      tile().click();
+      refresh();
+      expect([...component.data.selection().status]).toEqual(['editing']);
+      expect(component.kpis().totalResults).toBe(editing);
+      expect(tile().getAttribute('aria-pressed')).toBe('true');
+
+      tile().click();
+      refresh();
+      expect(component.data.selection().status.size).toBe(0);
+      expect(component.kpis().totalResults).toBe(5);
+      expect(tile().getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('S-5.2: two statuses can be on at once', () => {
+      build(OPEN_PHASE);
+      component.toggleStatus('editing');
+      component.toggleStatus('in-qa');
+      expect([...component.data.selection().status].sort()).toEqual(['editing', 'in-qa']);
+    });
+
+    it('mounts the filter bar inside hasFigures, above the deck, and not in the empty state', () => {
+      build(OPEN_PHASE);
+      const deck = q('button.po-card')!;
+      expect(q(BAR)).toBeTruthy();
+      expect(q(BAR)!.compareDocumentPosition(deck) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      build([]);
+      expect(q(BAR)).toBeNull();
+    });
+
+    it('S-14.1: ?program=SP06,ZZ99&status=editing restores only the known values and writes back with replaceUrl, keeping other params', () => {
+      build(OPEN_PHASE, {}, { query: { program: 'SP06,ZZ99', status: 'editing', foo: '1' } });
+      refresh();
+
+      expect([...component.data.selection().program]).toEqual(['SP06']);
+      expect([...component.data.selection().status]).toEqual(['editing']);
+      const navigate = router.navigate as jest.Mock;
+      const [commands, extras] = navigate.mock.calls[navigate.mock.calls.length - 1];
+      expect(commands).toEqual([]);
+      expect(extras.replaceUrl).toBe(true);
+      expect(extras.queryParamsHandling).toBe('merge');
+      expect(extras.queryParams).toEqual({ program: 'SP06', status: 'editing', project: null, center: null, typology: null });
+      expect(extras.queryParams).not.toHaveProperty('foo');
+    });
+
+    it('every later selection change is written with replaceUrl too', () => {
+      build(OPEN_PHASE);
+      component.toggleStatus('rejected');
+      refresh();
+      const navigate = router.navigate as jest.Mock;
+      const [, extras] = navigate.mock.calls[navigate.mock.calls.length - 1];
+      expect(extras.replaceUrl).toBe(true);
+      expect(extras.queryParams['status']).toBe('rejected');
+    });
+
+    it('S-10.1: no match shows the panel with Clear all, keeps the ToC KPI block, and never the phase-empty text', () => {
+      build(OPEN_PHASE);
+      component.data.setSelection({ ...component.data.selection(), program: new Set(['SP06']), status: new Set(['rejected']) });
+      refresh();
+
+      expect(component.data.filteredTotal()).toBe(0);
+      expect(q(NO_MATCH)).toBeTruthy();
+      expect(q(NO_MATCH)!.textContent).toContain(COPY.filters.noResults);
+      expect(q(TOC_KPI)).toBeTruthy();
+      expect(q('button.po-card')).toBeNull();
+      expect(q('[data-testid="status-tile-editing"]')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('No results have been reported in this phase yet.');
+
+      q<HTMLButtonElement>(`${NO_MATCH} button`)!.click();
+      refresh();
+      expect(component.data.selection().program.size + component.data.selection().status.size).toBe(0);
+      expect(q(NO_MATCH)).toBeNull();
+      expect(q('button.po-card')).toBeTruthy();
+    });
+
+    it('S-13.1: a Project selection while the map is pending shows the section skeletons, not the panel nor the sections', () => {
+      build(OPEN_PHASE, {}, { query: { project: '5' }, dimensions$: new Subject() });
+      refresh();
+
+      expect(component.data.filtersPending()).toBe(true);
+      expect(q('[data-testid="portfolio-overview-skeleton-typology"]')).toBeTruthy();
+      expect(q(NO_MATCH)).toBeNull();
+      expect(q('button.po-card')).toBeNull();
+      expect(q('app-portfolio-typology-block')).toBeNull();
+      expect(q(BAR)).toBeTruthy();
+      expect(q(TOC_KPI)).toBeTruthy();
+    });
+
+    it('shows the strip only when a dimension is active, never with "Active filter: all"', () => {
+      build(OPEN_PHASE);
+      expect(q(STRIP)).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Active filter: all');
+
+      component.toggleStatus('editing');
+      refresh();
+      expect(q(STRIP)).toBeTruthy();
+      expect(q(STRIP)!.textContent).toContain('Editing');
+
+      component.data.toggleValue('typology', 'output');
+      refresh();
+      expect(q(STRIP)!.textContent).toContain(COPY.filters.dimensions.typology);
+    });
+
+    it('View in Results Center passes the single status and program to navigateToResultsCenter', () => {
+      build(OPEN_PHASE);
+      component.toggleStatus('editing');
+      component.data.toggleValue('program', 'SP01');
+      refresh();
+      const spy = jest.spyOn(component, 'navigateToResultsCenter');
+
+      q<HTMLButtonElement>(LINK)!.click();
+
+      expect(spy).toHaveBeenCalledWith('all', { status: 'editing', program: 'SP01' });
+    });
+
+    it('View in Results Center is hidden with two statuses, and with a Center active', () => {
+      build(withIds(OPEN_PHASE), {}, {
+        dimensions$: of({
+          response: { ...EMPTY_MAP, centerLinks: [[1, 'C1']], centers: [{ code: 'C1', acronym: 'C1', name: 'Center 1' }] }
+        })
+      });
+      component.toggleStatus('editing');
+      refresh();
+      expect(q(LINK)).toBeTruthy();
+
+      component.toggleStatus('in-qa');
+      refresh();
+      expect(q(STRIP)).toBeTruthy();
+      expect(q(LINK)).toBeNull();
+
+      component.data.clearAll();
+      component.data.setSelection({ ...component.data.selection(), center: new Set(['C1']) });
+      refresh();
+      expect(component.data.filteredTotal()).toBeGreaterThan(0);
+      expect(q(STRIP)).toBeTruthy();
+      expect(q(LINK)).toBeNull();
+    });
+
+    it('typology gets the filtered rows', () => {
+      build(OPEN_PHASE);
+      component.toggleStatus('editing');
+      refresh();
+      const typology = fixture.debugElement.query(By.css('app-portfolio-typology-block')).componentInstance;
+      expect(typology.rows().length).toBe(component.data.filteredTotal());
+    });
+
+    it('block inputs: ToC KPI and Projects get the selection and the not-affected list in bar order', () => {
+      build(OPEN_PHASE);
+      component.data.toggleValue('typology', 'output');
+      component.data.toggleValue('program', 'SP01');
+      refresh();
+
+      const toc = fixture.debugElement.query(By.directive(PortfolioTocKpiBlockComponent)).componentInstance;
+      const projects = fixture.debugElement.query(By.directive(PortfolioProjectsBlockComponent)).componentInstance;
+      expect([...toc.programs()]).toEqual(['SP01']);
+      expect(toc.notAffected()).toEqual(['typology']);
+      expect([...projects.programs()]).toEqual(['SP01']);
+      expect(projects.notAffected()).toEqual(['typology']);
+    });
+
+    it('DD-5: the Centers block gets dimensionsVersionId only once the map is ready', () => {
+      const centers = () => fixture.debugElement.query(By.directive(PortfolioCentersBlockComponent)).componentInstance;
+      build(OPEN_PHASE, {}, { dimensions$: new Subject() });
+      expect(centers().dimensionsVersionId()).toBeNull();
+      expect(centers().dimensionIndex()).toBeNull();
+
+      build(OPEN_PHASE);
+      expect(centers().dimensionsVersionId()).toBe(36);
+      expect(centers().dimensionIndex()).not.toBeNull();
+      expect(centers().selection()).toBe(component.data.selection());
+    });
+
+    it('R-15: the closed-phase banner stays under a filter', () => {
+      build(CLOSED_PHASE);
+      component.toggleStatus('editing');
+      refresh();
+      expect(fixture.nativeElement.textContent).toContain('Viewing a closed phase. Figures are final.');
     });
   });
 
