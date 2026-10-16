@@ -710,6 +710,10 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.resultId.set(null);
     this.autoSaveService.reset();
     this.mdsTracker.reset();
+    // P2-3980: the held assessment belongs to the former type — a change to Knowledge Product must not
+    // leave its AI flags on the now read-only Title/Description. The rehydration effect re-reads it.
+    this.qualityAssessment.reset();
+    this.qualityAssessmentResultId = null;
     this.creationService.loadResult(request.resultCode, request.versionId);
   }
 

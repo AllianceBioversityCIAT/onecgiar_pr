@@ -19,11 +19,14 @@ One predicate, `BilateralCreationService.isKnowledgeProduct` (`Number(resultType
 - **KPP-DD-3** For a KP, Title/Description are published to the MDS tracker with `optional: true`, so an empty repository value never greys Submit.
 - **KPP-DD-4** `BilateralQualityAssessmentUiService.submitKnowledgeProduct(rid)`: POST assessment then PATCH submit with `submitted_anyway`, wrapped in `defer` with an `isKpSubmitting` guard (second call completes empty). It never touches `assessment` or `state`, so `isDialogOpen()` stays false and the rail card and field flags have nothing to show.
 - **KPP-DD-5** Confirmation = Spartan `hlm-dialog` (`kp-submit-confirm-dialog`, same shape as `toc-linkage-switch-dialog`); copy in `internationalization/bilateral-kp-submit.copy.ts`. Cancel is the default focus; Escape cancels.
+- **KPP-DD-7** (adversarial review, 16-Oct-2026) Server `isReusable` no longer reuses a row that already carries a submit `decision`: a result rejected and resubmitted unchanged (the usual KP case, Title/Description read-only) was refused for good. Applies to every type — it was a latent bug for all of them.
+- **KPP-DD-8** `submitKnowledgeProduct` waits for a `running` row (202 from a concurrent tab) with the same poll window as `run()` before the PATCH.
+- **KPP-DD-9** `reloadAfterResultTypeChange` resets the held assessment, so a change to KP does not leave the former type's AI flags on screen.
 - **KPP-DD-6** `submitResult()` keeps all its guards; the KP branch comes after them. `loadLatest` is skipped for a KP; the rail card and the submit note are behind `!isKnowledgeProduct()`.
 
 ## 3. Files
 
-`services/bilateral-creation.service.ts`, `services/bilateral-quality-assessment-ui.service.ts`, `components/section-general-info/*`, `components/kp-submit-confirm-dialog/*`, `pages/bilateral-result-creator/*`, `internationalization/bilateral-kp-submit.copy.ts`.
+Server: `onecgiar-pr-server/src/api/bilateral/services/quality-assessment/bilateral-quality-assessment.service.ts` (`isReusable`). Client: `services/bilateral-creation.service.ts`, `services/bilateral-quality-assessment-ui.service.ts`, `components/section-general-info/*`, `components/kp-submit-confirm-dialog/*`, `pages/bilateral-result-creator/*`, `internationalization/bilateral-kp-submit.copy.ts`.
 
 ## 4. Tests
 

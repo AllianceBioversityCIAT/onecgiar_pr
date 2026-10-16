@@ -112,6 +112,16 @@ export class BilateralQualityAssessmentUiService {
       this.isKpSubmitting.set(true);
       return this.api.POST_bilateralQualityAssessment(resultId).pipe(
         map((envelope: { response: BilateralQualityAssessmentView }) => envelope.response),
+        // A 202 `running` row (another tab claimed it a moment earlier) cannot be submitted: wait for
+        // it to settle, same window as `run()`, instead of sending a PATCH the server refuses.
+        switchMap((assessment) => assessment.status === 'running'
+          ? timer(POLL_INTERVAL_MS, POLL_INTERVAL_MS).pipe(
+            switchMap(() => this.readLatest(resultId)),
+            filter((latest): latest is BilateralQualityAssessmentView => !!latest && latest.status !== 'running'),
+            take(1),
+            timeout(POLL_WINDOW_MS),
+          )
+          : of(assessment)),
         switchMap((assessment) => this.api.PATCH_bilateralSubmitForReview(resultId, {
           assessment_id: assessment.id,
           decision: 'submitted_anyway',

@@ -216,3 +216,4 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
 
 ## Pendiente / Coming soon
 - HITL responsive/axe del drawer — ver `execution.md` del spec `manual-create-drawer`.
+- ⚠️ **P2-3980 — type change drops the held quality assessment.** `reloadAfterResultTypeChange()` calls `qualityAssessment.reset()` and clears `qualityAssessmentResultId`, so a switch to Knowledge Product does not leave the former type's AI flags on the now read-only Title/Description.

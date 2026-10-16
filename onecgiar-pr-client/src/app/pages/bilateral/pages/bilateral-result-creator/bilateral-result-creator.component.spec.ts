@@ -445,10 +445,36 @@ describe('BilateralResultCreatorComponent', () => {
     });
 
     it('does not rehydrate an AI assessment for a KP', () => {
+      component.isCreating.set(false);
+      creationService.isLoadingResult.set(false);
       creationService.currentResultId.set(77);
       TestBed.flushEffects();
 
+      expect(component.resultId()).toBe(77);
       expect(qualityAssessment.loadLatest).not.toHaveBeenCalled();
+    });
+
+    // Review finding: switching an AI-checked result to Knowledge Product kept its amber flags on the
+    // now read-only Title/Description. The type change drops the held assessment.
+    it('drops the former type assessment when the result type changes', () => {
+      (component as any).lastLoadRequest = { resultCode: 31111, versionId: 8 };
+      (component as any).qualityAssessmentResultId = 42;
+
+      component.reloadAfterResultTypeChange();
+
+      expect(qualityAssessment.reset).toHaveBeenCalled();
+      expect((component as any).qualityAssessmentResultId).toBeNull();
+      expect(creationService.loadResult).toHaveBeenCalledWith(31111, 8);
+    });
+
+    it('still rehydrates the AI assessment for any other type (positive control)', () => {
+      creationService.resultTypeId.set(7);
+      component.isCreating.set(false);
+      creationService.isLoadingResult.set(false);
+      creationService.currentResultId.set(78);
+      TestBed.flushEffects();
+
+      expect(qualityAssessment.loadLatest).toHaveBeenCalledWith(78);
     });
   });
 

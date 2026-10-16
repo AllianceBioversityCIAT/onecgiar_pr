@@ -444,6 +444,21 @@ describe('BilateralQualityAssessmentUiService', () => {
   });
   // P2-3980 — a Knowledge Product submits through a silent assessment row, never the AI dialog.
   describe('submitKnowledgeProduct', () => {
+    it('waits for a row another tab left running before submitting it', fakeAsync(() => {
+      service.submitKnowledgeProduct(42).subscribe();
+
+      httpMock.expectOne(postUrl(42)).flush({ response: view({ id: 77, status: 'running' }) });
+      httpMock.expectNone(submitUrl(42));
+      tick(3000);
+      httpMock.expectOne(latestUrl(42)).flush({ response: view({ id: 77, status: 'skipped_kp_rule' }) });
+
+      const patch = httpMock.expectOne(submitUrl(42));
+      expect(patch.request.body).toEqual({ assessment_id: 77, decision: 'submitted_anyway' });
+      patch.flush({ response: {} });
+      expect(service.isKpSubmitting()).toBe(false);
+      discardPeriodicTasks();
+    }));
+
     it('creates the assessment row, then submits with that id as submitted_anyway', () => {
       let done = false;
       service.submitKnowledgeProduct(42).subscribe({ complete: () => (done = true) });
