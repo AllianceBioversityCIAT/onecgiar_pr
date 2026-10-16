@@ -8,7 +8,8 @@ import {
   partitionProgramKpis,
   pendingOf,
   sortRemainingFirst,
-  summarisePartition
+  summarisePartition,
+  sumTargetValues
 } from './reporting-burndown';
 
 // MRF-TEST-1 (docs/specs/changes/mass-reporting-flow/tasks.md, MRF-T-1) — pure burn-down helpers.
@@ -447,5 +448,27 @@ describe('summarisePartition (KCR-R-2 / R-8 / R-9)', () => {
     const partition = partitionProgramKpis([{ aow: { code: 'A' }, indicators: [zeroAchievedButPercentString] }], null, null);
 
     expect(summarisePartition(partition)).toEqual({ planned: 1, zeroTarget: 0, counted: 1, reported: 0 });
+  });
+});
+
+// DKT-T-1 (docs/specs/changes/reporting-dynamic-kpi-target-counts) - DKT-DD-2: numeric target sum.
+describe('sumTargetValues (DKT-R-2)', () => {
+  const t = (v: unknown) => ({ target_value_sum: v });
+
+  it('adds numeric strings as numbers, never concatenating ("9" + "100" = "109")', () => {
+    expect(sumTargetValues([t('9'), t('100')])).toBe('109');
+  });
+
+  it('treats null, empty and non-numeric terms as 0', () => {
+    expect(sumTargetValues([t(null), t(''), t('abc')])).toBe('0');
+  });
+
+  it('formats a fractional sum with one decimal, like the per-HLO TARGET', () => {
+    expect(sumTargetValues([t('1.25'), t('1')])).toBe('2.3');
+  });
+
+  it('returns "0" for empty or missing input', () => {
+    expect(sumTargetValues([])).toBe('0');
+    expect(sumTargetValues(null)).toBe('0');
   });
 });

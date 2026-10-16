@@ -187,6 +187,7 @@ export class ReportingProgramBandComponent {
     }
   });
   readonly typologyCounts = input<Record<string, number>>({});
+  readonly targetSum = input<string | null>(null);
   readonly typologyOptions = input<BandFilterOption[]>([]);
   /** Type filter: hlo | outcome | intermediate_outcome | outcome_2030 | all. */
   readonly typeValue = input<string[], string[] | string | null | undefined>([], {

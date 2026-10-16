@@ -1465,6 +1465,7 @@
             [search]="plannedSearch()"
             [matchCount]="plannedSearch().trim() ? reportingMatchingCount() : null"
             [typologyCounts]="reportingTypologyCounts()"
+            [targetSum]="reportingTargetSum()"
             [statusValue]="reportingStatusFilter()"
             [aowOptions]="reportingSectionOptions()"
             [aowValue]="reportingAowFilter()"
@@ -1527,6 +1528,7 @@
                 <app-reporting-quick-typology-filters
                   [typologyValue]="reportingTypologyFilter()"
                   [typologyCounts]="reportingTypologyCounts()"
+                  [targetSum]="reportingTargetSum()"
                   [plannedResultsCount]="bandPlannedResultsCount()"
                   (typologyChange)="reportingTypologyFilter.set($event)" />
               </div>

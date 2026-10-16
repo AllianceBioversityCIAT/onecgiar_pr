@@ -442,7 +442,9 @@
             </span>
 
             <span class="shrink-0 whitespace-nowrap text-[12px] text-[var(--pr-text-subtle)] hidden sm:inline">
-              {{ countLabel(group.count) }}
+              {{ headerCount(group) }}@if (headerTargets(group); as targets) {
+                <span data-testid="aow-header-targets"> · {{ targets }}</span>
+              }
             </span>
           </div>
           @if (split.line && !group.loading) {

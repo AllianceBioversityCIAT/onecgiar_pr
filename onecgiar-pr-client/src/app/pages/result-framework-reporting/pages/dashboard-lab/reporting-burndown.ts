@@ -83,6 +83,18 @@ export function hasTarget(ind: BurndownIndicator | null | undefined): boolean {
   return Number.isFinite(target) && target > 0;
 }
 
+/**
+ * Numeric sum of `target_value_sum` over `rows`, formatted like the per-HLO `TARGET`: integer as is,
+ * fractional with one decimal. The API sends the value as a STRING (`"9"` + `"100"`), so each term is
+ * parsed first; null / empty / non-numeric terms count 0 (DKT-DD-2).
+ *
+ * @akili-spec changes/reporting-dynamic-kpi-target-counts
+ */
+export function sumTargetValues(rows: ReadonlyArray<{ target_value_sum?: unknown } | null | undefined> | null | undefined): string {
+  const sum = (rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.target_value_sum ?? 0)) || 0), 0);
+  return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
+}
+
 export function stateOf(ind: BurndownIndicator | null | undefined): BurndownState {
   const achieved = achievedOf(ind);
   const target = targetOf(ind);

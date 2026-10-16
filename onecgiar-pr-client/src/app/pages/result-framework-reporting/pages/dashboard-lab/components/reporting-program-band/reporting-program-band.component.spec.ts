@@ -1125,7 +1125,7 @@ describe('ReportingProgramBandComponent', () => {
       expect(chips.length).toBe(8);
 
       const expected = [
-        { label: 'All', count: '50' },
+        { label: 'KPI', count: '50' },
         { label: 'Knowledge Product', count: '15' },
         { label: 'Innovation Development', count: '12' },
         { label: 'Policy Change', count: '8' },
@@ -1151,10 +1151,27 @@ describe('ReportingProgramBandComponent', () => {
 
       const strip = root().querySelector('[data-testid="quick-typology-filters"]');
       const chips = Array.from(strip!.querySelectorAll('button'));
-      expect(chips[0].textContent).toContain('All');
+      expect(chips[0].textContent).toContain('KPI');
       expect(chips[0].textContent).toContain('25');
       expect(chips[1].textContent).toContain('Knowledge Product');
       expect(chips[1].textContent).toContain('0');
+    });
+
+    it('renders an informational Target pill: span, no aria-pressed, no emit (DKT-R-4)', async () => {
+      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5 }, targetSum: '259' });
+      const spy = jest.spyOn(component.typologyChange, 'emit');
+      const pill = root().querySelector('[data-testid="quick-typology-target-pill"]') as HTMLElement;
+      expect(pill.tagName).toBe('SPAN');
+      expect(pill.getAttribute('aria-label')).toBe('Target sum: 259');
+      expect(pill.hasAttribute('aria-pressed')).toBe(false);
+      expect(pill.textContent).toContain('259');
+      pill.click();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('renders no Target pill without targetSum', async () => {
+      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5 } });
+      expect(root().querySelector('[data-testid="quick-typology-target-pill"]')).toBeNull();
     });
 
     it('does not render quick filter chips when compactFilters is true', async () => {
@@ -1204,7 +1221,7 @@ describe('ReportingProgramBandComponent', () => {
       chips[1].click();
       expect(spy).toHaveBeenCalledWith([]);
 
-      // Click 'All' chip -> emits []
+      // Click 'KPI' chip -> emits []
       chips[0].click();
       expect(spy).toHaveBeenCalledWith([]);
     });

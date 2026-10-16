@@ -15,7 +15,7 @@ import {
   PrTableBodyDirective,
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
-import { buildRatio, hasTarget, pendingOf } from '../../reporting-burndown';
+import { buildRatio, hasTarget, pendingOf, sumTargetValues } from '../../reporting-burndown';
 import { PtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityTooltip } from '../../pt-activity';
 import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
 
@@ -1054,8 +1054,7 @@ export class ReportingAowTableComponent {
 
   /** Sum of target values across an HLO's rows. */
   hloTargetSum(hlo: { rows?: ReportingIndicator[] }): string {
-    const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.target_value_sum ?? 0)) || 0), 0);
-    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
+    return sumTargetValues(hlo.rows);
   }
 
   /** Sum of achieved values across an HLO's rows. */
@@ -1299,6 +1298,23 @@ export class ReportingAowTableComponent {
   private ratioBase(group: ReportingAowGroup): ReportingIndicator[] {
     const base = (group as { __allIndicators?: ReportingIndicator[] }).__allIndicators ?? group.indicators ?? [];
     return base.filter(ind => ind?.__isIntermediateCrosscut !== true);
+  }
+
+  /** True while the card is loading and has no rows yet: the header then shows `group.count`, no sum. */
+  private headerPending(group: ReportingAowGroup): boolean {
+    return !!group.loading && this.ratioBase(group).length === 0;
+  }
+
+  /** Card header count (DKT-R-1): size of the card KPI set (`ratioBase`); `group.count` while loading. */
+  headerCount(group: ReportingAowGroup): string {
+    return this.countLabel(this.headerPending(group) ? group.count : this.ratioBase(group).length);
+  }
+
+  /** Card header target sum (DKT-R-2), e.g. `63 targets` / `1 target`; `''` while loading. */
+  headerTargets(group: ReportingAowGroup): string {
+    if (this.headerPending(group)) return '';
+    const sum = sumTargetValues(this.ratioBase(group));
+    return `${sum} ${sum === '1' ? 'target' : 'targets'}`;
   }
 
   countLabel(n: number, noun = 'KPI'): string {

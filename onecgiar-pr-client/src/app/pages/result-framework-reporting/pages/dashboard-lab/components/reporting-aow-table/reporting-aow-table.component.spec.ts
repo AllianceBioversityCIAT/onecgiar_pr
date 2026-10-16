@@ -1255,6 +1255,56 @@ describe('ReportingAowTableComponent', () => {
   });
 
   // ── In-card Target filter axis (KTO-R-7, S-7.1, S-7.2, KTO-DD-4) ─────────────
+  describe('header count and target sum follow the card KPI set (DKT-R-1, DKT-R-2)', () => {
+    const headerText = (code = 'AOW01') =>
+      (
+        ((fixture.nativeElement as HTMLElement).querySelector(`button[data-aow-header="${code}"]`) as HTMLElement).textContent ?? ''
+      ).replace(/\s+/g, ' ');
+
+    const hloRow = (id: number, target: string) => row({ indicator_id: id, __tier: 'output', target_value_sum: target });
+    const outcomeRow = (id: number, target: string) => row({ indicator_id: id, __tier: 'outcome', target_value_sum: target });
+
+    it('Type all: reads N KPIs and the numeric target sum; HLO rows only: the smaller count and sum', async () => {
+      const hlo = [hloRow(1, '9'), hloRow(2, '100'), hloRow(3, '0')];
+      const outcomes = [outcomeRow(4, '5'), outcomeRow(5, '1')];
+      await build([group([...hlo, ...outcomes], { count: 99 })]);
+      expect(headerText()).toContain('5 KPIs · 115 targets');
+
+      fixture.componentRef.setInput('groups', [group(hlo, { count: 99 })]);
+      fixture.detectChanges();
+      expect(headerText()).toContain('3 KPIs · 109 targets');
+    });
+
+    it('uses the pre-toggle set (__allIndicators) when Only pending / Favorites narrow the listed rows', async () => {
+      const all = [hloRow(1, '4'), hloRow(2, '6'), hloRow(3, '10')];
+      const g = group([all[0]], { count: 1 }) as ReportingAowGroup & { __allIndicators?: ReportingIndicator[] };
+      g.__allIndicators = all;
+      await build([g]);
+      expect(headerText()).toContain('3 KPIs · 20 targets');
+      expect(component.headerCount(g)).toBe('3 KPIs');
+    });
+
+    it('excludes cross-cut Intermediate Outcome rows from both the count and the sum', async () => {
+      const own = [hloRow(1, '7')];
+      const crosscut = row({ indicator_id: 9, __tier: 'outcome', target_value_sum: '50', __isIntermediateCrosscut: true });
+      await build([group([...own, crosscut], { count: 2 })]);
+      expect(headerText()).toContain('1 KPI · 7 targets');
+    });
+
+    it('while loading with no rows shows group.count and no target sum', async () => {
+      await build([group([], { loading: true, count: 12 })]);
+      expect(headerText()).toContain('12 KPIs');
+      expect(headerText()).not.toContain('targets');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-header-targets"]')).toBeNull();
+    });
+
+    it('uses the singular when the sum is exactly 1', async () => {
+      await build([group([hloRow(1, '1')], { count: 1 })]);
+      expect(headerText()).toContain('1 KPI · 1 target');
+      expect(headerText()).not.toContain('1 targets');
+    });
+  });
+
   describe('in-card Target filter axis (KTO-R-7)', () => {
     const el = () => fixture.nativeElement as HTMLElement;
     const flat = (n: Element) => (n.textContent ?? '').replace(/\s+/g, ' ').trim();

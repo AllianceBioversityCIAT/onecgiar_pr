@@ -32,6 +32,15 @@ import { buildQuickTypologyChips, ResultTypeQuickChip } from './reporting-quick-
             </span>
           }
         </button>
+        @if ($first && targetSum() !== null && targetSum() !== undefined) {
+          <span
+            data-testid="quick-typology-target-pill"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-2.5 py-1 text-[12px] font-medium text-[var(--pr-text-secondary)] max-[1366px]:px-2"
+            [attr.aria-label]="'Target sum: ' + targetSum()">
+            <span>Target</span>
+            <span class="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10.5px] font-medium tabular-nums text-slate-600">{{ targetSum() }}</span>
+          </span>
+        }
       }
     </div>
   `
@@ -40,6 +49,8 @@ export class ReportingQuickTypologyFiltersComponent {
   readonly typologyValue = input<string[]>([]);
   readonly typologyCounts = input<Record<string, number> | null>(null);
   readonly plannedResultsCount = input(0);
+  /** Informational Target sum (DKT-R-4); null / undefined hides the pill. */
+  readonly targetSum = input<string | null>(null);
 
   readonly typologyChange = output<string[]>();
 

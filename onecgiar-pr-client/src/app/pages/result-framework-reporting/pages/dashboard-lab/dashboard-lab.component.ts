@@ -106,6 +106,7 @@ import {
   stateOf,
   summarisePartition,
   hasTarget,
+  sumTargetValues,
   type ReportingTargetFilter
 } from './reporting-burndown';
 // @akili-spec changes/overview-aow-cross-filter
@@ -3851,6 +3852,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     let total = 0;
     for (const group of groups) {
       for (const row of group.indicators ?? []) {
+        if ((row as any).__isIntermediateCrosscut) continue;
         total++;
         const type = row.result_type_name?.trim();
         if (type) {
@@ -3861,6 +3863,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     counts['all'] = total;
     return counts;
   });
+
+  /** Σ target_value_sum over the same rows `reportingTypologyCounts().all` counts (DKT-DD-4). */
+  readonly reportingTargetSum = computed<string>(() =>
+    sumTargetValues(
+      this.reportingGroups().flatMap(g => (g.indicators ?? []).filter(r => !(r as any).__isIntermediateCrosscut))
+    )
+  );
 
   /** Flatten a program-level ToC list (`tocResults`) into reporting indicator rows. */
   private flattenBucketIndicators(

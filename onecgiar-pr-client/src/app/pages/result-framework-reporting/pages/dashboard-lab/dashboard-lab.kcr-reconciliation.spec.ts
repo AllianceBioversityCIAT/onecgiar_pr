@@ -226,7 +226,8 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
 
   function tableCountLabel(group: ReportingAowGroup): string {
     const table = TestBed.createComponent(ReportingAowTableComponent).componentInstance;
-    return table.countLabel(group.count);
+    // The method the header template binds (DKT-R-1): never rebuilt from `group.count`.
+    return table.headerCount(group);
   }
 
   const byCode = <T extends { code: string }>(rows: T[]): Record<string, T> =>
@@ -420,6 +421,18 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     expect(component.plannedReportingSummaryStats().totalKpis).toBe(PLANNED_IDS.length);
   });
 
+  it('DKT-R-3/R-4: KPI chip = sum of card header counts and Target = sum of header sums (cross-cut rows once)', async () => {
+    const component = await createComponent();
+    const table = TestBed.createComponent(ReportingAowTableComponent).componentInstance;
+    const groups = component.reportingGroups();
+
+    const headerCounts = groups.reduce((n, g) => n + Number.parseInt(table.headerCount(g), 10), 0);
+    const headerSums = groups.reduce((n, g) => n + (Number.parseFloat(table.headerTargets(g)) || 0), 0);
+
+    expect(component.reportingTypologyCounts()['all']).toBe(headerCounts);
+    expect(Number.parseFloat(component.reportingTargetSum())).toBe(headerSums);
+  });
+
   // ── Reported predicate (KCR-R-9, both scenario clauses) ──────────────────────────────────────
   it('counts reported from achieved > 0 alone: `0%` rows excluded, the achieved-75 row counted despite its "1500%" string', async () => {
     const component = await createComponent();
@@ -580,6 +593,38 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     const idsOf = (group: ReportingAowGroup) => group.indicators.map(r => String(r.indicator_id));
     const splitLine = (group: ReportingAowGroup) => TestBed.createComponent(ReportingAowTableComponent).componentInstance.splitOf(group).line;
     const ratio = (group: ReportingAowGroup) => TestBed.createComponent(ReportingAowTableComponent).componentInstance.ratioOf(group);
+
+    it('DKT-R-1/R-2: the host Target sum follows the Type and Category filters (HLO rows only, narrower than all)', async () => {
+      const component = await createComponent();
+      const kp = { result_type_name: 'Knowledge product' };
+      component.aowsByCode.set(new Map([[PROGRAM.initiativeCode, [{ code: AOW, name: 'Area 01' }] as unknown as Unit[]]]));
+      component.tocByKey.set(
+        new Map<string, { outputs: any[]; outcomes: any[] }>([
+          [
+            `${PROGRAM.initiativeCode}::${AOW}::default`,
+            {
+              outputs: [{ toc_result_id: 1, category: 'OUTPUT', result_title: 'HLO-1 Output', is_aow: true, indicators: [ind('h1', 10, 0, kp), ind('h2', 5, 0)] }],
+              outcomes: [{ toc_result_id: 2, category: 'OUTCOME', result_title: 'Outcome 1', is_aow: true, indicators: [ind('o1', 7, 0, kp)] }]
+            }
+          ],
+          [`${PROGRAM.initiativeCode}::${INTERMEDIATE_OUTCOMES_CODE}::default`, { outputs: [], outcomes: [] }],
+          [`${PROGRAM.initiativeCode}::${OUTCOMES_2030_CODE}::default`, { outputs: [], outcomes: [] }]
+        ])
+      );
+
+      component.reportingTypeFilter.set(['hlo']);
+      expect(component.reportingTargetSum()).toBe('15');
+      expect(component.reportingTypologyCounts()['all']).toBe(2);
+
+      component.reportingTypeFilter.set([]);
+      const allSum = Number(component.reportingTargetSum());
+      expect(allSum).toBeGreaterThan(15);
+
+      component.reportingTypeFilter.set(['hlo']);
+      component.reportingTypologyFilter.set(['Knowledge product']);
+      expect(component.reportingTargetSum()).toBe('10');
+      expect(component.reportingTypologyCounts()['all']).toBe(1);
+    });
 
     it('defaults to All: 54 rows, `54 KPIs`, the split line unchanged', async () => {
       const component = await createComponent();
