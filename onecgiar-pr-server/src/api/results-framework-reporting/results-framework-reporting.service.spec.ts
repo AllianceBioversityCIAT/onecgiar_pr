@@ -36,6 +36,7 @@ import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
+  find: jest.fn(),
 };
 
 const mockRoleByUserRepository = {
@@ -74,6 +75,7 @@ const mockTocResultsRepository = {
   findBilateralProjectById: jest.fn(),
   findBilateralProjectsByProgramOfficialCode: jest.fn(),
   findTargetsWithCentersByIndicatorId: jest.fn(),
+  getPortfolioTocCoverage: jest.fn(),
 };
 
 const mockTocCatalogRepository = {
@@ -1691,6 +1693,291 @@ describe('ResultsFrameworkReportingService', () => {
       ]);
 
       expect(result.response.areas[0].progress.progress_value).toBe(50);
+    });
+  });
+
+  describe('getPortfolioTocCoverage (TKP-T-2)', () => {
+    const seedInitiatives = () => [
+      {
+        official_code: 'SP01',
+        short_name: 'Program One',
+        name: 'Science Program One',
+      },
+      {
+        official_code: 'SP02',
+        short_name: 'Program Two',
+        name: 'Science Program Two',
+      },
+      {
+        official_code: 'A3',
+        short_name: 'Accel Three',
+        name: 'Accelerator Three',
+      },
+    ];
+    const row = (
+      official_code: string,
+      category: string,
+      total: number,
+      covered: number,
+    ) => ({ official_code, category, total, covered });
+    const falsifierRows = () => [
+      row('SP01', 'OUTPUT', 3, 1),
+      row('SP01', 'OUTCOME', 1, 0),
+      row('SP02', 'OUTPUT', 2, 2),
+      row('XX99', 'OUTPUT', 5, 5),
+    ];
+    const activeContext = {
+      reportingYear: 2026,
+      phaseUuid: 'PHASE-ACTIVE',
+      versionId: 42,
+      phaseName: 'Reporting 2026',
+    };
+
+    beforeEach(() => {
+      mockClarisaInitiativesRepository.find.mockReset();
+      mockTocResultsRepository.getPortfolioTocCoverage.mockReset();
+      mockReportingTocContextService.resolve.mockReset();
+      mockReportingTocContextService.resolveByVersionId.mockReset();
+      mockReportingTocContextService.resolve.mockResolvedValue(activeContext);
+      mockClarisaInitiativesRepository.find.mockResolvedValue(
+        seedInitiatives(),
+      );
+      mockTocResultsRepository.getPortfolioTocCoverage.mockResolvedValue(
+        falsifierRows(),
+      );
+    });
+
+    const programOf = (result: any, code: string) =>
+      result.response.programs.find((p: any) => p.code === code);
+
+    it('merges the P/A seed with the repository rows (S-3.1, S-2.1)', async () => {
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(programOf(result, 'SP01')).toEqual({
+        code: 'SP01',
+        shortName: 'Program One',
+        name: 'Science Program One',
+        total: 4,
+        covered: 1,
+        outputs: { total: 3, covered: 1 },
+        outcomes: { total: 1, covered: 0 },
+      });
+      expect(programOf(result, 'SP02')).toMatchObject({
+        total: 2,
+        covered: 2,
+        outputs: { total: 2, covered: 2 },
+        outcomes: { total: 0, covered: 0 },
+      });
+      // S-3.1: a zero-KPI P/A is present with 0 / 0.
+      expect(programOf(result, 'A3')).toMatchObject({
+        total: 0,
+        covered: 0,
+        outputs: { total: 0, covered: 0 },
+        outcomes: { total: 0, covered: 0 },
+      });
+      // A code outside the seed is dropped and does not feed the portfolio.
+      expect(programOf(result, 'XX99')).toBeUndefined();
+      expect(result.response.programs).toHaveLength(3);
+      expect(result.response.portfolio).toEqual({ total: 6, covered: 3 });
+    });
+
+    it('keeps covered <= total for every program and category (S-2.1)', async () => {
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      for (const p of result.response.programs) {
+        expect(p.covered).toBeLessThanOrEqual(p.total);
+        expect(p.outputs.covered).toBeLessThanOrEqual(p.outputs.total);
+        expect(p.outcomes.covered).toBeLessThanOrEqual(p.outcomes.total);
+      }
+    });
+
+    it('matches codes after trim + upper case on both sides', async () => {
+      mockClarisaInitiativesRepository.find.mockResolvedValue([
+        { official_code: ' sp01 ', short_name: 'One', name: 'Program One' },
+      ]);
+      mockTocResultsRepository.getPortfolioTocCoverage.mockResolvedValue([
+        row('sp01  ', 'OUTPUT', 3, 1),
+        row(' SP01', 'OUTCOME', 1, 1),
+      ]);
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.response.programs).toHaveLength(1);
+      expect(result.response.programs[0]).toMatchObject({
+        total: 4,
+        covered: 2,
+        outputs: { total: 3, covered: 1 },
+        outcomes: { total: 1, covered: 1 },
+      });
+    });
+
+    it('reads the seed as active portfolio-3 entities of types 22, 23 and 24', async () => {
+      await service.getPortfolioTocCoverage();
+
+      const arg = mockClarisaInitiativesRepository.find.mock.calls[0][0];
+      expect(arg.where.portfolio_id).toBe(3);
+      expect(arg.where.active).toBe(true);
+      expect(JSON.stringify(arg.where.cgiar_entity_type_id)).toContain(
+        '[22,23,24]',
+      );
+    });
+
+    it('falls back to the active version and gives the repository its numeric id', async () => {
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(mockReportingTocContextService.resolve).toHaveBeenCalledTimes(1);
+      expect(
+        mockReportingTocContextService.resolveByVersionId,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          versionId: 42,
+          phaseUuid: 'PHASE-ACTIVE',
+          reportingYear: 2026,
+        }),
+      );
+      expect(result.response).toMatchObject({
+        versionId: 42,
+        phaseName: 'Reporting 2026',
+        reportingYear: 2026,
+      });
+    });
+
+    it('resolves an explicit versionId directly from its version row', async () => {
+      mockReportingTocContextService.resolveByVersionId.mockResolvedValue({
+        reportingYear: 2025,
+        phaseUuid: 'PHASE-OLD',
+        versionId: 7,
+        phaseName: null,
+      });
+
+      const result = (await service.getPortfolioTocCoverage(7)) as any;
+
+      expect(
+        mockReportingTocContextService.resolveByVersionId,
+      ).toHaveBeenCalledWith(7);
+      expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).toHaveBeenCalledWith(expect.objectContaining({ versionId: 7 }));
+      expect(result.response.versionId).toBe(7);
+      expect(result.response.phaseName).toBeNull();
+    });
+
+    it('coerces the string ids the MySQL driver returns for BIGINT columns (active fallback)', async () => {
+      // version.id is BIGINT; the driver (bigNumberStrings) hands it back as '42'.
+      mockReportingTocContextService.resolve.mockResolvedValue({
+        reportingYear: 2026,
+        phaseUuid: 'PHASE-ACTIVE',
+        versionId: '42',
+        phaseName: 'Reporting 2026',
+      } as any);
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).toHaveBeenCalledWith(expect.objectContaining({ versionId: 42 }));
+      expect(result.response.versionId).toBe(42);
+      expect(typeof result.response.versionId).toBe('number');
+    });
+
+    it('coerces the string ids the MySQL driver returns for an explicit versionId', async () => {
+      mockReportingTocContextService.resolveByVersionId.mockResolvedValue({
+        reportingYear: '2025',
+        phaseUuid: 'PHASE-OLD',
+        versionId: '7',
+        phaseName: null,
+      } as any);
+
+      const result = (await service.getPortfolioTocCoverage(7)) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ versionId: 7, reportingYear: 2025 }),
+      );
+      expect(result.response.versionId).toBe(7);
+      expect(result.response.reportingYear).toBe(2025);
+      expect(typeof result.response.reportingYear).toBe('number');
+    });
+
+    it.each([
+      ['missing', undefined],
+      ['null', null],
+      ['zero', 0],
+      ['a zero string', '0'],
+      ['a non-numeric string', 'abc'],
+    ])(
+      'never calls the repository when the resolved version id is %s',
+      async (_label, versionId) => {
+        mockReportingTocContextService.resolve.mockResolvedValue({
+          reportingYear: 2026,
+          phaseUuid: 'PHASE-ACTIVE',
+          versionId,
+        } as any);
+
+        const result = (await service.getPortfolioTocCoverage()) as any;
+
+        expect(
+          mockTocResultsRepository.getPortfolioTocCoverage,
+        ).not.toHaveBeenCalled();
+        expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      },
+    );
+
+    it('relays a 4xx raised by the ToC context resolution', async () => {
+      mockReportingTocContextService.resolveByVersionId.mockRejectedValue(
+        buildTocContextError(
+          'No version was found for versionId 999.',
+          HttpStatus.NOT_FOUND,
+        ),
+      );
+
+      const result = (await service.getPortfolioTocCoverage(999)) as any;
+
+      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      expect(result.message).toBe('No version was found for versionId 999.');
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('returns a generic 500 without SQL when the repository rejects with its wrapped error', async () => {
+      // Shape thrown by HandlersError.returnErrorRepository: a plain object whose
+      // message quotes the driver error, which can carry SQL fragments.
+      mockTocResultsRepository.getPortfolioTocCoverage.mockRejectedValue({
+        response: { error: true },
+        message:
+          '[AoWBilateralRepository] => error: QueryFailedError: ER_PARSE_ERROR near SELECT tr.official_code FROM toc_results tr',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      const body = JSON.stringify(result);
+      expect(body).not.toContain('SELECT');
+      expect(body).not.toContain('toc_results');
+      expect(body).not.toContain('QueryFailedError');
+    });
+
+    it('returns a generic 500 without SQL when an unexpected Error escapes', async () => {
+      mockClarisaInitiativesRepository.find.mockRejectedValue(
+        new Error('Query failed: SELECT * FROM toc_results WHERE secret = 1'),
+      );
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      const body = JSON.stringify(result);
+      expect(body).not.toContain('SELECT');
+      expect(body).not.toContain('toc_results');
     });
   });
 

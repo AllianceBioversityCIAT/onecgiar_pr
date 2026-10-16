@@ -4,6 +4,7 @@ import {
   Get,
   Post,
   Query,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -23,6 +24,11 @@ import { ScienceProgramProgressResponseDto } from '../results/dto/science-progra
 import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.dto';
 import { ReportingEntryHubProjectsDto } from './dto/reporting-entry-hub-projects.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-T-2)
+import { Roles } from '../../shared/decorators/roles.decorator';
+import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
+import { RoleEnum, RoleTypeEnum } from '../../shared/constants/role-type.enum';
+import { PortfolioTocCoverageResponseDto } from './dto/portfolio-toc-coverage.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -258,6 +264,45 @@ export class ResultsFrameworkReportingController {
     return this.resultsFrameworkReportingService.getScienceProgramTocProgress(
       programId,
       parsedVersion,
+    );
+  }
+
+  @Get('toc-results/portfolio-coverage')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary: 'Portfolio ToC KPI coverage by Program / Accelerator',
+    description:
+      "Returns, for every active Program and Accelerator of the open portfolio (zero-KPI ones included), how many ToC KPIs it has and how many are covered, split by Output and Outcome nodes. A KPI is a distinct ToC indicator of the requested phase, counted once however many targets or Areas of Work reach it; Output nodes count when they belong to an Area of Work or to no work package, Outcome nodes only when they belong to an Area of Work. A KPI is covered when at least one active pooled result (source 'Result') in Quality Assessed or Submitted status, from the requested version, is mapped to it through an active ToC mapping and an active indicator link not marked not-applicable; the submitting Program does not matter. Restricted to the Admin application role. Items are unordered; the client sorts.",
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. A missing or non-numeric value falls back to the active reporting phase.',
+  })
+  @ApiOkResponse({
+    description: 'Portfolio ToC KPI coverage retrieved successfully.',
+    type: PortfolioTocCoverageResponseDto,
+  })
+  getPortfolioTocCoverage(@Query('versionId') versionId?: string) {
+    // Design 4.1: an empty, whitespace-only, non-numeric or non-positive value
+    // is treated as absent, so the service falls back to the active phase.
+    const parsedVersion =
+      typeof versionId === 'string' && versionId.trim() !== ''
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' &&
+      Number.isFinite(parsedVersion) &&
+      parsedVersion > 0
+        ? parsedVersion
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getPortfolioTocCoverage(
+      normalizedVersion,
     );
   }
 

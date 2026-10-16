@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { env } from 'node:process';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { YearRepository } from '../results/years/year.repository';
@@ -30,6 +30,11 @@ import type {
   ResultScopeDto,
   ResultScopeRow,
 } from './application/queries/results-scope/results-scope.dto';
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-T-2)
+import type {
+  PortfolioTocCoverageProgramDto,
+  PortfolioTocCoverageResponseDto,
+} from './dto/portfolio-toc-coverage.dto';
 
 /** One entry of the additive `scopeBuckets[]` partition (design.md §5). */
 export interface ScopeBucketDto {
@@ -847,6 +852,138 @@ export class ResultsFrameworkReportingService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * Portfolio-wide ToC KPI coverage per Program / Accelerator
+   * (changes/portfolio-overview-revamp/toc-kpi-progress, TKP-R-3, design §5).
+   * Merges the P/A seed with ONE grouped repository query, so every P/A is
+   * present (zeros by default) and codes outside the seed are dropped.
+   */
+  async getPortfolioTocCoverage(versionId?: number) {
+    try {
+      const tocContext = await this.resolveTocContextForRequest(versionId);
+
+      // Both resolution paths carry the version row id; the repository binds it.
+      // `version.id` is BIGINT and the MySQL driver returns it as a string, so
+      // coerce before validating (`Number(null) === 0` is rejected by `> 0`).
+      const resolvedVersionId = Number(tocContext.versionId);
+      if (!Number.isFinite(resolvedVersionId) || resolvedVersionId <= 0) {
+        throwServiceError(
+          'No version could be resolved for the portfolio ToC coverage.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      const resolvedReportingYear = Number(tocContext.reportingYear);
+
+      const seed = await this._clarisaInitiativesRepository.find({
+        where: {
+          portfolio_id: 3,
+          active: true,
+          cgiar_entity_type_id: In([22, 23, 24]),
+        },
+      });
+
+      const rows = await this._tocResultsRepository.getPortfolioTocCoverage({
+        ...tocContext,
+        reportingYear: resolvedReportingYear,
+        versionId: resolvedVersionId,
+      });
+
+      const normaliseCode = (code?: string | null) =>
+        (code ?? '').trim().toUpperCase();
+      const addCounts = (
+        target: { total: number; covered: number },
+        total: number,
+        covered: number,
+      ) => {
+        target.total += total;
+        target.covered += covered;
+      };
+
+      const countsByCode = new Map<
+        string,
+        {
+          outputs: { total: number; covered: number };
+          outcomes: { total: number; covered: number };
+        }
+      >();
+      for (const initiative of seed) {
+        countsByCode.set(normaliseCode(initiative.official_code), {
+          outputs: { total: 0, covered: 0 },
+          outcomes: { total: 0, covered: 0 },
+        });
+      }
+
+      for (const row of rows) {
+        // A code outside the seed (inactive or older initiative) is dropped.
+        const counts = countsByCode.get(normaliseCode(row.official_code));
+        if (!counts) continue;
+
+        const category = (row.category ?? '').trim().toUpperCase();
+        if (category === 'OUTPUT') {
+          addCounts(counts.outputs, row.total, row.covered);
+        } else if (category === 'OUTCOME') {
+          addCounts(counts.outcomes, row.total, row.covered);
+        }
+      }
+
+      const portfolio = { total: 0, covered: 0 };
+      const programs: PortfolioTocCoverageProgramDto[] = seed.map(
+        (initiative) => {
+          const { outputs, outcomes } = countsByCode.get(
+            normaliseCode(initiative.official_code),
+          );
+          const total = outputs.total + outcomes.total;
+          const covered = outputs.covered + outcomes.covered;
+          addCounts(portfolio, total, covered);
+
+          return {
+            code: (initiative.official_code ?? '').trim(),
+            shortName: initiative.short_name ?? '',
+            name: initiative.name ?? '',
+            total,
+            covered,
+            outputs: { ...outputs },
+            outcomes: { ...outcomes },
+          };
+        },
+      );
+
+      const response: PortfolioTocCoverageResponseDto = {
+        versionId: resolvedVersionId,
+        phaseName: tocContext.phaseName ?? null,
+        reportingYear: resolvedReportingYear,
+        programs,
+        portfolio,
+      };
+
+      return {
+        response,
+        message: 'Portfolio ToC KPI coverage retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      // A 4xx comes from the ToC context resolution and carries a safe message.
+      // Anything else (a wrapped repository error quotes the driver error, which
+      // can include SQL) is replaced by a generic 500 so no SQL reaches the body.
+      const status = Number(error?.status);
+      if (Number.isInteger(status) && status >= 400 && status < 500) {
+        return this._handlersError.returnErrorRes({ error, debug: true });
+      }
+
+      const errorCode =
+        typeof error?.code === 'string' ? ` (${error.code})` : '';
+      this._logger.error(`getPortfolioTocCoverage failed${errorCode}`);
+      return this._handlersError.returnErrorRes({
+        error: {
+          message: 'The portfolio ToC KPI coverage could not be retrieved.',
+          response: { error: true },
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        },
+        debug: false,
+      });
     }
   }
 

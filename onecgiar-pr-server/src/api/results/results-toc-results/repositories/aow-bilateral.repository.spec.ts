@@ -1061,6 +1061,172 @@ describe('AoWBilateralRepository', () => {
         );
       });
     });
+
+    // TKP-T-1 (toc-kpi-progress). `dataSource.query` is mocked, so these cases are
+    // presence-assertions on the SQL text and the bound parameters. They cannot prove
+    // that the SQL returns the right numbers; that is the TKP-T-6 live parity check.
+    describe('getPortfolioTocCoverage', () => {
+      const coverageContext = { ...defaultContext, versionId: 8 };
+
+      const captureSql = async (): Promise<{
+        sql: string;
+        params: unknown[];
+      }> => {
+        dataSourceQueryMock.mockResolvedValueOnce([]);
+        await repository.getPortfolioTocCoverage(coverageContext);
+        const [query, params] = dataSourceQueryMock.mock.calls[0];
+        return { sql: String(query).replace(/\s+/g, ' ').trim(), params };
+      };
+
+      it('runs one statement grouped by program code and category', async () => {
+        const { sql } = await captureSql();
+
+        expect(dataSourceQueryMock).toHaveBeenCalledTimes(1);
+        expect(sql).toContain('GROUP BY tr.official_code, tr.category');
+        expect(sql).toContain('tr.is_active = 1');
+        expect(sql).toContain("tr.category IN ('OUTPUT', 'OUTCOME')");
+        expect(sql).toContain('tri.is_active = 1');
+      });
+
+      it('counts only distinct indicator ids for total and covered', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain('COUNT(DISTINCT tri.id) AS total');
+        expect(sql).toContain(
+          'COUNT(DISTINCT CASE WHEN cov.indicator_id IS NOT NULL THEN tri.id END) AS covered',
+        );
+        // No COUNT( may appear without DISTINCT right after the parenthesis.
+        expect(sql.match(/COUNT\((?!DISTINCT)/g)).toBeNull();
+      });
+
+      it('builds the covered set from active, applicable links of counting results of the version', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain('r.is_active = 1');
+        expect(sql).toContain('rtr.is_active = 1');
+        expect(sql).toContain('rtri.is_active = 1');
+        expect(sql).toContain('rtri.is_not_aplicable = 0');
+        expect(sql).toContain('r.source IN (?)');
+        expect(sql).toContain('r.status_id IN (?, ?)');
+        expect(sql).toContain('r.version_id = ?');
+        expect(sql).toContain('tri2.toc_results_id = rtr.toc_result_id');
+        expect(sql).toContain(
+          'CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri2.related_node_id USING utf8mb4)',
+        );
+        // The covered set is a derived table joined to the ToC side by indicator id.
+        expect(sql).toContain('cov ON cov.indicator_id = tri.id');
+      });
+
+      it('joins the AoW with the program taken from the row and admits wp_id IS NULL for OUTPUT only', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain(
+          "wp ON tr.wp_id = wp.toc_id AND wp.year = ? AND wp.wp_official_code LIKE CONCAT(tr.official_code, '-%')",
+        );
+        expect(sql).not.toContain('wp.acronym');
+
+        const outputBranch = sql.indexOf(
+          "tr.category = 'OUTPUT' AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)",
+        );
+        const outcomeBranch = sql.indexOf(
+          "tr.category = 'OUTCOME' AND wp.toc_id IS NOT NULL",
+        );
+        expect(outputBranch).toBeGreaterThan(-1);
+        expect(outcomeBranch).toBeGreaterThan(outputBranch);
+        // `wp_id IS NULL` exists once, inside the OUTPUT branch; the OUTCOME branch has none.
+        expect(sql.match(/wp_id IS NULL/g)).toHaveLength(1);
+        expect(sql.slice(outcomeBranch)).not.toContain('wp_id IS NULL');
+      });
+
+      it('applies no year or target filter on indicators', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).not.toContain('toc_result_indicator_target');
+        expect(sql).not.toContain('target_date');
+      });
+
+      it('binds every caller value, in placeholder order, and interpolates none', async () => {
+        const { sql, params } = await captureSql();
+
+        // year, source, statuses [2, 3], version, phase
+        expect(params).toEqual([2025, 'Result', 2, 3, 8, 'PHASE-1']);
+
+        // Placeholder order in the text matches the parameter order above.
+        const order = [
+          'wp.year = ?',
+          'r.source IN (?)',
+          'r.status_id IN (?, ?)',
+          'r.version_id = ?',
+          'tr.phase = ?',
+        ].map((fragment) => sql.indexOf(fragment));
+        expect(order.every((index) => index > -1)).toBe(true);
+        expect([...order].sort((a, b) => a - b)).toEqual(order);
+        expect(sql.match(/\?/g)).toHaveLength(params.length);
+
+        // Nothing the caller supplied appears in the SQL text.
+        expect(sql).not.toContain('PHASE-1');
+        expect(sql).not.toMatch(/\b2025\b/);
+        expect(sql).not.toMatch(/version_id = 8\b/);
+        expect(sql).not.toContain("'Result'");
+        expect(sql).not.toContain('${');
+      });
+
+      it('uses the configured schemas for both databases', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain('FROM toc_test.toc_results tr');
+        expect(sql).toContain('toc_test.toc_work_packages wp');
+        expect(sql).toContain('toc_test.toc_results_indicators tri');
+        expect(sql).toContain('FROM main_test.result r');
+        expect(sql).toContain('main_test.results_toc_result rtr');
+        expect(sql).toContain('main_test.results_toc_result_indicators rtri');
+      });
+
+      it('returns numeric total and covered even when the driver sends strings', async () => {
+        dataSourceQueryMock.mockResolvedValueOnce([
+          {
+            official_code: 'SP01',
+            category: 'OUTPUT',
+            total: '4',
+            covered: '1',
+          },
+          {
+            official_code: 'SP01',
+            category: 'OUTCOME',
+            total: 3,
+            covered: '0',
+          },
+        ]);
+
+        const rows = await repository.getPortfolioTocCoverage(coverageContext);
+
+        expect(rows).toEqual([
+          { official_code: 'SP01', category: 'OUTPUT', total: 4, covered: 1 },
+          { official_code: 'SP01', category: 'OUTCOME', total: 3, covered: 0 },
+        ]);
+        expect(typeof rows[0].total).toBe('number');
+        expect(typeof rows[0].covered).toBe('number');
+      });
+
+      it('rejects through returnErrorRepository without putting the SQL text in the error', async () => {
+        const failure = new Error('db down');
+        dataSourceQueryMock.mockRejectedValueOnce(failure);
+
+        await expect(
+          repository.getPortfolioTocCoverage(coverageContext),
+        ).rejects.toBe(failure);
+
+        expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledTimes(
+          1,
+        );
+        const arg = (mockHandlersError.returnErrorRepository as jest.Mock).mock
+          .calls[0][0];
+        expect(arg.error).toBe(failure);
+        expect(arg.className).toBe('AoWBilateralRepository');
+        expect(JSON.stringify(arg)).not.toMatch(/SELECT|toc_results/);
+        expect(String(failure.message)).not.toMatch(/SELECT|toc_results/);
+      });
+    });
   });
 
   // ─── RFR-T-1 (bugfix/indicator-achieved-value-per-center) ─────────────────
