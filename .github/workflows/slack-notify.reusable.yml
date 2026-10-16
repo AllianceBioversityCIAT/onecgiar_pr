@@ -1,0 +1,101 @@
+# Reusable: posts a CI/CD notification to Slack in the style of the Jenkins `slackSend` messages
+# (bold "[<title>]: (<ENV>)" line plus one colored attachment with short fields).
+#
+# Split of responsibilities (one message per event, never duplicated):
+#   GitHub Actions  status=started  when the CI/CD run starts (the whole process, not the Jenkins deploy)
+#                   status=failed   only when the run fails BEFORE Jenkins accepted the deploy (CI failure,
+#                                   or the Jenkins trigger itself failed): Jenkins has no build to report
+#   Jenkins         succeeded / failed of the deploy (post { success / failure } of the CD job)
+#
+# Notifications never block the pipeline: the job is `continue-on-error` and, when SLACK_BOT_TOKEN is not
+# available to the caller, it only warns.
+#
+# Secret: SLACK_BOT_TOKEN, a bot token with `chat:write` that is a member of the channel. It is the same kind
+# of credential as Jenkins' `slack-token`; store it as an organization or repository secret, never in code.
+name: slack-notify (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      status:
+        description: started | failed
+        type: string
+        required: true
+      title:
+        description: Bracketed label of the message, e.g. "Reporting Tool NEW ENVIRONMENT"
+        type: string
+        required: true
+      project:
+        description: Project name shown in the details, e.g. "Reporting Tool"
+        type: string
+        required: true
+      environment-label:
+        description: Environment shown in the message, e.g. DEV, STAGING, PROD
+        type: string
+        required: true
+      channel:
+        type: string
+        default: "#notifications-platform"
+      detail:
+        description: Optional extra line (e.g. the failed jobs)
+        type: string
+        default: ""
+    secrets:
+      SLACK_BOT_TOKEN:
+        required: false
+
+permissions: {}
+
+jobs:
+  notify:
+    name: slack ${{ inputs.status }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - name: Post to Slack
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          STATUS: ${{ inputs.status }}
+          TITLE: ${{ inputs.title }}
+          PROJECT: ${{ inputs.project }}
+          ENV_LABEL: ${{ inputs.environment-label }}
+          CHANNEL: ${{ inputs.channel }}
+          DETAIL: ${{ inputs.detail }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SLACK_BOT_TOKEN:-}" ]; then echo "::warning::SLACK_BOT_TOKEN is not available; notification skipped"; exit 0; fi
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}"
+          commit_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${COMMIT}"
+          case "$STATUS" in
+            started)
+              color="#FFFF00"; att_title="CI/CD Start Details"
+              text=":rocket: *[${TITLE}]*: *(${ENV_LABEL})* - CI/CD started" ;;
+            failed)
+              color="#FF0000"; att_title="CI Failure Details"
+              text=":alert: *[${TITLE}]*: *(${ENV_LABEL})* - CI/CD failed in GitHub Actions (no deploy was started) :alert:" ;;
+            *) echo "::error::unknown status '$STATUS'"; exit 1 ;;
+          esac
+          payload="$(jq -n \
+            --arg channel "$CHANNEL" --arg text "$text" --arg color "$color" --arg att_title "$att_title" \
+            --arg project "$PROJECT" --arg env "$ENV_LABEL" --arg repo "${GITHUB_REPOSITORY#*/}" \
+            --arg branch "$BRANCH" --arg commit "<${commit_url}|${COMMIT:0:7}>" \
+            --arg run "<${run_url}|Click here>" --arg detail "$DETAIL" '
+            { channel: $channel, text: $text,
+              attachments: [ { title: $att_title, color: $color,
+                fields: ([
+                  {title: "Project", value: $project, short: true},
+                  {title: "Environment", value: $env, short: true},
+                  {title: "Repository", value: $repo, short: true},
+                  {title: "Branch", value: $branch, short: true},
+                  {title: "Commit", value: $commit, short: true},
+                  {title: "GitHub Actions Run", value: $run, short: false}
+                ] + (if $detail == "" then [] else [{title: "Detail", value: $detail, short: false}] end)) } ] }')"
+          response="$(printf 'header = "Authorization: Bearer %s"\n' "$SLACK_BOT_TOKEN" \
+            | curl --config - -sS --max-time 20 -X POST https://slack.com/api/chat.postMessage \
+                -H 'Content-Type: application/json; charset=utf-8' --data "$payload")"
+          if [ "$(jq -r '.ok' <<<"$response")" != "true" ]; then
+            echo "::warning::Slack rejected the notification: $(jq -r '.error // "unknown"' <<<"$response")"
+          fi

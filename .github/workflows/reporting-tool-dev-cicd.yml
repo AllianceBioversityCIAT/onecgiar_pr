@@ -1,23 +1,30 @@
-# Reporting Tool DEV: CI on GitHub Actions + automatic deploy request to the ONECGIAR CI/CD Platform.
+# Reporting Tool DEV: CI on GitHub Actions, CD on Jenkins (CD-only job prms-reporting-tool-dev-cd).
 #
-# Replaces the build, test, lint and image stages of the Jenkins DEV job.
+#   GitHub Actions (CI)  ->  prms-reporting-tool-dev-cd (Jenkins, CD orchestration)  ->  target server
 #
-# Triggers:
-#   push to feature/reporting-dev-github-actions-cicd
-#       Quality checks, then ONE publish job (common quality barrier: it starts only when every mandatory
-#       check of the backend, the frontend and the deploy script passed) that builds both images and pushes
-#       them to ECR by immutable digest, then AUTOMATICALLY one deploy request per Reporting Tool TEST
-#       target (backend digest to reporting-tool-test-backend, frontend digest to reporting-tool-test-frontend)
-#       through the platform's reusable workflow (owner decision D1: no human approval). The central Executor still
-#       authorizes the source repository and the target, deduplicates, orders, locks and applies the target's
-#       deploy window: a request is not a deploy.
-#   workflow_dispatch (manual)
-#       The same CI; the deploy request is sent only when the `request-deploy` input is true. GitHub offers
-#       this trigger only once the workflow file is on the default branch.
+# The legacy all-in-one job prms-reporting-tool-dev (and jenkins-trigger.yml) is NOT used by this workflow and
+# stays unchanged as the current mechanism and fallback.
+# PILOT: the hand-over sends DRY_RUN=true. prms-reporting-tool-dev-cd then validates the request, the ECR images
+# and the target over SSH WITHOUT changing the server, so it cannot interfere with the legacy job. Coordination
+# between both jobs is reviewed before any real deploy is enabled.
+#
+# Triggers: push to feature/reporting-dev-github-actions-cicd, and workflow_dispatch (manual; GitHub offers it
+# only once the workflow file is on the default branch). Both run the full CI/CD:
+#   quality checks, then ONE publish job (common quality barrier: it starts only when every mandatory check of
+#   the backend, the frontend and the deploy script passed) that builds both images and pushes them to ECR by
+#   immutable digest, then the hand-over to Jenkins with both digests, the commit and this run (reusable
+#   workflow jenkins-cd.reusable.yml). Jenkins only coordinates the deploy on the target over SSH (pull by
+#   digest, conditional migrations, container update, health checks) and reports the result. It never lints,
+#   tests, builds or pushes images.
 # There is no pull_request trigger: the frontend checks need the DEV configuration, which is never given
 # to pull request code.
 #
-# CI and CD are separated by GitHub Environment (the platform contract is unchanged):
+# Slack (reusable workflow slack-notify.reusable.yml; one message per event, never duplicated):
+#   started               GitHub Actions, at the start of the run (the whole CI/CD process)
+#   failed                GitHub Actions, only when the run fails before Jenkins started the deploy build
+#   succeeded / failed    Jenkins, for the deploy (post block of the CD job)
+#
+# GitHub Environments:
 #   reporting-tool-dev-ci   CI jobs that need AWS (frontend configuration read, ECR push). No required
 #                           reviewers (it runs on every push); deployment branches: the feature branch only.
 #                           Variables: CICD_BOUND_REF, RT_AWS_REGION, RT_ECR_BACKEND_REPOSITORY,
@@ -25,15 +32,13 @@
 #                           Secrets: RT_BUILD_ROLE_ARN, RT_FRONTEND_CONFIG_SECRET_ID. They are identifiers, not
 #                           credentials; they are secrets only so GitHub masks them in these public logs
 #                           (`with:` inputs and `env:` headers), which `::add-mask::` cannot do before a step runs.
-#   reporting-tool-dev      CD request only: the platform's reusable workflow sends the deploy request from it.
-#                           No required reviewers (D1); deployment branches: the feature branch only.
-#                           Variables: CICD_BOUND_REF, CICD_ROLE_ARN, CICD_AWS_REGION, CICD_DEPLOY_QUEUE_NAME
-#                           (read by the reusable workflow). CICD_ECR_REPOSITORY is not set: it is read only to
-#                           push `units`, and this caller sends `units: "[]"` (its images are pushed by publish-images).
-#   The build role trusts only `reporting-tool-dev-ci`. CICD_ROLE_ARN is this repository's own CI role
-#   (platform template infra/sam/ci-repository-role.yaml, multi-repository decision D2), which trusts only
-#   `reporting-tool-dev`, the bound branch and the pinned reusable workflow.
-#   CICD_BOUND_REF is refs/heads/feature/reporting-dev-github-actions-cicd in both, for now.
+#   reporting-tool-dev      Jenkins hand-over only. No required reviewers; deployment branches: the feature
+#                           branch only. Uses JENKINS_USERNAME and JENKINS_API_TOKEN, the same secrets as
+#                           jenkins-trigger*.yml.
+#   The build role trusts only `reporting-tool-dev-ci`.
+#   CICD_BOUND_REF is refs/heads/feature/reporting-dev-github-actions-cicd, for now.
+#   Slack: secret SLACK_BOT_TOKEN (organization or repository). Without it the notifications are skipped with
+#   a warning; they never block the pipeline.
 #
 # Secret handling (only the frontend configuration, as in the Jenkins job; the backend needs no secret in CI):
 #   * OIDC with `output-env-credentials: false`: credentials are never exported to the job; only the
@@ -50,20 +55,13 @@
 #   actions/checkout                       v7.0.1  3d3c42e5aac5ba805825da76410c181273ba90b1
 #   actions/setup-node                     v7.0.0  820762786026740c76f36085b0efc47a31fe5020
 #   aws-actions/configure-aws-credentials  v6.3.0  e1253824e5c10ff9df46874f81ed3ec929e19cfd
-#   platform reusable workflow (architecture-change-03, `artifacts` input):
-#                                                  3893a882ed8c687b78d4b509252ef55352a87c07
-#     The platform's CI role trust must pin this same commit (PinnedWorkflowSha) before a manual deploy.
+# The local reusable workflows (./.github/workflows/*.reusable.yml) run from this same commit.
 name: reporting-tool-dev-cicd
 
 on:
   push:
     branches: [feature/reporting-dev-github-actions-cicd]
   workflow_dispatch:
-    inputs:
-      request-deploy:
-        description: Send the deploy requests (one per TEST target) for the images published by this run (explicit authorization)
-        type: boolean
-        default: false
 
 permissions: {}
 
@@ -72,6 +70,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ---------------------------------------------------------------- start notification
+  # Runs in parallel with the checks and never blocks them.
+  notify-start:
+    name: notify start (Slack)
+    permissions: {}
+    uses: ./.github/workflows/slack-notify.reusable.yml
+    with:
+      status: started
+      title: Reporting Tool NEW ENVIRONMENT
+      project: Reporting Tool
+      environment-label: DEV
+    secrets:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
   # ---------------------------------------------------------------- mandatory checks
   # No secret and no AWS access: the backend lint, tests and build need no runtime configuration.
   backend-checks:
@@ -261,48 +273,47 @@ jobs:
           TAG: gha-${{ github.run_id }}-${{ github.run_attempt }}
         run: bash .github/scripts/push-image.sh
 
-  # ---------------------------------------------------------------- automatic deploy requests (D1)
-  # One DEPLOY_REQUESTED per Reporting Tool TEST target, from the `reporting-tool-dev` environment, only after
-  # `publish-images` succeeded and produced BOTH digests (the reusable workflow re-validates them). One request per
-  # target because the Executor verifies every requested digest against what that target's script reports: each
-  # request carries only its own image. Both requests belong to this run (requestId <run id>-<attempt>, deduplicated
-  # per target). The scripts installed for these targets are, for now, in PULL-ONLY TEST mode.
-  deploy-request-backend:
-    name: deploy request backend (ONECGIAR CI/CD Platform)
+  # ---------------------------------------------------------------- CD hand-over to Jenkins
+  # Only after `publish-images` succeeded with BOTH digests. Jenkins deploys exactly these digests.
+  deploy:
+    name: deploy (Jenkins prms-reporting-tool-dev-cd)
     needs: publish-images
     if: >-
       needs.publish-images.result == 'success'
       && needs.publish-images.outputs.backend-digest != ''
       && needs.publish-images.outputs.frontend-digest != ''
-      && (github.event_name == 'push'
-          || (github.event_name == 'workflow_dispatch' && inputs.request-deploy))
-    permissions:
-      id-token: write
-      contents: read
-    uses: AllianceBioversityCIAT/onecgiar-cicd-platform/.github/workflows/deploy-request.reusable.yml@3893a882ed8c687b78d4b509252ef55352a87c07
+    permissions: {}
+    uses: ./.github/workflows/jenkins-cd.reusable.yml
     with:
-      targetId: reporting-tool-test-backend
+      jenkins-job: prms-reporting-tool-dev-cd
       environment: reporting-tool-dev
-      units: "[]"
+      dry-run: true # PILOT: validation only; a real deploy needs the owner's explicit authorization
       artifacts: >-
-        {"backend":"${{ needs.publish-images.outputs.backend-digest }}"}
+        backend=${{ needs.publish-images.outputs.backend-digest }}
+        frontend=${{ needs.publish-images.outputs.frontend-digest }}
+    secrets:
+      JENKINS_USERNAME: ${{ secrets.JENKINS_USERNAME }}
+      JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
 
-  deploy-request-frontend:
-    name: deploy request frontend (ONECGIAR CI/CD Platform)
-    needs: publish-images
-    if: >-
-      needs.publish-images.result == 'success'
-      && needs.publish-images.outputs.backend-digest != ''
-      && needs.publish-images.outputs.frontend-digest != ''
-      && (github.event_name == 'push'
-          || (github.event_name == 'workflow_dispatch' && inputs.request-deploy))
-    permissions:
-      id-token: write
-      contents: read
-    uses: AllianceBioversityCIAT/onecgiar-cicd-platform/.github/workflows/deploy-request.reusable.yml@3893a882ed8c687b78d4b509252ef55352a87c07
+  # ---------------------------------------------------------------- CI failure notification
+  # Only when the run failed before Jenkins started a build (a check, the publish or the hand-over itself).
+  # Once Jenkins started the build, Jenkins reports the outcome.
+  notify-ci-failure:
+    name: notify CI failure (Slack)
+    needs: [backend-checks, frontend-checks, deploy-script-checks, publish-images, deploy]
+    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    permissions: {}
+    uses: ./.github/workflows/slack-notify.reusable.yml
     with:
-      targetId: reporting-tool-test-frontend
-      environment: reporting-tool-dev
-      units: "[]"
-      artifacts: >-
-        {"frontend":"${{ needs.publish-images.outputs.frontend-digest }}"}
+      status: failed
+      title: Reporting Tool NEW ENVIRONMENT
+      project: Reporting Tool
+      environment-label: DEV
+      detail: >-
+        backend-checks=${{ needs.backend-checks.result }},
+        frontend-checks=${{ needs.frontend-checks.result }},
+        deploy-script-checks=${{ needs.deploy-script-checks.result }},
+        publish-images=${{ needs.publish-images.result }},
+        jenkins-hand-over=${{ needs.deploy.result }}
+    secrets:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
