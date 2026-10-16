@@ -292,7 +292,7 @@ TKP-T-6 parity set: **SP09** (covered > 0, exercises the covered predicate) + **
 - Dead symbols: `getCategoryShortName`, `PROGRAM_AXIS_LABEL_MAX_CHARS.matrix`.
 - For archive (pending; do not edit on the spec branch): reword the design §10 bound-param order to "in placeholder order".
 
-### TKP-T-6 — HITL live checks — IN PROGRESS
+### TKP-T-6 — HITL live checks — PASS
 
 - **Date:** 2026-10-15. Local stack (user: "si lo tengo arriba"). The user's reply was taken as acceptance of the budget overrun and the go-ahead for T-6; recorded here so it can be corrected.
 - **Environment finding:** the local server is **not** on the prod database. The shell shows "TEST ENVIRONMENT", the active version resolves to **36** (prod is 8), and `?versionId=8` returns 404 "No version was found for versionId 8.". The ToC schema is shared: the totals match prod.
@@ -337,3 +337,12 @@ TKP-T-6 parity set: **SP09** (covered > 0, exercises the covered predicate) + **
 - **Still open, carried to the PRTest smoke (rollout §7):** check 2 (403 with a non-admin session; the guard behaviour is unit-covered in T-2, but not live-verified) and the screenshot acceptance.
 - **Status:** T-6 stays `[~]` until both are recorded.
 - **Commits:** server `154079643`, client `34b9f5ad6` (spec docs in the following docs commit).
+
+**T-6 check 2 (403) — PASS (2026-10-16, PRTest after deploy of `38d15a30c`):**
+- **Who ran it:** the user, in an incognito window, logged in on `prtest.ciat.cgiar.org` as the non-admin test account "Test PRMS 12345".
+- **Call:** the user ran the console snippet.
+- **Result:** the network line shows `GET https://prtest-back.ciat.cgiar.org/api/results-framework-reporting/toc-results/portfolio-coverage 403 (Forbidden)`. The page's own console filter hid the `console.log` line, but the status is unambiguous.
+- **Meaning:** the `ValidRoleGuard` + `@Roles(ADMIN, APPLICATION)` gate holds live.
+- **Remaining for T-6:** the user's acceptance of the block (screenshots / PRTest view, expected SP01 360 / 10, SP02 137 / 3 after `toc-kpi-target-filter`).
+
+**T-6 closed — PASS (2026-10-16).** The user accepted the block ("PERFECTO") after the PRTest check. All T-6 DoD items are met. TKP-T-0..T-6 are done, and the target-only follow-up shipped as child #10 `toc-kpi-target-filter` (`e5c2c775b`). Deployed to PRTest through `performance-refactor` at `38d15a30c`.

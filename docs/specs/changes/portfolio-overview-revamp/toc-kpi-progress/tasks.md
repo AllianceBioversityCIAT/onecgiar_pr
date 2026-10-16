@@ -7,7 +7,7 @@
 | Linked spec | [`requirements.md`](./requirements.md) (approved) + [`design.md`](./design.md) (approved) |
 | Parent | `changes/portfolio-overview-revamp` (family #5) |
 | Owner | santiago.sanchez@cgiar.org |
-| Status | in-progress (T-0..T-5 done, T-6 open: 403 + screenshot acceptance) |
+| Status | done |
 | Branch | `qa-development-2026-ss` (no commit without explicit go-ahead) |
 
 **Rules for every task that runs tests** (machine rules, copy them into each delegated brief):
@@ -285,8 +285,8 @@
     - A PRTest check needs the commit deployed (`performance-refactor`, about 30 min). A local check against the shared prdb is valid for parity and timing only if the version id matches.
   - **Consumers:** none.
 - **Definition of done:**
-  - [~] All 4 checks recorded in `execution.md` with numbers. Parity, timing and browser PASS; the 403 is pending for the PRTest smoke.
-  - [ ] User accepts the browser screenshots (pending for the PRTest smoke).
+  - [x] All 4 checks recorded in `execution.md` with numbers. Parity, timing and browser PASS locally; the 403 PASS on PRTest (2026-10-16).
+  - [x] User accepts the browser screenshots (accepted on PRTest, 2026-10-16).
   - [x] Commit on the user's explicit go-ahead (2026-10-16, pushed before the two items above; see `execution.md`). Rule: commit on the user's explicit go-ahead. Server and client go in separate commits, server first; `<emoji> <type>(<scope>) [SPEC:changes/portfolio-overview-revamp/toc-kpi-progress]: …`, with no apostrophes, `$` or quotes in the subject.
 
 ## 4. Dependency graph
