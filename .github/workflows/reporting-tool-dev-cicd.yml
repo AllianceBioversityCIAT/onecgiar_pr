@@ -37,7 +37,7 @@
 #                           jenkins-trigger*.yml.
 #   The build role trusts only `reporting-tool-dev-ci`.
 #   CICD_BOUND_REF is refs/heads/feature/reporting-dev-github-actions-cicd, for now.
-#   Slack: secret SLACK_BOT_TOKEN (organization or repository). Without it the notifications are skipped with
+#   Slack: repository secret SLACK_NOTIFICATIONS_WEBHOOK_URL (incoming webhook of #notifications-platform). Without it the notifications are skipped with
 #   a warning; they never block the pipeline.
 #
 # Secret handling (only the frontend configuration, as in the Jenkins job; the backend needs no secret in CI):
@@ -82,7 +82,7 @@ jobs:
       project: Reporting Tool
       environment-label: DEV
     secrets:
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_NOTIFICATIONS_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}
 
   # ---------------------------------------------------------------- mandatory checks
   # No secret and no AWS access: the backend lint, tests and build need no runtime configuration.
@@ -316,4 +316,4 @@ jobs:
         publish-images=${{ needs.publish-images.result }},
         jenkins-hand-over=${{ needs.deploy.result }}
     secrets:
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_NOTIFICATIONS_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}

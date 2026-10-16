@@ -4,14 +4,15 @@
 # Split of responsibilities (one message per event, never duplicated):
 #   GitHub Actions  status=started  when the CI/CD run starts (the whole process, not the Jenkins deploy)
 #                   status=failed   only when the run fails BEFORE Jenkins accepted the deploy (CI failure,
-#                                   or the Jenkins trigger itself failed): Jenkins has no build to report
-#   Jenkins         succeeded / failed of the deploy (post { success / failure } of the CD job)
+#                                   or the Jenkins hand-over itself failed): Jenkins has no build to report
+#   Jenkins         succeeded / failed of the deploy (post block of the CD job, slackSend + slack-token)
 #
-# Notifications never block the pipeline: the job is `continue-on-error` and, when SLACK_BOT_TOKEN is not
-# available to the caller, it only warns.
+# Transport: the Slack incoming webhook of #notifications-platform (secret SLACK_NOTIFICATIONS_WEBHOOK_URL). An incoming webhook
+# always posts to the channel it was created for; the channel cannot be chosen here.
 #
-# Secret: SLACK_BOT_TOKEN, a bot token with `chat:write` that is a member of the channel. It is the same kind
-# of credential as Jenkins' `slack-token`; store it as an organization or repository secret, never in code.
+# Notifications never block the pipeline: the job is `continue-on-error`, and a missing or rejected webhook
+# only produces a warning. The webhook URL is a credential: it is never printed and is passed to curl
+# through stdin.
 name: slack-notify (reusable)
 
 on:
@@ -33,15 +34,12 @@ on:
         description: Environment shown in the message, e.g. DEV, STAGING, PROD
         type: string
         required: true
-      channel:
-        type: string
-        default: "#notifications-platform"
       detail:
-        description: Optional extra line (e.g. the failed jobs)
+        description: Optional extra line (e.g. the result of each job)
         type: string
         default: ""
     secrets:
-      SLACK_BOT_TOKEN:
+      SLACK_NOTIFICATIONS_WEBHOOK_URL:
         required: false
 
 permissions: {}
@@ -55,18 +53,21 @@ jobs:
     steps:
       - name: Post to Slack
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_NOTIFICATIONS_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}
           STATUS: ${{ inputs.status }}
           TITLE: ${{ inputs.title }}
           PROJECT: ${{ inputs.project }}
           ENV_LABEL: ${{ inputs.environment-label }}
-          CHANNEL: ${{ inputs.channel }}
           DETAIL: ${{ inputs.detail }}
           BRANCH: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [ -z "${SLACK_BOT_TOKEN:-}" ]; then echo "::warning::SLACK_BOT_TOKEN is not available; notification skipped"; exit 0; fi
+          if [ -z "${SLACK_NOTIFICATIONS_WEBHOOK_URL:-}" ]; then echo "::warning::SLACK_NOTIFICATIONS_WEBHOOK_URL is not available; notification skipped"; exit 0; fi
+          case "$SLACK_NOTIFICATIONS_WEBHOOK_URL" in
+            https://hooks.slack.com/*) ;;
+            *) echo "::warning::SLACK_NOTIFICATIONS_WEBHOOK_URL is not a Slack https webhook; notification skipped"; exit 0 ;;
+          esac
           run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}"
           commit_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${COMMIT}"
           case "$STATUS" in
@@ -76,14 +77,14 @@ jobs:
             failed)
               color="#FF0000"; att_title="CI Failure Details"
               text=":alert: *[${TITLE}]*: *(${ENV_LABEL})* - CI/CD failed in GitHub Actions (no deploy was started) :alert:" ;;
-            *) echo "::error::unknown status '$STATUS'"; exit 1 ;;
+            *) echo "::warning::unknown status '$STATUS'; notification skipped"; exit 0 ;;
           esac
           payload="$(jq -n \
-            --arg channel "$CHANNEL" --arg text "$text" --arg color "$color" --arg att_title "$att_title" \
+            --arg text "$text" --arg color "$color" --arg att_title "$att_title" \
             --arg project "$PROJECT" --arg env "$ENV_LABEL" --arg repo "${GITHUB_REPOSITORY#*/}" \
             --arg branch "$BRANCH" --arg commit "<${commit_url}|${COMMIT:0:7}>" \
             --arg run "<${run_url}|Click here>" --arg detail "$DETAIL" '
-            { channel: $channel, text: $text,
+            { text: $text,
               attachments: [ { title: $att_title, color: $color,
                 fields: ([
                   {title: "Project", value: $project, short: true},
@@ -93,9 +94,12 @@ jobs:
                   {title: "Commit", value: $commit, short: true},
                   {title: "GitHub Actions Run", value: $run, short: false}
                 ] + (if $detail == "" then [] else [{title: "Detail", value: $detail, short: false}] end)) } ] }')"
-          response="$(printf 'header = "Authorization: Bearer %s"\n' "$SLACK_BOT_TOKEN" \
-            | curl --config - -sS --max-time 20 -X POST https://slack.com/api/chat.postMessage \
-                -H 'Content-Type: application/json; charset=utf-8' --data "$payload")"
-          if [ "$(jq -r '.ok' <<<"$response")" != "true" ]; then
-            echo "::warning::Slack rejected the notification: $(jq -r '.error // "unknown"' <<<"$response")"
+          # The webhook URL goes to curl through stdin (`url = ...`), so it never appears on a command line.
+          code="$(printf 'url = "%s"\n' "$SLACK_NOTIFICATIONS_WEBHOOK_URL" \
+            | curl --config - --proto '=https' --max-redirs 0 -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+                -X POST -H 'Content-Type: application/json; charset=utf-8' --data "$payload")" || code="000"
+          if [ "$code" = "200" ]; then
+            echo "Slack notification sent (${STATUS})"
+          else
+            echo "::warning::Slack did not accept the notification (HTTP ${code}); the pipeline continues"
           fi
