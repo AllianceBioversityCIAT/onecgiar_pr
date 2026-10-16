@@ -113,7 +113,7 @@ export interface AowProgressRow {
   total: number;
   /**
    * How many KPIs the zero-target rule (MRF-R-7) excluded from `total` on this row — the number the
-   * `excludes N zero-target KPIs` disclosure states (KCR-R-2.1). Optional: a caller that has no
+   * `excludes N KPI(s) with no target set` disclosure states (KCR-R-2.1, KTO-R-6). Optional: a caller that has no
    * figure to disclose simply omits it, and `0`/absent means the denominator hid nothing.
    * @akili-spec bugfix/kpi-count-reconciliation
    */
@@ -424,20 +424,20 @@ export class ProgramOverviewComponent {
   /**
    * Per-chip `title` disclosure for the Strategic-outcomes footer (`KCR-R-2.1` / `KCR-R-6`). The
    * chip's `total` is *Counted*, so a bucket that plans more than it counts states the difference —
-   * `excludes 1 zero-target KPI` / `excludes 3 zero-target KPIs`, pluralised exactly as
+   * `excludes 1 KPI with no target set` / `excludes 3 KPIs with no target set`, pluralised exactly as
    * `reporting-aow-table.countLabel` does. `null` (not `''`) omits the attribute: a chip that
    * excluded nothing must carry no tooltip at all (`KCR-AC-2`'s "2030 `0/1` no title").
    * @akili-spec bugfix/kpi-count-reconciliation
    */
   chipZeroTargetTitle(row: AowProgressRow): string | null {
     const n = row.zeroTarget ?? 0;
-    return n > 0 ? `excludes ${n} zero-target KPI${n === 1 ? '' : 's'}` : null;
+    return n > 0 ? `excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : null;
   }
 
   /** Rail `title` disclosure for the zero-target exclusion (OAH-R-1) — `null` omits the attribute. */
   readonly zeroTargetTitle = computed(() => {
     const n = this.richStats().zeroTarget;
-    return n > 0 ? `excludes ${n} zero-target KPIs` : null;
+    return n > 0 ? `excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : null;
   });
 
   /** SVG ring geometry — `r=40` circle (mockup's dasharray/dashoffset pair, design.md §6). */
@@ -476,11 +476,14 @@ export class ProgramOverviewComponent {
 
   /**
    * Text alternative for the segmented bar (OAH-N-1) and its `title` disclosure (OAH-R-3): the
-   * three glossary counts, plus the zero-target exclusion note when any KPI was excluded.
+   * three glossary counts, plus the no-target exclusion note when any KPI was excluded.
    * @akili-spec changes/overview-aow-progress-hero
+   * @akili-spec changes/kpi-progress-target-only
    */
   rowBarTitle(row: OverviewAowProgressRowRich): string {
-    return `${row.complete} Complete, ${row.inProgress} In progress, ${row.notStarted} Not started`;
+    const base = `${row.complete} Complete, ${row.inProgress} In progress, ${row.notStarted} Not started`;
+    const n = row.zeroTarget ?? 0;
+    return n > 0 ? `${base}, excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : base;
   }
 
   /** `true` once a row has reported every counted KPI (OAH-R-4 complete swap). */

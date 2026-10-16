@@ -1,7 +1,9 @@
 import {
   applyZeroTargetRule,
+  buildRatio,
   countNewlyReported,
   groupPendingCount,
+  hasTarget,
   nextPendingAfter,
   partitionProgramKpis,
   pendingOf,
@@ -9,62 +11,118 @@ import {
   summarisePartition
 } from './reporting-burndown';
 
-// MRF-TEST-1 (docs/specs/changes/mass-reporting-flow/tasks.md, MRF-T-1) — pure burn-down helpers
-// and the centralised zero-target rule (MRF-R-7, MRF-AC-6). Every fixture below varies target and
-// achieved independently (disqualifier: reusing the same value for both cannot distinguish the
-// zero-target rule from the completion rule).
+// MRF-TEST-1 (docs/specs/changes/mass-reporting-flow/tasks.md, MRF-T-1) — pure burn-down helpers.
+// The centralised rule was re-armed as "has a target" by KTO-T-1 (below). Every fixture varies
+// target and achieved independently (disqualifier: reusing the same value for both cannot
+// distinguish the no-target rule from the completion rule).
 
-describe('applyZeroTargetRule', () => {
-  it('counts every planned KPI, including target=0 with nothing reported yet', () => {
-    const inds = [
-      { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 },
-      { indicator_id: 2, target_value_sum: 0, actual_achieved_value_sum: 0 },
-      { indicator_id: 3, target_value_sum: 0, actual_achieved_value_sum: 0 },
-      { indicator_id: 4, target_value_sum: 5, actual_achieved_value_sum: 5 },
-      { indicator_id: 5, target_value_sum: 5, actual_achieved_value_sum: 2 },
-      { indicator_id: 6, target_value_sum: 5, actual_achieved_value_sum: 0 },
-      { indicator_id: 7, target_value_sum: 3, actual_achieved_value_sum: 3 },
-      { indicator_id: 8, target_value_sum: 10, actual_achieved_value_sum: 1 },
-      { indicator_id: 9, target_value_sum: 0, actual_achieved_value_sum: 4 },
-      { indicator_id: 10, target_value_sum: 2, actual_achieved_value_sum: 0 }
-    ];
+// KTO-T-1 (docs/specs/changes/kpi-progress-target-only) — the shared rule is "has a target":
+// target finite and > 0, achieved ignored (KTO-R-1). Fixtures vary target and achieved
+// independently so `0/3` (reported, no target) cannot hide behind `0/0`.
 
-    const { counted, zeroTarget } = applyZeroTargetRule(inds);
+const row = (id: number | string, target: unknown, achieved: unknown) => ({
+  indicator_id: id,
+  target_value_sum: target,
+  actual_achieved_value_sum: achieved
+});
 
-    expect(zeroTarget).toBe(0);
-    expect(counted.map(i => i.indicator_id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+// S-1.1 / S-2.2 falsifier fixture: 5/2, 0/0, 0/3, null/0, "0"/0, "12"/0
+const falsifierRows = () => [row(1, 5, 2), row(2, 0, 0), row(3, 0, 3), row(4, null, 0), row(5, '0', 0), row(6, '12', 0)];
+
+describe('hasTarget (KTO-R-1, S-1.1)', () => {
+  it.each([
+    ['5/2', 5, 2, true],
+    ['0/0', 0, 0, false],
+    ['0/3 (overachieved, still no target)', 0, 3, false],
+    ['null/0', null, 0, false],
+    ['undefined target', undefined, 4, false],
+    ['"0"/0', '0', 0, false],
+    ['"12"/0 (numeric string parses)', '12', 0, true],
+    ['negative target', -2, 0, false],
+    ['NaN target', Number.NaN, 0, false],
+    ['Infinity target', Number.POSITIVE_INFINITY, 0, false]
+  ])('%s -> %s', (_label, target, achieved, expected) => {
+    expect(hasTarget(row(1, target, achieved))).toBe(expected);
   });
 
-  it('keeps a KPI with achieved reported but no target', () => {
-    const ind = { indicator_id: 1, actual_achieved_value_sum: 4 };
+  it('returns false for a null / undefined row', () => {
+    expect(hasTarget(null)).toBe(false);
+    expect(hasTarget(undefined)).toBe(false);
+  });
+});
+
+describe('applyZeroTargetRule', () => {
+  it('counts only rows with a target; zeroTarget is the number of rows excluded (no target set)', () => {
+    const { counted, zeroTarget } = applyZeroTargetRule(falsifierRows());
+
+    expect(counted.map(i => i.indicator_id)).toEqual([1, 6]);
+    expect(zeroTarget).toBe(4);
+  });
+
+  it('excludes a reported row without a target (0/3) from counted', () => {
+    const ind = row(1, 0, 3);
 
     const { counted, zeroTarget } = applyZeroTargetRule([ind]);
 
-    expect(zeroTarget).toBe(0);
-    expect(counted).toEqual([ind]);
+    expect(counted).toEqual([]);
+    expect(zeroTarget).toBe(1);
   });
 
-  it('returns all string-typed fixtures in the counted set', () => {
-    const zeroTargetString = { indicator_id: 1, target_value_sum: '0', actual_achieved_value_sum: '0' };
-    const countedString = { indicator_id: 2, target_value_sum: '4', actual_achieved_value_sum: '2' };
+  it('keeps every row when all have a target', () => {
+    const inds = [row(1, 5, 5), row(2, '4', '2'), row(3, 1, 0)];
 
-    const { counted, zeroTarget } = applyZeroTargetRule([zeroTargetString, countedString]);
+    const { counted, zeroTarget } = applyZeroTargetRule(inds);
 
+    expect(counted).toEqual(inds);
     expect(zeroTarget).toBe(0);
-    expect(counted).toEqual([zeroTargetString, countedString]);
+  });
+});
+
+describe('buildRatio (KTO-R-2, KTO-R-3)', () => {
+  it('S-2.1/S-2.2 falsifier: 5/2, 0/0, 0/3, null/0, "0"/0, "12"/0 -> done 1, total 2, zeroTarget 4', () => {
+    expect(buildRatio(falsifierRows())).toEqual({ done: 1, total: 2, percent: 50, zeroTarget: 4 });
+  });
+
+  it('S-2.1: 50 targeted (10 reported) + 4 without a target reads 10 of 50 and 20%', () => {
+    const targeted = Array.from({ length: 50 }, (_, i) => row(i, 10, i < 10 ? 1 : 0));
+    const untargeted = [row(100, 0, 0), row(101, 0, 0), row(102, null, 0), row(103, 0, 0)];
+
+    expect(buildRatio([...targeted, ...untargeted])).toEqual({ done: 10, total: 50, percent: 20, zeroTarget: 4 });
+  });
+
+  it('S-2.2: an extra 0/3 row stays out of the numerator and bumps zeroTarget to 5', () => {
+    const targeted = Array.from({ length: 50 }, (_, i) => row(i, 10, i < 10 ? 1 : 0));
+    const untargeted = [row(100, 0, 0), row(101, 0, 0), row(102, null, 0), row(103, 0, 0), row(104, 0, 3)];
+
+    expect(buildRatio([...targeted, ...untargeted])).toEqual({ done: 10, total: 50, percent: 20, zeroTarget: 5 });
+  });
+
+  it('S-3.1: all rows without a target -> total 0, percent 0 (not NaN), zeroTarget 3', () => {
+    const result = buildRatio([row(1, 0, 0), row(2, 0, 7), row(3, null, 0)]);
+
+    expect(result).toEqual({ done: 0, total: 0, percent: 0, zeroTarget: 3 });
+    expect(Number.isNaN(result.percent)).toBe(false);
+  });
+
+  it('an empty list is total 0, percent 0, zeroTarget 0', () => {
+    expect(buildRatio([])).toEqual({ done: 0, total: 0, percent: 0, zeroTarget: 0 });
   });
 });
 
 describe('pendingOf', () => {
-  it('includes zero-target not-started KPIs alongside other pending KPIs', () => {
-    const inds = [
-      { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 },
-      { indicator_id: 2, target_value_sum: 5, actual_achieved_value_sum: 0 },
-      { indicator_id: 3, target_value_sum: 5, actual_achieved_value_sum: 2 },
-      { indicator_id: 4, target_value_sum: 5, actual_achieved_value_sum: 5 }
-    ];
+  it('excludes no-target rows and complete rows; keeps targeted not-started and in-progress', () => {
+    const inds = [row(1, 0, 0), row(2, 5, 0), row(3, 5, 2), row(4, 5, 5), row(5, 0, 3)];
 
-    expect(pendingOf(inds).map(i => i.indicator_id)).toEqual([1, 2, 3]);
+    expect(pendingOf(inds).map(i => i.indicator_id)).toEqual([2, 3]);
+  });
+
+  it('S-8.1: over the falsifier fixture contains no no-target row', () => {
+    const noTargetIds = [2, 3, 4, 5];
+
+    const ids = pendingOf(falsifierRows()).map(i => i.indicator_id);
+
+    expect(ids).toEqual([1, 6]);
+    expect(ids.some(id => noTargetIds.includes(id as number))).toBe(false);
   });
 });
 
@@ -92,33 +150,41 @@ describe('sortRemainingFirst', () => {
     expect(catalogue).toEqual(copy);
   });
 
-  // MRF-T-2 Leader decision (T-1 review, binding): a zero-target KPI ranks with `not-started` by
-  // default (its raw achieved/target reading), but LAST — after `complete` — when the caller opts
-  // into `zeroTargetLast` (Only-pending off, sort = Remaining work).
+  // A no-target row ranks with `not-started` by default (its raw reading), but LAST — after
+  // `complete` — when the caller opts into `zeroTargetLast` (KTO-R-8: Remaining-work order).
   describe('zeroTargetLast option', () => {
-    const zeroTarget = (id: string) => ({ indicator_id: id, target_value_sum: 0, actual_achieved_value_sum: 0 });
+    const noTarget = (id: string) => ({ indicator_id: id, target_value_sum: 0, actual_achieved_value_sum: 0 });
+    const noTargetReported = (id: string) => ({ indicator_id: id, target_value_sum: 0, actual_achieved_value_sum: 3 });
     const notStarted = (id: string) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 0 });
     const inProgress = (id: string) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 2 });
     const complete = (id: string) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 5 });
 
-    it('without the option, ranks a zero-target KPI with not-started (its raw reading)', () => {
-      const catalogue = [complete('A'), zeroTarget('B'), inProgress('C'), notStarted('D')];
+    it('without the option, ranks a no-target KPI with not-started (its raw reading)', () => {
+      const catalogue = [complete('A'), noTarget('B'), inProgress('C'), notStarted('D')];
 
       const sorted = sortRemainingFirst(catalogue);
 
       expect(sorted.map(i => i.indicator_id)).toEqual(['B', 'D', 'C', 'A']);
     });
 
-    it('with zeroTargetLast, ranks a zero-target KPI after complete instead of with not-started', () => {
-      const catalogue = [complete('A'), zeroTarget('B'), inProgress('C'), notStarted('D')];
+    it('with zeroTargetLast, ranks a no-target KPI after complete instead of with not-started', () => {
+      const catalogue = [complete('A'), noTarget('B'), inProgress('C'), notStarted('D')];
 
       const sorted = sortRemainingFirst(catalogue, { zeroTargetLast: true });
 
       expect(sorted.map(i => i.indicator_id)).toEqual(['D', 'C', 'A', 'B']);
     });
 
-    it('keeps multiple zero-target KPIs stable relative to each other, both last', () => {
-      const catalogue = [zeroTarget('B1'), notStarted('D'), zeroTarget('B2')];
+    it('with zeroTargetLast, a reported no-target KPI (0/3) also ranks last, not as in-progress', () => {
+      const catalogue = [noTargetReported('R'), notStarted('D'), complete('A')];
+
+      const sorted = sortRemainingFirst(catalogue, { zeroTargetLast: true });
+
+      expect(sorted.map(i => i.indicator_id)).toEqual(['D', 'A', 'R']);
+    });
+
+    it('keeps multiple no-target KPIs stable relative to each other, both last', () => {
+      const catalogue = [noTarget('B1'), notStarted('D'), noTarget('B2')];
 
       const sorted = sortRemainingFirst(catalogue, { zeroTargetLast: true });
 
@@ -128,7 +194,7 @@ describe('sortRemainingFirst', () => {
 });
 
 describe('groupPendingCount', () => {
-  it('counts pending KPIs within a group, including zero-target not-started KPIs', () => {
+  it('counts pending KPIs within a group, excluding no-target KPIs', () => {
     const group = {
       indicators: [
         { indicator_id: 1, target_value_sum: 0, actual_achieved_value_sum: 0 },
@@ -137,7 +203,7 @@ describe('groupPendingCount', () => {
       ]
     };
 
-    expect(groupPendingCount(group)).toBe(2);
+    expect(groupPendingCount(group)).toBe(1);
   });
 
   it('returns 0 for a group with no indicators', () => {
@@ -171,6 +237,15 @@ describe('nextPendingAfter', () => {
 
   it('returns null for an empty list', () => {
     expect(nextPendingAfter(1, [])).toBeNull();
+  });
+
+  it('S-8.1: never lands on a no-target row, including a reported 0/3 row', () => {
+    const noTarget = { indicator_id: 2, target_value_sum: 0, actual_achieved_value_sum: 0 };
+    const noTargetReported = { indicator_id: 3, target_value_sum: 0, actual_achieved_value_sum: 3 };
+    const ordered = [pending(1), noTarget, noTargetReported, pending(4)];
+
+    expect(nextPendingAfter(1, ordered)).toEqual(pending(4));
+    expect(nextPendingAfter(4, ordered)).toEqual(pending(1));
   });
 });
 
@@ -223,7 +298,7 @@ describe('countNewlyReported', () => {
 //   IO bucket   — #901, #902     2030 bucket — #950
 //
 // Expected values are read off the scenario, not recomputed the way the helper does
-// (anti-tautology): planned 11, zero-target 2, counted 9, reported 1.
+// (anti-tautology): planned 11, no-target (`zeroTarget`) 2 (a4, #902), counted 9, reported 1.
 
 /** An output-tier row as `indicatorsByAow` stamps it (`__isIntermediateCrosscut` is false there). */
 const output = (id: string | number, target: number, achieved: number) => ({
@@ -357,11 +432,11 @@ describe('partitionProgramKpis (KCR-R-1)', () => {
 });
 
 describe('summarisePartition (KCR-R-2 / R-8 / R-9)', () => {
-  it('reads the requirements fixture as planned 11, counted 11, reported 1', () => {
+  it('reads the requirements fixture as planned 11, no-target 2, counted 9, reported 1', () => {
     const partition = partitionProgramKpis(scenarioBundles(), scenarioIntermediate(), scenario2030());
 
     // Hand-counted from the scenario: A 4 + B 4 + IO 2 + 2030 1 = 11 planned; reported = b2 only.
-    expect(summarisePartition(partition)).toEqual({ planned: 11, zeroTarget: 0, counted: 11, reported: 1 });
+    expect(summarisePartition(partition)).toEqual({ planned: 11, zeroTarget: 2, counted: 9, reported: 1 });
   });
 
   it('counts reported from achieved > 0 alone — a progress_percentage string never makes a KPI reported (KCR-R-9)', () => {

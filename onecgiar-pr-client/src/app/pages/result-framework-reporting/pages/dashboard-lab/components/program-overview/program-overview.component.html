@@ -134,13 +134,22 @@
         </span>
       </div>
       <div class="flex items-baseline gap-[8px]">
-        <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
-          {{ aowStats().pct }}%
-        </span>
+        @if (aowStats().totalPlanned > 0) {
+          <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+            {{ aowStats().pct }}%
+          </span>
+        } @else {
+          <!-- @akili-spec changes/kpi-progress-target-only — KTO-R-11 (A-2): no KPI has a target → dash, never 0% -->
+          <span class="pr-figure text-[32px] font-bold leading-none text-[var(--pr-text-muted)]" aria-label="No KPIs with a target">—</span>
+        }
         <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">completed</span>
       </div>
       <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
-        <span>{{ aowStats().totalDone }}/{{ aowStats().totalPlanned }} KPIs</span>
+        @if (aowStats().totalPlanned > 0) {
+          <span>{{ aowStats().totalDone }}/{{ aowStats().totalPlanned }} KPIs</span>
+        } @else {
+          <span>No KPIs with a target</span>
+        }
         <span class="text-[var(--pr-text-muted)]">·</span>
         <span>{{ aowStats().count }} AoWs</span>
       </div>
@@ -447,8 +456,13 @@
             [attr.title]="zeroTargetTitle()"
             prTooltip="How many KPIs have something reported against them. This is coverage of the plan, not achievement against the targets."
             prTooltipPosition="top">
-            <span class="pr-figure text-[32px] font-bold leading-none text-[var(--pr-text-heading)]">{{ richStats().pct }}%</span>
-            <span class="pr-figure-sm font-semibold text-[var(--pr-text-secondary)]">{{ richStats().reported }} of {{ richStats().total }}</span>
+            @if (richStats().total > 0) {
+              <span class="pr-figure text-[32px] font-bold leading-none text-[var(--pr-text-heading)]">{{ richStats().pct }}%</span>
+              <span class="pr-figure-sm font-semibold text-[var(--pr-text-secondary)]">{{ richStats().reported }} of {{ richStats().total }}</span>
+            } @else {
+              <!-- @akili-spec changes/kpi-progress-target-only — KTO-R-3 -->
+              <span class="pr-figure text-[32px] font-bold leading-none text-[var(--pr-text-muted)]" aria-label="No KPIs with a target">—</span>
+            }
             <span class="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-muted)]">KPIs reported</span>
           </div>
         </div>
@@ -793,9 +807,16 @@
               <!-- Mono figures: reported/total + % -->
               <div class="flex w-[76px] min-w-[76px] flex-col items-end justify-self-end @max-[560px]:[grid-column:2] @max-[560px]:[grid-row:2]">
                 <span class="pr-figure text-[16px] font-bold text-[var(--pr-text-heading)]">
-                  {{ row.reported }}<span class="font-semibold text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                  @if (row.total > 0) {
+                    {{ row.reported }}<span class="font-semibold text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                  } @else {
+                    <!-- @akili-spec changes/kpi-progress-target-only — KTO-R-3: no KPI with a target, so a dash, never 0/0. -->
+                    <span class="text-[var(--pr-text-muted)]" aria-label="No KPIs with a target">—</span>
+                  }
                 </span>
-                <span class="pr-figure-sm font-semibold text-[var(--pr-text-secondary)]">{{ percentOfRich(row) }}%</span>
+                @if (row.total > 0) {
+                  <span class="pr-figure-sm font-semibold text-[var(--pr-text-secondary)]">{{ percentOfRich(row) }}%</span>
+                }
               </div>
 
               <!--
@@ -908,7 +929,7 @@
               [attr.title]="chipZeroTargetTitle(row)"
               class="inline-flex cursor-pointer items-center gap-[8px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] py-[5px] text-[12.5px] text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
               {{ row.name }}
-              <span class="pr-figure-sm font-bold">{{ row.done }}/{{ row.total }}</span>
+              <span class="pr-figure-sm font-bold">@if (row.total > 0) { {{ row.done }}/{{ row.total }} } @else { <span aria-label="No KPIs with a target">—</span> }</span>
             </button>
           }
           <span class="w-full sm:w-auto sm:ml-auto inline-flex flex-wrap items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)] mt-1 sm:mt-0">

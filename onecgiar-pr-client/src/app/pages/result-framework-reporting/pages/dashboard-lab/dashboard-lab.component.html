@@ -1469,6 +1469,7 @@
             [aowOptions]="reportingSectionOptions()"
             [aowValue]="reportingAowFilter()"
             [typeValue]="reportingTypeFilter()"
+            [targetValue]="reportingTargetFilter()"
             [typologyOptions]="reportingTypologyOptions()"
             [typologyValue]="reportingTypologyFilter()"
             [viewMode]="reportingViewMode()"
@@ -1485,6 +1486,7 @@
             (statusChange)="reportingStatusFilter.set($event)"
             (aowChange)="onSectionFilterChange($event)"
             (typeChange)="reportingTypeFilter.set($event)"
+            (targetChange)="reportingTargetFilter.set($event)"
             (typologyChange)="reportingTypologyFilter.set($event)"
             (viewModeChange)="reportingViewMode.set($event)"
             [centerOptions]="byAowCenterFilterOptions()"
@@ -1685,13 +1687,21 @@
                       <div class="rounded-xl border border-slate-200/80 bg-slate-50/60 hover:bg-slate-50 transition-colors px-4 py-3 shadow-2xs">
                         <p class="m-0 text-[10px] font-bold uppercase tracking-[0.06em] text-slate-500">Reported</p>
                         <p class="m-0 mt-1 text-[20px] font-black tabular-nums text-slate-900">
-                          <span [attr.title]="bannerZeroTargetTitle(banner.zeroTarget)">{{ banner.done }}<span class="text-[13px] font-semibold text-slate-400">/{{ banner.total }}</span></span>
+                          <span [attr.title]="bannerZeroTargetTitle(banner.zeroTarget)">@if (banner.total > 0) {
+                            {{ banner.done }}<span class="text-[13px] font-semibold text-slate-400">/{{ banner.total }}</span>
+                          } @else {
+                            <span class="text-slate-400" aria-label="No KPIs with a target">—</span>
+                          }</span>
                         </p>
                       </div>
                       <div class="rounded-xl border border-slate-200/80 bg-slate-50/60 hover:bg-slate-50 transition-colors px-4 py-3 shadow-2xs">
                         <p class="m-0 text-[10px] font-bold uppercase tracking-[0.06em] text-slate-500">Progress</p>
                         <div class="mt-1 flex items-center justify-between gap-3">
-                          <p class="m-0 text-[20px] font-black tabular-nums text-slate-900">{{ banner.pct }}%</p>
+                          <p class="m-0 text-[20px] font-black tabular-nums text-slate-900">@if (banner.total > 0) {
+                            {{ banner.pct }}%
+                          } @else {
+                            —
+                          }</p>
                           <span class="h-[7px] w-[90px] overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
                             <span
                               class="block h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-300"

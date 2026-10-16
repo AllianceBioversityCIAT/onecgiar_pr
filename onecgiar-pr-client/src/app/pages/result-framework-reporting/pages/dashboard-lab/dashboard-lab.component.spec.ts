@@ -2568,6 +2568,72 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
     );
   });
 
+  // KTO-T-7 follow-up (changes/kpi-progress-target-only): the global Target filter rides the URL as `tgt`,
+  // the same way Category rides `typ`. `all` is the default and writes no param.
+  describe('global Target filter in the URL (`tgt`, KTO-R-10)', () => {
+    const lastQueryParams = (navigate: jest.Mock) => navigate.mock.calls[navigate.mock.calls.length - 1][1].queryParams;
+
+    it('writes tgt=without / tgt=with when the filter changes, and no param for All', async () => {
+      const { component, navigate } = await createPlannedComponent();
+      component.plannedBrowseView.set('aows');
+
+      component.reportingTargetFilter.set('without');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('without');
+
+      component.reportingTargetFilter.set('with');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('with');
+
+      component.reportingTargetFilter.set('all');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBeNull();
+    });
+
+    it('Clear filters resets the signal and removes the param', async () => {
+      const { component, navigate } = await createPlannedComponent();
+      component.plannedBrowseView.set('aows');
+      component.reportingTargetFilter.set('with');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('with');
+
+      component.clearReportingFilters();
+      TestBed.flushEffects();
+
+      expect(component.reportingTargetFilter()).toBe('all');
+      expect(lastQueryParams(navigate).tgt).toBeNull();
+    });
+
+    it('restores the value on load, even when tgt is the only Reporting param', async () => {
+      const { component } = await createPlannedComponent();
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tgt: 'without' }));
+      expect(component.reportingTargetFilter()).toBe('without');
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tocView: 'aows', tgt: 'with' }));
+      expect(component.reportingTargetFilter()).toBe('with');
+    });
+
+    it('ignores an invalid value and falls back to All', async () => {
+      const { component } = await createPlannedComponent();
+      component.reportingTargetFilter.set('with');
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tocView: 'aows', tgt: 'bogus' }));
+
+      expect(component.reportingTargetFilter()).toBe('all');
+    });
+
+    it('follows browser back / forward: a changed or missing tgt on the stream updates the signal', async () => {
+      const { component, qpSubject } = await createPlannedComponent();
+
+      qpSubject.next(convertToParamMap({ tocView: 'aows', tgt: 'without' }));
+      expect(component.reportingTargetFilter()).toBe('without');
+
+      qpSubject.next(convertToParamMap({ tocView: 'aows' }));
+      expect(component.reportingTargetFilter()).toBe('all');
+    });
+  });
+
   it('hydrates plannedSearch, reportingTypologyFilter, and pendingKpi with inequality guards without loops', async () => {
     const { component, qpSubject } = await createPlannedComponent();
 

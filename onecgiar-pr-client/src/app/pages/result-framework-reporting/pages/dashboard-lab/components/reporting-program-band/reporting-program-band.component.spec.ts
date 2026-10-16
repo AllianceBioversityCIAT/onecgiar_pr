@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { ReportingProgramBandComponent } from './reporting-program-band.component';
 import { ReportingGuideService } from '../../services/reporting-guide.service';
@@ -1501,6 +1502,63 @@ describe('ReportingProgramBandComponent', () => {
       const statusSpy = jest.spyOn(component.statusChange, 'emit');
       component.removeStatusChip('achieved');
       expect(statusSpy).toHaveBeenCalledWith(['not-started']);
+    });
+  });
+
+  // ── KTO-T-7 / KTO-R-10 · global Target filter ─────────────────────────────
+  describe('Target filter in the Filters popover (KTO-R-10)', () => {
+    it('renders a single-select Target control beside Status in grouped mode, not in By-AOW mode', async () => {
+      await build({ showToolbar: true, compactFilters: false });
+      const el = root();
+
+      expect(el.querySelector('[aria-label="Filter by target"] app-pr-filter-select')).not.toBeNull();
+      expect(el.querySelector('[aria-label="Filter by target"]')?.textContent).toContain('Target');
+    });
+
+    it('does not render the Target control in By-AOW (compact) mode, like Type / Category', async () => {
+      await build({ showToolbar: true, compactFilters: true });
+
+      expect(root().querySelector('[aria-label="Filter by target"]')).toBeNull();
+    });
+
+    it('offers exactly All / KPIs with target / KPIs with no target', async () => {
+      await build({ showToolbar: true, compactFilters: false });
+
+      expect(component.targetOptions.map(o => [o.value, o.label])).toEqual([
+        ['all', 'All'],
+        ['with', 'KPIs with target'],
+        ['without', 'KPIs with no target']
+      ]);
+    });
+
+    it('emits the picked value through targetChange', async () => {
+      await build({ showToolbar: true, compactFilters: false });
+      const spy = jest.spyOn(component.targetChange, 'emit');
+
+      const select = fixture.debugElement.query(By.css('[aria-label="Filter by target"] app-pr-filter-select'));
+      select.triggerEventHandler('changed', 'without');
+
+      expect(spy).toHaveBeenCalledWith('without');
+    });
+
+    it('counts a non-All Target in the active-filter badge and shows a removable chip', async () => {
+      await build({ showToolbar: true, compactFilters: false, targetValue: 'with', statusValue: ['achieved'] });
+
+      expect(component.activeFilterCount()).toBe(2); // 1 status + the Target
+      expect(component.hasActiveFilters()).toBe(true);
+      expect(component.activeTargetChip()).toEqual({ value: 'with', label: 'KPIs with target' });
+
+      const spy = jest.spyOn(component.targetChange, 'emit');
+      component.removeTargetChip();
+      expect(spy).toHaveBeenCalledWith('all');
+    });
+
+    it('All adds nothing to the badge and renders no chip', async () => {
+      await build({ showToolbar: true, compactFilters: false, targetValue: 'all' });
+
+      expect(component.activeFilterCount()).toBe(0);
+      expect(component.activeTargetChip()).toBeNull();
+      expect(component.hasActiveFilterChips()).toBe(false);
     });
   });
 
