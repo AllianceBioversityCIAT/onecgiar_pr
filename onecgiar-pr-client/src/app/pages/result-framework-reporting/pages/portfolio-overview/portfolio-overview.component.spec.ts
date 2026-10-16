@@ -1,4 +1,6 @@
 import { ChangeDetectorRef } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
@@ -7,7 +9,6 @@ import { Subject, of, throwError } from 'rxjs';
 import { PortfolioOverviewComponent } from './portfolio-overview.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
-import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { PORTFOLIO_OVERVIEW_COPY as COPY } from '../../../../internationalization/portfolio-overview.copy';
 
 const mockChartInstance = {
@@ -113,7 +114,8 @@ describe('PortfolioOverviewComponent', () => {
         { provide: ApiService, useValue: apiMock },
         { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } },
         { provide: DataControlService, useValue: { reportingCurrentPhase: { phaseYear: 2026, portfolioAcronym: 'P25' } } },
-        { provide: ExportTablesService, useValue: { exportExcel: jest.fn().mockResolvedValue(undefined) } }
+        provideHttpClient(),
+        provideHttpClientTesting()
       ]
     });
 
@@ -334,186 +336,117 @@ describe('PortfolioOverviewComponent', () => {
     });
   });
 
-  describe('Search and Pagination in Matrix Table', () => {
-    it('filters rows based on search query by code or name', () => {
+  describe('Progress against ToC KPIs slot (TKP-R-7, TKP-R-9, TKP-T-5)', () => {
+    const TYPOLOGY = 'app-portfolio-typology-block';
+    const TOC_KPI = 'app-portfolio-toc-kpi-block';
+    const CENTERS = 'app-portfolio-centers-block';
+    const COVERAGE_URL = 'toc-results/portfolio-coverage';
+
+    const coverageRequests = () => TestBed.inject(HttpTestingController).match(r => r.url.includes(COVERAGE_URL));
+
+    const buildWith = (resultsSE: unknown) => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [PortfolioOverviewComponent],
+        providers: [
+          { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE } },
+          { provide: Router, useValue: { navigate: jest.fn() } },
+          { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
+          provideHttpClient(),
+          provideHttpClientTesting()
+        ]
+      });
+      fixture = TestBed.createComponent(PortfolioOverviewComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    };
+
+    it('hasFigures: the matrix is gone, the order is typology then ToC KPI then centers (S-9.1)', () => {
       build(OPEN_PHASE);
 
-      expect(component.totalFilteredRows()).toBe(2);
-
-      component.searchQuery.set('SP01');
-      expect(component.filteredRows().length).toBe(1);
-      expect(component.filteredRows()[0].code).toBe('SP01');
-
-      component.searchQuery.set('Climate');
-      expect(component.filteredRows().length).toBe(1);
-      expect(component.filteredRows()[0].code).toBe('SP06');
-
-      component.clearSearch();
-      expect(component.searchQuery()).toBe('');
-      expect(component.totalFilteredRows()).toBe(2);
+      const root: HTMLElement = fixture.nativeElement;
+      const typology = root.querySelector(TYPOLOGY) as Element;
+      const tocKpi = root.querySelector(TOC_KPI) as Element;
+      const centers = root.querySelector(CENTERS) as Element;
+      expect(root.querySelector('#progress-by-science-program')).toBeNull();
+      expect(root.textContent).not.toContain('Progress by science program');
+      expect(Array.from(root.querySelectorAll('button')).some(b => /export excel/i.test(b.textContent ?? ''))).toBe(false);
+      expect(typology && tocKpi && centers).toBeTruthy();
+      expect(typology.compareDocumentPosition(tocKpi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(tocKpi.compareDocumentPosition(centers) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(root.querySelector('[data-testid="portfolio-overview-skeleton-toc-kpi"]')).toBeNull();
     });
 
-    it('filters rows by Science Program dropdown or Indicator Type dropdown', () => {
-      build(OPEN_PHASE);
+    it('loading: shows the ToC KPI skeleton, no block and no request (TKP-R-7)', () => {
+      buildWith({ GET_AllResultsWithUseRole: () => new Subject() });
 
-      // SP Filter
-      component.setProgramFilter('SP01');
-      expect(component.filteredRows().length).toBe(1);
-      expect(component.filteredRows()[0].code).toBe('SP01');
-      expect(component.hasActiveFilters()).toBe(true);
-
-      // Indicator Type Filter: Policy change (SP01 has 1, SP06 has 0)
-      component.setProgramFilter('all');
-      component.setIndicatorFilter('Policy change');
-      expect(component.filteredRows().length).toBe(1);
-      expect(component.filteredRows()[0].code).toBe('SP01');
-
-      // Reset filters
-      component.resetFilters();
-      expect(component.selectedProgramFilter()).toBe('all');
-      expect(component.selectedIndicatorFilter()).toBe('all');
-      expect(component.hasActiveFilters()).toBe(false);
-      expect(component.totalFilteredRows()).toBe(2);
+      expect(component.isLoading()).toBe(true);
+      expect(fixture.nativeElement.querySelector('[data-testid="portfolio-overview-skeleton-toc-kpi"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector(TOC_KPI)).toBeNull();
+      expect(coverageRequests().length).toBe(0);
     });
 
-    it('paginates rows accurately with pageSize and page navigation', () => {
+    it('error and empty: no block and no request', () => {
+      buildWith({ GET_AllResultsWithUseRole: () => throwError(() => new Error('boom')) });
+      expect(fixture.nativeElement.querySelector(TOC_KPI)).toBeNull();
+      expect(coverageRequests().length).toBe(0);
+
+      build([]);
+      expect(fixture.nativeElement.querySelector(TOC_KPI)).toBeNull();
+      expect(coverageRequests().length).toBe(0);
+    });
+
+    it('hasFigures: requests coverage once, with the version of the page rows and a resolved year', () => {
       build(OPEN_PHASE);
 
-      component.setPageSize(1);
-      expect(component.totalPages()).toBe(2);
-      expect(component.paginatedRows().length).toBe(1);
-      expect(component.paginationStart()).toBe(1);
-      expect(component.paginationEnd()).toBe(1);
+      const requests = coverageRequests();
+      expect(requests.length).toBe(1);
+      expect(requests[0].request.urlWithParams).toContain('versionId=36');
+      expect(component.phaseYear()).toBe('2026');
+      expect(fixture.nativeElement.querySelector(TOC_KPI)).toBeTruthy();
+      expect(fixture.nativeElement.querySelector(TOC_KPI).textContent).toContain('Theory of Change for 2026');
+    });
 
-      component.nextPage();
-      expect(component.currentPage()).toBe(2);
-      expect(component.paginationStart()).toBe(2);
-      expect(component.paginationEnd()).toBe(2);
+    it('versionId() is the first open row version, and the newest version on a closed phase', () => {
+      build([raw({ version_id: '36' }), raw({ version_id: '36' })]);
+      expect(component.data.versionId()).toBe(36);
 
-      component.prevPage();
-      expect(component.currentPage()).toBe(1);
+      build(CLOSED_PHASE);
+      expect(component.data.closedPhase()).toBe(true);
+      expect(component.data.versionId()).toBe(34);
 
-      component.setPageSize(0); // All
-      expect(component.paginatedRows().length).toBe(2);
+      build([]);
+      expect(component.data.versionId()).toBeNull();
+    });
+
+    it('a closed phase keeps the banner and asks for the newest version', () => {
+      build(CLOSED_PHASE);
+
+      expect(fixture.nativeElement.textContent).toContain('Viewing a closed phase. Figures are final.');
+      const requests = coverageRequests();
+      expect(requests.length).toBe(1);
+      expect(requests[0].request.urlWithParams).toContain('versionId=34');
+    });
+
+    it('wires (programmeOpen) to openProgramme', () => {
+      build(OPEN_PHASE);
+
+      const block = fixture.debugElement.query(By.css(TOC_KPI));
+      block.componentInstance.programmeOpen.emit('SP06');
+      expect(router.navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP06', 'results']);
     });
   });
 
-  describe('Enhanced Matrix Table & Heatmap Intensity (POV-R-6)', () => {
-    it('puts TOTAL between the programme and the categories, as the design does', () => {
-      build(OPEN_PHASE);
+  it('opens a programme on the Results tab — the surface that lists exactly what the row counts', () => {
+    build(OPEN_PHASE);
 
-      expect(component.columns().map(c => c.label)).toEqual(['Science program', 'Total', 'Innovation development', 'Policy change']);
-      expect(component.columns().map(c => c.shortLabel)).toEqual(['Science Program', 'Total', 'Inno-Dev', 'Policy']);
-      expect(component.columns()[1].key).toBe('total');
-    });
+    component.openProgramme('SP06');
+    expect(router.navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP06', 'results']);
 
-    it('manages column widths and allows custom resizing', () => {
-      build(OPEN_PHASE);
-
-      const progCol = component.columns()[0];
-      const totalCol = component.columns()[1];
-      const catCol = component.columns()[2];
-
-      expect(component.getColumnWidth(progCol)).toBe(280);
-      expect(component.getColumnWidth(totalCol)).toBe(80);
-      expect(component.getColumnWidth(catCol)).toBe(95);
-
-      // Custom width signal update
-      component.columnWidths.set({ 'Innovation development': 140 });
-      expect(component.getColumnWidth(catCol)).toBe(140);
-    });
-
-    it('allows adding and removing columns dynamically via column picker', () => {
-      build(OPEN_PHASE);
-
-      expect(component.availableCategories()).toEqual(['Innovation development', 'Policy change']);
-      expect(component.selectedCategories()).toEqual(['Innovation development', 'Policy change']);
-
-      // Toggle column picker
-      expect(component.isColumnPickerOpen()).toBe(false);
-      component.toggleColumnPicker();
-      expect(component.isColumnPickerOpen()).toBe(true);
-
-      // Deselect Policy change
-      component.toggleCategory('Policy change');
-      expect(component.selectedCategories()).toEqual(['Innovation development']);
-      expect(component.columns().map(c => c.label)).toEqual(['Science program', 'Total', 'Innovation development']);
-
-      // Select All
-      component.selectAllCategories();
-      expect(component.selectedCategories()).toEqual(['Innovation development', 'Policy change']);
-      expect(component.columns().map(c => c.label)).toEqual(['Science program', 'Total', 'Innovation development', 'Policy change']);
-
-      // Reset / Deselect All (keeps first)
-      component.deselectAllCategories();
-      expect(component.selectedCategories()).toEqual(['Innovation development']);
-    });
-
-    it('builds one matrix row per programme, with cells aligned to the category columns', () => {
-      build(OPEN_PHASE);
-
-      const rows = component.rows();
-      expect(rows.map(r => [r.code, r.total])).toEqual([
-        ['SP01', 3],
-        ['SP06', 2]
-      ]);
-      // SP01: 2 Innovation development + 1 Policy change. Cell order follows categories().
-      expect(rows[0].cells).toEqual([2, 1]);
-      expect(rows[1].cells).toEqual([2, 0]);
-
-      // Every row's cells sum to its own total, and the footer sums the whole phase.
-      for (const row of rows) expect(row.cells.reduce((a, b) => a + b, 0)).toBe(row.total);
-      expect(component.data.footer().total).toBe(5);
-      expect(component.data.footer().cells).toEqual([4, 1]);
-    });
-
-    it('calculates maxMatrixCellValue and cellIntensity for heatmap styling', () => {
-      build(OPEN_PHASE);
-
-      // In OPEN_PHASE: max cell value is 2
-      expect(component.maxMatrixCellValue()).toBe(2);
-
-      // 0 value -> 0 intensity
-      expect(component.cellIntensity(0)).toBe(0);
-      // max value (2) -> 1
-      expect(component.cellIntensity(2)).toBe(1);
-      // value 1 -> 1 / 2 = 0.5
-      expect(component.cellIntensity(1)).toBe(0.5);
-    });
-
-    it('sorts on a header click and flips direction on the second', () => {
-      build(OPEN_PHASE);
-
-      const programme = component.columns()[0];
-      component.sortBy(programme);
-      expect(component.rows().map(r => r.code)).toEqual(['SP01', 'SP06']);
-
-      component.sortBy(programme);
-      expect(component.rows().map(r => r.code)).toEqual(['SP06', 'SP01']);
-
-      // A different column starts descending again.
-      component.sortBy(component.columns()[1]);
-      expect(component.sortAsc()).toBe(false);
-      expect(component.rows().map(r => r.total)).toEqual([3, 2]);
-
-      // Sort by category column
-      const catCol = component.columns()[2];
-      component.sortBy(catCol);
-      expect(component.sortKey()).toBe(0);
-      expect(component.isSorted(catCol)).toBe(true);
-    });
-
-    it('opens a programme on the Results tab — the surface that lists exactly what the row counts', () => {
-      build(OPEN_PHASE);
-
-      component.openProgramme('SP06');
-      expect(router.navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP06', 'results']);
-
-      // A row with no code navigates nowhere instead of building a broken url.
-      (router.navigate as jest.Mock).mockClear();
-      component.openProgramme('');
-      expect(router.navigate).not.toHaveBeenCalled();
-    });
+    // A row with no code navigates nowhere instead of building a broken url.
+    (router.navigate as jest.Mock).mockClear();
+    component.openProgramme('');
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('says the figures are partial instead of passing a truncated portfolio off as the whole thing', () => {
@@ -584,8 +517,7 @@ describe('PortfolioOverviewComponent', () => {
           useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE: { GET_AllResultsWithUseRole: () => throwError(() => new Error('boom')) } }
         },
         { provide: Router, useValue: { navigate: jest.fn() } },
-        { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
-        { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } }
+        { provide: DataControlService, useValue: { reportingCurrentPhase: {} } }
       ]
     });
     fixture = TestBed.createComponent(PortfolioOverviewComponent);
@@ -611,8 +543,7 @@ describe('PortfolioOverviewComponent', () => {
           }
         },
         { provide: Router, useValue: { navigate: jest.fn() } },
-        { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
-        { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } }
+        { provide: DataControlService, useValue: { reportingCurrentPhase: {} } }
       ]
     });
     fixture = TestBed.createComponent(PortfolioOverviewComponent);
@@ -629,6 +560,7 @@ describe('PortfolioOverviewComponent', () => {
 
   describe('Results by typology slot (TYV-R-7, S-7.1)', () => {
     const BLOCK = 'app-portfolio-typology-block';
+    const TOC_KPI = 'app-portfolio-toc-kpi-block';
 
     const buildWith = (resultsSE: unknown) => {
       TestBed.resetTestingModule();
@@ -638,7 +570,8 @@ describe('PortfolioOverviewComponent', () => {
           { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 2 } }, resultsSE } },
           { provide: Router, useValue: { navigate: jest.fn() } },
           { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
-          { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } }
+          provideHttpClient(),
+          provideHttpClientTesting()
         ]
       });
       fixture = TestBed.createComponent(PortfolioOverviewComponent);
@@ -654,18 +587,18 @@ describe('PortfolioOverviewComponent', () => {
       expect(fixture.nativeElement.querySelector(BLOCK)).toBeNull();
     });
 
-    it('hasFigures: block sits after the status section and before the matrix, skeleton gone', () => {
+    it('hasFigures: block sits after the status section and directly before the ToC KPI block, skeleton gone', () => {
       build(OPEN_PHASE);
 
       expect(component.hasFigures()).toBe(true);
       const root: HTMLElement = fixture.nativeElement;
       const block = root.querySelector(BLOCK) as Element;
       const status = root.querySelector('[data-testid="status-guide-link"], h2')!.closest('.po-card') as Element;
-      const matrix = root.querySelector('#progress-by-science-program') as Element;
+      const tocKpi = root.querySelector(TOC_KPI) as Element;
       expect(block).toBeTruthy();
       expect(root.querySelector('[data-testid="portfolio-overview-skeleton-typology"]')).toBeNull();
       expect(status.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(block.compareDocumentPosition(matrix) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(block.compareDocumentPosition(tocKpi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it('error: no block', () => {
@@ -683,33 +616,6 @@ describe('PortfolioOverviewComponent', () => {
     });
   });
 
-  it('toggles matrixViewMode between table and chart', () => {
-    build(OPEN_PHASE);
-
-    expect(component.matrixViewMode()).toBe('table');
-    component.setMatrixViewMode('chart');
-    expect(component.matrixViewMode()).toBe('chart');
-    expect(component.matrixChartOption()).toBeTruthy();
-    expect(component.matrixChartTable().caption).toContain('Progress by Science Program breakdown');
-
-    component.setMatrixViewMode('table');
-    expect(component.matrixViewMode()).toBe('table');
-  });
-
-  it('exports progress by science program data to Excel via ExportTablesService', async () => {
-    build(OPEN_PHASE);
-    const exportSpy = jest.spyOn(TestBed.inject(ExportTablesService), 'exportExcel').mockResolvedValue(undefined as never);
-
-    await component.exportToExcel();
-
-    expect(exportSpy).toHaveBeenCalledTimes(1);
-    const [exportData, fileName, wscols] = exportSpy.mock.calls[0] as [Record<string, unknown>[], string, unknown[]];
-    expect(fileName).toContain('Portfolio-Progress-Science-Programs-2026');
-    expect(exportData.length).toBeGreaterThan(0);
-    expect(exportData[exportData.length - 1]['Science Program']).toBe('TOTAL');
-    expect(wscols.length).toBeGreaterThan(0);
-  });
-
   describe('Interactive Navigation & Click Handlers', () => {
     it('navigates to Results Center or Bilateral results when clicking KPI cards', () => {
       build(OPEN_PHASE);
@@ -725,7 +631,7 @@ describe('PortfolioOverviewComponent', () => {
       expect(navigateSpy).toHaveBeenCalledWith(['/result-framework-reporting/bilateral-results']);
     });
 
-    it('handles interactive clicks on charts and table cells', () => {
+    it('handles interactive clicks on charts', () => {
       build(OPEN_PHASE);
       const navigateSpy = jest.spyOn(router, 'navigate');
 
@@ -737,50 +643,10 @@ describe('PortfolioOverviewComponent', () => {
       component.onBilateralChartClick();
       expect(navigateSpy).toHaveBeenCalledWith(['/result-framework-reporting/bilateral-results']);
 
-      // Matrix chart click navigates to Results Center filtered by program
-      component.onMatrixChartClick({ name: 'Climate Action' } as any);
-      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { program: 'SP06' } });
-
       // Category origin chart click navigates to Results Center filtered by category
       component.onCategoryOriginChartClick({ name: 'Knowledge product' } as any);
       expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { category: 'Knowledge product' } });
 
-      // Category cell click in table navigates to Results Center with program and category
-      const sampleRow = component.paginatedRows()[0];
-      const sampleCol = component.columns().find(c => c.key === 'category')!;
-      component.onCategoryCellClick(sampleRow, sampleCol);
-      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], {
-        queryParams: { program: sampleRow.code, category: sampleCol.label }
-      });
-    });
-  });
-
-  describe('Column resize does not trigger a sort (parity with bugfix/results-center-title-resize-triggers-sort)', () => {
-    it('swallows the phantom click the browser fires after a resize drag ends over the header, without swallowing a later unrelated click', () => {
-      build(OPEN_PHASE);
-      const column = component.columns()[0]; // 'programme'
-      const sortKeyBefore = component.sortKey();
-      const sortAscBefore = component.sortAsc();
-
-      component.onResizeStart({ clientX: 300, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, column);
-      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 250 }));
-      window.dispatchEvent(new MouseEvent('mouseup'));
-
-      // Stands in for the native click the browser synthesizes on <th> right after this drag's
-      // mouseup — this is the click that would otherwise reach the header button's sortBy(column).
-      const phantomClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-      document.dispatchEvent(phantomClick);
-      expect(phantomClick.defaultPrevented).toBe(true);
-      expect(component.sortKey()).toBe(sortKeyBefore);
-      expect(component.sortAsc()).toBe(sortAscBefore);
-      expect(component.columnWidths()[column.label]).toBe(230);
-
-      const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-      document.dispatchEvent(laterUnrelatedClick);
-      expect(laterUnrelatedClick.defaultPrevented).toBe(false);
-      component.sortBy(column);
-      expect(component.sortKey()).toBe('programme');
-      expect(component.sortAsc()).toBe(false);
     });
   });
 
@@ -792,8 +658,7 @@ describe('PortfolioOverviewComponent', () => {
       providers: [
         { provide: ApiService, useValue: { authSE: { localStorageUser: null }, resultsSE: { GET_AllResultsWithUseRole: spy } } },
         { provide: Router, useValue: { navigate: jest.fn() } },
-        { provide: DataControlService, useValue: { reportingCurrentPhase: {} } },
-        { provide: ExportTablesService, useValue: { exportExcel: jest.fn() } }
+        { provide: DataControlService, useValue: { reportingCurrentPhase: {} } }
       ]
     });
     fixture = TestBed.createComponent(PortfolioOverviewComponent);

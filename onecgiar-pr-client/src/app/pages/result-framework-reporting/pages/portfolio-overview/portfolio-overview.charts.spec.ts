@@ -9,8 +9,6 @@ import {
   categoryOriginBarTable,
   centerBilateralOption,
   centerBilateralTable,
-  matrixTableChartOption,
-  matrixTableChartTable,
   truncateProgramAxisLabel,
   PROGRAM_AXIS_LABEL_MAX_CHARS
 } from './portfolio-overview.charts';
@@ -336,43 +334,6 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
           ['CIMMYT', 35, 25, '35%']
         ]);
       });
-    });
-  });
-
-  describe('matrixTableChartOption & matrixTableChartTable (POV-R-6)', () => {
-    const mockRows = [
-      { code: 'SP01', name: 'Plant Health', total: 15, cells: [10, 5] },
-      { code: 'SP02', name: 'Breeding', total: 20, cells: [12, 8] }
-    ];
-    const mockCatCols = [
-      { label: 'Knowledge product', shortLabel: 'KP', cellIndex: 0 },
-      { label: 'Policy change', shortLabel: 'Policy', cellIndex: 1 }
-    ];
-
-    it('builds a stacked bar chart option with category series per column', () => {
-      const option = matrixTableChartOption(mockRows, mockCatCols, mockTokens) as {
-        xAxis: { data: string[] };
-        series: { name: string; type: string; stack: string; data: number[] }[];
-      };
-
-      expect(option.xAxis.data).toEqual(['Plant Health', 'Breeding']);
-      expect(option.series.length).toBe(3);
-      expect(option.series[0].name).toBe('KP');
-      expect(option.series[0].data).toEqual([10, 12]);
-      expect(option.series[1].name).toBe('Policy');
-      expect(option.series[1].data).toEqual([5, 8]);
-      expect(option.series[2].name).toBe('Total');
-    });
-
-    it('builds accessible table model for matrix chart', () => {
-      const table = matrixTableChartTable(mockRows, mockCatCols);
-
-      expect(table.caption).toContain('Progress by Science Program breakdown');
-      expect(table.headers).toEqual(['Science Program', 'Program Name', 'Total', 'Knowledge product', 'Policy change']);
-      expect(table.rows).toEqual([
-        ['SP01', 'Plant Health', 15, 10, 5],
-        ['SP02', 'Breeding', 20, 12, 8]
-      ]);
     });
   });
 });

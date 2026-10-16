@@ -98,14 +98,6 @@ export interface PortfolioBar {
   width: string;
 }
 
-/** One programme row of the matrix. `cells` follows `categories()` order, one to one. */
-export interface PortfolioRow {
-  code: string;
-  name: string;
-  total: number;
-  cells: number[];
-}
-
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 /**
@@ -198,6 +190,16 @@ export class PortfolioOverviewService {
   readonly closedPhase = signal<boolean>(false);
 
   readonly total = computed(() => this.rows().length);
+
+  /**
+   * Version (phase) id of the page rows: the first row's `version_id`, or `null` when there is none.
+   * `apply()` narrows the rows to ONE phase (the open one, or the newest closed one), so the first row speaks
+   * for all. It feeds the ToC KPI block, so the section describes the same phase as the page (TKP-P-10).
+   */
+  readonly versionId = computed<number | null>(() => {
+    const id = Number(this.rows()[0]?.version_id);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  });
 
   /**
    * Executive KPI Summary (POV-R-1)
@@ -425,31 +427,6 @@ export class PortfolioOverviewService {
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([code, n]) => ({ code, name: this.programmeName(code), n, width: percent(n, max) }));
   });
-
-  /** The matrix: one row per programme, ordered by total desc. */
-  readonly programmeRows = computed<PortfolioRow[]>(() => {
-    const cats = this.categories();
-    const byProgramme = new Map<string, RawResult[]>();
-    for (const row of this.rows()) {
-      const code = text(row.submitter);
-      if (!code) continue;
-      byProgramme.set(code, [...(byProgramme.get(code) ?? []), row]);
-    }
-    return [...byProgramme.entries()]
-      .map(([code, items]) => ({
-        code,
-        name: this.programmeName(code),
-        total: items.length,
-        cells: cats.map(cat => items.filter(item => text(item.result_type) === cat).length)
-      }))
-      .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
-  });
-
-  /** The `All programs` closing row — recomputed from the rows, never accumulated by hand. */
-  readonly footer = computed(() => ({
-    total: this.total(),
-    cells: this.categories().map(cat => this.rows().filter(row => text(row.result_type) === cat).length)
-  }));
 
   /** Loads the portfolio. Safe to call again: a second call supersedes the first. */
   load(): void {

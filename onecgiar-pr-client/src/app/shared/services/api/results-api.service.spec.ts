@@ -5770,4 +5770,30 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+  describe('GET_PortfolioTocCoverage', () => {
+    const base = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/portfolio-coverage`;
+
+    it('sends versionId as a query parameter and returns the envelope untouched', done => {
+      const envelope = { response: { versionId: 36, programs: [], portfolio: { total: 0, covered: 0 } }, message: 'ok', status: 200 };
+      service.GET_PortfolioTocCoverage(36).subscribe(res => {
+        expect(res).toEqual(envelope);
+        done();
+      });
+      const req = httpMock.expectOne(`${base}?versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(envelope);
+    });
+
+    it('omits the query string without a versionId', () => {
+      service.GET_PortfolioTocCoverage().subscribe();
+      const req = httpMock.expectOne(base);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+
+    it('omits the query string for a non-finite versionId', () => {
+      service.GET_PortfolioTocCoverage(NaN).subscribe();
+      httpMock.expectOne(base).flush({});
+    });
+  });
 });

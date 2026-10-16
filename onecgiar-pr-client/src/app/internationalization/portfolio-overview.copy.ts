@@ -29,5 +29,21 @@ export const PORTFOLIO_OVERVIEW_COPY = {
   noLeadCenter: 'No lead Center',
   noType: 'No type',
   centerNote: 'Each W3/Bilateral result counts once, under its lead Center.',
-  centerEmpty: 'No W3/Bilateral results in this phase'
+  centerEmpty: 'No W3/Bilateral results in this phase',
+  // Progress against ToC KPIs (spec changes/portfolio-overview-revamp/toc-kpi-progress, TKP-R-4..7)
+  tocKpi: {
+    title: 'Progress against ToC KPIs',
+    subtitle: (year: string) =>
+      `KPIs covered by at least one W1/W2 result in QA or Submitted status, out of the KPIs in each Program's Theory of Change for ${year}`,
+    summaryLabel: 'All Programs and Accelerators',
+    splitLine: (outputs: { covered: number; total: number }, outcomes: { covered: number; total: number }) =>
+      `Outputs ${outputs.covered} / ${outputs.total} · Outcomes ${outcomes.covered} / ${outcomes.total}`,
+    noKpis: 'No ToC KPIs in this phase',
+    empty: 'No ToC KPIs are defined for this phase yet.',
+    error: 'Progress against ToC KPIs could not be loaded right now.',
+    retry: 'Retry',
+    loading: 'Loading progress against ToC KPIs',
+    barLabel: (percent: number, covered: number, total: number) => `${percent}% — ${covered} of ${total} KPIs covered`,
+    openProgramme: (name: string) => `Open the Results tab of ${name}`
+  }
 } as const;

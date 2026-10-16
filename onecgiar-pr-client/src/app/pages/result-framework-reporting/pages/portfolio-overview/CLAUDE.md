@@ -1,41 +1,32 @@
 # portfolio-overview
 
-**Verified:** 2026-10-15 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/typology-view (TYV-T-3)
+**Verified:** 2026-10-15 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-T-5)
 
-**What this owns:** the **admin-only** `/portfolio-overview` screen — reporting figures for the WHOLE
-portfolio in the open phase: a KPI deck, the status section, results by indicator category, a
-science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304**; design block `showPortfolio` of
-`PRMS Reporting.dc.html` (read 2026-08-24).
+**What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
+phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers. Ticket **P2-3304**;
+design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 
 ## Contract
 
-- `PortfolioOverviewComponent` is standalone + `OnPush` and **provides its own service**
-  (`portfolio-overview.component.ts:35`), so leaving the screen drops the rows.
+- `PortfolioOverviewComponent` is standalone + `OnPush` and **provides its own service**, so leaving the screen
+  drops the rows. The typology and ToC KPI blocks read from it; the ToC KPI block and the Centers block have **their own** data paths.
 - `PortfolioOverviewService` owns **data and every aggregation**: `totals()` (status strip),
-  `categories()` / `categoryBars()`, `bilateralTotal()` / `bilateralBars()`, `programmeRows()`
-  (the matrix) and `footer()`. All are `computed` off one signal — never accumulated by hand.
-- The component owns only **view state**: `sortKey` / `sortAsc`, `bilateralExpanded`, plus the four
-  mutually exclusive states `isLoading` / `hasError` / `isEmpty` / `hasFigures`.
-- Data path: **one** call to `GET_AllResultsWithUseRole(userId, { limit: 20000 })`
-  (`services/portfolio-overview.service.ts:189`) — no `submitter_id`, so it returns everything the
-  caller's roles allow.
-- Route: `extraRoutingApp` in `shared/routing/routing-data.ts`, `path: 'portfolio-overview'`,
-  `canActivate: [CheckAdminGuard]`. **Guarded, not merely hidden** — the design gates it on
-  `isAdmin`, and hiding a nav entry is never enough (client CLAUDE.md §7).
-- `kpis()` adds 8 breakdown fields: `w1w2New`, `w1w2NewSubmitted`, `w1w2NewEditing`, `w1w2Replicated` and the
-  same four as `bilateralNew…` / `bilateralReplicated`. **Replicated** = `is_replicated` ∈ `1 | '1' | true`;
-  anything else is **New**. **Editing** = `Number(status_id) === 1`; every other status (missing too) is
-  **Submitted**. Submitted + Editing = New, so New + Replicated reconciles to the source's count.
+  `categories()` / `categoryBars()`, `bilateralTotal()` / `bilateralBars()` and `versionId()` (first row's
+  `version_id`). All are `computed` off one signal — never accumulated by hand.
+- The component owns only **view state**: `bilateralExpanded`, `selectedStatusFilter`, the `phaseYear()` shared
+  by the eyebrow and the ToC KPI subtitle, plus the four mutually exclusive states `isLoading` / `hasError` /
+  `isEmpty` / `hasFigures`.
+- Page data: **one** `GET_AllResultsWithUseRole(userId, { limit: 20000 })`, no `submitter_id` (all the roles allow).
+- Route: `extraRoutingApp` (`shared/routing/routing-data.ts`), `canActivate: [CheckAdminGuard]`. **Guarded, not
+  merely hidden** (client CLAUDE.md §7).
+- `kpis()` has 8 breakdown fields (`w1w2New/NewSubmitted/NewEditing/Replicated`, same four `bilateral…`). **Replicated** = `is_replicated` ∈ `1 | '1' | true`, else **New**. **Editing** = `Number(status_id) === 1`; every
+  other status (missing too) is **Submitted**. Submitted + Editing = New, so New + Replicated reconciles.
 
 ## KPI deck (2026-10-14, spec `changes/portfolio-overview-kpi-breakdown`)
 
-- Three cards (the 4th, "Science programs", and `scrollToMatrixSection()` were removed):
-  1. **Total** — W1/W2 new, W3/Bilateral new, W1/W2 replicated, W3/Bilateral replicated (4 parts that
-     reconcile to the total), a translucent separator between the new and replicated pairs.
-  2. **W1/W2** — New → Submitted / Editing, separator, "Replicated from previous years".
-  3. **W3/Bilateral** — same shape, last line "Innovations replicated from 2025".
-- All 3 cards keep their click targets: card 1 `navigateToResultsCenter('all')`, card 2 `'w1w2'`, card 3 `'bilateral'`; test ids are `kpi-total-*`, `kpi-w1w2-*`,
-  `kpi-bilateral-*`.
+- Three cards: **Total** (W1/W2 new + W3 new + the two replicated, reconciling to the total), **W1/W2** and
+  **W3/Bilateral** (New -> Submitted / Editing, separator, replicated line). Click targets: card 1
+  `navigateToResultsCenter('all')`, card 2 `'w1w2'`, card 3 `'bilateral'`; test ids `kpi-total-*`, `kpi-w1w2-*`, `kpi-bilateral-*`.
 
 ## CGIAR Centers block (P2-3928; W3-only + origin filter by spec `centers-new-vs-replicated`)
 
@@ -65,7 +56,7 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
 
 - `shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component.ts:218` — `sections()` puts it **first**
   in PLATFORM for admins (from `extraRoutingApp`), above `Results Center`, as designed. Icon `lucideLayoutGrid` (`:151`).
-- Rows and bilateral rows navigate to `entity-details/:code/results` (the programme's Results tab).
+- Bilateral and ToC KPI rows navigate to `entity-details/:code/results` (the programme's Results tab).
 
 ## Gotchas
 
@@ -76,14 +67,8 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
   `programme-results.component.ts:101`; unknown ids fall back to the `not-started` foreground. The
   names in the payload (`Editing`, `Pending Review`, …) are labels only — colouring by name would
   invent a sixth status colour (UI rule 9).
-- ⚠️ **Column order is `programme · TOTAL · categories`**, verified in the design template, not
-  inferred from a rendering: a row emits `pr.code`, `pr.name`, `pr.total`, then `pr.cells`. Putting
-  TOTAL last silently misaligns every figure against its header.
-- ⚠️ **`cells` is positional** — index `i` of a row is `categories()[i]`. Both come from the same
-  `computed`, so they cannot drift; do not sort one without the other.
-- **Categories are derived from the rows**, never hardcoded (real data: seven, incl. `Other output` / `Other outcome`).
 - **The counters and the category bars are deliberately NOT clickable**: no surface lists the whole portfolio
-  filtered by status or category, so the destination would be invented (raised on P2-3304).
+  filtered by status or category (raised on P2-3304).
 - **The bilateral fill uses `--pr-chart-2-muted` (`#8b7cc4`)** — the design's colour, valid here
   because it is a NON-TEXT graphic (3.52:1 on the divider track, WCAG 1.4.11). 🛑 Never use it for
   text: see `docs/DESIGN-DEVIATIONS.md` §1 vs §8, the same hex answering two different questions.
@@ -105,15 +90,29 @@ science-program × category matrix and the CGIAR Centers block. Ticket **P2-3304
   parameter. Rejected-tile hint: `statusHints` + `hlmTooltip`.
 - Guide link: `STATUS_GUIDE_URL` (`shared/constants/portfolio-links.constants.ts`), typed `string` (not `''`,
   or templates narrow it to `never`). Empty = not rendered. Pending OQ-1: set it when the guide exists.
-- 🛑 **Removed on purpose, do not re-add:** the Program and Center ranking cards ("competition" feedback) and
-  "Progress by Center" (stakeholder item 9: no planning data for W3, so no "progress").
+- 🛑 **Removed on purpose, do not re-add:** the Program and Center ranking cards ("competition" feedback),
+  "Progress by Center" (stakeholder item 9: no planning data for W3, so no "progress") and the Program x category
+  matrix with search, filters, paging, column picker and Excel export (TKP-R-9). Level counts per Program live in
+  Typology; the export returns with family #9 `filtered-detail-export`.
 
 ## Results by typology (2026-10-15, spec `changes/portfolio-overview-revamp/typology-view`)
 
-- `components/typology-block/` between the status section and the matrix, inside `hasFigures()` (skeleton testid
+- `components/typology-block/` after the status section, inside `hasFigures()` (skeleton testid
   `portfolio-overview-skeleton-typology`); type -> level map in `typology.aggregate.ts` (pure).
 - Center dimension is lead-only + W3-only; rows A->Z, catch-all last, no ranking. The `rows` input
   (`data.openRows()`) is the hook for the family #6 global filters.
+
+## Progress against ToC KPIs (2026-10-15, spec `changes/portfolio-overview-revamp/toc-kpi-progress`)
+
+- `components/toc-kpi-block/`, order typology -> ToC KPI -> Centers, **inside** `hasFigures()` (skeleton testid
+  `portfolio-overview-skeleton-toc-kpi`): it never mounts or requests while loading, so `[versionId]` is already
+  resolved and `[year]` is `phaseYear()`, never `''`. Do not move it out of the gate: null then a number = 2 calls.
+- **Own data path**: `GET_PortfolioTocCoverage(versionId)` (`toc-results/portfolio-coverage`, admin-only on the
+  server), one request per version and per Retry; a failure shows the block's error and leaves the page intact.
+- Rule: a KPI = distinct indicator, covered by >= 1 pooled W1/W2 result in QA or Submitted (W3 never covers).
+  % half-up, 100% only if covered = total, 0% only if covered = 0; total = 0 reads "No ToC KPIs in this phase".
+- 🛑 **No ranking**: rows in natural code order (`naturalCodeCompare`), no sort control. Only the name is
+  interactive (`(programmeOpen)` -> `openProgramme`); counts, bars and the summary are not links (P2-3304).
 
 ## Pending
 

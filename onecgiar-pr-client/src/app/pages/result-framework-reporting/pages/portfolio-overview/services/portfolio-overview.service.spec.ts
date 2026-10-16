@@ -319,6 +319,38 @@ describe('PortfolioOverviewService', () => {
     });
   });
 
+  describe('versionId — version of the page rows (TKP-P-10)', () => {
+    it('is null before any load', () => {
+      setupService();
+      expect(service.versionId()).toBeNull();
+    });
+
+    it('is the version_id of the open phase rows, read from a string', () => {
+      setupService([{ version_id: '36', phase_status: 1 }, { version_id: '36', phase_status: 1 }, { version_id: '34', phase_status: 0 }]);
+      service.load();
+
+      expect(service.versionId()).toBe(36);
+    });
+
+    it('is the newest version on a closed phase', () => {
+      setupService([
+        { version_id: '34', phase_status: 0 },
+        { version_id: '1', phase_status: 0 }
+      ]);
+      service.load();
+
+      expect(service.closedPhase()).toBe(true);
+      expect(service.versionId()).toBe(34);
+    });
+
+    it('is null when the rows carry no usable version_id', () => {
+      setupService([{ phase_status: 1 }]);
+      service.load();
+
+      expect(service.versionId()).toBeNull();
+    });
+  });
+
   describe('fetchedCount — rows actually fetched, before phase filtering (REQ-3-S1)', () => {
     it('reports the raw fetched-item count, distinct from the open-phase-filtered total()', () => {
       // 9 open-phase rows + 2 closed-phase rows fetched in the same page — fetchedCount must be 11

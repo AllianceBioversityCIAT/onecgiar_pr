@@ -21,6 +21,8 @@ import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result
 import { BilateralApiService } from './bilateral-api.service';
 import { BilateralOverviewService } from '../../../pages/bilateral/services/bilateral-overview.service';
 import { toDisplayBasis } from '../../constants/achieved-display-basis';
+import { PortfolioTocCoverage } from '../../interfaces/portfolio-toc-coverage.interface';
+import { ReportingApiResponse } from '../../interfaces/reporting-api.response';
 
 /**
  * @akili-spec notifications/detail-side-panel (DSP-T-2)
@@ -1698,6 +1700,16 @@ export class ResultsApiService {
       url += `&versionId=${encodeURIComponent(String(versionId))}`;
     }
     return this.http.get<any>(url).pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
+  }
+
+  // @akili-spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-R-3) — one portfolio-wide
+  // coverage call. No `toDisplayBasis`: the payload has counts only, no achieved values.
+  GET_PortfolioTocCoverage(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/portfolio-coverage`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<ReportingApiResponse<PortfolioTocCoverage>>(url);
   }
 
   // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
