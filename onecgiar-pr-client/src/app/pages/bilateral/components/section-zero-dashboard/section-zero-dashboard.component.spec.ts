@@ -7,7 +7,7 @@ import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { signal } from '@angular/core';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 const primaryRequestResponse = (
   state: 'none' | 'pending' | 'sent_back' | 'accepted',
@@ -61,6 +61,8 @@ describe('SectionZeroDashboardComponent', () => {
       resultContributingProjectIds: signal([]) as any,
       // P2-3760 — Contribution % stored on the lead project row; null = never answered.
       resultContributionPercentage: signal(null) as any,
+      // PAA-T-5 — the inline project selector reads the result lead Center code.
+      resultLeadCenterCode: signal<string | null>(null) as any,
       getProjects: jest.fn(),
       selectProject: jest.fn(),
       setLeadProject: jest.fn(),
@@ -342,6 +344,134 @@ describe('SectionZeroDashboardComponent', () => {
       });
 
       expect(component.requiresPrimarySelection()).toBe(true);
+    });
+  });
+
+  // PAA-T-1 (bilateral/replicated-innovations-2026-pa/project-and-pa-assignment) — an editable
+  // result with NO lead project gets the same project + Program pickers as a linked one (PAA-R-1..R-3,
+  // R-6). Every assertion reads the rendered DOM: the client runs zoneless.
+  describe('PAA-T-1 — project and Program picker with no lead project', () => {
+    const SP = (programId: number, programCode: string) => ({
+      programId,
+      programCode,
+      allocation: '100',
+      spName: `${programCode} name`,
+      spShortName: programCode,
+    });
+    const el = () => fixture.nativeElement as HTMLElement;
+    const saveButton = () => el().querySelector('.bp-assignment-save') as HTMLButtonElement | null;
+    const patchMock = () => (TestBed.inject(BilateralApiService) as any).PATCH_primaryAssignment as jest.Mock;
+
+    const openNoProjectResult = () => {
+      (creationService.currentResultId as any).set(27270);
+      (creationService.selectedProject as any).set(null);
+      (creationService.selectedPrimarySp as any).set({ programId: 9, programCode: 'SP09', allocation: '100' });
+      fixture.detectChanges();
+    };
+
+    it('(1) editable + no project: renders the selector and the R-6 hint, not "No project linked"', () => {
+      openNoProjectResult();
+
+      expect(el().querySelector('app-bilateral-project-selector')).not.toBeNull();
+      expect(el().querySelector('[data-testid="bp-no-project-hint"]')?.textContent).toContain(
+        'No 2026 project linked. Link one of your Center',
+      );
+      expect(el().querySelector('[data-testid="bp-no-project-hint"]')?.classList.contains('bp-primary-help')).toBe(true);
+      expect(el().textContent).not.toContain('No project linked');
+      // PAA-AC-1: the Program field is visible from the start but disabled; nothing to save (R-3).
+      const waiting = el().querySelector('[data-testid="bp-program-waiting"]');
+      expect(waiting?.textContent).toContain('Program');
+      expect(waiting?.querySelector('button')?.textContent).toContain('Select Primary Science Program');
+      expect((waiting?.querySelector('button') as HTMLButtonElement).disabled).toBe(true);
+      expect(el().textContent).not.toContain('This project has no alternative Primary Science Program');
+      expect(saveButton()).toBeNull();
+    });
+
+    it('(2) read-only + no project: static text, no selector, no save button, no hint', () => {
+      openNoProjectResult();
+      fixture.componentRef.setInput('readOnly', true);
+      fixture.detectChanges();
+
+      expect(el().textContent).toContain('No project linked');
+      expect(el().querySelector('app-bilateral-project-selector')).toBeNull();
+      expect(saveButton()).toBeNull();
+      expect(el().querySelector('[data-testid="bp-no-project-hint"]')).toBeNull();
+    });
+
+    it('keeps "Select a project to begin" in the create wizard (no result id)', () => {
+      expect(el().textContent).toContain('Select a project to begin');
+      expect(el().querySelector('[data-testid="bp-no-project-hint"]')).toBeNull();
+    });
+
+    it('(3) a one-Program project preselects its Program, enables Save and sends one PATCH with both ids', () => {
+      openNoProjectResult();
+      component.onProjectCandidate({ ...project(500, 'ONEPROG'), sciencePrograms: [SP(6, 'SP06')] });
+      fixture.detectChanges();
+
+      expect(el().textContent).toContain('SP06 name');
+      expect(el().textContent).not.toContain('Select the Primary Science Program allocated to this project.');
+      expect(saveButton()?.disabled).toBe(false);
+
+      saveButton()!.click();
+
+      expect(patchMock()).toHaveBeenCalledTimes(1);
+      expect(patchMock().mock.calls[0][0]).toBe(27270);
+      expect(patchMock().mock.calls[0][1]).toEqual({ project_id: 500, primary_science_program_id: 6 });
+    });
+
+    it('(4) a two-Program project asks for a Program first: Save disabled, 0 PATCH, 2025 P/A not shown as selected', () => {
+      openNoProjectResult();
+      component.onProjectCandidate({ ...project(600, 'TWOPROG'), sciencePrograms: [SP(6, 'SP06'), SP(7, 'SP07')] });
+      fixture.detectChanges();
+
+      expect(el().textContent).toContain('Select the Primary Science Program allocated to this project.');
+      expect(saveButton()?.disabled).toBe(true);
+      expect(el().querySelector('.bp-primary-selector')?.textContent).toContain('Select Primary Science Program');
+
+      saveButton()!.click();
+      component.saveAssignment();
+      expect(patchMock()).not.toHaveBeenCalled();
+
+      // Choosing a Program makes it saveable.
+      component.selectPrimary(SP(7, 'SP07'));
+      fixture.detectChanges();
+      expect(saveButton()?.disabled).toBe(false);
+    });
+
+    it('(4b) a two-Program project that INCLUDES the stored P/A still asks for a Program: label, hint and Save agree', () => {
+      openNoProjectResult(); // stored P/A = SP09
+      component.onProjectCandidate({ ...project(700, 'HASSP09'), sciencePrograms: [SP(9, 'SP09'), SP(7, 'SP07')] });
+      fixture.detectChanges();
+
+      expect(el().querySelector('.bp-primary-selector')?.textContent).toContain('Select Primary Science Program');
+      expect(el().querySelector('.bp-primary-selector')?.textContent).not.toContain('SP09 name');
+      expect(el().textContent).toContain('Select the Primary Science Program allocated to this project.');
+      expect(saveButton()?.disabled).toBe(true);
+    });
+
+    it('(5) a PATCH error shows the generic save error and the picked project is not shown as linked', () => {
+      (patchMock() as jest.Mock).mockReturnValueOnce(throwError(() => new Error('boom')));
+      openNoProjectResult();
+      component.onProjectCandidate({ ...project(500, 'ONEPROG'), sciencePrograms: [SP(6, 'SP06')] });
+      fixture.detectChanges();
+
+      saveButton()!.click();
+      fixture.detectChanges();
+
+      expect(el().textContent).toContain('The project and Primary Science Program could not be updated. Please try again.');
+      expect(el().querySelector('[data-testid="bp-no-project"]')).not.toBeNull();
+      expect(creationService.applyPrimaryAssignment).not.toHaveBeenCalled();
+      expect(creationService.loadResult).not.toHaveBeenCalled();
+      expect(el().querySelector('.bp-meta-field-value--project')).toBeNull();
+    });
+
+    it('(6) untouched: no PATCH is sent and no blocker or save button appears', () => {
+      openNoProjectResult();
+      fixture.detectChanges();
+
+      expect(patchMock()).not.toHaveBeenCalled();
+      expect(saveButton()).toBeNull();
+      expect(component.requiresPrimarySelection()).toBe(false);
     });
   });
 

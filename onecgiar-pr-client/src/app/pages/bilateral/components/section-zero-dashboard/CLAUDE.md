@@ -1,8 +1,19 @@
 # section-zero-dashboard (bilateral)
 
-**Verified:** 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: primary-request banners render `CODE - Name` via `programBannerLabel` / `bilateralProgramLabel` (name from the loaded project / primary / secondary SPs, code on a miss); prior: 2026-10-07 · spec `notifications/primary-review-not-accept` PRA-R-5 / PRA-T-2: `pending` (no owner) no longer sets `submitBlockedReason`, and the `draft` / `pending` banner reads "{code} will review this result when you submit it for review"; prior: 2026-10-06 · spec `bilateral/rejected-result-correction` RRC-R-11 / RRC-T-7; prior: 2026-10-01 · spec `notifications/primary-decline-rejects-result` PDR-R-9 / PDR-DD-8
+**Verified:** 2026-10-16 · qa-development-2026-ss · spec `bilateral/replicated-innovations-2026-pa/project-and-pa-assignment` PAA-T-1: editable result with no lead project renders the project selector + Program picker + R-6 hint (see "PAA-T-1" below); prior: 2026-10-13 · spec `results/program-full-names-labels-part-2` PF2-T-6: primary-request banners render `CODE - Name` via `programBannerLabel` / `bilateralProgramLabel` (name from the loaded project / primary / secondary SPs, code on a miss); prior: 2026-10-07 · spec `notifications/primary-review-not-accept` PRA-R-5 / PRA-T-2: `pending` (no owner) no longer sets `submitBlockedReason`, and the `draft` / `pending` banner reads "{code} will review this result when you submit it for review"; prior: 2026-10-06 · spec `bilateral/rejected-result-correction` RRC-R-11 / RRC-T-7; prior: 2026-10-01 · spec `notifications/primary-decline-rejects-result` PDR-R-9 / PDR-DD-8
 
 - **PRA-R-5:** `submitBlockedReason` is null for `pending` when there is no owner (`selectedPrimarySp()` empty); `pending` with an owner still blocks. `sentBack`, `noneUnpicked` and `rejected` banners unchanged.
+
+- **PAA-T-1 (2026-10-16):** the final `@else` branch (no `selectedProject()`) now has three states:
+  editable + result loaded (`canEditAssignment()`) -> `[data-testid="bp-no-project"]` block with
+  `app-bilateral-project-selector` (`deferCommit`, `onProjectCandidate`) + the R-6 hint
+  (`noProjectLinkHint`, `bp-primary-help`); read-only -> "No project linked"; no result id (create
+  wizard) -> "Select a project to begin". The Program field and the Save/error actions are two
+  `ng-template`s (`#programField`, `#assignmentActions`, DD-1) rendered by BOTH branches; the Program
+  field is on screen from first render (disabled `bp-program-waiting` placeholder until a project is picked); the real Program picker and the actions appear once a project is picked. Untouched = 0 PATCH, no blocker (R-3).
+  `assignmentPrimary()` returns null (never the stored 2025 P/A) when there is no lead project and no
+  primary was chosen this session, even if the picked project includes it, so the picker asks for a Program; `requiresPrimarySelection`
+  stays authoritative for Save.
 
 ## What it is
 Section 0 of the bilateral form: the read-mostly card that identifies the result (code, type,

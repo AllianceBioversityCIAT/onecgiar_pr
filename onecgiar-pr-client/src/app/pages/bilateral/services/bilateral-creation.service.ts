@@ -298,7 +298,12 @@ export class BilateralCreationService {
           const leadProject = response.contributingProjects.find((p: any) => p.is_lead);
           if (leadProject?.obj_clarisa_project) {
             const proj = leadProject.obj_clarisa_project;
-            this.selectedProject.set({
+            // PAA-DD-3: the detail omits project mappings. When the centre catalogue already arrived,
+            // take the lead project from it (with its sciencePrograms); getProjects covers the reverse order.
+            const catalogueProject = this.projects().find(
+              (p: BilateralProject) => Number(p.id) === Number(proj.id),
+            );
+            this.selectedProject.set(catalogueProject ?? {
               id: proj.id,
               shortName: proj.shortName,
               fullName: proj.fullName,
