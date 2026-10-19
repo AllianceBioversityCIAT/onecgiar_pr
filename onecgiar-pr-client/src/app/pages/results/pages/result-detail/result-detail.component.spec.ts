@@ -409,8 +409,39 @@ describe('ResultDetailComponent', () => {
       expect(component.requestedPhaseName).toBe('');
     });
 
-    it('keeps the route and swaps only the phase in the recovery links', () => {
-      expect(component.phaseLink(34)).toBe(`${(component as any).router.url.split('?')[0]}?phase=34`);
+    // @akili-spec bugfix/result-detail-not-found-navigation RDN-R-2
+    it('keeps the route and swaps only the phase in the recovery links for a Reporting phase', () => {
+      const routerPath = (component as any).router.url.split('?')[0];
+      expect(component.phaseLink({ id: 34, app_module_id: 1 })).toBe(`${routerPath}?phase=34`);
+    });
+
+    it('falls back to the Reporting route when the phase row has no app_module_id', () => {
+      const routerPath = (component as any).router.url.split('?')[0];
+      expect(component.phaseLink({ id: 34 })).toBe(`${routerPath}?phase=34`);
+    });
+
+    it('points an IPSR phase at IPSR general information, not at the Reporting route', () => {
+      mockApiService.resultsSE.currentResultCode = 11719;
+      expect(component.phaseLink({ id: 9, app_module_id: 2 })).toBe('/ipsr/detail/11719/general-information?phase=9');
+    });
+
+    it('renders each chip href by the module of its phase', async () => {
+      // First pass runs ngOnInit -> getData(), which resets the failure state and the code; settle it, then set ours.
+      fixture.detectChanges();
+      await fixture.whenStable();
+      mockApiService.resultsSE.currentResultCode = 11719;
+      mockCurrentResultService.resultIdIsconverted = false;
+      mockCurrentResultService.resultLoadFailure.set('not-found');
+      component.availablePhases.set([
+        { id: 9, phase_name: 'IPSR 2026', status: true, app_module_id: 2 } as any,
+        { id: 34, phase_name: 'Reporting 2025', status: false, app_module_id: 1 } as any
+      ]);
+      fixture.detectChanges();
+
+      const anchors = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="result-detail-not-found-phases"] a')) as HTMLAnchorElement[];
+      expect(anchors.length).toBe(2);
+      const routerPath = (component as any).router.url.split('?')[0];
+      expect(anchors.map(a => a.getAttribute('href'))).toEqual(['/ipsr/detail/11719/general-information?phase=9', `${routerPath}?phase=34`]);
     });
   });
 
@@ -716,6 +747,68 @@ describe('ResultDetailComponent', () => {
       navigate(2, '/result/result-detail/1234/general-information?phase=6');
 
       expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
+  // @akili-spec bugfix/result-detail-not-found-navigation RDN-R-3 (RDN-DD-3)
+  describe('IPSR result redirect (RDN-R-3)', () => {
+    let navigateSpy: jest.SpiedFunction<Router['navigate']>;
+
+    // The signal is written AFTER the component exists, so the effect runs on a real change.
+    const resolveResult = (result_type_id: number, result_code: number | string) => {
+      mockDataControlService.currentResultSignal.set({ result_type_id, result_code });
+      TestBed.flushEffects();
+    };
+
+    beforeEach(() => {
+      // The outer beforeEach already built a component; its effect would double every call.
+      fixture.destroy();
+      jest.spyOn(ResultDetailComponent.prototype, 'getData').mockImplementation(async () => {});
+      mockApiService.resultsSE.currentResultCode = '11719';
+      mockApiService.resultsSE.currentResultPhase = '9';
+      navigateSpy = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      fixture = TestBed.createComponent(ResultDetailComponent);
+      fixture.detectChanges();
+      TestBed.flushEffects();
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('sends a resolved IPSR (type 10) result to the IPSR module, replacing the history entry', () => {
+      resolveResult(10, 11719);
+
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledWith(['/ipsr/detail', '11719', 'general-information'], {
+        queryParams: { phase: '9' },
+        replaceUrl: true
+      });
+    });
+
+    it('leaves a non-IPSR result (type 7) where it is', () => {
+      resolveResult(7, 11719);
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not redirect on a stale result whose code is not the one being opened', () => {
+      resolveResult(10, 99999);
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+
+    it('redirects once per code even if the signal is written again', () => {
+      resolveResult(10, 11719);
+      resolveResult(10, 11719);
+      mockDataControlService.currentResultSignal.set({ result_type_id: 10, result_code: 11719, other: 1 });
+      TestBed.flushEffects();
+
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not redirect Complementary innovation (type 11, P-6)', () => {
+      resolveResult(11, 11719);
+
+      expect(navigateSpy).not.toHaveBeenCalled();
     });
   });
 });
