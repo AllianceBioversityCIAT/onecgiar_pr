@@ -1,4 +1,11 @@
 // @akili-spec bilateral/center-overview-tab (COV-T-2, COV-DD-11, COV-R-16)
+
+/**
+ * INC-165171 — replicated first, by source; then new W3/Bilateral; then W1/W2 split by whether
+ * the result tags a bilateral project owned by the center.
+ */
+export type OverviewCategory = 'replicated_w3' | 'replicated_w1w2' | 'new_w3' | 'w1w2_tagging' | 'w1w2_center_only';
+
 /**
  * Single home for `BilateralCenterResult` (`COV-DD-11`) — previously declared in
  * `bilateral-results-list.component.ts`, which now re-exports it for existing imports. Both the
@@ -42,7 +49,13 @@ export interface BilateralCenterResult {
   source: 'API' | 'Result';
   creation_method?: string;
   is_ai_generated?: boolean | number;
-  is_leading_result: 0 | 1;
+  /** `null` on a W1/W2 row that only tags a center project (the center is not on the result). */
+  is_leading_result: 0 | 1 | null;
+  /**
+   * INC-165171 — the one bucket the center Overview counts this row in, resolved in SQL. Optional
+   * because older payloads and fixtures lack it; `resolveOverviewCategory` derives it then.
+   */
+  overview_category?: OverviewCategory;
   /**
    * BIL-POM-T-2 — raw SQL response (`getResultsByBilateralCenter` uses `this.query(...)`, not the
    * TypeORM entity layer): arrives as MySQL `tinyint` (`0`/`1`/possibly `null`), NOT a JS boolean.

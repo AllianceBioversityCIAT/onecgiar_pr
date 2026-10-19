@@ -36,6 +36,19 @@ describe('ResultRepository (unit)', () => {
     (repo as any).query = queryMock;
   });
 
+  /** getResultsByBilateralCenter binds: center code/acronym, the W3 alias pairs, the center code
+   *  again (results_center), the version and the project-tagging flag — in that order. */
+  const expectCenterResultsParams = (
+    params: unknown[],
+    centerId: string,
+    versionId: number,
+    taggingFlag: 0 | 1,
+  ) => {
+    expect(params.slice(0, 2)).toEqual([centerId, centerId]);
+    expect(params.slice(-3)).toEqual([centerId, versionId, taggingFlag]);
+    expect(params.join(',')).toContain('CIP,CENTER-06');
+  };
+
   it('builds IN clauses for array filters and paginates', async () => {
     const items = [{ id: 1, title: 'A' }];
     queryMock
@@ -386,7 +399,7 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('r.created_by');
     expect(sql).toContain('AS created_by_name');
     expect(sql).toContain('FROM users u');
-    expect(params).toEqual(['BIO', 'BIO', 36]);
+    expectCenterResultsParams(params, 'BIO', 36, 0);
   });
 
   it('includes AI provenance fields in bilateral center results ordered newest first', async () => {
@@ -400,7 +413,7 @@ describe('ResultRepository (unit)', () => {
       "CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated",
     );
     expect(sql).toContain('ORDER BY r.created_date DESC, r.id DESC');
-    expect(params).toEqual(['BIO', 'BIO', 36]);
+    expectCenterResultsParams(params, 'BIO', 36, 0);
   });
 
   // P2-3152 AC6 — the centre dashboard must list Project name and Description. Neither was
@@ -420,7 +433,7 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain(') AS project_name');
     expect(sql).not.toContain('LEFT JOIN results_by_projects');
     // The subquery adds no bound parameter — a stray ? here would shift mysql2's placeholders.
-    expect(params).toEqual(['BIO', 'BIO', 36]);
+    expectCenterResultsParams(params, 'BIO', 36, 0);
   });
 
   // P2-3653. The centre list offered "Update result" on a Knowledge Product and left the
@@ -443,7 +456,7 @@ describe('ResultRepository (unit)', () => {
     // Neither addition binds a parameter. `?` inside a SQL comment counts for mysql2 too — that
     // is what produced a QueryFailedError on `getIndicatorContributionSummaryByProgram`.
     expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
-    expect(params).toEqual(['BIO', 'BIO', 36]);
+    expectCenterResultsParams(params, 'BIO', 36, 0);
   });
 
   // COV-R-16 (bilateral/center-overview-tab): the Overview's "Projects covered" card needs the
@@ -469,10 +482,14 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('r.source');
     // Neither subquery binds a parameter — placeholder count must still match params.
     expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
-    expect(params).toEqual(['BIO', 'BIO', 36]);
+    expectCenterResultsParams(params, 'BIO', 36, 0);
     // Both project_name and project_id resolve the lead project the same way.
     expect(
-      (sql.match(/ORDER BY rbp\.is_lead DESC, rbp\.id DESC/g) ?? []).length,
+      (
+        sql.match(
+          /ORDER BY rbp\.project_id IN \(SELECT id FROM center_projects\) DESC, rbp\.is_lead DESC, rbp\.id DESC/g,
+        ) ?? []
+      ).length,
     ).toBe(2);
   });
 
@@ -486,7 +503,7 @@ describe('ResultRepository (unit)', () => {
 
     const [sql, params] = queryMock.mock.calls[0];
     expect(sql).toContain('r.is_replicated');
-    expect(params).toEqual(['BIO', 'BIO', 36]);
+    expectCenterResultsParams(params, 'BIO', 36, 0);
   });
 
   // SR-164368: result 8641 has two active results_center rows for the same center, and the plain
@@ -500,10 +517,59 @@ describe('ResultRepository (unit)', () => {
     const [sql, params] = queryMock.mock.calls[0];
     expect(sql).toContain('MAX(rcx.is_leading_result) AS is_leading_result');
     expect(sql).toContain('GROUP BY rcx.result_id');
-    expect(sql).toContain(') rc ON rc.result_id = r.id');
+    expect(sql).toContain('LEFT JOIN center_rc rc ON rc.result_id = r.id');
     expect(sql).not.toMatch(/INNER JOIN results_center rc\s+ON/);
     expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
-    expect(params).toEqual(['BIO', 'BIO', 36]);
+    expectCenterResultsParams(params, 'BIO', 36, 0);
+  });
+
+  // INC-165171: the center Overview builds every card from this one row set, so each row says
+  // which bucket it belongs to, and the W1/W2 rows tagging a center project can be opted in.
+  describe('getResultsByBilateralCenter overview categories (INC-165171)', () => {
+    it('classifies every row into one overview_category, replicated first', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getResultsByBilateralCenter('CIP', 8);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('END AS overview_category');
+      const order = [
+        "'replicated_w3'",
+        "'replicated_w1w2'",
+        "'new_w3'",
+        "'w1w2_tagging'",
+        "'w1w2_center_only'",
+      ].map((label) => sql.indexOf(label));
+      expect(order.every((index) => index > 0)).toBe(true);
+      expect([...order].sort((a, b) => a - b)).toEqual(order);
+    });
+
+    it('resolves center projects with the ownership rule of the projects list', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getResultsByBilateralCenter('CIP', 8);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('cp.organization_code = c.institutionId');
+      expect(sql).toContain('(cp.source_center_acronym = ? AND c.code = ?)');
+      expect(sql).not.toContain('CONCAT(cp.source_center_acronym');
+      expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+    });
+
+    it('keeps the tagging-only rows out unless asked for', async () => {
+      queryMock.mockResolvedValue([]);
+
+      await repo.getResultsByBilateralCenter('CIP', 8);
+      await repo.getResultsByBilateralCenter('CIP', 8, true);
+
+      const [sql, offParams] = queryMock.mock.calls[0];
+      const [, onParams] = queryMock.mock.calls[1];
+      expect(sql).toContain(
+        "OR (? = 1 AND r.source = 'Result' AND tg.result_id IS NOT NULL)",
+      );
+      expectCenterResultsParams(offParams, 'CIP', 8, 0);
+      expectCenterResultsParams(onParams, 'CIP', 8, 1);
+    });
   });
 
   describe('getBilateralCenterOverviewTotals (SR-164368)', () => {

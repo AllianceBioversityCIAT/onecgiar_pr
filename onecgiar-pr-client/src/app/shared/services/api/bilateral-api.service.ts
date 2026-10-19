@@ -30,11 +30,14 @@ export class BilateralApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/projects`, { params });
   }
 
-  GET_bilateralCenterResults(centerId: string, versionId: number) {
-    return this.http.get<any>(
-      `${this.resultsApiBaseUrl}bilateral-center-results`,
-      { params: { centerId, versionId: String(versionId) } }
-    );
+  /**
+   * INC-165171 — `includeProjectTagging` (center Overview) also returns the W1/W2 results that tag
+   * a center project without the center on the result. Omitted, the request is the previous one.
+   */
+  GET_bilateralCenterResults(centerId: string, versionId: number, includeProjectTagging = false) {
+    const params: Record<string, string> = { centerId, versionId: String(versionId) };
+    if (includeProjectTagging) params['includeProjectTagging'] = 'true';
+    return this.http.get<any>(`${this.resultsApiBaseUrl}bilateral-center-results`, { params });
   }
 
   /** SR-164368 — figures of the center Overview "Total results" card, counted server-side. */

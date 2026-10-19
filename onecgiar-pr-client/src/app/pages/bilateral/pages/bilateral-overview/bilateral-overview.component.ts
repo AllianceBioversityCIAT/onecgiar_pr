@@ -44,6 +44,7 @@ import {
 } from '../../bilateral-query-params';
 import { filterCenterResults } from '../../bilateral-result-filter';
 import {
+  OVERVIEW_CATEGORIES,
   OverviewAttentionRow,
   OverviewModel,
   OverviewProjectBar,
@@ -51,6 +52,7 @@ import {
   PENDING_AGE_DAYS,
   buildOverviewModel,
 } from './bilateral-overview.aggregate';
+import { OverviewCategory } from '../../services/bilateral-center-result.interface';
 import {
   NO_PROJECT_CATEGORY_LABEL,
   OVERVIEW_PROJECT_BAR_LIMIT,
@@ -119,6 +121,30 @@ function emptyParams(): BilateralQueryParams {
 function phaseVersionId(phase: Phases): number {
   return Number(phase.id);
 }
+
+/**
+ * INC-165171 — label and tooltip of each overview category, in the Total results card and the
+ * by-project "not linked" line. Every result sits in exactly one, so the rows add up to the total.
+ */
+const OVERVIEW_CATEGORY_COPY: Record<OverviewCategory, { label: string; hint: string }> = {
+  replicated_w3: {
+    label: 'Replicated W3/Bilateral innovations',
+    hint: 'W3/Bilateral innovations replicated from the previous phase for update',
+  },
+  replicated_w1w2: {
+    label: 'Replicated W1/W2 innovations with the Center',
+    hint: 'W1/W2 innovations replicated from the previous phase where this center is lead or contributing',
+  },
+  new_w3: { label: 'New W3/Bilateral results', hint: 'W3/Bilateral results of this center reported in this phase' },
+  w1w2_tagging: {
+    label: 'W1/W2 results tagging a Center bilateral project',
+    hint: 'New W1/W2 results that tag a bilateral project of this center',
+  },
+  w1w2_center_only: {
+    label: 'W1/W2 results with the Center, no Center project',
+    hint: 'New W1/W2 results where this center is lead or contributing, with no bilateral project of the center',
+  },
+};
 
 /** The four Needs-attention rows' copy, keyed by the model's row key (`COV-R-8`). */
 const ATTENTION_ROW_COPY: Record<OverviewAttentionRow['key'], { title: string; hint: string }> = {
@@ -191,6 +217,8 @@ export class BilateralOverviewComponent implements OnInit {
   readonly statusTileMeta = STATUS_TILE_META;
   readonly statusTileLabels = STATUS_TILE_LABELS;
   readonly noProjectLabel = NO_PROJECT_CATEGORY_LABEL;
+  readonly overviewCategories = OVERVIEW_CATEGORIES;
+  readonly overviewCategoryCopy = OVERVIEW_CATEGORY_COPY;
   readonly pendingAgeDays = PENDING_AGE_DAYS;
 
   /**
@@ -236,14 +264,6 @@ export class BilateralOverviewComponent implements OnInit {
    * second computed. Reading the current key only is also what keeps a late response for a
    * superseded phase off the screen (`COV-R-2` B / `COV-R-21`).
    */
-  /** SR-164368 — Total results card figures, counted server-side for the current center and phase. */
-  readonly overviewTotals = computed(() => {
-    const centerKey = this.centerKey();
-    const versionId = this.effectiveVersionId();
-    if (!centerKey || versionId === null) return null;
-    return this.overviewService.totalsData(centerKey, versionId)();
-  });
-
   private readonly entrySignal = computed<Signal<BilateralOverviewEntry> | null>(() => {
     const centerKey = this.centerKey();
     const versionId = this.effectiveVersionId();
@@ -401,7 +421,7 @@ export class BilateralOverviewComponent implements OnInit {
 
   /** Fixed per-card heights (`COV-R-19` AND-IT-MUST: no aspect-ratio jump), bounded 180–420px. */
   readonly byProjectChartHeight = computed(() => {
-    const rows = this.visibleBars().length + (this.model().byProject.noProjectRow ? 1 : 0);
+    const rows = this.visibleBars().length;
     return `${Math.min(Math.max(rows * 26 + 56, 180), 420)}px`;
   });
 

@@ -866,7 +866,7 @@ export class ResultsController {
   @ApiOperation({
     summary: 'Get bilateral results by center and phase',
     description:
-      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters. Each row also includes `project_id` (the lead bilateral project CLARISA id, `null` when the result has no linked project) alongside `project_name`, both resolved from the same lead-project selection.',
+      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters. Each row also includes `project_id` (the CLARISA id of a bilateral project owned by the center when the result has one, otherwise the lead project; `null` when the result has no linked project) alongside `project_name`, both resolved from the same selection, and `overview_category` (INC-165171).',
   })
   @ApiQuery({
     name: 'centerId',
@@ -880,14 +880,26 @@ export class ResultsController {
     required: true,
     description: 'Reporting phase (version) ID',
   })
+  @ApiQuery({
+    name: 'includeProjectTagging',
+    type: String,
+    required: false,
+    description:
+      'INC-165171. `true` also returns W1/W2 results that tag a bilateral project of the center without the center on the result (center Overview). Every row carries `overview_category`.',
+  })
   @ApiOkResponse({
     description: 'Bilateral center results retrieved successfully.',
   })
   async getBilateralCenterResults(
     @Query('centerId') centerId: string,
     @Query('versionId') versionId: string,
+    @Query('includeProjectTagging') includeProjectTagging?: string,
   ) {
-    return this.resultsService.getBilateralCenterResults(centerId, versionId);
+    return this.resultsService.getBilateralCenterResults(
+      centerId,
+      versionId,
+      includeProjectTagging === 'true',
+    );
   }
 
   @Get('by-program-and-centers')

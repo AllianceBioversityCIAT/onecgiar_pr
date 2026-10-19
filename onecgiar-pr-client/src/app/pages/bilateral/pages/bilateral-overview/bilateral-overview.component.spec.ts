@@ -19,7 +19,6 @@ import { BilateralOverviewComponent } from './bilateral-overview.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
-import { BilateralCenterOverviewTotals } from '../../services/bilateral-overview.service';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
@@ -163,39 +162,11 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
     versionId = OPEN_PHASE_ID,
     rows: BilateralCenterResult[] = FIXTURE_D1_ROWS,
     projects: BilateralProject[] = FIXTURE_PROJECTS,
-    totals: Partial<BilateralCenterOverviewTotals> = {},
   ): void {
     httpMock.expectOne(resultsUrl(versionId)).flush({ response: rows });
-    // SR-164368: the Total results card figures come from their own endpoint. Default answer
-    // derived from the rows (the server owns the real rule); a test passes `totals` to pin it.
-    const defaultTotals: BilateralCenterOverviewTotals = {
-      replicated_count: rows.filter(row => Number(row.is_replicated) === 1).length,
-      new_w3_count: rows.filter(row => row.source === 'API' && Number(row.is_replicated) !== 1).length,
-      w1w2_tagging_count: 0,
-      total_count: rows.length,
-    };
-    httpMock
-      .match(request => request.url.includes('bilateral-center-overview-totals'))
-      .forEach(request => request.flush({ response: { ...defaultTotals, ...totals } }));
     const projectRequests = httpMock.match(request => request.url.includes('center/projects'));
     projectRequests.forEach(request => request.flush({ response: { projects } }));
     harness.detectChanges();
-  }
-
-  /** SR-164368: answers any pending Total results totals request with figures derived from `rows`. */
-  function flushTotals(rows: BilateralCenterResult[] = FIXTURE_D1_ROWS): void {
-    httpMock
-      .match(request => request.url.includes('bilateral-center-overview-totals'))
-      .forEach(request =>
-        request.flush({
-          response: {
-            replicated_count: 0,
-            new_w3_count: rows.filter(row => row.source === 'API').length,
-            w1w2_tagging_count: 0,
-            total_count: rows.length,
-          },
-        }),
-      );
   }
 
   function el(testId: string) {
@@ -238,41 +209,49 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('status-chart')).toBeTruthy();
     });
 
-    // SR-164368: the replicated / new chips were removed — their "new" counted every non-replicated
-    // row (W1/W2 included) and contradicted the "New W3/Bilateral results" row.
-    it('renders no replicated/new chips; the aria-label carries the server totals', async () => {
+    // INC-165171: the Total card is built from the same rows as every other card — five category
+    // lines that add up to the headline, with the W1/W2 project-tagging rows requested too.
+    it('requests the project-tagging rows and makes no separate totals request', async () => {
       await setup();
-      flushData();
-
-      expect(el('kpi-total-replication-badges')).toBeFalsy();
-      expect(el('kpi-total-replicated-badge')).toBeFalsy();
-      expect(el('kpi-total-new-badge')).toBeFalsy();
-
-      const ariaLabel = el('kpi-total').attributes['aria-label'];
-      expect(ariaLabel).toContain('10 results');
-      expect(ariaLabel).toContain('0 innovations replicated for update');
-      expect(ariaLabel).toContain('9 new W3/Bilateral results');
+      const request = httpMock.expectOne(resultsUrl(OPEN_PHASE_ID));
+      expect(request.request.params.get('includeProjectTagging')).toBe('true');
+      httpMock.expectNone(req => req.url.includes('bilateral-center-overview-totals'));
+      request.flush({ response: FIXTURE_D1_ROWS });
     });
 
-    // @akili-spec bilateral/overview-w1w2-contributor-badge (BOV2-R-2, BOV2-R-3)
-    // SR-164368: the headline and the three rows are the server totals, not counts over the rows.
-    it('renders the headline and breakdown rows from the server totals (SR-164368)', async () => {
+    it('renders the headline and one breakdown line per overview category, adding up to it', async () => {
       await setup();
-      flushData(OPEN_PHASE_ID, FIXTURE_D1_ROWS, FIXTURE_PROJECTS, {
-        replicated_count: 34,
-        new_w3_count: 57,
-        w1w2_tagging_count: 6,
-        total_count: 97,
-      });
+      const rows: BilateralCenterResult[] = [
+        { ...FIXTURE_D1_ROWS[0], id: 801, is_replicated: true, overview_category: 'replicated_w3' },
+        { ...FIXTURE_D1_ROWS[5], id: 802, is_replicated: true, overview_category: 'replicated_w1w2' },
+        { ...FIXTURE_D1_ROWS[5], id: 803, is_replicated: true, overview_category: 'replicated_w1w2' },
+        { ...FIXTURE_D1_ROWS[1], id: 804, overview_category: 'new_w3' },
+        { ...FIXTURE_D1_ROWS[5], id: 805, is_leading_result: null, overview_category: 'w1w2_tagging' },
+        { ...FIXTURE_D1_ROWS[5], id: 806, overview_category: 'w1w2_center_only' },
+      ];
+      flushData(OPEN_PHASE_ID, rows);
 
-      expect(text('kpi-total')).toMatch(/97\s*results/);
-      const breakdown = text('kpi-total-breakdown');
-      expect(breakdown).toMatch(/Innovations replicated for update\s*34/);
-      expect(breakdown).toMatch(/New W3\/Bilateral results\s*57/);
-      expect(breakdown).toMatch(/W1\/W2 results tagging Center bilateral project\s*6/);
+      expect(text('kpi-total')).toMatch(/6\s*results/);
+      expect(text('kpi-total-replicated_w3')).toMatch(/Replicated W3\/Bilateral innovations\s*1/);
+      expect(text('kpi-total-replicated_w1w2')).toMatch(/Replicated W1\/W2 innovations with the Center\s*2/);
+      expect(text('kpi-total-new_w3')).toMatch(/New W3\/Bilateral results\s*1/);
+      expect(text('kpi-total-w1w2_tagging')).toMatch(/W1\/W2 results tagging a Center bilateral project\s*1/);
+      expect(text('kpi-total-w1w2_center_only')).toMatch(/W1\/W2 results with the Center, no Center project\s*1/);
 
       const ariaLabel = el('kpi-total').attributes['aria-label'];
-      expect(ariaLabel).toContain('6 W1/W2 results tagging a Center bilateral project');
+      expect(ariaLabel).toContain('6 results');
+      expect(ariaLabel).toContain('2 Replicated W1/W2 innovations with the Center');
+    });
+
+    it('splits each status tile into replicated and new', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, [
+        { ...FIXTURE_D1_ROWS[0], id: 811, status_id: 1, is_replicated: true, overview_category: 'replicated_w1w2' },
+        { ...FIXTURE_D1_ROWS[0], id: 812, status_id: 1, overview_category: 'w1w2_center_only' },
+      ]);
+
+      expect(text('status-tile-editing')).toContain('2');
+      expect(text('status-split-editing')).toBe('1 replicated · 1 new');
     });
 
     it('renders a ≤160px one-line empty state when the phase has no results', async () => {
@@ -305,7 +284,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       httpMock
         .match(request => request.url.includes('center/projects'))
         .forEach(request => request.flush('boom', { status: 500, statusText: 'Server Error' }));
-      flushTotals();
       harness.detectChanges();
 
       // The three surfaces whose figures come out of the PROJECTS call.
@@ -347,7 +325,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       harness.detectChanges();
 
       httpMock.expectOne(resultsUrl(OPEN_PHASE_ID)).flush({ response: FIXTURE_D1_ROWS });
-      flushTotals();
       harness.detectChanges();
       expect(text('kpi-total')).toContain('10');
     });
@@ -468,8 +445,8 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(text('overview-filter-badge')).toBe('1');
       expect(text('overview-filter-chips')).toContain('Program');
       expect(router.url).toContain('program=SP02');
-      // SR-164368: the Total results card is center-wide (server totals) — the filter does not narrow it.
-      expect(text('kpi-total')).toMatch(/10\s*results/);
+      // INC-165171: the Total card is computed from the filtered rows, like every other card.
+      expect(text('kpi-total')).toMatch(/4\s*results/);
     });
 
     it('Clear removes the chips and params but keeps the phase (COV-AC-6)', async () => {
@@ -526,8 +503,8 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       // The resolution is NOT a center switch: the deep link's filter survives it.
       expect(router.url).toContain('program=SP02');
       expect(text('overview-filter-badge')).toBe('1');
-      // SR-164368: Total results stays center-wide under a filter.
-      expect(text('kpi-total')).toMatch(/10\s*results/);
+      // INC-165171: Total results narrows with the filter, like every other card.
+      expect(text('kpi-total')).toMatch(/4\s*results/);
     });
 
     it('shows no data under the new acronym while the shell still carries the previous code', async () => {
@@ -584,11 +561,13 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('attention-row-editing')).toBeFalsy();
     });
 
-    it('renders the "No bilateral project" row and the not-started chips (COV-R-9 B/C)', async () => {
+    it('states the results with no project as a broken-down line, plus the not-started chips (INC-165171)', async () => {
       await setup();
       flushData();
 
-      expect(text('by-project-no-project')).toContain('No bilateral project');
+      expect(text('by-project-no-project')).toContain('2 results not linked to a bilateral project');
+      expect(text('by-project-no-project-new_w3')).toContain('1');
+      expect(text('by-project-no-project-w1w2_center_only')).toContain('1');
       // Project 300 (Gamma) has no results in scope.
       expect(el('not-started-chip-300')).toBeTruthy();
       expect(text('not-started-chip-300')).toContain('0');
@@ -758,10 +737,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
   // ── COV-T-4 review pointer · chart click against the RENDERED categories ──────────────────
 
   describe('chart clicks (COV-R-9 A, COV-R-10, COV-R-11)', () => {
-    it('resolves the trailing "no project" category against the limited bar set, not the full model', async () => {
-      // Eight projects with results plus the null-project rows: the 7-bar limit is active, so the
-      // trailing category sits at dataIndex 7 — resolving it against the unlimited model would
-      // address the eighth PROJECT instead of the "No bilateral project" row.
+    it('a click past the last drawn project bar does not navigate (no "no project" category, INC-165171)', async () => {
       const projects: BilateralProject[] = Array.from({ length: 8 }, (_, index) => ({
         id: 100 + index,
         shortName: `P${index}`,
@@ -781,13 +757,9 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
       const chart = el('by-project-chart').componentInstance as PrVizChartComponent;
-      chart.chartClick.emit({ seriesId: 'overview-by-project:lead', dataIndex: 7 } as never);
+      chart.chartClick.emit({ seriesId: 'overview-by-project:new', dataIndex: 7 } as never);
 
-      expect(navigate).toHaveBeenCalledWith(
-        ['/bilateral', CENTER, 'results'],
-        expect.objectContaining({ queryParams: expect.objectContaining({ source: 'w1w2' }) }),
-      );
-      expect((navigate.mock.calls[0][1] as { queryParams: Record<string, string> }).queryParams['project']).toBeUndefined();
+      expect(navigate).not.toHaveBeenCalled();
     });
 
     it('sends the Science Program "projects mapped" series to Reporting and "results" to Results', async () => {
