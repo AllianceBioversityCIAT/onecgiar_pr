@@ -143,7 +143,7 @@
         }
       </nav>
 
-      @if (qualityAssessment.assessment(); as assessment) {
+      @if (!creationService.isKnowledgeProduct() && qualityAssessment.assessment(); as assessment) {
         <section class="bcr-quality-summary" aria-label="AI quality assessment">
           <div class="bcr-quality-summary__head">
             <span>AI quality check</span>
@@ -204,16 +204,18 @@
              nothing on screen said so. The whole note does not fit in a 200px rail, so the rail carries
              one muted line and `prTooltip` (hover AND click/Enter — the directive pins it) holds the
              two sentences the reviewer asked for. -->
-        <p class="mt-[8px] mb-0 text-center" data-testid="bilateral-rail-submit-note">
-          <span
-            class="inline-flex cursor-help items-center gap-[4px] rounded-[4px] text-[11px] leading-[1.35] text-[var(--pr-text-muted)] hover:text-[var(--pr-color-primary-400)] focus-visible:text-[var(--pr-color-primary-400)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pr-color-primary-300)]"
-            [prTooltip]="submitQualityCheckNote"
-            prTooltipPosition="top"
-            aria-label="What happens when you submit for review">
-            <i class="material-icons-round text-[13px] leading-none" aria-hidden="true">info</i>
-            <span>The AI quality check runs first</span>
-          </span>
-        </p>
+        @if (!creationService.isKnowledgeProduct()) {
+          <p class="mt-[8px] mb-0 text-center" data-testid="bilateral-rail-submit-note">
+            <span
+              class="inline-flex cursor-help items-center gap-[4px] rounded-[4px] text-[11px] leading-[1.35] text-[var(--pr-text-muted)] hover:text-[var(--pr-color-primary-400)] focus-visible:text-[var(--pr-color-primary-400)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pr-color-primary-300)]"
+              [prTooltip]="submitQualityCheckNote"
+              prTooltipPosition="top"
+              aria-label="What happens when you submit for review">
+              <i class="material-icons-round text-[13px] leading-none" aria-hidden="true">info</i>
+              <span>The AI quality check runs first</span>
+            </span>
+          </p>
+        }
       }
     </aside>
 

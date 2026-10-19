@@ -218,18 +218,17 @@ export class ResultSectionsService {
    * (`roles.service.ts:22`, `:53-59`), so the async role resolution repaints this getter by itself;
    * it also defaults to `true`, which fails to the safe side while permissions are unknown.
    *
-   * ⚠️ P2-2385: this used to carry `result_type_id != 6`, which hid the button for Knowledge
-   * Products because their title and description are auto-synced from CGSpace and must not be
-   * overridden by an AI proposal. The exclusion is gone: a KP reporter still owns the Impact Area
-   * (DAC) tags by hand, so the button is offered for EVERY result type and what a Knowledge Product
-   * may be shown is narrowed one layer down, in `AiReviewService.onAIReviewClick()` — impact areas
-   * only, no title / description proposal is requested or persisted. Deliberately not an allow-list
-   * of types: every type is allowed today, and a list would silently hide the button for the next
-   * type someone adds.
+   * ⚠️ P2-2385 opened the button to Knowledge Products (impact areas only, narrowed in
+   * `AiReviewService.onAIReviewClick()`), but the AI service does not evaluate KPs yet. 🛑 Hotfix
+   * 16-Oct-2026: KPs are hidden again behind `AiReviewService.knowledgeProductsEnabled` (false).
+   * Flip that one switch once the service supports KPs; do not drop the type check here by hand.
+   * Deliberately a single-type exclusion, not an allow-list: a list would silently hide the button
+   * for the next type someone adds.
    */
   get showAiReview(): boolean {
     const r = this.dataControlSE.currentResult;
-    return !!(r && r.status_id == 1) && !this.rolesSE.readOnly;
+    const kpBlocked = r?.result_type_id == 6 && !this.aiReviewSE.knowledgeProductsEnabled;
+    return r?.status_id == 1 && !kpBlocked && !this.rolesSE.readOnly;
   }
 
   /** Second line of defence for `runAiReview()`, so the TS guard holds even if the button renders. */

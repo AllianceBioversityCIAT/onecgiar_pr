@@ -218,6 +218,16 @@ describe('FieldCardComponent', () => {
       expect(stateClasses()).toEqual(['fc-error']);
     });
 
+    // P2-3982: a read-only Knowledge Product description over 300 words went red and was read as an AI flag.
+    it('does not paint an error on a read-only field the user cannot shorten', () => {
+      host.readOnly.set(true);
+      host.hasError.set(true);
+      fixture.detectChanges();
+
+      expect(stateClasses()).toEqual([]);
+      expect(q('.field_card').nativeElement.getAttribute('data-state')).toBe('plain');
+    });
+
     it('does not paint an error on a bare (label-less) field', () => {
       host.label.set('');
       host.hasError.set(true);
