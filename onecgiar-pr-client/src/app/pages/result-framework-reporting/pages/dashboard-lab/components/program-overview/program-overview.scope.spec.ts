@@ -873,13 +873,14 @@ describe('ProgramOverviewComponent — AoW row responsive ladder (OSF-T-2b)', ()
     expect(actions.className).toContain('@max-[560px]:[grid-row:1]');
   });
 
-  it('the achievement cell narrows below Q=700 (AIS-T-2 T_restack) and drops entirely below Q=630 (T_full)', () => {
+  it('the achievement cell drops entirely below Q=630 (T_full) and no longer renders the "X of Y Int. outcomes" coverage line', () => {
     const row = realRow();
     const achievementCell = row.querySelector('.leading-tight') as HTMLElement;
     expect(achievementCell.className).toContain('@max-[630px]:hidden');
 
-    const coverageLine = row.querySelector('.leading-tight span.text-\\[10px\\].text-\\[var\\(--pr-text-muted\\)\\]') as HTMLElement;
-    expect(coverageLine.className).toContain('@max-[700px]:hidden');
+    // quick/aow-row-remove-io-coverage: the per-row coverage line was removed on request.
+    expect(row.querySelector('.leading-tight span.text-\\[10px\\].text-\\[var\\(--pr-text-muted\\)\\]')).toBeNull();
+    expect(row.textContent).not.toContain('Int. outcomes');
   });
 
   // @akili-spec bugfix/achieved-counts-submitted — ACS-S-10: the flag restores the QA/Prel row,

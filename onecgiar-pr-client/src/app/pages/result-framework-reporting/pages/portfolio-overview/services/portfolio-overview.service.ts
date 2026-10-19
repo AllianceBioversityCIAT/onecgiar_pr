@@ -2,6 +2,21 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { ApiService } from '../../../../../shared/services/api/api.service';
+import type { PortfolioResultDimensions } from '../../../../../shared/interfaces/portfolio-result-dimensions.interface';
+import {
+  EMPTY_SELECTION,
+  FILTER_DIMENSIONS,
+  buildDimensionIndex,
+  buildOptions,
+  isActive,
+  matchesRow,
+  sanitize,
+  type DimensionIndex,
+  type FilterDimension,
+  type PortfolioFilterOptions,
+  type PortfolioFilterSelection
+} from './portfolio-filters';
+import { resolveStatusSlot } from './portfolio-status-slot';
 
 /**
  * One page is enough: the endpoint is already scoped by the caller's roles, and the OPEN phase
@@ -13,6 +28,12 @@ export const PORTFOLIO_PAGE_LIMIT = 20000;
 
 /** The raw list item, restricted to the keys this screen reads. Verified live on prtest. */
 export interface RawResult {
+  /** Result id: the key of the dimensions map (global filters, GLF-P-1). */
+  id?: number | string | null;
+  /** Result code shown and linked in the detail table (filtered-detail-export, FDE-P-1). */
+  result_code?: number | string | null;
+  title?: string;
+  result_level_name?: string;
   submitter?: string;
   submitter_short_name?: string;
   submitter_name?: string;
@@ -24,6 +45,16 @@ export interface RawResult {
   phase_name?: string;
   acronym?: string;
   version_id?: number | string;
+  /** Result already existed in an earlier phase. Same encodings as `programme-results.service.ts`. */
+  is_replicated?: number | string | boolean | null;
+  /** Acronym of the leading Center, as on the wire (typology view, TYV-P-1). */
+  lead_center?: string | null;
+}
+
+/** `idle` before the first request, `loading` while it is in flight, then `ready` or `error`. */
+export interface PortfolioDimensionsState {
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  map: PortfolioResultDimensions | null;
 }
 
 export interface AllResultsEnvelope {
@@ -42,6 +73,14 @@ export interface PortfolioKpis {
   activeProgramsCount: number;
   totalProgramsCount: number;
   portfolioProgressPercent: number;
+  w1w2New: number;
+  w1w2NewSubmitted: number;
+  w1w2NewEditing: number;
+  w1w2Replicated: number;
+  bilateralNew: number;
+  bilateralNewSubmitted: number;
+  bilateralNewEditing: number;
+  bilateralReplicated: number;
 }
 
 export interface PortfolioStatusSegment {
@@ -57,15 +96,6 @@ export interface CategoryOriginRow {
   category: string;
   w1w2Count: number;
   bilateralCount: number;
-  total: number;
-}
-
-export interface ProgramRankingRow {
-  code: string;
-  name: string;
-  editing: number;
-  submittedOrQa: number;
-  approved: number;
   total: number;
 }
 
@@ -95,14 +125,6 @@ export interface PortfolioBar {
   width: string;
 }
 
-/** One programme row of the matrix. `cells` follows `categories()` order, one to one. */
-export interface PortfolioRow {
-  code: string;
-  name: string;
-  total: number;
-  cells: number[];
-}
-
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 /**
@@ -123,21 +145,8 @@ const statusDot = (statusId: unknown): string => STATUS_DOT[String(statusId)] ??
 
 const percent = (n: number, max: number): string => `${max > 0 ? Math.round((n / max) * 100) : 0}%`;
 
-export function resolveStatusSlot(row: RawResult): PortfolioStatusSegment['key'] {
-  const sname = (row.status_name || '').toLowerCase().trim();
-  const sid = Number(row.status_id);
-
-  if (sname.includes('approved') || sid === 6) return 'approved';
-  if (sname.includes('in qa') || sname.includes('quality assessed')) return 'in-qa';
-  if (sname.includes('submitted') || sname.includes('pending review') || sid === 3 || sid === 5) return 'submitted';
-  if (sname.includes('editing') || sname.includes('draft') || sid === 1) return 'editing';
-  if (sname.includes('discontinued') || sid === 4) return 'discontinued';
-  if (sname.includes('rejected') || sid === 7) return 'rejected';
-
-  if (sid === 2) return 'in-qa';
-
-  return 'editing';
-}
+// Moved verbatim to a pure file (spec global-filters, GLF-T-2); re-exported so existing imports keep working.
+export { resolveStatusSlot };
 
 const STATUS_SEGMENT_DEFINITIONS: {
   key: PortfolioStatusSegment['key'];
@@ -166,6 +175,7 @@ export class PortfolioOverviewService {
   private readonly api = inject(ApiService);
 
   private requestToken = 0;
+  private dimensionsToken = 0;
 
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
@@ -183,6 +193,8 @@ export class PortfolioOverviewService {
 
   /** Results of the OPEN phase only (`phase_status === 1`). */
   private readonly rows = signal<RawResult[]>([]);
+  /** Read-only view of the open-phase rows, for child blocks that aggregate on their own (TYV-DD-1). */
+  readonly openRows = this.rows.asReadonly();
   /** Label of the phase these figures describe, e.g. `Reporting 2026 - P25`. */
   readonly phaseName = signal<string>('');
   readonly portfolioAcronym = signal<string>('');
@@ -194,11 +206,60 @@ export class PortfolioOverviewService {
 
   readonly total = computed(() => this.rows().length);
 
+  // ---- Global filters (spec global-filters, GLF-T-3) ----------------------------------------------
+
+  /** The global selection. Change it only through the methods below: each one writes a NEW selection. */
+  readonly selection = signal<PortfolioFilterSelection>(EMPTY_SELECTION);
+  /** The result -> project / Center map (one request per load, plus one per Retry: DD-4). */
+  readonly dimensions = signal<PortfolioDimensionsState>({ status: 'idle', map: null });
+  /** True when a Project or Center selection had to be dropped because the map failed (GLF-R-13). */
+  readonly dimensionsNotice = signal<boolean>(false);
+
+  readonly dimensionIndex = computed<DimensionIndex | null>(() => {
+    const { status, map } = this.dimensions();
+    return status === 'ready' && map ? buildDimensionIndex(map) : null;
+  });
+
+  readonly options = computed<PortfolioFilterOptions>(() => {
+    const { status, map } = this.dimensions();
+    return buildOptions(this.rows(), status === 'ready' ? map : null);
+  });
+
+  /** Project or Center is selected and the map is not ready: the row-driven sections wait (DD-5). */
+  readonly filtersPending = computed(() => {
+    const selection = this.selection();
+    return (selection.project.size > 0 || selection.center.size > 0) && this.dimensions().status !== 'ready';
+  });
+
+  /**
+   * The page rows the selection keeps. With no selection it is the very same array as `rows()`. A row whose
+   * Project / Center match cannot be told yet (no map) is left out: never shown as if it matched (DD-5).
+   */
+  readonly filteredRows = computed<RawResult[]>(() => {
+    const rows = this.rows();
+    const selection = this.selection();
+    if (!isActive(selection)) return rows;
+    const index = this.dimensionIndex();
+    return rows.filter(row => matchesRow(row, selection, index) === 'match');
+  });
+
+  readonly filteredTotal = computed(() => this.filteredRows().length);
+
+  /**
+   * Version (phase) id of the page rows: the first row's `version_id`, or `null` when there is none.
+   * `apply()` narrows the rows to ONE phase (the open one, or the newest closed one), so the first row speaks
+   * for all. It feeds the ToC KPI block, so the section describes the same phase as the page (TKP-P-10).
+   */
+  readonly versionId = computed<number | null>(() => {
+    const id = Number(this.rows()[0]?.version_id);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  });
+
   /**
    * Executive KPI Summary (POV-R-1)
    */
   readonly kpiTotals = computed<PortfolioKpis>(() => {
-    const allRows = this.rows();
+    const allRows = this.filteredRows();
     const totalResults = allRows.length;
     const phaseLabel = this.phaseName() || 'Active Cycle';
 
@@ -236,11 +297,29 @@ export class PortfolioOverviewService {
     );
     const bilateralCentersCount = bilateralCenters.size;
 
+    const isReplicated = (r: RawResult): boolean =>
+      r.is_replicated === 1 || r.is_replicated === '1' || r.is_replicated === true;
+    const tally = (rows: RawResult[]) => {
+      let newRows = 0;
+      let newEditing = 0;
+      let replicated = 0;
+      for (const r of rows) {
+        if (isReplicated(r)) replicated++;
+        else {
+          newRows++;
+          if (Number(r.status_id) === 1) newEditing++;
+        }
+      }
+      return { newRows, newEditing, newSubmitted: newRows - newEditing, replicated };
+    };
+    const w1w2Tally = tally(w1w2Rows);
+    const bilateralTally = tally(bilateralRows);
+
     const activePrograms = new Set(allRows.map(r => text(r.submitter)).filter(Boolean));
     const activeProgramsCount = activePrograms.size;
     const totalProgramsCount = 13;
 
-    const completedResults = this.rows().filter(r => {
+    const completedResults = allRows.filter(r => {
       const sid = Number(r.status_id);
       const sname = (r.status_name ?? '').toLowerCase();
       return (
@@ -253,7 +332,7 @@ export class PortfolioOverviewService {
       );
     }).length;
     const portfolioProgressPercent =
-      this.rows().length > 0 ? Math.round((completedResults / this.rows().length) * 100) : 0;
+      allRows.length > 0 ? Math.round((completedResults / allRows.length) * 100) : 0;
 
     return {
       totalResults,
@@ -266,7 +345,15 @@ export class PortfolioOverviewService {
       bilateralCentersCount,
       activeProgramsCount,
       totalProgramsCount,
-      portfolioProgressPercent
+      portfolioProgressPercent,
+      w1w2New: w1w2Tally.newRows,
+      w1w2NewSubmitted: w1w2Tally.newSubmitted,
+      w1w2NewEditing: w1w2Tally.newEditing,
+      w1w2Replicated: w1w2Tally.replicated,
+      bilateralNew: bilateralTally.newRows,
+      bilateralNewSubmitted: bilateralTally.newSubmitted,
+      bilateralNewEditing: bilateralTally.newEditing,
+      bilateralReplicated: bilateralTally.replicated
     };
   });
 
@@ -274,7 +361,7 @@ export class PortfolioOverviewService {
    * Portfolio Status Distribution (POV-R-2)
    */
   readonly statusSegments = computed<PortfolioStatusSegment[]>(() => {
-    const allRows = this.rows();
+    const allRows = this.filteredRows();
     const total = allRows.length;
     const counts = new Map<PortfolioStatusSegment['key'], number>();
 
@@ -302,7 +389,7 @@ export class PortfolioOverviewService {
    */
   readonly categoryOriginRows = computed<CategoryOriginRow[]>(() => {
     const cats = this.categories();
-    const allRows = this.rows();
+    const allRows = this.filteredRows();
 
     return cats.map(category => {
       const matching = allRows.filter(r => text(r.result_type) === category);
@@ -315,46 +402,6 @@ export class PortfolioOverviewService {
         total: w1w2Count + bilateralCount
       };
     });
-  });
-
-  /**
-   * Science Programs Output Ranking (POV-R-4)
-   */
-  readonly programRankingRows = computed<ProgramRankingRow[]>(() => {
-    const byProgramme = new Map<string, RawResult[]>();
-    for (const row of this.rows()) {
-      const code = text(row.submitter);
-      if (!code) continue;
-      byProgramme.set(code, [...(byProgramme.get(code) ?? []), row]);
-    }
-
-    return [...byProgramme.entries()]
-      .map(([code, items]) => {
-        let editing = 0;
-        let submittedOrQa = 0;
-        let approved = 0;
-
-        for (const item of items) {
-          const slot = resolveStatusSlot(item);
-          if (slot === 'editing') {
-            editing++;
-          } else if (slot === 'in-qa' || slot === 'submitted') {
-            submittedOrQa++;
-          } else if (slot === 'approved') {
-            approved++;
-          }
-        }
-
-        return {
-          code,
-          name: this.programmeName(code),
-          editing,
-          submittedOrQa,
-          approved,
-          total: items.length
-        };
-      })
-      .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
   });
 
   /**
@@ -394,14 +441,15 @@ export class PortfolioOverviewService {
    */
   readonly totals = computed<PortfolioTotal[]>(() => {
     const counts = new Map<string, { n: number; statusId: unknown }>();
-    for (const row of this.rows()) {
+    const filtered = this.filteredRows();
+    for (const row of filtered) {
       const label = text(row.status_name);
       if (!label) continue;
       const seen = counts.get(label);
       counts.set(label, { n: (seen?.n ?? 0) + 1, statusId: seen?.statusId ?? row.status_id });
     }
     return [
-      { label: 'Results in this phase', n: this.rows().length, dot: '' },
+      { label: 'Results in this phase', n: filtered.length, dot: '' },
       ...[...counts.entries()]
         .sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]))
         .map(([label, { n, statusId }]) => ({ label, n, dot: statusDot(statusId) }))
@@ -410,19 +458,19 @@ export class PortfolioOverviewService {
 
   /** Distinct categories present, ordered by count desc — the matrix columns follow this list. */
   readonly categories = computed<string[]>(() => {
-    const counts = this.countBy(this.rows(), row => text(row.result_type));
+    const counts = this.countBy(this.filteredRows(), row => text(row.result_type));
     return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
   });
 
   /** "Results by indicator category" — same order as `categories()`, widest first. */
   readonly categoryBars = computed<PortfolioBar[]>(() => {
-    const counts = this.countBy(this.rows(), row => text(row.result_type));
+    const counts = this.countBy(this.filteredRows(), row => text(row.result_type));
     const max = Math.max(0, ...counts.values());
     return this.categories().map(name => ({ code: '', name, n: counts.get(name) ?? 0, width: percent(counts.get(name) ?? 0, max) }));
   });
 
-  /** Bilateral (`W3/Bilaterals`) results of the open phase. */
-  private readonly bilaterals = computed(() => this.rows().filter(row => text(row.source_name) === 'W3/Bilaterals'));
+  /** Bilateral (`W3/Bilaterals`) results of the open phase, narrowed by the global selection. */
+  private readonly bilaterals = computed(() => this.filteredRows().filter(row => text(row.source_name) === 'W3/Bilaterals'));
 
   readonly bilateralTotal = computed(() => this.bilaterals().length);
 
@@ -435,34 +483,11 @@ export class PortfolioOverviewService {
       .map(([code, n]) => ({ code, name: this.programmeName(code), n, width: percent(n, max) }));
   });
 
-  /** The matrix: one row per programme, ordered by total desc. */
-  readonly programmeRows = computed<PortfolioRow[]>(() => {
-    const cats = this.categories();
-    const byProgramme = new Map<string, RawResult[]>();
-    for (const row of this.rows()) {
-      const code = text(row.submitter);
-      if (!code) continue;
-      byProgramme.set(code, [...(byProgramme.get(code) ?? []), row]);
-    }
-    return [...byProgramme.entries()]
-      .map(([code, items]) => ({
-        code,
-        name: this.programmeName(code),
-        total: items.length,
-        cells: cats.map(cat => items.filter(item => text(item.result_type) === cat).length)
-      }))
-      .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
-  });
-
-  /** The `All programs` closing row — recomputed from the rows, never accumulated by hand. */
-  readonly footer = computed(() => ({
-    total: this.total(),
-    cells: this.categories().map(cat => this.rows().filter(row => text(row.result_type) === cat).length)
-  }));
-
   /** Loads the portfolio. Safe to call again: a second call supersedes the first. */
   load(): void {
     const token = ++this.requestToken;
+    // A map response still in flight belongs to the rows being replaced.
+    ++this.dimensionsToken;
     const userId = this.api.authSE?.localStorageUser?.id;
 
     if (!userId) {
@@ -483,6 +508,7 @@ export class PortfolioOverviewService {
         const total = Number(envelope?.response?.meta?.total ?? items.length);
         this.isPartial.set(Number.isFinite(total) && total > items.length);
         this.loading.set(false);
+        this.loadDimensions();
       },
       error: () => {
         if (token !== this.requestToken) return;
@@ -491,6 +517,91 @@ export class PortfolioOverviewService {
         this.loading.set(false);
       }
     });
+  }
+
+  /**
+   * Requests the result -> project / Center map for the page version. Called once after `apply()` and by
+   * Retry; a response of an older call is ignored (same request-token pattern as `load()`). With no rows there
+   * is nothing to filter, so nothing is requested.
+   */
+  loadDimensions(): void {
+    const token = ++this.dimensionsToken;
+    const versionId = this.versionId();
+    this.dimensionsNotice.set(false);
+
+    if (this.rows().length === 0 || versionId === null) {
+      this.dimensions.set({ status: 'idle', map: null });
+      return;
+    }
+
+    this.dimensions.set({ status: 'loading', map: null });
+    this.api.resultsSE.GET_PortfolioResultDimensions(versionId).subscribe({
+      next: envelope => {
+        if (token !== this.dimensionsToken) return;
+        const map = envelope?.response ?? null;
+        if (!map) {
+          this.failDimensions();
+          return;
+        }
+        this.dimensions.set({ status: 'ready', map });
+        this.reconcileSelection();
+      },
+      error: () => {
+        if (token !== this.dimensionsToken) return;
+        this.failDimensions();
+      }
+    });
+  }
+
+  retryDimensions(): void {
+    this.loadDimensions();
+  }
+
+  setSelection(selection: PortfolioFilterSelection): void {
+    this.selection.set(selection);
+    this.reconcileSelection();
+  }
+
+  toggleValue(dimension: FilterDimension, value: string): void {
+    const values = new Set(this.selection()[dimension]);
+    if (!values.delete(value)) values.add(value);
+    this.selection.set({ ...this.selection(), [dimension]: values });
+  }
+
+  clearDimension(dimension: FilterDimension): void {
+    if (this.selection()[dimension].size === 0) return;
+    this.selection.set({ ...this.selection(), [dimension]: new Set<string>() });
+  }
+
+  clearAll(): void {
+    this.selection.set(EMPTY_SELECTION);
+  }
+
+  /** Map failed: Project and Center cannot be told, so those selections go, and the page says so (GLF-R-13). */
+  private failDimensions(): void {
+    this.dimensions.set({ status: 'error', map: null });
+    const selection = this.selection();
+    if (selection.project.size > 0 || selection.center.size > 0) {
+      this.selection.set({ ...selection, project: new Set<string>(), center: new Set<string>() });
+      this.dimensionsNotice.set(true);
+    }
+  }
+
+  /**
+   * Drops the selected values that are not options. Program, Typology and Status are checked as soon as there
+   * are rows; Project and Center only once the map is ready (until then they are kept: the filter is pending).
+   */
+  private reconcileSelection(): void {
+    const current = this.selection();
+    if (!isActive(current) || this.rows().length === 0) return;
+    const clean = sanitize(current, this.options());
+    const mapReady = this.dimensions().status === 'ready';
+    const next: PortfolioFilterSelection = {
+      ...clean,
+      project: mapReady ? clean.project : current.project,
+      center: mapReady ? clean.center : current.center
+    };
+    if (FILTER_DIMENSIONS.some(d => next[d].size !== current[d].size)) this.selection.set(next);
   }
 
   /**
@@ -515,6 +626,7 @@ export class PortfolioOverviewService {
 
   private setPhase(items: RawResult[]): void {
     this.rows.set(items);
+    this.reconcileSelection();
     this.phaseName.set(text(items[0]?.phase_name));
     this.portfolioAcronym.set(text(items[0]?.acronym));
   }
@@ -541,5 +653,7 @@ export class PortfolioOverviewService {
     this.portfolioAcronym.set('');
     this.closedPhase.set(false);
     this.isPartial.set(false);
+    ++this.dimensionsToken;
+    this.dimensions.set({ status: 'idle', map: null });
   }
 }

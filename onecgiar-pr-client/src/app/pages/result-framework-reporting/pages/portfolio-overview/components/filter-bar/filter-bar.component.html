@@ -1,0 +1,90 @@
+<!--
+  Global filters (GLF-R-1, R-3, R-13). Five controls in bar order; below 768px one "Filters (n)" button opens a
+  Spartan Sheet holding the same five, stacked. Neutral surface, `--pr-*` tokens only; counts are mono + tabular.
+-->
+<ng-template #controls>
+  @for (d of dimensions; track d) {
+    <app-filter-multi-select
+      class="block w-full md:w-[176px]"
+      [dimension]="d"
+      [label]="copy.dimensions[d]"
+      [options]="optionsFor(d)"
+      [groups]="d === 'typology' ? data.options().typology : []"
+      [selected]="data.selection()[d]"
+      [searchable]="d === 'project' || d === 'center'"
+      [disabled]="isDisabled(d)"
+      [hint]="hintFor(d)"
+      (toggled)="toggle(d, $event)" />
+  }
+</ng-template>
+
+<section class="flex flex-col gap-[8px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px]" role="group" [attr.aria-label]="copy.barLabel" data-testid="filter-bar">
+  <div class="flex flex-wrap items-center gap-[8px]">
+    <div class="hidden flex-wrap items-center gap-[8px] md:flex" data-testid="filter-bar-controls">
+      <ng-container [ngTemplateOutlet]="controls" />
+    </div>
+
+    <button
+      hlmBtn
+      type="button"
+      variant="outline"
+      size="sm"
+      class="md:hidden"
+      data-testid="filter-sheet-trigger"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="sheetOpen() ? 'true' : 'false'"
+      (click)="sheetOpen.set(true)">
+      <ng-icon name="lucideSlidersHorizontal" aria-hidden="true" />
+      {{ copy.sheetTrigger(selectedCount()) }}
+    </button>
+
+    @if (isActive()) {
+      <button hlmBtn type="button" variant="ghost" size="sm" data-testid="filter-clear-all" (click)="clearAll()">{{ copy.clearAll }}</button>
+    }
+
+    <p class="ml-auto font-mono text-[12px] font-medium tabular-nums text-[var(--pr-text-secondary)]" data-testid="filter-count" aria-live="polite" aria-atomic="true">{{ countText() }}</p>
+  </div>
+
+  @if (chips().length > 0) {
+    <ul class="flex flex-wrap items-center gap-[6px]" [attr.aria-label]="copy.activeChips" data-testid="filter-chips">
+      @for (chip of chips(); track chip.dimension + ':' + chip.value) {
+        <li>
+          <span hlmBadge variant="secondary" class="h-[24px] gap-[4px] pr-[2px]" [attr.data-testid]="'filter-chip-' + chip.dimension + '-' + chip.value">
+            <span class="max-w-[220px] truncate text-[12px]">{{ chip.label }}</span>
+            <button
+              type="button"
+              class="inline-flex size-[18px] cursor-pointer items-center justify-center rounded-[999px] text-[var(--pr-text-secondary)] outline-none hover:bg-[var(--pr-surface-band)] focus-visible:shadow-[var(--pr-focus-ring)]"
+              [attr.aria-label]="copy.remove(chip.label)"
+              (click)="remove(chip)">
+              <ng-icon name="lucideX" class="text-[12px]" aria-hidden="true" />
+            </button>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (data.dimensions().status === 'loading') {
+    <p class="text-[12px] font-normal text-[var(--pr-text-secondary)]" role="status" data-testid="filter-map-loading">{{ copy.mapLoading }}</p>
+  } @else if (data.dimensions().status === 'error') {
+    <p class="flex items-center gap-[8px] text-[12px] font-normal text-[var(--pr-text-secondary)]" role="status" data-testid="filter-map-error">
+      {{ copy.mapError }}
+      <button hlmBtn type="button" variant="outline" size="xs" data-testid="filter-map-retry" (click)="retry()">{{ copy.retry }}</button>
+    </p>
+  }
+
+  @if (data.dimensionsNotice()) {
+    <p class="text-[12px] font-normal text-[var(--pr-text-secondary)]" role="status" data-testid="filter-dropped-notice">{{ copy.droppedNotice }}</p>
+  }
+</section>
+
+<hlm-sheet side="bottom" [state]="sheetOpen() ? 'open' : 'closed'" [aria-labelledby]="sheetTitleId" (closed)="sheetOpen.set(false)">
+  <hlm-sheet-content *hlmSheetPortal="let ctx" class="max-h-[85vh] overflow-y-auto motion-reduce:transition-none motion-reduce:animate-none" data-testid="filter-sheet">
+    <hlm-sheet-header>
+      <h2 hlmSheetTitle [id]="sheetTitleId">{{ copy.sheetTitle }}</h2>
+    </hlm-sheet-header>
+    <div class="flex flex-col gap-[12px] px-[16px] pb-[16px]">
+      <ng-container [ngTemplateOutlet]="controls" />
+    </div>
+  </hlm-sheet-content>
+</hlm-sheet>

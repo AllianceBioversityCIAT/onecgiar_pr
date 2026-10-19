@@ -49,10 +49,20 @@ export class BilateralProjectSelectorComponent {
       // answers `{ projects: [] }` for it — a 200 with nothing in it, so the dropdown rendered
       // empty for every centre and no bilateral result could be created at all. Verified on
       // prtest: centerId=CIP → [], centerId=49 → 1 project. `bilateral-ai.service.ts:60,150`
-      // already reads the institution id for the same reason.
+      // already reads the institution id for the same reason. (A CLARISA centre CODE such as
+      // "CENTER-02" is a different thing from the acronym "CIP": the server resolves a numeric
+      // institution id first and then a CLARISA code, so the lead-Center code below also works.)
+      //
+      // PAA-DD-6 — `inline` (existing result): the server validates a re-pointed project against the
+      // catalogue of the result's LEAD Center, which can differ from the page centre, so request it by
+      // that code once `resultLeadCenterCode()` is known. Until it arrives (loadResult still in
+      // flight) we fall back to the page institution id; the effect re-runs when the code lands and
+      // the final `projects()` is the lead-Center list. `wizard` (create) is unchanged.
+      const leadCenterCode = this.isInline() ? this.creationService.resultLeadCenterCode() : null;
       const institutionId = this.ctx.centerInstitutionId();
-      if (institutionId) {
-        this.creationService.getProjects(institutionId);
+      const key = leadCenterCode || institutionId;
+      if (key) {
+        this.creationService.getProjects(key);
       }
     });
   }

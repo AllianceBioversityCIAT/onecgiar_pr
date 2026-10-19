@@ -34,6 +34,7 @@ import { PhaseSwitcherModule } from '../../../../shared/components/phase-switche
 import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-notice/ai-provenance-notice.component';
 import { CopyButtonComponent } from '../../../../shared/components/copy-button/copy-button.component';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
+import { KpSubmitConfirmDialogService } from '../../components/kp-submit-confirm-dialog/kp-submit-confirm-dialog.service';
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { resultStatusBg, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
@@ -90,6 +91,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly ctx = inject(BilateralContextService);
   private readonly smartNav = inject(SmartNavigationService);
   readonly qualityAssessment = inject(BilateralQualityAssessmentUiService);
+  private readonly kpSubmitConfirm = inject(KpSubmitConfirmDialogService);
+  /** P2-3980: true while the KP confirmation is on screen, so a second click on Submit cannot stack another. */
+  private kpConfirmOpen = false;
   private readonly saveButtonSE = inject(SaveButtonService);
 
   isCreating = signal(true);
@@ -98,7 +102,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   /** The rail's Submit is busy for BOTH halves of the flow: the AI check and the PATCH after it. */
   isSubmitting = computed(() => this.qualityAssessment.isBusy());
   /** A spinner with no words told the user nothing — the label names which half is running. */
-  submitButtonLabel = computed(() => (this.qualityAssessment.isSubmitting() ? 'Submitting…' : 'Checking quality…'));
+  submitButtonLabel = computed(() =>
+    this.qualityAssessment.isSubmitting() || this.qualityAssessment.isKpSubmitting() ? 'Submitting…' : 'Checking quality…'
+  );
 
   /**
    * QA feedback (2026-09-21), verbatim. It is accurate as written: `submitResult()` starts the AI
@@ -444,7 +450,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.loadPhasesForSwitcher(id);
         if (this.qualityAssessmentResultId !== id) {
           this.qualityAssessmentResultId = id;
-          this.qualityAssessment.loadLatest(id).subscribe({
+          // P2-3980: a Knowledge Product has no AI quality check to rehydrate (nor to show).
+          if (!this.creationService.isKnowledgeProduct()) this.qualityAssessment.loadLatest(id).subscribe({
             // An assessment is optional history. A failed read must never prevent editing.
             error: () => this.qualityAssessment.reset(),
           });
@@ -703,6 +710,10 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.resultId.set(null);
     this.autoSaveService.reset();
     this.mdsTracker.reset();
+    // P2-3980: the held assessment belongs to the former type — a change to Knowledge Product must not
+    // leave its AI flags on the now read-only Title/Description. The rehydration effect re-reads it.
+    this.qualityAssessment.reset();
+    this.qualityAssessmentResultId = null;
     this.creationService.loadResult(request.resultCode, request.versionId);
   }
 
@@ -860,7 +871,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   async selectSection(section: BilateralEditorSection): Promise<void> {
     const current = this.openSectionName();
     if (current === section) return;
+    let flushTargets: string[] = [];
     if (!this.isSubmitting() && this.autoSaveService.hasPendingFor(current)) {
+      flushTargets = this.autoSaveService.pendingStatusKeysFor(current);
       await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(current));
       await this.waitForSectionSave(current);
 
@@ -882,6 +895,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         return;
       }
     }
+    this.maybeBumpSavedTick(current, flushTargets.length > 0);
     this.pendingOpen.set(false);
     this.openSectionName.set(section);
   }
@@ -965,6 +979,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // P2-3980: a Knowledge Product never runs nor shows the AI quality check. It asks for a
+    // confirmation instead and submits silently; every other type falls through to the AI check below.
+    if (this.creationService.isKnowledgeProduct()) {
+      this.confirmKnowledgeProductSubmit(rid);
+      return;
+    }
+
     this.qualityAssessment.run(rid).subscribe({
       next: () => {
       },
@@ -973,6 +994,38 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         // or the most likely failure of the whole flow reaches the user as "Unknown error".
         const detail = (err as HttpErrorResponse).error?.message || (err as HttpErrorResponse).statusText || err.message || 'Unknown error';
         this.api.alertsFe.show({ id: 'bilateralQualityAssessmentError', title: 'Quality check failed', description: detail, status: 'error', closeIn: 8000 });
+      }
+    });
+  }
+
+  /**
+   * P2-3980: Cancel (or Escape) changes nothing and sends nothing. Confirm re-checks the lock — the
+   * result may have left Editing while the dialog was open — and submits once
+   * (`submitKnowledgeProduct` ignores a call made while one is in flight).
+   */
+  private confirmKnowledgeProductSubmit(rid: number): void {
+    if (this.kpConfirmOpen) return;
+    this.kpConfirmOpen = true;
+    this.kpSubmitConfirm.open().subscribe({
+      next: (decision) => {
+        this.kpConfirmOpen = false;
+        if (decision !== 'submit' || this.isFormReadOnly()) return;
+        this.qualityAssessment.submitKnowledgeProduct(rid).subscribe({
+          next: () => {
+            this.creationService.resultStatusId.set(BILATERAL_STATUS.PendingReview);
+            this.api.alertsFe.show({ id: 'bilateralSubmitSuccess', title: 'Submitted', description: 'Result submitted successfully', status: 'success' });
+          },
+          error: (err: HttpErrorResponse) => {
+            const detail = err.error?.message || err.statusText || 'Unknown error';
+            this.api.alertsFe.show({ id: 'bilateralSubmitError', title: 'Submit failed', description: detail, status: 'error', closeIn: 5000 });
+          }
+        });
+      },
+      error: () => {
+        this.kpConfirmOpen = false;
+      },
+      complete: () => {
+        this.kpConfirmOpen = false;
       }
     });
   }
@@ -1062,24 +1115,18 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       // (Innovation Developer prefill), never skipped. Never reached on the error/catch paths above.
       this.autoSaveService.manualSave$.next('general-info');
 
-      // Rework, item 1 (attempt 2, owner-approved 2026-09-29): `savedTick` clears EVERY field-card's
-      // "Unsaved changes" pill (`field-card.component.ts:112-131`), not just general-info's — every
-      // section stays mounted under `[hidden]` (`bilateral-result-creator.component.html:269-293`).
-      // Bumping it unconditionally therefore cleared the pill in whichever section the reporter had
-      // open, even with real unsaved edits sitting there untouched by this save.
-      //
-      // Navigating away always flushes the section being left first (BIL-T-2's `selectSection()`),
-      // so a genuinely staged edit can only exist in the section still open. Safe to bump when that
-      // section is general-info (the one this save actually reaches) or it provably has nothing
-      // staged. Evidence is excluded outright: its own draft-item state (`showDraft()` in
-      // `section-evidence.component.ts`) never surfaces through `hasPendingFor('evidence')` — a
-      // reporter can have an evidence draft open, with that field-card already marked "edited" from
-      // the click that opened it, while `hasPendingFor` reads clean.
-      const openSection = this.openSectionName();
-      const safeToBumpSavedTick =
-        openSection === 'general-info' ||
-        (openSection !== 'evidence' && !this.autoSaveService.hasPendingFor(openSection));
-      if (safeToBumpSavedTick) this.saveButtonSE.savedTick.update(count => count + 1);
+      // BSP-T-1 (design.md P-6 refuted, P-11, §6.2): the single-section premise behind the OLD
+      // `safeToBumpSavedTick` guard — "navigating away always flushes the section being left first,
+      // so a genuinely staged edit can only exist in the section still open" — is false (the AI
+      // quality-assessment drawer's own `'refreshing'` window lets `selectSection()` switch sections
+      // without flushing the one being left). Replaced with the shared, page-wide
+      // `maybeBumpSavedTick` helper: it is correct regardless of navigation order because it reads
+      // every section's ACTUAL field status, not an inference about what must have been flushed.
+      // Keyed on `openSectionName()` (the OPEN section), not the fixed `'general-info'` save
+      // target — Evidence's invisible `showDraft()` draft-item state can only be protected by
+      // checking what the reporter currently has open, since the drawer can be opened from any
+      // section via "View AI assessment".
+      this.maybeBumpSavedTick(this.openSectionName(), true);
 
       // P-6/DD-5: the server is the authority on `is_current`, but it only answers on the NEXT
       // read — without this the submit button would stay visible until a reload, and pressing it
@@ -1237,18 +1284,24 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     // Read before flushing: flush() empties the staged fields, so afterwards nothing distinguishes
     // "saved" from "there was nothing to save".
     const hadChanges = this.autoSaveService.hasPendingFor(activeSection);
+    // BSF-T-2 (design.md §2.3, `BSF-DD-2`): the exact status keys THIS flush is about to dispatch,
+    // captured before flush() drains `_pendingFields` — same timing discipline as `hadChanges`
+    // above. Scoping the post-flush failure check to this set (not the section-wide `hasErrorFor`)
+    // stops a different, already-settled field's stale `'error'` from misreporting this flush —
+    // which never touched that field — as failed.
+    const flushTargets = this.autoSaveService.pendingStatusKeysFor(activeSection);
     try {
       // Explicit section save: unrelated staged payloads remain in the editor session and are
       // never persisted by navigation, Save draft, destroy, or browser lifecycle hooks.
       await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(activeSection));
       this.autoSaveService.manualSave$.next(activeSection);
-      await this.waitForSectionSave(activeSection);
+      await this.waitForSectionSave(activeSection, flushTargets);
 
-      if (this.autoSaveService.hasErrorFor(activeSection)) {
+      if (this.autoSaveService.hasErrorForFields(flushTargets)) {
         // Say WHY: the server's rejection reason was always in the response body (e.g. clearing the
         // required title leaves nothing savable → 400), but the alert used to swallow it into a bare
         // "Please try again" — which reads as a transient glitch when it is actually a rule.
-        const serverReason = this.autoSaveService.lastErrorMessageFor(activeSection);
+        const serverReason = this.autoSaveService.lastErrorMessageForFields(flushTargets);
         const missing = this.missingFieldsFor(activeSection);
         this.api.alertsFe.show({
           id: 'bilateralManualSave',
@@ -1264,6 +1317,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         });
         return;
       }
+
+      // BSP-T-1 (design.md P-7/§6.2): `flushTargets.length > 0` — not `hadChanges` — is the "had a
+      // real, dispatchable change" signal for the bump. `hadChanges` (`hasPendingFor`) can be true
+      // from a stale `'error'`-status field alone (P-7) that this flush never touched; `flushTargets`
+      // only ever holds what THIS flush actually dispatched. `hadChanges` itself is untouched below —
+      // it still drives the alert-copy branching, a different concern from the bump's safety.
+      this.maybeBumpSavedTick(activeSection, flushTargets.length > 0);
 
       // Save draft saves a partial draft, as on W1/W2 — but it must say what is still missing.
       // Before this, an untouched section with three empty required fields reported "Success".
@@ -1308,19 +1368,45 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   /**
    * Waits for the section's requests to settle. A failed request leaves its fields in `'error'`,
-   * which `hasPendingFor` counts as pending (the data is still unsaved) — so without the
-   * `hasErrorFor` exit a 400 kept the button on "Saving…" for the whole 15s timeout before the
-   * failure was reported.
+   * which `hasPendingFor` counts as pending (the data is still unsaved) — so without an early exit
+   * a 400 kept the button on "Saving…" for the whole 15s timeout before the failure was reported.
+   *
+   * `scopedFields` (BSF-T-2, design.md §2.3): when given (a `pendingStatusKeysFor` capture, read
+   * before the flush that is being waited on), the early exit is scoped to exactly those status
+   * keys via `hasErrorForFields`, instead of `hasErrorFor(section)`'s section-wide scan — so a
+   * different, already-settled field's stale `'error'` can't trigger (or suppress) an exit based on
+   * data this call never touched. Omitted by `selectSection()` and `handleGiFieldSaveRequested()`,
+   * which keep the original section-wide behavior (other call sites still rely on it, per
+   * `BilateralAutoSaveService`'s `hasErrorFor` doc comment).
    */
-  private async waitForSectionSave(section: BilateralEditorSection): Promise<void> {
+  private async waitForSectionSave(section: BilateralEditorSection, scopedFields?: readonly string[]): Promise<void> {
     const start = Date.now();
     while (
       this.autoSaveService.hasPendingFor(section) &&
-      !this.autoSaveService.hasErrorFor(section) &&
+      !(scopedFields
+        ? this.autoSaveService.hasErrorForFields(scopedFields)
+        : this.autoSaveService.hasErrorFor(section)) &&
       Date.now() - start < BilateralResultCreatorComponent.MANUAL_SAVE_TIMEOUT_MS
     ) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
+  }
+
+  /**
+   * BSP-T-1 (design.md §6.2, `BSP-DD-1`): the one shared gate behind every `savedTick` bump, used by
+   * `triggerManualSave()`, `selectSection()`, and `handleGiFieldSaveRequested()`. Bumps iff a real
+   * change was actually dispatched, the SECTION BEING CHECKED isn't Evidence (its own `showDraft()`
+   * draft-item state is invisible to `fieldStatus()` — a pre-existing, explicitly out-of-scope gap
+   * this helper must not worsen), and nothing anywhere on the page — any section, including Evidence
+   * itself — is `'dirty'`, `'saving'`, or `'error'`. The page-wide check is correct regardless of
+   * whether the caller's own flush-before-switch assumption holds, because it reads every field's
+   * ACTUAL status rather than inferring safety from navigation order (the premise the Pivot proved
+   * false — `design.md` P-6).
+   */
+  private maybeBumpSavedTick(section: BilateralEditorSection, hadRealChange: boolean): void {
+    if (!hadRealChange || section === 'evidence') return;
+    if (this.autoSaveService.hasAnyUnsavedAnywhere()) return;
+    this.saveButtonSE.savedTick.update(count => count + 1);
   }
 
   /**

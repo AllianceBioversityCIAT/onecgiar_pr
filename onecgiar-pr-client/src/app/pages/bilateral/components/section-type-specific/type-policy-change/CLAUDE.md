@@ -1,10 +1,15 @@
 # type-policy-change (bilateral)
 
-**Verified:** 2026-09-02 · branch performance-refactor · 2de8884cd
+**Verified:** 2026-10-15 · branch qa-development-2026-mc-2 · 846fa3620 (re-stamped, `FCT-T-1` attempt 4)
 
 ## What it is
-Section 5 of the bilateral form: Policy Change. Shows the **MDS** (3 mandatory fields) and hides the
-rest of the pooled-funding form behind the **Complete full metadata** button.
+Section 5 of the bilateral form: Policy Change. Shows the **MDS** (3 mandatory fields), plus USD
+amount + Status always-visible whenever `policy_type_id == 1` (`PCL-R-2`/`PCL-DD-2`,
+`docs/specs/bugfix/policy-change-usd-amount-layout/`). Only the **"Is this result related to:"**
+question still hides behind the **Complete full metadata** button — USD amount/Status are no longer
+part of that toggle. USD amount/Status render as siblings of **Policy type itself**, inside one
+shared grid row (`PCP-R-1`/`PCP-DD-1`, `docs/specs/bugfix/policy-change-usd-amount-position/`) —
+not merely always-visible, grouped with the field that gates them, matching Pool Funding's layout.
 
 ## Contract
 - Endpoints: **the same ones pooled funding's summary uses** —
@@ -73,15 +78,35 @@ rest of the pooled-funding form behind the **Complete full metadata** button.
   related-to question used to do (P2-3382/P2-3388) — it is full metadata and must never be tracked.
 - ⚠️ **The MDS tracker's stage item is labelled `Stage`, matching the template, not "Policy stage"**
   (P2-3383). The AC calls it "Stage in policy process"; renaming the visible field is P2-3377.
-- ⚠️ **The related-to question sits inside the full-metadata toggle but OUTSIDE the `policy_type_id == 1`
-  gate.** That gate is AC6 and covers only USD amount and Status; nesting the question under it hid it
-  for policy types 2 and 3.
+- ⚠️ **USD amount/Status are no longer inside the full-metadata toggle at all** (reversed by
+  `PCL-R-2`/`PCL-DD-2`, `docs/specs/bugfix/policy-change-usd-amount-layout/`). They render
+  always-visible in the MDS area, gated only on `body.policy_type_id == 1` (AC6, P2-3388) — the same
+  gate as before, just moved outside `@if (showAllFields())`. The toggle now holds **only** the
+  "Is this result related to:" question, and that question stays OUTSIDE the `policy_type_id == 1`
+  gate — do not nest it under that gate, or it disappears for policy types 2 and 3.
 - ⚠️ **If the questions GET fails the section still saves** — `optionsWithAnswers` is then absent, which
   the server ignores, so no data is lost. But `onRelatedToChange` silently does nothing (the `forEach`
   runs on `undefined`), so the user's answer is dropped without a warning. Out of scope for P2-3556
   (lost edit, not data loss) and not fixed.
 - ⚠️ **A null `currentResultId()` leaves `loaded` at `null`**, so Save stays disabled. `loadData()`
   returns early and there is nothing to save against anyway; the section only renders inside a result.
+
+- ⚠️ **Status must not set `[expandSpaceOnOpen]="true"`** — it renders a second, normal-flow spacer
+  div that animates 0→300px on open, pushing Stage and the rest of the form down. The options panel
+  is already an absolutely-positioned overlay and works without it, same as Policy type (`BSD-R-1`,
+  `docs/specs/bugfix/bilateral-status-dropdown-overlay/`).
+- ⚠️ **The shared grid's `minmax()` floor is `min(390px,100%)`, not `190px`** (`FCT-T-1`,
+  `docs/specs/bugfix/field-card-save-pill-truncation/`; full rework history in `execution.md`).
+  `190px` floored all three columns below `app-field-card`'s 380px save-pill collapse threshold, so
+  "Unsaved changes" rendered icon-only at ordinary desktop/laptop widths. `auto-fit`/`minmax(F,1fr)`
+  guarantees every rendered column is `≥ F`, so any `F > 380px` is collapse-free at every content
+  width — `390px` is the locked value. The `min(...,100%)` wrapper exists because a BARE `390px`
+  floor can't shrink below itself: content narrower than 390px (phone widths) would force horizontal
+  overflow instead of degrading. `min(390px,100%)` lets the single column shrink to the container's
+  own width there instead, falling through to `app-field-card`'s own 380px/240px collapse rules as
+  the intended last resort — the same graceful behavior `190px` always had at phone widths. Column
+  count varies with content width: 1 below 800px, 2 from 800-1209px (Policy type + USD amount row 1,
+  Status row 2), 3 from 1210px up (the original `PCP-DD-1` grouping restored).
 
 ## Pending / Coming soon
 - Read-only mode for Pending Review / Approved / Rejected: **not implemented**, and no bilateral

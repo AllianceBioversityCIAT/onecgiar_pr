@@ -209,6 +209,23 @@
                 </div>
               </div>
 
+              <!-- Replication — STD-R-4: New / Previously reported over row.isReplicated. -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
+                <div class="pgr-filter" aria-label="Filter by replication">
+                  <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                    Replication
+                  </label>
+                  <app-pr-filter-multiselect
+                    [options]="replicationSelectOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Replication"
+                    countLabel="options"
+                    [ngModel]="filter.selectedReplication()"
+                    (changed)="filter.selectedReplication.set($event)"></app-pr-filter-multiselect>
+                </div>
+              </div>
+
               <!-- Row 4: Section — RAC-T-3 (P2-3398 closed): live multi-select over the bucket-key
                    vocabulary, grouped Areas of work / Program-level with counts (RAC-R-3). -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">

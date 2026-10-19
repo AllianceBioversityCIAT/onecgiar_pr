@@ -10,7 +10,7 @@ This is the **module-level guide** for `api/bilateral`. It complements:
 >
 > `AGENTS.md` covers **what the module does** (ingestion flow, handlers, review workflow). This `CLAUDE.md` covers **how the code is laid out**, the security/contract rules that apply, and what to touch (or not) when extending it.
 
-**Verified:** 2026-09-29 · BIL-QTS-T-7 field-revision endpoint dto tree entry
+**Verified:** 2026-10-16 · P2-3980 quality-assessment `isReusable` skips rows that already carry a submit decision
 
 ---
 
@@ -249,3 +249,5 @@ Always validate external ids (institution code, country code, region id, project
 4. Update / add fixture tests for any shape change.
 5. Keep Swagger docs in sync with the doc.
 6. Commit using `<emoji> <type>(<scope>) [ticket]: <description>` with `bilateral.service` / `bilateral.controller` / `bilateral.handlers` as the scope.
+
+- ⚠️ **P2-3980 — a decided assessment row is never reused.** `BilateralQualityAssessmentService.isReusable` requires `!row.decision`: a row consumed by submit-for-review is refused by `assertAssessmentDecision`, so reusing it on an unchanged hash blocked any rejected result resubmitted without edits.

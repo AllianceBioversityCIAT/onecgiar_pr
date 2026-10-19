@@ -23,10 +23,16 @@
     <div class="flex flex-col gap-3" role="status" aria-live="polite" data-test="pt-loading">
       <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-500">
         <i class="pi pi-spin pi-spinner text-3xl text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
-        <p class="m-0 max-w-sm text-center text-[13px] font-medium text-gray-700">
-          Checking the Progress Tracker for this KPI — this can take up to 20 seconds the first
-          time. You can keep working while you wait.
-        </p>
+        @if (autoRetrying()) {
+          <p class="m-0 max-w-sm text-center text-[13px] font-medium text-gray-700" data-test="pt-loading-auto-retry">
+            The Progress Tracker is still working on this KPI — checking again in a few seconds.
+          </p>
+        } @else {
+          <p class="m-0 max-w-sm text-center text-[13px] font-medium text-gray-700">
+            Checking the Progress Tracker for this KPI — this can take 20 to 30 seconds the first
+            time. You can keep working while you wait.
+          </p>
+        }
       </div>
       <div class="flex justify-center">
         <button
@@ -83,6 +89,63 @@
     </div>
   }
 
+  <!-- still_working: the call ran past the proxy/gateway limit while PT keeps drafting. Not an error. -->
+  @if (status() === 'still_working') {
+    <div
+      aria-live="polite"
+      class="flex flex-col items-center justify-center py-8 px-6 text-center border border-gray-200 rounded-xl bg-gray-50"
+      data-test="pt-still-working">
+      <i class="pi pi-hourglass text-2xl text-gray-400 mb-2" aria-hidden="true"></i>
+      <h4 class="m-0 text-sm font-bold text-gray-900">The Progress Tracker is still working on this KPI</h4>
+      <p class="m-0 mt-1 max-w-sm text-xs text-gray-600">
+        Drafting is taking longer than usual and continues in the background. Check again in a
+        moment, or report this result yourself.
+      </p>
+      <button
+        type="button"
+        class="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-25)] disabled:cursor-not-allowed disabled:opacity-60"
+        data-test="pt-check-again-still-working"
+        [disabled]="checkAgainCooldownS() > 0"
+        (click)="checkAgain()">
+        <i class="pi pi-refresh text-[11px]" aria-hidden="true"></i>
+        Check again
+      </button>
+      <button
+        type="button"
+        class="mt-2 cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold text-[var(--pr-color-primary-300)] hover:underline"
+        data-test="pt-switch-to-manual-still-working"
+        (click)="onSwitchToManual()">
+        Switch to Manual entry
+      </button>
+    </div>
+  }
+
+  <!-- preparing: ok with nothing to show yet because PT is still preparing this KPI. -->
+  @if (status() === 'preparing') {
+    <div
+      aria-live="polite"
+      class="flex flex-col items-center justify-center py-8 px-4 text-center border border-gray-200 rounded-lg bg-gray-50"
+      data-test="pt-preparing">
+      <i class="pi pi-clock text-2xl text-gray-400 mb-2" aria-hidden="true"></i>
+      <p class="m-0 text-sm font-semibold text-gray-800">The Progress Tracker is preparing this KPI, check again in a few minutes</p>
+      <p class="m-0 mt-1 max-w-sm text-xs text-gray-600">You can also report this result yourself in the meantime.</p>
+      <button
+        type="button"
+        class="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-25)] disabled:cursor-not-allowed disabled:opacity-60"
+        data-test="pt-check-again-preparing"
+        [disabled]="checkAgainCooldownS() > 0"
+        (click)="checkAgain()">
+        <i class="pi pi-refresh text-[11px]" aria-hidden="true"></i>
+        Check again
+      </button>
+      @if (checkAgainCooldownS() > 0) {
+        <p class="m-0 mt-1 text-[11px] text-gray-500" data-test="pt-check-again-cooldown">
+          Available in {{ checkAgainCooldownS() }} s
+        </p>
+      }
+    </div>
+  }
+
   <!-- empty: ok status with zero proposals — not an error (PTB-AC-5). -->
   @if (status() === 'empty') {
     <div
@@ -94,6 +157,17 @@
       <p class="m-0 mt-1 max-w-sm text-xs text-gray-600">
         This is not an error — check back later, or report this result yourself.
       </p>
+      @if (ptUrl()) {
+        <a
+          [href]="ptUrl()"
+          target="_blank"
+          rel="noopener"
+          class="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[var(--pr-color-primary-300)] hover:underline"
+          data-test="pt-empty-open-in-tracker">
+          Open in Progress Tracker
+          <i class="pi pi-external-link text-[10px]" aria-hidden="true"></i>
+        </a>
+      }
     </div>
   }
 
@@ -110,6 +184,23 @@
           Open in Progress Tracker
           <i class="pi pi-external-link text-[10px]" aria-hidden="true"></i>
         </a>
+      }
+
+      @if (partialNotice(); as notice) {
+        <div
+          role="status"
+          class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+          data-test="pt-partial-notice">
+          <p class="m-0 min-w-0 flex-1 basis-48">{{ notice }}</p>
+          <button
+            type="button"
+            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+            data-test="pt-check-again-partial"
+            (click)="checkAgain()">
+            <i class="pi pi-refresh text-[11px]" aria-hidden="true"></i>
+            Check again
+          </button>
+        </div>
       }
 
       @for (proposal of proposals(); track proposal.result_key) {
@@ -160,6 +251,28 @@
             </ul>
           }
 
+          <!-- Evidence links: http(s) only (filtered in toEvidenceLinks), always a new tab without opener. -->
+          @if (proposal.evidence_links.length) {
+            <ul class="m-0 flex min-w-0 flex-col gap-1 p-0 text-xs" data-test="pt-proposal-evidence-links">
+              @for (link of proposal.evidence_links; track link.url) {
+                <li class="flex min-w-0 list-none items-baseline gap-1.5">
+                  <i class="pi pi-external-link shrink-0 text-[10px] text-gray-400" aria-hidden="true"></i>
+                  <a
+                    [href]="link.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="min-w-0 break-words font-medium text-[var(--pr-color-primary-300)] hover:underline"
+                    data-test="pt-evidence-link">
+                    {{ link.title }}
+                  </a>
+                  @if (link.kind) {
+                    <span class="shrink-0 text-[11px] text-gray-500">{{ link.kind }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
           @if (proposal.missing_info.length) {
             <ul class="m-0 list-disc pl-4 text-xs text-amber-700" data-test="pt-proposal-missing-info">
               @for (info of proposal.missing_info; track info) {
@@ -169,16 +282,151 @@
           }
 
           <!-- PTB-R-18: guidance only, never written to the create payload. -->
-          @if (proposal.countries.length || proposal.impact_areas || proposal.gender_split) {
+          @if (
+            proposal.geo ||
+            proposal.countries.length ||
+            proposal.partners.length ||
+            proposal.impact_area_details.length ||
+            proposal.impact_areas ||
+            proposal.gender_split
+          ) {
             <div
-              class="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-600"
+              class="flex min-w-0 flex-col gap-2 rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-600"
               data-test="pt-proposal-guidance">
               <p class="m-0 font-semibold text-gray-700">Guidance only — not written to the created result:</p>
-              @if (proposal.countries.length) {
-                <p class="m-0 mt-1">Countries: {{ proposal.countries.join(', ') }}</p>
+
+              @if (proposal.geo; as geo) {
+                <div class="flex min-w-0 flex-col gap-1" data-test="pt-proposal-geo">
+                  <p class="m-0 flex flex-wrap items-center gap-1.5">
+                    <span class="font-semibold text-gray-700">Geography</span>
+                    @if (geo.level) {
+                      <span
+                        class="rounded-full border border-gray-200 bg-white px-2 py-0.5 capitalize text-gray-700"
+                        data-test="pt-geo-level">
+                        {{ geo.level }}
+                      </span>
+                    }
+                  </p>
+                  @if (geo.countries.length) {
+                    <ul class="m-0 flex min-w-0 flex-wrap gap-1 p-0" aria-label="Countries">
+                      @for (country of geo.countries; track country.iso_alpha_2 ?? country.name) {
+                        <li
+                          class="inline-flex max-w-full list-none items-center gap-1 rounded-full border px-2 py-0.5"
+                          [class]="
+                            clarisaBadge(country.match_status) === 'out'
+                              ? 'border-amber-300 bg-amber-50 text-amber-900'
+                              : 'border-gray-200 bg-white text-gray-700'
+                          "
+                          [attr.data-match]="country.match_status"
+                          [attr.title]="clarisaBadge(country.match_status) === 'out' ? 'Not matched to a CLARISA country (' + country.match_status + ')' : null"
+                          data-test="pt-geo-country">
+                          @if (clarisaBadge(country.match_status) === 'out') {
+                            <i class="pi pi-exclamation-triangle text-[10px]" aria-hidden="true"></i>
+                          }
+                          <span class="truncate">{{ country.name }}</span>
+                          @if (country.iso_alpha_2) {
+                            <span class="font-mono text-[10px] text-gray-500">{{ country.iso_alpha_2 }}</span>
+                          }
+                          @if (clarisaBadge(country.match_status) === 'out') {
+                            <span class="sr-only">(not matched in CLARISA)</span>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  }
+                  @if (geo.regions.length) {
+                    <p class="m-0" data-test="pt-geo-regions">
+                      Regions:
+                      @for (region of geo.regions; track region.name; let last = $last) {
+                        <span [class.text-amber-800]="clarisaBadge(region.match_status) === 'out'">{{ region.name }}</span
+                        >{{ last ? '' : ', ' }}
+                      }
+                    </p>
+                  }
+                  @if (geo.subnational_areas) {
+                    <p class="m-0" data-test="pt-geo-subnational">Subnational areas: {{ geo.subnational_areas }}</p>
+                  }
+                </div>
+              } @else if (proposal.countries.length) {
+                <p class="m-0">Countries: {{ proposal.countries.join(', ') }}</p>
               }
-              @if (proposal.impact_areas) {
-                <p class="m-0 mt-1">Impact areas: {{ impactAreaSummary(proposal.impact_areas) }}</p>
+
+              @if (proposal.partners.length) {
+                <div class="flex min-w-0 flex-col gap-1" data-test="pt-proposal-partners">
+                  <span class="font-semibold text-gray-700">Partners</span>
+                  <ul class="m-0 flex min-w-0 flex-col gap-1 p-0">
+                    @for (partner of proposal.partners; track partner.name) {
+                      <li class="flex min-w-0 list-none flex-wrap items-center gap-1.5" data-test="pt-partner">
+                        <span class="min-w-0 break-words text-gray-800">
+                          {{ partner.name }}
+                          @if (partner.acronym && partner.acronym !== partner.name) {
+                            <span class="text-gray-500">({{ partner.acronym }})</span>
+                          }
+                        </span>
+                        @if (partner.role) {
+                          <span class="text-gray-500">· {{ partner.role }}</span>
+                        }
+                        @if (partner.is_cgiar_center) {
+                          <span class="rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-700" data-test="pt-partner-cgiar">
+                            CGIAR center
+                          </span>
+                        }
+                        @switch (clarisaBadge(partner.match_status)) {
+                          @case ('in') {
+                            <span
+                              class="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800"
+                              data-test="pt-partner-in-clarisa">
+                              In CLARISA
+                            </span>
+                          }
+                          @case ('out') {
+                            <span
+                              class="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900"
+                              [attr.title]="'Match status: ' + partner.match_status"
+                              data-test="pt-partner-not-in-clarisa">
+                              Not in CLARISA
+                            </span>
+                          }
+                        }
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+
+              @if (proposal.impact_area_details.length) {
+                <div class="flex min-w-0 flex-col gap-1" data-test="pt-proposal-impact-areas">
+                  <span class="font-semibold text-gray-700">Impact areas</span>
+                  <ul class="m-0 flex min-w-0 flex-col gap-1 p-0">
+                    @for (area of proposal.impact_area_details; track area.key) {
+                      <li class="min-w-0 list-none" [attr.data-test]="'pt-impact-area-' + area.key">
+                        <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+                          <span class="min-w-0 text-gray-800">{{ area.label }}</span>
+                          <span
+                            class="rounded-full border px-1.5 py-0.5 text-[10px] font-semibold"
+                            [class]="
+                              area.score === 2
+                                ? 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-25)] text-[var(--pr-color-primary-700)]'
+                                : area.score === 1
+                                  ? 'border-gray-300 bg-white text-gray-800'
+                                  : 'border-gray-200 bg-gray-100 text-gray-500'
+                            "
+                            data-test="pt-impact-score">
+                            {{ impactScoreLabel(area.score) }}
+                          </span>
+                        </div>
+                        @if (area.justification) {
+                          <details class="mt-0.5" data-test="pt-impact-justification">
+                            <summary class="cursor-pointer text-[var(--pr-color-primary-300)]">Why this score</summary>
+                            <p class="m-0 mt-0.5 break-words text-gray-600">{{ area.justification }}</p>
+                          </details>
+                        }
+                      </li>
+                    }
+                  </ul>
+                </div>
+              } @else if (proposal.impact_areas) {
+                <p class="m-0">Impact areas: {{ impactAreaSummary(proposal.impact_areas) }}</p>
               }
               @if (proposal.gender_split) {
                 <p class="m-0 mt-1">

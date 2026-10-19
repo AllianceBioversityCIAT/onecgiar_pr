@@ -1,0 +1,105 @@
+<!--
+  Typology view (spec typology-view). Level fills come from the result-level tokens, on bar segments and
+  marker dots only. Nothing here is a link or a button except the dimension tabs (TYV-R-8).
+-->
+<section
+  class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]"
+  data-testid="typology-block"
+  aria-labelledby="typology-title">
+  <div class="mb-[20px]">
+    <h2 id="typology-title" class="m-0 text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">{{ copy.typologyTitle }}</h2>
+    <p class="m-0 mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">{{ copy.typologySubtitle }}</p>
+  </div>
+
+  <!-- Level cards: always all page rows, whatever the dimension -->
+  <div class="grid grid-cols-1 gap-[12px] sm:grid-cols-3" data-testid="typology-cards">
+    @for (card of visibleCards(); track card.level) {
+      <div
+        class="flex flex-col gap-[10px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[14px] py-[12px]"
+        [attr.data-testid]="'typology-card-' + card.level">
+        <div class="flex items-center gap-[8px]">
+          <span class="h-[9px] w-[9px] shrink-0 rounded-full" [style.background]="fill(card.level)" data-testid="typology-marker"></span>
+          <span class="text-[12.5px] font-semibold text-[var(--pr-text-heading)]">{{ levelLabel(card.level) }}</span>
+        </div>
+        <div class="flex items-baseline gap-[8px]">
+          <span class="font-mono text-[28px] font-extrabold leading-none tabular-nums text-[var(--pr-text-heading)]" data-testid="typology-card-count">{{ card.count }}</span>
+          <span class="font-mono text-[12px] font-medium tabular-nums text-[var(--pr-text-muted)]" data-testid="typology-card-percent">{{ card.percent }}%</span>
+        </div>
+        @if (card.types.length) {
+          <ul class="m-0 flex list-none flex-col gap-[4px] p-0" data-testid="typology-card-types">
+            @for (type of card.types; track type.name) {
+              <li class="flex items-baseline justify-between gap-[8px] text-[12.5px] text-[var(--pr-text-secondary)]">
+                <span>{{ typeName(type.name) }}</span>
+                <span class="font-mono tabular-nums">{{ type.count }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="m-0 text-[12.5px] text-[var(--pr-text-muted)]" data-testid="typology-card-empty">{{ copy.levelEmpty }}</p>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Dimension switch (Spartan Tabs) + table -->
+  <hlm-tabs [tab]="dimension()" (tabActivated)="setDimension($event)" class="mt-[20px]">
+    <hlm-tabs-list class="max-sm:!h-auto max-sm:!w-full" [attr.aria-label]="copy.dimensionAriaLabel">
+      <button hlmTabsTrigger="program" type="button" class="!text-[13px] max-sm:!h-auto max-sm:min-w-0 max-sm:!whitespace-normal max-sm:text-center" data-testid="typology-tab-program">{{ copy.dimensionProgram }}</button>
+      <button hlmTabsTrigger="center" type="button" class="!text-[13px] max-sm:!h-auto max-sm:min-w-0 max-sm:!whitespace-normal max-sm:text-center" data-testid="typology-tab-center">{{ copy.dimensionCenter }}</button>
+    </hlm-tabs-list>
+
+    <div [hlmTabsContent]="dimension()" class="!text-[13px]">
+      @if (activeBreakdown().rows.length === 0) {
+        <p class="m-0 max-h-[160px] text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="typology-center-empty">{{ copy.centerEmpty }}</p>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-[13px]" data-testid="typology-table">
+            <caption class="sr-only">{{ copy.typologyTableCaption }}</caption>
+            <thead>
+              <tr class="border-b border-[var(--pr-border-divider)] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+                <th scope="col" class="px-[8px] py-[8px] font-bold">{{ dimension() === 'center' ? copy.colCenter : copy.colProgram }}</th>
+                <th scope="col" class="px-[8px] py-[8px] text-right font-bold">{{ copy.colTotal }}</th>
+                @for (level of levels(); track level) {
+                  <th scope="col" class="px-[8px] py-[8px] text-right font-bold">{{ levelLabel(level) }}</th>
+                }
+                <th scope="col" class="w-[160px] px-[8px] py-[8px]" aria-hidden="true"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of activeBreakdown().rows; track row.key) {
+                <tr class="border-b border-[var(--pr-border-divider)] last:border-b-0" data-testid="typology-row">
+                  <th scope="row" class="px-[8px] py-[8px] text-left font-semibold text-[var(--pr-text-heading)]">
+                    {{ rowLabel(row) }}
+                    @if (row.name) {
+                      <span class="ml-[6px] text-[12px] font-normal text-[var(--pr-text-muted)]">{{ row.name }}</span>
+                    }
+                  </th>
+                  <td class="px-[8px] py-[8px] text-right font-mono font-bold tabular-nums text-[var(--pr-text-heading)]" data-testid="typology-row-total">{{ row.total }}</td>
+                  @for (level of levels(); track level) {
+                    <td class="px-[8px] py-[8px] text-right font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.byLevel[level] }}</td>
+                  }
+                  <td class="px-[8px] py-[8px]">
+                    <div class="flex h-[8px] w-full overflow-hidden rounded-full bg-[var(--pr-border-divider)]" aria-hidden="true" data-testid="typology-bar">
+                      @for (level of levels(); track level) {
+                        @if (row.byLevel[level] > 0) {
+                          <span
+                            class="h-full min-w-[4px] basis-0"
+                            [style.flex-grow]="row.byLevel[level]"
+                            [style.background]="fill(level)"
+                            [attr.data-testid]="'typology-segment-' + level"></span>
+                        }
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      @if (dimension() === 'center') {
+        <p class="m-0 mt-[10px] text-[12px] text-[var(--pr-text-muted)]" data-testid="typology-center-note">{{ copy.centerNote }}</p>
+      }
+    </div>
+  </hlm-tabs>
+</section>

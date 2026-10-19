@@ -518,6 +518,66 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
 
     expect(navigate).not.toHaveBeenCalled();
   });
+
+  // ---- sp-overview-total-drilldown T-3: `onTotalSegment` host navigation (STD-R-3) ----
+  describe('onTotalSegment (STD-S-3.1 .. S-3.4)', () => {
+    const RESULTS = ['/result-framework-reporting/entity-details', 'SP02', 'results'];
+    const REVIEW = ['/result-framework-reporting/entity-details', 'SP02', 'bilateral-review'];
+
+    it('S-3.1: new opens Results with origin W1/W2, replication=new and the effective phase label', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('new');
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith(RESULTS, { queryParams: { origin: 'W1/W2', replication: 'new', phase: 'Reporting' } });
+    });
+
+    it('S-3.1 AND IT MUST NOT: an active Overview AoW scope is never stamped as section', async () => {
+      const component = await createComponent();
+      component.overviewScope.set('AOW01');
+
+      component.onTotalSegment('new');
+
+      const params = navigate.mock.calls[0][1].queryParams as Record<string, string>;
+      expect(Object.keys(params)).not.toContain('section');
+      expect(params).toEqual({ origin: 'W1/W2', replication: 'new', phase: 'Reporting' });
+    });
+
+    it('S-3.2: replicated uses replication=replicated', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('replicated');
+
+      expect(navigate).toHaveBeenCalledWith(RESULTS, { queryParams: { origin: 'W1/W2', replication: 'replicated', phase: 'Reporting' } });
+    });
+
+    it('S-3.3: pendingReview opens Bilateral review with status=pending and the effective versionId as phase', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('pendingReview');
+
+      expect(navigate).toHaveBeenCalledWith(REVIEW, { queryParams: { status: 'pending', phase: '1' } });
+    });
+
+    it('S-3.3: pendingReview omits phase when no versionId resolves', async () => {
+      const component = await createComponent();
+      (component as unknown as { effectiveVersionId: () => number | null }).effectiveVersionId = () => null;
+
+      component.onTotalSegment('pendingReview');
+
+      expect(navigate).toHaveBeenCalledWith(REVIEW, { queryParams: { status: 'pending' } });
+    });
+
+    it('S-3.4: navigation fires even when every count is 0', async () => {
+      const component = await createComponent();
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, pendingReview: 0 });
+
+      component.onTotalSegment('replicated');
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 /**
@@ -2506,6 +2566,72 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
         replaceUrl: true
       })
     );
+  });
+
+  // KTO-T-7 follow-up (changes/kpi-progress-target-only): the global Target filter rides the URL as `tgt`,
+  // the same way Category rides `typ`. `all` is the default and writes no param.
+  describe('global Target filter in the URL (`tgt`, KTO-R-10)', () => {
+    const lastQueryParams = (navigate: jest.Mock) => navigate.mock.calls[navigate.mock.calls.length - 1][1].queryParams;
+
+    it('writes tgt=without / tgt=with when the filter changes, and no param for All', async () => {
+      const { component, navigate } = await createPlannedComponent();
+      component.plannedBrowseView.set('aows');
+
+      component.reportingTargetFilter.set('without');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('without');
+
+      component.reportingTargetFilter.set('with');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('with');
+
+      component.reportingTargetFilter.set('all');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBeNull();
+    });
+
+    it('Clear filters resets the signal and removes the param', async () => {
+      const { component, navigate } = await createPlannedComponent();
+      component.plannedBrowseView.set('aows');
+      component.reportingTargetFilter.set('with');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('with');
+
+      component.clearReportingFilters();
+      TestBed.flushEffects();
+
+      expect(component.reportingTargetFilter()).toBe('all');
+      expect(lastQueryParams(navigate).tgt).toBeNull();
+    });
+
+    it('restores the value on load, even when tgt is the only Reporting param', async () => {
+      const { component } = await createPlannedComponent();
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tgt: 'without' }));
+      expect(component.reportingTargetFilter()).toBe('without');
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tocView: 'aows', tgt: 'with' }));
+      expect(component.reportingTargetFilter()).toBe('with');
+    });
+
+    it('ignores an invalid value and falls back to All', async () => {
+      const { component } = await createPlannedComponent();
+      component.reportingTargetFilter.set('with');
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tocView: 'aows', tgt: 'bogus' }));
+
+      expect(component.reportingTargetFilter()).toBe('all');
+    });
+
+    it('follows browser back / forward: a changed or missing tgt on the stream updates the signal', async () => {
+      const { component, qpSubject } = await createPlannedComponent();
+
+      qpSubject.next(convertToParamMap({ tocView: 'aows', tgt: 'without' }));
+      expect(component.reportingTargetFilter()).toBe('without');
+
+      qpSubject.next(convertToParamMap({ tocView: 'aows' }));
+      expect(component.reportingTargetFilter()).toBe('all');
+    });
   });
 
   it('hydrates plannedSearch, reportingTypologyFilter, and pendingKpi with inequality guards without loops', async () => {

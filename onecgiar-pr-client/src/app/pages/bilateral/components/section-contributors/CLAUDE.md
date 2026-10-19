@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: banner SP name via `bilateralProgramLabel` (`pages/bilateral/shared/`), code on a miss; prior: 2026-10-02 · qa-development-2026-ss · LPC el proyecto líder ya no se repite como chip ni como opción en Contributing W3/bilateral projects — campo propio "Lead W3/bilateral project" arriba (solo vista; el payload lo sigue mandando con is_lead: true); prior: 2026-09-30 · feat/bilateral-contributors-nicoleta-sep29 · P2-3859 filtro por Center dentro del desplegable de proyectos W3/bilaterales, una píldora por cada Center con proyectos (arranca en el Center de la página; 1-oct: antes solo dos); P2-3865 nota "What is a contributor?" (definición CLARISA + "elige entidades distintas a la que reporta") justo antes de los campos de contribuyentes (tras el bloque ToC); P2-3864 el centro líder ya no se repite como chip ★ ni como opción en Contributing CGIAR centers (solo vista; el payload lo sigue mandando); prior: 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
+**Verified:** 2026-10-16 · qa-development-2026-ss · spec `bilateral/replicated-innovations-2026-pa` PAA-T-2: helper bajo el P/A de solo lectura = `contributorsPrimaryHelp` ("Change the primary Science Program in Project information, above."); nota de `sciencePrograms` corregida; prior: 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels-part-2` PF2-T-6: banner SP name via `bilateralProgramLabel` (`pages/bilateral/shared/`), code on a miss; prior: 2026-10-02 · qa-development-2026-ss · LPC el proyecto líder ya no se repite como chip ni como opción en Contributing W3/bilateral projects — campo propio "Lead W3/bilateral project" arriba (solo vista; el payload lo sigue mandando con is_lead: true); prior: 2026-09-30 · feat/bilateral-contributors-nicoleta-sep29 · P2-3859 filtro por Center dentro del desplegable de proyectos W3/bilaterales, una píldora por cada Center con proyectos (arranca en el Center de la página; 1-oct: antes solo dos); P2-3865 nota "What is a contributor?" (definición CLARISA + "elige entidades distintas a la que reporta") justo antes de los campos de contribuyentes (tras el bloque ToC); P2-3864 el centro líder ya no se repite como chip ★ ni como opción en Contributing CGIAR centers (solo vista; el payload lo sigue mandando); prior: 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
 del tracker MDS y se muda a Full metadata, opcional para todo tipo (se retiran el marcador
 `required` y el hint rojo; el banner de centros se muda a Block 1, junto al selector de centros);
 prior: 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3823 blindaje (claves solo al tocar la pregunta, selector sin pérdida, entrada normalizada) + P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
@@ -251,8 +251,10 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   `app-pr-checkbox` *"This result has no external partners"* (línea 168); no entraba en el alcance
   del ticket. El multi-select de *Select a result* **ya se corrigió** el 24-sep (P2-3368): pasa
   `[isStatic]="!readOnly()"` y lo cubre `section-contributors.readonly.spec.ts`.
-- ⚠️ **`selectedProject().sciencePrograms` viene `[]` al cargar un resultado existente**
-  (`bilateral-creation.service.ts:170`). El multi-select de "Contributing science programs" sólo se
+- ⚠️ **`selectedProject().sciencePrograms` puede venir `[]` al cargar un resultado existente**
+  (`bilateral-creation.service.ts`). `loadResult` toma el proyecto líder del catálogo del Center si
+  ya está cargado (entonces `sciencePrograms` viene lleno); queda `[]` solo si el catálogo llega
+  después (lo completa `getProjects`) o el proyecto no está en el catálogo. El multi-select de "Contributing science programs" sólo se
   renderiza si hay opciones; en un resultado guardado se ven únicamente los chips read-only. No
   "arreglarlo" pintando un dropdown vacío.
 - **Socios: leer el catálogo por la SIGNAL, nunca por el array plano.**
@@ -292,7 +294,7 @@ de `showFullMetadata`). El template se sobreescribe con
 `<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds — y eso es justo lo que
 dejó pasar el hueco de P2-3520 (ver la trampa de `isStatic`).
 
-`section-contributors.readonly.spec.ts` — 29 casos (BIL-T-1 añadió 3: banner/Retry de centers
+`section-contributors.readonly.spec.ts` — 45 casos (PAA-T-2 añadió 1: el helper bajo el P/A de solo lectura = `contributorsPrimaryHelp`, sin "cannot be changed here"; BIL-T-1 añadió 3: banner/Retry de centers
 renderizado en el DOM real; P2-3821/BCP-T-2 añadió 6: el picker "External partners" ausente/presente
 según `showAllFields()` para tipo 1 y tipo 2, sin marcador `required` ni hint rojo, y el banner de
 centros renderizado con Full metadata colapsado — y reescribió los casos de `PARTNER_PICKER_LABELS`

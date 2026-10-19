@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideArrowDown, lucideArrowUp, lucideSearch, lucideX } from '@ng-icons/lucide';
+import { HlmSeparatorImports } from '@spartan/separator';
 import { take } from 'rxjs';
 import { PrVizChartComponent } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
@@ -14,34 +13,28 @@ import { resultStatusLabel } from '../../../../../../shared/constants/result-sta
 import { PORTFOLIO_CENTERS_BLOCK_COPY } from '../../../../../../internationalization/portfolio-centers-block.copy';
 import {
   DONUT_PALETTE_TOKENS,
-  HEATMAP_RAMP_TOKENS,
-  RankingMode,
   STATUS_CHART_TOKEN,
   STATUS_TILE_TOKEN,
   StatusColumn,
-  buildHeatmapOption,
-  buildRankingOption,
-  buildRowsTable,
   buildSegments,
   buildSegmentsTable,
-  buildShareOption,
   buildStatusDonutOption,
   percentOf,
   statusIdFromChartEvent
 } from './centers-block.charts';
-import { CENTER_STATUS_IDS, EntityOverviewRow, buildCenterRow, sumRows } from './centers-block.aggregate';
+import { BilateralCenterResult } from '../../../../../bilateral/services/bilateral-center-result.interface';
+import { DimensionIndex, EMPTY_SELECTION, PortfolioFilterSelection, notAffectedBy } from '../../services/portfolio-filters';
+import { CENTER_STATUS_IDS, CenterOrigin, EntityOverviewRow, applyGlobal, buildCenterRow, byOrigin, isW3Row, originCounts, sumRows } from './centers-block.aggregate';
 
 type LoadState = 'loading' | 'ready' | 'error';
-type SortKey = 'name' | 'total' | number;
 
-/** One line of the detail table. Center rows load one by one. */
+/** Load state of one Center. Center rows load one by one. */
 export interface CenterRowState {
   code: string;
   acronym: string;
-  fullName: string;
-  link: string;
   state: LoadState;
-  row: EntityOverviewRow | null;
+  /** W3 rows of the Center (CNR-1); `null` while loading or failed. */
+  w3Rows: BilateralCenterResult[] | null;
 }
 
 /** Resolves a `var(--token)` to the colour ECharts can paint; '' outside a browser (jsdom). */
@@ -54,14 +47,12 @@ function resolveCssColor(value: string): string {
 /**
  * P2-3928 — the CGIAR Centers (W3/Bilateral) block of the Portfolio overview. Built for P2-3858 as Admin ›
  * All P/As and Centers; moved here as one more section (Ángel, 7-Oct-2026: "La respuesta son las 3") with
- * the same figures and presentation: KPI cards, status donut + tiles, ranking (three modes) and a detail
- * table with a chart view, for the open P25 reporting phase. Read-only: it only issues GETs. Admin-only
- * because its host route (`portfolio-overview`) carries `CheckAdminGuard`.
+ * the same figures and presentation: KPI cards and status donut + tiles, for the open P25 reporting phase.
+ * Read-only: it only issues GETs. Admin-only because its host route (`portfolio-overview`) carries `CheckAdminGuard`.
  */
 @Component({
   selector: 'app-portfolio-centers-block',
-  imports: [RouterLink, PrVizChartComponent, NgIcon],
-  providers: [provideIcons({ lucideSearch, lucideX, lucideArrowUp, lucideArrowDown })],
+  imports: [RouterLink, PrVizChartComponent, HlmSeparatorImports],
   templateUrl: './centers-block.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -72,7 +63,11 @@ export class PortfolioCentersBlockComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly copy = PORTFOLIO_CENTERS_BLOCK_COPY;
-  readonly skeletonRows = [1, 2, 3, 4, 5];
+
+  /** GLF-T-7: the page's global selection, the dimensions index and the version that index was built for. All optional. */
+  readonly selection = input<PortfolioFilterSelection>(EMPTY_SELECTION);
+  readonly dimensionIndex = input<DimensionIndex | null>(null);
+  readonly dimensionsVersionId = input<number | null>(null);
 
   readonly phase = signal<Phases | null>(null);
   readonly phaseResolved = signal(false);
@@ -80,17 +75,41 @@ export class PortfolioCentersBlockComponent {
 
   readonly centersListState = signal<LoadState>('loading');
   readonly centerRows = signal<CenterRowState[]>([]);
-  readonly loadedCenterRows = computed(() => this.centerRows().map(c => c.row).filter((row): row is EntityOverviewRow => row !== null));
+  /** Per-Center row over the W3 rows of the selected origin (CNR-3); Centers still loading or failed are absent. */
+  readonly viewRows = computed<EntityOverviewRow[]>(() => {
+    const origin = this.origin();
+    return this.globalCenters().map(center => buildCenterRow(center.code, center.acronym, byOrigin(center.w3Rows, origin)));
+  });
+  readonly loadedCenterRows = computed(() => this.viewRows());
   readonly centerTotals = computed(() => sumRows(this.loadedCenterRows(), CENTER_STATUS_IDS.length));
   readonly centersPartial = computed(() => this.centerRows().some(center => center.state === 'error'));
   readonly centersLoading = computed(() => this.centerRows().some(center => center.state === 'loading'));
 
+  /** Project is honoured only when this block's phase is the version the dimensions index was built for (GLF-R-8, A-3). */
+  readonly honoursProject = computed(() => this.versionId() !== null && this.versionId() === this.dimensionsVersionId());
+  /** GLF-R-9: the active dimensions this block does not honour (Project between cycles). */
+  readonly notAffected = computed(() => notAffectedBy('centers', this.selection(), this.honoursProject() ? [] : ['project']));
+  readonly notAffectedText = computed(() => {
+    const list = this.notAffected();
+    return list.length ? this.copy.notAffected(list.map(d => this.copy.dimensions[d]).join(', ')) : '';
+  });
+  /** States the Center selection leaves in (all of them when none is selected). In memory only: requests never change. */
+  private readonly visibleCenterRows = computed(() => {
+    const codes = this.selection().center;
+    return codes.size > 0 ? this.centerRows().filter(center => codes.has(center.code)) : this.centerRows();
+  });
+  /** Loaded Centers with their W3 rows under the global selection, before origin and status tile (DD-9). */
+  private readonly globalCenters = computed(() => {
+    const selection = this.selection();
+    const index = this.dimensionIndex();
+    const honoursProject = this.honoursProject();
+    return this.visibleCenterRows()
+      .filter((center): center is CenterRowState & { w3Rows: BilateralCenterResult[] } => center.w3Rows !== null)
+      .map(center => ({ ...center, w3Rows: applyGlobal(center.w3Rows, selection, index, honoursProject) }));
+  });
+
   readonly selectedStatus = signal<number | null>(null);
-  readonly rankingMode = signal<RankingMode>('horizontal');
-  readonly detailMode = signal<'table' | 'chart'>('table');
-  readonly search = signal('');
-  readonly sortKey = signal<SortKey>('total');
-  readonly sortDesc = signal(true);
+  readonly origin = signal<CenterOrigin>('all');
 
   /** Status columns with the colour the charts paint. */
   readonly columns = computed<StatusColumn[]>(() =>
@@ -105,51 +124,24 @@ export class PortfolioCentersBlockComponent {
   );
   readonly segments = computed(() => buildSegments(this.tileColumns(), this.centerTotals()));
 
+  /** CNR-DD-4: the KPI card reads ALL W3 rows under the global selection, whatever the origin filter says. */
   readonly kpis = computed(() => {
-    const centers = this.centerTotals();
-    const approvedIdx = CENTER_STATUS_IDS.indexOf(6);
+    const loaded = this.globalCenters();
+    const all = loaded.flatMap(center => center.w3Rows);
+    const counts = originCounts(all);
+    const approved = all.filter(row => Number(row.status_id) === 6).length;
     return {
-      bilateral: centers.total,
-      bilateralApproved: percentOf(centers.counts[approvedIdx] ?? 0, centers.total),
-      centersReporting: this.loadedCenterRows().filter(row => row.total > 0).length,
-      centersCount: this.centerRows().length
+      bilateral: counts.total,
+      bilateralNew: counts.new,
+      bilateralReplicated: counts.replicated,
+      bilateralApproved: percentOf(approved, counts.total),
+      centersReporting: loaded.filter(center => center.w3Rows.length > 0).length,
+      centersCount: this.visibleCenterRows().length
     };
   });
 
   readonly donutOption = computed(() => buildStatusDonutOption(this.segments(), this.centerTotals().total, this.selectedStatus(), this.donutPalette()));
   readonly donutTable = computed(() => buildSegmentsTable(this.copy.statusTitle, this.segments()));
-  readonly rankingOption = computed(() => {
-    const mode = this.rankingMode();
-    if (mode === 'heatmap') {
-      const ramp = HEATMAP_RAMP_TOKENS.map(token => resolveCssColor(`var(${token})`));
-      return buildHeatmapOption(this.loadedCenterRows(), this.columns(), ramp);
-    }
-    return buildRankingOption(this.loadedCenterRows(), this.columns(), this.selectedStatus(), mode);
-  });
-  readonly rankingTable = computed(() => buildRowsTable(this.copy.rankingCentersTitle, this.loadedCenterRows(), this.columns()));
-  readonly rankingHeight = computed(() => `${Math.max(260, this.loadedCenterRows().length * (this.rankingMode() === 'vertical' ? 0 : 26) + 60)}px`);
-  readonly shareOption = computed(() => buildShareOption(this.filteredDetail().map(c => c.row!).filter(Boolean), this.columns()));
-
-  /** Rows of the detail table, filtered by the search box, sorted by the clicked header. */
-  readonly filteredDetail = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    const key = this.sortKey();
-    const sign = this.sortDesc() ? -1 : 1;
-    const value = (c: CenterRowState): number | string => {
-      if (key === 'name') return c.acronym.toLowerCase();
-      if (!c.row) return -1;
-      if (key === 'total') return c.row.total;
-      return c.row.counts[this.columns().findIndex(column => column.id === key)] ?? 0;
-    };
-    return this.centerRows()
-      .filter(c => !term || c.acronym.toLowerCase().includes(term) || c.code.toLowerCase().includes(term) || c.fullName.toLowerCase().includes(term))
-      .sort((a, b) => {
-        const va = value(a);
-        const vb = value(b);
-        const cmp = typeof va === 'string' && typeof vb === 'string' ? va.localeCompare(vb) : Number(va) - Number(vb);
-        return cmp * sign || a.acronym.localeCompare(b.acronym);
-      });
-  });
   readonly selectedLabel = computed(() => {
     const id = this.selectedStatus();
     return id === null ? null : resultStatusLabel(id);
@@ -162,34 +154,39 @@ export class PortfolioCentersBlockComponent {
 
   toggleStatus(statusId: number): void {
     this.selectedStatus.update(current => (current === statusId ? null : statusId));
-    if (this.selectedStatus() !== null) {
-      this.sortKey.set(statusId);
-      this.sortDesc.set(true);
-    }
   }
+
+  /** Selects an origin, or goes back to 'all' when it is already selected. Never touches the status (CNR-4). */
+  toggleOrigin(origin: CenterOrigin): void {
+    this.origin.update(current => (current === origin ? 'all' : origin));
+  }
+
+  clearFilters(): void {
+    this.selectedStatus.set(null);
+    this.origin.set('all');
+  }
+
+  /** Origin label and status label joined; null when neither filter is set. */
+  readonly activeFilterLabel = computed<string | null>(() => {
+    const origin = this.origin();
+    const parts = [origin === 'new' ? this.copy.originNew : origin === 'replicated' ? this.copy.originReplicated : null, this.selectedLabel()].filter(
+      (part): part is string => !!part
+    );
+    return parts.length ? parts.join(this.copy.filterSeparator) : null;
+  });
+
+  /** CNR-7: Results Center cannot filter by origin, so the link only exists when the origin is 'all'. */
+  readonly showResultsCenterLink = computed(() => this.selectedStatus() !== null && this.origin() === 'all');
 
   onChartClick(event: unknown): void {
     const id = statusIdFromChartEvent(event as any);
     if (id !== null) this.toggleStatus(id);
   }
 
-  sortBy(key: SortKey): void {
-    if (this.sortKey() === key) {
-      this.sortDesc.update(desc => !desc);
-      return;
-    }
-    this.sortKey.set(key);
-    this.sortDesc.set(key !== 'name');
-  }
-
-  onSearch(event: Event): void {
-    this.search.set((event.target as HTMLInputElement).value ?? '');
-  }
-
-  /** The Results Center reads `?status=` (results-list.component); the same deep link the Portfolio overview uses. */
-  resultsCenterParams(): Record<string, number> {
+  /** The Results Center reads `?status=` (results-list.component); `funding=bilateral` keeps it on W3/Bilateral results (CNR-7). */
+  resultsCenterParams(): Record<string, number | string> {
     const id = this.selectedStatus();
-    return id === null ? {} : { status: id };
+    return id === null ? {} : { funding: 'bilateral', status: id };
   }
 
   constructor() {
@@ -209,10 +206,13 @@ export class PortfolioCentersBlockComponent {
     void this.loadCenters(this.versionId());
   }
 
-  retryCenter(code: string): void {
-    const center = this.centerRows().find(item => item.code === code);
-    if (!center || center.state === 'loading') return;
-    this.loadCenter(center, this.versionId());
+  /** Re-requests every Center in the error state. loadCenter flips each to 'loading' at once, so a second tap finds none. */
+  retryFailedCenters(): void {
+    if (this.centersListState() !== 'ready') return;
+    const versionId = this.versionId();
+    this.centerRows()
+      .filter(center => center.state === 'error')
+      .forEach(center => this.loadCenter(center, versionId));
   }
 
   private resolvePhase(): void {
@@ -241,14 +241,7 @@ export class PortfolioCentersBlockComponent {
         .filter(center => !!center?.code)
         .map(center => {
           const acronym = center.acronym || center.name || center.code;
-          return {
-            code: center.code,
-            acronym,
-            fullName: center.name || acronym,
-            link: buildCenterRow(center.code, acronym, []).link,
-            state: 'loading' as LoadState,
-            row: null
-          };
+          return { code: center.code, acronym, state: 'loading' as LoadState, w3Rows: null };
         })
         .sort((a, b) => a.acronym.localeCompare(b.acronym, undefined, { sensitivity: 'base' }));
       this.centerRows.set(states);
@@ -261,17 +254,17 @@ export class PortfolioCentersBlockComponent {
 
   private loadCenter(center: CenterRowState, versionId: number | null): void {
     if (versionId === null) {
-      this.patchCenter(center.code, { state: 'ready', row: buildCenterRow(center.code, center.acronym, []) });
+      this.patchCenter(center.code, { state: 'ready', w3Rows: [] });
       return;
     }
-    this.patchCenter(center.code, { state: 'loading', row: null });
+    this.patchCenter(center.code, { state: 'loading', w3Rows: null });
     this.bilateralApi
       .GET_bilateralCenterResults(center.code, versionId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (envelope: any) =>
-          this.patchCenter(center.code, { state: 'ready', row: buildCenterRow(center.code, center.acronym, envelope?.response ?? []) }),
-        error: () => this.patchCenter(center.code, { state: 'error', row: null })
+          this.patchCenter(center.code, { state: 'ready', w3Rows: ((envelope?.response ?? []) as BilateralCenterResult[]).filter(isW3Row) }),
+        error: () => this.patchCenter(center.code, { state: 'error', w3Rows: null })
       });
   }
 

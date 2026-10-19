@@ -2,8 +2,14 @@ import { computed, Injectable, signal } from '@angular/core';
 import { ProgrammeResultRow } from './programme-results.service';
 import { sectionLabel } from './programme-results-section-labels';
 
-/** The eight filter dimensions of the Results tab toolbar, left to right. */
-export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'phase' | 'status' | 'category' | 'origin' | 'center' | 'createdBy';
+/** The nine filter dimensions of the Results tab toolbar, left to right. */
+export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'phase' | 'status' | 'category' | 'origin' | 'center' | 'createdBy' | 'replication';
+
+// @akili-spec changes/sp-overview-total-drilldown (STD-T-1)
+/** Replication filter value space; the URL carries the same strings. */
+export type ProgrammeResultsReplicationValue = 'new' | 'replicated';
+export const PROGRAMME_RESULTS_REPLICATION_VALUES: readonly ProgrammeResultsReplicationValue[] = ['new', 'replicated'];
+const REPLICATION_LABELS: Record<ProgrammeResultsReplicationValue, string> = { new: 'New', replicated: 'Previously reported' };
 
 /** One entry of the chip row. `value` is what `clearChip()` needs to remove just this one. */
 export interface ProgrammeResultsFilterChip {
@@ -31,6 +37,8 @@ export interface ProgrammeResultsFilterState {
   selectedOrigins: string[];
   selectedCenters: string[];
   selectedCreatedBy: string[];
+  // @akili-spec changes/sp-overview-total-drilldown (STD-T-1) — optional so older snapshots still type-check.
+  selectedReplication?: string[];
 }
 
 /** Which dimensions to skip. Used for the status counters, which must ignore the status filter. */
@@ -253,6 +261,13 @@ export function matchesProgrammeResultFilters(
   const creators = state.selectedCreatedBy ?? [];
   if (creators.length && !creators.some(value => normalize(value) === normalize(row?.createdBy))) return false;
 
+  // @akili-spec changes/sp-overview-total-drilldown (STD-T-1, STD-R-4) — empty or both values =
+  // no filter; one value narrows on `row.isReplicated` (absent counts as New).
+  const replication = state.selectedReplication ?? [];
+  const wantsNew = replication.includes('new');
+  const wantsReplicated = replication.includes('replicated');
+  if (wantsNew !== wantsReplicated && !!row?.isReplicated !== wantsReplicated) return false;
+
   return true;
 }
 
@@ -330,7 +345,11 @@ export class ProgrammeResultsFilterService {
   /** MULTI-select, matched against `row.createdBy` (`create_first_name` + `create_last_name`). */
   readonly selectedCreatedBy = signal<string[]>([]);
 
-  /** Plain snapshot of all eight dimensions — what the pure predicates take. */
+  // @akili-spec changes/sp-overview-total-drilldown (STD-T-1)
+  /** MULTI-select over `'new' | 'replicated'`, matched against `row.isReplicated`. `[]` = no filter. */
+  readonly selectedReplication = signal<string[]>([]);
+
+  /** Plain snapshot of all nine dimensions — what the pure predicates take. */
   readonly state = computed<ProgrammeResultsFilterState>(() => ({
     searchText: this.searchText(),
     selectedSections: this.selectedSections(),
@@ -339,7 +358,8 @@ export class ProgrammeResultsFilterService {
     selectedCategories: this.selectedCategories(),
     selectedOrigins: this.selectedOrigins(),
     selectedCenters: this.selectedCenters(),
-    selectedCreatedBy: this.selectedCreatedBy()
+    selectedCreatedBy: this.selectedCreatedBy(),
+    selectedReplication: this.selectedReplication()
   }));
 
   /** True when at least one dimension is narrowing the list. Drives the chip row and the
@@ -379,6 +399,11 @@ export class ProgrammeResultsFilterService {
     for (const origin of this.selectedOrigins()) {
       if (origin) chips.push({ label: `Funding source: ${origin}`, dimension: 'origin', value: origin });
     }
+    // @akili-spec changes/sp-overview-total-drilldown (STD-T-1) — right after Funding source.
+    for (const value of this.selectedReplication()) {
+      const label = REPLICATION_LABELS[value as ProgrammeResultsReplicationValue];
+      if (label) chips.push({ label: `Replication: ${label}`, dimension: 'replication', value });
+    }
     for (const center of this.selectedCenters()) {
       if (center) chips.push({ label: `Center: ${center}`, dimension: 'center', value: center });
     }
@@ -409,6 +434,11 @@ export class ProgrammeResultsFilterService {
   /** Adds or removes one funding source from the multi-select. */
   toggleOrigin(origin: string): void {
     this.selectedOrigins.update(current => toggleInList(current, origin));
+  }
+
+  /** Adds or removes one replication value (`new` / `replicated`). */
+  toggleReplication(value: string): void {
+    this.selectedReplication.update(current => toggleInList(current, value));
   }
 
   /** Adds or removes one center from the multi-select. */
@@ -482,6 +512,15 @@ export class ProgrammeResultsFilterService {
     this.selectedCenters.update(current => current.filter(value => value !== center));
   }
 
+  /** Removes one replication value, or all of them when called with no argument. */
+  clearReplication(value?: string): void {
+    if (value === undefined) {
+      this.selectedReplication.set([]);
+      return;
+    }
+    this.selectedReplication.update(current => current.filter(item => item !== value));
+  }
+
   /** Removes one creator, or all of them when called with no argument. */
   clearCreatedBy(createdBy?: string): void {
     if (createdBy === undefined) {
@@ -519,12 +558,15 @@ export class ProgrammeResultsFilterService {
       case 'createdBy':
         this.clearCreatedBy(chip.value);
         return;
+      case 'replication':
+        this.clearReplication(chip.value);
+        return;
       default:
         return;
     }
   }
 
-  /** Resets all eight dimensions. Shared by "Clear all" and the filtered empty state's button. */
+  /** Resets all nine dimensions. Shared by "Clear all" and the filtered empty state's button. */
   clearAll(): void {
     this.searchText.set('');
     this.selectedSections.set([]);
@@ -534,6 +576,7 @@ export class ProgrammeResultsFilterService {
     this.selectedOrigins.set([]);
     this.selectedCenters.set([]);
     this.selectedCreatedBy.set([]);
+    this.selectedReplication.set([]);
   }
 }
 

@@ -322,6 +322,7 @@
   <div class="flex flex-col gap-[10px]">
     @for (group of visibleGroups(); track group.aow.code) {
       @let ratio = ratioOf(group);
+      @let split = splitOf(group);
       @let aowKey = 'aow::' + group.aow.code;
       <!-- Every card starts collapsed (reference seed `expandedAows: {}`), unless the toolbar's
            Expand all switch moved the default — resolved once per card. -->
@@ -335,7 +336,9 @@
         <!-- Top-level header: 52px compact, balanced 3-zone layout. Same chrome for AoW and for Intermediate / 2030 buckets. -->
         <button
           type="button"
-          class="flex h-[52px] min-h-[52px] w-full items-center gap-[10px] bg-[var(--pr-surface-card)] px-[12px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-400)] focus-visible:ring-inset"
+          class="flex min-h-[52px] w-full items-center gap-[10px] max-[640px]:flex-wrap max-[640px]:gap-y-[2px] bg-[var(--pr-surface-card)] px-[12px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-400)] focus-visible:ring-inset"
+          [class.h-[52px]]="!split.line"
+          [class.py-[6px]]="!!split.line"
           [class.rounded-b-[12px]]="!aowOpen"
           [class.border-b]="aowOpen"
           [class.border-[var(--pr-border-divider)]]="aowOpen"
@@ -348,8 +351,9 @@
             class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
             [class.rotate-180]="aowOpen" />
 
-          <!-- Left zone: Identity (code, name, info, count) -->
-          <div class="flex items-center gap-[8px] min-w-0 flex-1 max-w-[420px]">
+          <!-- Left zone: Identity (code, name, info, count) + the optional split line under the name (KTO-R-4) -->
+          <div class="flex min-w-0 flex-1 max-w-[420px] flex-col justify-center">
+          <div class="flex items-center gap-[8px] min-w-0">
             <span
               class="pr-code shrink-0 rounded-[6px] px-[8px] py-[2px] text-[11.5px] font-semibold uppercase tracking-[0.02em]"
               [class]="headerChipClass(group)"
@@ -424,6 +428,12 @@
                   <p class="pr-info-pop_blurb mb-[10px] mt-0 text-[12.5px] leading-[1.5] text-[var(--pr-text-secondary)]">
                     {{ infoBlurb(group) }}
                   </p>
+                  <!-- KTO-R-5: the rule, stated where the user goes to ask what the percentage means. -->
+                  <p
+                    class="mb-[10px] mt-0 text-[12.5px] leading-[1.5] text-[var(--pr-text-secondary)]"
+                    data-testid="aow-info-rule">
+                    {{ ratioRuleSentence }}
+                  </p>
                   <div class="flex items-center gap-[8px] text-[11px] font-medium text-[var(--pr-text-subtle)]">
                     {{ infoMeta(group) }}
                   </div>
@@ -432,9 +442,30 @@
             </span>
 
             <span class="shrink-0 whitespace-nowrap text-[12px] text-[var(--pr-text-subtle)] hidden sm:inline">
-              {{ countLabel(group.count) }}
+              {{ headerCount(group) }}@if (headerTargets(group); as targets) {
+                <span data-testid="aow-header-targets"> · {{ targets }}</span>
+              }
             </span>
           </div>
+          @if (split.line && !group.loading) {
+            <span
+              class="mt-[2px] block text-[11.5px] leading-[1.3] tabular-nums text-[var(--pr-text-subtle)] max-[640px]:hidden"
+              data-testid="aow-split-line">
+              {{ split.line }}
+            </span>
+          }
+          </div>
+
+          <!-- Below 640px the left zone collapses to ~40px (ratio + By-AOW are shrink-0), so the split line
+               gets its own full-width row under the header grid (flex-wrap + basis-full), aligned with the
+               code chip (chevron 16px + gap 10px). >=640px keeps the in-zone copy above. -->
+          @if (split.line && !group.loading) {
+            <span
+              class="order-last block basis-full pl-[26px] text-[11.5px] leading-[1.3] tabular-nums text-[var(--pr-text-subtle)] min-[640px]:hidden"
+              data-testid="aow-split-line-mobile">
+              {{ split.line }}
+            </span>
+          }
 
           <!-- Center zone: Progress bar and coverage ratio -->
           @if (group.loading) {
@@ -450,16 +481,27 @@
                   class="block h-[7px] rounded-[4px] bg-[var(--pr-color-primary-400)]"
                   [style.width.%]="ratio.percent"></span>
               </span>
-              <span
-                class="pr-figure-sm min-w-[50px] sm:min-w-[70px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
-                {{ ratio.done }} of {{ ratio.total }}
-              </span>
-              <span
-                class="min-w-[34px] sm:min-w-[40px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]"
-                prTooltip="KPIs with something reported against them. This is coverage of the plan, not achievement against the targets."
-                prTooltipPosition="top">
-                {{ ratio.percent }}%
-              </span>
+              @if (ratio.empty) {
+                <!-- KTO-R-3: no KPI with a target — a dash, never `0 of 0` / `0%` / `NaN`; the bar is empty and the % slot absent. -->
+                <span
+                  role="img"
+                  aria-label="No KPIs with a target"
+                  data-testid="aow-ratio-empty"
+                  class="pr-figure-sm min-w-[50px] sm:min-w-[70px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-muted)]">
+                  —
+                </span>
+              } @else {
+                <span
+                  class="pr-figure-sm min-w-[50px] sm:min-w-[70px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
+                  {{ ratio.done }} of {{ ratio.total }}
+                </span>
+                <span
+                  class="min-w-[34px] sm:min-w-[40px] shrink-0 whitespace-nowrap text-right text-[12px] sm:text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]"
+                  [prTooltip]="ratioPercentTooltip"
+                  prTooltipPosition="top">
+                  {{ ratio.percent }}%
+                </span>
+              }
             </div>
           }
 
@@ -527,11 +569,56 @@
               @let hasOverflow = hasOverflowFilters(group);
               @let isOverActive = hasActiveOverflowFilter(group);
               @let overCount = activeOverflowCount(group);
+              @let tCounts = targetCountsOf(group);
+              @let selTarget = selectedTargetOf(group);
+              @let filterActive = isOverActive || !!selTarget;
+              @let filterCount = overCount + (selTarget ? 1 : 0);
+              @let showTarget = hasMixedTargets(group);
 
-              @if (centers.length > 1 || types.length > 1) {
+              @if (centers.length > 1 || types.length > 1 || showTarget) {
                 <div
                   class="relative flex h-[32px] min-h-[32px] items-center justify-between border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[20px] sm:px-[28px]">
                   <div class="flex items-center gap-[12px] overflow-hidden min-w-0">
+                    <!-- Target Section (KTO-R-7) — FIRST in the bar (3 short chips, shrink-0, never clipped); Centers/Types are what overflow into the Filter popover. Below 640px the axis lives in the popover. -->
+                    @if (showTarget) {
+                      <div class="flex shrink-0 items-center gap-[5px] max-[640px]:hidden" role="group" aria-label="Filter by target" data-testid="target-axis">
+                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[2px]">
+                          Target:
+                        </span>
+                        <button
+                          type="button"
+                          class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pr-color-primary-300)]"
+                          [class]="!selTarget ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          [attr.aria-pressed]="!selTarget"
+                          data-target-chip="all"
+                          (click)="setTargetFilter(group, null)">
+                          All <span class="opacity-75 tabular-nums">({{ tCounts.all }})</span>
+                        </button>
+                        <button
+                          type="button"
+                          class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pr-color-primary-300)]"
+                          [class]="selTarget === 'with' ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          [attr.aria-pressed]="selTarget === 'with'"
+                          data-target-chip="with"
+                          (click)="setTargetFilter(group, 'with')">
+                          With target <span class="opacity-75 tabular-nums">({{ tCounts.withTarget }})</span>
+                        </button>
+                        <button
+                          type="button"
+                          class="inline-flex h-[22px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pr-color-primary-300)]"
+                          [class]="selTarget === 'without' ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          [attr.aria-pressed]="selTarget === 'without'"
+                          data-target-chip="without"
+                          (click)="setTargetFilter(group, 'without')">
+                          No target set <span class="opacity-75 tabular-nums">({{ tCounts.without }})</span>
+                        </button>
+                      </div>
+
+                      @if (centers.length > 1 || types.length > 1) {
+                        <div class="h-[14px] w-px shrink-0 bg-[var(--pr-border-divider)] max-[640px]:hidden" aria-hidden="true"></div>
+                      }
+                    }
+
                     <!-- Centers Section -->
                     @if (centers.length > 1) {
                       <div class="flex shrink-0 items-center gap-[5px]">
@@ -585,26 +672,27 @@
                         }
                       </div>
                     }
+
                   </div>
 
-                  <!-- Overflow [ ⠚ Filter ] button -->
-                  @if (hasOverflow) {
-                    <div class="relative shrink-0 ml-[8px]">
+                  <!-- Overflow [ ⠚ Filter ] button (also the home of the Target axis below 640px) -->
+                  @if (hasOverflow || showTarget) {
+                    <div class="relative shrink-0 ml-[8px]" [class]="hasOverflow ? '' : 'min-[640px]:hidden'">
                       <button
                         type="button"
                         (click)="toggleCardFilterPopover(group, $event)"
                         class="inline-flex h-[22px] cursor-pointer items-center gap-[4px] rounded-[5px] border px-[8px] text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
-                        [class]="isOverActive
+                        [class]="filterActive
                           ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
                           : 'border-[var(--pr-border)] bg-white text-slate-700 font-medium hover:bg-slate-50'"
                         aria-label="More filters"
                         aria-haspopup="true"
                         [attr.aria-expanded]="isCardFilterOpen(group)">
-                        <span class="material-icons-round text-[14px]" [class.text-[var(--pr-color-primary-600)]]="isOverActive" [class.text-slate-500]="!isOverActive">filter_list</span>
+                        <span class="material-icons-round text-[14px]" [class.text-[var(--pr-color-primary-600)]]="filterActive" [class.text-slate-500]="!filterActive">filter_list</span>
                         <span>Filter</span>
-                        @if (overCount > 0) {
+                        @if (filterCount > 0) {
                           <span class="flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[3px] text-[9.5px] font-bold text-white tabular-nums">
-                            {{ overCount }}
+                            {{ filterCount }}
                           </span>
                         }
                       </button>
@@ -615,15 +703,53 @@
                           (click)="$event.stopPropagation()">
                           <div class="mb-[8px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[6px]">
                             <span class="text-[12px] font-bold text-[var(--pr-text-heading)]">Additional Filters</span>
-                            @if (isOverActive) {
+                            @if (isOverActive || selTarget) {
                               <button
                                 type="button"
                                 class="text-[11px] font-medium text-[var(--pr-color-primary-600)] hover:underline cursor-pointer"
-                                (click)="isOverflowCenterActive(group) ? setCenterFilter(group, null) : null; isOverflowTypeActive(group) ? setTypeFilter(group, null) : null">
+                                (click)="isOverflowCenterActive(group) ? setCenterFilter(group, null) : null; isOverflowTypeActive(group) ? setTypeFilter(group, null) : null; setTargetFilter(group, null)">
                                 Reset
                               </button>
                             }
                           </div>
+
+                          <!-- Target axis, below 640px only (inline in the bar from 640px up) -->
+                          @if (showTarget) {
+                            <div class="mb-[12px] min-[640px]:hidden" role="group" aria-label="Filter by target" data-testid="target-axis-popover">
+                              <p class="m-0 mb-[6px] text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)]">
+                                Target:
+                              </p>
+                              <div class="flex flex-wrap gap-[4px]">
+                                <button
+                                  type="button"
+                                  class="inline-flex min-h-[44px] items-center gap-[3px] rounded-[5px] px-[10px] text-[11px] font-medium transition-colors cursor-pointer border"
+                                  data-target-chip="all"
+                                  [class]="!selTarget ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-slate-50 text-slate-700 border-[var(--pr-border)] hover:bg-slate-100'"
+                                  [attr.aria-pressed]="!selTarget"
+                                  (click)="setTargetFilter(group, null)">
+                                  All <span class="opacity-75 tabular-nums">({{ tCounts.all }})</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  class="inline-flex min-h-[44px] items-center gap-[3px] rounded-[5px] px-[10px] text-[11px] font-medium transition-colors cursor-pointer border"
+                                  data-target-chip="with"
+                                  [class]="selTarget === 'with' ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-slate-50 text-slate-700 border-[var(--pr-border)] hover:bg-slate-100'"
+                                  [attr.aria-pressed]="selTarget === 'with'"
+                                  (click)="setTargetFilter(group, 'with')">
+                                  With target <span class="opacity-75 tabular-nums">({{ tCounts.withTarget }})</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  class="inline-flex min-h-[44px] items-center gap-[3px] rounded-[5px] px-[10px] text-[11px] font-medium transition-colors cursor-pointer border"
+                                  data-target-chip="without"
+                                  [class]="selTarget === 'without' ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-slate-50 text-slate-700 border-[var(--pr-border)] hover:bg-slate-100'"
+                                  [attr.aria-pressed]="selTarget === 'without'"
+                                  (click)="setTargetFilter(group, 'without')">
+                                  No target set <span class="opacity-75 tabular-nums">({{ tCounts.without }})</span>
+                                </button>
+                              </div>
+                            </div>
+                          }
 
                           <!-- Overflow Centers (Compact Chip Cloud) -->
                           @if (overflowCenters.length > 0) {
@@ -678,9 +804,9 @@
 
               @if (!bands.length && !group.loading) {
                 <div class="flex flex-col items-start gap-[10px] px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
-                  @if (filtersActive() || selCenter || selType) {
+                  @if (filtersActive() || selCenter || selType || selTarget) {
                     <p class="m-0">No indicators match the current filters.</p>
-                    <button type="button" class="pr-clear-filters" (click)="setCenterFilter(group, null); setTypeFilter(group, null); clearFilters.emit()">Clear filters</button>
+                    <button type="button" class="pr-clear-filters" (click)="setCenterFilter(group, null); setTypeFilter(group, null); setTargetFilter(group, null); clearFilters.emit()">Clear filters</button>
                   } @else if (isBucket(group)) {
                     <p class="m-0">No indicators in this bucket yet.</p>
                   } @else {
