@@ -747,7 +747,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: null,
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
   });
 
@@ -767,7 +768,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: null,
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
   });
 
@@ -825,7 +827,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: 'W1/W2',
       center: 'CIAT,IITA',
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
   });
 
@@ -1043,7 +1046,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: 'CIAT',
       createdBy: 'Angel Jarrin',
-      section: null
+      section: null,
+      replication: null
     });
   });
 
@@ -1067,7 +1071,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: null,
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
     expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
   });
@@ -1094,7 +1099,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: null,
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
     expect(extras.replaceUrl).toBe(true);
     expect(extras.queryParamsHandling).toBe('merge');
@@ -2316,6 +2322,70 @@ describe('ProgrammeResultsComponent', () => {
   });
 
   // ── column resizing (TRC-R-1..4) ────────────────────────────────────────────────────────
+  // @akili-spec changes/sp-overview-total-drilldown (STD-T-1, STD-R-4)
+  describe('Replication filter (STD-R-4)', () => {
+    const REPL_ITEMS = [
+      { ...RAW_ITEMS[0], id: 7001, result_code: '7001', is_replicated: 0 },
+      { ...RAW_ITEMS[0], id: 7002, result_code: '7002', is_replicated: 1 },
+      { ...RAW_ITEMS[0], id: 7003, result_code: '7003', is_replicated: 0 }
+    ];
+    const codes = () => component.filteredRows().map(r => r.code);
+
+    it('S-4.2 hydrates ?replication=new into the signal and chip, filters rows, and does not navigate', () => {
+      setup(REPL_ITEMS, { phase: 'Reporting 2026', replication: 'new' });
+
+      expect(filterService().selectedReplication()).toEqual(['new']);
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Replication: New');
+      expect(codes()).toEqual(['7001', '7003']);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('S-4.2 setting the signal writes replication=new; clearing writes null', () => {
+      setup(REPL_ITEMS, { phase: 'Reporting 2026' });
+      (router.navigate as jest.Mock).mockClear();
+
+      filterService().selectedReplication.set(['new']);
+      fixture.detectChanges();
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      expect((router.navigate as jest.Mock).mock.calls[0][1].queryParams).toEqual(expect.objectContaining({ replication: 'new' }));
+
+      (router.navigate as jest.Mock).mockClear();
+      pushQueryParams({ phase: 'Reporting 2026', replication: 'new' });
+      fixture.detectChanges();
+      (router.navigate as jest.Mock).mockClear();
+      filterService().selectedReplication.set([]);
+      fixture.detectChanges();
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      expect((router.navigate as jest.Mock).mock.calls[0][1].queryParams.replication).toBeNull();
+    });
+
+    it('S-4.3 ?replication=foo is ignored: no chip, all rows kept, no throw', () => {
+      expect(() => setup(REPL_ITEMS, { phase: 'Reporting 2026', replication: 'foo' })).not.toThrow();
+
+      expect(filterService().selectedReplication()).toEqual([]);
+      expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026']);
+      expect(codes()).toEqual(['7001', '7002', '7003']);
+    });
+
+    it('S-4.3 ?replication=new,foo keeps only new', () => {
+      setup(REPL_ITEMS, { phase: 'Reporting 2026', replication: 'new,foo' });
+
+      expect(filterService().selectedReplication()).toEqual(['new']);
+      expect(codes()).toEqual(['7001', '7003']);
+    });
+
+    it('S-4.4 the badge counts the replication chip and clearAll drops it', () => {
+      setup(REPL_ITEMS, { phase: 'Reporting 2026', replication: 'replicated' });
+
+      expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Replication: Previously reported');
+      expect(codes()).toEqual(['7002']);
+
+      component.clearAll();
+      expect(filterService().selectedReplication()).toEqual([]);
+    });
+  });
+
   describe('column resizing (TRC-R-1..4)', () => {
     afterEach(() => {
       localStorage.removeItem(PGR_COLUMN_WIDTHS_STORAGE_KEY);

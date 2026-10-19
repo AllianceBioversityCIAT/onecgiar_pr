@@ -38,6 +38,16 @@ import {
 import { ResultFrameworkReportingHomeService } from '../../../result-framework-reporting-home/services/result-framework-reporting-home.service';
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-3)
 import { PtResultsBrowseComponent, PtProposalDto } from './components/pt-results-browse/pt-results-browse.component';
+import {
+  PtPendingItem,
+  PtPrefillBlock,
+  buildPtPendingChecklist,
+  buildPtPrefillBlock,
+  ptContributionToApply,
+  ptPendingChecklistHtml,
+  ptPrefillOutcomeItems,
+  resolvePtCenters
+} from './pt-prefill.util';
 
 // @akili-spec changes/kp-program-accelerator-match (KPAM-T-3, KPAM-R-2)
 export const SCIENCE_PROGRAM_NAMES: Record<string, string> = {
@@ -380,6 +390,17 @@ export class LabReportFormComponent {
    * notice never survives past the pick that caused it.
    */
   readonly ptTitleTruncated = signal(false);
+  /**
+   * `PTB-R-18a`: what PT suggested and the drawer did not apply — rendered under the pick banner
+   * and repeated in the post-create alert. Reactive on the centers catalogue (unmatched centers).
+   */
+  readonly ptPendingChecklist = computed<PtPendingItem[]>(() => buildPtPendingChecklist(this.ptDraft(), this.centersSE.centers()));
+  /** Contribution the last pick wrote — a later pick or a clear only undoes it while it is still untouched. */
+  private ptAppliedContribution: number | null = null;
+  /** Center codes the last pick added (never the user's), so a re-pick or clear can take them back out. */
+  private ptAppliedCenterCodes: string[] = [];
+  /** True when the last pick also had to add the `Other(s)` sentinel to reach a non-ToC center. */
+  private ptAddedOtherSentinel = false;
 
   /** `related_node_id` is the string the Progress Tracker route expects (server decision block, `progress-tracker.service.ts`). */
   readonly ptTocIndicatorId = computed<string | number | null>(() => this.indicator()?.related_node_id ?? null);
@@ -422,6 +443,7 @@ export class LabReportFormComponent {
   /** "Change proposal" in the pick banner — clears the pick alongside its truncation flag together,
    * so a stale notice cannot survive a proposal that no longer exists. */
   clearPtDraft(): void {
+    this.undoPtPrefill();
     this.ptDraft.set(null);
     this.ptTitleTruncated.set(false);
   }
@@ -434,6 +456,7 @@ export class LabReportFormComponent {
    * — only `Create and continue` issues a request.
    */
   onPtResultSelected(proposal: PtProposalDto): void {
+    this.undoPtPrefill();
     this.ptDraft.set(proposal);
 
     // PTB-R-9 / PTB-AC-8: truncate to 30 words, always noting whether truncation happened so the
@@ -470,6 +493,80 @@ export class LabReportFormComponent {
     if (this.currentResultIsKnowledgeProduct() && proposal.knowledge_product_handle) {
       this.patch('handler', proposal.knowledge_product_handle);
     }
+
+    this.applyPtContribution(proposal);
+    void this.applyPtCenters(proposal);
+  }
+
+  /**
+   * `PTB-R-18a`: PT's numeric contribution, only into an empty field — never over what the user
+   * typed. A knowledge product always contributes 1 (`KPAC-R-1`), so it is skipped there.
+   */
+  private applyPtContribution(proposal: PtProposalDto): void {
+    const value = ptContributionToApply(proposal);
+    if (value === null || this.currentResultIsKnowledgeProduct()) return;
+    const current = this.createResultBody().contribution_to_indicator_target;
+    if (current != null && `${current}`.trim() !== '') return;
+    this.patch('contribution_to_indicator_target', value);
+    this.ptAppliedContribution = value;
+  }
+
+  /**
+   * `PTB-R-18a`: adds the PRMS centers PT names (lead, contributing, CGIAR-center partners) to the
+   * selection — additive only, never removing a user pick. Waits for the ToC preselect so a ToC
+   * center lands in the primary list, and a non-ToC one goes through `Other(s)` as a user pick would.
+   */
+  private async applyPtCenters(proposal: PtProposalDto): Promise<void> {
+    await Promise.resolve(this.preselectCentersP).catch(() => undefined);
+    if (this.ptDraft() !== proposal) return;
+    const { matched } = resolvePtCenters(proposal, this.centersSE.centers());
+    if (!matched.length) return;
+
+    const tocByCode = new Map(this.tocCenters().map((c: any) => [c.code, c]));
+    const primary = [...this.contributingCenters()];
+    const others = [...this.otherCentersSelected()];
+    const selected = (code: string) => primary.some(c => c?.code === code) || others.some(c => c?.code === code);
+    const added: string[] = [];
+    for (const center of matched) {
+      if (selected(center.code)) continue;
+      if (!this.hasReferenceCenters() || tocByCode.has(center.code)) {
+        primary.push(tocByCode.get(center.code) ?? center);
+      } else {
+        if (!primary.some(c => c?.code === OTHER_CENTERS_CODE)) {
+          primary.push(this.otherCentersSentinel);
+          this.ptAddedOtherSentinel = true;
+        }
+        others.push(center);
+      }
+      added.push(center.code);
+    }
+    if (!added.length) return;
+    this.contributingCenters.set(primary);
+    this.otherCentersSelected.set(others);
+    this.ptAppliedCenterCodes = added;
+    this.markDirty();
+  }
+
+  /** Takes back what the previous pick prefilled, leaving anything the user changed alone. */
+  private undoPtPrefill(): void {
+    const applied = this.ptAppliedContribution;
+    if (applied !== null && Number(this.createResultBody().contribution_to_indicator_target) === applied) {
+      this.createResultBody.update(body => ({ ...body, contribution_to_indicator_target: null }));
+    }
+    if (this.ptAppliedCenterCodes.length) {
+      const codes = new Set(this.ptAppliedCenterCodes);
+      this.otherCentersSelected.update(list => list.filter(c => !codes.has(c?.code)));
+      this.contributingCenters.update(list =>
+        list.filter(c => !codes.has(c?.code) && !(this.ptAddedOtherSentinel && c?.code === OTHER_CENTERS_CODE && !this.otherCentersSelected().length))
+      );
+    }
+    this.resetPtPrefillTracking();
+  }
+
+  private resetPtPrefillTracking(): void {
+    this.ptAppliedContribution = null;
+    this.ptAppliedCenterCodes = [];
+    this.ptAddedOtherSentinel = false;
   }
 
   /** Stored from the arming effect — auto-create (KPAC-T-2/T-3) awaits this Promise. */
@@ -746,6 +843,7 @@ export class LabReportFormComponent {
     this.ptDraft.set(null);
     this.ptTabOpened.set(false);
     this.ptTitleTruncated.set(false);
+    this.resetPtPrefillTracking();
     // P2-3420: back to the story's default, NO.
     this.hasInnovationLink.set(false);
     this.linkedResultId.set(null);
@@ -1047,6 +1145,31 @@ export class LabReportFormComponent {
     return this.missingFields().length === 0;
   });
 
+  /**
+   * `PTB-R-18a`: with a Progress Tracker pick that left work behind, the success toast becomes a
+   * persistent "Pending from Progress Tracker" alert — it is mounted on `app-root`, so it survives
+   * the navigation to Result Detail. Partners the server could not save are appended to it.
+   */
+  private showCreatedAlert(pending: PtPendingItem[], prefill: Record<string, unknown> | null | undefined, sent: PtPrefillBlock | null = null): void {
+    const names = (value: unknown): string[] =>
+      (Array.isArray(value) ? value : []).filter((name): name is string => typeof name === 'string' && name.trim() !== '');
+    const items: PtPendingItem[] = [
+      ...pending,
+      ...names(prefill?.['partners_skipped']).map(name => ({ label: `Partner: ${name}`, detail: 'Could not be saved — add it in Contributors and partners' })),
+      ...ptPrefillOutcomeItems(sent, prefill)
+    ];
+    if (!items.length) {
+      this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+      return;
+    }
+    this.api.alertsFe.show({
+      id: 'reportResultPtPending',
+      title: 'Result created — pending from Progress Tracker',
+      description: ptPendingChecklistHtml(items),
+      status: 'information'
+    });
+  }
+
   createResult(): void {
     if (!this.canSave()) return;
     this.creatingResult.set(true);
@@ -1063,9 +1186,11 @@ export class LabReportFormComponent {
     // submit time. Every other create path passes `null`, which keeps `toc_progressive_narrative`
     // `''` and omits `progress_tracker_provenance` and `result.description` entirely (`PTB-AC-13`).
     // With a pick, the draft becomes `result.description`; the narrative carries only the origin note. Only the four fields the
-    // builder reads travel — never `countries` / `impact_areas` / `gender_split` (`PTB-R-18`,
-    // `PTB-AC-17`), which this file never even destructures off `ptDraft()`.
+    // builder reads travel as provenance; `PTB-R-18a` adds evidence links + CLARISA-matched
+    // partners in `ptPrefill` (allowlisted in `buildPtPrefillBlock`), and `PTB-R-18b` the mapped
+    // geography + impact-area scores. Gender split and type blocks stay out (`PTB-R-18`).
     const ptDraft = this.ptDraft();
+    const ptPrefill = ptDraft ? buildPtPrefillBlock(ptDraft) : null;
     const ptProposal: PtProvenanceInput | null = ptDraft
       ? {
           description: ptDraft.description,
@@ -1089,13 +1214,15 @@ export class LabReportFormComponent {
       bilateralProjects: this.selectedBilateral(),
       hasInnovationLink: this.showsInnovationLink() ? this.hasInnovationLink() : null,
       linkedResultId: this.linkedResultId(),
-      ptProposal
+      ptProposal,
+      ptPrefill
     });
+    const ptPending = ptDraft ? this.ptPendingChecklist() : [];
 
     this.autoCreateHint.set(null);
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: (resp: any) => {
-        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+        this.showCreatedAlert(ptPending, resp?.response?.progressTrackerPrefill, ptPrefill);
         const code = resp?.response?.result?.result_code;
         const phase = resp?.response?.result?.version_id;
         if (code == null) {

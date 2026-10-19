@@ -65,15 +65,19 @@ describe('ReportingAowTableComponent — Progress Tracker badge', () => {
     openAow();
     const visible = badges().filter(b => b.closest('.pr-collapse.is-open .pr-collapse.is-open'));
     expect(visible.length).toBe(1);
-    expect(visible[0].textContent).toContain('PT · 7');
-    expect(visible[0].textContent).toContain('Progress Tracker has 7 evidence items for this KPI');
+    expect(visible[0].querySelector('[data-testid="pt-activity-badge-full"]')?.textContent?.trim()).toBe('PT · 7 evidence items');
+    expect(visible[0].querySelector('[data-testid="pt-activity-badge-short"]')?.textContent?.trim()).toBe('PT · 7');
+    expect(component.ptTooltip).toBe('Evidence items in Progress Tracker. One proposal can group several evidence items.');
+    expect(visible[0].querySelector('.sr-only')?.textContent?.trim()).toBe(
+      'PT · 7 evidence items. Evidence items in Progress Tracker. One proposal can group several evidence items.'
+    );
   });
 
   it('flat view: renders the badge in the title cell', async () => {
     await build([row(), row({ indicator_id: 102 })], { ptActivity: index, viewMode: 'flat' });
     const flat = badges().filter(b => b.closest('.pr-flat-cell'));
     expect(flat.length).toBe(1);
-    expect(flat[0].textContent).toContain('PT · 7');
+    expect(flat[0].textContent).toContain('PT · 7 evidence items');
   });
 
   it('ptCountOf reads the input index', async () => {

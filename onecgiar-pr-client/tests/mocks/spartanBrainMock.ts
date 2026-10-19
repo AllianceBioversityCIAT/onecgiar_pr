@@ -1,4 +1,4 @@
-import { Directive, EventEmitter, HostListener, Injectable, Input, Output, TemplateRef, ViewContainerRef, effect, inject, signal } from '@angular/core';
+import { DestroyRef, Directive, EventEmitter, HostListener, Injectable, Input, Output, TemplateRef, ViewContainerRef, effect, inject, signal } from '@angular/core';
 import { EMPTY, Observable } from 'rxjs';
 
 @Directive({ selector: '[brnButton]', standalone: true })
@@ -190,6 +190,8 @@ export function injectExposesStateProvider(): any {
 
 @Directive({ selector: '[brnCommand]', standalone: true })
 export class BrnCommand {
+  /** Item count, so the structural `BrnCommandEmpty` stub can render only when nothing is listed. */
+  readonly _itemCount = signal(0);
   @Input() id: string | undefined;
   @Input() filter: ((value: string, search: string) => boolean) | undefined;
   @Input() search: string | undefined;
@@ -229,10 +231,37 @@ export class BrnCommandItem {
   @Input() id: string | undefined;
   @Input() value: string | undefined;
   @Input() disabled: boolean | string | undefined;
+  // No `selected` output on purpose: specs dispatch a DOM `selected` CustomEvent, which `(selected)` binds to.
+
+  constructor() {
+    const command = inject(BrnCommand, { optional: true });
+    if (command) {
+      command._itemCount.update(n => n + 1);
+      inject(DestroyRef).onDestroy(() => command._itemCount.update(n => n - 1));
+    }
+  }
 }
 
+/**
+ * STRUCTURAL, like the real `BrnCommandEmpty` (which injects `TemplateRef`): use `*brnCommandEmpty`.
+ * The attribute form throws NG0201 here exactly as it does in the browser. Renders only while the
+ * owning command lists no item (the real one tracks `visible()` after search filtering; the stub has
+ * no search filtering, so an empty option list is the reproducible "no matches" case).
+ */
 @Directive({ selector: '[brnCommandEmpty]', standalone: true })
-export class BrnCommandEmpty {}
+export class BrnCommandEmpty {
+  private readonly _template = inject(TemplateRef);
+  private readonly _viewContainer = inject(ViewContainerRef);
+  private readonly _command = inject(BrnCommand, { optional: true });
+
+  constructor() {
+    effect(() => {
+      const visible = this._command ? this._command._itemCount() === 0 : true;
+      this._viewContainer.clear();
+      if (visible) this._viewContainer.createEmbeddedView(this._template);
+    });
+  }
+}
 
 @Directive({ selector: '[brnCommandSeparator]', standalone: true })
 export class BrnCommandSeparator {}
@@ -342,6 +371,8 @@ export type BrnActivationMode = 'automatic' | 'manual';
 export class BrnTabs {
   @Input('brnTabs') activeTab: string | undefined;
   @Input() orientation: 'horizontal' | 'vertical' = 'horizontal';
+  // Re-exposed by `HlmTabs` through hostDirectives (hlm-tabs.ts); missing it raises NG0311 for every hlm-tabs user.
+  @Input() activationMode: 'automatic' | 'manual' = 'automatic';
   @Output() readonly brnTabsChange = new EventEmitter<string>();
   @Output() readonly tabActivated = new EventEmitter<string>();
 

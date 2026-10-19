@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, input
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { NgClass } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideInfo } from '@ng-icons/lucide';
+import { lucideArrowRight, lucideChevronDown, lucideInfo } from '@ng-icons/lucide';
 import { HlmPopover, HlmPopoverContent, HlmPopoverPortal } from '@spartan/popover';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
@@ -92,6 +92,18 @@ export interface OverviewTotalBreakdown {
   pendingReview: number;
 }
 
+/** Total General composition kinds (changes/sp-overview-total-drilldown, STD-R-2/R-3). */
+export type TotalSegmentKind = 'replicated' | 'new' | 'pendingReview';
+
+/** View model of one composition-bar segment; widthPct is computed here, never in the template. */
+export interface TotalSegment {
+  kind: TotalSegmentKind;
+  count: number;
+  widthPct: number;
+  label: string;
+  colorClass: string;
+}
+
 export type OverviewSection = 'all' | 'w1w2' | 'bilateral' | 'aow';
 
 export interface AowProgressRow {
@@ -101,7 +113,7 @@ export interface AowProgressRow {
   total: number;
   /**
    * How many KPIs the zero-target rule (MRF-R-7) excluded from `total` on this row — the number the
-   * `excludes N zero-target KPIs` disclosure states (KCR-R-2.1). Optional: a caller that has no
+   * `excludes N KPI(s) with no target set` disclosure states (KCR-R-2.1, KTO-R-6). Optional: a caller that has no
    * figure to disclose simply omits it, and `0`/absent means the denominator hid nothing.
    * @akili-spec bugfix/kpi-count-reconciliation
    */
@@ -227,7 +239,7 @@ export interface HeatmapModel {
     HlmPopoverContent,
     HlmPopoverPortal
   ],
-  providers: [provideIcons({ lucideChevronDown, lucideInfo })],
+  providers: [provideIcons({ lucideArrowRight, lucideChevronDown, lucideInfo })],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -412,20 +424,20 @@ export class ProgramOverviewComponent {
   /**
    * Per-chip `title` disclosure for the Strategic-outcomes footer (`KCR-R-2.1` / `KCR-R-6`). The
    * chip's `total` is *Counted*, so a bucket that plans more than it counts states the difference —
-   * `excludes 1 zero-target KPI` / `excludes 3 zero-target KPIs`, pluralised exactly as
+   * `excludes 1 KPI with no target set` / `excludes 3 KPIs with no target set`, pluralised exactly as
    * `reporting-aow-table.countLabel` does. `null` (not `''`) omits the attribute: a chip that
    * excluded nothing must carry no tooltip at all (`KCR-AC-2`'s "2030 `0/1` no title").
    * @akili-spec bugfix/kpi-count-reconciliation
    */
   chipZeroTargetTitle(row: AowProgressRow): string | null {
     const n = row.zeroTarget ?? 0;
-    return n > 0 ? `excludes ${n} zero-target KPI${n === 1 ? '' : 's'}` : null;
+    return n > 0 ? `excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : null;
   }
 
   /** Rail `title` disclosure for the zero-target exclusion (OAH-R-1) — `null` omits the attribute. */
   readonly zeroTargetTitle = computed(() => {
     const n = this.richStats().zeroTarget;
-    return n > 0 ? `excludes ${n} zero-target KPIs` : null;
+    return n > 0 ? `excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : null;
   });
 
   /** SVG ring geometry — `r=40` circle (mockup's dasharray/dashoffset pair, design.md §6). */
@@ -464,11 +476,14 @@ export class ProgramOverviewComponent {
 
   /**
    * Text alternative for the segmented bar (OAH-N-1) and its `title` disclosure (OAH-R-3): the
-   * three glossary counts, plus the zero-target exclusion note when any KPI was excluded.
+   * three glossary counts, plus the no-target exclusion note when any KPI was excluded.
    * @akili-spec changes/overview-aow-progress-hero
+   * @akili-spec changes/kpi-progress-target-only
    */
   rowBarTitle(row: OverviewAowProgressRowRich): string {
-    return `${row.complete} Complete, ${row.inProgress} In progress, ${row.notStarted} Not started`;
+    const base = `${row.complete} Complete, ${row.inProgress} In progress, ${row.notStarted} Not started`;
+    const n = row.zeroTarget ?? 0;
+    return n > 0 ? `${base}, excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : base;
   }
 
   /** `true` once a row has reported every counted KPI (OAH-R-4 complete swap). */
@@ -675,7 +690,26 @@ export class ProgramOverviewComponent {
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
 
-  readonly programResultsTotal = computed(() => this.totalBreakdown().replicated + this.totalBreakdown().new);
+  // @akili-spec changes/sp-overview-total-drilldown STD-R-1
+  readonly programResultsTotal = computed(() => {
+    const b = this.totalBreakdown();
+    return b.replicated + b.new + b.pendingReview;
+  });
+
+  /** STD-R-2: one segment per non-zero row, in row order; widths are TS-computed (DD-4 colors). */
+  readonly totalSegments = computed<TotalSegment[]>(() => {
+    const b = this.totalBreakdown();
+    const total = this.programResultsTotal();
+    const all: Omit<TotalSegment, 'widthPct'>[] = [
+      { kind: 'replicated', count: b.replicated, label: 'innovations replicated for update', colorClass: 'bg-white' },
+      { kind: 'new', count: b.new, label: 'new results', colorClass: 'bg-cyan-300' },
+      { kind: 'pendingReview', count: b.pendingReview, label: 'W3/Bilateral results awaiting review', colorClass: 'bg-amber-300' }
+    ];
+    return all.filter(s => s.count > 0).map(s => ({ ...s, widthPct: (s.count / total) * 100 }));
+  });
+
+  /** STD-R-3: rows and segments emit the same intent; the host performs the navigation. */
+  readonly openTotalSegment = output<TotalSegmentKind>();
 
   readonly programResultsLoading = computed(() => this.meterLoading() || this.bilateralLoading());
 

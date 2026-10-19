@@ -128,7 +128,15 @@ export function ptActivityHasAny(index: PtActivityIndex | null | undefined): boo
   return false;
 }
 
-/** Badge tooltip copy. */
-export function ptActivityTooltip(count: number): string {
-  return `Progress Tracker has ${count} evidence items for this KPI`;
+/** Badge tooltip copy — explains the unit, since one proposal can group several evidence items. */
+export const PT_ACTIVITY_TOOLTIP = 'Evidence items in Progress Tracker. One proposal can group several evidence items.';
+
+/** Full badge label: `PT · 1 evidence item` / `PT · 2 evidence items`. */
+export function ptActivityLabel(count: number): string {
+  return `PT · ${count} evidence ${count === 1 ? 'item' : 'items'}`;
+}
+
+/** Compact badge label for narrow viewports (<640px): `PT · 2`. */
+export function ptActivityShortLabel(count: number): string {
+  return `PT · ${count}`;
 }

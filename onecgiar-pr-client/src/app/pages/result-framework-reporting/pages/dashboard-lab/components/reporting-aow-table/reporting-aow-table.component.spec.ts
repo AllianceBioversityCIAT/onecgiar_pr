@@ -950,7 +950,7 @@ describe('ReportingAowTableComponent', () => {
         row({ indicator_id: 2, actual_achieved_value_sum: 0, progress_percentage: 0 })
       ]);
       await build([g]);
-      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50 });
+      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50, empty: false });
     });
 
     it('counts a row at 100% only if something was actually reported', async () => {
@@ -967,31 +967,35 @@ describe('ReportingAowTableComponent', () => {
       await build([g], { search: 'alpha' });
       // One row is filtered out, but the ratio still reflects both.
       expect(component.visibleRows(g).length).toBe(1);
-      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50 });
+      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50, empty: false });
     });
 
     it('does not divide by zero on an empty AoW', async () => {
       const g = group([]);
       await build([g]);
-      expect(component.ratioOf(g)).toEqual({ done: 0, total: 0, percent: 0 });
+      expect(component.ratioOf(g)).toEqual({ done: 0, total: 0, percent: 0, empty: true });
     });
 
     // MRF-AC-6 / MRF-R-6: the grouped header ratio and the By-AOW banner MUST agree, including
-    // when the zero-target rule (MRF-R-7) excludes a KPI from the denominator.
-    it('agrees with buildAowBannerStats on a shared fixture, incl. a zero-target KPI', async () => {
+    // when the has-a-target rule (KTO-R-2) excludes a KPI from the denominator.
+    it('agrees with buildAowBannerStats on a shared fixture, incl. a no-target KPI', async () => {
       const inds = [
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '4' }),
-        // Zero-target (target = 0 AND achieved = 0): excluded from the denominator (MRF-R-7).
+        // No target: excluded from the denominator (KTO-R-2).
         row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' })
       ];
       const g = group(inds);
       await build([g]);
       const banner = buildAowBannerStats(inds);
       const ratio = component.ratioOf(g);
-      expect(ratio).toEqual({ done: banner.done, total: banner.total, percent: banner.pct });
-      // Every planned KPI counts, including zero-target: 3 total, 1 reported.
-      expect(ratio).toEqual({ done: 1, total: 3, percent: 33 });
+      expect({ done: ratio.done, total: ratio.total, percent: ratio.percent }).toEqual({
+        done: banner.done,
+        total: banner.total,
+        percent: banner.pct
+      });
+      // Only KPIs with a target count: 2 targeted, 1 reported; the no-target row is out.
+      expect(ratio).toEqual({ done: 1, total: 2, percent: 50, empty: false });
     });
 
     // MRF-AC-5: Only-pending narrows `indicators`, so the host stashes the pre-toggle set on
@@ -1017,20 +1021,540 @@ describe('ReportingAowTableComponent', () => {
       const g = { ...group([all[1]]), __allIndicators: all } as ReportingAowGroup;
       await build([g]);
       // Over `indicators` alone this would read 0 of 1 · 0%.
-      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50 });
+      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50, empty: false });
     });
 
-    it('omits a zero-target exclusion title — every planned KPI is in the denominator', async () => {
+    it('discloses the exclusion in the ratio title (KTO-R-6) and says nothing when nothing is excluded', async () => {
       const withZeros = group([
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' }),
-        row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' })
+        row({ indicator_id: 3, actual_achieved_value_sum: 3, target_value_sum: '0' })
       ]);
       await build([withZeros]);
-      expect(component.ratioTitle(withZeros)).toBe('');
+      expect(component.ratioTitle(withZeros)).toBe('excludes 2 KPIs with no target set');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[title="excludes 2 KPIs with no target set"]')).toBeTruthy();
       expect((fixture.nativeElement as HTMLElement).querySelector('[title*="zero-target"]')).toBeNull();
-      expect(component.ratioTitle(group([row({ indicator_id: 1, actual_achieved_value_sum: 0, target_value_sum: '0' })]))).toBe('');
+      expect(component.ratioTitle(group([row({ indicator_id: 1, actual_achieved_value_sum: 0, target_value_sum: '0' })]))).toBe(
+        'excludes 1 KPI with no target set'
+      );
       expect(component.ratioTitle(group([row()]))).toBe('');
+    });
+  });
+
+  // ── KPI progress counts only KPIs with a target (P2-3974, KTO-T-3) ──────────────
+  /** @akili-spec changes/kpi-progress-target-only */
+  describe('header: split line, empty ratio and rule copy (KTO-R-2..R-6)', () => {
+    const headerOf = (code = 'AOW01') =>
+      (fixture.nativeElement as HTMLElement).querySelector(`button[data-aow-header="${code}"]`) as HTMLElement;
+    const flat = (el: Element) => (el.textContent ?? '').replace(/\s+/g, ' ');
+    const splitNode = () => (fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-split-line"]');
+
+    /** S-2.1: 54 rows — 50 with a target (10 reported) + 4 without, one of them `0/3` (Overachieved). */
+    const ticketRows = (): ReportingIndicator[] => [
+      ...Array.from({ length: 50 }, (_, i) =>
+        row({
+          indicator_id: i + 1,
+          target_value_sum: '10',
+          actual_achieved_value_sum: i < 10 ? 2 : 0,
+          progress_percentage: i < 10 ? 20 : 0
+        })
+      ),
+      row({ indicator_id: 101, target_value_sum: '0', actual_achieved_value_sum: 3 }), // 0/3
+      row({ indicator_id: 102, target_value_sum: '0', actual_achieved_value_sum: 0 }),
+      row({ indicator_id: 103, target_value_sum: null as any, actual_achieved_value_sum: 0 }),
+      row({ indicator_id: 104, target_value_sum: '0', actual_achieved_value_sum: 0 })
+    ];
+
+    // (a) S-2.1 + S-4.1 + S-4.3
+    it('(a) the ticket AoW reads 10 of 50 · 20% · 54 KPIs with the split line, and 4 rows read No target set / Overachieved', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+
+      const header = flat(headerOf());
+      expect(header).toContain('10 of 50');
+      expect(header).toContain('20%');
+      expect(header).toContain('54 KPIs');
+      expect(header).toContain('50 KPIs with target · 4 with no target set');
+      expect(component.splitOf(group(ticketRows()))).toEqual({
+        withTarget: 50,
+        without: 4,
+        line: '50 KPIs with target · 4 with no target set'
+      });
+
+      openAow();
+      const noTargetCells = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.pr-reporting-row span')).filter(el => {
+        const t = el.textContent?.trim();
+        return t === 'No target set' || t === 'Overachieved';
+      });
+      expect(noTargetCells.length).toBe(4);
+    });
+
+    // S-2.2: a reported no-target row never enters the numerator; the no-target count grows.
+    it('a reported row without a target stays out of the numerator and raises the no-target count to 5', async () => {
+      const rows = [...ticketRows(), row({ indicator_id: 105, target_value_sum: '0', actual_achieved_value_sum: 3 })];
+      await build([group(rows, { count: 55 })]);
+
+      const header = flat(headerOf());
+      expect(header).toContain('10 of 50');
+      expect(header).toContain('20%');
+      expect(header).toContain('50 KPIs with target · 5 with no target set');
+    });
+
+    it('uses the singular for one targeted KPI', async () => {
+      const g = group([row({ indicator_id: 1, target_value_sum: '4' }), row({ indicator_id: 2, target_value_sum: '0' })]);
+      await build([g]);
+      expect(flat(headerOf())).toContain('1 KPI with target · 1 with no target set');
+    });
+
+    // (b) S-4.2: the header must look as today
+    it('(b) an all-targeted AoW renders no split line and keeps the 52px header classes', async () => {
+      await build([group([row({ indicator_id: 1, target_value_sum: '4' }), row({ indicator_id: 2, target_value_sum: '9' })])]);
+
+      expect(splitNode()).toBeNull();
+      expect(component.splitOf(component.groups()[0]).line).toBe('');
+      const classes = headerOf().classList;
+      expect(classes.contains('h-[52px]')).toBe(true);
+      expect(classes.contains('min-h-[52px]')).toBe(true);
+      expect(classes.contains('py-[6px]')).toBe(false);
+    });
+
+    it('renders the mobile split-line row (full-width, <640px) only when the line exists', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+      const mobile = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-split-line-mobile"]') as HTMLElement;
+      expect(mobile).toBeTruthy();
+      expect(mobile.textContent?.trim()).toBe('50 KPIs with target · 4 with no target set');
+      expect(mobile.classList.contains('basis-full')).toBe(true);
+      expect(mobile.classList.contains('min-[640px]:hidden')).toBe(true);
+      expect(splitNode()?.classList.contains('max-[640px]:hidden')).toBe(true);
+    });
+
+    it('renders no mobile split-line row when every KPI has a target', async () => {
+      await build([group([row({ indicator_id: 1, target_value_sum: '4' })])]);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-split-line-mobile"]')).toBeNull();
+    });
+
+    it('a card with the split line grows past 52px (min-h only, no fixed height)', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+
+      const classes = headerOf().classList;
+      expect(classes.contains('min-h-[52px]')).toBe(true);
+      expect(classes.contains('h-[52px]')).toBe(false);
+    });
+
+    // (c) S-3.1
+    it('(c) an all-no-target AoW shows a dash instead of the ratio and the %, with an empty bar', async () => {
+      const g = group([
+        row({ indicator_id: 1, target_value_sum: '0', actual_achieved_value_sum: 0 }),
+        row({ indicator_id: 2, target_value_sum: '0', actual_achieved_value_sum: 3 }),
+        row({ indicator_id: 3, target_value_sum: null as any, actual_achieved_value_sum: 0 })
+      ]);
+      await build([g]);
+
+      const header = headerOf();
+      const dash = header.querySelector('[data-testid="aow-ratio-empty"]') as HTMLElement;
+      expect(dash).toBeTruthy();
+      expect(dash.textContent?.trim()).toBe('—');
+      expect(dash.getAttribute('aria-label')).toBe('No KPIs with a target');
+      expect(header.textContent).not.toMatch(/\d+%/);
+      const t = flat(header);
+      expect(t).not.toContain('0 of 0');
+      expect(t).not.toContain('NaN');
+      expect(t).not.toContain('100%');
+      expect(t).toContain('0 KPIs with target · 3 with no target set');
+      const bar = header.querySelector('span[style*="width"]') as HTMLElement;
+      expect(bar.style.width).toBe('0%');
+    });
+
+    // (d) S-4.4
+    it('(d) the header does not move with Only-pending (__allIndicators) or with a picked Center', async () => {
+      const rows = [
+        row({ indicator_id: 1, target_value_sum: '4', actual_achieved_value_sum: 4, center_acronym: 'IITA' }),
+        row({ indicator_id: 2, target_value_sum: '4', actual_achieved_value_sum: 0, center_acronym: 'IITA' }),
+        row({ indicator_id: 3, target_value_sum: '0', actual_achieved_value_sum: 0, center_acronym: 'CIAT' }),
+        row({ indicator_id: 4, target_value_sum: '0', actual_achieved_value_sum: 2, center_acronym: 'CIAT' })
+      ];
+      await build([group(rows, { count: 4 })]);
+      const before = flat(headerOf());
+      expect(before).toContain('1 of 2');
+      expect(before).toContain('2 KPIs with target · 2 with no target set');
+
+      // Only-pending: `indicators` narrowed, the host stashes the full set on `__allIndicators`.
+      const narrowed = { ...group([rows[1]], { count: 4 }), __allIndicators: rows } as ReportingAowGroup;
+      fixture.componentRef.setInput('groups', [narrowed]);
+      fixture.detectChanges();
+      expect(flat(headerOf())).toBe(before);
+
+      // A Center picked in the in-card bar.
+      fixture.componentRef.setInput('groups', [group(rows, { count: 4 })]);
+      fixture.detectChanges();
+      openAow();
+      component.setCenterFilter(component.groups()[0], 'IITA');
+      fixture.detectChanges();
+      expect(flat(headerOf())).toBe(before);
+    });
+
+    // (e) AC-9
+    it.each(['intermediate', '2030'] as const)('(e) the %s bucket card shows the same split line, ratio and rule copy', async kind => {
+      const g = group(
+        [
+          row({ indicator_id: 1, target_value_sum: '4', actual_achieved_value_sum: 1 }),
+          row({ indicator_id: 2, target_value_sum: '0', actual_achieved_value_sum: 0 })
+        ],
+        { aow: { code: `${kind}-outcomes`, name: 'Bucket card' }, kind } as any
+      );
+      await build([g]);
+
+      const header = headerOf(`${kind}-outcomes`);
+      expect(flat(header)).toContain('1 of 1');
+      expect(flat(header)).toContain('1 KPI with target · 1 with no target set');
+      expect(header.querySelector('[data-testid="aow-split-line"]')).toBeTruthy();
+
+      (header.querySelector('button[aria-label="About this group"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-info-rule"]')?.textContent?.trim()).toBe(
+        'The percentage is calculated using only the KPIs that have a target defined.'
+      );
+    });
+
+    // KTO-R-5
+    it('states the rule in the info panel and on the % tooltip', async () => {
+      const g = group([row({ indicator_id: 1, target_value_sum: '4', actual_achieved_value_sum: 1 })]);
+      await build([g]);
+
+      (headerOf().querySelector('button[aria-label="About this group"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-info-rule"]')?.textContent).toContain(
+        'only the KPIs that have a target defined'
+      );
+
+      const pct = Array.from(headerOf().querySelectorAll('span')).find(el => el.textContent?.trim() === '100%') as HTMLElement;
+      const tip = fixture.debugElement.query(de => de.nativeElement === pct).injector.get(PrTooltipDirective).text;
+      expect(tip).toBe(
+        'Share of KPIs with a target that have something reported against them. KPIs with no target set are not counted. This is coverage of the plan, not achievement against the targets.'
+      );
+    });
+
+    it('achievementTooltip states the has-a-target rule on every branch (KTO-R-5)', async () => {
+      await build([group([row()])]);
+      const none = component.achievementTooltip(achievement({ counted: 0, total: 3 }));
+      expect(none).toContain('KPI reporting progress uses only KPIs with a target in the ratio above.');
+      const some = component.achievementTooltip(achievement());
+      expect(some).toContain('KPI reporting progress counts only KPIs with a target separately.');
+      (component as any).showQaPrelSplit = true;
+      expect(component.achievementTooltip(achievement())).toContain('KPI reporting progress counts only KPIs with a target separately.');
+      expect(none + some).not.toContain('every planned KPI');
+    });
+
+    // One predicate (KTO-DD-1)
+    it('hasUsableTarget is the shared hasTarget predicate (string, null, zero, negative)', async () => {
+      await build([group([row()])]);
+      expect(component.hasUsableTarget(row({ target_value_sum: '12' }))).toBe(true);
+      expect(component.hasUsableTarget(row({ target_value_sum: '0' }))).toBe(false);
+      expect(component.hasUsableTarget(row({ target_value_sum: null as any }))).toBe(false);
+      expect(component.hasUsableTarget(row({ target_value_sum: '-3' }))).toBe(false);
+    });
+  });
+
+  // ── In-card Target filter axis (KTO-R-7, S-7.1, S-7.2, KTO-DD-4) ─────────────
+  describe('header count and target sum follow the card KPI set (DKT-R-1, DKT-R-2)', () => {
+    const headerText = (code = 'AOW01') =>
+      (
+        ((fixture.nativeElement as HTMLElement).querySelector(`button[data-aow-header="${code}"]`) as HTMLElement).textContent ?? ''
+      ).replace(/\s+/g, ' ');
+
+    const hloRow = (id: number, target: string) => row({ indicator_id: id, __tier: 'output', target_value_sum: target });
+    const outcomeRow = (id: number, target: string) => row({ indicator_id: id, __tier: 'outcome', target_value_sum: target });
+
+    it('Type all: reads N KPIs and the numeric target sum; HLO rows only: the smaller count and sum', async () => {
+      const hlo = [hloRow(1, '9'), hloRow(2, '100'), hloRow(3, '0')];
+      const outcomes = [outcomeRow(4, '5'), outcomeRow(5, '1')];
+      await build([group([...hlo, ...outcomes], { count: 99 })]);
+      expect(headerText()).toContain('5 KPIs · 115 targets');
+
+      fixture.componentRef.setInput('groups', [group(hlo, { count: 99 })]);
+      fixture.detectChanges();
+      expect(headerText()).toContain('3 KPIs · 109 targets');
+    });
+
+    it('uses the pre-toggle set (__allIndicators) when Only pending / Favorites narrow the listed rows', async () => {
+      const all = [hloRow(1, '4'), hloRow(2, '6'), hloRow(3, '10')];
+      const g = group([all[0]], { count: 1 }) as ReportingAowGroup & { __allIndicators?: ReportingIndicator[] };
+      g.__allIndicators = all;
+      await build([g]);
+      expect(headerText()).toContain('3 KPIs · 20 targets');
+      expect(component.headerCount(g)).toBe('3 KPIs');
+    });
+
+    it('excludes cross-cut Intermediate Outcome rows from both the count and the sum', async () => {
+      const own = [hloRow(1, '7')];
+      const crosscut = row({ indicator_id: 9, __tier: 'outcome', target_value_sum: '50', __isIntermediateCrosscut: true });
+      await build([group([...own, crosscut], { count: 2 })]);
+      expect(headerText()).toContain('1 KPI · 7 targets');
+    });
+
+    it('while loading with no rows shows group.count and no target sum', async () => {
+      await build([group([], { loading: true, count: 12 })]);
+      expect(headerText()).toContain('12 KPIs');
+      expect(headerText()).not.toContain('targets');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-header-targets"]')).toBeNull();
+    });
+
+    it('uses the singular when the sum is exactly 1', async () => {
+      await build([group([hloRow(1, '1')], { count: 1 })]);
+      expect(headerText()).toContain('1 KPI · 1 target');
+      expect(headerText()).not.toContain('1 targets');
+    });
+  });
+
+  describe('in-card Target filter axis (KTO-R-7)', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+    const flat = (n: Element) => (n.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const headerOf = () => el().querySelector('button[data-aow-header="AOW01"]') as HTMLElement;
+    const barOf = () => el().querySelector('.h-\\[32px\\].min-h-\\[32px\\]');
+    const chip = (kind: 'all' | 'with' | 'without') => el().querySelector(`[data-target-chip="${kind}"]`) as HTMLButtonElement;
+    const pick = (kind: 'all' | 'with' | 'without') => {
+      chip(kind).click();
+      fixture.detectChanges();
+    };
+
+    /** S-2.1 shape: 54 rows, 50 with a target (10 reported) + 4 without; IITA holds 3 of the 4 no-target rows. */
+    const ticketRows = (): ReportingIndicator[] => [
+      ...Array.from({ length: 50 }, (_, i) =>
+        row({
+          indicator_id: i + 1,
+          center_acronym: 'CIAT',
+          target_value_sum: '10',
+          actual_achieved_value_sum: i < 10 ? 2 : 0,
+          progress_percentage: i < 10 ? 20 : 0
+        })
+      ),
+      row({ indicator_id: 101, center_acronym: 'IITA', target_value_sum: '0', actual_achieved_value_sum: 3 }),
+      row({ indicator_id: 102, center_acronym: 'IITA', target_value_sum: '0', actual_achieved_value_sum: 0 }),
+      row({ indicator_id: 103, center_acronym: 'IITA', target_value_sum: null as any, actual_achieved_value_sum: 0 }),
+      row({ indicator_id: 104, center_acronym: 'CIAT', target_value_sum: '0', actual_achieved_value_sum: 0 })
+    ];
+
+    it('renders All / With target / No target set chips with counts, default All, aria-pressed', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+      openAow();
+
+      expect(flat(chip('all'))).toBe('All (54)');
+      expect(flat(chip('with'))).toBe('With target (50)');
+      expect(flat(chip('without'))).toBe('No target set (4)');
+      expect(chip('all').getAttribute('aria-pressed')).toBe('true');
+      expect(chip('with').getAttribute('aria-pressed')).toBe('false');
+      expect(chip('without').getAttribute('aria-pressed')).toBe('false');
+      expect(component.selectedTargetOf(component.groups()[0])).toBeNull();
+      expect(rows().length).toBe(54);
+    });
+
+    it('S-7.1: Centers IITA + No target set lists exactly 3 rows and the header still reads 10 of 50 · 20%', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+      openAow();
+      const before = flat(headerOf());
+      expect(before).toContain('10 of 50');
+      expect(before).toContain('20%');
+
+      component.setCenterFilter(component.groups()[0], 'IITA');
+      pick('without');
+
+      expect(rows().length).toBe(3);
+      const after = flat(headerOf());
+      expect(after).toBe(before);
+      expect(after).toContain('10 of 50');
+      expect(after).toContain('20%');
+      expect(after).toContain('50 KPIs with target · 4 with no target set');
+      // Counts describe the card, not the selection (chips count the delivered rows).
+      expect(flat(chip('without'))).toBe('No target set (4)');
+      expect(chip('without').getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('With target lists only rows that have one', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+      openAow();
+      pick('with');
+      expect(rows().length).toBe(50);
+      expect(flat(headerOf())).toContain('10 of 50');
+    });
+
+    it('S-7.2: All restores every row, and re-pressing the active chip clears it too', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+      openAow();
+      pick('without');
+      expect(rows().length).toBe(4);
+
+      pick('all');
+      expect(rows().length).toBe(54);
+      expect(chip('all').getAttribute('aria-pressed')).toBe('true');
+
+      pick('without');
+      expect(rows().length).toBe(4);
+      pick('without');
+      expect(rows().length).toBe(54);
+    });
+
+    it('ANDs with the Types selection, the toolbar search and the status filter', async () => {
+      const rs = [
+        row({ indicator_id: 1, result_type_name: 'Policy change', target_value_sum: '4', actual_achieved_value_sum: 0, center_acronym: 'CIAT' }),
+        row({ indicator_id: 2, result_type_name: 'Policy change', target_value_sum: '0', center_acronym: 'CIAT' }),
+        row({ indicator_id: 3, result_type_name: 'Innovation use', target_value_sum: '0', center_acronym: 'CIAT' }),
+        row({ indicator_id: 4, result_type_name: 'Innovation use', target_value_sum: '5', center_acronym: 'CIAT' })
+      ];
+      await build([group(rs)]);
+      const g = component.groups()[0];
+
+      component.setTargetFilter(g, 'without');
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2, 3]);
+      component.setTypeFilter(g, 'Policy change');
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+
+      component.setTypeFilter(g, null);
+      fixture.componentRef.setInput('search', 'zzz-no-match');
+      fixture.detectChanges();
+      expect(component.visibleRows(g)).toEqual([]);
+      fixture.componentRef.setInput('search', '');
+
+      fixture.componentRef.setInput('statusFilter', ['achieved']);
+      fixture.detectChanges();
+      expect(component.visibleRows(g)).toEqual([]);
+    });
+
+    it('shows the bar on a single-center, single-type card that mixes targeted and untargeted rows', async () => {
+      await build([
+        group([
+          row({ indicator_id: 1, center_acronym: 'CIAT', target_value_sum: '4' }),
+          row({ indicator_id: 2, center_acronym: 'CIAT', target_value_sum: '0' })
+        ])
+      ]);
+      openAow();
+
+      expect(component.centerCountsOf(component.groups()[0]).length).toBe(1);
+      expect(component.typeCountsOf(component.groups()[0]).length).toBe(1);
+      expect(barOf()).toBeTruthy();
+      expect(el().querySelector('[data-testid="target-axis"]')).toBeTruthy();
+      expect(flat(chip('all'))).toBe('All (2)');
+      expect(flat(chip('with'))).toBe('With target (1)');
+      expect(flat(chip('without'))).toBe('No target set (1)');
+      // No Centers / Types sections and no divider before Target when there is nothing to divide.
+      expect(barOf()!.textContent).not.toContain('Centers:');
+      expect(barOf()!.textContent).not.toContain('Types:');
+    });
+
+    it('keeps the bar absent on a single-center, single-type card where every row has a target (unchanged)', async () => {
+      await build([
+        group([
+          row({ indicator_id: 1, center_acronym: 'CIAT', target_value_sum: '4' }),
+          row({ indicator_id: 2, center_acronym: 'CIAT', target_value_sum: '9' })
+        ])
+      ]);
+      openAow();
+
+      expect(barOf()).toBeNull();
+      expect(el().querySelector('[data-testid="target-axis"]')).toBeNull();
+    });
+
+    it('keeps the bar absent on a single-center, single-type card with no targeted row at all', async () => {
+      await build([group([row({ indicator_id: 1, center_acronym: 'CIAT', target_value_sum: '0' })])]);
+      openAow();
+      expect(barOf()).toBeNull();
+    });
+
+    it('keyboard: Enter and Space toggle a chip and never collapse the card', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+      openAow();
+      expect(headerOf().getAttribute('aria-expanded')).toBe('true');
+
+      // A native <button> turns Enter / Space into a click; jsdom does not, so dispatch both the key
+      // events (nothing above the chip may react to them) and the click the browser would synthesise.
+      const press = (key: string) => {
+        const target = chip('without');
+        target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+        target.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }));
+        target.click();
+        fixture.detectChanges();
+      };
+
+      expect(chip('without').tagName).toBe('BUTTON');
+      expect(chip('without').getAttribute('type')).toBe('button');
+      press('Enter');
+      expect(chip('without').getAttribute('aria-pressed')).toBe('true');
+      expect(rows().length).toBe(4);
+      expect(headerOf().getAttribute('aria-expanded')).toBe('true');
+
+      press(' ');
+      expect(chip('without').getAttribute('aria-pressed')).toBe('false');
+      expect(rows().length).toBe(54);
+      expect(headerOf().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('the Filter popover carries the Target axis for narrow widths and its Reset clears it', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+      openAow();
+      pick('without');
+
+      (el().querySelector('button[aria-label="More filters"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(el().querySelector('[data-testid="target-axis-popover"]')).toBeTruthy();
+
+      const reset = Array.from(el().querySelectorAll('button')).find(b => b.textContent?.trim() === 'Reset') as HTMLButtonElement;
+      expect(reset).toBeTruthy();
+      reset.click();
+      fixture.detectChanges();
+      expect(component.selectedTargetOf(component.groups()[0])).toBeNull();
+      expect(rows().length).toBe(54);
+    });
+
+    it('the inline Target axis is the FIRST section of the bar, before Centers, and never shrinks', async () => {
+      const rows = ticketRows().map((r, i) => ({ ...r, center_acronym: ['IITA', 'CIAT', 'CIMMYT'][i % 3] }));
+      await build([group(rows, { count: 54 })]);
+      openAow();
+      const axis = el().querySelector('[data-testid="target-axis"]') as HTMLElement;
+      expect(axis).toBeTruthy();
+      expect(axis.classList.contains('shrink-0')).toBe(true);
+      expect(axis.classList.contains('max-[640px]:hidden')).toBe(true);
+      const centersLabel = Array.from(el().querySelectorAll('span')).find(x => x.textContent?.trim() === 'Centers:') as HTMLElement;
+      expect(centersLabel).toBeTruthy();
+      expect(axis.compareDocumentPosition(centersLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      (el().querySelector('button[aria-label="More filters"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const pop = el().querySelector('[data-testid="target-axis-popover"]') as HTMLElement;
+      expect(pop.classList.contains('min-[640px]:hidden')).toBe(true);
+    });
+
+    it('the popover holds the Target chips and the Filter badge counts an active Target selection', async () => {
+      await build([group(ticketRows(), { count: 54 })]);
+      openAow();
+      const filterBtn = () => el().querySelector('button[aria-label="More filters"]') as HTMLButtonElement;
+      expect(filterBtn()).toBeTruthy();
+      expect(filterBtn().textContent).not.toMatch(/\d/);
+
+      filterBtn().click();
+      fixture.detectChanges();
+      const pop = el().querySelector('[data-testid="target-axis-popover"]') as HTMLElement;
+      expect(pop.querySelectorAll('[data-target-chip]').length).toBe(3);
+      (pop.querySelector('[data-target-chip="without"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.selectedTargetOf(component.groups()[0])).toBe('without');
+      expect(filterBtn().textContent?.trim()).toMatch(/Filter\s*1/);
+    });
+
+    it('the empty state offers Clear filters that also resets the Target axis', async () => {
+      await build([
+        group([
+          row({ indicator_id: 1, center_acronym: 'CIAT', target_value_sum: '4' }),
+          row({ indicator_id: 2, center_acronym: 'CIAT', target_value_sum: '5' }),
+          row({ indicator_id: 3, center_acronym: 'IITA', target_value_sum: '0' })
+        ])
+      ]);
+      openAow();
+      component.setCenterFilter(component.groups()[0], 'CIAT');
+      pick('without'); // CIAT has no untargeted row -> nothing matches
+      expect(el().textContent).toContain('No indicators match the current filters.');
+
+      const clear = Array.from(el().querySelectorAll('button.pr-clear-filters')).find(b => b.textContent?.trim() === 'Clear filters') as HTMLButtonElement;
+      clear.click();
+      fixture.detectChanges();
+      expect(component.selectedTargetOf(component.groups()[0])).toBeNull();
+      expect(component.selectedCenterOf(component.groups()[0])).toBeNull();
     });
   });
 
@@ -1082,12 +1606,13 @@ describe('ReportingAowTableComponent', () => {
       expect(component.rowTitle(g)).not.toContain('QA 40%');
     });
 
-    it('rowTitle is empty when there is no exclusion copy', async () => {
+    it('rowTitle is only the exclusion copy, and empty when nothing is excluded', async () => {
       const withZeros = group([
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' })
       ]);
-      expect(component.rowTitle(withZeros)).toBe('');
+      expect(component.rowTitle(withZeros)).toBe('excludes 1 KPI with no target set');
+      expect(component.rowTitle(group([row()]))).toBe('');
     });
 
     it('renders center zone progress and ratio skeletons while group is loading', async () => {
@@ -1411,15 +1936,15 @@ describe('ReportingAowTableComponent', () => {
       expect(component.nextPendingRow()?.indicator_id).toBe(2);
     });
 
-    it('skips reported rows but includes zero-target not-started rows', async () => {
+    it('skips reported rows AND no-target rows (KTO-R-8: pending = targeted and not complete)', async () => {
       const rows = [
         row({ indicator_id: 1, actual_achieved_value_sum: 1, target_value_sum: '1' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 2, target_value_sum: '2' }), // reported
-        row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' }), // zero-target
+        row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' }), // no target: not pending
         row({ indicator_id: 4, actual_achieved_value_sum: 0, target_value_sum: '5' }) // the answer
       ];
       await build([group(rows)], { lastReported: { id: 1, aowCode: 'AOW01' } });
-      expect(component.nextPendingRow()?.indicator_id).toBe(3);
+      expect(component.nextPendingRow()?.indicator_id).toBe(4);
     });
 
     it('is null when nothing pending remains (the row shows the all-reported note)', async () => {
@@ -1575,13 +2100,14 @@ describe('ReportingAowTableComponent', () => {
       return fixture.debugElement.query(de => de.nativeElement === button).injector.get(PrTooltipDirective).text;
     };
 
-    it('A header reads "4 KPIs" and "0 of 4" — own Planned beside its own Counted ratio', async () => {
+    it('A header reads "4 KPIs" and "0 of 3" — own Planned beside its own Targeted ratio (a4 has no target)', async () => {
       await build([groupA()]);
 
       const header = (fixture.nativeElement as HTMLElement).querySelector('section > button') as HTMLElement;
       const headerText = (header.textContent ?? '').replace(/\s+/g, ' ');
       expect(headerText).toContain('4 KPIs');
-      expect(headerText).toContain('0 of 4');
+      expect(headerText).toContain('0 of 3');
+      expect(headerText).toContain('3 KPIs with target · 1 with no target set');
     });
 
     /**
@@ -1591,7 +2117,7 @@ describe('ReportingAowTableComponent', () => {
      * puts them in an AoW bundle, so this fixture no longer describes anything the host can send.
      *
      * The half of KCR-AC-5 that is this component's business is unchanged and still asserted: the
-     * header pair (`4 KPIs` / `0 of 4`) is AoW-own, so it did not move. Kept as a rendering
+     * header pair (`4 KPIs` / `0 of 3`) is AoW-own, so it did not move. Kept as a rendering
      * property of a presentational component: hand it such a row and it draws it, minus the
      * superseded RES-R-3 disclosure.
      */

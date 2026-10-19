@@ -17,6 +17,9 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService } from '../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
+/** IPSR result types (P-6: type 11, Complementary innovation, is deliberately NOT included). */
+const IPSR_RESULT_TYPE_IDS = new Set([10]);
+
 @Component({
   selector: 'app-result-detail',
   templateUrl: './result-detail.component.html',
@@ -63,9 +66,29 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
       }
     });
 
+    // @akili-spec bugfix/result-detail-not-found-navigation RDN-R-3 (RDN-DD-3)
+    // An IPSR result opened through the generic result route resolves fine but renders as a broken
+    // reporting form. Once the loaded result is the one being opened (code match, so a stale
+    // signal from the previous result cannot trigger it) hand it to the IPSR module. Keyed by
+    // code, not a boolean: reuse strategy keeps this component alive across results.
+    effect(() => {
+      const result = this.dataControlSE.currentResultSignal();
+      const code = String(this.api.resultsSE.currentResultCode ?? '');
+      if (!result || !IPSR_RESULT_TYPE_IDS.has(Number(result.result_type_id))) return;
+      if (!code || String(result.result_code) !== code || this.ipsrRedirectedCode === code) return;
+      this.ipsrRedirectedCode = code;
+      this.router.navigate(['/ipsr/detail', code, 'general-information'], {
+        queryParams: { phase: this.api.resultsSE.currentResultPhase },
+        replaceUrl: true
+      });
+    });
+
     this.watchCompactEntry();
     this.watchSectionChange();
   }
+
+  /** Code already redirected to the IPSR module; the effect re-runs on every signal write. */
+  private ipsrRedirectedCode: string | null = null;
   closeInfo = false;
 
   /**
@@ -243,8 +266,14 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
    * strategy keeps this component alive when only `?phase=` changes, so an in-app navigation would
    * leave the old, already-failed state on screen.
    */
-  phaseLink(phaseId: number | string): string {
-    return `${this.router.url.split('?')[0]}?phase=${phaseId}`;
+  // @akili-spec bugfix/result-detail-not-found-navigation RDN-R-2 (RDN-DD-2)
+  // The two modules do not share section paths, so an IPSR phase goes to IPSR general information;
+  // any other phase, or a row without `app_module_id`, keeps the current Reporting path.
+  phaseLink(phase: Pick<Phases, 'id'> & Partial<Pick<Phases, 'app_module_id'>>): string {
+    if (phase.app_module_id == 2) {
+      return `/ipsr/detail/${this.api.resultsSE.currentResultCode}/general-information?phase=${phase.id}`;
+    }
+    return `${this.router.url.split('?')[0]}?phase=${phase.id}`;
   }
 
   reload(): void {

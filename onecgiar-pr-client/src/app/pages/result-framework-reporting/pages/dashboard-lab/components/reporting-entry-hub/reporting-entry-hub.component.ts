@@ -259,10 +259,11 @@ export class ReportingEntryHubComponent {
    * hub row and the chip are two readings of one number (`KCR-R-3`). `null` (not `''`) so
    * `[attr.title]` drops the attribute rather than rendering an empty tooltip.
    * @akili-spec bugfix/kpi-count-reconciliation
+   * @akili-spec changes/kpi-progress-target-only — copy is `excludes N KPI(s) with no target set`.
    */
   zeroTargetTitle(row: HubAowRow | HubProgramLevelRow): string | null {
     const n = row.zeroTarget ?? 0;
-    return n > 0 ? `excludes ${n} zero-target KPI${n === 1 ? '' : 's'}` : null;
+    return n > 0 ? `excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : null;
   }
 
   percentOf(row: HubAowRow | HubProgramLevelRow): number {

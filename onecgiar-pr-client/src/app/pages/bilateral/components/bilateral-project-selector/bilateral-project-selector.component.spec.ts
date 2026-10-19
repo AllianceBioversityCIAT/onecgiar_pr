@@ -18,6 +18,7 @@ describe('BilateralProjectSelectorComponent', () => {
       getProjects: jest.fn(),
       selectProject: jest.fn(),
       setLeadProject: jest.fn(),
+      resultLeadCenterCode: signal<string | null>(null),
     };
 
     ctxService = {
@@ -64,6 +65,14 @@ describe('BilateralProjectSelectorComponent', () => {
     expect(creationService.getProjects).not.toHaveBeenCalled();
   });
 
+  it('wizard variant ignores the result lead Center code (create wizard unchanged)', () => {
+    creationService.resultLeadCenterCode.set('CENTER-03');
+    fixture.detectChanges();
+
+    expect(creationService.getProjects).not.toHaveBeenCalledWith('CENTER-03');
+    expect(creationService.getProjects).toHaveBeenLastCalledWith(49);
+  });
+
   it('should emit on project select', () => {
     const emitSpy = jest.spyOn(component.projectSelected, 'emit');
     const project = { id: 1, shortName: 'P1', fullName: 'Project 1', summary: null, description: null, leadCenter: null, sciencePrograms: [] };
@@ -105,6 +114,26 @@ describe('BilateralProjectSelectorComponent', () => {
       expect(creationService.setLeadProject).toHaveBeenCalledWith(project);
       expect(creationService.selectProject).not.toHaveBeenCalled();
       expect(emitSpy).toHaveBeenCalledWith(project);
+    });
+
+    // PAA-DD-6 / PAA-R-7 / AC-9 — the server validates a re-pointed project against the LEAD Center of
+    // the result, which can differ from the page centre, so the inline catalogue must follow it.
+    it('requests the catalogue of the result lead Center (code) once it is known', () => {
+      creationService.getProjects.mockClear();
+      creationService.resultLeadCenterCode.set('CENTER-03');
+      fixture.detectChanges();
+
+      const calls = creationService.getProjects.mock.calls;
+      expect(calls[calls.length - 1][0]).toBe('CENTER-03');
+    });
+
+    it('falls back to the page institution id while the lead Center code is unknown', () => {
+      creationService.getProjects.mockClear();
+      ctxService.centerInstitutionId.set(50);
+      fixture.detectChanges();
+
+      expect(creationService.getProjects).toHaveBeenLastCalledWith(50);
+      expect(creationService.getProjects).not.toHaveBeenCalledWith('CENTER-03');
     });
 
     it('keeps the label and the info block in the default wizard variant', () => {

@@ -577,3 +577,25 @@ The honest red was the outcome the brief ordered, and the fix requires a design 
 2. Gating instructions in a brief must be scoped to **new** surfaces, or they revert delivered behaviour.
 3. Twelve tests in this family claimed more than they asserted, and every Reviewer round found one.
 4. CT geometry gates on `flex-1` rows need a height or line-count measurement; width alone cannot catch a wrap.
+
+## Amendment 2026-10-19 — `PTB-R-18a` (Phase 1 prefill + matched partners)
+
+Approved by Juan Carlos ("Haz la fase 1 y los partners matched juntos"); amends `PTB-R-18`.
+Branch `JuankCadavid/pt-prefill-partners`. Client: `lab-report-form/pt-prefill.util.ts` (contribution,
+centers, links, matched partners, pending checklist), `onPtResultSelected` / `undoPtPrefill`,
+`buildCreateResultPayload({ ptPrefill })`. Server: `ProgressTrackerPrefillService` (best-effort,
+after the provenance write), `progress_tracker_prefill` on the create DTO. No migration: provenance
+uses the existing `results_by_institution.is_predicted`.
+
+## Amendment 2026-10-19 — `PTB-R-18b` (geography + impact-area scores)
+
+Approved by Juan Carlos ("Sí, haz geografía e impact areas"); amends `PTB-R-18` / `PTB-R-18a`.
+Branch `JuankCadavid/pt-prefill-geo-ia`. Client: `pt-prefill.util.ts` (`ptGeographyPlan`,
+`ptImpactAreaPlan`, `ptPrefillOutcomeItems`; level → focus table in `requirements.md` `PTB-R-18b`),
+`pt-results-browse` normalization keeps `geo_scope.provenance`, region CLARISA ids and coded
+subnational areas. Server: `ProgressTrackerPrefillService` validates against `clarisa_countries` /
+`clarisa_regions` / `clarisa_subnational_scopes`, saves geography through
+`GeographicLocationService.saveGeoScopeV2` (resolved via `ModuleRef`, non-strict, so
+`ProgressTrackerModule` does not import the `ResultsModule` graph) and the five `*_tag_level_id`
+columns (score + 1) only where empty. No migration.
+

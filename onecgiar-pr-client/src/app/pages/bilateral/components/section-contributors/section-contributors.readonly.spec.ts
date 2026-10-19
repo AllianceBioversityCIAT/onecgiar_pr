@@ -13,6 +13,7 @@ import { RolesService } from '../../../../shared/services/global/roles.service';
 import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BILATERAL_PRIMARY_ASSIGNMENT_COPY } from '../../../../internationalization/bilateral-primary-assignment.copy';
 import { SectionTocComponent } from '../section-toc/section-toc.component';
 
 /**
@@ -666,6 +667,16 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       build();
       seed();
       expect(fixture.nativeElement.querySelector('[data-testid="projects-center-pills"]')).toBeNull();
+    });
+  });
+
+  // PAA-R-5 / AC-8 — the helper under the read-only primary Science Program, in the REAL template.
+  describe('PAA-R-5 · helper under the read-only primary Science Program', () => {
+    it('points to Project information and no longer says it cannot be changed here', () => {
+      build();
+      const helper = fixture.nativeElement.querySelector('.sc-block--toc .sc-helper') as HTMLElement;
+      expect(helper.textContent?.trim()).toBe(BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsPrimaryHelp);
+      expect(fixture.nativeElement.textContent).not.toContain('cannot be changed here');
     });
   });
 });

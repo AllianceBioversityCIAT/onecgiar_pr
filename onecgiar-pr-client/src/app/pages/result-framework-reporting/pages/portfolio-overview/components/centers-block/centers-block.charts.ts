@@ -1,5 +1,4 @@
 import { EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
-import { EntityOverviewRow } from './centers-block.aggregate';
 
 /**
  * P2-3858 (rework 5-Oct-2026, Cami + Ángel: "que se vea en charts, muy parecida al Portfolio overview") —
@@ -109,45 +108,6 @@ export function buildStatusDonutOption(
       }
     ]
   } as EChartsOption;
-}
-
-/**
- * "Chart view" of the detail table: each entity's split as 100 % stacked bars. The share is over the four
- * shown statuses, not `total`: a Center's total also counts results in other states (e.g. Draft), which
- * would leave every bar short of 100 % with no segment to explain the gap.
- */
-export function buildShareOption(rows: readonly EntityOverviewRow[], columns: readonly StatusColumn[]): EChartsOption {
-  const ordered = [...rows].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name)).reverse();
-  return {
-    tooltip: {
-      ...TOOLTIP_BASE,
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      valueFormatter: (value: any) => `${value}%`
-    },
-    legend: { top: 0, left: 0, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
-    grid: { left: 8, right: 16, top: 32, bottom: 8, containLabel: true },
-    xAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%', fontSize: 11 }, splitLine: { lineStyle: { type: 'dashed' } } },
-    yAxis: { type: 'category', data: ordered.map(row => row.name), axisTick: { show: false }, axisLabel: { fontSize: 11, width: 150, overflow: 'truncate' } },
-    series: columns.map((column, index) => ({
-      type: 'bar',
-      id: `share-${column.id}`,
-      name: column.label,
-      stack: 'share',
-      barMaxWidth: 18,
-      itemStyle: { color: column.color },
-      data: ordered.map(row => percentOf(row.counts[index] ?? 0, row.counts.reduce((sum, count) => sum + (count ?? 0), 0)))
-    }))
-  } as EChartsOption;
-}
-
-/** Screen-reader / no-JS twin of every chart on the page: the same figures as a table. */
-export function buildRowsTable(caption: string, rows: readonly EntityOverviewRow[], columns: readonly StatusColumn[]): VizChartTableModel {
-  return {
-    caption,
-    headers: ['Name', 'Total', ...columns.map(column => column.label)],
-    rows: rows.map(row => [row.name, row.total, ...row.counts])
-  };
 }
 
 export function buildSegmentsTable(caption: string, segments: readonly StatusSegment[]): VizChartTableModel {

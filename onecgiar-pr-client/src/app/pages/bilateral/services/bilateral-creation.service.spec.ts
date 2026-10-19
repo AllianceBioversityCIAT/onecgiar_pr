@@ -580,6 +580,60 @@ describe('BilateralCreationService', () => {
       ]);
     });
 
+    describe('lead project vs the centre catalogue (PAA-T-3, PAA-AC-7)', () => {
+      const leadRow = {
+        project_id: 5,
+        is_lead: true,
+        obj_clarisa_project: { id: 5, shortName: 'BP5', fullName: 'Bilateral Project 5', obj_organization: { id: 88, name: 'Center', acronym: 'CTR' } },
+      };
+      const catalogueEntry = {
+        id: 5,
+        shortName: 'BP5',
+        fullName: 'Bilateral Project 5',
+        summary: null,
+        description: null,
+        leadCenter: { id: 88, name: 'Center', acronym: 'CTR' },
+        sciencePrograms: [
+          { id: 6, code: 'SP06', name: 'Program 6' },
+          { id: 7, code: 'SP07', name: 'Program 7' },
+        ],
+        w1w2ContributorCount: 0,
+      };
+
+      it('hydrates the Programs when the catalogue was loaded before the detail', () => {
+        service.projects.set([catalogueEntry as any]);
+        respondWith({ contributingProjects: [leadRow] });
+
+        service.loadResult(10);
+
+        expect(service.selectedProject()!.sciencePrograms).toEqual(catalogueEntry.sciencePrograms);
+        expect(service.resultLeadCenterId()).toBe(88);
+      });
+
+      it('still enriches the lead project when the catalogue arrives after the detail', () => {
+        respondWith({ contributingProjects: [leadRow] });
+        service.loadResult(10);
+        expect(service.selectedProject()!.sciencePrograms).toEqual([]);
+
+        mockBilateralApi.GET_bilateralProjects.mockReturnValue({
+          subscribe: ({ next }: any) => next({ response: { projects: [catalogueEntry] } }),
+        } as any);
+        service.getProjects('CENTER-01');
+
+        expect(service.selectedProject()!.sciencePrograms).toEqual(catalogueEntry.sciencePrograms);
+      });
+
+      it('keeps empty Programs, without throwing, when the lead project is not in the catalogue', () => {
+        service.projects.set([{ ...catalogueEntry, id: 99 } as any]);
+        respondWith({ contributingProjects: [leadRow] });
+
+        expect(() => service.loadResult(10)).not.toThrow();
+
+        expect(service.selectedProject()!.id).toBe(5);
+        expect(service.selectedProject()!.sciencePrograms).toEqual([]);
+      });
+    });
+
     it('leaves the lead center empty when the lead project has no organization', () => {
       respondWith({
         contributingProjects: [
