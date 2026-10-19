@@ -287,7 +287,7 @@ jobs:
     with:
       jenkins-job: prms-reporting-tool-dev-cd
       environment: reporting-tool-dev
-      dry-run: true # cutover step 1: validation only; step 2 sets false (real deploy, owner's explicit authorization)
+      dry-run: false # real deploy on every push to performance-refactor (owner authorization, cutover step 2)
       artifacts: >-
         backend=${{ needs.publish-images.outputs.backend-digest }}
         frontend=${{ needs.publish-images.outputs.frontend-digest }}
