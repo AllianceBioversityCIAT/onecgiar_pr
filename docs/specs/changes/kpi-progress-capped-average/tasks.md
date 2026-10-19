@@ -146,7 +146,7 @@
   - **Not evidence:** a quartile test whose `done/total` and % land in the same bucket. S-5.3 picks values where they differ
 - **Done when:** green, D-3 sweep recorded, eslint clean
 
-### [~] KPC-T-6 — HITL: layout and figures, folder guides
+### [x] KPC-T-6 — HITL: layout and figures, folder guides
 
 - **Type:** tests (manual, read-only browser) + docs
 - **Description:** Re-stamp the folder guides that state the old rule: `dashboard-lab/CLAUDE.md`, `reporting-aow-table/CLAUDE.md`, `program-overview/CLAUDE.md`. Each gets one line pointing to this spec; no root guide or TRD edit (shared-file discipline). On local, after confirming the served bundle matches disk and without clicking write buttons (shared prdb):
@@ -155,7 +155,7 @@
   - Overview row % equals the Reporting card %
   - Layout at 1366 / 1280 / 375 px: no wrap or clip of the one-decimal % in card header, ring, rows, hub, chips (D-7)
   - Show G-1 (ring vs program achievement) and G-3 (per-HLO TARGET) to the user for a decision
-  - After the user's push to PRTest, compare SP05 AoW01 against Nicoleta's Excel (D-8, KPC-OQ-1)
+  - Compare SP05 AoW01 against Nicoleta's worked example (D-8, KPC-OQ-1). Local and PRTest share prdb, so this needs her source (indicators, year), not a deploy
 - **Implements:** KPC-R-9 (S-9.1 live count 213, Other Output / Other Outcome included), KPC-R-5 (S-5.1 live), the layout NFR, D-7, D-8
 - **Depends on:** KPC-T-1 … T-5
 - **Estimate:** S · **Review:** user at the HITL pause
@@ -237,7 +237,7 @@ T-1 and T-2 are parallel-safe (different packages). Tests still run **one at a t
 
 - [ ] User authorizes the commit(s), using the format `<emoji> <type>(<scope>) [SPEC:changes/kpi-progress-capped-average]: …` with no apostrophes in the subject (Jenkins)
 - [ ] Push to `qa-development-2026-ss`, then fast-forward to `performance-refactor` for PRTest (~30 min deploy), in the user's checkout
-- [ ] PRTest check against Nicoleta's Excel (T-6 D-8), then the reply to Nicoleta / Angel
+- [ ] D-8: ask Nicoleta which indicators and source her 77.6 % example used (T-6), then the reply to Nicoleta / Angel
 - [ ] Staging → master promotion by Cristian, once he authorizes it
 
 ## 7. Follow-ups

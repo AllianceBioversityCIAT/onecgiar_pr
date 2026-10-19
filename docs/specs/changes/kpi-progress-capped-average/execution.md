@@ -382,3 +382,47 @@ The branch is knowingly red on these 6 tests until KPC-T-3 lands. The other `bui
   - the PRTest D-8 check against Nicoleta's Excel
   - a final layout check at 375 px (the By-AOW grid is now 4 tracks; the earlier 375 px Overview overflow looks pre-existing)
   - the G-1 follow-up recorded for Nicoleta
+
+#### Correction (2026-10-19): there is no "Nicoleta Excel"
+- Earlier entries above say "Nicoleta's Excel" or "ToC export Excel". No such file was provided. The only source is her red annotation on the email *"RE: Resync PRMS with ToC for BDN"*, with 11 achievement values (100, 100, 45, 73, 100, 86, 0, 100, 50, 100, 100) and 77.6 %. It names no indicators, year or source.
+- Local and PRTest share prdb, so the D-8 check does not need the deploy. In prdb, SP05 AoW01 for 2026 reads `1 of 37 · 2.7%` (one KPI with achievement). The gap with her 77.6 % comes from the data, not the code.
+- D-8 is resolved by asking Nicoleta which indicators and which source or year her example used (KPC-OQ-1). requirements.md, design.md and tasks.md wording was corrected; the history above is left as written.
+- Push record: `b5865e341` was pushed to `qa-development-2026-ss` and fast-forwarded to `performance-refactor` (after merging `performance-refactor` in, with 3 conflicts resolved; 886 scoped tests green). CI run `39329135479` started.
+
+#### D-8 source check (2026-10-19): `Better_Diets_and_Nutrition_ToC_export_with_2026_targets_check.xlsx`
+- The user supplied the file. It was read in an isolated copy and not committed.
+- It is a **2026 targets reconciliation** (ToC export of 12 Oct against the June 2026 PORB). Its columns hold baselines and 2025–2030 **targets only**: no achieved values, and no 77.6 anywhere. It cannot reproduce Nicoleta's achievement example.
+- What it does settle for KPC-OQ-1: in the ToC export, AoW01 has **36 indicators with a 2026 target > 0** (33 HLO + 3 IO, counting "Indicator total" rows only), against **37 with a target** in PRMS. The denominator is therefore about 36–37, not 11. Her 11 values look like a selection, probably the indicators with reported values. To be confirmed with her.
+- The file itself warns that "summing % IO values with counts gives a number that is not meaningful", which agrees with KPC-R-12 (no target sums).
+- Its row 55 ("System / dashboard (as quoted in email) 53 | 6 of 7 | 209") quotes the old dashboard figures from before this spec.
+
+### KPC-T-6 — HITL: layout and figures, folder guides — PASS (closed 2026-10-19)
+
+- **D-8 resolved:** the user confirmed that Nicoleta's 77.6 % (BDN AoW1, 11 values) is an **illustrative example of the formula**, not real data. Nothing needs reconciling against prdb. Her formula is exactly KPC-R-1/R-2 and is pinned on both sides by the KPC-S-2.1 fixture (client `reporting-burndown.spec`, server `toc-progress-rollup.spec`, both 77.6).
+- **KPC-OQ-1:** stays at the user's 2026-10-19 default: all KPIs with a target, unreported KPIs count as 0. The ToC export confirms a denominator of 36–37 for AoW01.
+- **D-7 layout:**
+  - 1366 and 1280 px are clean on Reporting and Overview.
+  - At 375 px, the Reporting header % stays on one line. The known AoW code chip overlap was already documented in the folder guide. The Overview horizontal overflow comes from fixed row tracks plus the tab nav, not the decimal, and looks pre-existing.
+  - The By-AOW grid is 4 tracks after T-7, aligned live at desktop width.
+- **Decisions recorded:**
+  - G-1: keep the three figures; follow-up for Nicoleta, no code change.
+  - G-3: resolved by KPC-T-7.
+  - Root tooltip: fixed by KPC-T-7.
+- **Folder guides:** re-stamped (T-6 and T-7), and the merge with `performance-refactor` was reconciled.
+- **Final state:** 7/7 tasks `[x]`, 10 review rounds, pushed as `b5865e341` to `qa-development-2026-ss` and `performance-refactor`.
+
+## Summary
+
+The Science Program shell and the server roll-up now show every KPI progress % as the mean of `min(achieved ÷ target, 1) × 100` over the KPIs with a target. The figure is flat over the leaf indicators and rounded to one decimal.
+
+- Target aggregation is gone from every multi-indicator surface: the chip, the card header, HLO rows, ToC map, heatmap and the a11y table.
+- The first chip reads `Total # of KPIs`, and the Areas of Work card reads `achieved`.
+- Two Pivots were recorded:
+  - T-4: the modal and guide fill their bars from the server value.
+  - T-7: a HITL-approved scope amendment.
+- Open follow-ups, outside the spec:
+  - G-1 (duplicate 1.3 % on the Overview), for Nicoleta.
+  - G-2 (`area.progress.done` is never sent).
+  - The 375 px Overview overflow.
+  - The `richStats` JSDoc wording.
+  - The `/akili-archive` guide, TRD and kaizen sync on `staging`.

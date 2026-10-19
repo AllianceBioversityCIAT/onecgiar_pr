@@ -136,7 +136,7 @@ No auth change, no new call, no logging. Client cost: one extra pass per `buildR
 | ToC map | `dashboard-lab.toc-map.spec.ts`, `program-overview.charts.spec.ts` | S-5.3 |
 | Sort outside shell | `where-to-report-modal.component.spec.ts`, `results-center-reporting-guide.component.spec.ts` | S-11.1 |
 | Gate sweeps | `rg` commands of requirements §8 D-3, D-5, D-6 | Remnants |
-| HITL | Browser at 1366 / 1280 / 375 (D-7); PRTest SP05 AoW01 vs Excel (D-8) | Layout, data |
+| HITL | Browser at 1366 / 1280 / 375 (D-7); SP05 AoW01 vs Nicoleta worked example (D-8; local and PRTest share prdb) | Layout, data |
 
 Lint: `ESLINT_USE_FLAT_CONFIG=false npx eslint <touched .ts> --quiet` (client, `KZ-changes--reporting-dynamic-kpi-target-counts-1`); `npx eslint <touched .ts> --quiet` (server).
 

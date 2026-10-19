@@ -57,7 +57,7 @@ Every aggregate progress % in the Science Program shell SHALL be the **average o
 | Persona | What changes for them |
 |---|---|
 | Science Program lead / submitter | The % now rises with partial achievement and is capped per KPI. No target sum is shown |
-| PMU lead (Nicoleta) | Figures can be checked by hand against the ToC export Excel |
+| PMU lead (Nicoleta) | Figures can be checked by hand against her worked example (BDN AoW1, 77.6 %, email "RE: Resync PRMS with ToC for BDN"); no source file was provided |
 | Center focal point | Hub and Center reporting guide order AoWs by the new % |
 
 ## 6. Functional Requirements
@@ -266,7 +266,7 @@ The ToC map SP root tooltip SHALL show only the program name and its progress li
 | D-5 | Target sum remnants | Jest DOM absence (KPC-S-7.1, 8.1) + `rg "targetSum\|headerTargets\|quick-typology-target-pill"` returns nothing in source |
 | D-6 | Stale copy | `rg -i "reported out of\|reported ÷"` over touched templates; KPC-S-10.1 DOM test |
 | D-7 | Layout wrap / clip with one decimal | **No automated gate** (jsdom measures no layout). Substitute: browser check at the HITL pause at 1366 / 1280 / 375 px |
-| D-8 | Figures disagree with Nicoleta's Excel (data, not code) | **No automated gate.** Substitute: PRTest hand check on SP05 AoW01 against the ToC export; differences explained or escalated |
+| D-8 | Figures disagree with Nicoleta's worked example (data, not code) | **No automated gate.** Substitute: PRTest hand check on SP05 AoW01 against the ToC export; differences explained or escalated |
 
 ## 9. Open Questions
 
