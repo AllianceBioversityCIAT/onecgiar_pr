@@ -120,10 +120,12 @@
                   <span
                     data-testid="pt-activity-badge"
                     class="inline-flex h-[20px] items-center rounded-[5px] border border-sky-200 bg-sky-50 px-[6px] text-[11px] font-semibold tabular-nums text-sky-700"
-                    [prTooltip]="ptTooltipOf(ptCount)"
+                    [prTooltip]="ptTooltip"
                     prTooltipPosition="top">
-                    <span aria-hidden="true">PT · {{ ptCount }}</span>
-                    <span class="sr-only">{{ ptTooltipOf(ptCount) }}</span>
+                    <!-- Full copy from 640px; below that the compact form keeps the title cell from wrapping. -->
+                    <span class="hidden min-[640px]:inline" aria-hidden="true" data-testid="pt-activity-badge-full">{{ ptLabelOf(ptCount) }}</span>
+                    <span class="min-[640px]:hidden" aria-hidden="true" data-testid="pt-activity-badge-short">{{ ptShortLabelOf(ptCount) }}</span>
+                    <span class="sr-only">{{ ptLabelOf(ptCount) }}. {{ ptTooltip }}</span>
                   </span>
                 }
               </div>
@@ -1113,10 +1115,12 @@
           <span
             data-testid="pt-activity-badge"
             class="inline-flex h-[20px] items-center rounded-[5px] border border-sky-200 bg-sky-50 px-[6px] text-[11px] font-semibold tabular-nums text-sky-700"
-            [prTooltip]="ptTooltipOf(ptCount)"
+            [prTooltip]="ptTooltip"
             prTooltipPosition="top">
-            <span aria-hidden="true">PT · {{ ptCount }}</span>
-            <span class="sr-only">{{ ptTooltipOf(ptCount) }}</span>
+            <!-- Full copy from 640px; below that the compact form keeps the title cell from wrapping. -->
+            <span class="hidden min-[640px]:inline" aria-hidden="true" data-testid="pt-activity-badge-full">{{ ptLabelOf(ptCount) }}</span>
+            <span class="min-[640px]:hidden" aria-hidden="true" data-testid="pt-activity-badge-short">{{ ptShortLabelOf(ptCount) }}</span>
+            <span class="sr-only">{{ ptLabelOf(ptCount) }}. {{ ptTooltip }}</span>
           </span>
         }
       </div>

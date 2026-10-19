@@ -17,7 +17,15 @@ export class UnsavedChangesGuard implements CanDeactivate<CanComponentDeactivate
   private readonly intentSE = inject(UnsavedNavigationIntentService);
   private readonly dialogSE = inject(UnsavedChangesDialogService);
 
-  canDeactivate(component: CanComponentDeactivate): Observable<boolean> | boolean {
+  canDeactivate(component: CanComponentDeactivate | null | undefined): Observable<boolean> | boolean {
+    // @akili-spec bugfix/result-detail-not-found-navigation
+    // No routed section is mounted (Result detail not-found / error screens skip the outlet), so
+    // nothing can hold unsaved changes: consume the one-shot flag (`UCA-DD-2`) and let it through (`RDN-DD-1`).
+    if (!component) {
+      this.intentSE.consumeSilent();
+      return true;
+    }
+
     if (!component.hasUnsavedChanges()) {
       // Consume unconditionally so a stray `markSilent()` from an earlier, blocked navigation
       // never leaks into the next, unrelated one (`UCA-DD-2`).

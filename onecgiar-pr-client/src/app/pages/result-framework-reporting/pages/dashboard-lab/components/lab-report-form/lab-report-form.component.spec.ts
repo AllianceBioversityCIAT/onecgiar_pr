@@ -1646,14 +1646,14 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
     return jest.spyOn(ResultsApiService.prototype, 'GET_progressTrackerResults').mockReturnValue(of(envelope));
   }
 
-  async function mountPt(inputs: Record<string, any> = {}) {
+  async function mountPt(inputs: Record<string, any> = {}, centersCatalogue: any[] = []) {
     const api = makeApiMock();
     const resultLevelSig = signal<any[]>([]);
     const outputOutcomeLevelsSig = computed(() => {
       const levels = resultLevelSig();
       return levels.length < 4 ? [] : levels.slice(2, 4).reverse();
     });
-    const centersMock = { getData: () => Promise.resolve(), centersList: [], centers: signal<any[]>([]) };
+    const centersMock = { getData: () => Promise.resolve(), centersList: centersCatalogue, centers: signal<any[]>(centersCatalogue) };
 
     await TestBed.configureTestingModule({
       imports: [LabReportFormComponent],
@@ -2137,17 +2137,19 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
         evidence_fingerprint: 'fingerprint-1',
         generated_at: '2026-09-22T00:00:00.000Z'
       });
-      // PTB-AC-17: countries / impact areas / gender split are guidance only — never in the payload.
-      expect(JSON.stringify(body)).not.toMatch(/Kenya|impact_areas|gender_split/);
+      // PTB-AC-17 (amended by PTB-R-18b): gender split stays guidance only; plain country names
+      // carry no CLARISA match so they never travel; impact-area scores now do, as mapped scores.
+      expect(body.progress_tracker_prefill).toEqual({ evidence_links: [], partners: [], impact_areas: { gender: 1 } });
+      expect(JSON.stringify(body)).not.toMatch(/Kenya|gender_split|geography/);
     });
 
-    it('PTB-R-18 (PT 2026-10-15 fields): geography, partners, impact-area details and evidence links never reach the payload', async () => {
+    it('PTB-R-18 / PTB-R-18a / PTB-R-18b: gender split, unmatched partners / places, justifications and type blocks never reach the payload — only allowlisted links, matched partners and mapped geography / scores do', async () => {
       const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
       const api: any = TestBed.inject(ApiService);
       fix.componentInstance.onOpenProgressTrackerTab();
 
-      fix.componentInstance.onPtResultSelected(
-        proposal({
+      fix.componentInstance.onPtResultSelected({
+        ...proposal({
           result_key: 'toc-node-1:2',
           geo: {
             level: 'national',
@@ -2155,21 +2157,171 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
             regions: [{ name: 'Lost Seas', match_status: 'matched' }],
             subnational_areas: 'Northern Atlantis province'
           },
-          partners: [{ name: 'Sentinel Partner Org', acronym: 'SPO', role: 'implementing', match_status: 'suggested', is_cgiar_center: false }],
+          partners: [
+            { name: 'Sentinel Partner Org', acronym: 'SPO', role: 'implementing', match_status: 'suggested', is_cgiar_center: false, clarisa_id: 777 },
+            { name: 'Matched Partner Org', acronym: 'MPO', role: 'implementing', match_status: 'matched', is_cgiar_center: false, clarisa_id: 1234 },
+            { name: 'Center As Partner', acronym: 'CAP', role: 'lead', match_status: 'matched', is_cgiar_center: true, clarisa_id: 55 }
+          ],
           impact_area_details: [{ key: 'climate', label: 'Climate adaptation & mitigation', score: 2, justification: 'Sentinel justification' }],
-          evidence_links: [{ url: 'https://evidence.example.org/sentinel', title: 'Sentinel evidence', kind: 'report' }]
-        })
-      );
+          evidence_links: [
+            { url: 'https://evidence.example.org/report', title: 'Report', kind: 'report' },
+            { url: 'https://evidence.example.org/report/', title: 'Same report', kind: 'report' }
+          ],
+          gender_split: { women: 3, men: 4 }
+        }),
+        // Fields outside the allowlist must not ride along even if PT sends them.
+        ...({ innovation: { readiness_level: 5 }, policy_change: { stage: 'Sentinel stage' }, capacity_sharing: { trainees: 9 } } as any)
+      });
       fix.componentInstance.patch('contribution_to_indicator_target', 3);
       fix.detectChanges();
 
       fix.componentInstance.createResult();
 
       expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
-      const serialized = JSON.stringify(api.resultsSE.POST_createResult.mock.calls[0][0]);
+      const body = api.resultsSE.POST_createResult.mock.calls[0][0];
+      // The only country is unmatched and the region has no CLARISA id → no geography travels;
+      // the climate score does, as a bare 0/1/2 (no label, no justification).
+      expect(body.progress_tracker_prefill).toEqual({
+        evidence_links: [{ url: 'https://evidence.example.org/report', title: 'Report' }],
+        partners: [{ clarisa_id: 1234, name: 'Matched Partner Org' }],
+        impact_areas: { climate: 2 }
+      });
+      const serialized = JSON.stringify(body);
       expect(serialized).not.toMatch(
-        /Atlantis|Lost Seas|Sentinel Partner|SPO|Sentinel justification|evidence\.example\.org|geo_scope|"geo"|partners|impact_area_details|evidence_links|clarisa_id|match_status/
+        /Atlantis|Lost Seas|Northern Atlantis|Sentinel Partner|SPO|Center As Partner|Sentinel justification|Sentinel stage|geo_scope|"geo"|geography|impact_area_details|gender_split|readiness_level|innovation"|policy_change|capacity_sharing|match_status/
       );
+    });
+
+    it('PTB-R-18b: a matched geography travels as a PRMS focus with CLARISA ids only, and what the server skipped comes back in the alert', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      api.resultsSE.POST_createResult.mockReturnValueOnce(
+        of({
+          response: {
+            result: { result_code: 'R-1', version_id: 9 },
+            progressTrackerPrefill: { partners_skipped: [], geography_applied: null, geography_skipped_reason: 'not_empty', geography_skipped: [], impact_areas_applied: [], impact_areas_skipped: ['gender'] }
+          }
+        })
+      );
+      const form = fix.componentInstance;
+      form.onPtResultSelected(
+        proposal({
+          geo: {
+            level: 'multinational',
+            countries: [
+              { name: 'Mali', iso_alpha_2: 'ML', clarisa_id: 466, match_status: 'matched' },
+              { name: 'Mozambique', iso_alpha_2: 'MZ', clarisa_id: 508, match_status: 'matched' }
+            ],
+            regions: [],
+            subnational_areas: null,
+            provenance: ['KPI']
+          },
+          impact_area_details: [{ key: 'gender', label: 'Gender', score: 1, justification: 'Sentinel justification' }]
+        })
+      );
+      form.patch('contribution_to_indicator_target', 1);
+      expect(form.ptPendingChecklist().map(i => i.label)).toContain('Geographic location');
+
+      form.createResult();
+
+      const body = api.resultsSE.POST_createResult.mock.calls[0][0];
+      expect(body.progress_tracker_prefill.geography).toEqual({
+        geo_scope_id: 3,
+        countries: [
+          { clarisa_id: 466, iso_alpha_2: 'ML', name: 'Mali' },
+          { clarisa_id: 508, iso_alpha_2: 'MZ', name: 'Mozambique' }
+        ],
+        regions: [],
+        subnational: []
+      });
+      expect(body.progress_tracker_prefill.impact_areas).toEqual({ gender: 1 });
+      expect(JSON.stringify(body)).not.toMatch(/Sentinel justification|match_status|"provenance":\[|KPI/);
+      const alert = api.alertsFe.show.mock.calls.at(-1)[0];
+      expect(alert.id).toBe('reportResultPtPending');
+      expect(alert.description).toContain('already had a geography');
+      expect(alert.description).toContain('Gender equality, youth &amp; social inclusion 1');
+    });
+
+    it('PTB-R-18a: prefills a numeric contribution into an empty field but never over a typed value', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const form = fix.componentInstance;
+
+      form.onPtResultSelected(proposal({ contribution_value: 7 }));
+      expect(form.createResultBody().contribution_to_indicator_target).toBe(7);
+
+      // Re-pick: the untouched PT value is replaced by the new proposal's.
+      form.onPtResultSelected(proposal({ result_key: 'pt-result-2', contribution_value: 2 }));
+      expect(form.createResultBody().contribution_to_indicator_target).toBe(2);
+
+      // The user types: a later pick leaves it alone, and so does clearing the pick.
+      form.patch('contribution_to_indicator_target', 11);
+      form.onPtResultSelected(proposal({ result_key: 'pt-result-3', contribution_value: 5 }));
+      expect(form.createResultBody().contribution_to_indicator_target).toBe(11);
+      form.clearPtDraft();
+      expect(form.createResultBody().contribution_to_indicator_target).toBe(11);
+    });
+
+    it('PTB-R-18a: a contribution the PT policy marks as suggest is not prefilled and lands in the checklist', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const form = fix.componentInstance;
+
+      form.onPtResultSelected(proposal({ contribution_value: 7, policy: { contribution: 'suggest' }, to_complete_in_prms: ['Innovation readiness level'] }));
+      fix.detectChanges();
+
+      expect(form.createResultBody().contribution_to_indicator_target).toBeNull();
+      const labels = form.ptPendingChecklist().map(item => item.label);
+      expect(labels).toEqual(expect.arrayContaining(['Innovation readiness level', 'Contribution to indicator target']));
+      expect(fix.nativeElement.querySelector('[data-testid="pt-pending-checklist"]')?.textContent).toContain('Innovation readiness level');
+    });
+
+    it('PTB-R-18a: preselects PT centers (ToC ones in the primary list, others through Other(s)) without dropping user picks, and takes them back on clear', async () => {
+      const ABC = { code: 'C-1', name: 'Alliance of Bioversity and CIAT', acronym: 'ABC', institutionId: 100 };
+      const CIP = { code: 'C-2', name: 'International Potato Center', acronym: 'CIP', institutionId: 101 };
+      const IRRI = { code: 'C-3', name: 'International Rice Research Institute', acronym: 'IRRI', institutionId: 102 };
+      const fix = await mountPt(
+        { indicator: { ...nonKpIndicator, targets_by_center: { centers: [{ center_acronym: 'ABC' }] } }, tocNode: { result_level_id: OUTPUT_LEVEL } },
+        [ABC, CIP, IRRI]
+      );
+      const form = fix.componentInstance;
+      await form.preselectCentersP;
+      form.onContributingCentersChange([...form.contributingCenters(), form.otherCentersSentinel]);
+      form.onOtherCentersChange([IRRI]);
+
+      form.onPtResultSelected(
+        proposal({
+          lead_center: { name: null, acronym: 'ABC', code: null },
+          contributing_centers: [{ name: 'International Potato Center', acronym: null, code: null }, { name: 'Unknown Center', acronym: null, code: null }]
+        })
+      );
+      await form.preselectCentersP;
+      await Promise.resolve();
+
+      expect(form.contributingCenters().map(c => c.code)).toEqual(['C-1', form.OTHER_CENTERS_CODE]);
+      expect(form.otherCentersSelected().map(c => c.code)).toEqual(['C-3', 'C-2']);
+      expect(form.ptPendingChecklist().map(i => i.label)).toContain('CGIAR center: Unknown Center');
+
+      form.clearPtDraft();
+      expect(form.otherCentersSelected().map(c => c.code)).toEqual(['C-3']);
+      expect(form.contributingCenters().map(c => c.code)).toEqual(['C-1', form.OTHER_CENTERS_CODE]);
+    });
+
+    it('PTB-R-18a: after create, a pick with pending items shows the persistent checklist alert (escaped)', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      api.resultsSE.POST_createResult.mockReturnValueOnce(
+        of({ response: { result: { result_code: 'R-1', version_id: 9 }, progressTrackerPrefill: { partners_skipped: ['Gone Org'] } } })
+      );
+      const form = fix.componentInstance;
+      form.onPtResultSelected(proposal({ to_complete_in_prms: ['<b>Readiness</b>'] }));
+      form.patch('contribution_to_indicator_target', 1);
+
+      form.createResult();
+
+      const alert = api.alertsFe.show.mock.calls.at(-1)[0];
+      expect(alert.id).toBe('reportResultPtPending');
+      expect(alert.closeIn).toBeUndefined();
+      expect(alert.description).toContain('&lt;b&gt;Readiness&lt;/b&gt;');
+      expect(alert.description).toContain('Partner: Gone Org');
     });
 
     it('PTB-AC-13: a manual (non-Progress-Tracker) create still sends an empty narrative and no provenance block', async () => {

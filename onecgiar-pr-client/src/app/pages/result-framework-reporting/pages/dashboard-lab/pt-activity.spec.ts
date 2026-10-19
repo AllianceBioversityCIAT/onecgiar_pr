@@ -1,4 +1,4 @@
-import { buildPtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityHasAny, ptActivityTooltip } from './pt-activity';
+import { buildPtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityHasAny, ptActivityLabel, ptActivityShortLabel, PT_ACTIVITY_TOOLTIP } from './pt-activity';
 
 const item = (over: Record<string, unknown> = {}) => ({
   toc_results_indicator_id: 'node-1',
@@ -92,7 +92,13 @@ describe('pt-activity', () => {
     expect(centerAcronymsOfRow({ center_acronym: '—' })).toEqual([]);
   });
 
-  it('ptActivityTooltip carries the count', () => {
-    expect(ptActivityTooltip(5)).toBe('Progress Tracker has 5 evidence items for this KPI');
+  it('ptActivityLabel names the unit, singular for one', () => {
+    expect(ptActivityLabel(1)).toBe('PT · 1 evidence item');
+    expect(ptActivityLabel(2)).toBe('PT · 2 evidence items');
+    expect(ptActivityShortLabel(2)).toBe('PT · 2');
+  });
+
+  it('PT_ACTIVITY_TOOLTIP explains evidence items vs proposals', () => {
+    expect(PT_ACTIVITY_TOOLTIP).toBe('Evidence items in Progress Tracker. One proposal can group several evidence items.');
   });
 });
