@@ -17,6 +17,7 @@ import { BilateralManualCreateFlowService } from '../../services/bilateral-manua
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
+import { KpSubmitConfirmDialogService } from '../../components/kp-submit-confirm-dialog/kp-submit-confirm-dialog.service';
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { RESULT_STATUS_TOKENS } from '../../../../shared/constants/result-status-tokens';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
@@ -92,6 +93,7 @@ describe('BilateralResultCreatorComponent', () => {
   let mockRoute: any;
   let mockRouter: any;
   let qualityAssessment: any;
+  let kpConfirm: { open: jest.Mock };
 
   beforeEach(async () => {
     creationService = {
@@ -148,6 +150,8 @@ describe('BilateralResultCreatorComponent', () => {
       resetWizard: jest.fn(),
       clearEditorState: jest.fn(),
     };
+    // P2-3980: the real service's single KP predicate, derived from the same mocked type signal.
+    creationService.isKnowledgeProduct = computed(() => Number(creationService.resultTypeId()) === 6);
 
     mdsTracker = {
       sectionStatus: signal([]),
@@ -234,9 +238,11 @@ describe('BilateralResultCreatorComponent', () => {
       isRunning: signal(false),
       isSubmitting: signal(false),
       isBusy: signal(false),
+      isKpSubmitting: signal(false),
       isDialogOpen: signal(false),
       run: jest.fn().mockReturnValue(of({ id: 9, status: 'completed' })),
       submit: jest.fn().mockReturnValue(of({})),
+      submitKnowledgeProduct: jest.fn().mockReturnValue(of({})),
       close: jest.fn(),
       loadLatest: jest.fn().mockReturnValue(of(null)),
       openStored: jest.fn(),
@@ -246,6 +252,8 @@ describe('BilateralResultCreatorComponent', () => {
       markStale: jest.fn(),
       reset: jest.fn(),
     };
+
+    kpConfirm = { open: jest.fn().mockReturnValue(of('cancel')) };
 
     mockRoute = {
       params: of({}),
@@ -271,6 +279,7 @@ describe('BilateralResultCreatorComponent', () => {
         { provide: BilateralAiService, useValue: mockAiService },
         { provide: BilateralManualCreateFlowService, useValue: manualCreateFlow },
         { provide: BilateralQualityAssessmentUiService, useValue: qualityAssessment },
+        { provide: KpSubmitConfirmDialogService, useValue: kpConfirm },
       ],
     })
       .overrideComponent(BilateralResultCreatorComponent, {
@@ -347,6 +356,126 @@ describe('BilateralResultCreatorComponent', () => {
     component.resultId.set(42);
     component.submitResult();
     expect(qualityAssessment.run).toHaveBeenCalledWith(42);
+    // P2-3980: every non-KP type keeps today's flow — no confirmation, no silent KP submit.
+    expect(kpConfirm.open).not.toHaveBeenCalled();
+    expect(qualityAssessment.submitKnowledgeProduct).not.toHaveBeenCalled();
+  });
+
+  // P2-3980 — a bilateral Knowledge Product never runs the AI check; it confirms, then submits silently.
+  describe('Knowledge Product submit (P2-3980)', () => {
+    let decision$: Subject<'submit' | 'cancel'>;
+
+    beforeEach(() => {
+      creationService.resultTypeId.set(6);
+      decision$ = new Subject();
+      kpConfirm.open.mockReturnValue(decision$.asObservable());
+      component.resultId.set(42);
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+    });
+
+    it('opens the confirmation and does NOT run the AI check nor open its dialog', () => {
+      component.submitResult();
+
+      expect(kpConfirm.open).toHaveBeenCalledTimes(1);
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+      expect(qualityAssessment.submitKnowledgeProduct).not.toHaveBeenCalled();
+      expect(qualityAssessment.isDialogOpen()).toBe(false);
+    });
+
+    it('confirm submits once and marks the result Pending review with the success toast', () => {
+      component.submitResult();
+      decision$.next('submit');
+
+      expect(qualityAssessment.submitKnowledgeProduct).toHaveBeenCalledTimes(1);
+      expect(qualityAssessment.submitKnowledgeProduct).toHaveBeenCalledWith(42);
+      expect(creationService.resultStatusId()).toBe(5);
+      expect((component as any).api.alertsFe.show).toHaveBeenCalledWith(expect.objectContaining({ id: 'bilateralSubmitSuccess', status: 'success' }));
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    it('cancel sends nothing and leaves the result as it was', () => {
+      creationService.resultStatusId.set(1);
+      component.submitResult();
+      decision$.next('cancel');
+
+      expect(qualityAssessment.submitKnowledgeProduct).not.toHaveBeenCalled();
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+      expect(creationService.resultStatusId()).toBe(1);
+    });
+
+    it('a second click while the confirmation is open does not stack another dialog', () => {
+      component.submitResult();
+      component.submitResult();
+
+      expect(kpConfirm.open).toHaveBeenCalledTimes(1);
+    });
+
+    it('can be confirmed again after a cancel', () => {
+      component.submitResult();
+      decision$.next('cancel');
+      decision$ = new Subject();
+      kpConfirm.open.mockReturnValue(decision$.asObservable());
+      component.submitResult();
+
+      expect(kpConfirm.open).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps every existing guard: an unsaved section stops it before the confirmation', () => {
+      autoSaveService.hasPendingFor.mockImplementation((section: string) => section === 'general-info');
+      component.submitResult();
+
+      expect(kpConfirm.open).not.toHaveBeenCalled();
+    });
+
+    it('does not submit if the result left Editing while the confirmation was open', () => {
+      component.submitResult();
+      creationService.isEditableByCenterUser.set(false);
+      decision$.next('submit');
+
+      expect(qualityAssessment.submitKnowledgeProduct).not.toHaveBeenCalled();
+    });
+
+    it('shows the server message when the submit fails', () => {
+      qualityAssessment.submitKnowledgeProduct.mockReturnValue(throwError(() => ({ error: { message: 'No SP' } })));
+      component.submitResult();
+      decision$.next('submit');
+
+      expect((component as any).api.alertsFe.show).toHaveBeenCalledWith(expect.objectContaining({ id: 'bilateralSubmitError', description: 'No SP' }));
+      expect(creationService.resultStatusId()).not.toBe(5);
+    });
+
+    it('does not rehydrate an AI assessment for a KP', () => {
+      component.isCreating.set(false);
+      creationService.isLoadingResult.set(false);
+      creationService.currentResultId.set(77);
+      TestBed.flushEffects();
+
+      expect(component.resultId()).toBe(77);
+      expect(qualityAssessment.loadLatest).not.toHaveBeenCalled();
+    });
+
+    // Review finding: switching an AI-checked result to Knowledge Product kept its amber flags on the
+    // now read-only Title/Description. The type change drops the held assessment.
+    it('drops the former type assessment when the result type changes', () => {
+      (component as any).lastLoadRequest = { resultCode: 31111, versionId: 8 };
+      (component as any).qualityAssessmentResultId = 42;
+
+      component.reloadAfterResultTypeChange();
+
+      expect(qualityAssessment.reset).toHaveBeenCalled();
+      expect((component as any).qualityAssessmentResultId).toBeNull();
+      expect(creationService.loadResult).toHaveBeenCalledWith(31111, 8);
+    });
+
+    it('still rehydrates the AI assessment for any other type (positive control)', () => {
+      creationService.resultTypeId.set(7);
+      component.isCreating.set(false);
+      creationService.isLoadingResult.set(false);
+      creationService.currentResultId.set(78);
+      TestBed.flushEffects();
+
+      expect(qualityAssessment.loadLatest).toHaveBeenCalledWith(78);
+    });
   });
 
   it('saves only the active section', async () => {
@@ -1377,6 +1506,41 @@ describe('BilateralResultCreatorComponent', () => {
       mdsTracker.overallStatus.set(tracker.overallStatus());
       expect(tracker.overallStatus()).toBe('partial');
       expect(component.canSubmitFromRail()).toBe(false);
+    });
+
+    // P2-3980: the AI check card and the "AI quality check runs first" note are hidden for a KP only.
+    describe('AI quality surfaces (P2-3980)', () => {
+      const railCard = () => fixture.nativeElement.querySelector('.bcr-quality-summary');
+      const note = () => fixture.nativeElement.querySelector('[data-testid="bilateral-rail-submit-note"]');
+      const held = { id: 1, result_id: 42, status: 'completed', is_current: true, overall: { verdict: 'green', summary: 'ok' } };
+
+      it('shows the card and the note for a non-KP type', () => {
+        creationService.resultTypeId.set(7);
+        qualityAssessment.assessment.set(held);
+        fixture.detectChanges();
+
+        expect(railCard()).toBeTruthy();
+        expect(note()).toBeTruthy();
+      });
+
+      it('hides the card and the note for a Knowledge Product, even with a held assessment', () => {
+        creationService.resultTypeId.set(6);
+        qualityAssessment.assessment.set(held);
+        fixture.detectChanges();
+
+        expect(railCard()).toBeNull();
+        expect(note()).toBeNull();
+        expect(submitButton().textContent).toContain('Submit for review');
+      });
+
+      it('reads Submitting while the silent KP submit is in flight', () => {
+        creationService.resultTypeId.set(6);
+        qualityAssessment.isBusy.set(true);
+        qualityAssessment.isKpSubmitting.set(true);
+        fixture.detectChanges();
+
+        expect(submitButton().textContent).toContain('Submitting');
+      });
     });
 
     it('names the AI check while it runs', () => {

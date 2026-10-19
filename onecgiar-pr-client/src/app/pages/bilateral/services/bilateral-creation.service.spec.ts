@@ -989,4 +989,20 @@ describe('BilateralCreationService', () => {
       expect(service.isEditableByCenterUser()).toBe(true);
     });
   });
+  // P2-3980 — the one Knowledge Product predicate of the bilateral layer.
+  describe('isKnowledgeProduct', () => {
+    it('is true only for result type 6 (number or numeric string)', () => {
+      service.resultTypeId.set(6);
+      expect(service.isKnowledgeProduct()).toBe(true);
+      service.resultTypeId.set('6' as any);
+      expect(service.isKnowledgeProduct()).toBe(true);
+    });
+
+    it('is false for every other type and when the type is unknown', () => {
+      for (const typeId of [1, 2, 3, 4, 5, 7, 8, 9, null]) {
+        service.resultTypeId.set(typeId);
+        expect(service.isKnowledgeProduct()).toBe(false);
+      }
+    });
+  });
 });
