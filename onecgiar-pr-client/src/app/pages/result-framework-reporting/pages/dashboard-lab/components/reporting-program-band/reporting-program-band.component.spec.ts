@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { ReportingProgramBandComponent } from './reporting-program-band.component';
 import { ReportingGuideService } from '../../services/reporting-guide.service';
@@ -1111,7 +1112,9 @@ describe('ReportingProgramBandComponent', () => {
           'Innovation development': 12,
           'Policy change': 8,
           'Innovation use': 6,
-          'Capacity sharing for development': 4
+          'Capacity sharing for development': 4,
+          'Other output': 3,
+          'Other outcome': 2
         }
       });
 
@@ -1119,15 +1122,17 @@ describe('ReportingProgramBandComponent', () => {
       expect(strip).toBeTruthy();
 
       const chips = Array.from(strip!.querySelectorAll('button'));
-      expect(chips.length).toBe(6);
+      expect(chips.length).toBe(8);
 
       const expected = [
-        { label: 'All', count: '50' },
+        { label: 'KPI', count: '50' },
         { label: 'Knowledge Product', count: '15' },
         { label: 'Innovation Development', count: '12' },
         { label: 'Policy Change', count: '8' },
         { label: 'Innovation Use', count: '6' },
-        { label: 'Capacity Sharing', count: '4' }
+        { label: 'Capacity Sharing', count: '4' },
+        { label: 'Other Output', count: '3' },
+        { label: 'Other Outcome', count: '2' }
       ];
 
       expected.forEach((exp, idx) => {
@@ -1146,10 +1151,27 @@ describe('ReportingProgramBandComponent', () => {
 
       const strip = root().querySelector('[data-testid="quick-typology-filters"]');
       const chips = Array.from(strip!.querySelectorAll('button'));
-      expect(chips[0].textContent).toContain('All');
+      expect(chips[0].textContent).toContain('KPI');
       expect(chips[0].textContent).toContain('25');
       expect(chips[1].textContent).toContain('Knowledge Product');
       expect(chips[1].textContent).toContain('0');
+    });
+
+    it('renders an informational Target pill: span, no aria-pressed, no emit (DKT-R-4)', async () => {
+      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5 }, targetSum: '259' });
+      const spy = jest.spyOn(component.typologyChange, 'emit');
+      const pill = root().querySelector('[data-testid="quick-typology-target-pill"]') as HTMLElement;
+      expect(pill.tagName).toBe('SPAN');
+      expect(pill.getAttribute('aria-label')).toBe('Target sum: 259');
+      expect(pill.hasAttribute('aria-pressed')).toBe(false);
+      expect(pill.textContent).toContain('259');
+      pill.click();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('renders no Target pill without targetSum', async () => {
+      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5 } });
+      expect(root().querySelector('[data-testid="quick-typology-target-pill"]')).toBeNull();
     });
 
     it('does not render quick filter chips when compactFilters is true', async () => {
@@ -1199,7 +1221,7 @@ describe('ReportingProgramBandComponent', () => {
       chips[1].click();
       expect(spy).toHaveBeenCalledWith([]);
 
-      // Click 'All' chip -> emits []
+      // Click 'KPI' chip -> emits []
       chips[0].click();
       expect(spy).toHaveBeenCalledWith([]);
     });
@@ -1501,6 +1523,63 @@ describe('ReportingProgramBandComponent', () => {
       const statusSpy = jest.spyOn(component.statusChange, 'emit');
       component.removeStatusChip('achieved');
       expect(statusSpy).toHaveBeenCalledWith(['not-started']);
+    });
+  });
+
+  // ── KTO-T-7 / KTO-R-10 · global Target filter ─────────────────────────────
+  describe('Target filter in the Filters popover (KTO-R-10)', () => {
+    it('renders a single-select Target control beside Status in grouped mode, not in By-AOW mode', async () => {
+      await build({ showToolbar: true, compactFilters: false });
+      const el = root();
+
+      expect(el.querySelector('[aria-label="Filter by target"] app-pr-filter-select')).not.toBeNull();
+      expect(el.querySelector('[aria-label="Filter by target"]')?.textContent).toContain('Target');
+    });
+
+    it('does not render the Target control in By-AOW (compact) mode, like Type / Category', async () => {
+      await build({ showToolbar: true, compactFilters: true });
+
+      expect(root().querySelector('[aria-label="Filter by target"]')).toBeNull();
+    });
+
+    it('offers exactly All / KPIs with target / KPIs with no target', async () => {
+      await build({ showToolbar: true, compactFilters: false });
+
+      expect(component.targetOptions.map(o => [o.value, o.label])).toEqual([
+        ['all', 'All'],
+        ['with', 'KPIs with target'],
+        ['without', 'KPIs with no target']
+      ]);
+    });
+
+    it('emits the picked value through targetChange', async () => {
+      await build({ showToolbar: true, compactFilters: false });
+      const spy = jest.spyOn(component.targetChange, 'emit');
+
+      const select = fixture.debugElement.query(By.css('[aria-label="Filter by target"] app-pr-filter-select'));
+      select.triggerEventHandler('changed', 'without');
+
+      expect(spy).toHaveBeenCalledWith('without');
+    });
+
+    it('counts a non-All Target in the active-filter badge and shows a removable chip', async () => {
+      await build({ showToolbar: true, compactFilters: false, targetValue: 'with', statusValue: ['achieved'] });
+
+      expect(component.activeFilterCount()).toBe(2); // 1 status + the Target
+      expect(component.hasActiveFilters()).toBe(true);
+      expect(component.activeTargetChip()).toEqual({ value: 'with', label: 'KPIs with target' });
+
+      const spy = jest.spyOn(component.targetChange, 'emit');
+      component.removeTargetChip();
+      expect(spy).toHaveBeenCalledWith('all');
+    });
+
+    it('All adds nothing to the badge and renders no chip', async () => {
+      await build({ showToolbar: true, compactFilters: false, targetValue: 'all' });
+
+      expect(component.activeFilterCount()).toBe(0);
+      expect(component.activeTargetChip()).toBeNull();
+      expect(component.hasActiveFilterChips()).toBe(false);
     });
   });
 

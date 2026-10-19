@@ -90,8 +90,17 @@
                 <span
                   class="w-[56px] text-right text-[12.5px] font-medium tabular-nums text-[var(--pr-text-secondary)]"
                   [attr.title]="zeroTargetTitle(row)">
-                  <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong
-                  ><span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                  @if (row.total > 0) {
+                    @if (row.total > 0) {
+                      <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong
+                      ><span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                    } @else {
+                      <span aria-label="No KPIs with a target">—</span>
+                    }
+                  } @else {
+                    <!-- @akili-spec changes/kpi-progress-target-only — KTO-R-3: dash, never 0/0 (sorts as 0 %). -->
+                    <span aria-label="No KPIs with a target">—</span>
+                  }
                 </span>
                 <button
                   type="button"
@@ -150,8 +159,12 @@
                   <span
                     class="w-[56px] text-right text-[12.5px] font-medium tabular-nums text-[var(--pr-text-secondary)]"
                     [attr.title]="zeroTargetTitle(row)">
-                    <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong
-                    ><span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                    @if (row.total > 0) {
+                      <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong
+                      ><span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                    } @else {
+                      <span aria-label="No KPIs with a target">—</span>
+                    }
                   </span>
                   <button
                     type="button"

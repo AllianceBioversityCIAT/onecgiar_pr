@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { PT_AUTO_RETRY_DELAY_MS, PtResultsBrowseComponent } from './pt-results-browse.component';
+import { PT_AUTO_RETRY_DELAY_MS, PT_EMPTY_DEFAULT_MESSAGE, PtResultsBrowseComponent } from './pt-results-browse.component';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 
 /**
@@ -176,6 +176,25 @@ describe('PtResultsBrowseComponent — partial and slow answers', () => {
       expect(link.getAttribute('target')).toBe('_blank');
       expect(link.getAttribute('rel')).toContain('noopener');
       expect(el('pt-check-again-preparing')).toBeNull();
+    });
+
+    it.each([
+      ['no_reportable_results', 'Progress Tracker reviewed the evidence for this KPI and found no reportable result yet.'],
+      ['no_readable_original_evidence', 'Progress Tracker could not read the evidence files for this KPI, so there is nothing to propose yet.']
+    ])('template reason %s gets its own empty message and keeps the Progress Tracker link', (reason, message) => {
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([proposal], { generated_by: { mode: 'template', fallback_reason: reason } })));
+      open();
+      expect(component.status()).toBe('empty');
+      expect(el('pt-empty-message')?.textContent?.trim()).toBe(message);
+      expect((el('pt-empty-open-in-tracker') as HTMLAnchorElement).getAttribute('href')).toBe('https://pt.example.org/kpi?x=1');
+      expect(el('pt-check-again-preparing')).toBeNull();
+    });
+
+    it('a known reason outside template mode keeps the generic empty message', () => {
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai', fallback_reason: 'no_reportable_results' } })));
+      open();
+      expect(component.status()).toBe('empty');
+      expect(el('pt-empty-message')?.textContent?.trim()).toBe(PT_EMPTY_DEFAULT_MESSAGE);
     });
 
     it('empty without source.pt_url renders no link', () => {

@@ -154,6 +154,8 @@ export class SectionZeroDashboardComponent {
   readonly singleAllocationNote = BILATERAL_PRIMARY_ASSIGNMENT_COPY.singleAllocationNote;
 
   readonly declinedOptionSuffix = BILATERAL_PRIMARY_ASSIGNMENT_COPY.declinedOptionSuffix;
+  /** PAA-R-6 — shown in the no-lead-project state. */
+  readonly noProjectLinkHint = BILATERAL_PRIMARY_ASSIGNMENT_COPY.noProjectLinkHint;
 
   constructor() {
     effect(() => {
@@ -186,6 +188,11 @@ export class SectionZeroDashboardComponent {
   readonly assignmentPrimary = computed(() => {
     const pending = this.pendingPrimary();
     if (pending) return pending;
+    // PAA-T-1 / design.md P-4: fires only when the result has NO lead project (selectedProject() is
+    // null) and no primary was chosen in this session. Then the stored (2025) P/A is only "current":
+    // it is never presented as the selected Program, even when the picked project includes it, so
+    // the label always agrees with requiresPrimarySelection() / Save.
+    if (!this.creationService.selectedProject()) return null;
     const project = this.assignmentProject();
     const current = this.creationService.selectedPrimarySp();
     // P2-3807 — the persisted primary is hydrated with the CLARISA initiative id (52), while the

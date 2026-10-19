@@ -102,7 +102,7 @@
                 <div class="mt-[4px] flex flex-wrap justify-center gap-[8px]" data-testid="result-detail-not-found-phases">
                   @for (phase of availablePhases(); track phase.id) {
                     <a
-                      [href]="phaseLink(phase.id)"
+                      [href]="phaseLink(phase)"
                       class="inline-flex h-[32px] items-center gap-[8px] rounded-full border border-[var(--pr-border)] bg-white px-[12px] text-[13px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-300)]">
                       {{ phase.phase_name }}
                       <span

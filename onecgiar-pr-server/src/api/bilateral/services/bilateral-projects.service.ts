@@ -4,6 +4,7 @@ import { In, IsNull, Repository } from 'typeorm';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaProject } from '../../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE } from '../constants/w3-center-alias.constants';
+import { APPROVED_MAPPING_STATUSES } from '../constants/approved-mapping-statuses.constants';
 import { YearRepository } from '../../results/years/year.repository';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
@@ -403,15 +404,9 @@ export class BilateralProjectsService {
       (mapping) =>
         !!mapping.programCode?.trim() &&
         Number(mapping.allocation) > 0 &&
-        BilateralProjectsService.APPROVED_MAPPING_STATUSES.has(
-          mapping.status?.trim() ?? '',
-        ),
+        APPROVED_MAPPING_STATUSES.has(mapping.status?.trim() ?? ''),
     );
   }
-
-  /** `clarisa_project_mappings.status` values that mean "approved" (see `hasProgramMapping`). */
-  private static readonly APPROVED_MAPPING_STATUSES: ReadonlySet<string> =
-    new Set(['Confirmed']);
 
   /**
    * `BIL-POM-OQ-1` correction (2026-09-22): the original `bilateral/project-overview-metrics`

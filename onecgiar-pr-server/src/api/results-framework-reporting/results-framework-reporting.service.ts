@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { env } from 'node:process';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { YearRepository } from '../results/years/year.repository';
@@ -30,6 +31,26 @@ import type {
   ResultScopeDto,
   ResultScopeRow,
 } from './application/queries/results-scope/results-scope.dto';
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-T-2)
+import type {
+  PortfolioTocCoverageProgramDto,
+  PortfolioTocCoverageResponseDto,
+} from './dto/portfolio-toc-coverage.dto';
+// @akili-spec changes/portfolio-overview-revamp/w3-projects-section (WPS-T-2)
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/clarisa-projects.repository';
+import { Version } from '../versioning/entities/version.entity';
+import {
+  buildCenterIndex,
+  resolveProjectOwnerCenter,
+} from '../bilateral/utils/project-owner-center.util';
+import type {
+  BilateralProjectCountsDto,
+  BilateralProjectsByCenterDto,
+  BilateralProjectsByProgramDto,
+  PortfolioBilateralProjectsResponseDto,
+} from './dto/portfolio-bilateral-projects.dto';
+import type { PortfolioResultDimensionsResponseDto } from './dto/portfolio-result-dimensions.dto';
 
 /** One entry of the additive `scopeBuckets[]` partition (design.md §5). */
 export interface ScopeBucketDto {
@@ -57,6 +78,9 @@ export class ResultsFrameworkReportingService {
     private readonly _versioningService: VersioningService,
     private readonly _createResultFromFrameworkHandler: CreateResultFromFrameworkHandler,
     private readonly _getExistingResultContributorsToIndicatorsHandler: GetExistingResultContributorsToIndicatorsHandler,
+    @InjectRepository(ClarisaCenter)
+    private readonly _clarisaCenterRepository: Repository<ClarisaCenter>,
+    private readonly _clarisaProjectsRepository: ClarisaProjectsRepository,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -848,6 +872,443 @@ export class ResultsFrameworkReportingService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * Portfolio-wide ToC KPI coverage per Program / Accelerator
+   * (changes/portfolio-overview-revamp/toc-kpi-progress, TKP-R-3, design §5).
+   * Merges the P/A seed with ONE grouped repository query, so every P/A is
+   * present (zeros by default) and codes outside the seed are dropped.
+   */
+  async getPortfolioTocCoverage(versionId?: number) {
+    try {
+      const tocContext = await this.resolveTocContextForRequest(versionId);
+
+      // Both resolution paths carry the version row id; the repository binds it.
+      // `version.id` is BIGINT and the MySQL driver returns it as a string, so
+      // coerce before validating (`Number(null) === 0` is rejected by `> 0`).
+      const resolvedVersionId = Number(tocContext.versionId);
+      if (!Number.isFinite(resolvedVersionId) || resolvedVersionId <= 0) {
+        throwServiceError(
+          'No version could be resolved for the portfolio ToC coverage.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      const resolvedReportingYear = Number(tocContext.reportingYear);
+
+      const seed = await this._clarisaInitiativesRepository.find({
+        where: {
+          portfolio_id: 3,
+          active: true,
+          cgiar_entity_type_id: In([22, 23, 24]),
+        },
+      });
+
+      const rows = await this._tocResultsRepository.getPortfolioTocCoverage({
+        ...tocContext,
+        reportingYear: resolvedReportingYear,
+        versionId: resolvedVersionId,
+      });
+
+      const normaliseCode = (code?: string | null) =>
+        (code ?? '').trim().toUpperCase();
+      const addCounts = (
+        target: { total: number; covered: number },
+        total: number,
+        covered: number,
+      ) => {
+        target.total += total;
+        target.covered += covered;
+      };
+
+      const countsByCode = new Map<
+        string,
+        {
+          outputs: { total: number; covered: number };
+          outcomes: { total: number; covered: number };
+        }
+      >();
+      for (const initiative of seed) {
+        countsByCode.set(normaliseCode(initiative.official_code), {
+          outputs: { total: 0, covered: 0 },
+          outcomes: { total: 0, covered: 0 },
+        });
+      }
+
+      for (const row of rows) {
+        // A code outside the seed (inactive or older initiative) is dropped.
+        const counts = countsByCode.get(normaliseCode(row.official_code));
+        if (!counts) continue;
+
+        const category = (row.category ?? '').trim().toUpperCase();
+        if (category === 'OUTPUT') {
+          addCounts(counts.outputs, row.total, row.covered);
+        } else if (category === 'OUTCOME') {
+          addCounts(counts.outcomes, row.total, row.covered);
+        }
+      }
+
+      const portfolio = { total: 0, covered: 0 };
+      const programs: PortfolioTocCoverageProgramDto[] = seed.map(
+        (initiative) => {
+          const { outputs, outcomes } = countsByCode.get(
+            normaliseCode(initiative.official_code),
+          );
+          const total = outputs.total + outcomes.total;
+          const covered = outputs.covered + outcomes.covered;
+          addCounts(portfolio, total, covered);
+
+          return {
+            code: (initiative.official_code ?? '').trim(),
+            shortName: initiative.short_name ?? '',
+            name: initiative.name ?? '',
+            total,
+            covered,
+            outputs: { ...outputs },
+            outcomes: { ...outcomes },
+          };
+        },
+      );
+
+      const response: PortfolioTocCoverageResponseDto = {
+        versionId: resolvedVersionId,
+        phaseName: tocContext.phaseName ?? null,
+        reportingYear: resolvedReportingYear,
+        programs,
+        portfolio,
+      };
+
+      return {
+        response,
+        message: 'Portfolio ToC KPI coverage retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      // A 4xx comes from the ToC context resolution and carries a safe message.
+      // Anything else (a wrapped repository error quotes the driver error, which
+      // can include SQL) is replaced by a generic 500 so no SQL reaches the body.
+      const status = Number(error?.status);
+      if (Number.isInteger(status) && status >= 400 && status < 500) {
+        return this._handlersError.returnErrorRes({ error, debug: true });
+      }
+
+      const errorCode =
+        typeof error?.code === 'string' ? ` (${error.code})` : '';
+      this._logger.error(`getPortfolioTocCoverage failed${errorCode}`);
+      return this._handlersError.returnErrorRes({
+        error: {
+          message: 'The portfolio ToC KPI coverage could not be retrieved.',
+          response: { error: true },
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        },
+        debug: false,
+      });
+    }
+  }
+
+  /**
+   * Portfolio Overview W3 / bilateral projects section
+   * (changes/portfolio-overview-revamp/w3-projects-section, WPS-T-2, design §5).
+   * The repository returns one fact row per active project; this method only
+   * aggregates (totals, by P/A, by Center, unmapped-with-W3).
+   */
+  async getPortfolioBilateralProjects(versionId?: number) {
+    try {
+      const version = await this.resolveReportingVersion(versionId);
+
+      // `version.id` is BIGINT and the MySQL driver returns it as a string.
+      const resolvedVersionId = Number(version?.id);
+      if (!Number.isFinite(resolvedVersionId) || resolvedVersionId <= 0) {
+        throwServiceError(
+          'No reporting version could be resolved for the portfolio bilateral projects.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      const phaseYear = Number(version.phase_year);
+
+      const seed = await this._clarisaInitiativesRepository.find({
+        where: {
+          portfolio_id: 3,
+          active: true,
+          cgiar_entity_type_id: In([22, 23, 24]),
+        },
+      });
+      const centerIndex = buildCenterIndex(
+        await this._clarisaCenterRepository.find({
+          relations: { clarisa_institution: true },
+        }),
+      );
+
+      const rows =
+        await this._clarisaProjectsRepository.getPortfolioProjectFacts(
+          phaseYear,
+          resolvedVersionId,
+        );
+
+      const normaliseCode = (code?: string | null) =>
+        (code ?? '').trim().toUpperCase();
+      const emptyCounts = (): BilateralProjectCountsDto => ({
+        mapped: 0,
+        withBilateralResults: 0,
+        w1w2Contributors: 0,
+      });
+      const addProject = (
+        target: BilateralProjectCountsDto,
+        hasBilateral: boolean,
+        hasW1w2: boolean,
+      ) => {
+        target.mapped += 1;
+        if (hasBilateral) target.withBilateralResults += 1;
+        if (hasW1w2) target.w1w2Contributors += 1;
+      };
+
+      const totals = emptyCounts();
+      const countsByProgram = new Map<string, BilateralProjectCountsDto>();
+      for (const initiative of seed) {
+        countsByProgram.set(
+          normaliseCode(initiative.official_code),
+          emptyCounts(),
+        );
+      }
+      const centerBuckets = new Map<
+        string | null,
+        {
+          counts: BilateralProjectCountsDto;
+          acronym: string | null;
+          name: string | null;
+        }
+      >();
+      let unmappedWithBilateralResults = 0;
+
+      for (const row of rows) {
+        const codes = new Set(
+          (row.approvedProgramCodes ?? [])
+            .map((code) => normaliseCode(code))
+            .filter((code) => code !== ''),
+        );
+        if (codes.size === 0) {
+          if (row.hasBilateral) unmappedWithBilateralResults += 1;
+          continue;
+        }
+
+        addProject(totals, row.hasBilateral, row.hasW1w2);
+        for (const code of codes) {
+          const counts = countsByProgram.get(code);
+          if (counts) addProject(counts, row.hasBilateral, row.hasW1w2);
+        }
+
+        const owner = resolveProjectOwnerCenter(row, centerIndex);
+        const centerCode = owner?.code ?? null;
+        let bucket = centerBuckets.get(centerCode);
+        if (!bucket) {
+          const institution = owner
+            ? centerIndex.byCode.get(owner.code)?.clarisa_institution
+            : undefined;
+          bucket = {
+            counts: emptyCounts(),
+            acronym: institution?.acronym ?? null,
+            name: institution?.name ?? null,
+          };
+          centerBuckets.set(centerCode, bucket);
+        }
+        addProject(bucket.counts, row.hasBilateral, row.hasW1w2);
+      }
+
+      const byProgram: BilateralProjectsByProgramDto[] = seed.map(
+        (initiative) => ({
+          code: (initiative.official_code ?? '').trim(),
+          shortName: initiative.short_name ?? '',
+          name: initiative.name ?? '',
+          ...countsByProgram.get(normaliseCode(initiative.official_code)),
+        }),
+      );
+      const byCenter: BilateralProjectsByCenterDto[] = [];
+      for (const [code, bucket] of centerBuckets) {
+        byCenter.push({
+          code,
+          acronym: bucket.acronym,
+          name: bucket.name,
+          ...bucket.counts,
+        });
+      }
+
+      const response: PortfolioBilateralProjectsResponseDto = {
+        versionId: resolvedVersionId,
+        phaseName: version.phase_name ?? null,
+        phaseYear,
+        totals,
+        byProgram,
+        byCenter,
+        unmappedWithBilateralResults,
+      };
+
+      return {
+        response,
+        message: 'Portfolio bilateral projects retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      // Same catch as getPortfolioTocCoverage: a 4xx is safe to pass through;
+      // anything else is replaced by a generic 500 so no SQL reaches the body.
+      const status = Number(error?.status);
+      if (Number.isInteger(status) && status >= 400 && status < 500) {
+        return this._handlersError.returnErrorRes({ error, debug: true });
+      }
+
+      const errorCode =
+        typeof error?.code === 'string' ? ` (${error.code})` : '';
+      this._logger.error(`getPortfolioBilateralProjects failed${errorCode}`);
+      return this._handlersError.returnErrorRes({
+        error: {
+          message: 'The portfolio bilateral projects could not be retrieved.',
+          response: { error: true },
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        },
+        debug: false,
+      });
+    }
+  }
+
+  /**
+   * Portfolio Overview global filters
+   * (changes/portfolio-overview-revamp/global-filters, GLF-T-1, design §4.1 / §5).
+   * The result -> project and result -> Center maps of one version, as positional
+   * pairs plus labels. Resolves the version like #8. A Center code with no
+   * catalogue row is kept and labelled by its code.
+   */
+  async getPortfolioResultDimensions(versionId?: number) {
+    try {
+      const version = await this.resolveReportingVersion(versionId);
+
+      // `version.id` is BIGINT and the MySQL driver returns it as a string.
+      const resolvedVersionId = Number(version?.id);
+      if (!Number.isFinite(resolvedVersionId) || resolvedVersionId <= 0) {
+        throwServiceError(
+          'No reporting version could be resolved for the portfolio result dimensions.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const raw =
+        await this._resultRepository.getPortfolioResultDimensions(
+          resolvedVersionId,
+        );
+
+      const projectLinks: Array<[number, number]> = (
+        raw.projectLinks ?? []
+      ).map((row) => [Number(row.result_id), Number(row.project_id)]);
+      const centerLinks: Array<[number, string]> = (raw.centerLinks ?? []).map(
+        (row) => [Number(row.result_id), String(row.center_id)],
+      );
+
+      const projects = (raw.projects ?? []).map((row) => ({
+        id: Number(row.id),
+        shortName: row.short_name ?? '',
+        fullName: row.full_name ?? '',
+      }));
+      const w3ProjectIds = (raw.projects ?? [])
+        .filter((row) => Number(row.is_w3) > 0)
+        .map((row) => Number(row.id));
+
+      const centers = new Map<
+        string,
+        { code: string; acronym: string; name: string }
+      >();
+      for (const row of raw.centers ?? []) {
+        const code = String(row.code);
+        centers.set(code, {
+          code,
+          acronym: row.acronym ?? code,
+          name: row.name ?? code,
+        });
+      }
+      for (const [, code] of centerLinks) {
+        if (!centers.has(code)) {
+          centers.set(code, { code, acronym: code, name: code });
+        }
+      }
+
+      const response: PortfolioResultDimensionsResponseDto = {
+        versionId: resolvedVersionId,
+        phaseName: version.phase_name ?? null,
+        projectLinks,
+        centerLinks,
+        projects,
+        centers: [...centers.values()],
+        w3ProjectIds,
+      };
+
+      return {
+        response,
+        message: 'Portfolio result dimensions retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      // A 4xx is safe to pass through; anything else is replaced by a generic
+      // 500 so no SQL text reaches the body or the log (65e70258f).
+      const status = Number(error?.status);
+      if (Number.isInteger(status) && status >= 400 && status < 500) {
+        return this._handlersError.returnErrorRes({ error, debug: true });
+      }
+
+      const errorCode =
+        typeof error?.code === 'string' ? ` (${error.code})` : '';
+      this._logger.error(`getPortfolioResultDimensions failed${errorCode}`);
+      return this._handlersError.returnErrorRes({
+        error: {
+          message: 'The portfolio result dimensions could not be retrieved.',
+          response: { error: true },
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        },
+        debug: false,
+      });
+    }
+  }
+
+  /**
+   * WPS-DD-3: its own version lookup. By id = active Reporting version, any
+   * status; no id = the open Reporting version, else the newest active one.
+   */
+  private async resolveReportingVersion(versionId?: number): Promise<Version> {
+    const versionRepository = this.dataSource.getRepository(Version);
+
+    if (versionId !== undefined) {
+      const byId = await versionRepository.findOne({
+        where: {
+          id: versionId,
+          is_active: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        },
+      });
+      if (!byId) {
+        throwServiceError(
+          'The requested version is not an active reporting version.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return byId;
+    }
+
+    const open = await versionRepository.findOne({
+      where: {
+        status: true,
+        is_active: true,
+        app_module_id: AppModuleIdEnum.REPORTING,
+      },
+    });
+    if (open) return open;
+
+    const newest = await versionRepository.findOne({
+      where: { is_active: true, app_module_id: AppModuleIdEnum.REPORTING },
+      order: { phase_year: 'DESC', id: 'DESC' },
+    });
+    if (!newest) {
+      throwServiceError(
+        'No reporting version was found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return newest;
   }
 
   async getBilateralProjectsByProgramAndTocResult(tocResultId?: number) {

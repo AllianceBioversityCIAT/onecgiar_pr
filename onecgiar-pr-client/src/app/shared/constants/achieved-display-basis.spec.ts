@@ -359,7 +359,7 @@ describe('achieved-display-basis', () => {
   });
 
   describe('toDisplayBasis feeding partitionProgramKpis/summarisePartition — ACS-S-8', () => {
-    it('counts the submitted-only KPI as reported (1, not 0) once normalised, while the zero-target sibling stays counted but unreported (KCR-R-2)', () => {
+    it('counts the submitted-only KPI as reported (1, not 0) once normalised, while the zero-target sibling stays planned but out of the targeted set (KTO-R-2)', () => {
       const payload = {
         tocResults: [
           {
@@ -398,10 +398,11 @@ describe('achieved-display-basis', () => {
         null,
       );
 
+      // `changes/kpi-progress-target-only`: the no-target sibling is planned but NOT counted.
       expect(summarisePartition(partition)).toEqual({
         planned: 2,
-        zeroTarget: 0,
-        counted: 2,
+        zeroTarget: 1,
+        counted: 1,
         reported: 1,
       });
     });

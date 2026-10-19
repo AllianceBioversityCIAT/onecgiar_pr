@@ -85,6 +85,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * auto-save service, so a Center User of another centre sees these pickers locked exactly like the
    * title and description. Every `[isStatic]="!readOnly()"` below follows this one computed.
    */
+  readonly primaryHelp = BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsPrimaryHelp;
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser() || this.autoSave.isReadOnly());
 
   /**

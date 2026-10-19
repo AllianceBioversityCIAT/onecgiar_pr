@@ -14,6 +14,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ReportingGuideService } from '../../services/reporting-guide.service';
+import type { ReportingTargetFilter } from '../../reporting-burndown';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
@@ -186,6 +187,7 @@ export class ReportingProgramBandComponent {
     }
   });
   readonly typologyCounts = input<Record<string, number>>({});
+  readonly targetSum = input<string | null>(null);
   readonly typologyOptions = input<BandFilterOption[]>([]);
   /** Type filter: hlo | outcome | intermediate_outcome | outcome_2030 | all. */
   readonly typeValue = input<string[], string[] | string | null | undefined>([], {
@@ -194,6 +196,14 @@ export class ReportingProgramBandComponent {
       if (!v || v === 'all') return [];
       return [v];
     }
+  });
+  /**
+   * Global Target filter (KTO-R-10): `all` | `with` | `without`. Single-select, grouped mode only —
+   * By-AOW has no Type / Category / Target, same as the rest of the grouped-view filters.
+   * @akili-spec changes/kpi-progress-target-only
+   */
+  readonly targetValue = input<ReportingTargetFilter, ReportingTargetFilter | string | null | undefined>('all', {
+    transform: (v: ReportingTargetFilter | string | null | undefined): ReportingTargetFilter => (v === 'with' || v === 'without' ? v : 'all')
   });
   /** Section is multi-select (reference `selSection`): the picked section codes, empty = no filter. */
   readonly aowValue = input<string[]>([]);
@@ -280,6 +290,8 @@ export class ReportingProgramBandComponent {
   readonly statusChange = output<string[]>();
   readonly typologyChange = output<string[]>();
   readonly typeChange = output<string[]>();
+  /** @akili-spec changes/kpi-progress-target-only */
+  readonly targetChange = output<ReportingTargetFilter>();
   readonly aowChange = output<string[]>();
   /** @akili-spec changes/mass-reporting-flow */
   readonly onlyPendingChange = output<boolean>();
@@ -664,6 +676,13 @@ export class ReportingProgramBandComponent {
     { value: 'outcome_2030', label: '2030 outcome' }
   ];
 
+  /** KTO-R-10 copy, verbatim. `all` is the pill's way back to "no filter". */
+  readonly targetOptions: { value: ReportingTargetFilter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'with', label: 'KPIs with target' },
+    { value: 'without', label: 'KPIs with no target' }
+  ];
+
   readonly cleanTypeOptions = computed(() => this.typeOptions.filter(o => o.value !== 'all'));
   readonly cleanTypologyOptions = computed(() => this.typologyOptions().filter(o => o.value !== 'all'));
   readonly cleanStatusOptions = computed(() => this.statusOptions.filter(o => o.value !== 'all'));
@@ -697,6 +716,7 @@ export class ReportingProgramBandComponent {
       if (this.typeValue()?.length) count += this.typeValue().length;
       if (this.typologyValue()?.length) count += this.typologyValue().length;
       if (this.statusValue()?.length) count += this.statusValue().length;
+      if (this.targetValue() !== 'all') count++;
       if (this.onlyPending()) count++;
     }
     return count;
@@ -713,6 +733,7 @@ export class ReportingProgramBandComponent {
       this.activeAowChips().length > 0 ||
       this.activeTypeChips().length > 0 ||
       this.activeTypologyChips().length > 0 ||
+      !!this.activeTargetChip() ||
       this.activeStatusChips().length > 0
     );
   });
@@ -772,6 +793,13 @@ export class ReportingProgramBandComponent {
     }));
   });
 
+  /** The dismissible chip for a non-`all` Target filter; `null` when the filter is off. */
+  readonly activeTargetChip = computed<{ value: ReportingTargetFilter; label: string } | null>(() => {
+    const v = this.targetValue();
+    if (v === 'all') return null;
+    return { value: v, label: this.targetOptions.find(o => o.value === v)?.label ?? v };
+  });
+
   readonly activeTypeLabel = computed(() => {
     return this.activeTypeChips().map(c => c.label).join(', ');
   });
@@ -822,6 +850,10 @@ export class ReportingProgramBandComponent {
     }
     const next = (this.statusValue() || []).filter(v => v !== val);
     this.statusChange.emit(next);
+  }
+
+  removeTargetChip(): void {
+    this.targetChange.emit('all');
   }
 
   removeOnlyPendingChip(): void {

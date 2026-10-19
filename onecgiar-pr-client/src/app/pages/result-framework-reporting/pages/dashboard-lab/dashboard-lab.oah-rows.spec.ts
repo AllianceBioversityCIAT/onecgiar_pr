@@ -125,7 +125,7 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
   }
 
   // ── Split / invariant / zero-target (hand-computed expectations) ────────────────────────────
-  it('partitions target=0∧achieved>0 into inProgress (the C-2 orphan), counts zero-target in total, and holds the invariant', async () => {
+  it('excludes no-target rows from total - including target=0 with achieved>0, the former C-2 orphan - and holds the invariant', async () => {
     const component = await createComponent();
     seedAows(component, {
       AOW01: {
@@ -134,8 +134,8 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
           { indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 10 }, // complete
           { indicator_id: 2, target_value_sum: 10, actual_achieved_value_sum: 5 }, // in-progress
           { indicator_id: 3, target_value_sum: 10, actual_achieved_value_sum: 0 }, // not-started
-          { indicator_id: 4, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target — counted as not-started
-          { indicator_id: 5, target_value_sum: 0, actual_achieved_value_sum: 3 } // the C-2 orphan → in-progress
+          { indicator_id: 4, target_value_sum: 0, actual_achieved_value_sum: 0 }, // no target - excluded
+          { indicator_id: 5, target_value_sum: 0, actual_achieved_value_sum: 3 } // reported but no target - excluded too (KTO-R-1/DD-2: achieved never rescues a row)
         ],
         // AoW-OWNED outcome (`is_aow: true`): counted here since KCR-DD-2 moved the row basis from
         // output-tier-only (OAH DD-3) to the AoW-own set — design §6.2 `overviewAowProgressRich` row.
@@ -143,8 +143,8 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
         // KCR fixture extension — a CROSS-CUT outcome (`is_aow: false`, complete on its own terms).
         // It belongs to the Intermediate bucket and must never reach this row (KCR-R-1/R-5).
         // Without it the fixture could not separate "AoW-own" from "every outcome tier row":
-        // both would read complete 2 / reported 4 / total 5. With it, a cross-cut-inclusive basis
-        // reads complete 3 / reported 5 / total 6 instead.
+        // both would read complete 2 / reported 3 / total 4. With it, a cross-cut-inclusive basis
+        // reads complete 3 / reported 4 / total 5 instead.
         crosscutIndicators: [{ indicator_id: 901, target_value_sum: 5, actual_achieved_value_sum: 5 }]
       }
     });
@@ -153,18 +153,24 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
 
     // Hand-computed independently of the production code's own arithmetic (anti-tautology).
     // AoW-own set = the 5 output KPIs + the `is_aow: true` outcome #99; the `is_aow: false` #901 is
-    // NOT in it. All six own KPIs count → complete=2 (1 and 99), inProgress=2 (2 and 5),
-    // notStarted=2 (3 and 4), zeroTarget=0, total=6, reported=4, remaining=2.
+    // NOT in it. Targeted = {1,2,3,99} (4 and 5 have no target set, whatever their achieved value) →
+    // complete=2 (1 and 99), inProgress=1 (2), notStarted=1 (3), zeroTarget=2, total=4, reported=3,
+    // remaining=1.
     expect(row).toEqual<OverviewAowProgressRowRich>({
       code: 'AOW01',
       name: 'AoW 01',
+      // KCR: 1 → 2, design §6.2 `overviewAowProgressRich` row (KCR-DD-2) — the owned outcome #99
+      // (achieved 5 >= target 5) is `complete` and now belongs to this row.
       complete: 2,
-      inProgress: 2,
-      notStarted: 2,
-      zeroTarget: 0,
-      reported: 4,
-      total: 6,
-      remaining: 2,
+      inProgress: 1,
+      notStarted: 1,
+      zeroTarget: 2,
+      // #99 has `achieved > 0` and a target, so it is Reported (KCR-R-9); #5 is not (no target).
+      reported: 3,
+      // Outputs contribute 3 targeted, the owned outcome 1. A basis that also swallowed the
+      // cross-cut #901 would read 5; the superseded output-tier basis, 3.
+      total: 4,
+      remaining: 1,
       // P2-3296 — beside the reported-KPI count; no achievement data seeded by this fixture.
       achievement: null
     });

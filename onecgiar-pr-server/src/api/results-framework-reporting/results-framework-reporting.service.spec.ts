@@ -1,6 +1,9 @@
 import { HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/clarisa-projects.repository';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -36,6 +39,7 @@ import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
+  find: jest.fn(),
 };
 
 const mockRoleByUserRepository = {
@@ -74,6 +78,7 @@ const mockTocResultsRepository = {
   findBilateralProjectById: jest.fn(),
   findBilateralProjectsByProgramOfficialCode: jest.fn(),
   findTargetsWithCentersByIndicatorId: jest.fn(),
+  getPortfolioTocCoverage: jest.fn(),
 };
 
 const mockTocCatalogRepository = {
@@ -136,6 +141,7 @@ const mockResultRepository = {
   getIndicatorContributionSummaryByProgram: jest.fn(),
   getActiveResultTypes: jest.fn(),
   getResultById: jest.fn(),
+  getPortfolioResultDimensions: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
   getUserRolesForResults: jest.fn(),
   query: jest.fn(),
@@ -163,8 +169,21 @@ const mockResultsByInstitutionsService = {
   savePartnersInstitutionsByResultV2: jest.fn(),
 };
 
+const mockVersionRepository = {
+  findOne: jest.fn(),
+};
+
 const mockDataSource = {
   query: jest.fn(),
+  getRepository: jest.fn(() => mockVersionRepository),
+};
+
+const mockClarisaCenterRepository = {
+  find: jest.fn(),
+};
+
+const mockClarisaProjectsRepository = {
+  getPortfolioProjectFacts: jest.fn(),
 };
 
 // W12-R-2: default versionId resolution goes through VersioningService.$_findActivePhase
@@ -205,6 +224,14 @@ describe('ResultsFrameworkReportingService', () => {
           useValue: mockClarisaInitiativesRepository,
         },
         { provide: RoleByUserRepository, useValue: mockRoleByUserRepository },
+        {
+          provide: getRepositoryToken(ClarisaCenter),
+          useValue: mockClarisaCenterRepository,
+        },
+        {
+          provide: ClarisaProjectsRepository,
+          useValue: mockClarisaProjectsRepository,
+        },
         {
           provide: ClarisaGlobalUnitRepository,
           useValue: mockClarisaGlobalUnitRepository,
@@ -1691,6 +1718,693 @@ describe('ResultsFrameworkReportingService', () => {
       ]);
 
       expect(result.response.areas[0].progress.progress_value).toBe(50);
+    });
+  });
+
+  describe('getPortfolioBilateralProjects (WPS-T-2)', () => {
+    const seed = () => [
+      { official_code: 'SP01', short_name: 'One', name: 'Program One' },
+      { official_code: 'SP02', short_name: 'Two', name: 'Program Two' },
+      { official_code: 'SP04', short_name: 'Four', name: 'Program Four' },
+    ];
+    const centers = () => [
+      {
+        code: 'CENTER-03',
+        institutionId: 103,
+        clarisa_institution: {
+          acronym: 'CIAT',
+          name: 'Alliance Bioversity-CIAT',
+        },
+      },
+      {
+        code: 'CENTER-16',
+        institutionId: 221,
+        clarisa_institution: {
+          acronym: 'SMO',
+          name: 'CGIAR System Organization',
+        },
+      },
+      {
+        code: 'CENTER-17',
+        institutionId: 10961,
+        clarisa_institution: { acronym: 'SO', name: 'System Office' },
+      },
+    ];
+    const fact = (o: any) => ({
+      id: 0,
+      organizationCode: null,
+      sourceCenterAcronym: null,
+      approvedProgramCodes: [],
+      hasBilateral: false,
+      hasW1w2: false,
+      ...o,
+    });
+    const falsifierRows = () => [
+      fact({
+        id: 1,
+        organizationCode: 103,
+        approvedProgramCodes: ['SP01'],
+        hasBilateral: true,
+        hasW1w2: true,
+      }),
+      fact({
+        id: 4,
+        sourceCenterAcronym: 'CIAT',
+        approvedProgramCodes: ['SP01', 'SP04'],
+      }),
+      fact({
+        id: 9,
+        sourceCenterAcronym: 'XYZ',
+        approvedProgramCodes: ['SP02'],
+      }),
+      fact({
+        id: 10,
+        organizationCode: 10961,
+        approvedProgramCodes: ['SP01'],
+      }),
+      fact({ id: 2, hasBilateral: true }),
+    ];
+    const openVersion = {
+      id: '42',
+      phase_name: 'Reporting 2026',
+      phase_year: 2026,
+      status: true,
+    };
+
+    beforeEach(() => {
+      mockVersionRepository.findOne.mockReset();
+      mockVersionRepository.findOne.mockResolvedValue(openVersion);
+      mockClarisaInitiativesRepository.find.mockReset();
+      mockClarisaInitiativesRepository.find.mockResolvedValue(seed());
+      mockClarisaCenterRepository.find.mockReset();
+      mockClarisaCenterRepository.find.mockResolvedValue(centers());
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockReset();
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue(
+        falsifierRows(),
+      );
+    });
+
+    const byCode = (list: any[], code: string | null) =>
+      list.find((i) => i.code === code);
+
+    it('aggregates totals, by P/A, by Center and the unmapped count (S-1.1..S-6.1)', async () => {
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(result.response.versionId).toBe(42);
+      expect(result.response.phaseYear).toBe(2026);
+      expect(result.response.phaseName).toBe('Reporting 2026');
+      expect(result.response.totals).toEqual({
+        mapped: 4,
+        withBilateralResults: 1,
+        w1w2Contributors: 1,
+      });
+      const { byProgram, byCenter } = result.response;
+      expect(byCode(byProgram, 'SP01')).toMatchObject({
+        shortName: 'One',
+        name: 'Program One',
+        mapped: 3,
+        withBilateralResults: 1,
+        w1w2Contributors: 1,
+      });
+      expect(byCode(byProgram, 'SP04').mapped).toBe(1);
+      expect(byCode(byProgram, 'SP02').mapped).toBe(1);
+      expect(byProgram).toHaveLength(3);
+
+      expect(byCode(byCenter, 'CENTER-03')).toMatchObject({
+        acronym: 'CIAT',
+        name: 'Alliance Bioversity-CIAT',
+        mapped: 2,
+        withBilateralResults: 1,
+        w1w2Contributors: 1,
+      });
+      expect(byCode(byCenter, 'CENTER-17').mapped).toBe(1);
+      expect(byCode(byCenter, null)).toMatchObject({
+        acronym: null,
+        name: null,
+        mapped: 1,
+      });
+      expect(byCode(byCenter, 'CENTER-16')).toBeUndefined();
+      expect(byCenter.reduce((n: number, c: any) => n + c.mapped, 0)).toBe(4);
+      expect(result.response.unmappedWithBilateralResults).toBe(1);
+    });
+
+    it('keeps a seed P/A with zero mapped projects (S-5.1)', async () => {
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue(
+        [],
+      );
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(result.response.byProgram).toHaveLength(3);
+      expect(byCode(result.response.byProgram, 'SP02')).toMatchObject({
+        mapped: 0,
+        withBilateralResults: 0,
+        w1w2Contributors: 0,
+      });
+      expect(result.response.byCenter).toEqual([]);
+      expect(result.response.unmappedWithBilateralResults).toBe(0);
+    });
+
+    it('drops codes outside the seed and counts a repeated code once', async () => {
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue([
+        fact({ id: 1, approvedProgramCodes: [' sp01 ', 'SP01', 'XX99'] }),
+      ]);
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(byCode(result.response.byProgram, 'SP01').mapped).toBe(1);
+      expect(byCode(result.response.byProgram, 'XX99')).toBeUndefined();
+      expect(result.response.totals.mapped).toBe(1);
+    });
+
+    it('carries null institution fields for an alias Center with no Center row', async () => {
+      mockClarisaCenterRepository.find.mockResolvedValue([]);
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockResolvedValue([
+        fact({
+          id: 1,
+          sourceCenterAcronym: 'CIAT',
+          approvedProgramCodes: ['SP01'],
+        }),
+      ]);
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(byCode(result.response.byCenter, 'CENTER-03')).toMatchObject({
+        acronym: null,
+        name: null,
+        mapped: 1,
+      });
+    });
+
+    it('loads the Centers with their institution relation', async () => {
+      await service.getPortfolioBilateralProjects();
+      expect(mockClarisaCenterRepository.find).toHaveBeenCalledWith({
+        relations: { clarisa_institution: true },
+      });
+    });
+
+    describe('version resolution (WPS-DD-3)', () => {
+      it('calls the repository with the phase year and the numeric version id, never undefined', async () => {
+        await service.getPortfolioBilateralProjects();
+        expect(
+          mockClarisaProjectsRepository.getPortfolioProjectFacts,
+        ).toHaveBeenCalledWith(2026, 42);
+      });
+
+      it('by id: active + Reporting module, with no status filter (closed phase accepted)', async () => {
+        mockVersionRepository.findOne.mockResolvedValue({
+          ...openVersion,
+          id: '7',
+          phase_year: 2025,
+          status: false,
+        });
+        const result = (await service.getPortfolioBilateralProjects(7)) as any;
+
+        expect(result.status).toBe(HttpStatus.OK);
+        expect(result.response.versionId).toBe(7);
+        const where = mockVersionRepository.findOne.mock.calls[0][0].where;
+        expect(where).toEqual({
+          id: 7,
+          is_active: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        });
+        expect(where).not.toHaveProperty('status');
+        expect(
+          mockClarisaProjectsRepository.getPortfolioProjectFacts,
+        ).toHaveBeenCalledWith(2025, 7);
+      });
+
+      it('an id that is not an active Reporting version (e.g. IPSR) is a 404', async () => {
+        mockVersionRepository.findOne.mockResolvedValue(null);
+        const result = (await service.getPortfolioBilateralProjects(99)) as any;
+
+        expect(result.status).toBe(HttpStatus.NOT_FOUND);
+        expect(
+          mockClarisaProjectsRepository.getPortfolioProjectFacts,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('no id: uses the open Reporting version', async () => {
+        await service.getPortfolioBilateralProjects();
+        expect(mockVersionRepository.findOne).toHaveBeenCalledTimes(1);
+        expect(mockVersionRepository.findOne.mock.calls[0][0].where).toEqual({
+          status: true,
+          is_active: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        });
+      });
+
+      it('no id and no open phase: falls back to the newest active Reporting version', async () => {
+        mockVersionRepository.findOne
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({
+            ...openVersion,
+            id: '30',
+            phase_year: 2025,
+            status: false,
+          });
+        const result = (await service.getPortfolioBilateralProjects()) as any;
+
+        expect(result.status).toBe(HttpStatus.OK);
+        expect(result.response.versionId).toBe(30);
+        const fallback = mockVersionRepository.findOne.mock.calls[1][0];
+        expect(fallback.where).toEqual({
+          is_active: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        });
+        expect(fallback.order).toEqual({ phase_year: 'DESC', id: 'DESC' });
+      });
+
+      it('no Reporting version at all is a 404', async () => {
+        mockVersionRepository.findOne.mockResolvedValue(null);
+        const result = (await service.getPortfolioBilateralProjects()) as any;
+        expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      });
+
+      it('a non-positive resolved id is a 404', async () => {
+        mockVersionRepository.findOne.mockResolvedValue({
+          ...openVersion,
+          id: null,
+        });
+        const result = (await service.getPortfolioBilateralProjects()) as any;
+        expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      });
+    });
+
+    it('turns a repository failure into a generic 500 without SQL', async () => {
+      mockClarisaProjectsRepository.getPortfolioProjectFacts.mockRejectedValue(
+        Object.assign(new Error('select * from clarisa_projects boom'), {
+          code: 'ER_X',
+        }),
+      );
+      const result = (await service.getPortfolioBilateralProjects()) as any;
+
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(JSON.stringify(result)).not.toContain('clarisa_projects');
+    });
+  });
+
+  describe('getPortfolioResultDimensions (GLF-T-1)', () => {
+    const openVersion = {
+      id: '42',
+      phase_name: 'Reporting 2026',
+      phase_year: 2026,
+      status: true,
+    };
+    const rows = () => ({
+      projectLinks: [
+        { result_id: '1', project_id: '5' },
+        { result_id: '2', project_id: '5' },
+        { result_id: '2', project_id: '6' },
+      ],
+      centerLinks: [
+        { result_id: '1', center_id: 'CENTER-03' },
+        { result_id: '2', center_id: 'CENTER-99' },
+      ],
+      projects: [
+        { id: '5', short_name: 'P5', full_name: 'Project 5', is_w3: '1' },
+        { id: '6', short_name: 'P6', full_name: 'Project 6', is_w3: '0' },
+      ],
+      centers: [{ code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' }],
+    });
+
+    beforeEach(() => {
+      mockVersionRepository.findOne.mockReset();
+      mockVersionRepository.findOne.mockResolvedValue(openVersion);
+      mockResultRepository.getPortfolioResultDimensions.mockReset();
+      mockResultRepository.getPortfolioResultDimensions.mockResolvedValue(
+        rows(),
+      );
+    });
+
+    it('shapes positional pairs, labels and the W3 project ids (S-11.1, S-11.2)', async () => {
+      const result = (await service.getPortfolioResultDimensions()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(
+        mockResultRepository.getPortfolioResultDimensions,
+      ).toHaveBeenCalledWith(42);
+      expect(result.response).toEqual({
+        versionId: 42,
+        phaseName: 'Reporting 2026',
+        projectLinks: [
+          [1, 5],
+          [2, 5],
+          [2, 6],
+        ],
+        centerLinks: [
+          [1, 'CENTER-03'],
+          [2, 'CENTER-99'],
+        ],
+        projects: [
+          { id: 5, shortName: 'P5', fullName: 'Project 5' },
+          { id: 6, shortName: 'P6', fullName: 'Project 6' },
+        ],
+        centers: [
+          { code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' },
+          { code: 'CENTER-99', acronym: 'CENTER-99', name: 'CENTER-99' },
+        ],
+        w3ProjectIds: [5],
+      });
+    });
+
+    it('keeps a Center code missing from the catalogue, labelled by its code', async () => {
+      const result = (await service.getPortfolioResultDimensions()) as any;
+
+      expect(result.response.centers).toContainEqual({
+        code: 'CENTER-99',
+        acronym: 'CENTER-99',
+        name: 'CENTER-99',
+      });
+      expect(
+        result.response.centerLinks.some((p: any[]) => p[1] === 'CENTER-99'),
+      ).toBe(true);
+    });
+
+    it('resolves a given versionId through the Reporting version lookup', async () => {
+      await service.getPortfolioResultDimensions(7);
+
+      expect(mockVersionRepository.findOne.mock.calls[0][0].where).toEqual({
+        id: 7,
+        is_active: true,
+        app_module_id: AppModuleIdEnum.REPORTING,
+      });
+    });
+
+    it('an id that is not an active Reporting version is a 404', async () => {
+      mockVersionRepository.findOne.mockResolvedValue(null);
+      const result = (await service.getPortfolioResultDimensions(99)) as any;
+
+      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      expect(
+        mockResultRepository.getPortfolioResultDimensions,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('turns a database failure into a generic 500 with no SQL in the body or the log', async () => {
+      const errorSpy = jest
+        .spyOn((service as any)._logger, 'error')
+        .mockImplementation(() => undefined);
+      mockResultRepository.getPortfolioResultDimensions.mockRejectedValue(
+        Object.assign(new Error('select * from results_center boom'), {
+          code: 'ER_X',
+        }),
+      );
+
+      const result = (await service.getPortfolioResultDimensions()) as any;
+
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(JSON.stringify(result)).not.toContain('results_center');
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const logged = errorSpy.mock.calls.map((c) => String(c[0])).join(' ');
+      expect(logged).not.toContain('results_center');
+      expect(logged).not.toContain('select');
+      expect(logged).toContain('ER_X');
+      errorSpy.mockRestore();
+    });
+  });
+
+  describe('getPortfolioTocCoverage (TKP-T-2)', () => {
+    const seedInitiatives = () => [
+      {
+        official_code: 'SP01',
+        short_name: 'Program One',
+        name: 'Science Program One',
+      },
+      {
+        official_code: 'SP02',
+        short_name: 'Program Two',
+        name: 'Science Program Two',
+      },
+      {
+        official_code: 'A3',
+        short_name: 'Accel Three',
+        name: 'Accelerator Three',
+      },
+    ];
+    const row = (
+      official_code: string,
+      category: string,
+      total: number,
+      covered: number,
+    ) => ({ official_code, category, total, covered });
+    const falsifierRows = () => [
+      row('SP01', 'OUTPUT', 3, 1),
+      row('SP01', 'OUTCOME', 1, 0),
+      row('SP02', 'OUTPUT', 2, 2),
+      row('XX99', 'OUTPUT', 5, 5),
+    ];
+    const activeContext = {
+      reportingYear: 2026,
+      phaseUuid: 'PHASE-ACTIVE',
+      versionId: 42,
+      phaseName: 'Reporting 2026',
+    };
+
+    beforeEach(() => {
+      mockClarisaInitiativesRepository.find.mockReset();
+      mockTocResultsRepository.getPortfolioTocCoverage.mockReset();
+      mockReportingTocContextService.resolve.mockReset();
+      mockReportingTocContextService.resolveByVersionId.mockReset();
+      mockReportingTocContextService.resolve.mockResolvedValue(activeContext);
+      mockClarisaInitiativesRepository.find.mockResolvedValue(
+        seedInitiatives(),
+      );
+      mockTocResultsRepository.getPortfolioTocCoverage.mockResolvedValue(
+        falsifierRows(),
+      );
+    });
+
+    const programOf = (result: any, code: string) =>
+      result.response.programs.find((p: any) => p.code === code);
+
+    it('merges the P/A seed with the repository rows (S-3.1, S-2.1)', async () => {
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(programOf(result, 'SP01')).toEqual({
+        code: 'SP01',
+        shortName: 'Program One',
+        name: 'Science Program One',
+        total: 4,
+        covered: 1,
+        outputs: { total: 3, covered: 1 },
+        outcomes: { total: 1, covered: 0 },
+      });
+      expect(programOf(result, 'SP02')).toMatchObject({
+        total: 2,
+        covered: 2,
+        outputs: { total: 2, covered: 2 },
+        outcomes: { total: 0, covered: 0 },
+      });
+      // S-3.1: a zero-KPI P/A is present with 0 / 0.
+      expect(programOf(result, 'A3')).toMatchObject({
+        total: 0,
+        covered: 0,
+        outputs: { total: 0, covered: 0 },
+        outcomes: { total: 0, covered: 0 },
+      });
+      // A code outside the seed is dropped and does not feed the portfolio.
+      expect(programOf(result, 'XX99')).toBeUndefined();
+      expect(result.response.programs).toHaveLength(3);
+      expect(result.response.portfolio).toEqual({ total: 6, covered: 3 });
+    });
+
+    it('keeps covered <= total for every program and category (S-2.1)', async () => {
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      for (const p of result.response.programs) {
+        expect(p.covered).toBeLessThanOrEqual(p.total);
+        expect(p.outputs.covered).toBeLessThanOrEqual(p.outputs.total);
+        expect(p.outcomes.covered).toBeLessThanOrEqual(p.outcomes.total);
+      }
+    });
+
+    it('matches codes after trim + upper case on both sides', async () => {
+      mockClarisaInitiativesRepository.find.mockResolvedValue([
+        { official_code: ' sp01 ', short_name: 'One', name: 'Program One' },
+      ]);
+      mockTocResultsRepository.getPortfolioTocCoverage.mockResolvedValue([
+        row('sp01  ', 'OUTPUT', 3, 1),
+        row(' SP01', 'OUTCOME', 1, 1),
+      ]);
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.response.programs).toHaveLength(1);
+      expect(result.response.programs[0]).toMatchObject({
+        total: 4,
+        covered: 2,
+        outputs: { total: 3, covered: 1 },
+        outcomes: { total: 1, covered: 1 },
+      });
+    });
+
+    it('reads the seed as active portfolio-3 entities of types 22, 23 and 24', async () => {
+      await service.getPortfolioTocCoverage();
+
+      const arg = mockClarisaInitiativesRepository.find.mock.calls[0][0];
+      expect(arg.where.portfolio_id).toBe(3);
+      expect(arg.where.active).toBe(true);
+      expect(JSON.stringify(arg.where.cgiar_entity_type_id)).toContain(
+        '[22,23,24]',
+      );
+    });
+
+    it('falls back to the active version and gives the repository its numeric id', async () => {
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(mockReportingTocContextService.resolve).toHaveBeenCalledTimes(1);
+      expect(
+        mockReportingTocContextService.resolveByVersionId,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          versionId: 42,
+          phaseUuid: 'PHASE-ACTIVE',
+          reportingYear: 2026,
+        }),
+      );
+      expect(result.response).toMatchObject({
+        versionId: 42,
+        phaseName: 'Reporting 2026',
+        reportingYear: 2026,
+      });
+    });
+
+    it('resolves an explicit versionId directly from its version row', async () => {
+      mockReportingTocContextService.resolveByVersionId.mockResolvedValue({
+        reportingYear: 2025,
+        phaseUuid: 'PHASE-OLD',
+        versionId: 7,
+        phaseName: null,
+      });
+
+      const result = (await service.getPortfolioTocCoverage(7)) as any;
+
+      expect(
+        mockReportingTocContextService.resolveByVersionId,
+      ).toHaveBeenCalledWith(7);
+      expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).toHaveBeenCalledWith(expect.objectContaining({ versionId: 7 }));
+      expect(result.response.versionId).toBe(7);
+      expect(result.response.phaseName).toBeNull();
+    });
+
+    it('coerces the string ids the MySQL driver returns for BIGINT columns (active fallback)', async () => {
+      // version.id is BIGINT; the driver (bigNumberStrings) hands it back as '42'.
+      mockReportingTocContextService.resolve.mockResolvedValue({
+        reportingYear: 2026,
+        phaseUuid: 'PHASE-ACTIVE',
+        versionId: '42',
+        phaseName: 'Reporting 2026',
+      } as any);
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).toHaveBeenCalledWith(expect.objectContaining({ versionId: 42 }));
+      expect(result.response.versionId).toBe(42);
+      expect(typeof result.response.versionId).toBe('number');
+    });
+
+    it('coerces the string ids the MySQL driver returns for an explicit versionId', async () => {
+      mockReportingTocContextService.resolveByVersionId.mockResolvedValue({
+        reportingYear: '2025',
+        phaseUuid: 'PHASE-OLD',
+        versionId: '7',
+        phaseName: null,
+      } as any);
+
+      const result = (await service.getPortfolioTocCoverage(7)) as any;
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ versionId: 7, reportingYear: 2025 }),
+      );
+      expect(result.response.versionId).toBe(7);
+      expect(result.response.reportingYear).toBe(2025);
+      expect(typeof result.response.reportingYear).toBe('number');
+    });
+
+    it.each([
+      ['missing', undefined],
+      ['null', null],
+      ['zero', 0],
+      ['a zero string', '0'],
+      ['a non-numeric string', 'abc'],
+    ])(
+      'never calls the repository when the resolved version id is %s',
+      async (_label, versionId) => {
+        mockReportingTocContextService.resolve.mockResolvedValue({
+          reportingYear: 2026,
+          phaseUuid: 'PHASE-ACTIVE',
+          versionId,
+        } as any);
+
+        const result = (await service.getPortfolioTocCoverage()) as any;
+
+        expect(
+          mockTocResultsRepository.getPortfolioTocCoverage,
+        ).not.toHaveBeenCalled();
+        expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      },
+    );
+
+    it('relays a 4xx raised by the ToC context resolution', async () => {
+      mockReportingTocContextService.resolveByVersionId.mockRejectedValue(
+        buildTocContextError(
+          'No version was found for versionId 999.',
+          HttpStatus.NOT_FOUND,
+        ),
+      );
+
+      const result = (await service.getPortfolioTocCoverage(999)) as any;
+
+      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      expect(result.message).toBe('No version was found for versionId 999.');
+      expect(
+        mockTocResultsRepository.getPortfolioTocCoverage,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('returns a generic 500 without SQL when the repository rejects with its wrapped error', async () => {
+      // Shape thrown by HandlersError.returnErrorRepository: a plain object whose
+      // message quotes the driver error, which can carry SQL fragments.
+      mockTocResultsRepository.getPortfolioTocCoverage.mockRejectedValue({
+        response: { error: true },
+        message:
+          '[AoWBilateralRepository] => error: QueryFailedError: ER_PARSE_ERROR near SELECT tr.official_code FROM toc_results tr',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      const body = JSON.stringify(result);
+      expect(body).not.toContain('SELECT');
+      expect(body).not.toContain('toc_results');
+      expect(body).not.toContain('QueryFailedError');
+    });
+
+    it('returns a generic 500 without SQL when an unexpected Error escapes', async () => {
+      mockClarisaInitiativesRepository.find.mockRejectedValue(
+        new Error('Query failed: SELECT * FROM toc_results WHERE secret = 1'),
+      );
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      const body = JSON.stringify(result);
+      expect(body).not.toContain('SELECT');
+      expect(body).not.toContain('toc_results');
     });
   });
 

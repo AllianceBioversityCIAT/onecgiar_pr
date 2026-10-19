@@ -52,4 +52,9 @@ export const BILATERAL_PRIMARY_ASSIGNMENT_COPY = {
    */
   contributorsTocNotice: (programCode: string): string =>
     `Theory of Change alignment comes from the primary Science Program (${programCode}). Available once the primary Science Program accepts.`,
+  /** `bilateral/replicated-innovations-2026-pa` PAA-R-6 / design.md §6.3: Section 0, result with no lead project. */
+  noProjectLinkHint:
+    "No 2026 project linked. Link one of your Center's projects to show its default Theory of Change linkage. Optional.",
+  /** `bilateral/replicated-innovations-2026-pa` PAA-R-5 / design.md §6.3: helper under the read-only P/A in Contributors. */
+  contributorsPrimaryHelp: 'Change the primary Science Program in Project information, above.',
 } as const;

@@ -16,6 +16,7 @@ import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 import { SPProgress } from '../../../../shared/interfaces/SP-progress.interface';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
+import { ReportingSummaryStatsComponent } from './components/reporting-summary-stats/reporting-summary-stats.component';
 
 // Same echarts mocks as `dashboard-lab.oah-rows.spec.ts` — `ProgramOverviewComponent` (a template
 // import of `DashboardLabComponent`) drags in the real `PrVizChartComponent`, an ESM package Jest
@@ -88,14 +89,17 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
   //           (#902 zero-target)
   //   IO endpoint   — #901, #902        2030 endpoint — #950
   //
-  // Planned 11 · counted 11 (every KPI, including zero-target) · reported 1 (`b2`).
+  // Planned 11 · targeted 9 (a4 and #902 have no target set - `changes/kpi-progress-target-only`,
+  // supersedes the 09-09 "count all" rule) · reported 1 (`b2`).
   // `progress_percentage` is deliberately a nonsense string on every REPORTED row (`'1500%'`);
   // every unreported row instead carries `'0%'` (KCR-R-9 requires this). The nonsense value on
   // reported rows proves the band's old `progress_percentage > 0` clause read exactly such a
   // string and must be gone — the predicate must key off `actual_achieved_value_sum` alone.
 
-  /** Every planned KPI — the whole shell's denominator budget. */
-  const COUNTED_IDS: Array<string | number> = ['a1', 'a2', 'a3', 'a4', 'b1', 'b2', 'b3', 'b-own', 901, 902, 950];
+  /** Every planned KPI - the band's "Total KPIs" (a count, KTO-DD-3). */
+  const PLANNED_IDS: Array<string | number> = ['a1', 'a2', 'a3', 'a4', 'b1', 'b2', 'b3', 'b-own', 901, 902, 950];
+  /** The planned KPIs with a target - the whole shell's ratio-denominator budget (KTO-R-2). */
+  const TARGETED_IDS: Array<string | number> = ['a1', 'a2', 'a3', 'b1', 'b2', 'b3', 'b-own', 901, 950];
 
   const ind = (id: string | number, target: number, achieved: number, extra: Record<string, unknown> = {}) => ({
     indicator_id: id,
@@ -222,7 +226,8 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
 
   function tableCountLabel(group: ReportingAowGroup): string {
     const table = TestBed.createComponent(ReportingAowTableComponent).componentInstance;
-    return table.countLabel(group.count);
+    // The method the header template binds (DKT-R-1): never rebuilt from `group.count`.
+    return table.headerCount(group);
   }
 
   const byCode = <T extends { code: string }>(rows: T[]): Record<string, T> =>
@@ -232,12 +237,14 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     Object.fromEntries(component.reportingGroups().map(group => [group.aow.code, group]));
 
   // ── Band (KCR-R-8, KCR-AC-1) ─────────────────────────────────────────────────────────────────
-  it('band Total KPIs = 11 — every planned KPI, cross-cut IOs counted once', async () => {
+  it('band Total KPIs = 11 planned, 9 targeted - cross-cut IOs counted once, no-target rows in the count only', async () => {
     const component = await createComponent();
 
     const stats = component.plannedReportingSummaryStats();
 
     expect(stats.totalKpis).toBe(11);
+    expect(stats.targetedKpis).toBe(9);
+    expect(stats.zeroTargetKpis).toBe(2);
     expect(stats.reportedKpis).toBe(1);
   });
 
@@ -248,25 +255,25 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
   });
 
   // ── Hero rows (KCR-R-5, KCR-DD-2) ────────────────────────────────────────────────────────────
-  it('hero rich rows read A 0/4 and B 1/4 — every AoW-own KPI counts', async () => {
+  it('hero rich rows read A 0/3 and B 1/4 - only AoW-own KPIs with a target count', async () => {
     const component = await createComponent();
 
     const rows = byCode(component.overviewAowProgressRich());
 
-    expect({ reported: rows['A'].reported, total: rows['A'].total }).toEqual({ reported: 0, total: 4 });
+    expect({ reported: rows['A'].reported, total: rows['A'].total }).toEqual({ reported: 0, total: 3 });
     expect({ reported: rows['B'].reported, total: rows['B'].total }).toEqual({ reported: 1, total: 4 });
   });
 
-  it('thin AoW rows (KPI card 4 / section badge / hub basis) read A 0/4 and B 1/4', async () => {
+  it('thin AoW rows (KPI card 4 / section badge / hub basis) read A 0/3 and B 1/4', async () => {
     const component = await createComponent();
 
     const rows = byCode(component.overviewAowProgress());
 
-    expect({ done: rows['A'].done, total: rows['A'].total }).toEqual({ done: 0, total: 4 });
+    expect({ done: rows['A'].done, total: rows['A'].total }).toEqual({ done: 0, total: 3 });
     expect({ done: rows['B'].done, total: rows['B'].total }).toEqual({ done: 1, total: 4 });
   });
 
-  it('hero rail (Σ rich rows, program-overview.richStats) reads 1 of 8', async () => {
+  it('hero rail (Σ rich rows, program-overview.richStats) reads 1 of 7', async () => {
     const component = await createComponent();
 
     const rows = component.overviewAowProgressRich();
@@ -275,16 +282,17 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
       total: rows.reduce((sum, row) => sum + row.total, 0)
     };
 
-    expect(rail).toEqual({ reported: 1, total: 8 });
+    expect(rail).toEqual({ reported: 1, total: 7 });
   });
 
   // ── Strategic-outcomes chips (KCR-R-2, KCR-R-6) ──────────────────────────────────────────────
-  it('chips read Intermediate 0/2 and 2030 0/1 — every bucket KPI counts', async () => {
+  it('chips read Intermediate 0/1 and 2030 0/1 - only bucket KPIs with a target count', async () => {
     const component = await createComponent();
 
     const chips = byCode(component.overviewXcutProgress());
 
-    expect({ done: chips[INTERMEDIATE_OUTCOMES_CODE].done, total: chips[INTERMEDIATE_OUTCOMES_CODE].total }).toEqual({ done: 0, total: 2 });
+    expect({ done: chips[INTERMEDIATE_OUTCOMES_CODE].done, total: chips[INTERMEDIATE_OUTCOMES_CODE].total }).toEqual({ done: 0, total: 1 });
+    expect(chips[INTERMEDIATE_OUTCOMES_CODE].zeroTarget).toBe(1);
     expect({ done: chips[OUTCOMES_2030_CODE].done, total: chips[OUTCOMES_2030_CODE].total }).toEqual({ done: 0, total: 1 });
   });
 
@@ -299,21 +307,21 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     expect(tableRatio(groups['B'])).toEqual({ done: 1, total: 4 });
   });
 
-  it('grouped table card A reads "4 KPIs · 0 of 4"', async () => {
+  it('grouped table card A reads "4 KPIs · 0 of 3" - the count keeps the no-target row, the ratio drops it', async () => {
     const component = await createComponent();
 
     const groups = groupByAowCode(component);
 
     expect(tableCountLabel(groups['A'])).toBe('4 KPIs');
-    expect(tableRatio(groups['A'])).toEqual({ done: 0, total: 4 });
+    expect(tableRatio(groups['A'])).toEqual({ done: 0, total: 3 });
   });
 
-  it('grouped table bucket cards read Intermediate "0 of 2" and 2030 "0 of 1"', async () => {
+  it('grouped table bucket cards read Intermediate "0 of 1" and 2030 "0 of 1"', async () => {
     const component = await createComponent();
 
     const groups = groupByAowCode(component);
 
-    expect(tableRatio(groups[INTERMEDIATE_OUTCOMES_CODE])).toEqual({ done: 0, total: 2 });
+    expect(tableRatio(groups[INTERMEDIATE_OUTCOMES_CODE])).toEqual({ done: 0, total: 1 });
     expect(tableRatio(groups[OUTCOMES_2030_CODE])).toEqual({ done: 0, total: 1 });
   });
 
@@ -329,14 +337,15 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
   });
 
   // ── Reporting Entry Hub (KCR-R-3, REH-R-2 basis) ─────────────────────────────────────────────
-  it('hub rows sum to the band: Σ AoW rows + Σ program-level rows = 11', async () => {
+  it("hub rows sum to the band's targeted set: Σ AoW rows + Σ program-level rows = 9 (band Total KPIs stays 11)", async () => {
     const component = await createComponent();
 
     const aowTotal = component.overviewAowProgress().reduce((sum, row) => sum + row.total, 0);
     const programTotal = component.hubProgramLevelRows().reduce((sum, row) => sum + row.total, 0);
 
-    expect(aowTotal + programTotal).toBe(11);
-    expect(aowTotal + programTotal).toBe(component.plannedReportingSummaryStats().totalKpis);
+    expect(aowTotal + programTotal).toBe(9);
+    expect(aowTotal + programTotal).toBe(component.plannedReportingSummaryStats().targetedKpis);
+    expect(component.plannedReportingSummaryStats().totalKpis).toBe(11);
   });
 
   // ── ToC map (KCR-R-5.1, KCR-DD-7) ────────────────────────────────────────────────────────────
@@ -352,31 +361,33 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
   });
 
   // ── Count-once identity (KCR-AC-1 last clause) ───────────────────────────────────────────────
-  it('every counted indicator_id contributes to exactly one denominator: Σ denominators = 11 = band', async () => {
+  it('every targeted indicator_id contributes to exactly one denominator: Σ denominators = 9 = band targeted (band total 11)', async () => {
     const component = await createComponent();
 
     const heroRows = byCode(component.overviewAowProgressRich());
     const chips = byCode(component.overviewXcutProgress());
     const groups = groupByAowCode(component);
 
-    // COUNTED_IDS is written out independently from the fixture — every planned KPI, once.
-    // Any id counted twice pushes a sum above 11; any id dropped pushes it below.
-    expect(COUNTED_IDS).toHaveLength(11);
+    // TARGETED_IDS is written out independently from the fixture - every KPI with a target, once.
+    // Any id counted twice pushes a sum above 9; any id dropped pushes it below.
+    expect(PLANNED_IDS).toHaveLength(11);
+    expect(TARGETED_IDS).toHaveLength(9);
 
-    // Σ of the four grouped-table header ratios (today 4 + 5 + 1 + 1 = 11 — #901 counted three times).
+    // Σ of the four grouped-table header ratios (3 + 4 + 1 + 1 = 9; #901 once, #902 and a4 excluded).
     const sumOfTableHeaders = [groups['A'], groups['B'], groups[INTERMEDIATE_OUTCOMES_CODE], groups[OUTCOMES_2030_CODE]].reduce(
       (sum, group) => sum + tableRatio(group).total,
       0
     );
-    expect(sumOfTableHeaders).toBe(COUNTED_IDS.length);
+    expect(sumOfTableHeaders).toBe(TARGETED_IDS.length);
 
     // Σ of the hero rail's rows plus the two chips beneath it (KCR-R-3's `band = rail + chips`).
     const sumOfHeroAndChips =
       heroRows['A'].total + heroRows['B'].total + chips[INTERMEDIATE_OUTCOMES_CODE].total + chips[OUTCOMES_2030_CODE].total;
-    expect(sumOfHeroAndChips).toBe(COUNTED_IDS.length);
+    expect(sumOfHeroAndChips).toBe(TARGETED_IDS.length);
 
-    // …and both must be the band. Today the band alone reads 15.
-    expect(component.plannedReportingSummaryStats().totalKpis).toBe(COUNTED_IDS.length);
+    // ...and both must be the band's targeted set; the band's Total KPIs is the planned count (KTO-DD-3).
+    expect(component.plannedReportingSummaryStats().targetedKpis).toBe(TARGETED_IDS.length);
+    expect(component.plannedReportingSummaryStats().totalKpis).toBe(PLANNED_IDS.length);
   });
 
   // ── Visibility (KCR-R-7 / the scenario's last AND clause) ────────────────────────────────────
@@ -402,12 +413,24 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     expect(crosscutIdsIn('B')).toEqual([]);
   });
 
-  it('still counts #901 and #902 exactly once, in the Intermediate bucket (KCR-R-1 unchanged)', async () => {
+  it('still counts #901 and #902 exactly once, in the Intermediate bucket (KCR-R-1 unchanged; #902 has no target)', async () => {
     const component = await createComponent();
 
     const chips = byCode(component.overviewXcutProgress());
-    expect(chips[INTERMEDIATE_OUTCOMES_CODE].total).toBe(2);
-    expect(component.plannedReportingSummaryStats().totalKpis).toBe(COUNTED_IDS.length);
+    expect(chips[INTERMEDIATE_OUTCOMES_CODE].total + chips[INTERMEDIATE_OUTCOMES_CODE].zeroTarget).toBe(2);
+    expect(component.plannedReportingSummaryStats().totalKpis).toBe(PLANNED_IDS.length);
+  });
+
+  it('DKT-R-3/R-4: KPI chip = sum of card header counts and Target = sum of header sums (cross-cut rows once)', async () => {
+    const component = await createComponent();
+    const table = TestBed.createComponent(ReportingAowTableComponent).componentInstance;
+    const groups = component.reportingGroups();
+
+    const headerCounts = groups.reduce((n, g) => n + Number.parseInt(table.headerCount(g), 10), 0);
+    const headerSums = groups.reduce((n, g) => n + (Number.parseFloat(table.headerTargets(g)) || 0), 0);
+
+    expect(component.reportingTypologyCounts()['all']).toBe(headerCounts);
+    expect(Number.parseFloat(component.reportingTargetSum())).toBe(headerSums);
   });
 
   // ── Reported predicate (KCR-R-9, both scenario clauses) ──────────────────────────────────────
@@ -424,6 +447,7 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     const component = await createComponent();
     const read = () => ({
       totalKpis: component.plannedReportingSummaryStats().totalKpis,
+      targetedKpis: component.plannedReportingSummaryStats().targetedKpis,
       reportedKpis: component.plannedReportingSummaryStats().reportedKpis,
       planned: component.bandPlannedResultsCount()
     });
@@ -448,7 +472,240 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     expect(read()).toEqual(unfiltered);
     sessionStorage.removeItem(ONLY_PENDING_STORAGE_KEY);
 
-    // …and the invariant figure is the reconciled one (today the unfiltered reading is 15/1/15).
-    expect(unfiltered).toEqual({ totalKpis: 11, reportedKpis: 1, planned: 11 });
+    // ...and the invariant figure is the reconciled one.
+    expect(unfiltered).toEqual({ totalKpis: 11, targetedKpis: 9, reportedKpis: 1, planned: 11 });
+  });
+
+  // ── KTO S-2.3 - every surface agrees on the targeted set (`changes/kpi-progress-target-only`) ──
+  //
+  // One AoW (`AOW01`): 50 KPIs with a target (the first 10 reported) + 4 without a target, one of
+  // them a `0/3` row (no target, achieved 3). Every figure below is read through the component's own
+  // computed signals / methods (never a hand-built row), so a surface that computed its own ratio,
+  // or read the stale 54, fails here. Expected values are the spec's literals (10 of 50, 20 %, 54).
+  describe('S-2.3 parity - one AoW with 50 targeted (10 reported) + 4 no-target rows', () => {
+    const AOW = 'AOW01';
+
+    function seedParityFixture(component: DashboardLabComponent): void {
+      const targeted = Array.from({ length: 50 }, (_, i) => ind(`t${i}`, 10, i < 10 ? 4 : 0));
+      const noTarget = [ind('n0', 0, 0), ind('n1', 0, 0), ind('n2', 0, 0), ind('n3', 0, 3)];
+      component.aowsByCode.set(new Map([[PROGRAM.initiativeCode, [{ code: AOW, name: 'Area 01' }] as unknown as Unit[]]]));
+      component.tocByKey.set(
+        new Map<string, { outputs: any[]; outcomes: any[] }>([
+          [
+            `${PROGRAM.initiativeCode}::${AOW}::default`,
+            {
+              outputs: [{ toc_result_id: 1, category: 'OUTPUT', result_title: 'HLO-1 Output', is_aow: true, indicators: [...targeted, ...noTarget] }],
+              outcomes: []
+            }
+          ],
+          [`${PROGRAM.initiativeCode}::${INTERMEDIATE_OUTCOMES_CODE}::default`, { outputs: [], outcomes: [] }],
+          [`${PROGRAM.initiativeCode}::${OUTCOMES_2030_CODE}::default`, { outputs: [], outcomes: [] }]
+        ])
+      );
+    }
+
+    it('hero row, thin row, By-AOW banner, ToC-map node and the table header all read 10 of 50', async () => {
+      const component = await createComponent();
+      seedParityFixture(component);
+      component.plannedHloAowCode.set(AOW);
+
+      const hero = byCode(component.overviewAowProgressRich())[AOW];
+      expect({ reported: hero.reported, total: hero.total, zeroTarget: hero.zeroTarget }).toEqual({ reported: 10, total: 50, zeroTarget: 4 });
+
+      const thin = byCode(component.overviewAowProgress())[AOW];
+      expect({ done: thin.done, total: thin.total, zeroTarget: thin.zeroTarget }).toEqual({ done: 10, total: 50, zeroTarget: 4 });
+
+      const banner = component.plannedAowBanner()!;
+      expect({ done: banner.done, total: banner.total, pct: banner.pct, zeroTarget: banner.zeroTarget }).toEqual({
+        done: 10,
+        total: 50,
+        pct: 20,
+        zeroTarget: 4
+      });
+
+      const node = component.overviewTocMap()!.branches.find(b => b.kind === 'aow' && b.code === AOW)!;
+      expect({ done: node.done, total: node.total }).toEqual({ done: 10, total: 50 });
+
+      const group = groupByAowCode(component)[AOW];
+      expect(tableRatio(group)).toEqual({ done: 10, total: 50 });
+      expect(tableCountLabel(group)).toBe('54 KPIs');
+    });
+
+    it('band Total KPIs reads 54 planned (title names the 4 excluded) while KPIs with evidence reads 10 of 50 / 20 %', async () => {
+      const component = await createComponent();
+      seedParityFixture(component);
+
+      const stats = component.plannedReportingSummaryStats();
+      expect(stats).toMatchObject({ totalKpis: 54, targetedKpis: 50, reportedKpis: 10, plannedKpis: 54, zeroTargetKpis: 4 });
+
+      const band = TestBed.createComponent(ReportingSummaryStatsComponent).componentInstance;
+      expect(band.totalKpisTitle(stats)).toBe('54 planned · excludes 4 KPIs with no target set');
+      expect(band.targetedOf(stats)).toBe(50);
+      expect(band.evidencePercentage(stats)).toBe(20);
+      expect(component.bannerZeroTargetTitle(banner4(component))).toBe('excludes 4 KPIs with no target set');
+    });
+
+    it('every surface keeps one denominator: hub rows sum to the band targeted set, never to 54', async () => {
+      const component = await createComponent();
+      seedParityFixture(component);
+
+      const hubTotal =
+        component.overviewAowProgress().reduce((sum, row) => sum + row.total, 0) +
+        component.hubProgramLevelRows().reduce((sum, row) => sum + row.total, 0);
+
+      expect(hubTotal).toBe(50);
+      expect(hubTotal).toBe(component.plannedReportingSummaryStats().targetedKpis);
+    });
+
+    function banner4(component: DashboardLabComponent): number {
+      component.plannedHloAowCode.set(AOW);
+      return component.plannedAowBanner()!.zeroTarget;
+    }
+  });
+  // ── KTO-T-7 / KTO-R-10 - the global Target filter (`changes/kpi-progress-target-only`, A-1) ─────
+  //
+  // One AoW (`AOW01`), 54 KPIs: 50 with a target (the first 10 reported, the first 5 of them
+  // `Knowledge product`) + 4 without (`n0` is `Knowledge product`). The toolbar Target filter rides
+  // `reportingGroups()` like Section / Type / Category, so the type chips' `All` figure
+  // (`reportingTypologyCounts`), the card's `N KPIs`, the ratio and the split line all move with it.
+  // Expected values are the scenario literals of S-10.1 - S-10.3.
+  describe('KTO-R-10 - global Target filter (S-10.1 .. S-10.3)', () => {
+    const AOW = 'AOW01';
+
+    function seedTargetFilterFixture(component: DashboardLabComponent): void {
+      const kp = { result_type_name: 'Knowledge product' };
+      const targeted = Array.from({ length: 50 }, (_, i) => ind(`t${i}`, 10, i < 10 ? 4 : 0, i < 5 ? kp : {}));
+      const noTarget = [ind('n0', 0, 0, kp), ind('n1', 0, 0), ind('n2', 0, 0), ind('n3', 0, 3)];
+      component.aowsByCode.set(new Map([[PROGRAM.initiativeCode, [{ code: AOW, name: 'Area 01' }] as unknown as Unit[]]]));
+      component.tocByKey.set(
+        new Map<string, { outputs: any[]; outcomes: any[] }>([
+          [
+            `${PROGRAM.initiativeCode}::${AOW}::default`,
+            { outputs: [{ toc_result_id: 1, category: 'OUTPUT', result_title: 'HLO-1 Output', is_aow: true, indicators: [...targeted, ...noTarget] }], outcomes: [] }
+          ],
+          [`${PROGRAM.initiativeCode}::${INTERMEDIATE_OUTCOMES_CODE}::default`, { outputs: [], outcomes: [] }],
+          [`${PROGRAM.initiativeCode}::${OUTCOMES_2030_CODE}::default`, { outputs: [], outcomes: [] }]
+        ])
+      );
+    }
+
+    const card = (component: DashboardLabComponent) => groupByAowCode(component)[AOW];
+    const idsOf = (group: ReportingAowGroup) => group.indicators.map(r => String(r.indicator_id));
+    const splitLine = (group: ReportingAowGroup) => TestBed.createComponent(ReportingAowTableComponent).componentInstance.splitOf(group).line;
+    const ratio = (group: ReportingAowGroup) => TestBed.createComponent(ReportingAowTableComponent).componentInstance.ratioOf(group);
+
+    it('DKT-R-1/R-2: the host Target sum follows the Type and Category filters (HLO rows only, narrower than all)', async () => {
+      const component = await createComponent();
+      const kp = { result_type_name: 'Knowledge product' };
+      component.aowsByCode.set(new Map([[PROGRAM.initiativeCode, [{ code: AOW, name: 'Area 01' }] as unknown as Unit[]]]));
+      component.tocByKey.set(
+        new Map<string, { outputs: any[]; outcomes: any[] }>([
+          [
+            `${PROGRAM.initiativeCode}::${AOW}::default`,
+            {
+              outputs: [{ toc_result_id: 1, category: 'OUTPUT', result_title: 'HLO-1 Output', is_aow: true, indicators: [ind('h1', 10, 0, kp), ind('h2', 5, 0)] }],
+              outcomes: [{ toc_result_id: 2, category: 'OUTCOME', result_title: 'Outcome 1', is_aow: true, indicators: [ind('o1', 7, 0, kp)] }]
+            }
+          ],
+          [`${PROGRAM.initiativeCode}::${INTERMEDIATE_OUTCOMES_CODE}::default`, { outputs: [], outcomes: [] }],
+          [`${PROGRAM.initiativeCode}::${OUTCOMES_2030_CODE}::default`, { outputs: [], outcomes: [] }]
+        ])
+      );
+
+      component.reportingTypeFilter.set(['hlo']);
+      expect(component.reportingTargetSum()).toBe('15');
+      expect(component.reportingTypologyCounts()['all']).toBe(2);
+
+      component.reportingTypeFilter.set([]);
+      const allSum = Number(component.reportingTargetSum());
+      expect(allSum).toBeGreaterThan(15);
+
+      component.reportingTypeFilter.set(['hlo']);
+      component.reportingTypologyFilter.set(['Knowledge product']);
+      expect(component.reportingTargetSum()).toBe('10');
+      expect(component.reportingTypologyCounts()['all']).toBe(1);
+    });
+
+    it('defaults to All: 54 rows, `54 KPIs`, the split line unchanged', async () => {
+      const component = await createComponent();
+      seedTargetFilterFixture(component);
+
+      expect(component.reportingTargetFilter()).toBe('all');
+      expect(component.reportingTypologyCounts()['all']).toBe(54);
+      expect(tableCountLabel(card(component))).toBe('54 KPIs');
+      expect(splitLine(card(component))).toBe('50 KPIs with target · 4 with no target set');
+    });
+
+    it('S-10.1 KPIs with no target: `All` chip 4, card `4 KPIs`, ratio is a dash, no split line', async () => {
+      const component = await createComponent();
+      seedTargetFilterFixture(component);
+
+      component.reportingTargetFilter.set('without');
+
+      expect(component.reportingTypologyCounts()['all']).toBe(4);
+      expect(component.reportingTypologyCounts()['Knowledge product']).toBe(1);
+      expect(idsOf(card(component))).toEqual(['n0', 'n1', 'n2', 'n3']);
+      expect(tableCountLabel(card(component))).toBe('4 KPIs');
+      expect(ratio(card(component)).empty).toBe(true);
+      expect(splitLine(card(component))).toBe('0 KPIs with target · 4 with no target set');
+    });
+
+    it('S-10.2 KPIs with a target: `All` 50, card `50 KPIs`, `10 of 50 · 20%`, no split line', async () => {
+      const component = await createComponent();
+      seedTargetFilterFixture(component);
+
+      component.reportingTargetFilter.set('with');
+
+      expect(component.reportingTypologyCounts()['all']).toBe(50);
+      expect(tableCountLabel(card(component))).toBe('50 KPIs');
+      expect(ratio(card(component))).toMatchObject({ done: 10, total: 50, percent: 20, empty: false });
+      expect(splitLine(card(component))).toBe('');
+    });
+
+    it('combines (AND) with the Category filter: only the Knowledge-product rows of that kind', async () => {
+      const component = await createComponent();
+      seedTargetFilterFixture(component);
+      component.reportingTypologyFilter.set(['Knowledge product']);
+
+      component.reportingTargetFilter.set('without');
+      expect(idsOf(card(component))).toEqual(['n0']);
+
+      component.reportingTargetFilter.set('with');
+      expect(idsOf(card(component))).toEqual(['t0', 't1', 't2', 't3', 't4']);
+    });
+
+    it('S-10.3 back to All and Clear filters: every count returns to the unfiltered 54', async () => {
+      const component = await createComponent();
+      seedTargetFilterFixture(component);
+
+      component.reportingTargetFilter.set('with');
+      expect(component.reportingFiltersActive()).toBe(true);
+
+      component.reportingTargetFilter.set('all');
+      expect(component.reportingFiltersActive()).toBe(false);
+      expect(component.reportingTypologyCounts()['all']).toBe(54);
+
+      component.reportingTargetFilter.set('without');
+      component.clearReportingFilters();
+      expect(component.reportingTargetFilter()).toBe('all');
+      expect(component.reportingFiltersActive()).toBe(false);
+      expect(component.reportingTypologyCounts()['all']).toBe(54);
+      expect(tableCountLabel(card(component))).toBe('54 KPIs');
+    });
+
+    it('feeds the Intermediate bucket too: its `N KPIs` follows the filter', async () => {
+      const component = await createComponent();
+
+      component.reportingTargetFilter.set('without');
+      const without = groupByAowCode(component);
+      expect(tableCountLabel(without['A'])).toBe('1 KPI'); // a4
+      expect(tableCountLabel(without['B'])).toBe('0 KPIs');
+      expect(tableCountLabel(without[INTERMEDIATE_OUTCOMES_CODE])).toBe('1 KPI'); // 902
+
+      component.reportingTargetFilter.set('with');
+      const withTarget = groupByAowCode(component);
+      expect(tableCountLabel(withTarget['A'])).toBe('3 KPIs');
+      expect(tableCountLabel(withTarget[INTERMEDIATE_OUTCOMES_CODE])).toBe('1 KPI'); // 901
+    });
   });
 });

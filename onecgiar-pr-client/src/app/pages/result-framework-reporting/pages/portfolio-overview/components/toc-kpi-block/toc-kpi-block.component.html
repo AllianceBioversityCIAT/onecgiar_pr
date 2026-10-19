@@ -1,0 +1,113 @@
+<!--
+  Progress against ToC KPIs (spec toc-kpi-progress, design 6.3). Same card as the typology block. The bar fill is
+  --pr-chart-2 on the --pr-color-accents-2 track: a data mark, never a violet surface tint (rule 7). Nothing here is
+  interactive except the name button of each row and Retry (TKP-R-6): counts, percentages, bars and the summary are text.
+-->
+<section
+  class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]"
+  data-testid="toc-kpi-block"
+  aria-labelledby="toc-kpi-title">
+  <div class="mb-[16px]">
+    <h2 id="toc-kpi-title" class="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--pr-text)]">{{ copy.title }}</h2>
+    <p class="m-0 mt-[2px] text-[13px] font-normal text-[var(--pr-text-secondary)]" data-testid="toc-kpi-subtitle">{{ copy.subtitle(year()) }}</p>
+    @if (notAffectedText()) {
+      <p class="m-0 mt-[4px] text-[12px] font-normal text-[var(--pr-text-secondary)]" data-testid="toc-kpi-not-affected">{{ notAffectedText() }}</p>
+    }
+  </div>
+
+  @if (status() === 'loading') {
+    <div aria-busy="true" data-testid="toc-kpi-skeleton">
+      <span class="sr-only" role="status">{{ copy.loading }}</span>
+      @for (n of skeletonRows; track n) {
+        <div class="flex flex-col gap-[8px] border-b border-[var(--pr-border-divider)] py-[12px] last:border-b-0 sm:flex-row sm:items-center sm:gap-[16px]">
+          <span class="pr-skeleton h-[14px] w-full rounded sm:flex-1"></span>
+          <span class="pr-skeleton h-[14px] w-[96px] shrink-0 rounded"></span>
+          <span class="pr-skeleton h-[8px] w-full shrink-0 rounded-full sm:w-[200px]"></span>
+        </div>
+      }
+    </div>
+  } @else if (status() === 'error') {
+    <div class="flex flex-wrap items-center justify-between gap-[12px]" data-testid="toc-kpi-error">
+      <p role="status" class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="toc-kpi-error-text">{{ copy.error }}</p>
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        class="!text-[13px] focus-visible:[box-shadow:var(--pr-focus-ring)]"
+        data-testid="toc-kpi-retry"
+        (click)="retry()">
+        {{ copy.retry }}
+      </button>
+    </div>
+  } @else if (isEmpty()) {
+    <p role="status" class="m-0 max-h-[160px] text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="toc-kpi-empty">{{ copy.empty }}</p>
+  } @else {
+    <!-- Portfolio summary: sum of covered over sum of total; zero-KPI rows add 0 to both -->
+    <div class="mb-[8px] flex flex-col gap-[8px] border-b border-[var(--pr-border-divider)] pb-[14px]" data-testid="toc-kpi-summary">
+      <div class="flex items-baseline justify-between gap-[12px]">
+        <span class="text-[13px] font-semibold text-[var(--pr-text-heading)]">{{ copy.summaryLabel }}</span>
+        <span class="flex items-baseline justify-end gap-[10px] font-mono text-[14px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
+          <span data-testid="toc-kpi-summary-count">{{ summary().covered }} / {{ summary().total }}</span>
+          <span class="min-w-[44px] text-right" data-testid="toc-kpi-summary-percent">{{ summary().percent }}%</span>
+        </span>
+      </div>
+      <div
+        class="h-[8px] w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]"
+        role="img"
+        [attr.aria-label]="copy.barLabel(summary().percent!, summary().covered, summary().total)"
+        data-testid="toc-kpi-summary-bar">
+        <div class="h-full rounded-full bg-[var(--pr-chart-2)]" [style.width.%]="summary().percent"></div>
+      </div>
+    </div>
+
+    <ul class="m-0 flex list-none flex-col p-0" aria-labelledby="toc-kpi-title" data-testid="toc-kpi-list">
+      @for (row of rows(); track row.code) {
+        <li
+          class="grid grid-cols-1 gap-x-[16px] gap-y-[8px] border-b border-[var(--pr-border-divider)] py-[12px] last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto_200px] sm:items-center"
+          data-testid="toc-kpi-row"
+          [attr.data-code]="row.code">
+          <div class="flex min-w-0 flex-col gap-[2px]">
+            <button
+              type="button"
+              class="group flex w-full min-w-0 cursor-pointer items-center gap-[8px] rounded-[4px] border-0 bg-transparent p-0 text-left focus-visible:outline-none focus-visible:[box-shadow:var(--pr-focus-ring)]"
+              [hlmTooltip]="row.name"
+              [attr.aria-label]="copy.openProgramme(row.name)"
+              data-testid="toc-kpi-name-button"
+              (click)="openProgramme(row.code)">
+              <span class="shrink-0 font-mono text-[12px] text-[var(--pr-text-secondary)]" data-testid="toc-kpi-code">{{ row.code }}</span>
+              <span
+                class="truncate text-[13px] font-semibold text-[var(--pr-text-heading)] transition-colors group-hover:text-[var(--pr-color-primary-600)]"
+                data-testid="toc-kpi-name"
+                >{{ row.name }}</span
+              >
+              <ng-icon
+                name="lucideChevronRight"
+                size="13px"
+                class="ml-auto shrink-0 text-[var(--pr-color-primary-500)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+            </button>
+            @if (row.percent !== null) {
+              <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="toc-kpi-split">{{ copy.splitLine(row.outputs, row.outcomes) }}</span>
+            }
+          </div>
+
+          @if (row.percent === null) {
+            <!-- Zero-KPI P/A: one muted line in place of figures and bar; no bar element at all -->
+            <span class="text-[12px] text-[var(--pr-text-secondary)] sm:col-span-2 sm:text-right" data-testid="toc-kpi-zero">{{ copy.noKpis }}</span>
+          } @else {
+            <div class="flex items-baseline justify-end gap-[10px] font-mono tabular-nums text-[var(--pr-text-heading)]">
+              <span class="text-[13px]" data-testid="toc-kpi-count">{{ row.covered }} / {{ row.total }}</span>
+              <span class="min-w-[44px] text-right text-[14px] font-semibold" data-testid="toc-kpi-percent">{{ row.percent }}%</span>
+            </div>
+            <div
+              class="h-[8px] w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]"
+              role="img"
+              [attr.aria-label]="copy.barLabel(row.percent, row.covered, row.total)"
+              data-testid="toc-kpi-bar">
+              <div class="h-full rounded-full bg-[var(--pr-chart-2)]" [style.width.%]="row.percent"></div>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

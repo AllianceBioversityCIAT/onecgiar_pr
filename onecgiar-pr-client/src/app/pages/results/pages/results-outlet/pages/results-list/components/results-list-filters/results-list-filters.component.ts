@@ -815,16 +815,9 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     if (layout === 'sidebar') this.refreshTempSubmitterOptions();
   }
 
-  /** Side column behaves like a shop's filter rail: each change applies at once. */
+  /** Every layout behaves like a shop's filter rail: each change applies at once. */
   onFilterFieldChanged(): void {
-    if (this.isSidebarLayout()) this.commitTempFilters();
-  }
-
-  // Apply all popover filters (search stays live on the toolbar).
-  applyFilters() {
     this.commitTempFilters();
-    this.moreFiltersOpen.set(false);
-    this.visible.set(false);
   }
 
   private commitTempFilters(): void {

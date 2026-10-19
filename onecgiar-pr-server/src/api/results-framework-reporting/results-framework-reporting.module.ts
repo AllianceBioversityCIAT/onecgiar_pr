@@ -7,6 +7,7 @@ import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-pr
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ResultsFrameworkReportingController } from './results-framework-reporting.controller';
+import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/clarisa-projects.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
@@ -73,6 +74,7 @@ import { ProgressTrackerModule } from '../progress-tracker/progress-tracker.modu
     ReportingEntryHubService,
     BilateralProjectsService,
     ClarisaInitiativesRepository,
+    ClarisaProjectsRepository,
     RoleByUserRepository,
     ClarisaGlobalUnitRepository,
     YearRepository,

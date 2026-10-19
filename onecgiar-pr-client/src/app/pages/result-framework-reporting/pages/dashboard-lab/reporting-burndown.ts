@@ -1,7 +1,12 @@
 /**
  * Pure burn-down helpers for the Reporting-tab surfaces (By-AOW banner, grouped header ratio,
- * band controls, session counter). Every planned KPI counts toward reporting progress — including
- * KPIs whose target is zero or unset (centers may still report; the row may read overachieved).
+ * band controls, session counter). Single home of the "has a target" rule (KTO-R-1): a KPI has a
+ * target when its target value is finite and > 0 — the achieved value never matters, so a reported
+ * row with target 0 (shown as *Overachieved*) has NO target. Ratios (`done / total`) count only
+ * rows with a target; rows without one are excluded from denominators and numerators, hidden by
+ * Only-pending, skipped by Next pending and ranked last in Remaining-work order. Counts of KPIs
+ * (cards, band "Total KPIs") are NOT ratios and keep every planned row — that split is the
+ * caller's, see spec `changes/kpi-progress-target-only` (KTO-DD-3).
  * No Angular imports — pure functions only, testable in isolation and safe to call from any
  * Reporting-tab surface.
  *
@@ -16,6 +21,7 @@
  *
  * @akili-spec changes/mass-reporting-flow
  * @akili-spec bugfix/kpi-count-reconciliation
+ * @akili-spec changes/kpi-progress-target-only
  */
 
 /** Structural shape every helper here needs — matches `ReportingIndicator` without importing it. */
@@ -39,11 +45,11 @@ const ZERO_TARGET_LAST_RANK = 3;
 /** Options for `sortRemainingFirst`. */
 export interface SortRemainingFirstOptions {
   /**
-   * Leader decision (MRF-T-2, T-1 review): in Remaining-work order, a zero-target KPI
-   * (`target = 0 AND achieved = 0`) ranks LAST — after `complete` — instead of alongside
-   * `not-started` (its raw achieved/target reading). Only meaningful when the list can still
-   * contain zero-target KPIs; under Only-pending they are already excluded (`pendingOf`), so this
-   * is a no-op there. Defaults to `false` to keep every existing caller byte-identical.
+   * In Remaining-work order, a KPI with no target (`!hasTarget` — including a reported `0/3` row)
+   * ranks LAST — after `complete` — instead of by its raw achieved/target reading (KTO-R-8). Only
+   * meaningful when the list can still contain no-target KPIs; under Only-pending they are already
+   * excluded (`pendingOf`), so this is a no-op there. Defaults to `false` to keep every existing
+   * caller byte-identical. The option name is historical (KTO-DD-5): "zero target" = no target set.
    */
   zeroTargetLast?: boolean;
 }
@@ -56,9 +62,37 @@ function targetOf(ind: BurndownIndicator | null | undefined): number {
   return Number(ind?.target_value_sum ?? 0) || 0;
 }
 
-/** `target = 0 AND achieved = 0` — the zero-target rule's own predicate (MRF-R-7). */
-function isZeroTarget(ind: BurndownIndicator | null | undefined): boolean {
-  return targetOf(ind) === 0 && achievedOf(ind) === 0;
+/**
+ * The toolbar Target filter value (KTO-R-10): `all` = no filter, `with` / `without` keep the KPIs
+ * for which `hasTarget` is true / false. One type for the host signal and the band control.
+ *
+ * @akili-spec changes/kpi-progress-target-only
+ */
+export type ReportingTargetFilter = 'all' | 'with' | 'without';
+
+/**
+ * The shared "has a target" predicate (KTO-R-1, KTO-DD-2): target value finite and > 0. Achieved is
+ * ignored on purpose — a `0/3` row is *Overachieved* in the Progress column and has no target.
+ * Numeric strings parse (`"12"` has a target); null, undefined, `NaN`, negatives and `Infinity`
+ * do not.
+ *
+ * @akili-spec changes/kpi-progress-target-only
+ */
+export function hasTarget(ind: BurndownIndicator | null | undefined): boolean {
+  const target = targetOf(ind);
+  return Number.isFinite(target) && target > 0;
+}
+
+/**
+ * Numeric sum of `target_value_sum` over `rows`, formatted like the per-HLO `TARGET`: integer as is,
+ * fractional with one decimal. The API sends the value as a STRING (`"9"` + `"100"`), so each term is
+ * parsed first; null / empty / non-numeric terms count 0 (DKT-DD-2).
+ *
+ * @akili-spec changes/reporting-dynamic-kpi-target-counts
+ */
+export function sumTargetValues(rows: ReadonlyArray<{ target_value_sum?: unknown } | null | undefined> | null | undefined): string {
+  const sum = (rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.target_value_sum ?? 0)) || 0), 0);
+  return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
 }
 
 export function stateOf(ind: BurndownIndicator | null | undefined): BurndownState {
@@ -68,26 +102,41 @@ export function stateOf(ind: BurndownIndicator | null | undefined): BurndownStat
 }
 
 function isPending(ind: BurndownIndicator | null | undefined): boolean {
-  return !isZeroTarget(ind) && stateOf(ind) !== 'complete';
+  return hasTarget(ind) && stateOf(ind) !== 'complete';
 }
 
 /**
- * Returns every KPI for denominators/pending/visible. `zeroTarget` is always `0` — kept in the
- * return shape so existing callers compile; disclosure titles that read it stay silent.
+ * Splits `inds` into the counted set — rows with a target (`hasTarget`), the only rows a ratio
+ * denominator / pending list / visible set may use — and `zeroTarget`, the number of rows left
+ * out because they have no target set. The field name is kept for compatibility with every
+ * consumer and disclosure title (KTO-DD-5); its meaning is "no target set", not "target = 0 and
+ * achieved = 0". `buildAowBannerStats` and the grouped header ratio delegate here (identical
+ * everywhere).
  *
  * @akili-spec changes/mass-reporting-flow
+ * @akili-spec changes/kpi-progress-target-only
  */
 export function applyZeroTargetRule<T extends BurndownIndicator>(inds: T[]): { counted: T[]; zeroTarget: number } {
-  return { counted: [...inds], zeroTarget: 0 };
+  const counted: T[] = [];
+  let zeroTarget = 0;
+  for (const ind of inds) {
+    if (hasTarget(ind)) counted.push(ind);
+    else zeroTarget++;
+  }
+  return { counted, zeroTarget };
 }
 
 /**
  * The ratio rule shared by `buildAowBannerStats` (By-AOW banner) and the grouped header's
- * `ratioOf` — one function, so both surfaces produce identical numbers under the zero-target rule
- * (MRF-R-6, MRF-AC-5, MRF-AC-6). **Reported** = `achieved > 0`, a different predicate from
- * **Complete** (`achieved >= target`, the burn-down states above) — never conflate the two.
+ * `ratioOf` — one function, so every surface produces identical numbers under the has-a-target
+ * rule (MRF-R-6, KTO-R-2). `total` = rows with a target, `done` = those also reported,
+ * `zeroTarget` = rows excluded for having no target set. When `total` is 0 the result is
+ * `percent: 0` (never NaN) and the caller renders a dash instead of the ratio (KTO-R-3).
+ * **Reported** = `achieved > 0`, a different predicate from **Complete** (`achieved >= target`,
+ * the burn-down states above) — never conflate the two.
  *
  * @akili-spec changes/mass-reporting-flow
+ * @akili-spec changes/kpi-progress-target-only
  */
 export function buildRatio<T extends BurndownIndicator>(
   inds: T[]
@@ -99,9 +148,9 @@ export function buildRatio<T extends BurndownIndicator>(
 }
 
 /**
- * The KPIs an "Only pending" toggle keeps visible: the zero-target rule's `counted` set, minus
- * `complete` KPIs (MRF-R-1 — visible == counted; a zero-target KPI is excluded even though its raw
- * achieved/target reads as `not-started`).
+ * The KPIs an "Only pending" toggle keeps visible: the rule's `counted` set (rows with a target),
+ * minus `complete` KPIs (MRF-R-1 — visible == counted; a no-target KPI is excluded even though its
+ * raw achieved/target reads as `not-started`, KTO-R-8).
  *
  * @akili-spec changes/mass-reporting-flow
  */
@@ -113,8 +162,8 @@ export function pendingOf<T extends BurndownIndicator>(inds: T[]): T[] {
  * Remaining-work order (MRF-R-2): `not-started` → `in-progress` → `complete`, stable within each
  * state. Does not mutate `inds`.
  *
- * `options.zeroTargetLast` (MRF-T-2 Leader decision): rank a zero-target KPI last instead of with
- * `not-started` — see `SortRemainingFirstOptions`.
+ * `options.zeroTargetLast`: rank a no-target KPI last instead of by its raw state — see
+ * `SortRemainingFirstOptions`.
  *
  * @akili-spec changes/mass-reporting-flow
  */
@@ -124,7 +173,7 @@ export function sortRemainingFirst<T extends BurndownIndicator>(inds: T[], optio
     .map((ind, index) => ({
       ind,
       index,
-      rank: zeroTargetLast && isZeroTarget(ind) ? ZERO_TARGET_LAST_RANK : STATE_RANK[stateOf(ind)]
+      rank: zeroTargetLast && !hasTarget(ind) ? ZERO_TARGET_LAST_RANK : STATE_RANK[stateOf(ind)]
     }))
     .sort((a, b) => a.rank - b.rank || a.index - b.index)
     .map(entry => entry.ind);
@@ -132,7 +181,7 @@ export function sortRemainingFirst<T extends BurndownIndicator>(inds: T[], optio
 
 /**
  * Pending-KPI count for a group (a card's badge, or the "groups by pending count desc" sort),
- * applying the zero-target rule identically to every other surface.
+ * applying the has-a-target rule identically to every other surface.
  *
  * @akili-spec changes/mass-reporting-flow
  */
@@ -205,7 +254,7 @@ export interface ProgramKpiAowSlice<T extends PartitionIndicator = PartitionIndi
   /**
    * How many cross-cut Intermediate-Outcome rows this AoW's payload repeats. They are NOT in `own`
    * — they belong to the Intermediate bucket and are counted there exactly once (KCR-R-1). Kept as
-   * a count for the zero-target/dedupe disclosures and for tests that prove the split happened.
+   * a count for the no-target/dedupe disclosures and for tests that prove the split happened.
    */
   crosscut: number;
   loading: boolean;
@@ -307,9 +356,10 @@ export function partitionProgramKpis<T extends PartitionIndicator>(
 }
 
 /**
- * Program-wide totals over the partition (KCR-R-2, R-8, R-9): `planned` = every KPI counted once;
- * `counted` = same set (every planned KPI is in the denominator); `reported` = KPIs with
- * `achieved > 0` — `achieved > 0` ONLY, never `progress_percentage`.
+ * Program-wide totals over the partition (KCR-R-2, R-9; band contract KTO-DD-3): `planned` = every
+ * KPI counted once (the count shown as "Total KPIs"); `zeroTarget` = how many of them have no
+ * target set; `counted` = the targeted set, the only ratio denominator the shell may show;
+ * `reported` = counted KPIs with `achieved > 0` — `achieved > 0` ONLY, never `progress_percentage`.
  *
  * @akili-spec bugfix/kpi-count-reconciliation
  */

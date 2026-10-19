@@ -4,6 +4,8 @@ import { env } from 'node:process';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import type { ReportingTocContext } from '../../../results-framework-reporting/reporting-toc-context/reporting-toc-context.interface';
 import { ProgressRollup, rollUpIndicators } from './toc-progress-rollup';
+import { W1_W2_RESULT_SOURCE_FILTER } from '../../../../shared/constants/w1-w2-result-source-filter.constant';
+import { TOC_KPI_COVERAGE_STATUS_IDS } from '../../../../shared/constants/toc-kpi-coverage-status.constant';
 
 interface TocResultRow {
   toc_result_id: number;
@@ -158,6 +160,21 @@ export interface ProjectTocLinkageNode {
   level_name?: string | null;
   related_node_id: string | null;
   indicators: ProjectTocLinkageIndicator[];
+}
+
+/**
+ * TKP-T-1: the ToC context of the coverage query plus the page version that
+ * bounds the covered set (`result.version_id`).
+ */
+export interface PortfolioTocCoverageContext extends ReportingTocContext {
+  versionId: number;
+}
+
+export interface PortfolioTocCoverageRow {
+  official_code: string;
+  category: string;
+  total: number;
+  covered: number;
 }
 
 @Injectable()
@@ -1285,6 +1302,101 @@ export class AoWBilateralRepository {
         error,
         className: AoWBilateralRepository.name,
         debug: true,
+      });
+    }
+  }
+
+  /**
+   * TKP-T-1 (toc-kpi-progress): ToC KPIs per program and node category, with how
+   * many of them are covered. One statement; every caller value is bound.
+   *
+   * - Total: distinct active indicators on in-scope nodes of the ToC phase. OUTPUT
+   *   keeps nodes in an AoW or without a work package; OUTCOME only nodes in an AoW
+   *   (TKP-P-1, TKP-P-2). Target-only rule (P2-3974, spec toc-kpi-target-filter): an
+   *   indicator counts only when it has at least one target row for the reporting
+   *   year with value > 0, so a no-target indicator leaves both total and covered.
+   * - Covered: indicators reached by a pooled result in a counting status of the page
+   *   version, through active links that are not marked not-applicable. The covered
+   *   set is built first from `result` (version / source / status), then LEFT-joined
+   *   by `tri.id`, because the indicator match needs CONVERT on both sides and cannot
+   *   use an index (design section 8).
+   */
+  async getPortfolioTocCoverage(
+    context: PortfolioTocCoverageContext,
+  ): Promise<PortfolioTocCoverageRow[]> {
+    try {
+      const sourcePlaceholders = W1_W2_RESULT_SOURCE_FILTER.map(() => '?').join(
+        ', ',
+      );
+      const statusPlaceholders = TOC_KPI_COVERAGE_STATUS_IDS.map(
+        () => '?',
+      ).join(', ');
+      const query = `
+        SELECT
+          tr.official_code AS official_code,
+          tr.category AS category,
+          COUNT(DISTINCT tri.id) AS total,
+          COUNT(DISTINCT CASE WHEN cov.indicator_id IS NOT NULL THEN tri.id END) AS covered
+        FROM ${env.DB_TOC}.toc_results tr
+        LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
+          AND wp.year = ?
+          AND wp.wp_official_code LIKE CONCAT(tr.official_code, '-%')
+        JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+          AND tri.is_active = 1
+        JOIN (
+          SELECT DISTINCT trit.id_indicator AS indicator_id,
+                 trit.toc_result_indicator_id AS related_node_id
+          FROM ${env.DB_TOC}.toc_result_indicator_target trit
+          WHERE trit.target_date = ?
+            AND CAST(trit.target_value AS DECIMAL(15,2)) > 0
+        ) tgt ON tgt.indicator_id = tri.id
+          AND CONVERT(tgt.related_node_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        LEFT JOIN (
+          SELECT DISTINCT tri2.id AS indicator_id
+          FROM ${env.DB_NAME}.result r
+          JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
+            AND rtr.is_active = 1
+          JOIN ${env.DB_NAME}.results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+            AND rtri.is_active = 1
+            AND rtri.is_not_aplicable = 0
+          JOIN ${env.DB_TOC}.toc_results_indicators tri2 ON tri2.toc_results_id = rtr.toc_result_id
+            AND CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri2.related_node_id USING utf8mb4)
+          WHERE r.is_active = 1
+            AND r.source IN (${sourcePlaceholders})
+            AND r.status_id IN (${statusPlaceholders})
+            AND r.version_id = ?
+        ) cov ON cov.indicator_id = tri.id
+        WHERE tr.phase = ?
+          AND tr.is_active = 1
+          AND tr.category IN ('OUTPUT', 'OUTCOME')
+          AND (
+            (tr.category = 'OUTPUT' AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL))
+            OR (tr.category = 'OUTCOME' AND wp.toc_id IS NOT NULL)
+          )
+        GROUP BY tr.official_code, tr.category
+      `;
+      const rows = await this.dataSource.query(query, [
+        context.reportingYear,
+        context.reportingYear,
+        ...W1_W2_RESULT_SOURCE_FILTER,
+        ...TOC_KPI_COVERAGE_STATUS_IDS,
+        context.versionId,
+        context.phaseUuid,
+      ]);
+      return rows.map(
+        (row: Record<string, unknown>): PortfolioTocCoverageRow => ({
+          official_code: row.official_code as string,
+          category: row.category as string,
+          total: Number(row.total),
+          covered: Number(row.covered),
+        }),
+      );
+    } catch (error) {
+      // debug: false: with true the handler logs the query text and bound params.
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: false,
       });
     }
   }

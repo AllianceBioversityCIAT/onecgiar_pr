@@ -106,12 +106,17 @@
           <div class="h-[12px] w-[150px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
         } @else {
           <div class="flex items-baseline gap-[8px]">
-            <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">{{ s.reportedKpis }}</span>
-            <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">of {{ s.totalKpis }}</span>
+            @if (targetedOf(s) > 0) {
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">{{ s.reportedKpis }}</span>
+              <span class="text-[12px] font-medium text-[var(--pr-text-muted)]">of {{ targetedOf(s) }}</span>
+            } @else {
+              <!-- @akili-spec changes/kpi-progress-target-only — KTO-R-3: no targeted KPI, so a dash, never 0 of 0. -->
+              <span class="pr-figure text-[24px] font-extrabold leading-none text-[var(--pr-text-muted)]" aria-label="No KPIs with a target">—</span>
+            }
           </div>
           <div class="flex items-center gap-[6px] text-[11.5px] text-[var(--pr-text-secondary)] min-w-0">
             <span class="h-[6px] w-[6px] shrink-0 rounded-full" [class]="s.reportedKpis > 0 ? 'bg-emerald-500' : 'bg-slate-300'"></span>
-            <span class="truncate">{{ evidencePercentage(s) }}% with reported results</span>
+            <span class="truncate">{{ targetedOf(s) > 0 ? evidencePercentage(s) + '% with reported results' : 'No KPIs with a target' }}</span>
           </div>
         }
       </div>

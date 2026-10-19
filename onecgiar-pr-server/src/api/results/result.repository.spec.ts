@@ -1597,3 +1597,156 @@ describe('ResultRepository — getTocMappingsByResultId indicators[] (BTC-T-1)',
     expect(sql).not.toMatch(/rbi\.initiative_role_id\s*<>/);
   });
 });
+
+// @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-1, GLF-R-11, S-11.1, S-11.2)
+// Presence assertions on the SQL text and binds (data source mocked). They cannot prove the pairs
+// are right against real rows; GLF-T-8 proves that live.
+describe('ResultRepository — getPortfolioResultDimensions (GLF-T-1)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const handlersError = {
+    returnErrorRepository: jest.fn(
+      ({ error, className }: { error: Error; className: string }) => ({
+        response: { error: true },
+        message: `[${className}] => error: ${error}`,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      }),
+    ),
+  } as any;
+
+  const normalise = (sql: string) =>
+    sql.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ');
+
+  beforeEach(() => {
+    repo = new ResultRepository(
+      {
+        createEntityManager: jest.fn(() => ({}) as any),
+      } as unknown as DataSource,
+      handlersError,
+    );
+    queryMock = jest.fn().mockResolvedValue([]);
+    (repo as any).query = queryMock;
+  });
+
+  const statements = () =>
+    queryMock.mock.calls.map(([sql, params]) => ({
+      sql: normalise(sql as string),
+      params: params as unknown[],
+    }));
+
+  const pairStatements = () =>
+    statements().filter((s) =>
+      /SELECT DISTINCT r\.id AS result_id, (rbp\.project_id|rc\.center_id)/.test(
+        s.sql,
+      ),
+    );
+
+  it('runs exactly four statements, each bound to [versionId] only', async () => {
+    await repo.getPortfolioResultDimensions(7);
+
+    expect(queryMock).toHaveBeenCalledTimes(4);
+    for (const { params } of statements()) {
+      expect(params).toEqual([7]);
+    }
+  });
+
+  it('both pair queries are SELECT DISTINCT (S-11.1 duplicates, S-11.2 no truncation)', async () => {
+    await repo.getPortfolioResultDimensions(7);
+
+    const pairs = pairStatements();
+    expect(pairs).toHaveLength(2);
+    expect(pairs.some((s) => s.sql.includes('rbp.project_id'))).toBe(true);
+    expect(pairs.some((s) => s.sql.includes('rc.center_id'))).toBe(true);
+    for (const { params } of pairs) {
+      expect(params).toEqual([7]);
+    }
+  });
+
+  it('never uses GROUP_CONCAT, JSON_ARRAYAGG or a template placeholder', async () => {
+    await repo.getPortfolioResultDimensions(7);
+
+    for (const { sql } of statements()) {
+      expect(sql).not.toMatch(/GROUP_CONCAT/i);
+      expect(sql).not.toMatch(/JSON_ARRAYAGG/i);
+      expect(sql).not.toContain('${');
+    }
+  });
+
+  it('keeps only active links and active in-scope results in every statement', async () => {
+    await repo.getPortfolioResultDimensions(7);
+
+    const all = statements();
+    for (const { sql } of all) {
+      expect(sql).toContain('r.version_id = ?');
+      expect(sql).toContain('r.is_active = 1');
+      expect(sql).toContain('r.result_type_id NOT IN (10, 11)');
+    }
+    const projectSql = all.filter((s) => s.sql.includes('rbp.'));
+    expect(projectSql.length).toBeGreaterThanOrEqual(2);
+    for (const { sql } of projectSql) {
+      expect(sql).toContain('rbp.is_active = 1');
+    }
+    const centerSql = all.filter((s) => s.sql.includes('rc.center_id'));
+    expect(centerSql.length).toBeGreaterThanOrEqual(2);
+    for (const { sql } of centerSql) {
+      expect(sql).toContain('rc.is_active = 1');
+    }
+  });
+
+  it('flags W3 projects through r.source = API in the project label statement', async () => {
+    await repo.getPortfolioResultDimensions(7);
+
+    const labels = statements().find((s) => s.sql.includes('clarisa_projects'));
+    expect(labels?.sql).toContain("r.source = 'API'");
+  });
+
+  it('labels Centers from clarisa_center joined to clarisa_institutions', async () => {
+    await repo.getPortfolioResultDimensions(7);
+
+    const labels = statements().find((s) => s.sql.includes('clarisa_center '));
+    expect(labels?.sql).toContain('clarisa_institutions');
+  });
+
+  it('returns the four row sets as the statements returned them', async () => {
+    queryMock.mockImplementation(async (sql: string) => {
+      const s = normalise(sql);
+      if (s.includes('SELECT DISTINCT r.id AS result_id, rbp.project_id'))
+        return [{ result_id: 1, project_id: 5 }];
+      if (s.includes('SELECT DISTINCT r.id AS result_id, rc.center_id'))
+        return [{ result_id: 1, center_id: 'CENTER-03' }];
+      if (s.includes('clarisa_projects'))
+        return [{ id: 5, short_name: 'P5', full_name: 'Project 5', is_w3: 1 }];
+      return [{ code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' }];
+    });
+
+    const out = await repo.getPortfolioResultDimensions(7);
+
+    expect(out).toEqual({
+      projectLinks: [{ result_id: 1, project_id: 5 }],
+      centerLinks: [{ result_id: 1, center_id: 'CENTER-03' }],
+      projects: [{ id: 5, short_name: 'P5', full_name: 'Project 5', is_w3: 1 }],
+      centers: [{ code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' }],
+    });
+  });
+
+  it('wraps a database failure through the repository error handler', async () => {
+    queryMock.mockRejectedValue(new Error('boom'));
+
+    await expect(repo.getPortfolioResultDimensions(7)).rejects.toMatchObject({
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+    });
+  });
+
+  it('never asks the error handler to log the driver error (debug false: it would log the SQL text and binds)', async () => {
+    handlersError.returnErrorRepository.mockClear();
+    queryMock.mockRejectedValue(new Error('select * from results_center boom'));
+
+    await expect(repo.getPortfolioResultDimensions(7)).rejects.toBeDefined();
+
+    expect(handlersError.returnErrorRepository).toHaveBeenCalledTimes(1);
+    expect(handlersError.returnErrorRepository).toHaveBeenCalledWith(
+      expect.objectContaining({ debug: false }),
+    );
+  });
+});

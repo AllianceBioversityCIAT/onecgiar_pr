@@ -107,4 +107,26 @@
 
 ### T-H — Browser check (human)
 
-- **Status:** pending. The user asked for a step-by-step test guide, which was handed over at the end of the run. The commit and push were done on the user's explicit instruction (2026-10-14) before this check.
+- **Final status:** PASS
+- **Date:** 2026-10-15
+- **Where:** `https://prtest.ciat.cgiar.org/portfolio-overview`, the user's admin session, driven through Claude in Chrome. Viewport 1280 px.
+- **Bundle check (disqualifier):** the served lazy chunk `portfolio-overview.component-Z7YX7DB3.js` contains "Portfolio Results Reporting Status", "Applies to W3/Bilateral results only" and "What do these statuses mean", and contains neither "output ranking" nor "Portfolio Reporting Status". Commit `6504812b8` is on `origin/performance-refactor`.
+- **Checks:**
+
+  | Check | Result |
+  |---|---|
+  | No ranking card, no gap; Progress by science program follows the status section | PASS ("ranking" absent from page text) |
+  | Centers block order KPI → Reporting status → Progress by Center | PASS |
+  | Progress by Center chart view | PASS: 16 Centers, chart 476 px high, sr-only table fallback present |
+  | Centers status filter | PASS: "Pending review" highlights its column in the table view |
+  | Title and subtitle | PASS |
+  | Donut total = Total KPI | PASS: 971 = 396 + 436 + 20 + 119 |
+  | Guide link with no URL | PASS: not rendered |
+  | Rejected tooltip on hover | PASS |
+  | Rejected tooltip on keyboard focus | PASS: Tab from Approved focuses `status-tile-rejected`; tooltip shown |
+  | Other tiles | PASS: no tooltip on Approved |
+  | Rejected click toggles the filter | PASS: All → Rejected → All |
+
+- **Not covered:** the 768 px width (resizing would have changed the user's own window). The user accepted the run as complete.
+- **Found, out of scope:** the status pipeline bar (`portfolio-overview.component.html:270`, from `18b359579`, 2026-08-28) renders the sr-only text "Warning: Chart rendered without required accessibility tableModel", which a screen reader would announce. Pre-existing.
+- **Accepted by:** the user, 2026-10-15 ("todo quedó validado").
