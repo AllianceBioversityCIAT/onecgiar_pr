@@ -107,7 +107,7 @@ jobs:
       - name: Install dependencies (lockfile only, no install scripts)
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Lint (the `lint` script without --fix)
-        run: npx eslint "{src,apps,libs,test}/**/*.ts"
+        run: ./node_modules/.bin/eslint "{src,apps,libs,test}/**/*.ts"
       - name: Unit tests with coverage thresholds
         run: npm run test:cov -- --ci
 
@@ -161,7 +161,7 @@ jobs:
         run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm run lint
       - name: Typecheck (application)
         working-directory: onecgiar-pr-client
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npx tsc -p tsconfig.app.json --noEmit
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" ./node_modules/.bin/tsc -p tsconfig.app.json --noEmit
       - name: Unit tests with coverage
         working-directory: onecgiar-pr-client
         run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm run test:coverage -- --ci --silent
