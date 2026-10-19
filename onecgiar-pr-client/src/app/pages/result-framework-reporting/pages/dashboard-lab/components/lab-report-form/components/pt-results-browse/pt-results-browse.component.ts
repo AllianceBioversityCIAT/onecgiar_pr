@@ -170,6 +170,15 @@ export const PT_AUTO_RETRY_DELAY_MS = 8_000;
 /** Upper bound for `preparation.retry_after_s`, so a large value never locks Check again for long. */
 const PT_MAX_RETRY_AFTER_S = 300;
 
+/** Generic `empty` headline — any template reason not listed in {@link PT_EMPTY_MESSAGES}. */
+export const PT_EMPTY_DEFAULT_MESSAGE = 'The Progress Tracker has nothing to propose for this KPI yet';
+
+/** `empty` headlines for the template `fallback_reason` values PT explains. */
+const PT_EMPTY_MESSAGES = new Map<string, string>([
+  ['no_reportable_results', 'Progress Tracker reviewed the evidence for this KPI and found no reportable result yet.'],
+  ['no_readable_original_evidence', 'Progress Tracker could not read the evidence files for this KPI, so there is nothing to propose yet.']
+]);
+
 const PT_DEFAULT_PARTIAL_NOTICE = 'The Progress Tracker is still drafting more proposals for this KPI. Check again in a moment to see them.';
 
 /** One settled call: the envelope, plus whether it looked like a timeout rather than an outage. */
@@ -323,6 +332,8 @@ export class PtResultsBrowseComponent {
   readonly ptUrl = signal<string | null>(null);
   /** Shown above the proposals when PT returned a partial list (`generated_by.complete === false`). */
   readonly partialNotice = signal<string | null>(null);
+  /** Headline of the `empty` state — explains PT's template `fallback_reason` when it is a known one. */
+  readonly emptyMessage = signal(PT_EMPTY_DEFAULT_MESSAGE);
   /** True while the one automatic retry after a timeout is pending — the spinner stays up. */
   readonly autoRetrying = signal(false);
   /** Seconds left before Check again is enabled (`preparation.retry_after_s`); 0 = enabled. */
@@ -498,6 +509,8 @@ export class PtResultsBrowseComponent {
         this.status.set('preparing');
         return;
       }
+      const reason = isTemplate ? String(generatedBy?.fallback_reason ?? '') : '';
+      this.emptyMessage.set(PT_EMPTY_MESSAGES.get(reason) ?? PT_EMPTY_DEFAULT_MESSAGE);
       this.status.set('empty');
       return;
     }

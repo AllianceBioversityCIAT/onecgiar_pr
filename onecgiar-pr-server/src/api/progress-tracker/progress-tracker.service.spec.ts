@@ -365,6 +365,28 @@ describe('ProgressTrackerService', () => {
       expect(result.response.generated_by).toEqual(generatedBy);
     });
 
+    it.each(['no_reportable_results', 'no_readable_original_evidence'])(
+      'passes generated_by.fallback_reason %s through for the client empty state',
+      async (reason) => {
+        mappingRepository.find.mockResolvedValue([mappedRow()]);
+        httpService.get.mockReturnValue(
+          of({
+            data: {
+              results: [],
+              generated_by: { mode: 'template', fallback_reason: reason },
+            },
+          }),
+        );
+
+        const result = await service.getIndicatorResults('5d51da6c6916');
+
+        expect(result.response.generated_by).toEqual({
+          mode: 'template',
+          fallback_reason: reason,
+        });
+      },
+    );
+
     it('drops a non-object preparation and omits it when absent (pre-2026-10-15 PT builds)', async () => {
       mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValueOnce(

@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-10-16 · qa-development-2026-ss · changes/reporting-dynamic-kpi-target-counts DKT-T-1 (header count + target sum) · prior: changes/kpi-progress-target-only (KTO-T-3/T-4/T-6/T-7: has-a-target rule, split line, Target axis first; file cut to the 120-line cap) · prior: 2026-10-14 · JuankCadavid/pt-center-mapping (`ptActivity` input + `PT · N` badge) · prior: 2026-10-13 · qa-development-2026-ss · quick/aow-row-remove-outcomes-figures (P2-3955: AoW header outcomes achievement block + its `rowTitle` text removed — see the 🗑️ bullet in Trampas) · prior: 2026-10-02 · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit`) · prior: 2026-09-21 · qa-development-2026-ss · 118716bc7 · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota Intermediate + `RES-R-3` retirado; "Centros de un target compartido") · prior: 2026-09-04 · qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1 superseded by the tabular redesign)
+**Verified:** 2026-10-19 · JuankCadavid/pt-badge-texts (badge copy `PT · N evidence item(s)`, short `PT · N` <640px, fixed tooltip) · prior: 2026-10-16 · qa-development-2026-ss · changes/reporting-dynamic-kpi-target-counts DKT-T-1 (header count + target sum) · prior: changes/kpi-progress-target-only (KTO-T-3/T-4/T-6/T-7: has-a-target rule, split line, Target axis first; file cut to the 120-line cap) · prior: 2026-10-14 · JuankCadavid/pt-center-mapping (`ptActivity` input + `PT · N` badge) · prior: 2026-10-13 · qa-development-2026-ss · quick/aow-row-remove-outcomes-figures (P2-3955: AoW header outcomes achievement block + its `rowTitle` text removed — see the 🗑️ bullet in Trampas) · prior: 2026-10-02 · bugfix/achieved-counts-submitted ACS-T-4 (hides the QA/Prel pair behind `showQaPrelSplit`) · prior: 2026-09-21 · qa-development-2026-ss · 118716bc7 · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota Intermediate + `RES-R-3` retirado; "Centros de un target compartido") · prior: 2026-09-04 · qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1 superseded by the tabular redesign)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: tarjetas colapsables por Area of
@@ -61,6 +61,7 @@ de estado `border-l-[3px]` y botones con aislamiento de eventos.
 ## Badge `PT · N` (Progress Tracker)
 - Chip en ambos layouts (`data-testid="pt-activity-badge"`) solo si `ptCountOf(row) > 0`. `centerAcronymsOf` delega en
   `pt-activity.ts` (`centerAcronymsOfRow`): chips, filtro por centro y badge coinciden; cambia la regla allí.
+- Copy desde `pt-activity.ts`: `ptActivityLabel` (`PT · 2 evidence items` / singular) ≥640px, `ptActivityShortLabel` (`PT · 2`) debajo; tooltip fijo `PT_ACTIVITY_TOOLTIP` (no lleva la cifra) vía `prTooltip`, sin `title` nativo (doble tooltip).
 
 ## QA/Prel oculto tras `showQaPrelSplit` (ACS-R-5, `bugfix/achieved-counts-submitted`)
 - `showQaPrelSplit = SHOW_QA_PREL_SPLIT` (`shared/constants/achieved-display-basis.ts`, default `false`). Cada par

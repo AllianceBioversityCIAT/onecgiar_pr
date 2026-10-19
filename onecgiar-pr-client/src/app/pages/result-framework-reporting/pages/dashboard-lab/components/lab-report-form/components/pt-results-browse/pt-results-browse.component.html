@@ -153,7 +153,7 @@
       class="flex flex-col items-center justify-center py-8 px-4 text-center border border-gray-200 rounded-lg bg-gray-50"
       data-test="pt-empty">
       <i class="pi pi-inbox text-2xl text-gray-400 mb-2" aria-hidden="true"></i>
-      <p class="m-0 text-sm font-semibold text-gray-800">The Progress Tracker has nothing to propose for this KPI yet</p>
+      <p class="m-0 text-sm font-semibold text-gray-800" data-test="pt-empty-message">{{ emptyMessage() }}</p>
       <p class="m-0 mt-1 max-w-sm text-xs text-gray-600">
         This is not an error — check back later, or report this result yourself.
       </p>
