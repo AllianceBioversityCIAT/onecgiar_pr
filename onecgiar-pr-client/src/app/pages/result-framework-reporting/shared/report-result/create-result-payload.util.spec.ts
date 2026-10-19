@@ -504,4 +504,17 @@ describe('buildCreateResultPayload — Progress Tracker provenance (PTB-T-5)', (
 
     expect(JSON.stringify(payload)).not.toMatch(/countries|impact_areas|gender_split/);
   });
+
+  // PTB-R-18a (2026-10-19): links + matched partners travel as a sibling block, never in `result`.
+  it('sends progress_tracker_prefill as a top-level sibling only with a pick', () => {
+    const ptPrefill = { evidence_links: [{ url: 'https://a.org/x', title: 'X' }], partners: [{ clarisa_id: 7, name: 'Org' }] };
+    const withPick = buildCreateResultPayload(options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptProposal, ptPrefill }));
+    expect(withPick['progress_tracker_prefill']).toEqual(ptPrefill);
+    expect(withPick['result']).not.toHaveProperty('progress_tracker_prefill');
+
+    const noPick = buildCreateResultPayload(options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptPrefill }));
+    expect(noPick).not.toHaveProperty('progress_tracker_prefill');
+    const noBlock = buildCreateResultPayload(options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptProposal, ptPrefill: null }));
+    expect(noBlock).not.toHaveProperty('progress_tracker_prefill');
+  });
 });

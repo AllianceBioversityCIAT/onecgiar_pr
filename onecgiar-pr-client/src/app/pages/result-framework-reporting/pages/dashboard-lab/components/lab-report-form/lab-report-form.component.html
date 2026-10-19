@@ -385,6 +385,24 @@
         <p class="m-0 text-[12px] font-semibold text-violet-700" data-testid="pt-nothing-saved-note">
           Nothing has been saved yet — press "Create and continue" below to create this result.
         </p>
+        <!-- PTB-R-18a: what PT suggested and this drawer does not apply. Repeated in the post-create alert. -->
+        @if (ptPendingChecklist().length) {
+          <details class="mt-1 rounded-lg border border-violet-200 bg-white/70 px-3 py-2" data-testid="pt-pending-checklist">
+            <summary class="cursor-pointer text-[12px] font-semibold text-violet-800">
+              Pending from Progress Tracker ({{ ptPendingChecklist().length }}) — complete in the result after creating it
+            </summary>
+            <ul class="m-0 mt-2 flex list-disc flex-col gap-1 pl-4 text-[12px] leading-snug text-gray-700">
+              @for (item of ptPendingChecklist(); track $index) {
+                <li>
+                  <span class="font-semibold">{{ item.label }}</span>
+                  @if (item.detail) {
+                    <span> — {{ item.detail }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          </details>
+        }
       </div>
     }
 
