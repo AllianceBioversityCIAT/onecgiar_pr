@@ -2,12 +2,21 @@
  * P2-3296 AC2-AC4 — rolling the indicator-level progress up to HLO, Area of Work and
  * Science Program.
  *
- * The whole ticket hinges on one decision, so it lives in one predicate:
- * `hasUsableTarget`. Nicoleta's ruling was "leave the target as is - if anything is
- * reported will be assessed as 'overachieved'". *Overachieved* is a verdict, not a
- * quantity: with a target of zero there is no ratio to compute, only a division by zero.
- * So an indicator without a usable target is labelled on its own row and kept OUT of the
- * averages above it.
+ * REVERSAL (2026-10-19, spec changes/kpi-progress-capped-average, KPC-R-1/R-3/R-6): the first
+ * build of this file did NOT cap an indicator at 100% (Nicoleta, P2-3296: overachievement stayed
+ * visible) and averaged an Area of Work / Program as a mean of the children's means (Ángel). Both
+ * are superseded by Nicoleta's email "RE: Resync PRMS with ToC for BDN" (KZ-BOR-1):
+ *   1. each indicator contributes `min(achieved / target, 1) * 100`, so one overachiever cannot
+ *      hide indicators that missed (`ratio`);
+ *   2. an HLO / AoW / Program is the FLAT mean over the leaf indicators with a target, so
+ *      `rollUpChildren` weights every child by `indicators_counted` instead of averaging means.
+ * The indicator row's own `progress_percentage` keeps the raw figure (KPC-S-6.3); only the
+ * averages cap.
+ *
+ * What stays: `hasUsableTarget`. Nicoleta's ruling was "leave the target as is - if anything is
+ * reported will be assessed as 'overachieved'". *Overachieved* is a verdict, not a quantity: with
+ * a target of zero there is no ratio to compute, only a division by zero. So an indicator without
+ * a usable target is labelled on its own row and kept OUT of the averages above it.
  *
  * Counting it as 0% would punish a team for an empty field; letting the current
  * `value * 100` branch through would put 50,000,000% into an average and destroy every
@@ -97,9 +106,14 @@ export function formatProgress(progressPercentage: number): string {
     : `${rounded.toFixed(1)}%`;
 }
 
+/**
+ * KPC-R-1 (Nicoleta, "RE: Resync PRMS with ToC for BDN", 2026-10): achievement =
+ * min(achieved / target, 1), so one over-achieved indicator can't hide others that missed.
+ * The row's own `progress_percentage` keeps the raw figure; only the averages cap it.
+ */
 function ratio(achieved: unknown, target: number): number {
   const value = Number(achieved);
-  return (Number.isFinite(value) ? value : 0) / target;
+  return Math.min((Number.isFinite(value) ? value : 0) / target, 1);
 }
 
 function averageOf(values: number[]): number | null {
@@ -107,6 +121,23 @@ function averageOf(values: number[]): number | null {
     return NO_MEASURABLE_PROGRESS;
   }
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+/** Mean of the children's figures weighted by the leaf indicators behind each one. */
+function weightedAverageOf(
+  children: readonly RollupChild[],
+  valueOf: (child: RollupChild) => number,
+): number | null {
+  const weight = (child: RollupChild) =>
+    child.progress?.indicators_counted ?? 0;
+  const totalWeight = children.reduce((sum, child) => sum + weight(child), 0);
+  if (totalWeight === 0) {
+    return NO_MEASURABLE_PROGRESS;
+  }
+  return (
+    children.reduce((sum, child) => sum + valueOf(child) * weight(child), 0) /
+    totalWeight
+  );
 }
 
 function present(rollup: NumericRollup): ProgressRollup {
@@ -174,9 +205,8 @@ function rollUpIndicatorsNumeric(
 /**
  * AC2 — one HLO / ToC node, averaged over its own indicators.
  *
- * A simple mean, not a weighted one: the indicators under a node are separate commitments
- * in different units (USD next to a count of knowledge products), so there is no common
- * scale to weight them on. Ángel confirmed the existing formula stays as it is.
+ * A simple mean over the node's own indicators: each one is already a unitless, capped
+ * percentage (`ratio`), so USD next to a count of knowledge products need no common scale.
  */
 export function rollUpIndicators(
   indicators: readonly RollupIndicator[],
@@ -191,10 +221,11 @@ export interface RollupChild {
 /**
  * AC3 / AC4 — Area of Work over its HLOs, Science Program over its Areas of Work.
  *
- * The mean is taken over the children's own percentages, so every HLO weighs the same
- * regardless of how many indicators hang off it — an HLO is one commitment. A child with
- * nothing measurable is skipped rather than counted as zero, exactly as an indicator
- * without a target is.
+ * Nicoleta (2026-10): "the % for an AoW or HLO is the average of those indicator %". So the
+ * mean is FLAT over the leaf indicators, not a mean of the children's means: each child's
+ * figure is weighted by `indicators_counted`, which is exactly the leaf average because every
+ * child figure is itself the mean over those indicators. A child with nothing measurable is
+ * skipped rather than counted as zero, exactly as an indicator without a target is.
  */
 export function rollUpChildren(
   children: readonly RollupChild[],
@@ -206,16 +237,19 @@ export function rollUpChildren(
   );
 
   return present({
-    actual: averageOf(
-      measurable.map((child) => child.progress!.progress_value!),
+    actual: weightedAverageOf(
+      measurable,
+      (child) => child.progress!.progress_value!,
     ),
-    preliminary: averageOf(
-      measurable.map((child) => child.progress?.preliminary_value ?? 0),
+    preliminary: weightedAverageOf(
+      measurable,
+      (child) => child.progress?.preliminary_value ?? 0,
     ),
     // @akili-spec bugfix/achieved-counts-submitted — same `measurable` set (keyed on
     // progress_value !== null, which depends on targets only, so it is identical across bases).
-    achieved: averageOf(
-      measurable.map((child) => child.progress?.achieved_value ?? 0),
+    achieved: weightedAverageOf(
+      measurable,
+      (child) => child.progress?.achieved_value ?? 0,
     ),
     counted: measurable.length,
     total: list.length,
