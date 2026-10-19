@@ -125,6 +125,7 @@
   - [ ] Type guard proven with both indicator fixtures (`PTB-AC-9`, `PTB-AC-10`)
   - [ ] `reporting-aow-table` still sends `''` (`PTB-AC-13`)
   - [ ] Countries / impact areas / gender split absent from the payload (`PTB-AC-17`)
+    - Amended 2026-10-19 (`PTB-R-18a`, `PTB-AC-17a`): links + matched partners now travel in `progress_tracker_prefill`; the lock moved to the "PTB-R-18 / PTB-R-18a" test in `lab-report-form.component.spec.ts` (allowlist).
   - [ ] No create request issued on selection (`PTB-AC-11`)
 
 ---

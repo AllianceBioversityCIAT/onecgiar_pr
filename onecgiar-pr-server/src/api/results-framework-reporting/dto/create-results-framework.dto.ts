@@ -5,6 +5,7 @@ import { ContributorResultTocResult } from '../../results/results-toc-results/dt
 import { ResultsCenterDto } from '../../results/results-centers/dto/results-center.dto';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { PtResultProvenanceDto } from '../../progress-tracker/dto/pt-result-provenance.dto';
+import { PtResultPrefillDto } from '../../progress-tracker/dto/pt-result-prefill.dto';
 
 export class ResultsFrameworkTocIndicatorDto {
   @ApiProperty({
@@ -216,4 +217,12 @@ export class CreateResultsFrameworkResultDto {
       'Provenance of a result created from a Progress Tracker proposal. Omit it for any other create; when present it is validated before the result is created and stored after associations.',
   })
   progress_tracker_provenance?: PtResultProvenanceDto;
+
+  // PTB-R-18a (2026-10-19)
+  @ApiPropertyOptional({
+    type: () => PtResultPrefillDto,
+    description:
+      'Evidence links and CLARISA-matched partners from the same Progress Tracker pick. Only read together with progress_tracker_provenance; applied best-effort after the result is created and never fails the create.',
+  })
+  progress_tracker_prefill?: PtResultPrefillDto;
 }

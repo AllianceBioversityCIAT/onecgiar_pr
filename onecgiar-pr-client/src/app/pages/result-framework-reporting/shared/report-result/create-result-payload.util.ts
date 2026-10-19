@@ -160,6 +160,18 @@ export interface CreateResultPayloadOptions {
    * `PTB-R-17` true: the key is ABSENT from the payload, not `null` or `{}` (`PTB-AC-13`).
    */
   ptProposal?: PtProvenanceInput | null;
+  /**
+   * `PTB-R-18a` (2026-10-19) — evidence links and CLARISA-matched partners from the same pick,
+   * built by `lab-report-form/pt-prefill.util.ts` (`buildPtPrefillBlock`). The server saves them
+   * best-effort after the result exists; `null` keeps the key absent.
+   */
+  ptPrefill?: PtPrefillInput | null;
+}
+
+/** `progress_tracker_prefill` — a sibling of `progress_tracker_provenance`, whose DTO is closed. */
+export interface PtPrefillInput {
+  evidence_links: { url: string; title: string }[];
+  partners: { clarisa_id: number; name: string }[];
 }
 
 /**
@@ -167,7 +179,8 @@ export interface CreateResultPayloadOptions {
  * full `PtProposalDto` — this file has no reason to know about guidance-only fields
  * (`countries` / `impact_areas` / `gender_split`, `PTB-R-18`) or the fields the pre-fill mapping in
  * `lab-report-form.component.ts` already consumed before building the payload (`title`,
- * `result_type`, `knowledge_product_handle`).
+ * `result_type`, `knowledge_product_handle`, contribution, centers). Evidence links and matched
+ * partners come separately, as {@link PtPrefillInput} (`PTB-R-18a`).
  */
 export interface PtProvenanceInput {
   /** The draft description — becomes `result.description` (the narrative carries only the origin note). */
@@ -325,6 +338,8 @@ export function buildCreateResultPayload(options: CreateResultPayloadOptions): R
     bilateral_project: options.bilateralProjects ?? [],
     // PTB-R-16 — a sibling of `toc_progressive_narrative`, never inside `result`. Spread only when
     // there IS a pick, so the key is genuinely absent (not `null`/`{}`) for every other caller.
-    ...(ptProvenance ? { progress_tracker_provenance: ptProvenance } : {})
+    ...(ptProvenance ? { progress_tracker_provenance: ptProvenance } : {}),
+    // PTB-R-18a — only with a pick that has links or matched partners; absent otherwise.
+    ...(ptProvenance && options.ptPrefill ? { progress_tracker_prefill: options.ptPrefill } : {})
   };
 }

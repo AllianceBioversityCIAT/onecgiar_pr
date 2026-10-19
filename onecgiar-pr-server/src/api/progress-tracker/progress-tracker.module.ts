@@ -11,6 +11,10 @@ import { ProgressTrackerController } from './progress-tracker.controller';
 import { ProgressTrackerResultProvenance } from './entities/progress-tracker-result-provenance.entity';
 import { ProgressTrackerProvenanceService } from './progress-tracker-provenance.service';
 import { ProgressTrackerActivityService } from './progress-tracker-activity.service';
+import { ProgressTrackerPrefillService } from './progress-tracker-prefill.service';
+import { Evidence } from '../results/evidences/entities/evidence.entity';
+import { ResultsByInstitution } from '../results/results_by_institutions/entities/results_by_institution.entity';
+import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 
 /**
  * `PTM-T-2` — module skeleton for the Progress Tracker Interoperability surface
@@ -41,6 +45,9 @@ import { ProgressTrackerActivityService } from './progress-tracker-activity.serv
  *
  * `ProgressTrackerActivityService` joins ready-counts with the map for the Reporting tab's
  * per-row `PT · N` badges (`GET programs/:programId/indicator-activity`).
+ *
+ * `ProgressTrackerPrefillService` (`PTB-R-18a`) saves a pick's evidence links and matched partners
+ * after create; plain `Repository<>` injections, same reasoning as `Version` above.
  */
 @Module({
   imports: [
@@ -49,6 +56,9 @@ import { ProgressTrackerActivityService } from './progress-tracker-activity.serv
       ProgressTrackerIndicatorMap,
       ProgressTrackerResultProvenance,
       Version,
+      Evidence,
+      ResultsByInstitution,
+      ClarisaInstitution,
     ]),
   ],
   controllers: [ProgressTrackerController],
@@ -58,7 +68,12 @@ import { ProgressTrackerActivityService } from './progress-tracker-activity.serv
     PtPorbRepository,
     ProgressTrackerProvenanceService,
     ProgressTrackerActivityService,
+    ProgressTrackerPrefillService,
   ],
-  exports: [ProgressTrackerService, ProgressTrackerProvenanceService],
+  exports: [
+    ProgressTrackerService,
+    ProgressTrackerProvenanceService,
+    ProgressTrackerPrefillService,
+  ],
 })
 export class ProgressTrackerModule {}

@@ -42,12 +42,28 @@ export interface PtGeoDto {
   subnational_areas: string | null;
 }
 
+/** One CLARISA institution PT considered for an unmatched partner — shown in the pending checklist only. */
+export interface PtClarisaCandidateDto {
+  clarisa_id: number | null;
+  name: string;
+}
+
 export interface PtPartnerDto {
   name: string;
   acronym: string | null;
   role: string | null;
   match_status: PtMatchStatus | null;
   is_cgiar_center: boolean | null;
+  /** CLARISA institution id PT matched; only `matched` partners with an id are saved (as predicted). */
+  clarisa_id?: number | null;
+  clarisa_candidates?: PtClarisaCandidateDto[];
+}
+
+/** A CGIAR center as PT names it — any of name / acronym / code; mapped to PRMS centers client-side. */
+export interface PtCenterRefDto {
+  name: string | null;
+  acronym: string | null;
+  code: string | null;
 }
 
 export interface PtImpactAreaDetailDto {
@@ -88,14 +104,28 @@ export interface PtProposalDto {
   rationale: string;
   missing_info: string[];
   /**
-   * Display-only detail blocks (PT 2026-10-15). Empty / `null` when PT does not send them — the
-   * 2-oct PT build in prod has none. Guidance only, never in the create payload (`PTB-R-18`).
+   * Detail blocks (PT 2026-10-15). Empty / `null` when PT does not send them — the 2-oct PT build
+   * in prod has none. Geography and impact areas stay guidance only (`PTB-R-18`); `PTB-R-18a`
+   * (2026-10-19) lets `matched` partners and http(s) `evidence_links` travel in
+   * `progress_tracker_prefill` — see `../../pt-prefill.util.ts`.
    */
   geo: PtGeoDto | null;
   partners: PtPartnerDto[];
   impact_area_details: PtImpactAreaDetailDto[];
   /** Only http(s) links survive normalization. */
   evidence_links: PtEvidenceLinkDto[];
+  /**
+   * Prefill sources (PT 2026-10-19, amends `PTB-R-18`). `null` / empty when PT sends none.
+   * `contribution_value` is numeric only (`contribution.value`, else `toc.contribution_value`).
+   */
+  contribution_value?: number | null;
+  lead_center?: PtCenterRefDto | null;
+  contributing_centers?: PtCenterRefDto[];
+  led_by_external_partner?: boolean | null;
+  /** Fields PT says the user must complete in PRMS — listed in the pending checklist. */
+  to_complete_in_prms?: string[];
+  /** PT per-field policy map (`apply` | `suggest` | `none`), raw; read through `ptFieldPolicy`. */
+  policy?: Record<string, unknown> | null;
   /** Envelope-level provenance, copied onto each proposal — see class doc above. */
   generated_at?: string;
   evidence_fingerprint?: string;
@@ -231,6 +261,13 @@ interface PtRawProposal {
   partners?: unknown[] | null;
   impact_area_details?: Record<string, { score?: unknown; justification?: unknown } | null> | null;
   evidence_links?: unknown[] | null;
+  contribution?: unknown;
+  toc?: { contribution_value?: unknown } | null;
+  lead_center?: unknown;
+  contributing_centers?: unknown[] | null;
+  led_by_external_partner?: unknown;
+  to_complete_in_prms?: unknown[] | null;
+  policy?: Record<string, unknown> | null;
 }
 
 /** Labels for the CGIAR impact-area keys PT uses; anything else is title-cased from its key. */
@@ -283,6 +320,38 @@ function toSubnational(value: unknown): string | null {
 }
 
 const nonNull = <T>(value: T | null): value is T => value !== null;
+
+/** A finite, non-negative number or numeric string; anything else (text, ranges, `null`) is `null`. */
+export function toPtNumber(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : null;
+  if (typeof value !== 'string' || !/^\s*\d+(\.\d+)?\s*$/.test(value)) return null;
+  return Number(value);
+}
+
+const toPositiveId = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+};
+
+/** A center as a plain string (name or acronym) or an object with `name` / `acronym` / `code`. */
+function toCenterRef(value: unknown): PtCenterRefDto | null {
+  if (typeof value === 'string') {
+    const text = value.trim();
+    return text ? { name: text, acronym: null, code: null } : null;
+  }
+  const rec = asRecord(value);
+  if (!rec) return null;
+  const ref = { name: asTextOrNull(rec['name']), acronym: asTextOrNull(rec['acronym']), code: asTextOrNull(rec['code']) };
+  return ref.name || ref.acronym || ref.code ? ref : null;
+}
+
+/** `to_complete_in_prms`: strings, or objects carrying `label` / `field` / `name`. */
+function toCompleteItem(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() || null;
+  const rec = asRecord(value);
+  return rec ? asTextOrNull(rec['label']) || asTextOrNull(rec['field']) || asTextOrNull(rec['name']) : null;
+}
 
 /** Only absolute http(s) URLs are rendered as links — never `javascript:`, `data:` or relative. */
 export function isSafeHttpUrl(value: unknown): value is string {
@@ -549,6 +618,12 @@ export class PtResultsBrowseComponent {
       partners: this.toPartners(item.partners),
       impact_area_details: this.toImpactAreaDetails(item.impact_area_details),
       evidence_links: this.toEvidenceLinks(item.evidence_links),
+      contribution_value: toPtNumber(asRecord(item.contribution)?.['value'] ?? item.contribution) ?? toPtNumber(asRecord(item.toc)?.['contribution_value']),
+      lead_center: toCenterRef(item.lead_center),
+      contributing_centers: (Array.isArray(item.contributing_centers) ? item.contributing_centers : []).map(toCenterRef).filter(nonNull),
+      led_by_external_partner: typeof item.led_by_external_partner === 'boolean' ? item.led_by_external_partner : null,
+      to_complete_in_prms: (Array.isArray(item.to_complete_in_prms) ? item.to_complete_in_prms : []).map(toCompleteItem).filter(nonNull),
+      policy: asRecord(item.policy),
       generated_at: body.generated_at,
       evidence_fingerprint: body.evidence_fingerprint
     };
@@ -583,12 +658,21 @@ export class PtResultsBrowseComponent {
         const name = asText(rec?.['name']) || asText(rec?.['acronym']);
         if (!rec || !name) return null;
         const center = rec['is_cgiar_center'];
+        const candidates = Array.isArray(rec['clarisa_candidates']) ? (rec['clarisa_candidates'] as unknown[]) : [];
         return {
           name,
           acronym: asTextOrNull(rec['acronym']),
           role: asTextOrNull(rec['role']),
           match_status: asTextOrNull(rec['match_status']),
-          is_cgiar_center: typeof center === 'boolean' ? center : null
+          is_cgiar_center: typeof center === 'boolean' ? center : null,
+          clarisa_id: toPositiveId(rec['clarisa_id']),
+          clarisa_candidates: candidates
+            .map(candidate => {
+              const c = asRecord(candidate);
+              const candidateName = asText(c?.['name']) || asText(c?.['acronym']);
+              return c && candidateName ? { clarisa_id: toPositiveId(c['clarisa_id'] ?? c['id']), name: candidateName } : null;
+            })
+            .filter(nonNull)
         };
       })
       .filter(nonNull);

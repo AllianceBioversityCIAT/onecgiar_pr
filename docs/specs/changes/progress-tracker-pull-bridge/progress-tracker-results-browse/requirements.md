@@ -92,7 +92,14 @@ It consumes the routes sibling child 1 exposes, addressed by **PRMS ids only** (
 - **`PTB-R-15`** While a proposal is selected and unsaved, the form MUST display a banner stating that nothing has been saved.
 - **`PTB-R-16`** The create payload MUST carry the draft description and its provenance tail in `toc_progressive_narrative`, and MUST carry the provenance fields (`result_key`, `evidence_fingerprint`) child 1 persists.
 - **`PTB-R-17`** Every existing caller of the create-payload builder MUST continue to send an empty `toc_progressive_narrative`. Only the Progress Tracker path sets a value.
-- **`PTB-R-18`** Countries, impact-area scores and gender split from a proposal MUST be displayed as guidance only and MUST NOT be written into the create payload.
+- **`PTB-R-18`** Countries, impact-area scores and gender split from a proposal MUST be displayed as guidance only and MUST NOT be written into the create payload. *(Amended 2026-10-19 by `PTB-R-18a`: the prefill is no longer limited to title / type / description — geography, impact areas, gender split and the type-specific blocks stay guidance only.)*
+- **`PTB-R-18a`** *(2026-10-19, approved by Juan Carlos: "Haz la fase 1 y los partners matched juntos")* A pick MAY prefill, following PT's per-field `policy` (`apply` prefills, `suggest` goes to the checklist, `none` is ignored; no policy = `apply`):
+  - **Contribution** — `contribution.value` (else `toc.contribution_value`) into *Contribution to indicator target*, numeric only, only into an empty field, never over a value the user typed; skipped for knowledge products (always 1).
+  - **CGIAR centers** — `lead_center`, `contributing_centers` and partners with `is_cgiar_center = true`, mapped by code / acronym / name to the PRMS centers catalogue, added to the selection (ToC ones in the primary list, others through `Other(s)`), never removing a user pick.
+  - **Evidence links** — http(s) only, deduped, at most 6, sent as `progress_tracker_prefill.evidence_links` and saved server-side as MAIN evidences without files.
+  - **Matched partners** — only `match_status = matched` with a `clarisa_id` and `is_cgiar_center` false, sent as `progress_tracker_prefill.partners`; the server keeps only ids that exist, are active, are reportable and are not centers, and saves them in `results_by_institution` with the partners-form role (`PARTNER`, or `KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS` for a KP), no delivery type and `is_predicted = true`. Saved even under `suggest` (stopped only by `none`). `no_applicable_partner` and `is_lead_by_partner` are never set.
+  - The server step is best-effort: it never fails the create; skipped partners come back in `response.progressTrackerPrefill.partners_skipped`.
+  - Everything not applied (`to_complete_in_prms`, unmatched partners with their `clarisa_candidates`, unmapped centers, `suggest` fields, external lead, geography, impact areas, gender split) is listed as **Pending from Progress Tracker** under the pick banner and again in a persistent alert after create.
 
 ### Should (SHOULD)
 
@@ -141,7 +148,8 @@ It consumes the routes sibling child 1 exposes, addressed by **PRMS ids only** (
 | `PTB-AC-14` | An indicator in **emerging mode** (`isEmerging()` true) | The form renders | The sticky **Create and continue** footer renders, **and IT MUST** be reachable — this is the regression the module guide records |
 | `PTB-AC-15` | Any existing indicator type on Browse repositories or Manual entry | The user completes the existing flow | Behavior is unchanged and the pre-existing suite passes **without any test being edited** |
 | `PTB-AC-16` | The client bundle and a full browse-to-create session | The browser's network log is inspected | No request targets the **Progress Tracker upstream host** (the `PT_INTEROP_BASE_URL` origin; PRMS's own pre-existing `execute-api` / `synapsis-analytics.com` calls are out of scope — narrowed 2026-09-22), **and no request the browser issues** contains a Progress Tracker `indicator_id` or API key. A **received response body** carrying the id inside `result_key` / `source.pt_url` is **permitted** (`PTB-R-6c`) |
-| `PTB-AC-17` | A proposal carrying countries, impact areas or gender split | The user presses "Use this result" then Create | Those values are shown as guidance, **and it must NOT** appear in the create payload |
+| `PTB-AC-17` | A proposal carrying countries, impact areas or gender split | The user presses "Use this result" then Create | Those values are shown as guidance, **and it must NOT** appear in the create payload *(still true after `PTB-R-18a`; the payload may now carry `progress_tracker_prefill` with links + matched partners only)* |
+| `PTB-AC-17a` | A proposal with a numeric contribution, mappable centers, http(s) links and matched / unmatched partners | The user picks it, then Create | Contribution and centers are prefilled without overwriting user input; only allowlisted links and matched partners travel; unmatched partners, geography and impact areas are listed as pending, never sent |
 
 Cross-cutting project ACs that apply without restatement: `AC-1`, `AC-3`, `AC-9`.
 
@@ -216,6 +224,7 @@ Family-level gates not restated as blockers here: D1 egress, D4 QA programs, D5 
 | `PTB-R-16` | Narrative + provenance in the payload | `PTB-AC-12` |
 | `PTB-R-17` | Existing callers still send `''` | `PTB-AC-13` |
 | `PTB-R-18` | Guidance-only fields excluded | `PTB-AC-17` |
+| `PTB-R-18a` | Phase 1 prefill + matched partners | `PTB-AC-17a` |
 | `PTB-R-20` | ~1.5 s first paint, upgrade in place | `PTB-AC-3` |
 | `PTB-R-21` | Honest loading copy for ~20 s | `PTB-AC-3` (+ D-9 human gate) |
 | `PTB-R-22` | Mounted and retained across tab switches | `PTB-AC-15` |
