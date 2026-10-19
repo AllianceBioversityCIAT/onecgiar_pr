@@ -15,7 +15,7 @@ import {
   PrTableBodyDirective,
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
-import { buildRatio, hasTarget, pendingOf, sumTargetValues } from '../../reporting-burndown';
+import { buildRatio, hasTarget, pendingOf } from '../../reporting-burndown';
 import { PtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityTooltip } from '../../pt-activity';
 import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
 
@@ -1052,17 +1052,6 @@ export class ReportingAowTableComponent {
     this.openCardFilterKey.set(null);
   }
 
-  /** Sum of target values across an HLO's rows. */
-  hloTargetSum(hlo: { rows?: ReportingIndicator[] }): string {
-    return sumTargetValues(hlo.rows);
-  }
-
-  /** Sum of achieved values across an HLO's rows. */
-  hloAchievedSum(hlo: { rows?: ReportingIndicator[] }): string {
-    const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.actual_achieved_value_sum ?? 0)) || 0), 0);
-    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
-  }
-
   hloJumpList(group: ReportingAowGroup): { key: string; name: string; count: number }[] {
     const bands = this.bandsOf(group);
     const list: { key: string; name: string; count: number }[] = [];
@@ -1121,25 +1110,6 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * The AoW header ratio — `3 of 8 · 38%` in the reference.
-   *
-   * `done` counts KPIs with SOMETHING REPORTED, not KPIs that reached 100%. That is the only
-   * reading under which the design's own worked example adds up: 3 of 8 = 37.5%, shown as 38%.
-   * Counting completions instead produced "0 of 30 · 0%" on real data — technically true and
-   * completely useless, since almost nothing is ever at 100% mid-cycle.
-   *
-   * Counted over the UNFILTERED set on purpose: a progress figure that moves when you type in a
-   * search box is not progress, it is a coincidence. `group.indicators` is that unfiltered set —
-   * EXCEPT when the host's Only-pending toggle is on, in which case it has already been narrowed
-   * and the host stashes the pre-toggle set on `__allIndicators` (see
-   * `dashboard-lab.applyBurndownFilterAndSort`); prefer that side-channel field when present.
-   *
-   * Delegates to `buildRatio` (`reporting-burndown.ts`) so this and the By-AOW banner's
-   * `buildAowBannerStats` apply the has-a-target rule identically (MRF-R-6, KTO-R-2, MRF-AC-5/AC-6).
-   *
-   * @akili-spec changes/mass-reporting-flow
-   */
-  /**
    * P2-3296 — the achievement figures, at any level.
    *
    * A dash, never 0%: an indicator with no usable target (absent, or zero) is excluded from every
@@ -1163,19 +1133,19 @@ export class ReportingAowTableComponent {
     const kpiNote = Number.isFinite(kpiTotal) && kpiTotal > 0 ? ` ${kpiTotal} KPIs sit under those nodes.` : '';
 
     if (!counted) {
-      return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} KPI reporting progress uses only KPIs with a target in the ratio above.`;
+      return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} The KPI progress % above averages only the KPIs with a target.`;
     }
 
     if (!this.showQaPrelSplit) {
       return (
         `ToC achievement — ${this.achievementLabel(achievement)}, averaged across ${scope}.${kpiNote} ` +
-        'KPI reporting progress counts only KPIs with a target separately.'
+        'The KPI progress % is a separate figure that averages only the KPIs with a target.'
       );
     }
 
     return (
       `ToC achievement — QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
-      `averaged across ${scope}.${kpiNote} KPI reporting progress counts only KPIs with a target separately.`
+      `averaged across ${scope}.${kpiNote} The KPI progress % is a separate figure that averages only the KPIs with a target.`
     );
   }
 
@@ -1272,12 +1242,11 @@ export class ReportingAowTableComponent {
     return this.ratioTitle(group);
   }
 
-  /** KTO-R-5 — the one-sentence rule, shown in the ⓘ panel of every AoW / Intermediate / 2030 card. */
-  readonly ratioRuleSentence = 'The percentage is calculated using only the KPIs that have a target defined.';
+  /** KPC-R-10 — the one-sentence rule, shown in the ⓘ panel of every AoW / Intermediate / 2030 card. */
+  readonly ratioRuleSentence = 'Average achievement of the KPIs with a target (achieved ÷ target, capped at 100%).';
 
-  /** KTO-R-5 — tooltip on the header `%`. */
-  readonly ratioPercentTooltip =
-    'Share of KPIs with a target that have something reported against them. KPIs with no target set are not counted. This is coverage of the plan, not achievement against the targets.';
+  /** KPC-R-10 — tooltip on the header `%`: the same sentence as the ⓘ panel. */
+  readonly ratioPercentTooltip = this.ratioRuleSentence;
 
   /**
    * The set both ratio readings count over. `__allIndicators` is a side-channel field the host adds
@@ -1308,13 +1277,6 @@ export class ReportingAowTableComponent {
   /** Card header count (DKT-R-1): size of the card KPI set (`ratioBase`); `group.count` while loading. */
   headerCount(group: ReportingAowGroup): string {
     return this.countLabel(this.headerPending(group) ? group.count : this.ratioBase(group).length);
-  }
-
-  /** Card header target sum (DKT-R-2), e.g. `63 targets` / `1 target`; `''` while loading. */
-  headerTargets(group: ReportingAowGroup): string {
-    if (this.headerPending(group)) return '';
-    const sum = sumTargetValues(this.ratioBase(group));
-    return `${sum} ${sum === '1' ? 'target' : 'targets'}`;
   }
 
   countLabel(n: number, noun = 'KPI'): string {

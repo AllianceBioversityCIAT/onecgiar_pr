@@ -2,8 +2,10 @@
  * Pure burn-down helpers for the Reporting-tab surfaces (By-AOW banner, grouped header ratio,
  * band controls, session counter). Single home of the "has a target" rule (KTO-R-1): a KPI has a
  * target when its target value is finite and > 0 — the achieved value never matters, so a reported
- * row with target 0 (shown as *Overachieved*) has NO target. Ratios (`done / total`) count only
- * rows with a target; rows without one are excluded from denominators and numerators, hidden by
+ * row with target 0 (shown as *Overachieved*) has NO target. Ratios count only rows with a target
+ * (`done` of `total`; the % is the flat average of each KPI's capped achievement, see `buildRatio`
+ * and `kpiProgressOf`, spec `changes/kpi-progress-capped-average`); rows without a target are
+ * excluded from denominators and numerators, hidden by
  * Only-pending, skipped by Next pending and ranked last in Remaining-work order. Counts of KPIs
  * (cards, band "Total KPIs") are NOT ratios and keep every planned row — that split is the
  * caller's, see spec `changes/kpi-progress-target-only` (KTO-DD-3).
@@ -22,6 +24,7 @@
  * @akili-spec changes/mass-reporting-flow
  * @akili-spec bugfix/kpi-count-reconciliation
  * @akili-spec changes/kpi-progress-target-only
+ * @akili-spec changes/kpi-progress-capped-average
  */
 
 /** Structural shape every helper here needs — matches `ReportingIndicator` without importing it. */
@@ -83,18 +86,6 @@ export function hasTarget(ind: BurndownIndicator | null | undefined): boolean {
   return Number.isFinite(target) && target > 0;
 }
 
-/**
- * Numeric sum of `target_value_sum` over `rows`, formatted like the per-HLO `TARGET`: integer as is,
- * fractional with one decimal. The API sends the value as a STRING (`"9"` + `"100"`), so each term is
- * parsed first; null / empty / non-numeric terms count 0 (DKT-DD-2).
- *
- * @akili-spec changes/reporting-dynamic-kpi-target-counts
- */
-export function sumTargetValues(rows: ReadonlyArray<{ target_value_sum?: unknown } | null | undefined> | null | undefined): string {
-  const sum = (rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.target_value_sum ?? 0)) || 0), 0);
-  return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
-}
-
 export function stateOf(ind: BurndownIndicator | null | undefined): BurndownState {
   const achieved = achievedOf(ind);
   const target = targetOf(ind);
@@ -127,11 +118,34 @@ export function applyZeroTargetRule<T extends BurndownIndicator>(inds: T[]): { c
 }
 
 /**
+ * One KPI's achievement in percent, capped at 100 (Nicoleta, "Resync PRMS with ToC for BDN",
+ * 2026-10): `achieved ÷ target`, so one over-achieved KPI can't hide others that missed. Only
+ * meaningful for a KPI with a target (`hasTarget`); callers filter first. Same rule as the
+ * server's `toc-progress-rollup.ts`.
+ */
+export function kpiProgressOf(ind: BurndownIndicator | null | undefined): number {
+  const target = targetOf(ind);
+  if (!(Number.isFinite(target) && target > 0)) return 0;
+  return Math.min(achievedOf(ind) / target, 1) * 100;
+}
+
+/** One decimal, like the server's `formatProgress` (77.636 → 77.6). */
+export function roundProgress(value: number): number {
+  return Number.isFinite(value) ? Math.round(value * 10) / 10 : 0;
+}
+
+/**
  * The ratio rule shared by `buildAowBannerStats` (By-AOW banner) and the grouped header's
  * `ratioOf` — one function, so every surface produces identical numbers under the has-a-target
  * rule (MRF-R-6, KTO-R-2). `total` = rows with a target, `done` = those also reported,
- * `zeroTarget` = rows excluded for having no target set. When `total` is 0 the result is
- * `percent: 0` (never NaN) and the caller renders a dash instead of the ratio (KTO-R-3).
+ * `zeroTarget` = rows excluded for having no target set.
+ *
+ * `percent` is the AVERAGE of the targeted KPIs' capped achievement (`kpiProgressOf`), not
+ * `done / total` (Nicoleta, 2026-10: "the % for an AoW or HLO is the average of those indicator
+ * %, not a count of met / not met"). `progressSum` is the unrounded sum behind it, so a caller
+ * aggregating several groups computes `Σ progressSum / Σ total` — the flat average over every
+ * KPI — instead of averaging rounded percents. When `total` is 0 the result is `percent: 0`
+ * (never NaN) and the caller renders a dash instead of the ratio (KTO-R-3).
  * **Reported** = `achieved > 0`, a different predicate from **Complete** (`achieved >= target`,
  * the burn-down states above) — never conflate the two.
  *
@@ -140,11 +154,17 @@ export function applyZeroTargetRule<T extends BurndownIndicator>(inds: T[]): { c
  */
 export function buildRatio<T extends BurndownIndicator>(
   inds: T[]
-): { done: number; total: number; percent: number; zeroTarget: number } {
+): { done: number; total: number; percent: number; progressSum: number; zeroTarget: number } {
   const { counted, zeroTarget } = applyZeroTargetRule(inds);
   const total = counted.length;
   const done = counted.filter(ind => achievedOf(ind) > 0).length;
-  return { done, total, percent: total > 0 ? Math.round((done / total) * 100) : 0, zeroTarget };
+  const progressSum = counted.reduce((sum, ind) => sum + kpiProgressOf(ind), 0);
+  return { done, total, percent: averageProgress(progressSum, total), progressSum, zeroTarget };
+}
+
+/** `Σ progressSum / Σ total`, rounded to one decimal; 0 when nothing has a target. */
+export function averageProgress(progressSum: number, total: number): number {
+  return total > 0 ? roundProgress(progressSum / total) : 0;
 }
 
 /**
@@ -359,13 +379,14 @@ export function partitionProgramKpis<T extends PartitionIndicator>(
  * Program-wide totals over the partition (KCR-R-2, R-9; band contract KTO-DD-3): `planned` = every
  * KPI counted once (the count shown as "Total KPIs"); `zeroTarget` = how many of them have no
  * target set; `counted` = the targeted set, the only ratio denominator the shell may show;
- * `reported` = counted KPIs with `achieved > 0` — `achieved > 0` ONLY, never `progress_percentage`.
+ * `reported` = counted KPIs with `achieved > 0` — `achieved > 0` ONLY, never `progress_percentage`;
+ * `percent` = the flat average of the counted KPIs' capped achievement (see `buildRatio`).
  *
  * @akili-spec bugfix/kpi-count-reconciliation
  */
 export function summarisePartition<T extends PartitionIndicator>(
   partition: ProgramKpiPartition<T>
-): { planned: number; zeroTarget: number; counted: number; reported: number } {
+): { planned: number; zeroTarget: number; counted: number; reported: number; percent: number } {
   const all: T[] = [
     ...partition.aows.flatMap(entry => entry.own),
     ...partition.intermediate.indicators,
@@ -376,6 +397,10 @@ export function summarisePartition<T extends PartitionIndicator>(
     planned: all.length,
     zeroTarget,
     counted: counted.length,
-    reported: counted.filter(ind => achievedOf(ind) > 0).length
+    reported: counted.filter(ind => achievedOf(ind) > 0).length,
+    percent: averageProgress(
+      counted.reduce((sum, ind) => sum + kpiProgressOf(ind), 0),
+      counted.length
+    )
   };
 }

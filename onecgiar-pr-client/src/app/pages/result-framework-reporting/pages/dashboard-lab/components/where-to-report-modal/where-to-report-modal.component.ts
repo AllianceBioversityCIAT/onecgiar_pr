@@ -12,7 +12,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { EntityAowService } from '../../../entity-aow/services/entity-aow.service';
 import { PrDialogComponent } from '../../../../../../shared/components/pr-dialog/pr-dialog.component';
 import { isAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
-import { buildRatio } from '../../reporting-burndown';
+import { buildRatio, roundProgress } from '../../reporting-burndown';
 import {
   HubAowRow,
   HubProgramLevelKind,
@@ -134,13 +134,12 @@ export class WhereToReportModalComponent {
               name: area.name,
               done: area.progress?.done ?? 0,
               total: area.progress?.total ?? 0,
-              zeroTarget: area.progress?.zeroTarget
+              zeroTarget: area.progress?.zeroTarget,
+              // KPC-R-11: the server's capped flat mean (T-1) drives the sort AND the hub bar —
+              // never done / total. (G-2: `progress.done` is never sent; the % does not depend on it.)
+              percent: roundProgress(area.progress?.achieved_value ?? area.progress?.progress_value ?? 0)
             }))
-            .sort((a: HubAowRow, b: HubAowRow) => {
-              const pa = a.total ? a.done / a.total : 0;
-              const pb = b.total ? b.done / b.total : 0;
-              return pa - pb || a.code.localeCompare(b.code);
-            });
+            .sort((a: HubAowRow, b: HubAowRow) => (a.percent ?? 0) - (b.percent ?? 0) || a.code.localeCompare(b.code));
           this.internalAowRows.set(aowRows);
 
           const intermediateRatio = buildRatio((intermediate as any)?.response?.tocResults?.flatMap((r: any) => r?.indicators ?? []) ?? []);
@@ -152,7 +151,9 @@ export class WhereToReportModalComponent {
               name: 'Intermediate outcomes',
               done: intermediateRatio.done,
               total: intermediateRatio.total,
-              zeroTarget: intermediateRatio.zeroTarget
+              zeroTarget: intermediateRatio.zeroTarget,
+              percent: intermediateRatio.percent,
+              progressSum: intermediateRatio.progressSum
             });
           }
           if (outcomes2030Ratio.total > 0 || outcomes2030Ratio.zeroTarget > 0) {
@@ -161,7 +162,9 @@ export class WhereToReportModalComponent {
               name: '2030 outcomes',
               done: outcomes2030Ratio.done,
               total: outcomes2030Ratio.total,
-              zeroTarget: outcomes2030Ratio.zeroTarget
+              zeroTarget: outcomes2030Ratio.zeroTarget,
+              percent: outcomes2030Ratio.percent,
+              progressSum: outcomes2030Ratio.progressSum
             });
           }
           this.internalProgramLevelRows.set(programLevel);

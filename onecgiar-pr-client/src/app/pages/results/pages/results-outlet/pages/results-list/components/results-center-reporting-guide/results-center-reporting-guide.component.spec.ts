@@ -6,6 +6,7 @@ import { ResultsCenterReportingGuideComponent } from './results-center-reporting
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { EntityAowService } from '../../../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
 import { PlatformReportingGuideService } from '../../services/platform-reporting-guide.service';
+import { ReportingEntryHubComponent } from '../../../../../../../result-framework-reporting/pages/dashboard-lab/components/reporting-entry-hub/reporting-entry-hub.component';
 import { ReportingGuideService } from '../../../../../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 describe('ResultsCenterReportingGuideComponent', () => {
@@ -86,6 +87,37 @@ describe('ResultsCenterReportingGuideComponent', () => {
     component.visible.set(true);
     fixture.detectChanges();
     expect(apiMock.resultsSE.GET_ScienceProgramTocProgress).not.toHaveBeenCalled();
+  });
+
+  it('KPC-S-11.1: hub rows sort by the server percent ascending (tie code) and carry percent for the bar', () => {
+    apiMock.resultsSE.GET_ScienceProgramTocProgress.mockReturnValue(
+      of({
+        response: {
+          areas: [
+            { code: 'AOW03', name: 'Three', progress: { done: 2, total: 4, progress_value: 75 } },
+            { code: 'AOW01', name: 'One', progress: { done: 3, total: 4, progress_value: 10 } },
+            { code: 'AOW02', name: 'Two', progress: { done: 1, total: 4, achieved_value: 37.5, progress_value: 99 } },
+            { code: 'AOW04', name: 'Four', progress: { done: 1, total: 4, progress_value: 75 } }
+          ]
+        }
+      })
+    );
+    apiMock.resultsSE.GET_IntermediateOutcomes.mockReturnValue(
+      of({ response: { tocResults: [{ indicators: [{ indicator_id: 1, target_value_sum: 4, actual_achieved_value_sum: 1 }] }] } })
+    );
+    (guideServiceMock.modalMode as ReturnType<typeof signal>).set('hub');
+    (guideServiceMock.selectedProgramCode as ReturnType<typeof signal>).set('SP01');
+    component.visible.set(true);
+    fixture.detectChanges();
+
+    const rows = (component as any).internalAowRows() as any[];
+    expect(rows.map(r => r.code)).toEqual(['AOW01', 'AOW02', 'AOW03', 'AOW04']);
+    expect(rows.map(r => r.percent)).toEqual([10, 37.5, 75, 75]);
+    expect(rows[0]).toEqual(expect.objectContaining({ done: 3, total: 4 }));
+    expect(ReportingEntryHubComponent.prototype.percentOf.call({}, rows[1])).toBe(37.5);
+
+    const program = (component as any).internalProgramLevelRows() as any[];
+    expect(program[0]).toEqual(expect.objectContaining({ kind: 'intermediate', percent: 25, progressSum: 25 }));
   });
 
   it('hub mode fetches hub data when program is selected', () => {

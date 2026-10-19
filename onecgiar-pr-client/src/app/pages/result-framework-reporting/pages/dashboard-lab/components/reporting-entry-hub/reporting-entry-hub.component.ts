@@ -30,6 +30,12 @@ export interface HubAowRow {
    * @akili-spec bugfix/kpi-count-reconciliation
    */
   zeroTarget?: number;
+  /**
+   * `changes/kpi-progress-capped-average` KPC-R-5 — the row's capped mean (one decimal) and the unrounded
+   * sum behind it. Optional so external callers keep compiling.
+   */
+  percent?: number;
+  progressSum?: number;
 }
 
 export type HubProgramLevelKind = 'intermediate' | '2030';
@@ -47,6 +53,12 @@ export interface HubProgramLevelRow {
    * @akili-spec bugfix/kpi-count-reconciliation
    */
   zeroTarget?: number;
+  /**
+   * `changes/kpi-progress-capped-average` KPC-R-5 — the row's capped mean (one decimal) and the unrounded
+   * sum behind it. Optional so external callers keep compiling.
+   */
+  percent?: number;
+  progressSum?: number;
 }
 
 /**
@@ -267,7 +279,8 @@ export class ReportingEntryHubComponent {
   }
 
   percentOf(row: HubAowRow | HubProgramLevelRow): number {
-    return row.total ? Math.round((row.done / row.total) * 100) : 0;
+    // KPC-R-5 — the row's capped mean; the producer fills it (absent reads 0).
+    return row.percent ?? 0;
   }
 
   onReportAow(row: HubAowRow): void {

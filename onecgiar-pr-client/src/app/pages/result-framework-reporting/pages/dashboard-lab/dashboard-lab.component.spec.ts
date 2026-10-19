@@ -2003,7 +2003,7 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
   });
 
   describe('By-AoW tabular layout (BTC-R-2, BTC-R-3)', () => {
-    it('renders .pr-by-aow-head table column headers with Target, Achieved, KPIs, and Progress', () => {
+    it('renders .pr-by-aow-head table column headers with KPIs and Progress (no Target / Achieved, KPC-R-12)', () => {
       const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
 
       // Test checking that the template includes the .pr-by-aow-head and .pr-by-aow-row structure
@@ -2012,8 +2012,8 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
 
       // Check column header titles (BTC-AC-3.1)
       expect(template).toContain('<span>TITLE & TAXONOMY</span>');
-      expect(template).toContain('<span class="text-center">TARGET</span>');
-      expect(template).toContain('<span class="text-center">ACHIEVED</span>');
+      expect(template).not.toContain('<span class="text-center">TARGET</span>');
+      expect(template).not.toContain('<span class="text-center">ACHIEVED</span>');
       expect(template).toContain('<span class="text-center">KPIS</span>');
       expect(template).toContain('<span class="text-center">PROGRESS</span>');
     });
@@ -2029,13 +2029,7 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(head?.classList.contains('md:grid')).toBe(true);
 
       const headerSpans = Array.from(head?.querySelectorAll('span') ?? []);
-      expect(headerSpans.length).toBe(6);
-      expect(headerSpans[0].textContent?.trim()).toBe('');
-      expect(headerSpans[1].textContent?.trim()).toBe('TITLE & TAXONOMY');
-      expect(headerSpans[2].textContent?.trim()).toBe('TARGET');
-      expect(headerSpans[3].textContent?.trim()).toBe('ACHIEVED');
-      expect(headerSpans[4].textContent?.trim()).toBe('KPIS');
-      expect(headerSpans[5].textContent?.trim()).toBe('PROGRESS');
+      expect(headerSpans.map(s => s.textContent?.trim())).toEqual(['', 'TITLE & TAXONOMY', 'KPIS', 'PROGRESS']);
     });
 
     it('renders Level 2 HLO Sub-Card enclosure with code badge, sanitized title, and stacked metric cells (BHA-R-2, BHA-R-3)', () => {
@@ -2057,11 +2051,31 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(badge?.textContent).toContain('tax.type');
 
       // Check stacked target and achieved cells (BHA-R-3)
-      expect(template).toContain('{{ hloTargetSum(hlo) }}');
-      expect(template).toContain('{{ hloAchievedSum(hlo) }}');
+      // KPC-R-12: the HLO row no longer carries summed Target / Achieved cells
+      expect(template).not.toContain('hloTargetSum(');
+      expect(template).not.toContain('hloAchievedSum(');
       expect(template).toContain('{{ hlo.count }}');
-      expect(template).toContain('TARGET');
-      expect(template).toContain('ACHIEVED');
+    });
+
+    it('KPC-R-12 / KZ-OAH-1: header cells, row cells and grid tracks stay the same count (jsdom cannot measure layout)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const scss = readFileSync(join(__dirname, 'dashboard-lab.component.scss'), 'utf8');
+      const doc = new DOMParser().parseFromString(template, 'text/html');
+
+      const trackList = /\$pr-by-aow-tracks:\s*([^;]+);/.exec(scss)![1].trim();
+      const tracks = trackList.replace(/minmax\([^)]*\)/g, 'M').split(/\s+/);
+      const headCells = (doc.querySelector('.pr-by-aow-head') as HTMLElement).children.length;
+      const rowCells = (doc.querySelector('.pr-by-aow-row') as HTMLElement).children.length;
+
+      expect(tracks.length).toBe(4);
+      expect(headCells).toBe(tracks.length);
+      expect(rowCells).toBe(tracks.length);
+    });
+
+    it('KPC-S-12.1: the By-AOW Level 3 sub-table keeps each indicator own Target and Achieved cells', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      expect(template).toContain('<td class="px-3 py-2.5 tabular-nums">{{ ind.target_value_sum ?? 0 }}</td>');
+      expect(template).toContain('<td class="px-3 py-2.5 tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</td>');
     });
 
     it('renders Level 3 indicator rows with accessibility attributes and keyboard navigation (BHA-NFR-2)', async () => {
@@ -2127,8 +2141,6 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(hloGroup.split.code).toBe('HLO4.AOW1.IO1');
       expect(hloGroup.split.name).toBe('Foster motivations');
       expect(component.cleanHloCode(hloGroup.split.code)).toBe('HLO4');
-      expect(component.hloTargetSum(hloGroup)).toBe('50');
-      expect(component.hloAchievedSum(hloGroup)).toBe('25');
       expect(hloGroup.count).toBe(1);
 
       // 2. Outcomes section
@@ -2140,8 +2152,6 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(outcomeGroup.split.code).toBe('I-OC 3.5');
       expect(outcomeGroup.split.name).toBe('Women, men, youth and vulnerable groups');
       expect(component.cleanHloCode(outcomeGroup.split.code)).toBe('I-OC 3.5');
-      expect(component.hloTargetSum(outcomeGroup)).toBe('30');
-      expect(component.hloAchievedSum(outcomeGroup)).toBe('30');
       expect(outcomeGroup.count).toBe(1);
     });
 
@@ -2178,8 +2188,8 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
     it('defines $pr-by-aow-tracks CSS Grid specification matching BTC-AC-2.1 and BTC-AC-3.2', () => {
       const scss = readFileSync(join(__dirname, 'dashboard-lab.component.scss'), 'utf8');
 
-      // Tracks specification: [Chevron 28px] [Title 1fr] [Target 76px] [Achieved 76px] [KPIs 64px] [Progress 130px]
-      expect(scss).toMatch(/\$pr-by-aow-tracks:\s*28px\s+minmax\(240px,\s*1fr\)\s+76px\s+76px\s+64px\s+130px;/);
+      // Tracks specification (KPC-R-12): [Chevron 28px] [Title 1fr] [KPIs 64px] [Progress 130px]
+      expect(scss).toMatch(/\$pr-by-aow-tracks:\s*28px\s+minmax\(240px,\s*1fr\)\s+64px\s+130px;/);
 
       // Both .pr-by-aow-head and .pr-by-aow-row must use $pr-by-aow-tracks
       expect(scss).toMatch(/\.pr-by-aow-head\s*\{[^}]*grid-template-columns:\s*\$pr-by-aow-tracks;/);
@@ -2192,16 +2202,12 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
           <div class="pr-by-aow-head hidden md:grid">
             <span></span>
             <span>Outcome</span>
-            <span class="text-center">Target</span>
-            <span class="text-center">Achieved</span>
             <span class="text-center">KPIs</span>
             <span class="text-center">Progress</span>
           </div>
           <button type="button" class="pr-by-aow-row">
             <span>chevron</span>
             <div><span class="pr-hlo-code">I-OC 3.5</span><span>Women, men, youth</span></div>
-            <div class="text-center"><span class="tabular-nums">30</span></div>
-            <div class="text-center"><span class="tabular-nums">30</span></div>
             <div class="kpis-col"><span>1</span></div>
             <div class="progress-col"><span>QA 100%</span></div>
           </button>
@@ -2213,7 +2219,7 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       const head = div.querySelector('.pr-by-aow-head');
       expect(head).not.toBeNull();
       const headers = Array.from(head!.querySelectorAll('span')).map(s => s.textContent?.trim());
-      expect(headers).toEqual(['', 'Outcome', 'Target', 'Achieved', 'KPIs', 'Progress']);
+      expect(headers).toEqual(['', 'Outcome', 'KPIs', 'Progress']);
 
       const row = div.querySelector('.pr-by-aow-row');
       expect(row).not.toBeNull();

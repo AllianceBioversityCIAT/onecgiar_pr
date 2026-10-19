@@ -142,7 +142,7 @@
           <!-- @akili-spec changes/kpi-progress-target-only — KTO-R-11 (A-2): no KPI has a target → dash, never 0% -->
           <span class="pr-figure text-[32px] font-bold leading-none text-[var(--pr-text-muted)]" aria-label="No KPIs with a target">—</span>
         }
-        <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">completed</span>
+        <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">achieved</span>
       </div>
       <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
         @if (aowStats().totalPlanned > 0) {
@@ -454,7 +454,7 @@
           <div
             class="flex flex-col gap-[1px]"
             [attr.title]="zeroTargetTitle()"
-            prTooltip="How many KPIs have something reported against them. This is coverage of the plan, not achievement against the targets."
+            prTooltip="Average achievement of the KPIs with a target (achieved ÷ target, capped at 100%)."
             prTooltipPosition="top">
             @if (richStats().total > 0) {
               <span class="pr-figure text-[32px] font-bold leading-none text-[var(--pr-text-heading)]">{{ richStats().pct }}%</span>

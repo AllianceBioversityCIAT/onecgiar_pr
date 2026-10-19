@@ -471,7 +471,7 @@ describe('ProgramOverviewComponent — overview states (OSF-T-7)', () => {
         { key: 'AOW01', kind: 'aow', name: 'Market Intelligence', count: 5 }
       ] satisfies OverviewScopeOption[]);
       fixture.componentRef.setInput('selectedScope', 'AOW01');
-      fixture.componentRef.setInput('richRows', [makeRichRow({ code: 'AOW01', total: 10, reported: 4, complete: 4 })]);
+      fixture.componentRef.setInput('richRows', [makeRichRow({ code: 'AOW01', total: 10, reported: 4, complete: 4, progressSum: 400, percent: 40 })]);
       detect();
 
       const text = heroSection().textContent as string;

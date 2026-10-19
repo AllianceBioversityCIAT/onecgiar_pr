@@ -61,6 +61,11 @@ export interface TocLeaf {
    * this equals the hero row's denominator. `0` → nothing countable here, no ratio is shown.
    */
   total: number;
+  /**
+   * `changes/kpi-progress-capped-average` KPC-R-5 — the unrounded sum of the counted KPIs' capped
+   * achievement (`buildRatio().progressSum`). Aggregates add THIS, never rounded percents (KPC-DD-2).
+   */
+  progressSum: number;
 }
 
 /** One branch of the radial tree: an AoW, the deduped "Program-level" bucket, or a program-level outcome bucket. */
@@ -80,6 +85,8 @@ export interface TocBranch {
    */
   done: number;
   total: number;
+  /** Σ of the leaves' `progressSum` — the branch % is `averageProgress(progressSum, total)` (flat, KPC-R-3). */
+  progressSum: number;
   /** Σ across every leaf under this branch (all tiers) — tooltip/table figures, not tied to the AoW-card rule. */
   target: number;
   achieved: number;
@@ -143,7 +150,7 @@ function buildLeaf(node: TocMapNodeInput, parseTitle: TocMapBuildInput['parseTit
   const indicators = node?.indicators ?? [];
   const target = indicators.reduce((sum, i) => sum + toNum(i?.target_value_sum), 0);
   const achieved = indicators.reduce((sum, i) => sum + toNum(i?.actual_achieved_value_sum), 0);
-  const { done, total } = buildRatio(indicators);
+  const { done, total, progressSum } = buildRatio(indicators);
 
   return {
     code: parsed.code,
@@ -153,7 +160,8 @@ function buildLeaf(node: TocMapNodeInput, parseTitle: TocMapBuildInput['parseTit
     target,
     achieved,
     done,
-    total
+    total,
+    progressSum
   };
 }
 
@@ -190,6 +198,7 @@ function buildProgramLevelBranch(
     name: label.name,
     done: sumBy(leaves, l => l.done),
     total: sumBy(leaves, l => l.total),
+    progressSum: sumBy(leaves, l => l.progressSum),
     target: sumBy(leaves, l => l.target),
     achieved: sumBy(leaves, l => l.achieved),
     leaves
@@ -263,6 +272,7 @@ export function buildTocMapModel(input: TocMapBuildInput | null | undefined): To
         name: aow.name,
         done: sumBy(leaves, l => l.done),
         total: sumBy(leaves, l => l.total),
+        progressSum: sumBy(leaves, l => l.progressSum),
         target: sumBy(leaves, l => l.target),
         achieved: sumBy(leaves, l => l.achieved),
         leaves
@@ -302,6 +312,7 @@ export function buildTocMapModel(input: TocMapBuildInput | null | undefined): To
         name: PROGRAM_BRANCH_LABEL.name,
         done: sumBy(programLeaves, l => l.done),
         total: sumBy(programLeaves, l => l.total),
+        progressSum: sumBy(programLeaves, l => l.progressSum),
         target: sumBy(programLeaves, l => l.target),
         achieved: sumBy(programLeaves, l => l.achieved),
         leaves: programLeaves

@@ -229,6 +229,28 @@ describe('buildTocMapModel (TCM-T-1)', () => {
     expect(aow01.achieved).toBe(0 + 5 + 0 + 3 + 0 + 0 + 0);
   });
 
+  it('carries progressSum (capped KPI %) on leaves and branches: branch = sum of leaves, AoW-own set (KPC-R-3, KPC-R-5)', () => {
+    const model = buildTocMapModel(baseInput())!;
+    const aow01 = model.branches.find(b => b.kind === 'aow' && b.code === 'AOW01')!;
+
+    // Hand-computed from the fixture, NOT via buildRatio. A1: (6,0)=0 + (2,5)=capped 100 -> 100.
+    // A4: (7,3)=300/7 -> 42.857, (2,0)=0. IO-A1: (10,0)=0, (0,0) is zero-target and excluded.
+    // 100 + 300/7 = 142.857 over total 7 -> 20.4 (NOT done/total = 2/7 = 28.6).
+    const a1 = aow01.leaves.find(l => l.title === 'A1')!;
+    expect(a1.progressSum).toBeCloseTo(100, 6);
+    expect(aow01.progressSum).toBeCloseTo(142.857, 3);
+    expect(aow01.progressSum).toBeCloseTo(
+      aow01.leaves.reduce((sum, l) => sum + l.progressSum, 0),
+      9
+    );
+    // AoW node % == Overview row % rule (flat Σ progressSum / Σ total, one decimal)
+    expect(Math.round((aow01.progressSum / aow01.total) * 10) / 10).toBe(20.4);
+
+    // Program-level branch (Intermediate): one fully achieved KPI -> 100
+    const inter = model.branches.find(b => b.kind === 'intermediate')!;
+    expect(inter.progressSum).toBeCloseTo(100, 6);
+  });
+
   it('renders a 0-indicator node as a structural leaf: total 0, done 0, never NaN', () => {
     const model = buildTocMapModel(baseInput())!;
     const aow01 = model.branches.find(b => b.kind === 'aow' && b.code === 'AOW01')!;

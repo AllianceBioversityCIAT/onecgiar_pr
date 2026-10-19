@@ -14,6 +14,7 @@ import type { EChartsOption, VizChartTableModel } from '../../../../../../shared
 import type { ResolvedChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import type { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
 import type { TocBranch, TocBranchKind, TocLeaf, TocMapModel } from '../../dashboard-lab.toc-map';
+import { averageProgress } from '../../reporting-burndown';
 
 /**
  * Builds the `app-pr-viz-chart` `options` for a `HeatmapModel`. `ramp` is the light→dark color
@@ -738,6 +739,8 @@ interface TocMapNodePayload {
   achieved: number;
   done: number;
   total: number;
+  /** Σ capped KPI % behind this node — the node % is `averageProgress(progressSum, total)` (KPC-R-5). */
+  progressSum: number;
 }
 
 interface TocMapTreeNode {
@@ -757,16 +760,17 @@ function truncateTocMapTitle(title: string): string {
 }
 
 /**
- * `done/total` quartile → ramp index (`TCM-DD-4`): `[0,.25)→0  [.25,.5)→1  [.5,.75)→2  [.75,1]→3`.
- * Checked top-down with `>=` so every named boundary (25/50/75%) lands in the HIGHER bucket, never
- * the lower one — the exact case an off-by-one would get backwards. `total === 0` is not a
- * quartile at all (structural — the caller never calls this for that case).
+ * Aggregate % (0–100, the capped mean — `changes/kpi-progress-capped-average` KPC-R-5) → ramp index
+ * (`TCM-DD-4`): `[0,25)→0  [25,50)→1  [50,75)→2  [75,100]→3`. Checked top-down with `>=` so every
+ * named boundary (25/50/75%) lands in the HIGHER bucket, never the lower one — the exact case an
+ * off-by-one would get backwards. The caller passes the one-decimal %, so the bucket agrees with
+ * the figure the tooltip shows. `total === 0` is not a quartile at all (structural — the caller
+ * never calls this for that case).
  */
-function tocMapQuartileIndex(done: number, total: number): 0 | 1 | 2 | 3 {
-  const ratio = total > 0 ? done / total : 0;
-  if (ratio >= 0.75) return 3;
-  if (ratio >= 0.5) return 2;
-  if (ratio >= 0.25) return 1;
+function tocMapQuartileIndex(percent: number): 0 | 1 | 2 | 3 {
+  if (percent >= 75) return 3;
+  if (percent >= 50) return 2;
+  if (percent >= 25) return 1;
   return 0;
 }
 
@@ -775,9 +779,24 @@ function tocMapQuartileIndex(done: number, total: number): 0 | 1 | 2 | 3 {
  * token (`total === 0` — TCM-R-3's "plain structural node, no division by zero"). Never a hex
  * literal, never a resolved value — `tokens` arrives already resolved by the caller (KZ-SPO-1).
  */
-function tocMapNodeColor(done: number, total: number, tokens: ResolvedChartTokens): string {
+function tocMapNodeColor(progressSum: number, total: number, tokens: ResolvedChartTokens): string {
   if (total <= 0) return tokens.bilateralMuted;
-  return tokens.ramp[tocMapQuartileIndex(done, total)];
+  return tokens.ramp[tocMapQuartileIndex(averageProgress(progressSum, total))];
+}
+
+/**
+ * The SP root's progress figures (KPC-R-3 "ToC map branch/root", design §7.4): `Σ` over the model's
+ * top-level branches, so `averageProgress(progressSum, total)` is the flat mean over the union of
+ * KPIs — never a mean of branch percents. Safe to add because the builder partitions KPIs: an AoW
+ * branch holds its output leaves + owned (`is_aow: true`) outcomes, the Program-level branch holds
+ * only the deduped `is_aow !== true` pool and is suppressed once the Intermediate branch exists,
+ * and Intermediate / 2030 come from their own endpoints (`buildTocMapModel`).
+ */
+function tocMapRootProgress(model: TocMapModel): { done: number; total: number; progressSum: number } {
+  return model.branches.reduce(
+    (acc, b) => ({ done: acc.done + b.done, total: acc.total + b.total, progressSum: acc.progressSum + b.progressSum }),
+    { done: 0, total: 0, progressSum: 0 }
+  );
 }
 
 function tocMapSumIndicators(leaves: TocLeaf[]): number {
@@ -815,8 +834,10 @@ function tocMapLevelName(info: { kind: TocMapNodeKind; level?: string }): string
 }
 
 /**
- * Tooltip formatter (`TCM-R-4`): code+title (title truncated ONLY when `code` is null — TCM-R-2's
- * fallback clause), level name, "N indicators", `Target: Σ`, `Achieved: Σ`, `Progress: done/total`.
+ * Tooltip formatter (`TCM-R-4`, progress line per `KPC-R-5`): code+title (title truncated ONLY when `code` is null — TCM-R-2's
+ * fallback clause), level name, "N indicators", `Progress: x% (N of M reported)` (KPC-R-5). KPC-R-12: `Target:` / `Achieved:`
+ * appear ONLY on a leaf that is itself a single indicator — never a sum over several. KPC-R-14: the SP root shows
+ * just name, level and progress (no indicator count).
  * AoW nodes append the click-affordance hint (design §2.2 item 4). Never a `$` figure — PRMS has
  * no per-node financial linkage (TCM-R-4 BUT clause), and never an invented percentage beyond the
  * stated fields.
@@ -824,14 +845,15 @@ function tocMapLevelName(info: { kind: TocMapNodeKind; level?: string }): string
 function tocMapTooltip(payload: TocMapNodePayload): string {
   const label = payload.code ? `${payload.code} ${payload.title}` : truncateTocMapTitle(payload.title);
   const indicatorWord = payload.indicators === 1 ? 'indicator' : 'indicators';
-  const lines = [
-    label,
-    tocMapLevelName(payload),
-    `${payload.indicators} ${indicatorWord}`,
-    `Target: ${payload.target}`,
-    `Achieved: ${payload.achieved}`,
-    `Progress: ${payload.done}/${payload.total}`
-  ];
+  // KPC-R-14: the SP root shows only the program name and its progress line.
+  const lines = [label];
+  if (payload.kind !== 'root') {
+    lines.push(tocMapLevelName(payload), `${payload.indicators} ${indicatorWord}`);
+  }
+  if (payload.kind === 'leaf' && payload.indicators === 1) {
+    lines.push(`Target: ${payload.target}`, `Achieved: ${payload.achieved}`);
+  }
+  lines.push(`Progress: ${averageProgress(payload.progressSum, payload.total)}% (${payload.done} of ${payload.total} reported)`);
   if (payload.kind === 'aow') {
     lines.push('Click to open this Area of Work');
   }
@@ -849,14 +871,15 @@ function tocMapLeafNode(leaf: TocLeaf, tokens: ResolvedChartTokens): TocMapTreeN
     target: leaf.target,
     achieved: leaf.achieved,
     done: leaf.done,
-    total: leaf.total
+    total: leaf.total,
+    progressSum: leaf.progressSum
   };
   return {
     // OQ-1 default: leaf labels OFF (label.show below), tooltip carries the name — this `name`
     // still identifies the node internally (and is the fallback if labels are ever turned on).
     name: leaf.code ?? truncateTocMapTitle(leaf.title),
     symbolSize: TOC_MAP_LEAF_SYMBOL_SIZE,
-    itemStyle: { color: tocMapNodeColor(leaf.done, leaf.total, tokens) },
+    itemStyle: { color: tocMapNodeColor(leaf.progressSum, leaf.total, tokens) },
     label: { show: false },
     tocMapPayload: payload
   };
@@ -895,7 +918,8 @@ function tocMapBranchNode(branch: TocBranch, tokens: ResolvedChartTokens): TocMa
     target: branch.target,
     achieved: branch.achieved,
     done: branch.done,
-    total: branch.total
+    total: branch.total,
+    progressSum: branch.progressSum
   };
   return {
     // HITL fix (TCM-T-4, SP02 live render): short code/label, not the full name — full names
@@ -903,7 +927,7 @@ function tocMapBranchNode(branch: TocBranch, tokens: ResolvedChartTokens): TocMa
     // (tooltip via `payload.title`, and the a11y table).
     name: tocMapBranchLabel(branch),
     symbolSize: TOC_MAP_BRANCH_SYMBOL_SIZE,
-    itemStyle: { color: tocMapNodeColor(branch.done, branch.total, tokens) },
+    itemStyle: { color: tocMapNodeColor(branch.progressSum, branch.total, tokens) },
     // `rotate: 0` + a small `distance` bump off the hub (HITL fix) — radial layout otherwise
     // rotates labels along the radius, which reads fine for one branch and illegible for six.
     label: { show: true, rotate: 0, distance: 8 },
@@ -917,7 +941,7 @@ function tocMapBranchNode(branch: TocBranch, tokens: ResolvedChartTokens): TocMa
  * `TCM-R-7`). ECharts `tree`, `layout: 'radial'`, fully expanded (`initialTreeDepth: -1`), no
  * roam/zoom — deterministic geometry, same data → same picture (`TCM-DD-3`). Root = SP node
  * (brand primary fill — it carries no indicators, so it is never quartile-colored); branch/leaf
- * fill by `done/total` quartile; root+branch labels on, leaf labels off (`TCM-DD-6`).
+ * fill by aggregate-%-quartile (KPC-R-5); root+branch labels on, leaf labels off (`TCM-DD-6`).
  */
 export function tocMapOption(
   model: TocMapModel,
@@ -933,8 +957,7 @@ export function tocMapOption(
     indicators: 0,
     target: 0,
     achieved: 0,
-    done: 0,
-    total: 0
+    ...tocMapRootProgress(model)
   };
 
   const rootNode: TocMapTreeNode = {
@@ -1000,8 +1023,7 @@ export function tocMapNetworkOption(model: TocMapModel, tokens: ResolvedChartTok
     indicators: 0,
     target: 0,
     achieved: 0,
-    done: 0,
-    total: 0
+    ...tocMapRootProgress(model)
   };
 
   const categories = [
@@ -1061,11 +1083,12 @@ export function tocMapNetworkOption(model: TocMapModel, tokens: ResolvedChartTok
       target: branch.target,
       achieved: branch.achieved,
       done: branch.done,
-      total: branch.total
+      total: branch.total,
+      progressSum: branch.progressSum
     };
 
     const branchCategory = branch.kind === 'aow' ? 1 : 4;
-    const branchColor = branch.kind === 'aow' ? tocMapNodeColor(branch.done, branch.total, tokens) : tokens.primary;
+    const branchColor = branch.kind === 'aow' ? tocMapNodeColor(branch.progressSum, branch.total, tokens) : tokens.primary;
 
     nodes.push({
       id: branchId,
@@ -1107,7 +1130,8 @@ export function tocMapNetworkOption(model: TocMapModel, tokens: ResolvedChartTok
         target: leaf.target,
         achieved: leaf.achieved,
         done: leaf.done,
-        total: leaf.total
+        total: leaf.total,
+        progressSum: leaf.progressSum
       };
 
       const leafCategory = leaf.level === 'OUTCOME' ? 2 : 3;
@@ -1120,7 +1144,7 @@ export function tocMapNetworkOption(model: TocMapModel, tokens: ResolvedChartTok
         symbolSize: leafSize,
         category: leafCategory,
         itemStyle: {
-          color: tocMapNodeColor(leaf.done, leaf.total, tokens)
+          color: tocMapNodeColor(leaf.progressSum, leaf.total, tokens)
         },
         label: { show: true, fontSize: 10 },
         draggable: true,
@@ -1212,7 +1236,7 @@ export interface TocHeatmapCellPayload {
  * Builds the `app-pr-viz-chart` `options` for a Theory-of-Change Heatmap Matrix view.
  * Rows = Areas of Work & Program-level branches.
  * Cols = Theory of Change tiers (Outputs, Outcomes, Intermediate, 2030) + Total Progress.
- * Cells = Progress ratio (done/total) and percentage with violet ramp heatmap intensity.
+ * Cells = flat capped-mean percentage (Σ progressSum ÷ Σ total) beside the reported count, with violet ramp heatmap intensity.
  */
 export function tocMapHeatmapOption(model: TocMapModel, tokens: ResolvedChartTokens): EChartsOption {
   const hasIntermediate = model.branches.some(b => b.kind === 'intermediate');
@@ -1281,9 +1305,11 @@ export function tocMapHeatmapOption(model: TocMapModel, tokens: ResolvedChartTok
 
       const done = leaves.reduce((sum, l) => sum + l.done, 0);
       const total = leaves.reduce((sum, l) => sum + l.total, 0);
+      const progressSum = leaves.reduce((sum, l) => sum + l.progressSum, 0);
       const target = leaves.reduce((sum, l) => sum + l.target, 0);
       const achieved = leaves.reduce((sum, l) => sum + l.achieved, 0);
-      const pct = total > 0 ? Math.round((done / total) * 100) : (isApplicable ? 0 : null);
+      // KPC-R-3/R-5: flat capped mean over the cell's KPIs (Σ progressSum ÷ Σ total), never done / total.
+      const pct = total > 0 ? averageProgress(progressSum, total) : (isApplicable ? 0 : null);
       const cellValue = isApplicable ? (pct ?? 0) : -1;
 
       const payload: TocHeatmapCellPayload = {
@@ -1359,8 +1385,7 @@ export function tocMapHeatmapOption(model: TocMapModel, tokens: ResolvedChartTok
         const lines: string[] = [
           `<div style="font-weight:700;font-size:13px;margin-bottom:3px">${payload.branchName}</div>`,
           `<div style="color:${tokens.textSecondary};font-size:11.5px;margin-bottom:6px">${payload.colName}</div>`,
-          `<div><b>Progress:</b> ${payload.done}/${payload.total} KPIs (${payload.pct}%)</div>`,
-          `<div><b>Target Σ:</b> ${payload.target} · <b>Achieved Σ:</b> ${payload.achieved}</div>`
+          `<div><b>Progress:</b> ${payload.pct}% (${payload.done} of ${payload.total} reported)</div>`
         ];
         if (payload.leaves?.length) {
           lines.push(
@@ -1463,7 +1488,21 @@ export function tocMapHeatmapOption(model: TocMapModel, tokens: ResolvedChartTok
  * walked twice, not two independent ones).
  */
 export function tocMapTable(model: TocMapModel): VizChartTableModel {
-  const rows: (string | number)[][] = [['', '', model.spName, tocMapLevelName({ kind: 'root' }), 0, 0, 0, '0/0']];
+  // KPC-R-12 / KPC-R-14: no summed Target / Achieved, and the root has no indicator count; the root
+  // carries the same real progress the tooltip shows (TCM-R-6 parity).
+  const rootProgress = tocMapRootProgress(model);
+  const rows: (string | number)[][] = [
+    [
+      '',
+      '',
+      model.spName,
+      tocMapLevelName({ kind: 'root' }),
+      '',
+      '',
+      '',
+      `${averageProgress(rootProgress.progressSum, rootProgress.total)}% (${rootProgress.done} of ${rootProgress.total} reported)`
+    ]
+  ];
 
   model.branches.forEach(branch => {
     rows.push([
@@ -1472,8 +1511,8 @@ export function tocMapTable(model: TocMapModel): VizChartTableModel {
       branch.name,
       tocMapLevelName({ kind: branch.kind }),
       tocMapSumIndicators(branch.leaves),
-      branch.target,
-      branch.achieved,
+      '—',
+      '—',
       `${branch.done}/${branch.total}`
     ]);
     branch.leaves.forEach(leaf => {
@@ -1483,8 +1522,8 @@ export function tocMapTable(model: TocMapModel): VizChartTableModel {
         leaf.title,
         tocMapLevelName({ kind: 'leaf', level: leaf.level }),
         leaf.indicators,
-        leaf.target,
-        leaf.achieved,
+        leaf.indicators === 1 ? leaf.target : '—',
+        leaf.indicators === 1 ? leaf.achieved : '—',
         `${leaf.done}/${leaf.total}`
       ]);
     });

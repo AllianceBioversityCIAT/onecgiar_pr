@@ -11,6 +11,7 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 import { SPProgress } from '../../../../shared/interfaces/SP-progress.interface';
+import { buildRatio } from './reporting-burndown';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
 
 // Same echarts mocks as `dashboard-lab.component.spec.ts` — `ProgramOverviewComponent` (a template
@@ -171,10 +172,64 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
       // cross-cut #901 would read 5; the superseded output-tier basis, 3.
       total: 4,
       remaining: 1,
+      // KPC-R-5 / S-5.1 — the capped mean over the 4 counted KPIs, hand-computed: 100 + 50 + 0 + 100
+      // = 250 → 250 / 4 = 62.5. Not `reported / total` (3/4 = 75).
+      progressSum: 250,
+      percent: 62.5,
       // P2-3296 — beside the reported-KPI count; no achievement data seeded by this fixture.
       achievement: null
     });
     expect(row.complete + row.inProgress + row.notStarted).toBe(row.total);
+  });
+
+  // ── KPC-S-5.1: the Overview rows carry the Reporting card's % ───────────────────────────────
+  it('KPC-S-5.1: the thin and rich rows carry the same capped mean as the Reporting ratio', async () => {
+    const component = await createComponent();
+    const indicators = [
+      { indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 10 },
+      { indicator_id: 2, target_value_sum: 10, actual_achieved_value_sum: 5 },
+      { indicator_id: 3, target_value_sum: 10, actual_achieved_value_sum: 0 },
+      { indicator_id: 4, target_value_sum: 10, actual_achieved_value_sum: 30 } // over-achieved: capped at 100
+    ];
+    seedAows(component, { AOW01: { name: 'AoW 01', outputIndicators: indicators } });
+
+    // 100 + 50 + 0 + 100 = 250 → 62.5 (KPC-S-4.1's fixture); the count-based figure would be 75.
+    const rich = rowsByCode(component)['AOW01'];
+    const thin = component.overviewAowProgress().find(r => r.code === 'AOW01')!;
+    expect(rich.percent).toBe(62.5);
+    expect(rich.progressSum).toBe(250);
+    expect(thin.percent).toBe(62.5);
+    expect(thin.progressSum).toBe(250);
+    expect(thin.percent).toBe(buildRatio(indicators).percent);
+  });
+
+  // ── KPC-S-11.1: the thin rows sort ascending by the capped mean, not by done / total ────────
+  it('KPC-S-11.1: overviewAowProgress sorts by the capped mean ascending, tie code ASC', async () => {
+    const component = await createComponent();
+    seedAows(component, {
+      // `1 of 4` (done/total 0.25, count order FIRST) but a 25 % mean.
+      AOW01: {
+        name: 'AoW 01',
+        outputIndicators: [
+          { indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 10 },
+          ...[2, 3, 4].map(id => ({ indicator_id: id, target_value_sum: 10, actual_achieved_value_sum: 0 }))
+        ]
+      },
+      // `2 of 4` (done/total 0.5, count order SECOND) but a 10 % mean — must come first now.
+      AOW02: {
+        name: 'AoW 02',
+        outputIndicators: [
+          { indicator_id: 5, target_value_sum: 100, actual_achieved_value_sum: 20 },
+          { indicator_id: 6, target_value_sum: 100, actual_achieved_value_sum: 20 },
+          { indicator_id: 7, target_value_sum: 100, actual_achieved_value_sum: 0 },
+          { indicator_id: 8, target_value_sum: 100, actual_achieved_value_sum: 0 }
+        ]
+      }
+    });
+
+    expect(component.overviewAowProgress().map(r => r.code)).toEqual(['AOW02', 'AOW01']);
+    // KPC-DD-7 — the rich rows keep their remaining-work order: AOW01 has 3 left, AOW02 has 2.
+    expect(component.overviewAowProgressRich().map(r => r.code)).toEqual(['AOW01', 'AOW02']);
   });
 
   // ── Sort: remaining DESC, tie code ASC ───────────────────────────────────────────────────────
