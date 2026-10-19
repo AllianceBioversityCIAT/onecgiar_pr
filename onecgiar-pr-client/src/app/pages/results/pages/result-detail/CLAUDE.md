@@ -1,6 +1,6 @@
 # result-detail
 
-**Verified:** 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `fieldFeedbackList` pliega gaps de secciones fuera de pantalla (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · reserva de 88px bajo la barra y pliegue suspendido con un dropdown abierto; prior: 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
+**Verified:** 2026-10-19 · JuanGuzman-io/investigate-p2-3969-chrome · `bugfix/result-detail-not-found-navigation` (P2-3969): chips de fase por módulo y redirect de tipo 10 a IPSR; prior: 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `fieldFeedbackList` pliega gaps de secciones fuera de pantalla (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · reserva de 88px bajo la barra y pliegue suspendido con un dropdown abierto; prior: 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
 
 ## Qué es
 
@@ -96,6 +96,24 @@ y `mandatoryFieldsTotal` igual que un gap del DOM, así que ningún consumidor d
 ring, popover, "N alerts" del save button) necesita cambio. El publisher, su gate y sus dos
 excepciones viven en [`pages/rd-contributors-and-partners/CLAUDE.md`](pages/rd-contributors-and-partners/CLAUDE.md)
 — no duplicado aquí.
+
+## Not-found, chips de fase y redirect a IPSR (P2-3969, `docs/specs/bugfix/result-detail-not-found-navigation`)
+
+- **El outlet no se pinta en not-found / error** (`.html:64`), así que el `UnsavedChangesGuard` de la
+  sección recibe `component = null`. El guard ahora deja pasar ese caso (consume el flag silencioso y
+  devuelve `true`); antes tiraba `TypeError … hasUnsavedChanges` y cancelaba toda salida.
+- **`phaseLink(phase)` recibe la fila de fase, no el id.** `app_module_id == 2` →
+  `/ipsr/detail/{code}/general-information?phase={id}` (los módulos no comparten rutas de sección);
+  cualquier otro valor, o sin módulo → la ruta actual + `?phase={id}`. Sigue siendo `href` plano.
+  Toma el código de `api.resultsSE.currentResultCode`, que `getData()` asigna antes del request que
+  falla: no mover esa asignación o los chips salen con `/ipsr/detail/null/…`.
+- **Redirect de Innovation Package:** un `effect` sobre `currentResultSignal` manda a
+  `/ipsr/detail/{code}/general-information?phase=` con `replaceUrl: true` cuando
+  `result_type_id` ∈ `IPSR_RESULT_TYPE_IDS` (**solo `{10}`**; el 11, Complementary innovation, queda
+  fuera por decisión de producto del 19-oct-2026) y el `result_code` del resultado coincide con el
+  código de la URL (descarta un resultado viejo). Dispara una vez por código (`ipsrRedirectedCode`).
+  ⚠️ `tsc -p tsconfig.app.json` no revisa templates: para un cambio de firma usado en el `.html`,
+  correr `npx ngc -p tsconfig.app.json --noEmit`.
 
 ## Trampas (⚠️ = ya rompió algo)
 

@@ -749,4 +749,66 @@ describe('ResultDetailComponent', () => {
       expect(spy).not.toHaveBeenCalled();
     });
   });
+
+  // @akili-spec bugfix/result-detail-not-found-navigation RDN-R-3 (RDN-DD-3)
+  describe('IPSR result redirect (RDN-R-3)', () => {
+    let navigateSpy: jest.SpiedFunction<Router['navigate']>;
+
+    // The signal is written AFTER the component exists, so the effect runs on a real change.
+    const resolveResult = (result_type_id: number, result_code: number | string) => {
+      mockDataControlService.currentResultSignal.set({ result_type_id, result_code });
+      TestBed.flushEffects();
+    };
+
+    beforeEach(() => {
+      // The outer beforeEach already built a component; its effect would double every call.
+      fixture.destroy();
+      jest.spyOn(ResultDetailComponent.prototype, 'getData').mockImplementation(async () => {});
+      mockApiService.resultsSE.currentResultCode = '11719';
+      mockApiService.resultsSE.currentResultPhase = '9';
+      navigateSpy = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      fixture = TestBed.createComponent(ResultDetailComponent);
+      fixture.detectChanges();
+      TestBed.flushEffects();
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('sends a resolved IPSR (type 10) result to the IPSR module, replacing the history entry', () => {
+      resolveResult(10, 11719);
+
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledWith(['/ipsr/detail', '11719', 'general-information'], {
+        queryParams: { phase: '9' },
+        replaceUrl: true
+      });
+    });
+
+    it('leaves a non-IPSR result (type 7) where it is', () => {
+      resolveResult(7, 11719);
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not redirect on a stale result whose code is not the one being opened', () => {
+      resolveResult(10, 99999);
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+
+    it('redirects once per code even if the signal is written again', () => {
+      resolveResult(10, 11719);
+      resolveResult(10, 11719);
+      mockDataControlService.currentResultSignal.set({ result_type_id: 10, result_code: 11719, other: 1 });
+      TestBed.flushEffects();
+
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not redirect Complementary innovation (type 11, P-6)', () => {
+      resolveResult(11, 11719);
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+  });
 });
