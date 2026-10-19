@@ -172,6 +172,15 @@ export interface CreateResultPayloadOptions {
 export interface PtPrefillInput {
   evidence_links: { url: string; title: string }[];
   partners: { clarisa_id: number; name: string }[];
+  /** `PTB-R-18b`: PRMS geographic focus (1 | 2 | 3 | 5) + CLARISA ids, mapped in `pt-prefill.util.ts`. */
+  geography?: {
+    geo_scope_id: number;
+    countries: { clarisa_id: number; iso_alpha_2: string | null; name: string }[];
+    regions: { id: number; name: string }[];
+    subnational: { code: string | null; clarisa_id: number | null }[];
+  };
+  /** `PTB-R-18b`: impact-area score (0 | 1 | 2) by PT key. */
+  impact_areas?: Record<string, number>;
 }
 
 /**
@@ -180,7 +189,8 @@ export interface PtPrefillInput {
  * (`countries` / `impact_areas` / `gender_split`, `PTB-R-18`) or the fields the pre-fill mapping in
  * `lab-report-form.component.ts` already consumed before building the payload (`title`,
  * `result_type`, `knowledge_product_handle`, contribution, centers). Evidence links and matched
- * partners come separately, as {@link PtPrefillInput} (`PTB-R-18a`).
+ * partners come separately, as {@link PtPrefillInput} (`PTB-R-18a`), and so do geography and
+ * impact-area scores once mapped (`PTB-R-18b`).
  */
 export interface PtProvenanceInput {
   /** The draft description — becomes `result.description` (the narrative carries only the origin note). */

@@ -586,3 +586,16 @@ centers, links, matched partners, pending checklist), `onPtResultSelected` / `un
 `buildCreateResultPayload({ ptPrefill })`. Server: `ProgressTrackerPrefillService` (best-effort,
 after the provenance write), `progress_tracker_prefill` on the create DTO. No migration: provenance
 uses the existing `results_by_institution.is_predicted`.
+
+## Amendment 2026-10-19 — `PTB-R-18b` (geography + impact-area scores)
+
+Approved by Juan Carlos ("Sí, haz geografía e impact areas"); amends `PTB-R-18` / `PTB-R-18a`.
+Branch `JuankCadavid/pt-prefill-geo-ia`. Client: `pt-prefill.util.ts` (`ptGeographyPlan`,
+`ptImpactAreaPlan`, `ptPrefillOutcomeItems`; level → focus table in `requirements.md` `PTB-R-18b`),
+`pt-results-browse` normalization keeps `geo_scope.provenance`, region CLARISA ids and coded
+subnational areas. Server: `ProgressTrackerPrefillService` validates against `clarisa_countries` /
+`clarisa_regions` / `clarisa_subnational_scopes`, saves geography through
+`GeographicLocationService.saveGeoScopeV2` (resolved via `ModuleRef`, non-strict, so
+`ProgressTrackerModule` does not import the `ResultsModule` graph) and the five `*_tag_level_id`
+columns (score + 1) only where empty. No migration.
+

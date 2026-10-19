@@ -84,7 +84,8 @@ export class CreateResultFromFrameworkHandler {
       );
     }
 
-    // `PTB-R-18a`: evidence links + matched partners of the same pick. Only with provenance (a
+    // `PTB-R-18a` / `PTB-R-18b`: evidence links, matched partners, geography and impact-area
+    // scores of the same pick. Only with provenance (a
     // real PT pick), after it is written, and never able to fail the create — the service
     // swallows and logs its own failures.
     let progressTrackerPrefill: PtPrefillSummary | undefined;

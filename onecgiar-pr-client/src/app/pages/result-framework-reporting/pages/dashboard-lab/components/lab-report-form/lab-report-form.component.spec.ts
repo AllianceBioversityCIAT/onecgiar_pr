@@ -2137,11 +2137,13 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
         evidence_fingerprint: 'fingerprint-1',
         generated_at: '2026-09-22T00:00:00.000Z'
       });
-      // PTB-AC-17: countries / impact areas / gender split are guidance only — never in the payload.
-      expect(JSON.stringify(body)).not.toMatch(/Kenya|impact_areas|gender_split/);
+      // PTB-AC-17 (amended by PTB-R-18b): gender split stays guidance only; plain country names
+      // carry no CLARISA match so they never travel; impact-area scores now do, as mapped scores.
+      expect(body.progress_tracker_prefill).toEqual({ evidence_links: [], partners: [], impact_areas: { gender: 1 } });
+      expect(JSON.stringify(body)).not.toMatch(/Kenya|gender_split|geography/);
     });
 
-    it('PTB-R-18 / PTB-R-18a: geography, impact areas, gender split, unmatched partners and type blocks never reach the payload — only allowlisted links and matched partners do', async () => {
+    it('PTB-R-18 / PTB-R-18a / PTB-R-18b: gender split, unmatched partners / places, justifications and type blocks never reach the payload — only allowlisted links, matched partners and mapped geography / scores do', async () => {
       const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
       const api: any = TestBed.inject(ApiService);
       fix.componentInstance.onOpenProgressTrackerTab();
@@ -2177,14 +2179,67 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
 
       expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
       const body = api.resultsSE.POST_createResult.mock.calls[0][0];
+      // The only country is unmatched and the region has no CLARISA id → no geography travels;
+      // the climate score does, as a bare 0/1/2 (no label, no justification).
       expect(body.progress_tracker_prefill).toEqual({
         evidence_links: [{ url: 'https://evidence.example.org/report', title: 'Report' }],
-        partners: [{ clarisa_id: 1234, name: 'Matched Partner Org' }]
+        partners: [{ clarisa_id: 1234, name: 'Matched Partner Org' }],
+        impact_areas: { climate: 2 }
       });
       const serialized = JSON.stringify(body);
       expect(serialized).not.toMatch(
-        /Atlantis|Lost Seas|Sentinel Partner|SPO|Center As Partner|Sentinel justification|Sentinel stage|geo_scope|"geo"|impact_area|gender_split|readiness_level|innovation"|policy_change|capacity_sharing|countries|match_status/
+        /Atlantis|Lost Seas|Northern Atlantis|Sentinel Partner|SPO|Center As Partner|Sentinel justification|Sentinel stage|geo_scope|"geo"|geography|impact_area_details|gender_split|readiness_level|innovation"|policy_change|capacity_sharing|match_status/
       );
+    });
+
+    it('PTB-R-18b: a matched geography travels as a PRMS focus with CLARISA ids only, and what the server skipped comes back in the alert', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      api.resultsSE.POST_createResult.mockReturnValueOnce(
+        of({
+          response: {
+            result: { result_code: 'R-1', version_id: 9 },
+            progressTrackerPrefill: { partners_skipped: [], geography_applied: null, geography_skipped_reason: 'not_empty', geography_skipped: [], impact_areas_applied: [], impact_areas_skipped: ['gender'] }
+          }
+        })
+      );
+      const form = fix.componentInstance;
+      form.onPtResultSelected(
+        proposal({
+          geo: {
+            level: 'multinational',
+            countries: [
+              { name: 'Mali', iso_alpha_2: 'ML', clarisa_id: 466, match_status: 'matched' },
+              { name: 'Mozambique', iso_alpha_2: 'MZ', clarisa_id: 508, match_status: 'matched' }
+            ],
+            regions: [],
+            subnational_areas: null,
+            provenance: ['KPI']
+          },
+          impact_area_details: [{ key: 'gender', label: 'Gender', score: 1, justification: 'Sentinel justification' }]
+        })
+      );
+      form.patch('contribution_to_indicator_target', 1);
+      expect(form.ptPendingChecklist().map(i => i.label)).toContain('Geographic location');
+
+      form.createResult();
+
+      const body = api.resultsSE.POST_createResult.mock.calls[0][0];
+      expect(body.progress_tracker_prefill.geography).toEqual({
+        geo_scope_id: 3,
+        countries: [
+          { clarisa_id: 466, iso_alpha_2: 'ML', name: 'Mali' },
+          { clarisa_id: 508, iso_alpha_2: 'MZ', name: 'Mozambique' }
+        ],
+        regions: [],
+        subnational: []
+      });
+      expect(body.progress_tracker_prefill.impact_areas).toEqual({ gender: 1 });
+      expect(JSON.stringify(body)).not.toMatch(/Sentinel justification|match_status|"provenance":\[|KPI/);
+      const alert = api.alertsFe.show.mock.calls.at(-1)[0];
+      expect(alert.id).toBe('reportResultPtPending');
+      expect(alert.description).toContain('already had a geography');
+      expect(alert.description).toContain('Gender equality, youth &amp; social inclusion 1');
     });
 
     it('PTB-R-18a: prefills a numeric contribution into an empty field but never over a typed value', async () => {

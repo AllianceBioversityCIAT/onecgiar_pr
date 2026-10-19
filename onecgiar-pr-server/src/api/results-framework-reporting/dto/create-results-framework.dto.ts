@@ -218,11 +218,11 @@ export class CreateResultsFrameworkResultDto {
   })
   progress_tracker_provenance?: PtResultProvenanceDto;
 
-  // PTB-R-18a (2026-10-19)
+  // PTB-R-18a / PTB-R-18b (2026-10-19)
   @ApiPropertyOptional({
     type: () => PtResultPrefillDto,
     description:
-      'Evidence links and CLARISA-matched partners from the same Progress Tracker pick. Only read together with progress_tracker_provenance; applied best-effort after the result is created and never fails the create.',
+      'Evidence links, CLARISA-matched partners, geography and impact-area scores from the same Progress Tracker pick. Only read together with progress_tracker_provenance; applied best-effort after the result is created and never fails the create.',
   })
   progress_tracker_prefill?: PtResultPrefillDto;
 }

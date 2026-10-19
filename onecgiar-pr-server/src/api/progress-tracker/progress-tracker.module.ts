@@ -15,6 +15,12 @@ import { ProgressTrackerPrefillService } from './progress-tracker-prefill.servic
 import { Evidence } from '../results/evidences/entities/evidence.entity';
 import { ResultsByInstitution } from '../results/results_by_institutions/entities/results_by_institution.entity';
 import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
+import { Result } from '../results/entities/result.entity';
+import { ResultCountry } from '../results/result-countries/entities/result-country.entity';
+import { ResultRegion } from '../results/result-regions/entities/result-region.entity';
+import { ClarisaCountry } from '../../clarisa/clarisa-countries/entities/clarisa-country.entity';
+import { ClarisaRegion } from '../../clarisa/clarisa-regions/entities/clarisa-region.entity';
+import { ClarisaSubnationalScope } from '../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 
 /**
  * `PTM-T-2` — module skeleton for the Progress Tracker Interoperability surface
@@ -47,7 +53,10 @@ import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/
  * per-row `PT · N` badges (`GET programs/:programId/indicator-activity`).
  *
  * `ProgressTrackerPrefillService` (`PTB-R-18a`) saves a pick's evidence links and matched partners
- * after create; plain `Repository<>` injections, same reasoning as `Version` above.
+ * after create; plain `Repository<>` injections, same reasoning as `Version` above. `PTB-R-18b`
+ * adds geography + impact-area scores: the CLARISA / result repositories below, and
+ * `GeographicLocationService` resolved through `ModuleRef` (non-strict) so this module does not
+ * import `GeographicLocationModule` and, with it, the whole `ResultsModule` graph.
  */
 @Module({
   imports: [
@@ -59,6 +68,12 @@ import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/
       Evidence,
       ResultsByInstitution,
       ClarisaInstitution,
+      Result,
+      ResultCountry,
+      ResultRegion,
+      ClarisaCountry,
+      ClarisaRegion,
+      ClarisaSubnationalScope,
     ]),
   ],
   controllers: [ProgressTrackerController],

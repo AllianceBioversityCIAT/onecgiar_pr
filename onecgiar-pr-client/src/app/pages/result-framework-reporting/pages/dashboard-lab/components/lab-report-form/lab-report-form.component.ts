@@ -40,10 +40,12 @@ import { ResultFrameworkReportingHomeService } from '../../../result-framework-r
 import { PtResultsBrowseComponent, PtProposalDto } from './components/pt-results-browse/pt-results-browse.component';
 import {
   PtPendingItem,
+  PtPrefillBlock,
   buildPtPendingChecklist,
   buildPtPrefillBlock,
   ptContributionToApply,
   ptPendingChecklistHtml,
+  ptPrefillOutcomeItems,
   resolvePtCenters
 } from './pt-prefill.util';
 
@@ -1148,13 +1150,13 @@ export class LabReportFormComponent {
    * persistent "Pending from Progress Tracker" alert — it is mounted on `app-root`, so it survives
    * the navigation to Result Detail. Partners the server could not save are appended to it.
    */
-  private showCreatedAlert(pending: PtPendingItem[], prefill: { partners_skipped?: unknown } | null | undefined): void {
-    const skipped = Array.isArray(prefill?.partners_skipped) ? prefill.partners_skipped : [];
+  private showCreatedAlert(pending: PtPendingItem[], prefill: Record<string, unknown> | null | undefined, sent: PtPrefillBlock | null = null): void {
+    const names = (value: unknown): string[] =>
+      (Array.isArray(value) ? value : []).filter((name): name is string => typeof name === 'string' && name.trim() !== '');
     const items: PtPendingItem[] = [
       ...pending,
-      ...skipped
-        .filter((name): name is string => typeof name === 'string' && name.trim() !== '')
-        .map(name => ({ label: `Partner: ${name}`, detail: 'Could not be saved — add it in Contributors and partners' }))
+      ...names(prefill?.['partners_skipped']).map(name => ({ label: `Partner: ${name}`, detail: 'Could not be saved — add it in Contributors and partners' })),
+      ...ptPrefillOutcomeItems(sent, prefill)
     ];
     if (!items.length) {
       this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
@@ -1185,9 +1187,10 @@ export class LabReportFormComponent {
     // `''` and omits `progress_tracker_provenance` and `result.description` entirely (`PTB-AC-13`).
     // With a pick, the draft becomes `result.description`; the narrative carries only the origin note. Only the four fields the
     // builder reads travel as provenance; `PTB-R-18a` adds evidence links + CLARISA-matched
-    // partners in `ptPrefill` (allowlisted in `buildPtPrefillBlock`). Countries / impact areas /
-    // gender split stay out (`PTB-R-18`, `PTB-AC-17`).
+    // partners in `ptPrefill` (allowlisted in `buildPtPrefillBlock`), and `PTB-R-18b` the mapped
+    // geography + impact-area scores. Gender split and type blocks stay out (`PTB-R-18`).
     const ptDraft = this.ptDraft();
+    const ptPrefill = ptDraft ? buildPtPrefillBlock(ptDraft) : null;
     const ptProposal: PtProvenanceInput | null = ptDraft
       ? {
           description: ptDraft.description,
@@ -1212,14 +1215,14 @@ export class LabReportFormComponent {
       hasInnovationLink: this.showsInnovationLink() ? this.hasInnovationLink() : null,
       linkedResultId: this.linkedResultId(),
       ptProposal,
-      ptPrefill: ptDraft ? buildPtPrefillBlock(ptDraft) : null
+      ptPrefill
     });
     const ptPending = ptDraft ? this.ptPendingChecklist() : [];
 
     this.autoCreateHint.set(null);
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: (resp: any) => {
-        this.showCreatedAlert(ptPending, resp?.response?.progressTrackerPrefill);
+        this.showCreatedAlert(ptPending, resp?.response?.progressTrackerPrefill, ptPrefill);
         const code = resp?.response?.result?.result_code;
         const phase = resp?.response?.result?.version_id;
         if (code == null) {

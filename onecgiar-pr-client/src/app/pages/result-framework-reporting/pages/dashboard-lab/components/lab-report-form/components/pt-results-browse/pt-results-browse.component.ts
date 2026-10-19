@@ -32,14 +32,30 @@ export interface PtCountryDto {
 export interface PtRegionDto {
   name: string;
   match_status: PtMatchStatus | null;
+  /** CLARISA region UM49 code (`clarisa_id` / `um49Code` / `id`); `null` = not mappable. */
+  clarisa_id?: number | null;
 }
 
-/** Display-only geography (`PTB-R-18`): never written to the create payload. */
+/** A subnational area PT identifies by CLARISA code (ISO 3166-2) or id — only these can be saved. */
+export interface PtSubnationalRefDto {
+  name: string | null;
+  code: string | null;
+  clarisa_id: number | null;
+}
+
+/**
+ * Geography as PT proposes it. Shown in the proposal; since `PTB-R-18b` (2026-10-19) also mapped
+ * to a PRMS geographic focus by `pt-prefill.util.ts` (`ptGeographyPlan`).
+ */
 export interface PtGeoDto {
   level: string | null;
   countries: PtCountryDto[];
   regions: PtRegionDto[];
   subnational_areas: string | null;
+  /** `geo_scope.provenance` (e.g. `["KPI"]` = the KPI's planned countries, not evidence-confirmed). */
+  provenance?: string[];
+  /** Subnational areas that carry a CLARISA code / id. */
+  subnational_refs?: PtSubnationalRefDto[];
 }
 
 /** One CLARISA institution PT considered for an unmatched partner — shown in the pending checklist only. */
@@ -305,10 +321,25 @@ function toCountry(value: unknown): PtCountryDto | null {
 }
 
 function toRegion(value: unknown): PtRegionDto | null {
-  if (typeof value === 'string') return value.trim() ? { name: value.trim(), match_status: null } : null;
+  if (typeof value === 'string') return value.trim() ? { name: value.trim(), match_status: null, clarisa_id: null } : null;
   const rec = asRecord(value);
   const name = asText(rec?.['name']);
-  return rec && name ? { name, match_status: asTextOrNull(rec['match_status']) } : null;
+  if (!rec || !name) return null;
+  return { name, match_status: asTextOrNull(rec['match_status']), clarisa_id: toPositiveId(rec['clarisa_id'] ?? rec['um49Code'] ?? rec['um49_code'] ?? rec['id']) };
+}
+
+/** Subnational entries that name a CLARISA code (ISO 3166-2) or id; plain names are display-only. */
+function toSubnationalRefs(value: unknown): PtSubnationalRefDto[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(item => {
+      const rec = asRecord(item);
+      if (!rec) return null;
+      const code = asTextOrNull(rec['code']) ?? asTextOrNull(rec['iso_code']) ?? asTextOrNull(rec['iso_3166_2']);
+      const clarisaId = toPositiveId(rec['clarisa_id']);
+      return code || clarisaId ? { name: asTextOrNull(rec['name']), code, clarisa_id: clarisaId } : null;
+    })
+    .filter(nonNull);
 }
 
 /** `subnational_areas` is informative text; an array of names or `{ name }` objects is joined. */
@@ -644,7 +675,9 @@ export class PtResultsBrowseComponent {
       level: asTextOrNull(scope?.['level']),
       countries: itemCountries.length ? itemCountries : scopeCountries,
       regions: (regionSource ?? []).map(toRegion).filter(nonNull),
-      subnational_areas: toSubnational(item.subnational_areas) ?? toSubnational(scope?.['subnational_areas'])
+      subnational_areas: toSubnational(item.subnational_areas) ?? toSubnational(scope?.['subnational_areas']),
+      provenance: (Array.isArray(scope?.['provenance']) ? (scope['provenance'] as unknown[]) : []).map(asText).filter(Boolean),
+      subnational_refs: [...toSubnationalRefs(item.subnational_areas), ...toSubnationalRefs(scope?.['subnational_areas'])]
     };
     const empty = !geo.level && !geo.countries.length && !geo.regions.length && !geo.subnational_areas;
     return empty ? null : geo;
