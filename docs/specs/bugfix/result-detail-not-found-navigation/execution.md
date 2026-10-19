@@ -79,3 +79,35 @@
 - **Requirements covered:** RDN-R-3 (automated part). Open: RDN-MAN-1 — on test after deploy, open an IPSR code on the Reporting route with `?phase=` → ends on `/ipsr/detail/…`; browser back does not return to the Reporting URL; note any flash of the Reporting section; confirm `result_code` in the by-id payload.
 - **runtime events:** none.
 - **spawns:** implementer 16 calls, 79955 tokens, ended complete; reviewer 15 calls, 102032 tokens, ended complete.
+
+### RDN-MAN-1 — local run (2026-10-19, Leader in Chrome)
+
+Local stack: client `localhost:4200` + server `:3400` from this worktree (node_modules symlinked, `.env` copied from the main checkout; its DB has IPSR 2026 = phase 37, Reporting 2026 = phase 36). User logged in. Codes picked from that DB: type 10 = 9733, type 11 = 9656, type 7 = 9867.
+
+| Check | Result |
+|---|---|
+| `/result/result-detail/9733/general-information?phase=37` (type 10) | Ends on `/ipsr/detail/9733/general-information?phase=37`, IPSR screen rendered (Annual updating, 3 tabs) |
+| Browser back after the redirect | Lands on `/result/results-outlet/results-list` (the previous entry) — no return to the Reporting URL, no loop |
+| `9656?phase=37` (type 11) | Stays on `/result/result-detail/9656/…` (P-6 exclusion) |
+| `9867?phase=36` (type 7) | Stays on Reporting, form rendered as today |
+| `/result/result-detail/9733/general-information` (no `?phase`) | "Not reported in this phase"; chip `IPSR 2026 Open -> /ipsr/detail/9733/general-information?phase=37` |
+| Not-found → **Back to results** | Navigates to `/result/results-outlet/results-list` |
+| Not-found → sidebar **Home** | Navigates to `/result-framework-reporting/home`; no `TypeError`/`hasUnsavedChanges` error in the console (console tracking started just before this click) |
+| Flash of the Reporting section before the redirect | Not observed in the screenshot taken 5 s after load; not measured frame by frame |
+
+Not covered: the run is local, not the deployed test environment that tasks.md RDN-T-3 names. 11719 (the prod reproduction code) does not exist in this DB.
+
+### RDN-T-3 — closed (2026-10-19)
+
+- **User decision:** the local Chrome run above is accepted as the RDN-MAN-1 human check ("Adelante, hagamos merge en performance-refactor"). RDN-T-3 → `[x]`; the Reviewer PASS above stands as its closing record.
+- **Rollout:** merged into `performance-refactor` the same day; the pipeline deploys it to test.
+
+## Summary
+
+| Task | Attempts | Reviewer | Result |
+|---|---|---|---|
+| RDN-T-1 guard null branch | 2 | FAIL (inert hidden-outlet stub) → PASS | `2720573fb` |
+| RDN-T-2 phase chips by module | 1 | PASS | `90fbf57ee` |
+| RDN-T-3 IPSR redirect (type 10 only) | 1 | PASS | `12dd6f5dc` |
+
+Budget (design.md §1): 3 tasks, 3 review rounds expected; actual 4 review rounds (one T1 rework). Spec-wording lessons for `/akili-archive`: plain `tsc -p tsconfig.app.json` does not type-check templates (use `ngc`); a router-level guard test needs a root outlet (`RouterTestingHarness`) or the hidden-outlet stub is inert.

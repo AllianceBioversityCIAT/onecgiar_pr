@@ -9,7 +9,7 @@
 | Ticket | P2-3969 |
 | Base branch | `performance-refactor`. Fast-forward first: this checkout is 6 commits behind `origin/performance-refactor`, and none of those commits touch these files |
 | Approval Mode | gated |
-| Status | in-progress — T1, T2 done; T3 code done, RDN-MAN-1 pending deploy |
+| Status | complete 2026-10-19 — merged into `performance-refactor` |
 
 ## 2. Pre-flight checklist
 
@@ -115,7 +115,7 @@ T1, T2 and T3 touch disjoint code. T2 and T3 share `result-detail.component.ts` 
 
 ---
 
-### [~] RDN-T-3 — Redirect a resolved IPSR result to the IPSR module (Bug Mode regression)
+### [x] RDN-T-3 — Redirect a resolved IPSR result to the IPSR module (Bug Mode regression)
 
 - **Type:** client + tests
 - **Description:**
