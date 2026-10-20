@@ -1,4 +1,5 @@
 import { PtCenterRefDto, PtGeoDto, PtProposalDto, isSafeHttpUrl } from './components/pt-results-browse/pt-results-browse.component';
+import { PT_TEMPORARY_EVIDENCE_NOTICE } from '../../../../../../shared/constants/progress-tracker-evidence.constants';
 
 /**
  * Progress Tracker prefill, Phase 1 + matched partners (2026-10-19, `PTB-R-18a` — amends
@@ -110,6 +111,20 @@ export function ptEvidenceLinksToSave(proposal: PtProposalDto | null | undefined
     if (links.length === PT_EVIDENCE_LINKS_MAX) break;
   }
   return links;
+}
+
+/**
+ * Names of the proposal's evidence items PT holds without an http(s) link (e.g. `kind: "text"`,
+ * `access: "upload_file"`). Nothing can be saved for them — the user has to upload the file.
+ */
+export function ptEvidenceWithoutLink(proposal: PtProposalDto | null | undefined): string[] {
+  const names = new Set<string>();
+  for (const item of proposal?.evidence ?? []) {
+    if (isSafeHttpUrl(item?.url)) continue;
+    const name = typeof item?.name === 'string' ? item.name.trim() : '';
+    if (name) names.add(name);
+  }
+  return [...names];
 }
 
 /**
@@ -461,6 +476,15 @@ export function buildPtPendingChecklist(proposal: PtProposalDto | null | undefin
   const linkCount = (proposal.evidence_links ?? []).length;
   if (evidencePolicy === 'suggest' && linkCount) {
     items.push({ label: 'Evidence links', detail: `${linkCount} suggested by Progress Tracker` });
+  }
+  // Links saved from PT are temporary (server prefixes their description); say so before creating.
+  if (ptEvidenceLinksToSave(proposal).length) {
+    items.push({ label: 'Temporary evidence', detail: PT_TEMPORARY_EVIDENCE_NOTICE });
+  }
+  if (evidencePolicy !== 'none') {
+    for (const name of ptEvidenceWithoutLink(proposal)) {
+      items.push({ label: `Evidence in Progress Tracker without a link: ${name}`, detail: 'upload the final file in Evidence' });
+    }
   }
 
   // PTB-R-18b: only what the geography / impact-area plans did not apply, or applied as a suggestion.

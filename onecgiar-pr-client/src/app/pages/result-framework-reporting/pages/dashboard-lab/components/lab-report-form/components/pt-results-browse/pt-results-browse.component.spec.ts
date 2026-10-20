@@ -301,6 +301,50 @@ describe('PtResultsBrowseComponent', () => {
       expect(emitted.evidence_fingerprint).toBe('f9adbe6f47c1e67fba54eac88e3c7f50aefa75c6bf4b1bbe9359e586aa01a181');
     });
 
+    it('shows the two-step hint and marks the picked card as Selected', () => {
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      const q = (sel: string) => fixture.nativeElement.querySelector(sel);
+      expect(q('[data-test="pt-steps-hint"]').textContent.trim()).toBe('1. Pick a proposal with “Use this result” → 2. Click “Create and continue”');
+      const useBtn = q('[data-test="pt-use-this-result-8006329bfd49:1"]');
+      expect(useBtn.textContent.trim()).toBe('Use this result');
+      expect(q('[data-test="pt-proposal-selected-label"]')).toBeNull();
+
+      useBtn.click();
+      fixture.detectChanges();
+
+      expect(useBtn.textContent.trim()).toBe('Selected ✓');
+      expect(useBtn.getAttribute('aria-pressed')).toBe('true');
+      expect(q('[data-test="pt-proposal-selected-label"]').textContent).toContain('Selected');
+      expect(q('[data-test="pt-proposal-8006329bfd49:1"]').getAttribute('data-selected')).toBe('true');
+    });
+
+    it('follows the host pick when selectedResultKey is bound (Change proposal clears the highlight)', () => {
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.componentRef.setInput('selectedResultKey', '8006329bfd49:1');
+      fixture.detectChanges();
+      const useBtn = () => fixture.nativeElement.querySelector('[data-test="pt-use-this-result-8006329bfd49:1"]');
+      expect(useBtn().textContent.trim()).toBe('Selected ✓');
+
+      fixture.componentRef.setInput('selectedResultKey', null);
+      fixture.detectChanges();
+      expect(useBtn().textContent.trim()).toBe('Use this result');
+    });
+
+    it('reports how many proposals can be picked through proposalsAvailable', () => {
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
+      const counts: number[] = [];
+      component.proposalsAvailable.subscribe(n => counts.push(n));
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+      TestBed.tick();
+      fixture.detectChanges();
+      expect(counts.at(-1)).toBe(1);
+    });
+
     it('disables Use this result while busy is true', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
 

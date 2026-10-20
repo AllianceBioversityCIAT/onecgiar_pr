@@ -21,6 +21,13 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 /** Main evidences a result shows in Evidence — mirrors the client cap (`PT_EVIDENCE_LINKS_MAX`). */
 export const PT_PREFILL_MAX_EVIDENCE_LINKS = 6;
+/**
+ * Prefixed to the description of every evidence saved from a Progress Tracker pick. The evidence
+ * table has no provenance column (no migration for this), so the prefix is the marker: the client
+ * Evidence section reads it to show the "temporary" notice.
+ */
+export const PT_TEMPORARY_EVIDENCE_PREFIX =
+  '[Temporary — from Progress Tracker, may be incomplete]';
 /** Generous upper bound so a malformed block cannot turn into a large insert. */
 export const PT_PREFILL_MAX_PARTNERS = 30;
 /** Same reasoning for geography: no real result spans more countries / regions / areas. */
@@ -530,7 +537,9 @@ export class ProgressTrackerPrefillService {
       .map((l) =>
         this._evidenceRepository.create({
           link: l.url,
-          description: l.title,
+          description: l.title
+            ? `${PT_TEMPORARY_EVIDENCE_PREFIX} ${l.title}`
+            : PT_TEMPORARY_EVIDENCE_PREFIX,
           result_id: resultId,
           evidence_type_id: EvidenceTypeEnum.MAIN,
           is_supplementary: false,

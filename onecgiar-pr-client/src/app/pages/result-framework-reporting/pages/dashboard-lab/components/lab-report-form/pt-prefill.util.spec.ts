@@ -6,6 +6,7 @@ import {
   escapePtHtml,
   ptContributionToApply,
   ptEvidenceLinksToSave,
+  ptEvidenceWithoutLink,
   ptFieldPolicy,
   ptMatchedPartners,
   ptGeoLevel,
@@ -16,6 +17,7 @@ import {
   ptPrefillOutcomeItems,
   resolvePtCenters
 } from './pt-prefill.util';
+import { PT_TEMPORARY_EVIDENCE_NOTICE } from '../../../../../../shared/constants/progress-tracker-evidence.constants';
 
 // PTB-R-18a (2026-10-19) — Progress Tracker prefill, Phase 1 + matched partners.
 const base: PtProposalDto = {
@@ -144,6 +146,33 @@ describe('pt-prefill.util', () => {
     expect(labels).toEqual(['Readiness level', 'Partner: Far Org', 'Lead partner']);
     expect(items[1].detail).toContain('Far Org Ltd (CLARISA 5)');
     expect(labels).not.toContain('Partner: Org');
+  });
+
+  it('flags PT evidence links as temporary in the checklist', () => {
+    const items = buildPtPendingChecklist(p({ evidence_links: [{ url: 'https://a.org/x', title: 'X', kind: null }] }), catalogue);
+    expect(items).toContainEqual({ label: 'Temporary evidence', detail: PT_TEMPORARY_EVIDENCE_NOTICE });
+    expect(PT_TEMPORARY_EVIDENCE_NOTICE).toBe(
+      'Evidence retrieved from Progress Tracker is temporary and may be incomplete. Replace it with the final evidence if available.'
+    );
+    expect(buildPtPendingChecklist(p(), catalogue).map(i => i.label)).not.toContain('Temporary evidence');
+  });
+
+  it('lists PT evidence items that have no link, so the user uploads the final file', () => {
+    const name = '[Qualitative level: On Track] Collection of standardized data: User-friendly too';
+    const proposal = p({
+      evidence: [
+        { item_key: 'E1', kind: 'text', name, url: null },
+        { item_key: 'E2', kind: 'link', name: 'Linked', url: 'https://a.org/y' },
+        { item_key: 'E3', kind: 'text', name: '  ', url: null },
+        { item_key: 'E4', kind: 'text', name, url: 'javascript:alert(1)' }
+      ],
+      evidence_links: []
+    });
+    expect(ptEvidenceWithoutLink(proposal)).toEqual([name]);
+    const items = buildPtPendingChecklist(proposal, catalogue);
+    expect(items).toContainEqual({ label: `Evidence in Progress Tracker without a link: ${name}`, detail: 'upload the final file in Evidence' });
+    expect(items.map(i => i.label)).not.toContain('Temporary evidence');
+    expect(buildPtPendingChecklist({ ...proposal, policy: { evidence_links: 'none' } }, catalogue)).toEqual([]);
   });
 
   it('escapes every PT string in the alert HTML', () => {

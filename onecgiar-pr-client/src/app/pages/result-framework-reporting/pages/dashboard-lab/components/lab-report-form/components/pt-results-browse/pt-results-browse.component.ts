@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { outputFromObservable, takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { EMPTY, Observable, Subscription, catchError, concat, defer, distinctUntilChanged, filter, interval, map, of, switchMap, take, tap, timer } from 'rxjs';
 import { ResultsApiService } from '../../../../../../../../shared/services/api/results-api.service';
 
@@ -165,6 +165,8 @@ export interface PtPreparation {
   status?: string;
   retry_after_s?: number | null;
   pending_group_ids?: string[];
+  /** Plain-language "nothing to propose" reason; fallback for `generated_by.notice` (null in every sample so far). */
+  no_results_reason?: string | null;
 }
 
 /** `child 1`'s house envelope, nested per `design.md` `P-13` — never a top-level `status`. */
@@ -352,6 +354,11 @@ function toSubnational(value: unknown): string | null {
 
 const nonNull = <T>(value: T | null): value is T => value !== null;
 
+/** `generated_by.notice`, else `preparation.no_results_reason`; trimmed text or `null`. */
+export function ptPlainNotice(generatedBy: PtGeneratedBy | null | undefined, preparation: PtPreparation | null | undefined): string | null {
+  return asTextOrNull(generatedBy?.notice) ?? asTextOrNull(preparation?.no_results_reason);
+}
+
 /** A finite, non-negative number or numeric string; anything else (text, ranges, `null`) is `null`. */
 export function toPtNumber(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : null;
@@ -419,6 +426,12 @@ export class PtResultsBrowseComponent {
   readonly center = input<string | null>(null);
   /** True while a target shared by several centers has no center chosen yet: nothing is fetched. */
   readonly awaitingCenter = input<boolean>(false);
+  /**
+   * The host's current pick (`ptDraft()?.result_key`). When bound, it is the source of truth for the
+   * selected card — so "Change proposal" in the host clears the highlight too. Unbound (`undefined`)
+   * falls back to the panel's own last click.
+   */
+  readonly selectedResultKey = input<string | null | undefined>(undefined);
 
   // Outputs — design.md §6.1
   readonly proposalSelected = output<PtProposalDto>();
@@ -434,6 +447,20 @@ export class PtResultsBrowseComponent {
   readonly partialNotice = signal<string | null>(null);
   /** Headline of the `empty` state — explains PT's template `fallback_reason` when it is a known one. */
   readonly emptyMessage = signal(PT_EMPTY_DEFAULT_MESSAGE);
+  /**
+   * PT's own plain-language explanation of an empty answer (`generated_by.notice`, else
+   * `preparation.no_results_reason`). Shown as text under the empty / preparing headline.
+   */
+  readonly ptNotice = signal<string | null>(null);
+  /** The card shown as selected: the host's pick when bound, else the last click here. */
+  readonly activeKey = computed<string | null>(() => {
+    const bound = this.selectedResultKey();
+    return bound !== undefined ? bound : this.selectedKey();
+  });
+  /** Proposals the user can pick right now (0 outside the `results` state). */
+  readonly selectableCount = computed(() => (this.status() === 'results' ? this.proposals().length : 0));
+  /** Lets the host refuse "Create and continue" while proposals are listed and none is picked. */
+  readonly proposalsAvailable = outputFromObservable(toObservable(this.selectableCount));
   /** True while the one automatic retry after a timeout is pending — the spinner stays up. */
   readonly autoRetrying = signal(false);
   /** Seconds left before Check again is enabled (`preparation.retry_after_s`); 0 = enabled. */
@@ -496,6 +523,7 @@ export class PtResultsBrowseComponent {
           this.ptUrl.set(null);
           this.selectedKey.set(null);
           this.partialNotice.set(null);
+          this.ptNotice.set(null);
           this.autoRetrying.set(false);
           this.stopCooldown();
         }),
@@ -600,6 +628,7 @@ export class PtResultsBrowseComponent {
       // Nothing to show: either PT is still preparing this KPI (template fallback for a
       // "not ready yet" reason, a retry hint, or a partial answer with nothing in it yet), or
       // there really is nothing to propose.
+      this.ptNotice.set(ptPlainNotice(generatedBy, body.preparation));
       const retryAfter = body.preparation?.retry_after_s;
       const hasRetryAfter = retryAfter !== null && retryAfter !== undefined;
       const preparing =

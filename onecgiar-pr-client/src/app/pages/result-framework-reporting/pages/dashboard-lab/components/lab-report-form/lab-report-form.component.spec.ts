@@ -12,7 +12,7 @@ import { ResultFrameworkReportingHomeService } from '../../../result-framework-r
 import { NO_ERRORS_SCHEMA, WritableSignal, computed, signal } from '@angular/core';
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-3)
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
-import { PtProposalDto } from './components/pt-results-browse/pt-results-browse.component';
+import { PtProposalDto, PtResultsBrowseComponent } from './components/pt-results-browse/pt-results-browse.component';
 
 /**
  * The template is replaced with an empty one on purpose: these tests are about the rules the form
@@ -2106,6 +2106,72 @@ describe('LabReportFormComponent — Progress Tracker entry mode (PTB-T-3)', () 
       fix.detectChanges();
 
       expect(api.resultsSE.POST_createResult).not.toHaveBeenCalled();
+    });
+
+    it('refuses Create and continue on the PT tab while proposals are listed and none is picked, and says why', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      const form = fix.componentInstance;
+      form.onOpenProgressTrackerTab();
+      fix.detectChanges(); // the mounted panel reports its own initial 0 first
+      form.ptProposalCount.set(2);
+      form.patch('result_name', 'Typed by hand');
+      form.patch('contribution_to_indicator_target', 3);
+      fix.detectChanges();
+      const message = () => fix.nativeElement.querySelector('[data-testid="pt-pick-required-message"]');
+      expect(message()).toBeNull();
+
+      (fix.nativeElement.querySelector('[data-testid="create-result-submit-btn"]') as HTMLButtonElement).click();
+      fix.detectChanges();
+
+      expect(api.resultsSE.POST_createResult).not.toHaveBeenCalled();
+      expect(message()?.querySelector('span:last-child')?.textContent?.trim()).toBe(
+        'Select a Progress Tracker proposal first (“Use this result”), or switch to Manual entry.'
+      );
+      expect(message()?.getAttribute('role')).toBe('alert');
+
+      form.createResult();
+      expect(api.resultsSE.POST_createResult).not.toHaveBeenCalled();
+
+      // A pick answers it: the message goes and the create goes through.
+      form.onPtResultSelected(proposal());
+      form.patch('contribution_to_indicator_target', 3);
+      fix.detectChanges();
+      expect(message()).toBeNull();
+      form.createResult();
+      expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
+    });
+
+    it('Manual entry is unaffected by listed PT proposals, and an empty PT panel never blocks', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      const api: any = TestBed.inject(ApiService);
+      const form = fix.componentInstance;
+      form.onOpenProgressTrackerTab();
+      form.ptProposalCount.set(0);
+      form.patch('result_name', 'Typed by hand');
+      form.patch('contribution_to_indicator_target', 3);
+      fix.detectChanges();
+      expect(form.ptPickRequired()).toBe(false);
+
+      form.ptProposalCount.set(1);
+      form.kpEntryMode.set('manual');
+      fix.detectChanges();
+      expect(form.ptPickRequired()).toBe(false);
+      form.createResult();
+      expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
+      expect(fix.nativeElement.querySelector('[data-testid="pt-pick-required-message"]')).toBeNull();
+    });
+
+    it('passes the current pick to the PT panel so its card shows Selected', async () => {
+      const fix = await mountPt({ indicator: nonKpIndicator, tocNode: { result_level_id: OUTPUT_LEVEL } });
+      fix.componentInstance.onOpenProgressTrackerTab();
+      fix.componentInstance.onPtResultSelected(proposal({ result_key: 'k:7' }));
+      fix.detectChanges();
+      const panel = fix.debugElement.query(By.directive(PtResultsBrowseComponent)).componentInstance as PtResultsBrowseComponent;
+      expect(panel.selectedResultKey()).toBe('k:7');
+      fix.componentInstance.clearPtDraft();
+      fix.detectChanges();
+      expect(panel.selectedResultKey()).toBeNull();
     });
 
     it('PTB-AC-12 / PTB-R-16 / PTB-AC-17: Create and continue sends exactly one POST carrying the narrative + provenance, never the guidance-only fields', async () => {

@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
   PT_PREFILL_MAX_EVIDENCE_LINKS,
+  PT_TEMPORARY_EVIDENCE_PREFIX,
   ProgressTrackerPrefillService,
 } from './progress-tracker-prefill.service';
 import { Result } from '../results/entities/result.entity';
@@ -159,7 +160,7 @@ describe('ProgressTrackerPrefillService', () => {
     expect(evidenceRepo.save).toHaveBeenCalledWith([
       expect.objectContaining({
         link: 'https://b.org/y',
-        description: 'Y',
+        description: '[Temporary — from Progress Tracker, may be incomplete] Y',
         result_id: 101,
         evidence_type_id: EvidenceTypeEnum.MAIN,
         is_sharepoint: 0,
@@ -167,6 +168,31 @@ describe('ProgressTrackerPrefillService', () => {
         created_by: 10,
       }),
     ]);
+  });
+
+  it('flags every PT evidence as temporary in its description, also when the link has no title', async () => {
+    evidenceRepo.find.mockResolvedValue([]);
+    await service.apply(
+      101,
+      {
+        evidence_links: [
+          { url: 'https://c.org/z', title: '  Field report  ' },
+          { url: 'https://d.org/w' },
+        ],
+      },
+      10,
+      false,
+    );
+    const saved = evidenceRepo.save.mock.calls.at(-1)[0];
+    expect(
+      saved.map((row: { description: string }) => row.description),
+    ).toEqual([
+      `${PT_TEMPORARY_EVIDENCE_PREFIX} Field report`,
+      PT_TEMPORARY_EVIDENCE_PREFIX,
+    ]);
+    expect(PT_TEMPORARY_EVIDENCE_PREFIX).toBe(
+      '[Temporary — from Progress Tracker, may be incomplete]',
+    );
   });
 
   it('saves only valid, active, non-center CLARISA partners as predicted, with the partner role and no delivery', async () => {

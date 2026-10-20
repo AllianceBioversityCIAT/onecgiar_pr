@@ -280,6 +280,8 @@
             [indicatorFixesResultType]="ptIndicatorFixesResultType()"
             [isKnowledgeProduct]="currentResultIsKnowledgeProduct()"
             [busy]="validatingHandler() || creatingResult()"
+            [selectedResultKey]="ptDraft()?.result_key ?? null"
+            (proposalsAvailable)="ptProposalCount.set($event)"
             (proposalSelected)="onPtResultSelected($event)"
             (switchToManual)="kpEntryMode.set('manual')">
           </app-pt-results-browse>
@@ -348,6 +350,8 @@
             [indicatorFixesResultType]="ptIndicatorFixesResultType()"
             [isKnowledgeProduct]="currentResultIsKnowledgeProduct()"
             [busy]="validatingHandler() || creatingResult()"
+            [selectedResultKey]="ptDraft()?.result_key ?? null"
+            (proposalsAvailable)="ptProposalCount.set($event)"
             (proposalSelected)="onPtResultSelected($event)"
             (switchToManual)="kpEntryMode.set('manual')">
           </app-pt-results-browse>
@@ -903,6 +907,17 @@
       <span data-testid="ready-to-create-indicator" class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)] font-medium">
         <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-green-500)]"></span> Ready to create
       </span>
+    }
+
+    <!-- PT tab with proposals listed and none picked: Create and continue would use no PT data. -->
+    @if (ptPickPromptVisible()) {
+      <p
+        class="m-0 flex items-start gap-1.5 text-[12.5px] font-semibold text-[var(--pr-color-red-300)] min-[640px]:max-w-[320px]"
+        role="alert"
+        data-testid="pt-pick-required-message">
+        <span class="material-icons-round mt-[1px] text-[15px]" aria-hidden="true">error_outline</span>
+        <span>Select a Progress Tracker proposal first (“Use this result”), or switch to Manual entry.</span>
+      </p>
     }
 
     <div class="flex w-full shrink-0 items-stretch gap-2.5 min-[640px]:w-auto min-[640px]:items-center">
