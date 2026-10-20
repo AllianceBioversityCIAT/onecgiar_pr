@@ -654,6 +654,63 @@ $phase-color-border:  #cbd5e1;
   color: #191524;
 }
 
+// CRK-DD-3 — one clickable line per version inside a cell (stacked newest first). Every cell line is
+// at least as tall as `.rc-cell-link` (28px) so the lines of different cells stay aligned.
+.rc-line {
+  display: block;
+  min-width: 0;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+    border-radius: 4px;
+  }
+
+  & + & {
+    margin-top: 2px;
+  }
+}
+
+// CRK-DD-3 — one "⋯" trigger per version, stacked like the cell lines (same 28px line + 2px gap) so
+// each trigger sits beside its own version.
+.rc-action-line {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+
+  & + & {
+    margin-top: 2px;
+  }
+}
+
+// CRK-DD-3 — phase label next to the code when a result shows more than one version.
+.rc-phase-tag {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--pr-text-secondary, #5d5872);
+  white-space: nowrap;
+}
+
+// CRK-DD-4 — "Previously reported" pill. Local copy of the Results Center `.rc-badge-replicated`
+// (results-list.component.scss) — that stylesheet is component-scoped, not global.
+.rc-badge-replicated {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  background: var(--pr-color-primary-100, #ede9fe);
+  color: var(--pr-color-primary-700, #4c2882);
+  white-space: nowrap;
+}
+
 .rc-title {
   font-size: 14px;
   font-weight: 400;

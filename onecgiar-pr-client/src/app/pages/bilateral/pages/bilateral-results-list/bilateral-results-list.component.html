@@ -192,6 +192,20 @@
                 (changed)="onCreatedByFilterChange($event)"></app-pr-filter-multiselect>
             </div>
 
+            <!-- CRK-DD-5 — Indicator category: options from the loaded rows, existing `type` URL/chip contract. -->
+            <div class="brl-filter-field" aria-label="Filter by indicator category">
+              <label class="brl_filter_group_label">Indicator category</label>
+              <app-pr-filter-multiselect
+                [options]="categorySelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Indicator category"
+                countLabel="categories"
+                [filter]="true"
+                [ngModel]="typeFilter()"
+                (changed)="onTypeFilterChange($event)"></app-pr-filter-multiselect>
+            </div>
+
             <div class="brl_filter_group brl_filter_group--stacked">
               <span class="brl_filter_group_label">Center role</span>
               <div class="brl_chips">
@@ -365,10 +379,10 @@
           #table
           sortField="result_code"
           [sortOrder]="-1"
-          [value]="filteredResults()"
+          [value]="groupedResults()"
           dataKey="result_code"
           [loading]="loading()"
-          [paginator]="filteredResults().length > 0"
+          [paginator]="groupedResults().length > 0"
           [showPaginatorAlways]="true"
           [rows]="100"
           [rowsPerPageOptions]="[10, 25, 50, 100]"
@@ -397,157 +411,181 @@
             </tr>
           </ng-template>
 
-          <ng-template prTableBody let-result>
-            <tr
-              class="rc-row"
-              [class.rc-row--focused]="isFocused(result)"
-              (click)="openResult(result)"
-              tabindex="0"
-              (keydown.enter)="openResult(result)">
-              @for (column of cols; track column.key) {
+          <ng-template prTableBody let-row>
+            <!-- CRK-DD-3: one row per result_code; each cell stacks one line per version (newest first).
+                 Every line is its own click / Enter target and opens THAT version. -->
+            <tr class="rc-row" [class.rc-row--focused]="isFocused(row)">
+              @for (column of cols; track column.key; let first = $first) {
                 <td [class]="'rc-td rc-td--' + column.attr" [style.width]="columnWidth(column)">
-                  @if (column.key === 'source') {
-                    <div class="rc-cell-link">
-                      @if (isAiResult(result)) {
-                        <span class="brl_ai_badge" title="AI Result" aria-label="AI Result">
-                          <span class="material-icons-round text-[16px]" aria-hidden="true">auto_awesome</span>
-                          <span>AI Result</span>
+                  @for (result of row.versions; track rowKey(result)) {
+                    <div
+                      class="rc-line"
+                      [attr.tabindex]="first ? 0 : null"
+                      (click)="openResult(result)"
+                      (keydown.enter)="openResult(result)">
+                      @if (column.key === 'source') {
+                        <div class="rc-cell-link">
+                          @if (isAiResult(result)) {
+                            <span class="brl_ai_badge" title="AI Result" aria-label="AI Result">
+                              <span class="material-icons-round text-[16px]" aria-hidden="true">auto_awesome</span>
+                              <span>AI Result</span>
+                            </span>
+                          } @else {
+                            <span class="rc-plain">Manual</span>
+                          }
+                        </div>
+                      } @else if (column.key === 'fundingSource') {
+                        <div class="rc-cell-link">
+                          @if (result.source === 'API') {
+                            <span class="brl_source_badge brl_source_badge--w3">W3</span>
+                          } @else {
+                            <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
+                          }
+                        </div>
+                      } @else if (column.attr === 'result_code') {
+                        <span class="rc-cell-link">
+                          <span class="rc-code">{{ result.result_code }}</span>
+                          @if (row.versions.length > 1) {
+                            <span class="rc-phase-tag" data-testid="brl-version-phase">{{ versionPhaseLabel(result) }}</span>
+                          }
                         </span>
-                      } @else {
-                        <span class="rc-plain">Manual</span>
-                      }
-                    </div>
-                  } @else if (column.key === 'fundingSource') {
-                    <div class="rc-cell-link">
-                      @if (result.source === 'API') {
-                        <span class="brl_source_badge brl_source_badge--w3">W3</span>
-                      } @else {
-                        <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
-                      }
-                    </div>
-                  } @else if (column.attr === 'result_code') {
-                    <span class="rc-cell-link rc-code">{{ result.result_code }}</span>
-                  } @else if (column.attr === 'title') {
-                    <span class="rc-cell-link rc-title" [attr.title]="result.title">
-                      <span class="rc-title__text">{{ result.title }}</span>
-                    </span>
-                  } @else if (column.attr === 'project_name') {
-                    <span class="rc-cell-link rc-plain" [attr.title]="result.project_name">{{ result.project_name || '-' }}</span>
-                  } @else if (column.attr === 'description') {
-                    <span class="rc-cell-link rc-plain" [attr.title]="result.description">{{ result.description || '-' }}</span>
-                  } @else if (column.attr === 'result_type') {
-                    <span class="rc-cell-link rc-plain" [attr.title]="result.result_type">{{ result.result_type }}</span>
-                  } @else if (column.attr === 'is_leading_result') {
-                    @if (result.is_leading_result === 1) {
-                      <span class="brl_role_badge brl_role_badge--lead">Lead</span>
-                    } @else {
-                      <span class="brl_role_badge brl_role_badge--contributing">Contributing</span>
-                    }
-                  } @else if (column.attr === 'status_id') {
-                    <span class="rc-cell-link rc-status-wrap">
-                      <span [class]="statusClass(result.status_id)">{{ result.status_name }}</span>
+                      } @else if (column.attr === 'title') {
+                        <span class="rc-cell-link rc-title" [attr.title]="result.title">
+                          @if (isReplicated(result)) {
+                            <span
+                              class="rc-badge-replicated"
+                              prTooltip="Previously reported in an earlier phase"
+                              prTooltipPosition="top"
+                              aria-label="Previously reported in an earlier phase">Previously reported</span>
+                          }
+                          <span class="rc-title__text">{{ result.title }}</span>
+                        </span>
+                      } @else if (column.attr === 'project_name') {
+                        <span class="rc-cell-link rc-plain" [attr.title]="result.project_name">{{ result.project_name || '-' }}</span>
+                      } @else if (column.attr === 'description') {
+                        <span class="rc-cell-link rc-plain" [attr.title]="result.description">{{ result.description || '-' }}</span>
+                      } @else if (column.attr === 'result_type') {
+                        <span class="rc-cell-link rc-plain" [attr.title]="result.result_type">{{ result.result_type }}</span>
+                      } @else if (column.attr === 'is_leading_result') {
+                        @if (result.is_leading_result === 1) {
+                          <span class="brl_role_badge brl_role_badge--lead">Lead</span>
+                        } @else {
+                          <span class="brl_role_badge brl_role_badge--contributing">Contributing</span>
+                        }
+                      } @else if (column.attr === 'status_id') {
+                        <span class="rc-cell-link rc-status-wrap">
+                          <span [class]="statusClass(result.status_id)">{{ result.status_name }}</span>
 
-                      <!-- P2-3157 AC4: read back the Science Program's rejection justification -->
-                      @if (hasReviewHistory(result)) {
-                        <button
-                          type="button"
-                          class="brl_justification_trigger"
-                          [class.brl_justification_trigger--rejected]="isRejected(result)"
-                          [attr.title]="isRejected(result) ? historyCopy.trigger.rejected : historyCopy.trigger.history"
-                          [attr.aria-label]="isRejected(result) ? historyCopy.trigger.rejected : historyCopy.trigger.history"
-                          data-testid="brl-history-trigger"
-                          (click)="$event.stopPropagation(); openJustification(result)">
-                          <i class="material-icons-round">{{ isRejected(result) ? 'warning_amber' : 'history' }}</i>
-                        </button>
+                          <!-- P2-3157 AC4: read back the Science Program's rejection justification -->
+                          @if (hasReviewHistory(result)) {
+                            <button
+                              type="button"
+                              class="brl_justification_trigger"
+                              [class.brl_justification_trigger--rejected]="isRejected(result)"
+                              [attr.title]="isRejected(result) ? historyCopy.trigger.rejected : historyCopy.trigger.history"
+                              [attr.aria-label]="isRejected(result) ? historyCopy.trigger.rejected : historyCopy.trigger.history"
+                              data-testid="brl-history-trigger"
+                              (keydown.enter)="$event.stopPropagation()"
+                              (click)="$event.stopPropagation(); openJustification(result)">
+                              <i class="material-icons-round">{{ isRejected(result) ? 'warning_amber' : 'history' }}</i>
+                            </button>
+                          }
+                        </span>
+                      } @else if (column.attr === 'created_by_name') {
+                        <span class="rc-cell-link rc-plain" [attr.title]="result.created_by_name">{{ result.created_by_name || '-' }}</span>
+                      } @else if (column.attr === 'created_date') {
+                        <span class="rc-cell-link rc-date">{{ result.created_date | date: 'dd MMM yyyy' }}</span>
                       }
-                    </span>
-                  } @else if (column.attr === 'created_by_name') {
-                    <span class="rc-cell-link rc-plain" [attr.title]="result.created_by_name">{{ result.created_by_name || '-' }}</span>
-                  } @else if (column.attr === 'created_date') {
-                    <span class="rc-cell-link rc-date">{{ result.created_date | date: 'dd MMM yyyy' }}</span>
+                    </div>
                   }
                 </td>
               }
 
               <td class="rc-td rc-td--action" (click)="$event.stopPropagation()">
-                <button
-                  #rowMenuTrigger="cdkOverlayOrigin"
-                  cdkOverlayOrigin
-                  type="button"
-                  class="flex size-[32px] items-center justify-center rounded-[8px] border transition-colors cursor-pointer ml-auto"
-                  [class.border-transparent]="!isMenuOpen(result)"
-                  [class.hover:border-[var(--pr-border)]]="!isMenuOpen(result)"
-                  [class.hover:bg-[#f3f2f7]]="!isMenuOpen(result)"
-                  [class.border-[var(--pr-color-secondary-300)]]="isMenuOpen(result)"
-                  [class.border-[1.5px]]="isMenuOpen(result)"
-                  [class.bg-[#f3f2f7]]="isMenuOpen(result)"
-                  aria-label="More actions"
-                  aria-haspopup="menu"
-                  [attr.aria-expanded]="isMenuOpen(result)"
-                  (click)="toggleRowMenu(result, $event)">
-                  <span class="material-icons-round text-[18px] text-[var(--pr-text-secondary)]">more_horiz</span>
-                </button>
-
-                <ng-template
-                  cdkConnectedOverlay
-                  [cdkConnectedOverlayOrigin]="rowMenuTrigger"
-                  [cdkConnectedOverlayOpen]="isMenuOpen(result)"
-                  [cdkConnectedOverlayPositions]="rowMenuPositions"
-                  [cdkConnectedOverlayHasBackdrop]="true"
-                  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-                  (backdropClick)="closeRowMenu()"
-                  (detach)="onRowMenuDetach(result)">
-                  <div role="menu" class="pr-row-menu" (click)="$event.stopPropagation()">
+                @for (result of row.versions; track rowKey(result)) {
+                  <div class="rc-action-line">
                     <button
+                      #rowMenuTrigger="cdkOverlayOrigin"
+                      cdkOverlayOrigin
                       type="button"
-                      role="menuitem"
-                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
-                      (click)="openResultFromMenu(result)">
-                      Open result
+                      class="flex items-center justify-center rounded-[8px] border transition-colors cursor-pointer ml-auto"
+                      [class.border-transparent]="!isMenuOpen(result)"
+                      [class.hover:border-[var(--pr-border)]]="!isMenuOpen(result)"
+                      [class.hover:bg-[#f3f2f7]]="!isMenuOpen(result)"
+                      [class.border-[var(--pr-color-secondary-300)]]="isMenuOpen(result)"
+                      [class.border-[1.5px]]="isMenuOpen(result)"
+                      [class.bg-[#f3f2f7]]="isMenuOpen(result)"
+                      [style.width.px]="row.versions.length > 1 ? 28 : 32"
+                      [style.height.px]="row.versions.length > 1 ? 28 : 32"
+                      [attr.aria-label]="row.versions.length > 1 ? 'More actions for ' + versionPhaseLabel(result) : 'More actions'"
+                      aria-haspopup="menu"
+                      [attr.aria-expanded]="isMenuOpen(result)"
+                      (click)="toggleRowMenu(result, $event)">
+                      <span class="material-icons-round text-[18px] text-[var(--pr-text-secondary)]">more_horiz</span>
                     </button>
 
-                    @if (canUpdateResult(result)) {
-                      <button
-                        type="button"
-                        role="menuitem"
-                        data-testid="bilateral-update-result"
-                        class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
-                        (click)="updateResult(result)">
-                        Update result
-                      </button>
-                    }
+                    <ng-template
+                      cdkConnectedOverlay
+                      [cdkConnectedOverlayOrigin]="rowMenuTrigger"
+                      [cdkConnectedOverlayOpen]="isMenuOpen(result)"
+                      [cdkConnectedOverlayPositions]="rowMenuPositions"
+                      [cdkConnectedOverlayHasBackdrop]="true"
+                      cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                      (backdropClick)="closeRowMenu()"
+                      (detach)="onRowMenuDetach(result)">
+                      <div role="menu" class="pr-row-menu" (click)="$event.stopPropagation()">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                          (click)="openResultFromMenu(result)">
+                          Open result
+                        </button>
 
-                    <a
-                      role="menuitem"
-                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
-                      [href]="pdfHref(result)"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      (click)="closeRowMenu()">
-                      Download PDF
-                    </a>
+                        @if (canUpdateResult(result)) {
+                          <button
+                            type="button"
+                            role="menuitem"
+                            data-testid="bilateral-update-result"
+                            class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                            (click)="updateResult(result)">
+                            Update result
+                          </button>
+                        }
 
-                    <button
-                      type="button"
-                      role="menuitem"
-                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
-                      (click)="copyLink(result)">
-                      Copy link
-                    </button>
+                        <a
+                          role="menuitem"
+                          class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                          [href]="pdfHref(result)"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          (click)="closeRowMenu()">
+                          Download PDF
+                        </a>
 
-                    @if (canDeleteResult(result)) {
-                      <div class="my-[4px] h-[1px] bg-[var(--pr-border)]"></div>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        class="flex h-[36px] w-full items-center gap-[8px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-color-red-600)] transition-colors hover:bg-[var(--pr-color-red-50)] cursor-pointer"
-                        (click)="deleteResult(result)">
-                        <span class="material-icons-round text-[16px]" aria-hidden="true">delete</span>
-                        <span>Delete</span>
-                      </button>
-                    }
+                        <button
+                          type="button"
+                          role="menuitem"
+                          class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                          (click)="copyLink(result)">
+                          Copy link
+                        </button>
+
+                        @if (canDeleteResult(result)) {
+                          <div class="my-[4px] h-[1px] bg-[var(--pr-border)]"></div>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            class="flex h-[36px] w-full items-center gap-[8px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-color-red-600)] transition-colors hover:bg-[var(--pr-color-red-50)] cursor-pointer"
+                            (click)="deleteResult(result)">
+                            <span class="material-icons-round text-[16px]" aria-hidden="true">delete</span>
+                            <span>Delete</span>
+                          </button>
+                        }
+                      </div>
+                    </ng-template>
                   </div>
-                </ng-template>
+                }
               </td>
             </tr>
           </ng-template>

@@ -2839,6 +2839,7 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
     ];
 
     jest.spyOn(component, 'reportingGroups').mockReturnValue(mockGroups as any);
+    jest.spyOn(component, 'reportingGroupsForCounts').mockReturnValue(mockGroups as any);
     jest.spyOn(component, 'reportingGroupsForTable').mockReturnValue(mockGroups as any);
 
     // Initial search is empty -> matching count is 0

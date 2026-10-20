@@ -7,6 +7,19 @@ import { ProgressRollup, rollUpIndicators } from './toc-progress-rollup';
 import { W1_W2_RESULT_SOURCE_FILTER } from '../../../../shared/constants/w1-w2-result-source-filter.constant';
 import { TOC_KPI_COVERAGE_STATUS_IDS } from '../../../../shared/constants/toc-kpi-coverage-status.constant';
 
+/**
+ * @akili-spec changes/center-results-kpi-chips CRK-R-5 / CRK-DD-0.
+ * Other output / Other outcome KPIs are `type_value = 'custom'` rows whose only discriminator is
+ * the (trimmed, case-insensitive) `type_name`, so the specific `type_value LIKE` patterns never
+ * matched them. These branches are appended AFTER those patterns (a specific type always wins) and
+ * are interpolated into BOTH CASE copies of the select (result_type_id and the result_type_name
+ * subselect) so the two cannot drift. Free labels (`other`, `Other quantitative measure ...`) do
+ * not start with these prefixes and stay uncategorised. Ids: 8 = Other output, 4 = Other outcome.
+ */
+const CUSTOM_OTHER_KPI_CASE_BRANCHES = `
+          WHEN tri.type_value = 'custom' AND LOWER(TRIM(tri.type_name)) LIKE 'other output%' THEN 8
+          WHEN tri.type_value = 'custom' AND LOWER(TRIM(tri.type_name)) LIKE 'other outcome%' THEN 4`;
+
 interface TocResultRow {
   toc_result_id: number;
   category: string;
@@ -586,7 +599,7 @@ export class AoWBilateralRepository {
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
           WHEN tri.type_value LIKE '%Number of people trained (capacity sharing for development)%' THEN 5
           WHEN tri.type_value LIKE '%Number of knowledge products%' THEN 6
-          WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7
+          WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7${CUSTOM_OTHER_KPI_CASE_BRANCHES}
           ELSE NULL
         END AS result_type_id,
         (SELECT rt.name
@@ -596,7 +609,7 @@ export class AoWBilateralRepository {
            WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
            WHEN tri.type_value LIKE '%Number of people trained (capacity sharing for development)%' THEN 5
            WHEN tri.type_value LIKE '%Number of knowledge products%' THEN 6
-           WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7
+           WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7${CUSTOM_OTHER_KPI_CASE_BRANCHES}
            ELSE NULL
          END) AS result_type_name,
         CASE
