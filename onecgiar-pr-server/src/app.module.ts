@@ -60,6 +60,7 @@ import { GlobalUtilsModule } from './shared/utils/global-utils.module';
 import { WebhookDispatchModule } from './api/results/webhook/webhook-dispatch.module';
 import { ProgressTrackerModule } from './api/progress-tracker/progress-tracker.module';
 import { QaCatalogModule } from './api/qa-catalog/qa-catalog.module';
+import { ReplicatedInnovationRemindersModule } from './api/replicated-innovation-reminders/replicated-innovation-reminders.module';
 
 @Module({
   imports: [
@@ -120,6 +121,7 @@ import { QaCatalogModule } from './api/qa-catalog/qa-catalog.module';
     GlobalUtilsModule,
     ProgressTrackerModule,
     QaCatalogModule,
+    ReplicatedInnovationRemindersModule,
   ],
   controllers: [AppController],
   providers: [

@@ -44,4 +44,16 @@ export enum EmailTemplate {
    * (`APF-R-5`). Lookup-only.
    */
   BILATERAL_AI_FAILED = 'email_template_bilateral_ai_failed',
+  /**
+   * INC-165323 `RIR-T-1`. The Q4 notice of the replicated-innovation reminder campaign: one digest
+   * per Lead Contact Person listing their pending (Editing) replicated innovations. Lookup-only,
+   * like `WEBHOOK_DELIVERY_FAILED`: the row is fetched from `template` and rendered with handlebars
+   * by the reminder dispatcher, never through `buildEmailData`.
+   */
+  REPLICATED_INNOVATION_Q4_NOTICE = 'email_template_replicated_innovation_q4_notice',
+  /**
+   * INC-165323 `RIR-T-1`. The final reminder of the same campaign. Same variables as
+   * `REPLICATED_INNOVATION_Q4_NOTICE`, different wording. Lookup-only.
+   */
+  REPLICATED_INNOVATION_FINAL_REMINDER = 'email_template_replicated_innovation_final_reminder',
 }

@@ -28,6 +28,7 @@ import { IpsrFrameworkModule } from './ipsr-framework/ipsr-framework.module';
 import { IpsrFrameworkRoutes } from './ipsr-framework/ipsr-framework.routes';
 import { FeedbackModule } from './feedback/feedback.module';
 import { ProgressTrackerModule } from './progress-tracker/progress-tracker.module';
+import { ReplicatedInnovationRemindersModule } from './replicated-innovation-reminders/replicated-innovation-reminders.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -133,5 +134,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'qa',
     module: QaCatalogModule,
+  },
+  {
+    path: 'replicated-innovation-reminders',
+    module: ReplicatedInnovationRemindersModule,
   },
 ];
