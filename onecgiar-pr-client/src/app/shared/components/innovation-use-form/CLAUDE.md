@@ -1,6 +1,6 @@
 # innovation-use-form
 
-**Verified:** 2026-09-11 · branch performance-refactor · 5791b85b9
+**Verified:** 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update rules moved to `shared/utils/current-use-update.util.ts` (shared with the bilateral form); prior: 2026-09-11 · branch performance-refactor · 5791b85b9
 
 ## What it is
 The shared Innovation Use questionnaire: use level (0-9), narrative/actors blocks, the
@@ -122,6 +122,10 @@ not IPSR, and `body.current_use_previous` is not null.
 - The mismatch error is driven off a **getter**, which is what gives §5's "the error appears as soon
   as the totals diverge, not only on submit" for free.
 - Deleted actor rows (`is_active === false`) are excluded from the sum.
+- **P2-3985** — the arithmetic, the completion rule and the mismatch message live in
+  `shared/utils/current-use-update.util.ts` (copy in `internationalization/current-use-update.copy.ts`),
+  shared with the W3/bilateral `type-innovation-use`. This component keeps its own gate and its own
+  `actorsTotal()`; the methods delegate in one line. Change a rule there, not here.
 - ⚠️ **The evidence for the increment (field 4) is NOT built.** It goes in the existing Evidence
   section behind one more marker (Yeck's Q3), and it is blocked by a real defect: the phase rollover
   drops 8 of the 14 evidence markers (`W-20260903-12`), so the trail would break on that side while
