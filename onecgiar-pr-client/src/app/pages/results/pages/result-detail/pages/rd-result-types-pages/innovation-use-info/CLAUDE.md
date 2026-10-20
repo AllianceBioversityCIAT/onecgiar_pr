@@ -1,6 +1,6 @@
 # innovation-use-info
 
-**Verified:** 2026-09-11 · branch performance-refactor · the innovation-link picker no longer wipes the links it cannot show (`linked_result` is a shared table — see the trap below); prior: 2026-09-10 · P2-3424 moves the "link to a QA'd Innovation Development result" question INTO this section, optional (PO decision, Ángel Jarrín, 10 Sep 2026).
+**Verified:** 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: the Current Use Update keys travel on the P25 save only; prior: 2026-09-11 · branch performance-refactor · the innovation-link picker no longer wipes the links it cannot show (`linked_result` is a shared table — see the trap below); prior: 2026-09-10 · P2-3424 moves the "link to a QA'd Innovation Development result" question INTO this section, optional (PO decision, Ángel Jarrín, 10 Sep 2026).
 
 ## What it is
 The "Innovation Use" section of the result detail (`result_type_id` 2, `prHide: 2`). It is a **host**:
@@ -26,6 +26,10 @@ hydration of `innovationUseInfoBody`, the save, and — since P2-3424 — the in
   P2-3295 (`innov_use_2030_justification`). A new field lives in **both** lists or it does not exist.
 - ⚠️ **`new_users_added` / `use_expansion_narrative` are written by the server as `?? null`**, so
   omitting them from the payload does not "leave them alone" — it blanks what was stored.
+  🛑 **P25 path only** (P2-3985). The legacy (non-P25) path never hydrates them — its GET lands in
+  `innovatonUse` — so they would always leave as `null`, and the legacy summary endpoint now persists
+  them whenever the key is present (it serves the W3/bilateral form too). There, omitting them IS what
+  leaves them alone. A spec pins it.
 
 ### P2-3424 — the link to a QA'd Innovation Development result (2026 phase onwards)
 

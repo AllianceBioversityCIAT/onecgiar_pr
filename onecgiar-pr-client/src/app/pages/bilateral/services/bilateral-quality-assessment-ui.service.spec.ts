@@ -496,6 +496,7 @@ describe('BilateralQualityAssessmentUiService', () => {
       httpMock.expectOne(submitUrl(42)).flush({ response: {} });
       httpMock.expectNone(postUrl(42));
       httpMock.expectNone(submitUrl(42));
+      expect(service.isBusy()).toBe(false);
     });
 
     it('releases the lock when the submit fails so the reporter can retry', () => {

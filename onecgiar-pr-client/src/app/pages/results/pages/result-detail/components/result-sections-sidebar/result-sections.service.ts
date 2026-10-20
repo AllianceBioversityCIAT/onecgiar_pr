@@ -228,7 +228,7 @@ export class ResultSectionsService {
   get showAiReview(): boolean {
     const r = this.dataControlSE.currentResult;
     const kpBlocked = r?.result_type_id == 6 && !this.aiReviewSE.knowledgeProductsEnabled;
-    return !!(r && r.status_id == 1 && !kpBlocked) && !this.rolesSE.readOnly;
+    return r?.status_id == 1 && !kpBlocked && !this.rolesSE.readOnly;
   }
 
   /** Second line of defence for `runAiReview()`, so the TS guard holds even if the button renders. */

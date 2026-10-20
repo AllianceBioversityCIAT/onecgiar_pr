@@ -30,6 +30,10 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { InnovationUseLevel } from './enum/innov-use-levels.enum';
+import {
+  currentUseRows,
+  summarizePreviousPhaseCurrentUse,
+} from '../../results/summary/utils/previous-phase-current-use.util';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
@@ -782,25 +786,19 @@ export class InnovationUseService {
 
     try {
       const actors = await this.getActorsData(previousId);
-      const currentUseActors = actors.filter(
-        (row: any) => Number(row.section_id) === 1,
+      const currentUseActors = currentUseRows(actors);
+
+      // P2-3985 — the filter, the null rule and the shape are shared with the legacy summary read
+      // (W3/bilateral). `getActorsData` already normalised `how_many`, so it is summed as is.
+      const summary = summarizePreviousPhaseCurrentUse(
+        currentUseActors,
+        previousId,
+        previousPhaseYear,
+        (row) => Number(row.how_many) || 0,
+        currentUseRows,
       );
 
-      if (!currentUseActors.length) return null;
-
-      const total = currentUseActors.reduce(
-        (sum: number, row: any) => sum + (Number(row.how_many) || 0),
-        0,
-      );
-
-      const year = Number(previousPhaseYear);
-
-      return {
-        result_id: previousId,
-        phase_year: Number.isFinite(year) ? year : null,
-        total_actors: total,
-        actors: currentUseActors,
-      };
+      return summary ? { ...summary, actors: currentUseActors } : null;
     } catch (error) {
       this.logger.error(
         `P2-3537: could not read the previous-phase current use from result ${previousId}`,

@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
+**Verified:** 2026-10-20 · yzuniga/p2-3985-bilateral-current-use-update · P2-3985: Current Use Update block + 4th MDS item `use-current-update` (blocks Submit); prior: 2026-10-14 · fix/innovation-use-phase-copy · current use hides only on an explicit "Yes" (NULL shows it); bilateral results DO roll over; prior: 2026-10-07 · The use-level ladder (not MDS since P2-3785 AC1) moved under full metadata, before the questions it gates.
 
 ## What it is
 BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
@@ -17,7 +17,15 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 - `BilateralCreationService.currentResultId()` — which result; `reportingYear()` — the phase gate.
 - `BilateralMdsTrackerService.setSectionFields('type-specific', …)` — three entries:
   `use-actors`, `use-measures` (optional), `use-investment`. The last one is the W3/bilateral-project
-  table only; Submit is gated on `overallStatus() === 'complete'`.
+  table only; Submit is gated on `overallStatus() === 'complete'`. **P2-3985 adds a fourth,
+  `use-current-update`, only while `showCurrentUseUpdate`** — NOT optional (holds Submit, as on W1/W2):
+  `filled` = both answered, a mismatch adds `invalid` + the exact gap. ⚠️ Client-only: the server
+  submit gate does not check it.
+- **P2-3985 contract keys** (legacy GET/PATCH, additive): GET returns `current_use_previous`
+  (`{ result_id, phase_year, total_actors }` or `null`), `new_users_added`, `use_expansion_narrative`;
+  PATCH persists the two answers only when their key is present, so `buildPayload()` sends them only
+  while the block is shown. The previous figure comes from
+  `api/results/summary/utils/previous-phase-current-use.util.ts`, the same rule the v2 read uses.
 - `BilateralAutoSaveService.schedulePayload('typeSpecific', …)` — autosave, 800 ms debounce.
 - Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
   **Every write is gated on `=== true`** at the single choke point `queueTypeSave()`.
@@ -142,6 +150,13 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   level, so the new phase opens pre-filled and editable (decision: Juan David).
   ⚠️ Current-use lookups by type/unit now skip section-2 rows, and the legacy GET splits them out; before
   this, a section-2 row would have shown up (and been re-saved) as current use.
+
+- **P2-3985 — Current Use Update** (P2-3537 §4; result #8398 never showed it): one getter,
+  `showCurrentUseUpdate` (= not "to be determined" Yes + `current_use_previous` present + phase ≥ 2026
+  or unresolved), drives the template, the MDS item and the payload keys. Rules shared with W1/W2 in
+  `shared/utils/current-use-update.util.ts`, copy in `internationalization/current-use-update.copy.ts`.
+  Actor sum = `how_many` where disaggregation does not apply, else Women + Men (server's rule).
+  ⚠️ Both forms write the same two columns: the last save wins.
 
 ## Pending / Coming soon
 - **Read-only mode (AC17)**: not implemented and not verified in this section.
