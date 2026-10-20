@@ -107,7 +107,7 @@
   - [ ] Lint clean on touched files.
   - [ ] Commit only on owner approval: `🔧 fix(bilateral) [SPEC:bilateral/replicated-innovations-2026-pa/project-and-pa-assignment]: hydrate lead project programs from loaded catalogue`.
 
-### [~] `PAA-T-4` — Build + HITL browser verification on real results
+### [x] `PAA-T-4` — Build + HITL browser verification on real results
 
 - **Type:** rollout
 - **Description:** After T-1..T-3: run `npm run build:dev` once in `onecgiar-pr-client` (nothing else running; templates are not type-checked by `tsc`). Then, with the local stack (shared prdb, prod mailer), confirm the served bundle has the change and check **without clicking Save**:

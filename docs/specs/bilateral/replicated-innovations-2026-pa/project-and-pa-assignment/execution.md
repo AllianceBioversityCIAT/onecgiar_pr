@@ -106,3 +106,15 @@
 
 **PAA-T-5 attempt 2 — PASS** (2026-10-16, effort high) — `section-zero-dashboard.component.spec.ts` creationService mock gains `resultLeadCenterCode: signal<string | null>(null)`; production unchanged. Reviewer PASS: the real service always has the signal (L94), so the TypeError was mock-only; third consumer `bilateral-result-creator` (wizard) never reads the code and its mock already has it. Leader final regression: `--testPathPattern="section-zero-dashboard|section-contributors|bilateral-creation.service|bilateral-project-selector|bilateral-result-creator"` → `Test Suites: 6 passed · Tests: 552 passed, 552 total`. Browser: 9848 (lead IRRI) opened from the Alliance page requested `centerId=CENTER-13` and listed IRRI projects; "no alternative" gone.
 - **Budget:** T-5 used 2 review rounds; the spec now has 5 tasks (+1 owner-approved).
+
+### PAA-T-4 — PRTest HITL with save (2026-10-19)
+
+- **Environment:** PRTest (testing), `performance-refactor` at `1a22ee0f2` (contains `572363fe2`). Real results 27270 / 28073 do not exist in PRTest; owner directed the check on the test equivalents. Owner authorised the saves in chat.
+- **9516 (lead IITA, no 2026 project, P/A SP09, ToC "Yes" + Intermediate Outcome with no node)** at `/bilateral/IITA/result/9516?phase=36`:
+  - Before: Section 0 selector + disabled Program + R-6 hint; catalogue = IITA projects (lead Center, DD-6) ✅; Contributors helper text new ✅.
+  - Picked `T-PJ-003161` → Program list SP02, SP06 only (SP09 absent) ✅; Save disabled until Program chosen ✅.
+  - **Save 1** (SP06): section flips to the linked branch (Lead center IITA, Project, Program, Contribution 100, chips SP02 25% / SP06 75%); breadcrumb gains the project. After reload: Contributors P/A = **SP06 Climate Action 100%**, block "Default ToC Linkage — Inherited from lead project" (4 nodes, 16 indicators, 12 Centers); the SP09 "Yes"/Intermediate Outcome mapping is gone ✅ (R-1, R-2, R-3, AC-7, OQ-5).
+  - **Save 2** (switch to SP02 within the same project): after reload P/A = **SP02 Sustainable Farming 100%**, default ToC recomputed (6 nodes, 46 indicators) ✅ (R-4, change P/A with a linked project).
+- **9848 (lead IRRI, `R-A-2013-126`, single Program SP01)** at `/bilateral/IRRI/result/9848?phase=36`: linked branch unchanged, Program Breeding for Tomorrow 100% ✅. Not saved.
+- **Observation (pre-existing, out of scope):** any result opens under another Center's URL (`/bilateral/Bioversity (Alliance)/result/11984` rendered 9516 with the Bioversity breadcrumb). Picker and save still use the result's lead Center, so data is unaffected. Logged as a follow-up.
+- **Remaining for T-4:** none on test data. Real-data check happens in Reporting (prod) after promotion.
