@@ -40,7 +40,8 @@
       "@spartan/popover": ["./src/app/spartan/popover/src/index.ts"],
       "@spartan/tabs": ["./src/app/spartan/tabs/src/index.ts"],
       "@spartan/badge": ["./src/app/spartan/badge/src/index.ts"],
-      "@spartan/checkbox": ["./src/app/spartan/checkbox/src/index.ts"]
+      "@spartan/checkbox": ["./src/app/spartan/checkbox/src/index.ts"],
+      "@spartan/table": ["./src/app/spartan/table/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

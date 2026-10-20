@@ -1,0 +1,192 @@
+<section
+  class="border-border bg-card text-card-foreground mt-8 flex flex-col gap-4 rounded-lg border p-4"
+  data-testid="rir-section"
+  aria-labelledby="rir-heading">
+  <header>
+    <h2 id="rir-heading" class="text-foreground text-base font-semibold">{{ copy.title }}</h2>
+    @if (list()) {
+      <p class="text-muted-foreground text-sm" data-testid="rir-subtitle">{{ subtitle() }}</p>
+    }
+  </header>
+
+  @if (actionError(); as e) {
+    <p role="alert" class="border-destructive/40 bg-destructive/10 text-destructive rounded-md border p-3 text-sm" data-testid="rir-action-error">
+      {{ e }}
+    </p>
+  }
+  @if (outcomeMessage(); as o) {
+    <p role="status" class="border-border bg-muted text-foreground rounded-md border p-3 text-sm" data-testid="rir-outcome">{{ o }}</p>
+  }
+
+  @if (loading()) {
+    <div class="flex flex-col gap-2" role="status" [attr.aria-label]="copy.loading" data-testid="rir-loading">
+      <hlm-skeleton class="h-8 w-full" />
+      <hlm-skeleton class="h-8 w-full" />
+    </div>
+  } @else if (loadError(); as err) {
+    <div class="flex items-center gap-3" data-testid="rir-load-error">
+      <p role="alert" class="text-destructive text-sm">{{ err }}</p>
+      <button hlmBtn variant="outline" size="sm" type="button" (click)="load()">{{ copy.retry }}</button>
+    </div>
+  } @else {
+    @if (campaigns().length === 0) {
+      <p class="text-muted-foreground text-sm" data-testid="rir-empty">{{ copy.empty }}</p>
+    } @else {
+      <div hlmTableContainer>
+        <table hlmTable data-testid="rir-table">
+          <thead hlmTHead>
+            <tr hlmTr>
+              <th hlmTh>{{ copy.columns.kind }}</th>
+              <th hlmTh>{{ copy.columns.scheduled }}</th>
+              <th hlmTh>{{ copy.columns.status }}</th>
+              <th hlmTh>{{ copy.columns.sentAt }}</th>
+              <th hlmTh>{{ copy.columns.sent }}</th>
+              <th hlmTh>{{ copy.columns.skipped }}</th>
+              <th hlmTh>{{ copy.columns.failed }}</th>
+              <th hlmTh>{{ copy.columns.unreachable }}</th>
+              <th hlmTh>{{ copy.columns.actions }}</th>
+            </tr>
+          </thead>
+          <tbody hlmTBody>
+            @for (c of campaigns(); track c.id) {
+              <tr hlmTr [attr.data-testid]="'rir-row-' + c.id">
+                <td hlmTd>{{ kindLabel(c.kind) }}</td>
+                <td hlmTd>
+                  @if (editing(); as ed) {
+                    @if (ed.id === c.id) {
+                      <div class="flex flex-col gap-1">
+                        <input
+                          hlmInput
+                          type="datetime-local"
+                          [attr.aria-label]="copy.schedule.dateLabel"
+                          [value]="ed.value"
+                          (input)="setEditValue($any($event.target).value)"
+                          data-testid="rir-edit-input" />
+                        <span class="text-muted-foreground text-[12px]">{{ timeZoneHintFor(ed.value) }}</span>
+                        @if (editError(); as ee) {
+                          <span role="alert" class="text-destructive text-[12px]">{{ ee }}</span>
+                        }
+                        <div class="flex gap-2">
+                          <button hlmBtn size="sm" type="button" [disabled]="busy()" (click)="saveEdit()" data-testid="rir-edit-save">
+                            {{ copy.actions.save }}
+                          </button>
+                          <button hlmBtn variant="outline" size="sm" type="button" [disabled]="busy()" (click)="discardEdit()">
+                            {{ copy.actions.discard }}
+                          </button>
+                        </div>
+                      </div>
+                    } @else {
+                      {{ displayDate(c.scheduled_at) }}
+                    }
+                  } @else {
+                    {{ displayDate(c.scheduled_at) }}
+                  }
+                </td>
+                <td hlmTd>
+                  <span hlmBadge [variant]="statusVariant(c.status)" [class.animate-pulse]="c.status === 'SENDING'" data-testid="rir-status">{{
+                    statusLabel(c.status)
+                  }}</span>
+                  @if (c.last_error && c.status === 'FAILED') {
+                    <span class="text-destructive block text-[12px]">{{ c.last_error }}</span>
+                  }
+                </td>
+                <td hlmTd data-testid="rir-sent-at">{{ c.sent_at ? displayDate(c.sent_at) : copy.noValue }}</td>
+                <td hlmTd>{{ c.sent_count }}</td>
+                <td hlmTd>{{ c.skipped_count }}</td>
+                <td hlmTd>{{ c.failed_count }}</td>
+                <td hlmTd>{{ c.unreachable_count }}</td>
+                <td hlmTd>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      [disabled]="!canPreviewOrSend(c)"
+                      (click)="openPreview(c)"
+                      data-testid="rir-preview-btn">
+                      {{ copy.actions.preview }}
+                    </button>
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      [disabled]="!canEditOrCancel(c)"
+                      (click)="startEdit(c)"
+                      data-testid="rir-edit-btn">
+                      {{ copy.actions.editDate }}
+                    </button>
+                    <button
+                      hlmBtn
+                      variant="destructive"
+                      size="sm"
+                      type="button"
+                      [disabled]="!canEditOrCancel(c)"
+                      (click)="cancel(c)"
+                      data-testid="rir-cancel-btn">
+                      {{ copy.actions.cancel }}
+                    </button>
+                    <button hlmBtn size="sm" type="button" [disabled]="!canPreviewOrSend(c)" (click)="requestSend(c)" data-testid="rir-send-btn">
+                      {{ c.status === 'SENDING' ? copy.actions.sending : copy.actions.sendNow }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (missingKinds().length) {
+      <div class="flex flex-col gap-3" data-testid="rir-schedule">
+        <h3 class="text-foreground text-sm font-semibold">{{ copy.schedule.heading }}</h3>
+        @for (k of missingKinds(); track k) {
+          <form class="flex flex-wrap items-end gap-3" (submit)="$event.preventDefault(); schedule(k)" [attr.data-testid]="'rir-schedule-' + k">
+            <label class="flex flex-col gap-1 text-sm">
+              <span>{{ kindLabel(k) }}: {{ copy.schedule.dateLabel }}</span>
+              <input
+                hlmInput
+                type="datetime-local"
+                [value]="draftOf(k)"
+                (input)="setDraft(k, $any($event.target).value)"
+                [attr.data-testid]="'rir-draft-' + k" />
+            </label>
+            <span class="text-muted-foreground text-[12px]" [attr.data-testid]="'rir-tz-hint-' + k">{{ timeZoneHintFor(draftOf(k)) }}</span>
+            <button hlmBtn type="submit" [disabled]="busy()" [attr.data-testid]="'rir-submit-' + k">
+              {{ busy() ? copy.actions.scheduling : copy.actions.schedule }}
+            </button>
+            @if (draftError()[k]; as de) {
+              <span role="alert" class="text-destructive text-[12px]">{{ de }}</span>
+            }
+          </form>
+        }
+      </div>
+    }
+  }
+
+  <hlm-dialog role="alertdialog" [state]="confirm() ? 'open' : 'closed'" (closed)="dismissConfirm()">
+    <hlm-dialog-content *hlmDialogPortal="let ctx" [showCloseButton]="false" data-testid="rir-confirm">
+      @if (confirm(); as cf) {
+        <hlm-dialog-header>
+          <h2 hlmDialogTitle>{{ copy.confirm.title }}</h2>
+          <p hlmDialogDescription data-testid="rir-confirm-text">{{ copy.confirm.description(cf.leads) }}</p>
+        </hlm-dialog-header>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" type="button" [disabled]="busy()" (click)="dismissConfirm()">{{ copy.confirm.cancel }}</button>
+          <button hlmBtn type="button" [disabled]="busy()" (click)="confirmSend()" data-testid="rir-confirm-send">
+            {{ busy() ? copy.actions.sending : copy.confirm.confirm }}
+          </button>
+        </hlm-dialog-footer>
+      }
+    </hlm-dialog-content>
+  </hlm-dialog>
+
+  <app-reminder-preview-drawer
+    [open]="previewOpen()"
+    [loading]="previewLoading()"
+    [error]="previewError()"
+    [preview]="previewData()"
+    (closed)="closePreview()" />
+</section>
