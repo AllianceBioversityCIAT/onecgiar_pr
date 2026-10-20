@@ -902,12 +902,13 @@ describe('LabReportFormComponent', () => {
         { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
       );
       const melUrl = 'https://repo.mel.cgiar.org/items/11111111-1111-1111-1111-111111111111';
+      const melHdl = 'https://hdl.handle.net/20.500.11766/70929';
       api.resultsSE.GET_mqapValidation.mockReturnValue(of({ response: { title: 'MEL Retrieved Title', metadata: [{ source: 'MELSpace' }] } }));
 
-      component.onCgspaceItemSelected({ itemUrl: melUrl, repository: 'melspace' } as any);
+      component.onCgspaceItemSelected({ handle: '20.500.11766/70929', handleUrl: melHdl, itemUrl: melUrl, repository: 'melspace' } as any);
       await flushAsync();
 
-      expect(api.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melUrl);
+      expect(api.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melHdl); // P2-3987: hdl wins over items
       expect(component.mqapUrlError().status).toBe(false);
       expect(component.selectedKpRepository()).toBe('melspace');
       expect(component.repositoryLabel()).toBe('MELSpace'); // drives the "Selected from {{ repositoryLabel() }}" banner
@@ -918,7 +919,7 @@ describe('LabReportFormComponent', () => {
       // selection at all — must produce the identical create body (KPM-R-12).
       api.resultsSE.POST_createResult.mockClear();
       component.clearSelectedKpItem();
-      component.patch('handler', melUrl);
+      component.patch('handler', melHdl);
       component.handleSource.set('manual');
       component.validateHandle();
       await flushAsync();

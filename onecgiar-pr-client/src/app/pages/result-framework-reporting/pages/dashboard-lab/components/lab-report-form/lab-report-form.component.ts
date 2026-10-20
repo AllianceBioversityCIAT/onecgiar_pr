@@ -20,7 +20,7 @@ import {
   resolveReportResultTypeId,
   resolveReportResultTypeName
 } from '../../../../shared/report-result/create-result-payload.util';
-import { KP_HANDLE_NO_ERROR, KpHandleError, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
+import { KP_HANDLE_NO_ERROR, KpHandleError, pickKpBrowseLink, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
 import {
   INNOVATION_LINK_QUESTION,
   QaInnovationDevelopmentResultsService,
@@ -585,7 +585,7 @@ export class LabReportFormComponent {
   readonly isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
 
   onCgspaceItemSelected(item: CgspaceItemDto): void {
-    const url = item.itemUrl || item.handleUrl || item.handle;
+    const url = pickKpBrowseLink(item);
     this.validatingHandler.set(true);
     this.handleSource.set('browse');
     this.selectedKpRepository.set(item.repository ?? 'cgspace');
