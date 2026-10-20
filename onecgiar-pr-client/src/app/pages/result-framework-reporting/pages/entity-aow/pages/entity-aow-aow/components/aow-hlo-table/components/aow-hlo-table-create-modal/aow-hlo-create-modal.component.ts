@@ -15,7 +15,7 @@ import { filterOutAvisaInitiatives } from '../../../../../../../../../../shared/
 import { BrnTabsImports } from '@spartan-ng/brain/tabs';
 import { KpCgspaceBrowseComponent, CgspaceItemDto } from './components/kp-cgspace-browse/kp-cgspace-browse.component';
 import { KpRepository, kpRepositoryLabel } from './components/kp-cgspace-browse/kp-repositories.constants';
-import { normalizeKpHandle } from '../../../../../../../../shared/report-result/kp-handle.validator';
+import { normalizeKpHandle, pickKpBrowseLink } from '../../../../../../../../shared/report-result/kp-handle.validator';
 import {
   INNOVATION_LINK_QUESTION,
   QaInnovationDevelopmentResultsService,
@@ -466,7 +466,7 @@ export class AowHloCreateModalComponent implements OnInit {
   }
 
   onCgspaceItemSelected(item: CgspaceItemDto): void {
-    const url = item.itemUrl || item.handleUrl || item.handle;
+    const url = pickKpBrowseLink(item);
     this.validatingHandler.set(true);
     this.handleSource.set('browse');
     this.selectedKpRepository.set(item.repository ?? 'cgspace');
