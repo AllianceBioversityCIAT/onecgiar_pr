@@ -1465,7 +1465,6 @@
             [search]="plannedSearch()"
             [matchCount]="plannedSearch().trim() ? reportingMatchingCount() : null"
             [typologyCounts]="reportingTypologyCounts()"
-            [targetSum]="reportingTargetSum()"
             [statusValue]="reportingStatusFilter()"
             [aowOptions]="reportingSectionOptions()"
             [aowValue]="reportingAowFilter()"
@@ -1528,7 +1527,6 @@
                 <app-reporting-quick-typology-filters
                   [typologyValue]="reportingTypologyFilter()"
                   [typologyCounts]="reportingTypologyCounts()"
-                  [targetSum]="reportingTargetSum()"
                   [plannedResultsCount]="bandPlannedResultsCount()"
                   (typologyChange)="reportingTypologyFilter.set($event)" />
               </div>
@@ -1773,8 +1771,6 @@
                       <div class="pr-by-aow-head hidden md:grid h-8 bg-slate-50/80 border-b border-slate-200/70 text-[10px] font-bold uppercase tracking-wider text-slate-400" aria-hidden="true">
                         <span></span>
                         <span>TITLE & TAXONOMY</span>
-                        <span class="text-center">TARGET</span>
-                        <span class="text-center">ACHIEVED</span>
                         <span class="text-center">KPIS</span>
                         <span class="text-center">PROGRESS</span>
                       </div>
@@ -1818,28 +1814,14 @@
                                 </h3>
                               </div>
 
-                              <!-- 3. Target (Strictly in Column 3, aligned under TARGET) -->
-                              <div class="text-center">
-                                <span class="text-[13.5px] font-extrabold text-slate-900 tabular-nums">
-                                  {{ hloTargetSum(hlo) }}
-                                </span>
-                              </div>
-
-                              <!-- 4. Achieved (Strictly in Column 4, aligned under ACHIEVED) -->
-                              <div class="text-center">
-                                <span class="text-[13.5px] font-extrabold tabular-nums" [class.text-emerald-600]="+hloAchievedSum(hlo) > 0" [class.text-slate-900]="+hloAchievedSum(hlo) === 0">
-                                  {{ hloAchievedSum(hlo) }}
-                                </span>
-                              </div>
-
-                              <!-- 5. KPIs Count Pill (Strictly in Column 5, aligned under KPIS) -->
+                              <!-- 3. KPIs Count Pill (Strictly in Column 3, aligned under KPIS). KPC-R-12: no summed Target / Achieved columns. -->
                               <div class="flex justify-center">
                                 <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200/80 text-slate-700 font-bold text-xs shadow-2xs whitespace-nowrap tabular-nums">
                                   {{ hlo.count }}
                                 </span>
                               </div>
 
-                              <!-- 6. Progress (Strictly in Column 6, aligned under PROGRESS) -->
+                              <!-- 4. Progress (Strictly in Column 4, aligned under PROGRESS) -->
                               <div class="text-center text-xs tabular-nums shrink-0 max-[899px]:sr-only">
                                 @if (hlo.achievement) {
                                   <!-- @akili-spec bugfix/achieved-counts-submitted -->

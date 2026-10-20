@@ -1,3 +1,4 @@
+import { ReminderCampaignList, ReminderCampaignView, ReminderCreateBody, ReminderEnvelope, ReminderPreview, ReminderSendOutcome } from '../../interfaces/replicated-innovation-reminders.interface';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
@@ -1865,5 +1866,32 @@ export class ResultsApiService {
   /** `justification` is mandatory on REJECT and an optional reviewer comment on APPROVE (P2-3157). */
   PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification?: string }) {
     return this.bilateralApiSE.PATCH_BilateralReviewDecision(resultId, body);
+  }
+
+  // ── RIR-T-6: replicated innovation reminders (admin) ────────────────────────────────────────
+  private readonly reminderCampaignsUrl = environment.apiBaseUrl + 'api/replicated-innovation-reminders/campaigns';
+
+  GET_reminderCampaigns() {
+    return this.http.get<ReminderEnvelope<ReminderCampaignList>>(this.reminderCampaignsUrl);
+  }
+
+  POST_reminderCampaign(body: ReminderCreateBody) {
+    return this.http.post<ReminderEnvelope<ReminderCampaignView>>(this.reminderCampaignsUrl, body);
+  }
+
+  PATCH_reminderCampaignDate(id: number, body: { scheduled_at: string }) {
+    return this.http.patch<ReminderEnvelope<ReminderCampaignView>>(`${this.reminderCampaignsUrl}/${id}`, body);
+  }
+
+  PATCH_reminderCampaignCancel(id: number) {
+    return this.http.patch<ReminderEnvelope<ReminderCampaignView>>(`${this.reminderCampaignsUrl}/${id}/cancel`, {});
+  }
+
+  GET_reminderCampaignPreview(id: number) {
+    return this.http.get<ReminderEnvelope<ReminderPreview>>(`${this.reminderCampaignsUrl}/${id}/preview`);
+  }
+
+  POST_reminderCampaignSend(id: number) {
+    return this.http.post<ReminderEnvelope<ReminderSendOutcome>>(`${this.reminderCampaignsUrl}/${id}/send`, {});
   }
 }

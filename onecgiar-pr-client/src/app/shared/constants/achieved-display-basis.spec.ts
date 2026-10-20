@@ -404,6 +404,8 @@ describe('achieved-display-basis', () => {
         zeroTarget: 1,
         counted: 1,
         reported: 1,
+        // `changes/kpi-progress-capped-average`: target 1, achieved 1 → capped mean 100.
+        percent: 100,
       });
     });
   });

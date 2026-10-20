@@ -25,18 +25,6 @@ export interface BilateralOverviewEntry {
 }
 
 /**
- * SR-164368 — the center Overview "Total results" card figures, counted server-side one row per
- * result (`GET bilateral-center-overview-totals`). The card cannot derive them from the results
- * list: W1/W2 results that tag a center project without the center on the result are not in it.
- */
-export interface BilateralCenterOverviewTotals {
-  replicated_count: number;
-  new_w3_count: number;
-  w1w2_tagging_count: number;
-  total_count: number;
-}
-
-/**
  * Data service for the Bilateral Center Overview tab (`COV-DD-8`). Results are cached per
  * `centerId::versionId`; projects are cached per center and fetched at most once — the two
  * streams are fetched and cached **independently** (`COV-R-17`: "results call fails AND projects
@@ -61,11 +49,6 @@ export class BilateralOverviewService {
    * after — or overwrite — the refetch that replaced it.
    */
   private readonly resultsRequestSeq = new Map<OverviewCacheKey, number>();
-
-  private readonly totalsCache = new Map<OverviewCacheKey, BilateralCenterOverviewTotals>();
-  private readonly totalsInFlight = new Set<OverviewCacheKey>();
-  private readonly totalsDataSignals = new Map<OverviewCacheKey, WritableSignal<BilateralCenterOverviewTotals | null>>();
-  private readonly totalsRequestSeq = new Map<OverviewCacheKey, number>();
 
   private readonly projectsCache = new Map<string, BilateralProject[]>();
   private readonly projectsInFlight = new Set<string>();
@@ -101,11 +84,6 @@ export class BilateralOverviewService {
    * Convenience combined view for the page: independent results/projects state for one
    * `centerId::versionId`, reactive (a `computed` over the two underlying signal pairs).
    */
-  /** SR-164368 — `null` until loaded, and on error (the card then shows dashes). */
-  totalsData(centerId: string, versionId: number): Signal<BilateralCenterOverviewTotals | null> {
-    return this.totalsDataSignal(overviewCacheKey(centerId, versionId));
-  }
-
   entry(centerId: string, versionId: number): Signal<BilateralOverviewEntry> {
     const key = overviewCacheKey(centerId, versionId);
     const resultsData = this.resultsDataSignal(key);
@@ -131,7 +109,6 @@ export class BilateralOverviewService {
    */
   load(centerId: string, versionId: number): void {
     this.loadResults(centerId, versionId);
-    this.loadTotals(centerId, versionId);
     this.loadProjects(centerId);
   }
 
@@ -147,7 +124,6 @@ export class BilateralOverviewService {
     this.resultsInFlight.delete(resultsKey);
     this.resultsDataSignal(resultsKey).set(null);
     this.resultsErrorSignal(resultsKey).set(null);
-    this.dropTotals(resultsKey);
 
     if (this.projectsErrorSignal(centerId)() !== null) {
       this.projectsCache.delete(centerId);
@@ -157,7 +133,6 @@ export class BilateralOverviewService {
     }
 
     this.loadResults(centerId, versionId);
-    this.loadTotals(centerId, versionId);
     this.loadProjects(centerId);
   }
 
@@ -181,56 +156,6 @@ export class BilateralOverviewService {
       const separator = key.lastIndexOf('::');
       this.loadResults(key.slice(0, separator), Number(key.slice(separator + 2)));
     }
-
-    const totalsToRefetch = new Set<OverviewCacheKey>([...this.totalsCache.keys(), ...this.totalsInFlight]);
-    for (const key of totalsToRefetch) {
-      this.dropTotals(key);
-      const separator = key.lastIndexOf('::');
-      this.loadTotals(key.slice(0, separator), Number(key.slice(separator + 2)));
-    }
-  }
-
-  private loadTotals(centerId: string, versionId: number): void {
-    const key = overviewCacheKey(centerId, versionId);
-    if (this.totalsCache.has(key) || this.totalsInFlight.has(key)) return;
-
-    const seq = (this.totalsRequestSeq.get(key) ?? 0) + 1;
-    this.totalsRequestSeq.set(key, seq);
-    const isLatest = () => this.totalsRequestSeq.get(key) === seq;
-
-    this.totalsInFlight.add(key);
-    this.bilateralApi
-      .GET_bilateralCenterOverviewTotals(centerId, versionId)
-      .pipe(map((envelope: any) => (envelope?.response ?? null) as BilateralCenterOverviewTotals | null))
-      .subscribe({
-        next: totals => {
-          if (!isLatest()) return;
-          this.totalsInFlight.delete(key);
-          if (!totals) return;
-          this.totalsCache.set(key, totals);
-          this.totalsDataSignal(key).set(totals);
-        },
-        error: () => {
-          if (!isLatest()) return;
-          this.totalsInFlight.delete(key);
-        },
-      });
-  }
-
-  private dropTotals(key: OverviewCacheKey): void {
-    this.totalsCache.delete(key);
-    this.totalsInFlight.delete(key);
-    this.totalsRequestSeq.set(key, (this.totalsRequestSeq.get(key) ?? 0) + 1);
-    this.totalsDataSignal(key).set(null);
-  }
-
-  private totalsDataSignal(key: OverviewCacheKey): WritableSignal<BilateralCenterOverviewTotals | null> {
-    let existing = this.totalsDataSignals.get(key);
-    if (!existing) {
-      existing = signal<BilateralCenterOverviewTotals | null>(this.totalsCache.get(key) ?? null);
-      this.totalsDataSignals.set(key, existing);
-    }
-    return existing;
   }
 
   private loadResults(centerId: string, versionId: number): void {
@@ -246,7 +171,9 @@ export class BilateralOverviewService {
     this.resultsErrorSignal(key).set(null);
 
     this.bilateralApi
-      .GET_bilateralCenterResults(centerId, versionId)
+      // INC-165171 — the Overview counts the W1/W2 results tagging a center project too, so its
+      // cards and the Reporting projects panel read one row set (`overview_category` per row).
+      .GET_bilateralCenterResults(centerId, versionId, true)
       .pipe(map((envelope: any) => (envelope?.response ?? []) as BilateralCenterResult[]))
       .subscribe({
         next: results => {

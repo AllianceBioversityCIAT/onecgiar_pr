@@ -1157,21 +1157,20 @@ describe('ReportingProgramBandComponent', () => {
       expect(chips[1].textContent).toContain('0');
     });
 
-    it('renders an informational Target pill: span, no aria-pressed, no emit (DKT-R-4)', async () => {
-      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5 }, targetSum: '259' });
-      const spy = jest.spyOn(component.typologyChange, 'emit');
-      const pill = root().querySelector('[data-testid="quick-typology-target-pill"]') as HTMLElement;
-      expect(pill.tagName).toBe('SPAN');
-      expect(pill.getAttribute('aria-label')).toBe('Target sum: 259');
-      expect(pill.hasAttribute('aria-pressed')).toBe(false);
-      expect(pill.textContent).toContain('259');
-      pill.click();
-      expect(spy).not.toHaveBeenCalled();
-    });
-
-    it('renders no Target pill without targetSum', async () => {
+    it('S-7.1: renders no Target pill in the toolbar, and every typology chip still renders with its count', async () => {
       await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5 } });
       expect(root().querySelector('[data-testid="quick-typology-target-pill"]')).toBeNull();
+      const chips = root().querySelectorAll('[data-testid="quick-typology-filters"] button');
+      expect(chips.length).toBeGreaterThan(1);
+      expect(chips[0].textContent).toContain('Total # of KPIs');
+      expect(chips[0].textContent).toContain('5');
+    });
+
+    it('S-9.1: the first chip accessible name carries its count; other chips keep their plain label', async () => {
+      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5, kp: 2 } });
+      const chips = root().querySelectorAll('[data-testid="quick-typology-filters"] button');
+      expect(chips[0].getAttribute('aria-label')).toBe('Total # of KPIs (5)');
+      expect(chips[1].getAttribute('aria-label')).toBe('Knowledge Product');
     });
 
     it('does not render quick filter chips when compactFilters is true', async () => {

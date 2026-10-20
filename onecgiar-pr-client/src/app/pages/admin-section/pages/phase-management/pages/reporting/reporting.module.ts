@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { ReportingRoutingModule } from './reporting-routing.module';
 import { ReportingComponent } from './reporting.component';
 import { OtherFunctionalitiesModule } from '../../other-functionalities/other-functionalities.module';
+import { ReplicatedInnovationRemindersComponent } from '../../components/replicated-innovation-reminders/replicated-innovation-reminders.component';
 import { PhaseManagementTableModule } from '../../../../../../shared/components/phase-management-table/phase-management-table.module';
 
 @NgModule({
@@ -12,7 +13,8 @@ import { PhaseManagementTableModule } from '../../../../../../shared/components/
     CommonModule,
     ReportingRoutingModule,
     OtherFunctionalitiesModule,
-    PhaseManagementTableModule
+    PhaseManagementTableModule,
+    ReplicatedInnovationRemindersComponent
   ]
 })
 export class ReportingModule {}

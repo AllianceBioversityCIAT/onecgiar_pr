@@ -65,8 +65,8 @@ describe('ProgramOverviewComponent', () => {
   ];
 
   const aows: AowProgressRow[] = [
-    { code: 'AOW06', name: 'Data', done: 0, total: 2 },
-    { code: 'AOW01', name: 'Market', done: 3, total: 8 }
+    { code: 'AOW06', name: 'Data', done: 0, total: 2, progressSum: 0, percent: 0 },
+    { code: 'AOW01', name: 'Market', done: 3, total: 8, progressSum: 300, percent: 37.5 }
   ];
 
   const bilateralCategories: CategoryBar[] = [
@@ -913,6 +913,15 @@ describe('ProgramOverviewComponent', () => {
       expect(el.querySelector('[data-testid="overview-kpi-bilateral"]')).toBeNull();
       expect(el.querySelector('[data-testid="overview-kpi-centers"]')).toBeNull();
       expect(el.textContent).not.toContain('Contributing Centers');
+    });
+
+    it('KPC-R-13: the Areas of Work card reads "achieved", never "completed"', () => {
+      const card = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="overview-kpi-aow"]') as HTMLElement;
+      const text = (card.textContent ?? '').replace(/\s+/g, ' ');
+      expect(text).toContain('achieved');
+      expect(text).not.toContain('completed');
+      expect(card.getAttribute('aria-label') ?? '').not.toContain('completed');
+      expect(card.getAttribute('title') ?? '').not.toContain('completed');
     });
 
     it('filters visible sections when a section tab is clicked', () => {

@@ -1,0 +1,87 @@
+<hlm-sheet
+  side="right"
+  [state]="open() ? 'open' : 'closed'"
+  aria-labelledby="rir-preview-title"
+  aria-describedby="rir-preview-desc"
+  (closed)="closed.emit()">
+  <hlm-sheet-content
+    *hlmSheetPortal="let ctx"
+    class="!w-[720px] sm:!max-w-[720px] flex flex-col gap-0 overflow-y-auto"
+    data-testid="rir-preview-panel">
+    <hlm-sheet-header>
+      <h2 id="rir-preview-title" hlmSheetTitle>{{ copy.title }}</h2>
+      <p id="rir-preview-desc" hlmSheetDescription>{{ copy.description }}</p>
+    </hlm-sheet-header>
+
+    <div class="flex flex-col gap-4 p-4">
+      @if (loading()) {
+        <div class="flex flex-col gap-2" role="status" [attr.aria-label]="copy.loading" data-testid="rir-preview-loading">
+          <hlm-skeleton class="h-6 w-2/3" />
+          <hlm-skeleton class="h-24 w-full" />
+        </div>
+      } @else if (error()) {
+        <p role="alert" class="text-destructive text-sm" data-testid="rir-preview-error">{{ error() }}</p>
+      } @else if (preview(); as p) {
+        @if (p.redirected_to) {
+          <p role="status" class="border-border bg-muted text-foreground rounded-md border p-3 text-sm" data-testid="rir-redirect-banner">
+            {{ copy.redirectBanner }}
+          </p>
+        }
+        <p class="text-foreground text-sm font-medium" data-testid="rir-preview-totals">{{ totalsText() }}</p>
+
+        @for (d of p.digests; track d.to) {
+          <section class="border-border rounded-md border p-3" data-testid="rir-digest">
+            <p class="text-sm">
+              <span class="text-muted-foreground">{{ copy.to }}:</span> {{ d.to }}
+            </p>
+            @if (d.cc.length) {
+              <p class="text-sm">
+                <span class="text-muted-foreground">{{ copy.cc }}:</span> {{ d.cc.join(', ') }}
+              </p>
+            }
+            <p class="text-muted-foreground mt-2 text-xs">{{ copy.results }} ({{ d.results.length }})</p>
+            <ul class="mt-1 list-disc ps-5 text-sm">
+              @for (r of d.results; track r.result_id) {
+                <li>{{ r.initiative_code }} - #{{ r.result_code }} {{ r.title }}</li>
+              }
+            </ul>
+          </section>
+        } @empty {
+          <p class="text-muted-foreground text-sm" data-testid="rir-no-digests">{{ copy.noDigests }}</p>
+        }
+
+        <h3 class="text-foreground mt-2 text-sm font-semibold">{{ copy.unreachableTitle }} ({{ p.unreachable.length }})</h3>
+        @if (p.unreachable.length) {
+          <div hlmTableContainer>
+            <table hlmTable data-testid="rir-unreachable-table">
+              <thead hlmTHead>
+                <tr hlmTr>
+                  <th hlmTh>{{ copy.colCode }}</th>
+                  <th hlmTh>{{ copy.colTitle }}</th>
+                  <th hlmTh>{{ copy.colInitiative }}</th>
+                  <th hlmTh>{{ copy.colContact }}</th>
+                </tr>
+              </thead>
+              <tbody hlmTBody>
+                @for (r of p.unreachable; track r.result_id) {
+                  <tr hlmTr>
+                    <td hlmTd>{{ r.result_code }}</td>
+                    <td hlmTd>{{ r.title }}</td>
+                    <td hlmTd>{{ r.initiative_code }}</td>
+                    <td hlmTd data-testid="rir-unreachable-contact">{{ r.lead_contact_person || noValue }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="text-muted-foreground text-sm">{{ copy.unreachableEmpty }}</p>
+        }
+      }
+    </div>
+
+    <hlm-sheet-footer>
+      <button hlmBtn variant="outline" type="button" (click)="closed.emit()">{{ actionCopy.close }}</button>
+    </hlm-sheet-footer>
+  </hlm-sheet-content>
+</hlm-sheet>

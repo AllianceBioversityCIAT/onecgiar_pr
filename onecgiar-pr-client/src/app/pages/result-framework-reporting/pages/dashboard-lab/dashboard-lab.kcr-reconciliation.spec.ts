@@ -421,16 +421,14 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
     expect(component.plannedReportingSummaryStats().totalKpis).toBe(PLANNED_IDS.length);
   });
 
-  it('DKT-R-3/R-4: KPI chip = sum of card header counts and Target = sum of header sums (cross-cut rows once)', async () => {
+  it('DKT-R-3: KPI chip = sum of card header counts (cross-cut rows once)', async () => {
     const component = await createComponent();
     const table = TestBed.createComponent(ReportingAowTableComponent).componentInstance;
     const groups = component.reportingGroups();
 
     const headerCounts = groups.reduce((n, g) => n + Number.parseInt(table.headerCount(g), 10), 0);
-    const headerSums = groups.reduce((n, g) => n + (Number.parseFloat(table.headerTargets(g)) || 0), 0);
 
     expect(component.reportingTypologyCounts()['all']).toBe(headerCounts);
-    expect(Number.parseFloat(component.reportingTargetSum())).toBe(headerSums);
   });
 
   // ── Reported predicate (KCR-R-9, both scenario clauses) ──────────────────────────────────────
@@ -519,7 +517,7 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
       expect({ done: banner.done, total: banner.total, pct: banner.pct, zeroTarget: banner.zeroTarget }).toEqual({
         done: 10,
         total: 50,
-        pct: 20,
+        pct: 8, // KPC-R-4: 10 rows at 4/10 = 40% each, 40 at 0% -> 400 / 50
         zeroTarget: 4
       });
 
@@ -613,16 +611,13 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
       );
 
       component.reportingTypeFilter.set(['hlo']);
-      expect(component.reportingTargetSum()).toBe('15');
       expect(component.reportingTypologyCounts()['all']).toBe(2);
 
       component.reportingTypeFilter.set([]);
-      const allSum = Number(component.reportingTargetSum());
-      expect(allSum).toBeGreaterThan(15);
+      expect(component.reportingTypologyCounts()['all']).toBeGreaterThan(2);
 
       component.reportingTypeFilter.set(['hlo']);
       component.reportingTypologyFilter.set(['Knowledge product']);
-      expect(component.reportingTargetSum()).toBe('10');
       expect(component.reportingTypologyCounts()['all']).toBe(1);
     });
 
@@ -650,7 +645,7 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
       expect(splitLine(card(component))).toBe('0 KPIs with target · 4 with no target set');
     });
 
-    it('S-10.2 KPIs with a target: `All` 50, card `50 KPIs`, `10 of 50 · 20%`, no split line', async () => {
+    it('S-10.2 KPIs with a target: `All` 50, card `50 KPIs`, `10 of 50 · 8%`, no split line', async () => {
       const component = await createComponent();
       seedTargetFilterFixture(component);
 
@@ -658,7 +653,7 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
 
       expect(component.reportingTypologyCounts()['all']).toBe(50);
       expect(tableCountLabel(card(component))).toBe('50 KPIs');
-      expect(ratio(card(component))).toMatchObject({ done: 10, total: 50, percent: 20, empty: false });
+      expect(ratio(card(component))).toMatchObject({ done: 10, total: 50, percent: 8, empty: false });
       expect(splitLine(card(component))).toBe('');
     });
 

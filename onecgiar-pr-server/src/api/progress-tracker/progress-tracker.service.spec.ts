@@ -365,6 +365,33 @@ describe('ProgressTrackerService', () => {
       expect(result.response.generated_by).toEqual(generatedBy);
     });
 
+    it('passes PT plain-language reasons through when there is nothing to propose (generated_by.notice, preparation.no_results_reason)', async () => {
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
+      const notice =
+        'No knowledge product for this KPI was found in the Progress Tracker evidence.';
+      httpService.get.mockReturnValue(
+        of({
+          data: {
+            results: [],
+            generated_by: { mode: 'ai', notice },
+            preparation: {
+              status: 'ready',
+              no_results_reason: 'Fallback reason.',
+            },
+          },
+        }),
+      );
+
+      const result = await service.getIndicatorResults('5d51da6c6916');
+
+      expect((result.response.generated_by as { notice?: string }).notice).toBe(
+        notice,
+      );
+      expect(result.response.preparation?.no_results_reason).toBe(
+        'Fallback reason.',
+      );
+    });
+
     it.each(['no_reportable_results', 'no_readable_original_evidence'])(
       'passes generated_by.fallback_reason %s through for the client empty state',
       async (reason) => {

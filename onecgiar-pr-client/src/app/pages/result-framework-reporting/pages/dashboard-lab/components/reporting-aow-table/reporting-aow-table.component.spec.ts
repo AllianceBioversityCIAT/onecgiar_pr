@@ -340,16 +340,9 @@ describe('ReportingAowTableComponent', () => {
       expect(component.isBandAllOpen(outputBand.groups)).toBe(false);
     });
 
-    it('sums target and achieved values for an HLO group', async () => {
-      const g = group([
-        row({ indicator_id: 1, __hlo: 'HLO 1', target_value_sum: '5', actual_achieved_value_sum: '12' }),
-        row({ indicator_id: 2, __hlo: 'HLO 1', target_value_sum: '3.5', actual_achieved_value_sum: '8.5' })
-      ]);
-      await build([g]);
-      const bands = component.bandsOf(g);
-      const hloGroup = bands[0].groups[0];
-      expect(component.hloTargetSum(hloGroup)).toBe('8.5');
-      expect(component.hloAchievedSum(hloGroup)).toBe('20.5');
+    it('KPC-R-12: the component no longer exposes HLO target / achieved sums', () => {
+      expect((component as any).hloTargetSum).toBeUndefined();
+      expect((component as any).hloAchievedSum).toBeUndefined();
     });
 
     it('sorts HLO groups numerically by code (e.g. HL01, HL02, HL03, HL04, HL05)', async () => {
@@ -417,7 +410,7 @@ describe('ReportingAowTableComponent', () => {
       expect(titleEl!.textContent).toContain('Women, men, youth and vulnerable groups');
     });
 
-    it('HLO header displays tabular metrics cluster with clean count badge and green achieved value (RAJ-R-2, RAJ-AC-2.1, RAH-R-3)', async () => {
+    it('HLO header displays tabular metrics cluster with clean count badge and no summed achieved value (RAJ-R-2, RAJ-AC-2.1, RAH-R-3)', async () => {
       const g = group([
         row({ indicator_id: 1, target_value_sum: '2', actual_achieved_value_sum: 0, progress_percentage: 0 }),
         row({ indicator_id: 2, target_value_sum: '3', actual_achieved_value_sum: 1, progress_percentage: 33 })
@@ -428,10 +421,8 @@ describe('ReportingAowTableComponent', () => {
       const hloBtn = (fixture.nativeElement as HTMLElement).querySelector('button[id^="hlo-group-"]');
       expect(hloBtn).toBeTruthy();
 
-      // Achieved text uses --pr-color-green-500
-      const achievedVal = hloBtn!.querySelector('.text-\\[var\\(--pr-color-green-500\\)\\]');
-      expect(achievedVal).toBeTruthy();
-      expect(achievedVal!.textContent?.trim()).toBe('1');
+      // KPC-R-12: no summed green Achieved figure in the HLO header cluster
+      expect(hloBtn!.querySelector('.text-\\[var\\(--pr-color-green-500\\)\\]')).toBeNull();
 
       // Count badge displays indicator count pill
       const countPill = hloBtn!.querySelector('.rounded-full.tabular-nums');
@@ -586,7 +577,7 @@ describe('ReportingAowTableComponent', () => {
       expect(badge!.textContent?.trim().replace(/\s+/g, ' ')).toBe('HLO 1.1');
     });
 
-    it('renders consolidated micro-KPI metric blocks with TARGET, ACHIEVED, and count pill (RAH-R-3)', async () => {
+    it('KPC-S-12.1: the HLO row shows the indicator count and no summed TARGET / ACHIEVED (RAH-R-3)', async () => {
       const g = group([
         row({ indicator_id: 1, target_value_sum: '15', actual_achieved_value_sum: 5 }),
         row({ indicator_id: 2, target_value_sum: '10', actual_achieved_value_sum: 5 })
@@ -597,11 +588,18 @@ describe('ReportingAowTableComponent', () => {
       const hloBtn = (fixture.nativeElement as HTMLElement).querySelector('button[id^="hlo-group-"]');
       expect(hloBtn).toBeTruthy();
 
-      expect(hloBtn!.textContent).toContain('TARGET');
-      expect(hloBtn!.textContent).toContain('ACHIEVED');
-      expect(hloBtn!.textContent).toContain('25'); // Target sum 15 + 10
-      expect(hloBtn!.textContent).toContain('10'); // Achieved sum 5 + 5
+      expect(hloBtn!.textContent).not.toContain('TARGET');
+      expect(hloBtn!.textContent).not.toContain('ACHIEVED');
+      expect(hloBtn!.textContent).not.toMatch(/\b25\b/); // Target sum 15 + 10 must not render
       expect(hloBtn!.textContent).toContain('2 indicators');
+
+      // S-12.1: the expanded indicator rows keep their own Target and Achieved
+      const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.pr-reporting-row')).map(r => (r.textContent ?? '').replace(/\s+/g, ' '));
+      expect(rows.length).toBeGreaterThanOrEqual(2);
+      expect(rows[0]).toContain('15');
+      expect(rows[0]).toMatch(/\b5\b/);
+      expect(rows[1]).toContain('10');
+      expect(rows[1]).toMatch(/\b5\b/);
     });
 
     it('renders singular "1 indicator" on count pill when single row present (RAH-R-3)', async () => {
@@ -941,16 +939,46 @@ describe('ReportingAowTableComponent', () => {
 
   // ── ratio ─────────────────────────────────────────────────────────────────
   describe('AoW ratio', () => {
-    it('counts REPORTED over total, not completed', async () => {
-      // Verified against the designer's rendered reference: "3 of 8 · 38%" — 3/8 = 37.5%.
-      // Counting `progress >= 100` instead gave "0 of 30 · 0%" on real data, since almost nothing
-      // is at 100% mid-cycle. A row counts as done the moment it has any achieved value.
+    it('counts REPORTED over total for `done`, and the % is the capped mean (not completed, not a count)', async () => {
+      // `done` counts a row the moment it has any achieved value (not `progress >= 100`); the % is the
+      // average of each KPI's capped achievement (KPC-R-4): 2/4 = 50%, 0/4 = 0% -> 25%, not 1/2 = 50%.
       const g = group([
-        row({ indicator_id: 1, actual_achieved_value_sum: 2, progress_percentage: 40 }),
-        row({ indicator_id: 2, actual_achieved_value_sum: 0, progress_percentage: 0 })
+        row({ indicator_id: 1, target_value_sum: '4', actual_achieved_value_sum: 2, progress_percentage: 40 }),
+        row({ indicator_id: 2, target_value_sum: '4', actual_achieved_value_sum: 0, progress_percentage: 0 })
       ]);
       await build([g]);
-      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50, empty: false });
+      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 25, empty: false });
+    });
+
+    // KPC-R-4 / S-4.1 (achieved / target): one over-achieved KPI is capped at 100% and cannot hide the others.
+    it('S-4.1: rows 10/10, 5/10, 0/10, 30/10 render `3 of 4`, `62.5%` and a 62.5% bar', async () => {
+      const g = group([
+        row({ indicator_id: 1, target_value_sum: '10', actual_achieved_value_sum: 10 }),
+        row({ indicator_id: 2, target_value_sum: '10', actual_achieved_value_sum: 5 }),
+        row({ indicator_id: 3, target_value_sum: '10', actual_achieved_value_sum: 0 }),
+        row({ indicator_id: 4, target_value_sum: '10', actual_achieved_value_sum: 30 })
+      ]);
+      await build([g]);
+      const header = (fixture.nativeElement as HTMLElement).querySelector('button[data-aow-header="AOW01"]') as HTMLElement;
+      const text = (header.textContent ?? '').replace(/\s+/g, ' ');
+      expect(text).toContain('3 of 4');
+      expect(text).toContain('62.5%');
+      expect(text).not.toContain('75%');
+      const bar = Array.from(header.querySelectorAll<HTMLElement>('span')).find(el => el.style.width !== '');
+      expect(bar?.style.width).toBe('62.5%');
+    });
+
+    // S-4.2: narrowing the base recomputes the % from the narrowed rows.
+    it('S-4.2: a narrowed row set recomputes the % from those rows', async () => {
+      const all = [
+        row({ indicator_id: 1, target_value_sum: '10', actual_achieved_value_sum: 10, __tier: 'output' }),
+        row({ indicator_id: 2, target_value_sum: '10', actual_achieved_value_sum: 0, __tier: 'outcome' })
+      ];
+      await build([group(all)]);
+      expect(component.ratioOf(component.groups()[0]).percent).toBe(50);
+      fixture.componentRef.setInput('groups', [group([all[0]])]);
+      fixture.detectChanges();
+      expect(component.ratioOf(component.groups()[0]).percent).toBe(100);
     });
 
     it('counts a row at 100% only if something was actually reported', async () => {
@@ -976,13 +1004,21 @@ describe('ReportingAowTableComponent', () => {
       expect(component.ratioOf(g)).toEqual({ done: 0, total: 0, percent: 0, empty: true });
     });
 
+    it('S-4.1 banner: buildAowBannerStats on 10/10, 5/10, 0/10, 30/10 gives pct 62.5, done 3, total 4', () => {
+      const inds = [10, 5, 0, 30].map((achieved, i) =>
+        row({ indicator_id: i + 1, target_value_sum: '10', actual_achieved_value_sum: achieved })
+      );
+      const banner = buildAowBannerStats(inds);
+      expect({ done: banner.done, total: banner.total, pct: banner.pct }).toEqual({ done: 3, total: 4, pct: 62.5 });
+    });
+
     // MRF-AC-6 / MRF-R-6: the grouped header ratio and the By-AOW banner MUST agree, including
     // when the has-a-target rule (KTO-R-2) excludes a KPI from the denominator.
     it('agrees with buildAowBannerStats on a shared fixture, incl. a no-target KPI', async () => {
       const inds = [
         row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
         row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '4' }),
-        // No target: excluded from the denominator (KTO-R-2).
+        // No target: excluded from the denominator and the average (KTO-R-2, KPC-R-4).
         row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' })
       ];
       const g = group(inds);
@@ -994,8 +1030,9 @@ describe('ReportingAowTableComponent', () => {
         total: banner.total,
         percent: banner.pct
       });
-      // Only KPIs with a target count: 2 targeted, 1 reported; the no-target row is out.
-      expect(ratio).toEqual({ done: 1, total: 2, percent: 50, empty: false });
+      // Only KPIs with a target count: 2 targeted, 1 reported; 5/10 = 50% and 0/4 = 0% -> mean 25; the no-target row is out.
+      expect(ratio).toEqual({ done: 1, total: 2, percent: 25, empty: false });
+      expect(banner.pct).toBe(25);
     });
 
     // MRF-AC-5: Only-pending narrows `indicators`, so the host stashes the pre-toggle set on
@@ -1066,12 +1103,14 @@ describe('ReportingAowTableComponent', () => {
     ];
 
     // (a) S-2.1 + S-4.1 + S-4.3
-    it('(a) the ticket AoW reads 10 of 50 · 20% · 54 KPIs with the split line, and 4 rows read No target set / Overachieved', async () => {
+    it('(a) the ticket AoW reads 10 of 50 · 4% · 54 KPIs with the split line, and 4 rows read No target set / Overachieved', async () => {
       await build([group(ticketRows(), { count: 54 })]);
 
       const header = flat(headerOf());
       expect(header).toContain('10 of 50');
-      expect(header).toContain('20%');
+      // 10 rows at 2/10 = 20% each, 40 at 0% -> 200 / 50 = 4% (KPC-R-4); no `targets` sum in the header (KPC-R-8).
+      expect(header).toMatch(/10 of 50 4%(?!\d)/);
+      expect(header).not.toContain('targets');
       expect(header).toContain('54 KPIs');
       expect(header).toContain('50 KPIs with target · 4 with no target set');
       expect(component.splitOf(group(ticketRows()))).toEqual({
@@ -1095,7 +1134,7 @@ describe('ReportingAowTableComponent', () => {
 
       const header = flat(headerOf());
       expect(header).toContain('10 of 50');
-      expect(header).toContain('20%');
+      expect(header).toMatch(/10 of 50 4%(?!\d)/);
       expect(header).toContain('50 KPIs with target · 5 with no target set');
     });
 
@@ -1211,7 +1250,7 @@ describe('ReportingAowTableComponent', () => {
       (header.querySelector('button[aria-label="About this group"]') as HTMLButtonElement).click();
       fixture.detectChanges();
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-info-rule"]')?.textContent?.trim()).toBe(
-        'The percentage is calculated using only the KPIs that have a target defined.'
+        'Average achievement of the KPIs with a target (achieved ÷ target, capped at 100%).'
       );
     });
 
@@ -1223,24 +1262,24 @@ describe('ReportingAowTableComponent', () => {
       (headerOf().querySelector('button[aria-label="About this group"]') as HTMLButtonElement).click();
       fixture.detectChanges();
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-info-rule"]')?.textContent).toContain(
-        'only the KPIs that have a target defined'
+        'Average achievement of the KPIs with a target (achieved ÷ target, capped at 100%).'
       );
 
-      const pct = Array.from(headerOf().querySelectorAll('span')).find(el => el.textContent?.trim() === '100%') as HTMLElement;
+      const pct = Array.from(headerOf().querySelectorAll('span')).find(el => el.textContent?.trim() === '25%') as HTMLElement;
       const tip = fixture.debugElement.query(de => de.nativeElement === pct).injector.get(PrTooltipDirective).text;
-      expect(tip).toBe(
-        'Share of KPIs with a target that have something reported against them. KPIs with no target set are not counted. This is coverage of the plan, not achievement against the targets.'
-      );
+      expect(tip).toBe('Average achievement of the KPIs with a target (achieved ÷ target, capped at 100%).');
     });
 
     it('achievementTooltip states the has-a-target rule on every branch (KTO-R-5)', async () => {
       await build([group([row()])]);
       const none = component.achievementTooltip(achievement({ counted: 0, total: 3 }));
-      expect(none).toContain('KPI reporting progress uses only KPIs with a target in the ratio above.');
+      expect(none).toContain('The KPI progress % above averages only the KPIs with a target.');
       const some = component.achievementTooltip(achievement());
-      expect(some).toContain('KPI reporting progress counts only KPIs with a target separately.');
+      expect(some).toContain('The KPI progress % is a separate figure that averages only the KPIs with a target.');
       (component as any).showQaPrelSplit = true;
-      expect(component.achievementTooltip(achievement())).toContain('KPI reporting progress counts only KPIs with a target separately.');
+      expect(component.achievementTooltip(achievement())).toContain(
+        'The KPI progress % is a separate figure that averages only the KPIs with a target.'
+      );
       expect(none + some).not.toContain('every planned KPI');
     });
 
@@ -1255,7 +1294,7 @@ describe('ReportingAowTableComponent', () => {
   });
 
   // ── In-card Target filter axis (KTO-R-7, S-7.1, S-7.2, KTO-DD-4) ─────────────
-  describe('header count and target sum follow the card KPI set (DKT-R-1, DKT-R-2)', () => {
+  describe('header count follows the card KPI set and states no target sum (DKT-R-1, KPC-R-8)', () => {
     const headerText = (code = 'AOW01') =>
       (
         ((fixture.nativeElement as HTMLElement).querySelector(`button[data-aow-header="${code}"]`) as HTMLElement).textContent ?? ''
@@ -1264,15 +1303,15 @@ describe('ReportingAowTableComponent', () => {
     const hloRow = (id: number, target: string) => row({ indicator_id: id, __tier: 'output', target_value_sum: target });
     const outcomeRow = (id: number, target: string) => row({ indicator_id: id, __tier: 'outcome', target_value_sum: target });
 
-    it('Type all: reads N KPIs and the numeric target sum; HLO rows only: the smaller count and sum', async () => {
+    it('Type all: reads N KPIs; HLO rows only: the smaller count', async () => {
       const hlo = [hloRow(1, '9'), hloRow(2, '100'), hloRow(3, '0')];
       const outcomes = [outcomeRow(4, '5'), outcomeRow(5, '1')];
       await build([group([...hlo, ...outcomes], { count: 99 })]);
-      expect(headerText()).toContain('5 KPIs · 115 targets');
+      expect(headerText()).toContain('5 KPIs');
 
       fixture.componentRef.setInput('groups', [group(hlo, { count: 99 })]);
       fixture.detectChanges();
-      expect(headerText()).toContain('3 KPIs · 109 targets');
+      expect(headerText()).toContain('3 KPIs');
     });
 
     it('uses the pre-toggle set (__allIndicators) when Only pending / Favorites narrow the listed rows', async () => {
@@ -1280,15 +1319,16 @@ describe('ReportingAowTableComponent', () => {
       const g = group([all[0]], { count: 1 }) as ReportingAowGroup & { __allIndicators?: ReportingIndicator[] };
       g.__allIndicators = all;
       await build([g]);
-      expect(headerText()).toContain('3 KPIs · 20 targets');
+      expect(headerText()).toContain('3 KPIs');
       expect(component.headerCount(g)).toBe('3 KPIs');
     });
 
-    it('excludes cross-cut Intermediate Outcome rows from both the count and the sum', async () => {
+    it('excludes cross-cut Intermediate Outcome rows from the count', async () => {
       const own = [hloRow(1, '7')];
       const crosscut = row({ indicator_id: 9, __tier: 'outcome', target_value_sum: '50', __isIntermediateCrosscut: true });
       await build([group([...own, crosscut], { count: 2 })]);
-      expect(headerText()).toContain('1 KPI · 7 targets');
+      expect(headerText()).toContain('1 KPI');
+      expect(headerText()).not.toContain('targets');
     });
 
     it('while loading with no rows shows group.count and no target sum', async () => {
@@ -1298,10 +1338,11 @@ describe('ReportingAowTableComponent', () => {
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-header-targets"]')).toBeNull();
     });
 
-    it('uses the singular when the sum is exactly 1', async () => {
-      await build([group([hloRow(1, '1')], { count: 1 })]);
-      expect(headerText()).toContain('1 KPI · 1 target');
-      expect(headerText()).not.toContain('1 targets');
+    it('S-8.1: no header targets span, whatever the target values', async () => {
+      await build([group([hloRow(1, '1'), hloRow(2, '9')], { count: 2 })]);
+      expect(headerText()).toContain('2 KPIs');
+      expect(headerText()).not.toContain('targets');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="aow-header-targets"]')).toBeNull();
     });
   });
 
@@ -1347,12 +1388,12 @@ describe('ReportingAowTableComponent', () => {
       expect(rows().length).toBe(54);
     });
 
-    it('S-7.1: Centers IITA + No target set lists exactly 3 rows and the header still reads 10 of 50 · 20%', async () => {
+    it('S-7.1: Centers IITA + No target set lists exactly 3 rows and the header still reads 10 of 50 · 4%', async () => {
       await build([group(ticketRows(), { count: 54 })]);
       openAow();
       const before = flat(headerOf());
       expect(before).toContain('10 of 50');
-      expect(before).toContain('20%');
+      expect(before).toMatch(/10 of 50 4%(?!\d)/);
 
       component.setCenterFilter(component.groups()[0], 'IITA');
       pick('without');
@@ -1361,7 +1402,7 @@ describe('ReportingAowTableComponent', () => {
       const after = flat(headerOf());
       expect(after).toBe(before);
       expect(after).toContain('10 of 50');
-      expect(after).toContain('20%');
+      expect(after).toMatch(/10 of 50 4%(?!\d)/);
       expect(after).toContain('50 KPIs with target · 4 with no target set');
       // Counts describe the card, not the selection (chips count the delivered rows).
       expect(flat(chip('without'))).toBe('No target set (4)');

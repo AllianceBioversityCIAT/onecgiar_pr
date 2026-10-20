@@ -130,6 +130,8 @@ describe('SummaryService', () => {
       save: jest.fn(),
       getLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
       replaceLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
+      // P2-3985 — no previous phase by default, so `current_use_previous` stays null.
+      InnovUseExists: jest.fn().mockResolvedValue(null),
     };
     mockResultsByProjectsRepository = {
       find: jest.fn(),
@@ -594,6 +596,50 @@ describe('SummaryService', () => {
         ).not.toHaveBeenCalled();
       });
 
+      // P2-3985 — the Current Use Update block of the W3/bilateral form.
+      it('persists a 0 of new users and the narrative, without turning the 0 into null', async () => {
+        arrange();
+
+        await service.saveInnovationUse(
+          {
+            new_users_added: 0,
+            use_expansion_narrative: 'Same farmers, second season.',
+          } as any,
+          5,
+          user,
+        );
+
+        expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            new_users_added: 0,
+            use_expansion_narrative: 'Same farmers, second season.',
+          }),
+        );
+      });
+
+      it('leaves the Current Use Update answers untouched when the payload omits their keys', async () => {
+        const existing = {
+          result_innovation_use_id: 1,
+          results_id: 5,
+          new_users_added: 40,
+          use_expansion_narrative: 'kept',
+        } as any;
+        arrange(existing);
+
+        await service.saveInnovationUse(
+          { innovation_use_level_id: 4 } as any,
+          5,
+          user,
+        );
+
+        expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            new_users_added: 40,
+            use_expansion_narrative: 'kept',
+          }),
+        );
+      });
+
       it('never touches linked_result when the payload omits the question', async () => {
         arrange();
 
@@ -711,6 +757,138 @@ describe('SummaryService', () => {
 
       expect(response.scaling_studies_urls).toEqual([]);
       expect(mockScalingStudyUrlRepository.find).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * P2-3985 — the W3/bilateral form opens on this legacy read, so the Current Use Update block needs
+   * the same `current_use_previous` the v2 read gives the W1/W2 form, plus its two saved answers.
+   */
+  describe('getInnovationUse — Current Use Update (P2-3985)', () => {
+    const arrangeEmptyLists = () => {
+      mockResultIpMeasureRepository.find.mockResolvedValueOnce([]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValueOnce([]);
+    };
+
+    it('returns the saved answers, keeping a 0', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([]);
+      arrangeEmptyLists();
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce({
+        result_innovation_use_id: 11,
+        new_users_added: 0,
+        use_expansion_narrative: 'Same farmers.',
+      });
+
+      const response: any = (await service.getInnovationUse(15)).response;
+
+      expect(response.new_users_added).toBe(0);
+      expect(response.use_expansion_narrative).toBe('Same farmers.');
+    });
+
+    it('sums the previous phase current-use actors: women + men, or how_many when disaggregation does not apply', async () => {
+      mockResultActorRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { section_id: 1, women: 120, men: 80, how_many: 999 },
+          { section_id: 1, sex_and_age_disaggregation: true, how_many: 300 },
+          { section_id: 2, women: 5000, men: 5000 },
+        ]);
+      arrangeEmptyLists();
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsInnovationsUseRepository.InnovUseExists.mockResolvedValueOnce({
+        previous_result_id: 41,
+        previous_phase_year: 2025,
+      });
+
+      const response: any = (await service.getInnovationUse(15)).response;
+
+      expect(response.current_use_previous).toEqual({
+        result_id: 41,
+        phase_year: 2025,
+        total_actors: 500,
+      });
+      expect(mockResultActorRepository.find).toHaveBeenLastCalledWith({
+        where: { result_id: 41, is_active: true },
+      });
+    });
+
+    it('counts the previous phase rows the legacy writer saved without a section (NULL), never the 2030 ones', async () => {
+      // `innovation_dev.service` stamps no `section_id` on current-use rows, and the phase copy can
+      // leave it NULL too: the same rule this read already applies to `actors` (only 2 is left out).
+      mockResultActorRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { section_id: null, women: 120, men: 80 },
+          {
+            section_id: undefined,
+            sex_and_age_disaggregation: true,
+            how_many: 30,
+          },
+          { section_id: 1, women: 5, men: 5 },
+          { section_id: 2, women: 5000, men: 5000 },
+        ]);
+      arrangeEmptyLists();
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsInnovationsUseRepository.InnovUseExists.mockResolvedValueOnce({
+        previous_result_id: 41,
+        previous_phase_year: 2025,
+      });
+
+      const response: any = (await service.getInnovationUse(15)).response;
+
+      expect(response.current_use_previous).toEqual({
+        result_id: 41,
+        phase_year: 2025,
+        total_actors: 240,
+      });
+    });
+
+    it('is null without a previous phase', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([]);
+      arrangeEmptyLists();
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsInnovationsUseRepository.InnovUseExists.mockResolvedValueOnce({
+        previous_result_id: null,
+      });
+
+      const response: any = (await service.getInnovationUse(15)).response;
+
+      expect(response.current_use_previous).toBeNull();
+      expect(mockResultActorRepository.find).toHaveBeenCalledTimes(1);
+    });
+
+    it('is null when the previous phase reported no current-use actors', async () => {
+      mockResultActorRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ section_id: 2, women: 10, men: 10 }]);
+      arrangeEmptyLists();
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsInnovationsUseRepository.InnovUseExists.mockResolvedValueOnce({
+        previous_result_id: 41,
+        previous_phase_year: 2025,
+      });
+
+      const response: any = (await service.getInnovationUse(15)).response;
+
+      expect(response.current_use_previous).toBeNull();
+    });
+
+    it('fails soft: an unreadable previous phase gives null and the read still answers 200', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([]);
+      arrangeEmptyLists();
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsInnovationsUseRepository.InnovUseExists.mockRejectedValueOnce(
+        new Error('db down'),
+      );
+      const logSpy = jest
+        .spyOn((service as any)._logger, 'error')
+        .mockImplementation(() => undefined);
+
+      const res = await service.getInnovationUse(15);
+
+      expect(res.status).toBe(HttpStatus.OK);
+      expect((res.response as any).current_use_previous).toBeNull();
+      expect(logSpy).toHaveBeenCalled();
     });
   });
 

@@ -11,6 +11,8 @@ import {
   buildOverviewPaceModel,
   buildStatusModel,
   buildTotalResultsKpi,
+  buildProjectsCoveredKpi,
+  resolveOverviewCategory,
   resolveResultTypeGroup,
 } from './bilateral-overview.aggregate';
 import {
@@ -58,6 +60,7 @@ describe('bilateral-overview.aggregate', () => {
         // no row in this fixture is both W1/W2 AND contributing (BOV2-R-1).
         w1w2ContributorCount: 0,
         w1w2LeadCount: 1,
+        categories: { replicated_w3: 0, replicated_w1w2: 0, new_w3: 9, w1w2_tagging: 0, w1w2_center_only: 1 },
       });
     });
 
@@ -144,7 +147,61 @@ describe('bilateral-overview.aggregate', () => {
     });
 
     it('Projects covered: covered/total/not-started — null-project rows never count toward coverage', () => {
-      expect(kpis.projectsCovered).toEqual({ coveredCount: 2, totalCount: 3, notStartedCount: 1 });
+      expect(kpis.projectsCovered).toEqual({
+        coveredCount: 2,
+        totalCount: 3,
+        notStartedCount: 1,
+        coveredWithNewCount: 2,
+        coveredOnlyReplicatedCount: 0,
+      });
+    });
+  });
+
+  // INC-165171 — the Overview cards are built from ONE row set and split by overview category.
+  describe('overview categories (INC-165171)', () => {
+    const CREATED = '2026-09-10';
+    const row = (overrides: Partial<BilateralCenterResult>): BilateralCenterResult =>
+      ({ created_date: CREATED, status_id: 1, source: 'API', is_leading_result: 1, is_replicated: 0, project_id: null, ...overrides }) as BilateralCenterResult;
+
+    it('takes the server category when present', () => {
+      expect(resolveOverviewCategory(row({ source: 'Result', overview_category: 'w1w2_tagging' }))).toBe('w1w2_tagging');
+    });
+
+    it('derives it with the server precedence when absent: replicated first, then source', () => {
+      expect(resolveOverviewCategory(row({ is_replicated: 1 as never }))).toBe('replicated_w3');
+      expect(resolveOverviewCategory(row({ source: 'Result', is_replicated: '1' as never }))).toBe('replicated_w1w2');
+      expect(resolveOverviewCategory(row({}))).toBe('new_w3');
+      expect(resolveOverviewCategory(row({ source: 'Result', is_leading_result: null }))).toBe('w1w2_tagging');
+      expect(resolveOverviewCategory(row({ source: 'Result', is_leading_result: 0 }))).toBe('w1w2_center_only');
+    });
+
+    // The CIP / Reporting 2026 shape that made the old Total (263) disagree with Editing (267).
+    const cipLike: BilateralCenterResult[] = [
+      ...Array.from({ length: 3 }, () => row({ is_replicated: 1 as never, overview_category: 'replicated_w3', project_id: 100 })),
+      ...Array.from({ length: 4 }, () => row({ source: 'Result', is_leading_result: 0, is_replicated: 1 as never, overview_category: 'replicated_w1w2' })),
+      ...Array.from({ length: 2 }, () => row({ source: 'Result', is_leading_result: 0, overview_category: 'w1w2_center_only' })),
+      row({ source: 'Result', is_leading_result: 0, status_id: 2, overview_category: 'w1w2_center_only' }),
+    ];
+
+    it('the Total breakdown adds up to the total, and each status tile splits replicated vs new', () => {
+      const total = buildTotalResultsKpi(cipLike);
+      expect(total.count).toBe(10);
+      expect(Object.values(total.categories).reduce((sum, n) => sum + n, 0)).toBe(total.count);
+      expect(total.categories).toEqual({ replicated_w3: 3, replicated_w1w2: 4, new_w3: 0, w1w2_tagging: 0, w1w2_center_only: 3 });
+
+      const editing = buildStatusModel(cipLike).tiles.find(tile => tile.key === 'editing');
+      expect(editing).toMatchObject({ count: 9, replicatedCount: 7, newCount: 2 });
+    });
+
+    it('projects covered only through replicated results say so', () => {
+      const covered = buildProjectsCoveredKpi(cipLike, FIXTURE_PROJECTS);
+      expect(covered).toMatchObject({ coveredCount: 1, coveredWithNewCount: 0, coveredOnlyReplicatedCount: 1 });
+    });
+
+    it('the no-project line breaks its total down by category', () => {
+      const noProject = buildByProjectModel(cipLike, FIXTURE_PROJECTS).noProjectRow;
+      expect(noProject?.total).toBe(7);
+      expect(noProject?.categories).toEqual({ replicated_w3: 0, replicated_w1w2: 4, new_w3: 0, w1w2_tagging: 0, w1w2_center_only: 3 });
     });
   });
 
@@ -214,10 +271,10 @@ describe('bilateral-overview.aggregate', () => {
   describe('Results by project card (COV-R-9)', () => {
     const byProject = buildByProjectModel(FIXTURE_D1_ROWS, FIXTURE_PROJECTS);
 
-    it('one bar per project with >=1 result, stacked lead/contributing, sorted desc by total', () => {
+    it('one bar per project with >=1 result, stacked replicated/new, sorted desc by total (INC-165171)', () => {
       expect(byProject.bars).toEqual([
-        { projectId: 100, leadCount: 3, contributingCount: 2, total: 5 },
-        { projectId: 200, leadCount: 2, contributingCount: 1, total: 3 },
+        { projectId: 100, replicatedCount: 0, newCount: 5, total: 5 },
+        { projectId: 200, replicatedCount: 0, newCount: 3, total: 3 },
       ]);
     });
 
@@ -226,7 +283,11 @@ describe('bilateral-overview.aggregate', () => {
     });
 
     it('null project_id rows group into "No bilateral project" and never count toward a project bar or coverage', () => {
-      expect(byProject.noProjectRow).toEqual({ total: 2, leadCount: 1, contributingCount: 1, allW1W2: false });
+      expect(byProject.noProjectRow).toEqual({
+        total: 2,
+        categories: { replicated_w3: 0, replicated_w1w2: 0, new_w3: 1, w1w2_tagging: 0, w1w2_center_only: 1 },
+        allW1W2: false,
+      });
       expect(byProject.coveredCount).toBe(2);
       expect(byProject.totalProjectsInScope).toBe(3);
     });

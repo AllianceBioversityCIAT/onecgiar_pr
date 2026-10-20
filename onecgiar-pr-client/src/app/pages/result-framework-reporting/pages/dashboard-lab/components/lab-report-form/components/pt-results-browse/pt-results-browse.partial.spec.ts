@@ -190,6 +190,39 @@ describe('PtResultsBrowseComponent — partial and slow answers', () => {
       expect(el('pt-check-again-preparing')).toBeNull();
     });
 
+    it('shows PT generated_by.notice as plain text under the empty headline', () => {
+      const notice =
+        'No knowledge product for this KPI was found in the Progress Tracker evidence. The evidence shows another kind of output, such as an event or meeting (other output) and an innovation (innovation development), which don\'t count toward this indicator. The Progress Tracker lists them with the reason.';
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai', notice: `<b>${notice}</b>` }, preparation: { no_results_reason: null } })));
+      open();
+      expect(component.status()).toBe('empty');
+      const p = el('pt-empty-notice') as HTMLElement;
+      expect(p.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Progress Tracker says: <b>${notice}</b>`);
+      expect(p.querySelector('b')).toBeNull();
+      expect(el('pt-empty-open-in-tracker')).not.toBeNull();
+    });
+
+    it('falls back to preparation.no_results_reason when there is no notice', () => {
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai' }, preparation: { no_results_reason: 'Nothing reportable yet.' } })));
+      open();
+      expect(el('pt-empty-notice')?.textContent).toContain('Nothing reportable yet.');
+    });
+
+    it('shows the notice while PT is busy drafting (template live_drafting_busy)', () => {
+      const notice = 'AI drafting is busy. Open this KPI again in 6 s.';
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'template', fallback_reason: 'live_drafting_busy', notice } })));
+      open();
+      expect(component.status()).toBe('preparing');
+      expect(el('pt-preparing-notice')?.textContent).toContain(notice);
+      fixture.destroy();
+    });
+
+    it('renders no notice paragraph when PT sends none', () => {
+      api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai' } })));
+      open();
+      expect(el('pt-empty-notice')).toBeNull();
+    });
+
     it('a known reason outside template mode keeps the generic empty message', () => {
       api.GET_progressTrackerResults.mockReturnValue(of(ok([], { generated_by: { mode: 'ai', fallback_reason: 'no_reportable_results' } })));
       open();

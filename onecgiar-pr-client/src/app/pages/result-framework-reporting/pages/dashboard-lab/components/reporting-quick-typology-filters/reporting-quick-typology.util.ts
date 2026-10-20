@@ -9,7 +9,7 @@ export interface ResultTypeQuickChip {
 }
 
 export const QUICK_TYPOLOGIES = [
-  { id: 'all', label: 'KPI', shortLabel: 'KPI', matchKey: 'all' },
+  { id: 'all', label: 'Total # of KPIs', shortLabel: 'KPIs', matchKey: 'all' },
   { id: 'kp', label: 'Knowledge Product', shortLabel: 'KP', matchKey: 'Knowledge product' },
   { id: 'id', label: 'Innovation Development', shortLabel: 'ID', matchKey: 'Innovation development' },
   { id: 'pc', label: 'Policy Change', shortLabel: 'PC', matchKey: 'Policy change' },

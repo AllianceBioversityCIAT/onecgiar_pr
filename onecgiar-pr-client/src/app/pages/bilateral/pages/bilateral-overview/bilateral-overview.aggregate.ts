@@ -1,5 +1,5 @@
 // @akili-spec bilateral/center-overview-tab (COV-T-3, COV-R-6..12, COV-R-20..22, COV-DD-1, COV-DD-6)
-import { BilateralCenterResult } from '../../services/bilateral-center-result.interface';
+import { BilateralCenterResult, OverviewCategory } from '../../services/bilateral-center-result.interface';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
@@ -90,6 +90,48 @@ function isActiveDraft(draft: BilateralAiDraft): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Overview categories (INC-165171) — every card splits its figure by these, from one row set
+// ---------------------------------------------------------------------------
+
+/** Display order of the categories, the same order the server resolves them in. */
+export const OVERVIEW_CATEGORIES: readonly OverviewCategory[] = [
+  'replicated_w3',
+  'replicated_w1w2',
+  'new_w3',
+  'w1w2_tagging',
+  'w1w2_center_only',
+];
+
+export type OverviewCategoryCounts = Record<OverviewCategory, number>;
+
+function emptyCategoryCounts(): OverviewCategoryCounts {
+  return { replicated_w3: 0, replicated_w1w2: 0, new_w3: 0, w1w2_tagging: 0, w1w2_center_only: 0 };
+}
+
+/**
+ * The row's `overview_category` as the server resolved it. A row without it (older payload,
+ * fixture) is classified with the same precedence; a W1/W2 row is "tagging" when the center is not
+ * on it (`is_leading_result` null), the only signal the client has without the project owners.
+ */
+export function resolveOverviewCategory(row: BilateralCenterResult): OverviewCategory {
+  if (row.overview_category && OVERVIEW_CATEGORIES.includes(row.overview_category)) return row.overview_category;
+  const isW3 = row.source === 'API';
+  if (Number(row.is_replicated) === 1) return isW3 ? 'replicated_w3' : 'replicated_w1w2';
+  if (isW3) return 'new_w3';
+  return row.is_leading_result === null || row.is_leading_result === undefined ? 'w1w2_tagging' : 'w1w2_center_only';
+}
+
+export function isReplicatedCategory(category: OverviewCategory): boolean {
+  return category === 'replicated_w3' || category === 'replicated_w1w2';
+}
+
+function countCategories(rows: readonly BilateralCenterResult[]): OverviewCategoryCounts {
+  const counts = emptyCategoryCounts();
+  for (const row of rows) counts[resolveOverviewCategory(row)]++;
+  return counts;
+}
+
+// ---------------------------------------------------------------------------
 // KPI deck (COV-R-6)
 // ---------------------------------------------------------------------------
 
@@ -120,6 +162,8 @@ export interface OverviewTotalResultsKpi {
    * lives on the number it explains).
    */
   w1w2LeadCount: number;
+  /** INC-165171 — the Total results card breakdown; the five counts add up to `count`. */
+  categories: OverviewCategoryCounts;
 }
 
 export interface OverviewPendingReviewKpi {
@@ -140,6 +184,10 @@ export interface OverviewProjectsCoveredKpi {
   coveredCount: number;
   totalCount: number;
   notStartedCount: number;
+  /** INC-165171 — covered projects with at least one result that is not replicated. */
+  coveredWithNewCount: number;
+  /** INC-165171 — covered projects whose every result is replicated. */
+  coveredOnlyReplicatedCount: number;
 }
 
 export interface OverviewKpisModel {
@@ -172,6 +220,7 @@ export function buildTotalResultsKpi(rows: readonly BilateralCenterResult[]): Ov
     newCount: rows.length - replicatedCount,
     w1w2ContributorCount,
     w1w2LeadCount: rows.length - w3Count - w1w2ContributorCount,
+    categories: countCategories(rows),
   };
 }
 
@@ -208,38 +257,36 @@ export function buildApprovedKpi(rows: readonly BilateralCenterResult[]): Overvi
 /** Aggregated per-project rollup shared by the KPI "Projects covered" card and `byProject` — one
  *  computation, so the two never drift on what "covered" means. */
 interface ProjectRollup {
-  perProject: Map<number, { lead: number; contributing: number; total: number }>;
-  noProject: { total: number; leadCount: number; contributingCount: number; allW1W2: boolean } | null;
+  perProject: Map<number, { replicated: number; new: number; total: number }>;
+  /** Rows with no linked project, by overview category. */
+  noProject: { total: number; categories: OverviewCategoryCounts; allW1W2: boolean } | null;
 }
 
 function rollupByProject(rows: readonly BilateralCenterResult[]): ProjectRollup {
-  const perProject = new Map<number, { lead: number; contributing: number; total: number }>();
+  const perProject = new Map<number, { replicated: number; new: number; total: number }>();
+  const noCategories = emptyCategoryCounts();
   let noTotal = 0;
-  let noLead = 0;
-  let noContributing = 0;
   let noNonW1w2 = 0;
 
   for (const row of rows) {
-    const isLead = Number(row.is_leading_result) === 1;
+    const category = resolveOverviewCategory(row);
     if (row.project_id === null || row.project_id === undefined) {
       noTotal++;
-      if (isLead) noLead++;
-      else noContributing++;
+      noCategories[category]++;
       if (row.source !== 'Result') noNonW1w2++;
       continue;
     }
     const projectId = Number(row.project_id);
-    const entry = perProject.get(projectId) ?? { lead: 0, contributing: 0, total: 0 };
-    if (isLead) entry.lead++;
-    else entry.contributing++;
+    const entry = perProject.get(projectId) ?? { replicated: 0, new: 0, total: 0 };
+    if (isReplicatedCategory(category)) entry.replicated++;
+    else entry.new++;
     entry.total++;
     perProject.set(projectId, entry);
   }
 
   return {
     perProject,
-    noProject:
-      noTotal > 0 ? { total: noTotal, leadCount: noLead, contributingCount: noContributing, allW1W2: noNonW1w2 === 0 } : null,
+    noProject: noTotal > 0 ? { total: noTotal, categories: noCategories, allW1W2: noNonW1w2 === 0 } : null,
   };
 }
 
@@ -250,11 +297,20 @@ export function buildProjectsCoveredKpi(
   const { perProject } = rollupByProject(rows);
   const scopeIds = new Set(projects.map(p => Number(p.id)));
   let coveredCount = 0;
-  for (const projectId of perProject.keys()) {
-    if (scopeIds.has(projectId)) coveredCount++;
+  let coveredWithNewCount = 0;
+  for (const [projectId, agg] of perProject.entries()) {
+    if (!scopeIds.has(projectId)) continue;
+    coveredCount++;
+    if (agg.new > 0) coveredWithNewCount++;
   }
   const totalCount = projects.length;
-  return { coveredCount, totalCount, notStartedCount: Math.max(totalCount - coveredCount, 0) };
+  return {
+    coveredCount,
+    totalCount,
+    notStartedCount: Math.max(totalCount - coveredCount, 0),
+    coveredWithNewCount,
+    coveredOnlyReplicatedCount: coveredCount - coveredWithNewCount,
+  };
 }
 
 export function buildOverviewKpis(
@@ -285,6 +341,9 @@ export interface OverviewStatusTile {
   key: StatusTileKey;
   statusIds: readonly number[];
   count: number;
+  /** INC-165171 — `replicatedCount + newCount === count`. */
+  replicatedCount: number;
+  newCount: number;
 }
 
 export interface OverviewStatusTableRow {
@@ -312,17 +371,21 @@ const STATUS_TILE_DEFS: { key: StatusTileKey; statusIds: readonly number[] }[] =
 
 export function buildStatusModel(rows: readonly BilateralCenterResult[]): OverviewStatusModel {
   const counts = new Map<number, number>();
+  const replicatedCounts = new Map<number, number>();
   for (let id = 1; id <= 7; id++) counts.set(id, 0);
   for (const row of rows) {
     const statusId = Number(row.status_id);
     counts.set(statusId, (counts.get(statusId) ?? 0) + 1);
+    if (isReplicatedCategory(resolveOverviewCategory(row))) {
+      replicatedCounts.set(statusId, (replicatedCounts.get(statusId) ?? 0) + 1);
+    }
   }
 
-  const tiles = STATUS_TILE_DEFS.map(def => ({
-    key: def.key,
-    statusIds: def.statusIds,
-    count: def.statusIds.reduce((sum, id) => sum + (counts.get(id) ?? 0), 0),
-  }));
+  const tiles = STATUS_TILE_DEFS.map(def => {
+    const count = def.statusIds.reduce((sum, id) => sum + (counts.get(id) ?? 0), 0);
+    const replicatedCount = def.statusIds.reduce((sum, id) => sum + (replicatedCounts.get(id) ?? 0), 0);
+    return { key: def.key, statusIds: def.statusIds, count, replicatedCount, newCount: count - replicatedCount };
+  });
 
   const tableRows = [...counts.entries()]
     .sort((a, b) => a[0] - b[0])
@@ -376,17 +439,21 @@ export function buildAttentionModel(
 // Results by project card (COV-R-9)
 // ---------------------------------------------------------------------------
 
+/** INC-165171 — bars split replicated vs new (Nicoleta: no lead/contributing split). */
 export interface OverviewProjectBar {
   projectId: number;
-  leadCount: number;
-  contributingCount: number;
+  replicatedCount: number;
+  newCount: number;
   total: number;
 }
 
+/**
+ * INC-165171 — results not linked to any bilateral project. Not drawn as a chart category
+ * (Nicoleta, 15-Oct); the card states it as one line, broken down by overview category.
+ */
 export interface OverviewNoProjectRow {
   total: number;
-  leadCount: number;
-  contributingCount: number;
+  categories: OverviewCategoryCounts;
   /** `true` iff every no-project row is a W1/W2 row (`source === 'Result'`) — decides whether the
    *  card's link carries `source=w1w2` or no project param at all (`COV-R-9` Scenario C). */
   allW1W2: boolean;
@@ -426,7 +493,7 @@ export function buildByProjectModel(
       unmatchedProjectRows += agg.total;
       continue;
     }
-    bars.push({ projectId, leadCount: agg.lead, contributingCount: agg.contributing, total: agg.total });
+    bars.push({ projectId, replicatedCount: agg.replicated, newCount: agg.new, total: agg.total });
   }
   bars.sort((a, b) => b.total - a.total || a.projectId - b.projectId);
 

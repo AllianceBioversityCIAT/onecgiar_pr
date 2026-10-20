@@ -106,7 +106,6 @@ import {
   stateOf,
   summarisePartition,
   hasTarget,
-  sumTargetValues,
   type ReportingTargetFilter
 } from './reporting-burndown';
 // @akili-spec changes/overview-aow-cross-filter
@@ -324,6 +323,13 @@ export interface OverviewAowProgressRowRich {
   reported: number;
   total: number;
   remaining: number;
+  /**
+   * `changes/kpi-progress-capped-average` KPC-R-5 — the AoW's capped mean (`buildRatio().percent`, one
+   * decimal) and the unrounded sum behind it. The rail / ring sum `progressSum` (KPC-DD-2); they never
+   * average the rounded `percent`s. Optional so external fixtures keep compiling.
+   */
+  progressSum?: number;
+  percent?: number;
   /** P2-3296 AC3 — this Area of Work's ToC achievement, beside the reported-KPI count above. */
   achievement?: TocAchievement | null;
 }
@@ -1901,23 +1907,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly overviewAowProgress = computed<OverviewAowProgressRow[]>(() => {
     return this.programKpiPartition()
       .aows.map(slice => {
-        const { done, total, zeroTarget } = buildRatio(slice.own);
+        const { done, total, zeroTarget, percent, progressSum } = buildRatio(slice.own);
         return {
           code: slice.code,
           name: slice.name,
           done,
           total,
           zeroTarget,
+          // KPC-R-5 — the capped mean, the Reporting card's own figure.
+          percent,
+          progressSum,
           // P2-3296 AC3 — beside the reported-KPI count, never instead of it.
           achievement: this.achievementByAowCode()[slice.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
-      .sort((a, b) => {
-        const pa = a.total ? a.done / a.total : 0;
-        const pb = b.total ? b.done / b.total : 0;
-        return pa - pb || a.code.localeCompare(b.code);
-      });
+      // KPC-R-11 — ascending by the capped mean (not `done / total`), tie code ASC.
+      .sort((a, b) => (a.percent ?? 0) - (b.percent ?? 0) || a.code.localeCompare(b.code));
   });
 
   /**
@@ -1937,10 +1943,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     ]
       .filter(bucket => bucket.indicators.length > 0)
       .map(bucket => {
-        const { done, total, zeroTarget } = buildRatio(bucket.indicators);
+        const { done, total, zeroTarget, percent, progressSum } = buildRatio(bucket.indicators);
         // Sentence case per the reference ("Intermediate outcomes" / "2030 outcomes"). Only the
         // Overview row is relabelled — the Reporting table keeps the group's own name.
-        return { code: bucket.code, name: sentenceCaseOutcomes(bucket.name), done, total, zeroTarget };
+        return { code: bucket.code, name: sentenceCaseOutcomes(bucket.name), done, total, zeroTarget, percent, progressSum };
       });
   });
 
@@ -1968,6 +1974,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const rows = this.programKpiPartition()
       .aows.map(slice => {
         const { counted, zeroTarget } = applyZeroTargetRule(slice.own);
+        // KPC-R-5 — the same capped mean as the thin row and the Reporting card (`buildRatio` over the
+        // same set); the rich counts below stay count-based.
+        const { percent, progressSum } = buildRatio(counted);
         let complete = 0;
         let inProgress = 0;
         let notStarted = 0;
@@ -1989,6 +1998,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           reported,
           total,
           remaining: total - reported,
+          progressSum,
+          percent,
           // P2-3296 AC3 — beside the reported-KPI count, never instead of it (same source as the
           // thin `overviewAowProgress` above).
           achievement: this.achievementByAowCode()[slice.code] ?? null
@@ -2040,7 +2051,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .map((row): HubProgramLevelRow | null => {
         const kind: HubProgramLevelKind | null =
           row.code === OUTCOMES_2030_CODE ? '2030' : row.code === INTERMEDIATE_OUTCOMES_CODE ? 'intermediate' : null;
-        return kind ? { kind, name: row.name, done: row.done, total: row.total, zeroTarget: row.zeroTarget } : null;
+        return kind
+          ? { kind, name: row.name, done: row.done, total: row.total, zeroTarget: row.zeroTarget, percent: row.percent, progressSum: row.progressSum }
+          : null;
       })
       .filter((row): row is HubProgramLevelRow => row !== null)
   );
@@ -3864,13 +3877,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return counts;
   });
 
-  /** Σ target_value_sum over the same rows `reportingTypologyCounts().all` counts (DKT-DD-4). */
-  readonly reportingTargetSum = computed<string>(() =>
-    sumTargetValues(
-      this.reportingGroups().flatMap(g => (g.indicators ?? []).filter(r => !(r as any).__isIntermediateCrosscut))
-    )
-  );
-
   /** Flatten a program-level ToC list (`tocResults`) into reporting indicator rows. */
   private flattenBucketIndicators(
     groups: any[] | undefined,
@@ -4988,18 +4994,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     }
 
     return { type, code: cleanCode };
-  }
-
-  /** Sum of target values across an HLO's indicators. */
-  hloTargetSum(hlo: { indicators?: any[] }): string {
-    const sum = (hlo.indicators ?? []).reduce((acc, ind) => acc + (parseFloat(String(ind?.target_value_sum ?? 0)) || 0), 0);
-    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
-  }
-
-  /** Sum of achieved values across an HLO's indicators. */
-  hloAchievedSum(hlo: { indicators?: any[] }): string {
-    const sum = (hlo.indicators ?? []).reduce((acc, ind) => acc + (parseFloat(String(ind?.actual_achieved_value_sum ?? 0)) || 0), 0);
-    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
   }
 
   setIndicatorTab(tab: 'outputs' | 'outcomes'): void {

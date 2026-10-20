@@ -38,6 +38,7 @@ import type { TocMapModel } from '../../dashboard-lab.toc-map';
 // shape; `OverviewScopeBreakdown`, the unfiltered per-scope breakdown (`OSF-T-7`).
 import type { OverviewAowProgressRowRich, OverviewScopeOption, OverviewScopeBreakdown } from '../../dashboard-lab.component';
 import type { ECElementEvent } from 'echarts/core';
+import { averageProgress } from '../../reporting-burndown';
 // @akili-spec changes/reporting-entry-hub — reuse the hub's centralised copy for the Report button's tooltip text.
 import { HUB_COPY } from '../reporting-entry-hub/hub-copy';
 import { SCIENCE_PROGRAM_DESCRIPTIONS } from '../reporting-program-band/reporting-program-band.component';
@@ -119,10 +120,17 @@ export interface AowProgressRow {
    */
   zeroTarget?: number;
   /**
+   * `changes/kpi-progress-capped-average` KPC-R-5 — the row's capped mean (`buildRatio().percent`, one
+   * decimal) and the unrounded sum behind it. Multi-row figures are `Σ progressSum / Σ total`
+   * (KPC-DD-2), never an average of rounded `percent`s. The host (`dashboard-lab`) always fills them.
+   */
+  percent?: number;
+  progressSum?: number;
+  /**
    * P2-3296 AC3 — the ToC achievement of this Area of Work, computed server-side.
    *
-   * Distinct from `done` / `total`, which count how many KPIs have SOMETHING reported. Both are
-   * shown: "how much of the plan has been touched" and "how far it got against the targets" are
+   * Distinct from `done` / `total`, which count KPIs with SOMETHING reported (the `N of M` count; the
+   * % is the capped mean, KPC-R-2). Both are shown: "how much of the plan has been touched" and "how far it got against the targets" are
    * different questions and one is not a substitute for the other.
    *
    * Absent until the roll-up call lands, and `progress_percentage` is null when nothing was
@@ -399,14 +407,19 @@ export class ProgramOverviewComponent {
     const rows = this.aowProgress();
     const totalPlanned = rows.reduce((sum, r) => sum + r.total, 0);
     const totalDone = rows.reduce((sum, r) => sum + r.done, 0);
-    const pct = totalPlanned ? Math.round((totalDone / totalPlanned) * 100) : 0;
+    // KPC-R-3 / KPC-DD-2 — flat capped mean over every KPI: Σ progressSum / Σ total, never the
+    // mean of the rows' rounded percents.
+    const pct = averageProgress(
+      rows.reduce((sum, r) => sum + (r.progressSum ?? 0), 0),
+      totalPlanned
+    );
     return { totalPlanned, totalDone, pct, count: rows.length };
   });
 
   /**
    * Rail figures — the SUM of the hero's own `richRows` (OAH-R-1 "internal coherence" scenario:
    * same derivation site as the rows themselves, never a different source — the requirement's
-   * single-home rule). `pct` rounds `reported/total` the same way `aowStats.pct` above does.
+   * single-home rule). `pct` rounds `reported/total` the same way as `aowStats.pct` above (`Σ progressSum / Σ total`, KPC-R-3).
    * @akili-spec changes/overview-aow-progress-hero
    */
   readonly richStats = computed(() => {
@@ -417,7 +430,10 @@ export class ProgramOverviewComponent {
     const zeroTarget = rows.reduce((sum, r) => sum + r.zeroTarget, 0);
     const total = rows.reduce((sum, r) => sum + r.total, 0);
     const reported = complete + inProgress;
-    const pct = total ? Math.round((reported / total) * 100) : 0;
+    const pct = averageProgress(
+      rows.reduce((sum, r) => sum + (r.progressSum ?? 0), 0),
+      total
+    );
     return { complete, inProgress, notStarted, zeroTarget, total, reported, pct };
   });
 
@@ -449,14 +465,14 @@ export class ProgramOverviewComponent {
   readonly skeletonSplitPlaceholders = [0, 1, 2];
 
   /**
-   * Row percent from the rich counts (`reported/total`) — feeds the mono `reported/total · N%`
-   * figure (design.md §6 "Mono figures"). Rounded ONLY for that display; the segmented-bar
-   * SEGMENT WIDTHS below are never derived from this rounded value (OAH-R-3 "never
-   * percent-of-percent").
+   * Row percent — the row's capped mean (`buildRatio().percent`, KPC-R-5), NOT `reported/total`.
+   * Feeds the mono `reported/total · N%` figure (design.md §6 "Mono figures"). The segmented-bar
+   * SEGMENT WIDTHS below are never derived from this value: they are shares of KPI counts by state
+   * (OAH-R-3 "never percent-of-percent", KPC-DD-6).
    * @akili-spec changes/overview-aow-progress-hero
    */
   percentOfRich(row: OverviewAowProgressRowRich): number {
-    return row.total ? Math.round((row.reported / row.total) * 100) : 0;
+    return row.percent ?? 0;
   }
 
   /**

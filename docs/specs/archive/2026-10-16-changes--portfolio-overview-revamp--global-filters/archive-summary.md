@@ -59,10 +59,11 @@
 | URL restore, `foo` kept, no history entries | ✅ |
 | Layout at 375 / 768 / 1280 | ✅ with no horizontal scroll. The sheet is used below the 900 px `md` breakpoint |
 | Non-admin 403 | Accepted by the user without a live call (the module is hidden for guests; the metadata is asserted in specs) |
+| PRTest smoke (2026-10-19) | ✅ CIP filter 124 of 1,002, `?center=CENTER-06` survives reload, the 3 portfolio endpoints return 200, and a guest cannot open the page. See `execution.md` |
 
 ## Accepted warnings and follow-ups
 
-- **PRTest smoke**, after merging to `performance-refactor`: one Center filter, a reload with params, and a **real non-admin 403 call**.
+- ~~**PRTest smoke**, after merging to `performance-refactor`: one Center filter, a reload with params, and a real non-admin 403 call.~~ **Done 2026-10-19** (see `execution.md` → *PRTest smoke*).
 - **Advisories, recorded and not acted on** (see `execution.md`):
   - Project options use the phase-wide `w3ProjectIds`.
   - The page test for S-14.1 uses a mocked Router.

@@ -16,6 +16,18 @@ import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.m
 import { EstimatesCgiarComponent } from '../../../../../shared/components/innovation-use-form/components/estimates/estimates.component';
 import { BILATERAL_INNOVATION_USE_ACTORS_COPY } from '../../../../../internationalization/bilateral-innovation-use-actors.copy';
 import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../../../internationalization/innovation-use-2030-projection.copy';
+import { CURRENT_USE_UPDATE_COPY } from '../../../../../internationalization/current-use-update.copy';
+import { ReportingDesignYear } from '../../../../../shared/enum/reporting-design-year.enum';
+import {
+  currentUseMismatchMessage,
+  currentUseMismatchReason,
+  hasCurrentUseMismatch,
+  isCurrentUseUpdateAnswered,
+  isCurrentUseUpdateComplete,
+  previousReportedUse,
+  previousUsePhaseYear,
+  totalCumulativeUse
+} from '../../../../../shared/utils/current-use-update.util';
 
 const SECTION_NAME = 'type-specific';
 
@@ -55,6 +67,13 @@ const LOAD_ERROR_NOTE =
  * section needs the same cut-off, promote it there.
  */
 const INNOVATION_LINK_MIN_PHASE_YEAR = 2026;
+
+/**
+ * P2-3985 — the Current Use Update block (P2-3537 §4) is 2026-onwards only: the SAME threshold the W1/W2
+ * form reads (`FieldsManagerService.isInnovationUseAgeFallback2026`), so the two forms cannot drift.
+ * Phase, never portfolio.
+ */
+const CURRENT_USE_UPDATE_MIN_PHASE_YEAR = ReportingDesignYear.InnovationUseAgeDisaggregationFallback;
 
 /**
  * P2-3294 / P2-3428 AC13: the scaling-strategy-studies question disappears from use level 6 upwards.
@@ -97,6 +116,8 @@ export class TypeInnovationUseComponent implements OnInit {
   readonly copy = BILATERAL_INNOVATION_USE_ACTORS_COPY;
   /** P2-3428 — same copy as the W1/W2 "2030 Use Projection" (title, guidance note, question, tooltip). */
   readonly projection2030Copy = INNOVATION_USE_2030_PROJECTION_COPY;
+  /** P2-3985 — same copy as the W1/W2 "Current Use Update" block. */
+  readonly currentUseCopy = CURRENT_USE_UPDATE_COPY;
   /** P2-3785 (4b) — the two sex groups, each with its Youth / Non-youth split, as in pooled reporting. */
   readonly genderGroups = [
     { key: 'women', label: 'Women', youthWarning: BILATERAL_INNOVATION_USE_ACTORS_COPY.womenYouthWarning },
@@ -253,6 +274,76 @@ export class TypeInnovationUseComponent implements OnInit {
   get showUseLevelExplanation(): boolean {
     const level = this.useLevelNumber;
     return level >= USE_LEVEL_EXPLANATION_MIN && level <= USE_LEVEL_EXPLANATION_MAX;
+  }
+
+  /**
+   * P2-3985 — the Current Use Update block of P2-3537 §4, which the W1/W2 form had and this editor never
+   * did (result #8398, W3/Bilaterals, replicated: the reporter saw none of it).
+   *
+   * 🥇 ONE condition drives the template, the MDS item and the two payload keys, so the three can never
+   * disagree:
+   * - not while the use is "to be determined" — the whole current-use block is hidden then
+   *   (`.html`, `hasActorMissingType`), and a hidden block must neither block Submit nor write;
+   * - only when the server sent `current_use_previous` — `null` means first report, or a previous phase
+   *   with no actors, and the block must be ABSENT (Yeck, 3 Sep 2026: a reconciliation against zero
+   *   actors is an error nobody could fix);
+   * - from the 2026 phase. An unresolved year counts as the running cycle, as `showInnovationLinkQuestion`.
+   */
+  get showCurrentUseUpdate(): boolean {
+    const year = this.creationService.reportingYear();
+    return (
+      this.body.innov_use_to_be_determined !== true &&
+      !!this.body.current_use_previous &&
+      (year == null || year >= CURRENT_USE_UPDATE_MIN_PHASE_YEAR)
+    );
+  }
+
+  /**
+   * The actor rows of current use, counted the way the server counts the previous phase
+   * (`previous-phase-current-use.util.ts`): a row whose disaggregation does not apply counts its
+   * "How many", every other row counts Women + Men. Deleted rows are out. Actors only (Yeck, Q4).
+   */
+  get currentUseActorsTotal(): number {
+    return this.visibleActors.reduce(
+      (sum: number, actor: any) =>
+        sum + ((actor?.sex_and_age_disaggregation ? this.toCount(actor?.how_many) : this.actorTotal(actor)) ?? 0),
+      0
+    );
+  }
+
+  get previousReportedUse(): number {
+    return previousReportedUse(this.body.current_use_previous);
+  }
+
+  get previousUsePhaseYear(): number | null {
+    return previousUsePhaseYear(this.body.current_use_previous);
+  }
+
+  get totalCumulativeUse(): number {
+    return totalCumulativeUse(this.body.current_use_previous, this.body.new_users_added);
+  }
+
+  get hasCurrentUseMismatch(): boolean {
+    return this.showCurrentUseUpdate && hasCurrentUseMismatch(this.currentUseActorsTotal, this.body.current_use_previous, this.body.new_users_added);
+  }
+
+  get currentUseMismatchMessage(): string {
+    return currentUseMismatchMessage(this.currentUseActorsTotal, this.body.current_use_previous, this.body.new_users_added);
+  }
+
+  get isCurrentUseUpdateComplete(): boolean {
+    return isCurrentUseUpdateComplete(
+      this.currentUseActorsTotal,
+      this.body.current_use_previous,
+      this.body.new_users_added,
+      this.body.use_expansion_narrative
+    );
+  }
+
+  /** §5: the increment cannot be negative. Goes through `onFieldChange`, so the P2-3556 load gate holds. */
+  onNewUsersAddedChange(): void {
+    if (Number(this.body.new_users_added) < 0) this.body.new_users_added = 0;
+    this.onFieldChange();
   }
 
   /**
@@ -758,6 +849,12 @@ export class TypeInnovationUseComponent implements OnInit {
       // the contract always carries numbers, the way the W1/W2 section stores them.
       linked_results: this.body.linked_result_id == null ? [] : [Number(this.body.linked_result_id)]
     };
+    // P2-3985 — only while the block is on screen. When it is not, the keys do not travel and the
+    // server leaves the stored answers alone (it writes each one only when its key is present).
+    if (this.showCurrentUseUpdate) {
+      payload['new_users_added'] = this.body.new_users_added ?? null;
+      payload['use_expansion_narrative'] = this.body.use_expansion_narrative ?? null;
+    }
     // Omit null PK so the server can AUTO_INCREMENT on first create.
     if (this.body.result_innovation_use_id != null) {
       payload['result_innovation_use_id'] = this.body.result_innovation_use_id;
@@ -788,6 +885,10 @@ export class TypeInnovationUseComponent implements OnInit {
    * that flag exists for fields the reporter is still ASKED for; this one stops being asked altogether.
    * The matching server-side gate was removed in the same change — a client-only relaxation would have
    * turned a blocked section into a section that passes locally and is refused on Submit.
+   *
+   * P2-3985 — a fourth item, `use-current-update`, while the Current Use Update block is shown. It is
+   * NOT optional: it holds Submit exactly as it does on the W1/W2 form (decision of the lead, 20-Oct-2026).
+   * ⚠️ Client-only: the server submit gate does not check it, so a direct API call skips it.
    */
   updateMds(): void {
     const tbd = this.body.innov_use_to_be_determined;
@@ -825,7 +926,24 @@ export class TypeInnovationUseComponent implements OnInit {
           Array.isArray(this.body.investment_bilateral) &&
           this.body.investment_bilateral.length > 0 &&
           this.body.investment_bilateral.every((investment: any) => Number(investment?.kind_cash) > 0 !== (investment?.is_determined === true))
-      }
+      },
+      ...(this.showCurrentUseUpdate
+        ? [
+            {
+              key: 'use-current-update',
+              label: this.currentUseCopy.title,
+              // Answered counts as filled; a mismatch is reported the P2-3340 way (`invalid` + the exact
+              // gap), as the Actors item does — so the footer says what to fix and Submit refuses on it.
+              filled: isCurrentUseUpdateAnswered(this.body.new_users_added, this.body.use_expansion_narrative),
+              ...(this.hasCurrentUseMismatch
+                ? {
+                    invalid: true,
+                    invalidReason: currentUseMismatchReason(this.currentUseActorsTotal, this.body.current_use_previous, this.body.new_users_added)
+                  }
+                : {})
+            }
+          ]
+        : [])
     ]);
   }
 }

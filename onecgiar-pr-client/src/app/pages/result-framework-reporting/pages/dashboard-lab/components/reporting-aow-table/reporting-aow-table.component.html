@@ -444,9 +444,7 @@
             </span>
 
             <span class="shrink-0 whitespace-nowrap text-[12px] text-[var(--pr-text-subtle)] hidden sm:inline">
-              {{ headerCount(group) }}@if (headerTargets(group); as targets) {
-                <span data-testid="aow-header-targets"> · {{ targets }}</span>
-              }
+              {{ headerCount(group) }}
             </span>
           </div>
           @if (split.line && !group.loading) {
@@ -907,16 +905,6 @@
 
                         <!-- Right zone mini-KPI metrics -->
                         <div class="flex items-center gap-4 sm:gap-6 shrink-0 pl-4">
-                          <div class="flex items-baseline gap-1.5">
-                            <span class="text-sm font-extrabold text-slate-900 tabular-nums">{{ hloTargetSum(hlo) }}</span>
-                            <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-600">TARGET</span>
-                          </div>
-
-                          <div class="flex items-baseline gap-1.5">
-                            <span class="text-sm font-extrabold text-emerald-600 text-[var(--pr-color-green-500)] tabular-nums">{{ hloAchievedSum(hlo) }}</span>
-                            <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-600">ACHIEVED</span>
-                          </div>
-
                           <div class="px-2.5 py-0.5 rounded-full bg-white border border-slate-200/80 text-slate-700 font-bold text-xs shadow-2xs tabular-nums whitespace-nowrap">
                             {{ hlo.rows.length }} <span class="hidden sm:inline">{{ hlo.rows.length === 1 ? 'indicator' : 'indicators' }}</span>
                           </div>

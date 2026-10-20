@@ -262,6 +262,21 @@ Run with the user. The Leader read the browser through Claude in Chrome, on `loc
 
 **GLF-T-8: PASS (2026-10-16).** Every check is ✅. The family manifest marks #6 `done`, with a log row. Commit and push to `qa-development-2026-ss` were authorised by the user ("ya podemos pasar a mi rama con push y todo?").
 
+#### PRTest smoke — 2026-10-19
+
+Run after `performance-refactor` (`13980266c`) was merged into `staging` (`69ec8981a`). The Leader read `prtest.ciat.cgiar.org` through Claude in Chrome with the user's admin session. Only filter state and reloads were used; no write button was clicked.
+
+| Check | Result |
+|---|---|
+| Page load, admin | ✅ the filter bar (Program, Project, Center, Typology, Status) renders; 1,002 results, version 36 |
+| Center filter: CENTER-06, CIP | ✅ "124 of 1,002 results". KPI split: W1/W2 new 36 + W3 new 35 + W1/W2 replicated 1 + W3 replicated 52 = 124. The URL updates to `?center=CENTER-06` |
+| Reload with `?center=CENTER-06` | ✅ restored: CIP chip, 124 of 1,002 |
+| Endpoints, v36 | ✅ `portfolio/result-dimensions`, `toc-results/portfolio-coverage` and `portfolio/bilateral-projects` return 200. `result-dimensions` without a token returns 401 |
+| Blocks | ✅ all 7 render (Reporting Status, Results by typology, Progress against ToC KPIs, CGIAR Centers, Reporting status, W3/Bilateral projects, Results detail). No console errors |
+| Non-admin | ✅ confirmed by the user on PRTest: a guest cannot open Portfolio overview (`CheckAdminGuard`) |
+
+**PRTest smoke: PASS.** This closes the follow-up recorded in `archive-summary.md`.
+
 #### GLF-T-4 attempt 3 (reopened from T-8) — PASS
 
 - **Root cause:** `<p brnCommandEmpty>` was used as an attribute, but `BrnCommandEmpty` is structural. That caused NG0201, and the popover content did not render.

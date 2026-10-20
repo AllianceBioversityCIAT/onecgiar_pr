@@ -85,25 +85,20 @@
         }
       } @else {
         @let overview = model();
-        <!-- SR-164368: the figures come from the server, one row per result; '—' until loaded. -->
-        @let totals = overviewTotals();
-        <!-- 1 · Total results (hero) -->
+        @let total = overview.kpis.totalResults;
+        <!-- 1 · Total results (hero). INC-165171: computed from the same rows as every other card,
+             one line per overview category; the lines add up to the headline. -->
         <a
           data-testid="kpi-total"
           [routerLink]="resultsLink()"
           [queryParams]="deepLinkParams()"
           [attr.aria-label]="
-            totals
-              ? 'Total results, ' +
-                totals.total_count +
-                ' results: ' +
-                totals.replicated_count +
-                ' innovations replicated for update, ' +
-                totals.new_w3_count +
-                ' new W3/Bilateral results, ' +
-                totals.w1w2_tagging_count +
-                ' W1/W2 results tagging a Center bilateral project — open in Results'
-              : 'Total results — open in Results'
+            'Total results, ' + total.count + ' results: ' +
+            total.categories.replicated_w3 + ' ' + overviewCategoryCopy.replicated_w3.label + ', ' +
+            total.categories.replicated_w1w2 + ' ' + overviewCategoryCopy.replicated_w1w2.label + ', ' +
+            total.categories.new_w3 + ' ' + overviewCategoryCopy.new_w3.label + ', ' +
+            total.categories.w1w2_tagging + ' ' + overviewCategoryCopy.w1w2_tagging.label + ', ' +
+            total.categories.w1w2_center_only + ' ' + overviewCategoryCopy.w1w2_center_only.label + ' — open in Results'
           "
           class="relative flex min-h-[120px] flex-col overflow-hidden rounded-[14px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[16px] text-white no-underline shadow-md cursor-pointer transition-all duration-200 motion-reduce:transition-none hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
           <!-- Same gradient + glow as the SP Overview Total General card. -->
@@ -114,22 +109,16 @@
             <span class="inline-flex h-[24px] items-center rounded-full border border-white/20 bg-white/15 px-[9px] text-[11px] font-semibold normal-case tracking-normal text-white">Center</span>
           </span>
           <span class="relative z-10 font-mono text-[28px] font-bold leading-none tabular-nums">
-            {{ totals?.total_count ?? '—' }}<span class="ml-[6px] font-sans text-[13px] font-medium text-purple-200">results</span>
+            {{ total.count }}<span class="ml-[6px] font-sans text-[13px] font-medium text-purple-200">results</span>
           </span>
           <!-- quick/overview-total-results-mockup: breakdown rows with right-aligned count chips. -->
           <span class="relative z-10 mt-[12px] flex flex-col gap-[6px] border-t border-white/20 pt-[10px] text-[12px] text-white/85" data-testid="kpi-total-breakdown">
-            <span class="flex items-center justify-between gap-[8px]" [title]="'Results replicated into this phase for update'">
-              <span class="min-w-0 truncate">Innovations replicated for update</span>
-              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totals?.replicated_count ?? '—' }}</span>
-            </span>
-            <span class="flex items-center justify-between gap-[8px]" [title]="'W3/Bilateral results of this center not replicated from a previous phase'">
-              <span class="min-w-0 truncate">New W3/Bilateral results</span>
-              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totals?.new_w3_count ?? '—' }}</span>
-            </span>
-            <span class="flex items-center justify-between gap-[8px]" [title]="'W1/W2 results that tag any bilateral project of this center'">
-              <span class="min-w-0 truncate">W1/W2 results tagging Center bilateral project</span>
-              <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ totals?.w1w2_tagging_count ?? '—' }}</span>
-            </span>
+            @for (category of overviewCategories; track category) {
+              <span class="flex items-center justify-between gap-[8px]" [attr.data-testid]="'kpi-total-' + category" [title]="overviewCategoryCopy[category].hint">
+                <span class="min-w-0 truncate">{{ overviewCategoryCopy[category].label }}</span>
+                <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ total.categories[category] }}</span>
+              </span>
+            }
           </span>
         </a>
 
@@ -203,6 +192,9 @@
             {{ overview.kpis.projectsCovered.coveredCount }}<span class="ml-[6px] font-sans text-[13px] font-medium text-[var(--pr-text-secondary)]">of {{ overview.kpis.projectsCovered.totalCount }}</span>
           </span>
           <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ overview.kpis.projectsCovered.notStartedCount }} projects with no result yet</span>
+          <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-covered-split">
+            {{ overview.kpis.projectsCovered.coveredWithNewCount }} with new results · {{ overview.kpis.projectsCovered.coveredOnlyReplicatedCount }} only replicated
+          </span>
         </a>
         }
       }
@@ -267,13 +259,16 @@
                 [attr.data-testid]="'status-tile-' + tile.key"
                 [routerLink]="resultsLink()"
                 [queryParams]="statusTileLinkParams(tile)"
-                [attr.aria-label]="statusTileLabels[tile.key] + ', ' + tile.count + ' results — open in Results'"
+                [attr.aria-label]="statusTileLabels[tile.key] + ', ' + tile.count + ' results, ' + tile.replicatedCount + ' replicated and ' + tile.newCount + ' new — open in Results'"
                 class="flex flex-col gap-[4px] rounded-[10px] border border-[var(--pr-border-divider)] p-[10px] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
                 <span class="inline-flex h-[20px] w-max items-center rounded-[10px] px-[8px] text-[11px] font-semibold" [class]="statusTileMeta[tile.key].pillClass">
                   {{ statusTileLabels[tile.key] }}
                 </span>
                 <span class="font-mono text-[20px] font-bold tabular-nums text-[var(--pr-text-heading)]">{{ tile.count }}</span>
                 <span class="text-[11.5px] text-[var(--pr-text-secondary)]">{{ statusTileMeta[tile.key].hint }}</span>
+                <span class="text-[11.5px] text-[var(--pr-text-secondary)]" [attr.data-testid]="'status-split-' + tile.key">
+                  {{ tile.replicatedCount }} replicated · {{ tile.newCount }} new
+                </span>
               </a>
             }
           </div>
@@ -338,7 +333,7 @@
         <div class="flex flex-col gap-[2px]">
           <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Results by project</h2>
           <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
-            Results reported under each bilateral project this phase — lead vs contributing
+            Results under each bilateral project of the center this phase — replicated for update vs new
           </p>
         </div>
 
@@ -366,11 +361,12 @@
               Retry
             </button>
           </div>
-        } @else if (!model().byProject.bars.length && !model().byProject.noProjectRow) {
+        } @else if (!model().byProject.bars.length && !model().byProject.noProjectRow && !model().byProject.unmatchedProjectRows) {
           <p data-testid="by-project-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
             No project has reported a result in this phase yet
           </p>
         } @else {
+          @if (model().byProject.bars.length) {
           <app-pr-viz-chart
             class="block w-full cursor-pointer"
             data-testid="by-project-chart"
@@ -379,6 +375,7 @@
             (chartClick)="onResultsChartClick($event)"
             chartTitle="Results by bilateral project"
             [height]="byProjectChartHeight()" />
+          }
 
           <!-- Every plotted bar also as text + link (COV-R-9 A, COV-R-18) -->
           <div class="flex flex-wrap items-center gap-[8px] max-[899px]:flex-nowrap max-[899px]:overflow-x-auto max-[899px]:no-scrollbar" data-testid="by-project-links">
@@ -394,18 +391,37 @@
               </a>
             }
 
-            @if (model().byProject.noProjectRow; as noProject) {
-              <a
-                data-testid="by-project-no-project"
-                [routerLink]="resultsLink()"
-                [queryParams]="deepLinkParams(noProject.allW1W2 ? { project: [], source: 'w1w2' } : { project: [] })"
-                [attr.aria-label]="noProjectLabel + ', ' + noProject.total + ' results — open in Results'"
-                class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-dashed border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                <span>{{ noProjectLabel }}</span>
-                <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ noProject.total }}</b>
-              </a>
-            }
           </div>
+
+          <!-- INC-165171: results with no bilateral project are stated here, not drawn as a bar. -->
+          @if (model().byProject.noProjectRow; as noProject) {
+            <a
+              data-testid="by-project-no-project"
+              [routerLink]="resultsLink()"
+              [queryParams]="deepLinkParams(noProject.allW1W2 ? { project: [], source: 'w1w2' } : { project: [] })"
+              [attr.aria-label]="noProjectLabel + ', ' + noProject.total + ' results — open in Results'"
+              class="flex flex-wrap items-center gap-x-[10px] gap-y-[4px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[12px] py-[8px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+              <span>
+                <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ noProject.total }}</b>
+                results {{ noProjectLabel.toLowerCase() }}:
+              </span>
+              @for (category of overviewCategories; track category) {
+                @if (noProject.categories[category]) {
+                  <span [attr.data-testid]="'by-project-no-project-' + category">
+                    <b class="font-mono font-semibold tabular-nums text-[var(--pr-text-heading)]">{{ noProject.categories[category] }}</b>
+                    {{ overviewCategoryCopy[category].label }}
+                  </span>
+                }
+              }
+            </a>
+          }
+
+          @if (model().byProject.unmatchedProjectRows) {
+            <p data-testid="by-project-unmatched" class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
+              <b class="font-mono font-semibold tabular-nums text-[var(--pr-text-heading)]">{{ model().byProject.unmatchedProjectRows }}</b>
+              results are linked only to bilateral projects outside this center's project list.
+            </p>
+          }
 
           @if (hiddenBarCount() > 0 || showAllProjects()) {
             <button

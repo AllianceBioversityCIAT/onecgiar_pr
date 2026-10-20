@@ -4181,11 +4181,72 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * INC-165171 — every row also carries `overview_category`, the one bucket the center Overview
+   * counts it in, so all of its cards are built from this single row set:
+   * `replicated_w3` / `replicated_w1w2` (is_replicated = 1, by source), `new_w3` (API, not
+   * replicated), `w1w2_tagging` (Result, tags a bilateral project owned by the center) and
+   * `w1w2_center_only` (Result, center on the result, no center project).
+   * `project_id` / `project_name` prefer a project owned by the center over the lead project, so
+   * a result linked to both lands on the center's own project.
+   * `includeProjectTagging` adds the W1/W2 results that tag a center project without the center
+   * on the result (`is_leading_result` NULL). Off by default: the Results tab and the portfolio
+   * Centers block keep their row set.
+   * Project ownership follows `BilateralProjectsService.getProjectsByCenter`: `organization_code`
+   * = the center institution, or `organization_code` NULL and the W3 alias of the center code.
+   */
   async getResultsByBilateralCenter(
     centerId: string,
     versionId: number,
+    includeProjectTagging = false,
   ): Promise<any[]> {
+    // One `(acronym = ? AND code = ?)` per alias, as in getBilateralCenterOverviewTotals.
+    const aliasEntries = Object.entries(
+      W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE,
+    );
+    const aliasCondition = aliasEntries.length
+      ? aliasEntries
+          .map(() => '(cp.source_center_acronym = ? AND c.code = ?)')
+          .join(' OR ')
+      : 'FALSE';
+    const aliasParams = aliasEntries.flat();
+
     const query = `
+      WITH center AS (
+        SELECT cc.code, cc.institutionId
+        FROM clarisa_center cc
+        INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+        WHERE cc.code = ? OR ci.acronym = ?
+      ),
+      center_projects AS (
+        SELECT DISTINCT cp.id
+        FROM clarisa_projects cp
+        INNER JOIN center c
+                ON cp.organization_code = c.institutionId
+                OR (
+                  cp.organization_code IS NULL
+                  AND (${aliasCondition})
+                )
+      ),
+      -- SR-164368: one row per result. A result can carry two active results_center rows for
+      -- the same center (8641 in Reporting 2026); a plain JOIN listed it twice and every
+      -- overview count went up by one. MAX keeps lead = 1 when any of the rows says so.
+      center_rc AS (
+        SELECT rcx.result_id, MAX(rcx.is_leading_result) AS is_leading_result
+        FROM results_center rcx
+        WHERE rcx.is_active = 1
+          AND (
+            rcx.center_id = ?
+            OR rcx.center_id IN (SELECT code FROM center)
+          )
+        GROUP BY rcx.result_id
+      ),
+      tagged AS (
+        SELECT DISTINCT rbpt.result_id
+        FROM results_by_projects rbpt
+        INNER JOIN center_projects cpt ON cpt.id = rbpt.project_id
+        WHERE rbpt.is_active = 1
+      )
       SELECT
         r.id,
         r.result_code,
@@ -4201,7 +4262,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
                   ON cp.id = rbp.project_id
           WHERE rbp.result_id = r.id
             AND rbp.is_active = 1
-          ORDER BY rbp.is_lead DESC, rbp.id DESC
+          ORDER BY rbp.project_id IN (SELECT id FROM center_projects) DESC, rbp.is_lead DESC, rbp.id DESC
           LIMIT 1
         ) AS project_name,
         -- @akili-spec bilateral/center-overview-tab COV-R-16: the Overview's "Projects covered"
@@ -4215,7 +4276,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
                   ON cp.id = rbp.project_id
           WHERE rbp.result_id = r.id
             AND rbp.is_active = 1
-          ORDER BY rbp.is_lead DESC, rbp.id DESC
+          ORDER BY rbp.project_id IN (SELECT id FROM center_projects) DESC, rbp.is_lead DESC, rbp.id DESC
           LIMIT 1
         ) AS project_id,
         rt.name  AS result_type,
@@ -4259,37 +4320,38 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.creation_method,
         r.is_replicated,
         CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
-        rc.is_leading_result
+        rc.is_leading_result,
+        CASE
+          WHEN COALESCE(r.is_replicated, 0) = 1 AND r.source = 'API' THEN 'replicated_w3'
+          WHEN COALESCE(r.is_replicated, 0) = 1 THEN 'replicated_w1w2'
+          WHEN r.source = 'API' THEN 'new_w3'
+          WHEN tg.result_id IS NOT NULL THEN 'w1w2_tagging'
+          ELSE 'w1w2_center_only'
+        END AS overview_category
       FROM result r
-      -- SR-164368: one row per result. A result can carry two active results_center rows for
-      -- the same center (8641 in Reporting 2026); a plain JOIN listed it twice and every
-      -- overview count went up by one. MAX keeps lead = 1 when any of the rows says so.
-      INNER JOIN (
-        SELECT rcx.result_id, MAX(rcx.is_leading_result) AS is_leading_result
-        FROM results_center rcx
-        WHERE rcx.is_active = 1
-          AND (
-            rcx.center_id = ?
-            OR EXISTS (
-              SELECT 1
-              FROM clarisa_center cc
-              INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
-              WHERE cc.code = rcx.center_id
-                AND ci.acronym = ?
-            )
-          )
-        GROUP BY rcx.result_id
-      ) rc ON rc.result_id = r.id
+      LEFT JOIN center_rc rc ON rc.result_id = r.id
+      LEFT JOIN tagged tg ON tg.result_id = r.id
       INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
       INNER JOIN result_status rs ON rs.result_status_id = r.status_id
       WHERE r.version_id = ?
         AND r.source IN ('API', 'Result')
         AND r.is_active = 1
+        AND (
+          rc.result_id IS NOT NULL
+          OR (? = 1 AND r.source = 'Result' AND tg.result_id IS NOT NULL)
+        )
       ORDER BY r.created_date DESC, r.id DESC
     `;
 
     try {
-      return await this.query(query, [centerId, centerId, versionId]);
+      return await this.query(query, [
+        centerId,
+        centerId,
+        ...aliasParams,
+        centerId,
+        versionId,
+        includeProjectTagging ? 1 : 0,
+      ]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

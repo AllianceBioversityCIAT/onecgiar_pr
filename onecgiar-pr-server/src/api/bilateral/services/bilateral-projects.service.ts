@@ -419,9 +419,9 @@ export class BilateralProjectsService {
    * result's `bilateral_project` payload field, writing a `results_by_projects` row with
    * `is_lead` left at its default (never `true` — W1/W2 results have no "lead bilateral
    * project" concept). That is why the existing per-result `project_id` subquery elsewhere in
-   * this codebase (`ResultRepository.getResultsByBilateralCenter`, `LIMIT 1 ORDER BY is_lead
-   * DESC`) never surfaces these rows: it deliberately keeps only the LEAD project per result,
-   * for a different consumer (`COV-R-16` "Projects covered"). This is a genuinely separate
+   * this codebase (`ResultRepository.getResultsByBilateralCenter`, `LIMIT 1`) keeps ONE project
+   * per result — a center-owned one first since INC-165171, otherwise the lead — for a different
+   * consumer (`COV-R-16` "Projects covered"). This is a genuinely separate
    * count — one bilateral project can be the "contributing" link for many W1/W2 results, and
    * each of those results counts toward every project it lists, not just one.
    *

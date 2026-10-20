@@ -1,15 +1,17 @@
 import {
   applyZeroTargetRule,
+  averageProgress,
   buildRatio,
   countNewlyReported,
   groupPendingCount,
   hasTarget,
+  kpiProgressOf,
   nextPendingAfter,
   partitionProgramKpis,
   pendingOf,
+  roundProgress,
   sortRemainingFirst,
-  summarisePartition,
-  sumTargetValues
+  summarisePartition
 } from './reporting-burndown';
 
 // MRF-TEST-1 (docs/specs/changes/mass-reporting-flow/tasks.md, MRF-T-1) — pure burn-down helpers.
@@ -81,32 +83,105 @@ describe('applyZeroTargetRule', () => {
 
 describe('buildRatio (KTO-R-2, KTO-R-3)', () => {
   it('S-2.1/S-2.2 falsifier: 5/2, 0/0, 0/3, null/0, "0"/0, "12"/0 -> done 1, total 2, zeroTarget 4', () => {
-    expect(buildRatio(falsifierRows())).toEqual({ done: 1, total: 2, percent: 50, zeroTarget: 4 });
+    expect(buildRatio(falsifierRows())).toEqual({ done: 1, total: 2, percent: 20, progressSum: 40, zeroTarget: 4 });
   });
 
-  it('S-2.1: 50 targeted (10 reported) + 4 without a target reads 10 of 50 and 20%', () => {
+  it('S-2.1: 50 targeted (10 reported) + 4 without a target reads 10 of 50 and a 2% capped mean', () => {
     const targeted = Array.from({ length: 50 }, (_, i) => row(i, 10, i < 10 ? 1 : 0));
     const untargeted = [row(100, 0, 0), row(101, 0, 0), row(102, null, 0), row(103, 0, 0)];
 
-    expect(buildRatio([...targeted, ...untargeted])).toEqual({ done: 10, total: 50, percent: 20, zeroTarget: 4 });
+    expect(buildRatio([...targeted, ...untargeted])).toEqual({ done: 10, total: 50, percent: 2, progressSum: 100, zeroTarget: 4 });
   });
 
   it('S-2.2: an extra 0/3 row stays out of the numerator and bumps zeroTarget to 5', () => {
     const targeted = Array.from({ length: 50 }, (_, i) => row(i, 10, i < 10 ? 1 : 0));
     const untargeted = [row(100, 0, 0), row(101, 0, 0), row(102, null, 0), row(103, 0, 0), row(104, 0, 3)];
 
-    expect(buildRatio([...targeted, ...untargeted])).toEqual({ done: 10, total: 50, percent: 20, zeroTarget: 5 });
+    expect(buildRatio([...targeted, ...untargeted])).toEqual({ done: 10, total: 50, percent: 2, progressSum: 100, zeroTarget: 5 });
   });
 
   it('S-3.1: all rows without a target -> total 0, percent 0 (not NaN), zeroTarget 3', () => {
     const result = buildRatio([row(1, 0, 0), row(2, 0, 7), row(3, null, 0)]);
 
-    expect(result).toEqual({ done: 0, total: 0, percent: 0, zeroTarget: 3 });
+    expect(result).toEqual({ done: 0, total: 0, percent: 0, progressSum: 0, zeroTarget: 3 });
     expect(Number.isNaN(result.percent)).toBe(false);
   });
 
   it('an empty list is total 0, percent 0, zeroTarget 0', () => {
-    expect(buildRatio([])).toEqual({ done: 0, total: 0, percent: 0, zeroTarget: 0 });
+    expect(buildRatio([])).toEqual({ done: 0, total: 0, percent: 0, progressSum: 0, zeroTarget: 0 });
+  });
+
+  // KPC-T-2 (docs/specs/changes/kpi-progress-capped-average) - fixture `row(id, target, achieved)`.
+  it('KPC-S-1.1: 10/50 and 10/0 -> percent 50 (capped), done 1, total 2', () => {
+    const result = buildRatio([row(1, 10, 50), row(2, 10, 0)]);
+
+    expect(result).toMatchObject({ percent: 50, done: 1, total: 2, progressSum: 100 });
+  });
+
+  it('KPC-S-1.2: 4/2 and 0/7 -> percent 50, zeroTarget 1 (no-target KPI stays out)', () => {
+    expect(buildRatio([row(1, 4, 2), row(2, 0, 7)])).toMatchObject({ percent: 50, zeroTarget: 1, total: 1 });
+  });
+
+  it('KPC-S-2.1: Nicoleta 11 KPIs (two raw overachievers) -> percent 77.6, progressSum 854', () => {
+    const achieved = [100, 100, 45, 73, 100, 86, 0, 100, 50, 100, 100];
+    // target 100 each; rows 0 and 4 report 150 and 230 (raw overachievers, capped to 100)
+    const raw = achieved.map((a, i) => (i === 0 ? 150 : i === 4 ? 230 : a));
+    const result = buildRatio(raw.map((a, i) => row(i, 100, a)));
+
+    expect(result.total).toBe(11);
+    expect(result.progressSum).toBe(854);
+    expect(result.percent).toBe(77.6);
+  });
+
+  it('KPC-S-1.1 falsifier: 10/10, 10/5, 10/0, 10/30 -> 62.5 (the uncapped or done/total reading is 75)', () => {
+    expect(buildRatio([row(1, 10, 10), row(2, 10, 5), row(3, 10, 0), row(4, 10, 30)]).percent).toBe(62.5);
+  });
+
+  it('KPC-S-2.2: every KPI without a target -> percent 0, total 0, never NaN', () => {
+    const result = buildRatio([row(1, 0, 0), row(2, null, 4)]);
+
+    expect(result).toMatchObject({ percent: 0, total: 0, progressSum: 0 });
+    expect(Number.isNaN(result.percent)).toBe(false);
+  });
+});
+
+// KPC-T-2 - capped KPI %, rounding and flat averaging (KPC-R-1, R-2, R-3, KPC-DD-2). `row(id, target, achieved)`.
+describe('kpiProgressOf (KPC-R-1)', () => {
+  it.each([
+    ['10/50 caps at 100 (S-1.1)', 10, 50, 100],
+    ['10/5 is 50', 10, 5, 50],
+    ['target 0 is 0 (no target)', 0, 7, 0],
+    ['achieved "abc" is 0 (S-1.3)', 10, 'abc', 0],
+    ['achieved null is 0 (S-1.3)', 10, null, 0],
+    ['achieved "" is 0 (S-1.3)', 10, '', 0],
+    ['numeric strings parse: "10"/"5"', '10', '5', 50]
+  ])('%s', (_label, target, achieved, expected) => {
+    expect(kpiProgressOf(row(1, target, achieved))).toBe(expected);
+  });
+
+  it('a missing indicator is 0', () => {
+    expect(kpiProgressOf(null)).toBe(0);
+    expect(kpiProgressOf(undefined)).toBe(0);
+  });
+});
+
+describe('roundProgress / averageProgress (KPC-R-2, KPC-DD-2)', () => {
+  it('rounds to one decimal and sends non-finite to 0', () => {
+    expect(roundProgress(77.636)).toBe(77.6);
+    expect(roundProgress(Number.NaN)).toBe(0);
+    expect(roundProgress(Number.POSITIVE_INFINITY)).toBe(0);
+  });
+
+  it('KPC-S-3.1: 250+0 over 4+1 KPIs is 50 (flat), not 31.3 (mean of rounded group percents)', () => {
+    expect(averageProgress(250 + 0, 4 + 1)).toBe(50);
+  });
+
+  it('KPC-S-3.1: HLO X 10 KPIs at 0 and HLO Y 1 KPI at 100 -> 9.1, not 50', () => {
+    expect(averageProgress(0 + 100, 10 + 1)).toBe(9.1);
+  });
+
+  it('is 0 when nothing has a target', () => {
+    expect(averageProgress(0, 0)).toBe(0);
   });
 });
 
@@ -437,7 +512,16 @@ describe('summarisePartition (KCR-R-2 / R-8 / R-9)', () => {
     const partition = partitionProgramKpis(scenarioBundles(), scenarioIntermediate(), scenario2030());
 
     // Hand-counted from the scenario: A 4 + B 4 + IO 2 + 2030 1 = 11 planned; reported = b2 only.
-    expect(summarisePartition(partition)).toEqual({ planned: 11, zeroTarget: 2, counted: 9, reported: 1 });
+    expect(summarisePartition(partition)).toEqual({ planned: 11, zeroTarget: 2, counted: 9, reported: 1, percent: expect.any(Number) });
+  });
+
+  it('KPC-R-2: percent equals buildRatio over the same counted set', () => {
+    const partition = partitionProgramKpis(scenarioBundles(), scenarioIntermediate(), scenario2030());
+    const all = [...partition.aows.flatMap(entry => entry.own), ...partition.intermediate.indicators, ...partition.outcomes2030.indicators];
+    const summary = summarisePartition(partition);
+
+    expect(summary.percent).toBe(buildRatio(all).percent);
+    expect(summary.counted).toBe(buildRatio(all).total);
   });
 
   it('counts reported from achieved > 0 alone — a progress_percentage string never makes a KPI reported (KCR-R-9)', () => {
@@ -447,28 +531,6 @@ describe('summarisePartition (KCR-R-2 / R-8 / R-9)', () => {
     } as ReturnType<typeof output> & { progress_percentage: string };
     const partition = partitionProgramKpis([{ aow: { code: 'A' }, indicators: [zeroAchievedButPercentString] }], null, null);
 
-    expect(summarisePartition(partition)).toEqual({ planned: 1, zeroTarget: 0, counted: 1, reported: 0 });
-  });
-});
-
-// DKT-T-1 (docs/specs/changes/reporting-dynamic-kpi-target-counts) - DKT-DD-2: numeric target sum.
-describe('sumTargetValues (DKT-R-2)', () => {
-  const t = (v: unknown) => ({ target_value_sum: v });
-
-  it('adds numeric strings as numbers, never concatenating ("9" + "100" = "109")', () => {
-    expect(sumTargetValues([t('9'), t('100')])).toBe('109');
-  });
-
-  it('treats null, empty and non-numeric terms as 0', () => {
-    expect(sumTargetValues([t(null), t(''), t('abc')])).toBe('0');
-  });
-
-  it('formats a fractional sum with one decimal, like the per-HLO TARGET', () => {
-    expect(sumTargetValues([t('1.25'), t('1')])).toBe('2.3');
-  });
-
-  it('returns "0" for empty or missing input', () => {
-    expect(sumTargetValues([])).toBe('0');
-    expect(sumTargetValues(null)).toBe('0');
+    expect(summarisePartition(partition)).toEqual({ planned: 1, zeroTarget: 0, counted: 1, reported: 0, percent: 0 });
   });
 });

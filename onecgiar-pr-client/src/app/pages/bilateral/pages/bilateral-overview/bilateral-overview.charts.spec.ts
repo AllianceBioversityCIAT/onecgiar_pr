@@ -199,17 +199,23 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
   // Results by project (COV-R-9)
   // -------------------------------------------------------------------------
   describe('byProjectOption / byProjectTable (COV-R-9)', () => {
-    it('stacks lead and contributing on one stack key', () => {
+    it('stacks replicated and new on one stack key (INC-165171, no lead/contributing split)', () => {
       const series = seriesOf(byProjectOption(model.byProject, TOKENS));
       expect(series).toHaveLength(2);
       expect(series.map(s => s.stack)).toEqual(['results', 'results']);
+      expect(series.map(s => s.name)).toEqual(['Replicated for update', 'New in this phase']);
+      expect(series.map(s => s.data)).toEqual([
+        model.byProject.bars.map(bar => bar.replicatedCount),
+        model.byProject.bars.map(bar => bar.newCount),
+      ]);
     });
 
-    it('renders at most the top-N bars plus the "no project" category', () => {
+    it('renders at most the top-N bars and no "no project" category (INC-165171)', () => {
+      expect(model.byProject.noProjectRow).not.toBeNull();
       const option = byProjectOption(model.byProject, TOKENS, { limit: 1 });
       const categories = (option.yAxis as { data: string[] }).data;
-      expect(categories).toHaveLength(2);
-      expect(categories[categories.length - 1]).toBe('No bilateral project');
+      expect(categories).toHaveLength(1);
+      expect(categories).not.toContain('Not linked to a bilateral project');
       expect(visibleProjectBars(model.byProject, 1)).toHaveLength(1);
       expect(OVERVIEW_PROJECT_BAR_LIMIT).toBe(7);
     });
@@ -222,11 +228,11 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       expect(categories).toContain('A-AG10173');
     });
 
-    it('lists every project bar plus the no-project row in the a11y table', () => {
+    it('tables every project bar; the no-project count goes in the summary, not a row', () => {
       const table = byProjectTable(model.byProject);
-      expect(table.rows).toHaveLength(model.byProject.bars.length + 1);
-      expect(table.headers).toEqual(['Project', 'Lead', 'Contributing', 'Total']);
-      expect(table.rows[table.rows.length - 1][0]).toBe('No bilateral project');
+      expect(table.rows).toHaveLength(model.byProject.bars.length);
+      expect(table.headers).toEqual(['Project', 'Replicated for update', 'New in this phase', 'Total']);
+      expect(table.summary).toContain(`${model.byProject.noProjectRow?.total} results are not linked to a bilateral project`);
     });
   });
 
@@ -380,11 +386,10 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       expect(resolveChartClick({ seriesId: seriesIdAt(option, 0), dataIndex: 0 }, model)).toEqual({ project: [expectedId] });
     });
 
-    it('maps the "no project" category to the W1/W2 source rather than a project id', () => {
+    it('a click past the last project bar resolves to nothing (no "no project" category any more)', () => {
       const option = byProjectOption(model.byProject, TOKENS);
       const lastIndex = visibleProjectBars(model.byProject).length;
-      const resolved = resolveChartClick({ seriesId: seriesIdAt(option, 0), dataIndex: lastIndex }, model);
-      expect(resolved).toEqual(model.byProject.noProjectRow?.allW1W2 ? { project: [], source: 'w1w2' } : { project: [] });
+      expect(resolveChartClick({ seriesId: seriesIdAt(option, 0), dataIndex: lastIndex }, model)).toBeNull();
     });
 
     it('maps a Science Program bar to its official code', () => {

@@ -9,11 +9,9 @@ describe('BilateralOverviewService', () => {
   let service: BilateralOverviewService;
   let resultsSubjects: Subject<any>[];
   let projectsSubjects: Subject<any>[];
-  let totalsSubjects: Subject<any>[];
   let mockApi: {
     GET_bilateralCenterResults: jest.Mock;
     GET_bilateralProjects: jest.Mock;
-    GET_bilateralCenterOverviewTotals: jest.Mock;
   };
 
   /** The real `GET_bilateralCenterResults` envelope: `{ response: [...] }`. */
@@ -32,7 +30,6 @@ describe('BilateralOverviewService', () => {
   beforeEach(() => {
     resultsSubjects = [];
     projectsSubjects = [];
-    totalsSubjects = [];
     mockApi = {
       GET_bilateralCenterResults: jest.fn(() => {
         const subject = new Subject<any>();
@@ -44,11 +41,6 @@ describe('BilateralOverviewService', () => {
         projectsSubjects.push(subject);
         return subject.asObservable();
       }),
-      GET_bilateralCenterOverviewTotals: jest.fn(() => {
-        const subject = new Subject<any>();
-        totalsSubjects.push(subject);
-        return subject.asObservable();
-      }),
     };
 
     TestBed.configureTestingModule({
@@ -57,23 +49,12 @@ describe('BilateralOverviewService', () => {
     service = TestBed.inject(BilateralOverviewService);
   });
 
-  // SR-164368: the Total results card figures are a third, independently cached stream.
-  it('load() fetches the overview totals per center::version and caches them; invalidate() refetches', () => {
-    const totals = { replicated_count: 34, new_w3_count: 57, w1w2_tagging_count: 6, total_count: 97 };
+  // INC-165171: the Overview reads ONE row set, which includes the W1/W2 results tagging a center
+  // project — the separate totals request is gone.
+  it('load() asks for the project-tagging rows and makes no totals request', () => {
     service.load('IITA', 36);
-    expect(mockApi.GET_bilateralCenterOverviewTotals).toHaveBeenCalledWith('IITA', 36);
-    expect(service.totalsData('IITA', 36)()).toBeNull();
-
-    totalsSubjects[0].next({ response: totals });
-    totalsSubjects[0].complete();
-    expect(service.totalsData('IITA', 36)()).toEqual(totals);
-
-    service.load('IITA', 36);
-    expect(mockApi.GET_bilateralCenterOverviewTotals).toHaveBeenCalledTimes(1);
-
-    service.invalidate('IITA', 36);
-    expect(service.totalsData('IITA', 36)()).toBeNull();
-    expect(mockApi.GET_bilateralCenterOverviewTotals).toHaveBeenCalledTimes(2);
+    expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledWith('IITA', 36, true);
+    expect((mockApi as Record<string, unknown>)['GET_bilateralCenterOverviewTotals']).toBeUndefined();
   });
 
   it('load() fetches results + projects independently and stores them under the real envelope shapes', () => {
@@ -217,8 +198,8 @@ describe('BilateralOverviewService', () => {
       service.invalidateAll();
 
       expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledTimes(4);
-      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(3, 'AfricaRice', 36);
-      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(4, 'AfricaRice', 37);
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(3, 'AfricaRice', 36, true);
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(4, 'AfricaRice', 37, true);
       expect(mockApi.GET_bilateralProjects).toHaveBeenCalledTimes(1);
       expect(service.resultsData('AfricaRice', 36)()).toBeNull();
       expect(service.resultsLoading('AfricaRice', 36)()).toBe(true);

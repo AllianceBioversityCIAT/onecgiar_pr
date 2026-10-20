@@ -68,8 +68,8 @@ const RESULT_TYPE_GROUP_LABELS: Record<ResultTypeGroupKey, string> = {
   other: 'Other',
 };
 
-/** The category shown for results whose `project_id` is null (`COV-R-9` Scenario C). */
-export const NO_PROJECT_CATEGORY_LABEL = 'No bilateral project';
+/** The line under the by-project chart for results whose `project_id` is null (INC-165171). */
+export const NO_PROJECT_CATEGORY_LABEL = 'Not linked to a bilateral project';
 
 /** Series id namespace — `resolveChartClick` reads the chart and segment back off it. */
 const CHART_SERIES_NAMESPACE = {
@@ -196,6 +196,10 @@ function projectLabel(projectId: number, options?: OverviewChartOptions): string
   return options?.projectLabels?.get(projectId) ?? `Project ${projectId}`;
 }
 
+/**
+ * INC-165171 — one bar per center project, stacked replicated vs new. Results with no project are
+ * not a category any more (Nicoleta, 15-Oct): the card states them as a line under the chart.
+ */
 export function byProjectOption(
   model: OverviewByProjectModel,
   tokens: ResolvedChartTokens,
@@ -203,14 +207,6 @@ export function byProjectOption(
 ): EChartsOption {
   const bars = visibleProjectBars(model, options?.limit);
   const categories = bars.map(bar => abbreviateAxisLabel(projectLabel(bar.projectId, options)));
-  const lead = bars.map(bar => bar.leadCount);
-  const contributing = bars.map(bar => bar.contributingCount);
-
-  if (model.noProjectRow) {
-    categories.push(NO_PROJECT_CATEGORY_LABEL);
-    lead.push(model.noProjectRow.leadCount);
-    contributing.push(model.noProjectRow.contributingCount);
-  }
 
   return {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true },
@@ -220,49 +216,36 @@ export function byProjectOption(
     yAxis: categoryAxis(categories, tokens),
     series: [
       {
-        id: `${CHART_SERIES_NAMESPACE.byProject}:lead`,
-        name: 'Lead',
-        type: 'bar',
-        stack: 'results',
-        barMaxWidth: 16,
-        itemStyle: barItemStyle(tokens.ramp[0], tokens),
-        data: lead,
-      },
-      {
-        id: `${CHART_SERIES_NAMESPACE.byProject}:contributing`,
-        name: 'Contributing',
+        id: `${CHART_SERIES_NAMESPACE.byProject}:replicated`,
+        name: 'Replicated for update',
         type: 'bar',
         stack: 'results',
         barMaxWidth: 16,
         itemStyle: barItemStyle(tokens.ramp[2], tokens),
-        data: contributing,
+        data: bars.map(bar => bar.replicatedCount),
+      },
+      {
+        id: `${CHART_SERIES_NAMESPACE.byProject}:new`,
+        name: 'New in this phase',
+        type: 'bar',
+        stack: 'results',
+        barMaxWidth: 16,
+        itemStyle: barItemStyle(tokens.ramp[0], tokens),
+        data: bars.map(bar => bar.newCount),
       },
     ],
   } as EChartsOption;
 }
 
 export function byProjectTable(model: OverviewByProjectModel, options?: OverviewChartOptions): VizChartTableModel {
-  const rows: (string | number)[][] = model.bars.map(bar => [
-    projectLabel(bar.projectId, options),
-    bar.leadCount,
-    bar.contributingCount,
-    bar.total,
-  ]);
-
-  if (model.noProjectRow) {
-    rows.push([
-      NO_PROJECT_CATEGORY_LABEL,
-      model.noProjectRow.leadCount,
-      model.noProjectRow.contributingCount,
-      model.noProjectRow.total,
-    ]);
-  }
-
+  const noProject = model.noProjectRow?.total ?? 0;
   return {
     caption: 'Results by bilateral project',
-    headers: ['Project', 'Lead', 'Contributing', 'Total'],
-    rows,
-    summary: `${model.coveredCount} of ${model.totalProjectsInScope} projects have at least one result in this phase.`,
+    headers: ['Project', 'Replicated for update', 'New in this phase', 'Total'],
+    rows: model.bars.map(bar => [projectLabel(bar.projectId, options), bar.replicatedCount, bar.newCount, bar.total]),
+    summary:
+      `${model.coveredCount} of ${model.totalProjectsInScope} projects have at least one result in this phase.` +
+      (noProject ? ` ${noProject} results are not linked to a bilateral project.` : ''),
   };
 }
 
@@ -522,13 +505,7 @@ export function resolveChartClick(
 
   if (namespace === CHART_SERIES_NAMESPACE.byProject) {
     const bars = visibleProjectBars(model.byProject, options?.limit);
-    if (dataIndex < bars.length) return { project: [bars[dataIndex].projectId] };
-    // The trailing "No bilateral project" category: W1/W2-only rows deep-link by source, anything
-    // else simply clears the project filter (`COV-R-9` Scenario C).
-    if (dataIndex === bars.length && model.byProject.noProjectRow) {
-      return model.byProject.noProjectRow.allW1W2 ? { project: [], source: 'w1w2' } : { project: [] };
-    }
-    return null;
+    return dataIndex < bars.length ? { project: [bars[dataIndex].projectId] } : null;
   }
 
   if (namespace === CHART_SERIES_NAMESPACE.bySp) {

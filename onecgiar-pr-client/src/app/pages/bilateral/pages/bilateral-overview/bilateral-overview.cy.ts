@@ -162,8 +162,6 @@ function mountOverview() {
 
   const apiStub = {
     GET_bilateralCenterResults: () => of({ response: ROWS }),
-    GET_bilateralCenterOverviewTotals: () =>
-      of({ response: { replicated_count: 0, new_w3_count: ROWS.length, w1w2_tagging_count: 0, total_count: ROWS.length } }),
     GET_bilateralProjects: () => of({ response: { projects: PROJECTS } }),
     // `BilateralAiService.loadAllDrafts` sets `draftList` from the response body DIRECTLY
     // (`this.draftList.set(data ?? [])`, no `.response` unwrap) — a bare array, not the

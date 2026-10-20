@@ -12,6 +12,10 @@
     <app-alert-status status="error" [collapsible]="false" [description]="loadErrorNote" data-testid="section-load-error"></app-alert-status>
   }
 
+  @if (hasPtTemporaryEvidence()) {
+    <app-alert-status status="warning" [collapsible]="false" [description]="ptTemporaryEvidenceNotice" data-testid="pt-temporary-evidence-notice"></app-alert-status>
+  }
+
   <app-alert-status *ngIf="isOptional" [collapsible]="false" description="Innovation readiness evidence is not required for innovations at readiness level 0 (idea). At least one piece of evidence is still required.">
   </app-alert-status>
 

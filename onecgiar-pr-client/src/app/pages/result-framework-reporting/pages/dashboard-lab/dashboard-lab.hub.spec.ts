@@ -298,7 +298,8 @@ describe('buildAowBannerStats (By-AOW context banner)', () => {
       { target_value_sum: 10, actual_achieved_value_sum: null },
       { target_value_sum: 0, actual_achieved_value_sum: 4 } // reported but no target: never in the numerator
     ]);
-    expect(stats).toEqual({ total: 4, done: 2, pct: 50, zeroTarget: 1 });
+    // KPC-R-2: pct is the capped mean (30 + 0 + 20 + 0) / 4 = 12.5, not the count-based 2 / 4 = 50.
+    expect(stats).toEqual({ total: 4, done: 2, pct: 12.5, zeroTarget: 1 });
   });
 
   it('with no target on any row the ratio is empty (0 of 0, never NaN) and every row is excluded', () => {
@@ -823,16 +824,10 @@ describe('By-AoW section collapse/expand', () => {
     expect(component.isPlannedHloExpanded('HLO 2')).toBe(false);
   });
 
-  it('aggregates target and achieved sums for an HLO', async () => {
+  it('KPC-R-12: the shell no longer aggregates target / achieved sums for an HLO', async () => {
     const { component } = await createComponent(apiMock());
-    const hlo = {
-      indicators: [
-        { target_value_sum: '10', actual_achieved_value_sum: '5' },
-        { target_value_sum: '2.5', actual_achieved_value_sum: '7.5' }
-      ]
-    };
-    expect(component.hloTargetSum(hlo)).toBe('12.5');
-    expect(component.hloAchievedSum(hlo)).toBe('12.5');
+    expect((component as any).hloTargetSum).toBeUndefined();
+    expect((component as any).hloAchievedSum).toBeUndefined();
   });
 
   it('manages the Where to report modal visibility', async () => {
@@ -1069,8 +1064,8 @@ describe('By-AoW section collapse/expand', () => {
       );
 
       expect(component.hubProgramLevelRows()).toEqual([
-        { kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1 },
-        { kind: '2030', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
+        { kind: 'intermediate', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1, progressSum: 0, percent: 0 },
+        { kind: '2030', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0, progressSum: 0, percent: 0 }
       ]);
     });
 
@@ -1116,7 +1111,8 @@ describe('By-AoW section collapse/expand', () => {
       // Own set = #1, #2, #3, #4; #3 is zero-target → counted 3, reported 1 → `1 of 3` excluding 1.
       // The superseded output-tier-only basis reads `1 of 2`; a cross-cut-inclusive one, `2 of 4`.
       expect(component.overviewAowProgress()).toEqual([
-        { code: 'AOW01', name: 'Market Intelligence', done: 1, total: 3, zeroTarget: 1, achievement: null }
+        // KPC-R-5 — counted #1 (4/10 → 40), #2 (0), #4 (0): Σ 40 over 3 → 13.3.
+        { code: 'AOW01', name: 'Market Intelligence', done: 1, total: 3, zeroTarget: 1, progressSum: 40, percent: 13.3, achievement: null }
       ]);
     });
 

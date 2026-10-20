@@ -20,7 +20,7 @@ import {
   resolveReportResultTypeId,
   resolveReportResultTypeName
 } from '../../../../shared/report-result/create-result-payload.util';
-import { KP_HANDLE_NO_ERROR, KpHandleError, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
+import { KP_HANDLE_NO_ERROR, KpHandleError, pickKpBrowseLink, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
 import {
   INNOVATION_LINK_QUESTION,
   QaInnovationDevelopmentResultsService,
@@ -175,6 +175,7 @@ export class LabReportFormComponent {
 
   onFormSubmit(event: Event): void {
     event.preventDefault();
+    if (this.blockCreateUntilPtPick()) return;
     if (!this.canSave()) {
       this.revealValidationErrors();
       this.focusFirstMissingField();
@@ -384,6 +385,16 @@ export class LabReportFormComponent {
    * Reset alongside the rest of the form in `resetForm()` — a fresh indicator gets a fresh mount.
    */
   readonly ptTabOpened = signal(false);
+  /** Proposals the Progress Tracker panel currently lists (its `proposalsAvailable` output). */
+  readonly ptProposalCount = signal(0);
+  /**
+   * PT tab open, proposals listed, none picked: "Create and continue" would create a result with
+   * no Progress Tracker data at all (tester feedback), so it is refused until a pick or Manual entry.
+   */
+  readonly ptPickRequired = computed(() => this.kpEntryMode() === 'progress-tracker' && !this.ptDraft() && this.ptProposalCount() > 0);
+  /** Set by a refused create; the message stays only while the pick is still missing. */
+  private readonly ptPickPromptShown = signal(false);
+  readonly ptPickPromptVisible = computed(() => this.ptPickPromptShown() && this.ptPickRequired());
   /**
    * `PTB-R-9` / `PTB-AC-8`: true only right after a pick whose title needed truncation. Reset
    * whenever the draft is cleared (a fresh pick, `resetForm()`, or "Change proposal") so a stale
@@ -585,7 +596,7 @@ export class LabReportFormComponent {
   readonly isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
 
   onCgspaceItemSelected(item: CgspaceItemDto): void {
-    const url = item.itemUrl || item.handleUrl || item.handle;
+    const url = pickKpBrowseLink(item);
     this.validatingHandler.set(true);
     this.handleSource.set('browse');
     this.selectedKpRepository.set(item.repository ?? 'cgspace');
@@ -809,6 +820,12 @@ export class LabReportFormComponent {
       const message = this.loadingOverlayMessage();
       this.loadingOverlayChange.emit(message);
     });
+
+    // The "pick a proposal first" message is answered by a pick, Manual entry, or an empty panel —
+    // drop it then, so a later "Change proposal" does not bring it back before the next attempt.
+    effect(() => {
+      if (!this.ptPickRequired()) untracked(() => this.ptPickPromptShown.set(false));
+    });
   }
 
   /** Message for the host overlay — null when idle. */
@@ -842,6 +859,7 @@ export class LabReportFormComponent {
     this.handleSource.set('browse');
     this.ptDraft.set(null);
     this.ptTabOpened.set(false);
+    this.ptProposalCount.set(0);
     this.ptTitleTruncated.set(false);
     this.resetPtPrefillTracking();
     // P2-3420: back to the story's default, NO.
@@ -1170,7 +1188,15 @@ export class LabReportFormComponent {
     });
   }
 
+  /** Refuses a create that would silently skip the Progress Tracker pick; shows why. */
+  private blockCreateUntilPtPick(): boolean {
+    if (!this.ptPickRequired()) return false;
+    this.ptPickPromptShown.set(true);
+    return true;
+  }
+
   createResult(): void {
+    if (this.blockCreateUntilPtPick()) return;
     if (!this.canSave()) return;
     this.creatingResult.set(true);
 

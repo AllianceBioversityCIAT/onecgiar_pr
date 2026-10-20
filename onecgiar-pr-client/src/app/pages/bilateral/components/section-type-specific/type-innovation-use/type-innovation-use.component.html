@@ -39,6 +39,62 @@
        which hides the fields only on an explicit "Yes": an UNANSWERED question (NULL — every result rolled
        over to a new phase before 2026-10-14) used to hide the actors the copy had carried over (27270). -->
     @if (body.innov_use_to_be_determined !== true) {
+      <!-- P2-3985 — the Current Use Update block of P2-3537 §4, same order as the W1/W2 form
+           (`shared/components/innovation-use-form`): previous figure, new users, calculated total,
+           narrative, mismatch error. Right above the actors it reconciles against, inside the
+           "to be determined" gate and OUTSIDE full metadata: it is an MDS item. ABSENT, not empty,
+           when the server sends no `current_use_previous`. Read-only mode comes from the `[inert]`
+           wrapper above. -->
+      @if (showCurrentUseUpdate) {
+        <div class="flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+          <app-pr-field-header
+            [label]="currentUseCopy.title"
+            [useColon]="false"
+            [description]="currentUseCopy.description"
+            [showDescriptionLabel]="false"
+            [required]="true">
+          </app-pr-field-header>
+
+          <div class="text-[13px]">
+            {{ currentUseCopy.previousLabel }}
+            <strong class="font-mono tabular-nums">{{ previousReportedUse }}</strong
+            >@if (previousUsePhaseYear) {
+              <!-- The space lives inside the span: Angular collapses whitespace between elements. -->
+              <span>&nbsp;(FY{{ previousUsePhaseYear }})</span>
+            }
+          </div>
+
+          <app-pr-input
+            [label]="currentUseCopy.newUsersLabel"
+            type="number"
+            [placeholder]="currentUseCopy.placeholder"
+            [required]="true"
+            [(ngModel)]="body.new_users_added"
+            (ngModelChange)="onNewUsersAddedChange()">
+          </app-pr-input>
+
+          <!-- Field 3 of the story: never typed, always previous + new. -->
+          <div class="text-[13px]">
+            {{ currentUseCopy.totalLabel }}
+            <strong class="font-mono tabular-nums">{{ totalCumulativeUse }}</strong>
+          </div>
+
+          <app-pr-textarea
+            [label]="currentUseCopy.narrativeLabel"
+            [placeholder]="currentUseCopy.placeholder"
+            [required]="true"
+            [maxWords]="currentUseCopy.maxNarrativeWords"
+            [(ngModel)]="body.use_expansion_narrative"
+            (ngModelChange)="onFieldChange()">
+          </app-pr-textarea>
+
+          <!-- §4.1 + §5: names the exact difference and appears as soon as the figures diverge. -->
+          @if (hasCurrentUseMismatch) {
+            <app-alert-status status="error" [collapsible]="false" [description]="currentUseMismatchMessage"></app-alert-status>
+          }
+        </div>
+      }
+
       <div>
         <app-pr-field-header label="Actors" description="Describe the actors involved in innovation use" [required]="true"></app-pr-field-header>
 
@@ -237,8 +293,9 @@
            question with its tooltip, then Actors / Organizations / Other quantitative measures), with the
            same copy source (`innovation-use-2030-projection.copy.ts`). Optional here: it lives in full
            metadata, so nothing carries a REQUIRED marker and nothing is published to the MDS tracker.
-           The annual-review part of P2-3295 is left out on purpose: it only applies to a result rolled
-           over from a previous phase, and W3/bilateral results are never rolled over. -->
+           The annual-review part of P2-3295 is not built here yet. W3/bilateral results ARE rolled over
+           (`/api/bilateral/version`, the phase copy — see CLAUDE.md), so the reason once given here, "never
+           rolled over", was false. -->
         <div class="flex flex-col gap-3">
           <app-pr-radio-button
             [label]="projection2030Copy.title"

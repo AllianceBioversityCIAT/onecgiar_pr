@@ -6070,7 +6070,11 @@ export class ResultsService {
     }
   }
 
-  async getBilateralCenterResults(centerId: string, versionId: string) {
+  async getBilateralCenterResults(
+    centerId: string,
+    versionId: string,
+    includeProjectTagging = false,
+  ) {
     try {
       const parsedVersionId = Number(versionId);
 
@@ -6093,6 +6097,7 @@ export class ResultsService {
       const results = await this._resultRepository.getResultsByBilateralCenter(
         centerId,
         parsedVersionId,
+        includeProjectTagging,
       );
 
       return {

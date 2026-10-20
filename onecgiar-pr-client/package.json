@@ -167,6 +167,7 @@
       "^@spartan/tabs$": "<rootDir>/src/app/spartan/tabs/src/index.ts",
       "^@spartan/badge$": "<rootDir>/src/app/spartan/badge/src/index.ts",
       "^@spartan/checkbox$": "<rootDir>/src/app/spartan/checkbox/src/index.ts",
+      "^@spartan/table$": "<rootDir>/src/app/spartan/table/src/index.ts",
       "^src/(.*)$": "<rootDir>/src/$1"
     },
     "coverageThreshold": {

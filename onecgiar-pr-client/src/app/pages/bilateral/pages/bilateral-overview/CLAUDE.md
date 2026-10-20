@@ -8,18 +8,20 @@ The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, 
 
 ## Invariants
 
-- **The Total results card figures come from the server (SR-164368, 2026-10-13), not from the rows.**
-  `GET /api/results/bilateral-center-overview-totals` (`ResultRepository.getBilateralCenterOverviewTotals`),
-  cached per `center::version` in `BilateralOverviewService.totalsData`, read via `overviewTotals()`.
-  Nicoleta's definitions, one row per result: *Innovations replicated for update* = center on the result
-  and `is_replicated = 1`; *New W3/Bilateral results* = `source = 'API'`, center on the result, not
-  replicated; *W1/W2 results tagging Center bilateral project* = `source = 'Result'` tagging ANY project
-  owned by the center (org code or W3 alias), center on the result or not; headline = distinct union.
-  Validated against prdb for IITA / Reporting 2026: 34 / 57 / 6 = 97. The client cannot derive these:
-  the W1/W2 tagging rows are not in `bilateral-center-results`. The card is **center-wide — the
-  Overview filters do not narrow it**; '—' until the totals load. The replicated / `+ N new` pills
-  (`BOV-R-3/4`) were **removed** — their "new" counted W1/W2 too and contradicted the row.
-  `kpis.totalResults` (`buildTotalResultsKpi`) is no longer rendered by this card.
+- **Every card comes from ONE row set (INC-165171, 2026-10-19).** The Total card showed 263 (server
+  totals) while Editing showed 267 (rows): two row sets. Now `BilateralOverviewService` asks
+  `bilateral-center-results?includeProjectTagging=true`, which adds the W1/W2 results tagging a center
+  project, and every row carries `overview_category` resolved in SQL: `replicated_w3`,
+  `replicated_w1w2`, `new_w3`, `w1w2_tagging`, `w1w2_center_only` (replicated first). The Total card
+  renders `kpis.totalResults.categories` — five lines that add up to the headline — and **narrows with
+  the filters** like every other card. Status tiles show `replicated · new`; Projects covered shows
+  `with new results · only replicated`. `project_id` prefers a center-owned project over the lead one.
+  `bilateral-center-overview-totals` is no longer called by the client (endpoint kept server-side).
+  `resolveOverviewCategory` derives the category for rows without it (older payloads, fixtures).
+- **Results by project has no "No project" bar and no lead/contributing split** (Nicoleta, 15-Oct):
+  bars stack *Replicated for update* vs *New in this phase*; the no-project rows are one line under
+  the chart, broken down by category (`by-project-no-project`), and rows on other centers' projects
+  (`unmatchedProjectRows`) are stated, not dropped silently.
 - **`bilateral-center-results` returns one row per result** (SR-164368): `results_center` is grouped
   per result (`MAX(is_leading_result)`) before the join — result 8641 had two active IITA rows and was
   listed twice.
@@ -36,6 +38,9 @@ The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, 
   with the Results tab (`COV-R-13`). `filterCenterResults(rows, params)` is the single predicate both
   tabs apply; a card figure and the Results tab's own visible count must reconcile by construction,
   not by coincidence — that reconciliation is proven live (HITL), never by a CT/Jest fixture alone.
+  ⚠️ **Known gap (INC-165171):** the Overview rows include `w1w2_tagging` results; the Results tab
+  fetches without `includeProjectTagging`, so a figure that counts tagging rows can open fewer rows
+  there (0 for CIP, 6 for IITA in Reporting 2026). Closing it means the Results tab passing the flag.
 - **`BilateralOverviewService` caches per `centerId::versionId`** (`COV-DD-8`); projects are cached
   per center only. Results and projects are two independent streams with their own loading/error
   signals (`COV-R-17`) — a results failure never nulls an already-loaded `projects` list, so
@@ -64,7 +69,7 @@ The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, 
 `BilateralOverviewComponent` resolves `centerKey` (gated on the shell's async CLARISA-code
 resolution, `resolvedCenterId`) and `effectiveVersionId` (`selectedPhase`, defaulting to Open), reads
 `overviewService.entry(centerKey, versionId)`, runs the row set through `filterCenterResults`, and
-feeds `buildOverviewModel` (`bilateral-overview.aggregate.ts:220`). Chart options/tables come from
+feeds `buildOverviewModel` (`bilateral-overview.aggregate.ts`). Chart options/tables come from
 `bilateral-overview.charts.ts`, fed `model()` + `chartTokens()` + `chartOptions()`. URL ↔ state sync
 lives in `applyUrlParams`/`writeUrl`; phase and center context live in `BilateralContextService`.
 
@@ -114,4 +119,4 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
   pages — not audited beyond this folder.
 - Visual parity vs the center mockup (Total results card): human browser check pending.
 
-**Verified:** 2026-10-13 · qa-development-2026-ss · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)
+**Verified:** 2026-10-19 · qa-development-2026-ss · one row set with overview_category for every card, by-project replicated vs new (INC-165171) · prior: 2026-10-13 · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)

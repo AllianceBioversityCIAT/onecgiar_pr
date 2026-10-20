@@ -703,6 +703,7 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
     border: 'token-border'
   };
 
+  /** `progressSum` defaults to "every done KPI fully achieved" (done * 100); tests that need a different % pass it. */
   function makeLeaf(partial: Partial<TocLeaf>): TocLeaf {
     return {
       code: null,
@@ -713,6 +714,7 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       achieved: 0,
       done: 0,
       total: 1,
+      progressSum: (partial.done ?? 0) * 100,
       ...partial
     };
   }
@@ -723,6 +725,7 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       total: 0,
       target: 0,
       achieved: 0,
+      progressSum: partial.leaves.reduce((sum, l) => sum + l.progressSum, 0),
       ...partial
     };
   }
@@ -923,6 +926,19 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       expect(colorOf('B75')).toBe(tokens.ramp[3]);
     });
 
+    it('KPC-S-5.3: fill comes from the aggregate %, not done/total (10 % with 3 of 4 -> bottom quartile)', () => {
+      // done/total = 3/4 = 75 % would be ramp[3]; the capped mean is 10 % -> ramp[0].
+      const s53 = makeLeaf({ code: 'S53', done: 3, total: 4, progressSum: 40 });
+      const s53Model = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', done: 3, total: 4, leaves: [s53] })]);
+      const branch = buildOption(s53Model).series[0].data[0].children![0];
+      expect(branch.children![0].itemStyle.color).toBe(tokens.ramp[0]);
+      expect(branch.itemStyle.color).toBe(tokens.ramp[0]);
+      // the one-decimal % is what the bucket reads: 24.96 rounds to 25.0 -> higher bucket
+      const edge = makeLeaf({ code: 'E', done: 0, total: 100, progressSum: 2496 });
+      const edgeModel = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', total: 100, leaves: [edge] })]);
+      expect(buildOption(edgeModel).series[0].data[0].children![0].children![0].itemStyle.color).toBe(tokens.ramp[1]);
+    });
+
     it('the SP root carries no progress concept — brand primary fill, never quartile-colored', () => {
       const root = buildOption(model).series[0].data[0];
       expect(root.itemStyle.color).toBe(tokens.primary);
@@ -938,24 +954,65 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       return option.tooltip.formatter({ data: node });
     }
 
-    it('a full leaf: code+title, level, "N indicators", Target Σ, Achieved Σ, progress — matches the requirements.md worked example', () => {
-      // requirements.md TCM-R-4 scenario: "OP 3.3.4", 2 indicators (targets 10,5; achieved 4,0) → target 15, achieved 4, progress 1/2.
+    it('KPC-R-12: a multi-indicator leaf: code+title, level, "N indicators", progress — NO Target / Achieved', () => {
+      // requirements.md TCM-R-4 scenario: "OP 3.3.4", 2 indicators (targets 10,5; achieved 4,0) -> progress 1/2; the summed Target / Achieved lines are gone.
       const leaf = makeLeaf({ code: 'OP 3.3.4', title: 'Adoption of climate-smart practices', level: 'OUTPUT', indicators: 2, target: 15, achieved: 4, done: 1, total: 2 });
       const model = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [leaf] })]);
       const node = buildOption(model).series[0].data[0].children![0].children![0];
 
       expect(tooltipFor(node, model)).toBe(
-        ['OP 3.3.4 Adoption of climate-smart practices', 'Output', '2 indicators', 'Target: 15', 'Achieved: 4', 'Progress: 1/2'].join('<br/>')
+        ['OP 3.3.4 Adoption of climate-smart practices', 'Output', '2 indicators', 'Progress: 50% (1 of 2 reported)'].join('<br/>')
       );
     });
 
-    it('a 0-indicator (structural) leaf: "0 indicators", Target/Achieved 0, progress 0/0 — no NaN, no $ figures', () => {
+    it('KPC-R-12: a single-indicator leaf keeps its own Target and Achieved', () => {
+      const leaf = makeLeaf({ code: 'OP 1', title: 'One KPI', level: 'OUTPUT', indicators: 1, target: 10, achieved: 4, done: 1, total: 1, progressSum: 40 });
+      const model = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [leaf] })]);
+      const node = buildOption(model).series[0].data[0].children![0].children![0];
+
+      expect(tooltipFor(node, model)).toContain('Target: 10<br/>Achieved: 4');
+    });
+
+    it('KPC-R-14: the SP root tooltip is exactly the program name and its progress line', () => {
+      const rootModel = makeModel([
+        makeBranch({ kind: 'aow', code: 'AOW01', name: 'One', done: 1, total: 2, progressSum: 100, target: 9, achieved: 3, leaves: [makeLeaf({ code: 'L1', indicators: 2, target: 9, achieved: 3 })] })
+      ]);
+      const root = buildOption(rootModel).series[0].data[0];
+      const text = tooltipFor(root, rootModel);
+
+      const expected = ['Science Program One', 'Progress: 50% (1 of 2 reported)'].join('<br/>');
+      expect(text).toBe(expected);
+      const net = tocMapNetworkOption(rootModel, tokens) as any;
+      const netRoot = net.series[0].data.find((n: any) => n.tocMapPayload.kind === 'root');
+      const netText = net.tooltip.formatter({ data: netRoot });
+      expect(netText).toBe(expected);
+    });
+
+    it('KPC-R-3: the SP root tooltip shows the flat % over every branch, in the radial tree and the network graph', () => {
+      // branch 1: 4 KPIs, 250 -> 62.5 % ; branch 2: 1 KPI, 0 -> 0 %.  Flat = 250 / 5 = 50 (mean of branch % would be 31.3).
+      const rootModel = makeModel([
+        makeBranch({ kind: 'aow', code: 'AOW01', name: 'One', done: 4, total: 4, progressSum: 250, leaves: [makeLeaf({ code: 'L1', done: 4, total: 4, progressSum: 250 })] }),
+        makeBranch({ kind: 'aow', code: 'AOW02', name: 'Two', done: 0, total: 1, progressSum: 0, leaves: [makeLeaf({ code: 'L2', done: 0, total: 1, progressSum: 0 })] })
+      ]);
+      const expected = 'Progress: 50% (4 of 5 reported)';
+
+      const root = buildOption(rootModel).series[0].data[0];
+      expect(root.tocMapPayload.kind).toBe('root');
+      expect(tooltipFor(root, rootModel)).toContain(expected);
+      expect(root.itemStyle.color).toBe(tokens.primary);
+
+      const net = tocMapNetworkOption(rootModel, tokens) as any;
+      const netRoot = net.series[0].data.find((n: any) => n.tocMapPayload.kind === 'root');
+      expect(net.tooltip.formatter({ data: netRoot })).toContain(expected);
+    });
+
+    it('a 0-indicator (structural) leaf: "0 indicators", progress 0/0 — no Target / Achieved, no NaN, no $ figures', () => {
       const leaf = makeLeaf({ code: 'STR-1', title: 'Structural placeholder', level: 'EOI', indicators: 0, target: 0, achieved: 0, done: 0, total: 0 });
       const model = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [leaf] })]);
       const node = buildOption(model).series[0].data[0].children![0].children![0];
       const text = tooltipFor(node, model);
 
-      expect(text).toBe(['STR-1 Structural placeholder', 'EoI', '0 indicators', 'Target: 0', 'Achieved: 0', 'Progress: 0/0'].join('<br/>'));
+      expect(text).toBe(['STR-1 Structural placeholder', 'EoI', '0 indicators', 'Progress: 0% (0 of 0 reported)'].join('<br/>'));
       expect(text).not.toContain('NaN');
       expect(text).not.toContain('$');
     });
@@ -968,6 +1025,7 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
           name: 'Area of Work 2',
           done: 3,
           total: 7,
+          progressSum: 300,
           target: 42,
           achieved: 18,
           leaves: [makeLeaf({ code: 'X', indicators: 4 }), makeLeaf({ code: 'Y', indicators: 3 })]
@@ -976,7 +1034,7 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       const node = buildOption(model).series[0].data[0].children![0];
 
       expect(tooltipFor(node, model)).toBe(
-        ['AOW02 Area of Work 2', 'AoW', '7 indicators', 'Target: 42', 'Achieved: 18', 'Progress: 3/7', 'Click to open this Area of Work'].join(
+        ['AOW02 Area of Work 2', 'AoW', '7 indicators', 'Progress: 42.9% (3 of 7 reported)', 'Click to open this Area of Work'].join(
           '<br/>'
         )
       );
@@ -1099,7 +1157,26 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       expect(leafRow).toEqual(['Area of Work 1', 'OP1', 'Output one', 'Output', 1, 10, 4, '1/1']);
 
       const branchRow = table.rows.find(row => row[0] === 'Area of Work 1' && row[1] === 'AOW01')!;
-      expect(branchRow).toEqual(['Area of Work 1', 'AOW01', 'Area of Work 1', 'AoW', 2, 15, 4, '1/2']);
+      // KPC-R-12: a branch groups several indicators, so its Target / Achieved cells are blank
+      expect(branchRow).toEqual(['Area of Work 1', 'AOW01', 'Area of Work 1', 'AoW', 2, '—', '—', '1/2']);
+    });
+
+    it('KPC-R-12 / KPC-R-14: multi-indicator leaf cells are blank; the SP root row has no indicators / Target / Achieved and carries the real progress', () => {
+      const multi = makeModel([
+        makeBranch({
+          kind: 'aow',
+          code: 'AOW01',
+          name: 'Area of Work 1',
+          done: 1,
+          total: 2,
+          progressSum: 100,
+          leaves: [makeLeaf({ code: 'M1', title: 'Multi', indicators: 2, target: 15, achieved: 4, done: 1, total: 2, progressSum: 100 })]
+        })
+      ]);
+      const table = tocMapTable(multi);
+
+      expect(table.rows.find(row => row[1] === 'M1')).toEqual(['Area of Work 1', 'M1', 'Multi', 'Output', 2, '—', '—', '1/2']);
+      expect(table.rows[0]).toEqual(['', '', 'Science Program One', 'SP', '', '', '', '50% (1 of 2 reported)']);
     });
   });
 
@@ -1160,6 +1237,61 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       const aowIntermediate = data.find((d: any) => d.value[0] === 2 && d.value[1] === 0);
       expect(aowIntermediate.value[2]).toBe(-1);
       expect(aowIntermediate.label.formatter()).toBe('—');
+    });
+
+    it('KPC-R-3/R-5: cell pct = Σ progressSum / Σ total (flat), tooltip reads "x% (N of M reported)"', () => {
+      // leaves {250, 4 KPIs, 4 done} + {0, 1 KPI, 0 done}: flat = 250 / 5 = 50; done/total would read 80.
+      const flatModel = makeModel([
+        makeBranch({
+          kind: 'aow',
+          code: 'AOW09',
+          name: 'Flat',
+          leaves: [
+            makeLeaf({ code: 'H1', level: 'OUTPUT', done: 4, total: 4, progressSum: 250 }),
+            makeLeaf({ code: 'H2', level: 'OUTPUT', done: 0, total: 1, progressSum: 0 })
+          ]
+        })
+      ]);
+      const option = tocMapHeatmapOption(flatModel, tokens) as any;
+      const data = option.series[0].data;
+      const outputs = data.find((d: any) => d.value[0] === 0);
+      const total = data.find((d: any) => d.tocCellPayload.colName === 'Total Progress');
+      for (const cell of [outputs, total]) {
+        expect(cell.tocCellPayload.pct).toBe(50);
+        expect(cell.value[2]).toBe(50);
+      }
+      expect(option.tooltip.formatter({ data: total })).toContain('Progress:</b> 50% (4 of 5 reported)');
+    });
+
+    it('KPC-S-12.2: the heatmap cell tooltip has no Target / Achieved / Σ', () => {
+      const m = makeModel([
+        makeBranch({ kind: 'aow', code: 'AOW09', name: 'Flat', leaves: [makeLeaf({ code: 'H1', level: 'OUTPUT', done: 1, total: 2, progressSum: 100, target: 48, achieved: 2 })] })
+      ]);
+      const option = tocMapHeatmapOption(m, tokens) as any;
+      const outputs = option.series[0].data.find((d: any) => d.value[0] === 0);
+      const html: string = option.tooltip.formatter({ data: outputs });
+
+      expect(html).toContain('Progress:');
+      expect(html).not.toContain('Target');
+      expect(html).not.toContain('Achieved');
+      expect(html).not.toContain('Σ');
+    });
+
+    it('KPC-S-3.1: heatmap aggregates the progress sum, never rounded leaf percents', () => {
+      // 10 KPIs at 0 % + 1 KPI at 100 % -> 9.1 (mean of means would be 50)
+      const m = makeModel([
+        makeBranch({
+          kind: 'aow',
+          code: 'AOW08',
+          name: 'Weighted',
+          leaves: [
+            makeLeaf({ code: 'X', level: 'OUTPUT', done: 0, total: 10, progressSum: 0 }),
+            makeLeaf({ code: 'Y', level: 'OUTPUT', done: 1, total: 1, progressSum: 100 })
+          ]
+        })
+      ]);
+      const cell = (tocMapHeatmapOption(m, tokens) as any).series[0].data.find((d: any) => d.tocCellPayload.colName === 'Total Progress');
+      expect(cell.tocCellPayload.pct).toBe(9.1);
     });
 
     it('resolves click on an AoW cell back to its AoW code', () => {
