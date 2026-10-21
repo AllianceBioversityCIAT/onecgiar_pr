@@ -489,6 +489,7 @@
                (right after it, no meta row between them); the decision chip used to be a sibling of
                `.notification_content_body` at the very end of the row, outside the text column
                entirely. Both now live together as this row's third line. -->
+          @if (!isPrimaryRequest) {
           <div class="notification_content_footer_row">
             <p class="notification_content_caption">
               Accepted by <span class="notification_content_caption_by">{{ notification?.obj_approved_by?.first_name }}
@@ -501,6 +502,11 @@
               Accepted
             </span>
           </div>
+          } @else if (primaryDecision; as decision) {
+          <!-- PRDS-T-1: primary rows read the SP decision from the RESULT status, never from the
+               system-written request row (no person, no date). -->
+          <ng-container *ngTemplateOutlet="primaryDecisionFooter; context: { $implicit: decision }" />
+          }
         </div>
       </div>
     }
@@ -644,6 +650,7 @@
                "Decline"/"Declined" terminology already used by the row's action button and the
                decision chip right next to this caption — "Rejected" was the only place on this row
                still using the older word. -->
+          @if (!isPrimaryRequest) {
           <div class="notification_content_footer_row">
             <p class="notification_content_caption">
               Declined by <span class="notification_content_caption_by">{{ notification?.obj_approved_by?.first_name }}
@@ -656,6 +663,9 @@
               Declined
             </span>
           </div>
+          } @else if (primaryDecision; as decision) {
+          <ng-container *ngTemplateOutlet="primaryDecisionFooter; context: { $implicit: decision }" />
+          }
         </div>
       </div>
     }
@@ -957,3 +967,23 @@
   (closed)="onDrawerShellClosedSignal()">
   <ng-container *ngTemplateOutlet="detailTpl"></ng-container>
 </app-contribution-request-drawer>
+
+<!-- PRDS-T-1 (`bugfix/primary-request-decision-state`, design §8.2): the primary row's decided-state
+     footer, shared by `@case (2)` and `@case (3)`. Caption names the Science Program code, never a
+     person or date; chip reuses the existing decision-chip styles. -->
+<ng-template #primaryDecisionFooter let-decision>
+  <div class="notification_content_footer_row">
+    <p class="notification_content_caption">
+      {{ decision === 'accepted' ? copy.notificationItem.primaryDecisionAccepted : copy.notificationItem.primaryDecisionRejected }} by
+      <span class="notification_content_caption_by">{{ responderCode }}</span>
+    </p>
+    <span
+      hlmBadge
+      variant="outline"
+      [attr.data-notif-decision-chip]="decision"
+      class="notification_decision_chip"
+      [ngClass]="decision === 'accepted' ? 'notification_decision_chip_accepted' : 'notification_decision_chip_declined'">
+      {{ decision === 'accepted' ? copy.notificationItem.primaryDecisionAccepted : copy.notificationItem.primaryDecisionRejected }}
+    </span>
+  </div>
+</ng-template>
