@@ -29,6 +29,9 @@ import {
   makeLargeFixture,
 } from './bilateral-overview.fixtures';
 import { BilateralCenterResult } from '../../services/bilateral-center-result.interface';
+import { filterCenterResults } from '../../bilateral-result-filter';
+import { convertToParamMap } from '@angular/router';
+import { parseBilateralQueryParams } from '../../bilateral-query-params';
 
 describe('bilateral-overview.aggregate', () => {
   describe('constants', () => {
@@ -238,7 +241,9 @@ describe('bilateral-overview.aggregate', () => {
         expect(model.byProject.noProjectRow?.categories).toEqual({ replicated_w3: 5, new_w3: 0, w1w2_tagging: 0 });
         expect(model.byProject.unmatchedProjectRows).toBe(4);
         const barTotal = model.byProject.bars.reduce((sum, bar) => sum + bar.total, 0);
-        expect(barTotal + 5 + 4).toBe(64);
+        // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-2): identity gains the updated-no-project term (0 in this fixture)
+        expect(barTotal + 5 + model.byProject.updatedNoProjectCount + 4).toBe(64);
+        expect(model.byProject.updatedNoProjectCount).toBe(0);
       });
 
       it('tiles + QA/Submitted + Discontinued = 64 and Needs attention matches the tiles (CWS-R-4)', () => {
@@ -485,5 +490,66 @@ describe('bilateral-overview.aggregate', () => {
         expect(median).toBeLessThan(100);
       }
     });
+  });
+});
+
+// @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-2, CNP-R-1, CNP-R-4, CNP-AC-1, CNP-AC-3, CNP-AC-5)
+describe('bilateral-overview.aggregate: updated innovations with no project (CNP-T-2)', () => {
+  const mk = (overrides: Partial<BilateralCenterResult>): BilateralCenterResult =>
+    ({ created_date: '2026-09-10', status_id: 1, source: 'API', is_leading_result: 1, is_replicated: 0, project_id: null, result_type_id: 7, ...overrides }) as BilateralCenterResult;
+  const updated = (n: number, shape: 'num' | 'str' = 'num') =>
+    Array.from({ length: n }, () =>
+      shape === 'str'
+        ? mk({ is_replicated: '1' as never, result_type_id: '7' as never, overview_category: 'replicated_w3' })
+        : mk({ is_replicated: 1 as never, result_type_id: 7, overview_category: 'replicated_w3' }),
+    );
+  const newNoProject = Array.from({ length: 3 }, () => mk({ result_type_id: 6, overview_category: 'new_w3' }));
+  const replicatedType1 = Array.from({ length: 2 }, () => mk({ is_replicated: 1 as never, result_type_id: 1, overview_category: 'replicated_w3' }));
+  const barRows = [101, 102, 101].map(id => mk({ project_id: id, is_replicated: 1 as never, result_type_id: 7, overview_category: 'replicated_w3' }));
+  const otherCenter = [mk({ project_id: 9001, overview_category: 'new_w3' })];
+  const projectsWith = (ids: number[]) => ids.map(id => ({ ...FIXTURE_PROJECTS[0], id: String(id) as never }));
+
+  const run = (rows: BilateralCenterResult[]) => buildByProjectModel(rows, projectsWith([101, 102]));
+
+  it('24 updated + 3 new + 2 replicated type-1 (no project) + bars + 1 other center: 24 / 5, and the identity holds without double count', () => {
+    const rows = [...updated(24), ...newNoProject, ...replicatedType1, ...barRows, ...otherCenter];
+    const model = run(rows);
+    expect(model.updatedNoProjectCount).toBe(24);
+    expect(model.noProjectRow?.total).toBe(5);
+    const barTotal = model.bars.reduce((sum, bar) => sum + bar.total, 0);
+    expect(barTotal).toBe(3);
+    expect(barTotal + model.noProjectRow!.total + model.updatedNoProjectCount + model.unmatchedProjectRows).toBe(rows.length);
+  });
+
+  it('only the 24 updated rows: noProjectRow is null', () => {
+    const model = run(updated(24));
+    expect(model.updatedNoProjectCount).toBe(24);
+    expect(model.noProjectRow).toBeNull();
+  });
+
+  it('string-shaped ids/flags give the same counts', () => {
+    const rows = [...updated(24, 'str'), ...newNoProject, ...replicatedType1, ...barRows, ...otherCenter];
+    const model = run(rows);
+    expect(model.updatedNoProjectCount).toBe(24);
+    expect(model.noProjectRow?.total).toBe(5);
+  });
+
+  it('Projects covered is unchanged by the bucket', () => {
+    const base = [...newNoProject, ...barRows];
+    const withBucket = [...updated(24), ...base];
+    expect(buildProjectsCoveredKpi(withBucket, projectsWith([101, 102]))).toEqual(buildProjectsCoveredKpi(base, projectsWith([101, 102])));
+  });
+
+  it('a row set that filters the bucket out reports 0 at model level', () => {
+    const rows = [...updated(24), ...newNoProject, ...barRows];
+    const filtered = filterCenterResults(rows, { ...parseBilateralQueryParams(convertToParamMap({})).params, source: 'w1w2' });
+    expect(run(filtered).updatedNoProjectCount).toBe(0);
+  });
+
+  it('CNP-AC-5: the count equals what group=updated-no-project returns on the same fixture', () => {
+    const rows = [...updated(24), ...updated(2, 'str'), ...newNoProject, ...replicatedType1, ...barRows, ...otherCenter];
+    const params = { ...parseBilateralQueryParams(convertToParamMap({})).params, group: 'updated-no-project' as const };
+    expect(run(rows).updatedNoProjectCount).toBe(filterCenterResults(rows, params).length);
+    expect(run(rows).updatedNoProjectCount).toBe(26);
   });
 });

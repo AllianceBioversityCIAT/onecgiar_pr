@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-10-13 · branch qa-development-2026-ss · program-full-names-labels-part-2 PF2-T-5
+**Verified:** 2026-10-21 · branch qa-development-2026-ss · center-overview-no-project-line CNP-T-4
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -133,6 +133,15 @@ Program`.
 - Chip `{ dimension: 'scope' }` "Scope: Bilateral reporting (Overview)"; `clearChip` sets the signal to
   `null` and writes the URL, which refetches unscoped. Clear all also resets it. Not sticky: the signal is
   re-derived from the URL on every emission. No client-side row hiding by scope.
+
+## Overview group (`replicated-innovations-2026-pa/center-overview-no-project-line`, `CNP-T-4`)
+- `group` signal hydrated by `applyUrlParams` from `?group=updated-no-project` (`CNP-R-2`); in
+  `RESULTS_TAB_MANAGED_QUERY_PARAMS` and `currentContractParams`, so `filterCenterResults` narrows rows
+  with the shared `isUpdatedNoProjectRow`. NOT in the fetch pipeline: no extra request.
+- Chip `{ dimension: 'group' }` "Updated innovations with no project"; `clearChip` and Clear all reset it
+  and write the URL (rows widen client-side). Not sticky: re-derived from the URL on every emission.
+- The Overview link carries `scope` + explicit `role=all&source=all`, so `group` in the URL suppresses the
+  W3 + Lead default like any contract key. A hand-typed `?group=` alone also skips that default.
 
 ## "Update result" (P2-3229, P2-3653)
 `canUpdateResult()` delegates to `ApiService.canUpdateBilateral` so this list and the Results Center

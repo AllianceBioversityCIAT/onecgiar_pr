@@ -16,9 +16,9 @@
 
 | # | Spec Path | Depends on | Parallel-safe | Status |
 |---|---|---|---|---|
-| 1 | `bilateral/replicated-innovations-2026-pa/project-and-pa-assignment` | none | yes | pending |
+| 1 | `bilateral/replicated-innovations-2026-pa/project-and-pa-assignment` | none | yes | done — archived 2026-10-21 to `docs/specs/archive/2026-10-21-bilateral--replicated-innovations-2026-pa--project-and-pa-assignment/` |
 | 3 | `bilateral/replicated-innovations-2026-pa/center-overview-w3-scope` | none | no (with #2) | done — archived 2026-10-21 to `docs/specs/archive/2026-10-21-bilateral--replicated-innovations-2026-pa--center-overview-w3-scope/` |
-| 2 | `bilateral/replicated-innovations-2026-pa/center-overview-no-project-line` | `center-overview-w3-scope` (#3) | no (with #3) | pending |
+| 2 | `bilateral/replicated-innovations-2026-pa/center-overview-no-project-line` | `center-overview-w3-scope` (#3) | no (with #3) | specified 2026-10-21 — ready for `/akili-execute` |
 
 **Build order (MoSCoW):** child 1 is a **Must**. Nicoleta asked for it in both red comments, and it unblocks the default ToC block for the 63 results that have no project. Child 2 is a **Should**. It is a read-only reporting line that reads live data, so it is correct with or without child 1. The two children touch different components (Section 0 of the result editor vs the Center Overview tab) and share no migration or payload, so they can run in parallel.
 
@@ -37,3 +37,5 @@
 | 2026-10-16 | Family created by `/akili-propose` with 2 children |
 | 2026-10-21 | Child #3 `center-overview-w3-scope` added at the user's request (INC-165171, Nicoleta 21-Oct: the Overview counts only replicated W3, new W3 and W1/W2 tagging a center project). It goes before #2, which now depends on it: #2's no-project row becomes W3-only |
 | 2026-10-21 | Child #3 executed: T-1..T-5 PASS, T-6 PRTest link reconciliation PASS on CIP and IITA. CIP prod count (63) is confirmed after release. Child #2 proposal noted: its no-project row is now W3-only |
+| 2026-10-21 | Child #1 `project-and-pa-assignment` archived: T-1..T-5 done (T-5 added in execute), PRTest HITL with saves closed 2026-10-19, shipped on `performance-refactor` `572363fe2`. The manifest had said pending while it was executed. Prod real-data check follows the release |
+| 2026-10-21 | Child #2 `center-overview-no-project-line` specified (Standard, 5 tasks, ~300 LOC). Rebased on #3: the bucket uses the row `project_id` (no project of any role, `CNP-OQ-3`), and the Results link uses a new `group` contract key with a shared predicate |

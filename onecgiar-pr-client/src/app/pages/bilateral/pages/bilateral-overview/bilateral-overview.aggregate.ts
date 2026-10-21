@@ -4,6 +4,7 @@ import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { STATUS_KEY_TO_ID } from '../../bilateral-query-params';
+import { isUpdatedNoProjectRow } from '../../bilateral-result-filter';
 
 /**
  * Pure aggregation module for the Center Overview tab (`COV-DD-1`): every card figure is derived
@@ -264,14 +265,23 @@ interface ProjectRollup {
   perProject: Map<number, { replicated: number; new: number; total: number }>;
   /** Rows with no linked project, by overview category. */
   noProject: { total: number; categories: OverviewCategoryCounts } | null;
+  /** CNP-R-1: updated replicated innovations with no project — their own bucket, never in `noProject`. */
+  updatedNoProject: number;
 }
 
 function rollupByProject(rows: readonly BilateralCenterResult[]): ProjectRollup {
   const perProject = new Map<number, { replicated: number; new: number; total: number }>();
   const noCategories = emptyCategoryCounts();
   let noTotal = 0;
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-2, CNP-R-1, CNP-R-4, CNP-DD-4)
+  let updatedNoProject = 0;
 
   for (const row of rows) {
+    // Counted BEFORE the null-project branch so the generic line excludes these rows by construction.
+    if (isUpdatedNoProjectRow(row)) {
+      updatedNoProject++;
+      continue;
+    }
     const category = resolveOverviewCategory(row);
     if (row.project_id === null || row.project_id === undefined) {
       noTotal++;
@@ -289,6 +299,7 @@ function rollupByProject(rows: readonly BilateralCenterResult[]): ProjectRollup 
   return {
     perProject,
     noProject: noTotal > 0 ? { total: noTotal, categories: noCategories } : null,
+    updatedNoProject,
   };
 }
 
@@ -466,6 +477,8 @@ export interface OverviewByProjectModel {
   notStartedProjectIds: number[];
   /** `null` when no row has a null `project_id`. */
   noProjectRow: OverviewNoProjectRow | null;
+  /** CNP-R-1: replicated W3 innovation rows with no project (see `isUpdatedNoProjectRow`); not in `noProjectRow`. */
+  updatedNoProjectCount: number;
   coveredCount: number;
   totalProjectsInScope: number;
   /** Rows whose `project_id` is set but matches no project in the passed-in scope — dropped from
@@ -478,7 +491,7 @@ export function buildByProjectModel(
   rows: readonly BilateralCenterResult[],
   projects: readonly BilateralProject[],
 ): OverviewByProjectModel {
-  const { perProject, noProject } = rollupByProject(rows);
+  const { perProject, noProject, updatedNoProject } = rollupByProject(rows);
   const scopeProjectIds = projects.map(p => Number(p.id));
   const scopeIdSet = new Set(scopeProjectIds);
 
@@ -503,6 +516,7 @@ export function buildByProjectModel(
     bars,
     notStartedProjectIds,
     noProjectRow: noProject,
+    updatedNoProjectCount: updatedNoProject,
     coveredCount: coveredIds.size,
     totalProjectsInScope: projects.length,
     unmatchedProjectRows,

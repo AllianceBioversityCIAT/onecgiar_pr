@@ -359,7 +359,7 @@
               Retry
             </button>
           </div>
-        } @else if (!model().byProject.bars.length && !model().byProject.noProjectRow && !model().byProject.unmatchedProjectRows) {
+        } @else if (!model().byProject.bars.length && !model().byProject.noProjectRow && !model().byProject.updatedNoProjectCount && !model().byProject.unmatchedProjectRows) {
           <p data-testid="by-project-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
             No project has reported a result in this phase yet
           </p>
@@ -390,6 +390,22 @@
             }
 
           </div>
+
+          <!-- @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-R-2, CNP-R-3):
+               replicated innovations with no project, split out of the generic line below; hidden at 0. -->
+          @if (model().byProject.updatedNoProjectCount > 0) {
+            <a
+              data-testid="by-project-updated-no-project"
+              [routerLink]="resultsLink()"
+              [queryParams]="resultsLinkParams({ group: 'updated-no-project' })"
+              [attr.aria-label]="updatedNoProjectLabel() + ', ' + model().byProject.updatedNoProjectCount + ' results — open in Results'"
+              class="flex flex-wrap items-center gap-x-[10px] gap-y-[4px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[12px] py-[8px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+              <span>
+                <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ model().byProject.updatedNoProjectCount }}</b>
+                {{ updatedNoProjectLabel() }}
+              </span>
+            </a>
+          }
 
           <!-- INC-165171: results with no bilateral project are stated here, not drawn as a bar. -->
           @if (model().byProject.noProjectRow; as noProject) {

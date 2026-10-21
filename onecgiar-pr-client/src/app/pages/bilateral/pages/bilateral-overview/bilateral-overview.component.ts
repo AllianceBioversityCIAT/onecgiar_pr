@@ -109,6 +109,7 @@ function emptyParams(): BilateralQueryParams {
     createdBy: [],
     multi: false,
     scope: null,
+    group: null,
   };
 }
 
@@ -245,6 +246,18 @@ export class BilateralOverviewComponent implements OnInit {
       if (match) return match;
     }
     return phases.find(phase => phase.status) ?? phases[0] ?? null;
+  });
+
+  /**
+   * @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-R-5)
+   * Label of the updated-no-project line: names the years from the selected phase, generic when the
+   * phase year is unknown.
+   */
+  readonly updatedNoProjectLabel = computed<string>(() => {
+    const year = Number(this.selectedPhase()?.phase_year);
+    return Number.isFinite(year) && year > 0
+      ? `Updated ${year - 1} innovations with no ${year} project`
+      : 'Updated innovations with no project in this phase';
   });
 
   readonly effectiveVersionId = computed<number | null>(() => {
@@ -441,7 +454,8 @@ export class BilateralOverviewComponent implements OnInit {
    */
   deepLinkParams(dimension: Partial<BilateralQueryParams> = {}): Params {
     return serializeBilateralQueryParams(
-      { ...this.params(), ...dimension, phase: this.effectiveVersionId(), scope: null },
+      // CNP-T-3 — Reporting and Draft tabs never read `group`, so it is never emitted here.
+      { ...this.params(), ...dimension, phase: this.effectiveVersionId(), scope: null, group: null },
       { explicitDefaults: true },
     );
   }
@@ -564,7 +578,10 @@ export class BilateralOverviewComponent implements OnInit {
 
   private applyUrlParams(map: ParamMap): void {
     const parsed = parseBilateralQueryParams(map);
-    this.params.set(parsed.params);
+    // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-DD-3)
+    // `group` belongs to the Results tab: a pasted `?group=` must never narrow an Overview card,
+    // or the line that links to it would equal the Total.
+    this.params.set({ ...parsed.params, group: null });
 
     if (parsed.params.phase !== null && parsed.params.phase !== this.ctx.selectedVersionId()) {
       this.ctx.selectedVersionId.set(parsed.params.phase);
