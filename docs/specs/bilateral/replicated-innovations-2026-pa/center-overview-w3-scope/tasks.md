@@ -5,7 +5,7 @@
 - **Module / feature:** `bilateral` · center Overview W3 scope (INC-165171)
 - **Linked spec:** `requirements.md` (`CWS-R-1..8`) + `design.md` (`CWS-DD-1..7`)
 - **Owner / driver:** Santiago Sanchez
-- **Status:** in-progress
+- **Status:** executed 2026-10-21 (archive pending)
 - **Branch:** `qa-development-2026-ss` directly (owner decision 2026-10-21, overrides "from `staging`": CRK is not in staging yet and shares `bilateral-results-list.component.ts`)
 - **Budget (design §1):** 6 tasks (4 code + 2 HITL checks) · ~400 LOC incl. tests · ≤ 2 review rounds per task
 
@@ -168,7 +168,7 @@
   - [ ] `npx eslint <touched files> --quiet` clean.
   - [ ] The chip is reachable by keyboard and has an accessible remove label, like the other chips.
 
-### `CWS-T-6` — Live check on PRTest + family bookkeeping
+### `CWS-T-6` — Live check on PRTest + family bookkeeping ✅ done 2026-10-21 (see `execution.md`)
 
 - **Type:** rollout (HITL)
 - **Description:**
