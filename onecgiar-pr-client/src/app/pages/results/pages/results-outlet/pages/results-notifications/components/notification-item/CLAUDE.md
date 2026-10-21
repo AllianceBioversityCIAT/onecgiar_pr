@@ -598,7 +598,7 @@ shared fallback; legacy/other types render no line. Copy in `bilateral-rejection
 ## PRA-T-2: primary rows say "Review result", never Decline (`notifications/primary-review-not-accept`)
 - `onAcceptContribution()` / `onDrawerAccept()` call `reviewPrimaryResult()` for a primary row (no more `acceptOrReject(true)` for it): the existing accept PATCH, then on success **or HTTP 409** `NotificationNavigationService.completePrimaryReview(row, notifyLater)` - status 5 navigates to `reviewRequestUrl(row)` (review drawer), anything else shows `copy.notificationItem.primaryNotifyLater` and does NOT navigate. Other errors keep the generic "Error when requesting" toast. No confirm step, no "already answered" toast.
 - Decline is gone for primary: the row's Decline button is not rendered (`@if (!isPrimaryRequest)`), the drawer gets `[showDecline]="!isPrimaryRequest"`, and `runAutoAction()` ignores `?action=decline` for a primary row (consumes the param only, like accept under BELL-T-7).
-- Chip and `detailTitle()` read "Needs your review" (`primaryRequestChip`); the Accept label is `footer.reviewResult` via `acceptLabelFor`.
+- Chip and `detailTitle()` read "Needs your review" (`primaryRequestChip`) **only while the result is status 5; amended by PRDS-T-1 (neutral "Primary Science Program request" otherwise)**; the Accept label is `footer.reviewResult` via `acceptLabelFor`.
 - SP code for the URL comes from `obj_shared_inititiative` on a primary row (an ownerless legacy result has no initiative yet).
 
 **Verified:** 2026-10-07 · qa-development-2026-ss · PRA-T-2 attempt 2 (`notifications/primary-review-not-accept`): `reviewPrimaryResult()`, Decline removed for primary (row, drawer, deep link), chip "Needs your review". Supersedes the primary bullets of PSR-T-8 and PDR-T-4 above.
@@ -618,3 +618,11 @@ shared fallback; legacy/other types render no line. Copy in `bilateral-rejection
 Every `obj_owner_initiative` / `obj_shared_inititiative` mention in the template renders through the standalone `SpLabelPipe` (`| spLabel`, imported in `notification-item.module.ts`): `SP01 - Name`, or the code alone when the payload has no `name` (the server select returns `id, official_code, name`). Add the pipe to any new P/A mention; keep routing/ids on the raw objects.
 
 **Verified:** 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels` PFN-T-3
+
+## PRDS-T-1: primary decision state comes from the result status (`bugfix/primary-request-decision-state`)
+- `primaryDecision` (getter): `null` unless `isPrimaryRequest`; `obj_result.status_id == 6` -> `'accepted'`, `== 7` -> `'rejected'`, else `null`. Never reads `request_status_id`/`approved_by` (a system write at Center submit since PRA, so it said "Accepted by <submitter>" on a pending result, PRTest 9864).
+- `@case (2)`/`@case (3)` footers: non-primary rows keep today's "Accepted/Declined by <person> · date" + chip untouched; a primary row with a decision renders the shared `#primaryDecisionFooter` template ("Accepted by SP03" / "Rejected by SP03" via `responderCode`, chip `data-notif-decision-chip="accepted|rejected"` reusing `notification_decision_chip_accepted/_declined`; no person, no date); a primary row without a decision renders no footer row at all. `request_status_id` still picks the `@case` block (DD-4).
+- `requestKindLabel` (row chip + `detailTitle()`): primary reads "Needs your review" only while `primaryReviewTarget() === 'review-drawer'` (status 5), else `primaryRequestKindChip` ("Primary Science Program request"). Copy keys `primaryRequestKindChip`, `primaryDecisionAccepted`, `primaryDecisionRejected` in `contribution-request-drawer.copy.ts`.
+- Specs: `PRDS` describe in `notification-item.component.spec.ts`. Primary fixtures that assert "Needs your review" need `obj_result.status_id: 5`.
+
+**Verified:** 2026-10-21 · qa-development-2026-ss · PRDS-T-1 (`bugfix/primary-request-decision-state`): `primaryDecision`, status-aware primary footer and kind chip; jsdom only, real payload fields (`obj_result.status_id`, primary SP code on decided rows) are PRDS-T-2 (PRTest).

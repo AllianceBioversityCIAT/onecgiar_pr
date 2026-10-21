@@ -51,6 +51,41 @@ describe('BilateralApiService', () => {
     req.flush(mockResponse);
   });
 
+  // CWS-T-3 (CWS-R-7): options object replaces the boolean; each option adds its own param only when set.
+  describe('GET_bilateralCenterResults', () => {
+    const url = `${environment.apiBaseUrl}api/results/bilateral-center-results`;
+
+    it('sends only centerId and versionId without options', () => {
+      service.GET_bilateralCenterResults('IITA', 36).subscribe();
+      const req = httpMock.expectOne(r => r.url === url);
+      expect(req.request.params.keys().sort()).toEqual(['centerId', 'versionId']);
+      req.flush(mockResponse);
+    });
+
+    it('keeps today URL for { includeProjectTagging: true }', () => {
+      service.GET_bilateralCenterResults('IITA', 36, { includeProjectTagging: true }).subscribe();
+      const req = httpMock.expectOne(r => r.url === url);
+      expect(req.request.params.get('includeProjectTagging')).toBe('true');
+      expect(req.request.params.has('scope')).toBe(false);
+      req.flush(mockResponse);
+    });
+
+    it('sends scope=bilateral and no includeProjectTagging for { scope: bilateral }', () => {
+      service.GET_bilateralCenterResults('IITA', 36, { scope: 'bilateral' }).subscribe();
+      const req = httpMock.expectOne(r => r.url === url);
+      expect(req.request.params.get('scope')).toBe('bilateral');
+      expect(req.request.params.has('includeProjectTagging')).toBe(false);
+      req.flush(mockResponse);
+    });
+
+    it('omits scope when it is null or undefined', () => {
+      service.GET_bilateralCenterResults('IITA', 36, { scope: null }).subscribe();
+      const req = httpMock.expectOne(r => r.url === url);
+      expect(req.request.params.has('scope')).toBe(false);
+      req.flush(mockResponse);
+    });
+  });
+
   it('POST_createBilateralHeader should POST create-header', done => {
     const body = { result_level_id: 3, result_type_id: 1 };
     service.POST_createBilateralHeader(body).subscribe(response => {

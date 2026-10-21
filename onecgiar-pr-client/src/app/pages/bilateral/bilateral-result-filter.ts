@@ -2,6 +2,25 @@
 import { BilateralCenterResult } from './services/bilateral-center-result.interface';
 import { BilateralQueryParams, STATUS_KEY_TO_ID } from './bilateral-query-params';
 
+// @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-1, CNP-R-1, CNP-R-2, CNP-DD-2)
+/** Result types that count as an "updated" replicated innovation: 7 Innovation development, 2 Innovation use. */
+export const UPDATED_INNOVATION_TYPE_IDS: readonly number[] = [7, 2];
+
+/**
+ * The single definition of the Overview's "updated innovations with no project" bucket
+ * (`CNP-R-1`): a replicated W3 (`source === 'API'`) innovation row with no active project.
+ * Wire flags arrive as strings, numbers or booleans, so every numeric field goes through `Number()`.
+ * Shared by the aggregate (count) and `filterCenterResults` (`group=updated-no-project`).
+ */
+export function isUpdatedNoProjectRow(row: BilateralCenterResult): boolean {
+  return (
+    Number(row.is_replicated) === 1 &&
+    row.source === 'API' &&
+    UPDATED_INNOVATION_TYPE_IDS.includes(Number(row.result_type_id)) &&
+    (row.project_id === null || row.project_id === undefined)
+  );
+}
+
 /**
  * `filterCenterResults` is the ONE predicate every center tab applies (`COV-R-13`'s reconciliation
  * scenario, `COV-DD-3`): it applies exactly what `params` says — a `null` role/source/method means
@@ -27,6 +46,8 @@ export function filterCenterResults(
       if (row.project_id === null || row.project_id === undefined) return false;
       if (!projectIds.has(Number(row.project_id))) return false;
     }
+
+    if (params.group === 'updated-no-project' && !isUpdatedNoProjectRow(row)) return false;
 
     if (programCodes && !(row.submitter != null && programCodes.has(row.submitter))) return false;
 

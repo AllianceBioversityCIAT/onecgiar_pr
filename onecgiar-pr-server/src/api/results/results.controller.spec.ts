@@ -67,6 +67,9 @@ describe('ResultsController', () => {
     getQaInnovationDevelopmentResults: jest
       .fn()
       .mockResolvedValue({ status: 200, response: [] }),
+    getBilateralCenterResults: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
   } as unknown as jest.Mocked<ResultsService>;
 
   const mockReportingFullMetadataExportService = {
@@ -339,6 +342,70 @@ describe('ResultsController', () => {
     await controller.getQaInnovationDevelopmentResults();
 
     expect(mockService.getQaInnovationDevelopmentResults).toHaveBeenCalled();
+  });
+
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-w3-scope CWS-R-1
+  describe('getBilateralCenterResults scope (CWS-R-1)', () => {
+    it('passes the bilateral scope flag only for the exact value "bilateral"', async () => {
+      await controller.getBilateralCenterResults(
+        'CIP',
+        '8',
+        undefined,
+        'bilateral',
+      );
+
+      expect(mockService.getBilateralCenterResults).toHaveBeenCalledWith(
+        'CIP',
+        '8',
+        false,
+        true,
+      );
+    });
+
+    it('treats an unknown scope value as no scope', async () => {
+      await controller.getBilateralCenterResults('CIP', '8', undefined, 'foo');
+      await controller.getBilateralCenterResults(
+        'CIP',
+        '8',
+        undefined,
+        'Bilateral',
+      );
+
+      expect(mockService.getBilateralCenterResults).toHaveBeenNthCalledWith(
+        1,
+        'CIP',
+        '8',
+        false,
+        false,
+      );
+      expect(mockService.getBilateralCenterResults).toHaveBeenNthCalledWith(
+        2,
+        'CIP',
+        '8',
+        false,
+        false,
+      );
+    });
+
+    it('keeps includeProjectTagging and the scope independent, and both off by default', async () => {
+      await controller.getBilateralCenterResults('CIP', '8', 'true');
+      await controller.getBilateralCenterResults('CIP', '8');
+
+      expect(mockService.getBilateralCenterResults).toHaveBeenNthCalledWith(
+        1,
+        'CIP',
+        '8',
+        true,
+        false,
+      );
+      expect(mockService.getBilateralCenterResults).toHaveBeenNthCalledWith(
+        2,
+        'CIP',
+        '8',
+        false,
+        false,
+      );
+    });
   });
 });
 

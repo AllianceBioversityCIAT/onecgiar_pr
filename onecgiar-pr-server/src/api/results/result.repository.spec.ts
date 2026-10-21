@@ -37,15 +37,22 @@ describe('ResultRepository (unit)', () => {
   });
 
   /** getResultsByBilateralCenter binds: center code/acronym, the W3 alias pairs, the center code
-   *  again (results_center), the version and the project-tagging flag — in that order. */
+   *  again (results_center), the version, the project-tagging flag and the bilateral-scope
+   *  category flag (CWS-R-1) — in that order. */
   const expectCenterResultsParams = (
     params: unknown[],
     centerId: string,
     versionId: number,
     taggingFlag: 0 | 1,
+    scopeFlag: 0 | 1 = 0,
   ) => {
     expect(params.slice(0, 2)).toEqual([centerId, centerId]);
-    expect(params.slice(-3)).toEqual([centerId, versionId, taggingFlag]);
+    expect(params.slice(-4)).toEqual([
+      centerId,
+      versionId,
+      taggingFlag,
+      scopeFlag,
+    ]);
     expect(params.join(',')).toContain('CIP,CENTER-06');
   };
 
@@ -570,6 +577,62 @@ describe('ResultRepository (unit)', () => {
       expectCenterResultsParams(offParams, 'CIP', 8, 0);
       expectCenterResultsParams(onParams, 'CIP', 8, 1);
     });
+
+    // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-w3-scope CWS-R-1, CWS-AC-1, CWS-AC-2
+    describe('bilateral scope (CWS-R-1)', () => {
+      const scopePredicate =
+        "AND (? = 0 OR r.source = 'API' OR (COALESCE(r.is_replicated, 0) = 0 AND tg.result_id IS NOT NULL))";
+
+      it('binds the category flag and the tagging flag to 1 for a scoped call', async () => {
+        queryMock.mockResolvedValueOnce([]);
+
+        await repo.getResultsByBilateralCenter('CIP', 8, false, true);
+
+        const [sql, params] = queryMock.mock.calls[0];
+        expect(sql).toContain(scopePredicate);
+        expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+        expectCenterResultsParams(params, 'CIP', 8, 1, 1);
+      });
+
+      it('binds the category flag to 0 for an unscoped call and keeps the rest of the parameters', async () => {
+        queryMock.mockResolvedValueOnce([]);
+
+        await repo.getResultsByBilateralCenter('CIP', 8);
+
+        const [sql, params] = queryMock.mock.calls[0];
+        expect(sql).toContain(scopePredicate);
+        // The tagging condition itself is untouched.
+        expect(sql).toContain(
+          "OR (? = 1 AND r.source = 'Result' AND tg.result_id IS NOT NULL)",
+        );
+        expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+        expectCenterResultsParams(params, 'CIP', 8, 0, 0);
+      });
+
+      it('binds tagging 1 and category 0 when only includeProjectTagging is on', async () => {
+        queryMock.mockResolvedValueOnce([]);
+
+        await repo.getResultsByBilateralCenter('CIP', 8, true);
+
+        const [, params] = queryMock.mock.calls[0];
+        expectCenterResultsParams(params, 'CIP', 8, 1, 0);
+      });
+
+      it('keeps the predicate after the CASE it mirrors and before the ORDER BY', async () => {
+        queryMock.mockResolvedValueOnce([]);
+
+        await repo.getResultsByBilateralCenter('CIP', 8, false, true);
+
+        const [sql] = queryMock.mock.calls[0];
+        expect(sql.indexOf('END AS overview_category')).toBeGreaterThan(0);
+        expect(sql.indexOf(scopePredicate)).toBeGreaterThan(
+          sql.indexOf('END AS overview_category'),
+        );
+        expect(sql.indexOf(scopePredicate)).toBeLessThan(
+          sql.indexOf('ORDER BY r.created_date DESC, r.id DESC'),
+        );
+      });
+    });
   });
 
   describe('getBilateralCenterOverviewTotals (SR-164368)', () => {
@@ -1059,6 +1122,21 @@ describe('ResultRepository — getResultById binds the id (P2-3498)', () => {
       expect(sql).toContain('LIMIT 1');
       expect(sql.slice(sql.indexOf('\nFROM'))).not.toContain('results_center');
     });
+  });
+
+  /**
+   * P2-3272 — the submit looks the Lead Contact Person up by `lead_contact_person_id` to send the
+   * IP confirmation email. The query only returned the typed name, so the id was always undefined
+   * and the email was skipped on every 2026 Innovation Development submit.
+   */
+  it('returns lead_contact_person_id for the IP confirmation email (P2-3272)', async () => {
+    await repo.getResultById(1234);
+    const sql = String(queryMock.mock.calls[0][0]).replace(
+      /\/\*[\s\S]*?\*\//g,
+      '',
+    );
+
+    expect(sql).toMatch(/r\.lead_contact_person_id,/);
   });
 });
 

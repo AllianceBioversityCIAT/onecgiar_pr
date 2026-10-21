@@ -6074,6 +6074,7 @@ export class ResultsService {
     centerId: string,
     versionId: string,
     includeProjectTagging = false,
+    bilateralScope = false,
   ) {
     try {
       const parsedVersionId = Number(versionId);
@@ -6098,6 +6099,7 @@ export class ResultsService {
         centerId,
         parsedVersionId,
         includeProjectTagging,
+        bilateralScope,
       );
 
       return {

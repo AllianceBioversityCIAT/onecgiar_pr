@@ -8,13 +8,13 @@
 | Parent Spec | `docs/specs/bilateral/replicated-innovations-2026-pa/` (`family.md`, child #2) |
 | Slug | `center-overview-no-project-line`, derived from the free-text argument |
 | Type | **Change** |
-| Status | **draft**, awaiting owner approval |
+| Status | **approved** 2026-10-21; specified in `requirements.md`, `design.md`, `tasks.md` |
 | Approval Mode | `gated` |
 | Owner | Santiago Sanchez |
 | Date | 2026-10-16 |
 | Ticket | Freshdesk INC-164073; no Jira yet |
-| Depends on | none (it reads live data; child #1 only changes the count) |
-| Parallel-safe | yes |
+| Depends on | `center-overview-w3-scope` (child #3, 2026-10-21): the no-project row is now W3-only |
+| Parallel-safe | no (with child #3; same aggregate and card) |
 | Requirement prefix (proposed) | `CNP` |
 
 ## 2. Intent
@@ -26,6 +26,8 @@ Nicoleta, in red on 15-Oct-2026:
 She wants the Center Overview to make those innovations visible as a **group of their own**, so they do not go unnoticed and are not confused with results that are simply missing data.
 
 ## 3. Problem / Current Behavior
+
+> **Premise changed (2026-10-21, `center-overview-w3-scope` / child #3, on PRTest):** the Overview now reads only `replicated_w3`, `new_w3` and `w1w2_tagging` rows (`scope=bilateral`). The "no project" row is **W3-only**: `allW1W2` and the `source=w1w2` branch were removed, and its link is `{ project: [], source: 'w3' }`, which still does not reconcile. The second bullet below (W1/W2 results) no longer applies. Re-check this section, `CNP-R-2` and §10 before `/akili-specify`.
 
 The **Overview** tab of the Center (`/bilateral/:acronym/overview`, archived spec `2026-09-14-bilateral--center-overview-tab`, COV-R-9) has a **"Results by bilateral project"** card with one bar per project. All results without a project already go into a single **"no project"** row/chip (`noProjectRow` in `bilateral-overview.aggregate.ts`, label `NO_PROJECT_CATEGORY_LABEL`).
 

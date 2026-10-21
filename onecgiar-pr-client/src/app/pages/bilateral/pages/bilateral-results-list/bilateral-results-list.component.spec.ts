@@ -683,6 +683,140 @@ describe('BilateralResultsListComponent', () => {
       expect((fixture.nativeElement.querySelector('input[aria-label="Search results"]') as HTMLInputElement).value).toBe('kenya');
     });
   });
+  describe('CWS-T-5 — Overview scope (CWS-R-7, CWS-AC-7)', () => {
+    const SCOPE_LABEL = 'Scope: Bilateral reporting (Overview)';
+
+    it('fetches the scoped rows per phase and shows a scope chip for ?phase=36&scope=bilateral&role=all&source=all', () => {
+      recreateOn({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36, { scope: 'bilateral' });
+      expect(component.scope()).toBe('bilateral');
+      expect(chipTexts().some(text => text.includes(SCOPE_LABEL))).toBe(true);
+      expect(component.hasActiveFilters()).toBe(true);
+      // No client-side hiding by scope: every fetched row is still listed.
+      expect(component.filteredResults().length).toBe(1);
+    });
+
+    it('removing the scope chip drops the key from the URL and refetches without scope', fakeAsync(() => {
+      recreateOn({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      bilateralApiService.GET_bilateralCenterResults.mockClear();
+
+      expect(chipRemoveButton(SCOPE_LABEL)!.getAttribute('aria-label')).toBeTruthy();
+      chipRemoveButton(SCOPE_LABEL)!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.scope()).toBeNull();
+      expect('scope' in queryParams$.value).toBe(false);
+      expect(queryParams$.value['role']).toBe('all');
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledTimes(1);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+      expect(chipTexts().some(text => text.includes(SCOPE_LABEL))).toBe(false);
+    }));
+
+    it('without the key the request has no options argument and the W3 + Lead default still applies', () => {
+      recreateOn({ phase: '36' });
+
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+      expect(component.scope()).toBeNull();
+      expect(component.showW3()).toBe(true);
+      expect(component.showW1W2()).toBe(false);
+      expect(component.showLead()).toBe(true);
+      expect(component.showContributing()).toBe(false);
+      expect(chipTexts().some(text => text.includes('Scope:'))).toBe(false);
+    });
+
+    it('does not keep the scope after navigating to the tab without it', () => {
+      recreateOn({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      queryParams$.next({ phase: '36' });
+      fixture.detectChanges();
+
+      expect(component.scope()).toBeNull();
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+    });
+  });
+
+
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-AC-7)
+  describe('CNP-T-4 — group=updated-no-project (CNP-R-2 A/B, CNP-AC-7)', () => {
+    const GROUP_LABEL = 'Updated innovations with no project';
+    const mixedRows = () =>
+      of({
+        response: [
+          result({ id: 1, result_code: '1', is_replicated: '1' as any, source: 'API', result_type_id: '7' as any, project_id: null }),
+          result({ id: 2, result_code: '2', is_replicated: 1 as any, source: 'API', result_type_id: 7 as any, project_id: null }),
+          result({ id: 3, result_code: '3', is_replicated: 1 as any, source: 'API', result_type_id: 7 as any, project_id: 12 }),
+          result({ id: 4, result_code: '4', is_replicated: 0 as any, source: 'API', result_type_id: 7 as any, project_id: null }),
+          result({ id: 5, result_code: '5', is_replicated: 1 as any, source: 'Result', result_type_id: 7 as any, project_id: null }),
+          result({ id: 6, result_code: '6', is_replicated: 1 as any, source: 'API', result_type_id: 1 as any, project_id: null }),
+        ],
+      });
+
+    it('shows exactly the predicate rows and a chip, with no extra HTTP call', () => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(mixedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      const callsWithoutGroup = bilateralApiService.GET_bilateralCenterResults.mock.calls.length;
+      bilateralApiService.GET_bilateralCenterResults.mockClear();
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'updated-no-project', role: 'all', source: 'all' });
+      const callsWithGroup = bilateralApiService.GET_bilateralCenterResults.mock.calls.length;
+
+      expect(component.filteredResults().map(r => r.id)).toEqual([1, 2]);
+      expect(chipTexts().some(text => text.includes(GROUP_LABEL))).toBe(true);
+      expect(component.hasActiveFilters()).toBe(true);
+      // One fetch per component creation; `group` adds none (the baseline also counts the beforeEach load).
+      expect(callsWithGroup).toBe(1);
+      expect(callsWithoutGroup).toBe(2);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36, { scope: 'bilateral' });
+    });
+
+    it('removing the chip drops group from the URL and widens the rows, without refetching', fakeAsync(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(mixedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'updated-no-project', role: 'all', source: 'all' });
+      bilateralApiService.GET_bilateralCenterResults.mockClear();
+
+      chipRemoveButton(GROUP_LABEL)!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect('group' in queryParams$.value).toBe(false);
+      expect(queryParams$.value['scope']).toBe('bilateral');
+      expect(component.filteredResults().length).toBe(6);
+      expect(chipTexts().some(text => text.includes(GROUP_LABEL))).toBe(false);
+      expect(bilateralApiService.GET_bilateralCenterResults).not.toHaveBeenCalled();
+    }));
+
+    it('Clear filters resets group', fakeAsync(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(mixedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'updated-no-project', role: 'all', source: 'all' });
+
+      component.clearAllFilters();
+      tick();
+
+      expect('group' in queryParams$.value).toBe(false);
+      expect(component.group()).toBeNull();
+    }));
+
+    it('is not sticky: a later URL without group shows no chip', () => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(mixedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'updated-no-project', role: 'all', source: 'all' });
+      queryParams$.next({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      fixture.detectChanges();
+
+      expect(component.group()).toBeNull();
+      expect(chipTexts().some(text => text.includes(GROUP_LABEL))).toBe(false);
+      expect(component.filteredResults().length).toBe(6);
+    });
+
+    it('a URL without group behaves as before and an unknown group is ignored', () => {
+      recreateOn({ phase: '36' });
+      expect(component.group()).toBeNull();
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'foo', role: 'all', source: 'all' });
+      expect(component.group()).toBeNull();
+    });
+  });
+
 
   /**
    * `COV-R-13` BUT — the regression this file could not see before: `onSearch` writes every keystroke
@@ -1417,7 +1551,7 @@ describe('BilateralResultsListComponent', () => {
       const labels = Array.from(popover.querySelectorAll('.brl_filter_group_label')).map(
         el => (el.textContent ?? '').trim(),
       );
-      expect(labels).toEqual(['Phase', 'Source', 'Project', 'Science Program', 'Created by', 'Center role']);
+      expect(labels).toEqual(['Phase', 'Source', 'Project', 'Science Program', 'Created by', 'Indicator category', 'Center role']);
 
       const projectField = popover.querySelector('.brl-filter-field[aria-label="Filter by project"]');
       expect(projectField).toBeTruthy();
@@ -1796,6 +1930,403 @@ describe('BilateralResultsListComponent', () => {
       const entries = open([row(1, 'UPDATE', 'edit', 1)]);
       expect(entries).toHaveLength(0);
       expect(document.body.textContent).toContain('No rejections have been recorded for this result.');
+    });
+  });
+  /**
+   * @akili-spec changes/center-results-kpi-chips (CRK-T-4, CRK-R-1, CRK-R-2, CRK-R-4, CRK-DD-3, CRK-DD-4)
+   * Result 9878 exists in 2025 (35) and 2026 (36, replicated); 9877 only in 2026.
+   */
+  describe('CRK — grouped versions + Previously reported badge', () => {
+    const BOTH_PHASES = [
+      { id: '35', phase_year: 2025, status: false, obj_portfolio: { acronym: 'P25' } },
+      { id: '36', phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
+    ];
+
+    const rowsByPhase: Record<number, BilateralCenterResult[]> = {
+      35: [result({ id: 5, result_code: '9878', title: 'Zulu old title', version_id: 35, is_replicated: 0 })],
+      36: [
+        result({ id: 6, result_code: '9878', title: 'New title', version_id: 36, is_replicated: 1 }),
+        result({ id: 7, result_code: '9877', title: 'Other result', version_id: 36, is_replicated: 0 }),
+      ],
+    };
+
+    const load = (params: Params) => {
+      phasesService.phases.reporting = BOTH_PHASES;
+      bilateralApiService.GET_bilateralCenterResults.mockImplementation((_center: string, versionId: number) =>
+        of({ response: rowsByPhase[versionId] ?? [] }),
+      );
+      recreateOn(params);
+    };
+
+    const bodyRows = (): HTMLElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('tr.rc-row:not(.rc-row--skeleton)')) as HTMLElement[];
+
+    const codesInOrder = (): string[] =>
+      bodyRows().map(r => (r.querySelector('.rc-code')?.textContent ?? '').trim());
+
+    const cellLines = (row: HTMLElement, attr: string): HTMLElement[] =>
+      Array.from(row.querySelectorAll(`td.rc-td--${attr} .rc-line`)) as HTMLElement[];
+
+    const rowOf = (code: string): HTMLElement =>
+      bodyRows().find(r => (r.querySelector('.rc-code')?.textContent ?? '').trim() === code)!;
+
+    const count = (): string =>
+      (fixture.nativeElement.querySelector('.brl_count')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+    it('renders one row per result with a stacked line per version, counting groups (both phases)', () => {
+      load({ phase: '35,36' });
+
+      expect(bodyRows()).toHaveLength(2);
+      expect(count()).toBe('Showing 2 of 2 results.');
+      expect(component.filteredResults()).toHaveLength(3); // flat rows stay flat
+      expect(component.totalCount()).toBe(2);
+      expect(component.totalLoaded()).toBe(2);
+
+      // newest phase first; the phase label rides on the code line only when there is more than one version
+      const lines = cellLines(rowOf('9878'), 'result_code');
+      expect(lines).toHaveLength(2);
+      const tag = (line: HTMLElement) => line.querySelector('[data-testid="brl-version-phase"]') as HTMLElement;
+      // Short label (the year) as text; the full phase label rides on title and aria-label (CRK-T-4a).
+      expect(tag(lines[0]).textContent?.trim()).toBe('2026');
+      expect(tag(lines[1]).textContent?.trim()).toBe('2025');
+      expect(tag(lines[0]).getAttribute('title')).toBe('Reporting 2026 - P25');
+      expect(tag(lines[0]).getAttribute('aria-label')).toBe('Reporting 2026 - P25');
+      expect(tag(lines[1]).getAttribute('title')).toBe('Reporting 2025 - P25');
+      expect(cellLines(rowOf('9877'), 'result_code')[0].textContent).not.toContain('2026');
+    });
+
+    it('falls back to the full phase label when the phase year is unknown', () => {
+      load({ phase: '35,36' });
+      component.phases.set(component.phases().map(p => (Number(p.id) === 35 ? { ...p, phase_year: undefined as any } : p)));
+      fixture.detectChanges();
+
+      const tag = cellLines(rowOf('9878'), 'result_code')[1].querySelector('[data-testid="brl-version-phase"]') as HTMLElement;
+      // No year to show: the current (full) label is used, as text and as title.
+      expect(tag.textContent?.trim()).toBe('Phase - P25');
+      expect(tag.getAttribute('title')).toBe('Phase - P25');
+    });
+
+    it('groups after the filters run: only the 2026 phase leaves 9878 with a single, unlabelled line', () => {
+      load({ phase: '36' });
+
+      expect(bodyRows()).toHaveLength(2);
+      expect(count()).toBe('Showing 2 of 2 results.');
+      const lines = cellLines(rowOf('9878'), 'result_code');
+      expect(lines).toHaveLength(1);
+      expect(lines[0].textContent).not.toContain('2026');
+    });
+
+    it('opens the clicked version (the 2025 line opens version 35)', () => {
+      load({ phase: '35,36' });
+      const openSpy = jest.spyOn(component, 'openResult');
+
+      cellLines(rowOf('9878'), 'result_code')[1].click();
+
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy.mock.calls[0][0]).toEqual(expect.objectContaining({ result_code: '9878', version_id: 35 }));
+    });
+
+    it('every cell line is a target: the title line of 2026 opens version 36', () => {
+      load({ phase: '35,36' });
+      const openSpy = jest.spyOn(component, 'openResult');
+
+      cellLines(rowOf('9878'), 'title')[0].click();
+
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy.mock.calls[0][0]).toEqual(expect.objectContaining({ result_code: '9878', version_id: 36 }));
+    });
+
+    it('opens the version with Enter on the focusable line', () => {
+      load({ phase: '35,36' });
+      const openSpy = jest.spyOn(component, 'openResult');
+
+      const line = cellLines(rowOf('9878'), 'result_code')[1];
+      expect(line.getAttribute('tabindex')).toBe('0');
+      line.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy.mock.calls[0][0]).toEqual(expect.objectContaining({ result_code: '9878', version_id: 35 }));
+    });
+
+    it('shows "Previously reported" only on the replicated version line', () => {
+      load({ phase: '35,36' });
+
+      const badges = Array.from(fixture.nativeElement.querySelectorAll('.rc-badge-replicated')) as HTMLElement[];
+      expect(badges).toHaveLength(1);
+      expect(badges[0].textContent?.trim()).toBe('Previously reported');
+      const titleLines = cellLines(rowOf('9878'), 'title');
+      expect(titleLines[0].querySelector('.rc-badge-replicated')).toBeTruthy(); // 2026 copy
+      expect(titleLines[1].querySelector('.rc-badge-replicated')).toBeNull(); // 2025 original
+      expect(rowOf('9877').querySelector('.rc-badge-replicated')).toBeNull();
+    });
+
+    it.each([[1], ['1'], [true]])('treats is_replicated=%p as replicated', flag => {
+      load({ phase: '36' });
+      component.results.set([result({ id: 9, result_code: '1', version_id: 36, is_replicated: flag as any })]);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelectorAll('.rc-badge-replicated')).toHaveLength(1);
+    });
+
+    it('exports the flat filtered rows, not the groups', () => {
+      load({ phase: '35,36' });
+      (URL as any).createObjectURL = jest.fn().mockReturnValue('blob:mock');
+      (URL as any).revokeObjectURL = jest.fn();
+      const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      const cellTextSpy = jest.spyOn(component as any, 'cellText');
+
+      component.exportCsv();
+
+      expect(cellTextSpy.mock.calls.filter(([, attr]) => attr === 'result_code')).toHaveLength(3);
+      clickSpy.mockRestore();
+    });
+
+    it('sorts groups by the newest version value (CRK-R-4)', fakeAsync(() => {
+      load({ phase: '35,36' });
+      // The table-reset effect is scheduled on a microtask; drain it so it cannot wipe the sort below.
+      tick();
+      fixture.detectChanges();
+      const titleHeader = (
+        Array.from(fixture.nativeElement.querySelectorAll('th.rc-th--sortable')) as HTMLElement[]
+      ).find(th => th.textContent?.includes('Title'))!;
+
+      // Default sort: result_code desc.
+      expect(codesInOrder()).toEqual(['9878', '9877']);
+      // Title asc by the NEWEST title: "New title" (9878) < "Other result" (9877).
+      titleHeader.click();
+      fixture.detectChanges();
+      expect(codesInOrder()).toEqual(['9878', '9877']);
+      // Title desc.
+      titleHeader.click();
+      fixture.detectChanges();
+      expect(codesInOrder()).toEqual(['9877', '9878']);
+      }));
+
+    describe('row "⋯" menu: one trigger per version, each bound to its own version', () => {
+      const menuTriggers = (code: string): HTMLButtonElement[] =>
+        Array.from(rowOf(code).querySelectorAll('td.rc-td--action button[aria-haspopup="menu"]')) as HTMLButtonElement[];
+
+      it('renders one trigger per version, labelled by phase, and a single plain one for a single version', () => {
+        load({ phase: '35,36' });
+
+        const triggers = menuTriggers('9878');
+        expect(triggers).toHaveLength(2);
+        expect(triggers[0].getAttribute('aria-label')).toContain('2026');
+        expect(triggers[1].getAttribute('aria-label')).toContain('2025');
+        expect(menuTriggers('9877')).toHaveLength(1);
+        expect(menuTriggers('9877')[0].getAttribute('aria-label')).toBe('More actions');
+      });
+
+      it('opens the 2025 trigger and binds PDF, Copy link, Open and Delete to version 35', () => {
+        load({ phase: '35,36' });
+        const pdfSpy = jest.spyOn(component, 'pdfHref');
+        const copySpy = jest.spyOn(component, 'copyLink').mockImplementation(() => {});
+        const deleteSpy = jest.spyOn(component, 'deleteResult').mockImplementation(() => {});
+        const openSpy = jest.spyOn(component, 'openResult');
+
+        menuTriggers('9878')[1].click(); // the 2025 line
+        fixture.detectChanges();
+
+        expect(component.openMenuKey()).toBe('9878|35');
+        const menu = document.body.querySelector('.pr-row-menu') as HTMLElement;
+        expect(menu).toBeTruthy();
+        expect(document.body.querySelectorAll('.pr-row-menu')).toHaveLength(1);
+
+        // Every pdfHref the open menu rendered is for version 35 (the 2026 menu is not rendered).
+        expect(pdfSpy.mock.calls.length).toBeGreaterThan(0);
+        for (const [arg] of pdfSpy.mock.calls) expect(arg).toEqual(expect.objectContaining({ result_code: '9878', version_id: 35 }));
+        expect((menu.querySelector('a[role="menuitem"]') as HTMLAnchorElement).getAttribute('href')).toBe(
+          '/reports/result-details/9878?phase=35',
+        );
+
+        const item = (label: string) =>
+          (Array.from(menu.querySelectorAll('[role="menuitem"]')) as HTMLElement[]).find(el =>
+            (el.textContent ?? '').includes(label),
+          )!;
+        item('Copy link').click();
+        expect(copySpy).toHaveBeenLastCalledWith(expect.objectContaining({ result_code: '9878', version_id: 35 }));
+
+        // Re-open (copyLink was mocked and did not close it) and exercise Delete / Open.
+        component.openMenuKey.set('9878|35');
+        fixture.detectChanges();
+        const menu2 = document.body.querySelector('.pr-row-menu') as HTMLElement;
+        (Array.from(menu2.querySelectorAll('[role="menuitem"]')) as HTMLElement[]).find(el => (el.textContent ?? '').includes('Delete'))!.click();
+        expect(deleteSpy).toHaveBeenLastCalledWith(expect.objectContaining({ result_code: '9878', version_id: 35 }));
+
+        component.openMenuKey.set('9878|35');
+        fixture.detectChanges();
+        (Array.from((document.body.querySelector('.pr-row-menu') as HTMLElement).querySelectorAll('[role="menuitem"]')) as HTMLElement[])
+          .find(el => (el.textContent ?? '').includes('Open result'))!.click();
+        expect(openSpy).toHaveBeenLastCalledWith(expect.objectContaining({ result_code: '9878', version_id: 35 }));
+      });
+
+      it('opens the 2026 trigger bound to version 36 and not to the 2025 one', () => {
+        load({ phase: '35,36' });
+
+        menuTriggers('9878')[0].click();
+        fixture.detectChanges();
+
+        expect(component.openMenuKey()).toBe('9878|36');
+        expect((document.body.querySelector('.pr-row-menu a[role="menuitem"]') as HTMLAnchorElement).getAttribute('href')).toBe(
+          '/reports/result-details/9878?phase=36',
+        );
+      });
+    });
+
+    it('Enter on the history trigger does not open the result; its click opens the justification of that version', () => {
+      load({ phase: '35,36' });
+      component.results.set([
+        result({ id: 6, result_code: '9878', version_id: 36, status_id: 7, status_name: 'Rejected' }),
+        result({ id: 5, result_code: '9878', version_id: 35, status_id: 1, status_name: 'Editing' }),
+      ]);
+      fixture.detectChanges();
+      bilateralApiService.GET_bilateralReviewHistory = jest.fn().mockReturnValue(of({ response: [] }));
+      const openSpy = jest.spyOn(component, 'openResult');
+      const justificationSpy = jest.spyOn(component, 'openJustification');
+
+      const trigger = fixture.nativeElement.querySelector('[data-testid="brl-history-trigger"]') as HTMLButtonElement;
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(openSpy).not.toHaveBeenCalled();
+
+      trigger.click(); // the browser's Enter-on-button activation
+      expect(justificationSpy).toHaveBeenCalledWith(expect.objectContaining({ result_code: '9878', version_id: 36 }));
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('makes the badge tooltip text reachable for assistive tech', () => {
+      load({ phase: '35,36' });
+
+      const badge = fixture.nativeElement.querySelector('.rc-badge-replicated') as HTMLElement;
+      expect(badge.getAttribute('aria-label')).toBe('Previously reported in an earlier phase');
+      expect(badge.textContent?.trim()).toBe('Previously reported');
+    });
+
+    it('highlights the group containing the focused ?result= code', () => {
+      load({ phase: '35,36', result: '9878' });
+
+      expect(rowOf('9878').classList.contains('rc-row--focused')).toBe(true);
+      expect(rowOf('9877').classList.contains('rc-row--focused')).toBe(false);
+    });
+  });
+  /**
+   * @akili-spec changes/center-results-kpi-chips (CRK-T-5, CRK-R-3, CRK-DD-5) — Indicator category
+   * multiselect: options from the loaded rows, bound to the existing `type` URL contract.
+   */
+  describe('CRK — Indicator category filter', () => {
+    const typed = (id: number, code: string, typeId: number | undefined, typeName: string) =>
+      result({ id, result_code: code, result_type_id: typeId, result_type: typeName });
+
+    const loadRows = (params: Params = {}) => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(
+        of({
+          response: [
+            typed(1, '1001', 6, 'Knowledge product'),
+            typed(2, '1002', 2, 'Innovation use'),
+            typed(3, '1003', 2, 'Innovation use'),
+          ],
+        }),
+      );
+      recreateOn(params);
+    };
+
+    const bodyCodes = (): string[] =>
+      (Array.from(fixture.nativeElement.querySelectorAll('tr.rc-row:not(.rc-row--skeleton) .rc-code')) as HTMLElement[])
+        .map(el => (el.textContent ?? '').trim())
+        .sort();
+
+    it('lists the distinct result types of the loaded rows, sorted by label', () => {
+      loadRows();
+
+      expect(component.categorySelectOptions()).toEqual([
+        { value: 2, label: 'Innovation use' },
+        { value: 6, label: 'Knowledge product' },
+      ]);
+    });
+
+    it('ignores rows without a result_type_id when building options', () => {
+      loadRows();
+      component.results.set([typed(1, '1', undefined, 'Mystery'), typed(2, '2', 2, 'Innovation use')]);
+
+      expect(component.categorySelectOptions().map(o => o.value)).toEqual([2]);
+    });
+
+    it('renders the Indicator category multiselect right after Created by', () => {
+      loadRows();
+      component.filterPopoverOpen.set(true);
+      fixture.detectChanges();
+
+      const popover = fixture.nativeElement.querySelector('div[role="dialog"][aria-label="Result filters"]');
+      const labels = Array.from(popover.querySelectorAll('.brl_filter_group_label')).map(
+        (el: any) => (el.textContent ?? '').trim(),
+      );
+      expect(labels.slice(labels.indexOf('Created by'))).toEqual(['Created by', 'Indicator category', 'Center role']);
+      expect(popover.querySelector('.brl-filter-field[aria-label="Filter by indicator category"] app-pr-filter-multiselect')).toBeTruthy();
+    });
+
+    it('filters to the selected category, adds the chip, counts in the badge and writes type= to the URL', fakeAsync(() => {
+      loadRows();
+      const badgeBefore = component.activeFilterBadgeCount();
+
+      component.onTypeFilterChange([2]);
+      tick();
+      fixture.detectChanges();
+
+      expect(bodyCodes()).toEqual(['1002', '1003']);
+      expect(component.activeChips().some(c => c.dimension === 'type' && c.label === 'Category: Innovation use')).toBe(true);
+      expect(chipTexts().some(text => text.includes('Category: Innovation use'))).toBe(true);
+      expect(component.activeFilterBadgeCount()).toBe(badgeBefore + 1);
+      expect(queryParams$.value['type']).toBe('2');
+    }));
+
+    it('restores the selection after a reload with type=2', () => {
+      loadRows({ type: '2' });
+
+      expect(component.typeFilter()).toEqual([2]);
+      expect(bodyCodes()).toEqual(['1002', '1003']);
+      expect(component.categorySelectOptions().map(o => o.value)).toContain(2);
+    });
+
+    it('keeps a URL type id absent from the rows as a selected "Type <id>" option and shows the filtered-empty state', () => {
+      loadRows({ type: '99' });
+
+      expect(component.typeFilter()).toEqual([99]);
+      expect(component.categorySelectOptions()).toContainEqual({ value: 99, label: 'Type 99' });
+      expect(component.activeChips().some(c => c.label === 'Category: Type 99')).toBe(true);
+      expect(component.isFilteredEmpty()).toBe(true);
+      expect(fixture.nativeElement.querySelector('[data-testid="bilateral-results-filtered-empty"]')).toBeTruthy();
+    });
+
+    it('removing the chip clears the category and the URL param', fakeAsync(() => {
+      loadRows({ type: '2' });
+
+      chipRemoveButton('Category: Innovation use')!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.typeFilter()).toEqual([]);
+      expect(chipTexts().some(text => text.includes('Category:'))).toBe(false);
+      expect('type' in queryParams$.value).toBe(false);
+      expect(bodyCodes()).toEqual(['1001', '1002', '1003']);
+    }));
+
+    it('"Clear all" clears the category', fakeAsync(() => {
+      loadRows({ type: '2' });
+
+      component.clearAllFilters();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.typeFilter()).toEqual([]);
+      expect(component.activeChips().some(c => c.dimension === 'type')).toBe(false);
+      expect('type' in queryParams$.value).toBe(false);
+    }));
+
+    it('normalizes the emitted ids to unique positive numbers', () => {
+      loadRows();
+
+      component.onTypeFilterChange([2, '2' as any, 0, -1, 'x' as any, 6]);
+
+      expect(component.typeFilter()).toEqual([2, 6]);
     });
   });
 });

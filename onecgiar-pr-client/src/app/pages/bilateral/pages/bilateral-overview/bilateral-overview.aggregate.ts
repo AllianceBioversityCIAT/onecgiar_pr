@@ -4,6 +4,7 @@ import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { STATUS_KEY_TO_ID } from '../../bilateral-query-params';
+import { isUpdatedNoProjectRow } from '../../bilateral-result-filter';
 
 /**
  * Pure aggregation module for the Center Overview tab (`COV-DD-1`): every card figure is derived
@@ -93,41 +94,44 @@ function isActiveDraft(draft: BilateralAiDraft): boolean {
 // Overview categories (INC-165171) — every card splits its figure by these, from one row set
 // ---------------------------------------------------------------------------
 
-/** Display order of the categories, the same order the server resolves them in. */
-export const OVERVIEW_CATEGORIES: readonly OverviewCategory[] = [
-  'replicated_w3',
-  'replicated_w1w2',
-  'new_w3',
-  'w1w2_tagging',
-  'w1w2_center_only',
-];
+/**
+ * `CWS-R-3` — the three categories the Overview DISPLAYS, in order. The Overview asks the server for
+ * `scope=bilateral`, so these are the only categories that ever arrive (the server is the filter,
+ * `CWS-R-7`): this list drives what is shown and never drops a row on the client. The wire type
+ * `OverviewCategory` keeps all five values the unscoped endpoint can return.
+ */
+export const OVERVIEW_CATEGORIES = ['replicated_w3', 'new_w3', 'w1w2_tagging'] as const satisfies readonly OverviewCategory[];
 
-export type OverviewCategoryCounts = Record<OverviewCategory, number>;
+export type OverviewDisplayCategory = (typeof OVERVIEW_CATEGORIES)[number];
+
+export type OverviewCategoryCounts = Record<OverviewDisplayCategory, number>;
 
 function emptyCategoryCounts(): OverviewCategoryCounts {
-  return { replicated_w3: 0, replicated_w1w2: 0, new_w3: 0, w1w2_tagging: 0, w1w2_center_only: 0 };
+  return { replicated_w3: 0, new_w3: 0, w1w2_tagging: 0 };
 }
 
 /**
  * The row's `overview_category` as the server resolved it. A row without it (older payload,
- * fixture) is classified with the same precedence; a W1/W2 row is "tagging" when the center is not
- * on it (`is_leading_result` null), the only signal the client has without the project owners.
+ * fixture) is classified from what the row carries: replicated W3, then new W3. Any W1/W2 row is
+ * "tagging", because the scoped server only sends W1/W2 rows that tag a center project.
  */
 export function resolveOverviewCategory(row: BilateralCenterResult): OverviewCategory {
-  if (row.overview_category && OVERVIEW_CATEGORIES.includes(row.overview_category)) return row.overview_category;
-  const isW3 = row.source === 'API';
-  if (Number(row.is_replicated) === 1) return isW3 ? 'replicated_w3' : 'replicated_w1w2';
-  if (isW3) return 'new_w3';
-  return row.is_leading_result === null || row.is_leading_result === undefined ? 'w1w2_tagging' : 'w1w2_center_only';
+  if (row.overview_category) return row.overview_category;
+  if (row.source === 'API') return Number(row.is_replicated) === 1 ? 'replicated_w3' : 'new_w3';
+  return 'w1w2_tagging';
 }
 
+/** `CWS-R-4` — a status tile counts `replicated_w3` as replicated and every other row as new. */
 export function isReplicatedCategory(category: OverviewCategory): boolean {
-  return category === 'replicated_w3' || category === 'replicated_w1w2';
+  return category === 'replicated_w3';
 }
 
 function countCategories(rows: readonly BilateralCenterResult[]): OverviewCategoryCounts {
   const counts = emptyCategoryCounts();
-  for (const row of rows) counts[resolveOverviewCategory(row)]++;
+  for (const row of rows) {
+    const category = resolveOverviewCategory(row);
+    if (category in counts) counts[category as OverviewDisplayCategory]++;
+  }
   return counts;
 }
 
@@ -162,7 +166,7 @@ export interface OverviewTotalResultsKpi {
    * lives on the number it explains).
    */
   w1w2LeadCount: number;
-  /** INC-165171 — the Total results card breakdown; the five counts add up to `count`. */
+  /** INC-165171 — the Total results card breakdown; the three counts add up to `count` when the server scope is applied. */
   categories: OverviewCategoryCounts;
 }
 
@@ -181,12 +185,13 @@ export interface OverviewApprovedKpi {
 }
 
 export interface OverviewProjectsCoveredKpi {
+  /** `CWS-R-5` — projects of the center with at least one NEW scoped row (`new_w3` or `w1w2_tagging`). */
   coveredCount: number;
   totalCount: number;
+  /** Projects with no new result yet, `totalCount - coveredCount` (replicated-only ones included). */
   notStartedCount: number;
-  /** INC-165171 — covered projects with at least one result that is not replicated. */
-  coveredWithNewCount: number;
-  /** INC-165171 — covered projects whose every result is replicated. */
+  /** `CWS-R-5` — projects of the center whose every scoped row is replicated: not covered, but
+   *  they already carry a bar, so the card says so. */
   coveredOnlyReplicatedCount: number;
 }
 
@@ -259,21 +264,28 @@ export function buildApprovedKpi(rows: readonly BilateralCenterResult[]): Overvi
 interface ProjectRollup {
   perProject: Map<number, { replicated: number; new: number; total: number }>;
   /** Rows with no linked project, by overview category. */
-  noProject: { total: number; categories: OverviewCategoryCounts; allW1W2: boolean } | null;
+  noProject: { total: number; categories: OverviewCategoryCounts } | null;
+  /** CNP-R-1: updated replicated innovations with no project — their own bucket, never in `noProject`. */
+  updatedNoProject: number;
 }
 
 function rollupByProject(rows: readonly BilateralCenterResult[]): ProjectRollup {
   const perProject = new Map<number, { replicated: number; new: number; total: number }>();
   const noCategories = emptyCategoryCounts();
   let noTotal = 0;
-  let noNonW1w2 = 0;
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-2, CNP-R-1, CNP-R-4, CNP-DD-4)
+  let updatedNoProject = 0;
 
   for (const row of rows) {
+    // Counted BEFORE the null-project branch so the generic line excludes these rows by construction.
+    if (isUpdatedNoProjectRow(row)) {
+      updatedNoProject++;
+      continue;
+    }
     const category = resolveOverviewCategory(row);
     if (row.project_id === null || row.project_id === undefined) {
       noTotal++;
-      noCategories[category]++;
-      if (row.source !== 'Result') noNonW1w2++;
+      if (category in noCategories) noCategories[category as OverviewDisplayCategory]++;
       continue;
     }
     const projectId = Number(row.project_id);
@@ -286,7 +298,8 @@ function rollupByProject(rows: readonly BilateralCenterResult[]): ProjectRollup 
 
   return {
     perProject,
-    noProject: noTotal > 0 ? { total: noTotal, categories: noCategories, allW1W2: noNonW1w2 === 0 } : null,
+    noProject: noTotal > 0 ? { total: noTotal, categories: noCategories } : null,
+    updatedNoProject,
   };
 }
 
@@ -297,19 +310,18 @@ export function buildProjectsCoveredKpi(
   const { perProject } = rollupByProject(rows);
   const scopeIds = new Set(projects.map(p => Number(p.id)));
   let coveredCount = 0;
-  let coveredWithNewCount = 0;
+  let coveredOnlyReplicatedCount = 0;
   for (const [projectId, agg] of perProject.entries()) {
     if (!scopeIds.has(projectId)) continue;
-    coveredCount++;
-    if (agg.new > 0) coveredWithNewCount++;
+    if (agg.new > 0) coveredCount++;
+    else coveredOnlyReplicatedCount++;
   }
   const totalCount = projects.length;
   return {
     coveredCount,
     totalCount,
     notStartedCount: Math.max(totalCount - coveredCount, 0),
-    coveredWithNewCount,
-    coveredOnlyReplicatedCount: coveredCount - coveredWithNewCount,
+    coveredOnlyReplicatedCount,
   };
 }
 
@@ -454,19 +466,19 @@ export interface OverviewProjectBar {
 export interface OverviewNoProjectRow {
   total: number;
   categories: OverviewCategoryCounts;
-  /** `true` iff every no-project row is a W1/W2 row (`source === 'Result'`) — decides whether the
-   *  card's link carries `source=w1w2` or no project param at all (`COV-R-9` Scenario C). */
-  allW1W2: boolean;
 }
 
 export interface OverviewByProjectModel {
   /** One entry per project with ≥1 result in scope, sorted by total desc (ties by `projectId`
    *  asc for a stable order) — full list; slicing to "top 7 + Show n more" is a render concern. */
   bars: OverviewProjectBar[];
-  /** Projects in scope with zero results. */
+  /** `CWS-R-5` B — projects in scope with no NEW result (replicated-only ones included): the same
+   *  rule as `buildProjectsCoveredKpi`, so the strip and the card always agree. */
   notStartedProjectIds: number[];
   /** `null` when no row has a null `project_id`. */
   noProjectRow: OverviewNoProjectRow | null;
+  /** CNP-R-1: replicated W3 innovation rows with no project (see `isUpdatedNoProjectRow`); not in `noProjectRow`. */
+  updatedNoProjectCount: number;
   coveredCount: number;
   totalProjectsInScope: number;
   /** Rows whose `project_id` is set but matches no project in the passed-in scope — dropped from
@@ -479,7 +491,7 @@ export function buildByProjectModel(
   rows: readonly BilateralCenterResult[],
   projects: readonly BilateralProject[],
 ): OverviewByProjectModel {
-  const { perProject, noProject } = rollupByProject(rows);
+  const { perProject, noProject, updatedNoProject } = rollupByProject(rows);
   const scopeProjectIds = projects.map(p => Number(p.id));
   const scopeIdSet = new Set(scopeProjectIds);
 
@@ -497,14 +509,15 @@ export function buildByProjectModel(
   }
   bars.sort((a, b) => b.total - a.total || a.projectId - b.projectId);
 
-  const coveredIds = new Set(bars.map(bar => bar.projectId));
+  const coveredIds = new Set(bars.filter(bar => bar.newCount > 0).map(bar => bar.projectId));
   const notStartedProjectIds = scopeProjectIds.filter(id => !coveredIds.has(id));
 
   return {
     bars,
     notStartedProjectIds,
     noProjectRow: noProject,
-    coveredCount: bars.length,
+    updatedNoProjectCount: updatedNoProject,
+    coveredCount: coveredIds.size,
     totalProjectsInScope: projects.length,
     unmatchedProjectRows,
   };

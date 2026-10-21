@@ -46,13 +46,13 @@ import { filterCenterResults } from '../../bilateral-result-filter';
 import {
   OVERVIEW_CATEGORIES,
   OverviewAttentionRow,
+  OverviewDisplayCategory,
   OverviewModel,
   OverviewProjectBar,
   OverviewStatusTile,
   PENDING_AGE_DAYS,
   buildOverviewModel,
 } from './bilateral-overview.aggregate';
-import { OverviewCategory } from '../../services/bilateral-center-result.interface';
 import {
   NO_PROJECT_CATEGORY_LABEL,
   OVERVIEW_PROJECT_BAR_LIMIT,
@@ -108,6 +108,8 @@ function emptyParams(): BilateralQueryParams {
     search: '',
     createdBy: [],
     multi: false,
+    scope: null,
+    group: null,
   };
 }
 
@@ -123,26 +125,19 @@ function phaseVersionId(phase: Phases): number {
 }
 
 /**
- * INC-165171 — label and tooltip of each overview category, in the Total results card and the
- * by-project "not linked" line. Every result sits in exactly one, so the rows add up to the total.
+ * `CWS-R-3` — label and tooltip of each of the three overview categories, in the Total results
+ * card and the by-project "not linked" line. The scoped server sends only these three, so the lines
+ * add up to the headline.
  */
-const OVERVIEW_CATEGORY_COPY: Record<OverviewCategory, { label: string; hint: string }> = {
+const OVERVIEW_CATEGORY_COPY: Record<OverviewDisplayCategory, { label: string; hint: string }> = {
   replicated_w3: {
-    label: 'Replicated W3/Bilateral innovations',
+    label: 'Replicated W3/bilateral innovations',
     hint: 'W3/Bilateral innovations replicated from the previous phase for update',
   },
-  replicated_w1w2: {
-    label: 'Replicated W1/W2 innovations with the Center',
-    hint: 'W1/W2 innovations replicated from the previous phase where this center is lead or contributing',
-  },
-  new_w3: { label: 'New W3/Bilateral results', hint: 'W3/Bilateral results of this center reported in this phase' },
+  new_w3: { label: 'New W3/bilateral results in this phase', hint: 'W3/Bilateral results of this center reported in this phase' },
   w1w2_tagging: {
-    label: 'W1/W2 results tagging a Center bilateral project',
+    label: 'W1/W2 results tagging a Center project',
     hint: 'New W1/W2 results that tag a bilateral project of this center',
-  },
-  w1w2_center_only: {
-    label: 'W1/W2 results with the Center, no Center project',
-    hint: 'New W1/W2 results where this center is lead or contributing, with no bilateral project of the center',
   },
 };
 
@@ -251,6 +246,18 @@ export class BilateralOverviewComponent implements OnInit {
       if (match) return match;
     }
     return phases.find(phase => phase.status) ?? phases[0] ?? null;
+  });
+
+  /**
+   * @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-R-5)
+   * Label of the updated-no-project line: names the years from the selected phase, generic when the
+   * phase year is unknown.
+   */
+  readonly updatedNoProjectLabel = computed<string>(() => {
+    const year = Number(this.selectedPhase()?.phase_year);
+    return Number.isFinite(year) && year > 0
+      ? `Updated ${year - 1} innovations with no ${year} project`
+      : 'Updated innovations with no project in this phase';
   });
 
   readonly effectiveVersionId = computed<number | null>(() => {
@@ -440,10 +447,26 @@ export class BilateralOverviewComponent implements OnInit {
    * `explicitDefaults: true` (so the Results tab does not layer its W3 + Lead default on top of an
    * Overview figure that counted both) and ALWAYS carries `phase` = the effective version id, even
    * when the Overview's own URL has no `?phase=`.
+   *
+   * `CWS-DD-5` — this one is for the Reporting and Draft Results tabs, which do not read `scope`:
+   * it never carries one, not even a `?scope=` the Overview's own URL happens to have. Links into
+   * Results go through `resultsLinkParams`.
    */
   deepLinkParams(dimension: Partial<BilateralQueryParams> = {}): Params {
     return serializeBilateralQueryParams(
-      { ...this.params(), ...dimension, phase: this.effectiveVersionId() },
+      // CNP-T-3 — Reporting and Draft tabs never read `group`, so it is never emitted here.
+      { ...this.params(), ...dimension, phase: this.effectiveVersionId(), scope: null, group: null },
+      { explicitDefaults: true },
+    );
+  }
+
+  /**
+   * `CWS-R-8` — a link into the Results tab: the same params plus `scope: 'bilateral'`, so the tab
+   * fetches the row set every Overview figure was counted from and its visible count equals the figure.
+   */
+  resultsLinkParams(dimension: Partial<BilateralQueryParams> = {}): Params {
+    return serializeBilateralQueryParams(
+      { ...this.params(), ...dimension, phase: this.effectiveVersionId(), scope: 'bilateral' },
       { explicitDefaults: true },
     );
   }
@@ -451,14 +474,14 @@ export class BilateralOverviewComponent implements OnInit {
   /** `COV-R-7` — every tile is one contract status key (P2-3863 removed the two-key `Submitted / QA`). */
   statusTileLinkParams(tile: OverviewStatusTile): Params {
     const status: StatusKey[] = [tile.key];
-    return this.deepLinkParams({ status });
+    return this.resultsLinkParams({ status });
   }
 
-  /** `COV-R-8` — the AI-drafts row opens Draft Results; the other three open Results. */
+  /** `COV-R-8` — the AI-drafts row opens Draft Results (no scope); the other three open Results. */
   attentionRowLinkParams(row: OverviewAttentionRow): Params {
     if (row.key === 'aiDrafts') return this.deepLinkParams();
     const status: StatusKey[] = row.key === 'editing' ? ['editing'] : row.key === 'rejected' ? ['rejected'] : ['pending'];
-    return this.deepLinkParams({ status });
+    return this.resultsLinkParams({ status });
   }
 
   constructor() {
@@ -555,7 +578,10 @@ export class BilateralOverviewComponent implements OnInit {
 
   private applyUrlParams(map: ParamMap): void {
     const parsed = parseBilateralQueryParams(map);
-    this.params.set(parsed.params);
+    // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-DD-3)
+    // `group` belongs to the Results tab: a pasted `?group=` must never narrow an Overview card,
+    // or the line that links to it would equal the Total.
+    this.params.set({ ...parsed.params, group: null });
 
     if (parsed.params.phase !== null && parsed.params.phase !== this.ctx.selectedVersionId()) {
       this.ctx.selectedVersionId.set(parsed.params.phase);
@@ -641,7 +667,7 @@ export class BilateralOverviewComponent implements OnInit {
   // ── Chart clicks (COV-R-9 A, COV-R-10, COV-R-11) ─────────────────────────────────────────
 
   onResultsChartClick(event: ECElementEvent): void {
-    this.navigateFromChart(event, this.resultsLink());
+    this.navigateFromChart(event, this.resultsLink(), true);
   }
 
   /**
@@ -650,12 +676,14 @@ export class BilateralOverviewComponent implements OnInit {
    */
   onSpChartClick(event: ECElementEvent): void {
     const toReporting = typeof event.seriesId === 'string' && event.seriesId.endsWith(':projects');
-    this.navigateFromChart(event, toReporting ? this.reportingLink() : this.resultsLink());
+    this.navigateFromChart(event, toReporting ? this.reportingLink() : this.resultsLink(), !toReporting);
   }
 
-  private navigateFromChart(event: ECElementEvent, commands: unknown[]): void {
+  /** `CWS-R-8` — only a click that lands on the Results tab carries the scope. */
+  private navigateFromChart(event: ECElementEvent, commands: unknown[], toResults: boolean): void {
     const dimension = resolveChartClick(event, this.model(), this.chartOptions());
     if (!dimension) return;
-    void this.router.navigate(commands as string[], { queryParams: this.deepLinkParams(dimension) });
+    const queryParams = toResults ? this.resultsLinkParams(dimension) : this.deepLinkParams(dimension);
+    void this.router.navigate(commands as string[], { queryParams });
   }
 }

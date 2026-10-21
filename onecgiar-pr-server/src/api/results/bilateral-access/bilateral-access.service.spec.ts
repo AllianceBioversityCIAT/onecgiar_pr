@@ -4,6 +4,7 @@ import { BilateralAccessService } from './bilateral-access.service';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { ResultsTocResultRepository } from '../results-toc-results/repositories/results-toc-results.repository';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -66,9 +67,17 @@ describe('BilateralAccessService', () => {
     Pick<ResultsTocResultRepository, 'find'>
   >;
 
+  let resultsCenterRepository: { getAllResultsCenterByResultId: jest.Mock };
+
   beforeEach(async () => {
+    // P2-3999 — no lead center by default, so every pre-existing case keeps its old (status-only)
+    // meaning; the lead-center cases below prime a lead center explicitly.
+    resultsCenterRepository = {
+      getAllResultsCenterByResultId: jest.fn().mockResolvedValue([]),
+    };
     roleByUserRepository = {
       isUserAdmin: jest.fn(),
+      validationCenterPermissions: jest.fn().mockResolvedValue(0),
       hasActiveRoleOnInitiative: jest.fn(),
       hasActiveRoleOnAnyInitiativeLinkedToResult: jest.fn(),
     } as any;
@@ -93,6 +102,10 @@ describe('BilateralAccessService', () => {
         {
           provide: ResultsTocResultRepository,
           useValue: resultsTocResultRepository,
+        },
+        {
+          provide: ResultsCenterRepository,
+          useValue: resultsCenterRepository,
         },
       ],
     }).compile();
@@ -176,6 +189,86 @@ describe('BilateralAccessService', () => {
           service.assertCenterWrite(result, ENDPOINT, user),
         ).rejects.toThrow(ForbiddenException);
       }
+    });
+  });
+
+  // P2-3999 — Cami, prtest 21-Oct-2026: an IFPRI Center account got 200 from `general-info` and
+  // geography on CIP's #8398 by sending the request directly (the form was read-only, the server
+  // was not). The lead-center rule now lives in `assertCenterWrite`.
+  describe('assertCenterWrite — lead center (P2-3999)', () => {
+    const CIP = { code: 'CENTER-06', is_leading_result: 1 };
+    const IFPRI = { code: 'CENTER-10', is_leading_result: 0 };
+
+    beforeEach(() => {
+      roleByUserRepository.isUserAdmin.mockResolvedValue(false);
+      resultsCenterRepository.getAllResultsCenterByResultId.mockResolvedValue([
+        IFPRI,
+        CIP,
+      ]);
+    });
+
+    it('refuses a user who is not a Center User of the lead center, at any status', async () => {
+      (
+        roleByUserRepository as any
+      ).validationCenterPermissions.mockResolvedValue(0);
+      for (const status of [1, 8]) {
+        await expect(
+          service.assertCenterWrite(
+            { id: RESULT_ID, status_id: status },
+            ENDPOINT,
+            {
+              id: 906,
+            } as TokenDto,
+          ),
+        ).rejects.toThrow(ForbiddenException);
+      }
+      expect(
+        (roleByUserRepository as any).validationCenterPermissions,
+      ).toHaveBeenCalledWith(906, 'CENTER-06');
+    });
+
+    it('lets a Center User of the lead center write outside Pending Review', async () => {
+      (
+        roleByUserRepository as any
+      ).validationCenterPermissions.mockResolvedValue(1);
+      await expect(
+        service.assertCenterWrite({ id: RESULT_ID, status_id: 1 }, ENDPOINT, {
+          id: 906,
+        } as TokenDto),
+      ).resolves.toBeUndefined();
+    });
+
+    it('still refuses the lead-center user at Pending Review', async () => {
+      (
+        roleByUserRepository as any
+      ).validationCenterPermissions.mockResolvedValue(1);
+      await expect(
+        service.assertCenterWrite(
+          { id: RESULT_ID, status_id: ResultStatusData.PendingReview.value },
+          ENDPOINT,
+          { id: 906 } as TokenDto,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('lets an admin through without reading the centers', async () => {
+      roleByUserRepository.isUserAdmin.mockResolvedValue(true);
+      await expect(
+        service.assertCenterWrite({ id: RESULT_ID, status_id: 1 }, ENDPOINT, {
+          id: 2,
+        } as TokenDto),
+      ).resolves.toBeUndefined();
+      expect(
+        resultsCenterRepository.getAllResultsCenterByResultId,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('names the lead-center rule in the 403 body', async () => {
+      await expect(
+        service.assertCenterWrite({ id: RESULT_ID, status_id: 1 }, ENDPOINT, {
+          id: 906,
+        } as TokenDto),
+      ).rejects.toThrow(/only a Center User of the lead center can/);
     });
   });
 

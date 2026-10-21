@@ -220,6 +220,14 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       expect(OVERVIEW_PROJECT_BAR_LIMIT).toBe(7);
     });
 
+    // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-2, CNP-R-5)
+    it('summary states the updated-no-project count when > 0 and omits it at 0', () => {
+      const withBucket = byProjectTable({ ...model.byProject, updatedNoProjectCount: 24 });
+      expect(withBucket.summary).toContain('24 updated innovations have no project in this phase.');
+      const without = byProjectTable({ ...model.byProject, updatedNoProjectCount: 0 });
+      expect(without.summary).not.toContain('updated innovations have no project');
+    });
+
     it('uses the supplied project labels for the axis', () => {
       const option = byProjectOption(model.byProject, TOKENS, {
         projectLabels: new Map([[100, 'A-AG10173']]),

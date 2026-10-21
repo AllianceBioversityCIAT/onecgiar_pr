@@ -655,6 +655,137 @@ describe('AoWBilateralRepository', () => {
     });
   });
 
+  /**
+   * @akili-spec changes/center-results-kpi-chips CRK-T-1 (CRK-R-5, CRK-DD-0).
+   * Other output / Other outcome KPIs carry `type_value = 'custom'` and only their `type_name`
+   * says which they are, so the pattern branches on `type_value` never matched them and the
+   * category chips read 0. The two new branches live in BOTH CASE copies of the select (the id and
+   * the name subselect) and must never out-rank a specific type pattern.
+   */
+  describe('CRK-R-5 — Other output / Other outcome KPIs are categorised', () => {
+    const squash = (sql: string) => sql.replaceAll(/\s+/g, ' ');
+
+    const buildQuery = (options: any = {}) =>
+      squash(
+        (repository as any).buildTocQuery('SP12', {
+          context: defaultContext,
+          ...options,
+        }).query,
+      );
+
+    // The two CASE copies, sliced between their own markers so one cannot satisfy the other.
+    const idCase = (query: string) =>
+      query.slice(
+        query.indexOf('CASE WHEN tri.type_value LIKE'),
+        query.indexOf('END AS result_type_id'),
+      );
+    const nameCase = (query: string) =>
+      query.slice(
+        query.indexOf('WHERE rt.id = CASE'),
+        query.indexOf(') AS result_type_name'),
+      );
+
+    const OTHER_OUTPUT_BRANCH =
+      "WHEN tri.type_value = 'custom' AND LOWER(TRIM(tri.type_name)) LIKE 'other output%' THEN 8";
+    const OTHER_OUTCOME_BRANCH =
+      "WHEN tri.type_value = 'custom' AND LOWER(TRIM(tri.type_name)) LIKE 'other outcome%' THEN 4";
+    const LAST_SPECIFIC_BRANCH =
+      "WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7";
+
+    it.each([
+      ['result_type_id CASE', idCase],
+      ['result_type_name subselect CASE', nameCase],
+    ])(
+      '%s carries both custom branches, after the specific ones and before ELSE NULL',
+      (_label, slice) => {
+        const copy = slice(buildQuery());
+
+        expect(copy).toContain(OTHER_OUTPUT_BRANCH);
+        expect(copy).toContain(OTHER_OUTCOME_BRANCH);
+
+        const specific = copy.indexOf(LAST_SPECIFIC_BRANCH);
+        const output = copy.indexOf(OTHER_OUTPUT_BRANCH);
+        const outcome = copy.indexOf(OTHER_OUTCOME_BRANCH);
+        const elseNull = copy.indexOf('ELSE NULL');
+
+        expect(specific).toBeGreaterThan(-1);
+        expect(output).toBeGreaterThan(specific);
+        expect(outcome).toBeGreaterThan(output);
+        expect(elseNull).toBeGreaterThan(outcome);
+      },
+    );
+
+    it('never lets a custom branch precede any specific LIKE branch (a specific type always wins)', () => {
+      const query = buildQuery();
+      for (const copy of [idCase(query), nameCase(query)]) {
+        const firstCustom = copy.indexOf("tri.type_value = 'custom'");
+        expect(firstCustom).toBeGreaterThan(-1);
+        const specificLikes = [
+          'Number of Policy',
+          'Innovation Use',
+          'Number of people trained',
+          'Number of knowledge products',
+          'Number of innovations (innovation development)',
+        ].map((fragment) => copy.indexOf(fragment));
+
+        for (const position of specificLikes) {
+          expect(position).toBeGreaterThan(-1);
+          expect(position).toBeLessThan(firstCustom);
+        }
+      }
+    });
+
+    it('requires type_value = custom, so a free label such as "other" is not categorised', () => {
+      const query = buildQuery();
+      for (const copy of [idCase(query), nameCase(query)]) {
+        // Every custom-name branch is guarded by the type_value test; no bare name match exists.
+        expect(copy.match(/LIKE 'other (output|outcome)%'/g)).toHaveLength(2);
+        expect(
+          copy.match(/type_value = 'custom' AND LOWER\(TRIM\(/g),
+        ).toHaveLength(2);
+        expect(copy).not.toContain("LIKE 'other%'");
+        expect(copy).not.toContain("LIKE '%other");
+      }
+    });
+
+    it('resolves the name through result_type, so ids 8 / 4 give "Other output" / "Other outcome"', () => {
+      const query = buildQuery();
+
+      expect(query).toContain(
+        'FROM main_test.result_type rt WHERE rt.id = CASE',
+      );
+      expect(nameCase(query)).toContain("LIKE 'other output%' THEN 8");
+      expect(nameCase(query)).toContain("LIKE 'other outcome%' THEN 4");
+    });
+
+    it.each([
+      [
+        'findIntermediateOutcomes',
+        (r: any) => r.findIntermediateOutcomes('SP12', defaultContext),
+      ],
+      [
+        'find2030Outcomes',
+        (r: any) => r.find2030Outcomes('SP12', defaultContext),
+      ],
+      [
+        'findByCompositeCode',
+        (r: any) => r.findByCompositeCode('SP12', 'SP12-AOW01', defaultContext),
+      ],
+    ])(
+      '%s runs the select that carries the branches (shared query)',
+      async (_name, call) => {
+        mockResolveContext();
+        dataSourceQueryMock.mockResolvedValue([]);
+
+        await call(repository);
+
+        const sql = squash(dataSourceQueryMock.mock.calls[0][0] as string);
+        expect(idCase(sql)).toContain(OTHER_OUTPUT_BRANCH);
+        expect(nameCase(sql)).toContain(OTHER_OUTCOME_BRANCH);
+      },
+    );
+  });
+
   describe('groupTocRows centre exposure (P2-3255)', () => {
     const rowWith = (centersConcat: string | null) => ({
       toc_result_id: 1,
