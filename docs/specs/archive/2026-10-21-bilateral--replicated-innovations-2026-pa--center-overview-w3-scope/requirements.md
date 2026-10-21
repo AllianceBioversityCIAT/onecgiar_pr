@@ -207,7 +207,7 @@ Every Overview link into the Results tab SHALL carry `scope`, next to `phase` an
 | ID | Given | When | Then |
 |---|---|---|---|
 | `CWS-AC-1` | Scoped request, rows of all 5 categories | Repository query runs | Only the 3 kept categories are returned (`CWS-R-1` A, B) |
-| `CWS-AC-2` | Unscoped request | Repository query runs | SQL and parameters identical to today's (`CWS-R-1` C) |
+| `CWS-AC-2` | Unscoped request | Repository query runs | Returns the same rows as today: the WHERE clause evaluates identically, and only one extra bound flag (0) and its predicate line are added (design §5; `CWS-R-1` C). Wording aligned at archive 2026-10-21 |
 | `CWS-AC-3` | Scoped fixture 63 / 0 / 0 | Overview model built | Total 63, 3 lines, tiles + QA/Submitted + Discontinued = 63 (`CWS-R-3`, `-4`) |
 | `CWS-AC-4` | 5 projects with only replicated rows, N = 57 | Model built | Projects covered 0 of 57, 5 only-replicated, Not started = 57 (`CWS-R-5`) |
 | `CWS-AC-5` | No-project and other-centers rows | Model built | No-project line W3-only; bars + no-project + other-centers = Total (`CWS-R-6`) |

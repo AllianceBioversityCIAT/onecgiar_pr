@@ -107,3 +107,7 @@ Contribution and bilateral-contributor request rows SHALL keep today's "Accepted
 | PRDS-R-2 | Decision state after the SP decides |
 | PRDS-R-3 | "Needs your review" only while Pending Review |
 | PRDS-R-4 | Non-primary rows unchanged |
+
+## 9. Amendment (2026-10-21, PRDS-T-2)
+
+The PRDS-R-2 **SP rejected** scenario is unreachable in the inbox while `bugfix/primary-notify-on-submit-regression` PNR-DD-3/4 stands. The server hides a primary card whose result is Rejected, because the result goes back to the Center (`PRIMARY_PREPARATION_STATUS_IDS` in `share-result-request.service.ts`). The client `rejected` branch is kept as a harmless guard. This was observed on PRTest with result 9742 and accepted by the user.

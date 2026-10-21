@@ -232,3 +232,93 @@ No replicated `Result` row in Reporting 2026 has an active `results_by_projects`
   - the PRTest deploy (~30 min);
   - checks on CIP and IITA, re-running `CWS-T-1` (b) the same day.
 - Nothing is committed. Exclude another session's files that are in the same checkout: `notification-item.component.*`, `contribution-request-drawer.copy.ts`, `docs/specs/notifications/primary-review-not-accept/tasks.md`, and `docs/specs/bugfix/primary-request-decision-state/`.
+
+## CWS-T-6 — Live check on PRTest — DONE (2026-10-21, Leader via Claude in Chrome, read-only)
+
+- **Build:** `performance-refactor` @ `686445be9`. Run `reporting-tool-dev-cicd` completed/success. PRTest served the new bundle: the "Scope: Bilateral reporting (Overview)" chip renders, and Overview links carry `scope=bilateral`. Before the Jenkins deploy finished, every `/bilateral/*` route redirected to `/`; a retry after it finished worked.
+- **Phase:** Reporting 2026 (`phase=36` in the client URL).
+- **Method:** only navigation clicks on figure links. No write controls were used.
+
+### IITA
+
+The Total card shows 119 = 32 replicated W3 + 81 new W3 + 6 W1/W2 tagging. Projects covered: 9 of 87, with 78 "no new result yet" (= 87 − 9 ✓) and 1 "only replicated".
+
+| Overview figure | Value | Results visible count |
+|---|---|---|
+| Total | 119 | 119 of 119 ✓ (scope chip shown) |
+| Editing tile | 91 | 91 ✓ |
+| Pending tile | 18 | 18 ✓ |
+| Approved tile | 7 | 7 ✓ |
+| Rejected tile | 3 | 3 ✓ |
+| Needs attention: Editing / Rejected | 91 / 3 | equal to the tiles ✓ |
+| Bar project 2134 | 21 | 21 ✓ |
+| Bar project 2131 | 12 | 12 ✓ |
+| Pending > 14 days | 14 | 18 (the link opens all pending results; no age filter exists, pre-existing) |
+| No-project line | 3 (W3 only) | 113 (link `{project: [], source: 'w3'}` does not reconcile; accepted in `CWS-R-8`, child #2 owns it) |
+
+- Tile identity: 91 + 18 + 7 + 3 = 119 ✓.
+
+### CIP
+
+The Total card shows 122 = 52 replicated W3 + 35 new W3 + 35 W1/W2 tagging. Projects covered: 10 of 57, with 47 "no new result yet" ✓ and 0 "only replicated".
+
+| Overview figure | Value | Results visible count |
+|---|---|---|
+| Total | 122 | 122 of 122 ✓ (scope chip shown) |
+| Editing tile | 94 | 94 ✓ |
+| Pending tile | 18 | 18 ✓ |
+| Bar project 1942 | 4 | 4 ✓ |
+| Bar project 1939 | 2 | 2 ✓ |
+
+- Tile identity: 94 + 18 + 0 + 0 + QA 1 + Submitted 8 + Discontinued 1 = 122 ✓.
+- No-project line: 55 (52 replicated W3 + 3 new W3). No W1/W2 row in it ✓.
+- Other centers' projects: 49.
+
+### Open items
+
+- **CIP baseline (63 / 0 / 0) not applicable.** PRTest data differs from the prod baseline of `CWS-T-1`: PRTest shows 52 / 35 / 35. Per the T-6 disqualifier, this is not evidence for the prod count. The 63 is confirmed only after release, or by running `CWS-T-1` (b) against the PRTest DB.
+- **Bar sum vs Total.** The chart shows the top 7 projects only:
+  - CIP: shown bars 15 + no-project 55 + other centers 49 = 119, against a Total of 122.
+  - IITA: shown bars 55 + 3 + 31 = 89, against 119.
+  - The full `CWS-R-6` sum (bars + no-project + unmatched = Total) was not verified in the browser. The aggregate spec asserts it.
+- **Not checked:** the visual check of the Total card. A screenshot was taken.
+- **Status:** closed by the owner 2026-10-21 ("cierra t-6"). Owner follow-ups: the CIP prod count after release, and the copy confirmation with Nicoleta.
+
+### CWS-T-6 close-out (2026-10-21)
+
+- **Owner decision:** close T-6 on the PRTest evidence above.
+- `family.md`: child #3 marked executed, with a change-log row added.
+- Child #2 `center-overview-no-project-line/proposal.md`:
+  - §3 now has a "premise changed" note: the no-project row is W3-only, and the `allW1W2` / `source=w1w2` branch is gone.
+  - Document Control now records that child #2 depends on #3 and is no longer parallel-safe with it.
+
+## Summary
+
+| Task | Result | Attempts |
+|---|---|---|
+| CWS-T-1 | done (HITL; 0 replicated W1/W2 rows on center projects) | — |
+| CWS-T-2 | PASS | 1 |
+| CWS-T-3 | PASS | 1 |
+| CWS-T-4 | PASS | 1 |
+| CWS-T-5 | PASS | 1 |
+| CWS-T-6 | done (PRTest reconciliation on CIP and IITA; CIP prod count after release) | — |
+
+- **Shipped:** `b29b749c1` (code) and `5008e86cf` (specs) on `qa-development-2026-ss`. `performance-refactor` was merged into qa-dev (`7536e0788`, bringing in P2-3272), then qa-dev into perf (`686445be9`, deployed to PRTest).
+- **Budget:**
+  - 6 tasks as planned.
+  - 1 review round per task.
+  - ~720 LOC against an estimate of ~400. Almost all of the overrun is tests: the T-4 fixtures, and T-2 controller/service specs for code that had no coverage.
+- **Carry to `/akili-archive`** (advisories; none blocks):
+  - align the `CWS-AC-2` wording with design §5;
+  - make the unscoped SQL test stricter;
+  - `FIXTURE_D1_ROWS` row 6 encodes an impossible state;
+  - fix the "nine contract keys" comment;
+  - trim the overview `CLAUDE.md` (123 lines, cap 120);
+  - type the API option with `BilateralScope`;
+  - the a11y summary copy goes into the Nicoleta confirmation (`CWS-OQ-3`);
+  - add a Constitution Impact note: none (no module boundary changed);
+  - CodeGraph re-index pending.
+- **Owner follow-ups:**
+  - confirm the CIP prod count (63 / 0 / 0) after the staging → master release;
+  - Nicoleta: `CWS-OQ-1` (63 vs 54) and `CWS-OQ-3` (copy);
+  - ship server and client in the same release (design §11).
