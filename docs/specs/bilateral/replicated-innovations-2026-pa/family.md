@@ -17,7 +17,7 @@
 | # | Spec Path | Depends on | Parallel-safe | Status |
 |---|---|---|---|---|
 | 1 | `bilateral/replicated-innovations-2026-pa/project-and-pa-assignment` | none | yes | pending |
-| 3 | `bilateral/replicated-innovations-2026-pa/center-overview-w3-scope` | none | no (with #2) | executed 2026-10-21 (T-1..T-6; on qa-dev + perf); archive pending |
+| 3 | `bilateral/replicated-innovations-2026-pa/center-overview-w3-scope` | none | no (with #2) | done — archived 2026-10-21 to `docs/specs/archive/2026-10-21-bilateral--replicated-innovations-2026-pa--center-overview-w3-scope/` |
 | 2 | `bilateral/replicated-innovations-2026-pa/center-overview-no-project-line` | `center-overview-w3-scope` (#3) | no (with #3) | pending |
 
 **Build order (MoSCoW):** child 1 is a **Must**. Nicoleta asked for it in both red comments, and it unblocks the default ToC block for the 63 results that have no project. Child 2 is a **Should**. It is a read-only reporting line that reads live data, so it is correct with or without child 1. The two children touch different components (Section 0 of the result editor vs the Center Overview tab) and share no migration or payload, so they can run in parallel.
