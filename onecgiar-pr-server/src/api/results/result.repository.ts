@@ -1594,6 +1594,8 @@ WHERE
     ci.short_name as initiative_short_name,
     ci.official_code as initiative_official_code,
     r.lead_contact_person,
+    /* P2-3272: the submit reads the directory id to send the IP confirmation email. */
+    r.lead_contact_person_id,
     v.status as is_phase_open,
     v.phase_name,
     v.phase_year,

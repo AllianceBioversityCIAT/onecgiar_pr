@@ -1123,6 +1123,21 @@ describe('ResultRepository — getResultById binds the id (P2-3498)', () => {
       expect(sql.slice(sql.indexOf('\nFROM'))).not.toContain('results_center');
     });
   });
+
+  /**
+   * P2-3272 — the submit looks the Lead Contact Person up by `lead_contact_person_id` to send the
+   * IP confirmation email. The query only returned the typed name, so the id was always undefined
+   * and the email was skipped on every 2026 Innovation Development submit.
+   */
+  it('returns lead_contact_person_id for the IP confirmation email (P2-3272)', async () => {
+    await repo.getResultById(1234);
+    const sql = String(queryMock.mock.calls[0][0]).replace(
+      /\/\*[\s\S]*?\*\//g,
+      '',
+    );
+
+    expect(sql).toMatch(/r\.lead_contact_person_id,/);
+  });
 });
 
 /**
