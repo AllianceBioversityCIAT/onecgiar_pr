@@ -1,12 +1,11 @@
 name: Trigger Jenkins Job
 
-# PROD only. STAGING CI runs in reporting-tool-staging-ci.yml (Jenkins prms-reporting-tool-staging-ci); the legacy
+# PROD only, manual recovery only. Pushes to master are deployed by reporting-tool-prod-ci.yml (Jenkins
+# prms-reporting-tool-master-cd); this legacy trigger of prms-reporting-tool-master no longer runs on push.
+# STAGING CI runs in reporting-tool-staging-ci.yml (Jenkins prms-reporting-tool-staging-ci); the legacy
 # job prms-reporting-tool-staging is no longer triggered from GitHub (manual "Build Now" in Jenkins only).
 on:
-  push:
-    branches:
-      - master
-  workflow_dispatch: # This allows the workflow to be manually triggered if needed
+  workflow_dispatch: # Manual recovery only; the job below runs only when dispatched on master
 
 jobs:
   trigger-job:
