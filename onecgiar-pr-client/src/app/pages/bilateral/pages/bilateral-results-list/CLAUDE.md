@@ -124,6 +124,16 @@ Program`.
   rely on inference, and don't trust lint/Jest alone to catch this class of error; verify with an
   actual `ng build` when touching this codepath.
 
+## Overview scope (`changes/center-overview-w3-scope`, `CWS-T-5`)
+- `scope` signal hydrated by `applyUrlParams` from `?scope=bilateral` (`CWS-R-7`); it is in
+  `RESULTS_TAB_MANAGED_QUERY_PARAMS`, so `syncUrlParams()` writes/clears it.
+- The fetch `combineLatest` includes `toObservable(scope)` (distinct); with a scope each phase request is
+  `GET_bilateralCenterResults(centerId, phaseId, { scope })`, without it the call has NO options argument
+  (byte-identical to before; W3 + Lead default untouched).
+- Chip `{ dimension: 'scope' }` "Scope: Bilateral reporting (Overview)"; `clearChip` sets the signal to
+  `null` and writes the URL, which refetches unscoped. Clear all also resets it. Not sticky: the signal is
+  re-derived from the URL on every emission. No client-side row hiding by scope.
+
 ## "Update result" (P2-3229, P2-3653)
 `canUpdateResult()` delegates to `ApiService.canUpdateBilateral` so this list and the Results Center
 row menu cannot drift: previous phase, Approved, **not a Knowledge Product**, user of the lead centre

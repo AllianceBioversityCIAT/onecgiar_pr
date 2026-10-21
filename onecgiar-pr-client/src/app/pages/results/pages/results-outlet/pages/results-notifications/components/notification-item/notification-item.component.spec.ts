@@ -3299,7 +3299,7 @@ describe('NotificationItemComponent', () => {
 
     describe('primary request row', () => {
       it('renders the "Needs your review" chip, the flag icon, and the row sentence (PSR-R-9, PRA-R-3)', () => {
-        component.notification = buildPsrFixture({ request_type: 'primary' });
+        component.notification = buildPsrFixture({ request_type: 'primary', obj_result: { status_id: 5 } });
         fixture.detectChanges();
 
         const root: HTMLElement = fixture.nativeElement;
@@ -3648,13 +3648,118 @@ describe('NotificationItemComponent', () => {
       });
     });
 
+    // PRDS-T-1 (`bugfix/primary-request-decision-state`): the primary row's decision state comes
+    // from the RESULT status (5 pending / 6 approved / 7 rejected), never from `request_status_id`
+    // / `approved_by` (a system write at Center submit since PRA).
+    describe('PRDS — primary decision state', () => {
+      const buildPrimary = (requestStatusId: number, statusId: number | string, extra: any = {}) =>
+        buildPsrFixture({
+          request_type: 'primary',
+          request_status_id: requestStatusId,
+          obj_approved_by: { id: 9, first_name: 'Carla', last_name: 'Submitter' },
+          aprovaed_date: '2026-10-05T10:00:00.000Z',
+          obj_result: { status_id: statusId },
+          ...extra
+        });
+      const text = (root: HTMLElement) => root.textContent?.replace(/\s+/g, ' ') ?? '';
+
+      it('PRDS-R-1 regression (9864): pending status 5 with a system-written ACCEPTED row shows no decision state', () => {
+        component.notification = buildPrimary(2, 5);
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('.notification_content_footer_row')).toBeFalsy();
+        expect(root.querySelector('[data-notif-decision-chip]')).toBeFalsy();
+        expect(text(root)).not.toContain('Accepted by');
+        expect(text(root)).not.toContain('Carla');
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Needs your review');
+        expect(root.querySelector('[data-testid="validate-bilateral-cta"]')).toBeTruthy();
+      });
+
+      it.each([
+        [2, 1],
+        [2, 4],
+        [3, 1],
+        [3, 4]
+      ])('PRDS-R-1: request_status_id %s with result status %s renders no footer row nor decision chip', (requestStatusId, statusId) => {
+        component.notification = buildPrimary(requestStatusId, statusId);
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('.notification_content_footer_row')).toBeFalsy();
+        expect(root.querySelector('[data-notif-decision-chip]')).toBeFalsy();
+      });
+
+      it('PRDS-R-2: result status 6 renders the Accepted chip and "Accepted by SP12", no person and no date', () => {
+        component.notification = buildPrimary(2, 6);
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        const chip = root.querySelector('[data-notif-decision-chip="accepted"]');
+        expect(chip?.textContent?.trim()).toBe('Accepted');
+        expect(chip?.className).toContain('notification_decision_chip_accepted');
+        const caption = root.querySelector('.notification_content_footer_row .notification_content_caption');
+        const captionText = caption?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+        expect(captionText).toContain('Accepted by');
+        expect(captionText).toContain('SP12');
+        expect(captionText).not.toContain('Carla');
+        expect(captionText).not.toContain('Submitter');
+        expect(caption?.querySelector('.notification_content_caption_date')).toBeFalsy();
+        expect(captionText).not.toMatch(/2026|Oct/);
+      });
+
+      it('PRDS-R-2: result status 7 renders the Rejected chip and "Rejected by SP12"', () => {
+        component.notification = buildPrimary(2, 7);
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        const chip = root.querySelector('[data-notif-decision-chip="rejected"]');
+        expect(chip?.textContent?.trim()).toBe('Rejected');
+        expect(chip?.className).toContain('notification_decision_chip_declined');
+        expect(root.querySelector('[data-notif-decision-chip="accepted"]')).toBeFalsy();
+        const captionText = root.querySelector('.notification_content_footer_row .notification_content_caption')?.textContent?.replace(/\s+/g, ' ').trim();
+        expect(captionText).toContain('Rejected by');
+        expect(captionText).toContain('SP12');
+      });
+
+      it.each([6, 7])('PRDS-R-3: decided result status %s shows the neutral kind label and no validate CTA', statusId => {
+        component.notification = buildPrimary(2, statusId);
+        fixture.detectChanges();
+
+        expect(component.requestKindLabel).toBe('Primary Science Program request');
+        expect(component.detailTitle()).toBe('Primary Science Program request');
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('[data-notif-type-chip]')?.textContent?.trim()).toBe('Primary Science Program request');
+        expect(text(root)).not.toContain('Needs your review');
+        expect(root.querySelector('[data-testid="validate-bilateral-cta"]')).toBeFalsy();
+      });
+
+      it.each([
+        [2, 'Accepted by Jane Approver', 'accepted'],
+        [3, 'Declined by Jane Approver', 'declined']
+      ])('PRDS-R-4: non-primary row with request_status_id %s keeps "%s" + date + chip', (requestStatusId, caption, chipKind) => {
+        component.notification = buildPsrFixture({
+          request_status_id: requestStatusId,
+          obj_approved_by: { id: 5, first_name: 'Jane', last_name: 'Approver' },
+          aprovaed_date: '2026-10-05T10:00:00.000Z'
+        });
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+        const captionEl = root.querySelector('.notification_content_footer_row .notification_content_caption');
+        expect(captionEl?.textContent?.replace(/\s+/g, ' ')).toContain(caption);
+        expect(captionEl?.querySelector('.notification_content_caption_date')?.textContent?.trim()).toBeTruthy();
+        expect(root.querySelector(`[data-notif-decision-chip="${chipKind}"]`)).toBeTruthy();
+      });
+    });
+
     // PSR-T-8 rework attempt 2 (Reviewer finding 3): `requestKind` was untested — deleting the
     // `requestKind:` line in the old `drawerViewFields()` kept the whole suite green before this.
     // DSP-T-4 moves the request kind out to `detailTitle()` (the panel's header title, DD-6) —
     // same `rowTypeChipLabel` source as before, single source with the row's own type chip.
     describe('detailTitle() (PSR-R-11, moved by DSP-T-4)', () => {
-      it('is "Needs your review" for a primary row (incl. resolved)', () => {
-        component.notification = buildPsrFixture({ request_type: 'primary', request_status_id: 2 });
+      it('is "Needs your review" for a pending (status 5) primary row', () => {
+        component.notification = buildPsrFixture({ request_type: 'primary', request_status_id: 2, obj_result: { status_id: 5 } });
         expect(component.detailTitle()).toBe('Needs your review');
       });
 

@@ -244,7 +244,7 @@ export function byProjectTable(model: OverviewByProjectModel, options?: Overview
     headers: ['Project', 'Replicated for update', 'New in this phase', 'Total'],
     rows: model.bars.map(bar => [projectLabel(bar.projectId, options), bar.replicatedCount, bar.newCount, bar.total]),
     summary:
-      `${model.coveredCount} of ${model.totalProjectsInScope} projects have at least one result in this phase.` +
+      `${model.coveredCount} of ${model.totalProjectsInScope} projects have at least one new result in this phase.` +
       (noProject ? ` ${noProject} results are not linked to a bilateral project.` : ''),
   };
 }

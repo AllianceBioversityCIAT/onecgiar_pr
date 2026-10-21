@@ -62,12 +62,14 @@ import {
   BilateralMethod,
   BilateralQueryParams,
   BilateralRole,
+  BilateralScope,
   BilateralSource,
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_PHASE_QUERY_PARAM,
   BILATERAL_PROGRAM_QUERY_PARAM,
   BILATERAL_PROJECT_QUERY_PARAM,
   BILATERAL_ROLE_QUERY_PARAM,
+  BILATERAL_SCOPE_QUERY_PARAM,
   BILATERAL_SEARCH_QUERY_PARAM,
   BILATERAL_CREATED_BY_QUERY_PARAM,
   BILATERAL_SOURCE_QUERY_PARAM,
@@ -103,10 +105,11 @@ const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_SEARCH_QUERY_PARAM,
   BILATERAL_CREATED_BY_QUERY_PARAM,
+  BILATERAL_SCOPE_QUERY_PARAM,
 ] as const;
 
 /** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
-type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'type' | 'search';
+type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'type' | 'search' | 'scope';
 
 interface BilateralFilterChip {
   dimension: BilateralFilterChipDimension;
@@ -476,8 +479,16 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
       search: this.searchQuery(),
       createdBy: this.createdByFilter(),
       multi: false,
+      scope: this.scope(),
     };
   });
+
+  /**
+   * `CWS-R-7` — `'bilateral'` when the URL carries `scope=bilateral` (an Overview deep link): the
+   * server then returns the Overview row set per phase. Hydrated from the URL only; removing the
+   * chip clears it, so it is never sticky (`CWS-R-7` B).
+   */
+  readonly scope = signal<BilateralScope | null>(null);
 
   /** Distinct creator display names from loaded rows — powers the Created by multiselect. */
   readonly createdByOptions = computed(() => {
@@ -684,6 +695,9 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     const search = this.searchQuery().trim();
     if (search) chips.push({ dimension: 'search', value: search, label: `Search: ${search}` });
 
+    // `CWS-R-7` A — the Overview row-set scope is a removable chip like any other filter.
+    if (this.scope()) chips.push({ dimension: 'scope', value: 'bilateral', label: 'Scope: Bilateral reporting (Overview)' });
+
     return chips;
   });
 
@@ -718,21 +732,25 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
         filter(ids => ids.length > 0),
         distinctUntilChanged((a, b) => a.length === b.length && a.every((id, index) => id === b[index])),
       ),
+      toObservable(this.scope).pipe(distinctUntilChanged()),
     ])
       .pipe(
         takeUntilDestroyed(),
-        switchMap(([centerId, phaseIds]) => {
+        switchMap(([centerId, phaseIds, scope]) => {
+          // `CWS-R-7` B — without the key the request is byte-identical to the pre-scope one.
+          const fetchPhase = (id: number) =>
+            scope
+              ? this.bilateralApiService.GET_bilateralCenterResults(centerId, id, { scope })
+              : this.bilateralApiService.GET_bilateralCenterResults(centerId, id);
           this.loading.set(true);
           this.error.set(false);
 
           if (phaseIds.length === 1) {
-            return this.bilateralApiService.GET_bilateralCenterResults(centerId, phaseIds[0]).pipe(
-              map(({ response }) => response ?? []),
-            );
+            return fetchPhase(phaseIds[0]).pipe(map(({ response }) => response ?? []));
           }
 
           return forkJoin(
-            phaseIds.map(id => this.bilateralApiService.GET_bilateralCenterResults(centerId, id)),
+            phaseIds.map(id => fetchPhase(id)),
           ).pipe(map(responses => responses.flatMap(({ response }) => response ?? [])));
         }),
       )
@@ -935,6 +953,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.typeFilter.set(params.type);
     this.methodFilter.set(params.method);
     this.createdByFilter.set(params.createdBy);
+    this.scope.set(params.scope);
 
     const urlPhaseIds = parsePhaseIdsFromUrl(map.get(BILATERAL_PHASE_QUERY_PARAM));
     if (urlPhaseIds.length) {
@@ -1175,6 +1194,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.methodFilter.set(null);
     this.createdByFilter.set([]);
     this.searchQuery.set('');
+    this.scope.set(null);
     this.syncUrlParams();
   }
 
@@ -1213,6 +1233,9 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
       case 'search':
         this.clearSearch();
         return;
+      case 'scope':
+        this.scope.set(null);
+        break;
     }
     this.syncUrlParams();
   }

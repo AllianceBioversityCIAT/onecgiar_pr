@@ -433,6 +433,20 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * PRDS-T-1 (`bugfix/primary-request-decision-state`, design §8.1): the SP's decision on a primary
+   * row, read from the RESULT status (6 approved, 7 rejected) — never from `request_status_id` /
+   * `approved_by`, which are a system write at Center submit since PRA. Loose `==` because the
+   * status may arrive as a string (same as `primaryReviewTarget()`).
+   */
+  get primaryDecision(): 'accepted' | 'rejected' | null {
+    if (!this.isPrimaryRequest) return null;
+    const status = this.notification?.obj_result?.status_id;
+    if (status == 6) return 'accepted';
+    if (status == 7) return 'rejected';
+    return null;
+  }
+
+  /**
    * PSR-T-8 (design.md §6.1 "Bilateral contributor request" row, `PSR-R-10`): every bilateral
    * contribution request is this variant now — `request_type='contribution'` (the default) AND
    * `source_name: 'W3/Bilaterals'`. This getter replaces the old pre-spec generic "any bilateral
@@ -477,7 +491,10 @@ export class NotificationItemComponent implements OnInit, OnChanges, OnDestroy {
    */
   get requestKindLabel(): string {
     const labels = this.copy.notificationItem;
-    if (this.isPrimaryRequest) return labels.primaryRequestChip;
+    if (this.isPrimaryRequest) {
+      // PRDS-R-3 (DD-3): "Needs your review" only while the result is Pending Review (5).
+      return primaryReviewTarget(this.notification) === 'review-drawer' ? labels.primaryRequestChip : labels.primaryRequestKindChip;
+    }
     if (this.isBilateralContributorRequest) return labels.contributorRequestChip;
     return labels.contributionRequestChip;
   }

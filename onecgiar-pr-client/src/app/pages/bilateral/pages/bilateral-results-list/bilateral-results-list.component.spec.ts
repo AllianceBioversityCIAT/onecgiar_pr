@@ -683,6 +683,59 @@ describe('BilateralResultsListComponent', () => {
       expect((fixture.nativeElement.querySelector('input[aria-label="Search results"]') as HTMLInputElement).value).toBe('kenya');
     });
   });
+  describe('CWS-T-5 — Overview scope (CWS-R-7, CWS-AC-7)', () => {
+    const SCOPE_LABEL = 'Scope: Bilateral reporting (Overview)';
+
+    it('fetches the scoped rows per phase and shows a scope chip for ?phase=36&scope=bilateral&role=all&source=all', () => {
+      recreateOn({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36, { scope: 'bilateral' });
+      expect(component.scope()).toBe('bilateral');
+      expect(chipTexts().some(text => text.includes(SCOPE_LABEL))).toBe(true);
+      expect(component.hasActiveFilters()).toBe(true);
+      // No client-side hiding by scope: every fetched row is still listed.
+      expect(component.filteredResults().length).toBe(1);
+    });
+
+    it('removing the scope chip drops the key from the URL and refetches without scope', fakeAsync(() => {
+      recreateOn({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      bilateralApiService.GET_bilateralCenterResults.mockClear();
+
+      expect(chipRemoveButton(SCOPE_LABEL)!.getAttribute('aria-label')).toBeTruthy();
+      chipRemoveButton(SCOPE_LABEL)!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.scope()).toBeNull();
+      expect('scope' in queryParams$.value).toBe(false);
+      expect(queryParams$.value['role']).toBe('all');
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledTimes(1);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+      expect(chipTexts().some(text => text.includes(SCOPE_LABEL))).toBe(false);
+    }));
+
+    it('without the key the request has no options argument and the W3 + Lead default still applies', () => {
+      recreateOn({ phase: '36' });
+
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+      expect(component.scope()).toBeNull();
+      expect(component.showW3()).toBe(true);
+      expect(component.showW1W2()).toBe(false);
+      expect(component.showLead()).toBe(true);
+      expect(component.showContributing()).toBe(false);
+      expect(chipTexts().some(text => text.includes('Scope:'))).toBe(false);
+    });
+
+    it('does not keep the scope after navigating to the tab without it', () => {
+      recreateOn({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      queryParams$.next({ phase: '36' });
+      fixture.detectChanges();
+
+      expect(component.scope()).toBeNull();
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+    });
+  });
+
 
   /**
    * `COV-R-13` BUT — the regression this file could not see before: `onSearch` writes every keystroke
