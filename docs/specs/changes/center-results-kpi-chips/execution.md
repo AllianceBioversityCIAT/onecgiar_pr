@@ -206,3 +206,34 @@
   - Reviewer PASS: `statusClass()` emits `status_tag`; the nested rule wins on specificity; the flex chain constrains the wrapper; the merged block has no regression.
 - **ADVISORY:** all rows are now 44px instead of 40px (accepted). Width and ellipsis can only be measured in a browser, so the PRTest re-measure should also cover a column resized down to minPx 100.
 - **Next:** re-measure on PRTest after deploy (line tops equal across columns; Status line 28px; phase tag "2026"/"2025" readable).
+
+### CRK-T-6 — PRTest re-measure after CRK-T-4a (2026-10-21, Claude in Chrome, read-only)
+
+- **Deploy:** `8d4864552` was deployed by run 39535773605 (success). The later run 39642986339 (merge `fe1b32006`, other specs) failed in `publish images` on `npm ci` ECONNRESET, a network problem. Every check job passed. It was re-run with `--failed` at the user's request, and the rerun succeeded including the Jenkins deploy.
+- **IITA, phases 2025 + 2026 (Lead, W3), 13 two-version rows:** ✅ PASS.
+  - Line tops are spread by **0px** across columns, for both line 1 and line 2.
+  - Every line is **28px** (Role and Status included). Two-version rows are 74–75px; single rows are 49px.
+  - The phase tag reads `2026` / `2025`, and its title is `Reporting 2026 - P25` / `Reporting 2025 - P25`.
+  - The history icon stays inside the Status cell.
+- **Status column at the 156px default (renders 188px):** none of the 25 icons is hidden, nothing is truncated, and the status line is 28px. ✅
+- **Simulated minPx 100 (inline style on th/td):** none of the 40 icons is hidden, "Pending Review" ellipsizes, and the line stays 28px. ✅
+- **Correction (user, 2026-10-21):** the `pr.bilateralResults.columnWidths.v1 = {"status":100}` entry was the **user's own** column resize, not a side effect of the simulation. The Leader removed it while checking the default, so the user's saved width is gone and the column is back at 156px. The default-width measurements were taken after that removal (25 icons, none hidden, nothing truncated). The 100px case is covered by the simulated minPx run above (40 icons, none hidden). On reload with the user's 100px, "Pending Review" ellipsized as designed. The earlier note that widths are persisted from a measured resize is withdrawn.
+- **Screenshot:** `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-B8dEs7\screenshot-1792605207826-1.jpg` (taken during the 100px simulation, so the "Pending…" ellipsis in it is the minPx case).
+
+### CRK-T-6 — SP12 / SP11 chips (2026-10-21, Claude in Chrome, read-only: only filters and chips were clicked)
+
+- **SP12, no filters:** Total 249 · KP 106 · ID 62 · PC 2 · IU 6 · CS 50 · **Other Output 17** · **Other Outcome 5**. ✅ CRK-R-5 matches the baseline exactly, and Total is unchanged at 249. The client match is case-sensitive, so these counts also confirm that `result_type` ids 8 and 4 resolve to exactly "Other output" and "Other outcome".
+- **SP12, Other Output chip active:** cards show 17 KPIs (AOW02 Action Lab 5 + AOW04 Enabling Environment 12). The other 7 chips stay visible with their counts. ✅ CRK-R-7 "selecting a chip keeps the others" and the BUT clause (cards filtered).
+- **SP12 Type filter:** ✅ CRK-R-7.
+  - High level output: Total 235 · KP 106 · ID 62 · CS 50 · OOP 17 (outputs only).
+  - Outcome: Total 10 · PC 2 · IU 4 · OOC 3 (outcomes only).
+  - Intermediate outcome: Total 0, Total chip only.
+  - 2030 outcome: Total 4 · IU 2 · OOC 2.
+  - The four types add up: 235 + 10 + 0 + 4 = 249.
+- **SP12, Other Outcome active, then Type = High level output:** the Other Outcome chip stays visible at count 0 and active. ✅ "Type removes the active category" (CRK-R-6 exception).
+- **SP11 (original report), no filters:** Total 22 · KP 3 · CS 5 · **Other Output 8** · **Other Outcome 4**. Zero chips (ID, PC, IU) are hidden. ✅ CRK-R-6.
+- **SP11, Other Output chip active:** AOW01 shows HLO 1.1.2 "CapSha pilots" (indicator pill "Other Outputs"). ✅
+- **SP11 per-AoW types (`typeCountsOf`, read via `ng.getComponent`):** "Other output" is listed in AoW 1 (2), AoW 2 (4) and AoW 3 (2), which sums to 8 = chip. "Other outcome" is listed too. ✅ CRK-R-5 "AoW TYPES row lists Other output".
+- **Screenshots:** `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-B8dEs7\screenshot-1792605685455-2.jpg` (SP12 Other Output), `…\screenshot-1792606261476-3.jpg` (SP11 CapSha pilots).
+
+**CRK-T-6 final status: PASS.** Every falsifier in tasks.md CRK-T-6 was checked on the deployed bundle: SP12 17/5/249; Type = HLO shows no outcome chip; IITA replicated codes show as one row; stacked lines aligned after CRK-T-4a.

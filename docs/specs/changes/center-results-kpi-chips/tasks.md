@@ -109,7 +109,7 @@ Part B (server CASE + chip counts) and Part A (center grouping + category filter
   - **Consumers:** `BilateralFilterChipDimension` (local type), `filterCenterResults` (unchanged), `bilateral-query-params` (unchanged contract).
 - **Definition of done:** lint clean; spec green.
 
-### CRK-T-6 — Rollout: PRTest smoke
+### [x] CRK-T-6 — Rollout: PRTest smoke
 
 - **Type:** rollout
 - **Description:** After merge to `performance-refactor` and deploy (~30 min): check SP12 and SP11 chips and the IITA center Results tab. Read-only — no write buttons.
