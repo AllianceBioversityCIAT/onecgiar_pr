@@ -696,6 +696,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         createdBy: [],
         multi: false,
         scope: null,
+        group: null,
       };
 
       // CWS-R-8 / CWS-DD-5 — every link into Results carries `scope`; Reporting and Draft links never do.
@@ -833,6 +834,113 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       // CWS-R-8 — the Results destination carries the scope, the Reporting one does not.
       expect((navigate.mock.calls[0][1] as { queryParams: Record<string, string> }).queryParams).not.toHaveProperty('scope');
       expect((navigate.mock.calls[1][1] as { queryParams: Record<string, string> }).queryParams['scope']).toBe('bilateral');
+    });
+  });
+
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-R-2, CNP-R-3, CNP-R-5, CNP-AC-3, CNP-AC-6, CNP-AC-8)
+  describe('updated-no-project line (CNP-T-3)', () => {
+    const updatedRow = (id: number, overrides: Partial<BilateralCenterResult> = {}): BilateralCenterResult => ({
+      ...FIXTURE_D1_ROWS[0],
+      id,
+      project_id: null,
+      source: 'API',
+      result_type_id: 7,
+      is_replicated: true,
+      overview_category: 'replicated_w3',
+      ...overrides,
+    });
+    const rows24 = (): BilateralCenterResult[] => [
+      ...Array.from({ length: 24 }, (_, index) => updatedRow(900 + index)),
+      { ...FIXTURE_D1_ROWS[0], id: 950, project_id: 100, overview_category: 'new_w3' },
+    ];
+    const hrefQuery = (testId: string) => {
+      const href = (el(testId).nativeElement as HTMLAnchorElement).getAttribute('href')!;
+      return { path: href.split('?')[0], query: Object.fromEntries(new URLSearchParams(href.split('?')[1] ?? '')) };
+    };
+
+    it('renders the line with the count, linking to Results with group, scope and phase (CNP-AC-6)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      const line = el('by-project-updated-no-project');
+      expect(line).toBeTruthy();
+      expect(text('by-project-updated-no-project')).toContain('24');
+      const { path, query } = hrefQuery('by-project-updated-no-project');
+      expect(path).toBe(`/bilateral/${CENTER}/results`);
+      expect(query['group']).toBe('updated-no-project');
+      expect(query['scope']).toBe('bilateral');
+      expect(query['phase']).toBe(String(OPEN_PHASE_ID));
+    });
+
+    it('names the years from the phase and the count in the aria label (CNP-AC-8)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      expect(text('by-project-updated-no-project')).toContain('Updated 2025 innovations with no 2026 project');
+      expect(el('by-project-updated-no-project').attributes['aria-label']).toBe(
+        'Updated 2025 innovations with no 2026 project, 24 results — open in Results',
+      );
+    });
+
+    it('falls back to the generic label when the phase year is unknown (CNP-AC-8)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+      const component = harness.routeDebugElement!.componentInstance as { phases: { set(value: Phases[]): void } };
+      component.phases.set([{ ...OPEN_PHASE, phase_year: null as unknown as number }, CLOSED_PHASE]);
+      harness.detectChanges();
+
+      expect(text('by-project-updated-no-project')).toContain('Updated innovations with no project in this phase');
+      expect(el('by-project-updated-no-project').attributes['aria-label']).toBe(
+        'Updated innovations with no project in this phase, 24 results — open in Results',
+      );
+    });
+
+    it('is not rendered when the count is 0 (CNP-AC-3)', async () => {
+      await setup();
+      flushData();
+
+      expect(el('by-project-updated-no-project')).toBeFalsy();
+    });
+
+    it('keeps the empty state away when the only rows are updated-no-project (CNP-R-3)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, [updatedRow(901), updatedRow(902)]);
+
+      expect(el('by-project-empty')).toBeFalsy();
+      expect(text('by-project-updated-no-project')).toContain('2');
+      expect(el('by-project-no-project')).toBeFalsy();
+    });
+
+    it('never puts group on a Reporting or Draft link (CNP-AC-6)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts', 'not-started-chip-300']) {
+        expect(hrefQuery(testId).query).not.toHaveProperty('group');
+      }
+    });
+
+    it('ignores ?group= in its own URL: the Total headline does not narrow and no link carries it (CNP-DD-3)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+      const totalBefore = text('kpi-total');
+      expect(totalBefore).toMatch(/25\s*results/);
+
+      await router.navigateByUrl(`/bilateral/${CENTER}/overview?group=updated-no-project`);
+      await settle();
+
+      expect(text('kpi-total')).toBe(totalBefore);
+      expect(hrefQuery('kpi-total').query).not.toHaveProperty('group');
+      expect(hrefQuery('attention-row-aiDrafts').query).not.toHaveProperty('group');
+      expect(hrefQuery('by-project-updated-no-project').query['group']).toBe('updated-no-project');
+    });
+
+    it('ignores ?group= on a cold load too (CNP-DD-3)', async () => {
+      await setup(`/bilateral/${CENTER}/overview?group=updated-no-project`);
+      flushData(OPEN_PHASE_ID, rows24());
+
+      expect(text('kpi-total')).toMatch(/25\s*results/);
+      expect(hrefQuery('kpi-total').query).not.toHaveProperty('group');
     });
   });
 

@@ -737,6 +737,87 @@ describe('BilateralResultsListComponent', () => {
   });
 
 
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-AC-7)
+  describe('CNP-T-4 — group=updated-no-project (CNP-R-2 A/B, CNP-AC-7)', () => {
+    const GROUP_LABEL = 'Updated innovations with no project';
+    const mixedRows = () =>
+      of({
+        response: [
+          result({ id: 1, result_code: '1', is_replicated: '1' as any, source: 'API', result_type_id: '7' as any, project_id: null }),
+          result({ id: 2, result_code: '2', is_replicated: 1 as any, source: 'API', result_type_id: 7 as any, project_id: null }),
+          result({ id: 3, result_code: '3', is_replicated: 1 as any, source: 'API', result_type_id: 7 as any, project_id: 12 }),
+          result({ id: 4, result_code: '4', is_replicated: 0 as any, source: 'API', result_type_id: 7 as any, project_id: null }),
+          result({ id: 5, result_code: '5', is_replicated: 1 as any, source: 'Result', result_type_id: 7 as any, project_id: null }),
+          result({ id: 6, result_code: '6', is_replicated: 1 as any, source: 'API', result_type_id: 1 as any, project_id: null }),
+        ],
+      });
+
+    it('shows exactly the predicate rows and a chip, with no extra HTTP call', () => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(mixedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      const callsWithoutGroup = bilateralApiService.GET_bilateralCenterResults.mock.calls.length;
+      bilateralApiService.GET_bilateralCenterResults.mockClear();
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'updated-no-project', role: 'all', source: 'all' });
+      const callsWithGroup = bilateralApiService.GET_bilateralCenterResults.mock.calls.length;
+
+      expect(component.filteredResults().map(r => r.id)).toEqual([1, 2]);
+      expect(chipTexts().some(text => text.includes(GROUP_LABEL))).toBe(true);
+      expect(component.hasActiveFilters()).toBe(true);
+      // One fetch per component creation; `group` adds none (the baseline also counts the beforeEach load).
+      expect(callsWithGroup).toBe(1);
+      expect(callsWithoutGroup).toBe(2);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36, { scope: 'bilateral' });
+    });
+
+    it('removing the chip drops group from the URL and widens the rows, without refetching', fakeAsync(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(mixedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'updated-no-project', role: 'all', source: 'all' });
+      bilateralApiService.GET_bilateralCenterResults.mockClear();
+
+      chipRemoveButton(GROUP_LABEL)!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect('group' in queryParams$.value).toBe(false);
+      expect(queryParams$.value['scope']).toBe('bilateral');
+      expect(component.filteredResults().length).toBe(6);
+      expect(chipTexts().some(text => text.includes(GROUP_LABEL))).toBe(false);
+      expect(bilateralApiService.GET_bilateralCenterResults).not.toHaveBeenCalled();
+    }));
+
+    it('Clear filters resets group', fakeAsync(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(mixedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'updated-no-project', role: 'all', source: 'all' });
+
+      component.clearAllFilters();
+      tick();
+
+      expect('group' in queryParams$.value).toBe(false);
+      expect(component.group()).toBeNull();
+    }));
+
+    it('is not sticky: a later URL without group shows no chip', () => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(mixedRows());
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'updated-no-project', role: 'all', source: 'all' });
+      queryParams$.next({ phase: '36', scope: 'bilateral', role: 'all', source: 'all' });
+      fixture.detectChanges();
+
+      expect(component.group()).toBeNull();
+      expect(chipTexts().some(text => text.includes(GROUP_LABEL))).toBe(false);
+      expect(component.filteredResults().length).toBe(6);
+    });
+
+    it('a URL without group behaves as before and an unknown group is ignored', () => {
+      recreateOn({ phase: '36' });
+      expect(component.group()).toBeNull();
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 36);
+
+      recreateOn({ phase: '36', scope: 'bilateral', group: 'foo', role: 'all', source: 'all' });
+      expect(component.group()).toBeNull();
+    });
+  });
+
+
   /**
    * `COV-R-13` BUT — the regression this file could not see before: `onSearch` writes every keystroke
    * to the URL and the same component re-hydrates from it, while `parseBilateralQueryParams` trims

@@ -3,7 +3,7 @@ import { ParamMap, Params } from '@angular/router';
 
 /**
  * Shared query-param contract for the four Bilateral center tabs (Overview, Results, Reporting,
- * Draft Results) — `design.md` §6.2, `COV-DD-3`. Eleven keys, all optional; unknown or malformed
+ * Draft Results) — `design.md` §6.2, `COV-DD-3`. Twelve keys, all optional; unknown or malformed
  * values never throw — they are dropped to the documented default and reported in `stripped` so
  * the caller can rewrite the URL (`COV-R-13`).
  */
@@ -20,6 +20,9 @@ export const BILATERAL_CREATED_BY_QUERY_PARAM = 'createdBy';
 export const BILATERAL_MULTI_QUERY_PARAM = 'multi';
 /** `CWS-R-7`: the single `scope` value that means the Overview row set. One shared definition. */
 export const BILATERAL_SCOPE_QUERY_PARAM = 'scope';
+// @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-1, CNP-R-2, CNP-DD-2)
+/** `CNP-DD-2`: closed-enum row group, read by the Results tab only; emitted by the Overview link only. */
+export const BILATERAL_GROUP_QUERY_PARAM = 'group';
 
 /** `status_id` → key table (`COV-R-13`/`COV-R-7`). Editing 1 · QA 2 · Submitted 3 · Discontinued 4
  *  · Pending 5 · Approved 6 · Rejected 7. */
@@ -44,6 +47,7 @@ const ROLE_VALUES = ['lead', 'contributing'] as const;
 const SOURCE_VALUES = ['w3', 'w1w2'] as const;
 const METHOD_VALUES = ['ai', 'manual'] as const;
 const SCOPE_VALUES = ['bilateral'] as const;
+const GROUP_VALUES = ['updated-no-project'] as const;
 /** Additive token accepted (but never emitted by default) on `role`/`source`/`method` — parses to
  *  `null` (= both) while still counting the key as `present` (`COV-DD-3` amendment). */
 const ALL_TOKEN = 'all';
@@ -52,6 +56,7 @@ export type BilateralRole = (typeof ROLE_VALUES)[number];
 export type BilateralSource = (typeof SOURCE_VALUES)[number];
 export type BilateralMethod = (typeof METHOD_VALUES)[number];
 export type BilateralScope = (typeof SCOPE_VALUES)[number];
+export type BilateralGroup = (typeof GROUP_VALUES)[number];
 
 /** The contract keys, for `present`. */
 export type ContractKey =
@@ -66,7 +71,8 @@ export type ContractKey =
   | 'search'
   | 'createdBy'
   | 'multi'
-  | 'scope';
+  | 'scope'
+  | 'group';
 
 /** Parsed, normalized state — every tab reads/writes through this shape (`COV-DD-3`). */
 export interface BilateralQueryParams {
@@ -84,6 +90,8 @@ export interface BilateralQueryParams {
   multi: boolean;
   /** `CWS-R-7`: `'bilateral'` = the Overview row set; `null` (absent or unknown value) = unscoped. */
   scope: BilateralScope | null;
+  /** `CNP-R-2`: `'updated-no-project'` keeps only the Overview's updated-no-project bucket; `null` (absent or unknown) = no group filter. */
+  group: BilateralGroup | null;
 }
 
 /** `COV-DD-3` "Clarification (execute, COV-T-2)": the Results tab's byte-identical no-param
@@ -277,8 +285,19 @@ export function parseBilateralQueryParams(map: ParamMap): ParsedBilateralQueryPa
     }
   }
 
+  const groupRaw = map.get(BILATERAL_GROUP_QUERY_PARAM);
+  let group: BilateralGroup | null = null;
+  if (groupRaw) {
+    if ((GROUP_VALUES as readonly string[]).includes(groupRaw)) {
+      group = groupRaw as BilateralGroup;
+      present.push('group');
+    } else {
+      stripped.push(`${BILATERAL_GROUP_QUERY_PARAM}=${groupRaw}`);
+    }
+  }
+
   return {
-    params: { phase, status, project, program, type, role, source, method, search, createdBy, multi, scope },
+    params: { phase, status, project, program, type, role, source, method, search, createdBy, multi, scope, group },
     stripped,
     present,
   };
@@ -321,6 +340,8 @@ export function serializeBilateralQueryParams(
   if (params.multi) out[BILATERAL_MULTI_QUERY_PARAM] = '1';
   // `CWS-R-7`: only when set — never part of `explicitDefaults`.
   if (params.scope !== null) out[BILATERAL_SCOPE_QUERY_PARAM] = params.scope;
+  // `CNP-R-2`: only when set — never part of `explicitDefaults`.
+  if (params.group !== null) out[BILATERAL_GROUP_QUERY_PARAM] = params.group;
   return out;
 }
 

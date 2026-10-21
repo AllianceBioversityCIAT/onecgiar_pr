@@ -3,8 +3,7 @@
 **What this owns:** the center Overview tab (`/bilateral/:acronym/overview`) — a KPI deck plus six
 cards (Reporting status, Needs attention, Results by project, Science Program contribution, Results
 by result type, Reporting pace) computed from the center's filtered result set for the selected phase.
-The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, `scrollToAttention()`) was removed
-2026-10-08 at reviewer request; the Needs attention panel next to Reporting status stays.
+The top-row "Needs attention" KPI tile was removed 2026-10-08 (reviewer request); the Needs attention panel stays.
 
 ## Invariants
 
@@ -21,16 +20,18 @@ The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, 
   `resolveOverviewCategory` derives the category for rows without it (older payloads, fixtures).
 - **Results by project has no "No project" bar and no lead/contributing split** (Nicoleta, 15-Oct):
   bars stack *Replicated for update* vs *New in this phase*; the no-project rows are one line under
-  the chart, W3 rows only (`by-project-no-project`, link `source=w3`), and rows on other centers' projects
-  (`unmatchedProjectRows`) are stated, not dropped silently.
-- **`bilateral-center-results` returns one row per result** (SR-164368): `results_center` is grouped
-  per result (`MAX(is_leading_result)`) before the join — result 8641 had two active IITA rows and was
-  listed twice.
-- **Card style (`quick/overview-total-results-mockup`, 2026-10-08):** count, divider, three label +
-  count-chip rows. **Since 2026-10-13 (SR-164368, user's call) the card uses the SP Overview Total
-  General purple** (`from-[#4a1d96] via-[#5c24b8] to-[#793ce8]` + two blurred glows, children
-  `relative z-10`) — keep both cards in lockstep. A progress-bar redesign (`OTR-T-1`) was tried and
-  reverted earlier; don't re-attempt without re-confirming visual direction.
+  the chart, W3 rows only (`by-project-no-project`, link `source=w3`); rows on other centers' projects
+  (`unmatchedProjectRows`) are stated, not dropped.
+- **Updated-no-project line (`by-project-updated-no-project`, CNP-T-3)** sits before the generic line: replicated
+  W3 innovations (type 7/2) with no project, counted by the shared `isUpdatedNoProjectRow`, hidden at 0, link
+  `group=updated-no-project` + `scope`/`phase`. The generic line excludes them; the empty state needs both at 0.
+  **The Overview ignores `group` in its own URL** (`applyUrlParams` forces `null`; `deepLinkParams` never emits it).
+- **`bilateral-center-results` returns one row per result** (SR-164368): `results_center` is grouped per
+  result (`MAX(is_leading_result)`) before the join — result 8641 was listed twice.
+- **Card style (2026-10-08):** count, divider, three label + count-chip rows. **Since 2026-10-13 (SR-164368)
+  the card uses the SP Overview Total General purple** (`from-[#4a1d96] via-[#5c24b8] to-[#793ce8]` + two
+  blurred glows, children `relative z-10`) — keep both cards in lockstep. The `OTR-T-1` progress-bar
+  redesign was reverted; don't re-attempt without re-confirming visual direction.
 - **The page computes no figure itself** (`COV-DD-1`). Every number rendered comes out of
   `bilateral-overview.aggregate.ts`'s `buildOverviewModel` — the component only wires signals and
   renders. If a card shows a wrong number, the bug is in `aggregate.ts` or in the row set fed to it,
@@ -83,18 +84,16 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
   `effectiveVersionId` and the controls' select options. A strict `===` silently makes every real
   phase look unknown: the deep link is stripped and the page falls back to Open. **Fixtures MUST
   carry string ids**, or a spec passes against a payload shape that never existed in production.
-- `OverviewControlsComponent` is purely presentational — it owns no data, no URL, no service. Don't
-  add a fetch or a router call there; emit `phaseChange` / `filtersChange` / `clearFilters` and let
-  the page reconcile.
+- `OverviewControlsComponent` is purely presentational (no data, URL or service): emit `phaseChange` /
+  `filtersChange` / `clearFilters` and let the page reconcile.
 - `BilateralAiService.loadAllDrafts()` sets `draftList` from the HTTP response body **directly**
   (`data ?? []`, no `.response` unwrap) — the opposite envelope shape from
   `GET_bilateralCenterResults`/`GET_bilateralProjects`. A CT/manual stub of `GET_bilateralAiDrafts`
   must return the bare array, not `{ response: [...] }`, or `buildOverviewModel` throws
   (`drafts.filter is not a function`).
-- ECharts resizes each `app-pr-viz-chart` host through a `ResizeObserver` callback that fires
-  **after** a viewport change's own reflow. A CT spec that measures `document.documentElement`
-  immediately after `cy.viewport(...)` catches the SVG mid-resize (still the previous width) and
-  reports a false horizontal-overflow positive — wait one frame/tick before measuring.
+- ECharts resizes each `app-pr-viz-chart` host in a `ResizeObserver` callback **after** a viewport
+  change's reflow. A CT spec measuring `document.documentElement` right after `cy.viewport(...)` sees
+  the SVG mid-resize and reports a false horizontal overflow — wait one frame/tick first.
 - **Rule: never mix a named Tailwind breakpoint (`sm:`/`md:`/`lg:`/`xl:`) with an arbitrary
   `min-[Npx]:`/`max-[Npx]:` variant on the SAME CSS property.** Found by `bilateral-overview.cy.ts`:
   the KPI deck's grid mixed `sm:grid-cols-2` with `min-[900px]:grid-cols-3`/`min-[1280px]:grid-cols-5`
@@ -115,9 +114,7 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
 | Layout (Cypress CT, real Chromium) | `bilateral-overview.cy.ts` — KPI column count, document horizontal-scroll, controls sticky proof, fixed chart heights across 1280×720 / 1280×1000 / 900×800 / 375×800 |
 
 ## Not verified
+- Whether the `sm:`/arbitrary-breakpoint cascade defect above affects other pages (not audited).
+- Visual parity vs the center mockup (Total results card); updated-no-project line at 375 px (CNP-T-5): human check pending.
 
-- Whether the `sm:`/arbitrary-breakpoint cascade defect above also affects other mixed-breakpoint
-  pages — not audited beyond this folder.
-- Visual parity vs the center mockup (Total results card): human browser check pending.
-
-**Verified:** 2026-10-21 · qa-development-2026-ss · Overview reads the `scope=bilateral` row set: 3 categories, Projects covered by new rows, Results links carry `scope` (CWS-T-4, spec `replicated-innovations-2026-pa/center-overview-w3-scope`) · prior: 2026-10-19 · qa-development-2026-ss · one row set with overview_category for every card, by-project replicated vs new (INC-165171) · prior: 2026-10-13 · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)
+**Verified:** 2026-10-21 · qa-development-2026-ss · updated-no-project line + Overview ignores `group` (CNP-T-3, spec `replicated-innovations-2026-pa/center-overview-no-project-line`) · prior: 2026-10-21 · qa-development-2026-ss · Overview reads the `scope=bilateral` row set: 3 categories, Projects covered by new rows, Results links carry `scope` (CWS-T-4, spec `replicated-innovations-2026-pa/center-overview-w3-scope`) · prior: 2026-10-19 · qa-development-2026-ss · one row set with overview_category for every card, by-project replicated vs new (INC-165171) · prior: 2026-10-13 · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)

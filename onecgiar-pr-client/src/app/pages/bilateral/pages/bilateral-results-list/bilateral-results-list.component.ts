@@ -59,11 +59,13 @@ import type { BilateralCenterResult } from '../../services/bilateral-center-resu
 // Lead) this list shipped before this spec.
 import {
   applyResultsTabDefaults,
+  BilateralGroup,
   BilateralMethod,
   BilateralQueryParams,
   BilateralRole,
   BilateralScope,
   BilateralSource,
+  BILATERAL_GROUP_QUERY_PARAM,
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_PHASE_QUERY_PARAM,
   BILATERAL_PROGRAM_QUERY_PARAM,
@@ -92,7 +94,7 @@ export type { BilateralCenterResult };
  *  stray `?multi=1` left over from a Reporting deep link still gets the W3 + Lead default. */
 const RESULTS_TAB_IGNORE_KEYS = ['phase', 'multi'] as const;
 
-/** `COV-R-14` — the nine contract keys the Results tab reads AND writes (everything except
+/** `COV-R-14` — the contract keys the Results tab reads AND writes (everything except
  *  `multi`, which is Reporting-only, and `?result=`, which is untouched notification focus). */
 const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
   BILATERAL_PHASE_QUERY_PARAM,
@@ -106,10 +108,12 @@ const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
   BILATERAL_SEARCH_QUERY_PARAM,
   BILATERAL_CREATED_BY_QUERY_PARAM,
   BILATERAL_SCOPE_QUERY_PARAM,
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-R-2 B)
+  BILATERAL_GROUP_QUERY_PARAM,
 ] as const;
 
 /** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
-type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'type' | 'search' | 'scope';
+type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'type' | 'search' | 'scope' | 'group';
 
 interface BilateralFilterChip {
   dimension: BilateralFilterChipDimension;
@@ -480,6 +484,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
       createdBy: this.createdByFilter(),
       multi: false,
       scope: this.scope(),
+      group: this.group(),
     };
   });
 
@@ -489,6 +494,14 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
    * chip clears it, so it is never sticky (`CWS-R-7` B).
    */
   readonly scope = signal<BilateralScope | null>(null);
+
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-R-2, CNP-DD-2)
+  /**
+   * `'updated-no-project'` when the URL carries `group=updated-no-project` (the Overview's
+   * updated-no-project line). Applied client-side by `filterCenterResults`; NOT part of the fetch
+   * pipeline. Hydrated from the URL only, so removing the chip clears it and it is never sticky.
+   */
+  readonly group = signal<BilateralGroup | null>(null);
 
   /** Distinct creator display names from loaded rows — powers the Created by multiselect. */
   readonly createdByOptions = computed(() => {
@@ -697,6 +710,9 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
 
     // `CWS-R-7` A — the Overview row-set scope is a removable chip like any other filter.
     if (this.scope()) chips.push({ dimension: 'scope', value: 'bilateral', label: 'Scope: Bilateral reporting (Overview)' });
+
+    // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-R-2 A)
+    if (this.group()) chips.push({ dimension: 'group', value: 'updated-no-project', label: 'Updated innovations with no project' });
 
     return chips;
   });
@@ -954,6 +970,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.methodFilter.set(params.method);
     this.createdByFilter.set(params.createdBy);
     this.scope.set(params.scope);
+    this.group.set(params.group);
 
     const urlPhaseIds = parsePhaseIdsFromUrl(map.get(BILATERAL_PHASE_QUERY_PARAM));
     if (urlPhaseIds.length) {
@@ -1195,6 +1212,7 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.createdByFilter.set([]);
     this.searchQuery.set('');
     this.scope.set(null);
+    this.group.set(null);
     this.syncUrlParams();
   }
 
@@ -1235,6 +1253,9 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
         return;
       case 'scope':
         this.scope.set(null);
+        break;
+      case 'group':
+        this.group.set(null);
         break;
     }
     this.syncUrlParams();

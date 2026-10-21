@@ -8,7 +8,7 @@
 | Parent Spec | `docs/specs/bilateral/replicated-innovations-2026-pa/` (`family.md`, child #2) |
 | Slug | `center-overview-no-project-line`, derived from the free-text argument |
 | Type | **Change** |
-| Status | **draft**, awaiting owner approval |
+| Status | **approved** 2026-10-21; specified in `requirements.md`, `design.md`, `tasks.md` |
 | Approval Mode | `gated` |
 | Owner | Santiago Sanchez |
 | Date | 2026-10-16 |
