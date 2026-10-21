@@ -53,7 +53,7 @@ describe('BilateralOverviewService', () => {
   // project — the separate totals request is gone.
   it('load() asks for the project-tagging rows and makes no totals request', () => {
     service.load('IITA', 36);
-    expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledWith('IITA', 36, true);
+    expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledWith('IITA', 36, { scope: 'bilateral' });
     expect((mockApi as Record<string, unknown>)['GET_bilateralCenterOverviewTotals']).toBeUndefined();
   });
 
@@ -198,8 +198,8 @@ describe('BilateralOverviewService', () => {
       service.invalidateAll();
 
       expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledTimes(4);
-      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(3, 'AfricaRice', 36, true);
-      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(4, 'AfricaRice', 37, true);
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(3, 'AfricaRice', 36, { scope: 'bilateral' });
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(4, 'AfricaRice', 37, { scope: 'bilateral' });
       expect(mockApi.GET_bilateralProjects).toHaveBeenCalledTimes(1);
       expect(service.resultsData('AfricaRice', 36)()).toBeNull();
       expect(service.resultsLoading('AfricaRice', 36)()).toBe(true);

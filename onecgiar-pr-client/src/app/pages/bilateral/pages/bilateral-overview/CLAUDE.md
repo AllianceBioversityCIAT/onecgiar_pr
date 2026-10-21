@@ -8,19 +8,20 @@ The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, 
 
 ## Invariants
 
-- **Every card comes from ONE row set (INC-165171, 2026-10-19).** The Total card showed 263 (server
-  totals) while Editing showed 267 (rows): two row sets. Now `BilateralOverviewService` asks
-  `bilateral-center-results?includeProjectTagging=true`, which adds the W1/W2 results tagging a center
-  project, and every row carries `overview_category` resolved in SQL: `replicated_w3`,
-  `replicated_w1w2`, `new_w3`, `w1w2_tagging`, `w1w2_center_only` (replicated first). The Total card
-  renders `kpis.totalResults.categories` — five lines that add up to the headline — and **narrows with
-  the filters** like every other card. Status tiles show `replicated · new`; Projects covered shows
-  `with new results · only replicated`. `project_id` prefers a center-owned project over the lead one.
-  `bilateral-center-overview-totals` is no longer called by the client (endpoint kept server-side).
+- **Every card comes from ONE scoped row set (INC-165171, CWS-R-2, 2026-10-21).** The Total card showed
+  263 (server totals) while Editing showed 267 (rows): two row sets. Now `BilateralOverviewService` asks
+  `bilateral-center-results?scope=bilateral`: the server sends only `replicated_w3`, `new_w3` and
+  `w1w2_tagging` rows (`overview_category`, resolved in SQL). The client never hides rows by category
+  (the server is the filter); `OVERVIEW_CATEGORIES` is the 3-line DISPLAY list, the wire type keeps 5.
+  The Total card renders `kpis.totalResults.categories` — three lines that add up to the headline —
+  and **narrows with the filters**. Status tiles show `replicated · new`. **Projects covered** counts
+  only projects with a NEW row (`new_w3`/`w1w2_tagging`); replicated-only projects are a sub-line ("not
+  counted"), and the "No new results yet" strip uses the same rule (`CWS-R-5`). `project_id` prefers a
+  center-owned project over the lead one. `bilateral-center-overview-totals` is no longer called.
   `resolveOverviewCategory` derives the category for rows without it (older payloads, fixtures).
 - **Results by project has no "No project" bar and no lead/contributing split** (Nicoleta, 15-Oct):
   bars stack *Replicated for update* vs *New in this phase*; the no-project rows are one line under
-  the chart, broken down by category (`by-project-no-project`), and rows on other centers' projects
+  the chart, W3 rows only (`by-project-no-project`, link `source=w3`), and rows on other centers' projects
   (`unmatchedProjectRows`) are stated, not dropped silently.
 - **`bilateral-center-results` returns one row per result** (SR-164368): `results_center` is grouped
   per result (`MAX(is_leading_result)`) before the join — result 8641 had two active IITA rows and was
@@ -38,9 +39,9 @@ The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, 
   with the Results tab (`COV-R-13`). `filterCenterResults(rows, params)` is the single predicate both
   tabs apply; a card figure and the Results tab's own visible count must reconcile by construction,
   not by coincidence — that reconciliation is proven live (HITL), never by a CT/Jest fixture alone.
-  ⚠️ **Known gap (INC-165171):** the Overview rows include `w1w2_tagging` results; the Results tab
-  fetches without `includeProjectTagging`, so a figure that counts tagging rows can open fewer rows
-  there (0 for CIP, 6 for IITA in Reporting 2026). Closing it means the Results tab passing the flag.
+  The old `includeProjectTagging` gap (tagging rows counted here, missing in Results) is closed by
+  `CWS-R-8`: every link into Results carries `scope=bilateral` (`resultsLinkParams`, `CWS-DD-5`); links to
+  Reporting and Draft Results (`deepLinkParams`) never do. Live reconciliation is HITL (`CWS-AC-9`).
 - **`BilateralOverviewService` caches per `centerId::versionId`** (`COV-DD-8`); projects are cached
   per center only. Results and projects are two independent streams with their own loading/error
   signals (`COV-R-17`) — a results failure never nulls an already-loaded `projects` list, so
@@ -48,7 +49,7 @@ The top-row "Needs attention" KPI tile (`kpi-attention`, `kpis.needsAttention`, 
   shows the results error. A late response for a phase the user has navigated away from writes to
   its OWN cache key and is never rendered under the current one (`COV-R-21`).
 - **Every deep link carries `phase` and `explicitDefaults: true`** (`COV-DD-3`,
-  `deepLinkParams()`) — even when the Overview's own URL has no `?phase=`. Omitting either breaks
+  `deepLinkParams()` / `resultsLinkParams()`) — even when the Overview's own URL has no `?phase=`. Omitting either breaks
   the reconciliation: without `explicitDefaults` the Results tab layers its own W3+Lead default on
   top of a figure that already counted both; without `phase` a click can land on the wrong phase's
   rows.
@@ -119,4 +120,4 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
   pages — not audited beyond this folder.
 - Visual parity vs the center mockup (Total results card): human browser check pending.
 
-**Verified:** 2026-10-19 · qa-development-2026-ss · one row set with overview_category for every card, by-project replicated vs new (INC-165171) · prior: 2026-10-13 · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)
+**Verified:** 2026-10-21 · qa-development-2026-ss · Overview reads the `scope=bilateral` row set: 3 categories, Projects covered by new rows, Results links carry `scope` (CWS-T-4, spec `replicated-innovations-2026-pa/center-overview-w3-scope`) · prior: 2026-10-19 · qa-development-2026-ss · one row set with overview_category for every card, by-project replicated vs new (INC-165171) · prior: 2026-10-13 · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)

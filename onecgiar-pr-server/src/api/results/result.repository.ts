@@ -4192,6 +4192,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
    * `includeProjectTagging` adds the W1/W2 results that tag a center project without the center
    * on the result (`is_leading_result` NULL). Off by default: the Results tab and the portfolio
    * Centers block keep their row set.
+   * `bilateralScope` (center-overview-w3-scope) implies the tagging rows and keeps only
+   * `replicated_w3`, `new_w3` and `w1w2_tagging`; the predicate sits next to the `CASE` it mirrors.
    * Project ownership follows `BilateralProjectsService.getProjectsByCenter`: `organization_code`
    * = the center institution, or `organization_code` NULL and the W3 alias of the center code.
    */
@@ -4199,6 +4201,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     centerId: string,
     versionId: number,
     includeProjectTagging = false,
+    bilateralScope = false,
   ): Promise<any[]> {
     // One `(acronym = ? AND code = ?)` per alias, as in getBilateralCenterOverviewTotals.
     const aliasEntries = Object.entries(
@@ -4321,6 +4324,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.is_replicated,
         CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rc.is_leading_result,
+        -- Keep in step with the bilateral scope predicate in the WHERE below (CWS-R-1).
         CASE
           WHEN COALESCE(r.is_replicated, 0) = 1 AND r.source = 'API' THEN 'replicated_w3'
           WHEN COALESCE(r.is_replicated, 0) = 1 THEN 'replicated_w1w2'
@@ -4340,6 +4344,13 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           rc.result_id IS NOT NULL
           OR (? = 1 AND r.source = 'Result' AND tg.result_id IS NOT NULL)
         )
+        -- @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-w3-scope CWS-R-1
+        -- Bilateral scope: keep only replicated_w3, new_w3 and w1w2_tagging. This is the
+        -- complement of replicated_w1w2 and w1w2_center_only under the CASE above, so it MUST
+        -- change together with that CASE (same precedence). Rows here are API or Result, so a
+        -- row that is not API is a Result: it stays only when it is not replicated and tags a
+        -- center project. Flag 0 leaves the row set exactly as before.
+        AND (? = 0 OR r.source = 'API' OR (COALESCE(r.is_replicated, 0) = 0 AND tg.result_id IS NOT NULL))
       ORDER BY r.created_date DESC, r.id DESC
     `;
 
@@ -4350,7 +4361,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ...aliasParams,
         centerId,
         versionId,
-        includeProjectTagging ? 1 : 0,
+        includeProjectTagging || bilateralScope ? 1 : 0,
+        bilateralScope ? 1 : 0,
       ]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

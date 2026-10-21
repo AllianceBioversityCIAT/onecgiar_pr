@@ -173,6 +173,44 @@ export const FIXTURE_D1_ROWS: BilateralCenterResult[] = [
   mkRow({ id: 10, project_id: 100, is_leading_result: 0, source: 'API', status_id: 6, result_type_id: 6, submitter: 'SP01', created_date: '2026-10-05' }),
 ];
 
+/**
+ * CWS-T-4 — the CIP / Reporting 2026 shape the scoped Overview receives (`scope=bilateral`, so the
+ * server sends only `replicated_w3`, `new_w3` and `w1w2_tagging` rows). Ids are STRINGS like the
+ * live payload (`H-1` / `H-2`); the aggregate normalizes through `Number()`.
+ *
+ * - 63 `replicated_w3` rows: 54 on 5 center projects (101..105), 5 with no project, 4 on project
+ *   9001, which is NOT in the center's list (another center's project).
+ * - 1 `new_w3` row on project 101 (the one new row, so the other 4 projects stay replicated-only).
+ * - N = 57 center projects (101..157).
+ * - Statuses: the 63 replicated rows cycle 1,5,6,7,2,3,4 (nine of each); the new row is Editing, so
+ *   Editing 10, Pending 9, Approved 9, Rejected 9, QA 9, Submitted 9, Discontinued 9 = 64.
+ */
+export const CWS_CENTER_PROJECT_COUNT = 57;
+export const CWS_OTHER_CENTER_PROJECT_ID = 9001;
+
+export function makeCwsScopedFixture(): { rows: BilateralCenterResult[]; projects: BilateralProject[] } {
+  const asApiId = (id: number) => String(id) as unknown as number;
+  const projects = Array.from({ length: CWS_CENTER_PROJECT_COUNT }, (_, index) => makeProject({ id: asApiId(101 + index) }));
+  const statusCycle = [1, 5, 6, 7, 2, 3, 4];
+  const replicatedProjectIds: (number | null)[] = [
+    ...Array.from({ length: 54 }, (_, index) => 101 + (index % 5)),
+    ...Array.from({ length: 5 }, () => null),
+    ...Array.from({ length: 4 }, () => CWS_OTHER_CENTER_PROJECT_ID),
+  ];
+  const rows: BilateralCenterResult[] = replicatedProjectIds.map((projectId, index) =>
+    mkRow({
+      id: 3000 + index,
+      project_id: projectId === null ? null : asApiId(projectId),
+      status_id: statusCycle[index % statusCycle.length],
+      is_replicated: true,
+      overview_category: 'replicated_w3',
+      created_date: '2026-09-10',
+    }),
+  );
+  rows.push(mkRow({ id: 3100, project_id: asApiId(101), status_id: 1, overview_category: 'new_w3', created_date: '2026-09-10' }));
+  return { rows, projects };
+}
+
 /** Approval-rate denominator 0: no approved (6) and no rejected (7) rows. */
 export const FIXTURE_ROWS_NO_APPROVALS: BilateralCenterResult[] = [
   mkRow({ id: 101, project_id: 100, status_id: 1, created_date: '2026-09-01' }),

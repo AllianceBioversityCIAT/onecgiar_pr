@@ -33,10 +33,16 @@ export class BilateralApiService {
   /**
    * INC-165171 — `includeProjectTagging` (center Overview) also returns the W1/W2 results that tag
    * a center project without the center on the result. Omitted, the request is the previous one.
+   * CWS-R-7 — `scope: 'bilateral'` asks for the Overview row set; it is sent only when set.
    */
-  GET_bilateralCenterResults(centerId: string, versionId: number, includeProjectTagging = false) {
+  GET_bilateralCenterResults(
+    centerId: string,
+    versionId: number,
+    options: { includeProjectTagging?: boolean; scope?: 'bilateral' | null } = {},
+  ) {
     const params: Record<string, string> = { centerId, versionId: String(versionId) };
-    if (includeProjectTagging) params['includeProjectTagging'] = 'true';
+    if (options.includeProjectTagging) params['includeProjectTagging'] = 'true';
+    if (options.scope) params['scope'] = options.scope;
     return this.http.get<any>(`${this.resultsApiBaseUrl}bilateral-center-results`, { params });
   }
 

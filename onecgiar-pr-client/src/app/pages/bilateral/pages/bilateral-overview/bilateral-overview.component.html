@@ -86,19 +86,17 @@
       } @else {
         @let overview = model();
         @let total = overview.kpis.totalResults;
-        <!-- 1 · Total results (hero). INC-165171: computed from the same rows as every other card,
-             one line per overview category; the lines add up to the headline. -->
+        <!-- 1 · Total results (hero). INC-165171 / CWS-R-3: computed from the same scoped rows as every
+             other card, exactly three lines (replicated W3, new W3, W1/W2 tagging); the lines add up to the headline. -->
         <a
           data-testid="kpi-total"
           [routerLink]="resultsLink()"
-          [queryParams]="deepLinkParams()"
+          [queryParams]="resultsLinkParams()"
           [attr.aria-label]="
             'Total results, ' + total.count + ' results: ' +
             total.categories.replicated_w3 + ' ' + overviewCategoryCopy.replicated_w3.label + ', ' +
-            total.categories.replicated_w1w2 + ' ' + overviewCategoryCopy.replicated_w1w2.label + ', ' +
             total.categories.new_w3 + ' ' + overviewCategoryCopy.new_w3.label + ', ' +
-            total.categories.w1w2_tagging + ' ' + overviewCategoryCopy.w1w2_tagging.label + ', ' +
-            total.categories.w1w2_center_only + ' ' + overviewCategoryCopy.w1w2_center_only.label + ' — open in Results'
+            total.categories.w1w2_tagging + ' ' + overviewCategoryCopy.w1w2_tagging.label + ' — open in Results'
           "
           class="relative flex min-h-[120px] flex-col overflow-hidden rounded-[14px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[16px] text-white no-underline shadow-md cursor-pointer transition-all duration-200 motion-reduce:transition-none hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
           <!-- Same gradient + glow as the SP Overview Total General card. -->
@@ -126,7 +124,7 @@
         <a
           data-testid="kpi-pending"
           [routerLink]="resultsLink()"
-          [queryParams]="deepLinkParams({ status: ['pending'] })"
+          [queryParams]="resultsLinkParams({ status: ['pending'] })"
           [attr.aria-label]="'Pending review, ' + overview.kpis.pendingReview.count + ' results — open in Results'"
           class="flex min-h-[120px] flex-col gap-[8px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
           <span class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
@@ -146,7 +144,7 @@
         <a
           data-testid="kpi-approved"
           [routerLink]="resultsLink()"
-          [queryParams]="deepLinkParams({ status: ['approved'] })"
+          [queryParams]="resultsLinkParams({ status: ['approved'] })"
           [attr.aria-label]="'Approved, ' + overview.kpis.approved.count + ' results — open in Results'"
           class="flex min-h-[120px] flex-col gap-[8px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
           <span class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
@@ -191,9 +189,9 @@
           <span class="font-mono text-[28px] font-bold leading-none tabular-nums text-[var(--pr-text-heading)]">
             {{ overview.kpis.projectsCovered.coveredCount }}<span class="ml-[6px] font-sans text-[13px] font-medium text-[var(--pr-text-secondary)]">of {{ overview.kpis.projectsCovered.totalCount }}</span>
           </span>
-          <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ overview.kpis.projectsCovered.notStartedCount }} projects with no result yet</span>
+          <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ overview.kpis.projectsCovered.notStartedCount }} projects with no new result yet</span>
           <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-covered-split">
-            {{ overview.kpis.projectsCovered.coveredWithNewCount }} with new results · {{ overview.kpis.projectsCovered.coveredOnlyReplicatedCount }} only replicated
+            {{ overview.kpis.projectsCovered.coveredOnlyReplicatedCount }} with only replicated updates (not counted)
           </span>
         </a>
         }
@@ -383,7 +381,7 @@
               <a
                 [attr.data-testid]="'by-project-link-' + bar.projectId"
                 [routerLink]="resultsLink()"
-                [queryParams]="deepLinkParams({ project: [bar.projectId] })"
+                [queryParams]="resultsLinkParams({ project: [bar.projectId] })"
                 [attr.aria-label]="projectLabel(bar.projectId) + ', ' + bar.total + ' results — open in Results'"
                 class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
                 <span class="max-w-[220px] truncate">{{ projectLabel(bar.projectId) }}</span>
@@ -398,7 +396,7 @@
             <a
               data-testid="by-project-no-project"
               [routerLink]="resultsLink()"
-              [queryParams]="deepLinkParams(noProject.allW1W2 ? { project: [], source: 'w1w2' } : { project: [] })"
+              [queryParams]="resultsLinkParams({ project: [], source: 'w3' })"
               [attr.aria-label]="noProjectLabel + ', ' + noProject.total + ' results — open in Results'"
               class="flex flex-wrap items-center gap-x-[10px] gap-y-[4px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[12px] py-[8px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
               <span>
@@ -433,20 +431,20 @@
             </button>
           }
 
-          <!-- Not started yet (COV-R-9 B, COV-DD-9) -->
+          <!-- No new results yet (COV-R-9 B, COV-DD-9; CWS-R-5 B: projects with no NEW result, replicated-only included) -->
           @if (model().byProject.notStartedProjectIds.length) {
             <div
               data-testid="by-project-not-started"
               class="flex flex-wrap items-center gap-[8px] border-t border-dashed border-[var(--pr-border)] pt-[10px] text-[12px] text-[var(--pr-text-secondary)] max-[899px]:flex-nowrap max-[899px]:overflow-x-auto max-[899px]:no-scrollbar">
               <b class="flex-none font-semibold text-[var(--pr-text-heading)]">
-                Not started yet ({{ model().byProject.notStartedProjectIds.length }})
+                No new results yet ({{ model().byProject.notStartedProjectIds.length }})
               </b>
               @for (projectId of model().byProject.notStartedProjectIds; track projectId) {
                 <a
                   [attr.data-testid]="'not-started-chip-' + projectId"
                   [routerLink]="reportingLink()"
                   [queryParams]="deepLinkParams({ project: [projectId] })"
-                  [attr.aria-label]="projectLabel(projectId) + ', 0 results — open in Reporting'"
+                  [attr.aria-label]="projectLabel(projectId) + ', 0 new results — open in Reporting'"
                   class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
                   <span class="max-w-[220px] truncate">{{ projectLabel(projectId) }}</span>
                   <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">0</b>
@@ -527,7 +525,7 @@
                 <a
                   [attr.data-testid]="'by-sp-results-' + row.programCode"
                   [routerLink]="resultsLink()"
-                  [queryParams]="deepLinkParams({ program: [row.programCode] })"
+                  [queryParams]="resultsLinkParams({ program: [row.programCode] })"
                   [attr.aria-label]="programLabel(row.programCode) + ', ' + row.resultsCount + ' results — open in Results'"
                   class="min-w-[32px] text-right font-mono font-bold tabular-nums text-[var(--pr-text-heading)] no-underline cursor-pointer hover:text-[var(--pr-color-primary-300)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
                   {{ row.resultsCount }}
@@ -578,7 +576,7 @@
               <a
                 [attr.data-testid]="'by-type-link-' + row.resultTypeId"
                 [routerLink]="resultsLink()"
-                [queryParams]="deepLinkParams({ type: [row.resultTypeId] })"
+                [queryParams]="resultsLinkParams({ type: [row.resultTypeId] })"
                 [attr.aria-label]="(row.label ?? 'Result type ' + row.resultTypeId) + ', ' + row.count + ' results — open in Results'"
                 class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
                 <span class="max-w-[220px] truncate">{{ row.label ?? 'Result type ' + row.resultTypeId }}</span>
