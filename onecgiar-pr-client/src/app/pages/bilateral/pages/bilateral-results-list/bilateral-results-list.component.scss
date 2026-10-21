@@ -577,6 +577,10 @@ $phase-color-border:  #cbd5e1;
         cursor: default;
         pointer-events: none;
 
+        td {
+          vertical-align: middle;
+        }
+
         &:hover {
           background: transparent;
         }
@@ -593,8 +597,10 @@ $phase-color-border:  #cbd5e1;
       border-top: none !important;
       border-left: none !important;
       font-size: 13px;
-      padding: 6px 12px !important;
-      vertical-align: middle;
+      // CRK-T-4a — 8px (not 6px) keeps a single 28px line centred in the 44px row while the stacked
+      // version lines of every cell start at the same top (`vertical-align: top`) and stay aligned.
+      padding: 8px 12px !important;
+      vertical-align: top;
       color: var(--pr-text, #2b2838);
       overflow: hidden;
 
@@ -609,7 +615,7 @@ $phase-color-border:  #cbd5e1;
         width: 56px !important;
         min-width: 56px;
         max-width: 56px;
-        padding: 6px 8px 6px 4px !important;
+        padding: 8px 8px 8px 4px !important;
         border-left: 1px solid var(--pr-border-divider, #eeeef1) !important;
         border-right: none !important;
         background: #fff;
@@ -655,11 +661,19 @@ $phase-color-border:  #cbd5e1;
 }
 
 // CRK-DD-3 — one clickable line per version inside a cell (stacked newest first). Every cell line is
-// at least as tall as `.rc-cell-link` (28px) so the lines of different cells stay aligned.
+// exactly one 28px line (CRK-T-4a: Role's bare badge and Status's badge + history icon included), content
+// centred, so the lines of different cells stay aligned.
 .rc-line {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 28px;
   min-width: 0;
   cursor: pointer;
+
+  // Keep the previous block behaviour: the cell link fills the line.
+  > .rc-cell-link {
+    flex: 1 1 auto;
+  }
 
   &:focus-visible {
     outline: 2px solid var(--pr-color-primary-300);
@@ -741,8 +755,21 @@ $phase-color-border:  #cbd5e1;
 }
 
 .rc-status-wrap {
-  flex-wrap: wrap;
+  display: inline-flex;
+  align-items: center;
+  // CRK-T-4a — badge and history icon stay on one line (a wrapped icon made the Status line 40px tall).
+  flex-wrap: nowrap;
   gap: 4px;
+  min-width: 0;
+
+  // The badge gives way (ellipsis, full name in its `title`) so the history icon is never clipped
+  // in a narrow, user-resized Status column.
+  .status_tag {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .rc-th-action {
@@ -841,13 +868,8 @@ $phase-color-border:  #cbd5e1;
 /* P2-3157 — rejection justification affordance + notification deep-link focus.
    New styles use --pr-color-* tokens; the legacy .status_* chips above still carry raw hex. */
 
-.rc-status-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .brl_justification_trigger {
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;

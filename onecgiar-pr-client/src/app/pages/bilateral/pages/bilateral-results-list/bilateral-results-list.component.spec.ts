@@ -1851,9 +1851,25 @@ describe('BilateralResultsListComponent', () => {
       // newest phase first; the phase label rides on the code line only when there is more than one version
       const lines = cellLines(rowOf('9878'), 'result_code');
       expect(lines).toHaveLength(2);
-      expect(lines[0].textContent).toContain('2026');
-      expect(lines[1].textContent).toContain('2025');
+      const tag = (line: HTMLElement) => line.querySelector('[data-testid="brl-version-phase"]') as HTMLElement;
+      // Short label (the year) as text; the full phase label rides on title and aria-label (CRK-T-4a).
+      expect(tag(lines[0]).textContent?.trim()).toBe('2026');
+      expect(tag(lines[1]).textContent?.trim()).toBe('2025');
+      expect(tag(lines[0]).getAttribute('title')).toBe('Reporting 2026 - P25');
+      expect(tag(lines[0]).getAttribute('aria-label')).toBe('Reporting 2026 - P25');
+      expect(tag(lines[1]).getAttribute('title')).toBe('Reporting 2025 - P25');
       expect(cellLines(rowOf('9877'), 'result_code')[0].textContent).not.toContain('2026');
+    });
+
+    it('falls back to the full phase label when the phase year is unknown', () => {
+      load({ phase: '35,36' });
+      component.phases.set(component.phases().map(p => (Number(p.id) === 35 ? { ...p, phase_year: undefined as any } : p)));
+      fixture.detectChanges();
+
+      const tag = cellLines(rowOf('9878'), 'result_code')[1].querySelector('[data-testid="brl-version-phase"]') as HTMLElement;
+      // No year to show: the current (full) label is used, as text and as title.
+      expect(tag.textContent?.trim()).toBe('Phase - P25');
+      expect(tag.getAttribute('title')).toBe('Phase - P25');
     });
 
     it('groups after the filters run: only the 2026 phase leaves 9878 with a single, unlabelled line', () => {

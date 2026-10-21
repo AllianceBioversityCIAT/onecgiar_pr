@@ -165,7 +165,7 @@ export const BILATERAL_COLUMNS: readonly BilateralColumnDef[] = [
   { key: 'description', title: 'Description', attr: 'description', width: '260px', minPx: 140, defaultOn: true },
   { key: 'type', title: 'Result type', attr: 'result_type', width: '180px', minPx: 120, defaultOn: true },
   { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', minPx: 100, defaultOn: true },
-  { key: 'status', title: 'Status', attr: 'status_id', width: '120px', minPx: 100, defaultOn: true },
+  { key: 'status', title: 'Status', attr: 'status_id', width: '156px', minPx: 100, defaultOn: true },
   { key: 'createdBy', title: 'Created by', attr: 'created_by_name', width: '160px', minPx: 120, defaultOn: true },
   { key: 'created', title: 'Created', attr: 'created_date', width: '110px', minPx: 90, defaultOn: true },
 ];
@@ -829,6 +829,18 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     const id = Number(result?.version_id);
     const phase = this.phases().find(p => phaseVersionId(p) === id);
     return phase ? this.phaseFilterLabel(phase) : `Phase ${result?.version_id ?? ''}`.trim();
+  }
+
+  /**
+   * `CRK-T-4a` — compact phase label for the code line: the phase year ("2026"). The full
+   * `phaseFilterLabel` ("Reporting 2026 - P25") truncated in the narrow Code column and made the
+   * stacked lines indistinguishable. Falls back to the full label when the year is unknown.
+   */
+  versionPhaseShortLabel(result: BilateralCenterResult): string {
+    const id = Number(result?.version_id);
+    const phase = this.phases().find(p => phaseVersionId(p) === id);
+    const year = phase?.phase_year;
+    return year ? String(year) : this.versionPhaseLabel(result);
   }
 
   /** `CRK-DD-4` — `is_replicated` is a raw tinyint that may arrive as a string or boolean. */

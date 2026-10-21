@@ -446,7 +446,11 @@
                         <span class="rc-cell-link">
                           <span class="rc-code">{{ result.result_code }}</span>
                           @if (row.versions.length > 1) {
-                            <span class="rc-phase-tag" data-testid="brl-version-phase">{{ versionPhaseLabel(result) }}</span>
+                            <span
+                              class="rc-phase-tag"
+                              data-testid="brl-version-phase"
+                              [attr.title]="versionPhaseLabel(result)"
+                              [attr.aria-label]="versionPhaseLabel(result)">{{ versionPhaseShortLabel(result) }}</span>
                           }
                         </span>
                       } @else if (column.attr === 'title') {
@@ -474,7 +478,7 @@
                         }
                       } @else if (column.attr === 'status_id') {
                         <span class="rc-cell-link rc-status-wrap">
-                          <span [class]="statusClass(result.status_id)">{{ result.status_name }}</span>
+                          <span [class]="statusClass(result.status_id)" [attr.title]="result.status_name">{{ result.status_name }}</span>
 
                           <!-- P2-3157 AC4: read back the Science Program's rejection justification -->
                           @if (hasReviewHistory(result)) {
