@@ -5,7 +5,7 @@
 - **Module / feature:** Notifications inbox — primary SP request row decision state
 - **Linked spec:** `requirements.md` (`PRDS-R-1..4`) + `design.md`
 - **Owner / driver:** Santiago Sanchez
-- **Status:** in-progress (T-1 done 2026-10-21)
+- **Status:** done 2026-10-21 (T-2 step 4 N/A by design, see execution.md)
 - **Budget (design §11):** 1 code task + 1 HITL · ~60 src / ~120 spec / ~15 docs LOC · 1 review round
 
 ## 2. Pre-flight checklist
@@ -48,7 +48,7 @@
 - **Cannot be proven here:** that the live payload carries `obj_result.status_id` and `obj_shared_inititiative.official_code` on decided primary rows (jsdom) → `PRDS-T-2`.
 - **Definition of done:** rows 1–6 green, row 1 seen red first; related tests green; lint clean; folder `CLAUDE.md` updated.
 
-### [ ] `PRDS-T-2` — PRTest check (HITL)
+### [x] `PRDS-T-2` — PRTest check (HITL)
 
 - **Type:** rollout · **Depends on:** `PRDS-T-1` deployed to PRTest (memory: via `performance-refactor`, ~30 min)
 - **Implements:** `PRDS-R-1..3` end-to-end; closes the defect class "real payload" (`requirements.md` §7.1)
