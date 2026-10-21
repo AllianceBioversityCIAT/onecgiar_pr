@@ -28,7 +28,7 @@ export function buildQuickTypologyChips(
   const counts = typologyCounts ?? {};
   const isAll = currentTypologies.length === 0;
 
-  return QUICK_TYPOLOGIES.map(item => {
+  const chips = QUICK_TYPOLOGIES.map(item => {
     const active =
       item.matchKey === 'all'
         ? isAll
@@ -48,4 +48,7 @@ export function buildQuickTypologyChips(
       active
     };
   });
+
+  // CRK-R-6 / CRK-DD-2: an empty category chip is noise; the active one stays so it can be cleared.
+  return chips.filter(chip => chip.matchKey === 'all' || chip.active || (chip.count ?? 0) > 0);
 }

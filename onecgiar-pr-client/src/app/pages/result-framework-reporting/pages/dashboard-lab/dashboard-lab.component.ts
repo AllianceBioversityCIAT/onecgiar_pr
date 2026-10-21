@@ -3705,7 +3705,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * known bug the owner rejected. Real PRMS data (and the previous entity-aow sidebar) treats them
    * as siblings of the Areas of Work list, each with its own endpoint.
    */
-  readonly reportingGroups = computed<ReportingAowGroup[]>(() => {
+  readonly reportingGroups = computed<ReportingAowGroup[]>(() => this.buildReportingGroups(true));
+
+  /**
+   * Same pipeline as `reportingGroups()` with the Category (typology) stage switched off, so the
+   * quick-filter chips keep showing every category that survives Type / Target / Section instead of
+   * zeroing the rest once one is selected. `plannedSearch` never feeds either pass.
+   * @akili-spec changes/center-results-kpi-chips CRK-DD-1
+   */
+  readonly reportingGroupsForCounts = computed<ReportingAowGroup[]>(() => this.buildReportingGroups(false));
+
+  private buildReportingGroups(applyCategory: boolean): ReportingAowGroup[] {
     const aowFilter = this.reportingAowFilter();
     const typologies = this.reportingTypologyFilter();
     const typeFilters = this.reportingTypeFilter();
@@ -3713,7 +3723,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // fallback to `type_name` was wrong: that field carries the indicator's own name ("Proportion of
     // CGIAR-NARS-SME breeding pipelines within…"), so indicators without a result type polluted the
     // filter with 160+ one-off entries.
-    const noTypology = !typologies || typologies.length === 0;
+    const noTypology = !applyCategory || !typologies || typologies.length === 0;
     const matchTypology = (i: ReportingIndicator) =>
       noTypology || typologies.includes((i?.result_type_name ?? '').trim());
     // Global Target filter (KTO-R-10): same stage as Category, AND-combined with it, so every
@@ -3819,7 +3829,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         : null;
 
     return [...aowCards, ...(intermediateCard ? [intermediateCard] : []), ...(o30Card ? [o30Card] : [])];
-  });
+  }
 
   /**
    * `reportingGroups()` feeds the Overview tab too (`bandPlannedResultsCount`, `overviewXcutProgress`
@@ -3861,7 +3871,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   readonly reportingTypologyCounts = computed<Record<string, number>>(() => {
     const counts: Record<string, number> = {};
-    const groups = this.reportingGroups();
+    const groups = this.reportingGroupsForCounts();
     let total = 0;
     for (const group of groups) {
       for (const row of group.indicators ?? []) {

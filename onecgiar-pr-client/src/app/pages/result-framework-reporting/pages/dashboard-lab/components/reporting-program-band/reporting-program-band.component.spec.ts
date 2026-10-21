@@ -1141,7 +1141,7 @@ describe('ReportingProgramBandComponent', () => {
       });
     });
 
-    it('falls back to plannedResultsCount for All and 0 for typologies without counts', async () => {
+    it('falls back to plannedResultsCount for All and hides typologies without counts (CRK-R-6)', async () => {
       await build({
         showToolbar: true,
         compactFilters: false,
@@ -1153,12 +1153,11 @@ describe('ReportingProgramBandComponent', () => {
       const chips = Array.from(strip!.querySelectorAll('button'));
       expect(chips[0].textContent).toContain('KPI');
       expect(chips[0].textContent).toContain('25');
-      expect(chips[1].textContent).toContain('Knowledge Product');
-      expect(chips[1].textContent).toContain('0');
+      expect(chips.length).toBe(1);
     });
 
     it('S-7.1: renders no Target pill in the toolbar, and every typology chip still renders with its count', async () => {
-      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5 } });
+      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5, 'Knowledge product': 2 } });
       expect(root().querySelector('[data-testid="quick-typology-target-pill"]')).toBeNull();
       const chips = root().querySelectorAll('[data-testid="quick-typology-filters"] button');
       expect(chips.length).toBeGreaterThan(1);
@@ -1167,7 +1166,7 @@ describe('ReportingProgramBandComponent', () => {
     });
 
     it('S-9.1: the first chip accessible name carries its count; other chips keep their plain label', async () => {
-      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5, kp: 2 } });
+      await build({ showToolbar: true, compactFilters: false, typologyCounts: { all: 5, 'Knowledge product': 2 } });
       const chips = root().querySelectorAll('[data-testid="quick-typology-filters"] button');
       expect(chips[0].getAttribute('aria-label')).toBe('Total # of KPIs (5)');
       expect(chips[1].getAttribute('aria-label')).toBe('Knowledge Product');
@@ -1198,7 +1197,8 @@ describe('ReportingProgramBandComponent', () => {
       await build({
         showToolbar: true,
         compactFilters: false,
-        typologyValue: []
+        typologyValue: [],
+        typologyCounts: { all: 2, 'Knowledge product': 2 }
       });
 
       const spy = jest.spyOn(component.typologyChange, 'emit');

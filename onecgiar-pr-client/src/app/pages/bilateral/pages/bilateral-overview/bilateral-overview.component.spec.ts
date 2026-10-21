@@ -31,6 +31,7 @@ import {
   FIXTURE_SP_TWO_PROJECTS,
   FIXTURE_SP_TWO_PROJECTS_ROWS,
   FIXTURE_TODAY,
+  makeCwsScopedFixture,
 } from './bilateral-overview.fixtures';
 import { BilateralCenterResult } from '../../services/bilateral-center-result.interface';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
@@ -209,51 +210,72 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('status-chart')).toBeTruthy();
     });
 
-    // INC-165171: the Total card is built from the same rows as every other card — five category
-    // lines that add up to the headline, with the W1/W2 project-tagging rows requested too.
-    it('requests the project-tagging rows and makes no separate totals request', async () => {
+    // CWS-R-2 — the Overview asks the server for the bilateral scope and no longer sends the tagging flag.
+    it('requests the bilateral scope, not the project-tagging flag, and makes no separate totals request', async () => {
       await setup();
       const request = httpMock.expectOne(resultsUrl(OPEN_PHASE_ID));
-      expect(request.request.params.get('includeProjectTagging')).toBe('true');
+      expect(request.request.params.get('scope')).toBe('bilateral');
+      expect(request.request.params.has('includeProjectTagging')).toBe(false);
       httpMock.expectNone(req => req.url.includes('bilateral-center-overview-totals'));
       request.flush({ response: FIXTURE_D1_ROWS });
     });
 
-    it('renders the headline and one breakdown line per overview category, adding up to it', async () => {
+    it('renders the headline and exactly three breakdown lines, adding up to it (CWS-R-3)', async () => {
       await setup();
       const rows: BilateralCenterResult[] = [
         { ...FIXTURE_D1_ROWS[0], id: 801, is_replicated: true, overview_category: 'replicated_w3' },
-        { ...FIXTURE_D1_ROWS[5], id: 802, is_replicated: true, overview_category: 'replicated_w1w2' },
-        { ...FIXTURE_D1_ROWS[5], id: 803, is_replicated: true, overview_category: 'replicated_w1w2' },
+        { ...FIXTURE_D1_ROWS[0], id: 802, is_replicated: true, overview_category: 'replicated_w3' },
         { ...FIXTURE_D1_ROWS[1], id: 804, overview_category: 'new_w3' },
         { ...FIXTURE_D1_ROWS[5], id: 805, is_leading_result: null, overview_category: 'w1w2_tagging' },
-        { ...FIXTURE_D1_ROWS[5], id: 806, overview_category: 'w1w2_center_only' },
       ];
       flushData(OPEN_PHASE_ID, rows);
 
-      expect(text('kpi-total')).toMatch(/6\s*results/);
-      expect(text('kpi-total-replicated_w3')).toMatch(/Replicated W3\/Bilateral innovations\s*1/);
-      expect(text('kpi-total-replicated_w1w2')).toMatch(/Replicated W1\/W2 innovations with the Center\s*2/);
-      expect(text('kpi-total-new_w3')).toMatch(/New W3\/Bilateral results\s*1/);
-      expect(text('kpi-total-w1w2_tagging')).toMatch(/W1\/W2 results tagging a Center bilateral project\s*1/);
-      expect(text('kpi-total-w1w2_center_only')).toMatch(/W1\/W2 results with the Center, no Center project\s*1/);
+      expect(text('kpi-total')).toMatch(/4\s*results/);
+      expect(text('kpi-total-replicated_w3')).toMatch(/Replicated W3\/bilateral innovations\s*2/);
+      expect(text('kpi-total-new_w3')).toMatch(/New W3\/bilateral results in this phase\s*1/);
+      expect(text('kpi-total-w1w2_tagging')).toMatch(/W1\/W2 results tagging a Center project\s*1/);
+      expect(harness.routeDebugElement!.queryAll(By.css('[data-testid^="kpi-total-"]')).length).toBe(3 + 1); // 3 lines + the breakdown wrapper
 
       const ariaLabel = el('kpi-total').attributes['aria-label'];
-      expect(ariaLabel).toContain('6 results');
-      expect(ariaLabel).toContain('2 Replicated W1/W2 innovations with the Center');
+      expect(ariaLabel).toBe(
+        'Total results, 4 results: 2 Replicated W3/bilateral innovations, 1 New W3/bilateral results in this phase, 1 W1/W2 results tagging a Center project — open in Results',
+      );
+      // `CWS-R-3` BUT — no line, label or aria text for the two removed groups.
+      expect(harness.routeDebugElement!.nativeElement.textContent).not.toContain('no Center project');
+      expect(harness.routeDebugElement!.nativeElement.textContent).not.toContain('Replicated W1/W2');
     });
 
     it('splits each status tile into replicated and new', async () => {
       await setup();
       flushData(OPEN_PHASE_ID, [
-        { ...FIXTURE_D1_ROWS[0], id: 811, status_id: 1, is_replicated: true, overview_category: 'replicated_w1w2' },
-        { ...FIXTURE_D1_ROWS[0], id: 812, status_id: 1, overview_category: 'w1w2_center_only' },
+        { ...FIXTURE_D1_ROWS[0], id: 811, status_id: 1, is_replicated: true, overview_category: 'replicated_w3' },
+        { ...FIXTURE_D1_ROWS[0], id: 812, status_id: 1, overview_category: 'new_w3' },
       ]);
 
       expect(text('status-tile-editing')).toContain('2');
       expect(text('status-split-editing')).toBe('1 replicated · 1 new');
     });
 
+    // CWS-T-4 falsifier — CIP scoped: 63 replicated W3 (54 / 5 / 4) + 1 new W3, N = 57.
+    it('CIP scoped rows: Total 64 (63 / 1 / 0), Projects covered 1 of 57, "No new results yet" 56, no-project 5, other centers 4', async () => {
+      await setup();
+      const { rows, projects } = makeCwsScopedFixture();
+      flushData(OPEN_PHASE_ID, rows, projects);
+
+      expect(text('kpi-total')).toMatch(/64\s*results/);
+      expect(text('kpi-total-replicated_w3')).toMatch(/innovations\s*63$/);
+      expect(text('kpi-total-new_w3')).toMatch(/this phase\s*1$/);
+      expect(text('kpi-total-w1w2_tagging')).toMatch(/Center project\s*0$/);
+
+      expect(text('kpi-projects-covered')).toMatch(/1\s*of 57/);
+      expect(text('kpi-projects-covered')).toContain('56 projects with no new result yet');
+      expect(text('projects-covered-split')).toBe('4 with only replicated updates (not counted)');
+
+      expect(text('by-project-not-started')).toContain('No new results yet (56)');
+      expect(text('by-project-no-project')).toContain('5 results not linked to a bilateral project');
+      expect(text('by-project-unmatched')).toContain('4 results are linked only to bilateral projects outside');
+      expect(text('by-project-no-project')).not.toContain('Replicated W1/W2');
+    });
     it('renders a ≤160px one-line empty state when the phase has no results', async () => {
       await setup();
       flushData(OPEN_PHASE_ID, []);
@@ -567,7 +589,8 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       expect(text('by-project-no-project')).toContain('2 results not linked to a bilateral project');
       expect(text('by-project-no-project-new_w3')).toContain('1');
-      expect(text('by-project-no-project-w1w2_center_only')).toContain('1');
+      expect(text('by-project-no-project-w1w2_tagging')).toContain('1');
+      expect(el('by-project-no-project-replicated_w3')).toBeFalsy();
       // Project 300 (Gamma) has no results in scope.
       expect(el('not-started-chip-300')).toBeTruthy();
       expect(text('not-started-chip-300')).toContain('0');
@@ -672,28 +695,48 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         search: '',
         createdBy: [],
         multi: false,
+        scope: null,
+        group: null,
       };
+
+      // CWS-R-8 / CWS-DD-5 — every link into Results carries `scope`; Reporting and Draft links never do.
+      const scoped = { ...base, scope: 'bilateral' as const };
 
       const expectations: { testId: string; path: string; params: Record<string, string> }[] = [
         {
           testId: 'kpi-total',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams(base, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams(scoped, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'kpi-pending',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams({ ...base, status: ['pending'] }, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams({ ...scoped, status: ['pending'] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'status-tile-approved',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams({ ...base, status: ['approved'] }, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams({ ...scoped, status: ['approved'] }, { explicitDefaults: true }) as Record<string, string>,
+        },
+        {
+          testId: 'attention-row-editing',
+          path: `/bilateral/${CENTER}/results`,
+          params: serializeBilateralQueryParams({ ...scoped, status: ['editing'] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'by-project-link-100',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams({ ...base, project: [100] }, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams({ ...scoped, project: [100] }, { explicitDefaults: true }) as Record<string, string>,
+        },
+        {
+          testId: 'by-project-no-project',
+          path: `/bilateral/${CENTER}/results`,
+          params: serializeBilateralQueryParams({ ...scoped, source: 'w3' }, { explicitDefaults: true }) as Record<string, string>,
+        },
+        {
+          testId: 'attention-row-aiDrafts',
+          path: `/bilateral/${CENTER}/drafts`,
+          params: serializeBilateralQueryParams(base, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'not-started-chip-300',
@@ -715,7 +758,20 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         const actual = Object.fromEntries(new URLSearchParams(query ?? ''));
         expect(actual).toEqual(expectation.params);
         expect(actual['phase']).toBe(String(OPEN_PHASE_ID));
+        expect('scope' in actual).toBe(expectation.path.endsWith('/results'));
       }
+    });
+
+    it('never forwards a scope the Overview URL itself carries to a Reporting or Draft link (CWS-DD-5)', async () => {
+      await setup(`/bilateral/${CENTER}/overview?scope=bilateral`);
+      flushData();
+
+      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts', 'not-started-chip-300']) {
+        const href = (el(testId).nativeElement as HTMLAnchorElement).getAttribute('href')!;
+        expect(Object.fromEntries(new URLSearchParams(href.split('?')[1] ?? ''))).not.toHaveProperty('scope');
+      }
+      const totalHref = (el('kpi-total').nativeElement as HTMLAnchorElement).getAttribute('href')!;
+      expect(new URLSearchParams(totalHref.split('?')[1] ?? '').get('scope')).toBe('bilateral');
     });
 
     it('carries the applied filters into every deep link', async () => {
@@ -774,6 +830,117 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       chart.chartClick.emit({ seriesId: 'overview-by-sp:results', dataIndex: 0 } as never);
       expect(navigate.mock.calls[1][0]).toEqual(['/bilateral', CENTER, 'results']);
+
+      // CWS-R-8 — the Results destination carries the scope, the Reporting one does not.
+      expect((navigate.mock.calls[0][1] as { queryParams: Record<string, string> }).queryParams).not.toHaveProperty('scope');
+      expect((navigate.mock.calls[1][1] as { queryParams: Record<string, string> }).queryParams['scope']).toBe('bilateral');
+    });
+  });
+
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-R-2, CNP-R-3, CNP-R-5, CNP-AC-3, CNP-AC-6, CNP-AC-8)
+  describe('updated-no-project line (CNP-T-3)', () => {
+    const updatedRow = (id: number, overrides: Partial<BilateralCenterResult> = {}): BilateralCenterResult => ({
+      ...FIXTURE_D1_ROWS[0],
+      id,
+      project_id: null,
+      source: 'API',
+      result_type_id: 7,
+      is_replicated: true,
+      overview_category: 'replicated_w3',
+      ...overrides,
+    });
+    const rows24 = (): BilateralCenterResult[] => [
+      ...Array.from({ length: 24 }, (_, index) => updatedRow(900 + index)),
+      { ...FIXTURE_D1_ROWS[0], id: 950, project_id: 100, overview_category: 'new_w3' },
+    ];
+    const hrefQuery = (testId: string) => {
+      const href = (el(testId).nativeElement as HTMLAnchorElement).getAttribute('href')!;
+      return { path: href.split('?')[0], query: Object.fromEntries(new URLSearchParams(href.split('?')[1] ?? '')) };
+    };
+
+    it('renders the line with the count, linking to Results with group, scope and phase (CNP-AC-6)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      const line = el('by-project-updated-no-project');
+      expect(line).toBeTruthy();
+      expect(text('by-project-updated-no-project')).toContain('24');
+      const { path, query } = hrefQuery('by-project-updated-no-project');
+      expect(path).toBe(`/bilateral/${CENTER}/results`);
+      expect(query['group']).toBe('updated-no-project');
+      expect(query['scope']).toBe('bilateral');
+      expect(query['phase']).toBe(String(OPEN_PHASE_ID));
+    });
+
+    it('names the years from the phase and the count in the aria label (CNP-AC-8)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      expect(text('by-project-updated-no-project')).toContain('Updated 2025 innovations with no 2026 project');
+      expect(el('by-project-updated-no-project').attributes['aria-label']).toBe(
+        'Updated 2025 innovations with no 2026 project, 24 results — open in Results',
+      );
+    });
+
+    it('falls back to the generic label when the phase year is unknown (CNP-AC-8)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+      const component = harness.routeDebugElement!.componentInstance as { phases: { set(value: Phases[]): void } };
+      component.phases.set([{ ...OPEN_PHASE, phase_year: null as unknown as number }, CLOSED_PHASE]);
+      harness.detectChanges();
+
+      expect(text('by-project-updated-no-project')).toContain('Updated innovations with no project in this phase');
+      expect(el('by-project-updated-no-project').attributes['aria-label']).toBe(
+        'Updated innovations with no project in this phase, 24 results — open in Results',
+      );
+    });
+
+    it('is not rendered when the count is 0 (CNP-AC-3)', async () => {
+      await setup();
+      flushData();
+
+      expect(el('by-project-updated-no-project')).toBeFalsy();
+    });
+
+    it('keeps the empty state away when the only rows are updated-no-project (CNP-R-3)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, [updatedRow(901), updatedRow(902)]);
+
+      expect(el('by-project-empty')).toBeFalsy();
+      expect(text('by-project-updated-no-project')).toContain('2');
+      expect(el('by-project-no-project')).toBeFalsy();
+    });
+
+    it('never puts group on a Reporting or Draft link (CNP-AC-6)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts', 'not-started-chip-300']) {
+        expect(hrefQuery(testId).query).not.toHaveProperty('group');
+      }
+    });
+
+    it('ignores ?group= in its own URL: the Total headline does not narrow and no link carries it (CNP-DD-3)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+      const totalBefore = text('kpi-total');
+      expect(totalBefore).toMatch(/25\s*results/);
+
+      await router.navigateByUrl(`/bilateral/${CENTER}/overview?group=updated-no-project`);
+      await settle();
+
+      expect(text('kpi-total')).toBe(totalBefore);
+      expect(hrefQuery('kpi-total').query).not.toHaveProperty('group');
+      expect(hrefQuery('attention-row-aiDrafts').query).not.toHaveProperty('group');
+      expect(hrefQuery('by-project-updated-no-project').query['group']).toBe('updated-no-project');
+    });
+
+    it('ignores ?group= on a cold load too (CNP-DD-3)', async () => {
+      await setup(`/bilateral/${CENTER}/overview?group=updated-no-project`);
+      flushData(OPEN_PHASE_ID, rows24());
+
+      expect(text('kpi-total')).toMatch(/25\s*results/);
+      expect(hrefQuery('kpi-total').query).not.toHaveProperty('group');
     });
   });
 

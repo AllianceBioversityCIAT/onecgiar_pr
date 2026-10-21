@@ -92,7 +92,7 @@ const STATUS_IDS = [1, 2, 3, 4, 5, 6, 7];
 
 /**
  * 47 results across the first 20 projects (project 21 stays at zero); two rows carry no linked
- * project (`project_id: null`, `source: 'Result'`) — the "No bilateral project" bucket. Dates
+ * project (`project_id: null`, replicated W3) — the no-project line. Dates
  * spread Aug 1 – Sep 27 2026, inside `OPEN_PHASE`'s window, so the pace chart plots a real window
  * instead of falling back to the no-dates case.
  */
@@ -104,6 +104,7 @@ const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
   const dateString = `2026-${inSeptember ? '09' : '08'}-${String(inSeptember ? day - 31 : day).padStart(2, '0')}`;
   const resultTypeId = RESULT_TYPE_IDS[index % RESULT_TYPE_IDS.length];
   const statusId = STATUS_IDS[index % STATUS_IDS.length];
+  const replicated = noProject || index % 4 === 1;
 
   return {
     id: index + 1,
@@ -118,7 +119,10 @@ const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
     status_name: `Status ${statusId}`,
     created_date: dateString,
     version_id: OPEN_PHASE.id,
-    source: noProject && index % 2 === 0 ? 'Result' : 'API',
+    // CWS-T-4 — the stub mirrors the scoped server: only replicated_w3 / new_w3 rows (no W1/W2 groups).
+    source: 'API',
+    is_replicated: replicated,
+    overview_category: replicated ? 'replicated_w3' : 'new_w3',
     creation_method: index % 3 === 0 ? 'AI' : 'Manual',
     is_ai_generated: index % 3 === 0 ? 1 : 0,
     is_leading_result: index % 2 === 0 ? 1 : 0,

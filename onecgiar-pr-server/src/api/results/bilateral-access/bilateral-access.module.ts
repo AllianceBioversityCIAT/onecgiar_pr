@@ -10,6 +10,7 @@ import { ResultsSdgTargetRepository } from '../results-toc-results/repositories/
 import { ResultsActionAreaOutcomeRepository } from '../results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 
 /**
  * Mirrors `ResultInnovationMergeSplitModule` (P2-3292; prtest outage, 3 Sep 2026,
@@ -54,6 +55,9 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
     ResultsSdgTargetRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
+    // P2-3999 — the lead-center read of `assertCenterWrite`. Needs only `DataSource` +
+    // `HandlersError`, like the repositories above, so this module stays self-contained.
+    ResultsCenterRepository,
     HandlersError,
   ],
   exports: [BilateralAccessService],

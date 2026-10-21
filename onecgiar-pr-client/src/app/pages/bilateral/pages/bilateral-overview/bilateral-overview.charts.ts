@@ -244,8 +244,10 @@ export function byProjectTable(model: OverviewByProjectModel, options?: Overview
     headers: ['Project', 'Replicated for update', 'New in this phase', 'Total'],
     rows: model.bars.map(bar => [projectLabel(bar.projectId, options), bar.replicatedCount, bar.newCount, bar.total]),
     summary:
-      `${model.coveredCount} of ${model.totalProjectsInScope} projects have at least one result in this phase.` +
-      (noProject ? ` ${noProject} results are not linked to a bilateral project.` : ''),
+      `${model.coveredCount} of ${model.totalProjectsInScope} projects have at least one new result in this phase.` +
+      (noProject ? ` ${noProject} results are not linked to a bilateral project.` : '') +
+      // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-2, CNP-R-5)
+      (model.updatedNoProjectCount > 0 ? ` ${model.updatedNoProjectCount} updated innovations have no project in this phase.` : ''),
   };
 }
 

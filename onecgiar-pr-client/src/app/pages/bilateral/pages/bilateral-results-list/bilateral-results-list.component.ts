@@ -59,15 +59,19 @@ import type { BilateralCenterResult } from '../../services/bilateral-center-resu
 // Lead) this list shipped before this spec.
 import {
   applyResultsTabDefaults,
+  BilateralGroup,
   BilateralMethod,
   BilateralQueryParams,
   BilateralRole,
+  BilateralScope,
   BilateralSource,
+  BILATERAL_GROUP_QUERY_PARAM,
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_PHASE_QUERY_PARAM,
   BILATERAL_PROGRAM_QUERY_PARAM,
   BILATERAL_PROJECT_QUERY_PARAM,
   BILATERAL_ROLE_QUERY_PARAM,
+  BILATERAL_SCOPE_QUERY_PARAM,
   BILATERAL_SEARCH_QUERY_PARAM,
   BILATERAL_CREATED_BY_QUERY_PARAM,
   BILATERAL_SOURCE_QUERY_PARAM,
@@ -78,6 +82,8 @@ import {
   StatusKey,
 } from '../../bilateral-query-params';
 import { filterCenterResults } from '../../bilateral-result-filter';
+import { groupCenterResults, isReplicatedRow } from '../../bilateral-result-grouping';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
 import { resolveBilateralResultOpenRoute } from '../../../../shared/routing/bilateral-result-open-route.util';
 
@@ -88,7 +94,7 @@ export type { BilateralCenterResult };
  *  stray `?multi=1` left over from a Reporting deep link still gets the W3 + Lead default. */
 const RESULTS_TAB_IGNORE_KEYS = ['phase', 'multi'] as const;
 
-/** `COV-R-14` — the nine contract keys the Results tab reads AND writes (everything except
+/** `COV-R-14` — the contract keys the Results tab reads AND writes (everything except
  *  `multi`, which is Reporting-only, and `?result=`, which is untouched notification focus). */
 const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
   BILATERAL_PHASE_QUERY_PARAM,
@@ -101,10 +107,13 @@ const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_SEARCH_QUERY_PARAM,
   BILATERAL_CREATED_BY_QUERY_PARAM,
+  BILATERAL_SCOPE_QUERY_PARAM,
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-R-2 B)
+  BILATERAL_GROUP_QUERY_PARAM,
 ] as const;
 
 /** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
-type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'search';
+type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'type' | 'search' | 'scope' | 'group';
 
 interface BilateralFilterChip {
   dimension: BilateralFilterChipDimension;
@@ -163,7 +172,7 @@ export const BILATERAL_COLUMNS: readonly BilateralColumnDef[] = [
   { key: 'description', title: 'Description', attr: 'description', width: '260px', minPx: 140, defaultOn: true },
   { key: 'type', title: 'Result type', attr: 'result_type', width: '180px', minPx: 120, defaultOn: true },
   { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', minPx: 100, defaultOn: true },
-  { key: 'status', title: 'Status', attr: 'status_id', width: '120px', minPx: 100, defaultOn: true },
+  { key: 'status', title: 'Status', attr: 'status_id', width: '156px', minPx: 100, defaultOn: true },
   { key: 'createdBy', title: 'Created by', attr: 'created_by_name', width: '160px', minPx: 120, defaultOn: true },
   { key: 'created', title: 'Created', attr: 'created_date', width: '110px', minPx: 90, defaultOn: true },
 ];
@@ -277,6 +286,7 @@ function catalogProjectLabel(project: { shortName?: unknown; fullName?: unknown 
     PrTableEmptyDirective,
     PrTableLoadingDirective,
     ChangePhaseModalModule,
+    PrTooltipDirectiveModule,
     SpTabEmptyStateComponent,
   ],
   templateUrl: './bilateral-results-list.component.html',
@@ -473,8 +483,25 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
       search: this.searchQuery(),
       createdBy: this.createdByFilter(),
       multi: false,
+      scope: this.scope(),
+      group: this.group(),
     };
   });
+
+  /**
+   * `CWS-R-7` — `'bilateral'` when the URL carries `scope=bilateral` (an Overview deep link): the
+   * server then returns the Overview row set per phase. Hydrated from the URL only; removing the
+   * chip clears it, so it is never sticky (`CWS-R-7` B).
+   */
+  readonly scope = signal<BilateralScope | null>(null);
+
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-R-2, CNP-DD-2)
+  /**
+   * `'updated-no-project'` when the URL carries `group=updated-no-project` (the Overview's
+   * updated-no-project line). Applied client-side by `filterCenterResults`; NOT part of the fetch
+   * pipeline. Hydrated from the URL only, so removing the chip clears it and it is never sticky.
+   */
+  readonly group = signal<BilateralGroup | null>(null);
 
   /** Distinct creator display names from loaded rows — powers the Created by multiselect. */
   readonly createdByOptions = computed(() => {
@@ -496,6 +523,29 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     return missing.length
       ? [...options, ...missing.map(value => ({ value, label: value }))]
       : options;
+  });
+
+  /**
+   * `CRK-DD-5` — distinct `(result_type_id, result_type)` pairs of the loaded rows, sorted by label.
+   * Rows without a usable `result_type_id` are not options (nothing to filter on).
+   */
+  readonly categoryOptions = computed(() => {
+    const byId = new Map<number, string>();
+    for (const row of this.results()) {
+      const id = Number(row.result_type_id);
+      if (!Number.isSafeInteger(id) || id <= 0 || byId.has(id)) continue;
+      byId.set(id, row.result_type?.trim() || `Type ${id}`);
+    }
+    return [...byId.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  });
+
+  /** `CRK-R-3` — keeps URL-selected category ids tickable (label `Type <id>`) when no loaded row carries them. */
+  readonly categorySelectOptions = computed(() => {
+    const options = this.categoryOptions();
+    const missing = this.typeFilter().filter(id => !options.some(option => option.value === id));
+    return missing.length ? [...options, ...missing.map(id => ({ value: id, label: `Type ${id}` }))] : options;
   });
 
   /** `PMF-R-1`/`PMF-DD-1` (pivot) — the union of the center's OWN catalog projects for the
@@ -548,8 +598,16 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
 
   readonly filteredResults = computed(() => filterCenterResults(this.results(), this.currentContractParams()));
 
-  readonly totalCount = computed(() => this.filteredResults().length);
-  readonly totalLoaded = computed(() => this.results().length);
+  /**
+   * `CRK-DD-3` — the table's rows: the filtered rows grouped by `result_code` AFTER the filters ran,
+   * so a phase filter leaves single-version groups. `filteredResults` stays flat (export, shared
+   * predicate and the table-reset effect depend on flat rows).
+   */
+  readonly groupedResults = computed(() => groupCenterResults(this.filteredResults()));
+
+  /** "Showing N of M" counts result groups, not versions (`CRK-R-1`). */
+  readonly totalCount = computed(() => this.groupedResults().length);
+  readonly totalLoaded = computed(() => new Set(this.results().map(row => String(row.result_code))).size);
 
   readonly hasRows = computed(() => this.filteredResults().length > 0);
   readonly isFilteredEmpty = computed(
@@ -641,8 +699,20 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
       if (name) chips.push({ dimension: 'createdBy', value: name, label: `Created by: ${name}` });
     }
 
+    const categoryOptions = this.categorySelectOptions();
+    for (const id of this.typeFilter()) {
+      const label = categoryOptions.find(option => option.value === id)?.label ?? `Type ${id}`;
+      chips.push({ dimension: 'type', value: String(id), label: `Category: ${label}` });
+    }
+
     const search = this.searchQuery().trim();
     if (search) chips.push({ dimension: 'search', value: search, label: `Search: ${search}` });
+
+    // `CWS-R-7` A — the Overview row-set scope is a removable chip like any other filter.
+    if (this.scope()) chips.push({ dimension: 'scope', value: 'bilateral', label: 'Scope: Bilateral reporting (Overview)' });
+
+    // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-4, CNP-R-2 A)
+    if (this.group()) chips.push({ dimension: 'group', value: 'updated-no-project', label: 'Updated innovations with no project' });
 
     return chips;
   });
@@ -678,21 +748,25 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
         filter(ids => ids.length > 0),
         distinctUntilChanged((a, b) => a.length === b.length && a.every((id, index) => id === b[index])),
       ),
+      toObservable(this.scope).pipe(distinctUntilChanged()),
     ])
       .pipe(
         takeUntilDestroyed(),
-        switchMap(([centerId, phaseIds]) => {
+        switchMap(([centerId, phaseIds, scope]) => {
+          // `CWS-R-7` B — without the key the request is byte-identical to the pre-scope one.
+          const fetchPhase = (id: number) =>
+            scope
+              ? this.bilateralApiService.GET_bilateralCenterResults(centerId, id, { scope })
+              : this.bilateralApiService.GET_bilateralCenterResults(centerId, id);
           this.loading.set(true);
           this.error.set(false);
 
           if (phaseIds.length === 1) {
-            return this.bilateralApiService.GET_bilateralCenterResults(centerId, phaseIds[0]).pipe(
-              map(({ response }) => response ?? []),
-            );
+            return fetchPhase(phaseIds[0]).pipe(map(({ response }) => response ?? []));
           }
 
           return forkJoin(
-            phaseIds.map(id => this.bilateralApiService.GET_bilateralCenterResults(centerId, id)),
+            phaseIds.map(id => fetchPhase(id)),
           ).pipe(map(responses => responses.flatMap(({ response }) => response ?? [])));
         }),
       )
@@ -779,6 +853,33 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     const portfolio = phase.obj_portfolio?.acronym;
     const base = portfolio ? `${year} · ${portfolio}` : String(year ?? '');
     return phase.status ? `${base} · Open` : base;
+  }
+
+  /**
+   * `CRK-DD-3` — label of the phase a version belongs to, shown on the code line when a result has
+   * more than one version. Falls back to the raw phase id when the phase is not in the loaded catalog.
+   */
+  versionPhaseLabel(result: BilateralCenterResult): string {
+    const id = Number(result?.version_id);
+    const phase = this.phases().find(p => phaseVersionId(p) === id);
+    return phase ? this.phaseFilterLabel(phase) : `Phase ${result?.version_id ?? ''}`.trim();
+  }
+
+  /**
+   * `CRK-T-4a` — compact phase label for the code line: the phase year ("2026"). The full
+   * `phaseFilterLabel` ("Reporting 2026 - P25") truncated in the narrow Code column and made the
+   * stacked lines indistinguishable. Falls back to the full label when the year is unknown.
+   */
+  versionPhaseShortLabel(result: BilateralCenterResult): string {
+    const id = Number(result?.version_id);
+    const phase = this.phases().find(p => phaseVersionId(p) === id);
+    const year = phase?.phase_year;
+    return year ? String(year) : this.versionPhaseLabel(result);
+  }
+
+  /** `CRK-DD-4` — `is_replicated` is a raw tinyint that may arrive as a string or boolean. */
+  isReplicated(result: BilateralCenterResult): boolean {
+    return isReplicatedRow(result);
   }
 
   /** Toolbar chip label — matches Programme Results (`Reporting 2026 - P25`). */
@@ -868,6 +969,8 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.typeFilter.set(params.type);
     this.methodFilter.set(params.method);
     this.createdByFilter.set(params.createdBy);
+    this.scope.set(params.scope);
+    this.group.set(params.group);
 
     const urlPhaseIds = parsePhaseIdsFromUrl(map.get(BILATERAL_PHASE_QUERY_PARAM));
     if (urlPhaseIds.length) {
@@ -951,6 +1054,20 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
 
   onCreatedByFilterChange(values: string[]): void {
     this.createdByFilter.set(values ?? []);
+    this.syncUrlParams();
+  }
+
+  /** `CRK-R-3` — removes one category id from the chip and writes the URL. */
+  removeTypeFilter(id: number): void {
+    this.typeFilter.update(ids => ids.filter(existing => existing !== id));
+    this.syncUrlParams();
+  }
+
+  /** `CRK-R-3` — Indicator category multiselect: unique positive ids into the existing `type` signal,
+   *  predicate, chips and URL synchronization (same path as `onCreatedByFilterChange`). */
+  onTypeFilterChange(values: number[]): void {
+    const ids = [...new Set((values ?? []).map(Number).filter(id => Number.isSafeInteger(id) && id > 0))];
+    this.typeFilter.set(ids);
     this.syncUrlParams();
   }
 
@@ -1094,6 +1211,8 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.methodFilter.set(null);
     this.createdByFilter.set([]);
     this.searchQuery.set('');
+    this.scope.set(null);
+    this.group.set(null);
     this.syncUrlParams();
   }
 
@@ -1126,9 +1245,18 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
       case 'createdBy':
         this.removeCreatedByFilter(chip.value);
         return;
+      case 'type':
+        this.removeTypeFilter(Number(chip.value));
+        return;
       case 'search':
         this.clearSearch();
         return;
+      case 'scope':
+        this.scope.set(null);
+        break;
+      case 'group':
+        this.group.set(null);
+        break;
     }
     this.syncUrlParams();
   }

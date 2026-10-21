@@ -618,7 +618,8 @@ describe('DashboardLabComponent — KPI count reconciliation (KCR-TEST-1, red be
 
       component.reportingTypeFilter.set(['hlo']);
       component.reportingTypologyFilter.set(['Knowledge product']);
-      expect(component.reportingTypologyCounts()['all']).toBe(1);
+      // CRK-R-7: chip counts ignore the Category selection (they follow Type / Target / Section).
+      expect(component.reportingTypologyCounts()['all']).toBe(2);
     });
 
     it('defaults to All: 54 rows, `54 KPIs`, the split line unchanged', async () => {

@@ -171,9 +171,10 @@ export class BilateralOverviewService {
     this.resultsErrorSignal(key).set(null);
 
     this.bilateralApi
-      // INC-165171 — the Overview counts the W1/W2 results tagging a center project too, so its
-      // cards and the Reporting projects panel read one row set (`overview_category` per row).
-      .GET_bilateralCenterResults(centerId, versionId, true)
+      // CWS-R-1/R-2 — `scope: 'bilateral'` makes the server send only `replicated_w3`, `new_w3` and
+      // `w1w2_tagging` rows (it already includes the tagging rows, so `includeProjectTagging` is no
+      // longer sent). Every card and the Reporting projects panel read this one row set.
+      .GET_bilateralCenterResults(centerId, versionId, { scope: 'bilateral' })
       .pipe(map((envelope: any) => (envelope?.response ?? []) as BilateralCenterResult[]))
       .subscribe({
         next: results => {
