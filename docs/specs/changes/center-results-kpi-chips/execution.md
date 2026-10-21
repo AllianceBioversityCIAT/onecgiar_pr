@@ -178,3 +178,31 @@
 ## Budget check
 
 - Tasks 6 (as estimated). Review rounds: T-4 used 2 (= ceiling), others 1. LOC: over the ~380 estimate, mostly tests and the template re-indent from the T-4 stacked cells (html +184/−85 is mostly moved lines); production logic is within scope. No tripwire escalation: no extra tasks and no extra review rounds; the LOC overrun is the template move.
+
+### CRK-T-6 — PRTest smoke, partial run (2026-10-20, Claude in Chrome, read-only)
+
+- **Bundle check:** the deployed `bilateral-results-list.component-*.js` chunk contains `brl-version-phase` / `rc-action-line` → the CRK commit is live. Only the Phase filter chip was toggled; no write buttons.
+- **Scope of this run (user request):** the IITA grouping check and the stacked-line alignment check. SP12/SP11 chips are not checked yet.
+- **IITA, phases 2025 + 2026 (Lead, W3), "Showing 233 of 324":** ✅ PASS. 13 replicated codes on the first page (8370, 8338, 8337, 8334, 8333, 8327, 8310, 8295, 8289, 8288, 8281, 8279, 8270) render as one row with 2 lines each. 2026 is the first line (validates `version_id` desc), and "Previously reported" appears only on line 0 (the 2026 version). No result code is repeated on the page.
+- **Alignment:** ❌ FAIL (layout defects that jsdom could not catch):
+  1. In the Status cell, the 2025 line is **40px** tall versus 28px everywhere else, because the history icon (`brl_justification_trigger`) wraps under the status badge. Cells use `vertical-align: middle`, so the lines of the other columns drift: the first lines are 10px apart and the second lines 6px apart across columns (8338: row 83px).
+  2. Lines in the Role cell are 24px versus 28px.
+  3. The phase tag is truncated: "Reporting 2026 - P25" needs 108px but the Code cell only has 98px, so both lines read "Reporting 202…" and cannot be told apart.
+- **Screenshot:** `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-B8dEs7\screenshot-1792546834874-0.png`
+- **Status:** CRK-T-6 stays open. The alignment defects need a fix to CRK-T-4's template/scss (user decision pending).
+
+### CRK-T-4a — Layout fix from the CRK-T-6 smoke (user-approved 2026-10-20)
+
+- **Origin:** CRK-T-6 alignment FAIL (see above). The user approved the fix in chat ("si hazlo"). It is a rework of CRK-T-4's template/scss, not a new feature.
+- **Final status:** PASS on attempt 2 of 3. Effort: `high` for attempt 1, `xhigh` for attempt 2.
+- **Attempt 1, FAIL.**
+  - Changes: (a) tbody `td` uses `vertical-align: top` (skeleton rows stay `middle`) and padding goes from 6px to 8px; (b) `.rc-status-wrap` gets `nowrap`, trigger `flex: none`; (c) `.rc-line` becomes flex with `min-height: 28px`; (d) the code line shows `versionPhaseShortLabel` (the phase year), with the full label in `title`/`aria-label`.
+  - Tests: 116/116; related tests 833/833; lint exit 0. There was no red run (the spec was updated after the code).
+  - Reviewer FAIL: with `nowrap`, the history icon overflows the 120px Status column (~125px of content against 96px) and is hidden by `overflow: hidden`, which makes the P2-3157 review-history dialog unreachable by mouse. Suggested fix: let the badge ellipsize and/or widen the column to ~140px.
+- **Attempt 2, PASS.**
+  - Status default width raised to **156px**, based on the Leader's PRTest measurement: "Pending Review" 107px + gap 4px + trigger 16px + padding 24px = 151px minimum. Only user-resized widths persist (`customWidths`), so no storage-key bump is needed.
+  - The badge gets `title=status_name`. `.rc-status-wrap .status_tag` gets `display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis`, so the icon is never clipped in narrower resized columns.
+  - The duplicate `.rc-status-wrap` blocks were merged. Tests 116/116; lint exit 0.
+  - Reviewer PASS: `statusClass()` emits `status_tag`; the nested rule wins on specificity; the flex chain constrains the wrapper; the merged block has no regression.
+- **ADVISORY:** all rows are now 44px instead of 40px (accepted). Width and ellipsis can only be measured in a browser, so the PRTest re-measure should also cover a column resized down to minPx 100.
+- **Next:** re-measure on PRTest after deploy (line tops equal across columns; Status line 28px; phase tag "2026"/"2025" readable).
