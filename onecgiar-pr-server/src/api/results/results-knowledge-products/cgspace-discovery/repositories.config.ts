@@ -344,6 +344,7 @@ export function resolveProjectScope(
     relevance = {
       keywords: extractRelevanceKeywords({
         title: ctx.title,
+        code: ctx.code,
         description: dto.projectDescription,
         leadCenter: ctx.leadCenter,
       }),

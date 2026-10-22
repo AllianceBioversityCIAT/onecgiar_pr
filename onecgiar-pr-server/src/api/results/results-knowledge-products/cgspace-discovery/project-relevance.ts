@@ -25,6 +25,8 @@ export interface RelevanceContext {
   description?: string | null;
   /** Lead-center acronym (e.g. `CIP`): never a keyword. */
   leadCenter?: string | null;
+  /** Project code (e.g. `P-1486-GCDT`): its tokens are never keywords (`KRR-T-6`). */
+  code?: string | null;
 }
 
 /** Science Program of the project; either part may be missing. */
@@ -71,13 +73,45 @@ export interface ProjectMatchResult {
 }
 
 const MAX_TITLE_KEYWORDS = 8;
-const MAX_DESCRIPTION_KEYWORDS = 8;
+const MAX_DESCRIPTION_KEYWORDS = 12;
 /**
- * Longer tokens are not words worth boosting and would eat the `KRR-NFR-2` budget: 16 keywords of
- * 30 characters plus two 200-character phrases stay under 2000 encoded characters.
+ * Longer tokens are not words worth boosting and would eat the `KRR-NFR-2` budget: 20 keywords (8 title + 12
+ * description) of 30 characters plus two 200-character phrases stay under 2000 encoded characters.
  */
 const MAX_KEYWORD_LENGTH = 30;
 const MIN_FOLD_LENGTH = 4;
+/**
+ * Funding / administrative boilerplate (`KRR-T-6`): words common to most project descriptions that
+ * say nothing about the subject matter and would crowd real topic words out of the capped pool.
+ * Explicit and small on purpose; extend only with evidence from real descriptions.
+ */
+const BOILERPLATE_WORDS = new Set([
+  'grant',
+  'grants',
+  'funding',
+  'funded',
+  'fund',
+  'provide',
+  'provides',
+  'providing',
+  'dedicated',
+  'support',
+  'supporting',
+  'operation',
+  'operations',
+  'long',
+  'term',
+  'project',
+  'projects',
+  'program',
+  'programme',
+  'phase',
+  'activities',
+  'implementation',
+  'international',
+  'standards',
+  'standard',
+]);
 /**
  * Longest center / program phrase the block emits (`KRR-NFR-2`). A phrase clause then encodes to at
  * most ~170 characters (spaces encode to 3), so after the longest ASCII related prefix the DTO
@@ -89,26 +123,42 @@ export const MAX_PHRASE_LENGTH = 60;
 const TIERS: ProjectMatchTier[] = ['none', 'weak', 'partial', 'strong'];
 
 /**
- * Strips one trailing plural marker from words of 4+ letters: `genebanks` -> `genebank`.
- * `es` is removed only after a sibilant (`boxes` -> `box`, `classes` -> `class`); otherwise only
- * the `s` goes, so `nematodes` and `nematode` fold to the same word. A trailing `ss` is kept
- * (`class`). Applied to both sides of every comparison.
+ * Candidate forms of a word for plural-insensitive comparison: the word itself plus, for words of
+ * 4+ letters, the word minus a trailing `s` (never after `ss`) and, only after s|x|z|ch|sh|o,
+ * minus `es` (`rates` never reaches `rat`; `rates` -> {rates, rate}).
+ * `potatoes` -> {potatoes, potatoe, potato}; `classes` -> {classes, classe, class}; `class` -> {class}.
+ * Two words match when their form sets intersect, so the irregular `-oes`/`-ses` plurals line up
+ * with their singular without a single lossy fold (`gene` still never matches `genebanks`).
+ * Words under 4 letters (`gas`, `bus`) are never folded.
  */
-export function foldPlural(word: string): string {
-  if (word.length < MIN_FOLD_LENGTH || !word.endsWith('s')) return word;
-  if (word.endsWith('ss')) return word;
-  if (/(?:s|x|z|ch|sh)es$/.test(word)) return word.slice(0, -2);
-  return word.slice(0, -1);
+export function pluralForms(word: string): Set<string> {
+  const forms = new Set([word]);
+  if (word.length < MIN_FOLD_LENGTH || !word.endsWith('s')) return forms;
+  if (!word.endsWith('ss')) forms.add(word.slice(0, -1));
+  if (/(?:s|x|z|ch|sh|o)es$/.test(word)) forms.add(word.slice(0, -2));
+  return forms;
+}
+
+/** True when two words share a plural form (`potatoes` ~ `potato`). Whole-word, never a prefix. */
+export function samePluralWord(a: string, b: string): boolean {
+  const formsB = pluralForms(b);
+  for (const form of pluralForms(a)) {
+    if (formsB.has(form)) return true;
+  }
+  return false;
 }
 
 /**
- * Distinctive project words: up to 8 from the title, then up to 8 more from the description.
+ * Distinctive project words: up to 8 from the title, then up to 12 more from the description.
  * Same tokenizer, stop words, roman numerals and minimum length as the KPSF match; the lead-center
- * acronym is excluded; deduped on the plural-folded form (the first spelling wins).
+ * acronym, the project-code tokens, purely numeric tokens and funding boilerplate are excluded;
+ * deduped on shared plural forms (`pluralForms`; the first spelling wins).
  */
 export function extractRelevanceKeywords(ctx: RelevanceContext): string[] {
-  const excluded = new Set(tokenize(ctx.leadCenter));
-  const seen = new Set<string>();
+  const excluded = new Set([
+    ...tokenize(ctx.leadCenter),
+    ...tokenize(ctx.code),
+  ]);
   const keywords: string[] = [];
 
   const take = (text: string | null | undefined, max: number): void => {
@@ -121,11 +171,12 @@ export function extractRelevanceKeywords(ctx: RelevanceContext): string[] {
         STOPWORDS.has(token) ||
         ROMAN_NUMERALS.has(token) ||
         excluded.has(token) ||
-        seen.has(foldPlural(token))
+        /^\d+$/.test(token) ||
+        BOILERPLATE_WORDS.has(token) ||
+        keywords.some((kept) => samePluralWord(kept, token))
       ) {
         continue;
       }
-      seen.add(foldPlural(token));
       keywords.push(token);
       taken += 1;
     }
@@ -297,11 +348,11 @@ function matchesKeywords(
   keywords: readonly string[],
 ): boolean {
   if (!subjects || subjects.length === 0 || keywords.length === 0) return false;
-  const wanted = new Set(
-    keywords.map((keyword) => foldPlural(keyword.toLowerCase())),
-  );
+  const wanted = keywords.map((keyword) => keyword.toLowerCase());
   return subjects.some((subject) =>
-    tokenize(subject).some((word) => wanted.has(foldPlural(word))),
+    tokenize(subject).some((word) =>
+      wanted.some((keyword) => samePluralWord(keyword, word)),
+    ),
   );
 }
 

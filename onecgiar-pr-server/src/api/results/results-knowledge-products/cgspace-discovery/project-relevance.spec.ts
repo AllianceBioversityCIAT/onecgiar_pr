@@ -4,7 +4,8 @@ import {
   MAX_PHRASE_LENGTH,
   evaluateProjectMatch,
   extractRelevanceKeywords,
-  foldPlural,
+  pluralForms,
+  samePluralWord,
   matchesTaggedMetadata,
   ProjectProgram,
   RelevanceAdapter,
@@ -49,7 +50,7 @@ const CIP = 'International Potato Center';
 const SP13: ProjectProgram = { code: 'SP13', name: 'Genebank' };
 
 describe('project-relevance', () => {
-  describe('foldPlural (KRR-R-5, design §7.1)', () => {
+  describe('plural matching (KRR-R-5, design §7.1)', () => {
     it.each([
       ['genebanks', 'genebank'],
       ['nematodes', 'nematode'],
@@ -57,16 +58,42 @@ describe('project-relevance', () => {
       ['boxes', 'box'],
       ['classes', 'class'],
       ['genes', 'gene'],
-    ])('folds %s to %s', (word, expected) => {
-      expect(foldPlural(word)).toBe(expected);
+      ['potatoes', 'potato'],
+      ['diseases', 'disease'],
+      ['responses', 'response'],
+      ['tomatoes', 'tomato'],
+      ['statuses', 'status'],
+      ['boxes', 'box'],
+    ])('%s matches %s (both directions)', (a, b) => {
+      expect(samePluralWord(a, b)).toBe(true);
+      expect(samePluralWord(b, a)).toBe(true);
     });
 
-    it.each(['genebank', 'gene', 'class', 'bus', 'rice'])(
-      'leaves %s unchanged',
-      (word) => {
-        expect(foldPlural(word)).toBe(word);
-      },
-    );
+    it.each([
+      ['gene', 'genebanks'],
+      ['gene', 'genebank'],
+      ['potat', 'potatoes'],
+      ['gas', 'ga'],
+      ['bus', 'bu'],
+      ['class', 'clas'],
+      ['rat', 'rates'],
+      ['cod', 'codes'],
+      ['pins', 'pines'],
+      ['plans', 'planes'],
+      ['tub', 'tubes'],
+      ['rates', 'rats'],
+    ])('%s does not match %s', (a, b) => {
+      expect(samePluralWord(a, b)).toBe(false);
+    });
+
+    it('lists the candidate forms; words under 4 letters and ss words are not stripped', () => {
+      expect([...pluralForms('potatoes')].sort()).toEqual(
+        ['potato', 'potatoe', 'potatoes'].sort(),
+      );
+      expect([...pluralForms('class')]).toEqual(['class']);
+      expect([...pluralForms('gas')]).toEqual(['gas']);
+      expect([...pluralForms('rice')]).toEqual(['rice']);
+    });
   });
 
   describe('extractRelevanceKeywords (KRR-R-9, KRR-R-5)', () => {
@@ -77,25 +104,16 @@ describe('project-relevance', () => {
           description: 'Genebank conservation of plant genetic resources',
           leadCenter: 'CIP',
         }),
-      ).toEqual([
-        'long',
-        'term',
-        'grant',
-        'genebank',
-        'conservation',
-        'plant',
-        'genetic',
-        'resources',
-      ]);
+      ).toEqual(['genebank', 'conservation', 'plant', 'genetic', 'resources']);
     });
 
-    it('caps at 8 title words and 8 description words', () => {
+    it('caps at 8 title words and 12 description words', () => {
       expect(
         extractRelevanceKeywords({
           title:
             'alpha beta gamma delta epsilon zeta theta kappa lambda sigma omega',
           description:
-            'one1 two2 three3 four4 five5 six6 seven7 eight8 nine9 ten10 eleven11',
+            'one1 two2 three3 four4 five5 six6 seven7 eight8 nine9 ten10 eleven11 twelve12 thirteen13',
         }),
       ).toEqual([
         'alpha',
@@ -114,7 +132,63 @@ describe('project-relevance', () => {
         'six6',
         'seven7',
         'eight8',
+        'nine9',
+        'ten10',
+        'eleven11',
+        'twelve12',
       ]);
+    });
+
+    // KRR-T-6: real P-1486 input as the PRTest client sends it (execution.md KRR-T-5, OI-5).
+    it('real P-1486 input keeps genebank/potato/sweetpotato and drops code tokens and boilerplate', () => {
+      expect(
+        extractRelevanceKeywords({
+          title: 'P-1486-GCDT-Long term grant',
+          code: 'P-1486-GCDT',
+          leadCenter: 'CIP',
+          description:
+            "Global Crop Diversity Trust Long-Term Grant providing dedicated funding for the long-term operation of CIP's ex situ genebank (potato, sweetpotato, Andean roots & tubers) to international standards: storage, curation, safety duplication, characterization, documentation and Treaty-compliant germplasm distribution.",
+        }),
+      ).toEqual([
+        'global',
+        'crop',
+        'diversity',
+        'trust',
+        'situ',
+        'genebank',
+        'potato',
+        'sweetpotato',
+        'andean',
+        'roots',
+        'tubers',
+        'storage',
+      ]);
+    });
+
+    it('iSPARK-like code: excludes the code tokens t, pj and the numeric part', () => {
+      expect(
+        extractRelevanceKeywords({
+          title: 'T-PJ-003936 sorghum pjx resilience',
+          code: 'T-PJ-003936',
+          description: 'pj 003936 sorghum breeding 2024',
+        }),
+      ).toEqual(['sorghum', 'pjx', 'resilience', 'breeding']);
+    });
+
+    it('excludes any purely numeric token even without a code', () => {
+      expect(extractRelevanceKeywords({ title: '2024 1486 alpha' })).toEqual([
+        'alpha',
+      ]);
+    });
+
+    it('excludes funding/administrative boilerplate words', () => {
+      expect(
+        extractRelevanceKeywords({
+          title: 'Grant funding support',
+          description:
+            'projects programme phase activities implementation international standards operations alpha',
+        }),
+      ).toEqual(['alpha']);
     });
 
     it('excludes the lead-center acronym', () => {
@@ -134,6 +208,12 @@ describe('project-relevance', () => {
           description: 'genebanks and genebank alpha',
         }),
       ).toEqual(['genebank', 'alpha']);
+      expect(
+        extractRelevanceKeywords({
+          title: 'Potatoes diseases',
+          description: 'potato disease tomato tomatoes',
+        }),
+      ).toEqual(['potatoes', 'diseases', 'tomato']);
     });
 
     it('does not spend the description cap on words already taken from the title', () => {
@@ -464,6 +544,20 @@ describe('project-relevance', () => {
         evaluateProjectMatch({ subjects: ['genebanks'] }, ['gene'], null, null),
       ).toEqual({ tier: 'none', factors: [] });
     });
+
+    it.each([
+      ['potatoes', 'potato'],
+      ['diseases', 'disease'],
+      ['responses', 'response'],
+      ['tomatoes', 'tomato'],
+    ])(
+      'keywords: subject %s matches keyword %s (-oes/-ses plurals)',
+      (subject, keyword) => {
+        expect(
+          evaluateProjectMatch({ subjects: [subject] }, [keyword], null, null),
+        ).toEqual({ tier: 'weak', factors: ['keywords'] });
+      },
+    );
 
     it('keywords: a keyword only in the title does not count (subjects are the only source)', () => {
       const item = {

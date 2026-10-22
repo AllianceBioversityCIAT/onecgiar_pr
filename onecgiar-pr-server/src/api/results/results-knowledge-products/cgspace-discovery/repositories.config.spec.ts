@@ -471,6 +471,24 @@ describe('translateParams — byte-identical when no ranking applies (KRR-R-3, R
 });
 
 // @akili-spec changes/kp-related-relevance-ranking
+describe('translateParams — project code never becomes a subject boost (KRR-T-6)', () => {
+  it('P-1486 context: no 1486 / gcdt subject boost on any adapter, topic words are boosted', () => {
+    const input = {
+      projectCode: 'P-1486-GCDT',
+      projectTitle: 'P-1486-GCDT-Long term grant',
+      projectLeadCenter: 'CIP',
+      projectScope: 'related' as const,
+      projectDescription: 'Genebank of potato and sweetpotato',
+    };
+    for (const adapter of [cgspace, melspace, worldfish]) {
+      const { query } = translateParams(input, adapter);
+      expect(query).not.toContain(`${adapter.fields.subject}:1486`);
+      expect(query).not.toContain(`${adapter.fields.subject}:gcdt`);
+      expect(query).toContain(`${adapter.fields.subject}:genebank^`);
+    }
+  });
+});
+
 describe('translateParams — encoded query length (KRR-NFR-2, FP-1)', () => {
   const letters = 'abcdefghijklmnop';
   const eightWords = (length: number) =>
@@ -538,6 +556,22 @@ describe('translateParams — encoded query length (KRR-NFR-2, FP-1)', () => {
       expect(resolveProjectScope(input)?.ranked).toBe(true);
     },
   );
+
+  it('worst case with a 12-word description of 30-char words and 8 title words of 30 chars (T-6 maximum of 20 keywords)', () => {
+    const input = {
+      ...worstCase,
+      projectDescription: Array.from(
+        { length: 12 },
+        (_, i) => letters[i].repeat(29) + 'z',
+      ).join(' '),
+    };
+    for (const adapter of ADAPTERS) {
+      const params = translateParams(input, adapter);
+      expect(encodedLength(params)).toBeLessThan(2000);
+      expect(params.query).toContain(BLOCK);
+    }
+    expect(resolveProjectScope(input)?.ranked).toBe(true);
+  });
 
   it('ranked is true exactly when the emitted query carries the block, on every adapter', () => {
     const variants: Record<string, any>[] = [];
