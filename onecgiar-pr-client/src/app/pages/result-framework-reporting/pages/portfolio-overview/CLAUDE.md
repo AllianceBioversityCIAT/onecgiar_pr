@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-10-16 · branch qa-development-2026-ss · spec changes/portfolio-overview-revamp/filtered-detail-export (FDE-T-3)
+**Verified:** 2026-10-22 · branch qa-development-2026-ss · quick/portfolio-overview-partial-label (header partial notice removed) · prior: 2026-10-16 · FDE-T-3
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
@@ -78,10 +78,12 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - **The bilateral fill uses `--pr-chart-2-muted` (`#8b7cc4`)** — the design's colour, valid here
   because it is a NON-TEXT graphic (3.52:1 on the divider track, WCAG 1.4.11). 🛑 Never use it for
   text: see `docs/DESIGN-DEVIATIONS.md` §1 vs §8, the same hex answering two different questions.
-- **`isPartial()` is the honesty guard**: if `meta.total` exceeds what we asked for, the screen says the figures are partial.
+- **`isPartial()`** (`meta.total` > what we asked for) now only feeds the Results detail note (`detail-partial`).
+  The orange header notice ("Showing the first N results…") was **removed on request** 2026-10-22
+  (`quick/portfolio-overview-partial-label`); do not re-add it without asking.
 - 🛑 **Two counts, two questions.** `total()` (`services/portfolio-overview.service.ts:195`) is the open-phase
   count (feeds the KPI tile); `fetchedCount()` (`:182`) is the raw server count captured in `load()` before
-  `apply()`'s phase filter. The partial banner ("Showing the first N results") MUST bind to `fetchedCount()`.
+  `apply()`'s phase filter. Any partial note MUST bind to `fetchedCount()`.
 - ⚠️ **"Replicated" means `is_replicated`, not "innovation".** Card-3's "Innovations replicated from 2025" assumes replicated W3 rows are innovations only (P-3, prod 2026-10-14); if that stops holding, change the label.
 - 🛑 **`tests/mocks/spartanBrainMock.ts` must declare every input a Helm host directive re-exposes**, or NG0311:
   `BrnSeparator` (`orientation`/`decorative`, deck), `BrnTooltip` (`brnTooltip`/`position`/`hideDelay`/

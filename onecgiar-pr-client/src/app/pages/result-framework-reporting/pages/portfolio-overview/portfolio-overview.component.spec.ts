@@ -485,31 +485,13 @@ describe('PortfolioOverviewComponent', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('says the figures are partial instead of passing a truncated portfolio off as the whole thing', () => {
-    build(OPEN_PHASE, { total: 900 });
+  it('does not show the partial-figures notice in the page header (removed on request, quick/portfolio-overview-partial-label)', () => {
+    build([...OPEN_PHASE, ...CLOSED_PHASE], { total: 20 });
 
+    expect(component.data.fetchedCount()).toBe(7);
     expect(component.data.isPartial()).toBe(true);
     fixture.detectChanges();
-    expect(fixture.debugElement.nativeElement.textContent).toContain('the server holds more');
-  });
-
-  describe('Partial-results banner states real fetched counts (REQ-3-S1)', () => {
-    it('binds the banner to the fetched-row count, not the open-phase-filtered count', () => {
-      // Fetched page mixes OPEN_PHASE (5 rows) and CLOSED_PHASE (2 rows) — fetchedCount is 7,
-      // but data.total() (open-phase-filtered, what the old buggy binding used) is only 5. The
-      // mock deliberately makes the two numbers differ: if they were equal this test would not
-      // distinguish the fix from the bug it replaces.
-      build([...OPEN_PHASE, ...CLOSED_PHASE], { total: 20 });
-
-      expect(component.data.fetchedCount()).toBe(7);
-      expect(component.data.total()).toBe(5);
-      expect(component.data.isPartial()).toBe(true);
-
-      fixture.detectChanges();
-      const bannerText = fixture.debugElement.nativeElement.textContent as string;
-      expect(bannerText).toContain('Showing the first 7 results');
-      expect(bannerText).not.toContain('Showing the first 5 results');
-    });
+    expect(fixture.debugElement.nativeElement.textContent).not.toContain('the server holds more');
   });
 
   describe('Open-cycle detection follows the fetched page (REQ-2-S1)', () => {
