@@ -6,7 +6,7 @@
 |---|---|
 | **Parent spec path** | `docs/specs/changes/portfolio-overview-revamp/` |
 | **Date created** | 2026-10-14 |
-| **Last updated** | 2026-10-16 (#8 done and archived) |
+| **Last updated** | 2026-10-22 (#11 added) |
 | **Spec-family status** | open |
 | **Source proposal** | [`proposal.md`](./proposal.md), from the stakeholder feedback list, items 1–8 (screenshot attached to the request) |
 
@@ -24,6 +24,7 @@
 | 8 | `changes/portfolio-overview-revamp/w3-projects-section` | server half: none · client half: `changes/portfolio-overview-revamp/toc-kpi-progress` (template order) | server half yes · client half no | done |
 | 9 | `changes/portfolio-overview-revamp/filtered-detail-export` | `changes/portfolio-overview-revamp/global-filters` | no | done |
 | 10 | `changes/portfolio-overview-revamp/toc-kpi-target-filter` | `changes/portfolio-overview-revamp/toc-kpi-progress` (bugfix of its shipped query, P2-3974) | yes (server repository only) | done |
+| 11 | `changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure` | `changes/portfolio-overview-revamp/toc-kpi-target-filter` (done) | yes | pending |
 
 Notes:
 - #7–#9 come from stakeholder email items 9–11 (the #1–#6 proposal covered items 1–8). The table is in build order by dependency, not by row number: #7 runs before #3, #8 runs before #6, and #9 runs last.
@@ -57,3 +58,5 @@ Notes:
 | 2026-10-16 | Child #6 `global-filters` executed: 8/8 tasks PASS (14 review rounds, against a budget of 12 that the user raised to about 15; LOC overran about 2x, mostly in specs, and the user accepted it). The admin-only `portfolio/result-dimensions` endpoint and the global filter bar are wired across the page. Live parity on version 36 matches an independent SQL: CENTER-03 141, CENTER-02 235, CENTER-11 160, project 1368 58. Endpoint 0.66 s and 78 KB. One defect was found live and fixed (`*brnCommandEmpty`). The design §6.4 `aria-checked` deviation was accepted. The non-admin 403 was accepted by the user without a live call (module hidden for guests; metadata asserted in specs). Not yet archived | santiago.sanchez@cgiar.org |
 | 2026-10-16 | Child #6 `global-filters` archived to `archive/2026-10-16-changes--portfolio-overview-revamp--global-filters/`. 2 lessons and 1 recurrence were recorded as pending items in `docs/specs/kaizen/changes--portfolio-overview-revamp--global-filters.md`, for the apply phase on staging. Open follow-ups: PRTest smoke including a real non-admin 403, and `codegraph sync` | santiago.sanchez@cgiar.org |
 | 2026-10-16 | Child #9 `filtered-detail-export` executed (4/4 PASS, 1 pivot: `exactFileName` export flag; production LOC ≈ 2.5× accepted by the user) and archived to `archive/2026-10-16-changes--portfolio-overview-revamp--filtered-detail-export/`. Live parity v36: 1000 / SP02 181 / CENTER-03+editing 87 = KPI. 2 lessons as pending items in `docs/specs/kaizen/changes--portfolio-overview-revamp--filtered-detail-export.md`. Commits d3a37c35a, 824d3bd6f, 58104126f | santiago.sanchez@cgiar.org |
+| 2026-10-22 | Child #11 `toc-kpi-no-target-disclosure` added: the ToC KPI block says how many KPIs it leaves out because they have no target (an added `noTarget` count, % rule unchanged). It is a follow-up of INC-165202. The user approved it in this family ("arranca pues") | santiago.sanchez@cgiar.org |
+| 2026-10-22 | Child #11 `toc-kpi-no-target-disclosure` specified (Standard compact; 3 tasks, about 260 LOC, single PR). Proposal, requirements, design and tasks approved. Not yet executed | santiago.sanchez@cgiar.org |
