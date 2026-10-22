@@ -1,3 +1,4 @@
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure (TND-T-2)
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -379,6 +380,104 @@ describe('PortfolioTocKpiBlockComponent (TKP-T-4)', () => {
       f.componentRef.setInput('notAffected', ['status']);
       f.detectChanges();
       expect(text(q(f, '[data-testid="toc-kpi-not-affected"]'))).toBe('Not affected by: Status');
+    });
+  });
+
+  describe('no-target disclosure (TND-R-2, R-3, R-4)', () => {
+    const withNoTarget = (code: string, covered: number, total: number, noTarget: number) => program(code, covered, total, { noTarget });
+    const answerWith = (f: Fixture, programs: PortfolioTocCoverageProgram[], portfolioNoTarget: number) => {
+      const body = payload(programs);
+      body.response.portfolio.noTarget = portfolioNoTarget;
+      pending()[0].flush(body);
+      f.detectChanges();
+    };
+
+    it('S-2.1: a row with noTarget = 2 and a summary with 40 show the plural lines', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 1, 4, 2)], 40);
+      expect(text(rowOf(f, 'SP01').querySelector('[data-testid="toc-kpi-no-target"]'))).toBe('excludes 2 KPIs with no target set');
+      expect(text(q(f, '[data-testid="toc-kpi-summary-no-target"]'))).toBe('excludes 40 KPIs with no target set');
+    });
+
+    it('S-2.2: singular for 1, and no disclosure element at all for 0', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 1, 4, 1), withNoTarget('SP02', 1, 4, 0)], 0);
+      expect(text(rowOf(f, 'SP01').querySelector('[data-testid="toc-kpi-no-target"]'))).toBe('excludes 1 KPI with no target set');
+      expect(rowOf(f, 'SP02').querySelector('[data-testid="toc-kpi-no-target"]')).toBeNull();
+      expect(q(f, '[data-testid="toc-kpi-summary-no-target"]')).toBeNull();
+    });
+
+    it('a response without noTarget (older server) shows no disclosure and no NaN', () => {
+      const f = create();
+      answer(f, pending()[0], [program('SP01', 1, 4)]);
+      expect(q(f, '[data-testid="toc-kpi-no-target"]')).toBeNull();
+      expect(q(f, '[data-testid="toc-kpi-summary-no-target"]')).toBeNull();
+      expect(text(q(f, '[data-testid="toc-kpi-block"]'))).not.toContain('NaN');
+    });
+
+    it('S-2.3: the Program filter sums the visible noTarget (2 + 3 = 5) with one request', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 1, 4, 2), withNoTarget('SP02', 1, 4, 3), withNoTarget('SP03', 1, 4, 9)], 14);
+      f.componentRef.setInput('programs', new Set(['SP01', 'SP02']));
+      f.detectChanges();
+      expect(text(q(f, '[data-testid="toc-kpi-summary-no-target"]'))).toBe('excludes 5 KPIs with no target set');
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('S-2.4: the split line keeps its text', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 2, 4, 7)], 7);
+      expect(text(rowOf(f, 'SP01').querySelector('[data-testid="toc-kpi-split"]'))).toBe('Outputs 1 / 2 · Outcomes 1 / 2');
+    });
+
+    it('S-3.1: total 0 with noTarget 4 reads noTargetOnly, not the no-KPIs line', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 1, 4, 0), withNoTarget('SP02', 0, 0, 4)], 4);
+      const zero = text(rowOf(f, 'SP02').querySelector('[data-testid="toc-kpi-zero"]'));
+      expect(zero).toBe('No KPIs with a target · 4 with no target set');
+      expect(zero).not.toContain('No ToC KPIs in this phase');
+    });
+
+    it('S-3.2: total 0 with noTarget 0 keeps the no-KPIs line', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 1, 4, 0), withNoTarget('SP02', 0, 0, 0)], 0);
+      expect(text(rowOf(f, 'SP02').querySelector('[data-testid="toc-kpi-zero"]'))).toBe('No ToC KPIs in this phase');
+    });
+
+    it('S-3.3: every visible row total 0 and visible noTarget 12 reads emptyNoTarget(12)', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 0, 0, 5), withNoTarget('SP02', 0, 0, 7), withNoTarget('SP03', 1, 2, 90)], 102);
+      f.componentRef.setInput('programs', new Set(['SP01', 'SP02']));
+      f.detectChanges();
+      const line = text(q(f, '[data-testid="toc-kpi-empty"]'));
+      expect(line).toBe('No ToC KPIs have a target for this phase yet · 12 with no target set');
+      expect(line).not.toContain('are defined');
+    });
+
+    it('S-3.3: a visible noTarget sum of 0 keeps the current empty text', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 0, 0, 0)], 0);
+      expect(text(q(f, '[data-testid="toc-kpi-empty"]'))).toBe('No ToC KPIs are defined for this phase yet.');
+    });
+
+    it('S-4.1: the subtitle names the rule in every state', () => {
+      const f = create(36, '2026');
+      expect(text(q(f, '[data-testid="toc-kpi-subtitle"]'))).toContain('out of the KPIs with a target');
+      fail(f, pending()[0]);
+      expect(text(q(f, '[data-testid="toc-kpi-subtitle"]'))).toContain('out of the KPIs with a target');
+    });
+
+    it('NFR-4: the disclosure lines are plain text (no role, tabindex or button)', () => {
+      const f = create();
+      answerWith(f, [withNoTarget('SP01', 1, 4, 2)], 2);
+      const lines = [...qa(f, '[data-testid="toc-kpi-no-target"]'), ...qa(f, '[data-testid="toc-kpi-summary-no-target"]')];
+      expect(lines).toHaveLength(2);
+      for (const el of lines) {
+        expect(el.hasAttribute('role')).toBe(false);
+        expect(el.hasAttribute('tabindex')).toBe(false);
+        expect(el.closest('button')).toBeNull();
+        expect(el.tagName).not.toBe('BUTTON');
+      }
     });
   });
 });

@@ -1,3 +1,4 @@
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure (TND-T-2)
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -53,8 +54,10 @@ export class PortfolioTocKpiBlockComponent {
   readonly rows = computed(() => filterRowsByPrograms(toViewRows(this.data()?.programs ?? []), this.programs()));
   /** The server portfolio, or (Program filter on) the sum of the visible rows (GLF-P-5). */
   readonly summary = computed(() =>
-    toSummary(this.programs().size ? sumRows(this.rows()) : (this.data()?.portfolio ?? { covered: 0, total: 0 }))
+    toSummary(this.programs().size ? sumRows(this.rows()) : (this.data()?.portfolio ?? { covered: 0, total: 0, noTarget: 0 }))
   );
+  /** Sum of `noTarget` over the visible rows; feeds the empty-state text (TND-S-3.3). */
+  readonly visibleNoTarget = computed(() => this.rows().reduce((sum, row) => sum + row.noTarget, 0));
   readonly notAffectedText = computed(() => {
     const list = this.notAffected();
     if (!list.length) return '';
