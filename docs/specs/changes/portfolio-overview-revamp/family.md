@@ -6,7 +6,7 @@
 |---|---|
 | **Parent spec path** | `docs/specs/changes/portfolio-overview-revamp/` |
 | **Date created** | 2026-10-14 |
-| **Last updated** | 2026-10-22 (#11 added) |
+| **Last updated** | 2026-10-22 (#11 done and archived) |
 | **Spec-family status** | open |
 | **Source proposal** | [`proposal.md`](./proposal.md), from the stakeholder feedback list, items 1–8 (screenshot attached to the request) |
 
@@ -24,7 +24,7 @@
 | 8 | `changes/portfolio-overview-revamp/w3-projects-section` | server half: none · client half: `changes/portfolio-overview-revamp/toc-kpi-progress` (template order) | server half yes · client half no | done |
 | 9 | `changes/portfolio-overview-revamp/filtered-detail-export` | `changes/portfolio-overview-revamp/global-filters` | no | done |
 | 10 | `changes/portfolio-overview-revamp/toc-kpi-target-filter` | `changes/portfolio-overview-revamp/toc-kpi-progress` (bugfix of its shipped query, P2-3974) | yes (server repository only) | done |
-| 11 | `changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure` | `changes/portfolio-overview-revamp/toc-kpi-target-filter` (done) | yes | pending |
+| 11 | `changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure` | `changes/portfolio-overview-revamp/toc-kpi-target-filter` (done) | yes | done |
 
 Notes:
 - #7–#9 come from stakeholder email items 9–11 (the #1–#6 proposal covered items 1–8). The table is in build order by dependency, not by row number: #7 runs before #3, #8 runs before #6, and #9 runs last.
@@ -60,3 +60,4 @@ Notes:
 | 2026-10-16 | Child #9 `filtered-detail-export` executed (4/4 PASS, 1 pivot: `exactFileName` export flag; production LOC ≈ 2.5× accepted by the user) and archived to `archive/2026-10-16-changes--portfolio-overview-revamp--filtered-detail-export/`. Live parity v36: 1000 / SP02 181 / CENTER-03+editing 87 = KPI. 2 lessons as pending items in `docs/specs/kaizen/changes--portfolio-overview-revamp--filtered-detail-export.md`. Commits d3a37c35a, 824d3bd6f, 58104126f | santiago.sanchez@cgiar.org |
 | 2026-10-22 | Child #11 `toc-kpi-no-target-disclosure` added: the ToC KPI block says how many KPIs it leaves out because they have no target (an added `noTarget` count, % rule unchanged). It is a follow-up of INC-165202. The user approved it in this family ("arranca pues") | santiago.sanchez@cgiar.org |
 | 2026-10-22 | Child #11 `toc-kpi-no-target-disclosure` specified (Standard compact; 3 tasks, about 260 LOC, single PR). Proposal, requirements, design and tasks approved. Not yet executed | santiago.sanchez@cgiar.org |
+| 2026-10-22 | Child #11 `toc-kpi-no-target-disclosure` executed (3/3, PASS on attempt 1 for both code tasks) and archived to `archive/2026-10-22-changes--portfolio-overview-revamp--toc-kpi-no-target-disclosure/`. Live parity on v36 matches an independent SQL for all 13 SPs (2452 with target, 137 without). Commits b9ea5e87b, 134c87e02, cee50cfc1. Open items: PRTest p95, the guide-sync of `portfolio-overview/CLAUDE.md` (kaizen P1), and 5 more kaizen items pending | santiago.sanchez@cgiar.org |
