@@ -17,6 +17,8 @@ import { lucideCircleCheck, lucideGlobe, lucideRefreshCw, lucideSplit, lucideTri
 import { catchError, debounceTime, defer, distinctUntilChanged, finalize, map, merge, of, retry, Subject, Subscription, switchMap, tap, timer } from 'rxjs';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
+import { HlmBadge } from '@spartan/badge';
+import { HlmTooltip } from '@spartan/tooltip';
 import {
   ALL_KP_REPOSITORIES,
   KP_ITEM_HOSTS,
@@ -52,6 +54,29 @@ export interface CgspaceItemDto {
   // @akili-spec changes/kp-project-match — KPPJ-R-1 (additive)
   /** Project identifiers tagged on the item from cg.identifier.project. */
   projects?: string[];
+  // @akili-spec changes/kp-related-relevance-ranking — KRR design §5 / §9 (additive)
+  /** Subject keywords of the item (can be `[]`). */
+  subjects?: string[];
+  /** Ranked related items only: project factors the item satisfies and the resulting tier. */
+  projectMatch?: KpProjectMatch;
+}
+
+// @akili-spec changes/kp-related-relevance-ranking — KRR design §5 (mirrors the server `CgspaceProjectMatchDto`)
+export type KpProjectMatchTier = 'strong' | 'partial' | 'weak' | 'none';
+export type KpProjectMatchFactor = 'keywords' | 'center' | 'program';
+
+export interface KpProjectMatch {
+  tier: KpProjectMatchTier;
+  /** Fixed order: keywords, center, program. */
+  factors: KpProjectMatchFactor[];
+}
+
+/** `projectScope` echo of a search response (`KPSF` design §7, `ranked` added by `KRR` design §5). */
+export interface KpProjectScopeEcho {
+  scope?: KpProjectScope;
+  applied?: boolean;
+  /** True when the related page carries the relevance block (ordered by relevance, items carry `projectMatch`). */
+  ranked?: boolean;
 }
 
 /** @akili-spec changes/kp-project-match — KPPJ-DD-3 shared fuzzy normalization */
@@ -168,8 +193,21 @@ export const KP_BROWSE_COPY = {
   linkedHeading: 'KPs linked to the project',
   relatedHeading: 'Other KPs potentially related',
   linkedInfo: "Linked KPs are repository items whose project field contains this project's title words or PJ code.",
-  proxyNote: 'These KPs are not tagged with this project. They match your search, so the relation is approximate.',
+  proxyNote:
+    'These KPs are not tagged with this project in the repository, so the relation is approximate. They are not ranked by how closely they relate to the project: without search text they are listed newest first; with search text, by how well they match it.',
+  // @akili-spec changes/kp-related-relevance-ranking — KRR-R-7 / KRR-R-8 / design §8
+  proxyNoteRanked:
+    'These KPs are not tagged with this project in the repository. They are ordered by similarity to the project (subjects, Center, Science Program); the match label is an approximation.',
   proxyMarker: 'Proxy',
+  proxyMarkerTooltip: 'Proxy: this KP is not tagged with this project in the repository. Its relation to the project is approximate — see the match label.',
+  tierStrong: 'Strong match',
+  tierPartial: 'Partial match',
+  tierWeak: 'Weak match',
+  tierNone: 'No direct match',
+  tierTooltip: 'Approximate: based on matching subjects, Center and Science Program with this project. Not tagged with the project.',
+  factorKeywords: 'Project keywords',
+  factorCenter: 'Center',
+  factorProgram: 'Science Program',
   linkedEmptyTitle: 'No linked KPs',
   relatedEmptyTitle: 'No other KPs found for this search',
   linkedNotApplied: 'This project has no title words or PJ code the repositories can be matched on, so no linked KPs can be listed. See the potentially related KPs below.',
@@ -232,6 +270,16 @@ export const CGIAR_CENTER_ACRONYMS: Record<string, string> = {
   'WorldFish': 'WorldFish',
   'System Office': 'SO'
 };
+
+/**
+ * Full center name for an acronym, through the name↔acronym map above (`KRR` design §6).
+ * `undefined` when the acronym is empty or unknown; ties (e.g. two `ICRAF` names) resolve to the first entry.
+ */
+export function centerNameFromAcronym(acronym: string | null | undefined): string | undefined {
+  const wanted = (acronym ?? '').trim().toUpperCase();
+  if (!wanted) return undefined;
+  return Object.entries(CGIAR_CENTER_ACRONYMS).find(([, value]) => value.toUpperCase() === wanted)?.[0];
+}
 
 export function formatCenterLabel(rawName: string): string {
   if (!rawName) return '';
@@ -303,7 +351,7 @@ export const DEFAULT_CGSPACE_CENTERS: FacetOption[] = [
 
 @Component({
   selector: 'app-kp-cgspace-browse',
-  imports: [CommonModule, FormsModule, CustomFieldsModule, NgIcon],
+  imports: [CommonModule, FormsModule, CustomFieldsModule, NgIcon, HlmBadge, HlmTooltip],
   templateUrl: './kp-cgspace-browse.component.html',
   styleUrls: ['./kp-cgspace-browse.component.scss'],
   // Client guide rule 21: every new icon in this component comes from @ng-icons/lucide.
@@ -376,6 +424,9 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly linkedApplied = signal<boolean>(true);
   /** `sources[]` of the last linked response (KPM-R-6 per scope). */
   readonly linkedSources = signal<SourceStatusDto[]>([]);
+  // @akili-spec changes/kp-related-relevance-ranking — KRR-R-8
+  /** `projectScope.ranked` of the last related response: true = ordered by relevance, so the ranked proxy note applies. */
+  readonly relatedRanked = signal<boolean>(false);
   // @akili-spec changes/kp-multi-repository-browse — KPM-R-20
   /** `page.hasMore` of the last response; drives *Load more* visibility (never `items().length < total()`). */
   readonly hasMore = signal<boolean>(false);
@@ -520,6 +571,37 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
 
   /** Copy constants for the template. */
   readonly copy = KP_BROWSE_COPY;
+
+  // @akili-spec changes/kp-related-relevance-ranking — KRR-R-7 / design §8
+  /** Tier label of a related item (never a percentage); `null` when the item carries no `projectMatch`. */
+  matchTierLabel(item: CgspaceItemDto): string | null {
+    switch (item?.projectMatch?.tier) {
+      case 'strong':
+        return this.copy.tierStrong;
+      case 'partial':
+        return this.copy.tierPartial;
+      case 'weak':
+        return this.copy.tierWeak;
+      case 'none':
+        return this.copy.tierNone;
+      default:
+        return null;
+    }
+  }
+
+  /** `Project keywords · Center · Science Program` — only the matched factors, fixed order; `''` for `none` or no match data. */
+  matchFactorsLine(item: CgspaceItemDto): string {
+    const factors = item?.projectMatch?.factors ?? [];
+    const labels: [KpProjectMatchFactor, string][] = [
+      ['keywords', this.copy.factorKeywords],
+      ['center', this.copy.factorCenter],
+      ['program', this.copy.factorProgram]
+    ];
+    return labels
+      .filter(([factor]) => factors.includes(factor))
+      .map(([, label]) => label)
+      .join(' · ');
+  }
 
   readonly isBilateralBrowse = computed(() => this.enableProjectRepositoryFilter());
 
@@ -929,6 +1011,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       state.total.set(0);
       state.sources.set([]);
       state.hasMore.set(false);
+      if (scope === 'related') this.relatedRanked.set(false);
       return;
     }
 
@@ -938,10 +1021,13 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     // KPM-R-20: *Load more* renders iff the last response reports page.hasMore.
     state.hasMore.set(Boolean(res?.response?.page?.hasMore));
 
+    const echo: KpProjectScopeEcho | undefined = res?.response?.projectScope;
     if (scope === 'linked') {
       // KPSF-R-9: `applied=false` = the project is not usable; the server answers an empty linked page.
-      const echo = res?.response?.projectScope;
       this.linkedApplied.set(echo ? echo.applied !== false : true);
+    } else {
+      // KRR-R-8: only a response that says `ranked` switches the proxy note; everything else keeps the quick copy.
+      this.relatedRanked.set(echo?.ranked === true);
     }
 
     const items: CgspaceItemDto[] = res?.response?.items ?? [];
@@ -994,6 +1080,13 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       if (code) params['projectCode'] = code;
       if (title) params['projectTitle'] = title;
       if (leadCenter) params['projectLeadCenter'] = leadCenter;
+      // @akili-spec changes/kp-related-relevance-ranking — design §6. Lengths match the server DTO limits (1000 / 200 / 200).
+      const description = (this.projectDescription() ?? '').trim().slice(0, 1000);
+      const program = [this.programCode()?.trim(), this.programName()?.trim()].filter(Boolean).join(' - ').slice(0, 200);
+      const leadCenterName = centerNameFromAcronym(this.leadCenterAcronym())?.slice(0, 200);
+      if (description) params['projectDescription'] = description;
+      if (program) params['projectProgram'] = program;
+      if (leadCenterName) params['projectLeadCenterName'] = leadCenterName;
       params['projectScope'] = scope;
     }
 
@@ -1022,6 +1115,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       state.total.set(0);
       state.sources.set([]);
     }
+    this.relatedRanked.set(false);
   }
 
   /** Search runs when the text has ≥ 3 chars, or when it is empty and an explicit filter is set. */

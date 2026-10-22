@@ -38,9 +38,37 @@
                       <span
                         class="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-400 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
                         [attr.data-test]="'kp-proxy-marker-' + (item.uuid || item.handle)"
-                        aria-label="Proxy: not tagged with this project, relation is approximate">
+                        aria-label="Proxy: not tagged with this project, relation is approximate"
+                        tabindex="0"
+                        [hlmTooltip]="copy.proxyMarkerTooltip">
                         {{ copy.proxyMarker }}
                       </span>
+                      <!-- @akili-spec changes/kp-related-relevance-ranking — KRR-R-7: neutral tier badge, never a percentage -->
+                      @if (matchTierLabel(item); as tierLabel) {
+                        <span
+                          hlmBadge
+                          variant="outline"
+                          class="h-auto gap-1 border-[var(--pr-border)] px-2 py-0.5 text-[11px] font-semibold text-[var(--pr-text-secondary)]"
+                          tabindex="0"
+                          [hlmTooltip]="copy.tierTooltip"
+                          [attr.data-test]="'kp-match-tier-' + (item.uuid || item.handle)"
+                          [attr.data-tier]="item.projectMatch?.tier">
+                          @switch (item.projectMatch?.tier) {
+                            @case ('strong') {
+                              <span class="size-[8px] shrink-0 rounded-full bg-[var(--pr-text-secondary)]" aria-hidden="true"></span>
+                            }
+                            @case ('partial') {
+                              <span
+                                class="size-[8px] shrink-0 rounded-full border border-[var(--pr-text-secondary)] bg-[linear-gradient(90deg,var(--pr-text-secondary)_50%,transparent_50%)]"
+                                aria-hidden="true"></span>
+                            }
+                            @case ('weak') {
+                              <span class="size-[8px] shrink-0 rounded-full border border-[var(--pr-text-secondary)]" aria-hidden="true"></span>
+                            }
+                          }
+                          {{ tierLabel }}
+                        </span>
+                      }
                     }
                     @if (matchesProgram(item)) {
                       <span
@@ -52,6 +80,12 @@
                       </span>
                     }
                   </div>
+
+                  @if (variant === 'related' && matchFactorsLine(item); as factorsLine) {
+                    <div class="mb-1.5 text-[11px] text-[var(--pr-text-secondary)]" [attr.data-test]="'kp-match-factors-' + (item.uuid || item.handle)">
+                      {{ factorsLine }}
+                    </div>
+                  }
 
                   <!-- Title -->
                   <h4 class="text-sm font-semibold text-gray-900 leading-snug">
@@ -632,7 +666,7 @@
               </h3>
               <p class="m-0 flex items-start gap-1.5 text-xs text-amber-900" data-test="kp-proxy-note">
                 <ng-icon name="lucideTriangleAlert" class="mt-px shrink-0 text-[13px]" aria-hidden="true" />
-                <span><strong>Proxy:</strong> {{ copy.proxyNote }}</span>
+                <span><strong>Proxy:</strong> {{ relatedRanked() ? copy.proxyNoteRanked : copy.proxyNote }}</span>
               </p>
             </div>
 
