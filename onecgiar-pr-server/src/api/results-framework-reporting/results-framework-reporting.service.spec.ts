@@ -2146,7 +2146,8 @@ describe('ResultsFrameworkReportingService', () => {
       category: string,
       total: number,
       covered: number,
-    ) => ({ official_code, category, total, covered });
+      noTarget = 0,
+    ) => ({ official_code, category, total, covered, noTarget });
     const falsifierRows = () => [
       row('SP01', 'OUTPUT', 3, 1),
       row('SP01', 'OUTCOME', 1, 0),
@@ -2187,26 +2188,79 @@ describe('ResultsFrameworkReportingService', () => {
         name: 'Science Program One',
         total: 4,
         covered: 1,
-        outputs: { total: 3, covered: 1 },
-        outcomes: { total: 1, covered: 0 },
+        noTarget: 0,
+        outputs: { total: 3, covered: 1, noTarget: 0 },
+        outcomes: { total: 1, covered: 0, noTarget: 0 },
       });
       expect(programOf(result, 'SP02')).toMatchObject({
         total: 2,
         covered: 2,
-        outputs: { total: 2, covered: 2 },
-        outcomes: { total: 0, covered: 0 },
+        noTarget: 0,
+        outputs: { total: 2, covered: 2, noTarget: 0 },
+        outcomes: { total: 0, covered: 0, noTarget: 0 },
       });
       // S-3.1: a zero-KPI P/A is present with 0 / 0.
       expect(programOf(result, 'A3')).toMatchObject({
         total: 0,
         covered: 0,
-        outputs: { total: 0, covered: 0 },
-        outcomes: { total: 0, covered: 0 },
+        noTarget: 0,
+        outputs: { total: 0, covered: 0, noTarget: 0 },
+        outcomes: { total: 0, covered: 0, noTarget: 0 },
       });
       // A code outside the seed is dropped and does not feed the portfolio.
       expect(programOf(result, 'XX99')).toBeUndefined();
       expect(result.response.programs).toHaveLength(3);
-      expect(result.response.portfolio).toEqual({ total: 6, covered: 3 });
+      expect(result.response.portfolio).toEqual({
+        total: 6,
+        covered: 3,
+        noTarget: 0,
+      });
+    });
+
+    // TND-T-1 (toc-kpi-no-target-disclosure): noTarget rides next to total / covered.
+    it('rolls noTarget up per category, per program and into the portfolio (TND-S-1.4)', async () => {
+      mockTocResultsRepository.getPortfolioTocCoverage.mockResolvedValue([
+        row('SP01', 'OUTPUT', 3, 1, 2),
+        row('SP01', 'OUTCOME', 1, 0, 4),
+        row('SP02', 'OUTPUT', 2, 2, 1),
+        row('XX99', 'OUTPUT', 5, 5, 9),
+      ]);
+
+      const result = (await service.getPortfolioTocCoverage()) as any;
+
+      expect(programOf(result, 'SP01')).toEqual({
+        code: 'SP01',
+        shortName: 'Program One',
+        name: 'Science Program One',
+        total: 4,
+        covered: 1,
+        noTarget: 6,
+        outputs: { total: 3, covered: 1, noTarget: 2 },
+        outcomes: { total: 1, covered: 0, noTarget: 4 },
+      });
+      expect(programOf(result, 'SP02')).toMatchObject({
+        total: 2,
+        covered: 2,
+        noTarget: 1,
+        outputs: { total: 2, covered: 2, noTarget: 1 },
+        outcomes: { total: 0, covered: 0, noTarget: 0 },
+      });
+      // A seeded program with no rows is 0 everywhere; XX99 (outside the seed) is dropped.
+      expect(programOf(result, 'A3')).toMatchObject({
+        noTarget: 0,
+        outputs: { noTarget: 0 },
+        outcomes: { noTarget: 0 },
+      });
+      expect(programOf(result, 'XX99')).toBeUndefined();
+      // portfolio.noTarget = 6 + 1 + 0; total / covered are unchanged by it (TND-S-1.3).
+      expect(result.response.portfolio).toEqual({
+        total: 6,
+        covered: 3,
+        noTarget: 7,
+      });
+      for (const p of result.response.programs) {
+        expect(p.noTarget).toBe(p.outputs.noTarget + p.outcomes.noTarget);
+      }
     });
 
     it('keeps covered <= total for every program and category (S-2.1)', async () => {
@@ -2234,8 +2288,9 @@ describe('ResultsFrameworkReportingService', () => {
       expect(result.response.programs[0]).toMatchObject({
         total: 4,
         covered: 2,
-        outputs: { total: 3, covered: 1 },
-        outcomes: { total: 1, covered: 1 },
+        noTarget: 0,
+        outputs: { total: 3, covered: 1, noTarget: 0 },
+        outcomes: { total: 1, covered: 1, noTarget: 0 },
       });
     });
 

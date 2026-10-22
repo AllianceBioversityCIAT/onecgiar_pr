@@ -1219,15 +1219,30 @@ describe('AoWBilateralRepository', () => {
         expect(sql).toContain('tri.is_active = 1');
       });
 
-      it('counts only distinct indicator ids for total and covered', async () => {
+      it('counts only distinct indicator ids for total, covered and no_target', async () => {
         const { sql } = await captureSql();
 
-        expect(sql).toContain('COUNT(DISTINCT tri.id) AS total');
+        // TND-S-1.1, TND-S-1.2: total counts targeted KPIs, no_target the rest.
         expect(sql).toContain(
-          'COUNT(DISTINCT CASE WHEN cov.indicator_id IS NOT NULL THEN tri.id END) AS covered',
+          'COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NOT NULL THEN tri.id END) AS total',
+        );
+        expect(sql).toContain(
+          'COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NULL THEN tri.id END) AS no_target',
         );
         // No COUNT( may appear without DISTINCT right after the parenthesis.
         expect(sql.match(/COUNT\((?!DISTINCT)/g)).toBeNull();
+      });
+
+      it('conditions covered on BOTH a target and a covering result, so covered stays a subset of total (TND-S-1.3, TND-DD-2)', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain(
+          'COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NOT NULL AND cov.indicator_id IS NOT NULL THEN tri.id END) AS covered',
+        );
+        // The bare covered condition (no target guard) must be gone.
+        expect(sql).not.toContain(
+          'COUNT(DISTINCT CASE WHEN cov.indicator_id IS NOT NULL THEN tri.id END)',
+        );
       });
 
       it('builds the covered set from active, applicable links of counting results of the version', async () => {
@@ -1269,7 +1284,7 @@ describe('AoWBilateralRepository', () => {
         expect(sql.slice(outcomeBranch)).not.toContain('wp_id IS NULL');
       });
 
-      it('keeps only indicators with a target > 0 for the year, through an inner join (TKF-R-1, TKF-R-2)', async () => {
+      it('reads targets > 0 for the year through a LEFT JOIN, so no-target KPIs stay in the row set (TKF-R-1, TND-S-1.2)', async () => {
         const { sql } = await captureSql();
 
         expect(sql).toContain('toc_test.toc_result_indicator_target trit');
@@ -1279,12 +1294,12 @@ describe('AoWBilateralRepository', () => {
         expect(sql).toContain(
           'CONVERT(tgt.related_node_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)',
         );
-        // Inner join: the target table is reached through a plain JOIN, so a
-        // no-target indicator leaves both total and covered.
-        expect(sql).toContain('JOIN ( SELECT DISTINCT trit.id_indicator');
-        expect(sql).not.toContain(
-          'LEFT JOIN ( SELECT DISTINCT trit.id_indicator',
-        );
+        // LEFT JOIN: a no-target indicator keeps its row (tgt columns NULL), so it
+        // can be counted in no_target and is kept out of total and covered by the
+        // CASE conditions (TND-DD-1, TND-DD-2).
+        expect(sql).toContain('LEFT JOIN ( SELECT DISTINCT trit.id_indicator');
+        const innerJoinTarget = /(?<!LEFT )JOIN \( SELECT DISTINCT trit\./;
+        expect(sql).not.toMatch(innerJoinTarget);
         // It sits right after the indicators join, before the covered set.
         const targetIdx = sql.indexOf('toc_result_indicator_target');
         expect(targetIdx).toBeGreaterThan(
@@ -1331,30 +1346,45 @@ describe('AoWBilateralRepository', () => {
         expect(sql).toContain('main_test.results_toc_result_indicators rtri');
       });
 
-      it('returns numeric total and covered even when the driver sends strings', async () => {
+      it('returns numeric total, covered and noTarget even when the driver sends strings', async () => {
         dataSourceQueryMock.mockResolvedValueOnce([
           {
             official_code: 'SP01',
             category: 'OUTPUT',
             total: '4',
             covered: '1',
+            no_target: '2',
           },
           {
             official_code: 'SP01',
             category: 'OUTCOME',
             total: 3,
             covered: '0',
+            no_target: 0,
           },
         ]);
 
         const rows = await repository.getPortfolioTocCoverage(coverageContext);
 
         expect(rows).toEqual([
-          { official_code: 'SP01', category: 'OUTPUT', total: 4, covered: 1 },
-          { official_code: 'SP01', category: 'OUTCOME', total: 3, covered: 0 },
+          {
+            official_code: 'SP01',
+            category: 'OUTPUT',
+            total: 4,
+            covered: 1,
+            noTarget: 2,
+          },
+          {
+            official_code: 'SP01',
+            category: 'OUTCOME',
+            total: 3,
+            covered: 0,
+            noTarget: 0,
+          },
         ]);
         expect(typeof rows[0].total).toBe('number');
         expect(typeof rows[0].covered).toBe('number');
+        expect(typeof rows[0].noTarget).toBe('number');
       });
 
       it('rejects through returnErrorRepository without putting the SQL text in the error', async () => {

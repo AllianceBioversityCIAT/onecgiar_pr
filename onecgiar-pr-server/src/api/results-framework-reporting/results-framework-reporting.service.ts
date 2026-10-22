@@ -912,26 +912,27 @@ export class ResultsFrameworkReportingService {
 
       const normaliseCode = (code?: string | null) =>
         (code ?? '').trim().toUpperCase();
+      // @akili-spec changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure (TND-T-1)
+      type KpiCounts = { total: number; covered: number; noTarget: number };
       const addCounts = (
-        target: { total: number; covered: number },
+        target: KpiCounts,
         total: number,
         covered: number,
+        noTarget: number,
       ) => {
         target.total += total;
         target.covered += covered;
+        target.noTarget += noTarget;
       };
 
       const countsByCode = new Map<
         string,
-        {
-          outputs: { total: number; covered: number };
-          outcomes: { total: number; covered: number };
-        }
+        { outputs: KpiCounts; outcomes: KpiCounts }
       >();
       for (const initiative of seed) {
         countsByCode.set(normaliseCode(initiative.official_code), {
-          outputs: { total: 0, covered: 0 },
-          outcomes: { total: 0, covered: 0 },
+          outputs: { total: 0, covered: 0, noTarget: 0 },
+          outcomes: { total: 0, covered: 0, noTarget: 0 },
         });
       }
 
@@ -942,13 +943,13 @@ export class ResultsFrameworkReportingService {
 
         const category = (row.category ?? '').trim().toUpperCase();
         if (category === 'OUTPUT') {
-          addCounts(counts.outputs, row.total, row.covered);
+          addCounts(counts.outputs, row.total, row.covered, row.noTarget);
         } else if (category === 'OUTCOME') {
-          addCounts(counts.outcomes, row.total, row.covered);
+          addCounts(counts.outcomes, row.total, row.covered, row.noTarget);
         }
       }
 
-      const portfolio = { total: 0, covered: 0 };
+      const portfolio: KpiCounts = { total: 0, covered: 0, noTarget: 0 };
       const programs: PortfolioTocCoverageProgramDto[] = seed.map(
         (initiative) => {
           const { outputs, outcomes } = countsByCode.get(
@@ -956,7 +957,8 @@ export class ResultsFrameworkReportingService {
           );
           const total = outputs.total + outcomes.total;
           const covered = outputs.covered + outcomes.covered;
-          addCounts(portfolio, total, covered);
+          const noTarget = outputs.noTarget + outcomes.noTarget;
+          addCounts(portfolio, total, covered, noTarget);
 
           return {
             code: (initiative.official_code ?? '').trim(),
@@ -964,6 +966,7 @@ export class ResultsFrameworkReportingService {
             name: initiative.name ?? '',
             total,
             covered,
+            noTarget,
             outputs: { ...outputs },
             outcomes: { ...outcomes },
           };

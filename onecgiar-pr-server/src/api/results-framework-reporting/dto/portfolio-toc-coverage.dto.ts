@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 // @akili-spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-T-2)
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure (TND-T-1)
 
-/** A total / covered pair of ToC KPIs (distinct ToC indicators). */
+/** A total / covered pair of ToC KPIs (distinct ToC indicators), plus the KPIs with no target. */
 export class TocKpiCountsDto {
   @ApiProperty({
     description:
@@ -15,6 +16,13 @@ export class TocKpiCountsDto {
       'Distinct KPIs covered by at least one active pooled result (source Result, status Quality Assessed or Submitted) of the requested version, linked through an active, applicable indicator link. Never greater than total.',
   })
   covered: number;
+
+  @ApiProperty({
+    description:
+      'Distinct in-scope ToC KPIs with no target for the reporting year (no target row, only a 0, NULL or non-numeric value, or a target only in another year). Not part of total, so not part of the ratio.',
+    minimum: 0,
+  })
+  noTarget: number;
 }
 
 /** One Program or Accelerator of the open portfolio. */
