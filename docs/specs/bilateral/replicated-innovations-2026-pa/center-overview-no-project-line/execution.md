@@ -169,7 +169,34 @@
 - **Issues:** none. No Cypress or visual run; the 375 px fit belongs to CNP-T-5.
 - **Final verification:** green run above. Reviewer PASS.
 
-## 3. Summary (code tasks complete — CNP-T-5 pending, HITL)
+### CNP-T-5 — HITL: live reconciliation and visual check on PRTest
+
+- **Status:** PASS. Closed 2026-10-22 by owner decision: the 13-Oct sheet comparison (`CNP-R-1` B, "reported, not gated") moves to the INC-164073 reply in `tasks.md` §6. It is not a task gate.
+- **Date:** 2026-10-22. Commit `7fc31ddb1` on `qa-development-2026-ss` was merged into `performance-refactor` as `d35c6e9ff` and deployed to PRTest.
+- **Run by:** Leader, via Claude in Chrome on `prtest.ciat.cgiar.org`, in the owner's session. Read-only: the only clicks were the line link, the chip ✕ (a filter) and the phase selector. Nothing was written.
+- **Review:** `skip-eligible` (live evidence, no code change)
+- **Served bundle check:** `[data-testid="by-project-updated-no-project"]` is present and its aria-label carries the new copy, so the reading is evidence (disqualifier not hit). An earlier attempt on 2026-10-21 found PRTest slow (`main.js` > 20 s, blank page) and was abandoned without a reading.
+
+| Check (CIP, Reporting 2026 · phase 36) | Expected | Observed | Result |
+|---|---|---|---|
+| Line text and count | label exact | **52** "Updated 2025 innovations with no 2026 project" | ✅ `CNP-R-5` |
+| Identity: bars + generic + line + other centers = Total | = Total | bars from the a11y table 4+3+2+2+2+1+1+1+1+1 = **18**, generic **3**, line **52**, other centers **49** → 122; Total **122** | ✅ `CNP-R-1` A / `CNP-AC-1` |
+| Line link params | `group`, `scope=bilateral`, `phase` | `phase, role, source, scope, group` (`role=all&source=all` explicit defaults) | ✅ `CNP-R-2` A |
+| Results after following the link | visible = line count, chip present | "52 of 122 results", 52 rows, chip "Updated innovations with no project" | ✅ `CNP-AC-9` |
+| Chip ✕ | `group` leaves the URL, rows widen | URL `phase, role, source, scope`; "122 of 122 results"; no chip | ✅ `CNP-R-2` B |
+| Not sticky | Results without `group` → no chip | `/bilateral/CIP/results` → no chip | ✅ |
+| Overview with `?group=updated-no-project` | Total unchanged | Total 122, line 52, generic 3 | ✅ `CNP-R-2` BUT |
+| Reporting / Draft links | no `group` | 0 of 2 deep links carry `group` | ✅ |
+| Desktop, 1920 px | aligned with the generic line | screenshot OK | ✅ |
+| 899 px (same-origin iframe: window resize was not honored, window maximized) | no clip, no page x-overflow | single line, 36 px high, not clipped, no x-overflow | ✅ |
+| 375 px (same-origin iframe) | no clip, no page x-overflow | wraps to 2 lines, 54 px high, inside the card (right edge 319 < card 340), no x-overflow | ✅ |
+| Reporting 2025 (phase 34) | line absent | line absent, Total 185, no generic line | ✅ `CNP-R-3` |
+
+- **Screenshots (local Chrome temp folder `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-5iZZIS\`):** desktop Overview, Results with chip, 899 px, 375 px.
+- **Open (reporting only, not gated):** `CNP-R-1` B. Compare the 52 with Nicoleta's 13-Oct "Without 2026 project" sheet minus what child #1 linked, for the INC-164073 reply. The Leader does not have the sheet. By owner decision (2026-10-22) the comparison goes into the INC-164073 reply instead of gating T-5.
+- **Not checked:** ILRI (CIP alone exercised every falsifier).
+
+## 3. Summary (all tasks complete)
 
 | Task | Result | Attempts | Green run |
 |---|---|---|---|
@@ -177,7 +204,7 @@
 | CNP-T-2 | PASS | 1 | 25 suites / 931 tests |
 | CNP-T-4 | PASS | 1 | 21 suites / 842 tests |
 | CNP-T-3 | PASS | 1 | 21 suites / 761 tests |
-| CNP-T-5 | pending (owner commit + PRTest deploy) | — | — |
+| CNP-T-5 | PASS on PRTest (CIP: line 52 = Results 52, 18+3+52+49 = 122); 13-Oct sheet comparison moved to the INC-164073 reply | — | live |
 
 - **Budget:** 5 tasks (as planned) · ≈ 530 lines changed incl. tests and CLAUDE.md edits vs ~300 LOC estimate. Production code is ≈ 110 lines, as estimated; the overrun is tests and docs. 0 rework rounds (budget ≤ 2 per task).
 - **Pending items for the owner / archive:**
