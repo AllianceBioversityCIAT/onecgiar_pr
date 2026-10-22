@@ -202,6 +202,39 @@ Budget (design §12): 5 tasks, ~650 LOC, 1–2 review rounds per task. Exceeding
 
 **Done:** user confirms; evidence attached; INC-166020 reply drafted.
 
+### KRR-T-6 — Keyword quality: drop project-code tokens and funding boilerplate, widen the description pool (user-approved 2026-10-22)
+
+| Field | Value |
+|---|---|
+| Status | [x] done (2026-10-22, PASS attempt 1 + refinement) |
+| Size | S (~30 prod + ~60 test LOC) |
+| Depends on | T-1..T-5 evidence (OI-5 in `execution.md`) |
+| Requirements | R-1 (quality), R-5, R-9, NFR-2 |
+| Design | §7.1 (amended by T-6) |
+| Skills | `nestjs-expert`, `tdd` |
+
+**Why.** T-5 on PRTest found that with real P-1486 data, `extractRelevanceKeywords` returns `1486, gcdt, long, term, grant, global, crop, diversity, trust, providing, dedicated, funding, operation`:
+- the code embedded in the title leaks in;
+- the first-8 description cap drops `genebank`, `potato`, `sweetpotato` and `germplasm`.
+
+**Scope** (only `extractRelevanceKeywords` in `project-relevance.ts`, plus its spec; factor rules, block format, weights and trim are unchanged)
+- Exclude the tokens of the project code (the code split on non-alphanumerics, normalized), and any purely numeric token, from title and description keywords.
+- Exclude a small explicit list of funding/administrative boilerplate words, kept as a named constant with a comment: grant, grants, funding, funded, fund, provide, provides, providing, dedicated, support, supporting, operation, operations, long, term, project, projects, program, programme, phase, activities, implementation, international, standards, standard.
+- Description pool: take up to **12** distinctive description words (was 8), still in order of appearance, after the exclusions. The title cap stays at 8.
+- **Plural matching (user-approved extension, 2026-10-22):** replace the single-fold equality with candidate matching, {w, w−"s", w−"es"} for words of 4+ letters, so that `potatoes`↔`potato` and `diseases`↔`disease` match. Matching stays whole-word, so `gene` ✗ `genebanks`. Live evidence: CGSpace 10568/183744 has subject `potatoes` and was tiered `none`.
+- NFR-2 is still guaranteed by the existing `appendRelevanceBlock` trim and the request-wide `ranked` gate. Re-run the worst-case tests.
+
+**Tests** (literal expected arrays)
+- Real P-1486 input: title `P-1486-GCDT-Long term grant`, code `P-1486-GCDT`, lead `CIP`, plus the real description recorded in `execution.md` T-5. The keywords contain `genebank`, `potato` and `sweetpotato`, and contain none of `1486`, `gcdt`, `grant`, `funding`, `providing`, `long` or `term`. Assert the full literal array.
+- iSPARK-like input: the code tokens `t`, `pj` and `003936` are excluded.
+- The description cap is 12; the title cap is still 8.
+- The existing T-1/T-2 worst-case and NFR-2 tests stay green. Update any literal that changes, and explain why in the report.
+
+**Verification**
+`cd onecgiar-pr-server && npx jest --maxWorkers=2 --silent --testPathPattern="project-relevance|repositories.config|cgspace-discovery"`, then eslint on the touched files. Then run a live GET probe with the real P-1486 and iSPARK contexts on 3 hosts: totals unchanged, and the keyword list printed.
+
+- **Fails if:** the P-1486 keywords lack `genebank` or `potato`, contain a code token, or any ranked total ≠ unranked total.
+
 ## 4. Dependency graph
 
 ```text

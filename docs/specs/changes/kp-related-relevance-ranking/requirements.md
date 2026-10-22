@@ -150,7 +150,7 @@ The proxy note SHALL say that related KPs are ordered by similarity to the proje
 
 ### Requirement KRR-R-9 — Safe, bounded query construction (MUST)
 
-Boost terms SHALL come only from sanitized project tokens, through the same escaping as KPSF-R-9. Field names SHALL be adapter constants. Keywords SHALL be capped: at most 8 from the title and 8 from the description.
+Boost terms SHALL come only from sanitized project tokens, through the same escaping as KPSF-R-9. Field names SHALL be adapter constants. Keywords SHALL be capped: at most 8 from the title and 12 from the description (amended by KRR-T-6, 2026-10-22; was 8 + 8). Project-code tokens, purely numeric tokens and the funding-boilerplate list are excluded.
 
 #### Scenario
 

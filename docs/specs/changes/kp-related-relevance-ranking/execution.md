@@ -266,3 +266,86 @@ ADVISORY:
 - A `projectProgram` cut at 200 chars could leave a dangling " -" (negligible).
 
 Open for T-5: the jsdom limit. Badge legibility and the tooltip opening on hover and focus can only be shown in the browser.
+
+## Promotion (2026-10-22)
+
+Commits on `qa-development-2026-ss`: 65ae4c2c4 (server), 00a86f0f4 (client), 226ffa29c (spec docs), 34e1e5aa5 (quick log). The branch merged `origin/performance-refactor` (P2-3999) as 4abedfa7d and was pushed. `performance-refactor` was fast-forwarded to 4abedfa7d and pushed. The other PRMS sessions (d8, ee, 49, e2, 91) all reported nothing pending. Pre-push: server `--findRelatedTests` 18 suites, 330/330; client 58 suites, 2619/2619. T-5 is waiting on the PRTest deploy (~30 min).
+
+### KRR-T-5 — Live acceptance on PRTest (R-11)
+
+| Field | Value |
+|---|---|
+| Status | Evidence recorded by the Leader at the user's request (2026-10-22); final sign-off is the user's |
+| Bundle | `chunk-SXN5TXFJ.js` on prtest.ciat.cgiar.org contains the T-4 copy ("No direct match"). The bundle is current |
+| Path | Centers → CIP → P-1486-GCDT → Create result → Complete the form manually → Output → Knowledge Product. Read-only: "Use this item" and "Create and continue" were not clicked |
+
+Checks:
+1. **CGSpace related top (no text).** The first page is led by two **Strong match** KPs (factors Project keywords · Center · Science Program): "Enhance food plant diversity conservation and use through greater coordination between genebanks and botanic gardens", and "Revealing the genetic diversity in the global ex situ sweetpotato collection…" (CIP). Then come Weak matches (Science Program only, e.g. IRRI seed-health manuals). ✅
+2. **Tier on every related card; totals.** Related 3821 = CGSpace 3464 + MELSpace 238 + WorldFish 119, the same as the unranked probe totals. ✅
+   - The first load showed "CGSpace unavailable": a transient upstream timeout (`SEARCH_TIMEOUT_MS = 8000`). "Retry CGSpace" loaded it. The same ranked query from the Leader machine returned 200 in 1.8 s (total 3464).
+3. **"potato".** 429 = 423 + 2 + 4. Led by "Potatoes, jobs, and digitalization…" (CGSpace) and "Genome editing in tetraploid potato…" (MELSpace). ✅
+4. **Tooltips.**
+   - Hover on the badge and on Proxy shows the full copy.
+   - Keyboard Tab focuses Proxy, then the badge. Both show a visible focus outline and open their tooltip. ✅
+   - The advisory about the Proxy focus ring is resolved: the outline is visible.
+5. **Linked unchanged.** P-1486 has 0 linked KPs. IITA iSPARK (T-PJ-003936) has 2 linked CGSpace KPs (ISRA metrics; climate-smart irrigation advisory) with "Linked to T-PJ-003936" and no tier badge. Related 3819 + 2 linked = 3821, so the exclusion is kept. The iSPARK related top is a Strong match (PAASS, IITA). ✅
+
+Screenshots (local):
+- `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-5R2In7\screenshot-1792705542606-0.jpg` (related top)
+- `…-1792705576435-1.png` (badge tooltip)
+- `…-1792705605815-2.png` (Proxy tooltip)
+- `…-1792705768746-3.png` (keyboard focus on Proxy)
+
+**New finding (OI-5, keyword quality).** With the real P-1486 data, the keywords are `1486, gcdt, long, term, grant, global, crop, diversity, trust, providing, dedicated, funding, operation`. Two causes:
+- The project code inside the title ("P-1486-GCDT-Long term grant") yields `1486` and `gcdt`.
+- The 8-word description cap takes the **first** 8 distinctive words, so `genebank`, `potato`, `sweetpotato`, `germplasm` and `curation` are dropped.
+
+The ranking still works on P-1486 because the program boost ("genebank") and the center boost (CIP) carry it. But the `keywords` factor is weak: "Potatoes, jobs…" shows "No direct match". Follow-up candidate:
+- strip the project code from the title;
+- pick description keywords by distinctiveness rather than position, or raise the cap within the NFR-2 budget.
+
+Outside this spec's approved scope; for the user to decide.
+
+## Scope change: KRR-T-6 (user-approved 2026-10-22, "vamos con B")
+
+OI-5 (keyword quality) was promoted to task KRR-T-6, which amends design section 7.1 for `extractRelevanceKeywords` only:
+- drop project-code tokens and numeric tokens;
+- drop an explicit list of funding boilerplate words;
+- raise the description cap from 8 to 12.
+
+T-5 sign-off is deferred until T-6 is deployed and re-checked on PRTest.
+
+Advisory 1 applied by the Leader: requirements.md R-9 and design.md section 7.1 now describe the T-6 rules. The tasks.md T-1 text is history and is left as written.
+
+### KRR-T-6 — Keyword quality + plural matching
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 1, refined after review advisories; re-review PASS) |
+| Date | 2026-10-22 |
+| Skills / effort | `nestjs-expert`, `tdd` · effort `medium` |
+| Requirements | R-1 (quality), R-5, R-9, NFR-2 |
+
+Files: `project-relevance.ts`/spec, `repositories.config.ts` (one line: `code: ctx.code`), `repositories.config.spec.ts`.
+
+Changes:
+- `RelevanceContext.code`; code tokens and purely numeric tokens are excluded.
+- New constant `BOILERPLATE_WORDS` (25 words).
+- Description cap 12; title cap stays 8.
+- `foldPlural` is replaced by `pluralForms` / `samePluralWord`: form-set intersection. `-s` is stripped for words of 4+ letters, never after `ss`; `-es` only after s/x/z/ch/sh/o. Dedup keeps the first spelling.
+
+Verification:
+- Leader-run `npx jest --maxWorkers=2 --findRelatedTests project-relevance.ts repositories.config.ts` → 17 suites, 326/326. eslint is clean on 4 files.
+- Falsifiers: removing the code exclusion turns the P-1486 spec red; "strip es after any letter" turns 6 negative vectors red (e.g. rat ✗ rates).
+- Live GET probe, year 2026, real P-1486 data (title `P-1486-GCDT-Long term grant`, program `SP13 - Genebank`).
+  - Keywords: global, crop, diversity, trust, situ, genebank, potato, sweetpotato, andean, roots, tubers, storage.
+  - Ranked = unranked on 3 hosts: 3464/238/119; "potato" 423/2/4.
+  - CGSpace no-text top: strong "Revealing the genetic diversity in the global ex situ sweetpotato collection".
+  - "Potatoes, jobs…" (subject `potatoes`) went from none to **weak**.
+- iSPARK (T-PJ-003936): keywords ispark, innovation, sustainability, policy, adaptation, resilience, kenya; no code token. Linked + related = year total on 3 hosts.
+
+Reviewer: PASS; re-review of the refinement: PASS.
+- Advisory 1 applied by the Leader: requirements R-9 and design §7.1, including the factor-rule line.
+- Remaining advisory: the worst-case test does not pin the trim drop order.
+
+Observation (not acted on): with an empty description, iSPARK keywords are generic CGIAR words (innovation, policy, adaptation), so many items rank as weak keyword matches. This is a residual limit of subject-based keywords.

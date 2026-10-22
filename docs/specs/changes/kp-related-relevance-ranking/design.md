@@ -73,13 +73,13 @@ Contract doc: none (this is not a `/api/bilateral/*` payload, so `bilateral-resu
 
 | Function | Responsibility | Requirements |
 |---|---|---|
-| `extractRelevanceKeywords(ctx)` | Distinctive words: up to 8 from the title, then up to 8 from the description. Reuses the KPSF `tokenize`/stop-word/min-length rules, excludes the lead-center acronym, dedups | R-5, R-9 |
-| `foldPlural(word)` | Strips one trailing `s` / `es` for words of 4+ letters (`genebanks`→`genebank`). The only stemming applied | R-5 |
+| `extractRelevanceKeywords(ctx)` | Distinctive words: up to 8 from the title, then up to 12 from the description. Reuses the KPSF `tokenize`/stop-word/min-length rules, and excludes the lead-center acronym, the project-code tokens, purely numeric tokens and `BOILERPLATE_WORDS`. Dedups plural variants. *Amended by KRR-T-6 (was 8 + 8, no code or boilerplate exclusion).* | R-5, R-9 |
+| `pluralForms(word)` / `samePluralWord(a, b)` | Words of 4+ letters get the forms {w, w−`s` (never after `ss`), w−`es` (only after s/x/z/ch/sh/o)}. Two words match when their form sets intersect (`potatoes`↔`potato`, `diseases`↔`disease`, `genebanks`↔`genebank`; `gene` ✗ `genebanks`, `rat` ✗ `rates`). The only stemming applied. *Replaced `foldPlural` in KRR-T-6* | R-5 |
 | `buildRelevanceBlock(adapter, keywords, centerName, program, weights)` | Returns `*:* OR <subject:kw^w>… OR <affiliation:"name"^w> OR <program:"…"^w>`, or `null` when nothing is usable. Tokens go through the same Solr escaping as KPSF-R-9; field names come only from the adapter | R-1, R-9, NFR-2 |
 | `evaluateProjectMatch(item, keywords, centerName, program)` | Factors in fixed order, then the tier by count (3/2/1/0) | R-5, R-6 |
 
 Factor rules:
-- `keywords`: subject word set (split on non-letters, lowercased, plural-folded) ∩ folded keywords ≠ ∅. Whole words only, so `gene` never matches `genebanks`.
+- `keywords`: some subject word (split on non-letters, lowercased) and some keyword are the same word under `samePluralWord`, i.e. their plural-form sets intersect (KRR-T-6). Whole words only, so `gene` never matches `genebanks`.
 - `center`: some affiliation equals `centerName`, case- and accent-insensitive. An acronym-only context never satisfies it.
 - `program`: a port of the client `matchesTaggedMetadata` (KPAM rule), with the same test vectors on both sides (DD-4).
 
