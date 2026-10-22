@@ -127,6 +127,7 @@ describe('CgspaceDiscoveryMapper', () => {
           repository: 'cgspace',
           programAccelerators: [],
           projects: [],
+          subjects: [],
         })),
       );
     });
@@ -315,6 +316,7 @@ describe('CgspaceDiscoveryMapper', () => {
         repository: 'cgspace',
         programAccelerators: [],
         projects: [],
+        subjects: [],
       });
     });
 
@@ -393,6 +395,49 @@ describe('CgspaceDiscoveryMapper', () => {
         worldfishAdapter,
       );
       expect(itemWithEmptyField.programAccelerators).toEqual([]);
+    });
+  });
+
+  // @akili-spec changes/kp-related-relevance-ranking
+  describe('toItem — subjects extraction (KRR-R-5)', () => {
+    it('CGSpace reads dcterms.subject', () => {
+      const node = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'u',
+            handle: 'h',
+            metadata: {
+              'dcterms.subject': [{ value: 'cassava' }, { value: 'seed' }],
+              'dc.subject': [{ value: 'ignored' }],
+            },
+          },
+        },
+      };
+      expect(mapper.toItem(node, cgspaceAdapter).subjects).toEqual([
+        'cassava',
+        'seed',
+      ]);
+    });
+
+    it('MELSpace fixture: an item carries its dc.subject values', () => {
+      const result = mapper.toPage(melspaceHal, melspaceAdapter);
+      expect(result.items.flatMap((item) => item.subjects ?? [])).toEqual(
+        expect.arrayContaining(['russian wheat aphid', 'resistance']),
+      );
+    });
+
+    it('WorldFish fixture: an item carries its dc.subject values', () => {
+      const result = mapper.toPage(worldfishHal, worldfishAdapter);
+      expect(result.items.flatMap((item) => item.subjects ?? [])).toEqual(
+        expect.arrayContaining([
+          'food and nutrition security',
+          'aquatic foods',
+        ]),
+      );
+    });
+
+    it('is [] when the field is absent', () => {
+      expect(mapper.toItem({}, cgspaceAdapter).subjects).toEqual([]);
     });
   });
 

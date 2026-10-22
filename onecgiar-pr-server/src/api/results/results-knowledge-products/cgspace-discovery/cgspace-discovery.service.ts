@@ -20,6 +20,7 @@ import {
   translateParams,
 } from './repositories.config';
 import { dedupe, interleave } from './merge';
+import { evaluateProjectMatch } from './project-relevance';
 
 export interface CacheEntry<T> {
   expires: number;
@@ -232,6 +233,10 @@ export class CgspaceDiscoveryService {
       projectTitle: dto.projectTitle ?? '',
       projectLeadCenter: dto.projectLeadCenter ?? '',
       projectScope: dto.projectScope ?? '',
+      // @akili-spec changes/kp-related-relevance-ranking
+      projectDescription: dto.projectDescription ?? '',
+      projectProgram: dto.projectProgram ?? '',
+      projectLeadCenterName: dto.projectLeadCenterName ?? '',
       repository,
     });
   }
@@ -501,7 +506,27 @@ export class CgspaceDiscoveryService {
           },
     );
 
-    const merged = interleave(okOutcomes.map((outcome) => outcome.items));
+    // @akili-spec changes/kp-related-relevance-ranking
+    // `KRR-R-3`: only a ranked related page carries `projectMatch`. `ranked` is the request-wide
+    // value echoed in `projectScope.ranked`, never recomputed per source. New item objects: the
+    // per-source payload is cached and must stay free of the request-specific hint. In-memory only.
+    const projectScope = resolveProjectScope(dto);
+    const relevance = projectScope?.ranked ? projectScope.relevance : undefined;
+    const sourceItems = okOutcomes.map((outcome) =>
+      relevance
+        ? outcome.items.map((item) => ({
+            ...item,
+            projectMatch: evaluateProjectMatch(
+              item,
+              relevance.keywords,
+              relevance.centerName,
+              relevance.program,
+            ),
+          }))
+        : outcome.items,
+    );
+
+    const merged = interleave(sourceItems);
     const { items, dedupedCount } = dedupe(merged, ALL_REPOSITORIES);
 
     const number = dto.page ?? 0;
@@ -547,8 +572,6 @@ export class CgspaceDiscoveryService {
       outcome,
     });
 
-    const projectScope = resolveProjectScope(dto);
-
     // With no ok source, `items` is already empty and every total is 0 — the 502 branch differs
     // only in message/status, so the body is assembled once.
     return {
@@ -567,6 +590,8 @@ export class CgspaceDiscoveryService {
               projectScope: {
                 scope: projectScope.scope,
                 applied: projectScope.applied,
+                // @akili-spec changes/kp-related-relevance-ranking
+                ranked: projectScope.ranked,
               },
             }
           : {}),

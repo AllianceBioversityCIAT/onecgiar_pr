@@ -302,4 +302,71 @@ describe('CgspaceSearchQueryDto', () => {
       );
     });
   });
+
+  // @akili-spec changes/kp-related-relevance-ranking
+  describe('relevance params (KRR-R-9)', () => {
+    const pipe = () => controllerValidationPipe();
+    const base = {
+      projectCode: 'T-PJ-003942',
+      projectTitle: 'Accelerated Innovation Delivery',
+      projectScope: 'related',
+    };
+
+    it('accepts the three optional params and trims them', async () => {
+      const result = await pipe().transform(
+        {
+          ...base,
+          projectDescription: '  genebank collections  ',
+          projectProgram: ' SP13 - Genebanks ',
+          projectLeadCenterName: ' International Potato Center ',
+        },
+        queryMetadata,
+      );
+      expect(result.projectDescription).toBe('genebank collections');
+      expect(result.projectProgram).toBe('SP13 - Genebanks');
+      expect(result.projectLeadCenterName).toBe('International Potato Center');
+    });
+
+    it('stays valid without any of them (older clients)', async () => {
+      const result = await pipe().transform(base, queryMetadata);
+      expect(result.projectDescription).toBeUndefined();
+      expect(result.projectProgram).toBeUndefined();
+      expect(result.projectLeadCenterName).toBeUndefined();
+    });
+
+    it('accepts the boundary lengths (description 1000, program 200, center 200)', async () => {
+      await expect(
+        pipe().transform(
+          {
+            ...base,
+            projectDescription: 'a'.repeat(1000),
+            projectProgram: 'b'.repeat(200),
+            projectLeadCenterName: 'c'.repeat(200),
+          },
+          queryMetadata,
+        ),
+      ).resolves.toBeDefined();
+    });
+
+    it('rejects over-long values (description 1001, program 201, center 201)', async () => {
+      for (const over of [
+        { projectDescription: 'a'.repeat(1001) },
+        { projectProgram: 'b'.repeat(201) },
+        { projectLeadCenterName: 'c'.repeat(201) },
+      ]) {
+        await expect(
+          pipe().transform({ ...base, ...over }, queryMetadata),
+        ).rejects.toThrow();
+      }
+    });
+
+    it('rejects a repeated (array) value instead of crashing later', async () => {
+      await expect(
+        pipe().transform(
+          { ...base, projectDescription: ['one', 'two'] },
+          queryMetadata,
+        ),
+      ).rejects.toThrow();
+    });
+  });
 });

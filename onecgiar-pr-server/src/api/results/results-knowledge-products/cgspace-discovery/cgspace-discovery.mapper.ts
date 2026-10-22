@@ -79,7 +79,13 @@ export class CgspaceDiscoveryMapper {
         ?.filter(Boolean) || [];
     const uri = metadata[adapter.fields.uri]?.[0]?.value || '';
     const programAccelerators =
-      metadata['cg.contributor.programAccelerator']
+      metadata[adapter.fields.program]
+        ?.map((m: any) => m?.value)
+        ?.filter(Boolean) || [];
+    // @akili-spec changes/kp-related-relevance-ranking
+    // `KRR-R-5`: the subject values the relevance keyword factor reads (always present, may be []).
+    const subjects: string[] =
+      metadata[adapter.fields.subject]
         ?.map((m: any) => m?.value)
         ?.filter(Boolean) || [];
     // `KPSF-R-7`: the adapter's own project field (cg.contributor.project on MEL/WorldFish) plus
@@ -109,6 +115,7 @@ export class CgspaceDiscoveryMapper {
       repository: adapter.key,
       programAccelerators,
       projects,
+      subjects,
     };
   }
 

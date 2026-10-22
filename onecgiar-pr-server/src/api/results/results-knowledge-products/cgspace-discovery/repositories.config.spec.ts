@@ -1,5 +1,7 @@
 import {
   KP_REPOSITORIES,
+  RepositoryAdapter,
+  parseProjectProgram,
   resolveProjectScope,
   translateParams,
 } from './repositories.config';
@@ -120,15 +122,20 @@ describe('translateParams — project scope (KPSF-R-1, R-3, R-7, R-8, R-11)', ()
     }
   });
 
-  it('related: `AND NOT (clause)`, and a user text is AND-combined first', () => {
+  // @akili-spec changes/kp-related-relevance-ranking
+  // Supersedes the KPSF expectation: a related request with a usable project now also carries the
+  // relevance block and no date sort (`KRR-R-1`, `KRR-DD-6`). The KPSF prefix is unchanged.
+  it('related: `AND NOT (clause)` stays the prefix, a user text is AND-combined first, the relevance block follows', () => {
+    const block =
+      ' AND (*:* OR dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4)';
     const noText = translateParams(
       { ...aidProject, projectScope: 'related', page: 0, size: 10 },
       cgspace,
     );
     expect(noText.query).toBe(
-      `*:* AND NOT (${aidClause('cg.identifier.project')})`,
+      `*:* AND NOT (${aidClause('cg.identifier.project')})${block}`,
     );
-    expect(noText.sort).toBe('dc.date.accessioned,DESC');
+    expect(noText.sort).toBeUndefined();
 
     const withText = translateParams(
       {
@@ -142,7 +149,7 @@ describe('translateParams — project scope (KPSF-R-1, R-3, R-7, R-8, R-11)', ()
       cgspace,
     );
     expect(withText.query).toBe(
-      `(seed) AND NOT (${aidClause('cg.identifier.project')})`,
+      `(seed) AND NOT (${aidClause('cg.identifier.project')}) AND (*:* OR dcterms.subject:accelerated^0.001 OR dcterms.subject:innovation^0.001 OR dcterms.subject:delivery^0.001 OR dcterms.subject:initiative^0.001 OR dcterms.subject:aid^0.001 OR dcterms.subject:mozambique^0.001)`,
     );
     expect(withText.sort).toBeUndefined();
     expect(withText['f.itemtype']).toBe('Case Study,equals');
@@ -250,5 +257,464 @@ describe('resolveProjectScope', () => {
         project: 'T-PJ-000001 - Something Else Entirely',
       }),
     ).toEqual(expect.objectContaining({ scope: 'related', applied: true }));
+  });
+});
+
+// @akili-spec changes/kp-related-relevance-ranking
+describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R-9, R-10)', () => {
+  /** The KPSF related query for T-PJ-003942 on one project field, written out (no rebuilding). */
+  const relatedNoText = (field: string) => `*:* AND NOT (${aidClause(field)})`;
+
+  const ranking = {
+    ...aidProject,
+    projectScope: 'related' as const,
+    projectDescription: 'Cassava seed systems',
+    projectLeadCenterName: 'International Institute of Tropical Agriculture',
+    projectProgram: 'SP03 - Sustainable Farming',
+  };
+
+  it('no search text: CGSpace appends the strong-weight block and sends no sort', () => {
+    const params = translateParams(
+      { ...ranking, year: '2026', page: 0, size: 10 },
+      cgspace,
+    );
+
+    expect(params.query).toBe(
+      `${relatedNoText('cg.identifier.project')} AND (*:* OR dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4 OR dcterms.subject:cassava^4 OR dcterms.subject:seed^4 OR dcterms.subject:systems^4 OR cg.contributor.affiliation:"international institute of tropical agriculture"^2 OR cg.contributor.programAccelerator:"sustainable farming"^2)`,
+    );
+    expect(Object.keys(params)).not.toContain('sort');
+    expect(params['f.dateIssued']).toBe('[2026 TO 2026],equals');
+  });
+
+  it('no search text: MELSpace and WorldFish use dc.subject and their own project/affiliation fields', () => {
+    const melspaceParams = translateParams(ranking, melspace);
+    expect(melspaceParams.query).toBe(
+      `${relatedNoText('cg.contributor.project')} AND (*:* OR dc.subject:accelerated^4 OR dc.subject:innovation^4 OR dc.subject:delivery^4 OR dc.subject:initiative^4 OR dc.subject:aid^4 OR dc.subject:mozambique^4 OR dc.subject:cassava^4 OR dc.subject:seed^4 OR dc.subject:systems^4 OR cg.contributor.center:"international institute of tropical agriculture"^2 OR cg.contributor.programAccelerator:"sustainable farming"^2)`,
+    );
+
+    const worldfishParams = translateParams(ranking, worldfish);
+    expect(worldfishParams.query).toBe(
+      `${relatedNoText('cg.contributor.project')} AND (*:* OR dc.subject:accelerated^4 OR dc.subject:innovation^4 OR dc.subject:delivery^4 OR dc.subject:initiative^4 OR dc.subject:aid^4 OR dc.subject:mozambique^4 OR dc.subject:cassava^4 OR dc.subject:seed^4 OR dc.subject:systems^4 OR cg.contributor.affiliation:"international institute of tropical agriculture"^2 OR cg.contributor.programAccelerator:"sustainable farming"^2)`,
+    );
+    expect(Object.keys(melspaceParams)).not.toContain('sort');
+    expect(Object.keys(worldfishParams)).not.toContain('sort');
+  });
+
+  it('with search text: text is AND-combined first and the calibrated weak weights apply (R-2)', () => {
+    const params = translateParams({ ...ranking, query: 'potato' }, cgspace);
+
+    expect(params.query).toBe(
+      `(potato) AND NOT (${aidClause('cg.identifier.project')}) AND (*:* OR dcterms.subject:accelerated^0.001 OR dcterms.subject:innovation^0.001 OR dcterms.subject:delivery^0.001 OR dcterms.subject:initiative^0.001 OR dcterms.subject:aid^0.001 OR dcterms.subject:mozambique^0.001 OR dcterms.subject:cassava^0.001 OR dcterms.subject:seed^0.001 OR dcterms.subject:systems^0.001 OR cg.contributor.affiliation:"international institute of tropical agriculture"^0.0005 OR cg.contributor.programAccelerator:"sustainable farming"^0.0005)`,
+    );
+    expect(Object.keys(params)).not.toContain('sort');
+  });
+
+  it('no program and no center in the request: only the subject boosts are emitted', () => {
+    const params = translateParams(
+      { ...aidProject, projectScope: 'related' },
+      cgspace,
+    );
+    expect(params.query).toBe(
+      `${relatedNoText('cg.identifier.project')} AND (*:* OR dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4)`,
+    );
+    expect(params.query).not.toContain('programAccelerator');
+    expect(params.query).not.toContain('affiliation');
+  });
+
+  it('an adapter without an affiliation field skips the center boost and keeps the rest', () => {
+    const noAffiliation: RepositoryAdapter = {
+      ...cgspace,
+      fields: { ...cgspace.fields, affiliation: undefined },
+    };
+    const params = translateParams(ranking, noAffiliation);
+    expect(params.query).toContain('dcterms.subject:cassava^4');
+    expect(params.query).toContain(
+      'cg.contributor.programAccelerator:"sustainable farming"^2',
+    );
+    expect(params.query).not.toContain('international institute');
+  });
+
+  it('the program param is split on the first " - " only and either part may be absent (FP-2)', () => {
+    const codeOnly = translateParams(
+      { ...aidProject, projectScope: 'related', projectProgram: 'SP13 -' },
+      cgspace,
+    );
+    expect(codeOnly.query).toContain(
+      'cg.contributor.programAccelerator:"sp13"^2',
+    );
+
+    const hyphenated = translateParams(
+      {
+        ...aidProject,
+        projectScope: 'related',
+        projectProgram: 'SP05 - Sustainable Farming - Phase 2',
+      },
+      cgspace,
+    );
+    expect(hyphenated.query).toContain(
+      'cg.contributor.programAccelerator:"sustainable farming phase 2"^2',
+    );
+  });
+
+  it('sort is present (newest first) when unranked, absent when ranked', () => {
+    const unranked = translateParams(
+      { ...aidProject, projectScope: 'linked', year: '2026' },
+      cgspace,
+    );
+    expect(unranked.sort).toBe('dc.date.accessioned,DESC');
+
+    const ranked = translateParams({ ...ranking, year: '2026' }, cgspace);
+    expect(ranked.sort).toBeUndefined();
+  });
+
+  it('metacharacters in the description never reach the query: only escaped word tokens (R-9)', () => {
+    const params = translateParams(
+      {
+        ...aidProject,
+        projectScope: 'related',
+        projectDescription:
+          '") OR *:* ( AND NOT dc.title:* \\ ^ ~ {x} [y] soil',
+      },
+      cgspace,
+    );
+    expect(params.query).toBe(
+      `${relatedNoText('cg.identifier.project')} AND (*:* OR dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4 OR dcterms.subject:title^4 OR dcterms.subject:soil^4)`,
+    );
+  });
+
+  it('never emits a country boost or factor (R-10 deferred)', () => {
+    for (const adapter of [cgspace, melspace, worldfish]) {
+      for (const query of [undefined, 'potato']) {
+        const params = translateParams({ ...ranking, query }, adapter);
+        expect(JSON.stringify(params)).not.toMatch(/country|coverage/i);
+      }
+    }
+  });
+});
+
+// @akili-spec changes/kp-related-relevance-ranking
+describe('translateParams — byte-identical when no ranking applies (KRR-R-3, R-4)', () => {
+  const extras = {
+    projectDescription: 'Cassava seed systems',
+    projectLeadCenterName: 'International Institute of Tropical Agriculture',
+    projectProgram: 'SP03 - Sustainable Farming',
+  };
+
+  it('linked ignores the relevance params entirely (R-4)', () => {
+    const params = translateParams(
+      {
+        ...aidProject,
+        ...extras,
+        projectScope: 'linked',
+        query: 'seed',
+        year: '2026',
+      },
+      cgspace,
+    );
+    expect(params).toEqual({
+      dsoType: 'item',
+      page: 0,
+      size: 10,
+      query: `(seed) AND (${aidClause('cg.identifier.project')})`,
+      'f.dateIssued': '[2026 TO 2026],equals',
+    });
+  });
+
+  it('related with an unusable project ignores them and keeps the date sort (R-3)', () => {
+    const params = translateParams(
+      {
+        projectTitle: 'Soil',
+        projectScope: 'related',
+        ...extras,
+        year: '2026',
+      },
+      cgspace,
+    );
+    expect(params).toEqual({
+      dsoType: 'item',
+      page: 0,
+      size: 10,
+      sort: 'dc.date.accessioned,DESC',
+      'f.dateIssued': '[2026 TO 2026],equals',
+    });
+  });
+
+  it('related with a usable project but no relevance context (code only) is the KPSF request (R-3)', () => {
+    const params = translateParams(
+      { projectCode: 'T-PJ-003942', projectScope: 'related', year: '2026' },
+      cgspace,
+    );
+    expect(params).toEqual({
+      dsoType: 'item',
+      page: 0,
+      size: 10,
+      sort: 'dc.date.accessioned,DESC',
+      query:
+        '*:* AND NOT (cg.identifier.project:"pj 003942" OR cg.identifier.project:"pj 3942")',
+      'f.dateIssued': '[2026 TO 2026],equals',
+    });
+  });
+
+  it('the non-project browse ignores the relevance params (R-3)', () => {
+    const params = translateParams(
+      { query: 'maize', page: 1, size: 5, year: '2026', ...extras },
+      melspace,
+    );
+    expect(params).toEqual({
+      dsoType: 'item',
+      page: 1,
+      size: 5,
+      query: 'maize',
+      'f.dateIssued': '[2026 TO 2026],equals',
+    });
+  });
+});
+
+// @akili-spec changes/kp-related-relevance-ranking
+describe('translateParams — encoded query length (KRR-NFR-2, FP-1)', () => {
+  const letters = 'abcdefghijklmnop';
+  const eightWords = (length: number) =>
+    Array.from({ length: 8 }, (_, i) => letters[i].repeat(length))
+      .join(' ')
+      .slice(0, 300);
+  const phrase = 'x '.repeat(100).trim();
+  const plainText = 'maize '.repeat(40).trim().slice(0, 200);
+  /** 200 characters that all need escaping: 6 encoded characters each. */
+  const metaText = 'a' + ':'.repeat(199);
+  /** Two code phrases (with and without leading zeros), the longest prefix the DTO allows. */
+  const longCode = 'T-PJ-0' + '1'.repeat(44);
+  const ADAPTERS = [cgspace, melspace, worldfish];
+  const BLOCK = ' AND (*:* OR ';
+
+  const worstCase = {
+    projectCode: longCode,
+    projectTitle: eightWords(30),
+    projectLeadCenter: 'IITA',
+    projectScope: 'related' as const,
+    projectDescription: Array.from({ length: 8 }, (_, i) =>
+      letters[i + 8].repeat(30),
+    ).join(' '),
+    projectLeadCenterName: phrase,
+    projectProgram: `${phrase} - ${phrase}`.slice(0, 200),
+  };
+
+  const encodedLength = (params: Record<string, any>) =>
+    encodeURIComponent(params.query).length;
+
+  const worstInputs: [string, Record<string, any>][] = [
+    ['no text', worstCase],
+    ['plain 200-char text', { ...worstCase, query: plainText }],
+    ['200 characters to escape', { ...worstCase, query: metaText }],
+    [
+      'title words too long to be keywords, no description, escaped text',
+      {
+        ...worstCase,
+        projectTitle: eightWords(36),
+        projectDescription: undefined,
+        query: metaText,
+      },
+    ],
+    [
+      'same without a center (program only)',
+      {
+        ...worstCase,
+        projectTitle: eightWords(36),
+        projectDescription: undefined,
+        projectLeadCenterName: undefined,
+        query: metaText,
+      },
+    ],
+  ];
+
+  it.each(worstInputs)(
+    'worst case (%s): under 2000 on every adapter, the block is still there, no sort, ranked',
+    (_label, input) => {
+      for (const adapter of ADAPTERS) {
+        const params = translateParams(input, adapter);
+        expect(encodedLength(params)).toBeLessThan(2000);
+        expect(params.query).toContain(BLOCK);
+        expect(Object.keys(params)).not.toContain('sort');
+      }
+      expect(resolveProjectScope(input)?.ranked).toBe(true);
+    },
+  );
+
+  it('ranked is true exactly when the emitted query carries the block, on every adapter', () => {
+    const variants: Record<string, any>[] = [];
+    for (const query of [undefined, plainText, metaText]) {
+      for (const projectDescription of [
+        undefined,
+        worstCase.projectDescription,
+      ]) {
+        for (const projectLeadCenterName of [undefined, phrase]) {
+          for (const projectProgram of [undefined, worstCase.projectProgram]) {
+            variants.push({
+              ...worstCase,
+              query,
+              projectDescription,
+              projectLeadCenterName,
+              projectProgram,
+            });
+          }
+        }
+      }
+    }
+    // Also the requests that carry no block at all.
+    variants.push(
+      { ...worstCase, projectScope: 'linked' },
+      { projectCode: longCode, projectScope: 'related', query: metaText },
+      { projectTitle: 'Soil', projectScope: 'related' },
+    );
+
+    for (const input of variants) {
+      const ranked = resolveProjectScope(input)?.ranked;
+      for (const adapter of ADAPTERS) {
+        const params = translateParams(input, adapter);
+        expect(String(params.query ?? '').includes(BLOCK)).toBe(ranked);
+        expect(Object.keys(params).includes('sort')).toBe(
+          !ranked && !input.query,
+        );
+      }
+    }
+  });
+
+  it('keeps every clause when it fits', () => {
+    const fits = translateParams(
+      { ...worstCase, projectDescription: 'cassava seed' },
+      cgspace,
+    );
+    expect(fits.query).toContain('dcterms.subject:cassava^4');
+    expect(fits.query).toContain('cg.contributor.affiliation:');
+    expect(fits.query).toContain('cg.contributor.programAccelerator:');
+  });
+
+  it('when it does not fit it drops the program, then the center, and keeps keywords', () => {
+    const trimmed = translateParams({ ...worstCase, query: metaText }, cgspace);
+    expect(trimmed.query).toContain(BLOCK);
+    expect(trimmed.query).toContain('dcterms.subject:');
+    expect(trimmed.query).not.toContain('programAccelerator');
+    expect(trimmed.query).not.toContain('cg.contributor.affiliation');
+    // The KPSF filter (text AND NOT linked) is still the prefix of the trimmed request.
+    expect(trimmed.query.startsWith(String.raw`(a\:`)).toBe(true);
+    expect(trimmed.query).toContain(' AND NOT (cg.identifier.project:');
+  });
+
+  // A request whose encoded prefix lands on the limit: the minimal block (one keyword) is 1998
+  // characters on MELSpace/WorldFish and 2000 on CGSpace (its subject field name is 5 characters
+  // longer, its project field 1 shorter, three times). One gate decides for all hosts.
+  it('hosts that disagree on fitting the block: no block, plain KPSF query and ranked=false on every adapter', () => {
+    const input = {
+      ...aidProject,
+      projectScope: 'related' as const,
+      query: '€'.repeat(189),
+    };
+    expect(resolveProjectScope(input)?.ranked).toBe(false);
+    for (const adapter of ADAPTERS) {
+      const params = translateParams(input, adapter);
+      expect(params.query).toBe(
+        `(${'€'.repeat(189)}) AND NOT (${aidClause(adapter.fields.project)})`,
+      );
+      expect(params.query).not.toContain(BLOCK);
+      expect(Object.keys(params)).not.toContain('sort');
+    }
+  });
+
+  it('200 three-byte characters (9 encoded each) leave no room: no block, ranked=false, the KPSF request', () => {
+    for (const query of ['€'.repeat(200), '漢'.repeat(200)]) {
+      const input = { ...aidProject, projectScope: 'related' as const, query };
+      expect(resolveProjectScope(input)?.ranked).toBe(false);
+      for (const adapter of ADAPTERS) {
+        const params = translateParams(input, adapter);
+        expect(params.query).toBe(
+          `(${query}) AND NOT (${aidClause(adapter.fields.project)})`,
+        );
+      }
+    }
+  });
+
+  it('a real long center name (ICARDA, 63 characters) is cut at a word boundary', () => {
+    const params = translateParams(
+      {
+        ...aidProject,
+        projectScope: 'related',
+        projectLeadCenterName:
+          'International Center for Agricultural Research in the Dry Areas',
+      },
+      cgspace,
+    );
+    expect(params.query).toContain(
+      'cg.contributor.affiliation:"international center for agricultural research in the dry"^2',
+    );
+  });
+
+  it('bounds the center and program phrases at a word boundary', () => {
+    const params = translateParams(
+      {
+        projectCode: 'T-PJ-003942',
+        projectTitle: AID_I_TITLE,
+        projectScope: 'related',
+        projectLeadCenterName:
+          'The Alliance of Bioversity International and the International Center for Tropical Agriculture',
+      },
+      cgspace,
+    );
+    expect(params.query).toContain(
+      'cg.contributor.affiliation:"the alliance of bioversity international and the"^2',
+    );
+  });
+});
+
+// @akili-spec changes/kp-related-relevance-ranking
+describe('parseProjectProgram (FP-2)', () => {
+  it.each([
+    ['SP13 - Genebanks', { code: 'SP13', name: 'Genebanks' }],
+    [
+      'SP05 - Sustainable Farming - Phase 2',
+      { code: 'SP05', name: 'Sustainable Farming - Phase 2' },
+    ],
+    ['  SP13  -  Genebanks  ', { code: 'SP13', name: 'Genebanks' }],
+    ['SP13 -', { code: 'SP13', name: undefined }],
+    ['- Genebanks', { code: undefined, name: 'Genebanks' }],
+    ['Agro-ecology', { name: 'Agro-ecology' }],
+    ['Genebanks', { name: 'Genebanks' }],
+    ['', {}],
+    [undefined, {}],
+  ])('%j -> %j', (raw, expected) => {
+    expect(parseProjectProgram(raw as string | undefined)).toEqual(expected);
+  });
+});
+
+// @akili-spec changes/kp-related-relevance-ranking
+describe('resolveProjectScope — ranked echo (KRR-R-1)', () => {
+  it('related + usable project with keywords is ranked', () => {
+    expect(
+      resolveProjectScope({ ...aidProject, projectScope: 'related' })?.ranked,
+    ).toBe(true);
+  });
+
+  it('linked, an unusable related project and a code-only related project are not ranked', () => {
+    expect(
+      resolveProjectScope({ ...aidProject, projectScope: 'linked' })?.ranked,
+    ).toBe(false);
+    expect(
+      resolveProjectScope({ projectTitle: 'Soil', projectScope: 'related' })
+        ?.ranked,
+    ).toBe(false);
+    expect(
+      resolveProjectScope({
+        projectCode: 'T-PJ-003942',
+        projectScope: 'related',
+      })?.ranked,
+    ).toBe(false);
+  });
+
+  it('a code-only related project becomes ranked when a center name arrives', () => {
+    expect(
+      resolveProjectScope({
+        projectCode: 'T-PJ-003942',
+        projectScope: 'related',
+        projectLeadCenterName: 'International Potato Center',
+      })?.ranked,
+    ).toBe(true);
   });
 });

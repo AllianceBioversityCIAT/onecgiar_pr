@@ -48,6 +48,7 @@ interface HalItemOptions {
   type?: string;
   year?: string;
   doi?: string;
+  subjects?: string[];
 }
 
 /** Builds one DSpace HAL object node using *that repository's* metadata field names. */
@@ -62,6 +63,9 @@ function halNode(repository: KpRepository, options: HalItemOptions) {
   };
   if (options.doi) {
     metadata[fields.doi] = [{ value: options.doi }];
+  }
+  if (options.subjects) {
+    metadata[fields.subject] = options.subjects.map((value) => ({ value }));
   }
   return {
     _embedded: {
@@ -400,6 +404,7 @@ describe('CgspaceDiscoveryService', () => {
         expect(result.response.projectScope).toEqual({
           scope: 'linked',
           applied: true,
+          ranked: false,
         });
       });
 
@@ -421,6 +426,7 @@ describe('CgspaceDiscoveryService', () => {
         expect(result.response.projectScope).toEqual({
           scope: 'related',
           applied: true,
+          ranked: true,
         });
       });
 
@@ -454,6 +460,7 @@ describe('CgspaceDiscoveryService', () => {
         expect(result.response.projectScope).toEqual({
           scope: 'linked',
           applied: false,
+          ranked: false,
         });
         expect(result.response.sources.map((s) => s.status)).toEqual([
           'ok',
@@ -479,6 +486,7 @@ describe('CgspaceDiscoveryService', () => {
         expect(result.response.projectScope).toEqual({
           scope: 'related',
           applied: false,
+          ranked: false,
         });
       });
 
@@ -518,6 +526,160 @@ describe('CgspaceDiscoveryService', () => {
           projectScope: 'linked',
         });
         expect(httpService.get).toHaveBeenCalledTimes(3);
+      });
+
+      // @akili-spec changes/kp-related-relevance-ranking
+      it('related with relevance params: the block reaches the upstream query, no sort, and the cache key follows each param', async () => {
+        emptyAll();
+        const base = {
+          ...aidProject,
+          projectScope: 'related' as const,
+          page: 0,
+          size: 10,
+          repository: ['cgspace'] as KpRepository[],
+        };
+
+        const result = await service.search({
+          ...base,
+          projectDescription: 'cassava seed',
+          projectLeadCenterName:
+            'International Institute of Tropical Agriculture',
+          projectProgram: 'SP03 - Sustainable Farming',
+        });
+
+        const [, config] = callFor('cgspace');
+        expect(config.params.query).toContain(
+          ' AND (*:* OR dcterms.subject:accelerated^4',
+        );
+        expect(config.params.query).toContain(
+          'cg.contributor.programAccelerator:"sustainable farming"^2',
+        );
+        expect(Object.keys(config.params)).not.toContain('sort');
+        expect(result.response.projectScope).toEqual({
+          scope: 'related',
+          applied: true,
+          ranked: true,
+        });
+
+        // Same project, different description / center name / program: three more upstream calls.
+        await service.search({ ...base, projectDescription: 'other words' });
+        await service.search({
+          ...base,
+          projectLeadCenterName: 'Other Center',
+        });
+        await service.search({ ...base, projectProgram: 'SP05 - Other' });
+        expect(httpService.get).toHaveBeenCalledTimes(4);
+        expect(new Set([...service.searchCache.keys()]).size).toBe(4);
+      });
+
+      // @akili-spec changes/kp-related-relevance-ranking
+      describe('projectMatch on ranked related pages (KRR-R-3..R-6)', () => {
+        const rankedBase = {
+          ...aidProject,
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        };
+
+        function mockItems() {
+          mockSources({
+            cgspace: {
+              data: halPage('cgspace', [
+                {
+                  uuid: 'c1',
+                  handle: '10568/1',
+                  title: 'A',
+                  subjects: ['Accelerated delivery'],
+                },
+                { uuid: 'c2', handle: '10568/2', title: 'B' },
+              ]),
+            },
+            melspace: {
+              data: halPage('melspace', [
+                { uuid: 'm1', handle: '20.500/1', title: 'C' },
+              ]),
+            },
+            worldfish: { data: halPage('worldfish', []) },
+          });
+        }
+
+        it('ranked related: every item of every ok source carries projectMatch, keywords factor from subjects', async () => {
+          mockItems();
+          const result = await service.search({
+            ...rankedBase,
+            projectScope: 'related',
+          });
+
+          expect(result.response.projectScope?.ranked).toBe(true);
+          expect(result.response.items).toHaveLength(3);
+          for (const item of result.response.items) {
+            expect(item.projectMatch).toBeDefined();
+          }
+          const byUuid = (u: string) =>
+            result.response.items.find((i) => i.uuid === u)!;
+          expect(byUuid('c1').subjects).toEqual(['Accelerated delivery']);
+          expect(byUuid('c1').projectMatch).toEqual({
+            tier: 'weak',
+            factors: ['keywords'],
+          });
+          expect(byUuid('c2').projectMatch).toEqual({
+            tier: 'none',
+            factors: [],
+          });
+          expect(httpService.get).toHaveBeenCalledTimes(3);
+        });
+
+        it('linked: no item carries projectMatch', async () => {
+          mockItems();
+          const result = await service.search({
+            ...rankedBase,
+            projectScope: 'linked',
+          });
+          expect(result.response.items.length).toBeGreaterThan(0);
+          for (const item of result.response.items) {
+            expect(item).not.toHaveProperty('projectMatch');
+          }
+        });
+
+        it('unranked related (unusable project): no item carries projectMatch', async () => {
+          mockItems();
+          const result = await service.search({
+            projectTitle: 'Soil',
+            projectScope: 'related',
+            page: 0,
+            size: 10,
+            repository: [...ALL],
+          });
+          expect(result.response.projectScope?.ranked).toBe(false);
+          expect(result.response.items.length).toBeGreaterThan(0);
+          for (const item of result.response.items) {
+            expect(item).not.toHaveProperty('projectMatch');
+          }
+        });
+
+        it('related with relevance but ranked=false (block does not fit): no item carries projectMatch', async () => {
+          mockItems();
+          const result = await service.search({
+            ...rankedBase,
+            projectScope: 'related',
+            query: '€'.repeat(189),
+          });
+          expect(result.response.projectScope?.ranked).toBe(false);
+          expect(result.response.items.length).toBeGreaterThan(0);
+          for (const item of result.response.items) {
+            expect(item).not.toHaveProperty('projectMatch');
+          }
+        });
+
+        it('does not leak projectMatch into the cached per-source payload (a later linked call stays clean)', async () => {
+          mockItems();
+          await service.search({ ...rankedBase, projectScope: 'related' });
+          for (const entry of service.searchCache.values()) {
+            for (const item of entry.value.items) {
+              expect(item).not.toHaveProperty('projectMatch');
+            }
+          }
+        });
       });
 
       it('special characters in the project title still yield a well-formed query (no raw text)', async () => {
@@ -1108,6 +1270,9 @@ describe('CgspaceDiscoveryService', () => {
         projectTitle: '',
         projectLeadCenter: '',
         projectScope: '',
+        projectDescription: '',
+        projectProgram: '',
+        projectLeadCenterName: '',
         repository: 'cgspace',
       });
       expect(service.searchCache.has(oldestKey)).toBe(true);

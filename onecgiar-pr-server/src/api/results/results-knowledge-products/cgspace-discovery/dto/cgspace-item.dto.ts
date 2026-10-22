@@ -31,6 +31,21 @@ export class CgspaceAlsoInDto {
   itemUrl: string;
 }
 
+// @akili-spec changes/kp-related-relevance-ranking
+/** Why a related item ranks where it does (`KRR-R-3`): satisfied factors and the tier by their count. */
+export class CgspaceProjectMatchDto {
+  @ApiProperty({ enum: ['strong', 'partial', 'weak', 'none'] })
+  tier: 'strong' | 'partial' | 'weak' | 'none';
+
+  @ApiProperty({
+    description:
+      'Satisfied factors, always in the order keywords, center, program.',
+    enum: ['keywords', 'center', 'program'],
+    isArray: true,
+  })
+  factors: ('keywords' | 'center' | 'program')[];
+}
+
 export class CgspaceItemDto {
   uuid: string;
   handle: string;
@@ -73,6 +88,21 @@ export class CgspaceItemDto {
     type: [String],
   })
   projects?: string[];
+
+  // @akili-spec changes/kp-related-relevance-ranking
+  @ApiPropertyOptional({
+    description:
+      'Subject values (dcterms.subject on CGSpace, dc.subject on MELSpace/WorldFish).',
+    type: [String],
+  })
+  subjects?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Present only on items of a ranked related page: which project factors the item satisfies.',
+    type: () => CgspaceProjectMatchDto,
+  })
+  projectMatch?: CgspaceProjectMatchDto;
 }
 
 export type SourceStatus = 'ok' | 'timeout' | 'error' | 'unconfigured';
@@ -106,6 +136,13 @@ export class CgspaceProjectScopeDto {
       'False when the project yields neither >= 2 distinctive title words nor a PJ code.',
   })
   applied: boolean;
+
+  // @akili-spec changes/kp-related-relevance-ranking
+  @ApiProperty({
+    description:
+      'True when the related query carries the project relevance block, i.e. the items are ordered by relevance instead of newest first.',
+  })
+  ranked: boolean;
 }
 
 export class CgspaceSearchPageDto {

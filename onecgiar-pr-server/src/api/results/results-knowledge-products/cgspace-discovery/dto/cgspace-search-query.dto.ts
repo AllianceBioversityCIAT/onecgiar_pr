@@ -147,6 +147,42 @@ export class CgspaceSearchQueryDto {
   @MaxLength(20)
   projectLeadCenter?: string;
 
+  // @akili-spec changes/kp-related-relevance-ranking
+  @ApiPropertyOptional({
+    description:
+      'Project description (max 1000 chars). Only read with `projectScope=related`: its distinctive words are boosted on the subject field to order the related KPs. Never changes the result set.',
+    maxLength: 1000,
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  projectDescription?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Primary Science Program of the project as `<code> - <name>` (either part may be absent; max 200 chars). Only read with `projectScope=related`: boosts KPs tagged with that program. Never changes the result set.',
+    maxLength: 200,
+    example: 'SP13 - Genebanks',
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  projectProgram?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Full name of the project lead center (max 200 chars), e.g. `International Potato Center`. Only read with `projectScope=related`: boosts KPs whose affiliations include it. Never changes the result set.',
+    maxLength: 200,
+    example: 'International Potato Center',
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  projectLeadCenterName?: string;
+
   @ApiPropertyOptional({
     description:
       'Project split: `linked` = items whose repository project field matches the project (title words or PJ code); `related` = the same search EXCLUDING those items. Absent = no project constraint. The response echoes `projectScope: { scope, applied }`; `applied=false` when the project is too generic to constrain (then `linked` returns an empty page and `related` is unconstrained).',
