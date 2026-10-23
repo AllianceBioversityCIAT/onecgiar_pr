@@ -90,7 +90,7 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
     <li>All links provided should be publicly accessible.</li>
     <li>Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.</li>
     <li>Files can be uploaded to the PRMS repository.</li>
-    <li>For confidential evidence, select “Upload file” and then respond with “No” to the confidentiality question to indicate that it should not be public.</li>
+    <li>For confidential evidence, select “Upload file” and then <b>respond with “No” to the confidentiality question</b> to indicate that it should not be public.</li>
     <li>If you need additional information or guidance on how to create an evidence entry, you can find a video tutorial at the following <a class="open_route" href="https://cgiar.sharepoint.com/:v:/s/OneCGIARPRMSRepository/IQCPCRtUOihDQKJExjQgfIOIAZQAZH4pnHDucy3HX-w14WU?e=Xoy42x" target="_blank">link</a>.</li>
     `;
 
