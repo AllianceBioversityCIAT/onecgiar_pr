@@ -706,6 +706,14 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
+  // ----- P2-3201 / P2-4010 (2026): approved copy from CGIAR System Org (INC-158283), 2026 portfolio only -----
+  readonly CLARISA_GLOSSARY_URL = 'https://clarisa.cgiar.org/clarisa-panel/documentation/One_CGIAR_Control_List/General_Control_List/Glossary';
+  readonly contributorDefinitionNote = `As defined in the <a class="open_route" href="${this.CLARISA_GLOSSARY_URL}" target="_blank" rel="noopener">CGIAR CLARISA Glossary</a>, a contributor is a partner — internal or external to CGIAR — that has made a significant contribution to the achievement of a result. Contributions may take many forms and the threshold for attribution is that the result would not have been achieved, or reported in its current form, without that partner's contribution.`;
+  readonly bilateralProjectsInfoNote =
+    'The dropdown list includes only the W3/Bilateral projects that were mapped to and agreed by the P/A during the 2026 mapping exercise.';
+  readonly selfRegistrationNote =
+    'The P/A submitting the result is automatically recorded as a contributor. You do not need to add your own P/A to the list of contributors.';
+
   // ----- P2-2929 (2026): Contributing Science Program/Accelerator split (VISUAL ONLY; pending/save deferred per Juan David) -----
   readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
   // QA 2026-07-14: wording unified with the Report-result popup (aow-hlo-create-modal) — keep both in sync.

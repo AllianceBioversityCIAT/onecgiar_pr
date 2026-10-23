@@ -1520,7 +1520,7 @@ describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes 
     const otherScience = fixture.debugElement.query(By.css('app-pr-multi-select[data-testid="toc-other-science"]'));
     expect(otherScience).toBeTruthy();
     expect(otherScience.componentInstance.options()).toEqual(SCIENCE_CATALOG);
-    expect(fixture.nativeElement.textContent).toContain('Contributing Science Program/Accelerator');
+    expect(fixture.nativeElement.textContent).toContain('Contributing Science Programs/Accelerators' /* P2-4010: plural */);
   });
 
   it('TOC-T-1 (attempt 3): unmapped + otherCentersSelected populated (LC-DD-4 auto-add) — BOTH the flat dropdown AND toc-other-centers render, chip visible and removable', () => {
