@@ -178,7 +178,7 @@ Budget (design §12): 5 tasks, ~650 LOC, 1–2 review rounds per task. Exceeding
 
 | Field | Value |
 |---|---|
-| Status | pending |
+| Status | [x] done (2026-10-22, PRTest check delegated by the user to the Leader; re-checked after T-6) |
 | Size | S (manual) |
 | Depends on | T-1..T-4 deployed to PRTest (via `performance-refactor`, ~30 min) |
 | Requirements | R-1 (quality), R-2 (order with text), R-7 (visual), R-11 |

@@ -349,3 +349,41 @@ Reviewer: PASS; re-review of the refinement: PASS.
 - Remaining advisory: the worst-case test does not pin the trim drop order.
 
 Observation (not acted on): with an empty description, iSPARK keywords are generic CGIAR words (innovation, policy, adaptation), so many items rank as weak keyword matches. This is a residual limit of subject-based keywords.
+
+### KRR-T-5 — Re-check on PRTest after the T-6 deploy (76b9d1914)
+
+| Field | Value |
+|---|---|
+| Final status | **PASS**. The user delegated the browser check to the Leader ("adelante con la prueba") |
+| Date | 2026-10-22 |
+
+1. **P-1486, no text.** Totals: CGSpace 3464, MELSpace 238, WorldFish 119; related 3821. ✅
+   - Top: **Strong** "Revealing the genetic diversity in the global ex situ sweetpotato collection…".
+   - Then **Partial** "Annual Technical Report 2025: Genebanks Accelerator" and the Genebanks Accelerator brief, both on Project keywords · Science Program. Before T-6 these had no keyword factor.
+   - This confirms the T-6 server code is live.
+2. **"potato".** 432 = CGSpace 426 + MELSpace 2 + WorldFish 4. CGSpace has 3 more items than this morning: new uploads upstream. ✅
+   - "Potatoes, jobs, and digitalization…" is first and now shows **Weak match · Project keywords**; it was "No direct match" before T-6.
+   - "Kenyan Potato Sector" and "Guatemalan potato tuber moth" are Partial (Project keywords · Center).
+3. **Tooltips.** The client is unchanged since the first T-5 check (hover and keyboard verified there).
+4. **IITA iSPARK (T-PJ-003936).**
+   - Linked: 2 CGSpace items "Linked to T-PJ-003936", with **no tier badge**.
+   - Related: 3819 (3462/238/119); 3819 + 2 = 3821, so the exclusion is kept.
+   - Related top includes **Strong** "Co-designing Ghana's Partnership for Advancing Agricultural Solutions at Scale (PAASS)…" and Partial Sustainable Farming PoRB items. ✅
+
+Screenshots: `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-5R2In7\screenshot-1792718918568-5.jpg` and `…-1792718851007-4.jpg` ("potato" list after T-6).
+
+## Summary (all tasks complete)
+
+- T-1..T-6 are done and every one has a Reviewer PASS.
+- Live acceptance on PRTest passed for P-1486 and iSPARK. Delivered on `performance-refactor` at 76b9d1914.
+- Not yet in production: promotion to prod is Cristian's step.
+
+Open items:
+- OI-1: the KPSF prefix can exceed 2000 with multi-byte text.
+- OI-3: center names over 60 chars are cut in the boost.
+- With an empty description, keywords are generic.
+- Transient CGSpace timeouts (8 s).
+- Geography (R-10) is deferred.
+- KRR-OQ-2: Nicoleta has to accept tier + factors instead of a percentage.
+
+Budget: exceeded (6 tasks vs 5; T-2 took 3 rounds). The user acknowledged it.
