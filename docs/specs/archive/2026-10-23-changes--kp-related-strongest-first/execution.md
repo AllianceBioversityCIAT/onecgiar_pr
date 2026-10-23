@@ -198,10 +198,74 @@ Verification:
 - **Cause:** tests, not production code. Server tests are about 263 LOC against the ~110 estimate. They cover the byte-identity loop over related, linked and non-project on 3 adapters, plus the DD-4 fixture. Production code is close to the estimate: server about 118 LOC including comments, client about 85.
 - **Leader assessment:** the overrun adds no scope. Escalated to the user at the end of the run.
 
-## Status: KRS-T-4 — PRTest acceptance
+## Promotion (2026-10-23)
 
-**Blocked, pending user action.** T-4 depends on T-1..T-3 being deployed to PRTest through `performance-refactor` (~30 min). That needs a commit, a push and a merge from qa-dev into performance-refactor, and none of these happen without the user's explicit go-ahead. Nothing is committed yet.
+The user authorized the three steps ("Si dale a los 3 pasos").
+- Pre-push checks: server `--findRelatedTests` 17 suites, 340/340; client 58 suites, 2633/2633 (`--maxWorkers=2`).
+- Commits on `qa-development-2026-ss`:
+  - 806b3739b: KRR archive, which was staged before this run;
+  - fd483d517: server (T-1);
+  - 4863c1088: client (T-2 + T-3);
+  - 3c749e6e9: spec docs.
+- `qa-development-2026-ss` was pushed. `performance-refactor` was fast-forwarded to 3c749e6e9 in the user's checkout and pushed.
 
-Carry-ins for T-4:
-- Step 5 also checks the NFR-4 advisory from T-3: the "Not available for this search" tooltip sits on a non-focusable wrapper around the disabled toggle.
-- Step 4 counts "No direct match" cards as the accepted residual. The T-1 probe found 3 of 55.
+### KRS-T-4 — PRTest acceptance
+
+| Field | Value |
+|---|---|
+| Final status | **PASS**: browser check by the Leader on 2026-10-23, at the user's request ("Ya lo puedes hacer") |
+| Bundle | Current. The served UI shows "Only related KPs", "Strong match · 3 of 3" and the design §8 ranked proxy note |
+| Path | Centers → CIP → P-1486-GCDT and Centers → IITA → iSPARK (T-PJ-003936) → Create result → Complete the form manually → Output → Knowledge Product |
+| Read-only | "Use this item" and "Create and continue" were never clicked. The modal was discarded when the tab closed |
+
+| # | Check | Evidence | Result |
+|---|---|---|---|
+| 1 | Bundle current | New copy rendered (toggle label, "· N of 3", ranked note) | ✅ |
+| 2 | Tier order and load more (P-1486) | Page 1 (30 cards) is in non-increasing order: 1 Strong, 9 Partial, 11 Weak, 9 None. After "Load more" the page-1 ids are in the same positions. Page 2 is ordered S P×6 W×12 N×11 | ✅ |
+| 3 | Labels | Strong match · 3 of 3, Partial match · 2 of 3, Weak match · 1 of 3, No direct match. No `%` in the related section | ✅ |
+| 4 | Toggle on (P-1486) | 3849 → **468** (CGSpace 444, MELSpace 22, WorldFish 2). 1 of 22 cards on page 1 is "No direct match" (accepted residual, design §10). Linked stays 0 | ✅ |
+| 5 | Keyboard | Focus on the toggle, then Space turns it on and `aria-pressed` becomes "true". Enter turns it off and `aria-pressed` becomes "false". Focus stays on the toggle | ✅ |
+| 6 | Toggle off (P-1486) | Total returns to 3850 (CGSpace grew by 1 during the check). The first 30 ids are identical to the pre-toggle page | ✅ |
+| 7 | iSPARK | Linked has 2 KPs, no tier badge (ISRA metrics; climate-smart irrigation advisory). Related is 3848 unfiltered, first card Strong, page monotonic. Toggle on gives **1489** (CGSpace 1419, MELSpace 50, WorldFish 20), first card Strong, 3 of 30 "No direct match", 0 linked titles in related. Toggle off returns to 3848 | ✅ |
+
+Notes:
+- The iSPARK form needed a primary Science Program, so "Sustainable Farming" was picked in the UI only. Nothing was saved.
+- The live filtered totals differ from the T-1 probe (494 → 444, 1073 → 1419) because the probe approximated the project inputs, while PRTest uses the real CLARISA and project data.
+- **Not exercised:** the "Not available for this search" state. It needs a search text that forces trimming. The T-3 advisory (the tooltip on a non-focusable wrapper around the disabled toggle) is still open as a follow-up candidate, outside this spec.
+- **Ordering incident:** the `tasks.md` `[x]` for T-4 was written a moment before this entry, because the first write of this entry failed (a Python escape error). The entry was written right after, so the evidence was never missing at rest.
+
+Screenshot (local): `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-5R2In7\screenshot-1792753172045-6.jpg` (P-1486 with the toggle on, 468).
+
+## Summary
+
+All 4 tasks passed:
+
+| Task | Attempts |
+|---|---|
+| T-1 | 1 |
+| T-2 | 1 |
+| T-3 | 2 |
+| T-4 | 1 |
+
+- **Budget:** LOC was about 40% over, all of it in tests (see Budget check). Review rounds stayed in range.
+- **INC-166020 gaps closed:**
+  - strongest-first per page;
+  - an opt-in related-only filter with real counts (P-1486 3849 → 468);
+  - a numeric "N of 3" cue with no percentage.
+- **Open follow-ups, outside this spec:**
+  - keyboard reach of the "Not available" tooltip;
+  - the readability advisories from T-1 and T-2.
+
+## Post-archive check: long search text on PRTest (2026-10-23)
+
+At the user's request ("puedes hacer la prueba?"), the Leader tried to reach the "Not available for this search" state on P-1486 by lengthening the search text. Read-only.
+
+| Text | Result |
+|---|---|
+| No text, toggle on | 468 (filter applied) |
+| "potato" ×20 / ×28, toggle on | 175 (filter applied); toggle enabled |
+| "potato" ×29 and longer | Response is **unranked**: the toggle is **hidden**, the unranked KRR note is shown, and the toggle resets to off |
+| Back to ×20 | Unfiltered 432, toggle off (reset kept), no "filtered" wording |
+| 8+ distinct keywords | 0–3 results; the section stays ranked |
+
+**Finding:** for P-1486, the request goes straight from "filter fits" to "unranked". There is no text length at which the boost fits trimmed but the filter does not fit untrimmed, so the disabled state could not be reached live. The behavior matches R-3 (hidden when unranked, no param effect, no "filtered" wording), and the disabled path stays covered by the T-3 Jest tests. The tooltip keyboard advisory therefore has low practical exposure.

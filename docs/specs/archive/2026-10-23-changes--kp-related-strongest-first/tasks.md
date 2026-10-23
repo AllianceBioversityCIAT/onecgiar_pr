@@ -150,7 +150,7 @@ Same commands as T-2, plus `npx jest --maxWorkers=2 --findRelatedTests <changed 
 
 | Field | Value |
 |---|---|
-| Status | pending |
+| Status | [x] done (PASS 2026-10-23, PRTest) |
 | Size | S (manual) |
 | Depends on | T-1..T-3 deployed to PRTest through `performance-refactor` (~30 min) |
 | Requirements | R-1..R-5 (behavior), NFR-4 |
