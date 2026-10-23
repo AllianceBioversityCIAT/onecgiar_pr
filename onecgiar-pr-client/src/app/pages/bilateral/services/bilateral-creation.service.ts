@@ -351,8 +351,10 @@ export class BilateralCreationService {
         );
         this.resultLeadCenterCode.set(leadCenterRow?.code ? String(leadCenterRow.code) : null);
 
+        // Same test as the lead row above: only 1/true is the lead. `is_leading_result` is nullable
+        // and some writers leave it NULL on a contributor (#9881, ILRI) — `=== 0 || === false` hid it.
         const contributingCenterIds = (response?.contributingCenters ?? [])
-          .filter((c: any) => c.is_leading_result === 0 || c.is_leading_result === false)
+          .filter((c: any) => Number(c?.is_leading_result) !== 1)
           .map((c: any) => {
             if (c.institutionId != null) return Number(c.institutionId);
             return null;
