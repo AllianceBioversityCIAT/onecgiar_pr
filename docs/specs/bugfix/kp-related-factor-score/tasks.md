@@ -78,7 +78,7 @@
 
 | Field | Value |
 |---|---|
-| Status | pending |
+| Status | [x] done 2026-10-23 (PASS, user confirmed; see execution.md) |
 | Size | S (manual) |
 | Depends on | T-1, committed and deployed to PRTest through `performance-refactor` (~30 min, with the user's go-ahead for commit and push) |
 | Requirements | KFS-R-1, KFS-R-2, NFR-3 |

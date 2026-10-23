@@ -96,3 +96,34 @@
 - Budget: 1 task of 2 done; ~289 LOC (prod ~43, tests ~246) against an estimate of ~240 including the +40 from the Pivot; 2 review rounds, within the 1–2 budget. Slightly over on LOC, driven by tests; no tripwire stop.
 - Final verification: scoped Jest 326/326, `--findRelatedTests` 359/359, eslint clean, live probe table above.
 - Not committed (no-auto-commit rule). T-2 needs the commit + push through `performance-refactor` with the user's go-ahead.
+
+### KFS-T-2 — PRTest acceptance (read-only browser check)
+
+| Field | Value |
+|---|---|
+| Status | **PASS** — user confirmed 2026-10-23 ("si la doy por buena") |
+| Date | 2026-10-23, by the Leader at the user's request ("Ya se desplegó … puedes probar?") |
+| Deploy | `performance-refactor` = 56929266f (af5cdfc81 server fix), deployed per the user |
+| Path | Bilateral → IITA → T-PJ-003161 / T-PJ-003936 (iSPARK), CIP → P-1486-GCDT → Create result → Complete the form manually → Output → Knowledge Product. Primary SP chosen in the drawer only (SP02 for the IITA projects; P-1486 was preset to SP13 Genebank) |
+| Read-only | "Use this item" and "Create and continue" were never clicked. Drawers were closed with ✕; nothing was saved |
+
+| # | Check | Evidence | Result |
+|---|---|---|---|
+| 1 | Bundle/server current | T-PJ-003161 first card "Strong match · 3 of 3" (before the fix it was Weak; proposal §3) | ✅ |
+| 2 | T-PJ-003161, no text, 3 pages (vs proposal §3 table) | P1: 4 S · 8 P · 15 W · 3 N (was 0·0·24·6). P2: 0·10·17·3 (was 0·1·26·3). P3: 0·10·10·10 (was 1·0·18·11). Each page is non-increasing. The first Strong is at position 1 (was 90); the first Partial is at position 5 (was 31) | ✅ |
+| 3 | T-PJ-003161 toggle on | 3858 → **1314** (CGSpace 1256 · MELSpace 39 · WorldFish 19; T-1 probe filter totals were identical). Expected 1313 ± drift. P1: S×4 P×8 W×15 N×3. Toggle off returns to 3858 | ✅ |
+| 4 | iSPARK | Related 3856. First card Strong; P1: S×5 P×8 W×13 N×4. Toggle on gives **1494** (KRS-T-4 had 1489 ± drift). Toggle off returns to 3856. The toggle-on page sequence was read 3 s after the header changed and came back identical to the toggle-off one, so the toggle-on first card is not independently confirmed | ✅ (totals) |
+| 5 | P-1486 | Related 3863 (CGSpace 3497 · MEL 238 · WF 128). First card Strong; P1: S×4 P×7 W×9 N×10. Toggle on gives **470** (CGSpace 446 · MEL 22 · WF 2; KRS-T-4 had 468 ± drift). Toggle off returns to 3863 | ✅ |
+| 6 | "potato" on P-1486 | 432 items (CGSpace 426 · MEL 2 · WF 4). The first card is a WorldFish item; WorldFish has no potato titles, the same as in the T-1 probe and KRR. It comes first because of the KRS per-page tier sort across the interleaved repositories. Cards 2–6 are all potato titles from CGSpace. Text leads within each repository | ✅ |
+
+- Fails-if check: page 1 of T-PJ-003161 is not all Weak/None (4 Strong + 8 Partial). No toggle total moved beyond drift (1314/1313, 1494/1489, 470/468).
+
+## Summary
+
+- Both tasks are PASS. KFS-T-1 passed on attempt 2, after two user-approved Pivots (DD-5 center alignment, then the stemming-residual criterion). KFS-T-2 passed as the PRTest acceptance check, confirmed by the user.
+- Commits: af5cdfc81 (server fix), 56929266f (spec + T-1 log). Both are on `qa-development-2026-ss` and `performance-refactor`. This log update is committed separately.
+- Outcome: on T-PJ-003161 the first Strong moved from position 90 to position 1. Totals are unchanged, and text precedence is unchanged.
+- Open for archive / kaizen:
+  - Reviewer advisories: the center-factor stemming residual one-liner for requirements §6; the DIAGNOSTIC section in `evidence.txt` is partial.
+  - Lesson: the probe in the acceptance projects of KRS hid the long-title case, and the T-1 smoke exposed the gap between the label and Solr.
+  - CodeGraph sync is pending.
