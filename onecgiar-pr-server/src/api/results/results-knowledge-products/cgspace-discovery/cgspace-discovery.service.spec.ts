@@ -553,10 +553,10 @@ describe('CgspaceDiscoveryService', () => {
 
         const [, config] = callFor('cgspace');
         expect(config.params.query).toContain(
-          ' AND (*:* OR dcterms.subject:accelerated^4',
+          ' AND (*:* OR (dcterms.subject:(accelerated OR',
         );
         expect(config.params.query).toContain(
-          'cg.contributor.programAccelerator:"sustainable farming"^2',
+          '(cg.contributor.programAccelerator:"sustainable farming")^=1',
         );
         expect(Object.keys(config.params)).not.toContain('sort');
         expect(result.response.projectScope).toEqual({

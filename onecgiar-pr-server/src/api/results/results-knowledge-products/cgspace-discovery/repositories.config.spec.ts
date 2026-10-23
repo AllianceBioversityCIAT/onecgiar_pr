@@ -127,7 +127,7 @@ describe('translateParams — project scope (KPSF-R-1, R-3, R-7, R-8, R-11)', ()
   // relevance block and no date sort (`KRR-R-1`, `KRR-DD-6`). The KPSF prefix is unchanged.
   it('related: `AND NOT (clause)` stays the prefix, a user text is AND-combined first, the relevance block follows', () => {
     const block =
-      ' AND (*:* OR dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4)';
+      ' AND (*:* OR (dcterms.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique))^=1)';
     const noText = translateParams(
       { ...aidProject, projectScope: 'related', page: 0, size: 10 },
       cgspace,
@@ -149,7 +149,7 @@ describe('translateParams — project scope (KPSF-R-1, R-3, R-7, R-8, R-11)', ()
       cgspace,
     );
     expect(withText.query).toBe(
-      `(seed) AND NOT (${aidClause('cg.identifier.project')}) AND (*:* OR dcterms.subject:accelerated^0.001 OR dcterms.subject:innovation^0.001 OR dcterms.subject:delivery^0.001 OR dcterms.subject:initiative^0.001 OR dcterms.subject:aid^0.001 OR dcterms.subject:mozambique^0.001)`,
+      `(seed) AND NOT (${aidClause('cg.identifier.project')}) AND (*:* OR (dcterms.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique))^=0.001)`,
     );
     expect(withText.sort).toBeUndefined();
     expect(withText['f.itemtype']).toBe('Case Study,equals');
@@ -280,7 +280,7 @@ describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R
     );
 
     expect(params.query).toBe(
-      `${relatedNoText('cg.identifier.project')} AND (*:* OR dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4 OR dcterms.subject:cassava^4 OR dcterms.subject:seed^4 OR dcterms.subject:systems^4 OR cg.contributor.affiliation:"international institute of tropical agriculture"^2 OR cg.contributor.programAccelerator:"sustainable farming"^2)`,
+      `${relatedNoText('cg.identifier.project')} AND (*:* OR (dcterms.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique OR cassava OR seed OR systems))^=1 OR (cg.contributor.affiliation:"international institute of tropical agriculture")^=1 OR (cg.contributor.programAccelerator:"sustainable farming")^=1)`,
     );
     expect(Object.keys(params)).not.toContain('sort');
     expect(params['f.dateIssued']).toBe('[2026 TO 2026],equals');
@@ -289,12 +289,12 @@ describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R
   it('no search text: MELSpace and WorldFish use dc.subject and their own project/affiliation fields', () => {
     const melspaceParams = translateParams(ranking, melspace);
     expect(melspaceParams.query).toBe(
-      `${relatedNoText('cg.contributor.project')} AND (*:* OR dc.subject:accelerated^4 OR dc.subject:innovation^4 OR dc.subject:delivery^4 OR dc.subject:initiative^4 OR dc.subject:aid^4 OR dc.subject:mozambique^4 OR dc.subject:cassava^4 OR dc.subject:seed^4 OR dc.subject:systems^4 OR cg.contributor.center:"international institute of tropical agriculture"^2 OR cg.contributor.programAccelerator:"sustainable farming"^2)`,
+      `${relatedNoText('cg.contributor.project')} AND (*:* OR (dc.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique OR cassava OR seed OR systems))^=1 OR (cg.contributor.center:"international institute of tropical agriculture")^=1 OR (cg.contributor.programAccelerator:"sustainable farming")^=1)`,
     );
 
     const worldfishParams = translateParams(ranking, worldfish);
     expect(worldfishParams.query).toBe(
-      `${relatedNoText('cg.contributor.project')} AND (*:* OR dc.subject:accelerated^4 OR dc.subject:innovation^4 OR dc.subject:delivery^4 OR dc.subject:initiative^4 OR dc.subject:aid^4 OR dc.subject:mozambique^4 OR dc.subject:cassava^4 OR dc.subject:seed^4 OR dc.subject:systems^4 OR cg.contributor.affiliation:"international institute of tropical agriculture"^2 OR cg.contributor.programAccelerator:"sustainable farming"^2)`,
+      `${relatedNoText('cg.contributor.project')} AND (*:* OR (dc.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique OR cassava OR seed OR systems))^=1 OR (cg.contributor.affiliation:"international institute of tropical agriculture")^=1 OR (cg.contributor.programAccelerator:"sustainable farming")^=1)`,
     );
     expect(Object.keys(melspaceParams)).not.toContain('sort');
     expect(Object.keys(worldfishParams)).not.toContain('sort');
@@ -304,7 +304,7 @@ describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R
     const params = translateParams({ ...ranking, query: 'potato' }, cgspace);
 
     expect(params.query).toBe(
-      `(potato) AND NOT (${aidClause('cg.identifier.project')}) AND (*:* OR dcterms.subject:accelerated^0.001 OR dcterms.subject:innovation^0.001 OR dcterms.subject:delivery^0.001 OR dcterms.subject:initiative^0.001 OR dcterms.subject:aid^0.001 OR dcterms.subject:mozambique^0.001 OR dcterms.subject:cassava^0.001 OR dcterms.subject:seed^0.001 OR dcterms.subject:systems^0.001 OR cg.contributor.affiliation:"international institute of tropical agriculture"^0.0005 OR cg.contributor.programAccelerator:"sustainable farming"^0.0005)`,
+      `(potato) AND NOT (${aidClause('cg.identifier.project')}) AND (*:* OR (dcterms.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique OR cassava OR seed OR systems))^=0.001 OR (cg.contributor.affiliation:"international institute of tropical agriculture")^=0.001 OR (cg.contributor.programAccelerator:"sustainable farming")^=0.001)`,
     );
     expect(Object.keys(params)).not.toContain('sort');
   });
@@ -315,7 +315,7 @@ describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R
       cgspace,
     );
     expect(params.query).toBe(
-      `${relatedNoText('cg.identifier.project')} AND (*:* OR dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4)`,
+      `${relatedNoText('cg.identifier.project')} AND (*:* OR (dcterms.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique))^=1)`,
     );
     expect(params.query).not.toContain('programAccelerator');
     expect(params.query).not.toContain('affiliation');
@@ -327,9 +327,11 @@ describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R
       fields: { ...cgspace.fields, affiliation: undefined },
     };
     const params = translateParams(ranking, noAffiliation);
-    expect(params.query).toContain('dcterms.subject:cassava^4');
     expect(params.query).toContain(
-      'cg.contributor.programAccelerator:"sustainable farming"^2',
+      '(dcterms.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique OR cassava OR seed OR systems))^=1',
+    );
+    expect(params.query).toContain(
+      '(cg.contributor.programAccelerator:"sustainable farming")^=1',
     );
     expect(params.query).not.toContain('international institute');
   });
@@ -340,7 +342,7 @@ describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R
       cgspace,
     );
     expect(codeOnly.query).toContain(
-      'cg.contributor.programAccelerator:"sp13"^2',
+      '(cg.contributor.programAccelerator:"sp13")^=1',
     );
 
     const hyphenated = translateParams(
@@ -352,7 +354,7 @@ describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R
       cgspace,
     );
     expect(hyphenated.query).toContain(
-      'cg.contributor.programAccelerator:"sustainable farming phase 2"^2',
+      '(cg.contributor.programAccelerator:"sustainable farming phase 2")^=1',
     );
   });
 
@@ -378,7 +380,7 @@ describe('translateParams — related relevance block (KRR-R-1, R-2, R-3, R-4, R
       cgspace,
     );
     expect(params.query).toBe(
-      `${relatedNoText('cg.identifier.project')} AND (*:* OR dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4 OR dcterms.subject:title^4 OR dcterms.subject:soil^4)`,
+      `${relatedNoText('cg.identifier.project')} AND (*:* OR (dcterms.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique OR title OR soil))^=1)`,
     );
   });
 
@@ -484,7 +486,7 @@ describe('translateParams — project code never becomes a subject boost (KRR-T-
       const { query } = translateParams(input, adapter);
       expect(query).not.toContain(`${adapter.fields.subject}:1486`);
       expect(query).not.toContain(`${adapter.fields.subject}:gcdt`);
-      expect(query).toContain(`${adapter.fields.subject}:genebank^`);
+      expect(query).toContain(`(${adapter.fields.subject}:(genebank`);
     }
   });
 });
@@ -617,7 +619,8 @@ describe('translateParams — encoded query length (KRR-NFR-2, FP-1)', () => {
       { ...worstCase, projectDescription: 'cassava seed' },
       cgspace,
     );
-    expect(fits.query).toContain('dcterms.subject:cassava^4');
+    expect(fits.query).toContain('(dcterms.subject:(');
+    expect(fits.query).toContain('OR cassava OR seed))^=1');
     expect(fits.query).toContain('cg.contributor.affiliation:');
     expect(fits.query).toContain('cg.contributor.programAccelerator:');
   });
@@ -677,7 +680,7 @@ describe('translateParams — encoded query length (KRR-NFR-2, FP-1)', () => {
       cgspace,
     );
     expect(params.query).toContain(
-      'cg.contributor.affiliation:"international center for agricultural research in the dry"^2',
+      '(cg.contributor.affiliation:"international center for agricultural research in the dry")^=1',
     );
   });
 
@@ -693,7 +696,7 @@ describe('translateParams — encoded query length (KRR-NFR-2, FP-1)', () => {
       cgspace,
     );
     expect(params.query).toContain(
-      'cg.contributor.affiliation:"the alliance of bioversity international and the"^2',
+      '(cg.contributor.affiliation:"the alliance of bioversity international and the")^=1',
     );
   });
 });
@@ -768,10 +771,10 @@ describe('translateParams — related-only filter (KRS-R-2, R-3, NFR-1..3)', () 
   it('CGSpace filter form: the related prefix, then the clauses with no *:* arm', () => {
     const params = translateParams(filtered, cgspace);
     expect(params.query).toBe(
-      `*:* AND NOT (${aidClause('cg.identifier.project')}) AND (dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4 OR dcterms.subject:cassava^4 OR dcterms.subject:seed^4 OR dcterms.subject:systems^4 OR cg.contributor.affiliation:"international institute of tropical agriculture"^2 OR cg.contributor.programAccelerator:"sustainable farming"^2)`,
+      `*:* AND NOT (${aidClause('cg.identifier.project')}) AND ((dcterms.subject:(accelerated OR innovation OR delivery OR initiative OR aid OR mozambique OR cassava OR seed OR systems))^=1 OR (cg.contributor.affiliation:"international institute of tropical agriculture")^=1 OR (cg.contributor.programAccelerator:"sustainable farming")^=1)`,
     );
     expect(params.query).toContain('AND NOT (');
-    expect(params.query).toContain(' AND (dcterms.subject:');
+    expect(params.query).toContain(' AND ((dcterms.subject:(');
     expect(params.query).not.toContain('*:* OR');
     expect(Object.keys(params)).not.toContain('sort');
     expect(resolveProjectScope(filtered)?.relatedOnly).toBe(true);
@@ -779,7 +782,7 @@ describe('translateParams — related-only filter (KRS-R-2, R-3, NFR-1..3)', () 
 
   it('MELSpace and WorldFish use their own field names in the filter form', () => {
     expect(translateParams(filtered, melspace).query).toContain(
-      ' AND (dc.subject:accelerated^4 OR',
+      ' AND ((dc.subject:(accelerated OR',
     );
     expect(translateParams(filtered, worldfish).query).not.toContain('*:* OR');
   });
@@ -796,9 +799,7 @@ describe('translateParams — related-only filter (KRS-R-2, R-3, NFR-1..3)', () 
       cgspace,
     );
     expect(params.query.startsWith('(potato) AND NOT (')).toBe(true);
-    expect(params.query).toContain(
-      ' AND (dcterms.subject:accelerated^0.001 OR',
-    );
+    expect(params.query).toContain(' AND ((dcterms.subject:(accelerated OR');
     expect(params.query).not.toContain('*:* OR');
     expect(params['f.itemtype']).toBe('Case Study,equals');
     expect(params['f.affiliation']).toBe('CIP,equals');
@@ -917,5 +918,139 @@ describe('translateParams — related-only filter (KRS-R-2, R-3, NFR-1..3)', () 
         }
       }
     });
+  });
+});
+
+// @akili-spec bugfix/kp-related-factor-score
+describe('translateParams — constant-score factor clauses (KFS-R-1, R-2, NFR-2)', () => {
+  const ADAPTERS = [cgspace, melspace, worldfish];
+  // Long-title fixture modeled on T-PJ-003161: 8 title keywords + Center + program.
+  const longTitle = {
+    projectCode: 'T-PJ-003161',
+    projectTitle:
+      'Cassava seed systems for smallholder farmers in West Africa and Mozambique',
+    projectLeadCenter: 'IITA',
+    projectLeadCenterName: 'International Institute of Tropical Agriculture',
+    projectProgram: 'SP02 - Sustainable Farming',
+    projectScope: 'related' as const,
+  };
+  const KEYWORDS =
+    'cassava OR seed OR systems OR smallholder OR farmers OR west OR africa OR mozambique';
+
+  /** The three constant-score clauses of one host, written out (never rebuilt). */
+  const clauses = (subject: string, affiliation: string) =>
+    `(${subject}:(${KEYWORDS}))^=1 OR (${affiliation}:"international institute of tropical agriculture")^=1 OR (cg.contributor.programAccelerator:"sustainable farming")^=1`;
+
+  it('CGSpace boost form: one grouped subject clause and one constant-score clause per factor', () => {
+    const { query } = translateParams(longTitle, cgspace);
+    expect(query.slice(query.indexOf(' AND (*:* OR '))).toBe(
+      ` AND (*:* OR ${clauses('dcterms.subject', 'cg.contributor.affiliation')})`,
+    );
+    expect(query.split('dcterms.subject:(')).toHaveLength(2);
+    expect(query).toContain('cg.contributor.affiliation:"');
+    expect(query).toContain('cg.contributor.programAccelerator:"');
+    expect(query).not.toContain('^4');
+    expect(query).not.toContain('^2');
+    expect(query).not.toContain('^0.');
+  });
+
+  it('MELSpace and WorldFish boost form use their own field names with the same shape', () => {
+    expect(translateParams(longTitle, melspace).query).toContain(
+      ` AND (*:* OR ${clauses('dc.subject', 'cg.contributor.center')})`,
+    );
+    expect(translateParams(longTitle, worldfish).query).toContain(
+      ` AND (*:* OR ${clauses('dc.subject', 'cg.contributor.affiliation')})`,
+    );
+  });
+
+  it('filter form: the same three clauses and no *:* arm', () => {
+    const { query } = translateParams(
+      { ...longTitle, projectRelatedOnly: true },
+      cgspace,
+    );
+    expect(query.slice(query.indexOf(' AND (('))).toBe(
+      ` AND (${clauses('dcterms.subject', 'cg.contributor.affiliation')})`,
+    );
+    expect(query).not.toContain('*:* OR');
+    expect(query).not.toContain('^4');
+    expect(query).not.toContain('^2');
+  });
+
+  it('with search text: constants are ^=0.001, the text base and the f.* params are unchanged', () => {
+    const params = translateParams(
+      {
+        ...longTitle,
+        query: 'potato',
+        type: 'Case Study',
+        center: 'CIP',
+        year: '2026',
+      },
+      cgspace,
+    );
+    expect(params.query.startsWith('(potato) AND NOT (')).toBe(true);
+    expect(params.query).toContain(
+      ` AND (*:* OR (dcterms.subject:(${KEYWORDS}))^=0.001 OR (cg.contributor.affiliation:"international institute of tropical agriculture")^=0.001 OR (cg.contributor.programAccelerator:"sustainable farming")^=0.001)`,
+    );
+    expect(params.query).not.toContain('^=1');
+    expect(params['f.itemtype']).toBe('Case Study,equals');
+    expect(params['f.affiliation']).toBe('CIP,equals');
+    expect(params['f.dateIssued']).toBe('[2026 TO 2026],equals');
+    expect(Object.keys(params)).not.toContain('sort');
+  });
+
+  it('with search text, filter form: ^=0.001 constants, no *:* arm', () => {
+    const { query } = translateParams(
+      { ...longTitle, query: 'potato', projectRelatedOnly: true },
+      cgspace,
+    );
+    expect(query).toContain(
+      ` AND ((dcterms.subject:(${KEYWORDS}))^=0.001 OR (cg.contributor.affiliation:"international institute of tropical agriculture")^=0.001 OR (cg.contributor.programAccelerator:"sustainable farming")^=0.001)`,
+    );
+    expect(query).not.toContain('*:* OR');
+  });
+
+  it('a single keyword still gets a grouped subject clause; absent factors emit no clause', () => {
+    const { query } = translateParams(
+      {
+        projectCode: 'T-PJ-003161',
+        projectTitle: 'Cassava',
+        projectScope: 'related',
+        projectLeadCenterName: 'CIP',
+      },
+      cgspace,
+    );
+    expect(query).toContain(
+      ' AND (*:* OR (dcterms.subject:(cassava))^=1 OR (cg.contributor.affiliation:"cip")^=1)',
+    );
+    expect(query).not.toContain('programAccelerator');
+  });
+
+  it('linked, plain and non-project-browse requests carry no constant-score clause', () => {
+    const inputs: Record<string, any>[] = [
+      { ...longTitle, projectScope: 'linked' },
+      { query: 'maize', year: '2026' },
+      { projectTitle: 'Soil', projectScope: 'related', query: 'seed' },
+      { projectCode: 'T-PJ-003161', projectScope: 'related' },
+    ];
+    for (const input of inputs) {
+      for (const adapter of ADAPTERS) {
+        expect(
+          String(translateParams(input, adapter).query ?? ''),
+        ).not.toContain('^=');
+      }
+    }
+  });
+
+  it('long-title fixture encodes under 2000 characters in both forms on every adapter', () => {
+    for (const adapter of ADAPTERS) {
+      for (const projectRelatedOnly of [false, true]) {
+        const params = translateParams(
+          { ...longTitle, projectRelatedOnly },
+          adapter,
+        );
+        expect(encodeURIComponent(params.query).length).toBeLessThan(2000);
+        expect(params.query).toContain('^=1');
+      }
+    }
   });
 });

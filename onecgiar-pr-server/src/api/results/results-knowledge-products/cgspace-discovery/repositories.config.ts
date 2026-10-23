@@ -267,24 +267,27 @@ export interface ResolvedRelevance {
 }
 
 /**
- * Boost weights by text presence (`KRR-DD-3`, `design.md` §7.2). With no search text the project
- * decides the order, so the boosts are strong. With search text the text score must dominate and the
- * project only breaks ties among comparable text matches (`KRR-R-2`), hence the much smaller values.
+ * Constant score per factor, by text presence (`KRR-DD-3`, superseded by `KFS-DD-2`). Every factor
+ * clause is constant-score (`^=w`), so the Solr score of a KP is `w` times its factor count and the
+ * order equals the tier (`KFS-R-1`). With no search text the project decides the order: 1/1/1 makes
+ * the score step between tiers exactly 1. With search text the text score must dominate and the
+ * project only breaks ties among comparable text matches (`KRR-R-2`): three factors add at most
+ * 0.003, far below any text score.
  *
- * Calibrated live on 2026-10-22 against the three hosts (P-1486-GCDT, year 2026, text "potato"):
- * `^0.3 / 0.15 / 0.15` (and `^1` down to `^0.02`) still put genebank KPs without potato in the
- * title first; `^0.001 / 0.0005 / 0.0005` keeps potato-titled KPs first and the total unchanged.
- * Keep every weight >= 0.0001: a smaller number stringifies as `1e-5`, which Solr rejects.
+ * Calibrated live on 2026-10-22 (KRR): weights of `^0.02` and above still put genebank KPs without
+ * potato in the title first; `0.001` keeps potato-titled KPs first. Keep every weight >= 0.0001: a
+ * smaller number stringifies as `1e-5`, which Solr rejects.
  */
+// @akili-spec bugfix/kp-related-factor-score
 export const RELEVANCE_WEIGHTS_NO_TEXT: RelevanceWeights = {
-  subject: 4,
-  center: 2,
-  program: 2,
+  subject: 1,
+  center: 1,
+  program: 1,
 };
 export const RELEVANCE_WEIGHTS_WITH_TEXT: RelevanceWeights = {
   subject: 0.001,
-  center: 0.0005,
-  program: 0.0005,
+  center: 0.001,
+  program: 0.001,
 };
 
 /** `KRR-NFR-2`: the encoded upstream `query` stays under this many characters. */

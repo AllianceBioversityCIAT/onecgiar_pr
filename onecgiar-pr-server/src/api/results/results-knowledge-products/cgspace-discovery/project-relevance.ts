@@ -49,7 +49,7 @@ export interface RelevanceAdapter {
   };
 }
 
-/** Boost per factor (`design.md` §7.2, `KRR-DD-3`). */
+/** Constant score per factor (`design.md` §7.2, `KRR-DD-3`, `KFS-DD-2`). */
 export interface RelevanceWeights {
   subject: number;
   center: number;
@@ -188,9 +188,13 @@ export function extractRelevanceKeywords(ctx: RelevanceContext): string[] {
 }
 
 /**
- * `*:* OR <subject:kw^w>… OR <affiliation:"name"^w> OR <program:"…"^w>`; the caller wraps it in
- * `AND ( … )`. The program phrase is the program name, or its code when it has no name. Returns
- * `null` when no clause is usable, so the request stays what it is today (`KRR-R-3`).
+ * `*:* OR (<subject:(kw OR kw …)>)^=w OR (<affiliation:"name">)^=w OR (<program:"…">)^=w`; the caller
+ * wraps it in `AND ( … )`. The program phrase is the program name, or its code when it has no name.
+ * Returns `null` when no clause is usable, so the request stays what it is today (`KRR-R-3`).
+ *
+ * Each factor is ONE constant-score clause (`^=w`, Solr `ConstantScoreQuery`): the keywords share a
+ * single grouped subject clause, so a document scores `w` per satisfied factor however many keywords
+ * or idf-rare terms match, and the Solr order equals the factor count (`KFS-R-1`, `KFS-DD-1`).
  *
  * `mode` (`KRS-DD-3`): `boost` (default) is the form above; `filter` emits the same clauses
  * without the `*:*` arm, so at least one clause must match (the "only related KPs" form).
@@ -198,6 +202,7 @@ export function extractRelevanceKeywords(ctx: RelevanceContext): string[] {
 // @akili-spec changes/kp-related-strongest-first
 export type RelevanceBlockMode = 'boost' | 'filter';
 
+// @akili-spec bugfix/kp-related-factor-score
 export function buildRelevanceBlock(
   adapter: RelevanceAdapter,
   keywords: readonly string[],
@@ -208,16 +213,22 @@ export function buildRelevanceBlock(
 ): string | null {
   const clauses: string[] = [];
 
+  const tokens: string[] = [];
   for (const keyword of keywords) {
     const token = normalizeText(keyword).replace(/ /g, '');
-    if (token) {
-      clauses.push(`${adapter.fields.subject}:${token}^${weights.subject}`);
-    }
+    if (token) tokens.push(token);
+  }
+  if (tokens.length > 0) {
+    clauses.push(
+      `(${adapter.fields.subject}:(${tokens.join(' OR ')}))^=${weights.subject}`,
+    );
   }
 
   const center = boundPhrase(normalizeText(centerName));
   if (center && adapter.fields.affiliation) {
-    clauses.push(`${adapter.fields.affiliation}:"${center}"^${weights.center}`);
+    clauses.push(
+      `(${adapter.fields.affiliation}:"${center}")^=${weights.center}`,
+    );
   }
 
   const programPhrase = boundPhrase(
@@ -225,7 +236,7 @@ export function buildRelevanceBlock(
   );
   if (programPhrase) {
     clauses.push(
-      `${adapter.fields.program}:"${programPhrase}"^${weights.program}`,
+      `(${adapter.fields.program}:"${programPhrase}")^=${weights.program}`,
     );
   }
 
@@ -367,14 +378,22 @@ function matchesKeywords(
   );
 }
 
-/** Full-name equality, case- and accent-insensitive. An acronym-only context has no name. */
+/**
+ * Whole-word phrase containment (`KFS-R-3`, `KFS-DD-5`): the normalized Center name appears as a
+ * whole-word phrase inside a normalized affiliation, case- and accent-insensitive. This mirrors the
+ * Solr phrase clause `affiliation:"<name>"` on a tokenized field, so the label counts the same
+ * Center the score does: "International Institute of Tropical Agriculture (IITA)" and "… - IITA"
+ * count; a name that only shares some words, a reordering or a substring inside a word does not.
+ * Supersedes the KRR full-name equality rule. An acronym-only context has no name.
+ */
 function matchesCenter(
   affiliations: string[] | null | undefined,
   centerName: string | null | undefined,
 ): boolean {
   const center = normalizeText(centerName);
   if (!center || !affiliations) return false;
-  return affiliations.some(
-    (affiliation) => normalizeText(affiliation) === center,
+  const phrase = ` ${center} `;
+  return affiliations.some((affiliation) =>
+    ` ${normalizeText(affiliation)} `.includes(phrase),
   );
 }

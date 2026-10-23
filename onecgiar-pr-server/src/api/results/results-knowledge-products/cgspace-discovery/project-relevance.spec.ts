@@ -43,7 +43,7 @@ const NO_AFFILIATION: RelevanceAdapter = {
   },
 };
 
-const W_NO_TEXT: RelevanceWeights = { subject: 4, center: 2, program: 2 };
+const W_NO_TEXT: RelevanceWeights = { subject: 1, center: 1, program: 1 };
 const W_TEXT: RelevanceWeights = { subject: 0.3, center: 0.15, program: 0.15 };
 
 const CIP = 'International Potato Center';
@@ -261,9 +261,9 @@ describe('project-relevance', () => {
           W_NO_TEXT,
         ),
       ).toBe(
-        '*:* OR dcterms.subject:genebank^4 OR dcterms.subject:conservation^4' +
-          ' OR cg.contributor.affiliation:"international potato center"^2' +
-          ' OR cg.contributor.programAccelerator:"genebank"^2',
+        '*:* OR (dcterms.subject:(genebank OR conservation))^=1' +
+          ' OR (cg.contributor.affiliation:"international potato center")^=1' +
+          ' OR (cg.contributor.programAccelerator:"genebank")^=1',
       );
     });
 
@@ -279,9 +279,9 @@ describe('project-relevance', () => {
           'filter',
         ),
       ).toBe(
-        'dcterms.subject:genebank^4 OR dcterms.subject:conservation^4' +
-          ' OR cg.contributor.affiliation:"international potato center"^2' +
-          ' OR cg.contributor.programAccelerator:"genebank"^2',
+        '(dcterms.subject:(genebank OR conservation))^=1' +
+          ' OR (cg.contributor.affiliation:"international potato center")^=1' +
+          ' OR (cg.contributor.programAccelerator:"genebank")^=1',
       );
       expect(
         buildRelevanceBlock(CGSPACE, [], null, null, W_NO_TEXT, 'filter'),
@@ -292,18 +292,18 @@ describe('project-relevance', () => {
       expect(
         buildRelevanceBlock(MELSPACE, ['nematode'], CIP, SP13, W_TEXT),
       ).toBe(
-        '*:* OR dc.subject:nematode^0.3' +
-          ' OR cg.contributor.center:"international potato center"^0.15' +
-          ' OR cg.contributor.programAccelerator:"genebank"^0.15',
+        '*:* OR (dc.subject:(nematode))^=0.3' +
+          ' OR (cg.contributor.center:"international potato center")^=0.15' +
+          ' OR (cg.contributor.programAccelerator:"genebank")^=0.15',
       );
     });
 
     it('emits only the clauses that have a value', () => {
       expect(
         buildRelevanceBlock(CGSPACE, ['genebank'], null, null, W_NO_TEXT),
-      ).toBe('*:* OR dcterms.subject:genebank^4');
+      ).toBe('*:* OR (dcterms.subject:(genebank))^=1');
       expect(buildRelevanceBlock(CGSPACE, [], CIP, null, W_NO_TEXT)).toBe(
-        '*:* OR cg.contributor.affiliation:"international potato center"^2',
+        '*:* OR (cg.contributor.affiliation:"international potato center")^=1',
       );
     });
 
@@ -316,13 +316,13 @@ describe('project-relevance', () => {
           { code: 'SP13', name: '' },
           W_NO_TEXT,
         ),
-      ).toBe('*:* OR cg.contributor.programAccelerator:"sp13"^2');
+      ).toBe('*:* OR (cg.contributor.programAccelerator:"sp13")^=1');
     });
 
     it('skips the center boost when the adapter has no affiliation field', () => {
       expect(
         buildRelevanceBlock(NO_AFFILIATION, ['genebank'], CIP, null, W_NO_TEXT),
-      ).toBe('*:* OR dc.subject:genebank^4');
+      ).toBe('*:* OR (dc.subject:(genebank))^=1');
       expect(
         buildRelevanceBlock(NO_AFFILIATION, [], CIP, null, W_NO_TEXT),
       ).toBeNull();
@@ -356,7 +356,7 @@ describe('project-relevance', () => {
         expect(keywords).toEqual(['genebanks']);
         expect(
           buildRelevanceBlock(CGSPACE, keywords, null, null, W_NO_TEXT),
-        ).toBe('*:* OR dcterms.subject:genebanks^4');
+        ).toBe('*:* OR (dcterms.subject:(genebanks))^=1');
       });
 
       it('keeps metacharacters out of words glued to them', () => {
@@ -376,10 +376,7 @@ describe('project-relevance', () => {
         expect(
           buildRelevanceBlock(CGSPACE, keywords, null, null, W_NO_TEXT),
         ).toBe(
-          '*:* OR dcterms.subject:soil^4 OR dcterms.subject:title^4' +
-            ' OR dcterms.subject:secret^4 OR dcterms.subject:genebank^4' +
-            ' OR dcterms.subject:negated^4' +
-            ' OR dcterms.subject:must^4',
+          '*:* OR (dcterms.subject:(soil OR title OR secret OR genebank OR negated OR must))^=1',
         );
       });
 
@@ -393,8 +390,8 @@ describe('project-relevance', () => {
             W_NO_TEXT,
           ),
         ).toBe(
-          '*:* OR cg.contributor.affiliation:"evil or"^2' +
-            ' OR cg.contributor.programAccelerator:"x or title a 9"^2',
+          '*:* OR (cg.contributor.affiliation:"evil or")^=1' +
+            ' OR (cg.contributor.programAccelerator:"x or title a 9")^=1',
         );
       });
 
@@ -410,10 +407,9 @@ describe('project-relevance', () => {
           W_NO_TEXT,
         );
         expect(block).toBe(
-          '*:* OR dcterms.subject:title^4 OR dcterms.subject:subject^4' +
-            ' OR dcterms.subject:affiliation^4 OR dcterms.subject:hack^4' +
-            ' OR cg.contributor.affiliation:"cg contributor affiliation hack"^2' +
-            ' OR cg.contributor.programAccelerator:"dcterms subject hack"^2',
+          '*:* OR (dcterms.subject:(title OR subject OR affiliation OR hack))^=1' +
+            ' OR (cg.contributor.affiliation:"cg contributor affiliation hack")^=1' +
+            ' OR (cg.contributor.programAccelerator:"dcterms subject hack")^=1',
         );
       });
     });
@@ -450,8 +446,8 @@ describe('project-relevance', () => {
           W_NO_TEXT,
         );
         expect(block).toBe(
-          '*:* OR cg.contributor.affiliation:"the alliance of bioversity international and the"^2' +
-            ' OR cg.contributor.programAccelerator:"abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij"^2',
+          '*:* OR (cg.contributor.affiliation:"the alliance of bioversity international and the")^=1' +
+            ' OR (cg.contributor.programAccelerator:"abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij")^=1',
         );
       });
 
@@ -459,12 +455,12 @@ describe('project-relevance', () => {
         const sixty = `${'a'.repeat(29)} ${'b'.repeat(30)}`;
         expect(sixty).toHaveLength(MAX_PHRASE_LENGTH);
         expect(buildRelevanceBlock(CGSPACE, [], sixty, null, W_NO_TEXT)).toBe(
-          `*:* OR cg.contributor.affiliation:"${sixty}"^2`,
+          `*:* OR (cg.contributor.affiliation:"${sixty}")^=1`,
         );
         expect(
           buildRelevanceBlock(CGSPACE, [], 'z'.repeat(90), null, W_NO_TEXT),
         ).toBe(
-          `*:* OR cg.contributor.affiliation:"${'z'.repeat(MAX_PHRASE_LENGTH)}"^2`,
+          `*:* OR (cg.contributor.affiliation:"${'z'.repeat(MAX_PHRASE_LENGTH)}")^=1`,
         );
       });
     });
@@ -667,6 +663,54 @@ describe('project-relevance', () => {
       expect(
         evaluateProjectMatch({ affiliations: [] }, [], CIP, null).factors,
       ).toEqual([]);
+    });
+
+    // @akili-spec bugfix/kp-related-factor-score
+    describe('center: whole-word phrase containment, like the Solr phrase clause (KFS-R-3, DD-5)', () => {
+      const IITA = 'International Institute of Tropical Agriculture';
+      const centerFactors = (
+        affiliations: string[],
+        name: string | null = IITA,
+      ) => evaluateProjectMatch({ affiliations }, [], name, null).factors;
+
+      it.each([
+        'International Institute of Tropical Agriculture (IITA)',
+        'International Institute of Tropical Agriculture - IITA',
+        'international institute of tropical agriculture, nigeria',
+        'IITA: International Institute of Tropical Agriculture',
+      ])(
+        'counts an affiliation that carries the full name: %s',
+        (affiliation) => {
+          expect(centerFactors(['Some University', affiliation])).toEqual([
+            'center',
+          ]);
+        },
+      );
+
+      it.each([
+        ['Tropical Agriculture Research Institute'],
+        ['International Institute of Tropical'],
+        ['Institute of Tropical Agriculture International'],
+        ['International Institute of Tropical Agricultures'],
+        ['Superinternational Institute of Tropical Agriculture'],
+        ['IITA'],
+      ])(
+        'does not count a partial, reordered or in-word match: %s',
+        (affiliation) => {
+          expect(centerFactors([affiliation])).toEqual([]);
+        },
+      );
+
+      it('an acronym-only or empty name still counts nothing, whatever the affiliations', () => {
+        const affiliations = [
+          'IITA',
+          IITA,
+          'International Institute of Tropical Agriculture (IITA)',
+        ];
+        expect(centerFactors(affiliations, null)).toEqual([]);
+        expect(centerFactors(affiliations, '  ')).toEqual([]);
+        expect(centerFactors(affiliations, '"')).toEqual([]);
+      });
     });
 
     it('program: uses the client KPAM rule on the programAccelerators labels', () => {
