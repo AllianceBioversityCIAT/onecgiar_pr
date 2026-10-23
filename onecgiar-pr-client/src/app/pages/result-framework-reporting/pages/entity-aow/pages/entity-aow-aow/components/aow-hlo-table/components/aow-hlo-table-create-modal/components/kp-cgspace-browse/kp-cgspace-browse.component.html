@@ -668,6 +668,24 @@
                 <ng-icon name="lucideTriangleAlert" class="mt-px shrink-0 text-[13px]" aria-hidden="true" />
                 <span><strong>Proxy:</strong> {{ relatedRanked() ? copy.proxyNoteRanked : copy.proxyNote }}</span>
               </p>
+              <!-- @akili-spec changes/kp-related-strongest-first — KRS-R-2 / R-3 / NFR-4: "Only related KPs" toggle, ranked lists only -->
+              @if (relatedRanked()) {
+                <div class="flex flex-wrap items-center gap-2" data-test="kp-related-only-row">
+                  <span class="inline-flex" data-test="kp-related-only-wrap" [hlmTooltip]="relatedOnlyUnavailable() ? copy.relatedOnlyUnavailable : ''">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer border disabled:cursor-not-allowed disabled:opacity-50"
+                      [ngClass]="relatedOnly() ? 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-400)] border-[var(--pr-color-primary-300)]' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                      [attr.aria-pressed]="relatedOnly()"
+                      [disabled]="relatedOnlyUnavailable()"
+                      data-test="kp-related-only-toggle"
+                      (click)="toggleRelatedOnly()">
+                      <ng-icon name="lucideFilter" class="text-[11px]" aria-hidden="true" />
+                      <span>{{ copy.relatedOnlyLabel }}</span>
+                    </button>
+                  </span>
+                </div>
+              }
             </div>
 
             @if (status() === 'loading') {

@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  untracked,
   inject,
   input,
   OnDestroy,
@@ -13,7 +14,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCircleCheck, lucideGlobe, lucideRefreshCw, lucideSplit, lucideTriangleAlert } from '@ng-icons/lucide';
+import { lucideCircleCheck, lucideFilter, lucideGlobe, lucideRefreshCw, lucideSplit, lucideTriangleAlert } from '@ng-icons/lucide';
 import { catchError, debounceTime, defer, distinctUntilChanged, finalize, map, merge, of, retry, Subject, Subscription, switchMap, tap, timer } from 'rxjs';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
@@ -77,6 +78,8 @@ export interface KpProjectScopeEcho {
   applied?: boolean;
   /** True when the related page carries the relevance block (ordered by relevance, items carry `projectMatch`). */
   ranked?: boolean;
+  /** True only when the related-only filter form was applied on every repository (`KRS` design §5). */
+  relatedOnly?: boolean;
 }
 
 /** @akili-spec changes/kp-project-match — KPPJ-DD-3 shared fuzzy normalization */
@@ -196,14 +199,19 @@ export const KP_BROWSE_COPY = {
   proxyNote:
     'These KPs are not tagged with this project in the repository, so the relation is approximate. They are not ranked by how closely they relate to the project: without search text they are listed newest first; with search text, by how well they match it.',
   // @akili-spec changes/kp-related-relevance-ranking — KRR-R-7 / KRR-R-8 / design §8
+  // @akili-spec changes/kp-related-strongest-first — KRS-R-5 / design §8: ranked note (strongest first + toggle) and toggle copy
   proxyNoteRanked:
-    'These KPs are not tagged with this project in the repository. They are ordered by similarity to the project (subjects, Center, Science Program); the match label is an approximation.',
+    'These KPs are not tagged with this project in the repository. The strongest matches are shown first on each page; turn on "Only related KPs" to hide KPs with no matching subject, Center or Science Program. The match label is an approximation.',
+  relatedOnlyLabel: 'Only related KPs',
+  relatedOnlyUnavailable: 'Not available for this search',
   proxyMarker: 'Proxy',
   proxyMarkerTooltip: 'Proxy: this KP is not tagged with this project in the repository. Its relation to the project is approximate — see the match label.',
   tierStrong: 'Strong match',
   tierPartial: 'Partial match',
   tierWeak: 'Weak match',
   tierNone: 'No direct match',
+  // @akili-spec changes/kp-related-strongest-first — KRS-R-4: factor count suffix, `{n}` = matched factors out of 3
+  tierCount: '{n} of 3',
   tierTooltip: 'Approximate: based on matching subjects, Center and Science Program with this project. Not tagged with the project.',
   factorKeywords: 'Project keywords',
   factorCenter: 'Center',
@@ -355,7 +363,7 @@ export const DEFAULT_CGSPACE_CENTERS: FacetOption[] = [
   templateUrl: './kp-cgspace-browse.component.html',
   styleUrls: ['./kp-cgspace-browse.component.scss'],
   // Client guide rule 21: every new icon in this component comes from @ng-icons/lucide.
-  providers: [provideIcons({ lucideCircleCheck, lucideGlobe, lucideRefreshCw, lucideSplit, lucideTriangleAlert })],
+  providers: [provideIcons({ lucideCircleCheck, lucideFilter, lucideGlobe, lucideRefreshCw, lucideSplit, lucideTriangleAlert })],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
@@ -427,6 +435,13 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   // @akili-spec changes/kp-related-relevance-ranking — KRR-R-8
   /** `projectScope.ranked` of the last related response: true = ordered by relevance, so the ranked proxy note applies. */
   readonly relatedRanked = signal<boolean>(false);
+  // @akili-spec changes/kp-related-strongest-first — KRS-R-2 / R-3 / DD-5: "Only related KPs" toggle, default off, never persisted
+  /** The "Only related KPs" toggle. Resets wherever `relatedRanked` resets, and on project / context / year change. */
+  readonly relatedOnly = signal<boolean>(false);
+  /** `projectScope.relatedOnly` of the last related response; `undefined` until the answer to the current toggle state arrives. */
+  readonly relatedOnlyEcho = signal<boolean | undefined>(undefined);
+  /** Toggle on but the server did not apply the filter: the toggle is disabled and the count is not presented as filtered. */
+  readonly relatedOnlyUnavailable = computed(() => this.relatedOnly() && this.relatedOnlyEcho() === false);
   // @akili-spec changes/kp-multi-repository-browse — KPM-R-20
   /** `page.hasMore` of the last response; drives *Load more* visibility (never `items().length < total()`). */
   readonly hasMore = signal<boolean>(false);
@@ -575,13 +590,15 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   // @akili-spec changes/kp-related-relevance-ranking — KRR-R-7 / design §8
   /** Tier label of a related item (never a percentage); `null` when the item carries no `projectMatch`. */
   matchTierLabel(item: CgspaceItemDto): string | null {
+    // @akili-spec changes/kp-related-strongest-first — KRS-R-4: `<label> · <n> of 3`; "No direct match" has no count
+    const count = (): string => this.copy.tierCount.replace('{n}', String(item?.projectMatch?.factors?.length ?? 0));
     switch (item?.projectMatch?.tier) {
       case 'strong':
-        return this.copy.tierStrong;
+        return `${this.copy.tierStrong} · ${count()}`;
       case 'partial':
-        return this.copy.tierPartial;
+        return `${this.copy.tierPartial} · ${count()}`;
       case 'weak':
-        return this.copy.tierWeak;
+        return `${this.copy.tierWeak} · ${count()}`;
       case 'none':
         return this.copy.tierNone;
       default:
@@ -732,7 +749,13 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   }
 
   /** Related list (and the single list outside the project-scoped browse). */
-  readonly displayItems = computed<CgspaceItemDto[]>(() => this.applyProgramMatch(this.items()));
+  // @akili-spec changes/kp-related-strongest-first — KRS-R-1 / DD-2: a ranked related list keeps the server/tier order (no SP-first reorder)
+  readonly displayItems = computed<CgspaceItemDto[]>(() => {
+    if (this.relatedRanked()) {
+      return this.onlyMatches() ? this.items().filter(item => this.matchesProgram(item)) : this.items();
+    }
+    return this.applyProgramMatch(this.items());
+  });
 
   /** Linked list (section 1 of the project-scoped browse). */
   readonly displayLinkedItems = computed<CgspaceItemDto[]>(() => this.applyProgramMatch(this.linkedItems()));
@@ -781,6 +804,16 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   private facetReloadSubscription?: Subscription;
 
   constructor() {
+    // @akili-spec changes/kp-related-strongest-first — KRS-R-2: a project or context change drops the ranked state and the toggle
+    let lastProjectKey: string | undefined;
+    effect(() => {
+      const key = [this.isBilateralBrowse(), this.projectCode(), this.projectTitle()].join('|');
+      // First run only records the key: it must not wipe a response that already arrived.
+      if (lastProjectKey !== undefined && key !== lastProjectKey) {
+        untracked(() => this.resetRelatedRanking());
+      }
+      lastProjectKey = key;
+    });
     effect(() => {
       if (!this.busy()) {
         this.selectingItem.set(null);
@@ -1011,7 +1044,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       state.total.set(0);
       state.sources.set([]);
       state.hasMore.set(false);
-      if (scope === 'related') this.relatedRanked.set(false);
+      if (scope === 'related') this.resetRelatedRanking();
       return;
     }
 
@@ -1028,9 +1061,19 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     } else {
       // KRR-R-8: only a response that says `ranked` switches the proxy note; everything else keeps the quick copy.
       this.relatedRanked.set(echo?.ranked === true);
+      if (echo?.ranked === true) {
+        this.relatedOnlyEcho.set(echo.relatedOnly === true);
+      } else {
+        // Unranked list: the toggle is hidden and nothing related-only is ever sent (KRS-R-2 "not available").
+        this.resetRelatedRanking();
+      }
     }
 
-    const items: CgspaceItemDto[] = res?.response?.items ?? [];
+    let items: CgspaceItemDto[] = res?.response?.items ?? [];
+    // @akili-spec changes/kp-related-strongest-first — KRS-R-1 / DD-1: tier-sort ONLY the incoming page (stable), then append; earlier pages never move
+    if (scope === 'related' && echo?.ranked === true) {
+      items = this.sortPageByTier(items);
+    }
     const total: number =
       res?.response?.page?.totalElements ??
       res?.response?.total ??
@@ -1046,6 +1089,23 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       state.items.set([]);
       state.total.set(0);
     }
+  }
+
+  private sortPageByTier(page: CgspaceItemDto[]): CgspaceItemDto[] {
+    const rank = (item: CgspaceItemDto): number => {
+      switch (item?.projectMatch?.tier) {
+        case 'strong':
+          return 0;
+        case 'partial':
+          return 1;
+        case 'weak':
+          return 2;
+        default:
+          return 3;
+      }
+    };
+    // Array.prototype.sort is stable: ties keep the server order.
+    return [...page].sort((a, b) => rank(a) - rank(b));
   }
 
   private buildSearchParams(page: number, scope?: KpProjectScope): Record<string, any> {
@@ -1088,6 +1148,8 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       if (program) params['projectProgram'] = program;
       if (leadCenterName) params['projectLeadCenterName'] = leadCenterName;
       params['projectScope'] = scope;
+      // @akili-spec changes/kp-related-strongest-first — KRS-R-2: toggle off sends no key at all (identical to the KRR request)
+      if (this.relatedOnly()) params['projectRelatedOnly'] = true;
     }
 
     return params;
@@ -1115,7 +1177,14 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       state.total.set(0);
       state.sources.set([]);
     }
+    this.resetRelatedRanking();
+  }
+
+  /** `relatedRanked` and the related-only toggle always reset together (KRS T-2 forward pointer). */
+  private resetRelatedRanking(): void {
     this.relatedRanked.set(false);
+    this.relatedOnly.set(false);
+    this.relatedOnlyEcho.set(undefined);
   }
 
   /** Search runs when the text has ≥ 3 chars, or when it is empty and an explicit filter is set. */
@@ -1163,6 +1232,8 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   onYearSelect(option: any): void {
     const val = option ? (option.value ?? option) : null;
     this.selectedYear.set(val);
+    this.relatedOnly.set(false);
+    this.relatedOnlyEcho.set(undefined);
     this.onFilterChange();
   }
 
@@ -1249,6 +1320,14 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     const nextPage = this.page() + 1;
     this.loadingMore.set(true);
     this.runSearch(nextPage, true, 'related');
+  }
+
+  // @akili-spec changes/kp-related-strongest-first — KRS-R-2: toggling reruns the related search from page 0
+  toggleRelatedOnly(): void {
+    if (this.relatedOnlyUnavailable() || this.isFetching()) return;
+    this.relatedOnly.update(v => !v);
+    this.relatedOnlyEcho.set(undefined);
+    this.runSearch(0, false, 'related');
   }
 
   /** Linked list (section 1): fetches only the linked scope; never re-queries related. */
