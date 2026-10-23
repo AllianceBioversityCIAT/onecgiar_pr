@@ -752,3 +752,170 @@ describe('resolveProjectScope — ranked echo (KRR-R-1)', () => {
     ).toBe(true);
   });
 });
+
+// @akili-spec changes/kp-related-strongest-first
+describe('translateParams — related-only filter (KRS-R-2, R-3, NFR-1..3)', () => {
+  const ADAPTERS = [cgspace, melspace, worldfish];
+  const ranking = {
+    ...aidProject,
+    projectScope: 'related' as const,
+    projectDescription: 'Cassava seed systems',
+    projectLeadCenterName: 'International Institute of Tropical Agriculture',
+    projectProgram: 'SP03 - Sustainable Farming',
+  };
+  const filtered = { ...ranking, projectRelatedOnly: true };
+
+  it('CGSpace filter form: the related prefix, then the clauses with no *:* arm', () => {
+    const params = translateParams(filtered, cgspace);
+    expect(params.query).toBe(
+      `*:* AND NOT (${aidClause('cg.identifier.project')}) AND (dcterms.subject:accelerated^4 OR dcterms.subject:innovation^4 OR dcterms.subject:delivery^4 OR dcterms.subject:initiative^4 OR dcterms.subject:aid^4 OR dcterms.subject:mozambique^4 OR dcterms.subject:cassava^4 OR dcterms.subject:seed^4 OR dcterms.subject:systems^4 OR cg.contributor.affiliation:"international institute of tropical agriculture"^2 OR cg.contributor.programAccelerator:"sustainable farming"^2)`,
+    );
+    expect(params.query).toContain('AND NOT (');
+    expect(params.query).toContain(' AND (dcterms.subject:');
+    expect(params.query).not.toContain('*:* OR');
+    expect(Object.keys(params)).not.toContain('sort');
+    expect(resolveProjectScope(filtered)?.relatedOnly).toBe(true);
+  });
+
+  it('MELSpace and WorldFish use their own field names in the filter form', () => {
+    expect(translateParams(filtered, melspace).query).toContain(
+      ' AND (dc.subject:accelerated^4 OR',
+    );
+    expect(translateParams(filtered, worldfish).query).not.toContain('*:* OR');
+  });
+
+  it('keeps text, type, affiliation and year filters together with the filter', () => {
+    const params = translateParams(
+      {
+        ...filtered,
+        query: 'potato',
+        type: 'Case Study',
+        center: 'CIP',
+        year: '2026',
+      },
+      cgspace,
+    );
+    expect(params.query.startsWith('(potato) AND NOT (')).toBe(true);
+    expect(params.query).toContain(
+      ' AND (dcterms.subject:accelerated^0.001 OR',
+    );
+    expect(params.query).not.toContain('*:* OR');
+    expect(params['f.itemtype']).toBe('Case Study,equals');
+    expect(params['f.affiliation']).toBe('CIP,equals');
+    expect(params['f.dateIssued']).toBe('[2026 TO 2026],equals');
+  });
+
+  it('param absent or false: byte-identical to the KRR request (related, linked, non-project)', () => {
+    const inputs: Record<string, any>[] = [
+      ranking,
+      { ...ranking, query: 'potato', year: '2026' },
+      { ...aidProject, projectScope: 'linked' },
+      { query: 'maize', year: '2026' },
+    ];
+    for (const input of inputs) {
+      for (const adapter of ADAPTERS) {
+        const krr = translateParams(input, adapter);
+        expect(
+          translateParams({ ...input, projectRelatedOnly: false }, adapter),
+        ).toEqual(krr);
+        expect(
+          translateParams({ ...input, projectRelatedOnly: undefined }, adapter),
+        ).toEqual(krr);
+      }
+    }
+    expect(translateParams(ranking, cgspace).query).toContain(' AND (*:* OR ');
+  });
+
+  it('linked + projectRelatedOnly=true: the linked query is unchanged and the echo is false', () => {
+    const linked = { ...aidProject, projectScope: 'linked' as const };
+    for (const adapter of ADAPTERS) {
+      expect(
+        translateParams({ ...linked, projectRelatedOnly: true }, adapter),
+      ).toEqual(translateParams(linked, adapter));
+    }
+    expect(
+      resolveProjectScope({ ...linked, projectRelatedOnly: true })?.relatedOnly,
+    ).toBe(false);
+  });
+
+  it('unranked (code-only related): requested but not applied', () => {
+    const input = {
+      projectCode: 'T-PJ-003942',
+      projectScope: 'related' as const,
+      projectRelatedOnly: true,
+    };
+    expect(resolveProjectScope(input)?.relatedOnly).toBe(false);
+    expect(translateParams(input, cgspace)).toEqual(
+      translateParams({ ...input, projectRelatedOnly: undefined }, cgspace),
+    );
+  });
+
+  describe('gate: the untrimmed block must fit on every adapter', () => {
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    const phrase = 'x '.repeat(100).trim();
+    const metaText = 'a' + ':'.repeat(199);
+    const worstCase = {
+      projectCode: 'T-PJ-0' + '1'.repeat(44),
+      projectTitle: Array.from({ length: 8 }, (_, i) => letters[i].repeat(30))
+        .join(' ')
+        .slice(0, 300),
+      projectLeadCenter: 'IITA',
+      projectScope: 'related' as const,
+      projectDescription: Array.from({ length: 8 }, (_, i) =>
+        letters[i + 8].repeat(30),
+      ).join(' '),
+      projectLeadCenterName: phrase,
+      projectProgram: `${phrase} - ${phrase}`.slice(0, 200),
+    };
+
+    it('a request that forces KRR trimming gets no filter: relatedOnly=false, KRR behavior, no filter form on any adapter', () => {
+      const input = { ...worstCase, query: metaText };
+      // Trimmed boost block fits (ranked), the untrimmed filter does not (DD-4).
+      expect(resolveProjectScope(input)?.ranked).toBe(true);
+      const asked = { ...input, projectRelatedOnly: true };
+      expect(resolveProjectScope(asked)?.relatedOnly).toBe(false);
+      expect(resolveProjectScope(asked)?.ranked).toBe(true);
+      for (const adapter of ADAPTERS) {
+        const params = translateParams(asked, adapter);
+        expect(params).toEqual(translateParams(input, adapter));
+        expect(params.query).toContain(' AND (*:* OR ');
+      }
+    });
+
+    it('multi-byte text (no block fits): unranked, relatedOnly=false, plain KPSF query', () => {
+      const input = {
+        ...aidProject,
+        projectScope: 'related' as const,
+        query: '€'.repeat(200),
+        projectRelatedOnly: true,
+      };
+      expect(resolveProjectScope(input)?.relatedOnly).toBe(false);
+      for (const adapter of ADAPTERS) {
+        const params = translateParams(input, adapter);
+        expect(params.query).toBe(
+          `(${'€'.repeat(200)}) AND NOT (${aidClause(adapter.fields.project)})`,
+        );
+      }
+    });
+
+    it('whenever relatedOnly is true, every adapter query is the filter form and encodes under 2000', () => {
+      const variants = [
+        ranking,
+        { ...ranking, query: 'potato' },
+        { ...worstCase },
+        { ...worstCase, projectDescription: 'cassava' },
+      ];
+      for (const variant of variants) {
+        const input = { ...variant, projectRelatedOnly: true };
+        const on = resolveProjectScope(input)?.relatedOnly;
+        for (const adapter of ADAPTERS) {
+          const params = translateParams(input, adapter);
+          if (on) {
+            expect(params.query).not.toContain('*:* OR');
+            expect(encodeURIComponent(params.query).length).toBeLessThan(2000);
+          }
+        }
+      }
+    });
+  });
+});

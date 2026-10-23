@@ -1,6 +1,7 @@
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -202,6 +203,21 @@ export class CgspaceSearchQueryDto {
     },
   })
   projectScope?: ProjectScope;
+
+  // @akili-spec changes/kp-related-strongest-first
+  @ApiPropertyOptional({
+    description:
+      '"Only related KPs": with `projectScope=related`, keep only items matching at least one project relevance factor (subject keyword, lead center or Science Program) in the repository itself. Honored only when the related list is ranked and the full relevance block fits on every repository; otherwise ignored and `projectScope.relatedOnly` is echoed `false`. Query strings are text: only `true` enables it.',
+    type: Boolean,
+  })
+  @Transform(({ value }) =>
+    value === undefined || value === null
+      ? undefined
+      : value === true || value === 'true',
+  )
+  @IsOptional()
+  @IsBoolean()
+  projectRelatedOnly?: boolean;
 
   @ApiPropertyOptional({
     description:

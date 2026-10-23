@@ -237,6 +237,8 @@ export class CgspaceDiscoveryService {
       projectDescription: dto.projectDescription ?? '',
       projectProgram: dto.projectProgram ?? '',
       projectLeadCenterName: dto.projectLeadCenterName ?? '',
+      // @akili-spec changes/kp-related-strongest-first
+      projectRelatedOnly: dto.projectRelatedOnly === true,
       repository,
     });
   }
@@ -592,6 +594,8 @@ export class CgspaceDiscoveryService {
                 applied: projectScope.applied,
                 // @akili-spec changes/kp-related-relevance-ranking
                 ranked: projectScope.ranked,
+                // @akili-spec changes/kp-related-strongest-first
+                relatedOnly: projectScope.relatedOnly,
               },
             }
           : {}),

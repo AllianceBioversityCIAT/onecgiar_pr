@@ -143,6 +143,13 @@ export class CgspaceProjectScopeDto {
       'True when the related query carries the project relevance block, i.e. the items are ordered by relevance instead of newest first.',
   })
   ranked: boolean;
+
+  // @akili-spec changes/kp-related-strongest-first
+  @ApiProperty({
+    description:
+      'True only when the "only related KPs" filter was applied on every repository: requested, ranked and the full relevance block fit. When false, the list is the unfiltered related list.',
+  })
+  relatedOnly: boolean;
 }
 
 export class CgspaceSearchPageDto {

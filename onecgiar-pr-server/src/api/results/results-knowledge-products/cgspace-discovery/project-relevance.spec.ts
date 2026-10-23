@@ -267,6 +267,27 @@ describe('project-relevance', () => {
       );
     });
 
+    // @akili-spec changes/kp-related-strongest-first
+    it('filter mode: the same clauses without the *:* arm', () => {
+      expect(
+        buildRelevanceBlock(
+          CGSPACE,
+          ['genebank', 'conservation'],
+          CIP,
+          SP13,
+          W_NO_TEXT,
+          'filter',
+        ),
+      ).toBe(
+        'dcterms.subject:genebank^4 OR dcterms.subject:conservation^4' +
+          ' OR cg.contributor.affiliation:"international potato center"^2' +
+          ' OR cg.contributor.programAccelerator:"genebank"^2',
+      );
+      expect(
+        buildRelevanceBlock(CGSPACE, [], null, null, W_NO_TEXT, 'filter'),
+      ).toBeNull();
+    });
+
     it('uses the with-text weights and the adapter field names of another host', () => {
       expect(
         buildRelevanceBlock(MELSPACE, ['nematode'], CIP, SP13, W_TEXT),

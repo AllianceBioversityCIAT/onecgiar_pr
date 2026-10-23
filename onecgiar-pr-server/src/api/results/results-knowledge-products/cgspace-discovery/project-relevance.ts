@@ -191,13 +191,20 @@ export function extractRelevanceKeywords(ctx: RelevanceContext): string[] {
  * `*:* OR <subject:kw^w>… OR <affiliation:"name"^w> OR <program:"…"^w>`; the caller wraps it in
  * `AND ( … )`. The program phrase is the program name, or its code when it has no name. Returns
  * `null` when no clause is usable, so the request stays what it is today (`KRR-R-3`).
+ *
+ * `mode` (`KRS-DD-3`): `boost` (default) is the form above; `filter` emits the same clauses
+ * without the `*:*` arm, so at least one clause must match (the "only related KPs" form).
  */
+// @akili-spec changes/kp-related-strongest-first
+export type RelevanceBlockMode = 'boost' | 'filter';
+
 export function buildRelevanceBlock(
   adapter: RelevanceAdapter,
   keywords: readonly string[],
   centerName: string | null | undefined,
   program: ProjectProgram | null | undefined,
   weights: RelevanceWeights,
+  mode: RelevanceBlockMode = 'boost',
 ): string | null {
   const clauses: string[] = [];
 
@@ -222,7 +229,11 @@ export function buildRelevanceBlock(
     );
   }
 
-  return clauses.length > 0 ? `*:* OR ${clauses.join(' OR ')}` : null;
+  if (clauses.length === 0) return null;
+  // @akili-spec changes/kp-related-strongest-first
+  return mode === 'filter'
+    ? clauses.join(' OR ')
+    : `*:* OR ${clauses.join(' OR ')}`;
 }
 
 /** Cuts an already-normalized phrase to `MAX_PHRASE_LENGTH`, at a word boundary when possible. */

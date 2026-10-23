@@ -231,6 +231,9 @@ export interface TranslatableSearchParams {
   /** Full lead-center name, matched against the affiliation field. */
   projectLeadCenterName?: string;
   projectScope?: ProjectScope;
+  // @akili-spec changes/kp-related-strongest-first
+  /** "Only related KPs" request; honored only when the request is ranked and the full block fits. */
+  projectRelatedOnly?: boolean;
 }
 
 export type ProjectScope = 'linked' | 'related';
@@ -248,6 +251,13 @@ export interface ResolvedProjectScope {
   relevance?: ResolvedRelevance;
   /** True when the related query carries a relevance block (`projectScope.ranked` echo, `KRR-R-1`). */
   ranked: boolean;
+  // @akili-spec changes/kp-related-strongest-first
+  /**
+   * True when the related query carries the FILTER form of the block on every adapter
+   * (`projectScope.relatedOnly` echo, `KRS-R-3`): requested AND ranked AND the untrimmed filter
+   * fits on every registered adapter.
+   */
+  relatedOnly: boolean;
 }
 
 export interface ResolvedRelevance {
@@ -371,7 +381,25 @@ export function resolveProjectScope(
         )?.ranked,
     );
 
-  return { scope, applied, ctx, relevance, ranked };
+  // @akili-spec changes/kp-related-strongest-first
+  // `relatedOnly` is the same kind of request-wide decision (`KRS-DD-4`): a filter must never be
+  // trimmed (dropping a clause would silently narrow the set), so it needs the FULL block to fit
+  // on EVERY registered adapter. Otherwise the request falls back to the KRR behavior.
+  const relatedOnly =
+    !!dto.projectRelatedOnly &&
+    ranked &&
+    KP_REPOSITORY_VALUES.every(
+      (key) =>
+        !!composeScopedQuery(
+          scope,
+          ctx,
+          relevance,
+          escapedQuery,
+          KP_REPOSITORIES[key],
+        )?.filtered,
+    );
+
+  return { scope, applied, ctx, relevance, ranked, relatedOnly };
 }
 
 /**
@@ -444,7 +472,11 @@ export function translateParams(
       // score (`KRR-DD-6`); every other request stays byte-identical to the KPSF one
       // (`KRR-R-3`, `KRR-R-4`). `scoped.ranked` is only false here for an adapter outside the
       // registry, which then falls back to the plain query.
-      if (project.ranked && scoped.ranked) {
+      if (project.relatedOnly && scoped.filtered) {
+        // @akili-spec changes/kp-related-strongest-first
+        params.query = scoped.filtered;
+        delete params.sort;
+      } else if (project.ranked && scoped.ranked) {
         params.query = scoped.ranked;
         delete params.sort;
       } else {
@@ -469,13 +501,13 @@ function composeScopedQuery(
   relevance: ResolvedRelevance | undefined,
   escapedQuery: string,
   adapter: RepositoryAdapter,
-): { query: string; ranked: string | null } | null {
+): { query: string; ranked: string | null; filtered: string | null } | null {
   const clause = buildProjectClause(adapter.fields.project, ctx);
   if (!clause) return null;
 
   const base = escapedQuery ? `(${escapedQuery})` : '*:*';
   if (scope === 'linked') {
-    return { query: `${base} AND (${clause})`, ranked: null };
+    return { query: `${base} AND (${clause})`, ranked: null, filtered: null };
   }
 
   const related = `${base} AND NOT (${clause})`;
@@ -487,7 +519,43 @@ function composeScopedQuery(
         escapedQuery ? RELEVANCE_WEIGHTS_WITH_TEXT : RELEVANCE_WEIGHTS_NO_TEXT,
       )
     : null;
-  return { query: related, ranked: withBlock };
+  // @akili-spec changes/kp-related-strongest-first
+  const weights = escapedQuery
+    ? RELEVANCE_WEIGHTS_WITH_TEXT
+    : RELEVANCE_WEIGHTS_NO_TEXT;
+  return {
+    query: related,
+    ranked: withBlock,
+    filtered: relevance
+      ? buildFilterQuery(related, adapter, relevance, weights)
+      : null,
+  };
+}
+
+// @akili-spec changes/kp-related-strongest-first
+/**
+ * `<related query> AND (<filter block>)` with the FULL block, or `null` when no clause is usable
+ * or the encoded query does not fit under `MAX_ENCODED_QUERY_LENGTH`. Never trimmed (`KRS-DD-4`).
+ */
+function buildFilterQuery(
+  relatedQuery: string,
+  adapter: RepositoryAdapter,
+  relevance: ResolvedRelevance,
+  weights: RelevanceWeights,
+): string | null {
+  const block = buildRelevanceBlock(
+    adapter,
+    relevance.keywords,
+    relevance.centerName,
+    relevance.program,
+    weights,
+    'filter',
+  );
+  if (block === null) return null;
+  const query = `${relatedQuery} AND (${block})`;
+  return encodeURIComponent(query).length < MAX_ENCODED_QUERY_LENGTH
+    ? query
+    : null;
 }
 
 /**

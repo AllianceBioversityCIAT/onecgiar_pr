@@ -405,6 +405,7 @@ describe('CgspaceDiscoveryService', () => {
           scope: 'linked',
           applied: true,
           ranked: false,
+          relatedOnly: false,
         });
       });
 
@@ -427,6 +428,7 @@ describe('CgspaceDiscoveryService', () => {
           scope: 'related',
           applied: true,
           ranked: true,
+          relatedOnly: false,
         });
       });
 
@@ -461,6 +463,7 @@ describe('CgspaceDiscoveryService', () => {
           scope: 'linked',
           applied: false,
           ranked: false,
+          relatedOnly: false,
         });
         expect(result.response.sources.map((s) => s.status)).toEqual([
           'ok',
@@ -487,6 +490,7 @@ describe('CgspaceDiscoveryService', () => {
           scope: 'related',
           applied: false,
           ranked: false,
+          relatedOnly: false,
         });
       });
 
@@ -559,6 +563,7 @@ describe('CgspaceDiscoveryService', () => {
           scope: 'related',
           applied: true,
           ranked: true,
+          relatedOnly: false,
         });
 
         // Same project, different description / center name / program: three more upstream calls.
@@ -573,6 +578,47 @@ describe('CgspaceDiscoveryService', () => {
       });
 
       // @akili-spec changes/kp-related-relevance-ranking
+      // @akili-spec changes/kp-related-strongest-first
+      it('related-only: one upstream call per source, filter form sent, echo relatedOnly=true, cache key follows the param', async () => {
+        emptyAll();
+        const base = {
+          ...aidProject,
+          projectScope: 'related' as const,
+          projectDescription: 'cassava seed',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        };
+
+        const off = await service.search(base);
+        expect(off.response.projectScope?.relatedOnly).toBe(false);
+        expect(httpService.get).toHaveBeenCalledTimes(ALL.length);
+
+        const on = await service.search({ ...base, projectRelatedOnly: true });
+        // Same number of upstream calls again (no extra call per page, NFR-1) and a distinct key.
+        expect(httpService.get).toHaveBeenCalledTimes(ALL.length * 2);
+        expect(new Set([...service.searchCache.keys()]).size).toBe(
+          ALL.length * 2,
+        );
+        expect(on.response.projectScope).toEqual({
+          scope: 'related',
+          applied: true,
+          ranked: true,
+          relatedOnly: true,
+        });
+        const sent = httpService.get.mock.calls
+          .slice(ALL.length)
+          .map(([, config]) => config.params.query as string);
+        expect(sent).toHaveLength(ALL.length);
+        for (const query of sent) {
+          expect(query).toContain(' AND NOT (');
+          expect(query).toContain(' AND (');
+          expect(query).not.toContain('*:* OR');
+        }
+        // Items still carry the tier on a related-only page.
+        expect(on.response.projectScope?.ranked).toBe(true);
+      });
+
       describe('projectMatch on ranked related pages (KRR-R-3..R-6)', () => {
         const rankedBase = {
           ...aidProject,
@@ -1273,6 +1319,7 @@ describe('CgspaceDiscoveryService', () => {
         projectDescription: '',
         projectProgram: '',
         projectLeadCenterName: '',
+        projectRelatedOnly: false,
         repository: 'cgspace',
       });
       expect(service.searchCache.has(oldestKey)).toBe(true);

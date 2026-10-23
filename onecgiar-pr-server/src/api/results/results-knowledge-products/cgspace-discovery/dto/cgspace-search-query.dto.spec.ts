@@ -369,4 +369,33 @@ describe('CgspaceSearchQueryDto', () => {
       ).rejects.toThrow();
     });
   });
+
+  // @akili-spec changes/kp-related-strongest-first
+  describe('projectRelatedOnly', () => {
+    const pipe = controllerValidationPipe;
+    const base = { projectScope: 'related', projectTitle: 'Soil health' };
+
+    it("maps the string 'true' to true", async () => {
+      const result = await pipe().transform(
+        { ...base, projectRelatedOnly: 'true' },
+        queryMetadata,
+      );
+      expect(result.projectRelatedOnly).toBe(true);
+    });
+
+    it("maps 'false' (and any other text) to false", async () => {
+      for (const value of ['false', 'yes', '1']) {
+        const result = await pipe().transform(
+          { ...base, projectRelatedOnly: value },
+          queryMetadata,
+        );
+        expect(result.projectRelatedOnly).toBe(false);
+      }
+    });
+
+    it('stays undefined when absent', async () => {
+      const result = await pipe().transform({ ...base }, queryMetadata);
+      expect(result.projectRelatedOnly).toBeUndefined();
+    });
+  });
 });
