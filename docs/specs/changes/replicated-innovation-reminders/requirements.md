@@ -202,7 +202,7 @@ Each developer digest MUST be copied to the **active MELIA focal points of every
 
 ### Requirement RIR-R-5: Campaign scheduling (MUST)
 
-An admin MUST be able to create a campaign for the active Reporting phase, choosing a kind (`Q4_NOTICE` | `FINAL_REMINDER`) and a scheduled date-time. The admin can also edit the date-time or cancel the campaign while it is still pending. Each phase allows at most one non-cancelled campaign per kind. Dates are entered and shown in the admin's local time, labelled with the time zone.
+An admin MUST be able to create a campaign for the active Reporting phase, choosing a kind (`Q4_NOTICE` | `FINAL_REMINDER`) and a scheduled date-time. The admin can also edit the date-time or cancel the campaign while it is still pending. Each phase allows at most one *open* campaign (`PENDING`, `SENDING` or `FAILED`; a failed campaign is still retryable with Send now) per kind. `SENT` and `CANCELLED` campaigns remain as history and do not block a new campaign of the same kind. An admin MAY start a new campaign from a `SENT` row ("Send again"); it is an independent campaign with its own send log, so its recipients are emailed again for whatever is still pending. *(Amended 2026-10-23, mini-Pivot R-5.)* Dates are entered and shown in the admin's local time, labelled with the time zone.
 
 #### Scenario: Duplicate kind
 
@@ -210,6 +210,13 @@ An admin MUST be able to create a campaign for the active Reporting phase, choos
 - WHEN the admin creates another `Q4_NOTICE` for the same phase
 - THEN the system rejects it with a clear message
 - BUT it must NOT reject a `FINAL_REMINDER` for the same phase.
+
+#### Scenario: Send again after a sent campaign
+
+- GIVEN the phase has a `SENT` `Q4_NOTICE`
+- WHEN the admin creates another `Q4_NOTICE` ("Send again")
+- THEN the system accepts it as a new pending campaign
+- BUT it must NOT modify the sent campaign or its send log.
 
 #### Scenario: Sent campaigns are frozen
 

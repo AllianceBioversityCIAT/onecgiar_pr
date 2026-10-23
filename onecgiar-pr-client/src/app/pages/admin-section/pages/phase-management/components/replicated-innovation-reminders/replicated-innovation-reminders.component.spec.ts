@@ -83,13 +83,11 @@ describe('ReplicatedInnovationRemindersComponent', () => {
           }
         })
       ),
-      POST_reminderCampaignSend: jest
-        .fn()
-        .mockReturnValue(
-          of({
-            response: { status: 'SENT', sent: 3, skipped: 0, failed: 0, unreachable: 0, sent_by_type: { DEVELOPER: 1, MELIA_SUMMARY: 1, CENTER: 1 } }
-          })
-        )
+      POST_reminderCampaignSend: jest.fn().mockReturnValue(
+        of({
+          response: { status: 'SENT', sent: 3, skipped: 0, failed: 0, unreachable: 0, sent_by_type: { DEVELOPER: 1, MELIA_SUMMARY: 1, CENTER: 1 } }
+        })
+      )
     };
     await TestBed.configureTestingModule({
       imports: [ReplicatedInnovationRemindersComponent],
@@ -149,10 +147,48 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     expect(isDisabled('rir-cancel-btn')).toBe(false);
   });
 
-  it('only offers the kind that is missing (a CANCELLED campaign does not count)', async () => {
+  it('only blocks a kind while an open campaign exists (PENDING); CANCELLED does not count', async () => {
     await setup(of(list([campaign({ kind: 'Q4_NOTICE' }), campaign({ id: 2, kind: 'FINAL_REMINDER', status: 'CANCELLED' })])));
     expect(q('rir-schedule-Q4_NOTICE')).toBeNull();
     expect(q('rir-schedule-FINAL_REMINDER')).not.toBeNull();
+  });
+
+  it.each([['PENDING'], ['SENDING'], ['FAILED']] as const)('hides the schedule form of a kind with an open %s campaign', async status => {
+    await setup(of(list([campaign({ kind: 'Q4_NOTICE', status })])));
+    expect(q('rir-schedule-Q4_NOTICE')).toBeNull();
+  });
+
+  it('a SENT campaign does not block its kind: the schedule form stays and the row is kept as history', async () => {
+    await setup(of(list([campaign({ id: 5, kind: 'Q4_NOTICE', status: 'SENT', sent_at: '2026-10-01T10:00:00.000Z' })])));
+    expect(q('rir-row-5')).not.toBeNull();
+    expect(q('rir-schedule-Q4_NOTICE')).not.toBeNull();
+  });
+
+  it('Send again shows only on SENT rows', async () => {
+    await setup(
+      of(
+        list([
+          campaign({ id: 1, kind: 'Q4_NOTICE', status: 'SENT' }),
+          campaign({ id: 2, kind: 'FINAL_REMINDER', status: 'PENDING' }),
+          campaign({ id: 3, kind: 'FINAL_REMINDER', status: 'CANCELLED' })
+        ])
+      )
+    );
+    expect(q('rir-row-1')!.querySelector('[data-testid="rir-send-again-btn"]')).not.toBeNull();
+    expect(q('rir-row-2')!.querySelector('[data-testid="rir-send-again-btn"]')).toBeNull();
+    expect(q('rir-row-3')!.querySelector('[data-testid="rir-send-again-btn"]')).toBeNull();
+  });
+
+  it('Send again opens the create flow preset to that kind, with the helper text, and POSTs like a normal create', async () => {
+    await setup(of(list([campaign({ id: 1, kind: 'Q4_NOTICE', status: 'SENT' })])));
+    expect(q('rir-send-again-hint-Q4_NOTICE')).toBeNull();
+    click('rir-send-again-btn');
+    expect(component.sendAgainKind()).toBe('Q4_NOTICE');
+    expect(q('rir-send-again-hint-Q4_NOTICE')!.textContent).toContain('emailed again');
+    type('rir-draft-Q4_NOTICE', '2099-11-15T08:00');
+    click('rir-submit-Q4_NOTICE');
+    expect(api['POST_reminderCampaign']).toHaveBeenCalledWith({ kind: 'Q4_NOTICE', scheduled_at: '2099-11-15T13:00:00.000Z' });
+    expect(component.sendAgainKind()).toBeNull();
   });
 
   it('POSTs local 2026-11-15T08:00 in UTC-5 as 2026-11-15T13:00:00.000Z', async () => {

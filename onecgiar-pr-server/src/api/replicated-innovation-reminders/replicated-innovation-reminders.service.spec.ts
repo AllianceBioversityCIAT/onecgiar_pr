@@ -120,7 +120,7 @@ describe('ReplicatedInnovationRemindersService', () => {
       expect(campaignRepo.save).not.toHaveBeenCalled();
     });
 
-    it('the duplicate lookup ignores CANCELLED, so a cancelled kind can be re-created', async () => {
+    it('the duplicate lookup only counts open campaigns (PENDING, SENDING, FAILED)', async () => {
       const { service, campaignRepo } = setup();
       campaignRepo.findOne.mockResolvedValue(null);
       await service.create({
@@ -132,8 +132,69 @@ describe('ReplicatedInnovationRemindersService', () => {
         version_id: PHASE_ID,
         kind: ReplicatedReminderKind.Q4_NOTICE,
       });
-      // TypeORM Not(...) operator wrapping CANCELLED.
-      expect(where.status.value).toBe(ReplicatedReminderStatus.CANCELLED);
+      // TypeORM In(...) operator: SENT and CANCELLED are history and never block.
+      expect([...where.status.value].sort()).toEqual(
+        [
+          ReplicatedReminderStatus.FAILED,
+          ReplicatedReminderStatus.PENDING,
+          ReplicatedReminderStatus.SENDING,
+        ].sort(),
+      );
+    });
+
+    // Behavioural: a fake store applies the real `where` the service sends.
+    const withStore = (existing: { kind: string; status: string }[]) => {
+      const ctx = setup();
+      ctx.campaignRepo.findOne.mockImplementation(({ where }) =>
+        Promise.resolve(
+          existing.find(
+            (c) =>
+              c.kind === where.kind && where.status.value.includes(c.status),
+          )
+            ? { id: 1 }
+            : null,
+        ),
+      );
+      return ctx;
+    };
+
+    it.each([
+      [ReplicatedReminderStatus.SENT, true],
+      [ReplicatedReminderStatus.CANCELLED, true],
+      [ReplicatedReminderStatus.PENDING, false],
+      [ReplicatedReminderStatus.SENDING, false],
+      [ReplicatedReminderStatus.FAILED, false],
+    ])(
+      'Q4_NOTICE with an existing %s Q4_NOTICE is accepted: %s',
+      async (st, accepted) => {
+        const { service, campaignRepo } = withStore([
+          { kind: ReplicatedReminderKind.Q4_NOTICE, status: st },
+        ]);
+        const code = await status(
+          service.create({
+            kind: ReplicatedReminderKind.Q4_NOTICE,
+            scheduled_at: future(),
+          }),
+        );
+        expect(code).toBe(accepted ? 200 : 409);
+        expect(campaignRepo.save).toHaveBeenCalledTimes(accepted ? 1 : 0);
+      },
+    );
+
+    it('FINAL_REMINDER is accepted while a PENDING Q4_NOTICE exists', async () => {
+      const { service } = withStore([
+        {
+          kind: ReplicatedReminderKind.Q4_NOTICE,
+          status: ReplicatedReminderStatus.PENDING,
+        },
+      ]);
+      const code = await status(
+        service.create({
+          kind: ReplicatedReminderKind.FINAL_REMINDER,
+          scheduled_at: future(),
+        }),
+      );
+      expect(code).toBe(200);
     });
 
     it('FINAL_REMINDER beside an existing Q4_NOTICE is created (201 path)', async () => {

@@ -810,3 +810,89 @@ Deviations in the templates, to confirm at the T-15 copy approval:
   - The two Alliance codes are distinct.
 - **Query 2:** 17 rows over 13 codes, which matches the decision.
 - **Revert:** the user reports both migrations were reverted, leaving prdb back at the pre-revision-2 state.
+
+## Data validation on PROD before T-15 (user-run, read-only, version 8) — 2026-10-23
+
+- **Developer field (1,359 W1/W2 type 7):**
+  - 128 empty;
+  - 205 with names only, no email;
+  - 1,026 with at least one email.
+- **Developer emails:**
+  - 758 distinct addresses, up to 10 per field.
+  - **471 are active PRMS users**, so 471 developer digests go out.
+  - 287 (38%) have no PRMS account and are routed to the MELIA summary.
+- **Routing:**
+  - 822 Innovation Development results go to developers;
+  - 537 Innovation Development results go to the MELIA summary;
+  - 351 Innovation Use results go to the MELIA summary.
+  - Total 1,710 ✓.
+- **MELIA summaries:** 13, one per SP, and every SP has at least one MELIA focal point. They cover 888 results. The largest are SP02 with 183 and SP09 with 174.
+- **W3:** 12 center emails covering 276 results, plus 2 unreachable with no lead center. CIAT (Alliance) has no pending W3 as lead.
+- **Total:** about 496 emails per campaign at today's volume.
+- **CC load per MELIA (developer digests):**
+  - j.delarueda and v.pede (SP06 + SP09): 152 each.
+  - Then SP01 84, SP02 76, SP03 58, SP04 48, SP07 34, SP12 29, SP05 19, SP13 17, SP08 15, SP10 13 each, and SP11 1.
+- **User decision (2026-10-23): accepted, same rationale as the 2026-10-19 R-3 decision.**
+  - No campaign is sent now. Teams get time to update, and the reminder is scheduled near the end of the year, by which point the pending set (and so the CC load) should be much smaller.
+  - The admin preview shows recipient and CC counts before "Send now".
+  - Residual risk: if the volume is still high when the reminder is due, raise it with Nicoleta before sending.
+
+## Pivot Record (mini): RIR-R-5 "Send again" — 2026-10-23
+
+**Trigger:** the user found during T-15 that a `SENT` campaign is terminal, and that R-5 allowed only one non-cancelled campaign per kind. As a result an admin could never send the same kind again: not for a second final reminder in production, and not for a re-test on PRTest.
+
+**Decision (user, 2026-10-23):**
+- R-5 is amended: at most one *open* (`PENDING`/`SENDING`) campaign per kind per phase. Sent and cancelled campaigns stay as history.
+- New "Send again" action on `SENT` rows. It creates a new campaign of the same kind, uses the normal schedule/preview/confirm flow, and has its own send log.
+- Exactly-once per campaign is unchanged.
+- The user asked for a fast turnaround.
+
+**Impact:**
+- Server: the duplicate-kind check in the campaign service and its spec.
+- Client: a "Send again" button on SENT rows, its copy and its spec.
+- No migration.
+
+**Interim for the T-15 smoke:** the user set the two PRTest (version 36) SENT campaigns to `CANCELLED` by SQL. `rir_test_recipient_email` is confirmed as the user's own address.
+
+#### T-15 PRTest smoke (agent-run in the browser on prtest.ciat.cgiar.org, deploy 68e10f343) — 2026-10-23
+
+- **Revision 2 is live.** The header reads "128 pending replicated innovation(s), 4 without a reachable recipient". The two old SENT campaigns were cancelled by SQL beforehand.
+- **Q4 campaign:**
+  - Created for 2026-12-31 10:00 local and shown as Pending.
+  - **Preview:**
+    - "Non-production: every email is redirected"; 15 messages, 124 results, 0 CC.
+    - Developer digests: 0, because no TEST developer address matches an active user.
+    - MELIA summaries: 6 messages, 14 results.
+    - Center MEL emails: 9 messages, 110 results.
+    - Unreachable: 4, all with reason "No lead center".
+    - 124 + 4 = 128 ✓.
+  - **Send now:** the confirmation read "15 messages will be sent". Result: "Dispatch finished: 15 sent, 0 skipped, 0 failed", split 0 / 6 / 9 by type. The row is SENT with Sent 15 and Unreachable 4.
+- **Inbox:** the test address received exactly **15** emails, each with subject "TEST - [PRMS Testing] Reminder: innovations pending a 2026 update – Reporting 2026". The "TEST - " prefix is added by the mail service.
+  - Sampled MELIA summary:
+    - the redirect block names the intended recipients (the SP06 pair);
+    - the badge reads "Q4 notice" and the greeting "Dear MELIA focal point(s) of SP06 – Climate Action";
+    - the table has a linked title · type, "SP06 – Climate Action" and "Not provided";
+    - the copy has 2026/2027 substituted.
+  - The S3 header image did not render in Outlook. It is an external SVG and looked the same in revision 1, so it is not a regression.
+- **Cron:** a FINAL_REMINDER was scheduled for 16:17 local and is Pending. The hourly tick at 17:00 local should dispatch it; the result is still to be recorded.
+- **Not covered by the agent:**
+  - The 403 check needs a non-admin account (user step).
+  - The developer digest template needs a TEST result whose developer field holds an active user's address.
+- **Developer digest (2026-10-23):** the user set result 8555 "Innovation Developer" to their own address. The preview of the pending FINAL_REMINDER then showed:
+  - Developer digests: 1 message, To the user's address, CC r.mawia (SP01 MELIA), greeting "Santiago Sanchez" (the PRMS user name, per A5), and result #8555;
+  - MELIA summaries: 6 messages with 13 results, one less than before, because 8555 left the SP01 summary.
+  - **RIR-R-2, R-3 and R-17 are confirmed live.**
+
+### Mini-Pivot R-5 "Send again" — Review 1 PASS (2026-10-23)
+
+- **Implementer:**
+  - Server: the duplicate check blocks only PENDING, SENDING and FAILED. Red 5 → green 175; `--findRelatedTests`: 8 suites, 64 tests.
+  - Client: "Send again" on SENT rows presets the kind and shows the hint. Red 3 → green 45; `--findRelatedTests`: 21 suites, 746 tests.
+  - The client eslint config fails to start, so style was checked by the Reviewer by hand.
+- **Review: PASS.**
+- **Advisories (recorded):**
+  - The R-5 wording is now aligned to include FAILED.
+  - The 409 text says "cancel" although a FAILED campaign cannot be cancelled. Known gap: a FAILED campaign that keeps failing blocks its kind for the phase.
+  - `canSendAgain` should also be disabled while that kind has an open campaign.
+  - The focus call uses `setTimeout`.
+  - The client eslint config needs fixing.

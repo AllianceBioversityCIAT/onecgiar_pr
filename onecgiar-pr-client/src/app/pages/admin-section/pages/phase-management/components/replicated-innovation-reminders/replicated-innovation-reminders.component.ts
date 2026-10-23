@@ -25,6 +25,7 @@ import { ReminderPreviewDrawerComponent } from './reminder-preview-drawer.compon
 export const REMINDER_TZ_OFFSET_MINUTES = new InjectionToken<OffsetAt>('REMINDER_TZ_OFFSET_MINUTES');
 
 const KINDS: ReminderKind[] = ['Q4_NOTICE', 'FINAL_REMINDER'];
+const OPEN_STATUSES: ReminderStatus[] = ['PENDING', 'SENDING', 'FAILED'];
 const MESSAGE_TYPES: ReminderMessageType[] = ['DEVELOPER', 'MELIA_SUMMARY', 'CENTER'];
 
 interface PendingConfirm {
@@ -71,8 +72,13 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
   readonly previewData = signal<ReminderPreview | null>(null);
 
   readonly campaigns = computed(() => this.list()?.campaigns ?? []);
-  /** A CANCELLED campaign does not block a new one of the same kind (server rule). */
-  readonly missingKinds = computed(() => KINDS.filter(k => !this.campaigns().some(c => c.kind === k && c.status !== 'CANCELLED')));
+  /**
+   * Only an open campaign blocks a new one of the same kind (server rule, RIR-R-5): PENDING, SENDING and
+   * FAILED (retryable via Send now). SENT and CANCELLED stay as history rows and do not block.
+   */
+  readonly missingKinds = computed(() => KINDS.filter(k => !this.campaigns().some(c => c.kind === k && OPEN_STATUSES.includes(c.status))));
+  /** Kind the admin chose with "Send again": highlights its create form and shows the helper text. */
+  readonly sendAgainKind = signal<ReminderKind | null>(null);
   readonly subtitle = computed(() => {
     const l = this.list();
     return l ? this.copy.subtitle(l.phase.phase_name, l.pending_total, l.unreachable_total) : '';
@@ -159,6 +165,16 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
     return (c.status === 'PENDING' || c.status === 'FAILED') && !this.busy();
   }
 
+  canSendAgain(c: ReminderCampaignView): boolean {
+    return c.status === 'SENT' && !this.busy();
+  }
+  /** "Send again": no new endpoint, it presets the normal create form (POST campaigns) to the row's kind. */
+  sendAgain(c: ReminderCampaignView): void {
+    if (!this.canSendAgain(c) || !this.missingKinds().includes(c.kind)) return;
+    this.sendAgainKind.set(c.kind);
+    setTimeout(() => (document.querySelector(`[data-testid="rir-draft-${c.kind}"]`) as HTMLElement | null)?.focus());
+  }
+
   // Schedule ----------------------------------------------------------------------------------
   setDraft(kind: ReminderKind, value: string): void {
     this.drafts.update(d => ({ ...d, [kind]: value }));
@@ -172,7 +188,10 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
     const iso = this.validate(this.draftOf(kind), msg => this.draftError.update(e => ({ ...e, [kind]: msg })));
     if (!iso) return;
     this.draftError.update(e => ({ ...e, [kind]: undefined }));
-    this.mutate(this.api.POST_reminderCampaign({ kind, scheduled_at: iso }), () => this.drafts.update(d => ({ ...d, [kind]: '' })));
+    this.mutate(this.api.POST_reminderCampaign({ kind, scheduled_at: iso }), () => {
+      this.drafts.update(d => ({ ...d, [kind]: '' }));
+      if (this.sendAgainKind() === kind) this.sendAgainKind.set(null);
+    });
   }
 
   // Edit date ---------------------------------------------------------------------------------

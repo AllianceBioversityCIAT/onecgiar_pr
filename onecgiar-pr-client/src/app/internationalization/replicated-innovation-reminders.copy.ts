@@ -18,6 +18,7 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
   noValue: '-',
   genericError: 'The request failed. Try again.',
   previewUnavailable: 'The preview could not be loaded. Nothing was sent.',
+  sendAgainHint: 'Creates a new reminder of this kind; people with innovations still in Editing will be emailed again.',
   kinds: {
     Q4_NOTICE: 'Q4 notice',
     FINAL_REMINDER: 'Final reminder'
@@ -45,6 +46,7 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
     editDate: 'Edit date',
     cancel: 'Cancel',
     sendNow: 'Send now',
+    sendAgain: 'Send again',
     save: 'Save date',
     discard: 'Discard',
     schedule: 'Schedule',

@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { env } from 'node:process';
-import { Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { GlobalParameterRepository } from '../global-parameter/repositories/global-parameter.repository';
 import { Version } from '../versioning/entities/version.entity';
@@ -80,17 +80,25 @@ export class ReplicatedInnovationRemindersService {
     const phase = await this.activePhase();
     const scheduledAt = this.parseFuture(dto.scheduled_at);
 
+    // RIR-R-5 (amended 2026-10-23): only an OPEN campaign of the same kind blocks a new one.
+    // SENT and CANCELLED stay as history ("Send again" creates an independent campaign).
+    // FAILED counts as open on purpose: it is retryable via Send now, so a second campaign
+    // of the kind would race it and email the same people twice.
     const duplicate = await this._campaignRepository.findOne({
       where: {
         version_id: phase.id,
         kind: dto.kind,
-        status: Not(ReplicatedReminderStatus.CANCELLED),
+        status: In([
+          ReplicatedReminderStatus.PENDING,
+          ReplicatedReminderStatus.SENDING,
+          ReplicatedReminderStatus.FAILED,
+        ]),
       },
       select: { id: true },
     });
     if (duplicate) {
       throw new ConflictException(
-        `A ${dto.kind} campaign already exists for this phase; cancel it before creating another`,
+        `A ${dto.kind} campaign is already open for this phase; send or cancel it before creating another`,
       );
     }
 

@@ -137,6 +137,19 @@
                     <button hlmBtn size="sm" type="button" [disabled]="!canPreviewOrSend(c)" (click)="requestSend(c)" data-testid="rir-send-btn">
                       {{ c.status === 'SENDING' ? copy.actions.sending : copy.actions.sendNow }}
                     </button>
+                    @if (c.status === 'SENT') {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        [disabled]="!canSendAgain(c)"
+                        [attr.title]="copy.sendAgainHint"
+                        (click)="sendAgain(c)"
+                        data-testid="rir-send-again-btn">
+                        {{ copy.actions.sendAgain }}
+                      </button>
+                    }
                   </div>
                 </td>
               </tr>
@@ -151,6 +164,9 @@
         <h3 class="text-foreground text-sm font-semibold">{{ copy.schedule.heading }}</h3>
         @for (k of missingKinds(); track k) {
           <form class="flex flex-wrap items-end gap-3" (submit)="$event.preventDefault(); schedule(k)" [attr.data-testid]="'rir-schedule-' + k">
+            @if (sendAgainKind() === k) {
+              <p class="text-muted-foreground w-full text-[12px]" [attr.data-testid]="'rir-send-again-hint-' + k">{{ copy.sendAgainHint }}</p>
+            }
             <label class="flex flex-col gap-1 text-sm">
               <span>{{ kindLabel(k) }}: {{ copy.schedule.dateLabel }}</span>
               <input
