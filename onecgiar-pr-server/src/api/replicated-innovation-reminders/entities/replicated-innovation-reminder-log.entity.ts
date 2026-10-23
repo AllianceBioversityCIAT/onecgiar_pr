@@ -13,7 +13,7 @@ import { ReplicatedInnovationReminderCampaign } from './replicated-innovation-re
 /**
  * `RIR-T-1` — one row per digest actually attempted for a campaign (design §3.1, `RIR-DD-2`).
  *
- * The UNIQUE (`campaign_id`, `recipient_email`) is the `RIR-R-8` guard and the reason this table
+ * The UNIQUE (`campaign_id`, `message_key`) is the `RIR-R-8` guard and the reason this table
  * exists: the dispatcher INSERTs the row *before* it emits, and `ER_DUP_ENTRY` means another
  * dispatch (the other PROD server, Send now, a retry) already owns that recipient, so it is
  * skipped. Exactly-once is therefore decided by the database, not by process memory.
@@ -25,7 +25,7 @@ import { ReplicatedInnovationReminderCampaign } from './replicated-innovation-re
  * when a non-production dispatch redirected the mail to the test address.
  */
 @Entity('replicated_innovation_reminder_log')
-@Index('UQ_rir_log_campaign_recipient', ['campaign_id', 'recipient_email'], {
+@Index('UQ_rir_log_campaign_message', ['campaign_id', 'message_key'], {
   unique: true,
 })
 export class ReplicatedInnovationReminderLog {
@@ -50,6 +50,19 @@ export class ReplicatedInnovationReminderLog {
     nullable: false,
   })
   recipient_email: string;
+
+  /**
+   * `RIR-T-10` — exactly-once key per message (`RIR-R-8`): `DEVELOPER:<email>`,
+   * `MELIA_SUMMARY:<initiative_id>` or `CENTER:<center code>`. Replaces the old
+   * (`campaign_id`, `recipient_email`) unique, so one address can get several messages.
+   */
+  @Column({
+    name: 'message_key',
+    type: 'varchar',
+    length: 200,
+    nullable: false,
+  })
+  message_key: string;
 
   /** Comma-separated result ids listed in the digest. */
   @Column({ name: 'result_ids', type: 'text', nullable: false })

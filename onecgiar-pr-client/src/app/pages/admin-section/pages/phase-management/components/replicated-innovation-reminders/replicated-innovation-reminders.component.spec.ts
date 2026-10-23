@@ -28,6 +28,20 @@ const list = (campaigns: ReminderCampaignView[]): { response: ReminderCampaignLi
   response: { phase: { id: 36, phase_name: 'Reporting 2026', phase_year: 2026 }, campaigns, pending_total: 4, unreachable_total: 1 }
 });
 
+const BY_TYPE = {
+  DEVELOPER: { messages: 1, results: 2 },
+  MELIA_SUMMARY: { messages: 1, results: 1 },
+  CENTER: { messages: 1, results: 1 }
+};
+const row = (id: number, extra: Record<string, unknown> = {}) => ({
+  result_id: id,
+  result_code: 10 + id,
+  title: `Title ${id}`,
+  initiative_code: `INIT-0${id}`,
+  initiative_short_name: null,
+  ...extra
+});
+
 describe('ReplicatedInnovationRemindersComponent', () => {
   let fixture: ComponentFixture<ReplicatedInnovationRemindersComponent>;
   let component: ReplicatedInnovationRemindersComponent;
@@ -60,12 +74,22 @@ describe('ReplicatedInnovationRemindersComponent', () => {
       POST_reminderCampaign: jest.fn().mockReturnValue(of({ response: campaign() })),
       PATCH_reminderCampaignDate: jest.fn().mockReturnValue(of({ response: campaign() })),
       PATCH_reminderCampaignCancel: jest.fn().mockReturnValue(of({ response: campaign({ status: 'CANCELLED' }) })),
-      GET_reminderCampaignPreview: jest
+      GET_reminderCampaignPreview: jest.fn().mockReturnValue(
+        of({
+          response: {
+            digests: [{ type: 'DEVELOPER', message_key: 'k1', to: ['a@x.org'], cc: [], greeting: 'Dear dev', results: [] }],
+            totals: { messages: 3, results: 5, cc_addresses: 1, by_type: BY_TYPE },
+            unreachable: []
+          }
+        })
+      ),
+      POST_reminderCampaignSend: jest
         .fn()
         .mockReturnValue(
-          of({ response: { digests: [{ to: 'a@x.org', cc: [], results: [] }], totals: { leads: 3, results: 5, cc_addresses: 1 }, unreachable: [] } })
-        ),
-      POST_reminderCampaignSend: jest.fn().mockReturnValue(of({ response: { status: 'SENT', sent: 3, skipped: 0, failed: 0, unreachable: 0 } }))
+          of({
+            response: { status: 'SENT', sent: 3, skipped: 0, failed: 0, unreachable: 0, sent_by_type: { DEVELOPER: 1, MELIA_SUMMARY: 1, CENTER: 1 } }
+          })
+        )
     };
     await TestBed.configureTestingModule({
       imports: [ReplicatedInnovationRemindersComponent],
@@ -190,16 +214,31 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     }
   });
 
-  it('Send now asks for confirmation that states the preview lead count, and sends only after confirming', async () => {
+  it('Send now asks for confirmation that states the total number of messages, and sends only after confirming', async () => {
     await setup(of(list([campaign()])));
     click('rir-send-btn');
     expect(api['GET_reminderCampaignPreview']).toHaveBeenCalledWith(1);
     expect(api['POST_reminderCampaignSend']).not.toHaveBeenCalled();
-    expect(q('rir-confirm-text')?.textContent).toContain('3 leads will receive an email');
+    expect(q('rir-confirm-text')?.textContent).toContain('3 messages will be sent');
     click('rir-confirm-send');
     expect(api['POST_reminderCampaignSend']).toHaveBeenCalledTimes(1);
     expect(api['POST_reminderCampaignSend']).toHaveBeenCalledWith(1);
     expect(q('rir-outcome')?.textContent).toContain('3 sent');
+    const byType = q('rir-outcome-by-type')?.textContent ?? '';
+    expect(byType).toContain('Developer digests: 1 sent');
+    expect(byType).toContain('MELIA summaries (per Program/Accelerator): 1 sent');
+    expect(byType).toContain('Center MEL emails (bilateral): 1 sent');
+  });
+
+  it('Send now with a malformed preview (no totals) shows an error and opens no confirmation', async () => {
+    await setup(of(list([campaign()])));
+    api['GET_reminderCampaignPreview'].mockReturnValue(of({ response: { digests: [], unreachable: [] } }));
+    click('rir-send-btn');
+    expect(q('rir-confirm-text')).toBeNull();
+    expect(q('rir-confirm-send')).toBeNull();
+    expect(q('rir-action-error')?.textContent).toContain('The preview could not be loaded. Nothing was sent.');
+    expect(api['POST_reminderCampaignSend']).not.toHaveBeenCalled();
+    expect(component.busy()).toBe(false);
   });
 
   it('disables the confirm button while the send is in flight (no double send)', async () => {
@@ -242,20 +281,49 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     }
   });
 
-  it('Preview opens the sheet and shows digests, unreachable table and the redirect banner', async () => {
+  it('Preview opens the sheet with three type groups, counts, To/CC/greeting and the redirect banner', async () => {
     await setup(of(list([campaign()])));
     api['GET_reminderCampaignPreview'].mockReturnValue(
       of({
         response: {
           digests: [
             {
-              to: 'lead@example.org',
+              type: 'DEVELOPER',
+              message_key: 'd1',
+              to: ['dev1@example.org', 'dev2@example.org'],
               cc: ['cc@example.org'],
-              results: [{ result_id: 1, result_code: 10, title: 'Maize', initiative_code: 'INIT-01' }]
+              greeting: 'Dear developers',
+              results: [row(1, { developerText: null }), row(4, { developerText: null })]
+            },
+            {
+              type: 'MELIA_SUMMARY',
+              message_key: 'm1',
+              to: ['melia@example.org'],
+              cc: [],
+              greeting: 'Dear MELIA',
+              sp_code: 'SP01',
+              sp_name: 'Program One',
+              results: [row(2, { developerText: 'Jane Doe (partner)' })]
+            },
+            {
+              type: 'CENTER',
+              message_key: 'c1',
+              to: ['mel@example.org'],
+              cc: [],
+              greeting: 'Dear center',
+              center_code: 'CENTER-1',
+              center_name: 'Center One',
+              results: [row(3, { developerText: 'Free text center' })]
             }
           ],
-          totals: { leads: 1, results: 1, cc_addresses: 1 },
-          unreachable: [{ result_id: 2, result_code: 11, title: 'Beans', initiative_code: 'INIT-02' }],
+          totals: {
+            messages: 3,
+            results: 4,
+            cc_addresses: 1,
+            // DEVELOPER results (7) deliberately differ from the digest-derived count so ignoring totals.by_type fails.
+            by_type: { DEVELOPER: { messages: 1, results: 7 }, MELIA_SUMMARY: { messages: 1, results: 1 }, CENTER: { messages: 1, results: 1 } }
+          },
+          unreachable: [],
           redirected_to: 'test@example.org'
         }
       })
@@ -263,8 +331,19 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     click('rir-preview-btn');
     expect(api['GET_reminderCampaignPreview']).toHaveBeenCalledWith(1);
     expect(q('rir-redirect-banner')).not.toBeNull();
-    expect(q('rir-digest')?.textContent).toContain('Maize');
-    expect(q('rir-unreachable-table')?.textContent).toContain('Beans');
+    expect(q('rir-preview-totals')?.textContent).toContain('3 message(s), 4 result(s), 1 CC address(es)');
+    const dev = q('rir-group-DEVELOPER')?.textContent ?? '';
+    expect(dev).toContain('Developer digests');
+    expect(dev).toContain('1 message(s), 7 result(s)');
+    expect(dev).toContain('dev1@example.org, dev2@example.org');
+    expect(dev).toContain('1 CC');
+    expect(dev).toContain('Dear developers');
+    const melia = q('rir-group-MELIA_SUMMARY')?.textContent ?? '';
+    expect(melia).toContain('MELIA summaries (per Program/Accelerator)');
+    expect(melia).toContain('Developer (free text): Jane Doe (partner)');
+    const center = q('rir-group-CENTER')?.textContent ?? '';
+    expect(center).toContain('Center MEL emails (bilateral)');
+    expect(center).not.toContain('Developer (free text)');
   });
 
   it('Preview shows no redirect banner in production responses', async () => {
@@ -301,23 +380,39 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     expect(cells[1].textContent?.trim()).toBe('-');
   });
 
-  it('shows the free-text contact of each unreachable row, or a dash', async () => {
+  it('unreachable table shows reason copy, SP or center, and the developer free text', async () => {
     await setup(of(list([campaign()])));
     api['GET_reminderCampaignPreview'].mockReturnValue(
       of({
         response: {
           digests: [],
-          totals: { leads: 0, results: 0, cc_addresses: 0 },
+          totals: {
+            messages: 0,
+            results: 0,
+            cc_addresses: 0,
+            by_type: { DEVELOPER: { messages: 0, results: 0 }, MELIA_SUMMARY: { messages: 0, results: 0 }, CENTER: { messages: 0, results: 0 } }
+          },
           unreachable: [
-            { result_id: 2, result_code: 11, title: 'Beans', initiative_code: 'INIT-02', lead_contact_person: 'Jane Doe (jane at example)' },
-            { result_id: 3, result_code: 12, title: 'Rice', initiative_code: 'INIT-03', lead_contact_person: null }
+            row(2, {
+              reason: 'NO_MELIA',
+              developer_text: 'Jane Doe (jane at example)',
+              lead_center_code: null,
+              lead_center_name: null,
+              initiative_short_name: 'Program One'
+            }),
+            row(3, { reason: 'NO_CENTER', developer_text: null, lead_center_code: null, lead_center_name: null }),
+            row(4, { reason: 'NO_CENTER_MEL', developer_text: null, lead_center_code: 'CENTER-9', lead_center_name: 'Center Nine' })
           ]
         }
       })
     );
     click('rir-preview-btn');
-    const cells = root().querySelectorAll('[data-testid="rir-unreachable-contact"]');
-    expect(cells[0].textContent).toContain('Jane Doe (jane at example)');
-    expect(cells[1].textContent?.trim()).toBe('-');
+    const reasons = Array.from(root().querySelectorAll('[data-testid="rir-unreachable-reason"]')).map(e => e.textContent?.trim());
+    expect(reasons).toEqual(['No MELIA focal point for the Program/Accelerator', 'No lead center', 'No Center MEL focal point for the center']);
+    const scopes = Array.from(root().querySelectorAll('[data-testid="rir-unreachable-scope"]')).map(e => e.textContent?.trim());
+    expect(scopes).toEqual(['INIT-02 - Program One', '-', 'Center Nine']);
+    const dev = root().querySelectorAll('[data-testid="rir-unreachable-developer"]');
+    expect(dev[0].textContent).toContain('Jane Doe (jane at example)');
+    expect(dev[1].textContent?.trim()).toBe('-');
   });
 });

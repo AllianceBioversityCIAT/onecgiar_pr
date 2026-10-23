@@ -1,12 +1,25 @@
 // @akili-spec changes/replicated-innovation-reminders
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as handlebars from 'handlebars';
 import { env } from 'node:process';
 import { GlobalParameterRepository } from '../global-parameter/repositories/global-parameter.repository';
 import { TemplateRepository } from '../platform-report/repositories/template.repository';
 import { EmailNotificationManagementService } from '../../shared/microservices/email-notification-management/email-notification-management.service';
 import { EmailTemplate } from '../../shared/microservices/email-notification-management/enum/email-notification.enum';
-import { buildDigests, Digest, PendingRow } from './digest-builder';
+import {
+  build,
+  BuildResult,
+  MailRecipient,
+  PendingInnovationRowV2,
+  ReminderMessage,
+  ReminderMessageType,
+  UnreachableItem,
+} from './digest-builder';
+import { parseDevelopers } from './developer-parser';
 import {
   ReplicatedInnovationReminderCampaign,
   ReplicatedReminderKind,
@@ -41,8 +54,12 @@ export interface DispatchOutcome {
   failed: number;
   unreachable: number;
   last_error: string | null;
-  digests?: Digest[];
-  unreachableRows?: PendingRow[];
+  /** Sent counts of this run, per message type (the campaign table only persists totals). */
+  sentByType: Record<ReminderMessageType, number>;
+  /** Dry run only: the messages that would be sent (same build path as a real dispatch). */
+  messages?: ReminderMessage[];
+  /** Dry run only. */
+  unreachableRows?: UnreachableItem[];
   /** Non-production only: the single address every send is redirected to. */
   redirectedTo?: string;
 }
@@ -61,15 +78,39 @@ const TEMPLATE_BY_KIND: Record<ReplicatedReminderKind, EmailTemplate> = {
   [ReplicatedReminderKind.FINAL_REMINDER]:
     EmailTemplate.REPLICATED_INNOVATION_FINAL_REMINDER,
 };
+/** Lookup-only template rows of the MELIA summary and the center email (created by the T-10 migration). */
+const MELIA_SUMMARY_TEMPLATE =
+  'email_template_replicated_innovation_melia_summary';
+const CENTER_TEMPLATE = 'email_template_replicated_innovation_center';
+const KIND_LABEL: Record<ReplicatedReminderKind, string> = {
+  [ReplicatedReminderKind.Q4_NOTICE]: 'Q4 notice',
+  [ReplicatedReminderKind.FINAL_REMINDER]: 'Final reminder',
+};
+const INNOVATION_DEVELOPMENT = 7;
+const BILATERAL_SOURCE = 'API';
+
+/** Pending rows plus everything `build` produced from them (design §15.2). */
+export interface DispatchPlan extends BuildResult {
+  rows: PendingInnovationRowV2[];
+}
+
+type Counts = {
+  sent: number;
+  skipped: number;
+  failed: number;
+  unreachable: number;
+  sentByType: Record<ReminderMessageType, number>;
+};
 
 /**
  * `RIR-T-4` — the single code path behind the hourly cron and "Send now" (`RIR-R-7`, design §2.2,
  * `RIR-DD-1`/`DD-2`).
  *
  * Exactly-once is decided in MySQL: a status-guarded claim, then a UNIQUE send-log row INSERTed
- * BEFORE each emit (`ER_DUP_ENTRY` = someone else owns that recipient, so skip). Delivery is
- * therefore at-most-once per recipient: an emit that throws after its log row counts as `failed`
- * and is not retried automatically.
+ * BEFORE each emit, keyed per message (`message_key`: DEVELOPER:<email> | MELIA_SUMMARY:<sp id> |
+ * CENTER:<center code>; `ER_DUP_ENTRY` = someone else owns that message, so skip). Delivery is
+ * therefore at-most-once per message: an emit that throws after its log row counts as `failed`
+ * and is not retried automatically. An address may receive more than one message type.
  *
  * Logs carry campaign ids and counts only. Errors are reduced to their class name / code before
  * being logged or stored, because a driver or SMTP message may contain an address (AC-9).
@@ -114,6 +155,72 @@ export class ReminderDispatcher {
       }
     }
     return outcomes;
+  }
+
+  /**
+   * Revision 2 build path (design §15.2), shared by dispatch, the dry-run preview and the GET
+   * counts: pending rows -> developer emails -> active PRMS users, SP MELIA and center MEL maps ->
+   * `build`. Read-only.
+   */
+  async plan(versionId: number): Promise<DispatchPlan> {
+    const rows = await this._pendingRepository.findPending(versionId);
+
+    // RIR-R-16/17: only type-7 W1/W2 rows have a developer field to parse (W3 never routes to developers).
+    const developerEmails = new Set<string>();
+    for (const row of rows) {
+      if (
+        row.source === BILATERAL_SOURCE ||
+        row.result_type_id !== INNOVATION_DEVELOPMENT
+      ) {
+        continue;
+      }
+      for (const dev of parseDevelopers(row.developer_text)) {
+        if (dev.email) developerEmails.add(dev.email);
+      }
+    }
+    const activeRows = await this._pendingRepository.findActiveUserEmails([
+      ...developerEmails,
+    ]);
+    const activeUsers = new Map<string, { name: string }>(
+      activeRows.map((u) => [u.email.toLowerCase(), { name: u.name }]),
+    );
+
+    const initiativeIds = [
+      ...new Set(
+        rows
+          .filter((r) => r.source !== BILATERAL_SOURCE)
+          .map((r) => r.initiative_id),
+      ),
+    ];
+    const meliaByInitiative = new Map<number, MailRecipient[]>();
+    for (const m of await this._pendingRepository.findMeliaByInitiatives(
+      initiativeIds,
+    )) {
+      const list = meliaByInitiative.get(m.initiative_id);
+      const entry = { name: m.name, email: m.email };
+      if (list) list.push(entry);
+      else meliaByInitiative.set(m.initiative_id, [entry]);
+    }
+
+    const centerCodes = [
+      ...new Set(
+        rows
+          .filter((r) => r.source === BILATERAL_SOURCE && r.lead_center_code)
+          .map((r) => r.lead_center_code as string),
+      ),
+    ];
+    const centerMelByCenter = new Map<string, MailRecipient[]>();
+    for (const m of await this._pendingRepository.findCenterMel(centerCodes)) {
+      const list = centerMelByCenter.get(m.center_code);
+      const entry = { name: m.name, email: m.email };
+      if (list) list.push(entry);
+      else centerMelByCenter.set(m.center_code, [entry]);
+    }
+
+    return {
+      rows,
+      ...build({ rows, activeUsers, meliaByInitiative, centerMelByCenter }),
+    };
   }
 
   async dispatch(
@@ -181,46 +288,44 @@ export class ReminderDispatcher {
         );
       }
 
-      const rows = await this._pendingRepository.findPending(
-        campaign.version_id,
-      );
-      const initiativeIds = [...new Set(rows.map((r) => r.initiative_id))];
-      const cc =
-        await this._pendingRepository.findCcByInitiatives(initiativeIds);
-      const { digests, unreachable } = buildDigests(rows, cc);
+      const { messages, unreachable } = await this.plan(campaign.version_id);
       counts.unreachable = unreachable.length;
 
       if (dryRun) {
         this._logger.log(
-          `dispatch dry-run campaign=${campaignId} digests=${digests.length} unreachable=${unreachable.length}`,
+          `dispatch dry-run campaign=${campaignId} messages=${messages.length} unreachable=${unreachable.length}`,
         );
         return {
           ...this.outcome('DRY_RUN', null),
           unreachable: unreachable.length,
-          digests,
+          messages,
           unreachableRows: unreachable,
           ...(isProd ? {} : { redirectedTo: testEmail || undefined }),
         };
       }
 
-      const templateName = TEMPLATE_BY_KIND[campaign.kind];
-      const templateRow = templateName
-        ? await this._templateRepository.findOne({
-            where: { name: templateName },
-          })
-        : null;
-      if (!templateRow?.template) {
-        lastError = `email template ${templateName ?? campaign.kind} not found`;
-        return await this.end(
-          campaign,
-          claimedAt,
-          counts,
-          lastError,
-          startedAt,
-        );
+      // Every template this run needs is fetched and compiled ONCE, before the first send, so a
+      // missing row fails the whole run cleanly instead of half-sending.
+      const compiled = new Map<string, handlebars.TemplateDelegate>();
+      for (const name of new Set(
+        messages.map((m) => this.templateNameFor(m.type, campaign.kind)),
+      )) {
+        const row = await this._templateRepository.findOne({
+          where: { name },
+        });
+        if (!row?.template) {
+          lastError = `email template ${name} not found`;
+          return await this.end(
+            campaign,
+            claimedAt,
+            counts,
+            lastError,
+            startedAt,
+          );
+        }
+        compiled.set(name, handlebars.compile(row.template));
       }
-      const compiled = handlebars.compile(templateRow.template);
-      const subject = this.buildSubject(campaign);
+      const subject = this.buildSubject(campaign, isProd);
 
       const batchSize = await this.readPositiveInt(
         'rir_batch_size',
@@ -231,13 +336,13 @@ export class ReminderDispatcher {
         DEFAULTS.pauseMs,
       );
 
-      for (let i = 0; i < digests.length; i += batchSize) {
+      for (let i = 0; i < messages.length; i += batchSize) {
         if (i > 0) await this.sleep(pauseMs);
-        for (const digest of digests.slice(i, i + batchSize)) {
-          await this.sendDigest(
+        for (const message of messages.slice(i, i + batchSize)) {
+          await this.sendMessage(
             campaign,
-            digest,
-            compiled,
+            message,
+            compiled.get(this.templateNameFor(message.type, campaign.kind)),
             subject,
             isProd ? null : testEmail,
             counts,
@@ -245,31 +350,41 @@ export class ReminderDispatcher {
         }
       }
     } catch (error) {
-      lastError = `dispatch error: ${this.safeReason(error)}`;
       this._logger.error(
         `dispatch campaign=${campaignId} aborted: ${this.safeReason(error)}`,
       );
+      // RIR-R-9: a dry run never claims, logs or finalizes. Surface the failure (global handler -> 5xx)
+      // instead of returning an empty preview.
+      if (dryRun) {
+        // Not the raw error: a driver error may carry bound addresses (AC-9).
+        throw new InternalServerErrorException(
+          `preview failed: ${this.safeReason(error)}`,
+        );
+      }
+      lastError = `dispatch error: ${this.safeReason(error)}`;
     }
 
     return this.end(campaign, claimedAt, counts, lastError, startedAt);
   }
 
-  /** One digest: log INSERT first, then emit. Never throws; failures are counted. */
-  private async sendDigest(
+  /** One message: log INSERT first, then emit. Never throws; failures are counted. */
+  private async sendMessage(
     campaign: ReplicatedInnovationReminderCampaign,
-    digest: Digest,
+    message: ReminderMessage,
     compiled: handlebars.TemplateDelegate,
     subject: string,
     redirectTo: string | null,
-    counts: ReturnType<ReminderDispatcher['counts']>,
+    counts: Counts,
   ): Promise<void> {
     try {
       try {
         await this._campaignRepository.insertLog({
           campaign_id: Number(campaign.id),
-          recipient_email: digest.to,
-          result_ids: digest.results.map((r) => r.result_id).join(','),
-          cc_count: digest.cc.length,
+          message_key: message.messageKey,
+          // The INTENDED first To address (audit), never the non-prod redirect address.
+          recipient_email: (message.to[0] ?? '').trim().toLowerCase(),
+          result_ids: message.results.map((r) => r.result_id).join(','),
+          cc_count: message.cc.length,
           redirected: redirectTo !== null,
         });
       } catch (error) {
@@ -280,22 +395,29 @@ export class ReminderDispatcher {
         throw error;
       }
 
+      const phaseYear = Number(campaign.obj_version?.phase_year);
       const body = compiled({
-        leadName: digest.lead_name?.trim() || 'colleague',
-        phaseName: campaign.obj_version?.phase_name ?? '',
-        resultCount: digest.results.length,
-        results: digest.results.map((r) => ({
+        kindLabel: KIND_LABEL[campaign.kind],
+        leadName: message.greetingName,
+        phaseYear,
+        nextYear: phaseYear + 1,
+        resultCount: message.results.length,
+        spCode: message.spCode,
+        spName: message.spName ?? '',
+        centerName: message.centerName || message.centerCode,
+        results: message.results.map((r) => ({
           resultCode: r.result_code,
           resultTitle: r.title,
           resultTypeName: RESULT_TYPE_NAMES[r.result_type_id] ?? '',
           spCode: r.initiative_code,
           spName: r.initiative_short_name ?? '',
           resultUrl: `${env.RESULTS_URL}${r.result_code}/general-information?phase=${r.version_id}`,
+          developerText: r.developerText ?? '',
         })),
         ...(redirectTo !== null
           ? {
-              intendedTo: digest.to,
-              intendedCc: digest.cc.length ? digest.cc.join(', ') : undefined,
+              intendedTo: message.to.join(', '),
+              intendedCc: message.cc.length ? message.cc.join(', ') : undefined,
             }
           : {}),
       });
@@ -304,34 +426,45 @@ export class ReminderDispatcher {
         from: { email: env.EMAIL_SENDER, name: 'PRMS Reporting Tool -' },
         emailBody: {
           subject,
-          to: [redirectTo ?? digest.to],
-          cc: redirectTo !== null ? [] : digest.cc,
+          // One email to every To address of the message (the DTO takes a list).
+          to: redirectTo !== null ? [redirectTo] : message.to,
+          cc: redirectTo !== null ? [] : message.cc,
           bcc: '',
           message: {
-            text: `${digest.results.length} replicated innovation(s) are pending update.`,
+            text: `${message.results.length} replicated innovation(s) are pending update.`,
             socketFile: body,
           },
         },
       });
       counts.sent += 1;
+      counts.sentByType[message.type] += 1;
     } catch (error) {
       counts.failed += 1;
       this._logger.error(
-        `digest failed campaign=${campaign.id}: ${this.safeReason(error)}`,
+        `message failed campaign=${campaign.id} type=${message.type}: ${this.safeReason(error)}`,
       );
     }
+  }
+
+  private templateNameFor(
+    type: ReminderMessageType,
+    kind: ReplicatedReminderKind,
+  ): string {
+    if (type === 'MELIA_SUMMARY') return MELIA_SUMMARY_TEMPLATE;
+    if (type === 'CENTER') return CENTER_TEMPLATE;
+    return TEMPLATE_BY_KIND[kind];
   }
 
   private async end(
     campaign: ReplicatedInnovationReminderCampaign,
     claimedAt: Date,
-    counts: ReturnType<ReminderDispatcher['counts']>,
+    counts: Counts,
     lastError: string | null,
     startedAt: number,
   ): Promise<DispatchOutcome> {
     const failedRun = counts.failed > 0 || lastError !== null;
     if (lastError === null && counts.failed > 0) {
-      lastError = `${counts.failed} digest(s) failed to send`;
+      lastError = `${counts.failed} message(s) failed to send`;
     }
     const status = failedRun
       ? ReplicatedReminderStatus.FAILED
@@ -353,6 +486,7 @@ export class ReminderDispatcher {
         skipped: counts.skipped,
         failed: counts.failed,
         unreachable: counts.unreachable,
+        sentByType: counts.sentByType,
         last_error: lastError,
       };
     }
@@ -365,6 +499,7 @@ export class ReminderDispatcher {
       skipped: counts.skipped,
       failed: counts.failed,
       unreachable: counts.unreachable,
+      sentByType: counts.sentByType,
       last_error: lastError,
     };
   }
@@ -372,7 +507,7 @@ export class ReminderDispatcher {
   private async finalize(
     id: number,
     claimedAt: Date,
-    counts: ReturnType<ReminderDispatcher['counts']>,
+    counts: Counts,
     lastError: string | null,
     status:
       | ReplicatedReminderStatus.SENT
@@ -389,17 +524,34 @@ export class ReminderDispatcher {
     });
   }
 
-  private buildSubject(campaign: ReplicatedInnovationReminderCampaign): string {
+  private buildSubject(
+    campaign: ReplicatedInnovationReminderCampaign,
+    isProd: boolean,
+  ): string {
     const phase = campaign.obj_version?.phase_name ?? '';
-    const kind =
+    const year = campaign.obj_version?.phase_year ?? '';
+    // RIR-R-11 / RIR-OQ-6; the en dash is part of Nicoleta's copy.
+    const lead =
       campaign.kind === ReplicatedReminderKind.FINAL_REMINDER
-        ? 'Final reminder'
-        : 'Reminder';
-    return `${this._emailService.addLabel()} ${kind}: replicated innovations pending update - ${phase}`;
+        ? 'Final reminder:'
+        : 'Reminder:';
+    // Own isProd (not addLabel()): an unset IS_PRODUCTION must still say Testing, as RIR-R-12 treats it as non-prod.
+    const label = isProd ? '[PRMS]' : '[PRMS Testing]';
+    return `${label} ${lead} innovations pending a ${year} update \u2013 ${phase}`;
   }
 
-  private counts() {
-    return { sent: 0, skipped: 0, failed: 0, unreachable: 0 };
+  private counts(): Counts {
+    return {
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+      unreachable: 0,
+      sentByType: this.zeroByType(),
+    };
+  }
+
+  private zeroByType(): Record<ReminderMessageType, number> {
+    return { DEVELOPER: 0, MELIA_SUMMARY: 0, CENTER: 0 };
   }
 
   private outcome(
@@ -413,6 +565,7 @@ export class ReminderDispatcher {
       skipped: 0,
       failed: 0,
       unreachable: 0,
+      sentByType: this.zeroByType(),
       last_error: null,
     };
   }

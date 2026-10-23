@@ -12,6 +12,7 @@ import {
   ReminderCampaignList,
   ReminderCampaignView,
   ReminderKind,
+  ReminderMessageType,
   ReminderPreview,
   ReminderSendOutcome,
   ReminderStatus
@@ -24,10 +25,11 @@ import { ReminderPreviewDrawerComponent } from './reminder-preview-drawer.compon
 export const REMINDER_TZ_OFFSET_MINUTES = new InjectionToken<OffsetAt>('REMINDER_TZ_OFFSET_MINUTES');
 
 const KINDS: ReminderKind[] = ['Q4_NOTICE', 'FINAL_REMINDER'];
+const MESSAGE_TYPES: ReminderMessageType[] = ['DEVELOPER', 'MELIA_SUMMARY', 'CENTER'];
 
 interface PendingConfirm {
   campaign: ReminderCampaignView;
-  leads: number;
+  messages: number;
 }
 
 /**
@@ -52,6 +54,7 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
   readonly loadError = signal<string | null>(null);
   readonly actionError = signal<string | null>(null);
   readonly outcomeMessage = signal<string | null>(null);
+  readonly outcomeByType = signal<string[]>([]);
   readonly list = signal<ReminderCampaignList | null>(null);
   /** True while any mutation (or the pre-send preview) is in flight. */
   readonly busy = signal(false);
@@ -230,6 +233,7 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
     if (!this.canPreviewOrSend(c)) return;
     this.actionError.set(null);
     this.outcomeMessage.set(null);
+    this.outcomeByType.set([]);
     this.busy.set(true);
     this.api
       .GET_reminderCampaignPreview(c.id)
@@ -237,7 +241,12 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
       .subscribe({
         next: res => {
           this.busy.set(false);
-          this.confirm.set({ campaign: c, leads: res?.response?.totals?.leads ?? 0 });
+          const messages = res?.response?.totals?.messages;
+          if (typeof messages !== 'number' || !Number.isFinite(messages) || messages < 0) {
+            this.actionError.set(this.copy.previewUnavailable);
+            return;
+          }
+          this.confirm.set({ campaign: c, messages });
         },
         error: err => {
           this.busy.set(false);
@@ -262,7 +271,10 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
           const o = res?.response as ReminderSendOutcome | undefined;
           this.confirm.set(null);
           this.busy.set(false);
-          if (o) this.outcomeMessage.set(this.copy.outcome(o.sent, o.skipped, o.failed));
+          if (o) {
+            this.outcomeMessage.set(this.copy.outcome(o.sent, o.skipped, o.failed));
+            this.outcomeByType.set(MESSAGE_TYPES.map(t => this.copy.outcomeByType(t, o.sent_by_type?.[t] ?? 0)));
+          }
           this.reload();
         },
         error: err => {

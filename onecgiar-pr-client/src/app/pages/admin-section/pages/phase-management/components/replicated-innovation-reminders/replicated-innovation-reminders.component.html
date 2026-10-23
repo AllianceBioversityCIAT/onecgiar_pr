@@ -16,6 +16,13 @@
   }
   @if (outcomeMessage(); as o) {
     <p role="status" class="border-border bg-muted text-foreground rounded-md border p-3 text-sm" data-testid="rir-outcome">{{ o }}</p>
+    @if (outcomeByType().length) {
+      <ul class="border-border bg-muted text-foreground list-disc rounded-md border p-3 ps-8 text-sm" data-testid="rir-outcome-by-type">
+        @for (line of outcomeByType(); track line) {
+          <li>{{ line }}</li>
+        }
+      </ul>
+    }
   }
 
   @if (loading()) {
@@ -171,7 +178,7 @@
       @if (confirm(); as cf) {
         <hlm-dialog-header>
           <h2 hlmDialogTitle>{{ copy.confirm.title }}</h2>
-          <p hlmDialogDescription data-testid="rir-confirm-text">{{ copy.confirm.description(cf.leads) }}</p>
+          <p hlmDialogDescription data-testid="rir-confirm-text">{{ copy.confirm.description(cf.messages) }}</p>
         </hlm-dialog-header>
         <hlm-dialog-footer>
           <button hlmBtn variant="outline" type="button" [disabled]="busy()" (click)="dismissConfirm()">{{ copy.confirm.cancel }}</button>

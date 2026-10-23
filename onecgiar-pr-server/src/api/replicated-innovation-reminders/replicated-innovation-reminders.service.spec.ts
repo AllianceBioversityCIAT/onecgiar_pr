@@ -44,6 +44,7 @@ const outcome = (over: Partial<DispatchOutcome> = {}): DispatchOutcome => ({
   skipped: 0,
   failed: 0,
   unreachable: 1,
+  sentByType: { DEVELOPER: 1, MELIA_SUMMARY: 1, CENTER: 0 },
   last_error: null,
   ...over,
 });
@@ -57,13 +58,14 @@ function setup(opts: { isProd?: boolean; testEmail?: string } = {}) {
     save: jest.fn((v) => Promise.resolve(campaign(v))),
     update: jest.fn().mockResolvedValue({ affected: 1 }),
   };
-  const pendingRepo: any = {
-    findPending: jest.fn().mockResolvedValue([
-      { result_id: 1, lead_email: 'a@example.org', initiative_id: 1 },
-      { result_id: 2, lead_email: null, initiative_id: 1 },
-    ]),
+  const dispatcher: any = {
+    dispatch: jest.fn().mockResolvedValue(outcome()),
+    plan: jest.fn().mockResolvedValue({
+      rows: [{ result_id: 1 }, { result_id: 2 }],
+      messages: [{}],
+      unreachable: [{ result_id: 2 }],
+    }),
   };
-  const dispatcher: any = { dispatch: jest.fn().mockResolvedValue(outcome()) };
   const globalParams: any = {
     findOne: jest
       .fn()
@@ -78,7 +80,6 @@ function setup(opts: { isProd?: boolean; testEmail?: string } = {}) {
   };
   const service = new ReplicatedInnovationRemindersService(
     campaignRepo,
-    pendingRepo,
     dispatcher,
     globalParams,
     versionRepo,
@@ -86,7 +87,6 @@ function setup(opts: { isProd?: boolean; testEmail?: string } = {}) {
   return {
     service,
     campaignRepo,
-    pendingRepo,
     dispatcher,
     globalParams,
     versionRepo,
@@ -189,6 +189,12 @@ describe('ReplicatedInnovationRemindersService', () => {
   });
 
   describe('edit date / cancel: only PENDING (SENT is frozen)', () => {
+    it('propagates a failed dry run instead of returning an empty preview', async () => {
+      const { service, dispatcher } = setup();
+      dispatcher.dispatch.mockRejectedValue(new Error('db down'));
+      await expect(service.preview(3)).rejects.toThrow('db down');
+    });
+
     it.each([
       ReplicatedReminderStatus.SENT,
       ReplicatedReminderStatus.SENDING,
@@ -263,37 +269,100 @@ describe('ReplicatedInnovationRemindersService', () => {
       expect(view.pending_total).toBe(2);
       expect(view.unreachable_total).toBe(1);
     });
+
+    it('takes the counts from the dispatcher build path for the active phase', async () => {
+      const { service, dispatcher } = setup();
+      await service.list();
+      expect(dispatcher.plan).toHaveBeenCalledWith(PHASE_ID);
+      expect(dispatcher.dispatch).not.toHaveBeenCalled();
+    });
   });
 
   describe('preview (RIR-R-9)', () => {
-    it('dispatches a dry run and maps digests to totals', async () => {
+    it('dispatches a dry run and maps messages to digests[] (type, to[], cc, greeting) and per-type totals', async () => {
       const { service, dispatcher } = setup();
       dispatcher.dispatch.mockResolvedValue(
         outcome({
           result: 'DRY_RUN',
           status: null,
-          digests: [
+          messages: [
             {
-              to: 'a@example.org',
-              lead_name: 'A',
+              type: 'DEVELOPER',
+              messageKey: 'DEVELOPER:a@example.org',
+              to: ['a@example.org'],
               cc: ['c@example.org'],
+              greetingName: 'A',
               results: [{}, {}] as any,
             },
             {
-              to: 'b@example.org',
-              lead_name: 'B',
-              cc: ['c@example.org'],
+              type: 'MELIA_SUMMARY',
+              messageKey: 'MELIA_SUMMARY:1',
+              to: ['m1@example.org', 'm2@example.org'],
+              cc: [],
+              greetingName: 'SP01 Short',
               results: [{}] as any,
+              spCode: 'SP01',
+              spName: 'Short',
+            },
+            {
+              type: 'CENTER',
+              messageKey: 'CENTER:CTR-1',
+              to: ['c1@example.org'],
+              cc: [],
+              greetingName: 'Center One',
+              results: [{}] as any,
+              centerCode: 'CTR-1',
+              centerName: 'Center One',
             },
           ],
-          unreachableRows: [{} as any],
+          unreachableRows: [
+            {
+              reason: 'NO_CENTER_MEL',
+              developer_text: null,
+              lead_center_code: 'CTR-2',
+              lead_center_name: 'Two',
+            } as any,
+          ],
           redirectedTo: 'tester@example.org',
         }),
       );
       const view = await service.preview(3);
       expect(dispatcher.dispatch).toHaveBeenCalledWith(3, { dryRun: true });
-      expect(view.totals).toEqual({ leads: 2, results: 3, cc_addresses: 1 });
+      expect(view.digests.map((x) => x.type)).toEqual([
+        'DEVELOPER',
+        'MELIA_SUMMARY',
+        'CENTER',
+      ]);
+      expect(view.digests[0]).toMatchObject({
+        to: ['a@example.org'],
+        cc: ['c@example.org'],
+        greeting: 'A',
+        message_key: 'DEVELOPER:a@example.org',
+      });
+      expect(view.digests[1].to).toEqual(['m1@example.org', 'm2@example.org']);
+      expect(view.digests[1]).toMatchObject({
+        sp_code: 'SP01',
+        sp_name: 'Short',
+      });
+      expect(view.digests[2]).toMatchObject({
+        center_code: 'CTR-1',
+        center_name: 'Center One',
+      });
+      expect(view.totals).toEqual({
+        messages: 3,
+        results: 4,
+        cc_addresses: 1,
+        by_type: {
+          DEVELOPER: { messages: 1, results: 2 },
+          MELIA_SUMMARY: { messages: 1, results: 1 },
+          CENTER: { messages: 1, results: 1 },
+        },
+      });
       expect(view.unreachable).toHaveLength(1);
+      expect(view.unreachable[0]).toMatchObject({
+        reason: 'NO_CENTER_MEL',
+        lead_center_code: 'CTR-2',
+      });
       expect(view.redirected_to).toBe('tester@example.org');
     });
 
@@ -344,6 +413,7 @@ describe('ReplicatedInnovationRemindersService', () => {
         skipped: 0,
         failed: 0,
         unreachable: 1,
+        sent_by_type: { DEVELOPER: 1, MELIA_SUMMARY: 1, CENTER: 0 },
       });
     });
 
