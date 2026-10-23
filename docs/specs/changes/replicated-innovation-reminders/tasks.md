@@ -8,8 +8,8 @@
 | Linked | [`requirements.md`](./requirements.md) · [`design.md`](./design.md) · [`proposal.md`](./proposal.md) |
 | Depth | Full |
 | Ticket | INC-165323 |
-| Status | in-progress |
-| Budget (from design §14) | 8 tasks · ~1,350 LOC · ≤ 2 review rounds per task |
+| Status | in-progress · revision 2 approved 2026-10-23 |
+| Budget (from design §14 + §15.6) | 15 tasks · ~2,450 LOC · ≤ 2 review rounds per task |
 | Date | 2026-10-19 |
 
 ## 1. Pre-flight checklist
@@ -259,6 +259,8 @@
 
 ### RIR-T-8: PRTest smoke + copy review (HITL)
 
+> **Superseded by RIR-T-15 (Pivot 2026-10-23).** The 2026-10-20 PRTest run remains valid evidence for the unchanged mechanics: 403, redirect, cron and exactly-once. Its copy and recipients are obsolete.
+
 - **Type:** rollout
 - **Description:** the user runs these, as they need PRTest and real accounts:
   1. Set `rir_test_recipient_email` on PRTest.
@@ -293,6 +295,146 @@
   - [ ] Evidence for each of the 7 steps recorded in `execution.md`.
   - [ ] Nicoleta's approval of the copy recorded.
 
+### Revision 2 tasks (Pivot 2026-10-23, approved)
+
+Skills: `nestjs-expert` + `tdd` for the server tasks; `angular-developer` + `spartan` for T-14.
+
+Jest rules for every task:
+- run with `--maxWorkers=2` and a scoped `--testPathPattern`;
+- one run at a time;
+- run `--findRelatedTests` on the changed files before any push.
+
+### RIR-T-9: Developer field parser (pure)
+
+- **Type:** server logic (TDD)
+- **Description:** `parseDevelopers(text): { name: string; email: string | null }[]`, in `replicated-innovation-reminders/developer-parser.ts`.
+- **Implements:** RIR-R-16, RIR-DD-7.
+- **Files:** `developer-parser.ts` + `.spec.ts`.
+- **Depends on:** — · **Blocks:** T-12 · **Estimate:** S · **Review:** full
+- **Verification:**
+  - Spec cases use anonymised shapes from the PROD extract:
+    - one entry with `<email>` and "(Main contact)";
+    - three numbered entries;
+    - a name with no email;
+    - a bare email;
+    - mixed case;
+    - a duplicate email;
+    - empty, blank or null;
+    - separators `;`, `,` and new lines.
+  - **Falsifier:** "Main contact" or "1." returned as a name-with-email; any listed email missing.
+  - **Red run:** required (spec first).
+- **Status:** [x] PASS 2026-10-23 (see `execution.md`)
+- **Definition of done:**
+  - [x] Red run, then green run recorded.
+  - [x] Every RIR-R-16 bullet is covered by at least one case.
+
+### RIR-T-10: Migration RecipientModelV2 + entities
+
+- **Type:** migration
+- **Description:** implements design §15.3:
+  - log `message_key` + index swap;
+  - the `center_mel_focal_point` table + entity;
+  - template UPDATE of the 2 RIR rows + INSERT of the MELIA summary and center templates.
+
+  The copy is Nicoleta's 2026-10-23 text, verbatim. The automatic-closure sentence stays as she wrote it.
+- **Implements:** RIR-R-8 (per-message key), RIR-R-11, RIR-R-18 (storage), RIR-DD-9.
+- **Files:** `migrations/<ts>-RIR-RecipientModelV2.ts`, `entities/center-mel-focal-point.entity.ts`, `entities/replicated-innovation-reminder-log.entity.ts`.
+- **Depends on:** — · **Blocks:** T-11, T-13, T-15 · **Estimate:** M · **Review:** full
+- **Verification:**
+  - `npm run migration:check`.
+  - The user runs up, down and up on prdb (HITL).
+  - The user verifies RIR-P-15 on PROD (read-only count).
+  - **Falsifier:** the down does not restore the old index and bodies; any non-RIR template row changes.
+- **Status:** [x] PASS 2026-10-23 (code review + prdb up/down/up/down + P-15; see `execution.md`)
+- **Definition of done:**
+  - [x] Up/down evidence recorded.
+  - [x] P-15 count recorded.
+
+### RIR-T-11: Pending repository v2
+
+- **Type:** server
+- **Description:** `findPending` changes:
+  - drop the `source <> 'API'` filter;
+  - return `source`, the developer text (LEFT JOIN `results_innovations_dev`) and the lead center code (RIR-OQ-8 default, RIR-P-14).
+
+  New queries:
+  - `findActiveUserEmails(emails[])`;
+  - `findMeliaByInitiatives` (the coordinator branch is removed);
+  - `findCenterMel(centerCodes[])`.
+- **Implements:** RIR-R-1, RIR-R-3 (no coordinators), RIR-R-17, RIR-R-18.
+- **Files:** `repositories/pending-innovation.repository.ts` + spec.
+- **Depends on:** T-10 · **Blocks:** T-13 · **Estimate:** M · **Review:** full
+- **Verification:**
+  - SQL assertions: no `role_by_user`, no `source <> 'API'`, `users.active = 1`, `LOWER(...)`.
+  - HITL: the user runs a PROD count of pending rows W1/W2 vs W3, and of developer emails matched vs unmatched.
+  - **Falsifier:** any coordinator address returned; W3 rows missing.
+- **Status:** [x] PASS 2026-10-23 (code review + PROD counts; see `execution.md`)
+- **Definition of done:**
+  - [x] Spec green.
+  - [x] PROD counts recorded.
+
+### RIR-T-12: MessageBuilder (replaces DigestBuilder grouping)
+
+- **Type:** server logic (TDD)
+- **Description:** a pure `build(...)` producing the `DEVELOPER`, `MELIA_SUMMARY` and `CENTER` messages plus `unreachable[]`, per design §15.2.
+  - The Innovation Use routing follows RIR-OQ-7. Default: MELIA summary, behind one constant.
+  - The order (SP code, then result code) is kept.
+- **Implements:** RIR-R-2, RIR-R-3, RIR-R-4, RIR-R-17.
+- **Files:** `digest-builder.ts` + spec (reworked).
+- **Depends on:** T-9 · **Blocks:** T-13 · **Estimate:** M · **Review:** full
+- **Status:** [x] PASS 2026-10-23 (Review 2; see `execution.md`)
+- **Verification:** every R-2/R-3/R-4 scenario is one spec case.
+  - **Falsifier:** an external address in To or CC; one email per result; a To address repeated in CC; a W3 result reaching a developer or MELIA focal point.
+  - **Red run:** required.
+
+### RIR-T-13: Dispatcher v2
+
+- **Type:** server
+- **Description:** dispatch the three message types, each with its template and its `message_key` log row.
+  - Subject per RIR-R-11 and RIR-OQ-6.
+  - The non-prod redirect and the "Intended recipients" block apply to every type.
+  - Outcome counts are per type.
+  - Claim, finalize, stale release and batches are unchanged.
+- **Implements:** RIR-R-8, RIR-R-9, RIR-R-11, RIR-R-12.
+- **Files:** `reminder-dispatcher.service.ts` + spec, `dto/campaign-view.ts`.
+- **Depends on:** T-10, T-11, T-12 · **Blocks:** T-14 · **Estimate:** M · **Review:** full
+- **Status:** [x] PASS 2026-10-23 (Review 3; see `execution.md`)
+- **Verification:**
+  - Existing specs a–f stay green.
+  - New specs:
+    - one address gets a summary and a digest, both are sent;
+    - a retry skips by `message_key`;
+    - a missing template fails cleanly.
+
+### RIR-T-14: Admin preview v2
+
+- **Type:** client
+- **Description:**
+  - The preview drawer groups by message type with per-type counts.
+  - The unreachable table shows the reason and the developer text.
+  - The Send-now confirmation shows the total number of messages.
+  - The copy lives in `internationalization/`.
+- **Implements:** RIR-R-9, RIR-R-4 (list), RIR-R-15.
+- **Files:** `reminder-preview-drawer.component.{ts,html}`, the component spec, `replicated-innovation-reminders.interface.ts`, `replicated-innovation-reminders.copy.ts`.
+- **Depends on:** T-13 contract · **Estimate:** S · **Review:** full
+- **Status:** [x] PASS 2026-10-23 (see `execution.md`)
+- **Verification:** the component spec covers the three groups and the reason column; `--findRelatedTests` is run on the changed files.
+
+### RIR-T-15: Center MEL seed + PRTest smoke v2 (HITL)
+
+- **Type:** rollout
+- **Description:**
+  1. Seed migration from DEP-5.
+  2. Re-run the T-8 smoke steps on the new model: 403; redirect for all three types; cron exactly once.
+  3. Send the 3 rendered templates to Nicoleta for copy approval (DEP-2).
+  4. Confirm RIR-OQ-7 and RIR-OQ-8 answers are applied.
+- **Implements:** RIR-R-18 (seed), RIR-R-6, RIR-R-10, RIR-R-11, RIR-R-12 (live).
+- **Depends on:** T-10, T-13, T-14 · DEP-2, DEP-5 · **Estimate:** S · **Review:** checklist
+- **Definition of done:**
+  - [ ] Seed count = the dashboard list.
+  - [ ] Smoke evidence recorded.
+  - [ ] Nicoleta's copy approval recorded.
+
 ## 3. Dependency graph
 
 ```
@@ -300,6 +442,15 @@ RIR-T-1 ──► RIR-T-2 ──┐
 RIR-T-3 (parallel) ───┴─► RIR-T-4 ──► RIR-T-5 ──► RIR-T-6 ──┐
 RIR-T-1 ──► RIR-T-7 (blocked: DEP-1 MELIA list) ────────────┴─► RIR-T-8 (HITL)
 ```
+
+Revision 2:
+
+```
+RIR-T-9 (parallel) ──► RIR-T-12 ──┐
+RIR-T-10 ──► RIR-T-11 ────────────┴─► RIR-T-13 ──► RIR-T-14 ──► RIR-T-15 (HITL; DEP-2, DEP-5)
+```
+
+T-9 and T-10 can start in parallel on approval. Only T-12's Innovation Use constant and T-11's lead-center join wait on RIR-OQ-7 / RIR-OQ-8, and both ship with their defaults.
 
 Parallel-safe: T-3 alongside T-1/T-2. T-7 at any time after T-1, once the list arrives. T-6 can start from the frozen DTO contract while T-5 is in review.
 
@@ -331,7 +482,7 @@ Parallel-safe: T-3 alongside T-1/T-2. T-7 at any time after T-1, once the list a
 
 - [ ] Commits use `✨ feat(replicated-innovation-reminders) [INC-165323]: …`, with no apostrophes in the subject. They are made only on the user's go-ahead, and `src/a.py` is never staged.
 - [ ] CI green: lint, tests, build, `migration:check:ci`, SonarCloud.
-- [ ] T-8 HITL evidence is complete before Nicoleta schedules the Q4 campaign.
+- [ ] T-15 HITL evidence is complete before Nicoleta schedules the Q4 campaign.
 
 ## 6. Roll-back plan
 

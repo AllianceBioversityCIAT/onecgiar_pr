@@ -64,4 +64,23 @@ describe('ResultsApiService reminder campaign methods', () => {
     expect(req.request.method).toBe('POST');
     req.flush({});
   });
+
+  it('POST_reminderCampaignSend exposes the per-type sent counts of the envelope', () => {
+    let sentByType: unknown;
+    service.POST_reminderCampaignSend(7).subscribe(res => (sentByType = res.response.sent_by_type));
+    http.expectOne(`${base}/7/send`).flush({
+      response: { status: 'SENT', sent: 3, skipped: 0, failed: 0, unreachable: 0, sent_by_type: { DEVELOPER: 1, MELIA_SUMMARY: 1, CENTER: 1 } }
+    });
+    expect(sentByType).toEqual({ DEVELOPER: 1, MELIA_SUMMARY: 1, CENTER: 1 });
+  });
+
+  it('GET_reminderCampaignPreview exposes totals.messages and by_type', () => {
+    let totals: any;
+    service.GET_reminderCampaignPreview(7).subscribe(res => (totals = res.response.totals));
+    http.expectOne(`${base}/7/preview`).flush({
+      response: { digests: [], unreachable: [], totals: { messages: 2, results: 3, cc_addresses: 0, by_type: { DEVELOPER: { messages: 2, results: 3 } } } }
+    });
+    expect(totals.messages).toBe(2);
+    expect(totals.by_type.DEVELOPER.results).toBe(3);
+  });
 });
