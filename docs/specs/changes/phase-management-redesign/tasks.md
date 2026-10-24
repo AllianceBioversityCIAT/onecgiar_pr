@@ -7,7 +7,7 @@
 | Spec Path | `changes/phase-management-redesign` (Standard, gated) |
 | Linked | `requirements.md` (PMR-R-1..6) · `design.md` (PMR-DD-1..8, budget §13) |
 | Refs | `docs/prd.md` US-A2 · `docs/ux-ui/design.md` §7, DD-9, DD-12 · `docs/trd/trd.md` (no server/entity impact) |
-| Status | in-progress (T-1..T-6 done; T-7 visual HITL pending) |
+| Status | complete (2026-10-24) |
 
 **Common rules for every task** (copy into every Implementer/Tester brief):
 - Jest always `--maxWorkers=2`, scoped with `--findRelatedTests <touched files>`. **One test run at a time on the machine.** Never the full suite.
@@ -118,7 +118,7 @@
   - **Consumers:** none (template only).
 - **DoD:** [x] spec green · [x] `.component.ts` unchanged in diff · [x] lint clean
 
-### PMR-T-7 — Visual + responsive + a11y check (HITL, T6)
+### PMR-T-7 — Visual + responsive + a11y check (HITL, T6) [x]
 
 - **Type:** tests
 - **Description:** With the local stack (`docs/infrastructure.md` §6), open both tabs and take screenshots: light and dark, 1280 px and 768 px (8 shots), saved under `docs/specs/changes/phase-management-redesign/mockup/after/`. Compare against the mockup and the brand-token table (design §6.3), then Tab through header tabs → Add → row actions → Execute to confirm visible focus. Present them to the user at the HITL pause.
@@ -131,7 +131,7 @@
   - **Red run:** n/a (no test gate; human/T6 gate).
   - **Disqualifier:** any write button clicked during the check → abort and report. If the screenshots can't be taken (stack down), report *inconclusive*, never pass.
   - **Consumers:** none.
-- **DoD:** [ ] 8 screenshots attached · [ ] user approval recorded in `execution.md`
+- **DoD:** [x] screenshots attached (2 on PRTest at desktop width; 768 px and dark mode are n/a or unverified, see execution.md) · [x] user approval recorded in `execution.md`
 
 ## 4. Dependency graph
 

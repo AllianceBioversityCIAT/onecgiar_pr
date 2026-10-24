@@ -244,3 +244,64 @@
 - **PMR-T-7 environment probe:** the local stack was started on the primary route. The client was served at 4200 and the server on port 3400.
   - The server was **stopped after about 4 minutes, before any hourly tick**. `ReplicatedInnovationRemindersCron` is an ungated `@Cron(EVERY_HOUR)`, and the local server points at the shared dev DB, which has a PENDING FINAL_REMINDER campaign (see the replicated-innovation-reminders execution log). A local tick could dispatch it.
   - The visual check therefore needs either a safe backend (cron disabled) or PRTest after deploy. Decision pending with the user.
+
+### Integration — 2026-10-23
+
+- **Commit and push:** `e6c37e009` was committed and pushed to `qa-development-2026-ss`, per the user's explicit request. It contains PMR-T-1..T-6 and the spec docs. The other session's dirty `replicated-innovation-reminders/execution.md` was excluded.
+- **performance-refactor:** fetched. It has **no commits missing from `qa-development-2026-ss`**: `origin/performance-refactor` is `cf0c1bdb4`, an ancestor of HEAD. So there was nothing to merge in, and `qa-dev → performance-refactor` is a clean **fast-forward of 1 commit** (`e6c37e009`).
+- **Not pushed to performance-refactor yet.** That push triggers the PRTest deploy, so it waits for explicit user confirmation.
+
+### PMR-T-7 — Visual + responsive + a11y check on PRTest — evidence collected, awaiting user approval (2026-10-24)
+
+- **Environment:** PRTest (`https://prtest.ciat.cgiar.org`). It deploys `performance-refactor` at `e6c37e009`; the user confirmed the deploy. Claude in Chrome, logged in as the user.
+- **Read-only:** no Execute, Send, Save, Delete or Confirm was clicked. Only navigation, screenshots, DOM reads and programmatic focus.
+- **Screenshots:** `mockup/after/reporting-light-desktop.jpg` and `mockup/after/ipsr-light-desktop.jpg`.
+- **Falsifier results:**
+  - **Passed:**
+    - Served bundle has the new code: breadcrumb, chips, cards and Delivery chips all render.
+    - `scrollWidth > clientWidth`: false (no horizontal scroll).
+    - Indigo `#4f46e5`: 0 elements. Inter font: 0 elements.
+    - `aria-current="page"` is on the active tab only (Results module, then IPSR module).
+    - The open-row pill is green (`#166f36` text, `#19ae58` border, `#eafff0` background) with the text "Open".
+    - Open row background is `rgb(250,249,254)` (`brand-25`).
+    - IPSR tab: title "IPSR phases", the Results phase column is present, and there is 1 operation card.
+    - No console errors.
+    - Focus: tabs and delete buttons show the `--pr-focus-ring` shadow on focus.
+  - **Finding, minor:** 1 inline SVG. It is the Spartan breadcrumb separator (`ng-icon lucideChevronRight`), the helm default, and it breaks the "material-icons-round only" rule.
+  - **Finding:** chip text renders at **9 px** (`hlmBadge` uses rem `text-xs` on a 12 px root). Section headings ("Phase operations", card titles, "Replicated innovation reminders") render at 12 px and the card title at 13.5 px, so the hierarchy is weak. Client rule 20 asks for explicit px.
+  - **Inconclusive:** 768 px and below `sm`. `resize_window` did not change the viewport (it stayed at 2133 CSS px, DPR 0.9). Needs a manual check.
+  - **Inconclusive:** dark mode. The app has no dark mode (`docs/ux-ui/design.md` OG-2), so it is n/a.
+- **Open visual decisions carried from review advisories (user to decide):**
+  - Card surface: `bg-card` in T-3 vs `bg-white` + `shadow-xs` in T-5, and client rule 10 (border, not shadow).
+  - The `bg-brand-25` open-row tint vs rule 7.
+  - The violet "to" chip in the confirm dialog. Not opened, because opening it needs an Execute click.
+  - Dialog body padding.
+  - "Target phase" shown twice.
+  - Text sizes (above).
+- **Status:** PMR-T-7 stays `[ ]` until the user approves or asks for fixes.
+- **User approval (2026-10-24):** the user approved PMR-T-7 as is ("si apruebo"). The minor findings (9 px chip text and 12 px section headings, the breadcrumb SVG separator) and the open visual decisions (card surface, row tint, dialog chip and padding, repeated "Target phase") are accepted for now. They are follow-ups, not blockers. The 768 px check and the dialog visual remain unverified by the agent.
+- **Final status: PASS (HITL).**
+
+## Summary
+
+| Task | Result | Attempts |
+|---|---|---|
+| PMR-T-1 Copy file | PASS | 1 |
+| PMR-T-2 Header + tabs | PASS | 2 (i18n aria-label, focus-ring token) |
+| PMR-T-3 Card header + counters | PASS | 2 (projection test) |
+| PMR-T-4 Cells + actions | PASS | 2 (i18n aria-labels; edit div narrowed per the DD-3 conflict) |
+| PMR-T-5 Operation cards + dialog | PASS | 2 (neutral decorative icon) |
+| PMR-T-6 Reminders Delivery chips | PASS | 1 |
+| PMR-T-7 Visual HITL (PRTest) | PASS (user approved) | — |
+
+- **Shipped:** `e6c37e009` on `qa-development-2026-ss` and `performance-refactor` (PRTest).
+- **Final gate:** 27 suites / 807 tests passed, ESLint clean.
+- **Budget:** about 1,100 changed lines against an estimate of about 450 (the ceiling was raised to about 900). The extra comes from specs and SCSS removal. Scope did not change.
+- **Follow-ups (outside this spec):**
+  1. Explicit px sizes for the chips and section headings, and a `material-icons-round` breadcrumb separator.
+  2. Unify the card surfaces (design §6.3 vs client rule 10). Decide the `bg-brand-25` row tint vs rule 7. Decide the violet dialog chip.
+  3. Amend PMR-DD-3 to allow keyboard activation of the edit action.
+  4. The CT "disabled row: tooltip pins" test fails at HEAD; investigate `pr-tooltip.directive.ts`.
+  5. Verify the page manually at 768 px.
+  6. Redesign the phase detail page (PMR-OQ-2). Convert the NgModules to standalone.
+  7. Run a CodeGraph sync.
