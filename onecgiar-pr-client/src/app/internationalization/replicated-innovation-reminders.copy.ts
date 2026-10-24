@@ -35,6 +35,7 @@ export const REPLICATED_INNOVATION_REMINDERS_COPY = {
     scheduled: 'Scheduled for',
     sentAt: 'Sent at',
     status: 'Status',
+    delivery: 'Delivery',
     sent: 'Sent',
     skipped: 'Skipped',
     failed: 'Failed',

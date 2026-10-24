@@ -1,16 +1,25 @@
-<div class="local_container">
-    <div class="option">
-        <div class="text">{{replicateBannerText()}}</div>
-        <div class="button">
-            <app-pr-button padding="medium"
-                [text]="this.api.dataControlSE.massivePhaseShiftIsRunning?'Running (this process may take time, please wait)':'Execute'"
-                [rotating]="this.api.dataControlSE.massivePhaseShiftIsRunning"
-                [icon]="this.api.dataControlSE.massivePhaseShiftIsRunning?'loop':'chevron_right'"
-                [ngClass]="{'globalDisabled': this.api.dataControlSE.massivePhaseShiftIsRunning}"
-                (click)="execute()"></app-pr-button>
-        </div>
+<article
+  class="flex h-full flex-col gap-4 rounded-xl border border-[var(--pr-color-accents-2)] bg-white p-5 shadow-xs"
+  data-testid="other-functionality-card">
+  <div class="flex items-start gap-4">
+    <span class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] text-[var(--pr-color-secondary-400)]" aria-hidden="true">
+      <span class="material-icons-round">{{ icon() }}</span>
+    </span>
+    <div class="flex flex-col gap-1">
+      <h3 class="text-base font-semibold text-[var(--pr-color-secondary-500)]" data-testid="of-title">{{ replicateTitle() }}</h3>
+      <p class="text-sm text-[var(--pr-color-secondary-400)]" data-testid="of-description">{{ replicateBannerText() }}</p>
     </div>
-</div>
-
+  </div>
+  <div class="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[var(--pr-color-accents-2)] pt-4">
+    <span class="text-sm text-[var(--pr-color-secondary-400)]">{{ copy.targetPhase }}: {{ targetPhaseName() }}</span>
+    <app-pr-button
+      padding="medium"
+      [text]="this.api.dataControlSE.massivePhaseShiftIsRunning ? 'Running (this process may take time, please wait)' : 'Execute'"
+      [rotating]="this.api.dataControlSE.massivePhaseShiftIsRunning"
+      [icon]="this.api.dataControlSE.massivePhaseShiftIsRunning ? 'loop' : 'chevron_right'"
+      [ngClass]="{ globalDisabled: this.api.dataControlSE.massivePhaseShiftIsRunning }"
+      (click)="execute()"></app-pr-button>
+  </div>
+</article>
 
 <app-massive-phase-shift [replicateIPSR]="replicateIPSR" [replicateInnovationUse]="replicateInnovationUse"></app-massive-phase-shift>

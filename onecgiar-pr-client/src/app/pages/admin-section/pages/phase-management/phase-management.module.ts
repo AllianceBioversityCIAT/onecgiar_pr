@@ -7,10 +7,11 @@ import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ResultHistoryOfChangesModalModule } from '../completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.module';
 import { FilterByTextModule } from '../../../../shared/pipes/filter-by-text.module';
+import { HlmBreadcrumbImports } from '@spartan/breadcrumb';
 
 @NgModule({
   declarations: [PhaseManagementComponent],
   exports: [PhaseManagementComponent],
-  imports: [CommonModule, PhaseManagementRoutingModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule]
+  imports: [CommonModule, PhaseManagementRoutingModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, ...HlmBreadcrumbImports]
 })
 export class PhaseManagementModule {}

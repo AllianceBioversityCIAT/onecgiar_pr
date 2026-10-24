@@ -131,7 +131,13 @@ describe('ReplicatedInnovationRemindersComponent', () => {
     await setup(of(list([campaign({ status: 'SENT', sent_count: 9, skipped_count: 2, failed_count: 1, unreachable_count: 3 })])));
     const row = q('rir-row-1')!;
     expect(row.querySelector('[data-testid="rir-status"]')?.textContent).toContain('Sent');
-    expect(row.textContent).toMatch(/9\s*2\s*1\s*3/);
+    const chip = (k: string) => row.querySelector(`[data-testid="rir-metric-${k}"]`) as HTMLElement;
+    expect(chip('sent').textContent).toMatch(/Sent\s*9/);
+    expect(chip('skipped').textContent).toMatch(/Skipped\s*2/);
+    expect(chip('failed').textContent).toMatch(/Failed\s*1/);
+    expect(chip('unreachable').textContent).toMatch(/Unreachable\s*3/);
+    expect(chip('unreachable').classList.contains('rir-chip-warning')).toBe(true);
+    expect(chip('sent').classList.contains('rir-chip-warning')).toBe(false);
   });
 
   it('disables Send now and Cancel on a SENDING row', async () => {

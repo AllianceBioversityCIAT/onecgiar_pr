@@ -47,10 +47,7 @@
               <th hlmTh>{{ copy.columns.scheduled }}</th>
               <th hlmTh>{{ copy.columns.status }}</th>
               <th hlmTh>{{ copy.columns.sentAt }}</th>
-              <th hlmTh>{{ copy.columns.sent }}</th>
-              <th hlmTh>{{ copy.columns.skipped }}</th>
-              <th hlmTh>{{ copy.columns.failed }}</th>
-              <th hlmTh>{{ copy.columns.unreachable }}</th>
+              <th hlmTh>{{ copy.columns.delivery }}</th>
               <th hlmTh>{{ copy.columns.actions }}</th>
             </tr>
           </thead>
@@ -98,10 +95,35 @@
                   }
                 </td>
                 <td hlmTd data-testid="rir-sent-at">{{ c.sent_at ? displayDate(c.sent_at) : copy.noValue }}</td>
-                <td hlmTd>{{ c.sent_count }}</td>
-                <td hlmTd>{{ c.skipped_count }}</td>
-                <td hlmTd>{{ c.failed_count }}</td>
-                <td hlmTd>{{ c.unreachable_count }}</td>
+                <td hlmTd>
+                  <div class="flex flex-wrap gap-1" data-testid="rir-delivery">
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[12px] border-border text-foreground tabular-nums"
+                      data-testid="rir-metric-sent"
+                      ><span class="text-muted-foreground">{{ copy.columns.sent }}</span>
+                      <span class="font-semibold">{{ c.sent_count }}</span></span
+                    >
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[12px] border-border text-foreground tabular-nums"
+                      data-testid="rir-metric-skipped"
+                      ><span class="text-muted-foreground">{{ copy.columns.skipped }}</span>
+                      <span class="font-semibold">{{ c.skipped_count }}</span></span
+                    >
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[12px] border-border text-foreground tabular-nums"
+                      data-testid="rir-metric-failed"
+                      ><span class="text-muted-foreground">{{ copy.columns.failed }}</span>
+                      <span class="font-semibold">{{ c.failed_count }}</span></span
+                    >
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[12px] tabular-nums"
+                      [class]="c.unreachable_count > 0 ? 'rir-chip-warning border-[var(--pr-color-yellow-300)] text-[var(--pr-color-yellow-700)]' : 'border-border text-foreground'"
+                      data-testid="rir-metric-unreachable"
+                      ><span class="text-muted-foreground">{{ copy.columns.unreachable }}</span>
+                      <span class="font-semibold">{{ c.unreachable_count }}</span></span
+                    >
+                  </div>
+                </td>
                 <td hlmTd>
                   <div class="flex flex-wrap gap-2">
                     <button

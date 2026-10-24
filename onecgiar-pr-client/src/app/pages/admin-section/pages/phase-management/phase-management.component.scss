@@ -5,38 +5,6 @@
   overflow: hidden;
   width: 95% !important;
 
-  .tabs {
-    display: flex;
-    border-bottom: 3px solid rgba(var(--pr-color-primary-rgb), 0.212);
-    width: max-content;
-
-    .active {
-      background-color: var(--pr-color-primary-300) !important;
-      color: var(--pr-color-white) !important;
-
-      &:hover {
-        background-color: rgba(var(--pr-color-primary-rgb), 0.918) !important;
-      }
-    }
-
-    .tab {
-      font-weight: 600;
-      background-color: var(--pr-color-accents-1);
-      color: var(--pr-color-primary-300);
-      text-decoration: none;
-      padding: 8px 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      transition: all ease-in-out 0.2s;
-
-      &:hover {
-        background-color: rgba(var(--pr-color-black-rgb), 0.05);
-      }
-    }
-  }
-
   .outlet {
     margin-top: 20px;
     padding: 0px 10px;

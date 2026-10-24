@@ -37,4 +37,33 @@ describe('ReportingComponent', () => {
   it('should call onPhaseUpdate without error', () => {
     expect(() => component.onPhaseUpdate()).not.toThrow();
   });
+
+  describe('phase operations section', () => {
+    afterEach(() => {
+      component.api.dataControlSE.previousReportingPhase.phaseName = null;
+      component.api.dataControlSE.reportingCurrentPhase.phaseName = null;
+    });
+
+    it('is hidden when there is no previous phase name', () => {
+      fixture.destroy();
+      component.api.dataControlSE.previousReportingPhase.phaseName = '' as any;
+      fixture = TestBed.createComponent(ReportingComponent);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="phase-operations"]')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('app-other-functionalities').length).toBe(0);
+    });
+
+    it('renders 2 operation card(s) with the target phase when a previous phase exists', () => {
+      fixture.destroy();
+      component.api.dataControlSE.previousReportingPhase.phaseName = 'Previous' as any;
+      component.api.dataControlSE.reportingCurrentPhase.phaseName = 'Current' as any;
+      fixture = TestBed.createComponent(ReportingComponent);
+      fixture.detectChanges();
+      const section: HTMLElement = fixture.nativeElement.querySelector('[data-testid="phase-operations"]');
+      expect(section).not.toBeNull();
+      expect(section.textContent).toContain('Phase operations');
+      expect(section.textContent).toContain('Target phase: Current');
+      expect(fixture.nativeElement.querySelectorAll('app-other-functionalities').length).toBe(2);
+    });
+  });
 });
