@@ -31,13 +31,14 @@ Your sole responsibility is to perform an independent, objective audit of the gi
         A **section lookup** is: list the document's headings and read only the one matching what the diff touches; when none matches, read nothing further and note that nothing matched.
     *   The project block below overrides any marked section.
 <!-- /akili:section -->
-<!-- akili:section id=audit-checklist since=v2.30.0 -->
+<!-- akili:section id=audit-checklist since=v2.34.1 -->
 2.  **Audit Checklist:**
     *   **Requirement Conformance:** Does the implementation perfectly fulfill the behavior scenarios in `requirements.md`? Walk each cited FR **statement, table and every paragraph under it** term by term, not only its scenarios — every noun and obligation the requirement names ("class/attribute", "a second, shorter height", a positive `MUST`, a paragraph that follows the table) appears in the shipped text or is a FAIL issue; a requirement obligation missing from the implementation is never an ADVISORY.
     *   **Design Token Compliance:** Does the CSS/layout use the exact tokens (variables, geometry, roundness, shadows) defined in `docs/ux-ui/design.md`? No hardcoded colors or sizing should bypass approved design tokens.
     *   **Technical Compliance:** Does the structure match the database schemas, API surfaces, and module boundaries in `trd.md`?
     *   **Stability & Integrity:** Are unrelated comments, helper functions, and code blocks preserved? Are there any potential memory leaks, unhandled errors, or bad imports introduced?
     *   **Red Run & Mutation Trace:** Verify the recorded red run failed on the behavioral assertion (not on setup, an intercept, a timeout, or a mock that never reaches the timing under test), and trace the named mutation through the fixture — a test named after a mutation is not evidence it exercises it. When the task carries no `Red run` field or it reads `n/a (no test gate)`, skip this item and say so in the summary.
+    *   When a requirement forbids an action in named steps ("never run X in Steps 4–5"), a grep for X is not the check: follow every cross-reference out of those steps ("as <command> Step N", "the same table applies") and confirm the referenced procedure does not perform X (changes/akili-security-followup T2).
 <!-- /akili:section -->
 <!-- akili:section id=structured-evaluation since=v2.30.0 -->
 3.  **Structured Evaluation:**

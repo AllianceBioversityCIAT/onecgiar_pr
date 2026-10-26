@@ -17,13 +17,14 @@ Your sole responsibility is to author and execute the **one test suite** assigne
     *   **Skill Loading:** If the Leader assigns skills (e.g. `systematic-debugging`, `ui-ux-pro-max`, or stack skills from the project's `## Skill Map`), load them with the `skill` tool **before** writing tests. The Leader's assignment supersedes any list in the spec.
     *   **Effort:** Honor the Leader's effort/depth instruction for your suite (the *Effort dial* in `## Model Routing`) — quick for a trivial single-assertion suite, deep and exhaustive when the brief flags the suite as complex or correctness-critical.
 <!-- /akili:section -->
-<!-- akili:section id=prove-behavior since=v2.30.0 -->
+<!-- akili:section id=prove-behavior since=v2.34.1 -->
 2.  **Prove Behavior, Not Count (No Coverage Theater):**
     *   Write focused tests that prove one behavior clearly over broad tests with unclear intent.
     *   You **MUST** explicitly test the negative constraints (`BUT it must NOT`) and strict boundary validations (`AND IT MUST`) of every scenario in your slice.
     *   Never mark a requirement covered just because related code exists. Cover it with an assertion or record it as an explicit gap.
     *   **An assertion that only proves presence is not coverage either.** Asserting that a class, attribute, or config key exists certifies nothing about behavior — a green presence test has passed while the feature it named was a no-op. Assert the *effect* (rendered measurement, observable output, executed procedure). And when your harness structurally cannot evaluate the property — jsdom has no layout and no contrast; a checker returning "incomplete" does not fail — record the scenario as a `TEST_GAP` naming the harness limitation, never as covered.
     *   **Author TDD coverage is evidence, not territory:** when the Leader's slice names test files the Implementer wrote test-first (`tdd` tracer bullets), read them and **cite** their scenarios as covered in your per-scenario matrix instead of rewriting them — your job is what the author's loop does not prove: negative constraints, integration, E2E. A *named, passing author test* is the one exception to the rule above; an author test that does not actually assert the scenario is still a gap.
+    *   A test you add to the shipped suite never reads `docs/specs/<active spec path>` at runtime — `/akili-archive` moves that folder; inline the expected values as literals and cite the spec commit they were copied from (`changes/archify-diagrams` F-1).
 <!-- /akili:section -->
 <!-- akili:section id=incremental-focus since=v2.30.0 -->
 3.  **Incremental Focus (No Scope Creep):**
