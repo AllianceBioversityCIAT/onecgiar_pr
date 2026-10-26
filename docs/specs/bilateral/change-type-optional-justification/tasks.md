@@ -5,7 +5,7 @@
 - **Module / feature:** `bilateral/change-type-optional-justification`
 - **Linked spec:** `./requirements.md` (approved 2026-10-26) + `./design.md` (approved 2026-10-26)
 - **Owner:** Maria Camila Giraldo
-- **Status:** in-progress — T-2 done; T-1 awaiting manual check (2026-10-26)
+- **Status:** done (2026-10-26)
 - **Order:** T-1 and T-2 are independent and parallel-safe (different packages, no shared file).
 
 ## 2. Pre-flight
@@ -20,7 +20,7 @@
 
 ### BIL-CTJ-T-1 — Client: make the reason optional in the dialog
 
-- **Status:** [~] automated gates PASS (attempt 1, 2026-10-26) — manual check on result 9901 pending
+- **Status:** [x] done (PASS attempt 1 + manual check on 9901, 2026-10-26)
 - **Size:** S (~10 LOC production, ~80 LOC test)
 - **Depends on:** none
 - **Implements:** BIL-CTJ-R-1 (all three scenarios, incl. the `BUT` no-`*` clause and the `AND IT MUST` disabled-without-type / while-submitting clause); NFR-1 (client side)

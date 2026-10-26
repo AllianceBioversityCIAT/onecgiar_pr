@@ -75,3 +75,21 @@
 **Decisions made:** commit deferred (root `AGENTS.md` §6). Manual check on IRRI result 9901 (Phase 36) is the HITL item — needs an authenticated environment; requested from the user.
 **Running totals:** tasks 2/2 · LOC ≈ +66/−5 server + ≈158-line client diff (≈150 test) · review rounds 2/2 — within budget (design §10: ~120 LOC est.; overage is test code only, production ≈ 20 LOC as estimated).
 **Final verification:** VERIFIED + PASS; manual check pending.
+
+### HITL — BIL-CTJ-T-1 manual check
+
+| Field | Value |
+|---|---|
+| Date | 2026-10-26 |
+| Check | IRRI result 9901 (Phase 36): General Information → "Change result type" → different type, reason empty → change completes |
+| Result | **PASS** — confirmed by the user in-session ("hice prueba manual y es adecuada") |
+| Effect | BIL-CTJ-T-1 closes `[x]` |
+
+## Summary
+
+| Task | Status | Attempts | Review |
+|---|---|---|---|
+| BIL-CTJ-T-1 | done | 1 | PASS (opus) + manual HITL PASS |
+| BIL-CTJ-T-2 | done | 1 | PASS (opus) |
+
+Budget: 2/2 tasks · 2/2 review rounds · production ≈ 20 LOC (tests + doc beyond the ~120 estimate). No HALT, no Pivot, no runtime events. Commits: `bf35183ff` (implementation + spec), follow-up closing T-1.
