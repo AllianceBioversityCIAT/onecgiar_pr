@@ -912,3 +912,27 @@ Deviations in the templates, to confirm at the T-15 copy approval:
 - Request: the Result ID in every reminder email must be an active link to the result page on reporting.cgiar.org.
 - Change: migration `1791900000000-RIR-ResultIdHyperlink.ts`, a REPLACE scoped by name on the 4 RIR template rows. The Result ID cell links to the same `{{resultUrl}}` as the title (`RESULTS_URL` + code + `/general-information?phase=<version>`). No code change.
 - Verification: eslint and tsc clean. Pending HITL: user runs up/down/up on prdb, then a PRTest send (Send again) to confirm the ID is clickable.
+
+### 2026-10-26 — Production release (PR #786)
+
+- PROD pre-checks, read-only: all 13 seed centers resolve and are active (Alliance CENTER-02 / CENTER-03); 0 open campaigns.
+- PR #786 staging → master, approved and merged by Cristian at 15:19 UTC.
+- Cristian's review follow-ups:
+  - disable Send again while a campaign of the same kind is open;
+  - non-admin 403 check;
+  - SMTP limits (Infra).
+- PROD post-deploy:
+  - `center_mel_focal_point` = 17 rows;
+  - 0 open campaigns;
+  - admin Preview shows about 496 messages, matching the volume estimate.
+- Next: Nicoleta receives the how-to email and schedules the Q4 notice. Then T-15 closes and the spec is archived.
+
+### 2026-10-26 — Cristian review follow-up: Send again button state
+
+- `canSendAgain` now also requires the kind to be free (no PENDING/SENDING/FAILED campaign of the same kind). The button is disabled instead of doing nothing on click.
+- New component spec case; the component spec is green (30 tests), and `--findRelatedTests` showed the other 20 related suites green.
+- Commit `5af580414` on qa-dev, not yet pushed; it ships in the next release.
+
+### RIR-T-15 — PASS 2026-10-26
+
+Closed with the evidence above. Spec archived the same day.

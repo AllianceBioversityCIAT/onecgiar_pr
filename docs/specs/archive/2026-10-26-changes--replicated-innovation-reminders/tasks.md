@@ -8,7 +8,7 @@
 | Linked | [`requirements.md`](./requirements.md) · [`design.md`](./design.md) · [`proposal.md`](./proposal.md) |
 | Depth | Full |
 | Ticket | INC-165323 |
-| Status | in-progress · revision 2 approved 2026-10-23 |
+| Status | done · archived 2026-10-26 (released to PROD via PR #786) |
 | Budget (from design §14 + §15.6) | 15 tasks · ~2,450 LOC · ≤ 2 review rounds per task |
 | Date | 2026-10-19 |
 
@@ -431,9 +431,10 @@ Jest rules for every task:
 - **Implements:** RIR-R-18 (seed), RIR-R-6, RIR-R-10, RIR-R-11, RIR-R-12 (live).
 - **Depends on:** T-10, T-13, T-14 · DEP-2, DEP-5 · **Estimate:** S · **Review:** checklist
 - **Definition of done:**
-  - [ ] Seed count = the dashboard list.
-  - [ ] Smoke evidence recorded.
-  - [ ] Nicoleta's copy approval recorded.
+  - [x] Seed count = the dashboard list (17 rows / 13 centers; PROD 17 after deploy).
+  - [x] Smoke evidence recorded (Q4 Send now 15/15, cron Final 16/16, Send again campaign 10 16/16, Result ID links open phase 36). 403 is carried over from the T-8 run of 2026-10-20 (guard unchanged).
+  - [x] Copy sent to Nicoleta; how-to email sent after the PROD release and the ticket closed by the user on 2026-10-26 (accepted as approval).
+- **Status:** [x] PASS 2026-10-26 (see `execution.md`)
 
 ## 3. Dependency graph
 
@@ -480,9 +481,9 @@ Parallel-safe: T-3 alongside T-1/T-2. T-7 at any time after T-1, once the list a
 
 ## 5. Rollout & verification
 
-- [ ] Commits use `✨ feat(replicated-innovation-reminders) [INC-165323]: …`, with no apostrophes in the subject. They are made only on the user's go-ahead, and `src/a.py` is never staged.
-- [ ] CI green: lint, tests, build, `migration:check:ci`, SonarCloud.
-- [ ] T-15 HITL evidence is complete before Nicoleta schedules the Q4 campaign.
+- [x] Commits use `✨ feat(replicated-innovation-reminders) [INC-165323]: …`, with no apostrophes in the subject. They are made only on the user's go-ahead, and `src/a.py` is never staged.
+- [x] CI green: lint, tests, build, `migration:check:ci`, SonarCloud (PR #786, all checks green).
+- [x] T-15 HITL evidence is complete before Nicoleta schedules the Q4 campaign.
 
 ## 6. Roll-back plan
 
