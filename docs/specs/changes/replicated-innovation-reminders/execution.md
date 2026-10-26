@@ -896,3 +896,19 @@ Deviations in the templates, to confirm at the T-15 copy approval:
   - `canSendAgain` should also be disabled while that kind has an open campaign.
   - The focus call uses `setTimeout`.
   - The client eslint config needs fixing.
+- **Cron (2026-10-23):** the FINAL_REMINDER scheduled for 16:17 local was dispatched by the hourly tick at 22:00 UTC (17:00 local). The test inbox received exactly **16** emails with subject "TEST - [PRMS Testing] **Final reminder:** innovations pending a 2026 update – Reporting 2026", all sent between 22:00:01 and 22:00:09 UTC. That is 1 developer digest + 6 MELIA + 9 Center MEL, with no duplicates.
+  - **RIR-R-6 (hourly) and RIR-R-8 (exactly once) are confirmed live.**
+  - The developer digest body was confirmed: "Final reminder / Dear Santiago Sanchez … you have 1 innovation(s)", with the MELIA address named in the redirect block's "in copy".
+- **T-15 smoke status:**
+  - Done: preview, Send now, all 3 templates, redirect, cron, exactly-once.
+  - Pending:
+    - the 403 check with a non-admin account (user);
+    - "Send again" on PRTest once deploy cf0c1bdb4 is live;
+    - Nicoleta's copy approval (DEP-2).
+- **DEP-2 copy review:** the user emailed Nicoleta the 3 test emails (developer digest, MELIA summary, Center MEL), together with the explanation and the volume estimate (about 496 emails). **Awaiting her approval.** T-15 closes once she approves and the 403 check is done.
+
+### 2026-10-26 — Result ID as an active hyperlink (Marc Schut via INC-165323)
+
+- Request: the Result ID in every reminder email must be an active link to the result page on reporting.cgiar.org.
+- Change: migration `1791900000000-RIR-ResultIdHyperlink.ts`, a REPLACE scoped by name on the 4 RIR template rows. The Result ID cell links to the same `{{resultUrl}}` as the title (`RESULTS_URL` + code + `/general-information?phase=<version>`). No code change.
+- Verification: eslint and tsc clean. Pending HITL: user runs up/down/up on prdb, then a PRTest send (Send again) to confirm the ID is clickable.
