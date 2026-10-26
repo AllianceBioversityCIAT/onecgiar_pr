@@ -40,7 +40,9 @@
       </button>
     </div>
   } @else if (isEmpty()) {
-    <p role="status" class="m-0 max-h-[160px] text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="toc-kpi-empty">{{ copy.empty }}</p>
+    <p role="status" class="m-0 max-h-[160px] text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="toc-kpi-empty">{{
+      visibleNoTarget() > 0 ? copy.emptyNoTarget(visibleNoTarget()) : copy.empty
+    }}</p>
   } @else {
     <!-- Portfolio summary: sum of covered over sum of total; zero-KPI rows add 0 to both -->
     <div class="mb-[8px] flex flex-col gap-[8px] border-b border-[var(--pr-border-divider)] pb-[14px]" data-testid="toc-kpi-summary">
@@ -58,6 +60,9 @@
         data-testid="toc-kpi-summary-bar">
         <div class="h-full rounded-full bg-[var(--pr-chart-2)]" [style.width.%]="summary().percent"></div>
       </div>
+      @if (summary().noTarget > 0) {
+        <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="toc-kpi-summary-no-target">{{ copy.excludesNoTarget(summary().noTarget) }}</span>
+      }
     </div>
 
     <ul class="m-0 flex list-none flex-col p-0" aria-labelledby="toc-kpi-title" data-testid="toc-kpi-list">
@@ -87,12 +92,17 @@
             </button>
             @if (row.percent !== null) {
               <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="toc-kpi-split">{{ copy.splitLine(row.outputs, row.outcomes) }}</span>
+              @if (row.noTarget > 0) {
+                <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="toc-kpi-no-target">{{ copy.excludesNoTarget(row.noTarget) }}</span>
+              }
             }
           </div>
 
           @if (row.percent === null) {
             <!-- Zero-KPI P/A: one muted line in place of figures and bar; no bar element at all -->
-            <span class="text-[12px] text-[var(--pr-text-secondary)] sm:col-span-2 sm:text-right" data-testid="toc-kpi-zero">{{ copy.noKpis }}</span>
+            <span class="text-[12px] text-[var(--pr-text-secondary)] sm:col-span-2 sm:text-right" data-testid="toc-kpi-zero">{{
+              row.noTarget > 0 ? copy.noTargetOnly(row.noTarget) : copy.noKpis
+            }}</span>
           } @else {
             <div class="flex items-baseline justify-end gap-[10px] font-mono tabular-nums text-[var(--pr-text-heading)]">
               <span class="text-[13px]" data-testid="toc-kpi-count">{{ row.covered }} / {{ row.total }}</span>

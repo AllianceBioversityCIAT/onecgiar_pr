@@ -30,10 +30,10 @@ export interface ProjectMatch {
 }
 
 const MAX_WORDS = 8;
-const MIN_WORD_LENGTH = 3;
+export const MIN_WORD_LENGTH = 3;
 const MIN_WORDS_FOR_GROUP = 2;
 
-const ROMAN_NUMERALS = new Set([
+export const ROMAN_NUMERALS = new Set([
   'i',
   'ii',
   'iii',
@@ -49,7 +49,7 @@ const ROMAN_NUMERALS = new Set([
 ]);
 
 /** Basic en/fr/es stopwords + `project`, `phase`. Includes Solr operator words (`and`/`or`/`not`). */
-const STOPWORDS = new Set([
+export const STOPWORDS = new Set([
   // en
   'the',
   'and',
@@ -126,7 +126,7 @@ export function normalizeText(value: string | null | undefined): string {
     .trim();
 }
 
-function tokenize(value: string | null | undefined): string[] {
+export function tokenize(value: string | null | undefined): string[] {
   const normalized = normalizeText(value);
   return normalized ? normalized.split(' ') : [];
 }

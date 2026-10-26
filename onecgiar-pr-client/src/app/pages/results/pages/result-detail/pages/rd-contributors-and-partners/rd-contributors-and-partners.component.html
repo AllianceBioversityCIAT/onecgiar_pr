@@ -94,6 +94,11 @@
     }
   }
 
+  <!-- P2-3201 / P2-4010 (2026): CLARISA-based definition of a contributor, shown once before Contributing CGIAR Centers. -->
+  @if (isCP2026()) {
+    <app-alert-status data-testid="cp-contributor-definition" [description]="contributorDefinitionNote" [collapsible]="false"></app-alert-status>
+  }
+
   <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
   @if (isCP2026() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
     @if (hasReferenceCenters()) {
@@ -274,7 +279,7 @@
       [required]="false"
       optionLabel="fullName"
       optionValue="project_id"
-      label="Contributing W3 and/or bilateral projects"
+      [label]="isCP2026() ? 'Contributing W3/Bilateral projects' : 'Contributing W3 and/or bilateral projects'"
       selectedLabel="Projects selected"
       selectedOptionLabel="fullName"
       placeholder="Select project"
@@ -347,10 +352,15 @@
     }
   </div>
 
+  <!-- P2-3201 / P2-4010 (2026): the dropdown is fed by the 2026 mapping exercise, not by the ToC. -->
+  @if (isCP2026()) {
+    <app-alert-status data-testid="cp-bilateral-projects-note" [description]="bilateralProjectsInfoNote" [collapsible]="false"></app-alert-status>
+  }
+
   @if (!this.rdPartnersSE.hasTocResultMapped()) {
     <div class="pr-message">
       <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
-      <p>Please select a TOC result (Output/Outcome) above to load the available W3 and/or bilateral projects.</p>
+      <p>Please select a TOC result (Output/Outcome) above to load the available {{ isCP2026() ? 'W3/Bilateral' : 'W3 and/or bilateral' }} projects.</p>
     </div>
   }
 
@@ -433,6 +443,9 @@
   }
 
   @if (isCP2026()) {
+    <!-- P2-3201 / P2-4010: the submitting P/A is recorded automatically, so users must not add their own. -->
+    <app-alert-status data-testid="cp-science-self-registration-note" [description]="selfRegistrationNote" [collapsible]="false"></app-alert-status>
+
     <!-- TOC-DD-1 / TOC-T-1 rework: the "reference" branch (dropdown pre-seeded from the ToC + its note) only
          applies when the result is actually mapped (planned_result !== false). When unmapped, no ToC node was
          ever selected, so hasReferenceScience() is already false and this falls into the @else below — which
@@ -445,7 +458,7 @@
       <!-- Node with Science Programs from the ToC: main dropdown with the pre-selected SP + the "Other(s)" option. -->
       <app-pr-multi-select
         [options]="dropdown1OptionsSP()"
-        label="Contributing Science Program/Accelerator"
+        label="Contributing Science Programs/Accelerators"
         selectedLabel="Science Program/Accelerator selected"
         optionLabel="full_name"
         optionValue="id"
@@ -488,7 +501,7 @@
       <app-pr-multi-select
         data-testid="toc-other-science"
         [options]="otherScienceList()"
-        [label]="hasReferenceScience() ? 'Other(s) Science Program(s)' : 'Contributing Science Program/Accelerator'"
+        [label]="hasReferenceScience() ? 'Other(s) Science Program(s)' : 'Contributing Science Programs/Accelerators'"
         selectedLabel="Science Program(s) selected"
         optionLabel="full_name"
         optionValue="id"

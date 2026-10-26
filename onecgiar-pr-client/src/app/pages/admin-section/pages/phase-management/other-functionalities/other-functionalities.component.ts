@@ -1,5 +1,6 @@
 import { Component, Input, ViewChild } from '@angular/core';
 import { ApiService } from '../../../../../shared/services/api/api.service';
+import { PHASE_MANAGEMENT_COPY } from '../../../../../internationalization/phase-management.copy';
 import { MassivePhaseShiftComponent } from './components/massive-phase-shift/massive-phase-shift.component';
 
 @Component({
@@ -13,7 +14,25 @@ export class OtherFunctionalitiesComponent {
   @Input() replicateInnovationUse: boolean = false;
   @ViewChild(MassivePhaseShiftComponent) massivePhaseShiftModal!: MassivePhaseShiftComponent;
 
+  readonly copy = PHASE_MANAGEMENT_COPY;
+
   constructor(public api: ApiService) {}
+
+  replicateTitle(): string {
+    if (this.replicateInnovationUse) return this.copy.innovationUseTitle;
+    if (this.replicateIPSR) return this.copy.innovationPackagesTitle;
+    return this.copy.resultInnovationsTitle;
+  }
+
+  icon(): string {
+    if (this.replicateInnovationUse) return 'fact_check';
+    if (this.replicateIPSR) return 'inventory_2';
+    return 'content_copy';
+  }
+
+  targetPhaseName(): string | null {
+    return this.replicateIPSR ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName;
+  }
 
   replicateBannerText() {
     if (this.replicateInnovationUse) {

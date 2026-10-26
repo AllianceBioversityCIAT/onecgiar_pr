@@ -20,6 +20,9 @@ export interface CampaignFinalState {
 
 export interface ReminderLogInsert {
   campaign_id: number;
+  /** Exactly-once key per message: DEVELOPER:<email> | MELIA_SUMMARY:<sp id> | CENTER:<code> (UNIQUE with campaign_id). */
+  message_key: string;
+  /** Audit only: the first INTENDED To address, never the non-prod redirect. */
   recipient_email: string;
   result_ids: string;
   cc_count: number;

@@ -62,12 +62,16 @@ export const PORTFOLIO_OVERVIEW_COPY = {
   tocKpi: {
     title: 'Progress against ToC KPIs',
     subtitle: (year: string) =>
-      `KPIs covered by at least one W1/W2 result in QA or Submitted status, out of the KPIs in each Program's Theory of Change for ${year}`,
+      `KPIs covered by at least one W1/W2 result in QA or Submitted status, out of the KPIs with a target in each Program's Theory of Change for ${year}`,
     summaryLabel: 'All Programs and Accelerators',
     splitLine: (outputs: { covered: number; total: number }, outcomes: { covered: number; total: number }) =>
       `Outputs ${outputs.covered} / ${outputs.total} · Outcomes ${outcomes.covered} / ${outcomes.total}`,
     noKpis: 'No ToC KPIs in this phase',
+    // KPIs without a target are excluded from the figures and disclosed (spec toc-kpi-no-target-disclosure, TND-R-2..R-3)
+    excludesNoTarget: (n: number) => (n === 1 ? 'excludes 1 KPI with no target set' : `excludes ${n} KPIs with no target set`),
+    noTargetOnly: (n: number) => `No KPIs with a target · ${n} with no target set`,
     empty: 'No ToC KPIs are defined for this phase yet.',
+    emptyNoTarget: (n: number) => `No ToC KPIs have a target for this phase yet · ${n} with no target set`,
     error: 'Progress against ToC KPIs could not be loaded right now.',
     retry: 'Retry',
     loading: 'Loading progress against ToC KPIs',

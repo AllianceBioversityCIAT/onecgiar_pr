@@ -308,9 +308,9 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
 
   /** OTV-R-2 / OTV-AC-2: Science half of the same defect — `data-testid="toc-other-science"` was previously
    *  asserted nowhere in this suite. */
-  it('resolves the empty-ToC Science label to "Contributing Science Program/Accelerator", not "Other(s)…" (OTV-R-2, OTV-AC-2)', () => {
+  it('resolves the empty-ToC Science label to "Contributing Science Programs/Accelerators" (P2-4010 plural), not "Other(s)…" (OTV-R-2, OTV-AC-2)', () => {
     const labelText = otherScienceSelectEl()?.querySelector('.fch_title, .pr_label')?.textContent?.trim();
-    expect(labelText).toBe('Contributing Science Program/Accelerator:');
+    expect(labelText).toBe('Contributing Science Programs/Accelerators:');
     expect(labelText).not.toContain('Other(s)');
   });
 

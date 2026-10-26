@@ -29,37 +29,55 @@
         }
         <p class="text-foreground text-sm font-medium" data-testid="rir-preview-totals">{{ totalsText() }}</p>
 
-        @for (d of p.digests; track d.to) {
-          <section class="border-border rounded-md border p-3" data-testid="rir-digest">
-            <p class="text-sm">
-              <span class="text-muted-foreground">{{ copy.to }}:</span> {{ d.to }}
-            </p>
-            @if (d.cc.length) {
-              <p class="text-sm">
-                <span class="text-muted-foreground">{{ copy.cc }}:</span> {{ d.cc.join(', ') }}
-              </p>
+        @for (g of groups(); track g.type) {
+          <section class="flex flex-col gap-2" [attr.aria-label]="g.label" [attr.data-testid]="'rir-group-' + g.type">
+            <h3 class="text-foreground text-sm font-semibold">
+              {{ g.label }}
+              <span class="text-muted-foreground font-normal" data-testid="rir-group-counts">({{ g.counts }})</span>
+            </h3>
+            @for (d of g.messages; track d.message_key) {
+              <article class="border-border rounded-md border p-3" data-testid="rir-digest">
+                <p class="text-sm">
+                  <span class="text-muted-foreground">{{ copy.to }}:</span> {{ d.to.join(', ') }}
+                </p>
+                <p class="text-sm" data-testid="rir-digest-cc">
+                  <span class="text-muted-foreground">{{ copy.cc }}:</span>
+                  {{ d.cc.length ? copy.ccCount(d.cc.length) + ' - ' + d.cc.join(', ') : noValue }}
+                </p>
+                <p class="text-sm">
+                  <span class="text-muted-foreground">{{ copy.greeting }}:</span> {{ d.greeting }}
+                </p>
+                <p class="text-muted-foreground mt-2 text-xs">{{ copy.results }} ({{ d.results.length }})</p>
+                <ul class="mt-1 list-disc ps-5 text-sm">
+                  @for (r of d.results; track r.result_id) {
+                    <li data-testid="rir-digest-result">
+                      {{ r.initiative_code }} - #{{ r.result_code }} {{ r.title }}
+                      @if (d.type === 'MELIA_SUMMARY') {
+                        <span class="text-muted-foreground block text-xs" data-testid="rir-digest-developer">
+                          {{ copy.developerText }}: {{ r.developerText || noValue }}
+                        </span>
+                      }
+                    </li>
+                  }
+                </ul>
+              </article>
+            } @empty {
+              <p class="text-muted-foreground text-sm" data-testid="rir-group-empty">{{ copy.noMessages }}</p>
             }
-            <p class="text-muted-foreground mt-2 text-xs">{{ copy.results }} ({{ d.results.length }})</p>
-            <ul class="mt-1 list-disc ps-5 text-sm">
-              @for (r of d.results; track r.result_id) {
-                <li>{{ r.initiative_code }} - #{{ r.result_code }} {{ r.title }}</li>
-              }
-            </ul>
           </section>
-        } @empty {
-          <p class="text-muted-foreground text-sm" data-testid="rir-no-digests">{{ copy.noDigests }}</p>
         }
 
         <h3 class="text-foreground mt-2 text-sm font-semibold">{{ copy.unreachableTitle }} ({{ p.unreachable.length }})</h3>
         @if (p.unreachable.length) {
           <div hlmTableContainer>
-            <table hlmTable data-testid="rir-unreachable-table">
+            <table hlmTable [attr.aria-label]="copy.unreachableTitle" data-testid="rir-unreachable-table">
               <thead hlmTHead>
                 <tr hlmTr>
                   <th hlmTh>{{ copy.colCode }}</th>
                   <th hlmTh>{{ copy.colTitle }}</th>
-                  <th hlmTh>{{ copy.colInitiative }}</th>
-                  <th hlmTh>{{ copy.colContact }}</th>
+                  <th hlmTh>{{ copy.colScope }}</th>
+                  <th hlmTh>{{ copy.colReason }}</th>
+                  <th hlmTh>{{ copy.colDeveloper }}</th>
                 </tr>
               </thead>
               <tbody hlmTBody>
@@ -67,8 +85,9 @@
                   <tr hlmTr>
                     <td hlmTd>{{ r.result_code }}</td>
                     <td hlmTd>{{ r.title }}</td>
-                    <td hlmTd>{{ r.initiative_code }}</td>
-                    <td hlmTd data-testid="rir-unreachable-contact">{{ r.lead_contact_person || noValue }}</td>
+                    <td hlmTd data-testid="rir-unreachable-scope">{{ scopeOf(r) }}</td>
+                    <td hlmTd data-testid="rir-unreachable-reason">{{ reasons[r.reason] }}</td>
+                    <td hlmTd data-testid="rir-unreachable-developer">{{ r.developer_text || noValue }}</td>
                   </tr>
                 }
               </tbody>

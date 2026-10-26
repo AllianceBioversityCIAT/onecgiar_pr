@@ -5,7 +5,7 @@
 - **Module / feature:** `bilateral` · center Overview "Results by bilateral project" card + Results tab
 - **Linked spec:** `requirements.md` + `design.md` (same folder)
 - **Owner / driver:** Santiago Sanchez
-- **Status:** in-progress (CNP-T-1..T-4 done 2026-10-21; CNP-T-5 HITL pending)
+- **Status:** done (CNP-T-1..T-4 2026-10-21; CNP-T-5 PRTest 2026-10-22)
 - **Budget (design §1):** 5 tasks · ~300 LOC incl. tests · ≤ 2 review rounds per task. Exceeding it → the Leader stops and escalates.
 
 ## 2. Pre-flight checklist
@@ -111,7 +111,7 @@
   - [x] `CLAUDE.md` updated and re-stamped
   - [x] Lint and `tsc` clean
 
-### `CNP-T-5` — HITL: live reconciliation and visual check on PRTest
+### [x] `CNP-T-5` — HITL: live reconciliation and visual check on PRTest
 
 - **Type:** rollout (HITL, read-only)
 - **Description:** After the owner commits and PRTest deploys (`performance-refactor`, ~30 min; `/bilateral/*` redirects to `/` until the Jenkins deploy finishes), open the Overview of one center with updated-no-project rows (ILRI or CIP), Reporting 2026. Record: the line count, the generic line, the bars total, the other-centers line and the Total. Follow the line and record the Results visible count and the chip. Check the label text, and the card at desktop width and at ≤ 899 px. Switch to Reporting 2025 and confirm the line is absent. **No write button is clicked** (shared prdb, memory `browser_checks_shared_db`).
@@ -127,8 +127,8 @@
   - **Disqualifier:** if the served bundle is stale (`window.ng.getComponent(…)` does not show `updatedNoProjectLabel`), the reading is not evidence — wait for the deploy, do not record a pass. If the top-7 bar cut hides bars, the identity is checked with the a11y table or "Show more", never inferred.
   - **Consumers:** none (no shared symbol changed)
 - **Definition of done:**
-  - [ ] Numbers and screenshots (desktop + narrow) recorded in `execution.md`
-  - [ ] Difference vs the 13-Oct sheet noted for the INC-164073 reply
+  - [x] Numbers and screenshots (desktop + narrow) recorded in `execution.md`
+  - [x] Difference vs the 13-Oct sheet: moved to the INC-164073 reply (§6) by owner decision 2026-10-22
 
 ## 4. Dependency graph
 

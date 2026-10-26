@@ -460,3 +460,455 @@ Advisories from Review 1: text-xs on a 12px root, untyped API, and that `last_er
 ## Decision: RIR-OQ-3 bilateral innovations — 2026-10-20
 
 The user decided to keep bilateral (`source = 'API'`) innovations **excluded**, which is the RIR-OQ-3 default. The question is not escalated to Nicoleta. RIR-R-1 is unchanged. This affects 279 replicated bilateral innovations in Editing on PROD, 25 of which have a linked lead (14 people).
+
+## Pivot Record: recipient model per Nicoleta — 2026-10-23
+
+**Trigger (external, business):** Nicoleta's reply of 2026-10-23 to the 2026-10-21 list and test email, with Marc Schut in CC. It replaces the recipient model in RIR-R-1..R-4 and the copy in RIR-R-11. The requirements changed, so this is a requirements pivot and not an implementation FAIL.
+
+**What she asked for:**
+- **W1/W2 innovations (dev, use and packages):**
+  - To = the **innovation developer(s)** listed on each innovation; CC = the P/A **MELIA** focal points.
+  - Where the developer is missing, **one email per P/A to its MELIA focal points**, gathering all of that P/A's innovations (not one email per innovation).
+  - Some developers are external to CGIAR, so be mindful of their PRMS access.
+- **W3/bilateral innovations:** to the **Center MEL focal point only**. The list is in her "Program/Accelerator Teams" dashboard and is not in PRMS today.
+- **Copy:**
+  - Subject: "Reminder: innovations pending a 2026 update – Reporting 2026".
+  - Greeting: "Dear [developer] / Dear [Center MEL FP]".
+  - Body: a table (Result ID · Innovation · type · SP), the update / Inactive guidance, and the automatic "Inactive – not updated" closure at the end of January 2027.
+- **Separate requests:**
+  - (a) replicate innovation packages;
+  - (b) distinguish a user-set Inactive from the PRMS automatic Inactive.
+
+**User decisions (2026-10-23):**
+1. Email **every** developer listed on the innovation, not only the "(Main contact)".
+2. A developer listed without an email address counts as **missing**.
+3. Innovation Use (2) and packages have no developer field. **Asked Nicoleta**; this is open as RIR-OQ-7.
+4. Developers without a PRMS account (external): **route to the MELIA focal points**.
+5. W3: the Center MEL focal point list is in the Program/Accelerator Teams dashboard, so the user exports it (DEP-5); it is not requested from Nicoleta. The view filtered by Roles = "MELIA Focal Point" is the P/A list already seeded by T-7 (16 rows, same people). The "lead center" rule is open as RIR-OQ-8.
+6. Requests (a) and (b) are **separate specs, after the Reporting 2026 phase closes**. They are out of RIR.
+
+**Withdrawn decisions:**
+- Decision RIR-R-3 option (c), "coordinators + MELIA in CC" (2026-10-19): **reversed**. Coordinators are no longer copied.
+- Decision RIR-OQ-3, "bilateral excluded" (2026-10-20): **reversed**. W3/bilateral innovations are included and routed to the Center MEL focal point.
+
+**Impact:**
+
+| Area | Change |
+|---|---|
+| `requirements.md` | R-1 (W3 included), R-2 (developer digest), R-3 (MELIA-only CC), R-4 (MELIA summary per SP + W3 center email + unreachable), R-9 (preview per message type), R-11 (copy, 4 templates), new R-16 (developer field parsing), R-17 (PRMS-account rule), R-18 (Center MEL focal points); OQ-3 closed; OQ-6..9 added; DEP-5 added |
+| `design.md` | P-11..P-14 premises, the 3-message-type flow, log key change, `center_mel_focal_point` table, a second schema migration, DD-7..DD-9, budget |
+| `tasks.md` | T-9..T-15 added. T-8 is superseded by T-15 (the T-8 smoke ran on the old model, so its evidence stays valid only for the R-6/R-8/R-10/R-12 mechanics) |
+| Shipped code | Already on staging, not used in PROD (no campaign created). RIR-T-2/3/4/6 code is reworked by the new tasks; the claim, log, cron, redirect, auth and scheduling are unchanged |
+
+**Status:** spec revision 2 drafted (requirements / design / tasks), **pending the user's approval** (Pivot Protocol step 4). No code is touched until it is approved. T-9 (parser), T-10 (migration) and T-11 (repository, W1/W2 part) do not depend on RIR-OQ-7/8 and can start on approval.
+
+**Approval (user, 2026-10-23): revision 2 approved.** Pivot Protocol step 4 is complete. T-9 and T-10 start in parallel. RIR-OQ-7 and RIR-OQ-8 ship with their defaults until Nicoleta answers.
+
+### RIR-T-9: Developer field parser (pure) — PASS 2026-10-23
+
+- **Attempt 1 (Implementer):**
+  - Files: `developer-parser.ts` and `developer-parser.spec.ts`.
+  - Red run: `TS2307 Cannot find module './developer-parser'`; 1 suite failed, 0 tests.
+  - Green run: `npx jest --maxWorkers=2 --testPathPattern=replicated-innovation-reminders/developer-parser` passed 18 of 18. It was re-run after `eslint --fix` (a prettier change on one line of the spec) and stayed green. eslint exits 0.
+  - Heuristic: entries split on newline, `;`, and `N.`/`N)` numbering after whitespace. A comma never splits on its own. Entries with an email are walked email by email. Names are cleaned of notes and "(Main contact)". Emails are lower-cased and the first of a duplicate is kept.
+- **Review 1 (Reviewer): PASS.**
+  - Every RIR-R-16 bullet and the Mixed-entries scenario are traced to tests.
+  - No probe input loses an email or turns a non-address into a recipient.
+  - The patterns cannot backtrack catastrophically.
+  - The red run was a missing module, not a failing assertion. That is accepted for a new pure function: the falsifier was checked by hand against spec:6 and spec:103.
+- **Advisories (recorded, not new tasks):**
+  - A1: `EMAIL_RE` allows a leading `'`, `-`, `.`, `+` or `%` in the local part. Such an address would never match a PRMS user, so the developer is silently not reached. Strip these in `normEmail`.
+  - A2: non-ASCII local parts are lost or truncated. Known limit.
+  - A3: an unclosed bracket stays in the name, e.g. "Ana Perez (".
+  - A4: pin the declared limits with tests: "Juan Ruiz, Ana Perez", "A <e1>, B", "Version 2. x".
+  - A5: T-12 should greet by the matched PRMS user's name, not the parsed name.
+  - A1, A3 and A4 are cheap and are folded into T-12's brief as a parser touch-up. A5 is applied in T-12's contract.
+
+### RIR-T-10: Migration RecipientModelV2 + entities — `[~]` code PASS, DB HITL pending (2026-10-23)
+
+- **Attempt 1 (Implementer):** files and checks.
+  - New: `migrations/1791700000000-RIR-RecipientModelV2.ts`, `entities/center-mel-focal-point.entity.ts`.
+  - Edited: `entities/replicated-innovation-reminder-log.entity.ts`, which gets `message_key` and the unique `UQ_rir_log_campaign_message`.
+  - `tsc --noEmit` is clean and eslint exits 0. Nothing was run against a DB.
+  - The center FK is `center_code varchar(15)` → `clarisa_center.code`.
+  - The new unique is added before the old one is dropped, so the FK keeps an index.
+  - `down` restores the old bodies through a verbatim copy of the 1791500000000 builder.
+- **Review 1 (Reviewer): PASS on code.**
+  - `down` is byte-identical.
+  - Every template write matches an exact RIR name.
+  - The FK/index order is safe and the guards are idempotent.
+  - The entities match the DDL.
+- **Advisories:**
+  - **A1, deploy hazard (Leader: binding).** The T-10 commit must not reach a deploying branch (qa-dev, performance-refactor, staging) without T-11 and T-13. The shipped dispatcher inserts log rows without `message_key`, and the new bodies need `kindLabel`, `phaseYear` and `nextYear`.
+  - **A2.** T-13 must store the lower-cased *intended* address in `recipient_email`, never the redirect address. Add a unit assertion for it.
+  - **A3.** The `description` text of the two updated templates is stale ("Lead Contact Person").
+  - **A4.** Stale comments: `phaseName` appears in the var list, and the log docblock still says "owns that recipient".
+  - **A5, spec gap (fixed below).** Nicoleta's verbatim copy was not recorded in the spec.
+- **Pending HITL (user, DB):**
+  - On prdb: up → verify → down → verify → up → verify, then revert. prdb is shared, and the deployed code still predates T-13.
+  - On PROD: the RIR-P-15 count.
+
+#### Appendix: Nicoleta's copy, verbatim (email of 2026-10-23)
+
+Subject: Reminder: innovations pending a 2026 update – Reporting 2026
+
+Dear [Name innov developer]/Dear (Center MEL FP – for w3/bilateral results)
+
+The CGIAR Performance and Results Management System (PRMS) shows that you have [X] innovation(s), reported in previous years, with no update yet to reflect any work done on them during the 2026 reporting period:
+Result ID | Innovation | Science Program / Accelerator
+8555 | [Innovation title] · [type] | [SP01 – Breeding for Tomorrow]
+For existing innovations that receive active investment in 2026, you only need to update changes, all other existing data will be pre-filled for you to review. This should not take much of your time.
+
+For existing innovation that did not receive investment in 2026, were stopped or put on-hold, you can indicate status 'Inactive' and provide the reason for discontinuation.
+If you do not update your innovation result, then PRMS will automatically close them with the status 'Inactive – not updated' at the end of January 2027. You can reopen and update an innovation in any later reporting phase (2027, 2028 and beyond).
+
+This update helps CGIAR keep its innovation records current and monitor their progress over the years. Thank you for your contribution to this process; it is much appreciated.
+
+This is an automated message from the CGIAR PRMS system. Please do not reply directly to this email.
+
+Deviations in the templates, to confirm at the T-15 copy approval:
+- The years come from the phase year: 2026 becomes `{{phaseYear}}`, and 2027 becomes `{{nextYear}}`, written as "({{nextYear}} and beyond)".
+- "For existing innovation" is pluralised to "innovations".
+- The MELIA summary and the center email have their own intro sentence, which Nicoleta did not write.
+
+### RIR-T-12: MessageBuilder — `[~]` Review 1 FAIL → rework (2026-10-23)
+
+- **Attempt 1 (Implementer):**
+  - Rewrote `digest-builder.ts` and its spec (22 cases), and applied T-9 advisories A1, A3 and A4 to the parser.
+  - Red runs:
+    - parser: 2 assertion failures;
+    - builder: TS2305 missing exports, because the module was fully rewritten.
+  - Green run: 43 of 43 tests pass, and eslint exits 0.
+  - Call sites that no longer compile (T-13 scope): the dispatcher, the campaign service and `campaign-view.ts`.
+- **Review 1: FAIL.**
+  - (1) A W3 unreachable item loses `lead_center_code` and `lead_center_name`. This violates RIR-R-4, which says to list the SP **or center**.
+  - (2) The greeting uses the PRMS user name, while RIR-R-2 said "as written in the developer field". **Leader decision:** the spec is amended to the PRMS user name, per T-9 A5 (a parsed name can merge two people). This is a clarification within the approved Pivot, and the user is informed.
+- **Advisories:**
+  - **Applied in the rework:**
+    - deduplicate results by `result_id` within a message;
+    - make `INNOVATION_USE_ROUTING` actually drive the routing.
+  - **Recorded:**
+    - The W3 owner-SP INNER JOIN in T-11 could drop W3 rows that have no owner SP. The PROD evidence from 2026-10-19 shows `API` rows with no owner SP = 0, so the risk is low. Re-check in the T-11 HITL counts.
+    - Use a `NO_SP` reason instead of `NO_MELIA` when `initiative_id` is null.
+    - Add a shared `stripRouting` helper.
+
+### RIR-T-11: Pending repository v2 — `[~]` code PASS, PROD HITL counts pending (2026-10-23)
+
+- **Attempt 1 (Implementer):** no Jest run by the Implementer, as instructed.
+  - `findPending` no longer excludes W3 and now adds `source`, `developer_text`, `lead_center_code` and `lead_center_name`. Each join is pinned to one row with a MAX/MIN subquery.
+  - `findMeliaByInitiatives` replaces the coordinator query. `findCcByInitiatives` is kept as a MELIA-only delegate for the dispatcher until T-13.
+  - New: `findActiveUserEmails`, chunked at 1000, and `findCenterMel`.
+- **Leader verification:** `npx jest --maxWorkers=2 --testPathPattern=replicated-innovation-reminders/repositories/pending-innovation` passed 27 of 27.
+- **Review 1: PASS.** Column names match the entities. The `IN (?)` array binding has a precedent in the codebase. The repository output can be assigned to T-12's `PendingInnovationRowV2`.
+- **Advisories:**
+  - A1: type `source` as `string | null` and use one shared row contract (T-13).
+  - A2: the HITL counts should include `source IS NULL` rows, which are now W1/W2, and `COUNT(*)` vs `COUNT(DISTINCT r.id)`.
+  - A3: run `EXPLAIN` on `findPending` to confirm the subqueries use `ref` access.
+  - A4: `LOWER(email)` cannot use the email index. That is fine at the current size.
+  - A5: remove `findCcByInitiatives` and `CcByInitiative` in T-13.
+
+## Decision: RIR-OQ-7 / RIR-OQ-8 answered by Nicoleta — 2026-10-23
+
+- **OQ-7:** Innovation Use and packages go to the P/A MELIA focal points, "combined with innov dev (without developer address) … in the same notification email to MELIA FPs".
+  - This matches the T-12 default: the MELIA summary per SP already holds both type 7 results without a reachable developer and type 2 results.
+  - Packages stay out until they are replicated (RIR-OQ-9).
+- **OQ-8:** "the Center MEL FP of the Center which has submitted the results (I believe by default that Center becomes lead Center)".
+  - Implemented as the lead center (`results_center.is_leading_result = 1`), which is the T-11 default.
+  - The PROD HITL counts W3 results that have no lead center.
+- **DEP-5:** the Center MEL list "changes based on HR changes in P/As and Centers. Please export it when you need it."
+  - RIR-R-18 is amended: the list is re-exported and reloaded before each campaign.
+  - **Follow-up, recorded and not a task:** an admin upload or edit for the Center MEL and MELIA lists, so a reload does not need a migration.
+- **Attempt 2 (Implementer, collation fix after the prdb run failed with errno 3780):**
+  - Changed `center_code` to `varchar(15) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci`, following the precedent in `1789478669369-BilateralHandoffCodes.ts`. The entity gets `collation: 'utf8mb3_unicode_ci'` (and `charset`).
+  - On prdb the failed run had already applied the log-table DDL steps, because MySQL commits DDL implicitly. The guards make re-running `up` safe.
+- **Review 2: PASS.**
+  - The collation now matches `clarisa_center.code`.
+  - The key size is 495 bytes.
+  - Re-running from the partial state is safe.
+  - Advisories:
+    - A6: the `charset` option on the entity is cosmetic.
+    - A7 (pending guide fix for staging): `onecgiar-pr-server/CLAUDE.md` §5 says `migration:check` detects entity drift. It only checks for pending migration names.
+- **Status:** `[~]` until the user records the prdb up → down → up → down run.
+- **Attempt 2 (Implementer):**
+  - Changes:
+    - W3 unreachable items keep `lead_center_code` and `lead_center_name`.
+    - Results are deduplicated by `result_id` within each message.
+    - `INNOVATION_USE_ROUTING` now drives the routing, through an optional second parameter of `build`.
+    - New helper `baseOf`.
+  - Red run: ts-jest compile errors (TS2554, TS2339).
+  - Green run: 45 of 45 pass, and eslint exits 0.
+- **Review 2: PASS.**
+  - Both Review 1 findings are fixed, and the greeting in the spec and the code now agree.
+  - W3 rows never reach MELIA, whatever their type.
+  - The per-message dedupe keeps a result that belongs in two developers' digests.
+  - A manual mutation trace confirms that every new test asserts behaviour.
+- **Advisories (go into the T-13 brief, as they are 1-2 line touches):**
+  - A1: a W3 type-2 test case.
+  - A2: a dedicated unreachable reason when the routing is `'UNREACHABLE'`. Accepted as is, because it is not the default.
+  - A3: deduplicate `unreachable` by `result_id`.
+  - A4: a comment noting that the routing branch covers every type other than 7.
+
+#### HITL evidence (user-run) — 2026-10-23
+
+**TEST (prdb), RIR-T-10:**
+- **Pre-check:** `center_mel_focal_point` was absent.
+- **run #1 OK:**
+  - The log has `message_key` and `UQ_rir_log_campaign_message`.
+  - `center_mel_focal_point` was created with `center_code varchar(15) CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci` and its FK.
+  - There are 4 RIR templates: center (kl 1, ctr 1), final (kl 1), melia_summary (kl 1, melia 1), q4 (kl 1).
+  - The non-RIR baseline is unchanged: `n=25` and `all_hash=f66171f7ed9b380418dff9be262af4eb`, both before and after.
+- **revert OK:** the old unique is restored, `message_key` is dropped, the center table is gone, and 2 templates remain with kl=0.
+- **run #2 OK:** the same checks as run #1 pass.
+- **EXPLAIN `findPending`, version 36:**
+  - The dependent subqueries use `d` = eq_ref and `c` = ref (FK index).
+  - The pinned joins `rid` and `lrc` use eq_ref on PRIMARY.
+  - No full scans. This answers T-11 advisory A3.
+- **Final revert:** done 2026-10-23 (user's output: `RIRRecipientModelV21791700000000 has been reverted successfully`, COMMIT). prdb is back to the pre-T-10 state. **RIR-T-10 → PASS.**
+
+**PROD (read-only, Reporting version 8):**
+- **RIR-P-15:** `replicated_innovation_reminder_campaign` is empty, so no campaign has ever been created and the premise is **verified**.
+- **Pending counts (T-11):**
+
+  | Bucket | Type | Rows | Results |
+  |---|---|---|---|
+  | W1/W2 | 2 | 351 | 351 |
+  | W1/W2 | 7 | 1,359 | 1,359 |
+  | W3 (API) | 2 | 57 | 57 |
+  | W3 (API) | 7 | 221 | 221 |
+
+  - There are no `source IS NULL` rows, and rows equal distinct results, so there are no duplicate owner rows (T-11 A2).
+  - The W1/W2 numbers match the 2026-10-21 extract (1,710).
+- **W3 without a lead center:** 2 of 278 W3 results. They will be listed as unreachable with reason NO_CENTER (RIR-OQ-8).
+- **Developer emails (approximate, first email per row, W1/W2 type 7):** 570 distinct; 389 (68%) match an active PRMS user.
+  - About 181 addresses (32%) are external or have no account. Their innovations go to the MELIA summary (RIR-R-17).
+- **T-10 → [x]** once the final revert is confirmed. **T-11 → [x]**: the PROD counts are recorded.
+
+### RIR-T-13: Dispatcher v2 — `[~]` Review 1 FAIL → rework (2026-10-23)
+
+- **Attempt 1 (Implementer):**
+  - Changes:
+    - The dispatcher was rewired: `plan()` → `build()` → per-type templates → a log keyed on `message_key` → emit.
+    - New `PreviewView` and `SendView` shapes.
+    - The T-10 A2, T-11 A1/A5 and T-12 A1/A3/A4 advisories were applied.
+  - Results:
+    - Module Jest: 10 suites, 165 tests green.
+    - `--findRelatedTests` on 15 files: 14 suites, 169 tests green.
+    - tsc is clean and eslint exits 0.
+  - Red run: TS2339 compile error.
+- **Review 1: FAIL.** A dry run that throws inside `plan()` falls through to `end()`/`finalize()`. That breaks RIR-R-9 (no status change), and the preview returns an empty 200.
+  - Verified with no findings: exactly-once handling, the non-prod redirect for all types, prod To/CC, no coordinator path, template vars against the migration bodies, the exact subject, logger hygiene, the advisories, and DI.
+- **Advisories:**
+  - Applied in the rework:
+    - the subject label comes from the dispatcher's `isProd`, so an unset `IS_PRODUCTION` still shows Testing;
+    - `lead_email`, `lead_name` and `lead_contact_person` are dropped from the preview items (the T-14 contract is updated to match);
+    - a dead branch is removed.
+  - Deferred to the T-15 copy review: a null `spName` renders "SP01 – ,". The fix is `{{#if spName}}` in the templates.
+- **Attempt 2 (Implementer):**
+  - Changes:
+    - a dry run that throws now rethrows instead of finalizing;
+    - the subject label comes from `isProd`;
+    - the `lead_*` fields are removed from the output items through `ResultItemBase`;
+    - a dead branch is removed.
+  - The Leader's Jest run found 1 stale T-4 test that expected `[PRMS Testing]` under prod. The Implementer updated that test only.
+  - Module result: 10 suites, 169 tests green.
+  - `--findRelatedTests`: 14 suites, 173 tests green.
+- **Review 2: PASS.**
+  - No dry-run path reaches claim, log, finalize or send.
+  - A real dispatch that errors still finalizes FAILED.
+  - The prod label is unchanged.
+  - No other consumer reads the removed lead fields.
+- **Advisory A1 (AC-9) — applied as a small attempt 3.** The rethrown raw error could carry bound emails (QueryFailedError) into the global filter's log and response. The fix wraps it as `InternalServerErrorException(safeReason)`.
+- **Advisory A2 (recorded):** the subject comment in migration 1791500000000 is stale. It is not editable after master.
+
+### RIR-T-14: Admin preview v2 — PASS 2026-10-23
+
+- **Attempt 1 (Implementer):**
+  - Changes:
+    - the client interfaces mirror `PreviewView` and `SendView`, with no `lead_*` fields;
+    - the drawer groups messages by type with `by_type` counts;
+    - the unreachable table gets Reason and SP-or-center columns plus the developer free text;
+    - Send now confirms `totals.messages` and shows the outcome per type;
+    - the copy lives in `replicated-innovation-reminders.copy.ts`.
+  - Scoped Jest: 3 suites, 38 tests green.
+  - `tsc` (app) is clean and eslint is clean.
+  - **Not spec-first, so no red run was recorded.** Accepted: the task block has no Red-run field.
+- **Leader verification:** after the late interface edit, `--findRelatedTests --maxWorkers=2` on the 4 changed source files passed 435 suites and 11,676 tests.
+- **Review 1: PASS.**
+  - The contract matches the server field for field (`developerText` vs `developer_text`).
+  - The reason copy is exact.
+  - Only Spartan components are used.
+  - The Send-now test is discriminating: the messages total differs from the digest count.
+- **Advisories (recorded):**
+  - A1: missing `totals` falls back to 0 with Send enabled. It should be an error state.
+  - A2: pin `by_type` with a value that differs from the recomputed one.
+  - A3: the `by_type` fallback hides contract drift.
+- **Attempt 3 (Implementer, AC-9):**
+  - A failed dry run now throws `InternalServerErrorException('preview failed: ' + safeReason)`.
+  - The spec rejects with an email in the message and asserts no '@' reaches the thrown error, plus no claim, log, finalize or send.
+  - Module Jest: 10 suites, 169 tests green. tsc and eslint are clean.
+- **Review 3: PASS.** `safeReason` uses only the class name and the error code, the real-dispatch path is unchanged, and the spec would catch the old raw rethrow. **RIR-T-13 → PASS 2026-10-23.**
+
+## Decision: Center MEL focal point list (DEP-5) — 2026-10-23
+
+- **Sources:**
+  - Nicoleta's deck "Reviewing and approving w3-bilat results" (5 Feb 2026, slide 7), which lists names only;
+  - "MELIAF Center stocktake dataset v2.xlsx" (Joined Up MELIA, interviews Apr–Sep 2026).
+  - The Program/Accelerator Teams dashboard is Power BI and cannot be read by the agent. The user's export only contained the P/A MELIA role.
+- **Emails:** resolved through the CGIAR M365 directory.
+- **User decision:** "esos son". Seed the deck's people who have a resolvable email, and leave out those without one: Ben Pamatmat (IRRI), plus Leroy Mwanzia (CIP) and Menale Kassie (ILRI) from the stocktake. The result is 15 people across 12 centers, which is 17 rows over 13 center codes, because the Alliance pair (Ivana Cortesini, Fabio Catini) is seeded on both CLARISA Alliance centers, 'Bioversity (Alliance)' and 'CIAT (Alliance)'. *(Corrected 2026-10-23: the Leader had miscounted it as 16.)*
+- **Discrepancies between the two sources, recorded:**
+  - CIP: the stocktake names Leroy Mwanzia.
+  - ILRI: the stocktake adds Menale Kassie as the new Head of MEL.
+  - IFPRI: blank in the stocktake.
+  - Nicoleta was given an optional confirmation email draft. RIR-R-18 requires a refresh before each campaign anyway.
+- **RIR-T-15 code part:**
+  - seed migration `1791800000000-RIR-SeedCenterMelFocalPoints`, with centers resolved by acronym and no hard-coded codes;
+  - a `{{#if spName}}` fix in the not-yet-deployed RecipientModelV2 templates (T-13 advisory);
+  - T-14 advisories A1–A3 on the client.
+
+### RIR-T-14 follow-up: Review 1 advisories A1–A3 (2026-10-23)
+
+- **Changes:**
+  - A1: when `totals.messages` is missing or invalid, the component shows a `previewUnavailable` error and opens no confirmation.
+  - A2: the `by_type` fixture differs from the count derived from the digests, which pins the contract.
+  - A3: the drawer's recompute fallback is removed.
+- **Red run:** 1 failed and 38 passed. The failure was the new A1 test, where the dialog rendered "0 messages will be sent".
+- **Green runs:**
+  - folder-scoped: 3 suites, 39 tests;
+  - `--findRelatedTests`: 21 suites, 740 tests;
+  - eslint: clean.
+- **Review:** the client-side diff is reviewed together with the T-15 code review.
+
+### RIR-T-15 part 1 (code): Center MEL seed + spName template fix — code PASS 2026-10-23
+
+- **Attempt 1:**
+  - `1791800000000-RIR-SeedCenterMelFocalPoints.ts`: 17 rows over 13 center labels, with the Alliance pair on both Alliance centers. Centers resolve by acronym, then name.
+  - `1791700000000` templates: `{{#if spName}}` wrap. The file is not yet deployed.
+  - tsc and eslint are clean.
+- **Review 1: FAIL** on a count mismatch. It was a Leader record error (16 vs 17), corrected above.
+  - The templates and the client follow-up (T-14 A1–A3) passed.
+  - Advisories:
+    - make the seed fail loudly on unresolved or colliding Alliance centers;
+    - drop the generic Alliance candidates;
+    - have `down` delete by email.
+- **Attempt 2:**
+  - The seed resolves all 13 labels first and throws before any insert if a label is unresolved or the two Alliance labels collide.
+  - The Alliance candidates are reduced.
+  - `down` is a bound `DELETE … WHERE email IN (…)`.
+- **Review 2: PASS.**
+  - The throw happens before any insert, every value is bound, and the header is accurate.
+  - The email-wide `down` is acceptable for a table this feature owns.
+- **Pending (HITL, user):**
+  - Query 1: preview of the center resolution on prdb and PROD.
+  - On prdb: `migration:run` (applies 1791700000000 + 1791800000000), Query 2 must return 17 rows over 13 codes, then `migration:revert` ×2.
+
+#### RIR-T-15 part 1: HITL evidence on prdb (user-run, 2026-10-23)
+
+- **`migration:run`** applied `RIRRecipientModelV21791700000000` and `RIRSeedCenterMelFocalPoints1791800000000` in one transaction.
+  - All 13 labels resolved on the **first acronym candidate**, so no name fallback was used.
+  - The resolved codes were: Bioversity (Alliance) → CENTER-02, CIAT (Alliance) → CENTER-03, AfricaRice → 01, CIMMYT → 05, CIP → 06, ICARDA → 07, ICRISAT → 09, IFPRI → 10, IITA → 11, ILRI → 12, IRRI → 13, IWMI → 14, WorldFish → 15.
+  - The two Alliance codes are distinct.
+- **Query 2:** 17 rows over 13 codes, which matches the decision.
+- **Revert:** the user reports both migrations were reverted, leaving prdb back at the pre-revision-2 state.
+
+## Data validation on PROD before T-15 (user-run, read-only, version 8) — 2026-10-23
+
+- **Developer field (1,359 W1/W2 type 7):**
+  - 128 empty;
+  - 205 with names only, no email;
+  - 1,026 with at least one email.
+- **Developer emails:**
+  - 758 distinct addresses, up to 10 per field.
+  - **471 are active PRMS users**, so 471 developer digests go out.
+  - 287 (38%) have no PRMS account and are routed to the MELIA summary.
+- **Routing:**
+  - 822 Innovation Development results go to developers;
+  - 537 Innovation Development results go to the MELIA summary;
+  - 351 Innovation Use results go to the MELIA summary.
+  - Total 1,710 ✓.
+- **MELIA summaries:** 13, one per SP, and every SP has at least one MELIA focal point. They cover 888 results. The largest are SP02 with 183 and SP09 with 174.
+- **W3:** 12 center emails covering 276 results, plus 2 unreachable with no lead center. CIAT (Alliance) has no pending W3 as lead.
+- **Total:** about 496 emails per campaign at today's volume.
+- **CC load per MELIA (developer digests):**
+  - j.delarueda and v.pede (SP06 + SP09): 152 each.
+  - Then SP01 84, SP02 76, SP03 58, SP04 48, SP07 34, SP12 29, SP05 19, SP13 17, SP08 15, SP10 13 each, and SP11 1.
+- **User decision (2026-10-23): accepted, same rationale as the 2026-10-19 R-3 decision.**
+  - No campaign is sent now. Teams get time to update, and the reminder is scheduled near the end of the year, by which point the pending set (and so the CC load) should be much smaller.
+  - The admin preview shows recipient and CC counts before "Send now".
+  - Residual risk: if the volume is still high when the reminder is due, raise it with Nicoleta before sending.
+
+## Pivot Record (mini): RIR-R-5 "Send again" — 2026-10-23
+
+**Trigger:** the user found during T-15 that a `SENT` campaign is terminal, and that R-5 allowed only one non-cancelled campaign per kind. As a result an admin could never send the same kind again: not for a second final reminder in production, and not for a re-test on PRTest.
+
+**Decision (user, 2026-10-23):**
+- R-5 is amended: at most one *open* (`PENDING`/`SENDING`) campaign per kind per phase. Sent and cancelled campaigns stay as history.
+- New "Send again" action on `SENT` rows. It creates a new campaign of the same kind, uses the normal schedule/preview/confirm flow, and has its own send log.
+- Exactly-once per campaign is unchanged.
+- The user asked for a fast turnaround.
+
+**Impact:**
+- Server: the duplicate-kind check in the campaign service and its spec.
+- Client: a "Send again" button on SENT rows, its copy and its spec.
+- No migration.
+
+**Interim for the T-15 smoke:** the user set the two PRTest (version 36) SENT campaigns to `CANCELLED` by SQL. `rir_test_recipient_email` is confirmed as the user's own address.
+
+#### T-15 PRTest smoke (agent-run in the browser on prtest.ciat.cgiar.org, deploy 68e10f343) — 2026-10-23
+
+- **Revision 2 is live.** The header reads "128 pending replicated innovation(s), 4 without a reachable recipient". The two old SENT campaigns were cancelled by SQL beforehand.
+- **Q4 campaign:**
+  - Created for 2026-12-31 10:00 local and shown as Pending.
+  - **Preview:**
+    - "Non-production: every email is redirected"; 15 messages, 124 results, 0 CC.
+    - Developer digests: 0, because no TEST developer address matches an active user.
+    - MELIA summaries: 6 messages, 14 results.
+    - Center MEL emails: 9 messages, 110 results.
+    - Unreachable: 4, all with reason "No lead center".
+    - 124 + 4 = 128 ✓.
+  - **Send now:** the confirmation read "15 messages will be sent". Result: "Dispatch finished: 15 sent, 0 skipped, 0 failed", split 0 / 6 / 9 by type. The row is SENT with Sent 15 and Unreachable 4.
+- **Inbox:** the test address received exactly **15** emails, each with subject "TEST - [PRMS Testing] Reminder: innovations pending a 2026 update – Reporting 2026". The "TEST - " prefix is added by the mail service.
+  - Sampled MELIA summary:
+    - the redirect block names the intended recipients (the SP06 pair);
+    - the badge reads "Q4 notice" and the greeting "Dear MELIA focal point(s) of SP06 – Climate Action";
+    - the table has a linked title · type, "SP06 – Climate Action" and "Not provided";
+    - the copy has 2026/2027 substituted.
+  - The S3 header image did not render in Outlook. It is an external SVG and looked the same in revision 1, so it is not a regression.
+- **Cron:** a FINAL_REMINDER was scheduled for 16:17 local and is Pending. The hourly tick at 17:00 local should dispatch it; the result is still to be recorded.
+- **Not covered by the agent:**
+  - The 403 check needs a non-admin account (user step).
+  - The developer digest template needs a TEST result whose developer field holds an active user's address.
+- **Developer digest (2026-10-23):** the user set result 8555 "Innovation Developer" to their own address. The preview of the pending FINAL_REMINDER then showed:
+  - Developer digests: 1 message, To the user's address, CC r.mawia (SP01 MELIA), greeting "Santiago Sanchez" (the PRMS user name, per A5), and result #8555;
+  - MELIA summaries: 6 messages with 13 results, one less than before, because 8555 left the SP01 summary.
+  - **RIR-R-2, R-3 and R-17 are confirmed live.**
+
+### Mini-Pivot R-5 "Send again" — Review 1 PASS (2026-10-23)
+
+- **Implementer:**
+  - Server: the duplicate check blocks only PENDING, SENDING and FAILED. Red 5 → green 175; `--findRelatedTests`: 8 suites, 64 tests.
+  - Client: "Send again" on SENT rows presets the kind and shows the hint. Red 3 → green 45; `--findRelatedTests`: 21 suites, 746 tests.
+  - The client eslint config fails to start, so style was checked by the Reviewer by hand.
+- **Review: PASS.**
+- **Advisories (recorded):**
+  - The R-5 wording is now aligned to include FAILED.
+  - The 409 text says "cancel" although a FAILED campaign cannot be cancelled. Known gap: a FAILED campaign that keeps failing blocks its kind for the phase.
+  - `canSendAgain` should also be disabled while that kind has an open campaign.
+  - The focus call uses `setTimeout`.
+  - The client eslint config needs fixing.
+- **Cron (2026-10-23):** the FINAL_REMINDER scheduled for 16:17 local was dispatched by the hourly tick at 22:00 UTC (17:00 local). The test inbox received exactly **16** emails with subject "TEST - [PRMS Testing] **Final reminder:** innovations pending a 2026 update – Reporting 2026", all sent between 22:00:01 and 22:00:09 UTC. That is 1 developer digest + 6 MELIA + 9 Center MEL, with no duplicates.
+  - **RIR-R-6 (hourly) and RIR-R-8 (exactly once) are confirmed live.**
+  - The developer digest body was confirmed: "Final reminder / Dear Santiago Sanchez … you have 1 innovation(s)", with the MELIA address named in the redirect block's "in copy".
+- **T-15 smoke status:**
+  - Done: preview, Send now, all 3 templates, redirect, cron, exactly-once.
+  - Pending:
+    - the 403 check with a non-admin account (user);
+    - "Send again" on PRTest once deploy cf0c1bdb4 is live;
+    - Nicoleta's copy approval (DEP-2).
+- **DEP-2 copy review:** the user emailed Nicoleta the 3 test emails (developer digest, MELIA summary, Center MEL), together with the explanation and the volume estimate (about 496 emails). **Awaiting her approval.** T-15 closes once she approves and the 403 check is done.
+
+### 2026-10-26 — Result ID as an active hyperlink (Marc Schut via INC-165323)
+
+- Request: the Result ID in every reminder email must be an active link to the result page on reporting.cgiar.org.
+- Change: migration `1791900000000-RIR-ResultIdHyperlink.ts`, a REPLACE scoped by name on the 4 RIR template rows. The Result ID cell links to the same `{{resultUrl}}` as the title (`RESULTS_URL` + code + `/general-information?phase=<version>`). No code change.
+- Verification: eslint and tsc clean. Pending HITL: user runs up/down/up on prdb, then a PRTest send (Send again) to confirm the ID is clickable.

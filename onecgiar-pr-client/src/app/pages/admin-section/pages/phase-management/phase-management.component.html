@@ -1,8 +1,38 @@
 <div class="local_container section_container">
-  <div class="tabs animate__shakeX">
-    <a class="tab pr-body-2" routerLinkActive="active" routerLink="reporting">Results module</a>
-    <a class="tab pr-body-2" routerLinkActive="active" routerLink="innovation-package">IPSR module</a>
-  </div>
+  <header class="flex flex-col gap-3">
+    <nav hlmBreadcrumb>
+      <ol hlmBreadcrumbList class="text-[13px]">
+        <li hlmBreadcrumbItem>{{ copy.breadcrumbAdmin }}</li>
+        <li hlmBreadcrumbSeparator></li>
+        <li hlmBreadcrumbItem>
+          <span hlmBreadcrumbPage>{{ copy.breadcrumbPhaseManagement }}</span>
+        </li>
+      </ol>
+    </nav>
+    <div class="flex flex-col gap-1">
+      <h1 class="m-0 text-[24px] font-semibold leading-[32px] text-[var(--pr-color-secondary-500)]">{{ title() }}</h1>
+      <p class="m-0 text-[14px] leading-[20px] text-[var(--pr-color-secondary-400)]">{{ description() }}</p>
+    </div>
+    <nav
+      [attr.aria-label]="copy.tabsNavLabel"
+      class="flex w-full flex-col gap-1 rounded-xl bg-[var(--pr-color-accents-1)] p-1 sm:inline-flex sm:w-fit sm:flex-row"
+    >
+      <a
+        routerLink="reporting"
+        routerLinkActive="is-active"
+        ariaCurrentWhenActive="page"
+        class="rounded-lg px-5 py-2 text-center text-[14px] font-medium text-[var(--pr-color-secondary-400)] no-underline transition-colors hover:bg-black/5 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] aria-[current=page]:bg-brand-300 aria-[current=page]:text-white aria-[current=page]:hover:bg-brand-300"
+        >Results module</a
+      >
+      <a
+        routerLink="innovation-package"
+        routerLinkActive="is-active"
+        ariaCurrentWhenActive="page"
+        class="rounded-lg px-5 py-2 text-center text-[14px] font-medium text-[var(--pr-color-secondary-400)] no-underline transition-colors hover:bg-black/5 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] aria-[current=page]:bg-brand-300 aria-[current=page]:text-white aria-[current=page]:hover:bg-brand-300"
+        >IPSR module</a
+      >
+    </nav>
+  </header>
   <div class="outlet">
     <router-outlet></router-outlet>
   </div>

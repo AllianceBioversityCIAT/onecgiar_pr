@@ -1,3 +1,4 @@
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure (TND-T-2)
 import { CoverageCount, PortfolioTocCoverageProgram } from '../../../../../../shared/interfaces/portfolio-toc-coverage.interface';
 
 export interface TocKpiViewRow {
@@ -6,6 +7,8 @@ export interface TocKpiViewRow {
   shortName: string;
   covered: number;
   total: number;
+  /** KPIs without a target, excluded from `total` (TND-DD-3: a missing value reads as 0). */
+  noTarget: number;
   /** Whole-number coverage %, or `null` when the program has no KPIs. */
   percent: number | null;
   outputs: CoverageCount;
@@ -13,6 +16,7 @@ export interface TocKpiViewRow {
 }
 
 export interface TocKpiSummary extends CoverageCount {
+  noTarget: number;
   percent: number | null;
 }
 
@@ -62,6 +66,7 @@ export function toViewRows(programs: PortfolioTocCoverageProgram[]): TocKpiViewR
       shortName: p.shortName,
       covered: p.covered,
       total: p.total,
+      noTarget: p.noTarget ?? 0,
       percent: coveragePercent(p.covered, p.total),
       outputs: p.outputs,
       outcomes: p.outcomes
@@ -69,7 +74,12 @@ export function toViewRows(programs: PortfolioTocCoverageProgram[]): TocKpiViewR
 }
 
 export function toSummary(portfolio: CoverageCount): TocKpiSummary {
-  return { covered: portfolio.covered, total: portfolio.total, percent: coveragePercent(portfolio.covered, portfolio.total) };
+  return {
+    covered: portfolio.covered,
+    total: portfolio.total,
+    noTarget: portfolio.noTarget ?? 0,
+    percent: coveragePercent(portfolio.covered, portfolio.total)
+  };
 }
 
 /** Rows whose code is in `programs`; every row when the set is empty (no Program filter). Does not mutate the input. */
@@ -79,5 +89,8 @@ export function filterRowsByPrograms(rows: readonly TocKpiViewRow[], programs: R
 
 /** Sum of the visible rows (GLF-P-5): the summary of a Program-filtered view. */
 export function sumRows(rows: readonly TocKpiViewRow[]): CoverageCount {
-  return rows.reduce((acc, row) => ({ covered: acc.covered + row.covered, total: acc.total + row.total }), { covered: 0, total: 0 });
+  return rows.reduce(
+    (acc, row) => ({ covered: acc.covered + row.covered, total: acc.total + row.total, noTarget: (acc.noTarget ?? 0) + row.noTarget }),
+    { covered: 0, total: 0, noTarget: 0 }
+  );
 }

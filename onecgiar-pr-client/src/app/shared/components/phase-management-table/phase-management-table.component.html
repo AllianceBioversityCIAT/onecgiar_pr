@@ -1,4 +1,21 @@
-<div class="setting_title">Phases</div>
+<section class="mb-5 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm" data-testid="pmt-card">
+  <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <h2 class="text-lg font-semibold">{{ copy.configuredPhases }}</h2>
+      <span hlmBadge variant="secondary" data-testid="pmt-total-chip">{{ copy.totalChip(totalPhases) }}</span>
+      <span hlmBadge variant="outline" data-testid="pmt-open-chip">{{ copy.openChip(openPhases) }}</span>
+    </div>
+    <div class="flex flex-col items-end gap-1" [ngClass]="{ disabled: getFeedback() }">
+      <app-pr-button
+        text="Add new phase"
+        (click)="getFeedback() ? '' : addNewPhase()"
+        padding="medium"
+        [ngClass]="{ disabled: getFeedback() }"
+        [disabled]="getFeedback() ? true : false"
+        [verticalMargin]="5"></app-pr-button>
+      <div class="text-sm text-destructive" role="status" *ngIf="getFeedback()">{{ getFeedback() }}</div>
+    </div>
+  </header>
 
 <div class="local_container phase_table">
   <app-pr-table
@@ -18,7 +35,7 @@
       </tr>
     </ng-template>
     <ng-template prTableBody let-phase let-rowIndex="rowIndex">
-      <tr>
+      <tr [ngClass]="{ 'bg-brand-25': phase?.status && !phase?.isNew }">
         <td [style.width.px]="30">
           {{ phase?.id }}
         </td>
@@ -52,7 +69,14 @@
         </td>
         <td [style.width.px]="180">
           <div class="text" *ngIf="!phase.editing">
-            {{ phase?.obj_portfolio?.name || '' }}
+            <span
+              *ngIf="phase?.obj_portfolio?.name"
+              hlmBadge
+              variant="outline"
+              class="h-auto px-2.5 py-0.5 text-[12px] font-medium"
+              data-testid="pmt-portfolio-chip"
+              >{{ phase?.obj_portfolio?.name }}</span
+            >
           </div>
           <app-pr-select
             *ngIf="phase.editing"
@@ -98,21 +122,26 @@
           </app-pr-select>
         </td>
         <td [style.width.px]="120">
-          <div class="text" *ngIf="!phase.isNew">{{ phase?.start_date | date: 'yyyy-MM-dd' }}</div>
+          <div class="text tabular-nums" *ngIf="!phase.isNew">{{ phase?.start_date | date: 'yyyy-MM-dd' }}</div>
           <input type="date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts" placeholder="Start date" />
         </td>
         <td [style.width.px]="120">
-          <div class="text" *ngIf="!phase.isNew">{{ phase?.end_date | date: 'yyyy-MM-dd' }}</div>
+          <div class="text tabular-nums" *ngIf="!phase.isNew">{{ phase?.end_date | date: 'yyyy-MM-dd' }}</div>
           <input type="date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts" placeholder="End date" />
         </td>
         <td [style.width.px]="90">
-          <div class="text" *ngIf="!phase.editing" style="display: flex; justify-content: center">
-            <div class="tag_container" [ngClass]="phase?.status ? 'open' : 'closed'">
-              {{ phase?.status ? 'Open' : 'Closed' }}
-            </div>
+          <div class="text flex justify-center" *ngIf="!phase.editing">
+            <span
+              hlmBadge
+              [variant]="phase?.status ? 'outline' : 'secondary'"
+              class="h-auto px-2.5 py-0.5 text-[12px] font-medium"
+              [ngClass]="{ 'border-[var(--pr-color-green-500)] bg-[var(--pr-color-green-50)] text-[var(--pr-color-green-700)]': phase?.status }"
+              data-testid="pmt-status-pill"
+              >{{ phase?.status ? 'Open' : 'Closed' }}</span
+            >
           </div>
-          <div class="text" *ngIf="phase.isNew" style="display: flex; justify-content: center">
-            <div class="tag_container" [ngClass]="'closed'">Closed</div>
+          <div class="text flex justify-center" *ngIf="phase.isNew">
+            <span hlmBadge variant="secondary" class="h-auto px-2.5 py-0.5 text-[12px] font-medium" data-testid="pmt-status-pill">Closed</span>
           </div>
           <app-pr-select
             *ngIf="phase.editing && !phase.isNew"
@@ -145,51 +174,55 @@
         </td>
 
         <td [style.width.px]="85">
-          <div class="actions" *ngIf="!phase.editing">
-            <div class="action_button edit" (click)="getFeedback() ? null : (phase.editing = true)" [ngClass]="{ disabled: getFeedback() }">
-              <i class="material-icons-round" [prTooltip]="getFeedback() ? this.disabledActionsText : null" prTooltipPosition="top">edit</i>
-            </div>
+          <div class="actions flex items-center gap-1" *ngIf="!phase.editing">
             <div
-              class="action_button delete"
-              [ngClass]="{ disabled: getFeedback() || !phase?.can_be_deleted }"
+              class="edit inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-[var(--pr-color-primary-300)] transition-colors hover:bg-[var(--pr-color-accents-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              (click)="getFeedback() ? null : (phase.editing = true)"
+              [ngClass]="{ 'cursor-not-allowed opacity-50': getFeedback() }">
+              <i class="material-icons-round text-[18px]" [prTooltip]="getFeedback() ? this.disabledActionsText : null" prTooltipPosition="top">edit</i>
+            </div>
+            <button
+              type="button"
+              class="inline-flex size-8 items-center justify-center rounded-md border-0 bg-transparent p-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-[var(--pr-color-accents-5)] hover:bg-[var(--pr-color-accents-1)] hover:text-[var(--pr-color-red-300)]"
+              data-testid="pmt-delete-btn"
+              [attr.aria-label]="copy.deletePhaseLabel"
+              [attr.aria-disabled]="getFeedback() || !phase?.can_be_deleted ? 'true' : null"
+              [ngClass]="{ 'cursor-not-allowed opacity-50 hover:text-[var(--pr-color-accents-5)]': getFeedback() || !phase?.can_be_deleted }"
               (click)="getFeedback() ? null : phase?.can_be_deleted ? this.deletePhase(phase) : null"
               [prTooltip]="
                 getFeedback() ? this.disabledActionsText : !phase?.can_be_deleted ? 'The phase has active results therefore cannot be eliminated' : ''
               "
               prTooltipPosition="top">
-              <i class="material-icons-round">delete</i>
-            </div>
+              <i class="material-icons-round text-[18px]">delete</i>
+            </button>
           </div>
-          <div class="actions" *ngIf="phase.editing">
-            <div
-              class="action_button save"
+          <div class="actions flex items-center gap-1" *ngIf="phase.editing">
+            <button
+              type="button"
+              class="inline-flex size-8 items-center justify-center rounded-md border-0 bg-transparent p-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-[var(--pr-color-green-500)] hover:bg-[var(--pr-color-accents-1)]"
+              data-testid="pmt-save-btn"
               prTooltipPosition="top"
-              [ngClass]="{ disabled: phase?.isNew && getMandatoryIncompleteFields(phase) }"
+              [attr.aria-label]="phase?.isNew ? copy.createPhaseLabel : copy.savePhaseLabel"
+              [attr.aria-disabled]="phase?.isNew && getMandatoryIncompleteFields(phase) ? 'true' : null"
+              [ngClass]="{ 'cursor-not-allowed opacity-50': phase?.isNew && getMandatoryIncompleteFields(phase) }"
               [prTooltip]="phase?.isNew ? getMandatoryIncompleteFields(phase) : null"
               (click)="phase?.isNew && getMandatoryIncompleteFields(phase) ? null : phase?.isNew ? createPhase(phase) : savePhase(phase)">
-              <i class="material-icons-round">{{ phase?.isNew ? 'add_circle' : 'save' }}</i>
-            </div>
-            <div class="action_button cancel" (click)="cancelAction(phase); this.updateVariablesToSave(phase)">
-              <i class="material-icons-round">close</i>
-            </div>
+              <i class="material-icons-round text-[18px]">{{ phase?.isNew ? 'add_circle' : 'save' }}</i>
+            </button>
+            <button
+              type="button"
+              class="inline-flex size-8 items-center justify-center rounded-md border-0 bg-transparent p-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-[var(--pr-color-accents-5)] hover:bg-[var(--pr-color-accents-1)]"
+              data-testid="pmt-cancel-btn"
+              [attr.aria-label]="copy.cancelEditLabel"
+              (click)="cancelAction(phase); this.updateVariablesToSave(phase)">
+              <i class="material-icons-round text-[18px]">close</i>
+            </button>
           </div>
         </td>
       </tr>
     </ng-template>
   </app-pr-table>
 </div>
-
-<div class="center_flex_100 items-center w-full">
-  <div class="add_new_phase_button" [ngClass]="{ disabled: getFeedback() }">
-    <div class="feedback" *ngIf="getFeedback()">{{ getFeedback() }}</div>
-    <app-pr-button
-      text="Add new phase"
-      (click)="getFeedback() ? '' : addNewPhase()"
-      padding="medium"
-      [ngClass]="{ disabled: getFeedback() }"
-      [disabled]="getFeedback() ? true : false"
-      [verticalMargin]="5"></app-pr-button>
-  </div>
-</div>
+</section>
 
 <ng-content></ng-content>
