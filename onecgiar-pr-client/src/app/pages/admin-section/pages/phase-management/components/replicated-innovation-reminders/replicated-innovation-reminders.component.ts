@@ -165,12 +165,13 @@ export class ReplicatedInnovationRemindersComponent implements OnInit {
     return (c.status === 'PENDING' || c.status === 'FAILED') && !this.busy();
   }
 
+  /** Only when the kind is free: an open (PENDING/SENDING/FAILED) campaign of the same kind blocks a new one (RIR-R-5). */
   canSendAgain(c: ReminderCampaignView): boolean {
-    return c.status === 'SENT' && !this.busy();
+    return c.status === 'SENT' && !this.busy() && this.missingKinds().includes(c.kind);
   }
   /** "Send again": no new endpoint, it presets the normal create form (POST campaigns) to the row's kind. */
   sendAgain(c: ReminderCampaignView): void {
-    if (!this.canSendAgain(c) || !this.missingKinds().includes(c.kind)) return;
+    if (!this.canSendAgain(c)) return;
     this.sendAgainKind.set(c.kind);
     setTimeout(() => (document.querySelector(`[data-testid="rir-draft-${c.kind}"]`) as HTMLElement | null)?.focus());
   }
