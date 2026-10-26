@@ -1962,7 +1962,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Reporting-tab surfaces that already call the same functions. A row with no target
    * (`target = 0`, whatever its achieved value) is excluded as `zeroTarget` (KTO-R-1/DD-2,
    * superseding the former C-2 orphan landing in `in-progress`) — the partition stays total over
-   * the targeted set. Sort: remaining DESC, tie code ASC (OAH-R-3). Loading
+   * the targeted set. Sort: AoW code ASC (quick/overview-aow-code-order; was remaining DESC, OAH-R-3). Loading
    * reuses `loadingAows()` — no new aggregate computed (design B-16).
    *
    * `changes/overview-aow-cross-filter` `OSF-R-11`: with a scope selected, narrows to that
@@ -2006,7 +2006,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
-      .sort((a, b) => b.remaining - a.remaining || a.code.localeCompare(b.code));
+      // quick/overview-aow-code-order — AoW code ASC (AOW01, AOW02, …), superseding OAH-R-3's remaining DESC.
+      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
     return filterRowsByScope(rows, this.overviewScope(), r => r.code);
   });
 
