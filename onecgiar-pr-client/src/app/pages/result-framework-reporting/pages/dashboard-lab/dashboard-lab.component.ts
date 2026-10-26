@@ -232,6 +232,10 @@ const BILATERAL_EDITING_STATUS_IDS = new Set<number>([1, 8]);
 /** Statuses a Science Program sees on the W3/Bilateral KPI card: Pending Review, Approved, Rejected. */
 const BILATERAL_REVIEW_STATUS_IDS = new Set<number>([5, 6, 7]);
 
+// @akili-spec changes/sp-overview-w3-received (SWR-R-1)
+/** W3/Bilateral results "received" by the Program: Pending Review, Approved, Rejected. Never `=== 5` alone. */
+const BILATERAL_RECEIVED_STATUS_IDS = new Set<number>([5, 6, 7]);
+
 const BILATERAL_DISCONTINUED_SLOT = {
   key: 'discontinued',
   label: 'Discontinued',
@@ -2147,10 +2151,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly overviewTotalBreakdown = computed<OverviewTotalBreakdown>(() => {
     const version = this.latestVersion(this.selected());
+    // @akili-spec changes/sp-overview-w3-received (SWR-R-1, SWR-DD-1): unscoped rows, as before.
+    const rows = this.bilateralRows();
     return {
       replicated: version?.replicatedResults ?? 0,
       new: version?.newResults ?? 0,
-      pendingReview: this.bilateralRows().filter(r => resolveBilateralStatusId(r) === 5).length
+      received: rows.filter(r => BILATERAL_RECEIVED_STATUS_IDS.has(resolveBilateralStatusId(r))).length,
+      pendingReview: rows.filter(r => resolveBilateralStatusId(r) === 5).length
     };
   });
 
@@ -2782,6 +2789,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * stamps `overviewScope()` as `section`, and KPI 1 is program-wide (S-3.1 AND IT MUST NOT).
    */
   onTotalSegment(kind: TotalSegmentKind): void {
+    // @akili-spec changes/sp-overview-w3-received (SWR-R-2, SWR-DD-3): in-page, idempotent `set` (never a toggle), no navigation.
+    if (kind === 'received') {
+      this.overviewSection.set('bilateral');
+      return;
+    }
     const code = this.selected()?.initiativeCode;
     if (!code) return;
     const base = ['/result-framework-reporting/entity-details', code];

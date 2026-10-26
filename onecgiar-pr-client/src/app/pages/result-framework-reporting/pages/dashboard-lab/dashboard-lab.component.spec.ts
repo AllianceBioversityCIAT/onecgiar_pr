@@ -571,11 +571,41 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
 
     it('S-3.4: navigation fires even when every count is 0', async () => {
       const component = await createComponent();
-      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, pendingReview: 0 });
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, received: 0, pendingReview: 0 });
 
       component.onTotalSegment('replicated');
 
       expect(navigate).toHaveBeenCalledTimes(1);
+    });
+
+    // ---- sp-overview-w3-received T-1 (SWR-S-2.1) ----
+    it('SWR S-2.1: received switches the Overview to the W3/Bilateral section without navigating', async () => {
+      const component = await createComponent();
+      expect(component.overviewSection()).toBe('all');
+
+      component.onTotalSegment('received');
+
+      expect(component.overviewSection()).toBe('bilateral');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('SWR S-2.1 AND IT MUST NOT: calling received twice keeps bilateral (set, not toggle)', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('received');
+      component.onTotalSegment('received');
+
+      expect(component.overviewSection()).toBe('bilateral');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('SWR S-3.1: pendingReview still navigates to bilateral-review with status=pending and the phase, leaving the section alone', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('pendingReview');
+
+      expect(navigate).toHaveBeenCalledWith(REVIEW, { queryParams: { status: 'pending', phase: '1' } });
+      expect(component.overviewSection()).toBe('all');
     });
   });
 });
@@ -1689,7 +1719,35 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
       const component = await createComponent(apiMock(), program, 36);
       setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '1'])]]);
 
-      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, pendingReview: 2 });
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, received: 3, pendingReview: 2 });
+    });
+
+    // ---- sp-overview-w3-received T-1 (SWR-S-1.1) ----
+    it('SWR S-1.1: received counts statuses 5, 6 and 7 (5x2, 6x3, 7x1, 1x1, 8x1 -> 6) while pendingReview stays 2', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '6', '6', '7', '1', '8'])]]);
+
+      const breakdown = component.overviewTotalBreakdown();
+      expect(breakdown.received).toBe(6);
+      expect(breakdown.pendingReview).toBe(2);
+    });
+
+    it('SWR S-1.1 BUT: Editing (1/8) and Discontinued (4) are not received', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['1', '8', '4', '1'])]]);
+
+      expect(component.overviewTotalBreakdown().received).toBe(0);
+    });
+
+    it('SWR S-1.1 AND IT MUST: an active scope matching nothing leaves received unchanged', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '6', '6', '7', '1', '8'])]]);
+
+      component.overviewScope.set('ZZZ99');
+      expect(component.overviewTotalBreakdown().received).toBe(6);
     });
 
     it('S-4.2: an active scope matching none of the bilateral rows does not narrow pendingReview', async () => {
@@ -1698,7 +1756,7 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
       setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '1'])]]);
 
       component.overviewScope.set('ZZZ99');
-      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, pendingReview: 2 });
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, received: 3, pendingReview: 2 });
     });
 
     it('missing replicatedResults/newResults coerce to 0 while pendingReview still counts', async () => {
@@ -1706,7 +1764,7 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
       const component = await createComponent(apiMock(), program, 36);
       setBilateral(component, [['SP04::36', bilateralRows(['5', '6', '5'])]]);
 
-      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, pendingReview: 2 });
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, received: 3, pendingReview: 2 });
     });
 
     it('S-4.1: switching phase yields the new phase figures, none from the previous phase', async () => {
@@ -1716,12 +1774,12 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
         ['SP04::36', bilateralRows(['5', '5', '6', '1'])],
         ['SP04::34', bilateralRows(['5', '6', '6'])]
       ]);
-      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, pendingReview: 2 });
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, received: 3, pendingReview: 2 });
 
       (component as any).cacheMeterOverlay((component as any).summaryCacheKey('SP04', 34), withCounts(34, 40, 3));
       component.selectedVersionId.set(34);
 
-      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 40, new: 3, pendingReview: 1 });
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 40, new: 3, received: 3, pendingReview: 1 });
     });
   });
 

@@ -149,7 +149,7 @@ El árbol de contenido en la vista "By AOW" (`plannedBrowseView() === 'byAow'`) 
   must sit inside an `@if (showQaPrelSplit)` block.
 
 ## Añadido 2026-10-08 (spec `changes/sp-overview-total-general-card`)
-- `overviewTotalBreakdown` feeds `program-overview`'s `[totalBreakdown]`: replicated + new from the meter Version (program-wide, ignores `overviewScope`) plus pendingReview from UNSCOPED `bilateralRows()`. Never read `scopedBilateralRows()` here.
+- `overviewTotalBreakdown` feeds `program-overview`'s `[totalBreakdown]`: replicated + new from the meter Version (program-wide, ignores `overviewScope`) plus `received` (status 5/6/7) and `pendingReview` (status 5) from UNSCOPED `bilateralRows()`. Never read `scopedBilateralRows()` here.
 
 ## Añadido 2026-10-15 (spec `changes/sp-overview-total-drilldown`)
 - `onTotalSegment(kind)` handles `program-overview`'s `(openTotalSegment)` (Total General rows and bar segments). It does NOT go through `onOverviewLink`, so it never stamps `section` — KPI 1 is program-wide.
