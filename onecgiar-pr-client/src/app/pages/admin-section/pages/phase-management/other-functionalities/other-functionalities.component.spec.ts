@@ -50,4 +50,40 @@ describe('OtherFunctionalitiesComponent', () => {
       expect(result).toBe('Replicate all Innovation Use results from previous phase to the current active phase');
     });
   });
+
+  describe('replicateTitle', () => {
+    it('returns a distinct card title per input', () => {
+      component.replicateIPSR = false;
+      component.replicateInnovationUse = false;
+      const results = component.replicateTitle();
+      component.replicateInnovationUse = true;
+      const use = component.replicateTitle();
+      component.replicateInnovationUse = false;
+      component.replicateIPSR = true;
+      const ipsr = component.replicateTitle();
+      expect(results).toBe('Result innovations');
+      expect(use).toBe('Innovation use');
+      expect(ipsr).toBe('Innovation packages');
+      expect(new Set([results, use, ipsr]).size).toBe(3);
+    });
+  });
+
+  describe('card template', () => {
+    it('renders the description, the title and keeps Execute enabled when idle', () => {
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-testid="of-title"]')?.textContent).toContain('Result innovations');
+      expect(el.querySelector('[data-testid="of-description"]')?.textContent).toContain('Replicate all result innovations');
+      expect(el.querySelector('app-pr-button')?.classList.contains('globalDisabled')).toBe(false);
+    });
+
+    it('disables Execute while a replication is running', () => {
+      fixture.destroy();
+      component.api.dataControlSE.massivePhaseShiftIsRunning = true;
+      fixture = TestBed.createComponent(OtherFunctionalitiesComponent);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-pr-button').classList.contains('globalDisabled')).toBe(true);
+      component.api.dataControlSE.massivePhaseShiftIsRunning = false;
+    });
+  });
 });

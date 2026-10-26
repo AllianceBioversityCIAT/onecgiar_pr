@@ -1,4 +1,6 @@
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure (TND-T-2)
 import { PortfolioTocCoverageProgram } from '../../../../../../shared/interfaces/portfolio-toc-coverage.interface';
+import { PORTFOLIO_OVERVIEW_COPY } from '../../../../../../internationalization/portfolio-overview.copy';
 import { coveragePercent, filterRowsByPrograms, naturalCodeCompare, sumRows, toSummary, toViewRows } from './toc-kpi.format';
 
 const program = (code: string, covered: number, total: number): PortfolioTocCoverageProgram => ({
@@ -67,6 +69,7 @@ describe('toc-kpi.format (TKP-T-3)', () => {
         covered: 100,
         total: 250,
         percent: 40,
+        noTarget: 0,
         outputs: { total: 125, covered: 50 },
         outcomes: { total: 125, covered: 50 }
       });
@@ -81,10 +84,10 @@ describe('toc-kpi.format (TKP-T-3)', () => {
 
   describe('toSummary', () => {
     it('reads 300 / 790 as 38%', () => {
-      expect(toSummary({ covered: 300, total: 790 })).toEqual({ covered: 300, total: 790, percent: 38 });
+      expect(toSummary({ covered: 300, total: 790 })).toEqual({ covered: 300, total: 790, noTarget: 0, percent: 38 });
     });
     it('is null percent when the portfolio has no KPIs', () => {
-      expect(toSummary({ covered: 0, total: 0 })).toEqual({ covered: 0, total: 0, percent: null });
+      expect(toSummary({ covered: 0, total: 0 })).toEqual({ covered: 0, total: 0, noTarget: 0, percent: null });
     });
     it('applies the clamps', () => {
       expect(toSummary({ covered: 999, total: 1000 }).percent).toBe(99);
@@ -100,7 +103,39 @@ describe('toc-kpi.format (TKP-T-3)', () => {
       expect(filterRowsByPrograms(rows, new Set())).toHaveLength(3);
     });
     it('sums covered and total of the given rows (15 / 50)', () => {
-      expect(sumRows(filterRowsByPrograms(rows, new Set(['SP01', 'SP02'])))).toEqual({ covered: 15, total: 50 });
+      expect(sumRows(filterRowsByPrograms(rows, new Set(['SP01', 'SP02'])))).toEqual({ covered: 15, total: 50, noTarget: 0 });
+    });
+  });
+
+  describe('noTarget (TND-R-2, TND-DD-3)', () => {
+    it('toViewRows carries noTarget and reads a missing one as 0', () => {
+      const rows = toViewRows([{ ...program('SP01', 1, 2), noTarget: 4 }, program('SP02', 1, 2)]);
+      expect(rows.map(r => r.noTarget)).toEqual([4, 0]);
+    });
+    it('toSummary carries noTarget and reads a missing one as 0', () => {
+      expect(toSummary({ covered: 1, total: 2, noTarget: 40 }).noTarget).toBe(40);
+      expect(toSummary({ covered: 1, total: 2 }).noTarget).toBe(0);
+    });
+    it('S-2.3: sumRows adds up noTarget of the given rows (2 + 3 = 5)', () => {
+      const rows = toViewRows([{ ...program('SP01', 1, 2), noTarget: 2 }, { ...program('SP02', 1, 2), noTarget: 3 }, program('SP03', 1, 2)]);
+      expect(sumRows(rows.slice(0, 2)).noTarget).toBe(5);
+    });
+  });
+
+  describe('copy (TND-R-2, R-3, R-4)', () => {
+    const copy = PORTFOLIO_OVERVIEW_COPY.tocKpi;
+    it('excludesNoTarget is singular for 1 and plural otherwise', () => {
+      expect(copy.excludesNoTarget(1)).toBe('excludes 1 KPI with no target set');
+      expect(copy.excludesNoTarget(3)).toBe('excludes 3 KPIs with no target set');
+    });
+    it('noTargetOnly and emptyNoTarget match the requirement text', () => {
+      expect(copy.noTargetOnly(4)).toBe('No KPIs with a target · 4 with no target set');
+      expect(copy.emptyNoTarget(12)).toBe('No ToC KPIs have a target for this phase yet · 12 with no target set');
+    });
+    it('S-4.1: the subtitle names the rule', () => {
+      expect(copy.subtitle('2026')).toBe(
+        "KPIs covered by at least one W1/W2 result in QA or Submitted status, out of the KPIs with a target in each Program's Theory of Change for 2026"
+      );
     });
   });
 });

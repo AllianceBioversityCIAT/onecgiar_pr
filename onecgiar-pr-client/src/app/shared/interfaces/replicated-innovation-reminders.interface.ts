@@ -26,22 +26,54 @@ export interface ReminderCampaignList {
   unreachable_total: number;
 }
 
+export type ReminderMessageType = 'DEVELOPER' | 'MELIA_SUMMARY' | 'CENTER';
+export type ReminderUnreachableReason = 'NO_MELIA' | 'NO_CENTER' | 'NO_CENTER_MEL';
+
+/** Fields shared by every pending result row (RIR-T-13 contract). */
 export interface ReminderPendingRow {
   result_id: number;
   result_code: number;
   title: string;
+  result_type_id: number;
+  version_id: number;
+  initiative_id: number;
   initiative_code: string;
   initiative_short_name: string | null;
-  lead_name: string | null;
-  lead_email: string | null;
-  lead_contact_person: string | null;
-  [key: string]: unknown;
+}
+
+export interface ReminderDigestItem extends ReminderPendingRow {
+  developerText: string | null;
+}
+
+export interface ReminderUnreachableItem extends ReminderPendingRow {
+  reason: ReminderUnreachableReason;
+  developer_text: string | null;
+  lead_center_code: string | null;
+  lead_center_name: string | null;
+}
+
+export interface ReminderPreviewMessage {
+  type: ReminderMessageType;
+  message_key: string;
+  to: string[];
+  cc: string[];
+  greeting: string;
+  results: ReminderDigestItem[];
+  sp_code?: string;
+  sp_name?: string | null;
+  center_code?: string;
+  center_name?: string | null;
 }
 
 export interface ReminderPreview {
-  digests: Array<{ to: string; cc: string[]; results: ReminderPendingRow[] }>;
-  totals: { leads: number; results: number; cc_addresses: number };
-  unreachable: ReminderPendingRow[];
+  digests: ReminderPreviewMessage[];
+  totals: {
+    messages: number;
+    results: number;
+    cc_addresses: number;
+    by_type: Record<ReminderMessageType, { messages: number; results: number }>;
+  };
+  unreachable: ReminderUnreachableItem[];
   redirected_to?: string;
 }
 
@@ -51,6 +83,7 @@ export interface ReminderSendOutcome {
   skipped: number;
   failed: number;
   unreachable: number;
+  sent_by_type: Record<ReminderMessageType, number>;
 }
 
 /** Server envelope: payload under `.response`. */

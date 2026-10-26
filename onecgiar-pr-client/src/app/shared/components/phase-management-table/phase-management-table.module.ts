@@ -9,6 +9,7 @@ import {
   PrTableHeaderDirective,
   PrTableBodyDirective
 } from 'src/app/shared/components/pr-table';
+import { HlmBadge } from '@spartan/badge';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
 
@@ -23,7 +24,8 @@ import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module'
     PrTableHeaderDirective,
     PrTableBodyDirective,
     FormsModule,
-    CustomFieldsModule
+    CustomFieldsModule,
+    HlmBadge
   ],
   exports: [PhaseManagementTableComponent]
 })

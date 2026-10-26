@@ -5,6 +5,7 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
 import { Phase } from '../../interfaces/phase.interface';
 import { PhasesService } from '../../services/global/phases.service';
 import { ApiService } from '../../services/api/api.service';
+import { PHASE_MANAGEMENT_COPY } from '../../../internationalization/phase-management.copy';
 
 @Component({
   selector: 'app-phase-management-table',
@@ -20,6 +21,7 @@ export class PhaseManagementTableComponent implements OnInit {
   @Input() enablePhaseLink: boolean = false;
   @Output() phaseUpdate = new EventEmitter<void>();
 
+  readonly copy = PHASE_MANAGEMENT_COPY;
   columnOrder = [];
   phaseList: any[] = [];
   previousPhaseList: any[] = [];
@@ -64,6 +66,14 @@ export class PhaseManagementTableComponent implements OnInit {
     } else {
       this.api.dataControlSE.getCurrentPhases().subscribe();
     }
+  }
+
+  get totalPhases(): number {
+    return this.phaseList.filter(phase => !phase.isNew).length;
+  }
+
+  get openPhases(): number {
+    return this.phaseList.filter(phase => !phase.isNew && phase.status === true).length;
   }
 
   setupColumnOrder() {

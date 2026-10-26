@@ -69,15 +69,47 @@ describe('PendingInnovationRepository', () => {
       expect(sql).toContain('r.is_active = 1');
     });
 
-    // RIR-R-1 / RIR-OQ-3: bilateral-sourced excluded (SourceEnum.Bilateral = 'API')
-    it("excludes bilateral-sourced results: r.source <> 'API'", async () => {
+    // T-11: W3 (bilateral, source 'API') results are now INCLUDED
+    it("no longer excludes bilateral-sourced results (no source <> 'API')", async () => {
       const { sql } = await run();
-      expect(sql).toContain("r.source <> 'API'");
+      expect(sql).not.toContain("<> 'API'");
+      expect(sql).not.toMatch(/r\.source\s*(<>|!=|=|IS)/);
     });
 
-    it("keeps results whose nullable `source` is NULL (NULL <> 'API' is NULL, not true)", async () => {
+    it('returns source, developer text and lead center columns', async () => {
       const { sql } = await run();
-      expect(sql).toContain("(r.source IS NULL OR r.source <> 'API')");
+      expect(sql).toContain('r.source AS source');
+      expect(sql).toContain('rid.innovation_developers AS developer_text');
+      expect(sql).toContain('lrc.center_id AS lead_center_code');
+      expect(sql).toContain('lci.name AS lead_center_name');
+    });
+
+    it('LEFT JOINs the active developer row deterministically (max id, one row per result)', async () => {
+      const { sql } = await run();
+      expect(sql).toContain('LEFT JOIN results_innovations_dev rid');
+      expect(sql).toContain('SELECT MAX(d.result_innovation_dev_id)');
+      expect(sql).toContain('d.results_id = r.id AND d.is_active = 1');
+    });
+
+    // RIR-P-14 / RIR-OQ-8
+    it('LEFT JOINs the single active leading center: is_leading_result = 1, is_active = 1, MIN(id)', async () => {
+      const { sql } = await run();
+      expect(sql).toContain('LEFT JOIN results_center lrc');
+      expect(sql).toContain('SELECT MIN(c.id)');
+      expect(sql).toContain(
+        'c.result_id = r.id AND c.is_leading_result = 1 AND c.is_active = 1',
+      );
+      expect(sql).toContain(
+        'LEFT JOIN clarisa_center lcc ON lcc.code = lrc.center_id',
+      );
+      expect(sql).not.toMatch(
+        /INNER JOIN (results_center|results_innovations_dev)/,
+      );
+    });
+
+    it('does not touch role_by_user', async () => {
+      const { sql } = await run();
+      expect(sql).not.toContain('role_by_user');
     });
 
     // RIR-P-2: owner SP = initiative_role_id = 1, active (bilateral.service.ts:1051)
@@ -117,6 +149,10 @@ describe('PendingInnovationRepository', () => {
           lead_email: 'lead@cgiar.org',
           lead_name: 'Lea Der',
           lead_contact_person: 'Lea Der (free text)',
+          source: 'Result',
+          developer_text: '1. Ann <ann@cgiar.org>',
+          lead_center_code: 'CENTER-1',
+          lead_center_name: 'Center One',
         },
         {
           result_id: 11,
@@ -130,6 +166,7 @@ describe('PendingInnovationRepository', () => {
           lead_email: null,
           lead_name: null,
           lead_contact_person: 'Hank Free',
+          source: 'API',
         },
       ]);
 
@@ -146,6 +183,10 @@ describe('PendingInnovationRepository', () => {
           lead_email: 'lead@cgiar.org',
           lead_name: 'Lea Der',
           lead_contact_person: 'Lea Der (free text)',
+          source: 'Result',
+          developer_text: '1. Ann <ann@cgiar.org>',
+          lead_center_code: 'CENTER-1',
+          lead_center_name: 'Center One',
         },
         {
           result_id: 11,
@@ -159,6 +200,10 @@ describe('PendingInnovationRepository', () => {
           lead_email: null,
           lead_name: null,
           lead_contact_person: 'Hank Free',
+          source: 'API',
+          developer_text: null,
+          lead_center_code: null,
+          lead_center_name: null,
         },
       ]);
     });
@@ -169,100 +214,119 @@ describe('PendingInnovationRepository', () => {
     });
   });
 
-  describe('findCcByInitiatives', () => {
+  describe('findMeliaByInitiatives', () => {
     const IDS = [901, 902];
 
     async function run(rows: any[] = [], ids: number[] = IDS) {
       const { repository, dataSource } = makeRepository(rows);
-      const result = await repository.findCcByInitiatives(ids);
-      return { result, dataSource, sql: sqlOf(dataSource.query) };
+      const result = await repository.findMeliaByInitiatives(ids);
+      return {
+        result,
+        dataSource,
+        sql: dataSource.query.mock.calls[0] ? sqlOf(dataSource.query) : '',
+      };
     }
 
-    it('returns an empty map without querying when there are no initiatives', async () => {
+    it('returns [] without querying when there are no initiatives', async () => {
       const { repository, dataSource } = makeRepository();
-      const result = await repository.findCcByInitiatives([]);
-      expect(result).toEqual(new Map());
+      expect(await repository.findMeliaByInitiatives([])).toEqual([]);
       expect(dataSource.query).not.toHaveBeenCalled();
     });
 
-    it('issues exactly one statement with the ids bound for each branch, never interpolated', async () => {
+    it('is a single MELIA-only statement with ids bound, never interpolated', async () => {
       const { dataSource, sql } = await run();
       expect(dataSource.query).toHaveBeenCalledTimes(1);
-      expect(dataSource.query.mock.calls[0][1]).toEqual([IDS, IDS]);
-      expect(sql).not.toContain('901');
-      expect(sql).not.toContain('902');
-    });
-
-    it('is a read-only UNION of coordinators and MELIA', async () => {
-      const { sql } = await run();
+      expect(dataSource.query.mock.calls[0][1]).toEqual([IDS]);
       expect(sql).toMatch(/^SELECT /);
-      expect(sql).toContain(' UNION ');
-      expect(sql).not.toContain('UNION ALL');
       expect(sql).not.toMatch(/\b(INSERT|UPDATE|DELETE|REPLACE)\b/i);
-    });
-
-    // RIR-P-3 / RIR-R-3: coordinators = role 5
-    it('selects coordinators as rbu.role = 5', async () => {
-      const { sql } = await run();
-      expect(sql).toContain('rbu.role = 5');
-    });
-
-    // RIR-R-3: "MUST NOT include SP leads, co-leads, directors" -> no other role id anywhere
-    it('never selects another role (lead / co-lead / director / member)', async () => {
-      const { sql } = await run();
-      const roles = [...sql.matchAll(/\brole\s*(=|IN|<=|<|>=|>|<>)\s*[^ ]+/g)];
-      expect(roles.map((m) => m[0])).toEqual(['role = 5']);
-    });
-
-    it('requires an active role assignment and an active user for coordinators', async () => {
-      const { sql } = await run();
-      expect(sql).toContain('rbu.active = 1');
-      expect(sql).toContain('u.active = 1');
-      expect(sql).toContain('JOIN users u ON u.id = rbu.user');
-    });
-
-    it('scopes coordinators to the given initiatives', async () => {
-      const { sql } = await run();
-      expect(sql).toContain('rbu.initiative_id IN (?)');
+      expect(sql).not.toContain('901');
+      expect(sql).not.toContain('role_by_user');
+      expect(sql).not.toContain('UNION');
     });
 
     // RIR-R-13: "Inactive entries MUST NOT be copied"
-    it('reads MELIA focal points from initiative_melia_focal_point with is_active = 1', async () => {
+    it('reads initiative_melia_focal_point with is_active = 1, scoped to the initiatives', async () => {
       const { sql } = await run();
       expect(sql).toContain('FROM initiative_melia_focal_point m');
       expect(sql).toContain('m.is_active = 1');
       expect(sql).toContain('m.initiative_id IN (?)');
     });
 
-    it('aligns the email collation of both UNION branches (users vs the new MELIA table)', async () => {
-      const { sql } = await run();
-      const aligned =
-        sql.match(
-          /CONVERT\([a-z]+\.email USING utf8mb4\) COLLATE utf8mb4_unicode_ci/g,
-        ) ?? [];
-      expect(aligned).toHaveLength(2);
-    });
-
-    it('builds the initiative -> addresses map, skipping empty addresses', async () => {
+    it('maps rows and drops empty addresses', async () => {
       const { result } = await run([
-        { initiative_id: '901', email: 'coord1@cgiar.org' },
-        { initiative_id: 901, email: 'melia1@cgiar.org' },
-        { initiative_id: 902, email: 'coord2@cgiar.org' },
-        { initiative_id: 902, email: null },
-        { initiative_id: 902, email: '  ' },
+        { initiative_id: '901', name: 'Mel', email: ' melia1@cgiar.org ' },
+        { initiative_id: 902, name: null, email: '  ' },
       ]);
+      expect(result).toEqual([
+        { initiative_id: 901, name: 'Mel', email: 'melia1@cgiar.org' },
+      ]);
+    });
+  });
 
-      expect(result).toEqual(
-        new Map<number, string[]>([
-          [901, ['coord1@cgiar.org', 'melia1@cgiar.org']],
-          [902, ['coord2@cgiar.org']],
-        ]),
-      );
+  describe('findActiveUserEmails', () => {
+    it('returns [] without querying on empty / blank input', async () => {
+      const { repository, dataSource } = makeRepository();
+      expect(await repository.findActiveUserEmails([])).toEqual([]);
+      expect(await repository.findActiveUserEmails(['  ', ''])).toEqual([]);
+      expect(dataSource.query).not.toHaveBeenCalled();
     });
 
-    it('omits initiatives with no addresses from the map', async () => {
-      const { result } = await run([]);
-      expect(result.size).toBe(0);
+    it('issues one parameterised query: LOWER(u.email) IN (?) AND u.active = 1', async () => {
+      const { repository, dataSource } = makeRepository([
+        { email: 'ann@cgiar.org', name: 'Ann Lee' },
+      ]);
+      const result = await repository.findActiveUserEmails([
+        'Ann@CGIAR.org',
+        'ann@cgiar.org',
+        'bob@cgiar.org',
+      ]);
+      const sql = sqlOf(dataSource.query);
+      expect(dataSource.query).toHaveBeenCalledTimes(1);
+      expect(sql).toContain('LOWER(u.email) IN (?)');
+      expect(sql).toContain('u.active = 1');
+      expect(sql).toContain('FROM users u');
+      expect(sql).not.toContain('role_by_user');
+      expect(sql).not.toContain('bob@cgiar.org');
+      expect(dataSource.query.mock.calls[0][1]).toEqual([
+        ['ann@cgiar.org', 'bob@cgiar.org'],
+      ]);
+      expect(result).toEqual([{ email: 'ann@cgiar.org', name: 'Ann Lee' }]);
+    });
+
+    it('chunks inputs larger than 1000 addresses', async () => {
+      const emails = Array.from({ length: 2500 }, (_, i) => `u${i}@cgiar.org`);
+      const { repository, dataSource } = makeRepository([]);
+      await repository.findActiveUserEmails(emails);
+      expect(dataSource.query).toHaveBeenCalledTimes(3);
+      expect(dataSource.query.mock.calls[0][1][0]).toHaveLength(1000);
+      expect(dataSource.query.mock.calls[2][1][0]).toHaveLength(500);
+    });
+  });
+
+  describe('findCenterMel', () => {
+    it('returns [] without querying when there are no centers', async () => {
+      const { repository, dataSource } = makeRepository();
+      expect(await repository.findCenterMel([])).toEqual([]);
+      expect(dataSource.query).not.toHaveBeenCalled();
+    });
+
+    it('reads active center_mel_focal_point rows with the codes bound', async () => {
+      const { repository, dataSource } = makeRepository([
+        { center_code: 'CENTER-1', name: 'Mel C', email: ' mel@cgiar.org ' },
+        { center_code: 'CENTER-2', name: null, email: '' },
+      ]);
+      const result = await repository.findCenterMel(['CENTER-1', 'CENTER-2']);
+      const sql = sqlOf(dataSource.query);
+      expect(sql).toContain('FROM center_mel_focal_point c');
+      expect(sql).toContain('c.is_active = 1');
+      expect(sql).toContain('c.center_code IN (?)');
+      expect(sql).not.toContain('CENTER-1');
+      expect(dataSource.query.mock.calls[0][1]).toEqual([
+        ['CENTER-1', 'CENTER-2'],
+      ]);
+      expect(result).toEqual([
+        { center_code: 'CENTER-1', name: 'Mel C', email: 'mel@cgiar.org' },
+      ]);
     });
   });
 });

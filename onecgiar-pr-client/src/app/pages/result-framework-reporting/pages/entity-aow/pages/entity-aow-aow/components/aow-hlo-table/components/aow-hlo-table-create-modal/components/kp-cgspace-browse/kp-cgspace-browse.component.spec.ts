@@ -2,7 +2,8 @@ import { ComponentFixture, fakeAsync, flush, TestBed, tick } from '@angular/core
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
 import { of, Subject, throwError } from 'rxjs';
-import { CgspaceItemDto, KP_LAST_REPOSITORY_TITLE, KpCgspaceBrowseComponent } from './kp-cgspace-browse.component';
+import { BrnTooltip } from '@spartan-ng/brain/tooltip';
+import { CgspaceItemDto, KP_LAST_REPOSITORY_TITLE, KpCgspaceBrowseComponent, KpProjectMatchFactor, KpProjectMatchTier } from './kp-cgspace-browse.component';
 import { ALL_KP_REPOSITORIES } from './kp-repositories.constants';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 import { RolesService } from 'src/app/shared/services/global/roles.service';
@@ -2203,6 +2204,441 @@ describe('KpCgspaceBrowseComponent', () => {
         expect(q('[data-test^="kp-linked-badge-"]')).toBeNull();
         expect(fixture.nativeElement.querySelectorAll('h4').length).toBe(3);
       }));
+    });
+
+    // @akili-spec changes/kp-related-relevance-ranking — KRR-T-4 (R-3 client side, R-4, R-7, R-8)
+    describe('KRR-T-4: relevance context params, tier badge, factors, tooltips and ranked note', () => {
+      const q = (sel: string): HTMLElement | null => fixture.nativeElement.querySelector(sel);
+      const qa = (sel: string): HTMLElement[] => Array.from(fixture.nativeElement.querySelectorAll(sel));
+      const text = (sel: string): string => q(sel)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+
+      const ranked = (id: string, tier: KpProjectMatchTier, factors: KpProjectMatchFactor[]): CgspaceItemDto => ({
+        ...createProjectItem(id, `Ranked paper ${id}`, []),
+        subjects: ['maize'],
+        projectMatch: { tier, factors }
+      });
+
+      const open = (related: CgspaceItemDto[], rankedFlag: boolean | undefined, inputs: Record<string, unknown> = {}) => {
+        const echo = rankedFlag === undefined ? {} : { ranked: rankedFlag };
+        answerByScope(
+          pageResponse([linkedItem], 1, false, { projectScope: { scope: 'linked', applied: true }, sources: [sourceOk('cgspace', 1)] }),
+          pageResponse(related, related.length, false, { projectScope: { scope: 'related', applied: true, ...echo }, sources: [sourceOk('cgspace', related.length)] })
+        );
+        setBilateral(inputs);
+        fixture.detectChanges();
+        flush();
+        fixture.detectChanges();
+      };
+
+      describe('request params', () => {
+        const openAndGetCalls = (inputs: Record<string, unknown>) => {
+          answerByScope(pageResponse([], 0, false), pageResponse([], 0, false));
+          setBilateral(inputs);
+          fixture.detectChanges();
+          flush();
+          return searchCalls();
+        };
+
+        it('sends projectDescription, projectProgram and projectLeadCenterName with the scope, on both requests', fakeAsync(() => {
+          const calls = openAndGetCalls({ projectDescription: '  Seed systems for beans  ', programCode: 'SP09', programName: 'Climate Action', leadCenterAcronym: 'CIP' });
+
+          expect(calls.length).toBe(2);
+          for (const call of calls) {
+            expect(call['projectDescription']).toBe('Seed systems for beans');
+            expect(call['projectProgram']).toBe('SP09 - Climate Action');
+            expect(call['projectLeadCenterName']).toBe('International Potato Center');
+            expect(call['projectLeadCenter']).toBe('CIP');
+          }
+        }));
+
+        it('truncates the description to 1000 and the program to 200 characters', fakeAsync(() => {
+          const call = openAndGetCalls({ projectDescription: 'd'.repeat(1500), programCode: 'P'.repeat(150), programName: 'N'.repeat(150) })[0];
+
+          expect(call['projectDescription'].length).toBe(1000);
+          expect(call['projectProgram'].length).toBe(200);
+        }));
+
+        it('accepts a program with the code only, without a dangling separator', fakeAsync(() => {
+          expect(openAndGetCalls({ programCode: 'SP09', programName: '' })[0]['projectProgram']).toBe('SP09');
+        }));
+
+        it('accepts a program with the name only, without a dangling separator', fakeAsync(() => {
+          expect(openAndGetCalls({ programCode: '', programName: 'Climate Action' })[0]['projectProgram']).toBe('Climate Action');
+        }));
+
+        it('omits projectLeadCenterName for an unknown acronym, and every new param when its source is empty', fakeAsync(() => {
+          const call = openAndGetCalls({ leadCenterAcronym: 'ZZZ', projectDescription: '', programCode: '', programName: '' })[0];
+
+          expect(call['projectLeadCenter']).toBe('ZZZ');
+          expect(call['projectLeadCenterName']).toBeUndefined();
+          expect(call['projectDescription']).toBeUndefined();
+          expect(call['projectProgram']).toBeUndefined();
+        }));
+
+        it('sends none of the new params without a scope (non-bilateral browse)', fakeAsync(() => {
+          mockResultsApiService.GET_cgspaceSearch.mockReturnValue(of(pageResponse([], 0, false)));
+          setBilateral({ enableProjectRepositoryFilter: false, projectDescription: 'desc', programCode: 'SP09', programName: 'Climate Action', leadCenterAcronym: 'CIP' });
+          fixture.detectChanges();
+          component.query.set('maize');
+          component.runSearch(0);
+          flush();
+
+          const call = searchCalls()[0];
+          for (const key of ['projectDescription', 'projectProgram', 'projectLeadCenterName', 'projectScope']) {
+            expect(call[key]).toBeUndefined();
+          }
+        }));
+      });
+
+      describe('tier badge and factor line', () => {
+        it('keywords + center: "Partial match" and "Project keywords · Center"', fakeAsync(() => {
+          open([ranked('p1', 'partial', ['keywords', 'center'])], true);
+
+          expect(text('[data-test="kp-match-tier-uuid-p1"]')).toBe('Partial match · 2 of 3');
+          expect(text('[data-test="kp-match-factors-uuid-p1"]')).toBe('Project keywords · Center');
+        }));
+
+        it('uses the four exact tier labels and the fixed factor order', fakeAsync(() => {
+          open(
+            [
+              ranked('s', 'strong', ['keywords', 'center', 'program']),
+              ranked('p', 'partial', ['center', 'program']),
+              ranked('w', 'weak', ['program']),
+              ranked('n', 'none', [])
+            ],
+            true
+          );
+
+          expect(text('[data-test="kp-match-tier-uuid-s"]')).toBe('Strong match · 3 of 3');
+          expect(text('[data-test="kp-match-factors-uuid-s"]')).toBe('Project keywords · Center · Science Program');
+          expect(text('[data-test="kp-match-tier-uuid-p"]')).toBe('Partial match · 2 of 3');
+          expect(text('[data-test="kp-match-factors-uuid-p"]')).toBe('Center · Science Program');
+          expect(text('[data-test="kp-match-tier-uuid-w"]')).toBe('Weak match · 1 of 3');
+          expect(text('[data-test="kp-match-factors-uuid-w"]')).toBe('Science Program');
+          expect(text('[data-test="kp-match-tier-uuid-n"]')).toBe('No direct match');
+        }));
+
+        it('the none tier shows "No direct match" and no factor line', fakeAsync(() => {
+          open([ranked('n', 'none', [])], true);
+
+          expect(text('[data-test="kp-match-tier-uuid-n"]')).toBe('No direct match');
+          expect(q('[data-test="kp-match-factors-uuid-n"]')).toBeNull();
+        }));
+
+        it('renders no percentage or numeric score anywhere in the related cards', fakeAsync(() => {
+          open(
+            [ranked('s', 'strong', ['keywords', 'center', 'program']), ranked('p', 'partial', ['keywords']), ranked('n', 'none', [])],
+            true
+          );
+
+          const related = q('[data-test="kp-related-section"]')!;
+          expect(related.querySelectorAll('[data-test^="kp-match-tier-"]').length).toBe(3);
+          expect(related.textContent).not.toContain('%');
+        }));
+
+        it('keeps the Proxy marker on every related card, with the badge after it', fakeAsync(() => {
+          open([ranked('p1', 'partial', ['keywords'])], true);
+
+          const marker = q('[data-test="kp-proxy-marker-uuid-p1"]')!;
+          expect(marker.textContent).toContain('Proxy');
+          expect(marker.nextElementSibling).toBe(q('[data-test="kp-match-tier-uuid-p1"]'));
+        }));
+
+        it('linked cards never show a tier or a factor line, even when the item carries projectMatch', fakeAsync(() => {
+          open([ranked('p1', 'partial', ['keywords'])], true);
+          const linked = q('[data-test="kp-linked-section"]')!;
+          expect(linked.querySelector('[data-test^="kp-match-"]')).toBeNull();
+
+          const withMatch = { ...linkedItem, projectMatch: { tier: 'strong', factors: ['keywords'] } } as CgspaceItemDto;
+          answerByScope(pageResponse([withMatch], 1, false), pageResponse([], 0, false));
+          component.runSearch(0);
+          flush();
+          fixture.detectChanges();
+
+          expect(q('[data-test="kp-linked-section"]')!.textContent).toContain('Strengthening bean seed systems');
+          expect(q('[data-test="kp-linked-section"]')!.querySelector('[data-test^="kp-match-"]')).toBeNull();
+        }));
+
+        it('a related item without projectMatch (inactive ranking) shows the Proxy marker but no badge', fakeAsync(() => {
+          open([createProjectItem('x', 'Plain related', [])], undefined);
+
+          expect(q('[data-test="kp-proxy-marker-uuid-x"]')).toBeTruthy();
+          expect(q('[data-test^="kp-match-"]')).toBeNull();
+        }));
+      });
+
+      // @akili-spec changes/kp-related-strongest-first — KRS-T-2 (R-1, R-4)
+      describe('KRS-T-2: tier order per loaded page, SP soft-sort scoped out of ranked related', () => {
+        const order = (): string[] =>
+          qa('[data-test="kp-related-section"] [data-test^="kp-match-tier-"]').map(el => el.getAttribute('data-test')!.replace('kp-match-tier-uuid-', ''));
+        const spItem = (id: string, tier: KpProjectMatchTier, factors: KpProjectMatchFactor[]): CgspaceItemDto => ({
+          ...ranked(id, tier, factors),
+          programAccelerators: ['SP01 - Sustainable Farming']
+        });
+
+        it('iSPARK page [Weak (MEL), Partial, Partial, Strong, Weak] renders Strong, Partial, Partial, Weak (MEL), Weak', fakeAsync(() => {
+          open(
+            [
+              ranked('weakMel', 'weak', ['program']),
+              ranked('partial1', 'partial', ['keywords', 'center']),
+              ranked('partial2', 'partial', ['center', 'program']),
+              ranked('strong', 'strong', ['keywords', 'center', 'program']),
+              ranked('weak2', 'weak', ['keywords'])
+            ],
+            true
+          );
+
+          expect(order()).toEqual(['strong', 'partial1', 'partial2', 'weakMel', 'weak2']);
+        }));
+
+        it('append: page 1 [Weak, Strong] + page 2 [Strong, None] renders Strong, Weak, Strong, None (page 1 never moves)', fakeAsync(() => {
+          const page1 = [ranked('w1', 'weak', ['program']), ranked('s1', 'strong', ['keywords', 'center', 'program'])];
+          const page2 = [ranked('n2', 'none', []), ranked('s2', 'strong', ['keywords', 'center', 'program'])];
+          const relatedEcho = { projectScope: { scope: 'related', applied: true, ranked: true }, sources: [sourceOk('cgspace', 4)] };
+          mockResultsApiService.GET_cgspaceSearch.mockImplementation((params: Record<string, unknown>) =>
+            of(
+              params['projectScope'] === 'linked'
+                ? pageResponse([linkedItem], 1, false)
+                : params['page'] === 0
+                  ? pageResponse(page1, 4, true, relatedEcho)
+                  : pageResponse(page2, 4, false, relatedEcho)
+            )
+          );
+          setBilateral();
+          fixture.detectChanges();
+          flush();
+          fixture.detectChanges();
+          expect(order()).toEqual(['s1', 'w1']);
+
+          component.loadMore();
+          flush();
+          fixture.detectChanges();
+
+          expect(order()).toEqual(['s1', 'w1', 's2', 'n2']);
+        }));
+
+        it('a ranked related list is not reordered SP-first; "Show matches only" still filters', fakeAsync(() => {
+          open([ranked('plain', 'strong', ['keywords', 'center', 'program']), spItem('sp', 'weak', ['program'])], true, {
+            programCode: 'SP01',
+            programName: 'Sustainable Farming'
+          });
+
+          expect(component.displayItems().map(i => i.uuid)).toEqual(['uuid-plain', 'uuid-sp']);
+          component.onlyMatches.set(true);
+          expect(component.displayItems().map(i => i.uuid)).toEqual(['uuid-sp']);
+        }));
+
+        it('an unranked related list keeps its order and SP-first (KPAM)', fakeAsync(() => {
+          open([createProjectItem('plain', 'Plain', []), createProjectItem('sp', 'SP', [], ['SP01 - Sustainable Farming'])], false, {
+            programCode: 'SP01',
+            programName: 'Sustainable Farming'
+          });
+
+          expect(component.displayItems().map(i => i.uuid)).toEqual(['uuid-sp', 'uuid-plain']);
+        }));
+
+        it('the linked list keeps SP-first and gets no tier ordering', fakeAsync(() => {
+          setBilateral({ programCode: 'SP01', programName: 'Sustainable Farming' });
+          fixture.detectChanges();
+          const plain = createProjectItem('lp', 'Linked plain', []);
+          const match = createProjectItem('lm', 'Linked SP', [], ['SP01 - Sustainable Farming']);
+          component.relatedRanked.set(true);
+          component.linkedItems.set([plain, match]);
+
+          expect(component.displayLinkedItems()).toEqual([match, plain]);
+        }));
+
+        it('labels: counts for strong/partial/weak, none has no count, no % in the related section, tooltip focusable', fakeAsync(() => {
+          open(
+            [ranked('s', 'strong', ['keywords', 'center', 'program']), ranked('p', 'partial', ['center', 'program']), ranked('w', 'weak', ['program']), ranked('n', 'none', [])],
+            true
+          );
+
+          expect(text('[data-test="kp-match-tier-uuid-s"]')).toBe('Strong match · 3 of 3');
+          expect(text('[data-test="kp-match-tier-uuid-p"]')).toBe('Partial match · 2 of 3');
+          expect(text('[data-test="kp-match-tier-uuid-w"]')).toBe('Weak match · 1 of 3');
+          expect(text('[data-test="kp-match-tier-uuid-n"]')).toBe('No direct match');
+          expect(q('[data-test="kp-related-section"]')!.textContent).not.toContain('%');
+          expect(q('[data-test="kp-match-tier-uuid-s"]')!.getAttribute('tabindex')).toBe('0');
+        }));
+      });
+
+      // @akili-spec changes/kp-related-strongest-first — KRS-T-3 (R-2, R-3, R-5, NFR-3, NFR-4)
+      describe('KRS-T-3: "Only related KPs" toggle', () => {
+        const toggle = (): HTMLButtonElement | null => q('[data-test="kp-related-only-toggle"]') as HTMLButtonElement | null;
+        const relatedCalls = (): Record<string, any>[] => searchCalls().filter(c => c['projectScope'] === 'related');
+        const tooltipOf = (selector: string): unknown => {
+          const input = fixture.debugElement.query(By.css(selector))?.injector.get(BrnTooltip).brnTooltip as unknown;
+          return typeof input === 'function' ? input() : input;
+        };
+        /** Server-like answer: the related echo carries `relatedOnly` per the given policy. */
+        const answerRelatedOnly = (echoFor: (asked: boolean) => boolean | undefined, rankedFlag = true) =>
+          mockResultsApiService.GET_cgspaceSearch.mockImplementation((params: Record<string, unknown>) => {
+            if (params['projectScope'] === 'linked') {
+              return of(pageResponse([linkedItem], 1, false, { projectScope: { scope: 'linked', applied: true } }));
+            }
+            const echoFlag = echoFor(params['projectRelatedOnly'] === true);
+            return of(
+              pageResponse([ranked('p1', 'partial', ['keywords'])], 1, false, {
+                projectScope: { scope: 'related', applied: true, ranked: rankedFlag, ...(echoFlag === undefined ? {} : { relatedOnly: echoFlag }) },
+                sources: [sourceOk('cgspace', 1)]
+              })
+            );
+          });
+        const openWith = (echoFor: (asked: boolean) => boolean | undefined, rankedFlag = true) => {
+          answerRelatedOnly(echoFor, rankedFlag);
+          setBilateral();
+          fixture.detectChanges();
+          flush();
+          fixture.detectChanges();
+        };
+        const click = () => {
+          toggle()!.click();
+          flush();
+          fixture.detectChanges();
+        };
+
+        it('is off by default: aria-pressed false and no projectRelatedOnly key on any request', fakeAsync(() => {
+          openWith(asked => asked);
+
+          expect(component.relatedOnly()).toBe(false);
+          expect(toggle()!.getAttribute('aria-pressed')).toBe('false');
+          expect(toggle()!.textContent).toContain('Only related KPs');
+          for (const call of searchCalls()) expect('projectRelatedOnly' in call).toBe(false);
+        }));
+
+        it('on: sends projectRelatedOnly=true on one related request from page 0, aria-pressed true', fakeAsync(() => {
+          openWith(asked => asked);
+          const before = searchCalls().length;
+
+          click();
+
+          const calls = searchCalls();
+          expect(calls.length).toBe(before + 1);
+          expect(calls[calls.length - 1]).toEqual(expect.objectContaining({ projectScope: 'related', projectRelatedOnly: true, page: 0 }));
+          expect(toggle()!.getAttribute('aria-pressed')).toBe('true');
+          expect(toggle()!.disabled).toBe(false);
+        }));
+
+        it('off again: the request is identical to the initial off request', fakeAsync(() => {
+          openWith(asked => asked);
+          const initial = relatedCalls()[0];
+
+          click();
+          click();
+
+          const last = relatedCalls()[relatedCalls().length - 1];
+          expect(last).toEqual(initial);
+          expect('projectRelatedOnly' in last).toBe(false);
+          expect(toggle()!.getAttribute('aria-pressed')).toBe('false');
+        }));
+
+        it('echo relatedOnly=false with the toggle on: disabled with the tooltip, count not presented as filtered', fakeAsync(() => {
+          openWith(() => false);
+
+          click();
+
+          expect(component.relatedOnly()).toBe(true);
+          expect(toggle()!.disabled).toBe(true);
+          expect(tooltipOf('[data-test="kp-related-only-wrap"]')).toBe('Not available for this search');
+          expect(q('[data-test="kp-related-section"]')!.textContent!.toLowerCase()).not.toContain('filtered');
+        }));
+
+        it('echo without a relatedOnly field (older server) counts as not applied', fakeAsync(() => {
+          openWith(() => undefined);
+
+          click();
+
+          expect(toggle()!.disabled).toBe(true);
+        }));
+
+        it('is hidden when the related list is unranked, and no related-only parameter is sent', fakeAsync(() => {
+          openWith(() => undefined, false);
+
+          expect(toggle()).toBeNull();
+          for (const call of searchCalls()) expect('projectRelatedOnly' in call).toBe(false);
+        }));
+
+        it('resets to off when the project changes', fakeAsync(() => {
+          openWith(asked => asked);
+          click();
+          expect(component.relatedOnly()).toBe(true);
+
+          fixture.componentRef.setInput('projectCode', 'T-PJ-OTHER');
+          fixture.detectChanges();
+
+          expect(component.relatedOnly()).toBe(false);
+          expect(component.relatedRanked()).toBe(false);
+        }));
+
+        it('resets to off when the year changes', fakeAsync(() => {
+          openWith(asked => asked);
+          click();
+
+          component.onYearSelect({ value: 2025 });
+          flush();
+          fixture.detectChanges();
+
+          expect(component.relatedOnly()).toBe(false);
+        }));
+      });
+
+      describe('tooltips (Spartan hlmTooltip, keyboard focusable)', () => {
+        const brnTooltipText = (selector: string): string | null | undefined => {
+          const debug = fixture.debugElement.query(By.css(selector));
+          const input = debug?.injector.get(BrnTooltip).brnTooltip as unknown;
+          return (typeof input === 'function' ? input() : input) as string | null | undefined;
+        };
+
+        it('the Proxy marker has the proxyMarkerTooltip copy, is focusable, and no longer relies on the native title', fakeAsync(() => {
+          open([ranked('p1', 'partial', ['keywords'])], true);
+
+          const marker = q('[data-test="kp-proxy-marker-uuid-p1"]')!;
+          expect(brnTooltipText('[data-test="kp-proxy-marker-uuid-p1"]')).toBe(
+            'Proxy: this KP is not tagged with this project in the repository. Its relation to the project is approximate — see the match label.'
+          );
+          expect(brnTooltipText('[data-test="kp-proxy-marker-uuid-p1"]')).toBe(component.copy.proxyMarkerTooltip);
+          expect(marker.getAttribute('tabindex')).toBe('0');
+          expect(marker.hasAttribute('title')).toBe(false);
+          expect(marker.getAttribute('aria-label')).toBe('Proxy: not tagged with this project, relation is approximate');
+        }));
+
+        it('the tier badge is a Spartan hlmBadge with the approximation tooltip and is focusable', fakeAsync(() => {
+          open([ranked('p1', 'partial', ['keywords'])], true);
+
+          const badge = q('[data-test="kp-match-tier-uuid-p1"]')!;
+          expect(badge.getAttribute('data-slot')).toBe('badge');
+          expect(badge.getAttribute('data-variant')).toBe('outline');
+          expect(badge.getAttribute('tabindex')).toBe('0');
+          expect(brnTooltipText('[data-test="kp-match-tier-uuid-p1"]')).toBe(
+            'Approximate: based on matching subjects, Center and Science Program with this project. Not tagged with the project.'
+          );
+        }));
+      });
+
+      describe('proxy note (KRR-R-8)', () => {
+        it('shows the ranked copy only when projectScope.ranked is true', fakeAsync(() => {
+          open([ranked('p1', 'partial', ['keywords'])], true);
+
+          expect(text('[data-test="kp-proxy-note"]')).toContain(
+            'These KPs are not tagged with this project in the repository. The strongest matches are shown first on each page; turn on "Only related KPs" to hide KPs with no matching subject, Center or Science Program. The match label is an approximation.'
+          );
+          expect(text('[data-test="kp-proxy-note"]')).toContain('not tagged with this project');
+          expect(text('[data-test="kp-proxy-note"]')).not.toContain('newest first');
+        }));
+
+        it.each([[false], [undefined]])(
+          'keeps the quick copy when ranked is %s',
+          fakeAsync((rankedFlag: boolean | undefined) => {
+            open([createProjectItem('x', 'Plain related', [])], rankedFlag);
+
+            expect(text('[data-test="kp-proxy-note"]')).toContain(
+              'These KPs are not tagged with this project in the repository, so the relation is approximate. They are not ranked by how closely they relate to the project: without search text they are listed newest first; with search text, by how well they match it.'
+            );
+            expect(text('[data-test="kp-proxy-note"]')).not.toContain('ordered by similarity');
+          })
+        );
+      });
     });
 
     describe('Bilateral empty and filter-summary states (kept behavior)', () => {

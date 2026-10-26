@@ -188,6 +188,8 @@ export interface PortfolioTocCoverageRow {
   category: string;
   total: number;
   covered: number;
+  /** TND-T-1: distinct in-scope KPIs with no target for the year (not in total). */
+  noTarget: number;
 }
 
 @Injectable()
@@ -1328,6 +1330,9 @@ export class AoWBilateralRepository {
    *   (TKP-P-1, TKP-P-2). Target-only rule (P2-3974, spec toc-kpi-target-filter): an
    *   indicator counts only when it has at least one target row for the reporting
    *   year with value > 0, so a no-target indicator leaves both total and covered.
+   * - No target: the same in-scope indicators that have no such target row. The
+   *   target table is LEFT-joined so they stay in the row set, and the conditional
+   *   counts keep them out of total and covered (TND-S-1.1 to TND-S-1.3).
    * - Covered: indicators reached by a pooled result in a counting status of the page
    *   version, through active links that are not marked not-applicable. The covered
    *   set is built first from `result` (version / source / status), then LEFT-joined
@@ -1344,19 +1349,23 @@ export class AoWBilateralRepository {
       const statusPlaceholders = TOC_KPI_COVERAGE_STATUS_IDS.map(
         () => '?',
       ).join(', ');
+      // @akili-spec changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure (TND-T-1)
+      // `tgt` is LEFT-joined: total and covered carry an explicit tgt condition
+      // (TND-DD-2) and no_target counts the rows where tgt is NULL (TND-DD-1).
       const query = `
         SELECT
           tr.official_code AS official_code,
           tr.category AS category,
-          COUNT(DISTINCT tri.id) AS total,
-          COUNT(DISTINCT CASE WHEN cov.indicator_id IS NOT NULL THEN tri.id END) AS covered
+          COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NOT NULL THEN tri.id END) AS total,
+          COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NOT NULL AND cov.indicator_id IS NOT NULL THEN tri.id END) AS covered,
+          COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NULL THEN tri.id END) AS no_target
         FROM ${env.DB_TOC}.toc_results tr
         LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
           AND wp.year = ?
           AND wp.wp_official_code LIKE CONCAT(tr.official_code, '-%')
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
           AND tri.is_active = 1
-        JOIN (
+        LEFT JOIN (
           SELECT DISTINCT trit.id_indicator AS indicator_id,
                  trit.toc_result_indicator_id AS related_node_id
           FROM ${env.DB_TOC}.toc_result_indicator_target trit
@@ -1402,6 +1411,7 @@ export class AoWBilateralRepository {
           category: row.category as string,
           total: Number(row.total),
           covered: Number(row.covered),
+          noTarget: Number(row.no_target),
         }),
       );
     } catch (error) {

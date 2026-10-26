@@ -680,6 +680,23 @@ describe('BilateralCreationService', () => {
       expect(service.resultContributingCenterIds()).toEqual([1, 2]);
     });
 
+    it('keeps a contributing center whose is_leading_result is NULL or missing (only 1/true is the lead)', () => {
+      // 23-oct-2026, #9881 (WorldFish via API): ILRI was stored with is_leading_result = NULL and the
+      // editor hid it, while the result detail and the review drawer showed it.
+      respondWith({
+        contributingCenters: [
+          { institutionId: 99, is_leading_result: 1 },
+          { institutionId: 66, is_leading_result: null },
+          { institutionId: 7 },
+          { institutionId: 8, is_leading_result: true },
+        ],
+      });
+
+      service.loadResult(10);
+
+      expect(service.resultContributingCenterIds()).toEqual([66, 7]);
+    });
+
     it('stops the loader when the request fails', () => {
       mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
         subscribe: ({ error }: any) => error(new Error('boom')),

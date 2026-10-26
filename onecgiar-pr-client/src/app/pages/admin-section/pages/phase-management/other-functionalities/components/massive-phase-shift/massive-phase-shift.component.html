@@ -1,51 +1,27 @@
-<app-pr-dialog
-    [(visible)]="this.visible"
-    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
-    styleClass="massive-phase-shift-dialog">
-    <div id="change-phase">
-        <div class="lateral-bar"></div>
-        <div class="content-change-phase">
-            <div [style]="{ 'text-align': 'center' }">
-                <h2 [style]="{ 'margin-bottom': '0px','padding':'10px' }">{{replicateDescription()}}</h2>
-            </div>
-            <br><br><br><br>
-            <div class="info-phase-change">
-                <div class="phase-data pa-l">
-                    <i>
-                        <b>{{this.replicateIPSR ? this.api.dataControlSE.previousIPSRPhase.phaseName : this.api.dataControlSE.previousReportingPhase.phaseName}}</b>
-                    </i>
-                </div>
-                <div class="icon-change">
-                    <img src="../../../../assets/icons/data_transfer.svg" alt="data transfer icon" [style]="{ width: '100px' }" />
-                </div>
-                <div class="phase-data pa-r">
-                    <i>
-                        <b>{{this.replicateIPSR ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName}}</b>
-                    </i>
-                </div>
-            </div>
-            <div [style]="{ 'text-align': 'center' }">
-                <span>
-                    <i>
-                        Metadata from the phase <b>'{{this.replicateIPSR ? this.api.dataControlSE.previousIPSRPhase.phaseName : this.api.dataControlSE.previousReportingPhase.phaseName}}'</b> will be duplicated in the
-                    </i>
-                </span>
-                <br />
-                <span>
-                    <i>
-                        phase <b>'{{this.replicateIPSR ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName}}'</b>.
-                    </i>
-                </span>
-            </div>
-            <div class="buttons">
-                <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem' }" text="Cancel"
-                    colorType="secondary" (click)="this.visible = false">
-                </app-pr-button>
-                <app-pr-button [ngClass]="{ globalDisabled: this.requesting }" [rotating]="this.requesting"
-                    padding="medium" [style]="{ margin: '1rem 2rem' }" text="Confirm"
-                    (click)="accept()" [icon]="this.requesting ? 'loop' : ''"> </app-pr-button>
-            </div>
-        </div>
-        <div class="lateral-bar"></div>
+<app-pr-dialog [(visible)]="this.visible" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" styleClass="massive-phase-shift-dialog">
+  <div id="change-phase" class="flex w-[min(700px,90vw)] flex-col gap-6 p-8">
+    <h2 class="text-center text-lg font-semibold text-[var(--pr-color-secondary-500)]">{{ replicateDescription() }}</h2>
+
+    <div class="flex items-center justify-center gap-4">
+      <span class="rounded-lg border border-[var(--pr-color-accents-2)] px-4 py-2 font-semibold text-[var(--pr-color-primary-300)]" data-testid="mps-from">{{ this.replicateIPSR ? this.api.dataControlSE.previousIPSRPhase.phaseName : this.api.dataControlSE.previousReportingPhase.phaseName }}</span>
+      <span class="material-icons-round text-[var(--pr-color-secondary-400)]" aria-hidden="true">arrow_forward</span>
+      <span class="bg-brand-25 rounded-lg border border-[var(--pr-color-primary-300)] px-4 py-2 font-semibold text-[var(--pr-color-primary-300)]" data-testid="mps-to">{{ this.replicateIPSR ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName }}</span>
     </div>
+
+    <p class="text-center text-sm text-[var(--pr-color-secondary-400)]">
+      Metadata from the phase <b>'{{ this.replicateIPSR ? this.api.dataControlSE.previousIPSRPhase.phaseName : this.api.dataControlSE.previousReportingPhase.phaseName }}'</b> will be duplicated in the phase <b>'{{ this.replicateIPSR ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName }}'</b>.
+    </p>
+
+    <div class="flex items-center justify-center gap-4">
+      <app-pr-button data-testid="mps-cancel" padding="medium" text="Cancel" colorType="secondary" (click)="this.visible = false"></app-pr-button>
+      <app-pr-button
+        data-testid="mps-confirm"
+        [ngClass]="{ globalDisabled: this.requesting }"
+        [rotating]="this.requesting"
+        padding="medium"
+        text="Confirm"
+        (click)="accept()"
+        [icon]="this.requesting ? 'loop' : ''"></app-pr-button>
+    </div>
+  </div>
 </app-pr-dialog>

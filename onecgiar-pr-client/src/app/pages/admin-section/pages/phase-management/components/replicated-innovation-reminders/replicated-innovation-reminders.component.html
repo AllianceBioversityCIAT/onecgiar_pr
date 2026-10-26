@@ -16,6 +16,13 @@
   }
   @if (outcomeMessage(); as o) {
     <p role="status" class="border-border bg-muted text-foreground rounded-md border p-3 text-sm" data-testid="rir-outcome">{{ o }}</p>
+    @if (outcomeByType().length) {
+      <ul class="border-border bg-muted text-foreground list-disc rounded-md border p-3 ps-8 text-sm" data-testid="rir-outcome-by-type">
+        @for (line of outcomeByType(); track line) {
+          <li>{{ line }}</li>
+        }
+      </ul>
+    }
   }
 
   @if (loading()) {
@@ -40,10 +47,7 @@
               <th hlmTh>{{ copy.columns.scheduled }}</th>
               <th hlmTh>{{ copy.columns.status }}</th>
               <th hlmTh>{{ copy.columns.sentAt }}</th>
-              <th hlmTh>{{ copy.columns.sent }}</th>
-              <th hlmTh>{{ copy.columns.skipped }}</th>
-              <th hlmTh>{{ copy.columns.failed }}</th>
-              <th hlmTh>{{ copy.columns.unreachable }}</th>
+              <th hlmTh>{{ copy.columns.delivery }}</th>
               <th hlmTh>{{ copy.columns.actions }}</th>
             </tr>
           </thead>
@@ -91,10 +95,35 @@
                   }
                 </td>
                 <td hlmTd data-testid="rir-sent-at">{{ c.sent_at ? displayDate(c.sent_at) : copy.noValue }}</td>
-                <td hlmTd>{{ c.sent_count }}</td>
-                <td hlmTd>{{ c.skipped_count }}</td>
-                <td hlmTd>{{ c.failed_count }}</td>
-                <td hlmTd>{{ c.unreachable_count }}</td>
+                <td hlmTd>
+                  <div class="flex flex-wrap gap-1" data-testid="rir-delivery">
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[12px] border-border text-foreground tabular-nums"
+                      data-testid="rir-metric-sent"
+                      ><span class="text-muted-foreground">{{ copy.columns.sent }}</span>
+                      <span class="font-semibold">{{ c.sent_count }}</span></span
+                    >
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[12px] border-border text-foreground tabular-nums"
+                      data-testid="rir-metric-skipped"
+                      ><span class="text-muted-foreground">{{ copy.columns.skipped }}</span>
+                      <span class="font-semibold">{{ c.skipped_count }}</span></span
+                    >
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[12px] border-border text-foreground tabular-nums"
+                      data-testid="rir-metric-failed"
+                      ><span class="text-muted-foreground">{{ copy.columns.failed }}</span>
+                      <span class="font-semibold">{{ c.failed_count }}</span></span
+                    >
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[12px] tabular-nums"
+                      [class]="c.unreachable_count > 0 ? 'rir-chip-warning border-[var(--pr-color-yellow-300)] text-[var(--pr-color-yellow-700)]' : 'border-border text-foreground'"
+                      data-testid="rir-metric-unreachable"
+                      ><span class="text-muted-foreground">{{ copy.columns.unreachable }}</span>
+                      <span class="font-semibold">{{ c.unreachable_count }}</span></span
+                    >
+                  </div>
+                </td>
                 <td hlmTd>
                   <div class="flex flex-wrap gap-2">
                     <button
@@ -130,6 +159,19 @@
                     <button hlmBtn size="sm" type="button" [disabled]="!canPreviewOrSend(c)" (click)="requestSend(c)" data-testid="rir-send-btn">
                       {{ c.status === 'SENDING' ? copy.actions.sending : copy.actions.sendNow }}
                     </button>
+                    @if (c.status === 'SENT') {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        [disabled]="!canSendAgain(c)"
+                        [attr.title]="copy.sendAgainHint"
+                        (click)="sendAgain(c)"
+                        data-testid="rir-send-again-btn">
+                        {{ copy.actions.sendAgain }}
+                      </button>
+                    }
                   </div>
                 </td>
               </tr>
@@ -144,6 +186,9 @@
         <h3 class="text-foreground text-sm font-semibold">{{ copy.schedule.heading }}</h3>
         @for (k of missingKinds(); track k) {
           <form class="flex flex-wrap items-end gap-3" (submit)="$event.preventDefault(); schedule(k)" [attr.data-testid]="'rir-schedule-' + k">
+            @if (sendAgainKind() === k) {
+              <p class="text-muted-foreground w-full text-[12px]" [attr.data-testid]="'rir-send-again-hint-' + k">{{ copy.sendAgainHint }}</p>
+            }
             <label class="flex flex-col gap-1 text-sm">
               <span>{{ kindLabel(k) }}: {{ copy.schedule.dateLabel }}</span>
               <input
@@ -171,7 +216,7 @@
       @if (confirm(); as cf) {
         <hlm-dialog-header>
           <h2 hlmDialogTitle>{{ copy.confirm.title }}</h2>
-          <p hlmDialogDescription data-testid="rir-confirm-text">{{ copy.confirm.description(cf.leads) }}</p>
+          <p hlmDialogDescription data-testid="rir-confirm-text">{{ copy.confirm.description(cf.messages) }}</p>
         </hlm-dialog-header>
         <hlm-dialog-footer>
           <button hlmBtn variant="outline" type="button" [disabled]="busy()" (click)="dismissConfirm()">{{ copy.confirm.cancel }}</button>

@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PhaseManagementTableComponent } from './phase-management-table.component';
 import { ResultsApiService } from '../../services/api/results-api.service';
@@ -5,6 +6,12 @@ import { CustomizedAlertsFeService } from '../../services/customized-alerts-fe.s
 import { PhasesService } from '../../services/global/phases.service';
 import { ApiService } from '../../services/api/api.service';
 import { of } from 'rxjs';
+import { By } from '@angular/platform-browser';
+import { RouterTestingModule } from '@angular/router/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { PHASE_MANAGEMENT_COPY } from '../../../internationalization/phase-management.copy';
+import { PhaseManagementTableModule } from './phase-management-table.module';
+import { PrTooltipDirective } from '../../directives/pr-tooltip.directive';
 
 describe('PhaseManagementTableComponent', () => {
   let component: PhaseManagementTableComponent;
@@ -194,5 +201,200 @@ describe('PhaseManagementTableComponent', () => {
     component.phaseList = [{ phase_year_ts: 2022 }, { phase_year_ts: 2023 }];
     const filtered = component.onlyPreviousPhase({ phase_year_ts: 2022 });
     expect(filtered.every(el => el.phase_year_ts >= 2022)).toBe(true);
+  });
+  describe('Phases card header (PMR-T-3)', () => {
+    const persisted = (id: number, status: boolean): any => ({ id, phase_name: `P${id}`, status });
+    const render = (): void => fixture.componentRef.changeDetectorRef.detectChanges();
+    const chip = (testId: string): string => fixture.nativeElement.querySelector(`[data-testid="${testId}"]`)?.textContent?.trim();
+
+    it('totalPhases excludes isNew drafts and openPhases counts status true', () => {
+      component.phaseList = [persisted(1, true), persisted(2, false), persisted(3, false), persisted(4, false), persisted(5, false), { isNew: true, status: true }];
+      expect(component.totalPhases).toBe(5);
+      expect(component.openPhases).toBe(1);
+      render();
+      expect(chip('pmt-total-chip')).toBe('5 total');
+      expect(chip('pmt-open-chip')).toBe('1 open');
+    });
+
+    it('renders "0 open" when every phase is closed', () => {
+      component.phaseList = [persisted(1, false), persisted(2, false)];
+      render();
+      expect(chip('pmt-open-chip')).toBe('0 open');
+    });
+
+    it('updates the chips after phaseList is reassigned with an extra open phase', () => {
+      component.phaseList = [persisted(1, true)];
+      render();
+      expect(chip('pmt-open-chip')).toBe('1 open');
+      component.phaseList = [...component.phaseList, persisted(2, true)];
+      render();
+      expect(chip('pmt-total-chip')).toBe('2 total');
+      expect(chip('pmt-open-chip')).toBe('2 open');
+    });
+
+    it('does not add a draft when Add is clicked while a draft exists', () => {
+      component.phaseList = [persisted(1, true), { isNew: true, editing: true }];
+      render();
+      const length = component.phaseList.length;
+      const button = fixture.nativeElement.querySelector('app-pr-button');
+      button.click();
+      expect(component.phaseList.length).toBe(length);
+      expect(fixture.nativeElement.textContent).toContain('Create or cancel to add a new phase');
+    });
+
+    it('exposes the card title copy', () => {
+      expect(fixture.nativeElement.textContent).toContain('Configured phases');
+    });
+  });
+});
+
+describe('PhaseManagementTableComponent cells and actions (PMR-T-4)', () => {
+  let fixture: ComponentFixture<PhaseManagementTableComponent>;
+  let component: PhaseManagementTableComponent;
+
+  const row = (over: any = {}): any => ({
+    id: 1,
+    phase_name: 'Reporting 2026',
+    phase_year: 2026,
+    status: true,
+    can_be_deleted: true,
+    obj_portfolio: { name: 'P25' },
+    obj_previous_phase: null,
+    ...over
+  });
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [PhaseManagementTableModule, RouterTestingModule, HttpClientTestingModule],
+      providers: [
+        {
+          provide: ResultsApiService,
+          useValue: {
+            GET_portfolioList: jest.fn().mockReturnValue(of([])),
+            GET_resultYears: jest.fn().mockReturnValue(of({ response: [] })),
+            GET_tocPhases: jest.fn().mockReturnValue(of({ response: [] })),
+            GET_versioning: jest.fn().mockReturnValue(of({ response: [] }))
+          }
+        },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: PhasesService, useValue: { getNewPhases: jest.fn() } },
+        { provide: ApiService, useValue: { dataControlSE: { getCurrentPhases: jest.fn(() => of({})), getCurrentIPSRPhase: jest.fn(() => of({})) } } }
+      ]
+    }).compileComponents();
+    fixture = TestBed.createComponent(PhaseManagementTableComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  const render = (rows: any[]): HTMLElement => {
+    component.phaseList = rows;
+    fixture.componentRef.changeDetectorRef.detectChanges();
+    return fixture.nativeElement;
+  };
+
+  it('highlights an open row and shows the "Open" pill text', () => {
+    const root = render([row()]);
+    const tr = root.querySelector('tbody tr') as HTMLElement;
+    expect(tr.classList.contains('bg-brand-25')).toBe(true);
+    expect(root.querySelector('[data-testid="pmt-status-pill"]')?.textContent?.trim()).toBe('Open');
+  });
+
+  it('shows "Closed" without highlight for a closed row', () => {
+    const root = render([row({ status: false })]);
+    const tr = root.querySelector('tbody tr') as HTMLElement;
+    expect(tr.classList.contains('bg-brand-25')).toBe(false);
+    expect(root.querySelector('[data-testid="pmt-status-pill"]')?.textContent?.trim()).toBe('Closed');
+  });
+
+  it('renders the portfolio as a chip', () => {
+    const root = render([row()]);
+    expect(root.querySelector('[data-testid="pmt-portfolio-chip"]')?.textContent?.trim()).toBe('P25');
+  });
+
+  it('does not call deletePhase when can_be_deleted is false and keeps the tooltip text', () => {
+    const spy = jest.spyOn(component, 'deletePhase');
+    const root = render([row({ can_be_deleted: false })]);
+    const del = root.querySelector('[data-testid="pmt-delete-btn"]') as HTMLButtonElement;
+    del.click();
+    expect(spy).not.toHaveBeenCalled();
+    expect(del.getAttribute('aria-disabled')).toBe('true');
+    expect(del.getAttribute('aria-label')).toBe(PHASE_MANAGEMENT_COPY.deletePhaseLabel);
+    expect(fixture.debugElement.query(By.css('[data-testid="pmt-delete-btn"]')).injector.get(PrTooltipDirective).text).toBe(
+      'The phase has active results therefore cannot be eliminated'
+    );
+  });
+
+  it('calls deletePhase when can_be_deleted is true', () => {
+    const spy = jest.spyOn(component, 'deletePhase').mockImplementation(() => undefined);
+    const root = render([row()]);
+    (root.querySelector('[data-testid="pmt-delete-btn"]') as HTMLButtonElement).click();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives the delete button an aria-label', () => {
+    const root = render([row()]);
+    const del = root.querySelector('[data-testid="pmt-delete-btn"]') as HTMLButtonElement;
+    expect(del.tagName).toBe('BUTTON');
+    expect(del.getAttribute('type')).toBe('button');
+    expect(del.getAttribute('aria-label')).toBe(PHASE_MANAGEMENT_COPY.deletePhaseLabel);
+  });
+
+  it('renders save and cancel as labelled buttons while editing', () => {
+    const root = render([row({ editing: true })]);
+    const expected: Record<string, string> = { 'pmt-save-btn': PHASE_MANAGEMENT_COPY.savePhaseLabel, 'pmt-cancel-btn': PHASE_MANAGEMENT_COPY.cancelEditLabel };
+    for (const id of Object.keys(expected)) {
+      const b = root.querySelector(`[data-testid="${id}"]`) as HTMLButtonElement;
+      expect(b.tagName).toBe('BUTTON');
+      expect(b.getAttribute('aria-label')).toBe(expected[id]);
+    }
+  });
+
+  it('labels the save button "Create phase" for a new draft', () => {
+    const root = render([row({ editing: true, isNew: true })]);
+    expect((root.querySelector('[data-testid="pmt-save-btn"]') as HTMLElement).getAttribute('aria-label')).toBe(PHASE_MANAGEMENT_COPY.createPhaseLabel);
+  });
+
+  it('keeps the edit action as a plain div without role or tabindex', () => {
+    const root = render([row()]);
+    const edit = root.querySelector('td div.edit') as HTMLElement;
+    expect(edit.hasAttribute('role')).toBe(false);
+    expect(edit.hasAttribute('tabindex')).toBe(false);
+    expect(edit.hasAttribute('aria-label')).toBe(false);
+  });
+});
+
+@Component({
+  selector: 'app-pmt-projection-host',
+  template: '<app-phase-management-table><div data-testid="pmt-projected">x</div></app-phase-management-table>',
+  standalone: false
+})
+class ProjectionHostComponent {}
+
+describe('PhaseManagementTableComponent content projection (PMR-T-3)', () => {
+  it('renders projected content through ng-content as a sibling of the card', async () => {
+    await TestBed.configureTestingModule({
+      declarations: [PhaseManagementTableComponent, ProjectionHostComponent],
+      providers: [
+        {
+          provide: ResultsApiService,
+          useValue: {
+            GET_portfolioList: jest.fn().mockReturnValue(of([])),
+            GET_resultYears: jest.fn().mockReturnValue(of({ response: [] })),
+            GET_tocPhases: jest.fn().mockReturnValue(of({ response: [] })),
+            GET_versioning: jest.fn().mockReturnValue(of({ response: [] }))
+          }
+        },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: PhasesService, useValue: { getNewPhases: jest.fn() } },
+        { provide: ApiService, useValue: { dataControlSE: { getCurrentPhases: jest.fn(() => of({})), getCurrentIPSRPhase: jest.fn(() => of({})) } } }
+      ]
+    }).compileComponents();
+
+    const hostFixture = TestBed.createComponent(ProjectionHostComponent);
+    hostFixture.detectChanges();
+    const root: HTMLElement = hostFixture.nativeElement;
+    const projected = root.querySelector('[data-testid="pmt-projected"]');
+    expect(projected).not.toBeNull();
+    expect(root.querySelector('[data-testid="pmt-card"]')?.contains(projected)).toBe(false);
   });
 });

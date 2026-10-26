@@ -9,11 +9,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { env } from 'node:process';
-import { Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { GlobalParameterRepository } from '../global-parameter/repositories/global-parameter.repository';
 import { Version } from '../versioning/entities/version.entity';
-import { buildDigests } from './digest-builder';
 import {
   CampaignListView,
   CampaignView,
@@ -29,7 +28,6 @@ import {
   ReplicatedInnovationReminderCampaign,
   ReplicatedReminderStatus,
 } from './entities/replicated-innovation-reminder-campaign.entity';
-import { PendingInnovationRepository } from './repositories/pending-innovation.repository';
 import { ReminderCampaignRepository } from './repositories/reminder-campaign.repository';
 import {
   EMPTY_TEST_RECIPIENT_ERROR,
@@ -51,7 +49,6 @@ const TEST_RECIPIENT_PARAM = 'rir_test_recipient_email';
 export class ReplicatedInnovationRemindersService {
   constructor(
     private readonly _campaignRepository: ReminderCampaignRepository,
-    private readonly _pendingRepository: PendingInnovationRepository,
     private readonly _dispatcher: ReminderDispatcher,
     private readonly _globalParameterRepository: GlobalParameterRepository,
     @InjectRepository(Version)
@@ -65,9 +62,8 @@ export class ReplicatedInnovationRemindersService {
       where: { version_id: phase.id },
       order: { scheduled_at: 'ASC', id: 'ASC' },
     });
-    const rows = await this._pendingRepository.findPending(Number(phase.id));
-    // Reachability depends on the lead only, so the CC lookup is not needed for a count.
-    const { unreachable } = buildDigests(rows, new Map());
+    // Same build path as the dispatch and the preview (read-only), so the counts cannot drift.
+    const { rows, unreachable } = await this._dispatcher.plan(Number(phase.id));
     return {
       phase: {
         id: Number(phase.id),
@@ -84,17 +80,25 @@ export class ReplicatedInnovationRemindersService {
     const phase = await this.activePhase();
     const scheduledAt = this.parseFuture(dto.scheduled_at);
 
+    // RIR-R-5 (amended 2026-10-23): only an OPEN campaign of the same kind blocks a new one.
+    // SENT and CANCELLED stay as history ("Send again" creates an independent campaign).
+    // FAILED counts as open on purpose: it is retryable via Send now, so a second campaign
+    // of the kind would race it and email the same people twice.
     const duplicate = await this._campaignRepository.findOne({
       where: {
         version_id: phase.id,
         kind: dto.kind,
-        status: Not(ReplicatedReminderStatus.CANCELLED),
+        status: In([
+          ReplicatedReminderStatus.PENDING,
+          ReplicatedReminderStatus.SENDING,
+          ReplicatedReminderStatus.FAILED,
+        ]),
       },
       select: { id: true },
     });
     if (duplicate) {
       throw new ConflictException(
-        `A ${dto.kind} campaign already exists for this phase; cancel it before creating another`,
+        `A ${dto.kind} campaign is already open for this phase; send or cancel it before creating another`,
       );
     }
 

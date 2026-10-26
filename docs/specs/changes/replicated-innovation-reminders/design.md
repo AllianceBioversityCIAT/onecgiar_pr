@@ -7,7 +7,7 @@
 | Spec path | `changes/replicated-innovation-reminders` |
 | Requirements | [`requirements.md`](./requirements.md) (RIR-R-1..15) |
 | Depth | Full |
-| Status | approved (2026-10-19) |
+| Status | approved revision 2 (§15, 2026-10-23, Pivot); revision 1 approved 2026-10-19 |
 | Code research | Delegated to an Explore scout (2026-10-19); findings cited in §1A |
 | Date | 2026-10-19 |
 
@@ -321,3 +321,102 @@ There are no reversions. No DD removes, disables or inverts any shipped behaviou
 | Review rounds | 2 per task at most; 1 expected |
 
 These match the **Full** depth declared in Phase 0, so the depth does not change.
+
+## 15. Revision 2 — recipient model per Nicoleta (Pivot 2026-10-23)
+
+This section **supersedes** §2.2 step 3, the `findCcByInitiatives` coordinator branch, the `DigestBuilder` grouping in §5, and the subject line in §5. Everything else stays as designed and shipped: the claim, the finalize guard, the stale release, the cron, Send now, the non-prod redirect, auth, scheduling and throttling.
+
+### 15.1 Premises (new)
+
+| # | Premise | Source of truth | Status | If false |
+|---|---|---|---|---|
+| RIR-P-11 | Developers live only in `results_innovations_dev.innovation_developers`, as free text: numbered entries, optional `<email>`, an optional "(Main contact)" mark | Entity `results-innovations-dev.entity.ts:103`; PROD extract 2026-10-21 (1,710 rows; 197 with several people; 113 with a name and no email) | verified (data) | The parser grammar changes. T-9 tests run on the real patterns |
+| RIR-P-12 | Innovation Use (2) has no developer field | Entity grep: only `results-innovations-dev` carries it | verified | RIR-OQ-7 default becomes moot |
+| RIR-P-13 | A PRMS account = `users.email` (unique) with `users.active = 1` | `user.entity.ts:24-64` | verified | The R-17 match uses AD instead |
+| RIR-P-14 | The lead center of a result = `results_center.is_leading_result = 1`, active | `results-center.entity.ts:48` | assumed (RIR-OQ-8) | The center routing predicate changes |
+| RIR-P-15 | No RIR campaign has been sent in PROD, so the old `template` rows and log rows can be changed without affecting history | Memory 2026-10-20: nothing sends until an admin creates a campaign | to verify at T-10 HITL (`SELECT COUNT(*) FROM replicated_innovation_reminder_campaign` on PROD) | If rows exist, keep them; the migration still works because it only adds a key |
+
+### 15.2 Flow (replaces §2.2 step 3)
+
+```
+pending = repo.findPending(activePhase)          W1/W2 + W3, with source, owner SP, lead center, developer text   (R-1)
+devs    = parseDevelopers(text) per result       (R-16)
+known   = repo.findActiveUserEmails(all parsed)  one IN (...) query, lower-cased                                (R-17)
+messages = builder.build(pending, devs, known, meliaBySp, centerMelByCenter):
+  W1/W2, ≥1 reachable dev → DEVELOPER digest per dev email; CC = MELIA of the listed SPs, minus To            (R-2, R-3)
+  W1/W2, 0 reachable dev  → MELIA_SUMMARY per owning SP;   To = SP MELIA; no CC                              (R-4)
+  W3                      → CENTER email per lead center; To = Center MEL FPs; no CC                         (R-4, R-18)
+  no recipient            → unreachable[]                                                                     (R-4)
+```
+
+An email address can legitimately receive more than one message per campaign: for example, a MELIA focal point gets its SP summary and also a digest as a developer. Each message is still sent at most once.
+
+### 15.3 Data model changes
+
+- **`replicated_innovation_reminder_log`:**
+  - Add `message_key varchar(200) NOT NULL`, backfilled with `CONCAT('DEVELOPER:', recipient_email)`.
+  - Replace `UQ_rir_log_campaign_recipient` with **UNIQUE (`campaign_id`, `message_key`)**. This is the R-8 guard per message.
+  - Key formats:
+
+    | Message type | `message_key` |
+    |---|---|
+    | Developer digest | `DEVELOPER:<email>` |
+    | MELIA summary | `MELIA_SUMMARY:<initiative_id>` |
+    | Center email | `CENTER:<center code>` |
+
+  - `recipient_email` stays as the first To address, for audit.
+- **New `center_mel_focal_point`** (`CenterMelFocalPoint`, extends `BaseEntity`):
+
+  | Column | Type | Notes |
+  |---|---|---|
+  | `id` | bigint PK auto | |
+  | `center_code` | varchar FK → `clarisa_center.code`, NOT NULL | type matched to `clarisa_center.code` at T-10 |
+  | `name` | varchar(200) NULL | |
+  | `email` | varchar(150) NOT NULL | |
+  | `is_active` + audit | `BaseEntity` | |
+  | UNIQUE | (`center_code`, `email`) | |
+
+- **Templates:**
+  - The `UPDATE` targets only the two RIR rows, by name (the developer digest, in two kinds).
+  - It inserts `email_template_replicated_innovation_melia_summary` and `email_template_replicated_innovation_center`.
+  - Each template takes a `{{kindLabel}}` so one template body serves Q4 and final.
+- **Migrations:**
+
+  | File | Contents | Down |
+  |---|---|---|
+  | `<ts>-RIR-RecipientModelV2.ts` | Log key + index swap; the center table; the template update and inserts (the old bodies are kept in the file for `down`) | Restore the index, drop the column, drop the table, restore the old bodies, delete the 2 new templates |
+  | `<ts>-RIR-SeedCenterMelFocalPoints.ts` | Rows from DEP-5, with `center_code` resolved by code | Delete them by (`center_code`, `email`) |
+
+### 15.4 API / UI
+
+The endpoints are unchanged. The `PreviewView` changes as follows:
+
+- `digests[]` gains `type: 'DEVELOPER' | 'MELIA_SUMMARY' | 'CENTER'` and `to: string[]`;
+- `totals` becomes per type;
+- `unreachable[]` items gain `reason: 'NO_MELIA' | 'NO_CENTER' | 'NO_CENTER_MEL'` and `developer_text`.
+
+The Send-now confirmation states the total number of messages. The preview drawer groups by type and shows the developer free text for the MELIA summaries.
+
+### 15.5 Design decisions
+
+- **RIR-DD-7: Parse the free text; do not add a structured developer table.**
+  - Context: the field is free text and Nicoleta wants every listed person.
+  - Decision: a pure `parseDevelopers(text)`. It extracts email tokens with an RFC-lite regex, and each entry's name from the text before its email, or the whole entry when there is no email.
+  - Alternative: migrate developers into a table. Rejected: that changes the result form and is out of scope.
+  - Reversible.
+- **RIR-DD-8: "Reachable" = active PRMS user.**
+  - This implements decision 4 (externals routed to MELIA). It is one batched query per dispatch.
+  - Alternative: domain allow-list (`@cgiar.org`). Rejected: partners with PRMS accounts would be lost, and CGIAR addresses without an account would get links they cannot open.
+- **RIR-DD-9: The log is keyed per message, not per address.**
+  - With three message types, one address can legitimately get two messages, so the old UNIQUE(campaign, email) would wrongly skip the second.
+  - The key keeps exactly-once per message across both servers and across retries.
+
+### 15.6 Budget (revision 2)
+
+| Measure | Estimate |
+|---|---|
+| New tasks | 7 (T-9..T-15) |
+| LOC | ~1,100 (parser + tests ~250 · repository ~150 · builder ~200 · dispatcher ~150 · migration with 2 new HTML templates ~250 · client ~100) |
+| Review rounds | ≤ 2 per task |
+
+Depth stays **Full**.
