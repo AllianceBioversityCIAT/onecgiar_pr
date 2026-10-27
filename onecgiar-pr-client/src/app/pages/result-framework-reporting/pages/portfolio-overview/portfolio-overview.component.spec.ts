@@ -288,7 +288,10 @@ describe('PortfolioOverviewComponent', () => {
 
       const text = fixture.nativeElement.textContent as string;
       expect(text).toContain('Editing');
-      expect(text).toContain('In QA');
+      // Status 2 is named as the rest of PRMS names it; "In QA" there is the separate in-review tag (inQA).
+      const qaTile = fixture.nativeElement.querySelector('[data-testid="status-tile-in-qa"]') as HTMLElement;
+      expect(qaTile.textContent).toContain('Quality Assessed');
+      expect(qaTile.textContent).not.toContain('In QA');
       expect(text).toContain('Submitted');
       expect(text).toContain('Approved');
       expect(text).toContain('Rejected');
