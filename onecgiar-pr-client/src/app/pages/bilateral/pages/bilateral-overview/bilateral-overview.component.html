@@ -384,7 +384,7 @@
                 [queryParams]="resultsLinkParams({ project: [bar.projectId] })"
                 [attr.aria-label]="projectLabel(bar.projectId) + ', ' + bar.total + ' results — open in Results'"
                 class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                <span class="max-w-[220px] truncate">{{ projectLabel(bar.projectId) }}</span>
+                <span class="max-w-[220px] truncate" [attr.title]="projectLabel(bar.projectId)">{{ projectLabel(bar.projectId) }}</span>
                 <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ bar.total }}</b>
               </a>
             }

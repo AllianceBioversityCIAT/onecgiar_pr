@@ -23,6 +23,7 @@ import {
   bySpOption,
   bySpTable,
   byProjectOption,
+  PROJECT_AXIS_LABEL_WIDTH,
   byProjectTable,
   byTypeOption,
   byTypeTable,
@@ -234,6 +235,25 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       });
       const categories = (option.yAxis as { data: string[] }).data;
       expect(categories).toContain('A-AG10173');
+    });
+
+    // INC-166545 — "code — title" labels: the axis truncates, the tooltip names the full project.
+    it('truncates long project labels on the axis and shows the full label in the tooltip', () => {
+      const projectId = model.byProject.bars[0].projectId;
+      const full = 'N-644H12 — Strengthening seed systems for <resilient> & nutritious crops';
+      const option = byProjectOption(model.byProject, TOKENS, { projectLabels: new Map([[projectId, full]]) });
+
+      const axisLabel = (option.yAxis as { axisLabel: { width: number; overflow: string } }).axisLabel;
+      expect(axisLabel).toEqual(expect.objectContaining({ width: PROJECT_AXIS_LABEL_WIDTH, overflow: 'truncate' }));
+
+      const formatter = (option.tooltip as { formatter: (params: unknown) => string }).formatter;
+      const html = formatter([
+        { dataIndex: 0, seriesName: 'Replicated for update', value: 1, marker: '' },
+        { dataIndex: 0, seriesName: 'New in this phase', value: 0, marker: '' },
+      ]);
+      expect(html).toContain('N-644H12 — Strengthening seed systems for &lt;resilient&gt; &amp; nutritious crops');
+      expect(html).toContain('Replicated for update: <strong>1</strong>');
+      expect(html).toContain('New in this phase: <strong>0</strong>');
     });
 
     it('tables every project bar; the no-project count goes in the summary, not a row', () => {

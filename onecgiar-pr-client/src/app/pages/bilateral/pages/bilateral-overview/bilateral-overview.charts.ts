@@ -89,7 +89,7 @@ const CHART_SERIES_NAMESPACE = {
 export interface OverviewChartOptions {
   /** Max project bars to draw; defaults to `OVERVIEW_PROJECT_BAR_LIMIT`. */
   limit?: number;
-  /** `project_id` → display label (short name or code). Falls back to `Project <id>`. */
+  /** `project_id` → display label ("code — title", or whichever exists). Falls back to `Project <id>`. */
   projectLabels?: ReadonlyMap<number, string>;
   /** SP official code → display name. Falls back to the code itself. */
   programLabels?: ReadonlyMap<string, string>;
@@ -196,6 +196,13 @@ function projectLabel(projectId: number, options?: OverviewChartOptions): string
   return options?.projectLabels?.get(projectId) ?? `Project ${projectId}`;
 }
 
+/** INC-166545 — project labels are "code — title"; the axis truncates them, the tooltip shows them whole. */
+export const PROJECT_AXIS_LABEL_WIDTH = 220;
+
+function escapeTooltipText(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 /**
  * INC-165171 — one bar per center project, stacked replicated vs new. Results with no project are
  * not a category any more (Nicoleta, 15-Oct): the card states them as a line under the chart.
@@ -206,14 +213,30 @@ export function byProjectOption(
   options?: OverviewChartOptions,
 ): EChartsOption {
   const bars = visibleProjectBars(model, options?.limit);
-  const categories = bars.map(bar => abbreviateAxisLabel(projectLabel(bar.projectId, options)));
+  const fullLabels = bars.map(bar => projectLabel(bar.projectId, options));
+  const categories = fullLabels.map(label => abbreviateAxisLabel(label));
+  const yAxis = categoryAxis(categories, tokens);
 
   return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      confine: true,
+      formatter: (params: unknown) => {
+        const items = (Array.isArray(params) ? params : [params]) as { dataIndex?: number; marker?: string; seriesName?: string; value?: number }[];
+        const index = items[0]?.dataIndex ?? 0;
+        const title = `<strong>${escapeTooltipText(fullLabels[index] ?? '')}</strong>`;
+        const lines = items.map(item => `${item.marker ?? ''}${item.seriesName ?? ''}: <strong>${item.value ?? 0}</strong>`);
+        return [title, ...lines].join('<br/>');
+      },
+    },
     legend: { show: true, bottom: 0, textStyle: { color: tokens.textSecondary, fontSize: 11 } },
     grid: { left: 8, right: 24, top: 8, bottom: 28, containLabel: true },
     xAxis: valueAxis(tokens),
-    yAxis: categoryAxis(categories, tokens),
+    yAxis: {
+      ...yAxis,
+      axisLabel: { ...(yAxis['axisLabel'] as Record<string, unknown>), width: PROJECT_AXIS_LABEL_WIDTH, overflow: 'truncate' },
+    },
     series: [
       {
         id: `${CHART_SERIES_NAMESPACE.byProject}:replicated`,

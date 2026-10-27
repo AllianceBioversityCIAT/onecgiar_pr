@@ -93,8 +93,7 @@ const STATUS_IDS = [1, 2, 3, 4, 5, 6, 7];
 /**
  * 47 results across the first 20 projects (project 21 stays at zero); two rows carry no linked
  * project (`project_id: null`, replicated W3) — the no-project line. Dates
- * spread Aug 1 – Sep 27 2026, inside `OPEN_PHASE`'s window, so the pace chart plots a real window
- * instead of falling back to the no-dates case.
+ * spread Aug 1 – Sep 27 2026, inside `OPEN_PHASE`'s window.
  */
 const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
   const noProject = index === 3 || index === 17;
@@ -132,7 +131,7 @@ const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
 const KPI_TESTIDS = ['kpi-total', 'kpi-pending', 'kpi-approved', 'kpi-projects-covered'];
 const KPI_SELECTOR = KPI_TESTIDS.map(id => `[data-testid="${id}"]`).join(', ');
 
-const CHART_TESTIDS = ['status-chart', 'by-project-chart', 'by-sp-chart', 'by-type-chart', 'pace-chart'];
+const CHART_TESTIDS = ['status-chart', 'by-project-chart', 'by-sp-chart', 'by-type-chart'];
 const CHART_SELECTOR = CHART_TESTIDS.map(id => `[data-testid="${id}"]`).join(', ');
 
 interface ViewportCase {

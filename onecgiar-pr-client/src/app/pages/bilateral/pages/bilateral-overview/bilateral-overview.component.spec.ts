@@ -15,7 +15,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 
-import { BilateralOverviewComponent } from './bilateral-overview.component';
+import { BilateralOverviewComponent, projectDisplayLabel } from './bilateral-overview.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -596,6 +596,18 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(text('not-started-chip-300')).toContain('0');
     });
 
+    // INC-166545 — the by-project chips name the project ("code — title"), full text in title/aria-label.
+    it('labels the by-project chips "code — title" with the full label in title and aria-label', async () => {
+      await setup();
+      flushData();
+
+      const chip = el('by-project-link-100').nativeElement as HTMLAnchorElement;
+      const label = chip.querySelector('span')!;
+      expect(label.textContent?.trim()).toBe('Alpha — Project 100');
+      expect(label.getAttribute('title')).toBe('Alpha — Project 100');
+      expect(chip.getAttribute('aria-label')).toContain('Alpha — Project 100');
+    });
+
     it('shows an SP with mapped projects and zero results as "n · 0" with a hint (COV-AC-14)', async () => {
       await setup();
       // SP03 has two mapped projects and no result reports it as primary.
@@ -960,5 +972,19 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       const mainEl = harness.fixture.nativeElement.querySelector('main[data-guide="bilateral-tab-overview"]');
       expect(mainEl).toBeTruthy();
     });
+  });
+});
+
+// INC-166545 — one label rule for the chart axis, tooltip, a11y table, chips and project filter.
+describe('projectDisplayLabel', () => {
+  it('joins code and title when the title adds something', () => {
+    expect(projectDisplayLabel({ id: 1, shortName: 'N-644H12', fullName: 'Seed systems' })).toBe('N-644H12 — Seed systems');
+  });
+
+  it('falls back to whichever of code/title exists, then to "Project <id>"', () => {
+    expect(projectDisplayLabel({ id: 1, shortName: 'N-644H12', fullName: 'N-644H12' })).toBe('N-644H12');
+    expect(projectDisplayLabel({ id: 1, shortName: 'N-644H12', fullName: '' })).toBe('N-644H12');
+    expect(projectDisplayLabel({ id: 1, shortName: '', fullName: 'Seed systems' })).toBe('Seed systems');
+    expect(projectDisplayLabel({ id: 7, shortName: '', fullName: '' })).toBe('Project 7');
   });
 });

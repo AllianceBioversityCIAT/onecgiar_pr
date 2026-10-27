@@ -169,6 +169,13 @@ const STATUS_TILE_META: Record<OverviewStatusTile['key'], { hint: string; pillCl
   rejected: { hint: 'rework required', pillClass: 'bg-[var(--pr-danger-soft)] text-[var(--pr-danger)]' },
 };
 
+/** INC-166545 — "code — title" when the title adds something; else whichever of the two exists. */
+export function projectDisplayLabel(project: Pick<BilateralProject, 'id' | 'shortName' | 'fullName'>): string {
+  return project.shortName && project.fullName && project.fullName !== project.shortName
+    ? `${project.shortName} — ${project.fullName}`
+    : project.shortName || project.fullName || `Project ${project.id}`;
+}
+
 /**
  * The Bilateral Center **Overview** tab (`design.md` §6.2). It owns the URL ↔ state sync, calls
  * `BilateralOverviewService`, derives the scoped row set through the SHARED `filterCenterResults`
@@ -325,7 +332,7 @@ export class BilateralOverviewComponent implements OnInit {
   // ── Labels ────────────────────────────────────────────────────────────────────────────────
 
   readonly projectLabels = computed<Map<number, string>>(
-    () => new Map(this.allProjects().map(project => [Number(project.id), project.shortName || project.fullName])),
+    () => new Map(this.allProjects().map(project => [Number(project.id), projectDisplayLabel(project)])),
   );
 
   readonly programLabels = computed<Map<string, string>>(() => {
@@ -362,9 +369,7 @@ export class BilateralOverviewComponent implements OnInit {
     this.allProjects()
       .map(project => ({
         value: Number(project.id),
-        label: project.fullName && project.fullName !== project.shortName
-          ? `${project.shortName} — ${project.fullName}`
-          : project.shortName || project.fullName || `Project ${project.id}`,
+        label: projectDisplayLabel(project),
       }))
       .sort((a, b) => a.label.localeCompare(b.label)),
   );
