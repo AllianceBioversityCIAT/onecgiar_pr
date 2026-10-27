@@ -234,7 +234,7 @@
 
 ### `ADS-T-3` — HITL: real-browser visual, keyboard and geometry check
 
-- **Status:** [~] HITL run 2026-10-27 — 1 fail at 375 px (AC-2c) + 1 spec gap (AC-6a); awaiting user decision, see `execution.md`
+- **Status:** [x] done (2026-10-27, user HITL approval; `REVIEW_WAIVED` (inline), see `execution.md`)
 - **Type:** manual (HITL)
 - **Size:** S
 - **Description:** On the local stack (`docs/infrastructure.md` §6: `npm run start:dev` for the server and `npm start` for the client), use a center that has an own AI job just completed. Check the matrix below at **375 px and 1280 px** (effective CSS px, browser zoom 100 %), and record a screenshot per row in `execution.md`.

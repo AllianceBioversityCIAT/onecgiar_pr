@@ -436,3 +436,25 @@ These are assumptions only, with no owed item. The browser re-check was done by 
 - **Overlay colour (F3):** now `#1e202f`. It is asserted by T4-1. No pixel re-check was done, because the unit assertion covers the config value.
 - **HITL-F1, F2 and F3 are closed.** HITL-O1 (horizontal scroll at 375 px) and HITL-O2 (`?job=` reload does not scroll at 375 px) are pre-existing, out of scope, and left for a separate ticket.
 - **ADS-T-3 now awaits the user's approval at the HITL pause** (done criterion: "The user approves at the HITL pause").
+
+## REVIEW_WAIVED: ADS-T-3
+
+| Field | Content |
+|---|---|
+| `flag` | `inline` — the HITL evidence was produced by the Leader, which supervised the work. No independent conformance Reviewer was spawned for this no-code task |
+| cause | The task is a human-in-the-loop check with no code diff. The `skip-eligible` claim ("no file changes outside `execution.md`") was **not** earned, because screenshots were added under `hitl/`, and that was reported at the gate. Override (c) also applies, since the walkthrough is derived evidence. A Reviewer was owed and was replaced by the two checks in the next row |
+| approved by | The user, 2026-10-27: "approve ADS-T-3" (after the H-6 and W-1 re-run results were presented) |
+| verification that stood in | 1) The user's HITL approval. 2) The independent `/akili-validate` T3 auditor (opus, fresh context, not the Leader) cross-checked the HITL evidence against the requirements and code. It judged the simulated poll adequate for AC-1a/1b and raised O1 as WARN-1 (`validation-report.md`). 3) The full client Jest suite was green: 677 suites and 14 584 tests, run by the Leader |
+| models | Implementer: n/a (no code). Evidence produced by the Leader (opus). Auditor: the validation agent (opus, separate context) |
+
+### ADS-T-3 — closure
+
+- **Final status:** WAIVED (inline). Closed on the user's HITL approval.
+- **Date:** 2026-10-27
+- **Requirements covered (rendered parts):**
+  - ADS-R-2, R-3, R-6 and R-7 (ADS-D5, D7)
+  - P-13 and P-17
+  - After the re-run: AC-2c at 375 px and the AC-6a BUT (W-1)
+- **Open items carried to follow-up (not owed by this spec):**
+  - HITL-O1: horizontal scroll at 375 px. It is pre-existing and maps to validation WARN-1, AC-7a.
+  - HITL-O2: a `?job=` reload at 375 px does not scroll to the card. It is pre-existing and `UNVERIFIED` against the baseline.
