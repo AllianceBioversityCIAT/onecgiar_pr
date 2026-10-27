@@ -165,4 +165,62 @@ describe('DraftSpotlightService', () => {
     expect(popover().nextBtnText).toBe('&lt;i&gt;ok&lt;/i&gt;');
     expect(popover().description).toBe('Open each one with <strong>Review</strong>.');
   });
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-4, DD-10, NFR-3)
+  describe('ADS-T-4 pivot fixes', () => {
+    let chrome: HTMLElement;
+
+    beforeEach(() => {
+      chrome = document.createElement('div');
+      chrome.className = 'app-shell-header';
+      chrome.getBoundingClientRect = () => ({ top: 0, bottom: 120, height: 120, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+      document.body.appendChild(chrome);
+    });
+
+    afterEach(() => chrome.remove());
+
+    it('T4-1. the driver config uses the same overlay colour as the guided tour', () => {
+      service.show(card, container, options());
+
+      expect(instances[0].config.overlayColor).toBe('#1e202f');
+    });
+
+    it('T4-2. scroll-margin-top is chrome height + 8 px BEFORE highlight() scrolls the card', () => {
+      let marginAtHighlight: string | null = null;
+      driverMock.mockImplementationOnce((config: any) => {
+        const instance: FakeInstance = {
+          highlight: jest.fn(() => {
+            marginAtHighlight = card.style.scrollMarginTop;
+          }),
+          destroy: jest.fn(),
+          refresh: jest.fn(),
+          config
+        };
+        instances.push(instance);
+        return instance;
+      });
+
+      service.show(card, container, options());
+
+      expect(marginAtHighlight).toBe('128px');
+    });
+
+    it.each([['dismiss' as const], ['programmatic' as const]])('T4-3. close(%s) restores an empty previous inline margin', reason => {
+      service.show(card, container, options());
+      expect(card.style.scrollMarginTop).toBe('128px');
+
+      service.close(reason);
+
+      expect(card.style.scrollMarginTop).toBe('');
+    });
+
+    it.each([['dismiss' as const], ['programmatic' as const]])('T4-3b. close(%s) restores a pre-set inline margin', reason => {
+      card.style.scrollMarginTop = '24px';
+      service.show(card, container, options());
+      expect(card.style.scrollMarginTop).toBe('128px');
+
+      service.close(reason);
+
+      expect(card.style.scrollMarginTop).toBe('24px');
+    });
+  });
 });

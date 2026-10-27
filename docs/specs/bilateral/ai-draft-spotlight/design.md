@@ -8,7 +8,7 @@
 | **Requirements** | `requirements.md` (`ADS-R-1..8`), approved 2026-10-27 (Phase 1 gate: Continue) |
 | **Depth** | Standard (confirmed by §Budget) |
 | **Approval Mode** | gated |
-| **Status** | approved (gated, 2026-10-27). **Revision 3**, `JUDGMENT: APPROVED ✅` (round 3, both judges). Post-approval info edits: FX-1 citation, FX-2 center reset, R3-3 budget. **Revision 4 (Pivot, 2026-10-27, after the ADS-T-3 HITL run):** DD-10 (tall-card scroll margin), DD-11 (close on a layer opening), the tour's `overlayColor`. These close HITL-F1, F2 and F3 (`execution.md` → *Pivot Record: ADS-T-3*). Pending user approval |
+| **Status** | approved (gated, 2026-10-27). **Revision 3**, `JUDGMENT: APPROVED ✅` (round 3, both judges). Post-approval info edits: FX-1 citation, FX-2 center reset, R3-3 budget. **Revision 4 (Pivot, 2026-10-27, after the ADS-T-3 HITL run):** DD-10 (tall-card scroll margin), DD-11 (close on a layer opening), the tour's `overlayColor`. These close HITL-F1, F2 and F3 (`execution.md` → *Pivot Record: ADS-T-3*). Approved by the user 2026-10-27 |
 | **Verified at** | `edcf190f0` |
 | **Ticket** | P2-4029 |
 | **Baseline cited** | `docs/ux-ui/design.md` §10 (a11y) · `docs/trd/trd.md` `bilateral` client module row · `.cursorrules` (no secrets; not touched) |

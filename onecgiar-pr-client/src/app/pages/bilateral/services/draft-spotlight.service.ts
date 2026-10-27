@@ -1,4 +1,4 @@
-// @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-DD-4, ADS-DD-7, ADS-DD-9)
+// @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-DD-4, ADS-DD-7, ADS-DD-9; ADS-T-4, DD-10)
 import { Injectable, signal } from '@angular/core';
 import { driver, Driver } from 'driver.js';
 
@@ -36,6 +36,9 @@ export class DraftSpotlightService {
   private instance: Driver | null = null;
   private scrollContainer: HTMLElement | null = null;
   private onDismiss: (() => void) | null = null;
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-4, DD-10): the card whose inline scroll-margin-top we set, and its old value.
+  private marginCard: HTMLElement | null = null;
+  private previousScrollMarginTop = '';
   private readonly onContainerScroll = (): void => this.refresh();
 
   isActive(): boolean {
@@ -45,9 +48,17 @@ export class DraftSpotlightService {
   show(card: HTMLElement, container: HTMLElement | null, options: DraftSpotlightOptions): void {
     this.close('programmatic');
 
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-4, DD-10): driver.js scrolls with `scrollIntoView`, which honours
+    // CSS `scroll-margin-top`. Keep a tall card's header clear of the sticky app chrome. Set BEFORE `highlight()`.
+    this.marginCard = card;
+    this.previousScrollMarginTop = card.style.scrollMarginTop;
+    card.style.scrollMarginTop = `${this.measureTopChrome() + 8}px`;
+
     const instance = driver({
       popoverClass: 'pr-guide',
       overlayOpacity: 0.65,
+      // @akili-spec bilateral/ai-draft-spotlight (ADS-T-4, NFR-3): same overlay colour as BilateralTourService.
+      overlayColor: '#1e202f',
       stagePadding: 6,
       animate: false,
       allowClose: true,
@@ -86,9 +97,18 @@ export class DraftSpotlightService {
     this.onDismiss = null;
     this.scrollContainer?.removeEventListener('scroll', this.onContainerScroll);
     this.scrollContainer = null;
+    if (this.marginCard) this.marginCard.style.scrollMarginTop = this.previousScrollMarginTop;
+    this.marginCard = null;
     this.active.set(false);
     instance.destroy();
     if (reason === 'dismiss') onDismiss?.();
+  }
+
+  /** Bottom edge (px) of the app shell's sticky header (`.app-shell-header`, app.component.html), 0 when absent or folded away. */
+  private measureTopChrome(): number {
+    const header = document.querySelector('.app-shell-header');
+    if (!header) return 0;
+    return Math.max(0, Math.round(header.getBoundingClientRect().bottom));
   }
 
   refresh(): void {

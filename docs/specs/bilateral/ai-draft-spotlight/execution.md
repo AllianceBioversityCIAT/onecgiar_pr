@@ -337,4 +337,102 @@ The change is additive under `drafts`.
     - `requirements.md:271` ("the tour's existing `overlayOpacity`") stays true.
   - **Backward:** references to §6.4 and DD-8 were checked. DD-8's focus rule ("focus stays with the new layer") is reused by DD-11 unchanged.
 - **Budget:** 4 tasks, which is the tripwire limit and not over it. The LOC overrun was already accepted by the user.
-- **Status:** the amendment is written and **awaits the user's approval** before ADS-T-4 is executed.
+- **Status:** approved by the user on 2026-10-27 ("approve, run ADS-T-4"). ADS-T-4 execution started.
+
+---
+
+### ADS-T-4 — Pivot fixes from the HITL run (tall-card header margin, close on a layer opening, the tour's overlay colour)
+
+- **Final status:** PASS
+- **Date:** 2026-10-27
+- **Implementer attempts:** 1
+- **Skills / effort:** `angular-developer`, `tdd` · medium
+
+#### Attempt 1
+
+- **Files changed:**
+  - `onecgiar-pr-client/src/app/pages/bilateral/services/draft-spotlight.service.ts` and `.spec.ts`
+  - `onecgiar-pr-client/src/app/pages/bilateral/pages/my-draft-results/my-draft-results.component.ts` and `.spec.ts`
+  - `onecgiar-pr-client/src/app/pages/bilateral/pages/my-draft-results/CLAUDE.md` (111 lines, re-stamped)
+- **Diff size:** +134 / −2.
+- **Implementer verification:**
+  - Bilateral Jest: 66 suites and 2671 tests passed.
+  - `tsc`: exit 0.
+  - Lint: clean.
+- **First reds** (quoted from the Implementer's report):
+  - T1: `Expected: "#1e202f"` / `Received: undefined`
+  - T2: `Expected: "128px"` / `Received: ""`. This is asserted inside the `highlight` mock.
+  - T3: `Expected: "128px"` / `Received: ""`
+  - T4: `spotlight.close` expected 1 call and received 0 (the `selectedDraft` case)
+- **Falsifiers.** Each was applied, observed red, then reverted:
+
+  | Change | Red |
+  |---|---|
+  | Drop `overlayColor` | T4-1 |
+  | Set the margin after `highlight()` | T4-2 |
+  | Do not restore the margin on close | T4-3 and T4-3b (4 cases) |
+  | Remove the DD-11 effect | test 21 "closes … once", for all 4 layers |
+  | Drop the `isActive()` gate | test 21 "does not close when not active", for all 4 layers |
+
+- **Top-chrome element (DD-10):** `.app-shell-header` (`app.component.html` L17, `appChromeFold="up"`). In `app.component.scss` L39–42 it is `position: sticky; top: 0; z-index: 30`. The Reviewer confirmed this at the source, which settles the DD-10 `UNVERIFIED` marker.
+- **Evidence re-run** (Leader-inline, non-author): **VERIFIED**.
+  - Jest: 66 suites and 2671 tests passed.
+  - `tsc`: 0.
+  - `ng lint`: exit 0.
+  - No lines were removed from either spec file.
+- **Reviewer verdict:** **PASS.** The diff conforms to `design.md` rev. 4 (§6.2, §6.4, DD-10 and DD-11, as amended on 2026-10-27).
+  - The margin is set before `driver()` and `highlight()`.
+  - The restore runs behind the `if (!instance) return` guard, so a second close is a no-op. A show-while-active restores the earlier card first.
+  - The DD-11 effect reads all five signals first. It closes inside `untracked` and cannot loop.
+  - It does not re-enter on the spotlight's own show path, because show requires every layer to be clear. A double close with `onReview`, `onPromoteClick` or `onDiscardClick` is a no-op.
+  - `overlayColor` equals the tour's value.
+  - No existing expectation was edited.
+- **runtime events:** none.
+- **spawns:**
+  - Implementer: 16 calls, 96 881 tokens, ended complete.
+  - Reviewer: 14 calls, 90 932 tokens, ended complete.
+
+#### ADVISORY (4R, from the Reviewer; non-gating)
+
+- **Reliability, fold state.** The margin is measured at show time while the header can fold away. The Reviewer asked for H-6 to be checked in both scroll directions. The Leader did so in the ADS-T-3 re-run below, and both pass.
+- **Reliability, throw after the margin is set.** The margin is set before `driver()` is created. If `driver()` or `highlight()` throws, the margin stays on the card, because `close()` returns early when no instance exists. The risk is low.
+- **Readability.** Test "21" sits before test "20" in the spec file.
+
+#### Not Done / Assumptions (verbatim from the Implementer)
+
+- The DD-11 effect reads all five signals first (the four layers plus `isActive()`) and calls `close('programmatic')` inside `untracked`. `// @akili-spec` tags are at the new code.
+- The tall-card fix is unit-tested only. No browser run at 375 × 812 was done, so the HITL re-check is still the Leader's.
+- No Pivot condition arose.
+
+These are assumptions only, with no owed item. The browser re-check was done by the Leader under ADS-T-3, below.
+
+#### Summary
+
+- **Requirements covered:**
+  - ADS-AC-2c (375 px)
+  - ADS-AC-6a BUT (a layer that opens after the spotlight)
+  - ADS-NFR-3
+- **Decisions made:** none beyond design rev. 4.
+- **Running totals vs budget:**
+  - Tasks: 4 of 4. That is at the tripwire, not over it.
+  - LOC: about 1 340, against a budget of 530 and a tripwire of 600. The overrun was accepted by the user.
+  - Review rounds: 4 verdict rounds (5 Reviewer verdicts), against a budget of 4 and a tripwire of 6.
+
+### ADS-T-3 — HITL re-run after ADS-T-4 (H-6 and W-1)
+
+- **Date:** 2026-10-27
+- **Run by:** the Leader, after the ADS-T-4 Reviewer PASS (the user asked for "re-run H-6 and W-1 when it passes").
+- **Setup:** the same client on `:4500`. Its bundle was confirmed fresh: the component has `spotlight.show` and the page has `.app-shell-header`.
+- **Built from:** the transcript output of `rerun-375.js` and `rerun-1280.js`.
+
+| Check | 375 × 812 | 1280 × 900 |
+|---|---|---|
+| **H-6 down** (CIP → IFPRI 12-draft card) | **PASS.** Card top 181 px, below the app header's bottom edge at 173 px (inline margin `181px`). A hit-test at the card header returns the card's own header row. The popover is inside the viewport | **PASS.** Card top 225, header bottom 108 (margin `116px`). Header visible, popover in view |
+| **H-6 up** (list scrolled past the card, card top at −2149, then requested again) | **PASS.** Card top 181, header visible, popover in view | **PASS.** Same geometry. The start position was 108, so this case is weaker at this width |
+| Margin restored on close | `""` | `""` |
+| **W-1** (drawer opened by code while the spotlight is active) | **PASS.** Spotlight closed first: `pop: false`, `overlay: false`, `body.className` `""`. Only the drawer is shown | **PASS**, same result |
+
+- **Screenshots:** `hitl/H-6-rerun-{down,up}-{375,1280}.png` and `hitl/W-1-{375,1280}.png`.
+- **Overlay colour (F3):** now `#1e202f`. It is asserted by T4-1. No pixel re-check was done, because the unit assertion covers the config value.
+- **HITL-F1, F2 and F3 are closed.** HITL-O1 (horizontal scroll at 375 px) and HITL-O2 (`?job=` reload does not scroll at 375 px) are pre-existing, out of scope, and left for a separate ticket.
+- **ADS-T-3 now awaits the user's approval at the HITL pause** (done criterion: "The user approves at the HITL pause").

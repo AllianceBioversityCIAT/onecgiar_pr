@@ -345,6 +345,20 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
       });
     });
 
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-4, DD-11): a layer that opens while the spotlight is lit
+    // (e.g. the drawer set programmatically) would stack its backdrop over the overlay, so close the spotlight.
+    // Every signal is read FIRST, before any return (page-guide trap).
+    effect(() => {
+      const selected = !!this.selectedDraft();
+      const promote = !!this.promoteTarget();
+      const discard = !!this.discardTarget();
+      const drawer = this.bilateralAiService.drawerOpen();
+      const active = this.spotlight.isActive();
+      if (active && (selected || promote || discard || drawer)) {
+        untracked(() => this.spotlight.close('programmatic'));
+      }
+    });
+
     // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-DD-3..DD-6, DD-8)
     // The request effect. Every signal is read FIRST, before any early return (page-guide trap). It never moves
     // the `?job=` ring: that effect stays the only scroller. It only waits for it, then lights the card.

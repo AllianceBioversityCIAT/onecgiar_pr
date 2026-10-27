@@ -2083,6 +2083,44 @@ describe('MyDraftResultsComponent', () => {
       expect(spotlight.refresh).toHaveBeenCalled();
     });
 
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-4, DD-11)
+    describe('21. clash guard: another layer opens while the spotlight is active', () => {
+      const layers: Array<[string, () => void]> = [
+        ['selectedDraft', () => component.selectedDraft.set(draftStub)],
+        ['promoteTarget', () => component.promoteTarget.set(draftStub)],
+        ['discardTarget', () => component.discardTarget.set(draftStub)],
+        ['drawerOpen', () => ai.drawerOpen.set(true)],
+      ];
+
+      it.each(layers)('closes the spotlight (programmatic) once when %s is set', async (_name, open) => {
+        await mount();
+        create();
+        loadDrafts();
+        spotlight.active.set(true);
+        flush();
+        spotlight.close.mockClear();
+
+        open();
+        flush();
+
+        expect(spotlight.close).toHaveBeenCalledTimes(1);
+        expect(spotlight.close).toHaveBeenCalledWith('programmatic');
+      });
+
+      it.each(layers)('does not close when the spotlight is not active and %s is set', async (_name, open) => {
+        await mount();
+        create();
+        loadDrafts();
+        flush();
+        spotlight.close.mockClear();
+
+        open();
+        flush();
+
+        expect(spotlight.close).not.toHaveBeenCalled();
+      });
+    });
+
     it('20. the whole flow issues no write request and calls no draft write method', async () => {
       await mount();
       create();

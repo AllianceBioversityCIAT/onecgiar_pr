@@ -274,7 +274,7 @@
 
 ### `ADS-T-4` — Pivot fixes from the HITL run: tall-card header margin, close on a layer opening, the tour's overlay colour
 
-- **Status:** [ ] not started (added by the Pivot of 2026-10-27, rev. 4. **Awaiting user approval**)
+- **Status:** [x] done (2026-10-27, Reviewer PASS — see `execution.md`)
 - **Type:** client
 - **Size:** S (≈ 25 production LOC, ≈ 60 test LOC)
 - **Description:**

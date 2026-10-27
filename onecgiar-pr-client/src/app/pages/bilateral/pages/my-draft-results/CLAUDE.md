@@ -1,6 +1,6 @@
 # my-draft-results
 
-**Verified:** 2026-10-27 · qa-development-2026-mc-2 · `ADS-T-2` (draft spotlight); earlier: `ADN-T-2` ("New" badge), `AIQ-T-7` scroll via `afterNextRender`
+**Verified:** 2026-10-27 · qa-development-2026-mc-2 · `ADS-T-4` (spotlight tall-card margin, clash guard); earlier: `ADS-T-2` (draft spotlight), `ADN-T-2` ("New" badge), `AIQ-T-7` scroll via `afterNextRender`
 
 ## What it is
 The **Draft Results** tab of the bilateral center dashboard (P2-3169, P2-3315). Lists every AI result suggestion
@@ -30,6 +30,8 @@ the center still has to decide on; each offers Review (read-only aside), Create 
   tour polled 1 s). The `?job=` effect stays the ONLY scroller. A finished same-job run re-runs through `highlightRearmSeq`.
   `onReview`/`onPromoteClick`/`onDiscardClick`, center change and destroy call `close('programmatic')`; Got it/Esc/overlay
   call `close('dismiss')` and focus the card (`tabindex="-1"`). A reload (`?job=` alone) never shows it.
+- **ADS DD-10 (`ADS-T-4`):** `show()` sets `card.style.scrollMarginTop` = bottom of `.app-shell-header` + 8 px BEFORE `highlight()` (driver.js `scrollIntoView` honours it); `close()` restores the old inline value.
+- **ADS DD-11 (`ADS-T-4`):** an effect closes the spotlight (`'programmatic'`) when `selectedDraft`/`promoteTarget`/`discardTarget`/`drawerOpen` is set while it is active (reads all five signals first).
 - **"New" badge (`ADN-T-2`).** `DraftSessionGroup.isNew` = `freshDraftJobIds().has(sessionId)` (own jobs the
   client saw finish with drafts; `draft-<id>` fallback never new), badge `data-testid="mdr-session-new-badge"`
   after the creator badge, copy in `BILATERAL_AI_PROCESSES_COPY.drafts.newBadge`. A constructor effect collects
