@@ -324,4 +324,15 @@ describe('BilateralApiService', () => {
     expect(req.request.url).not.toContain('/ai/jobs/');
     req.flush(mockResponse);
   });
+
+  it('POST_bilateralAiDraftsDiscard sends ONE POST with { draftIds } (ABD-NFR-1)', done => {
+    service.POST_bilateralAiDraftsDiscard([1, 2, 3]).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts/discard`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ draftIds: [1, 2, 3] });
+    req.flush(mockResponse);
+  });
 });

@@ -1,13 +1,13 @@
 import { Injectable, signal, computed, inject, effect, OnDestroy } from '@angular/core';
-import { Observable } from 'rxjs';
-import { map, shareReplay } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, map, shareReplay, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { PrToastService } from '../../../shared/components/pr-toast/pr-toast.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { ResultsApiService } from '../../../shared/services/api/results-api.service';
 import { BilateralContextService } from './bilateral-context.service';
 import { BilateralCreationService } from './bilateral-creation.service';
-import { BilateralAiDraft, BilateralAiJobStatus, BilateralAiUploadState } from './bilateral-ai.interfaces';
+import { BilateralAiDraft, BilateralAiJobStatus, BilateralAiUploadState, BulkDiscardDraftsResponse } from './bilateral-ai.interfaces';
 import {
   BilateralAiExpectations,
   BilateralAiMixClass,
@@ -554,5 +554,38 @@ export class BilateralAiService implements OnDestroy {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to discard draft' });
       },
     });
+  }
+
+  /**
+   * `ABD-R-6` / `ABD-NFR-1`: one request for the whole batch. Optimistic removal; ids the server
+   * reports in `failed` come back, a request error restores the snapshot. Never navigates.
+   * Emits the server summary, or `null` when the request itself failed.
+   */
+  discardDrafts(draftIds: number[]): Observable<BulkDiscardDraftsResponse | null> {
+    const snapshot = this.draftList();
+    const ids = new Set(draftIds.map(Number));
+    this.draftList.set(snapshot.filter(d => !ids.has(Number(d.id))));
+    return this.bilateralApi.POST_bilateralAiDraftsDiscard(draftIds).pipe(
+      map(({ response }: { response: BulkDiscardDraftsResponse }) => ({
+        discarded: (response?.discarded ?? []).map(Number),
+        failed: (response?.failed ?? []).map(f => ({ ...f, id: Number(f.id) })),
+      })),
+      tap(({ discarded, failed }) => {
+        const failedIds = new Set(failed.map(f => f.id));
+        this.draftList.set(snapshot.filter(d => !(ids.has(Number(d.id)) && !failedIds.has(Number(d.id)))));
+        if (this.currentDraft() && discarded.includes(Number(this.currentDraft()!.id))) this.currentDraft.set(null);
+        const done = `${discarded.length} draft result${discarded.length === 1 ? '' : 's'} discarded`;
+        this.messageService.add({
+          severity: failed.length ? 'warn' : 'success',
+          summary: failed.length ? 'Partially discarded' : 'Discarded',
+          detail: failed.length ? `${done}. ${failed.length} could not be discarded` : done,
+        });
+      }),
+      catchError(() => {
+        this.draftList.set(snapshot);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to discard drafts' });
+        return of(null);
+      }),
+    );
   }
 }

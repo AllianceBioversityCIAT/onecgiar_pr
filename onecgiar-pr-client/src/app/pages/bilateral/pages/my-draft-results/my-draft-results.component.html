@@ -247,6 +247,13 @@
             <div class="mdr-session-header flex flex-col gap-[10px] px-[20px] py-[12px] bg-[var(--pr-surface-page)] border-b border-[var(--pr-border-divider)] xl:flex-row xl:items-center xl:justify-between xl:gap-[12px]">
               <div class="flex flex-wrap items-center gap-[10px] min-w-0 w-full xl:w-auto">
                 <div class="flex items-center gap-[6px] text-[13px] font-semibold text-[var(--pr-text-heading)]">
+                  @if (isCenterMember()) {
+                    <hlm-checkbox
+                      aria-label="Select all drafts of this upload"
+                      [checked]="cardSelectionState(group) === 'all'"
+                      [indeterminate]="cardSelectionState(group) === 'some'"
+                      (checkedChange)="toggleCard(group, $event)" />
+                  }
                   <i class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">smart_toy</i>
                   <span class="mdr-meta-session font-mono text-[12px] text-[var(--pr-text-secondary)]" [prTooltip]="group.sessionTooltip" prTooltipPosition="top">
                     {{ group.sessionShortHash }}@if (group.formattedDate) { · {{ group.formattedDate }} }
@@ -296,6 +303,9 @@
             <div class="mdr-table-container overflow-x-auto custom_scroll">
               <table class="mdr-session-table w-full text-left border-collapse text-[13px]">
                 <colgroup>
+                  @if (isCenterMember()) {
+                    <col class="w-[44px]" />
+                  }
                   <col class="mdr-col-title" />
                   <col class="mdr-col-category" />
                   <col class="mdr-col-level" />
@@ -304,6 +314,9 @@
                 </colgroup>
                 <thead>
                   <tr class="border-b border-[var(--pr-border-divider)] text-[11px] font-semibold uppercase tracking-wider text-[var(--pr-text-secondary)] bg-[var(--pr-surface-card)]">
+                    @if (isCenterMember()) {
+                      <th scope="col" class="py-[10px] pl-[20px] pr-[0px]"><span class="sr-only">Select</span></th>
+                    }
                     <th scope="col" class="mdr-col-title py-[10px] pl-[20px] pr-[16px]">Result Title</th>
                     <th scope="col" class="mdr-col-category py-[10px] px-[12px] whitespace-nowrap">Category</th>
                     <th scope="col" class="mdr-col-level py-[10px] px-[12px] whitespace-nowrap">Level</th>
@@ -314,6 +327,14 @@
                 <tbody class="divide-y divide-[var(--pr-border-subtle)]">
                   @for (draft of group.drafts; track draft.id) {
                     <tr class="mdr-card-row hover:bg-[var(--pr-surface-hover)] transition-colors">
+                      @if (isCenterMember()) {
+                        <td class="py-[12px] pl-[20px] pr-[0px] align-middle">
+                          <hlm-checkbox
+                            [aria-label]="'Select draft: ' + getDraftTitle(draft)"
+                            [checked]="isRowSelected(draft)"
+                            (checkedChange)="toggleRow(draft, $event)" />
+                        </td>
+                      }
                       <td class="py-[12px] pl-[20px] pr-[16px] align-middle overflow-hidden">
                         <div
                           class="mdr-card-title font-semibold text-[14px] text-[var(--pr-text-heading)] leading-snug truncate cursor-default"
@@ -394,6 +415,19 @@
           </div>
         }
       </div>
+      @if (isCenterMember() && selectedCount() > 0) {
+        <div
+          class="sticky bottom-[12px] z-10 mt-[16px] flex items-center justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] py-[10px] shadow-sm"
+          role="region"
+          aria-label="Bulk actions"
+          data-testid="mdr-bulk-bar">
+          <span class="font-mono text-[13px] tabular-nums text-[var(--pr-text-heading)]" data-testid="mdr-bulk-count">{{ selectedCount() }} selected</span>
+          <div class="flex items-center gap-[8px]">
+            <button hlmBtn variant="ghost" type="button" data-testid="mdr-bulk-clear" (click)="clearSelection()">{{ BULK_COPY.clear }}</button>
+            <button hlmBtn variant="outline" type="button" data-testid="mdr-bulk-discard" [disabled]="isBulkDiscarding()" [attr.disabled]="isBulkDiscarding() ? '' : null" (click)="showBulkDiscardDialog.set(true)">{{ BULK_COPY.discard }}</button>
+          </div>
+        </div>
+      }
     } @else if (isFilteredEmpty()) {
     <div class="mdr-empty mdr-empty--filtered">
       <div class="mdr-empty-icon">
@@ -535,6 +569,30 @@
       (click)="onPromoteConfirm()">
       Create Result
     </button>
+  </div>
+</app-pr-dialog>
+
+<app-pr-dialog
+  styleClass="pr-dialog pr-dialog--discard"
+  [modal]="true"
+  [closable]="false"
+  [dismissableMask]="false"
+  [visible]="showBulkDiscardDialog()"
+  (onHide)="showBulkDiscardDialog.set(false)"
+>
+  <div class="pr-dialog-header">
+    <span class="pr-dialog-header-icon pr-dialog-header-icon--discard">
+      <i class="material-icons-round">delete_outline</i>
+    </span>
+    <span class="pr-dialog-header-title">{{ BULK_COPY.discard }}</span>
+  </div>
+  <div class="pr-dialog-body">
+    <p class="pr-dialog-text">{{ bulkDialogTitle() }}</p>
+    <p class="pr-dialog-hint pr-dialog-hint--danger">{{ BULK_COPY.dialogBody }}</p>
+  </div>
+  <div pr-dialog-footer class="pr-dialog-footer">
+    <button hlmBtn variant="outline" data-testid="mdr-bulk-cancel" (click)="showBulkDiscardDialog.set(false)">Cancel</button>
+    <button hlmBtn variant="destructive" data-testid="mdr-bulk-confirm" [disabled]="isBulkDiscarding()" [attr.disabled]="isBulkDiscarding() ? '' : null" (click)="onBulkDiscardConfirm()">Discard</button>
   </div>
 </app-pr-dialog>
 

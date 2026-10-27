@@ -3,11 +3,33 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { convertToParamMap, RouterModule, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { PrTooltipDirective } from '../../../../shared/directives/pr-tooltip.directive';
 import { MyDraftResultsComponent } from './my-draft-results.component';
+
+/**
+ * Jest replaces `@spartan-ng/brain/*` with a mock that has no BrnCheckbox, so the real
+ * `hlm-checkbox` cannot even be compiled here. This stand-in keeps the public contract the template
+ * uses (`aria-label`, `checked`, `indeterminate`, `checkedChange`) as a role=checkbox button.
+ */
+jest.mock('@spartan/checkbox', () => {
+  const { Component, EventEmitter } = jest.requireActual('@angular/core');
+  class HlmCheckboxStub {
+    ariaLabel = '';
+    checked = false;
+    indeterminate = false;
+    checkedChange = new EventEmitter();
+  }
+  Component({
+    selector: 'hlm-checkbox',
+    inputs: ['checked', 'indeterminate', { name: 'ariaLabel', alias: 'aria-label' }],
+    outputs: ['checkedChange'],
+    template: `<button type="button" role="checkbox" [attr.aria-label]="ariaLabel" [attr.aria-checked]="indeterminate ? 'mixed' : checked" (click)="checkedChange.emit(!(checked && !indeterminate))"></button>`,
+  })(HlmCheckboxStub);
+  return { HlmCheckboxImports: [HlmCheckboxStub] };
+});
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
@@ -250,12 +272,13 @@ describe('MyDraftResultsComponent', () => {
       const colgroup = fixture.debugElement.query(By.css('.mdr-session-table colgroup'));
       expect(colgroup).toBeTruthy();
       const cols = colgroup.queryAll(By.css('col'));
-      expect(cols.length).toBe(5);
-      expect(cols[0].nativeElement.classList.contains('mdr-col-title')).toBe(true);
-      expect(cols[1].nativeElement.classList.contains('mdr-col-category')).toBe(true);
-      expect(cols[2].nativeElement.classList.contains('mdr-col-level')).toBe(true);
-      expect(cols[3].nativeElement.classList.contains('mdr-col-status')).toBe(true);
-      expect(cols[4].nativeElement.classList.contains('mdr-col-actions')).toBe(true);
+      // ABD-T-3: a Center member gets a leading checkbox column, so the named columns shift by one.
+      expect(cols.length).toBe(6);
+      expect(cols[1].nativeElement.classList.contains('mdr-col-title')).toBe(true);
+      expect(cols[2].nativeElement.classList.contains('mdr-col-category')).toBe(true);
+      expect(cols[3].nativeElement.classList.contains('mdr-col-level')).toBe(true);
+      expect(cols[4].nativeElement.classList.contains('mdr-col-status')).toBe(true);
+      expect(cols[5].nativeElement.classList.contains('mdr-col-actions')).toBe(true);
     });
 
     it('keeps the status chip and Review control in separate table cells (responsive overlap fix)', () => {
@@ -1326,6 +1349,122 @@ describe('MyDraftResultsComponent', () => {
 
       expect(component.isCenterMember()).toBe(false);
       expect(fixture.nativeElement.querySelector('.mdr-aside-footer')).toBeNull();
+    });
+  });
+
+  // ABD-T-3 — bulk discard selection UI. DOM-driven: ticks the rendered checkboxes and clicks the buttons.
+  describe('ABD-T-3 — select drafts and discard them in bulk', () => {
+    const mk = (id: number, job: string, title: string) =>
+      ({ ...draftStub, id, job_id: job, extracted_mds: { title, indicator: 'X' }, job: { ...(draftStub as any).job, job_id: job } }) as unknown as BilateralAiDraft;
+    const A = ['a1', 'a2', 'a3', 'a4'].map((t, i) => mk(i + 1, 'job-a', `${i < 3 ? 'keep' : 'hide'} ${t}`));
+    const B = [mk(11, 'job-b', 'keep b1'), mk(12, 'job-b', 'keep b2')];
+    const boxes = () => Array.from(fixture.nativeElement.querySelectorAll('tbody [role="checkbox"]')) as HTMLElement[];
+    const cardBox = (card: number) =>
+      fixture.nativeElement.querySelectorAll('[data-testid="mdr-session-card"]')[card].querySelector('.mdr-session-header [role="checkbox"]') as HTMLElement;
+    const tick = (el: HTMLElement) => { el.click(); fixture.detectChanges(); };
+    const q = (id: string) => fixture.nativeElement.querySelector(`[data-testid="${id}"]`) as HTMLButtonElement | null;
+    const count = () => q('mdr-bulk-count')?.textContent?.trim();
+
+    beforeEach(() => {
+      bilateralAiService.draftList.set([...A, ...B]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+    });
+
+    it('S-1.1/1.3/3.1/3.2: ticking rows shows the bar with a named checkbox; Clear empties it; no new brand button', () => {
+      const brandBefore = fixture.nativeElement.querySelectorAll('button.bg-primary').length;
+      expect(q('mdr-bulk-bar')).toBeNull();
+      expect(boxes()[0].getAttribute('aria-label')).toContain('keep a1');
+      boxes().slice(0, 3).forEach(tick);
+      expect(count()).toBe('3 selected');
+      expect(fixture.nativeElement.querySelectorAll('button.bg-primary').length).toBe(brandBefore);
+      tick(q('mdr-bulk-clear')!);
+      expect(q('mdr-bulk-bar')).toBeNull();
+    });
+
+    it('S-1.2: a non-member sees no checkbox or bar, and Review still opens the panel', () => {
+      component.api.rolesSE.applyRolesResponse({ center: [], application: { role_id: 1 } });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('[role="checkbox"]').length).toBe(0);
+      expect(q('mdr-bulk-bar')).toBeNull();
+      (fixture.nativeElement.querySelector('.mdr-btn--review') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(component.selectedDraft()).not.toBeNull();
+    });
+
+    it('S-2.1/2.2: the card checkbox selects only its card, shows indeterminate, and toggles only that card', () => {
+      tick(cardBox(1));
+      expect(count()).toBe('2 selected');
+      tick(cardBox(1));
+      expect(q('mdr-bulk-bar')).toBeNull();
+      boxes().slice(0, 3).forEach(tick); // 3 of 4 in card A
+      expect(cardBox(0).getAttribute('aria-checked')).toBe('mixed');
+      tick(cardBox(0));
+      expect(count()).toBe('4 selected');
+      tick(cardBox(0));
+      expect(q('mdr-bulk-bar')).toBeNull();
+    });
+
+    it('S-2.3: with a filter hiding one draft, the card checkbox selects only the visible ones', () => {
+      component.filter.setSearchText('keep');
+      fixture.detectChanges();
+      tick(cardBox(0));
+      expect(count()).toBe('3 selected');
+      expect([...component.selectedIds()]).not.toContain(4);
+    });
+
+    it('S-7.1: changing a filter clears the selection, repeatedly', () => {
+      boxes().slice(0, 3).forEach(tick);
+      component.filter.setSearchText('keep');
+      fixture.detectChanges();
+      expect(q('mdr-bulk-bar')).toBeNull();
+      tick(boxes()[0]);
+      component.filter.setSearchText('keep a');
+      fixture.detectChanges();
+      expect(q('mdr-bulk-bar')).toBeNull();
+    });
+
+    it('S-4.1/4.2/6.1: confirm sends one call with the exact ids; cancel sends nothing and keeps the selection', () => {
+      const spy = jest.spyOn(bilateralAiService, 'discardDrafts').mockReturnValue(of({ discarded: [1, 2], failed: [] }));
+      boxes().slice(0, 2).forEach(tick);
+      tick(q('mdr-bulk-discard')!);
+      expect(fixture.nativeElement.textContent).toContain('Discard 2 draft results?');
+      tick(q('mdr-bulk-cancel')!);
+      expect(spy).not.toHaveBeenCalled();
+      expect(count()).toBe('2 selected');
+      tick(q('mdr-bulk-discard')!);
+      tick(q('mdr-bulk-confirm')!);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith([1, 2]);
+      expect(q('mdr-bulk-bar')).toBeNull();
+    });
+
+    it('S-6.2: failed ids stay selected (string ids normalized); S-6.3: a null result keeps the selection', () => {
+      const spy = jest.spyOn(bilateralAiService, 'discardDrafts').mockReturnValueOnce(of({ discarded: [1], failed: [{ id: '2' as any, reason: 'x' }] }));
+      boxes().slice(0, 2).forEach(tick);
+      tick(q('mdr-bulk-discard')!);
+      tick(q('mdr-bulk-confirm')!);
+      expect([...component.selectedIds()]).toEqual([2]);
+      spy.mockReturnValueOnce(of(null));
+      tick(q('mdr-bulk-discard')!);
+      tick(q('mdr-bulk-confirm')!);
+      expect([...component.selectedIds()]).toEqual([2]);
+      expect(component.isBulkDiscarding()).toBe(false);
+    });
+
+    it('S-6.4: while the request is in flight confirm is disabled and a second click sends nothing', () => {
+      const pending = new Subject<any>();
+      const spy = jest.spyOn(bilateralAiService, 'discardDrafts').mockReturnValue(pending);
+      tick(boxes()[0]);
+      tick(q('mdr-bulk-discard')!);
+      tick(q('mdr-bulk-confirm')!);
+      expect(q('mdr-bulk-confirm')!.disabled).toBe(true);
+      expect(q('mdr-bulk-discard')!.disabled).toBe(true);
+      q('mdr-bulk-confirm')!.click();
+      expect(spy).toHaveBeenCalledTimes(1);
+      pending.next({ discarded: [1], failed: [] });
+      fixture.detectChanges();
+      expect(component.isBulkDiscarding()).toBe(false);
     });
   });
 });

@@ -1,6 +1,6 @@
 # my-draft-results
 
-**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · `AIQ-T-7`; scroll deferred with `afterNextRender`, not `queueMicrotask` (second post-execution fix, same session)
+**Verified:** 2026-10-27 · qa-development-2026-ss · `ABD-T-3` (bulk select + discard). Prior: `AIQ-T-7`, 2026-09-29.
 
 ## What it is
 The **Draft Results** tab of the bilateral center dashboard (P2-3169, P2-3315). Lists every AI-generated
@@ -18,19 +18,10 @@ result suggestion the center still has to decide on, and offers Review (read-onl
 - Endpoint: `GET /api/bilateral/center/ai/drafts?centerId=` via
   `BilateralApiService.GET_bilateralAiDrafts`, plus `POST …/drafts/:id/promote` and
   `DELETE …/drafts/:id`. All three are wrapped by `BilateralAiService`, never called from here.
-- **`?job=<id>` deep link (`AIQ-R-9` D / P-19), from the "AI processes" drawer's "View N drafts" and
-  the completion toast — NOT part of the `COV-T-7`/`parseBilateralQueryParams` contract, read
-  separately in `ngOnInit` by subscribing to `activatedRoute.queryParamMap` (LIVE, not `snapshot` —
-  see Traps).** The matching `sessionGroups()` entry (grouped by `job_id`, same id) gets
-  `[id]="'mdr-session-'+group.sessionId"`, is scrolled into view (`scrollWithinNearestScrollContainer()`
-  — see Traps, never `scrollIntoView`) and highlighted with Tailwind
-  `ring-2 ring-inset ring-[var(--pr-color-primary-300)]` for 4 s (`highlightedSessionId` signal),
-  once. Drafts load asynchronously (`bilateralAiService.loadAllDrafts()`), so the job usually is not
-  on screen yet when the query-param subscription first fires — a constructor `effect()` applies the
-  highlight the first time a matching group appears in `sessionGroups()`. **That effect reads
-  `pendingHighlightJobId()` (a signal, not a plain field) AND `sessionGroups()` unconditionally on
-  every run, before any early return** — the very first run would otherwise register zero tracked
-  dependencies and never fire again once a job id and a matching group show up later.
+- **`?job=<id>` deep link (`AIQ-R-9` D / P-19)**, from the "AI processes" drawer and the completion toast;
+  outside `parseBilateralQueryParams`. The matching `sessionGroups()` entry is scrolled into view and
+  ringed for 4 s, once. Drafts load async, so a constructor `effect()` applies it when the group first
+  appears; it reads `pendingHighlightJobId()` and `sessionGroups()` unconditionally (see Traps).
 - Children reused from the detail page: `app-draft-result-card`, `app-draft-evidence-list`
   (`../bilateral-ai-draft-detail/components/…`).
 - Filter state: `services/my-draft-results-filter.service.ts`, **provided on the component**, not in
@@ -41,6 +32,19 @@ result suggestion the center still has to decide on, and offers Review (read-onl
   resetting on every open/cancel/complete and gating `onPromoteConfirm()` before
   `BilateralAiService.promoteDraft`. Not persisted: promotion sets `Editing`; Submit for review is
   the only path toward P/A review.
+- **Bulk discard (ABD-T-3), Center members only (`isCenterMember()`).** Row `hlm-checkbox` (`aria-label`
+  "Select draft: {title}") in a 44px leading column; card select-all in `.mdr-session-header`, over
+  VISIBLE drafts only (`group.drafts`, never `allDrafts()`).
+- Selection is component-local (`selectedIds`, DD-5). Cleared on tab/centre leave, filter-key or centre
+  change, or a selected id no longer visible; that visibility check is skipped while a bulk request is
+  in flight (the service removes rows optimistically).
+- Sticky bar `mdr-bulk-bar` (N selected · Clear · Discard) opens an `app-pr-dialog` confirm; copy in `BULK_COPY`.
+- Flow: `BilateralAiService.discardDrafts(ids)` → `POST api/bilateral/center/ai/drafts/discard` `{ draftIds }`
+  (1..100) → `{ discarded, failed[{ id, reason }] }`, HTTP 200 on partial. The service removes rows at
+  call time, restores failed ids, owns the one toast, and emits `null` on error (selection kept). No
+  navigation. Server: one transaction per draft.
+- Test trap: `tests/mocks/spartanBrainMock.ts` has no `BrnCheckbox`; the spec stubs `@spartan/checkbox`
+  as a `<button role="checkbox">`.
 
 ## Where it is used
 - `src/app/shared/routing/routing-data.ts` — the `drafts` child route of the bilateral center.
@@ -78,25 +82,15 @@ and the promote dialog print through `BilateralAiService.projectNameMap()`. No n
   pure predicate + `clearAll()`), so a second dimension is a signal plus a branch.
 
 ## Traps (⚠️ = already broke something)
-- ⚠️ **Two scroll bugs, same target (P2-3853).** Never `element.scrollIntoView()` — it scrolls EVERY
-  scrollable ancestor incl. `pr-viewport-page` (`overflow:hidden` ≥900px; measured `scrollTop` 57).
-  `scrollWithinNearestScrollContainer()` walks to the nearest `overflow-y:auto|scroll` ancestor
-  (`#workArea`) and scrolls ONLY that. Never defer that scroll with `queueMicrotask()` either — it
-  can run BEFORE Angular renders the `@for` group the effect just matched, so `getElementById`
-  returns null and the scroll silently never fires (reproduced live on every load, hard reload
-  included; the 4 s ring auto-cleared with the target still off-screen). `afterNextRender(cb,
-  {injector: this.injector})` waits for the real render; the clear-timer is armed INSIDE that
-  callback so it starts once the card is actually visible, not before.
+- ⚠️ **Scroll (P2-3853).** Never `scrollIntoView()` (it also scrolls `pr-viewport-page`); use
+  `scrollWithinNearestScrollContainer()`. Never defer it with `queueMicrotask()` (it runs before the
+  `@for` renders); use `afterNextRender(cb, {injector})` and arm the clear-timer inside it.
 - ⚠️ **The highlight effect must read its two signals unconditionally, before any early return** —
   reading `sessionGroups()` only after an `if (!jobId) return` registers zero dependencies on that
   first (job-less) run, and Angular never re-runs the effect once a job id and a matching group show
   up later. `pendingHighlightJobId` is a signal (not a plain field) for the same reason.
-- ⚠️ **`ngOnInit` must subscribe to the LIVE `activatedRoute.queryParamMap`, never read
-  `snapshot.queryParamMap.get('job')` once** (P2-3853) — the default `RouteReuseStrategy`
-  (`PrmsRouteReuseStrategy` only special-cases `result-detail/:id`) reuses this component when only
-  query params change (e.g. the drawer's "View N drafts" from this same tab); `ngOnInit` never
-  reruns, so a snapshot read misses the new `?job=` — reproduced live as "group on screen, no
-  highlight, no scroll". `queryParamMap` re-emits on reuse and on first load alike.
+- ⚠️ **Subscribe to the LIVE `activatedRoute.queryParamMap`, never a `snapshot`** (P2-3853): the route
+  is reused on query-only changes, so `ngOnInit` does not rerun and a snapshot misses the new `?job=`.
 - ⚠️ `BilateralAiDraft` (`../../services/bilateral-ai.interfaces.ts`) **does not model the `result`
   relation** even though the endpoint always returns it — read here through a local
   `DraftResultRelation` cast. Model it on the shared interface next time that file is touched.
@@ -115,6 +109,8 @@ and the promote dialog print through `BilateralAiService.projectNameMap()`. No n
   `draftList()` optimistically, so nothing here needs to refetch.
 
 ## Pending / Coming soon
-- The mockup's Drafts card (`.design-snapshots/PRMS-Reporting.dc.html:1101-1140`) has a search box, a
-  per-card kebab menu and a source-document link this page does not implement, and its reporter also
-  wanted to *select* several drafts at once — neither is part of P2-3169/3319, not built, not implied.
+- The mockup's Drafts card (`.design-snapshots/PRMS-Reporting.dc.html:1101-1140`) has a per-card kebab
+  menu and a source-document link this page does not implement — not part of
+  P2-3169/3319, not built, not implied.
+- Multi-select + bulk discard is built (spec `docs/specs/bilateral/ai-drafts-bulk-discard/`). Bulk
+  promote is NOT built.

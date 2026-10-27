@@ -327,6 +327,10 @@ export class BilateralApiService {
     return this.http.delete<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts/${draftId}`);
   }
 
+  POST_bilateralAiDraftsDiscard(draftIds: number[]) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts/discard`, { draftIds });
+  }
+
   GET_bilateralAiFileSignedUrl(key: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/files/signed-url`, {
       params: new HttpParams().set('key', key),

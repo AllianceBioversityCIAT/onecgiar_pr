@@ -83,6 +83,7 @@ describe('BilateralAiService', () => {
       GET_bilateralAiDraft: jest.fn().mockReturnValue(of({ response: null })),
       POST_promoteBilateralAiDraft: jest.fn().mockReturnValue(of({ response: {} })),
       DELETE_bilateralAiDraft: jest.fn().mockReturnValue(of({})),
+      POST_bilateralAiDraftsDiscard: jest.fn(),
       POST_bilateralAiJobRetry: jest.fn().mockReturnValue(of({ response: { jobId: 'job-1', jobStatus: 'PENDING' } })),
       GET_bilateralAiJobExpectations: jest.fn().mockReturnValue(of({ response: { mix: 'documents', sampleSize: 8, p25Minutes: 3, p75Minutes: 6 } })),
     };
@@ -691,6 +692,62 @@ describe('BilateralAiService', () => {
       expect(() => service.stopPolling()).not.toThrow();
       service.stopPolling();
       expect(() => service.stopPolling()).not.toThrow();
+    });
+  });
+
+  // ── discardDrafts (ABD-R-6) ─────────────────────────────────────────────
+
+  describe('discardDrafts', () => {
+    const drafts = [5, 6, 7].map(id => ({ id: String(id) }) as any); // bigint ids arrive as strings
+
+    beforeEach(() => {
+      service.draftList.set(drafts);
+    });
+
+    it('S-6.1 success removes the ids, clears a discarded currentDraft, does NOT navigate', () => {
+      service.currentDraft.set({ id: 5 } as any);
+      bilateralApi.POST_bilateralAiDraftsDiscard.mockReturnValue(of({ response: { discarded: [5, 6], failed: [] } }));
+
+      let result: any;
+      service.discardDrafts([5, 6]).subscribe(r => (result = r));
+
+      expect(result).toEqual({ discarded: [5, 6], failed: [] });
+      expect(service.draftList().map(d => Number(d.id))).toEqual([7]);
+      expect(service.currentDraft()).toBeNull();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(toast.add).toHaveBeenCalledTimes(1);
+    });
+
+    it('S-6.2 partial: a failed id is restored and one partial toast shows', () => {
+      bilateralApi.POST_bilateralAiDraftsDiscard.mockReturnValue(of({ response: { discarded: [5, 6], failed: [{ id: 7, reason: 'forbidden' }] } }));
+
+      service.discardDrafts([5, 6, 7]).subscribe();
+
+      expect(service.draftList().map(d => Number(d.id))).toEqual([7]);
+      expect(toast.add).toHaveBeenCalledTimes(1);
+      expect(toast.add.mock.calls[0][0].detail).toContain('1 could not be discarded');
+    });
+
+    it('keeps currentDraft when its id (string, as TypeORM sends bigint) is among the failed', () => {
+      const current = { id: '7' } as any;
+      service.currentDraft.set(current);
+      bilateralApi.POST_bilateralAiDraftsDiscard.mockReturnValue(of({ response: { discarded: [5, 6], failed: [{ id: '7', reason: 'error' }] } }));
+
+      service.discardDrafts([5, 6, 7]).subscribe();
+
+      expect(service.currentDraft()).toBe(current);
+    });
+
+    it('S-6.3 request error restores the snapshot and shows one error toast', () => {
+      bilateralApi.POST_bilateralAiDraftsDiscard.mockReturnValue(throwError(() => ({ status: 500, error: { message: 'secret' } })));
+
+      let result: any = 'unset';
+      service.discardDrafts([5, 6]).subscribe(r => (result = r));
+
+      expect(result).toBeNull();
+      expect(service.draftList()).toEqual(drafts);
+      expect(toast.add).toHaveBeenCalledTimes(1);
+      expect(toast.add.mock.calls[0][0]).toMatchObject({ severity: 'error', detail: 'Failed to discard drafts' });
     });
   });
 });

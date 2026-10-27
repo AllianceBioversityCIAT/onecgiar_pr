@@ -10,6 +10,7 @@ import {
   OnDestroy,
   OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -17,6 +18,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HlmButton } from '@spartan/button';
+import { HlmCheckboxImports } from '@spartan/checkbox';
 import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
@@ -103,6 +105,14 @@ const DRAFT_STATUS_MODIFIERS: Record<number, string> = {
   [BILATERAL_STATUS.Rejected]: 'mdr-status--rejected',
 };
 
+/** ABD-OQ-2 copy defaults, one place to edit. */
+const BULK_COPY = {
+  discard: 'Discard selected',
+  clear: 'Clear selection',
+  dialogTitle: (n: number) => `Discard ${n} draft result${n === 1 ? '' : 's'}?`,
+  dialogBody: 'Their draft results will be removed from PRMS.',
+};
+
 export interface DraftSessionGroup {
   sessionId: string;
   sessionShortHash: string;
@@ -127,6 +137,7 @@ export interface DraftSessionGroup {
     RouterModule,
     OverlayModule,
     HlmButton,
+    ...HlmCheckboxImports,
     PrDialogComponent,
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
@@ -223,6 +234,7 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
    */
   private readonly pendingHighlightJobId = signal<string | null>(null);
   private highlightApplied = false;
+  private lastFilterKey: string | null = null;
   readonly highlightedSessionId = signal<string | null>(null);
   private highlightClearTimer: ReturnType<typeof setTimeout> | null = null;
   /** Delay of the corrective second scroll pass (see the highlight effect). */
@@ -267,6 +279,29 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
         },
         { injector: this.injector },
       );
+    });
+
+    // ABD-R-7 / DD-6: any filter or centre change, or a selected draft that is no longer visible,
+    // empties the selection. Every signal is read BEFORE any early return (same trap as `?job=`).
+    // The filter key is compared with the previous run so a discard (which only shrinks `drafts()`
+    // and re-selects the failed ids) is not mistaken for a filter change.
+    effect(() => {
+      const visible = this.drafts();
+      const key = JSON.stringify([
+        this.filter.selectedProjectIds(),
+        this.filter.searchText(),
+        this.filter.selectedCreatedBy(),
+        this.ctx.centerId(),
+      ]);
+      // While a bulk request is in flight the service has already removed the rows optimistically;
+      // judging visibility then would wipe the selection a failed request must keep (ABD-S-6.3).
+      const inFlight = this.isBulkDiscarding();
+      const selected = untracked(() => this.selectedIds());
+      const changed = key !== this.lastFilterKey;
+      this.lastFilterKey = key;
+      if (!selected.size || (inFlight && !changed)) return;
+      const visibleIds = new Set(visible.map(d => Number(d.id)));
+      if (changed || [...selected].some(id => !visibleIds.has(id))) this.selectedIds.set(new Set());
     });
 
     effect(() => {
@@ -812,6 +847,63 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
 
   onDiscardCancel(): void {
     this.discardTarget.set(null);
+  }
+
+  // ── ABD · Bulk discard (selection is component-scoped, ABD-DD-5) ──────────
+  readonly BULK_COPY = BULK_COPY;
+  readonly selectedIds = signal<Set<number>>(new Set());
+  readonly selectedCount = computed(() => this.selectedIds().size);
+  readonly isBulkDiscarding = signal(false);
+  readonly showBulkDiscardDialog = signal(false);
+  readonly bulkDialogTitle = computed(() => BULK_COPY.dialogTitle(this.selectedCount()));
+
+  isRowSelected(draft: BilateralAiDraft): boolean {
+    return this.selectedIds().has(Number(draft.id));
+  }
+
+  toggleRow(draft: BilateralAiDraft, checked: boolean): void {
+    this.selectedIds.update(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(Number(draft.id));
+      else next.delete(Number(draft.id));
+      return next;
+    });
+  }
+
+  /** Over the group's VISIBLE drafts only (`group.drafts` is built from the filtered `drafts()`). */
+  cardSelectionState(group: DraftSessionGroup): 'all' | 'some' | 'none' {
+    const selected = this.selectedIds();
+    const n = group.drafts.filter(d => selected.has(Number(d.id))).length;
+    return n === 0 ? 'none' : n === group.drafts.length ? 'all' : 'some';
+  }
+
+  toggleCard(group: DraftSessionGroup, checked: boolean): void {
+    this.selectedIds.update(prev => {
+      const next = new Set(prev);
+      for (const d of group.drafts) {
+        if (checked) next.add(Number(d.id));
+        else next.delete(Number(d.id));
+      }
+      return next;
+    });
+  }
+
+  clearSelection(): void {
+    this.selectedIds.set(new Set());
+  }
+
+  onBulkDiscardConfirm(): void {
+    if (this.isBulkDiscarding()) return;
+    const ids = [...this.selectedIds()];
+    if (!ids.length) return;
+    this.isBulkDiscarding.set(true);
+    // The service removes rows at call time and shows the single toast for every outcome.
+    this.bilateralAiService.discardDrafts(ids).subscribe(res => {
+      this.isBulkDiscarding.set(false);
+      this.showBulkDiscardDialog.set(false);
+      // `null` = request failed: keep the selection as-is (ABD-S-6.3).
+      if (res) this.selectedIds.set(new Set(res.failed.map(f => Number(f.id))));
+    });
   }
 
   ngOnDestroy(): void {
