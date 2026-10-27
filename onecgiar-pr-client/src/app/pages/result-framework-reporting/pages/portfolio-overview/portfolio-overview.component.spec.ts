@@ -292,6 +292,8 @@ describe('PortfolioOverviewComponent', () => {
       const qaTile = fixture.nativeElement.querySelector('[data-testid="status-tile-in-qa"]') as HTMLElement;
       expect(qaTile.textContent).toContain('Quality Assessed');
       expect(qaTile.textContent).not.toContain('In QA');
+      // The label truncates on narrow screens (~1024 px): the full name stays on hover.
+      expect(qaTile.querySelector('span.truncate')!.getAttribute('title')).toBe('Quality Assessed');
       expect(text).toContain('Submitted');
       expect(text).toContain('Approved');
       expect(text).toContain('Rejected');
