@@ -56,7 +56,8 @@ export const PORTFOLIO_OVERVIEW_COPY = {
     droppedNotice: 'Your Project and Center selection was removed because their data could not be loaded.',
     sheetTrigger: (n: number) => (n > 0 ? `Filters (${n})` : 'Filters'),
     sheetTitle: 'Filters',
-    activeChips: 'Active filters'
+    activeChips: 'Active filters',
+    showResults: (n: number) => (n === 1 ? 'Show 1 result ↓' : `Show ${n} results ↓`)
   },
   // Progress against ToC KPIs (spec changes/portfolio-overview-revamp/toc-kpi-progress, TKP-R-4..7)
   tocKpi: {

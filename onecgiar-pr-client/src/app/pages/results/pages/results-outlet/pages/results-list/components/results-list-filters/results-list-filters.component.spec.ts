@@ -63,6 +63,7 @@ describe('ResultsListFiltersComponent', () => {
       selectedFundingSource: createSignal<any[]>([]),
       text_to_search: createSignal<string>(''),
       phasesOptions: createSignal<any[]>([]),
+      requestedPhaseId: createSignal<number | null>(null),
       phasesOptionsOld: createSignal<any[]>([]),
       submittersOptions: createSignal<any[]>([]),
       submittersOptionsOld: createSignal<any[]>([]),
@@ -217,6 +218,36 @@ describe('ResultsListFiltersComponent', () => {
     // status options
     expect(mockApiService.resultsSE.GET_allResultStatuses).toHaveBeenCalled();
     expect(mockResultsListFilterService.statusOptions()).toEqual([{ id: 1, name: 'Draft' }]);
+  });
+
+  describe('links from Portfolio overview (?phase= / ?status=)', () => {
+    it('a requested phase replaces the portfolio default, once', () => {
+      mockResultsListFilterService.requestedPhaseId.set(102);
+
+      component.getData();
+
+      expect(mockResultsListFilterService.selectedPhases().map(p => p.id)).toEqual([102]);
+      expect(mockResultsListFilterService.requestedPhaseId()).toBeNull();
+    });
+
+    it('an unknown requested phase falls back to the portfolio default', () => {
+      mockResultsListFilterService.requestedPhaseId.set(999);
+
+      component.getData();
+
+      expect(mockResultsListFilterService.selectedPhases().map(p => p.id)).toEqual([101]);
+    });
+
+    it('a status set by id only gets its full option, so the chip shows its name', () => {
+      mockResultsListFilterService.selectedStatus.set([{ status_id: 2 }]);
+      mockApiService.resultsSE.GET_allResultStatuses.mockReturnValue(
+        of({ response: [{ status_id: 1, name: 'Editing' }, { status_id: 2, name: 'Quality Assessed' }] })
+      );
+
+      component.getResultStatus();
+
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ status_id: 2, name: 'Quality Assessed' }]);
+    });
   });
 
   describe('filtersCount and filtersCountText', () => {
