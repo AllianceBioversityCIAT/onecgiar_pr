@@ -37,8 +37,9 @@ describe('ResultRepository (unit)', () => {
   });
 
   /** getResultsByBilateralCenter binds: center code/acronym, the W3 alias pairs, the center code
-   *  again (results_center), the version, the project-tagging flag and the bilateral-scope
-   *  category flag (CWS-R-1) — in that order. */
+   *  again (results_center), the bilateral-scope flag of tagged_center_project_ids (CPA-R-6, in the
+   *  SELECT list so it precedes the WHERE binds), the version, the project-tagging flag and the
+   *  bilateral-scope category flag (CWS-R-1) — in that order. */
   const expectCenterResultsParams = (
     params: unknown[],
     centerId: string,
@@ -47,8 +48,9 @@ describe('ResultRepository (unit)', () => {
     scopeFlag: 0 | 1 = 0,
   ) => {
     expect(params.slice(0, 2)).toEqual([centerId, centerId]);
-    expect(params.slice(-4)).toEqual([
+    expect(params.slice(-5)).toEqual([
       centerId,
+      scopeFlag,
       versionId,
       taggingFlag,
       scopeFlag,
@@ -616,6 +618,72 @@ describe('ResultRepository (unit)', () => {
 
         const [, params] = queryMock.mock.calls[0];
         expectCenterResultsParams(params, 'CIP', 8, 1, 0);
+      });
+
+      // @akili-spec bilateral/center-overview-pa-contribution CPA-R-6, CPA-AC-6
+      it('adds tagged_center_project_ids as a correlated subquery with no extra JOIN and binds the scope flag', async () => {
+        queryMock.mockResolvedValueOnce([]);
+
+        await repo.getResultsByBilateralCenter('CIP', 8, false, true);
+
+        const [sql, params] = queryMock.mock.calls[0];
+        expect(sql).toContain('SELECT JSON_ARRAYAGG(cpx.id)');
+        expect(sql).toContain('END AS tagged_center_project_ids');
+        expect(sql).not.toMatch(/JSON_ARRAYAGG\(DISTINCT/i);
+        // The outer FROM keeps exactly its joins: no JOIN on results_by_projects was added.
+        expect(sql).not.toContain('LEFT JOIN results_by_projects');
+        expect(sql).not.toContain('INNER JOIN results_by_projects rbpx');
+        expect(sql).toContain('ORDER BY r.created_date DESC, r.id DESC');
+        expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+        // Exact param array: tail is [center, scope flag, version, tagging, scope].
+        expect(params).toEqual(expect.arrayContaining(['CIP', 'CENTER-06']));
+        expect(params.slice(-5)).toEqual(['CIP', 1, 8, 1, 1]);
+      });
+
+      it('binds the new flag to 0 for an unscoped call and maps tagged_center_project_ids to null', async () => {
+        queryMock.mockResolvedValueOnce([
+          { id: 1, overview_category: 'w1w2_tagging' },
+          {
+            id: 2,
+            overview_category: 'new_w3',
+            tagged_center_project_ids: null,
+          },
+        ]);
+
+        const rows = await repo.getResultsByBilateralCenter('CIP', 8);
+
+        const [, params] = queryMock.mock.calls[0];
+        expect(params.slice(-5)).toEqual(['CIP', 0, 8, 0, 0]);
+        expect(rows.map((r) => r.tagged_center_project_ids)).toEqual([
+          null,
+          null,
+        ]);
+      });
+
+      it('maps JSON text, a parsed array, NULL and invalid values of tagged_center_project_ids', async () => {
+        queryMock.mockResolvedValueOnce([
+          { id: 1, tagged_center_project_ids: '[11,12]' },
+          { id: 2, tagged_center_project_ids: [13, '14'] },
+          { id: 3, tagged_center_project_ids: null },
+          { id: 4, tagged_center_project_ids: 'not json' },
+          { id: 5, tagged_center_project_ids: '{"a":1}' },
+        ]);
+
+        const rows = await repo.getResultsByBilateralCenter(
+          'CIP',
+          8,
+          false,
+          true,
+        );
+
+        expect(rows.map((r) => r.tagged_center_project_ids)).toEqual([
+          [11, 12],
+          [13, 14],
+          null,
+          null,
+          null,
+        ]);
+        expect(rows.map((r) => r.id)).toEqual([1, 2, 3, 4, 5]);
       });
 
       it('keeps the predicate after the CASE it mirrors and before the ORDER BY', async () => {

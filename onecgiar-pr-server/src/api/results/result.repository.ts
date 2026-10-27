@@ -4184,6 +4184,25 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   }
 
   /**
+   * @akili-spec bilateral/center-overview-pa-contribution CPA-R-6
+   * `JSON_ARRAYAGG` comes back as JSON text or an already parsed array depending on the driver.
+   * Returns `number[]`, or `null` for NULL, an empty or an invalid value.
+   */
+  private static normaliseTaggedProjectIds(raw: unknown): number[] | null {
+    let value: unknown = raw;
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return null;
+      }
+    }
+    if (!Array.isArray(value)) return null;
+    const ids = value.map(Number).filter((id) => Number.isFinite(id));
+    return ids.length ? ids : null;
+  }
+
+  /**
    * INC-165171 — every row also carries `overview_category`, the one bucket the center Overview
    * counts it in, so all of its cards are built from this single row set:
    * `replicated_w3` / `replicated_w1w2` (is_replicated = 1, by source), `new_w3` (API, not
@@ -4333,7 +4352,31 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           WHEN r.source = 'API' THEN 'new_w3'
           WHEN tg.result_id IS NOT NULL THEN 'w1w2_tagging'
           ELSE 'w1w2_center_only'
-        END AS overview_category
+        END AS overview_category,
+        -- @akili-spec bilateral/center-overview-pa-contribution CPA-R-6
+        -- Center project ids a W1/W2 tagging row links to, for the Overview's projects-by-P/A
+        -- chart. Correlated subquery in the SELECT list (no JOIN, so the row count and order are
+        -- untouched). MySQL has no DISTINCT inside JSON_ARRAYAGG; center_projects is already
+        -- DISTINCT, so filtering it by IN (...) yields each id once. Only under the bilateral
+        -- scope flag; NULL otherwise. The condition repeats the 'w1w2_tagging' branch of the CASE
+        -- above (not replicated, not API, tags a center project): keep in step with it.
+        CASE
+          WHEN ? = 1
+           AND COALESCE(r.is_replicated, 0) = 0
+           AND r.source <> 'API'
+           AND tg.result_id IS NOT NULL
+          THEN (
+            SELECT JSON_ARRAYAGG(cpx.id)
+            FROM center_projects cpx
+            WHERE cpx.id IN (
+              SELECT rbpx.project_id
+              FROM results_by_projects rbpx
+              WHERE rbpx.result_id = r.id
+                AND rbpx.is_active = 1
+            )
+          )
+          ELSE NULL
+        END AS tagged_center_project_ids
       FROM result r
       LEFT JOIN center_rc rc ON rc.result_id = r.id
       LEFT JOIN tagged tg ON tg.result_id = r.id
@@ -4357,15 +4400,22 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     `;
 
     try {
-      return await this.query(query, [
+      const rows = await this.query(query, [
         centerId,
         centerId,
         ...aliasParams,
         centerId,
+        bilateralScope ? 1 : 0, // tagged_center_project_ids (CPA-R-6), SELECT list precedes WHERE
         versionId,
         includeProjectTagging || bilateralScope ? 1 : 0,
         bilateralScope ? 1 : 0,
       ]);
+      return (rows ?? []).map((row: any) => ({
+        ...row,
+        tagged_center_project_ids: ResultRepository.normaliseTaggedProjectIds(
+          row?.tagged_center_project_ids,
+        ),
+      }));
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
