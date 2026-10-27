@@ -446,28 +446,6 @@
               {{ showAllProjects() ? 'Show fewer projects' : 'Show ' + hiddenBarCount() + ' more projects with results' }}
             </button>
           }
-
-          <!-- No new results yet (COV-R-9 B, COV-DD-9; CWS-R-5 B: projects with no NEW result, replicated-only included) -->
-          @if (model().byProject.notStartedProjectIds.length) {
-            <div
-              data-testid="by-project-not-started"
-              class="flex flex-wrap items-center gap-[8px] border-t border-dashed border-[var(--pr-border)] pt-[10px] text-[12px] text-[var(--pr-text-secondary)] max-[899px]:flex-nowrap max-[899px]:overflow-x-auto max-[899px]:no-scrollbar">
-              <b class="flex-none font-semibold text-[var(--pr-text-heading)]">
-                No new results yet ({{ model().byProject.notStartedProjectIds.length }})
-              </b>
-              @for (projectId of model().byProject.notStartedProjectIds; track projectId) {
-                <a
-                  [attr.data-testid]="'not-started-chip-' + projectId"
-                  [routerLink]="reportingLink()"
-                  [queryParams]="deepLinkParams({ project: [projectId] })"
-                  [attr.aria-label]="projectLabel(projectId) + ', 0 new results — open in Reporting'"
-                  class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                  <span class="max-w-[220px] truncate">{{ projectLabel(projectId) }}</span>
-                  <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">0</b>
-                </a>
-              }
-            </div>
-          }
         }
       </article>
     </section>
@@ -600,57 +578,6 @@
               </a>
             }
           </div>
-        }
-      </article>
-    </section>
-
-    <!-- ═══ Row D — Reporting pace (COV-R-12) ═══════════════════════════════════════════════ -->
-    <section class="grid grid-cols-1 gap-[16px]">
-      <article class="flex flex-col gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[18px]">
-        <div class="flex flex-col gap-[2px]">
-          <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting pace</h2>
-          <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
-            Cumulative results created across the phase window
-          </p>
-        </div>
-
-        @if (resultsLoading()) {
-          <span aria-busy="true" aria-label="Loading reporting pace" data-testid="pace-skeleton" class="pr-skeleton block h-[200px] w-full rounded-[10px]"></span>
-        } @else if (resultsError()) {
-          <div role="alert" data-testid="pace-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
-            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
-            <button
-              type="button"
-              class="inline-flex h-[30px] items-center rounded-[8px] border border-[var(--pr-border)] bg-transparent px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              (click)="retry()">
-              Retry
-            </button>
-          </div>
-        } @else if (!model().pace.points.length) {
-          <p data-testid="pace-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
-            No results were created in this phase yet
-          </p>
-        } @else {
-          <app-pr-viz-chart
-            class="block w-full"
-            data-testid="pace-chart"
-            [options]="paceChartOption()"
-            [tableModel]="paceChartTable()"
-            chartTitle="Reporting pace"
-            height="200px" />
-
-          <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]" data-testid="pace-summary">
-            <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ model().kpis.totalResults.count }}</b>
-            results created
-            @if (model().pace.hasWindow) {
-              between {{ model().pace.windowStart }} and {{ model().pace.windowEnd }}
-            } @else {
-              between {{ model().pace.windowStart }} and {{ model().pace.windowEnd }} (this phase has no dates, so the axis spans the results themselves)
-            }
-            @if (model().pace.outsideWindowCount > 0) {
-              · {{ model().pace.outsideWindowCount }} created outside the window are counted in the first or last week
-            }
-          </p>
         }
       </article>
     </section>

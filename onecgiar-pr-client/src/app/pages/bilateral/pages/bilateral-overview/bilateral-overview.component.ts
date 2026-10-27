@@ -64,8 +64,6 @@ import {
   bySpTable,
   byTypeOption,
   byTypeTable,
-  paceOption,
-  paceTable,
   resolveChartClick,
   statusMeterOption,
   statusMeterTable,
@@ -419,8 +417,6 @@ export class BilateralOverviewComponent implements OnInit {
   readonly byTypeChartOption = computed(() => byTypeOption(this.model().byType, this.chartTokens()));
   readonly byTypeChartTable = computed(() => byTypeTable(this.model().byType));
 
-  readonly paceChartOption = computed(() => paceOption(this.model().pace, this.chartTokens(), this.chartOptions()));
-  readonly paceChartTable = computed(() => paceTable(this.model().pace));
 
   /** Bars actually drawn — the card's link chips mirror exactly what the chart shows. */
   readonly visibleBars = computed<OverviewProjectBar[]>(() =>

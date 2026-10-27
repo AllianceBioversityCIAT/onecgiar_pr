@@ -1,8 +1,10 @@
 # bilateral-overview
 
-**What this owns:** the center Overview tab (`/bilateral/:acronym/overview`) — a KPI deck plus six
+**What this owns:** the center Overview tab (`/bilateral/:acronym/overview`) — a KPI deck plus five
 cards (Reporting status, Needs attention, Results by project, Science Program contribution, Results
-by result type, Reporting pace) computed from the center's filtered result set for the selected phase.
+by result type) computed from the center's filtered result set for the selected phase.
+The Reporting pace card and the "No new results yet" chip strip were removed 2026-10-26 (INC-166545,
+Nicoleta); `model().pace` / `notStartedProjectIds` stay in the aggregate, unrendered.
 The top-row "Needs attention" KPI tile was removed 2026-10-08 (reviewer request); the Needs attention panel stays.
 
 ## Invariants
@@ -15,7 +17,7 @@ The top-row "Needs attention" KPI tile was removed 2026-10-08 (reviewer request)
   The Total card renders `kpis.totalResults.categories` — three lines that add up to the headline —
   and **narrows with the filters**. Status tiles show `replicated · new`. **Projects covered** counts
   only projects with a NEW row (`new_w3`/`w1w2_tagging`); replicated-only projects are a sub-line ("not
-  counted"), and the "No new results yet" strip uses the same rule (`CWS-R-5`). `project_id` prefers a
+  counted"); the KPI's "no new result yet" count uses the same rule (`CWS-R-5`). `project_id` prefers a
   center-owned project over the lead one. `bilateral-center-overview-totals` is no longer called.
   `resolveOverviewCategory` derives the category for rows without it (older payloads, fixtures).
 - **Results by project has no "No project" bar and no lead/contributing split** (Nicoleta, 15-Oct):
@@ -119,4 +121,4 @@ lives in `applyUrlParams`/`writeUrl`; phase and center context live in `Bilatera
 - Whether the `sm:`/arbitrary-breakpoint cascade defect above affects other pages (not audited).
 - Visual parity vs the center mockup (Total results card); updated-no-project line at 375 px (CNP-T-5): human check pending.
 
-**Verified:** 2026-10-26 · qa-development-2026-ss · Results by project labels "code — title", truncated axis + full-label tooltip (INC-166545 point 4, `quick/inc-166545-project-title-labels`) · prior: 2026-10-21 · qa-development-2026-ss · updated-no-project line + Overview ignores `group` (CNP-T-3, spec `replicated-innovations-2026-pa/center-overview-no-project-line`) · prior: 2026-10-21 · qa-development-2026-ss · Overview reads the `scope=bilateral` row set: 3 categories, Projects covered by new rows, Results links carry `scope` (CWS-T-4, spec `replicated-innovations-2026-pa/center-overview-w3-scope`) · prior: 2026-10-19 · qa-development-2026-ss · one row set with overview_category for every card, by-project replicated vs new (INC-165171) · prior: 2026-10-13 · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)
+**Verified:** 2026-10-26 · qa-development-2026-ss · Results by project labels "code — title", truncated axis + full-label tooltip (INC-166545 point 4, `quick/inc-166545-project-title-labels`) · prior: 2026-10-26 · qa-development-2026-ss · removed Reporting pace card + No new results yet chips (INC-166545, `quick/inc-166545-overview-remove-pace-not-started`) · prior: 2026-10-21 · qa-development-2026-ss · updated-no-project line + Overview ignores `group` (CNP-T-3, spec `replicated-innovations-2026-pa/center-overview-no-project-line`) · prior: 2026-10-21 · qa-development-2026-ss · Overview reads the `scope=bilateral` row set: 3 categories, Projects covered by new rows, Results links carry `scope` (CWS-T-4, spec `replicated-innovations-2026-pa/center-overview-w3-scope`) · prior: 2026-10-19 · qa-development-2026-ss · one row set with overview_category for every card, by-project replicated vs new (INC-165171) · prior: 2026-10-13 · Total results card = server totals, pills removed, one row per result (SR-164368) · prior: 2026-10-13 · Total results card adopts the SP Total General purple (SR-164368) · prior: 2026-10-08 · qa-development-2026-ss · removed top-row Needs attention KPI tile (card kept) · prior: 2026-10-08 · qa-development-2026-ss · cdc422d8e (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-total-results-mockup`)

@@ -271,7 +271,8 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(text('kpi-projects-covered')).toContain('56 projects with no new result yet');
       expect(text('projects-covered-split')).toBe('4 with only replicated updates (not counted)');
 
-      expect(text('by-project-not-started')).toContain('No new results yet (56)');
+      // INC-166545 — the "No new results yet" strip is gone; only the KPI keeps that count.
+      expect(el('by-project-not-started')).toBeFalsy();
       expect(text('by-project-no-project')).toContain('5 results not linked to a bilateral project');
       expect(text('by-project-unmatched')).toContain('4 results are linked only to bilateral projects outside');
       expect(text('by-project-no-project')).not.toContain('Replicated W1/W2');
@@ -583,7 +584,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('attention-row-editing')).toBeFalsy();
     });
 
-    it('states the results with no project as a broken-down line, plus the not-started chips (INC-165171)', async () => {
+    it('states the results with no project as a broken-down line, with no not-started chips (INC-165171, INC-166545)', async () => {
       await setup();
       flushData();
 
@@ -592,8 +593,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(text('by-project-no-project-w1w2_tagging')).toContain('1');
       expect(el('by-project-no-project-replicated_w3')).toBeFalsy();
       // Project 300 (Gamma) has no results in scope.
-      expect(el('not-started-chip-300')).toBeTruthy();
-      expect(text('not-started-chip-300')).toContain('0');
+      expect(el('not-started-chip-300')).toBeFalsy();
     });
 
     // INC-166545 — the by-project chips name the project ("code — title"), full text in title/aria-label.
@@ -647,7 +647,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         'attention-row-editing',
         'by-project-link-100',
         'by-project-no-project',
-        'not-started-chip-300',
         'by-type-link-6',
       ];
 
@@ -751,11 +750,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
           params: serializeBilateralQueryParams(base, { explicitDefaults: true }) as Record<string, string>,
         },
         {
-          testId: 'not-started-chip-300',
-          path: `/bilateral/${CENTER}/home`,
-          params: serializeBilateralQueryParams({ ...base, project: [300] }, { explicitDefaults: true }) as Record<string, string>,
-        },
-        {
           testId: 'kpi-projects-covered',
           path: `/bilateral/${CENTER}/home`,
           params: serializeBilateralQueryParams(base, { explicitDefaults: true }) as Record<string, string>,
@@ -778,7 +772,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       await setup(`/bilateral/${CENTER}/overview?scope=bilateral`);
       flushData();
 
-      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts', 'not-started-chip-300']) {
+      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts']) {
         const href = (el(testId).nativeElement as HTMLAnchorElement).getAttribute('href')!;
         expect(Object.fromEntries(new URLSearchParams(href.split('?')[1] ?? ''))).not.toHaveProperty('scope');
       }
@@ -927,7 +921,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       await setup();
       flushData(OPEN_PHASE_ID, rows24());
 
-      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts', 'not-started-chip-300']) {
+      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts']) {
         expect(hrefQuery(testId).query).not.toHaveProperty('group');
       }
     });
