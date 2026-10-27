@@ -68,6 +68,13 @@ export const BILATERAL_AI_PROCESSES_COPY = {
       label: 'New',
       srSuffix: 'generated in your latest AI run',
     },
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-NFR-4): popover of the one-shot draft spotlight.
+    // `title` takes plain text only (the spotlight service HTML-escapes it); `body` is static trusted markup.
+    spotlight: {
+      title: (n: number, label: string): string => `${n} new draft${n === 1 ? '' : 's'} from ${label}`,
+      body: 'These are the drafts this AI run just found. Open each one with <strong>Review</strong>, then create the result or discard it.',
+      button: 'Got it',
+    },
   },
   /** `ai-job-card` (`AIQ-R-9` B–H, parity list `AIQ-DD-8`). */
   card: {

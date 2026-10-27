@@ -237,7 +237,8 @@
         @for (group of sessionGroups(); track group.sessionId) {
           <div
             [id]="'mdr-session-' + group.sessionId"
-            class="mdr-session-card bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm transition-all"
+            tabindex="-1"
+            class="mdr-session-card outline-none bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm transition-all"
             [class.mdr-session-card--me]="group.isCurrentUser"
             [class.ring-2]="highlightedSessionId() === group.sessionId"
             [class.ring-inset]="highlightedSessionId() === group.sessionId"

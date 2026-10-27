@@ -101,7 +101,7 @@
 
 ### `ADS-T-2` — `DraftSpotlightService` and Draft Results integration (attach / re-arm, settle, show, close, refresh, guards, copy, guide)
 
-- **Status:** [ ] not started
+- **Status:** [x] done (2026-10-27, Reviewer PASS ×2 lenses — see `execution.md`)
 - **Type:** client
 - **Size:** L (≈ 175 production LOC, ≈ 200 test LOC). It is expected to take two review rounds.
 - **Description:**
