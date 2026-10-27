@@ -309,13 +309,13 @@ The one risk is that a reader of T-2 alone copies the old config. A one-line "su
 | # | Severity | Item | Owner |
 |---|---|---|---|
 | R-1 | ~~BLOCKING~~ **DONE** 2026-10-27 | The user reviews ADS-T-3 and approves or rejects at the HITL pause. **Done:** the user approved ("approve ADS-T-3"); `tasks.md:237` is `[x]`; closure is at `execution.md:440-460`. Ticking the boxes at `tasks.md:272-273` is still open and moves to R-2 | User, then Leader |
-| R-2 | WARN-2 | Tick the done criteria for T-1, T-2, T-3 and T-4 (`tasks.md:96-100`, `:229-233`, `:272-273`, `:327-331`); update `tasks.md:8` (rev. 4), `:11` (status), `:237` (T-3 status) and `execution.md:13` (budget header), `:252` (T-3 first-run status → "superseded by re-run, `:421`") | Leader / `/akili-archive` |
-| R-3 | WARN-3 | `design.md`: close the DD-10 `UNVERIFIED` marker (`:264`) and §13 rows `:288-289`, `:291` with the settled evidence (`.app-shell-header`, `app.component.scss:39`; H-6 re-run; H-7); mark the §Budget table as superseded by the rev. 4 note; fix `execution.md:419` to "3 verdict rounds (4 Reviewer verdicts)" | Leader / `/akili-archive` |
+| R-2 | WARN-2 · **DONE** 2026-10-27 (Leader: 17 boxes ticked, status lines updated) | Tick the done criteria for T-1, T-2, T-3 and T-4 (`tasks.md:96-100`, `:229-233`, `:272-273`, `:327-331`); update `tasks.md:8` (rev. 4), `:11` (status), `:237` (T-3 status) and `execution.md:13` (budget header), `:252` (T-3 first-run status → "superseded by re-run, `:421`") | Leader / `/akili-archive` |
+| R-3 | WARN-3 · **DONE** 2026-10-27 (Leader: DD-10 marker and three §13 rows closed, §Budget superseded, review count corrected to 3/4) | `design.md`: close the DD-10 `UNVERIFIED` marker (`:264`) and §13 rows `:288-289`, `:291` with the settled evidence (`.app-shell-header`, `app.component.scss:39`; H-6 re-run; H-7); mark the §Budget table as superseded by the rev. 4 note; fix `execution.md:419` to "3 verdict rounds (4 Reviewer verdicts)" | Leader / `/akili-archive` |
 | R-4 | WARN-1 | Open a follow-up ticket for the 375 px horizontal page scroll on Draft Results (HITL-O1) and for the `?job=` reload not scrolling at 375 px (HITL-O2). Measure both at `edcf190f0` to confirm they already existed. Cite the ticket in the archive summary | User / PMU |
-| R-5 | Optional | Add a one-line "superseded by ADS-T-4" pointer at `tasks.md:110` and `:145` (§8.2) | `/akili-archive` |
+| R-5 | Optional · **DONE** 2026-10-27 (pointers added at `tasks.md` T-2) | Add a one-line "superseded by ADS-T-4" pointer at `tasks.md:110` and `:145` (§8.2) | `/akili-archive` |
 | R-6 | Optional (advisory) | If `/akili-test` runs: assert that the ring and the New badge survive a dismiss (N-2), write checks on `ResultsApiService` (T1-c), and a jsdom `querySelector('img') === null` (T2-B1); consider the try/catch hardening (T2-B2, T4-b) | `/akili-test` |
 
-Required: **4** (R-1..R-4), of which **1 is done** (R-1) and **3 remain** (R-2..R-4). Optional: 2.
+Required: **4** (R-1..R-4), of which **1 is done** (R-1) and **1 remains** (R-4, a user-owned ticket). R-2 and R-3 were done by the Leader on 2026-10-27. Optional: 2.
 
 ## 12. Archive Readiness Recommendation
 

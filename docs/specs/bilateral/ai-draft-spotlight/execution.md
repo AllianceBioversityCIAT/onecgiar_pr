@@ -10,7 +10,7 @@
 | **Baseline** | `edcf190f0` |
 | **Branch** | `qa-development-2026-mc-2` |
 | **Leader model** | opus (T1) · Implementer `akili-implementer` (sonnet, T2) · Reviewer `akili-reviewer` (opus, T3) |
-| **Budget** | 3 tasks · ≈ 530 LOC · 4 review rounds (tripwire: > 4 tasks, > 600 LOC, > 6 rounds) |
+| **Budget** | 3 tasks · ≈ 530 LOC · 4 review rounds (tripwire: > 4 tasks, > 600 LOC, > 6 rounds). **Rev. 4:** 4 tasks. The LOC overrun was accepted by the user on 2026-10-27 |
 | **Persona drift** | `akili doctor --agents` 2026-10-27: no blocking drift |
 
 ---
@@ -249,7 +249,7 @@ The change is additive under `drafts`.
 
 ### ADS-T-3 — HITL: real-browser visual, keyboard and geometry check
 
-- **Status:** `[~]` — evidence collected; **one requirement fails at 375 px and one spec gap was found**. Both await the user's decision.
+- **Status:** first run. *Superseded:* H-6 and W-1 were re-run after ADS-T-4 (see "ADS-T-3 — HITL re-run after ADS-T-4" below), and the task was closed on the user's approval (see "ADS-T-3 — closure").
 - **Date:** 2026-10-27
 - **Run by:** the Leader, at the user's request ("start the stack and drive the browser with Playwright"). No Implementer was spawned, because this task has no code diff.
 
@@ -416,7 +416,7 @@ These are assumptions only, with no owed item. The browser re-check was done by 
 - **Running totals vs budget:**
   - Tasks: 4 of 4. That is at the tripwire, not over it.
   - LOC: about 1 340, against a budget of 530 and a tripwire of 600. The overrun was accepted by the user.
-  - Review rounds: 4 verdict rounds (5 Reviewer verdicts), against a budget of 4 and a tripwire of 6.
+  - Review rounds: 3 verdict rounds (4 Reviewer verdicts), against a budget of 4 and a tripwire of 6. *Corrected 2026-10-27 per validation R-3; the earlier figure was "4 rounds / 5 verdicts".*
 
 ### ADS-T-3 — HITL re-run after ADS-T-4 (H-6 and W-1)
 

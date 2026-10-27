@@ -261,7 +261,7 @@ driver.js listens to window scroll and resize only (P-14). While active, the ser
 
 driver.js scrolls the card with `scrollIntoView({ block: 'start' })` when the card is taller than the window (P-10). At 375 px that puts the card top at y = 0, under the app's fixed top bar, so the header is hidden. `scrollIntoView` honours the target's `scroll-margin-top`, so `show()` sets `card.style.scrollMarginTop = <top-chrome height> + 8px` before `highlight()`, and `close()` restores the previous inline value.
 - The top-chrome height is measured at show time. It is the bottom edge of the app shell's fixed or sticky header element(s) still visible at the top of the viewport.
-- The exact element is identified by ADS-T-4: `UNVERIFIED — confirm at source before relying on it`.
+- The exact element, identified by ADS-T-4 and confirmed at source by its Reviewer, is `.app-shell-header` (`app.component.html` L17; `app.component.scss` L39–42, `position: sticky; top: 0`).
 - It is measured, not hard-coded, because the banner wraps at narrow widths.
 
 *Rejected:* scrolling the card from the service before `highlight()`. That would be a second scroller, which DD-3 rules out.
@@ -285,10 +285,10 @@ URL-driven behavior is identical when no request exists. The existing `?job=` te
 
 | Item | Owner |
 |---|---|
-| Tall-card popover placement (driver's auto side) | ADS-T-3, HITL (accepted risk if acceptable on screen) |
-| Real-browser behavior of `refresh()` on container scroll | ADS-T-3, HITL |
+| Tall-card popover placement (driver's auto side) | ADS-T-3, HITL. **Closed** 2026-10-27: H-6 re-run PASS at 375 and 1280 px, with the popover in the viewport |
+| Real-browser behavior of `refresh()` on container scroll | ADS-T-3, HITL. **Closed** 2026-10-27: H-7 PASS, the cut-out follows the card (delta 6 = `stagePadding`) |
 | Got it button rendered and focused (P-17) | ADS-T-3, HITL. **Closed** 2026-10-27, H-4 PASS at 1280 and 375 |
-| The "app top chrome" element(s) that DD-10 measures | ADS-T-4. The Implementer identifies them in the app shell. `UNVERIFIED — confirm at source before relying on it` |
+| The "app top chrome" element(s) that DD-10 measures | **Closed** 2026-10-27: `.app-shell-header`, confirmed at source by the ADS-T-4 Reviewer |
 
 ---
 
@@ -298,7 +298,7 @@ URL-driven behavior is identical when no request exists. The existing `?job=` te
 
 | Measure | Estimate |
 |---|---|
-| Tasks | 3 (T-1 service request, expiry and navigation rule, both entry points; T-2 spotlight service and page integration; T-3 HITL visual and keyboard check) |
+| Tasks | *Superseded by the rev. 4 note above: 4 tasks.* 3 (T-1 service request, expiry and navigation rule, both entry points; T-2 spotlight service and page integration; T-3 HITL visual and keyboard check) |
 | LOC | ≈ 530 total: ≈ 220 production (service request ~40, spotlight service ~70, component ~100, tour guard ~2, copy ~8) plus ≈ 310 tests (re-estimated after round 3, R3-3) |
 | Review rounds | 4 (T-2 is expected to take two) |
 

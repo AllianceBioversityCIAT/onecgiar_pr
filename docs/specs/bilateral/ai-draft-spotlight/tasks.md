@@ -5,10 +5,10 @@
 | Field | Value |
 |---|---|
 | **Module / feature** | `bilateral` / `ai-draft-spotlight` |
-| **Linked spec** | `requirements.md` + `design.md` (rev. 3, `JUDGMENT: APPROVED ✅` in `judgment.md`) |
+| **Linked spec** | `requirements.md` + `design.md` (rev. 3, `JUDGMENT: APPROVED ✅` in `judgment.md`; **rev. 4** Pivot amendment approved by the user 2026-10-27) |
 | **Ticket** | P2-4029 |
 | **Owner / driver** | Maria Camila Giraldo |
-| **Status** | approved (gated, 2026-10-27); not started |
+| **Status** | executed. All 4 tasks `[x]` (2026-10-27). Validated: WARN, 0 FAIL (`validation-report.md`) |
 | **Budget (from design)** | 3 tasks · ≈ 530 LOC (≈ 220 production plus ≈ 310 tests) · 4 review rounds. The tripwire trips at more than 4 tasks, 600 LOC or 6 rounds. **Rev. 4 (Pivot after the ADS-T-3 HITL run):** 4 tasks. The LOC overrun was accepted by the user on 2026-10-27 |
 | **PR strategy** | One PR, client-only, to `staging`. 530 LOC is above the ~400 guideline, but ~60 % is tests, and the three tasks are one behavior that only makes sense together. Splitting T-1 alone would ship `?job=` on the toast with no spotlight |
 
@@ -93,11 +93,11 @@
     - If any existing service or drawer-host expectation must change (not just its stub), stop and report it as a Pivot.
   - **Consumers:** `bilateral-ai.service.spec.ts` (the toast tests at `:400-417`), `ai-processes-drawer-host.component.spec.ts` (`:162-166`, `onViewDrafts`), `ai-processes-drawer.component.{ts,html}` and `ai-job-card.component.{ts,html}` (emit `viewDrafts`, behavior unchanged), `my-draft-results.component.spec.ts` (`?job=` tests, unchanged). Run `npx jest src/app/pages/bilateral --silent --reporters=summary --no-coverage`.
 - **Done criteria:**
-  - [ ] Tests 1–9 green. Each greenfield first red is quoted in `execution.md`.
-  - [ ] Each falsifier above was applied once against the post-change code and observed red, then reverted.
-  - [ ] The whole `src/app/pages/bilateral` Jest suite is green, and `npx ng lint --quiet` is clean.
-  - [ ] `npx tsc -p tsconfig.app.json --noEmit` exits 0.
-  - [ ] No secrets logged (`.cursorrules`).
+  - [x] Tests 1–9 green. Each greenfield first red is quoted in `execution.md`.
+  - [x] Each falsifier above was applied once against the post-change code and observed red, then reverted.
+  - [x] The whole `src/app/pages/bilateral` Jest suite is green, and `npx ng lint --quiet` is clean.
+  - [x] `npx tsc -p tsconfig.app.json --noEmit` exits 0.
+  - [x] No secrets logged (`.cursorrules`).
 
 ### `ADS-T-2` — `DraftSpotlightService` and Draft Results integration (attach / re-arm, settle, show, close, refresh, guards, copy, guide)
 
@@ -107,7 +107,7 @@
 - **Description:**
   - **New `DraftSpotlightService`** (`pages/bilateral/services/draft-spotlight.service.ts`, root):
     - `active` signal, `isActive()`, `show(card, container, { title, description, buttonText, onDismiss })`, `close(reason: 'dismiss' | 'programmatic')`, `refresh()`.
-    - `show` closes any active instance first. It builds `driver({ popoverClass: 'pr-guide', overlayOpacity: 0.65, stagePadding: 6, animate: false, allowClose: true, onDestroyStarted: → close('dismiss') })`.
+    - *(Superseded by ADS-T-4 / DD-10: the config also gets `overlayColor: '#1e202f'`, plus a scroll margin before `highlight()`.)* `show` closes any active instance first. It builds `driver({ popoverClass: 'pr-guide', overlayOpacity: 0.65, stagePadding: 6, animate: false, allowClose: true, onDestroyStarted: → close('dismiss') })`.
     - It then calls `highlight({ element: card, popover: { title, description, showButtons: ['next'], nextBtnText, onNextClick: → close('dismiss') } })`. Buttons go in the **step popover** (P-17).
     - It adds a passive `scroll` listener on `container` that calls `refresh()`.
     - It HTML-escapes every dynamic value (`& < > " '`) before composing title and body (DD-7).
@@ -142,7 +142,7 @@
   - ADS-R-2:
     - AC-2a: every clause. Everything except J's group is under the overlay; the header and rows are lit; the title names the run; the body states N and the next step; there is a Got it button; and the BUT "drafts of any other job MUST NOT be lit", since the lit element is J's card only.
     - AC-2b: "only after the scroll has settled", and the AND IT MUST "no offset cut-out" (unit part).
-    - AC-2c: unit part (driver handles `block: 'start'`).
+    - AC-2c: unit part (driver handles `block: 'start'`). *Superseded by ADS-T-4 / DD-10, the scroll margin below the app chrome.*
   - ADS-R-3:
     - AC-3a: the three close paths, "focus moves to J's group", and "ring and New badge remain". The BUT "no scroll lock, leftover overlay, or inert region" is covered by the unit part; the rendered part is in T-3.
     - AC-3b: navigation away, center change, destroy.
@@ -226,11 +226,11 @@
     - `bilateral-ai-processes.copy.ts` consumers (`grep -rln BILATERAL_AI_PROCESSES_COPY src`, to be listed in `execution.md`).
     - No Cypress hit for `mdr-session-`.
 - **Done criteria:**
-  - [ ] Tests 1–21 green. Each listed first red is quoted in `execution.md`.
-  - [ ] Each falsifier above was applied once against the post-change code and observed red, then reverted.
-  - [ ] The whole `src/app/pages/bilateral` Jest suite is green, with no existing expectation edited. `ng lint --quiet` is clean and `tsc` exits 0.
-  - [ ] `CLAUDE.md` is ≤ 120 lines and lists the traps.
-  - [ ] No secrets logged (`.cursorrules`).
+  - [x] Tests 1–21 green. Each listed first red is quoted in `execution.md`.
+  - [x] Each falsifier above was applied once against the post-change code and observed red, then reverted.
+  - [x] The whole `src/app/pages/bilateral` Jest suite is green, with no existing expectation edited. `ng lint --quiet` is clean and `tsc` exits 0.
+  - [x] `CLAUDE.md` is ≤ 120 lines and lists the traps.
+  - [x] No secrets logged (`.cursorrules`).
 
 ### `ADS-T-3` — HITL: real-browser visual, keyboard and geometry check
 
@@ -269,8 +269,8 @@
     - If H-6 shows the popover off-screen, record it as a finding for the user, not a pass.
   - **Consumers:** none
 - **Done criteria:**
-  - [ ] H-1..H-10 pass at 375 and 1280 px, with screenshots in `execution.md`.
-  - [ ] The user approves at the HITL pause.
+  - [x] H-1..H-10 pass at 375 and 1280 px, with screenshots in `execution.md`. (Screenshots are in `hitl/` and referenced from `execution.md`. H-6 at 375 px passed on the re-run after ADS-T-4.)
+  - [x] The user approves at the HITL pause.
 
 ### `ADS-T-4` — Pivot fixes from the HITL run: tall-card header margin, close on a layer opening, the tour's overlay colour
 
@@ -324,11 +324,11 @@
     - `bilateral-tour.service.spec.ts`.
     - `my-draft-results/CLAUDE.md`.
 - **Done criteria:**
-  - [ ] Tests 1–5 green, with the first reds quoted.
-  - [ ] Each falsifier observed red, then reverted.
-  - [ ] The whole bilateral suite green, with no existing expectation edited. Lint clean and `tsc` 0.
-  - [ ] `CLAUDE.md` ≤ 120 lines and re-stamped.
-  - [ ] No secrets logged.
+  - [x] Tests 1–5 green, with the first reds quoted.
+  - [x] Each falsifier observed red, then reverted.
+  - [x] The whole bilateral suite green, with no existing expectation edited. Lint clean and `tsc` 0.
+  - [x] `CLAUDE.md` ≤ 120 lines and re-stamped.
+  - [x] No secrets logged.
 
 ---
 
