@@ -8,7 +8,7 @@
 | **Requirements** | `requirements.md` (`ADS-R-1..8`), approved 2026-10-27 (Phase 1 gate: Continue) |
 | **Depth** | Standard (confirmed by §Budget) |
 | **Approval Mode** | gated |
-| **Status** | approved (gated, 2026-10-27). **Revision 3**, `JUDGMENT: APPROVED ✅` (round 3, both judges). Post-approval info edits: FX-1 citation, FX-2 center reset, R3-3 budget |
+| **Status** | approved (gated, 2026-10-27). **Revision 3**, `JUDGMENT: APPROVED ✅` (round 3, both judges). Post-approval info edits: FX-1 citation, FX-2 center reset, R3-3 budget. **Revision 4 (Pivot, 2026-10-27, after the ADS-T-3 HITL run):** DD-10 (tall-card scroll margin), DD-11 (close on a layer opening), the tour's `overlayColor`. These close HITL-F1, F2 and F3 (`execution.md` → *Pivot Record: ADS-T-3*). Pending user approval |
 | **Verified at** | `edcf190f0` |
 | **Ticket** | P2-4029 |
 | **Baseline cited** | `docs/ux-ui/design.md` §10 (a11y) · `docs/trd/trd.md` `bilateral` client module row · `.cursorrules` (no secrets; not touched) |
@@ -140,7 +140,7 @@ Unchanged. `/bilateral/:acronym/drafts?job=<id>` is now also produced by the toa
 | `openDraftsForJob` / `onViewDrafts` | Build the label (same rule as the toast summary) and request. Then navigate **only if** `router.serializeUrl(router.createUrlTree(['/bilateral', acronym, 'drafts'], { queryParams: { job } }))` differs from `router.url`. When it differs (another page, another job, or extra params such as `?project=`, which are dropped as the drawer does today), navigate. A `false` from that navigation consumes the nonce | ADS-R-1 (AC-1a..1d) |
 | `MyDraftResultsComponent` request effect | The sequence in §2.2. Reads every signal before any return. It **never moves the ring ahead of the URL**: it acts only when `pendingHighlightJobId()` already equals the request's job (FC-4). Re-arm happens only for a completed earlier run, through `highlightRearmSeq` (FC-1); otherwise it attaches to the pending run, so a cold mount scrolls once | ADS-R-1, R-2, R-4..6 |
 | Existing `?job=` highlight effect and subscription | Same scroll logic. The effect also reads `highlightRearmSeq` first. The second pass sets `highlightSettledJobId(id)` only if `pendingHighlightJobId()` still equals `id`. The subscription resets `highlightSettledJobId` on every id change, and the center-change effect resets it too (FC-3). It stays the **only** scroller; `highlightClearTimer` keeps one owner and is cleared in `ngOnDestroy` (`:861`, already) | ADS-AC-2b |
-| `DraftSpotlightService.show(card, container, { title, description, buttonText, onDismiss })` | Closes any active instance first. One `driver()` with the tour's look (`popoverClass: 'pr-guide'`, `overlayOpacity: 0.65`, `stagePadding: 6`), `animate: false`, `allowClose: true`, and `onDestroyStarted` (Esc, overlay) → `close('dismiss')`. Calls `highlight({ element: card, popover: { title, description, showButtons: ['next'], nextBtnText, onNextClick: → close('dismiss') } })`. **The buttons live in the step popover**, because `highlight()` overrides a config-level `showButtons` with `[]` (P-17). Attaches a passive scroll listener on `container` that calls `refresh()`. Sets `active` | ADS-R-2, R-3, R-7 |
+| `DraftSpotlightService.show(card, container, { title, description, buttonText, onDismiss })` | Closes any active instance first. One `driver()` with the tour's look (`popoverClass: 'pr-guide'`, `overlayColor: '#1e202f'`, `overlayOpacity: 0.65`, `stagePadding: 6`; the colour was added in rev. 4, HITL-F3), `animate: false`, `allowClose: true`, and `onDestroyStarted` (Esc, overlay) → `close('dismiss')`. Calls `highlight({ element: card, popover: { title, description, showButtons: ['next'], nextBtnText, onNextClick: → close('dismiss') } })`. **The buttons live in the step popover**, because `highlight()` overrides a config-level `showButtons` with `[]` (P-17). Attaches a passive scroll listener on `container` that calls `refresh()`. Sets `active` | ADS-R-2, R-3, R-7 |
 | `DraftSpotlightService.close(reason)` | Idempotent: removes the listener, calls `destroy()`, clears `active`, and calls `onDismiss` **only** for `'dismiss'`. Never relies on `onDestroyed` (P-15) | ADS-R-3 |
 | `DraftSpotlightService.refresh()` | Calls `driver.refresh()` when active. The page calls it from an effect on `sessionGroups()` while active (list reloads change row heights) | ADS-AC-7b |
 | `onDismiss` (page) | Focuses the card (`tabindex="-1"` added to the card) | ADS-AC-3a, NFR-2 |
@@ -160,11 +160,11 @@ Unchanged. `/bilateral/:acronym/drafts?job=<id>` is now also produced by the toa
 | Rule | Behavior |
 |---|---|
 | Lit element | The whole session card (`#mdr-session-<jobId>`), D-3 |
-| Tall card | If the card is not fully in the window after the page's scroll, driver.js scrolls it itself (`block: 'start'` when taller than the window, P-10), so the header is visible. The container listener keeps the cut-out aligned afterwards. Popover side is driver's auto placement. **HITL-checked** (ADS-D5) |
+| Tall card | If the card is not fully in the window after the page's scroll, driver.js scrolls it itself (`block: 'start'` when taller than the window, P-10). **Rev. 4 (DD-10):** before `highlight()`, the service sets `card.style.scrollMarginTop` to the height of the app's fixed top chrome plus 8 px, so `scrollIntoView` lands the card header **below** that chrome. It clears the margin on close. Without it, at 375 px the header was hidden under the app bar (HITL-F1). The container listener keeps the cut-out aligned afterwards. Popover side is driver's auto placement. **HITL-checked** (ADS-D5) |
 | Scrolling while open | Allowed. The container listener calls `refresh()` (DD-9) |
 | Clicks inside the card | Allowed (P-13). Review, Create and Discard close the spotlight first |
 | Keyboard | Focus starts on **Got it** (P-9). Tab cycles through the popover **and the lit card's buttons** (driver's trap, P-9). That is accepted, because those buttons are the next step. Esc closes |
-| Clash guard | Wait while `selectedDraft()`, `promoteTarget()`, `discardTarget()` or `drawerOpen()` is set. The tour, which is not a signal, is checked when the effect runs and re-polled once per second while a request is pending. Expiry (10 s) drops the request either way. Reverse: the tour does not start while the spotlight is active |
+| Clash guard | Wait while `selectedDraft()`, `promoteTarget()`, `discardTarget()` or `drawerOpen()` is set. The tour, which is not a signal, is checked when the effect runs and re-polled once per second while a request is pending. Expiry (10 s) drops the request either way. Reverse: the tour does not start while the spotlight is active. **Rev. 4 (DD-11):** while the spotlight is active, if `selectedDraft()`, `promoteTarget()`, `discardTarget()` or `drawerOpen()` becomes set (for example, a toast action opens the drawer), the page calls `close('programmatic')`, so two dimming layers never show (HITL-F2) |
 
 ---
 
@@ -257,6 +257,19 @@ driver.js writes title, description and button texts with `innerHTML` (P-11). Th
 
 driver.js listens to window scroll and resize only (P-14). While active, the service listens (passively) to the card's scroll container and calls `refresh()`. The page also calls `refresh()` when `sessionGroups()` changes, because list reloads change heights. Both stop on close.
 
+### `ADS-DD-10`: Land a tall card's header below the app's fixed top chrome (rev. 4, HITL-F1)
+
+driver.js scrolls the card with `scrollIntoView({ block: 'start' })` when the card is taller than the window (P-10). At 375 px that puts the card top at y = 0, under the app's fixed top bar, so the header is hidden. `scrollIntoView` honours the target's `scroll-margin-top`, so `show()` sets `card.style.scrollMarginTop = <top-chrome height> + 8px` before `highlight()`, and `close()` restores the previous inline value.
+- The top-chrome height is measured at show time. It is the bottom edge of the app shell's fixed or sticky header element(s) still visible at the top of the viewport.
+- The exact element is identified by ADS-T-4: `UNVERIFIED — confirm at source before relying on it`.
+- It is measured, not hard-coded, because the banner wraps at narrow widths.
+
+*Rejected:* scrolling the card from the service before `highlight()`. That would be a second scroller, which DD-3 rules out.
+
+### `ADS-DD-11`: Close the spotlight when another layer opens while it is active (rev. 4, HITL-F2)
+
+The clash guard (§6.4) only stops the spotlight from **starting** over another layer. In the HITL run, the drawer opened programmatically by a toast action while the spotlight was active, and its backdrop stacked on the spotlight. That breaks the ADS-AC-6a BUT. While the spotlight is active, an effect on the four layer signals calls `close('programmatic')` as soon as any of them becomes set. Focus stays with the new layer (DD-8).
+
 ### Reversion challenge (Step 2.3)
 
 No decision removes or inverts shipped behavior. The `?job=` scroll logic, ring, same-id guard and the `ADN` badge are kept. The changes to the existing `?job=` code are additive:
@@ -274,11 +287,14 @@ URL-driven behavior is identical when no request exists. The existing `?job=` te
 |---|---|
 | Tall-card popover placement (driver's auto side) | ADS-T-3, HITL (accepted risk if acceptable on screen) |
 | Real-browser behavior of `refresh()` on container scroll | ADS-T-3, HITL |
-| Got it button rendered and focused (P-17) | ADS-T-3, HITL |
+| Got it button rendered and focused (P-17) | ADS-T-3, HITL. **Closed** 2026-10-27, H-4 PASS at 1280 and 375 |
+| The "app top chrome" element(s) that DD-10 measures | ADS-T-4. The Implementer identifies them in the app shell. `UNVERIFIED — confirm at source before relying on it` |
 
 ---
 
 ## Budget
+
+> **Rev. 4 note:** the user accepted the LOC overrun after ADS-T-2 (about 1 200 LOC against the 600 tripwire). The pivot adds `ADS-T-4`, which brings the count to **4 tasks**, the tripwire limit, not over it. ADS-T-4 is estimated at about 25 production LOC and about 60 test LOC.
 
 | Measure | Estimate |
 |---|---|

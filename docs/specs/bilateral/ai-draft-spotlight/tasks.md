@@ -9,7 +9,7 @@
 | **Ticket** | P2-4029 |
 | **Owner / driver** | Maria Camila Giraldo |
 | **Status** | approved (gated, 2026-10-27); not started |
-| **Budget (from design)** | 3 tasks · ≈ 530 LOC (≈ 220 production plus ≈ 310 tests) · 4 review rounds. The tripwire trips at more than 4 tasks, 600 LOC or 6 rounds |
+| **Budget (from design)** | 3 tasks · ≈ 530 LOC (≈ 220 production plus ≈ 310 tests) · 4 review rounds. The tripwire trips at more than 4 tasks, 600 LOC or 6 rounds. **Rev. 4 (Pivot after the ADS-T-3 HITL run):** 4 tasks. The LOC overrun was accepted by the user on 2026-10-27 |
 | **PR strategy** | One PR, client-only, to `staging`. 530 LOC is above the ~400 guideline, but ~60 % is tests, and the three tasks are one behavior that only makes sense together. Splitting T-1 alone would ship `?job=` on the toast with no spotlight |
 
 ## 2. Pre-flight checklist
@@ -234,7 +234,7 @@
 
 ### `ADS-T-3` — HITL: real-browser visual, keyboard and geometry check
 
-- **Status:** [ ] not started
+- **Status:** [~] HITL run 2026-10-27 — 1 fail at 375 px (AC-2c) + 1 spec gap (AC-6a); awaiting user decision, see `execution.md`
 - **Type:** manual (HITL)
 - **Size:** S
 - **Description:** On the local stack (`docs/infrastructure.md` §6: `npm run start:dev` for the server and `npm start` for the client), use a center that has an own AI job just completed. Check the matrix below at **375 px and 1280 px** (effective CSS px, browser zoom 100 %), and record a screenshot per row in `execution.md`.
@@ -253,7 +253,8 @@
   | H-10 | Set a project filter that hides J, then click Open drafts → the filters clear and the spotlight shows | AC-5a |
 
 - **Implements:** the rendered parts of ADS-R-2, R-3, R-6 and R-7 (ADS-D5, D7), and the P-13 and P-17 library behavior.
-- **Depends on:** `ADS-T-2`
+- **Depends on:** `ADS-T-2`. **Rev. 4:** closing it also depends on `ADS-T-4`. After T-4, re-run **H-6** and the new **W-1** (below) at 375 and 1280 px. The other rows passed on 2026-10-27 (`execution.md`) and are not re-run unless T-4's diff touches them.
+  - W-1 (rev. 4): with the spotlight open, open the AI processes drawer programmatically (as a toast action does). The spotlight closes first, and only the drawer's layer is shown (AC-6a BUT, DD-11).
 - **Review:** `skip-eligible`. A human check is the gate itself, and there is no code diff to review. The claim to prove at execute: no file changes outside `execution.md`.
 - **Skills:** `playwright-cli` (optional, if installed locally, for screenshots); otherwise manual
 - **Verification:**
@@ -271,6 +272,64 @@
   - [ ] H-1..H-10 pass at 375 and 1280 px, with screenshots in `execution.md`.
   - [ ] The user approves at the HITL pause.
 
+### `ADS-T-4` — Pivot fixes from the HITL run: tall-card header margin, close on a layer opening, the tour's overlay colour
+
+- **Status:** [ ] not started (added by the Pivot of 2026-10-27, rev. 4. **Awaiting user approval**)
+- **Type:** client
+- **Size:** S (≈ 25 production LOC, ≈ 60 test LOC)
+- **Description:**
+  - **HITL-F1, DD-10.** In `DraftSpotlightService.show()`, before `highlight()`:
+    - Set `card.style.scrollMarginTop` to the measured height of the app's fixed top chrome plus 8 px.
+    - Measure the height at show time, as the bottom edge of the app shell's fixed or sticky header element(s) still at the top of the viewport. Identify that element in the app shell and cite it in the report (`UNVERIFIED — confirm at source before relying on it`).
+    - `close()` restores the card's previous inline `scrollMarginTop`.
+  - **HITL-F2, DD-11.** In `MyDraftResultsComponent`, add an effect: while `spotlight.isActive()`, if any of `selectedDraft()`, `promoteTarget()`, `discardTarget()` or `drawerOpen()` becomes set, call `spotlight.close('programmatic')`. Read every signal before any return (page-guide trap).
+  - **HITL-F3, NFR-3.** Add `overlayColor: '#1e202f'` to the `driver()` config in `show()`, matching `BilateralTourService`.
+  - Update `my-draft-results/CLAUDE.md` with DD-10 and DD-11 in one line each, keep it ≤ 120 lines, and re-stamp it (client `CLAUDE.md` §10).
+- **Implements:**
+  - ADS-AC-2c ("the group's header is on screen") at 375 px.
+  - ADS-AC-6a BUT ("two dimming layers MUST NOT be shown at the same time") for a layer that opens after the spotlight.
+  - ADS-NFR-3 (same overlay as the tour).
+- **Design refs:** §6.2 (`show` row, rev. 4), §6.4 rows "Tall card" and "Clash guard" (rev. 4), DD-10, DD-11, P-10; `execution.md` → ADS-T-3 HITL findings and *Pivot Record: ADS-T-3*
+- **Files (expected):**
+  - `onecgiar-pr-client/src/app/pages/bilateral/services/draft-spotlight.service.ts` (+ `.spec.ts`)
+  - `onecgiar-pr-client/src/app/pages/bilateral/pages/my-draft-results/my-draft-results.component.ts` (+ `.spec.ts`)
+  - `onecgiar-pr-client/src/app/pages/bilateral/pages/my-draft-results/CLAUDE.md`
+- **Depends on:** `ADS-T-2`
+- **Blocks:** closing `ADS-T-3` (re-run of H-6 and W-1)
+- **Review:** `checklist`. The task is small, but it touches the shared close path and a DOM style, so a Reviewer is owed (override b).
+- **Skills:** `angular-developer`, `tdd`
+- **Tests:**
+  - `draft-spotlight.service.spec.ts`:
+    1. The `driver()` config has `overlayColor: '#1e202f'`.
+    2. With a stub top chrome of height 120 px, `show()` sets `card.style.scrollMarginTop` to `'128px'` **before** `highlight()` is called (assert inside the `highlight` mock).
+    3. `close('dismiss')` and `close('programmatic')` both restore the previous inline value (`''`, or a pre-set value).
+  - `my-draft-results.component.spec.ts` (`describe('draft spotlight (ADS)')`):
+    4. Spotlight active (stub `isActive` → true), then `drawerOpen.set(true)` → `close('programmatic')` is called once. The same holds for `selectedDraft`, `promoteTarget` and `discardTarget`.
+    5. Spotlight not active, then `drawerOpen.set(true)` → `close` is not called by this effect.
+- **Verification:**
+  - **Command:** `cd onecgiar-pr-client && npx jest src/app/pages/bilateral --silent --reporters=summary --no-coverage`, then `npx tsc -p tsconfig.app.json --noEmit` and `npx ng lint --quiet`.
+  - **Falsifier:**
+    - Drop `overlayColor` → test 1 red.
+    - Set the margin after `highlight()` → test 2 red.
+    - Do not restore it on close → test 3 red.
+    - Remove the DD-11 effect → test 4 red.
+    - Drop the `isActive()` gate → test 5 red.
+  - **Red run:** `predicted — greenfield behavior (observed in ADS-T-4)`. Quote the first reds of tests 1, 2 and 4 verbatim in `execution.md`.
+  - **Disqualifier:**
+    - A test 2 that asserts the margin only after `show()` returns does not prove the ordering.
+    - If any existing ADS, `?job=` or ADN expectation must change, stop and report it as a Pivot.
+  - **Consumers:**
+    - `my-draft-results.component.spec.ts`: ADS, `?job=` and ADN suites, unchanged.
+    - `draft-spotlight.service.spec.ts`: existing tests 1–6.
+    - `bilateral-tour.service.spec.ts`.
+    - `my-draft-results/CLAUDE.md`.
+- **Done criteria:**
+  - [ ] Tests 1–5 green, with the first reds quoted.
+  - [ ] Each falsifier observed red, then reverted.
+  - [ ] The whole bilateral suite green, with no existing expectation edited. Lint clean and `tsc` 0.
+  - [ ] `CLAUDE.md` ≤ 120 lines and re-stamped.
+  - [ ] No secrets logged.
+
 ---
 
 ## 4. Coverage map (scenario and clause level)
@@ -283,24 +342,26 @@
 | AC-1d drawer entry point | T-1 (8, 9), T-3 (H-3) |
 | AC-2a lit area, popover, Got it; BUT other jobs not lit | T-2 (1, 7), T-3 (H-1, H-4) |
 | AC-2b after settle; AND IT MUST no offset cut-out | T-2 (7, 9, 11), T-3 (H-7) |
-| AC-2c tall group | T-3 (H-6) |
+| AC-2c tall group | T-3 (H-6), T-4 (2, 3; rev. 4) |
 | AC-3a close paths, focus, ring and badge remain; BUT no scroll lock or leftover overlay | T-2 (2, 3, 18), T-3 (H-4, H-5) |
 | AC-3b leaving the page | T-2 (17) |
 | AC-4a reload; BUT spotlight MUST NOT appear | T-2 (12), T-3 (H-9) |
 | AC-4b request expires; AND IT MUST NOT fire later | T-1 (4, 5, 6), T-2 (14) |
 | AC-5a filters hide group | T-2 (13), T-3 (H-10) |
 | AC-5b group missing → no overlay, no error | T-2 (14) |
-| AC-6a another layer; BUT never two dimming layers | T-2 (16, 21) |
+| AC-6a another layer; BUT never two dimming layers | T-2 (16, 21), T-4 (4, 5; rev. 4), T-3 (W-1) |
 | AC-6b Review or Create from the lit group | T-2 (17, 18), T-3 (H-8) |
 | AC-7a 375 / 1280 | T-3 (H-1, H-6) |
 | AC-7b resize while open | T-2 (19), T-3 (H-7) |
 | ADS-R-8 no data change | T-1 (7), T-2 (20) |
 | NFR-1 ≈ 1 s | T-3 (H-1, observed) |
 | NFR-2 a11y | T-2 (18), T-3 (H-4) |
-| NFR-3 / NFR-5 tour look, no new dependency | T-2 (1), review |
+| NFR-3 / NFR-5 tour look, no new dependency | T-2 (1), T-4 (1; rev. 4), review |
 | NFR-4 copy | T-2 (copy) |
 | NFR-6 gates | T-1, T-2 done criteria |
 
 ## 5. Dependency graph
 
 `ADS-T-1` → `ADS-T-2` → `ADS-T-3` (linear, no cycles).
+
+**Rev. 4:** `ADS-T-2` → `ADS-T-4` → close `ADS-T-3` (re-run H-6 and W-1). There are no cycles: T-3's other rows already ran against T-2.

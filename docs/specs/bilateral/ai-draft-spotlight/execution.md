@@ -244,3 +244,97 @@ The change is additive under `drafts`.
 - **Child guides:** `my-draft-results/CLAUDE.md` is updated in this commit. `pages/bilateral/services/` has no folder guide, and none is needed for one thin wrapper.
 - **Parent `## Module Guides`:** no change.
 - **CodeGraph:** re-index pending (`codegraph sync` at archive).
+
+---
+
+### ADS-T-3 — HITL: real-browser visual, keyboard and geometry check
+
+- **Status:** `[~]` — evidence collected; **one requirement fails at 375 px and one spec gap was found**. Both await the user's decision.
+- **Date:** 2026-10-27
+- **Run by:** the Leader, at the user's request ("start the stack and drive the browser with Playwright"). No Implementer was spawned, because this task has no code diff.
+
+**Built from:** the session transcript of 2026-10-27. Its sources are the raw JSON of the `playwright-cli run-code` scripts (`m1280.json`, `m375.json`, `h7-*.js` in the session scratchpad) and the pixel samples taken with Python/PIL.
+
+#### Setup
+
+- **Server:** the user's own NestJS on `:3400`, already running from this worktree (`GET /api` → 200). Not touched.
+- **Client:** the Leader's own `ng serve --port 4500`. The user's `:4200` was left alone, following client `CLAUDE.md` §9 trap 2 ("never trust a dev server you did not start").
+- **Bundle freshness:** confirmed. `'highlightRearmSeq' in ng.getComponent(app-my-draft-results)` returned `true` on every center.
+- **Browser:** Chromium, headed, persistent profile, zoom 100 %. The viewport was set to exactly 1280 × 900 and 375 × 812 CSS px.
+- **Login:** done by the user in the opened window. The Leader handled no credentials.
+- **Data:**
+  - CIP job `4e0beadc…` has 2 drafts (project `P-1502-CHI0-Educational Programs`).
+  - IFPRI job `9effa644…` has 12 drafts and is the tall card.
+  - SO job `358a155d…` came from the AI processes drawer.
+- **Simulation (disclosed):** the "job just completed" poll event depends on the external AI service. It was replaced by calling the service's own `announceTerminalJob({ jobId, centerAcronym, projectName, status: 'COMPLETED', resultCount })`. That renders the **real** toast, and every step after it was real UI: the click on **Open drafts**, the navigation, and the spotlight.
+  - The IFPRI toast label `"IFPRI 12-draft run"` is a test label.
+- **Screenshots:** `docs/specs/bilateral/ai-draft-spotlight/hitl/*-{1280,375}.png`.
+
+#### Visual-read correction (recorded for honesty)
+
+- **Wrong early report:** the Leader first reported "the page is not dimmed" from viewing a screenshot. That was a misread.
+- **Evidence:** pixel sampling shows the overlay is painted. The light header reads (245) undimmed and (86,85,88) under the spotlight, which is exactly 245 × 0.35, the 0.65 black overlay. The DOM agrees: `svg.driver-overlay`, fixed, `z-index` 10000, fill `rgb(0,0,0)`, opacity 0.65, and a cut-out path around the card.
+- **From then on**, dimming was judged by pixel samples, not by eye.
+
+#### Matrix results
+
+| # | Check | 1280 px | 375 px | Evidence |
+|---|---|---|---|---|
+| H-1 | Toast **Open drafts** on Draft Results → dim, only J's card lit, title with N and label | **PASS**. Visible in 879 ms (NFR-1 ≈ 1 s). `lit = mdr-session-4e0beadc…`. Title "2 new drafts from P-1502-CHI0-Educational Programs" | **PASS**, 842 ms | `H-1-*.png` |
+| H-2 | From the Overview tab → lands on Draft Results, then the spotlight | **PASS**. `/bilateral/CIP/overview` → `/bilateral/CIP/drafts?job=…`, 828 ms | **PASS**, 813 ms | `H-2-from-overview-*.png` |
+| H-3 | Same URL again, and the drawer's "View N drafts" | **PASS**. A same-URL toast re-click re-spotlights (845 ms). Drawer "View 2 drafts" → `/bilateral/SO/drafts?job=358a155d…`, the drawer closed and the SO card is lit (this also exercises a center switch) | **PASS**, same results | `H-3-same-url-*.png`, `H-3-drawer-*.png` |
+| H-4 | Got it visible and focused; Tab; Esc; then focus on the card | **PASS**. The only visible button is `Got it` (`×` and `Previous` are `display:none`) and it is focused on open. Tab goes Review → Create → Delete → Review (driver's trap through the lit card, as designed in §6.4). Esc closes it, `body` classes are cleared, and focus is on `mdr-session-4e0beadc…` | **PASS**, same results | `H-4-after-esc-*.png` |
+| H-5 | Overlay click closes; no leftovers | **PASS**. Popover and overlay are gone, `body.className` is `""` (no `driver-active` / `driver-no-scroll`), and focus is on the card | **PASS** | `H-5-after-overlay-click-*.png` |
+| H-6 | Tall card (12 drafts): header visible, popover on screen, no horizontal scroll | **PASS**. Card top at 116 px, under the app bar. Popover at 712–890, inside the viewport | **FAIL (AC-2c)**. driver.js scrolls the card with `block:'start'` (P-10), so the card top lands at y = 0, **under the app's fixed top bar**. The card header (job id, project, "12 drafts") is hidden, and only the table rows show. The popover is inside the viewport | `H-6-tall-*.png` |
+| H-7 | Scroll while open → cut-out follows; resize → follows | **PASS**. The list container scrolled 1682 → 1832: card top 489 → 339, hole top 483 → 333 (delta 6 = `stagePadding` both times). Resize to 1240 × 840 → hole still at card top − 6 | **PASS**. At 375 the window scrolls, not the container: card 237 → 87, hole 231 → 81. Resize → it follows (147 / 141) | `H-7-*.png` |
+| H-8 | Review inside the lit card → spotlight closes, panel opens | **PASS**. Overlay gone, `selectedDraft()` set, Draft Preview panel open with focus on a button inside it | **PASS** | `H-8-review-*.png` |
+| H-9 | Reload with `?job=J` → ring only, no spotlight | **PASS**. No popover and no overlay, ring present | **PASS** for the spotlight half (none shown, ring present). *Observation:* at 375 the card stayed at y = 3378, so the existing `?job=` scroll did not bring it into view | `H-9-reload-*.png` |
+| H-10 | A search filter hides J, then Open drafts → filters cleared, spotlight shows | **PASS**. Search `zzzz-no-match` hid the card (`hiddenBefore: true`). After the click the search box is `""` and the card is lit (857 ms) | **PASS** (854 ms) | `H-10-filters-cleared-*.png` |
+
+**Watch items carried from the ADS-T-2 lens B review:**
+- **Esc reaching an underlying layer:** not observed. Esc closed only the spotlight, and no other layer was open.
+- **Drawer opened by code while the spotlight is active:** **two dimming layers stacked.** `window.__ai.openDrawer()` was called with the spotlight open; afterwards `pop: true` and `dialog: true`, and the screenshot shows the drawer's blur backdrop over the spotlight (`WATCH-drawer-while-active-*.png`). This breaks the AC-6a BUT ("two dimming layers MUST NOT be shown at the same time"). The design enforces the guard only when the spotlight starts (§6.4 "Clash guard"), so this is a **spec gap**, not a T-2 implementation defect.
+  - A user can still reach this, because the toast host sits outside the overlay. For example, a "View" action on a failed-job or grouped toast calls `openDrawer()`. The page's own **AI processes** button is behind the overlay, so it cannot be clicked.
+
+#### Findings for the user
+
+| ID | Kind | Finding | Requirement |
+|---|---|---|---|
+| HITL-F1 | **Requirement fails** | At 375 px a tall card's header is hidden under the app's fixed top bar after driver's `block:'start'` scroll | ADS-AC-2c (at 375 px), ADS-R-7 |
+| HITL-F2 | **Spec gap** | A programmatic drawer open (from a toast action) while the spotlight is active stacks two dimming layers | ADS-AC-6a BUT |
+| HITL-F3 | Minor | The overlay colour is driver's default black. The tour uses `overlayColor: '#1e202f'`. §6.2 did not list `overlayColor`, so the code follows the design, but NFR-3 asks for "same overlay … as the bilateral guided tour" | ADS-NFR-3 |
+| HITL-O1 | Pre-existing (not caused by the spotlight) | At 375 px the page has a horizontal scroll with **and without** the spotlight (`hscroll: true` after close and on a plain reload) | AC-7a ("no horizontal page scroll"). Unchanged by this spec |
+| HITL-O2 | Pre-existing, `UNVERIFIED` against `edcf190f0` | At 375 px a `?job=` reload rings the card but does not scroll it into view | C-2 / AIQ-R-9 D, out of scope |
+
+**Review intensity (Step 2.3), checked against the claim in `tasks.md`:**
+- The `skip-eligible` claim was "no file changes outside `execution.md`". It is **not met as written**: the screenshots were added under `hitl/`. They are evidence files, not code.
+- Under the HITL nature of the task, the human approval is the gate.
+
+## Pivot Record: ADS-T-3
+
+- **Date:** 2026-10-27
+- **Trigger:** the ADS-T-3 HITL run (above). Implementation follows the approved design, but the design does not meet two approved requirements at runtime, and a third behaviour falls short of an NFR.
+  - **HITL-F1, AC-2c at 375 px:** driver.js's `block:'start'` scroll (P-10, which the design relied on in §6.4 "Tall card") lands the card header under the app's fixed top bar.
+  - **HITL-F2, the AC-6a BUT:** the §6.4 clash guard only gates the **start** of the spotlight, so a layer opened afterwards stacks over it.
+  - **HITL-F3, NFR-3:** §6.2's driver config omits the tour's `overlayColor`.
+- **User decision (AskUserQuestion, 2026-10-27):** fix all three through a spec amendment. All three recommended options were chosen.
+- **Alternatives considered:**
+  - Accept each as a known issue and close T-3. Rejected by the user.
+  - For F1, scroll the card from the service before `highlight()`. Rejected: it would be a second scroller (DD-3).
+- **Revised direction:**
+  - `design.md` rev. 4: §6.2 `show` row (`overlayColor`), §6.4 "Tall card" and "Clash guard" rows, new **DD-10** (scroll-margin-top below the app's top chrome) and **DD-11** (close on a layer opening), §13 Open Gaps, and a §Budget note.
+  - `tasks.md`:
+    - New **ADS-T-4**.
+    - ADS-T-3 now re-runs H-6 and the new W-1 after T-4.
+    - The budget row and coverage map are updated.
+    - The dependency graph gains a rev. 4 note.
+  - `requirements.md`: unchanged. No requirement changes meaning; the amendment brings the design up to the approved ACs.
+- **ADR impact:** none. No TRD decision is overturned.
+- **Correction-closure sweep:**
+  - **Forward:** grepped for `overlayOpacity`, `block: 'start'`, `Reverse:` and `3 tasks` across the spec folder.
+    - `design.md` §6.2 and §6.4 were amended.
+    - `tasks.md` ADS-T-2 lines 110 and 145 still carry the rev. 3 config and the "driver handles `block: 'start'`" note. They are left on purpose, because T-2 is a closed, executed task and its text records what was approved and built. T-4 supersedes both.
+    - `requirements.md:271` ("the tour's existing `overlayOpacity`") stays true.
+  - **Backward:** references to §6.4 and DD-8 were checked. DD-8's focus rule ("focus stays with the new layer") is reused by DD-11 unchanged.
+- **Budget:** 4 tasks, which is the tripwire limit and not over it. The LOC overrun was already accepted by the user.
+- **Status:** the amendment is written and **awaits the user's approval** before ADS-T-4 is executed.
