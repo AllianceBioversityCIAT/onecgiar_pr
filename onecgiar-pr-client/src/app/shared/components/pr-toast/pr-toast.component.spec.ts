@@ -60,4 +60,21 @@ describe('PrToastComponent', () => {
     expect(toastEl.querySelector('.pr-toast__detail').textContent.trim()).toBe('All good');
     expect(toastEl.querySelector('.pr-toast__close')).toBeTruthy();
   });
+
+  // AQT-D2 (bilateral/ai-queue-toast-info): lock the shared `info` variant at the render
+  // level so a future drift in the host's `icons` map (e.g. info reusing `check_circle`)
+  // is caught here — read the real rendered DOM, not just the class list.
+  it('renders the info variant with the pr-toast--info class and the info icon glyph, not the success icon', () => {
+    service.add({ severity: 'info', summary: 'Queued', detail: 'In progress' });
+    fixture.detectChanges();
+
+    const toastEl: HTMLElement = fixture.nativeElement.querySelector('.pr-toast');
+    expect(toastEl).toBeTruthy();
+    expect(toastEl.classList.contains('pr-toast--info')).toBe(true);
+
+    const icon = toastEl.querySelector('.pr-toast__icon');
+    expect(icon).toBeTruthy();
+    expect(icon!.textContent?.trim()).toBe('info');
+    expect(icon!.textContent?.trim()).not.toBe('check_circle');
+  });
 });

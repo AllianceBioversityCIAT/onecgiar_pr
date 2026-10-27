@@ -531,6 +531,11 @@ describe('BilateralAiService', () => {
       expect(call.action).toBeDefined();
       expect(typeof call.action.run).toBe('function');
       expect(call.summary).toContain('Alpha');
+      // AQT-D5 (bilateral/ai-queue-toast-info): lock the "is ready" completion toast to
+      // `success` so it can't drift off its own severity by accident when unrelated code
+      // in this file changes (the queued toast at bilateral-ai-upload.component.ts:596 is
+      // a separate, unrelated call site that moved to `info`).
+      expect(call.severity).toBe('success');
     });
 
     // Reviewer issue (AIQ-T-5 attempt 2): `addSubmittedJob` inserted into `jobs()` but not into
