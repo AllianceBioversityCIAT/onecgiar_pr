@@ -641,10 +641,10 @@ describe('PortfolioOverviewComponent', () => {
       const navigateSpy = jest.spyOn(router, 'navigate');
 
       component.navigateToResultsCenter('all');
-      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: {} });
+      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36 } });
 
       component.navigateToResultsCenter('w1w2');
-      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { funding: 'w1w2' } });
+      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, funding: 'w1w2' } });
 
       component.navigateToResultsCenter('bilateral');
       expect(navigateSpy).toHaveBeenCalledWith(['/result-framework-reporting/bilateral-results']);
@@ -664,7 +664,7 @@ describe('PortfolioOverviewComponent', () => {
 
       // Category origin chart click navigates to Results Center filtered by category
       component.onCategoryOriginChartClick({ name: 'Knowledge product' } as any);
-      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { category: 'Knowledge product' } });
+      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, category: 'Knowledge product' } });
 
     });
   });
@@ -859,6 +859,36 @@ describe('PortfolioOverviewComponent', () => {
       q<HTMLButtonElement>(LINK)!.click();
 
       expect(spy).toHaveBeenCalledWith('all', { status: 'editing', program: 'SP01' });
+    });
+
+    it('View in Results Center carries the open phase, so Results Center counts the same results as the tile', () => {
+      build(OPEN_PHASE);
+      component.toggleStatus('editing');
+      refresh();
+      const navigateSpy = jest.spyOn(router, 'navigate');
+
+      q<HTMLButtonElement>(LINK)!.click();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { phase: 36, status: 1 } });
+    });
+
+    it('the strip offers a jump to the filtered list, with its count, and scrolls to it', () => {
+      const JUMP = '[data-testid="portfolio-active-filter-jump"]';
+      build(OPEN_PHASE);
+      expect(q(JUMP)).toBeNull();
+
+      component.toggleStatus('editing');
+      refresh();
+      const editing = component.data.filteredTotal();
+      expect(editing).toBeGreaterThan(0);
+      expect(q(JUMP)!.textContent!.trim()).toBe(COPY.filters.showResults(editing));
+
+      const detail = q('app-portfolio-results-detail')!;
+      const scrollIntoView = jest.fn();
+      (detail as any).scrollIntoView = scrollIntoView;
+      q<HTMLButtonElement>(JUMP)!.click();
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
     });
 
     it('View in Results Center is hidden with two statuses, and with a Center active', () => {

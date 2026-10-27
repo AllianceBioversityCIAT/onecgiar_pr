@@ -593,8 +593,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.resultsListFilterSE.phasesOptions.set(this.buildPhaseOptions(response));
     this.resultsListFilterSE.phasesOptionsOld.set(this.resultsListFilterSE.phasesOptions());
 
+    const requestedPhase = this.resultsListFilterSE.phasesOptions().find(item => item.id == this.resultsListFilterSE.requestedPhaseId());
+    this.resultsListFilterSE.requestedPhaseId.set(null);
     this.resultsListFilterSE.selectedPhases.set(
-      this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
+      requestedPhase
+        ? [requestedPhase]
+        : this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
     );
 
     const initialSubmitterOptions = this.getFilteredSubmitterOptions(
@@ -742,6 +746,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   getResultStatus() {
     this.api.resultsSE.GET_allResultStatuses().subscribe(({ response }) => {
       this.resultsListFilterSE.statusOptions.set(response);
+      // A status set from a link (`?status=2`) carries only its id: swap in the full option so the chip
+      // shows its name and the Status dropdown shows it checked.
+      const options = response ?? [];
+      this.resultsListFilterSE.selectedStatus.update(selected =>
+        selected.map(status => (status?.name ? status : (options.find(option => option.status_id == status?.status_id) ?? status)))
+      );
     });
   }
 

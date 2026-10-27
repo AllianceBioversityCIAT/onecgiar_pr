@@ -1328,6 +1328,16 @@ describe('ResultsListComponent', () => {
       expect(mockResultsListFilterService.selectedStatus()).toEqual([{ status_id: 2 }]);
       expect(mockResultsListFilterService.text_to_search()).toBe('SP01');
     });
+
+    it('keeps the ?phase= of a Portfolio overview link and names the status when its options are loaded', () => {
+      mockResultsListFilterService.statusOptions.set([{ status_id: 2, name: 'Quality Assessed' }]);
+      component.activatedRoute = { queryParams: of({ status: '2', phase: '36' }) } as any;
+
+      component.ngOnInit();
+
+      expect(mockResultsListFilterService.requestedPhaseId()).toBe(36);
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ status_id: 2, name: 'Quality Assessed' }]);
+    });
   });
 
   describe('Emerging result chip (EMG-T-3)', () => {
