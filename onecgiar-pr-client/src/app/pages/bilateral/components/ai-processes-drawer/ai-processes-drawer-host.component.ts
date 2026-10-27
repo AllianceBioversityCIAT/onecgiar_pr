@@ -104,8 +104,16 @@ export class AiProcessesDrawerHostComponent implements OnDestroy {
   onViewDrafts(job: NormalizedBilateralAiListJob): void {
     if (!job.centerAcronym) return;
     this.service.loadAllDrafts();
+    const nonce = this.service.requestDraftSpotlight(job);
     this.service.drawerOpen.set(false);
-    void this.router.navigate(['/bilateral', job.centerAcronym, 'drafts'], { queryParams: { job: job.jobId } });
+    // `ADS-R-1`/`P-12`: navigating to the URL we are already on is skipped by the router (resolves
+    // `false`), so only navigate when the target differs; the page reacts to the request itself.
+    const commands = ['/bilateral', job.centerAcronym, 'drafts'];
+    const extras = { queryParams: { job: job.jobId } };
+    if (this.router.serializeUrl(this.router.createUrlTree(commands, extras)) === this.router.url) return;
+    void this.router.navigate(commands, extras).then(ok => {
+      if (!ok) this.service.consumeDraftSpotlight(nonce);
+    });
   }
 
   /** `ARM-DD-3` (bilateral/ai-queue-report-manually): closes this drawer and opens the normal

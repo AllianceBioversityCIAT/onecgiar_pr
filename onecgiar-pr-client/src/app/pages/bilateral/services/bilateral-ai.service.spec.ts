@@ -5,6 +5,7 @@ import { of, Subject, throwError } from 'rxjs';
 
 import { BilateralAiService } from './bilateral-ai.service';
 import { rawListJob } from '../bilateral-ai-job.fixtures';
+import { normalizeListJob } from '../bilateral-ai-job.model';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { ResultsApiService } from '../../../shared/services/api/results-api.service';
 import { BilateralContextService } from './bilateral-context.service';
@@ -90,7 +91,17 @@ describe('BilateralAiService', () => {
       GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
       GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] })),
     };
-    router = { navigate: jest.fn().mockResolvedValue(true), url: '/bilateral/ALLIANCE/create' };
+    router = {
+      navigate: jest.fn().mockResolvedValue(true),
+      url: '/bilateral/ALLIANCE/create',
+      // ADS-T-1 setup: minimal stand-ins for the real UrlTree round trip.
+      createUrlTree: jest.fn((commands: string[], extras?: { queryParams?: Record<string, string> }) => ({ commands, queryParams: extras?.queryParams ?? {} })),
+      serializeUrl: jest.fn((tree: { commands: string[]; queryParams: Record<string, string> }) => {
+        const path = tree.commands.join('/').replace('//', '/');
+        const qs = new URLSearchParams(tree.queryParams).toString();
+        return qs ? `${path}?${qs}` : path;
+      }),
+    };
     ctx = { centerInstitutionId: signal<number | null>(null), centerAcronym: signal('ALLIANCE') };
     creation = { isAiGenerated: signal(false) };
     toast = { add: jest.fn() };
@@ -383,6 +394,112 @@ describe('BilateralAiService', () => {
       bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })])));
       await advance(POLL_INTERVAL_INITIAL * 3);
       expect(bilateralApi.GET_bilateralAiJobs.mock.calls.length).toBeGreaterThan(callsAfterFirstError);
+    });
+  });
+
+  // ── ADS-T-1: draft spotlight request ─────────────────────────────────────────────────────
+
+  describe('draft spotlight request (ADS)', () => {
+    const DRAFTS_JOB1_URL = '/bilateral/ALLIANCE/drafts?job=job-1';
+
+    /** Drives a real poll diff to a COMPLETED-with-drafts job and returns the toast's action. */
+    const completedToastAction = async () => {
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse([rawListJob({ job_id: 'job-1', status: 'PROCESSING', project_name: 'Alpha' })])));
+      service.addSubmittedJob({ jobId: 'job-1' });
+      await flush();
+      bilateralApi.GET_bilateralAiJobs.mockReturnValue(
+        of(listResponse([rawListJob({ job_id: 'job-1', status: 'COMPLETED', project_name: 'Alpha', result_count: '4', center_acronym: 'ALLIANCE' })])),
+      );
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+      return toast.add.mock.calls[0][0].action as { run: () => void };
+    };
+    const jobRef = (jobId: string, over: Record<string, string> = {}) => normalizeListJob(rawListJob({ job_id: jobId, center_acronym: 'ALLIANCE', ...over }));
+
+    it('1: Open drafts from another page navigates with ?job= and requests the spotlight with the toast label', async () => {
+      const action = await completedToastAction();
+      router.url = '/bilateral/ALLIANCE/create';
+
+      action.run();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'drafts'], { queryParams: { job: 'job-1' } });
+      expect(service.draftSpotlightRequest()).toEqual(expect.objectContaining({ jobId: 'job-1', centerAcronym: 'ALLIANCE', label: 'Alpha' }));
+    });
+
+    it('2: already on the target URL -> no navigate (NavigationSkipped resolves false) and the request is kept', async () => {
+      const action = await completedToastAction();
+      router.url = DRAFTS_JOB1_URL;
+      router.navigate.mockImplementation(async (commands: string[], extras: { queryParams: Record<string, string> }) =>
+        router.serializeUrl(router.createUrlTree(commands, extras)) === router.url ? false : true,
+      );
+
+      action.run();
+      await flush();
+
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(service.draftSpotlightRequest()?.jobId).toBe('job-1');
+    });
+
+    it('3: a URL that only starts with the target (extra ?project=) still navigates', async () => {
+      const action = await completedToastAction();
+      router.url = '/bilateral/ALLIANCE/drafts?job=job-1&project=7';
+
+      action.run();
+
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('4: navigate resolving false for a different URL clears the request', async () => {
+      const action = await completedToastAction();
+      router.url = '/bilateral/ALLIANCE/create';
+      router.navigate.mockResolvedValue(false);
+
+      action.run();
+      await flush();
+
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      expect(service.draftSpotlightRequest()).toBeNull();
+    });
+
+    it('5: the request expires after 10 s; a newer request made at 9 s survives the old timer', async () => {
+      service.requestDraftSpotlight(jobRef('a'));
+      jest.advanceTimersByTime(9_999);
+      expect(service.draftSpotlightRequest()?.jobId).toBe('a');
+      jest.advanceTimersByTime(1);
+      expect(service.draftSpotlightRequest()).toBeNull();
+
+      service.requestDraftSpotlight(jobRef('b'));
+      jest.advanceTimersByTime(9_000);
+      service.requestDraftSpotlight(jobRef('c'));
+      jest.advanceTimersByTime(1_000); // b's original 10 s deadline
+      expect(service.draftSpotlightRequest()?.jobId).toBe('c');
+      jest.advanceTimersByTime(9_000);
+      expect(service.draftSpotlightRequest()).toBeNull();
+    });
+
+    it('6: consuming an old nonce leaves a newer request intact; the matching nonce clears it', () => {
+      const oldNonce = service.requestDraftSpotlight(jobRef('a'));
+      const newNonce = service.requestDraftSpotlight(jobRef('a'));
+      expect(newNonce).not.toBe(oldNonce);
+
+      service.consumeDraftSpotlight(oldNonce);
+      expect(service.draftSpotlightRequest()?.nonce).toBe(newNonce);
+
+      service.consumeDraftSpotlight(newNonce);
+      expect(service.draftSpotlightRequest()).toBeNull();
+    });
+
+    it('7: never writes (POST/PATCH/PUT/DELETE) on any path', async () => {
+      const action = await completedToastAction();
+      router.navigate.mockResolvedValue(false);
+      action.run();
+      await flush();
+      service.requestDraftSpotlight(jobRef('x'));
+      jest.advanceTimersByTime(10_000);
+
+      for (const name of Object.keys(bilateralApi).filter(k => /^(POST|PATCH|PUT|DELETE)_/.test(k))) {
+        expect(bilateralApi[name]).not.toHaveBeenCalled();
+      }
     });
   });
 

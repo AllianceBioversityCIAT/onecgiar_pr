@@ -44,6 +44,16 @@ const LEGACY_ACTIVE_JOB_KEY = 'prms.bilateral-ai.active-job';
 const ACTIVE_STATUSES: ReadonlySet<BilateralAiJobStatus> = new Set(['PENDING', 'PROCESSING']);
 const TERMINAL_STATUSES: ReadonlySet<BilateralAiJobStatus> = new Set(['COMPLETED', 'FAILED']);
 
+/** `ADS-DD-2`: a pending request expires after this long if the Draft Results page never consumes it. */
+const DRAFT_SPOTLIGHT_TTL_MS = 10_000;
+
+export interface DraftSpotlightRequest {
+  jobId: string;
+  centerAcronym: string;
+  label: string;
+  nonce: number;
+}
+
 /**
  * `AIQ-T-5` (`design.md` §6.2): the multi-job list service. One poll fetches every one of the
  * caller's jobs at once (`GET_bilateralAiJobs`, never one request per job) and diffs consecutive
@@ -81,6 +91,13 @@ export class BilateralAiService implements OnDestroy {
   /** `ADN-DD-1`: own jobs this client saw finish with drafts this session. Always replaced with a
    * new `Set` (never mutated) so `computed`s re-run; cleared per id by `consumeFreshDraftJobs`. */
   readonly freshDraftJobIds = signal<ReadonlySet<string>>(new Set());
+
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-1)
+  /** `ADS-DD-1`: pending "spotlight this job's draft group" request. Replaced per click (fresh
+   * `nonce`), cleared only by a matching `consumeDraftSpotlight(nonce)` or the 10 s expiry. */
+  readonly draftSpotlightRequest = signal<DraftSpotlightRequest | null>(null);
+  private spotlightNonce = 0;
+  private spotlightTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── Upload-form-local state (kept; narrowed to the upload's own submission, `AIQ-DD-11`) ────
 
@@ -131,6 +148,35 @@ export class BilateralAiService implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+    this.clearSpotlightTimer();
+  }
+
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-1)
+  /** Replaces any pending request (new nonce, old timer cleared) and starts the 10 s expiry.
+   * Returns the nonce so the caller can `consumeDraftSpotlight` it if navigation is cancelled. */
+  requestDraftSpotlight(job: NormalizedBilateralAiListJob): number {
+    this.clearSpotlightTimer();
+    const nonce = ++this.spotlightNonce;
+    this.draftSpotlightRequest.set({
+      jobId: job.jobId,
+      centerAcronym: job.centerAcronym ?? '',
+      label: job.projectName || job.programCode || job.jobId,
+      nonce,
+    });
+    this.spotlightTimer = setTimeout(() => this.consumeDraftSpotlight(nonce), DRAFT_SPOTLIGHT_TTL_MS);
+    return nonce;
+  }
+
+  /** Clears the request (and its timer) only when `nonce` still matches the pending one. */
+  consumeDraftSpotlight(nonce: number): void {
+    if (this.draftSpotlightRequest()?.nonce !== nonce) return;
+    this.clearSpotlightTimer();
+    this.draftSpotlightRequest.set(null);
+  }
+
+  private clearSpotlightTimer(): void {
+    if (this.spotlightTimer !== null) clearTimeout(this.spotlightTimer);
+    this.spotlightTimer = null;
   }
 
   setUploadProgress(progress: number): void {
@@ -462,7 +508,15 @@ export class BilateralAiService implements OnDestroy {
 
   private openDraftsForJob(job: NormalizedBilateralAiListJob): void {
     this.loadAllDrafts();
-    if (job.centerAcronym) void this.router.navigate(['/bilateral', job.centerAcronym, 'drafts']);
+    if (!job.centerAcronym) return;
+    const nonce = this.requestDraftSpotlight(job);
+    // `P-12`: navigating to the URL we are already on is skipped by the router, so only navigate on a change.
+    const commands = ['/bilateral', job.centerAcronym, 'drafts'];
+    const extras = { queryParams: { job: job.jobId } };
+    if (this.router.serializeUrl(this.router.createUrlTree(commands, extras)) === this.router.url) return;
+    void this.router.navigate(commands, extras).then(ok => {
+      if (!ok) this.consumeDraftSpotlight(nonce);
+    });
   }
 
   // ── Draft CRUD ──────────────────────────────────────────────────────
