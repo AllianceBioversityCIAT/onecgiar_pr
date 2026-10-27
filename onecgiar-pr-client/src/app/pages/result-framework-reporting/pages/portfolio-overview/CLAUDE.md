@@ -72,6 +72,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - 🛑 **The payload carries EVERY phase** (6094 rows on prtest, 259 open). `apply()` narrows to
   `phase_status === 1` **before** counting; with none open it falls back to the newest `version_id` and flips
   `closedPhase()` (amber "Viewing a closed phase" banner).
+- 🛑 **Status 2 is labelled "Quality Assessed", not "In QA"** (key stays `in-qa` for URLs and tests). Elsewhere in PRMS "In QA" is the separate in-review tag (`result.inQA`, `api.service.ts` `full_status_name_html`); the old "In QA" label made the tile and the Results Center chip disagree (27-oct-2026). Both label definitions: `services/portfolio-status-slot.ts` + `STATUS_SEGMENT_DEFINITIONS` in the service.
 - ⚠️ **Status dots resolve by `status_id`, never by `status_name`.** Same map as
   `programme-results.component.ts:101`; unknown ids fall back to the `not-started` foreground. The
   names in the payload (`Editing`, `Pending Review`, …) are labels only — colouring by name would

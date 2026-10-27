@@ -234,7 +234,7 @@ describe('portfolio-filters (pure logic)', () => {
 
     it('Status: always the six slots, in the status section order', () => {
       expect(options.status.map(o => o.value)).toEqual(['editing', 'in-qa', 'submitted', 'approved', 'rejected', 'discontinued']);
-      expect(options.status.map(o => o.label)).toEqual(['Editing', 'In QA', 'Submitted', 'Approved', 'Rejected', 'Discontinued']);
+      expect(options.status.map(o => o.label)).toEqual(['Editing', 'Quality Assessed', 'Submitted', 'Approved', 'Rejected', 'Discontinued']);
     });
 
     it('with no map, Project and Center are empty and the other three still build', () => {
