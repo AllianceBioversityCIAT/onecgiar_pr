@@ -296,6 +296,15 @@
                     }
                   </span>
                   <div class="flex flex-wrap items-center gap-[12px] self-end sm:self-auto">
+                    @if (data.filteredTotal() > 0) {
+                      <button
+                        type="button"
+                        data-testid="portfolio-active-filter-jump"
+                        (click)="scrollToResultsDetail()"
+                        class="rounded-[6px] bg-[var(--pr-color-primary-600)] px-[10px] py-[4px] text-[12px] font-bold text-white hover:bg-[var(--pr-color-primary-700)] cursor-pointer border-0">
+                        {{ copy.filters.showResults(data.filteredTotal()) }}
+                      </button>
+                    }
                     @if (resultsCenterLinkable()) {
                       <button
                         type="button"

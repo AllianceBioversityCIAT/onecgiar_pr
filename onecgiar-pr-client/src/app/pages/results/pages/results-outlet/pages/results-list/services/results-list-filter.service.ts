@@ -107,6 +107,11 @@ export class ResultsListFilterService {
   ]);
 
   selectedPhases = signal([]);
+  /**
+   * Phase (version id) asked for by a `?phase=` link, e.g. from Portfolio overview, which counts the open
+   * phase only. Applied once the phase options load instead of the portfolio default, then cleared.
+   */
+  requestedPhaseId = signal<number | null>(null);
   selectedSubmitters = signal([]);
   selectedSubmittersAdmin = signal([]);
 
