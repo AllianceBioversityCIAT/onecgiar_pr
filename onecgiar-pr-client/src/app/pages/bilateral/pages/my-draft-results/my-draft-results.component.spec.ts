@@ -1,5 +1,5 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { convertToParamMap, RouterModule, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -12,6 +12,7 @@ import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { RolesService } from '../../../../shared/services/global/roles.service';
+import { BILATERAL_AI_PROCESSES_COPY } from '../../../../internationalization/bilateral-ai-processes.copy';
 
 /** A Center User assignment for the centre every test in this file opens as (see `ctx.setCenter`). */
 const CIAT_MEMBER = { center_id: 'CIAT_CODE', center_acronym: 'CIAT', role_name: 'Center User', role_id: 9 };
@@ -1326,6 +1327,320 @@ describe('MyDraftResultsComponent', () => {
 
       expect(component.isCenterMember()).toBe(false);
       expect(fixture.nativeElement.querySelector('.mdr-aside-footer')).toBeNull();
+    });
+  });
+
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2)
+  describe('ADN-T-2 — "New" badge for freshly generated own jobs (ADN-R-1..R-5)', () => {
+    const JOB_A = 'aaaaaaaa-0000-0000-0000-00000000000a';
+    const JOB_B = 'bbbbbbbb-0000-0000-0000-00000000000b';
+    const JOB_C = 'cccccccc-0000-0000-0000-00000000000c';
+    const JOB_D = 'dddddddd-0000-0000-0000-00000000000d';
+    const NEW_BADGE = '[data-testid="mdr-session-new-badge"]';
+
+    const draftOf = (id: number, jobId: string, userId: number, title = `Alpha ${id}`): BilateralAiDraft =>
+      ({
+        ...draftStub,
+        id,
+        job_id: jobId,
+        extracted_mds: { title, indicator: 'Capacity Sharing' },
+        job: { ...(draftStub as any).job, job_id: jobId, user_id: userId },
+      }) as unknown as BilateralAiDraft;
+
+    const draftA = draftOf(1, JOB_A, 42);
+    const draftB = draftOf(2, JOB_B, 42); // own, but NOT fresh
+    const draftC = draftOf(3, JOB_C, 99); // teammate's, not fresh
+    const draftD = draftOf(4, JOB_D, 42);
+
+    let consumeSpy: jest.SpyInstance;
+
+    const setFresh = (...ids: string[]) => bilateralAiService.freshDraftJobIds.set(new Set(ids));
+    const badges = () => Array.from(fixture.nativeElement.querySelectorAll(NEW_BADGE)) as HTMLElement[];
+    const consumedIds = () => consumeSpy.mock.calls.flatMap(call => Array.from(call[0] as Iterable<string>)).sort();
+
+    beforeEach(() => {
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      consumeSpy = jest.spyOn(bilateralAiService, 'consumeFreshDraftJobs');
+      bilateralAiService.isDraftListLoaded.set(true);
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('user');
+    });
+
+    it('1 — marks only the fresh group; B (own) and C (teammate) stay unmarked; text, hidden icon, sr-only suffix', () => {
+      bilateralAiService.draftList.set([draftA, draftB, draftC]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+
+      const groups = component.sessionGroups();
+      expect(groups.find(g => g.sessionId === JOB_A)?.isNew).toBe(true);
+      expect(groups.find(g => g.sessionId === JOB_B)?.isNew).toBe(false);
+      expect(groups.find(g => g.sessionId === JOB_C)?.isNew).toBe(false);
+
+      // Disqualifier guard: the selector must match a real element (>= 1) in the positive case.
+      expect(badges().length).toBe(1);
+      const badge = badges()[0];
+      expect(badge.closest('[data-testid="mdr-session-card"]')?.id).toBe(`mdr-session-${JOB_A}`);
+      expect(badge.textContent).toContain('New');
+      expect(badge.querySelector('i.material-icons-round')?.getAttribute('aria-hidden')).toBe('true');
+      expect(badge.querySelector('.sr-only')?.textContent?.trim()).toBe(BILATERAL_AI_PROCESSES_COPY.drafts.newBadge.srSuffix);
+      // Leading space so the accessible name reads "New generated…" without relying on flex blockification.
+      expect(badge.querySelector('.sr-only')?.textContent?.startsWith(' ')).toBe(true);
+    });
+
+    it('1b — the draft-<id> fallback group is never new', () => {
+      const orphan = { ...draftA, id: 77, job_id: undefined, job: undefined } as unknown as BilateralAiDraft;
+      bilateralAiService.draftList.set([orphan]);
+      setFresh('draft-77');
+      fixture.detectChanges();
+      expect(component.sessionGroups()[0].sessionId).toBe('draft-77');
+      expect(component.sessionGroups()[0].isNew).toBe(false);
+      expect(badges().length).toBe(0);
+    });
+
+    it('2 — two fresh own jobs render two badges', () => {
+      bilateralAiService.draftList.set([draftA, draftB, draftD]);
+      setFresh(JOB_A, JOB_D);
+      fixture.detectChanges();
+      expect(badges().length).toBe(2);
+    });
+
+    it('3 — a list swap that adds the new job keeps search, project filter and the open Review aside', () => {
+      bilateralAiService.draftList.set([draftB]);
+      fixture.detectChanges();
+      component.filter.setSearchText('Alpha');
+      component.filter.setProjects(['7']);
+      component.selectedDraft.set(draftB);
+      fixture.detectChanges();
+      expect(badges().length).toBe(0);
+
+      setFresh(JOB_A);
+      bilateralAiService.draftList.set([draftA, draftB]);
+      fixture.detectChanges();
+
+      expect(component.filter.searchText()).toBe('Alpha');
+      expect(component.filter.selectedProjectIds()).toEqual(['7']);
+      expect(component.selectedDraft()).toBe(draftB);
+      expect(badges().length).toBe(1);
+    });
+
+    it('4 — Review open/close, a filter change and discarding another draft keep the mark and never consume', () => {
+      jest.spyOn(bilateralAiService, 'discardDraft').mockImplementation();
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+      expect(badges().length).toBe(1);
+
+      component.onReview(draftA);
+      fixture.detectChanges();
+      component.closeAside();
+      component.filter.setSearchText('Alpha');
+      fixture.detectChanges();
+      component.onDiscardClick(draftB);
+      component.onDiscardConfirm();
+      fixture.detectChanges();
+
+      expect(consumeSpy).not.toHaveBeenCalled();
+      expect(badges().length).toBe(1);
+    });
+
+    it('5 — destroy consumes exactly the ids that were shown; a fresh id never in the list is not passed', () => {
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A, JOB_D); // D is fresh but its drafts never reached the list
+      fixture.detectChanges();
+
+      fixture.destroy();
+
+      expect(consumeSpy).toHaveBeenCalledTimes(1);
+      expect(consumedIds()).toEqual([JOB_A]);
+      expect(Array.from(bilateralAiService.freshDraftJobIds())).toEqual([JOB_D]);
+    });
+
+    it('6 — center 12 -> null -> 13 consumes at the 12 -> null step; a cold null -> 12 mount does not', () => {
+      const ctx = TestBed.inject(BilateralContextService);
+      bilateralAiService.draftList.set([draftA]);
+      setFresh(JOB_A);
+      ctx.centerInstitutionId.set(null);
+      fixture.detectChanges();
+
+      ctx.centerInstitutionId.set(12); // cold null -> 12
+      fixture.detectChanges();
+      expect(consumeSpy).not.toHaveBeenCalled();
+      expect(badges().length).toBe(1);
+
+      ctx.centerInstitutionId.set(null); // 12 -> null
+      fixture.detectChanges();
+      expect(consumedIds()).toEqual([JOB_A]);
+      expect(badges().length).toBe(0);
+
+      ctx.centerInstitutionId.set(13); // null -> 13
+      fixture.detectChanges();
+      expect(consumeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('6b — a direct 12 -> 13 switch consumes too', () => {
+      const ctx = TestBed.inject(BilateralContextService);
+      ctx.centerInstitutionId.set(12);
+      bilateralAiService.draftList.set([draftA]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+      expect(consumeSpy).not.toHaveBeenCalled();
+
+      ctx.centerInstitutionId.set(13);
+      fixture.detectChanges();
+      expect(consumedIds()).toEqual([JOB_A]);
+    });
+
+    it('7 — Create Result (page destroyed afterwards) consumes all shown ids, even a group whose only draft was promoted', () => {
+      jest.spyOn(bilateralAiService, 'promoteDraft').mockImplementation();
+      bilateralAiService.draftList.set([draftA, draftD]);
+      setFresh(JOB_A, JOB_D);
+      fixture.detectChanges();
+
+      component.onPromoteClick(draftD);
+      component.centerValidationConfirmed.set(true);
+      component.onPromoteConfirm();
+      // The real promote navigates to the result editor and drops D's only draft from the list.
+      bilateralAiService.draftList.set([draftA]);
+      fixture.detectChanges();
+      fixture.destroy();
+
+      expect(consumedIds()).toEqual([JOB_A, JOB_D]);
+    });
+
+    it('8 — rendering and consuming issue no write request', () => {
+      const http = TestBed.inject(HttpTestingController);
+      bilateralAiService.draftList.set([draftA]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+      fixture.destroy();
+      expect(http.match(req => req.method !== 'GET').length).toBe(0);
+    });
+  });
+
+  // @akili-spec bilateral/ai-draft-new-indicator — `/akili-test` Tester (frontend-unit), independent of the ADN-T-2 author tests.
+  // Expected values inlined from requirements.md §5 ADN-R-3 / ADN-R-5 and §7 ADN-AC-5 / ADN-AC-8.
+  describe('ADN-test — "New" badge lifecycle, tester gaps (ADN-R-3, ADN-R-5)', () => {
+    const JOB_A = 'aaaaaaaa-1111-0000-0000-00000000000a';
+    const JOB_B = 'bbbbbbbb-1111-0000-0000-00000000000b';
+    const JOB_D = 'dddddddd-1111-0000-0000-00000000000d';
+    const NEW_BADGE = '[data-testid="mdr-session-new-badge"]';
+
+    const draftOf = (id: number, jobId: string, userId: number): BilateralAiDraft =>
+      ({
+        ...draftStub,
+        id,
+        job_id: jobId,
+        extracted_mds: { title: `Alpha ${id}`, indicator: 'Capacity Sharing' },
+        job: { ...(draftStub as any).job, job_id: jobId, user_id: userId },
+      }) as unknown as BilateralAiDraft;
+
+    const draftA = draftOf(101, JOB_A, 42);
+    const draftB = draftOf(102, JOB_B, 42);
+    const draftD = draftOf(104, JOB_D, 42);
+
+    const badgesIn = (f: ComponentFixture<MyDraftResultsComponent>) =>
+      Array.from(f.nativeElement.querySelectorAll(NEW_BADGE)) as HTMLElement[];
+    const setFresh = (...ids: string[]) => bilateralAiService.freshDraftJobIds.set(new Set(ids));
+    const mount = () => {
+      const f = TestBed.createComponent(MyDraftResultsComponent);
+      f.detectChanges();
+      return f;
+    };
+
+    beforeEach(() => {
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.isDraftListLoaded.set(true);
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('user');
+    });
+
+    it('ADN-R-3 leave and come back: after destroy, a re-mounted Draft Results shows no badge for the same drafts', () => {
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+      expect(badgesIn(fixture).length).toBe(1);
+
+      fixture.destroy(); // navigate to another bilateral tab
+      const back = mount(); // navigate back to Draft Results
+
+      expect(back.componentInstance.sessionGroups().find(g => g.sessionId === JOB_A)?.isNew).toBe(false);
+      expect(badgesIn(back).length).toBe(0);
+      back.destroy();
+    });
+
+    it('ADN-R-3 switch center A -> B -> A: A\'s group is no longer marked; B\'s fresh group, never shown on A, is still marked on B', () => {
+      const ctx = TestBed.inject(BilateralContextService);
+      ctx.centerInstitutionId.set(12); // center A
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A, JOB_D);
+      fixture.detectChanges();
+      expect(badgesIn(fixture).length).toBe(1);
+
+      // Real order: the center switch flushes first; B's drafts arrive later from the async GET.
+      ctx.centerInstitutionId.set(13); // center B
+      fixture.detectChanges();
+      bilateralAiService.draftList.set([draftD]);
+      fixture.detectChanges();
+      expect(bilateralAiService.freshDraftJobIds().has(JOB_D)).toBe(true);
+      expect(badgesIn(fixture).length).toBe(1);
+      expect(badgesIn(fixture)[0].closest('[data-testid="mdr-session-card"]')?.id).toBe(`mdr-session-${JOB_D}`);
+
+      ctx.centerInstitutionId.set(12); // back to center A
+      fixture.detectChanges();
+      bilateralAiService.draftList.set([draftA, draftB]);
+      fixture.detectChanges();
+
+      expect(component.sessionGroups().find(g => g.sessionId === JOB_A)?.isNew).toBe(false);
+      expect(badgesIn(fixture).length).toBe(0);
+      expect(bilateralAiService.freshDraftJobIds().has(JOB_A)).toBe(false);
+    });
+
+    it('ADN-R-3 job finished while the user is on other pages: stays fresh with no consume, and the mark shows on the first visit', () => {
+      const consumeSpy = jest.spyOn(bilateralAiService, 'consumeFreshDraftJobs');
+      fixture.destroy(); // the user is elsewhere — Draft Results is not mounted
+
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A); // the job completes in the background
+
+      expect(consumeSpy).not.toHaveBeenCalled();
+      expect(bilateralAiService.freshDraftJobIds().has(JOB_A)).toBe(true);
+
+      const visit = mount();
+      expect(visit.componentInstance.sessionGroups().find(g => g.sessionId === JOB_A)?.isNew).toBe(true);
+      expect(badgesIn(visit).length).toBe(1);
+      visit.destroy();
+    });
+
+    it('ADN-R-5 show, center-switch clear and leave clear issue no POST/PATCH/PUT/DELETE, and drafts, statuses, is_discarded and order are unchanged', () => {
+      const http = TestBed.inject(HttpTestingController);
+      const ctx = TestBed.inject(BilateralContextService);
+      const list = [draftA, draftB, { ...draftD, is_discarded: true } as unknown as BilateralAiDraft];
+      const snapshot = JSON.parse(JSON.stringify(list));
+      ctx.centerInstitutionId.set(12);
+      bilateralAiService.draftList.set(list);
+      setFresh(JOB_A, JOB_B);
+      fixture.detectChanges();
+      expect(badgesIn(fixture).length).toBe(2);
+
+      ctx.centerInstitutionId.set(13); // clear via center switch
+      fixture.detectChanges();
+      ctx.centerInstitutionId.set(12);
+      fixture.detectChanges();
+      fixture.destroy(); // clear via leaving the tab
+
+      const writes = http.match(req => ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method));
+      expect(writes.map(r => `${r.request.method} ${r.request.url}`)).toEqual([]);
+      expect(bilateralAiService.draftList()).toBe(list);
+      expect(JSON.parse(JSON.stringify(bilateralAiService.draftList()))).toEqual(snapshot);
+      expect(bilateralAiService.draftList().map(d => [d.id, d.is_discarded, (d as any).result.status_id])).toEqual([
+        [101, false, '8'],
+        [102, false, '8'],
+        [104, true, '8'],
+      ]);
     });
   });
 });

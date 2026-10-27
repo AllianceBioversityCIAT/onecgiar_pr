@@ -1,6 +1,6 @@
 # my-draft-results
 
-**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · `AIQ-T-7`; scroll deferred with `afterNextRender`, not `queueMicrotask` (second post-execution fix, same session)
+**Verified:** 2026-10-27 · qa-development-2026-mc-2 · `ADN-T-2` ("New" badge + consume rule); earlier: `AIQ-T-7` scroll via `afterNextRender`, not `queueMicrotask`
 
 ## What it is
 The **Draft Results** tab of the bilateral center dashboard (P2-3169, P2-3315). Lists every AI-generated
@@ -15,9 +15,8 @@ result suggestion the center still has to decide on, and offers Review (read-onl
   `isDraftListLoaded()` = loading gate, `isPromoting()` = full-screen overlay,
   `projectNameMap()` / `initiativeNameMap()` = id → label lookups.
   `BilateralContextService.centerInstitutionId()` decides which center's drafts are fetched.
-- Endpoint: `GET /api/bilateral/center/ai/drafts?centerId=` via
-  `BilateralApiService.GET_bilateralAiDrafts`, plus `POST …/drafts/:id/promote` and
-  `DELETE …/drafts/:id`. All three are wrapped by `BilateralAiService`, never called from here.
+- Endpoint: `GET /api/bilateral/center/ai/drafts?centerId=` (+ `POST …/promote`, `DELETE …/drafts/:id`),
+  all wrapped by `BilateralAiService`, never called from here.
 - **`?job=<id>` deep link (`AIQ-R-9` D / P-19), from the "AI processes" drawer's "View N drafts" and
   the completion toast — NOT part of the `COV-T-7`/`parseBilateralQueryParams` contract, read
   separately in `ngOnInit` by subscribing to `activatedRoute.queryParamMap` (LIVE, not `snapshot` —
@@ -31,16 +30,18 @@ result suggestion the center still has to decide on, and offers Review (read-onl
   `pendingHighlightJobId()` (a signal, not a plain field) AND `sessionGroups()` unconditionally on
   every run, before any early return** — the very first run would otherwise register zero tracked
   dependencies and never fire again once a job id and a matching group show up later.
-- Children reused from the detail page: `app-draft-result-card`, `app-draft-evidence-list`
-  (`../bilateral-ai-draft-detail/components/…`).
+- **"New" badge (`ADN-T-2`).** `DraftSessionGroup.isNew` = `freshDraftJobIds().has(sessionId)` (own jobs the
+  client saw finish with drafts; `draft-<id>` fallback never new), badge `data-testid="mdr-session-new-badge"`
+  after the creator badge, copy in `BILATERAL_AI_PROCESSES_COPY.drafts.newBadge`. A constructor effect collects
+  the shown `isNew` ids into `shownFreshIds`; `ngOnDestroy` and every `centerInstitutionId()` change away from a
+  non-null value call `consumeFreshDraftJobs(shownFreshIds)` (`null`→X never). Review/filters/delete keep it.
+- Children reused from the detail page: `app-draft-result-card`, `app-draft-evidence-list`.
 - Filter state: `services/my-draft-results-filter.service.ts`, **provided on the component**, not in
   root — it must reset when the tab or the center is left. `drafts()` = filtered list rendered,
   `allDrafts()` = everything the center has; the pair is what separates "no drafts yet" from
   "the filter hid them all" (`isFilteredEmpty()`).
-- P2-3315 Center validation is a required, client-side confirmation in the Create Result dialog,
-  resetting on every open/cancel/complete and gating `onPromoteConfirm()` before
-  `BilateralAiService.promoteDraft`. Not persisted: promotion sets `Editing`; Submit for review is
-  the only path toward P/A review.
+- P2-3315 Center validation: required client-side confirmation in the Create Result dialog (resets on every
+  open/cancel/complete), gates `onPromoteConfirm()` before `promoteDraft`. Not persisted; promotion sets `Editing`.
 
 ## Where it is used
 - `src/app/shared/routing/routing-data.ts` — the `drafts` child route of the bilateral center.
@@ -60,8 +61,7 @@ carries more than the draft columns:
 | Generation date | `created_date` |
 | Draft status | `result.status_id` (8 = Draft) |
 
-The level and the status are stamped by the server when the draft is created, from
-`TYPE_BY_INDICATOR` (same file, `:37-48` and `createDraftFromCandidate` at `:397-410`).
+Level and status are stamped by the server at creation from `TYPE_BY_INDICATOR` (same file, `:37-48`, `:397-410`).
 
 ## The project filter (P2-3319)
 The project is **already in the drafts payload** — `draft.job.project_id`, the same field the card
@@ -74,10 +74,14 @@ and the promote dialog print through `BilateralAiService.projectNameMap()`. No n
 - `projectFilterOptions()` is built from the **drafts on screen**, not from the CLARISA catalogue,
   so the dropdown can never offer a project that would empty the list. Labels fall back to the raw
   id while `projectNameMap()` is still loading.
-- Shape copied from `programme-results/services/programme-results-filter.service.ts` (pure state +
-  pure predicate + `clearAll()`), so a second dimension is a signal plus a branch.
+- Shape copied from `programme-results/services/programme-results-filter.service.ts` (pure state + predicate).
 
 ## Traps (⚠️ = already broke something)
+- ⚠️ **P-9: the "New" badge is the only cue — no card accent.** Own-job cards already carry an unlayered SCSS
+  `.mdr-session-card--me` 4px green left border that beats Tailwind's layered utilities; a card-level accent is inert.
+- ⚠️ **P-10: a center switch REUSES this component** (only the parent `:acronym` changes; the shell sets
+  `centerInstitutionId` to `null` meanwhile), so `ngOnDestroy` alone misses it. Consume from `shownFreshIds` (what was
+  rendered), never from `allDrafts()` at destroy — that list may be another center's or lack a promoted draft.
 - ⚠️ **Two scroll bugs, same target (P2-3853).** Never `element.scrollIntoView()` — it scrolls EVERY
   scrollable ancestor incl. `pr-viewport-page` (`overflow:hidden` ≥900px; measured `scrollTop` 57).
   `scrollWithinNearestScrollContainer()` walks to the nearest `overflow-y:auto|scroll` ancestor
@@ -103,18 +107,13 @@ and the promote dialog print through `BilateralAiService.projectNameMap()`. No n
 - ⚠️ TypeORM serialises `bigint`/`int` columns as **strings** — `status_id` arrives as `"8"`, not `8`.
   Always `Number(...)` before comparing against `BILATERAL_STATUS`. Same reason the project filter
   compares ids through `normalizeProjectId()` instead of `===` (a numeric id vs the dropdown's string).
-- ⚠️ The filter must NOT be `providedIn: 'root'` — project ids belong to one center, and
-  `BilateralAiService` refetches `draftList()` per switch; a surviving selection would blank the tab.
-- ⚠️ No shared client catalogue for result levels: `RESULT_LEVEL_LABELS` here duplicates the private
-  `RESULT_LEVELS` of `../../components/bilateral-result-level-selector/`. Change both together.
-- Every draft in this list is status `Draft` in practice: promote/decline both set
-  `is_discarded = true`, dropping the row from the endpoint's `where`. Status still reads from the
-  payload rather than hardcoded, so a server-side change surfaces instead of lying. It replaced a
-  decorative "completeness" ring (fixed 50% arc, `Draft` printed inside) — do not bring that back.
+- ⚠️ The filter must NOT be `providedIn: 'root'` — project ids belong to one center; a surviving selection would blank the tab.
+- ⚠️ `RESULT_LEVEL_LABELS` here duplicates the private `RESULT_LEVELS` of `../../components/bilateral-result-level-selector/`; change both together.
+- Every draft here is status `Draft` in practice (promote/decline set `is_discarded = true`); status still
+  reads from the payload so a server-side change surfaces. Do not bring back the old fixed-50% "completeness" ring.
 - `promoteDraft` navigates away and `discardDraft` reloads the route; both drop the draft from
   `draftList()` optimistically, so nothing here needs to refetch.
 
 ## Pending / Coming soon
-- The mockup's Drafts card (`.design-snapshots/PRMS-Reporting.dc.html:1101-1140`) has a search box, a
-  per-card kebab menu and a source-document link this page does not implement, and its reporter also
-  wanted to *select* several drafts at once — neither is part of P2-3169/3319, not built, not implied.
+- The mockup's Drafts card (`.design-snapshots/PRMS-Reporting.dc.html:1101-1140`) has a kebab menu, a
+  source-document link and multi-select this page does not implement (not part of P2-3169/3319).

@@ -10,6 +10,7 @@ import {
   OnDestroy,
   OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -48,6 +49,7 @@ import {
 } from './utils/draft-filter-helpers';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { isCenterMember } from '../../services/bilateral-center-membership.util';
+import { BILATERAL_AI_PROCESSES_COPY } from '../../../../internationalization/bilateral-ai-processes.copy';
 
 /**
  * P2-3169 AC2 — the `result` relation the drafts endpoint returns next to every draft.
@@ -116,6 +118,8 @@ export interface DraftSessionGroup {
   isCurrentUser: boolean;
   creatorName: string;
   creatorTooltip: string;
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2): `ADN-DD-3`, true when the group's job id is in `freshDraftJobIds()`.
+  isNew: boolean;
   drafts: BilateralAiDraft[];
 }
 
@@ -228,6 +232,15 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   /** Delay of the corrective second scroll pass (see the highlight effect). */
   private static readonly SCROLL_SETTLE_MS = 600;
 
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2)
+  /** Copy for the "New" badge (DD-9). */
+  readonly newBadgeCopy = BILATERAL_AI_PROCESSES_COPY.drafts.newBadge;
+  /** `ADN-DD-5`: ids of the `isNew` groups this component has rendered. A plain Set — only effects and
+   * the consume path touch it, nothing in a template reads it. Never holds an id that was not shown. */
+  private shownFreshIds = new Set<string>();
+  /** Last seen `centerInstitutionId()`; `undefined` until the first effect run (a cold mount never consumes). */
+  private previousCenterInstitutionId: number | null | undefined = undefined;
+
   constructor() {
     effect(() => {
       document.body.style.overflow = this.selectedDraft() ? 'hidden' : '';
@@ -267,6 +280,22 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
         },
         { injector: this.injector },
       );
+    });
+
+    // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2): collect what was shown. `sessionGroups()` is
+    // read unconditionally and first (page-guide trap: no early return before the read).
+    effect(() => {
+      const groups = this.sessionGroups();
+      for (const group of groups) if (group.isNew) this.shownFreshIds.add(group.sessionId);
+    });
+
+    // `ADN-DD-5` / P-10: a center switch reuses this component, so consume on every transition of
+    // `centerInstitutionId()` AWAY from a non-null value (X->null, X->Y). `null`->X never consumes.
+    effect(() => {
+      const current = this.ctx.centerInstitutionId();
+      const previous = this.previousCenterInstitutionId;
+      this.previousCenterInstitutionId = current;
+      if (previous != null && current !== previous) this.consumeShownFreshJobs();
     });
 
     effect(() => {
@@ -419,6 +448,7 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     if (!list.length) return [];
 
     const groupMap = new Map<string, DraftSessionGroup>();
+    const freshIds = this.bilateralAiService.freshDraftJobIds();
     const currentUserId = this.api.authSE?.localStorageUser?.id;
     const currentUserName = this.api.authSE?.localStorageUser?.user_name;
 
@@ -479,6 +509,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
           isCurrentUser,
           creatorName,
           creatorTooltip,
+          // The `draft-<id>` fallback key is not a job id, so it is never new (even if a caller adds it to the set).
+          isNew: Boolean(jobId) && freshIds.has(sessionId),
           drafts: [],
         };
         groupMap.set(sessionId, group);
@@ -814,7 +846,16 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     this.discardTarget.set(null);
   }
 
+  /** @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2): forget the fresh jobs this view showed (`ADN-R-3`). */
+  private consumeShownFreshJobs(): void {
+    if (this.shownFreshIds.size === 0) return;
+    const ids = Array.from(this.shownFreshIds);
+    this.shownFreshIds = new Set<string>();
+    untracked(() => this.bilateralAiService.consumeFreshDraftJobs(ids));
+  }
+
   ngOnDestroy(): void {
+    this.consumeShownFreshJobs();
     document.body.style.overflow = '';
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     if (this.highlightClearTimer) clearTimeout(this.highlightClearTimer);

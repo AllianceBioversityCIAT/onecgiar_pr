@@ -266,6 +266,17 @@
                   </span>
                 }
 
+                <!-- @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2): "New" badge, pattern 10 violet tokens (ADN-DD-4) -->
+                @if (group.isNew) {
+                  <span
+                    class="mdr-new-badge inline-flex items-center gap-[4px] px-[8px] py-[1px] text-[11px] font-semibold rounded-full bg-violet-50 text-violet-700 border border-violet-200"
+                    data-testid="mdr-session-new-badge">
+                    <i class="material-icons-round text-[14px]" aria-hidden="true">auto_awesome</i>
+                    <span>{{ newBadgeCopy.label }}</span>
+                    <span class="sr-only">{{ ' ' + newBadgeCopy.srSuffix }}</span>
+                  </span>
+                }
+
                 <span class="inline-flex items-center px-[8px] py-[1px] text-[11px] font-semibold rounded-full bg-[var(--pr-surface-hover)] text-[var(--pr-text-secondary)] border border-[var(--pr-border-divider)]">
                   {{ group.drafts.length }} {{ group.drafts.length === 1 ? 'draft' : 'drafts' }}
                 </span>

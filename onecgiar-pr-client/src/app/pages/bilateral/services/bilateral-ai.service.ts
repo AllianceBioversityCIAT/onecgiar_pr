@@ -77,6 +77,10 @@ export class BilateralAiService implements OnDestroy {
   lastPollFailed = signal(false);
   /** Session memory of finished jobs the trigger badge has not been shown yet (`AIQ-R-10` B). */
   unseenFinishedIds = signal<ReadonlySet<string>>(new Set());
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-1)
+  /** `ADN-DD-1`: own jobs this client saw finish with drafts this session. Always replaced with a
+   * new `Set` (never mutated) so `computed`s re-run; cleared per id by `consumeFreshDraftJobs`. */
+  readonly freshDraftJobIds = signal<ReadonlySet<string>>(new Set());
 
   // ── Upload-form-local state (kept; narrowed to the upload's own submission, `AIQ-DD-11`) ────
 
@@ -97,6 +101,8 @@ export class BilateralAiService implements OnDestroy {
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private currentIntervalMs = POLL_INTERVAL_INITIAL;
   private previousJobsById = new Map<string, NormalizedBilateralAiListJob>();
+  /** `ADN-DD-2` / P-12: latest-wins token for `loadAllDrafts`. */
+  private draftsRequestSeq = 0;
   private readonly expectationsCache = new Map<BilateralAiMixClass, Observable<BilateralAiExpectations>>();
 
   draftCount = computed(() => this.draftList().length);
@@ -388,6 +394,19 @@ export class BilateralAiService implements OnDestroy {
         return next;
       });
       this.announceTerminalJobs(newlyTerminal);
+
+      // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-1): `newlyTerminal` already means "seen
+      // active on the previous poll" (P-2), so a job finished before this client saw it is never marked.
+      const withDrafts = newlyTerminal.filter(job => job.status === 'COMPLETED' && job.resultCount > 0);
+      if (withDrafts.length > 0) {
+        this.freshDraftJobIds.update(set => {
+          const next = new Set(set);
+          for (const job of withDrafts) next.add(job.jobId);
+          return next;
+        });
+        // Once per poll (`ADN-DD-2`); a no-op when no center is resolved (P-11).
+        this.loadAllDrafts();
+      }
     }
     this.previousJobsById = new Map(newJobs.map(job => [job.jobId, job]));
   }
@@ -448,18 +467,31 @@ export class BilateralAiService implements OnDestroy {
 
   // ── Draft CRUD ──────────────────────────────────────────────────────
 
+  /** @akili-spec bilateral/ai-draft-new-indicator (ADN-T-1): forgets the given fresh ids (new `Set`). */
+  consumeFreshDraftJobs(jobIds: Iterable<string>): void {
+    this.freshDraftJobIds.update(set => {
+      const next = new Set(set);
+      for (const id of jobIds) next.delete(id);
+      return next;
+    });
+  }
+
   loadAllDrafts(): void {
     const centerId = this.ctx.centerInstitutionId();
     if (centerId == null) return;
 
+    // `ADN-DD-2` / P-12: only the newest call may write; the counter advances after the null-center return.
+    const seq = ++this.draftsRequestSeq;
     this.loadProjectNames();
     this.loadInitiativeNames();
     this.bilateralApi.GET_bilateralAiDrafts(centerId).subscribe({
       next: (data: any) => {
+        if (seq !== this.draftsRequestSeq) return;
         this.draftList.set(data ?? []);
         this.isDraftListLoaded.set(true);
       },
       error: () => {
+        if (seq !== this.draftsRequestSeq) return;
         this.isDraftListLoaded.set(true);
       },
     });

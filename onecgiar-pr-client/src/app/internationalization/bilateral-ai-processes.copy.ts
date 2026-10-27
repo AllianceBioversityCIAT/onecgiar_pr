@@ -61,6 +61,14 @@ export const BILATERAL_AI_PROCESSES_COPY = {
     /** `AIQ-R-9` H live-region announcement on a group change. */
     movedTo: (label: string, group: string): string => `${label} moved to ${group}.`,
   },
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2)
+  /** `my-draft-results` session header badge (`ADN-R-4`, DD-9): visible `label` + `sr-only` suffix. */
+  drafts: {
+    newBadge: {
+      label: 'New',
+      srSuffix: 'generated in your latest AI run',
+    },
+  },
   /** `ai-job-card` (`AIQ-R-9` B–H, parity list `AIQ-DD-8`). */
   card: {
     elapsedLabel: 'elapsed',

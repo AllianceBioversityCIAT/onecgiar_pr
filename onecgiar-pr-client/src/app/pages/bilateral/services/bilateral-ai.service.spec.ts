@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { BilateralAiService } from './bilateral-ai.service';
 import { rawListJob } from '../bilateral-ai-job.fixtures';
@@ -670,6 +670,301 @@ describe('BilateralAiService', () => {
     service.clearUploadState();
 
     expect(service.uploadState()).toEqual({ jobId: null, status: 'idle', uploadProgress: 0 });
+  });
+
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-1)
+  // ── Fresh draft jobs: own jobs the client saw finish this session (`ADN-R-1`..`ADN-R-3`) ──
+
+  describe('fresh draft jobs (ADN)', () => {
+    /** Resolve the center and flush the deferred center `effect()` so its drafts load is already in the baseline. */
+    const resolveCenter = () => {
+      ctx.centerInstitutionId.set(7);
+      TestBed.tick();
+    };
+    const draftsCalls = () => bilateralApi.GET_bilateralAiDrafts.mock.calls.length;
+    const pollWith = (jobs: ReturnType<typeof rawListJob>[]) => bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse(jobs)));
+
+    /** Seed `jobIds` as active, then return the drafts-call baseline taken after effects are flushed. */
+    const seedActive = async (jobIds: string[]) => {
+      resolveCenter();
+      pollWith(jobIds.map(id => rawListJob({ job_id: id, status: 'PROCESSING' })));
+      service.addSubmittedJob({ jobId: jobIds[0] });
+      await flush();
+      TestBed.tick();
+      return draftsCalls();
+    };
+
+    it('adds an own job seen active that completes with drafts, and reloads the drafts list exactly once', async () => {
+      const baseline = await seedActive(['job-1']);
+
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '3' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+
+      expect(service.freshDraftJobIds().has('job-1')).toBe(true);
+      expect(draftsCalls() - baseline).toBe(1);
+    });
+
+    it('does not mark a COMPLETED job with 0 drafts, and issues no extra drafts call', async () => {
+      const baseline = await seedActive(['job-1']);
+
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '0' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+
+      expect(service.freshDraftJobIds().size).toBe(0);
+      expect(draftsCalls() - baseline).toBe(0);
+    });
+
+    it('does not mark a FAILED job, and issues no extra drafts call', async () => {
+      const baseline = await seedActive(['job-1']);
+
+      pollWith([rawListJob({ job_id: 'job-1', status: 'FAILED', error_code: 'TIMED_OUT' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+
+      expect(service.freshDraftJobIds().size).toBe(0);
+      expect(draftsCalls() - baseline).toBe(0);
+    });
+
+    it('does not mark a job that is already COMPLETED on the first poll (reload after the job finished)', async () => {
+      resolveCenter();
+      const baseline = draftsCalls();
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '3' })]);
+      service.openDrawer();
+      await flush();
+      TestBed.tick();
+
+      expect(service.freshDraftJobIds().size).toBe(0);
+      expect(draftsCalls() - baseline).toBe(0);
+    });
+
+    it('marks a job when the page reloaded while it was running (hint key set, first poll PROCESSING, then COMPLETED)', async () => {
+      localStorage.setItem(HAS_ACTIVE_JOBS_KEY, '1');
+      pollWith([rawListJob({ job_id: 'job-1', status: 'PROCESSING' })]);
+      TestBed.resetTestingModule();
+      configureTestBed();
+      const resumed = TestBed.inject(BilateralAiService);
+      await flush();
+      expect(resumed.freshDraftJobIds().size).toBe(0);
+
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '2' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+
+      expect(resumed.freshDraftJobIds().has('job-1')).toBe(true);
+      resumed.stopPolling();
+    });
+
+    it('marks both jobs when two finish in the same poll, with a single drafts reload', async () => {
+      const baseline = await seedActive(['job-1', 'job-2']);
+
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' }), rawListJob({ job_id: 'job-2', status: 'COMPLETED', result_count: '4' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+
+      expect([...service.freshDraftJobIds()].sort()).toEqual(['job-1', 'job-2']);
+      expect(draftsCalls() - baseline).toBe(1);
+    });
+
+    it('consumeFreshDraftJobs removes only the given ids and replaces the set reference', async () => {
+      await seedActive(['job-1', 'job-2']);
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' }), rawListJob({ job_id: 'job-2', status: 'COMPLETED', result_count: '4' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      const before = service.freshDraftJobIds();
+
+      service.consumeFreshDraftJobs(['job-1']);
+
+      const after = service.freshDraftJobIds();
+      expect(after).not.toBe(before);
+      expect([...after]).toEqual(['job-2']);
+      expect(before.has('job-1')).toBe(true);
+    });
+
+    it('ignores a superseded response: the newest loadAllDrafts call wins even when it resolves first', () => {
+      resolveCenter();
+      const older = new Subject<any>();
+      const newer = new Subject<any>();
+      bilateralApi.GET_bilateralAiDrafts.mockReturnValueOnce(older).mockReturnValueOnce(newer);
+
+      service.loadAllDrafts();
+      service.loadAllDrafts();
+      newer.next([{ draft_id: 2 }]);
+      older.next([{ draft_id: 1 }]);
+
+      expect(service.draftList()).toEqual([{ draft_id: 2 }]);
+    });
+
+    it('when the newest call errors it marks the list loaded and keeps the current list; a superseded error is ignored', () => {
+      resolveCenter();
+      bilateralApi.GET_bilateralAiDrafts.mockReturnValueOnce(of([{ draft_id: 1 }]));
+      service.loadAllDrafts();
+      expect(service.draftList()).toEqual([{ draft_id: 1 }]);
+
+      service.isDraftListLoaded.set(false);
+      bilateralApi.GET_bilateralAiDrafts.mockReturnValueOnce(throwError(() => new Error('boom')));
+      service.loadAllDrafts();
+      expect(service.draftList()).toEqual([{ draft_id: 1 }]);
+      expect(service.isDraftListLoaded()).toBe(true);
+
+      const older = new Subject<any>();
+      const newer = new Subject<any>();
+      bilateralApi.GET_bilateralAiDrafts.mockReturnValueOnce(older).mockReturnValueOnce(newer);
+      service.isDraftListLoaded.set(false);
+      service.loadAllDrafts();
+      service.loadAllDrafts();
+      newer.next([{ draft_id: 3 }]);
+      older.error(new Error('late'));
+      expect(service.draftList()).toEqual([{ draft_id: 3 }]);
+      expect(service.isDraftListLoaded()).toBe(true);
+    });
+
+    it('a null-center call issues no request and does not supersede an in-flight load', () => {
+      resolveCenter();
+      const inFlight = new Subject<any>();
+      bilateralApi.GET_bilateralAiDrafts.mockReturnValueOnce(inFlight);
+      service.loadAllDrafts();
+      const calls = draftsCalls();
+
+      ctx.centerInstitutionId.set(null);
+      service.loadAllDrafts();
+      expect(draftsCalls()).toBe(calls);
+
+      inFlight.next([{ draft_id: 9 }]);
+      expect(service.draftList()).toEqual([{ draft_id: 9 }]);
+    });
+
+    it('never calls a write endpoint on any of these paths (`ADN-R-5`)', async () => {
+      await seedActive(['job-1']);
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '3' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+      service.consumeFreshDraftJobs(['job-1']);
+
+      for (const name of Object.keys(bilateralApi).filter(k => k.startsWith('POST_') || k.startsWith('DELETE_'))) {
+        expect(bilateralApi[name]).not.toHaveBeenCalled();
+      }
+    });
+  });
+
+  // @akili-spec bilateral/ai-draft-new-indicator — `/akili-test` Tester (frontend-unit), independent of the ADN-T-1 author tests.
+  // Expected values inlined from requirements.md §5 (ADN-R-1, ADN-R-3, ADN-R-5) and §6 (one reload per poll).
+
+  describe('ADN-test — fresh draft jobs, tester gaps (ADN-R-1, ADN-R-3, ADN-R-5)', () => {
+    const draftsCalls = () => bilateralApi.GET_bilateralAiDrafts.mock.calls.length;
+    const pollWith = (jobs: ReturnType<typeof rawListJob>[]) => bilateralApi.GET_bilateralAiJobs.mockReturnValue(of(listResponse(jobs)));
+    const resolveCenter = () => {
+      ctx.centerInstitutionId.set(7);
+      TestBed.tick();
+    };
+    const seedActive = async (jobIds: string[]) => {
+      pollWith(jobIds.map(id => rawListJob({ job_id: id, status: 'PROCESSING' })));
+      service.addSubmittedJob({ jobId: jobIds[0] });
+      await flush();
+      TestBed.tick();
+      return draftsCalls();
+    };
+
+    it('ADN-R-1 two own jobs completing in DIFFERENT polls: both ids are fresh, one drafts reload per poll', async () => {
+      resolveCenter();
+      const baseline = await seedActive(['job-1', 'job-2']);
+
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '2' }), rawListJob({ job_id: 'job-2', status: 'PROCESSING' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+      expect([...service.freshDraftJobIds()]).toEqual(['job-1']);
+      expect(draftsCalls() - baseline).toBe(1);
+
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '2' }), rawListJob({ job_id: 'job-2', status: 'COMPLETED', result_count: '5' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+      expect([...service.freshDraftJobIds()].sort()).toEqual(['job-1', 'job-2']);
+      expect(draftsCalls() - baseline).toBe(2);
+    });
+
+    it('ADN-R-3 job finished but Draft Results not visited: the id stays fresh across later polls, with no repeat reload', async () => {
+      resolveCenter();
+      const baseline = await seedActive(['job-1']);
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '3' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+      expect(service.freshDraftJobIds().has('job-1')).toBe(true);
+
+      // Drawer open keeps polling alive; the same COMPLETED job is returned on every later poll.
+      service.openDrawer();
+      await flush();
+      await advance(POLL_INTERVAL_INITIAL);
+      await advance(POLL_INTERVAL_INITIAL);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+
+      expect(service.freshDraftJobIds().has('job-1')).toBe(true);
+      expect(draftsCalls() - baseline).toBe(1);
+    });
+
+    it('P-11 completion with a null center: the id is still fresh, no drafts request is sent, and the next center resolve loads the drafts', async () => {
+      await seedActive(['job-1']);
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '3' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+
+      expect(service.freshDraftJobIds().has('job-1')).toBe(true);
+      expect(bilateralApi.GET_bilateralAiDrafts).not.toHaveBeenCalled();
+
+      bilateralApi.GET_bilateralAiDrafts.mockReturnValue(of([{ id: 11, job_id: 'job-1', is_discarded: false }]));
+      resolveCenter();
+
+      expect(bilateralApi.GET_bilateralAiDrafts).toHaveBeenCalledTimes(1);
+      expect(bilateralApi.GET_bilateralAiDrafts).toHaveBeenCalledWith(7);
+      expect(service.draftList()).toEqual([{ id: 11, job_id: 'job-1', is_discarded: false }]);
+      expect(service.freshDraftJobIds().has('job-1')).toBe(true);
+    });
+
+    it('ADN-R-5 show + consume touch no write method of any verb (POST_/PATCH_/PUT_/DELETE_), and drafts and statuses stay unchanged', async () => {
+      // Re-wire the API stubs behind a Proxy that records every verb-prefixed member the service reads,
+      // so a write method that is NOT on the stub (e.g. a future PATCH_) is caught too.
+      const accessed = new Set<string>();
+      const track = <T extends object>(target: T): T =>
+        new Proxy(target, {
+          get(obj, prop, receiver) {
+            if (typeof prop === 'string' && /^[A-Z]+_/.test(prop)) accessed.add(prop);
+            return Reflect.get(obj, prop, receiver);
+          },
+        });
+      const drafts = [
+        { id: 11, job_id: 'job-1', is_discarded: false, result: { status_id: '8' } },
+        { id: 12, job_id: 'job-0', is_discarded: true, result: { status_id: '8' } },
+      ];
+      bilateralApi.GET_bilateralAiDrafts.mockReturnValue(of(drafts));
+      const rawApi = bilateralApi;
+      service.stopPolling();
+      TestBed.resetTestingModule();
+      bilateralApi = track(rawApi);
+      resultsApi = track(resultsApi);
+      configureTestBed();
+      service = TestBed.inject(BilateralAiService);
+
+      resolveCenter();
+      const baseline = await seedActive(['job-1']);
+      pollWith([rawListJob({ job_id: 'job-1', status: 'COMPLETED', result_count: '1' })]);
+      await advance(POLL_INTERVAL_INITIAL);
+      TestBed.tick();
+      expect(service.freshDraftJobIds().has('job-1')).toBe(true);
+      expect(rawApi.GET_bilateralAiDrafts.mock.calls.length - baseline).toBe(1);
+      const listBefore = service.draftList();
+      const snapshot = JSON.parse(JSON.stringify(listBefore));
+
+      service.consumeFreshDraftJobs(['job-1']);
+      TestBed.tick();
+
+      expect(service.freshDraftJobIds().size).toBe(0);
+      expect([...accessed].filter(name => !name.startsWith('GET_'))).toEqual([]);
+      expect(service.draftList()).toBe(listBefore);
+      expect(service.draftList()).toEqual(snapshot);
+      expect(service.draftList().map((d: any) => [d.id, d.is_discarded, d.result.status_id])).toEqual([
+        [11, false, '8'],
+        [12, true, '8'],
+      ]);
+    });
   });
 
   // ── Teardown ────────────────────────────────────────────────────────────
