@@ -23,13 +23,14 @@ export class ChangeCenterResultTypeDto {
   @IsNotEmpty()
   result_type_id: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'The promoted draft was classified as the wrong result type.',
-    description: 'Audit justification for changing a promoted AI draft.',
+    description:
+      'Optional audit justification for changing a promoted AI draft. When omitted or blank, the review-history comment carries no reason.',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  justification: string;
+  justification?: string;
 
   @ApiPropertyOptional({
     example: '10568/175322',
