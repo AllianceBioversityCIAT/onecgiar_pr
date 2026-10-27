@@ -450,83 +450,84 @@
       </article>
     </section>
 
-    <!-- ═══ Row C — SP contribution + Results by result type (COV-R-10, COV-R-11) ═══════════ -->
-    <section class="grid grid-cols-1 min-[1280px]:grid-cols-2 gap-[16px]">
-      <!-- Science Program contribution -->
+    <!-- ═══ Row B2 — Projects by Program / Accelerator, full width (CPA-R-2, CPA-DD-7) ═══════ -->
+    <section class="grid grid-cols-1 gap-[16px]">
       <article class="flex flex-col gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[18px]">
         <div class="flex flex-col gap-[2px]">
-          <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Science Program contribution</h2>
+          <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Projects by Program / Accelerator</h2>
           <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
-            Projects mapped to each SP vs results reported with that SP as primary
+            Center projects mapped to each Program / Accelerator, with reported W3/Bilat results, and tagged by W1/W2 results
           </p>
         </div>
 
         @if (resultsLoading() || projectsLoading()) {
-          <span aria-busy="true" aria-label="Loading Science Program contribution" data-testid="by-sp-skeleton" class="pr-skeleton block h-[180px] w-full rounded-[10px]"></span>
-        } @else if (resultsError()) {
-          <div role="alert" data-testid="by-sp-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
-            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
+          <span aria-busy="true" aria-label="Loading projects by Program / Accelerator" data-testid="projects-by-pa-skeleton" class="pr-skeleton block h-[200px] w-full rounded-[10px]"></span>
+        } @else if (resultsError() || projectsError()) {
+          <!-- COV-R-17 - mapped projects come from the projects call, W3/tagged from the results call: either failure fails the card -->
+          <div role="alert" data-testid="projects-by-pa-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
+            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() || projectsError() }}</span>
             <button
               type="button"
-              class="inline-flex h-[30px] items-center rounded-[8px] border border-[var(--pr-border)] bg-transparent px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              (click)="retry()">
-              Retry
-            </button>
-          </div>
-        } @else if (projectsError()) {
-          <!-- COV-R-17 — "projects mapped" comes from the projects call, so it fails with it -->
-          <div role="alert" data-testid="by-sp-projects-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
-            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ projectsError() }}</span>
-            <button
-              type="button"
-              data-testid="by-sp-projects-retry"
+              data-testid="projects-by-pa-retry"
               class="inline-flex h-[30px] items-center rounded-[8px] border border-[var(--pr-border)] bg-transparent px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
               (click)="retry()">
               Retry
             </button>
           </div>
-        } @else if (!model().bySp.rows.length) {
-          <p data-testid="by-sp-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
-            No Science Program is mapped or reporting in this phase yet
+        } @else if (projectsByPaEmpty()) {
+          <p data-testid="projects-by-pa-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
+            No Program / Accelerator has mapped, reporting or tagged projects in this phase yet
           </p>
         } @else {
           <app-pr-viz-chart
             class="block w-full cursor-pointer"
-            data-testid="by-sp-chart"
-            [options]="bySpChartOption()"
-            [tableModel]="bySpChartTable()"
-            (chartClick)="onSpChartClick($event)"
-            chartTitle="Science Program contribution"
-            [height]="bySpChartHeight()" />
+            data-testid="projects-by-pa-chart"
+            [options]="projectsByPaChartOption()"
+            [tableModel]="projectsByPaChartTable()"
+            (chartClick)="onProjectsByPaChartClick($event)"
+            chartTitle="Projects by Program / Accelerator"
+            [height]="projectsByPaChartHeight" />
+        }
+      </article>
+    </section>
 
-          <div class="flex flex-col border-t border-[var(--pr-border-divider)]" data-testid="by-sp-rows">
-            @for (row of model().bySp.rows; track row.programCode) {
-              <div class="grid grid-cols-[1fr_auto_auto] items-center gap-[12px] border-b border-[var(--pr-border-divider)] py-[8px] text-[12.5px]">
-                <a
-                  [attr.data-testid]="'by-sp-row-' + row.programCode"
-                  [routerLink]="reportingLink()"
-                  [queryParams]="deepLinkParams({ program: [row.programCode] })"
-                  [attr.aria-label]="programLabel(row.programCode) + ', ' + row.projectsMappedCount + ' projects mapped — open in Reporting'"
-                  class="min-w-0 truncate text-[var(--pr-text-heading)] no-underline cursor-pointer hover:text-[var(--pr-color-primary-300)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                  {{ programLabel(row.programCode) }}
-                  @if (row.resultsCount === 0) {
-                    <small class="ml-[6px] text-[11.5px] text-[var(--pr-text-subtle)]">no results yet</small>
-                  }
-                </a>
-                <span
-                  [attr.data-testid]="'by-sp-projects-' + row.programCode"
-                  class="font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.projectsMappedCount }} ·</span>
-                <a
-                  [attr.data-testid]="'by-sp-results-' + row.programCode"
-                  [routerLink]="resultsLink()"
-                  [queryParams]="resultsLinkParams({ program: [row.programCode] })"
-                  [attr.aria-label]="programLabel(row.programCode) + ', ' + row.resultsCount + ' results — open in Results'"
-                  class="min-w-[32px] text-right font-mono font-bold tabular-nums text-[var(--pr-text-heading)] no-underline cursor-pointer hover:text-[var(--pr-color-primary-300)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                  {{ row.resultsCount }}
-                </a>
-              </div>
-            }
+    <!-- ═══ Row C — Results by P/A + Results by result type (CPA-R-1, COV-R-11) ═══════════ -->
+    <section class="grid grid-cols-1 min-[1280px]:grid-cols-2 gap-[16px]">
+      <!-- Results by Program / Accelerator (CPA-R-1) -->
+      <article class="flex flex-col gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[18px]">
+        <div class="flex flex-col gap-[2px]">
+          <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Results by Program / Accelerator</h2>
+          <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
+            W3/Bilateral results and W1/W2 results tagging center projects, by primary Program / Accelerator
+          </p>
+        </div>
+
+        @if (resultsLoading()) {
+          <span aria-busy="true" aria-label="Loading results by Program / Accelerator" data-testid="by-pa-skeleton" class="pr-skeleton block h-[200px] w-full rounded-[10px]"></span>
+        } @else if (resultsError()) {
+          <div role="alert" data-testid="by-pa-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
+            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
+            <button
+              type="button"
+              data-testid="by-pa-retry"
+              class="inline-flex h-[30px] items-center rounded-[8px] border border-[var(--pr-border)] bg-transparent px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+              (click)="retry()">
+              Retry
+            </button>
           </div>
+        } @else if (!model().byPa.rows.length) {
+          <p data-testid="by-pa-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
+            No Program / Accelerator has reported or tagging results in this phase yet
+          </p>
+        } @else {
+          <app-pr-viz-chart
+            class="block w-full cursor-pointer"
+            data-testid="by-pa-chart"
+            [options]="byPaChartOption()"
+            [tableModel]="byPaChartTable()"
+            (chartClick)="onPaChartClick($event)"
+            chartTitle="Results by Program / Accelerator"
+            [height]="byPaChartHeight()" />
         }
       </article>
 

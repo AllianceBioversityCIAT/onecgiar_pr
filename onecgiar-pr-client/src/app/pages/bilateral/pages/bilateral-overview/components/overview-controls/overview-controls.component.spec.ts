@@ -62,6 +62,7 @@ function params(overrides: Partial<BilateralQueryParams> = {}): BilateralQueryPa
     multi: false,
     scope: null,
     group: null,
+    category: null,
     ...overrides,
   };
 }
@@ -447,6 +448,101 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       expect(component.draftParams().role).toBe('lead');
       component.selectRole('lead');
       expect(component.draftParams().role).toBeNull();
+    });
+  });
+
+  // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-6, CPA-R-3)
+  describe('visible P/A multi-select and Result category select (CPA-R-3)', () => {
+    afterEach(() => {
+      component.closePaListbox(false);
+      component.closeCategoryListbox(false);
+    });
+
+    it('renders both controls outside the popover, with the popover closed, and keeps the popover filters', () => {
+      expect(el('overview-pa-trigger')).toBeTruthy();
+      expect(el('overview-category-trigger')).toBeTruthy();
+      expect(el('overview-pa-trigger').attributes['role']).toBe('combobox');
+      expect(el('overview-category-trigger').attributes['role']).toBe('combobox');
+      expect(el('overview-filter-button')).toBeTruthy();
+      expect(component.popoverOpen()).toBe(false);
+      expect(el('overview-pa-trigger').nativeElement.textContent).toContain('All');
+      expect(el('overview-category-trigger').nativeElement.textContent).toContain('All');
+    });
+
+    it('lists the three category choices and applies one at once', () => {
+      const emitted: BilateralQueryParams[] = [];
+      component.filtersChange.subscribe(value => emitted.push(value));
+
+      (el('overview-category-trigger').nativeElement as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const options = Array.from(document.querySelectorAll('[data-testid^="overview-category-option-"]')).map(node => node.querySelector('span')!.textContent!.trim());
+      expect(options).toEqual(['All', 'W3/Bilat reported', 'W1/W2 tagging a center project']);
+
+      (overlay('[data-testid="overview-category-option-w1w2-tagging"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(emitted).toEqual([expect.objectContaining({ category: 'w1w2-tagging', phase: OPEN_PHASE_ID })]);
+      expect(component.categoryOpen()).toBe(false);
+    });
+
+    it('shows the selected category on the trigger and Clear (with no chip) when only a category is set', () => {
+      fixture.componentRef.setInput('params', params({ category: 'w3' }));
+      fixture.detectChanges();
+
+      expect(el('overview-category-trigger').nativeElement.textContent).toContain('W3/Bilat reported');
+      expect(el('overview-filter-chips')).toBeFalsy();
+      expect(el('overview-clear-filters')).toBeTruthy();
+    });
+
+    it('ticks several P/A without closing the list and applies each toggle at once', () => {
+      const emitted: BilateralQueryParams[] = [];
+      component.filtersChange.subscribe(value => emitted.push(value));
+
+      (el('overview-pa-trigger').nativeElement as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (overlay('[data-testid="overview-pa-option-SP02"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(emitted[0].program).toEqual(['SP02']);
+      expect(component.paOpen()).toBe(true);
+
+      fixture.componentRef.setInput('params', params({ program: ['SP02', 'SP01'] }));
+      fixture.detectChanges();
+      expect(el('overview-pa-trigger').nativeElement.textContent).toContain('2 selected');
+      expect(overlay('[data-testid="overview-pa-option-SP01"]')!.getAttribute('aria-selected')).toBe('true');
+      expect(overlay('[data-testid="overview-pa-listbox"]')!.getAttribute('aria-multiselectable')).toBe('true');
+    });
+
+    it('is keyboard operable: ArrowDown opens, Enter toggles the active P/A, Escape closes and returns focus', async () => {
+      const emitted: BilateralQueryParams[] = [];
+      component.filtersChange.subscribe(value => emitted.push(value));
+      const trigger = el('overview-pa-trigger').nativeElement as HTMLButtonElement;
+
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      fixture.detectChanges();
+      expect(component.paOpen()).toBe(true);
+
+      component.onPaListKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      component.onPaListKeydown(new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(emitted[0].program).toEqual(['SP02']);
+
+      component.onPaListKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
+      await Promise.resolve();
+      fixture.detectChanges();
+      expect(component.paOpen()).toBe(false);
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('is keyboard operable for the category select: Enter picks the active choice', () => {
+      const emitted: BilateralQueryParams[] = [];
+      component.filtersChange.subscribe(value => emitted.push(value));
+
+      el('overview-category-trigger').nativeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      fixture.detectChanges();
+      component.onCategoryListKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      component.onCategoryListKeydown(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+      expect(emitted[0].category).toBe('w3');
     });
   });
 });

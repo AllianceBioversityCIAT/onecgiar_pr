@@ -14,6 +14,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { Phases } from '../../../../../../shared/interfaces/phasesList.interface';
 import {
+  BilateralCategory,
   BilateralMethod,
   BilateralQueryParams,
   BilateralRole,
@@ -35,6 +36,13 @@ export interface OverviewFilterChip {
   label: string;
   value: string;
 }
+
+/** `CPA-R-3` - the visible single-select; `null` = All (key absent from the URL). */
+const CATEGORY_CHOICES: OverviewFilterOption<BilateralCategory | null>[] = [
+  { value: null, label: 'All' },
+  { value: 'w3', label: 'W3/Bilat reported' },
+  { value: 'w1w2-tagging', label: 'W1/W2 tagging a center project' },
+];
 
 const ROLE_LABELS: Record<BilateralRole, string> = { lead: 'Lead', contributing: 'Contributing' };
 const SOURCE_LABELS: Record<BilateralSource, string> = { w3: 'W3/Bilateral', w1w2: 'W1/W2' };
@@ -104,6 +112,18 @@ export class OverviewControlsComponent {
 
   readonly popoverOpen = signal(false);
 
+  // Visible filters, outside the popover (`CPA-R-3`): P/A multi-select + Result category select.
+  // Both are the same token-styled `role="combobox"` + `cdkConnectedOverlay` listbox as the phase control
+  // (the project's `pr-select`/`pr-multi-select` field cards are form chrome and were already rejected on this
+  // row at COV-T-8 H-3; Spartan `select` is not generated in this client). They apply immediately - no draft.
+  readonly paOpen = signal(false);
+  readonly activePaIndex = signal(0);
+  readonly paListboxId = 'overview-pa-listbox';
+  readonly categoryOpen = signal(false);
+  readonly activeCategoryIndex = signal(0);
+  readonly categoryListboxId = 'overview-category-listbox';
+  readonly categoryChoices = CATEGORY_CHOICES;
+
   /** Phase listbox open state (`COV-R-2` B) — same overlay mechanism as the Filter popover. */
   readonly phaseOpen = signal(false);
   /** The option the arrow keys are currently on (`aria-activedescendant`), not the selection. */
@@ -115,6 +135,10 @@ export class OverviewControlsComponent {
   private readonly filterOrigin = viewChild<CdkOverlayOrigin>('filterOrigin');
   private readonly phaseTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('phaseTrigger');
   private readonly phaseListRef = viewChild<ElementRef<HTMLDivElement>>('phaseList');
+  private readonly paTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('paTrigger');
+  private readonly paListRef = viewChild<ElementRef<HTMLDivElement>>('paList');
+  private readonly categoryTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('categoryTrigger');
+  private readonly categoryListRef = viewChild<ElementRef<HTMLDivElement>>('categoryList');
 
   constructor() {
     // Moves DOM focus into the listbox once the overlay's content is actually in the DOM — the
@@ -124,6 +148,12 @@ export class OverviewControlsComponent {
       if (this.phaseOpen()) {
         queueMicrotask(() => this.phaseListRef()?.nativeElement.focus());
       }
+    });
+    effect(() => {
+      if (this.paOpen()) queueMicrotask(() => this.paListRef()?.nativeElement.focus());
+    });
+    effect(() => {
+      if (this.categoryOpen()) queueMicrotask(() => this.categoryListRef()?.nativeElement.focus());
     });
   }
 
@@ -191,6 +221,21 @@ export class OverviewControlsComponent {
 
     return chips;
   });
+
+  /** `CPA-R-3` - Clear must show for ANY active filter, including a category (which has no chip). */
+  readonly hasActiveFilters = computed(() => this.chips().length > 0 || this.params().category !== null);
+
+  /** What the closed P/A trigger reads: All, the one label, or "N selected". */
+  readonly paTriggerLabel = computed<string>(() => {
+    const selected = this.params().program;
+    if (!selected.length) return 'All';
+    if (selected.length === 1) return this.programOptions().find(option => option.value === selected[0])?.label ?? selected[0];
+    return `${selected.length} selected`;
+  });
+
+  readonly categoryTriggerLabel = computed<string>(
+    () => CATEGORY_CHOICES.find(choice => choice.value === this.params().category)?.label ?? 'All',
+  );
 
   /** The draft the popover binds to — falls back to the applied params before the first open. */
   readonly draftParams = computed<BilateralQueryParams>(() => this.draft() ?? this.params());
@@ -359,6 +404,169 @@ export class OverviewControlsComponent {
     this.phaseChange.emit(id);
   }
 
+  // Visible P/A multi-select (`CPA-R-3`)
+
+  paOptionId(code: string): string {
+    return `overview-pa-option-${code}`;
+  }
+
+  isPaSelected(code: string): boolean {
+    return this.params().program.includes(code);
+  }
+
+  /** Variable half of an option row's class list - whole strings so Tailwind's scan sees them. */
+  listOptionClass(active: boolean): string {
+    return active ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-surface-subtle)]' : 'border-transparent';
+  }
+
+  togglePaListbox(): void {
+    if (this.paOpen()) {
+      this.closePaListbox();
+      return;
+    }
+    const first = this.programOptions().findIndex(option => this.isPaSelected(option.value));
+    this.activePaIndex.set(Math.max(first, 0));
+    this.paOpen.set(true);
+  }
+
+  closePaListbox(refocusTrigger = true): void {
+    if (!this.paOpen()) return;
+    this.paOpen.set(false);
+    if (refocusTrigger) queueMicrotask(() => this.paTriggerRef()?.nativeElement.focus());
+  }
+
+  /** Toggles one P/A and applies at once; the list stays open so several can be ticked. */
+  togglePaOption(code: string): void {
+    this.filtersChange.emit({ ...this.params(), program: toggleValue(this.params().program, code) });
+  }
+
+  clearPaSelection(): void {
+    if (this.params().program.length) this.filtersChange.emit({ ...this.params(), program: [] });
+  }
+
+  onPaTriggerKeydown(event: KeyboardEvent): void {
+    if (this.paOpen()) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.togglePaListbox();
+    }
+  }
+
+  onPaListKeydown(event: KeyboardEvent): void {
+    const options = this.programOptions();
+    const last = Math.max(options.length - 1, 0);
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activePaIndex.set(Math.min(this.activePaIndex() + 1, last));
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activePaIndex.set(Math.max(this.activePaIndex() - 1, 0));
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.activePaIndex.set(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.activePaIndex.set(last);
+        break;
+      case 'Enter':
+      case ' ': {
+        event.preventDefault();
+        const active = options[this.activePaIndex()];
+        if (active) this.togglePaOption(active.value);
+        break;
+      }
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        this.closePaListbox();
+        break;
+    }
+  }
+
+  onPaOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      this.closePaListbox();
+    }
+  }
+
+  // Visible Result category select (`CPA-R-3`)
+
+  categoryOptionId(index: number): string {
+    return `overview-category-option-${index}`;
+  }
+
+  toggleCategoryListbox(): void {
+    if (this.categoryOpen()) {
+      this.closeCategoryListbox();
+      return;
+    }
+    this.activeCategoryIndex.set(Math.max(CATEGORY_CHOICES.findIndex(choice => choice.value === this.params().category), 0));
+    this.categoryOpen.set(true);
+  }
+
+  closeCategoryListbox(refocusTrigger = true): void {
+    if (!this.categoryOpen()) return;
+    this.categoryOpen.set(false);
+    if (refocusTrigger) queueMicrotask(() => this.categoryTriggerRef()?.nativeElement.focus());
+  }
+
+  selectCategory(category: BilateralCategory | null): void {
+    this.closeCategoryListbox();
+    if (category !== this.params().category) this.filtersChange.emit({ ...this.params(), category });
+  }
+
+  onCategoryTriggerKeydown(event: KeyboardEvent): void {
+    if (this.categoryOpen()) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggleCategoryListbox();
+    }
+  }
+
+  onCategoryListKeydown(event: KeyboardEvent): void {
+    const last = CATEGORY_CHOICES.length - 1;
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activeCategoryIndex.set(Math.min(this.activeCategoryIndex() + 1, last));
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activeCategoryIndex.set(Math.max(this.activeCategoryIndex() - 1, 0));
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.activeCategoryIndex.set(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.activeCategoryIndex.set(last);
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        this.selectCategory(CATEGORY_CHOICES[this.activeCategoryIndex()].value);
+        break;
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        this.closeCategoryListbox();
+        break;
+    }
+  }
+
+  onCategoryOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      this.closeCategoryListbox();
+    }
+  }
+
   isProgramChecked(code: string): boolean {
     return this.draftParams().program.includes(code);
   }
@@ -411,6 +619,8 @@ export class OverviewControlsComponent {
 
   onClear(): void {
     this.closePopover();
+    this.closePaListbox(false);
+    this.closeCategoryListbox(false);
     this.clearFilters.emit();
   }
 

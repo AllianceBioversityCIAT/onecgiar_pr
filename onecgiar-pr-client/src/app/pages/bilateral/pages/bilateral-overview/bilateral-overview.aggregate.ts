@@ -529,7 +529,6 @@ export function buildByProjectModel(
 
 export interface OverviewSpRow {
   programCode: string;
-  projectsMappedCount: number;
   resultsCount: number;
 }
 
@@ -537,38 +536,158 @@ export interface OverviewBySpModel {
   rows: OverviewSpRow[];
 }
 
-export function buildBySpModel(
-  rows: readonly BilateralCenterResult[],
-  projects: readonly BilateralProject[],
-): OverviewBySpModel {
-  const projectsMappedBySp = new Map<string, Set<number>>();
-  for (const project of projects) {
-    const seenOnThisProject = new Set<string>();
-    for (const mapping of project.sciencePrograms ?? []) {
-      const code = mapping.programCode;
-      if (!code || seenOnThisProject.has(code)) continue; // dedupe: same project, same SP twice → once
-      seenOnThisProject.add(code);
-      const set = projectsMappedBySp.get(code) ?? new Set<number>();
-      set.add(Number(project.id));
-      projectsMappedBySp.set(code, set);
-    }
-  }
-
+/**
+ * CPA-DD-7: "projects mapped" left this model (it moved to `buildProjectsByPaModel`); the card's
+ * replacement is `buildByPaModel` (CPA-T-5/T-6 swap the chart). Until then rows are results only.
+ */
+export function buildBySpModel(rows: readonly BilateralCenterResult[]): OverviewBySpModel {
   const resultsBySp = new Map<string, number>();
   for (const row of rows) {
     if (!row.submitter) continue;
     resultsBySp.set(row.submitter, (resultsBySp.get(row.submitter) ?? 0) + 1);
   }
 
-  const codes = new Set<string>([...projectsMappedBySp.keys(), ...resultsBySp.keys()]);
-  const spRows: OverviewSpRow[] = [...codes].map(code => ({
-    programCode: code,
-    projectsMappedCount: projectsMappedBySp.get(code)?.size ?? 0,
-    resultsCount: resultsBySp.get(code) ?? 0,
-  }));
-  spRows.sort((a, b) => b.resultsCount - a.resultsCount || b.projectsMappedCount - a.projectsMappedCount || a.programCode.localeCompare(b.programCode));
+  const spRows: OverviewSpRow[] = [...resultsBySp].map(([programCode, resultsCount]) => ({ programCode, resultsCount }));
+  spRows.sort((a, b) => b.resultsCount - a.resultsCount || a.programCode.localeCompare(b.programCode));
 
   return { rows: spRows };
+}
+
+// ---------------------------------------------------------------------------
+// Results / Projects by P/A (CPA-R-1, CPA-R-2) — @akili-spec bilateral/center-overview-pa-contribution (CPA-T-4)
+// ---------------------------------------------------------------------------
+
+/** `CPA-R-1` B — the single group for rows whose `submitter` (primary P/A) is null. */
+export const NO_PA_CODE = 'NO_PA';
+
+/**
+ * Category membership of the two by-P/A series. It reads the RAW `overview_category`, exactly like the
+ * drill-down (`filterCenterResults` `category=w3` / `category=w1w2-tagging`), so a bar always equals the
+ * rows its click opens (chart = drill). It deliberately does NOT use `resolveOverviewCategory`: that
+ * derives a category for rows lacking the field, and the drill would then show 0 for a bar showing N.
+ * The scoped server always sends the field.
+ */
+function isW3Row(row: BilateralCenterResult): boolean {
+  return row.overview_category === 'replicated_w3' || row.overview_category === 'new_w3';
+}
+
+function isTaggingRow(row: BilateralCenterResult): boolean {
+  return row.overview_category === 'w1w2_tagging';
+}
+
+/** Total desc is each caller's business; ties and the null-P/A group are ordered here: code asc, no P/A last. */
+function compareProgramCode(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a === NO_PA_CODE) return 1;
+  if (b === NO_PA_CODE) return -1;
+  return a.localeCompare(b);
+}
+
+export interface OverviewPaRow {
+  /** P/A official code, or `NO_PA_CODE`. */
+  programCode: string;
+  /** W3 rows (`replicated_w3` | `new_w3`) whose `submitter` is this P/A. */
+  w3Count: number;
+  /** `w1w2_tagging` rows whose `submitter` is this P/A. */
+  taggingCount: number;
+}
+
+export interface OverviewByPaModel {
+  rows: OverviewPaRow[];
+}
+
+/** `CPA-R-1` — W3 and tagging results per primary P/A; sorted by (W3 + tagging) desc, then code asc. */
+export function buildByPaModel(rows: readonly BilateralCenterResult[]): OverviewByPaModel {
+  const groups = new Map<string, OverviewPaRow>();
+  for (const row of rows) {
+    const isW3 = isW3Row(row);
+    if (!isW3 && !isTaggingRow(row)) continue;
+    const code = row.submitter || NO_PA_CODE;
+    const group = groups.get(code) ?? { programCode: code, w3Count: 0, taggingCount: 0 };
+    if (isW3) group.w3Count++;
+    else group.taggingCount++;
+    groups.set(code, group);
+  }
+  const paRows = [...groups.values()];
+  paRows.sort((a, b) => b.w3Count + b.taggingCount - (a.w3Count + a.taggingCount) || compareProgramCode(a.programCode, b.programCode));
+  return { rows: paRows };
+}
+
+export interface OverviewProjectsPaRow {
+  programCode: string;
+  /** Distinct center projects whose approved mapping includes the P/A. */
+  mappedCount: number;
+  /** Mapped projects that have at least one W3 row (`project_id`), whatever that row's own P/A (A-5). */
+  withW3Count: number;
+  /** Distinct center projects tagged by W1/W2 results whose `submitter` is the P/A, mapped or not (A-1). */
+  taggedCount: number;
+}
+
+export interface OverviewProjectsByPaModel {
+  rows: OverviewProjectsPaRow[];
+}
+
+function addToSetMap(map: Map<string, Set<number>>, key: string, value: number): void {
+  const set = map.get(key) ?? new Set<number>();
+  set.add(value);
+  map.set(key, set);
+}
+
+/**
+ * `CPA-R-2` — distinct center projects per primary P/A, three series: mapped / with W3 results / tagged by
+ * W1/W2. Each count is a Set size, so a project is never counted twice in a series (not by two mappings of
+ * the same P/A, not by two tagging results).
+ *
+ * Tagged ids come from `tagged_center_project_ids`. The `[project_id]` fallback is only for an old server
+ * (deploy skew, design §7): it applies when the field is absent/`null` and never when it is present, even `[]`.
+ */
+export function buildProjectsByPaModel(
+  rows: readonly BilateralCenterResult[],
+  projects: readonly BilateralProject[],
+): OverviewProjectsByPaModel {
+  const mapped = new Map<string, Set<number>>();
+  const centerProjectIds = new Set<number>();
+  for (const project of projects) {
+    const projectId = Number(project.id);
+    centerProjectIds.add(projectId);
+    for (const mapping of project.sciencePrograms ?? []) {
+      if (mapping.programCode) addToSetMap(mapped, mapping.programCode, projectId);
+    }
+  }
+
+  const w3ProjectIds = new Set<number>();
+  const tagged = new Map<string, Set<number>>();
+  for (const row of rows) {
+    if (isW3Row(row)) {
+      if (row.project_id !== null && row.project_id !== undefined) w3ProjectIds.add(Number(row.project_id));
+    } else if (isTaggingRow(row)) {
+      // CPA-R-7: a tagging row without a P/A belongs only to the "No P/A" group of CPA-R-1, never here.
+      const code = row.submitter;
+      if (!code) continue;
+      let ids: number[];
+      if (row.tagged_center_project_ids != null) {
+        ids = row.tagged_center_project_ids.map(Number);
+      } else if (row.project_id !== null && row.project_id !== undefined && centerProjectIds.has(Number(row.project_id))) {
+        ids = [Number(row.project_id)];
+      } else {
+        ids = [];
+      }
+      for (const id of ids) addToSetMap(tagged, code, id);
+    }
+  }
+
+  const codes = new Set<string>([...mapped.keys(), ...tagged.keys()]);
+  const paRows: OverviewProjectsPaRow[] = [...codes].map(code => {
+    const mappedIds = mapped.get(code) ?? new Set<number>();
+    return {
+      programCode: code,
+      mappedCount: mappedIds.size,
+      withW3Count: [...mappedIds].filter(id => w3ProjectIds.has(id)).length,
+      taggedCount: tagged.get(code)?.size ?? 0,
+    };
+  });
+  paRows.sort((a, b) => b.mappedCount - a.mappedCount || compareProgramCode(a.programCode, b.programCode));
+  return { rows: paRows };
 }
 
 // ---------------------------------------------------------------------------
@@ -732,6 +851,9 @@ export interface OverviewModel {
   attention: OverviewAttentionModel;
   byProject: OverviewByProjectModel;
   bySp: OverviewBySpModel;
+  /** CPA-T-4 — consumed by CPA-T-5 (charts) / CPA-T-6 (page). */
+  byPa: OverviewByPaModel;
+  projectsByPa: OverviewProjectsByPaModel;
   byType: OverviewByTypeModel;
   pace: OverviewPaceModel;
 }
@@ -754,7 +876,9 @@ export function buildOverviewModel(
     status: buildStatusModel(rows),
     attention: buildAttentionModel(rows, drafts, today),
     byProject: buildByProjectModel(rows, projects),
-    bySp: buildBySpModel(rows, projects),
+    bySp: buildBySpModel(rows),
+    byPa: buildByPaModel(rows),
+    projectsByPa: buildProjectsByPaModel(rows, projects),
     byType: buildByTypeModel(rows),
     pace: buildOverviewPaceModel(rows, phase, today),
   };

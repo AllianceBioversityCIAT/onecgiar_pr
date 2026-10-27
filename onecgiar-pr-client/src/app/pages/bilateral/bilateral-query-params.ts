@@ -23,6 +23,9 @@ export const BILATERAL_SCOPE_QUERY_PARAM = 'scope';
 // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-1, CNP-R-2, CNP-DD-2)
 /** `CNP-DD-2`: closed-enum row group, read by the Results tab only; emitted by the Overview link only. */
 export const BILATERAL_GROUP_QUERY_PARAM = 'group';
+// @akili-spec bilateral/center-overview-pa-contribution (CPA-T-3, CPA-R-4, CPA-DD-4)
+/** `CPA-R-4`: closed-enum overview category; unknown value = absent. Applied on `overview_category`. */
+export const BILATERAL_CATEGORY_QUERY_PARAM = 'category';
 
 /** `status_id` → key table (`COV-R-13`/`COV-R-7`). Editing 1 · QA 2 · Submitted 3 · Discontinued 4
  *  · Pending 5 · Approved 6 · Rejected 7. */
@@ -48,6 +51,7 @@ const SOURCE_VALUES = ['w3', 'w1w2'] as const;
 const METHOD_VALUES = ['ai', 'manual'] as const;
 const SCOPE_VALUES = ['bilateral'] as const;
 const GROUP_VALUES = ['updated-no-project'] as const;
+const CATEGORY_VALUES = ['w3', 'w1w2-tagging'] as const;
 /** Additive token accepted (but never emitted by default) on `role`/`source`/`method` — parses to
  *  `null` (= both) while still counting the key as `present` (`COV-DD-3` amendment). */
 const ALL_TOKEN = 'all';
@@ -57,6 +61,7 @@ export type BilateralSource = (typeof SOURCE_VALUES)[number];
 export type BilateralMethod = (typeof METHOD_VALUES)[number];
 export type BilateralScope = (typeof SCOPE_VALUES)[number];
 export type BilateralGroup = (typeof GROUP_VALUES)[number];
+export type BilateralCategory = (typeof CATEGORY_VALUES)[number];
 
 /** The contract keys, for `present`. */
 export type ContractKey =
@@ -72,7 +77,8 @@ export type ContractKey =
   | 'createdBy'
   | 'multi'
   | 'scope'
-  | 'group';
+  | 'group'
+  | 'category';
 
 /** Parsed, normalized state — every tab reads/writes through this shape (`COV-DD-3`). */
 export interface BilateralQueryParams {
@@ -92,6 +98,8 @@ export interface BilateralQueryParams {
   scope: BilateralScope | null;
   /** `CNP-R-2`: `'updated-no-project'` keeps only the Overview's updated-no-project bucket; `null` (absent or unknown) = no group filter. */
   group: BilateralGroup | null;
+  /** `CPA-R-4`: `'w3'` = replicated_w3 + new_w3; `'w1w2-tagging'` = w1w2_tagging; `null` (absent or unknown) = all. */
+  category: BilateralCategory | null;
 }
 
 /** `COV-DD-3` "Clarification (execute, COV-T-2)": the Results tab's byte-identical no-param
@@ -296,8 +304,19 @@ export function parseBilateralQueryParams(map: ParamMap): ParsedBilateralQueryPa
     }
   }
 
+  const categoryRaw = map.get(BILATERAL_CATEGORY_QUERY_PARAM);
+  let category: BilateralCategory | null = null;
+  if (categoryRaw) {
+    if ((CATEGORY_VALUES as readonly string[]).includes(categoryRaw)) {
+      category = categoryRaw as BilateralCategory;
+      present.push('category');
+    } else {
+      stripped.push(`${BILATERAL_CATEGORY_QUERY_PARAM}=${categoryRaw}`);
+    }
+  }
+
   return {
-    params: { phase, status, project, program, type, role, source, method, search, createdBy, multi, scope, group },
+    params: { phase, status, project, program, type, role, source, method, search, createdBy, multi, scope, group, category },
     stripped,
     present,
   };
@@ -342,6 +361,8 @@ export function serializeBilateralQueryParams(
   if (params.scope !== null) out[BILATERAL_SCOPE_QUERY_PARAM] = params.scope;
   // `CNP-R-2`: only when set — never part of `explicitDefaults`.
   if (params.group !== null) out[BILATERAL_GROUP_QUERY_PARAM] = params.group;
+  // `CPA-R-4`: only when set — never part of `explicitDefaults`.
+  if (params.category !== null) out[BILATERAL_CATEGORY_QUERY_PARAM] = params.category;
   return out;
 }
 

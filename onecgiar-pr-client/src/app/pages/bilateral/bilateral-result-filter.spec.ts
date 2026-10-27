@@ -437,3 +437,31 @@ describe('isUpdatedNoProjectRow / group=updated-no-project', () => {
     expect(ids(filterCenterResults(all, withParams({ group: null })))).toEqual(all.map(r => r.id));
   });
 });
+
+// @akili-spec bilateral/center-overview-pa-contribution (CPA-T-3, CPA-R-4, CPA-R-5, CPA-AC-5)
+describe('category and role=contributing null-lead (CPA)', () => {
+  const base = rows[0];
+  const mk = (id: number, over: Partial<BilateralCenterResult>): BilateralCenterResult => ({ ...base, id, project_id: null, ...over });
+  const w3NullLead = mk(901, { source: 'API', is_leading_result: null, overview_category: 'new_w3' });
+  const resNullLead = mk(902, { source: 'Result', is_leading_result: null, overview_category: 'w1w2_tagging' });
+  const resLead0 = mk(903, { source: 'Result', is_leading_result: 0, overview_category: 'w1w2_center_only' });
+  const resLead1 = mk(904, { source: 'Result', is_leading_result: 1, overview_category: 'w1w2_center_only' });
+  const set = [w3NullLead, resNullLead, resLead0, resLead1];
+
+  it('role=contributing keeps Result null-lead and lead=0, drops W3 null-lead and lead=1', () => {
+    expect(ids(filterCenterResults(set, withParams({ role: 'contributing' })))).toEqual([902, 903]);
+  });
+
+  it('role=lead still requires 1', () => {
+    expect(ids(filterCenterResults(set, withParams({ role: 'lead' })))).toEqual([904]);
+  });
+
+  it('category=w3 keeps replicated_w3 and new_w3 only; w1w2-tagging keeps w1w2_tagging only', () => {
+    const cats = (['replicated_w3', 'replicated_w1w2', 'new_w3', 'w1w2_tagging', 'w1w2_center_only'] as const).map((c, i) =>
+      mk(950 + i, { overview_category: c }),
+    );
+    expect(ids(filterCenterResults(cats, withParams({ category: 'w3' })))).toEqual([950, 952]);
+    expect(ids(filterCenterResults(cats, withParams({ category: 'w1w2-tagging' })))).toEqual([953]);
+    expect(ids(filterCenterResults(cats, withParams({ category: null })))).toEqual(cats.map(r => r.id));
+  });
+});

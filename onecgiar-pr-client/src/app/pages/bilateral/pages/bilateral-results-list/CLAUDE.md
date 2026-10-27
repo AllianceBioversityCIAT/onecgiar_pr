@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-10-21 · branch qa-development-2026-ss · center-overview-no-project-line CNP-T-4
+**Verified:** 2026-10-27 · branch qa-development-2026-ss · center-overview-pa-contribution CPA-T-7 (`category` key, `fetchScope`) · prior: 2026-10-21 · center-overview-no-project-line CNP-T-4
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -127,9 +127,9 @@ Program`.
 ## Overview scope (`changes/center-overview-w3-scope`, `CWS-T-5`)
 - `scope` signal hydrated by `applyUrlParams` from `?scope=bilateral` (`CWS-R-7`); it is in
   `RESULTS_TAB_MANAGED_QUERY_PARAMS`, so `syncUrlParams()` writes/clears it.
-- The fetch `combineLatest` includes `toObservable(scope)` (distinct); with a scope each phase request is
-  `GET_bilateralCenterResults(centerId, phaseId, { scope })`, without it the call has NO options argument
-  (byte-identical to before; W3 + Lead default untouched).
+- The fetch `combineLatest` reads `toObservable(fetchScope)` (distinct; `fetchScope = scope() ?? (category() ?
+  'bilateral' : null)`); with a scope each phase request is `GET_bilateralCenterResults(centerId, phaseId, { scope })`,
+  without `scope` AND without `category` the call has NO options argument (byte-identical; W3 + Lead default untouched).
 - Chip `{ dimension: 'scope' }` "Scope: Bilateral reporting (Overview)"; `clearChip` sets the signal to
   `null` and writes the URL, which refetches unscoped. Clear all also resets it. Not sticky: the signal is
   re-derived from the URL on every emission. No client-side row hiding by scope.
@@ -142,6 +142,15 @@ Program`.
   and write the URL (rows widen client-side). Not sticky: re-derived from the URL on every emission.
 - The Overview link carries `scope` + explicit `role=all&source=all`, so `group` in the URL suppresses the
   W3 + Lead default like any contract key. A hand-typed `?group=` alone also skips that default.
+
+## Overview category (`bilateral/center-overview-pa-contribution`, `CPA-T-7`)
+- `category` signal (`w3` | `w1w2-tagging`) hydrated by `applyUrlParams`; unknown values are stripped by the
+  shared parser. In `RESULTS_TAB_MANAGED_QUERY_PARAMS`; `filterCenterResults` narrows on the raw `overview_category`.
+- `category` forces the scoped fetch through `fetchScope` (tagging rows only exist in `scope=bilateral`), but the
+  Scope chip still follows `scope()` only. Removing `category` alone refetches unscoped.
+- Chip `{ dimension: 'category' }` "Category: W3 bilateral" / "Category: W1/W2 tagging"; `clearChip` and Clear all reset it.
+- Being a contract key, `category` suppresses the W3 + Lead default on purpose: tagging rows are W1/W2 with a null
+  lead, so the default would empty an Overview drill-down. Spec: "a deep link carrying category does not get the W3 + Lead default".
 
 ## "Update result" (P2-3229, P2-3653)
 `canUpdateResult()` delegates to `ApiService.canUpdateBilateral` so this list and the Results Center

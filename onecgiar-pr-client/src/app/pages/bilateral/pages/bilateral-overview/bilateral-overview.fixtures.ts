@@ -211,6 +211,97 @@ export function makeCwsScopedFixture(): { rows: BilateralCenterResult[]; project
   return { rows, projects };
 }
 
+// @akili-spec bilateral/center-overview-pa-contribution (CPA-T-4, CPA-R-1 A/B, CPA-R-2 A/B, CPA-AC-1, CPA-AC-2)
+/**
+ * CPA-T-4 — hand-computed fixture for the by-P/A builders. Project ids and `tagged_center_project_ids`
+ * are STRINGS on purpose (the live payload shape, `H-1`/`H-2`).
+ *
+ * Projects (id → approved mapping): 1 → SP07 · 2 → SP07 · 3 → SP02 · 4 → SP05 + SP02 · 6 → SP05.
+ *
+ * | row | category        | submitter | project_id | tagged ids |
+ * |---|---|---|---|---|
+ * | 1001 | new_w3          | SP05 | 4    | —      |
+ * | 1002 | replicated_w3   | SP05 | 4    | —      |
+ * | 1003 | new_w3          | SP05 | null | —      |
+ * | 1004 | w1w2_tagging    | SP05 | 4    | [4]    |
+ * | 1005 | w1w2_tagging    | SP07 | 1    | [1,2]  |
+ * | 1006 | w1w2_tagging    | SP07 | 2    | [2]    |
+ * | 1007 | new_w3          | SP07 | 3    | —      |  (project 3 is mapped to SP02 only)
+ * | 1008 | new_w3          | null | null | —      |
+ * | 1009 | w1w2_tagging    | null | 1    | [1]    |
+ *
+ * Results by P/A (R-1): SP05 w3 = 1001+1002+1003 = 3, tagging = 1004 = 1 (total 4) · SP07 w3 = 1007 = 1,
+ * tagging = 1005+1006 = 2 (total 3) · NO_PA w3 = 1008 = 1, tagging = 1009 = 1 (total 2). Σ = 4+3+2 = 9 = rows.
+ *
+ * Projects by P/A (R-2), mapped: SP07 {1,2} = 2 · SP02 {3,4} = 2 · SP05 {4,6} = 2.
+ * With W3 (mapped ∩ project_id of a W3 row; W3 project ids are {4,4,3}): SP05 {4} = 1 · SP02 {3,4} = 2 · SP07 = 0
+ * (project 3 has a W3 row filed under SP07 but is NOT mapped to SP07, A-5).
+ * Tagged (union of tagged ids of tagging rows by `submitter`, A-1): SP05 {4} = 1 · SP07 {1,2} ∪ {2} = 2 (not 3: project
+ * 2 appears twice). Row 1009 (null P/A) is NOT a Projects-by-P/A group (CPA-R-7): it counts only in R-1's NO_PA group.
+ */
+export const FIXTURE_CPA_PROJECTS: BilateralProject[] = [
+  makeProject({ id: '1' as unknown as number, sciencePrograms: [mapping({ programCode: 'SP07' })] }),
+  makeProject({ id: '2' as unknown as number, sciencePrograms: [mapping({ programCode: 'SP07' }), mapping({ programCode: 'SP07' })] }),
+  makeProject({ id: '3' as unknown as number, sciencePrograms: [mapping({ programCode: 'SP02' })] }),
+  makeProject({ id: '4' as unknown as number, sciencePrograms: [mapping({ programCode: 'SP05' }), mapping({ programCode: 'SP02' })] }),
+  makeProject({ id: '6' as unknown as number, sciencePrograms: [mapping({ programCode: 'SP05' })] }),
+];
+
+const asWireIds = (ids: number[]) => ids.map(String) as unknown as number[];
+
+function cpaW3(id: number, category: 'new_w3' | 'replicated_w3', submitter: string | null, projectId: number | null): BilateralCenterResult {
+  return mkRow({
+    id,
+    submitter,
+    project_id: projectId === null ? null : (String(projectId) as unknown as number),
+    overview_category: category,
+    is_replicated: category === 'replicated_w3',
+    created_date: '2026-09-10',
+  });
+}
+
+function cpaTagging(id: number, submitter: string | null, projectId: number, tagged: number[]): BilateralCenterResult {
+  return mkRow({
+    id,
+    submitter,
+    source: 'Result',
+    is_leading_result: null,
+    project_id: String(projectId) as unknown as number,
+    overview_category: 'w1w2_tagging',
+    tagged_center_project_ids: asWireIds(tagged),
+    created_date: '2026-09-10',
+  });
+}
+
+export const FIXTURE_CPA_ROWS: BilateralCenterResult[] = [
+  cpaW3(1001, 'new_w3', 'SP05', 4),
+  cpaW3(1002, 'replicated_w3', 'SP05', 4),
+  cpaW3(1003, 'new_w3', 'SP05', null),
+  cpaTagging(1004, 'SP05', 4, [4]),
+  cpaTagging(1005, 'SP07', 1, [1, 2]),
+  cpaTagging(1006, 'SP07', 2, [2]),
+  cpaW3(1007, 'new_w3', 'SP07', 3),
+  cpaW3(1008, 'new_w3', null, null),
+  cpaTagging(1009, null, 1, [1]),
+];
+
+/** R-2 Scenario B — one more SP07 result tags project 3 (mapped to SP02 only): SP07 tagged 2 → 3, SP07 mapped stays {1,2}. */
+export const FIXTURE_CPA_ROWS_TAGGING_OUTSIDE_MAPPING: BilateralCenterResult[] = [...FIXTURE_CPA_ROWS, cpaTagging(1010, 'SP07', 3, [3])];
+
+/** Deploy skew: tagging row from an old server — no `tagged_center_project_ids` at all, only the single `project_id`. */
+export function makeCpaTaggingRow(
+  id: number,
+  submitter: string | null,
+  projectId: number | null,
+  tagged: number[] | null | undefined,
+): BilateralCenterResult {
+  const row = cpaTagging(id, submitter, projectId ?? 0, tagged ?? []);
+  row.project_id = projectId === null ? null : (String(projectId) as unknown as number);
+  if (tagged === undefined) delete row.tagged_center_project_ids;
+  else row.tagged_center_project_ids = tagged === null ? null : asWireIds(tagged);
+  return row;
+}
+
 /** Approval-rate denominator 0: no approved (6) and no rejected (7) rows. */
 export const FIXTURE_ROWS_NO_APPROVALS: BilateralCenterResult[] = [
   mkRow({ id: 101, project_id: 100, status_id: 1, created_date: '2026-09-01' }),

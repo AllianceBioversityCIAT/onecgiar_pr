@@ -131,7 +131,7 @@ const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
 const KPI_TESTIDS = ['kpi-total', 'kpi-pending', 'kpi-approved', 'kpi-projects-covered'];
 const KPI_SELECTOR = KPI_TESTIDS.map(id => `[data-testid="${id}"]`).join(', ');
 
-const CHART_TESTIDS = ['status-chart', 'by-project-chart', 'by-sp-chart', 'by-type-chart'];
+const CHART_TESTIDS = ['status-chart', 'by-project-chart', 'by-pa-chart', 'projects-by-pa-chart', 'by-type-chart'];
 const CHART_SELECTOR = CHART_TESTIDS.map(id => `[data-testid="${id}"]`).join(', ');
 
 interface ViewportCase {

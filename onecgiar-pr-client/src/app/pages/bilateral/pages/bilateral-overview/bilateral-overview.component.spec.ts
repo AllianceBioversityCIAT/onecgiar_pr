@@ -24,17 +24,19 @@ import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { serializeBilateralQueryParams } from '../../bilateral-query-params';
 import {
+  FIXTURE_CPA_PROJECTS,
+  FIXTURE_CPA_ROWS,
   FIXTURE_D1_ROWS,
   FIXTURE_DRAFTS,
   FIXTURE_PHASE,
   FIXTURE_PROJECTS,
-  FIXTURE_SP_TWO_PROJECTS,
   FIXTURE_SP_TWO_PROJECTS_ROWS,
   FIXTURE_TODAY,
   makeCwsScopedFixture,
 } from './bilateral-overview.fixtures';
 import { BilateralCenterResult } from '../../services/bilateral-center-result.interface';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 
 // jsdom cannot lay out an ECharts canvas, and `resolveChartTokens()` resolves every custom property
 // to '' there — so the chart runtime is stubbed and the tokens are replaced with the token
@@ -313,10 +315,12 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('kpi-projects-error').attributes['role']).toBe('alert');
       expect(text('kpi-projects-error')).toContain('Retry');
       expect(text('by-project-projects-error')).toContain('Retry');
-      expect(text('by-sp-projects-error')).toContain('Retry');
-      // ...and never the silent "0 of 0" / "No Science Program is mapped" reading.
+      expect(text('projects-by-pa-error')).toContain('Retry');
+      // ...and never the silent "0 of 0" / "no P/A has mapped projects" reading.
       expect(el('kpi-projects-covered')).toBeFalsy();
-      expect(el('by-sp-empty')).toBeFalsy();
+      expect(el('projects-by-pa-empty')).toBeFalsy();
+      // Results by P/A comes out of the results call only: it still renders.
+      expect(el('by-pa-error')).toBeFalsy();
 
       // Everything computed from the results call still renders its data.
       expect(text('kpi-total')).toContain('10');
@@ -608,15 +612,25 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(chip.getAttribute('aria-label')).toContain('Alpha — Project 100');
     });
 
-    it('shows an SP with mapped projects and zero results as "n · 0" with a hint (COV-AC-14)', async () => {
+    // CPA-DD-7 — the "Science Program contribution" card is gone: Results by P/A replaces it and "projects mapped"
+    // lives in Projects by P/A (full width).
+    it('replaces the Science Program card with Results by P/A and a full-width Projects by P/A (CPA-DD-7)', async () => {
       await setup();
-      // SP03 has two mapped projects and no result reports it as primary.
-      flushData(OPEN_PHASE_ID, FIXTURE_SP_TWO_PROJECTS_ROWS, FIXTURE_SP_TWO_PROJECTS);
+      flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
 
-      expect(text('by-sp-row-SP03')).toContain('no results yet');
-      expect(el('by-sp-row-SP03').attributes['aria-label']).toContain('2 projects mapped');
-      expect(text('by-sp-projects-SP03')).toBe('2 ·');
-      expect(text('by-sp-results-SP03')).toBe('0');
+      expect(el('by-sp-chart')).toBeFalsy();
+      expect(el('by-sp-rows')).toBeFalsy();
+      expect(el('by-pa-chart')).toBeTruthy();
+      expect(el('projects-by-pa-chart')).toBeTruthy();
+    });
+
+    it('shows Results by P/A and Projects by P/A empty states (CPA-R-2 C)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, FIXTURE_SP_TWO_PROJECTS_ROWS, []);
+
+      expect(el('by-pa-chart')).toBeFalsy();
+      expect(el('by-pa-empty')).toBeTruthy();
+      expect(el('projects-by-pa-empty')).toBeTruthy();
     });
 
     it('lists a result-type link per type present in scope (COV-R-11)', async () => {
@@ -708,6 +722,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         multi: false,
         scope: null,
         group: null,
+        category: null,
       };
 
       // CWS-R-8 / CWS-DD-5 — every link into Results carries `scope`; Reporting and Draft links never do.
@@ -824,22 +839,175 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('sends the Science Program "projects mapped" series to Reporting and "results" to Results', async () => {
+    // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-6, CPA-R-1 C, CPA-R-2 D)
+    describe('Results / Projects by P/A drill-downs (CPA-T-6)', () => {
+      const queryOf = (navigate: jest.SpyInstance, call: number) => (navigate.mock.calls[call][1] as { queryParams: Record<string, string> }).queryParams;
+
+      it('a click on the SP05 tagging bar opens Results with program, category, scope, phase and explicitDefaults', async () => {
+        await setup();
+        flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+        const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+        const chart = el('by-pa-chart').componentInstance as PrVizChartComponent;
+        // Sorted: SP05 (4) first, then SP07 (3), then the no-P/A group.
+        chart.chartClick.emit({ seriesId: 'overview-by-pa:tagging', dataIndex: 0 } as never);
+
+        expect(navigate.mock.calls[0][0]).toEqual(['/bilateral', CENTER, 'results']);
+        const query = queryOf(navigate, 0);
+        expect(query['program']).toBe('SP05');
+        expect(query['category']).toBe('w1w2-tagging');
+        expect(query['scope']).toBe('bilateral');
+        expect(query['phase']).toBe(String(OPEN_PHASE_ID));
+        // The whole link is the shared contract's serialization with explicit defaults (no W3+Lead default on top).
+        expect(query).toEqual(
+          serializeBilateralQueryParams(
+            {
+              phase: OPEN_PHASE_ID,
+              status: [],
+              project: [],
+              program: ['SP05'],
+              type: [],
+              role: null,
+              source: null,
+              method: null,
+              search: '',
+              createdBy: [],
+              multi: false,
+              scope: 'bilateral',
+              group: null,
+              category: 'w1w2-tagging',
+            },
+            { explicitDefaults: true },
+          ),
+        );
+
+        chart.chartClick.emit({ seriesId: 'overview-by-pa:w3', dataIndex: 0 } as never);
+        expect(queryOf(navigate, 1)['category']).toBe('w3');
+      });
+
+      it('the No Program/Accelerator group is not clickable', async () => {
+        await setup();
+        flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+        const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+        const chart = el('by-pa-chart').componentInstance as PrVizChartComponent;
+        chart.chartClick.emit({ seriesId: 'overview-by-pa:w3', dataIndex: 2 } as never);
+
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('Projects by P/A: mapped and with-W3 open Reporting (no scope, no category); tagged opens Results with the tagging category', async () => {
+        await setup('/bilateral/' + CENTER + '/overview?category=w3');
+        flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+        const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+        const chart = el('projects-by-pa-chart').componentInstance as PrVizChartComponent;
+
+        chart.chartClick.emit({ seriesId: 'overview-projects-by-pa:mapped', dataIndex: 0 } as never);
+        chart.chartClick.emit({ seriesId: 'overview-projects-by-pa:w3', dataIndex: 0 } as never);
+        chart.chartClick.emit({ seriesId: 'overview-projects-by-pa:tagged', dataIndex: 0 } as never);
+
+        for (const call of [0, 1]) {
+          expect(navigate.mock.calls[call][0]).toEqual(['/bilateral', CENTER, 'home']);
+          expect(queryOf(navigate, call)).not.toHaveProperty('scope');
+          expect(queryOf(navigate, call)).not.toHaveProperty('category');
+          expect(queryOf(navigate, call)['phase']).toBe(String(OPEN_PHASE_ID));
+          expect(queryOf(navigate, call)['program']).toBeDefined();
+        }
+        expect(navigate.mock.calls[2][0]).toEqual(['/bilateral', CENTER, 'results']);
+        expect(queryOf(navigate, 2)['category']).toBe('w1w2-tagging');
+        expect(queryOf(navigate, 2)['scope']).toBe('bilateral');
+      });
+    });
+  });
+
+  // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-6, CPA-R-1, CPA-R-3, CPA-AC-3)
+  describe('Results by P/A: category filter, sort and labels (CPA-T-6)', () => {
+    const byPaSeries = () => {
+      const options = (el('by-pa-chart').componentInstance as PrVizChartComponent).options() as { series: { data: number[] }[]; yAxis: { data: string[] } };
+      return { w3: options.series[0].data, tagging: options.series[1].data, labels: options.yAxis.data };
+    };
+
+    // Falsifier: category=w1w2-tagging narrows every card to the tagging line.
+    it('category=w1w2-tagging makes Total equal the tagging count and every by-P/A W3 value 0 (CPA-AC-3)', async () => {
+      await setup('/bilateral/' + CENTER + '/overview?category=w1w2-tagging');
+      flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 4 results');
+      const { w3, tagging } = byPaSeries();
+      expect(w3.every(value => value === 0)).toBe(true);
+      expect(tagging.reduce((sum, value) => sum + value, 0)).toBe(4);
+    });
+
+    it('choosing the category in the visible select writes it to the URL and applies it; Clear filters clears it', async () => {
       await setup();
-      flushData();
+      flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 9 results');
+
+      (el('overview-category-trigger').nativeElement as HTMLButtonElement).click();
+      harness.detectChanges();
+      (document.querySelector('[data-testid="overview-category-option-w3"]') as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).toContain('category=w3');
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 5 results');
+
+      (el('overview-clear-filters').nativeElement as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).not.toContain('category=');
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 9 results');
+    });
+
+    it('the visible P/A multi-select narrows every card and Clear filters clears it', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+      (el('overview-pa-trigger').nativeElement as HTMLButtonElement).click();
+      harness.detectChanges();
+      (document.querySelector('[data-testid="overview-pa-option-SP07"]') as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).toContain('program=SP07');
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 3 results');
+
+      (el('overview-clear-filters').nativeElement as HTMLButtonElement).click();
+      await settle();
+      expect(router.url).not.toContain('program=');
+    });
+
+    // CPA-R-1 A — ties break by the RESOLVED P/A label, not by code (code order is Z1 < Z2, label order is the reverse).
+    it('sorts groups by total desc, then by P/A label asc even when code order differs, and the click resolves the same row', async () => {
+      const rows = [
+        { ...FIXTURE_CPA_ROWS[0], id: 2001, submitter: 'Z1' },
+        { ...FIXTURE_CPA_ROWS[0], id: 2002, submitter: 'Z2' },
+      ];
+      const projects: BilateralProject[] = [
+        { ...FIXTURE_CPA_PROJECTS[0], sciencePrograms: [{ ...FIXTURE_CPA_PROJECTS[0].sciencePrograms[0], programCode: 'Z1', spName: 'Zeta' }] },
+        { ...FIXTURE_CPA_PROJECTS[1], sciencePrograms: [{ ...FIXTURE_CPA_PROJECTS[1].sciencePrograms[0], programCode: 'Z2', spName: 'Alpha' }] },
+      ];
+      await setup();
+      flushData(OPEN_PHASE_ID, rows, projects);
+
+      expect(byPaSeries().labels).toEqual(['Alpha', 'Zeta']);
 
       const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
-      const chart = el('by-sp-chart').componentInstance as PrVizChartComponent;
+      (el('by-pa-chart').componentInstance as PrVizChartComponent).chartClick.emit({ seriesId: 'overview-by-pa:w3', dataIndex: 0 } as never);
+      expect((navigate.mock.calls[0][1] as { queryParams: Record<string, string> }).queryParams['program']).toBe('Z2');
+    });
 
-      chart.chartClick.emit({ seriesId: 'overview-by-sp:projects', dataIndex: 0 } as never);
-      expect(navigate.mock.calls[0][0]).toEqual(['/bilateral', CENTER, 'home']);
+    // CPA-DD-6 — a P/A mapped to none of the center's projects is named by the initiatives catalog.
+    it('names a P/A from the initiatives catalog when no project maps it, else shows the raw code', async () => {
+      const rows = [
+        { ...FIXTURE_CPA_ROWS[0], id: 3001, submitter: 'SP99' },
+        { ...FIXTURE_CPA_ROWS[0], id: 3002, submitter: 'SP98' },
+      ];
+      await setup();
+      flushData(OPEN_PHASE_ID, rows, FIXTURE_CPA_PROJECTS);
+      TestBed.inject(InitiativesService).allInitiatives.set([{ name: 'Portfolio', entities: [{ official_code: 'SP99', name: 'Catalog Programme' }] }]);
+      harness.detectChanges();
 
-      chart.chartClick.emit({ seriesId: 'overview-by-sp:results', dataIndex: 0 } as never);
-      expect(navigate.mock.calls[1][0]).toEqual(['/bilateral', CENTER, 'results']);
-
-      // CWS-R-8 — the Results destination carries the scope, the Reporting one does not.
-      expect((navigate.mock.calls[0][1] as { queryParams: Record<string, string> }).queryParams).not.toHaveProperty('scope');
-      expect((navigate.mock.calls[1][1] as { queryParams: Record<string, string> }).queryParams['scope']).toBe('bilateral');
+      expect(byPaSeries().labels).toEqual(['Catalog Programme', 'SP98']);
     });
   });
 

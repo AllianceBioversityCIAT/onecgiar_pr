@@ -56,6 +56,8 @@ export interface BilateralCenterResult {
    * because older payloads and fixtures lack it; `resolveOverviewCategory` derives it then.
    */
   overview_category?: OverviewCategory;
+  /** CPA-T-3 — CLARISA ids of every center project this W1/W2 tagging row tags; absent/`null` otherwise. */
+  tagged_center_project_ids?: number[] | null;
   /**
    * BIL-POM-T-2 — raw SQL response (`getResultsByBilateralCenter` uses `this.query(...)`, not the
    * TypeORM entity layer): arrives as MySQL `tinyint` (`0`/`1`/possibly `null`), NOT a JS boolean.

@@ -45,6 +45,65 @@
 
   <span class="hidden min-[900px]:block w-[1px] h-[22px] bg-[var(--pr-border-divider)] flex-none"></span>
 
+  <!--
+    Visible filters (`CPA-R-3`): Program / Accelerator multi-select + Result category select, OUTSIDE the popover and
+    always rendered (they wrap onto the next line below 900px, never hide). Same token-styled combobox + listbox
+    mechanism as the phase control above; they apply at once (no draft) and the popover keeps working unchanged.
+  -->
+  <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">P/A</span>
+  <div class="w-full min-[640px]:w-auto min-[640px]:min-w-[190px] min-[640px]:max-w-[260px] flex-none" data-testid="overview-pa-select">
+    <button
+      #paTrigger
+      type="button"
+      cdkOverlayOrigin
+      #paOrigin="cdkOverlayOrigin"
+      role="combobox"
+      aria-haspopup="listbox"
+      aria-label="Program / Accelerator"
+      data-testid="overview-pa-trigger"
+      class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+      [attr.aria-expanded]="paOpen() ? 'true' : 'false'"
+      [attr.aria-controls]="paListboxId"
+      (click)="togglePaListbox()"
+      (keydown)="onPaTriggerKeydown($event)">
+      <span class="truncate" [title]="paTriggerLabel()">{{ paTriggerLabel() }}</span>
+      <i
+        class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+        [class.rotate-180]="paOpen()"
+        aria-hidden="true"
+        >expand_more</i
+      >
+    </button>
+  </div>
+
+  <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Category</span>
+  <div class="w-full min-[640px]:w-auto min-[640px]:min-w-[210px] flex-none" data-testid="overview-category-select">
+    <button
+      #categoryTrigger
+      type="button"
+      cdkOverlayOrigin
+      #categoryOrigin="cdkOverlayOrigin"
+      role="combobox"
+      aria-haspopup="listbox"
+      aria-label="Result category"
+      data-testid="overview-category-trigger"
+      class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+      [attr.aria-expanded]="categoryOpen() ? 'true' : 'false'"
+      [attr.aria-controls]="categoryListboxId"
+      (click)="toggleCategoryListbox()"
+      (keydown)="onCategoryTriggerKeydown($event)">
+      <span class="truncate" [title]="categoryTriggerLabel()">{{ categoryTriggerLabel() }}</span>
+      <i
+        class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+        [class.rotate-180]="categoryOpen()"
+        aria-hidden="true"
+        >expand_more</i
+      >
+    </button>
+  </div>
+
+  <span class="hidden min-[900px]:block w-[1px] h-[22px] bg-[var(--pr-border-divider)] flex-none"></span>
+
   <!-- ── Filter button + popover (COV-R-3) ────────────────────────────────────────────────── -->
   <button
     type="button"
@@ -87,7 +146,9 @@
         </span>
       }
     </div>
+  }
 
+  @if (hasActiveFilters()) {
     <button
       type="button"
       data-testid="overview-clear-filters"
@@ -338,6 +399,104 @@
       </button>
     } @empty {
       <span class="px-[10px] py-[7px] text-[12px] text-[var(--pr-text-secondary)]">No phases available</span>
+    }
+  </div>
+</ng-template>
+
+<!-- P/A listbox (`CPA-R-3`) - multi-select; stays open while ticking, Escape / backdrop closes. -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="paOrigin"
+  [cdkConnectedOverlayOpen]="paOpen()"
+  [cdkConnectedOverlayPositions]="popoverPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="closePaListbox()"
+  (overlayKeydown)="onPaOverlayKeydown($event)"
+  (detach)="closePaListbox()">
+  <div
+    #paList
+    [id]="paListboxId"
+    role="listbox"
+    aria-multiselectable="true"
+    tabindex="0"
+    aria-label="Program / Accelerator"
+    data-testid="overview-pa-listbox"
+    [attr.aria-activedescendant]="programOptions()[activePaIndex()] ? paOptionId(programOptions()[activePaIndex()].value) : null"
+    (keydown)="onPaListKeydown($event)"
+    class="flex w-[300px] max-w-[calc(100vw-32px)] max-h-[min(60vh,320px)] flex-col gap-[2px] overflow-y-auto custom_scroll rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)] outline-none">
+    @for (option of programOptions(); track option.value; let index = $index) {
+      <button
+        type="button"
+        role="option"
+        [id]="paOptionId(option.value)"
+        [attr.data-testid]="'overview-pa-option-' + option.value"
+        [attr.aria-selected]="isPaSelected(option.value)"
+        (click)="togglePaOption(option.value)"
+        (mouseenter)="activePaIndex.set(index)"
+        class="flex w-full items-center gap-[8px] rounded-[6px] border-2 px-[8px] py-[6px] text-left text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none"
+        [class]="listOptionClass(activePaIndex() === index)">
+        <span
+          class="inline-flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] border"
+          [class]="checkboxBoxClass(isPaSelected(option.value))">
+          @if (isPaSelected(option.value)) {
+            <i class="material-icons-round text-[11px] text-white" aria-hidden="true">check</i>
+          }
+        </span>
+        <span class="truncate" [title]="option.label">{{ option.label }}</span>
+      </button>
+    } @empty {
+      <span class="px-[10px] py-[7px] text-[12px] text-[var(--pr-text-secondary)]">No Programs / Accelerators in this phase</span>
+    }
+    @if (params().program.length) {
+      <button
+        type="button"
+        data-testid="overview-pa-clear"
+        class="mt-[2px] self-start rounded-[6px] border border-transparent bg-transparent px-[8px] py-[4px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        (click)="clearPaSelection()">
+        Clear selection
+      </button>
+    }
+  </div>
+</ng-template>
+
+<!-- Result category listbox (`CPA-R-3`) - single select, picks and closes. -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="categoryOrigin"
+  [cdkConnectedOverlayOpen]="categoryOpen()"
+  [cdkConnectedOverlayPositions]="popoverPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="closeCategoryListbox()"
+  (overlayKeydown)="onCategoryOverlayKeydown($event)"
+  (detach)="closeCategoryListbox()">
+  <div
+    #categoryList
+    [id]="categoryListboxId"
+    role="listbox"
+    tabindex="0"
+    aria-label="Result category"
+    data-testid="overview-category-listbox"
+    [attr.aria-activedescendant]="categoryOptionId(activeCategoryIndex())"
+    (keydown)="onCategoryListKeydown($event)"
+    class="flex w-[260px] max-w-[calc(100vw-32px)] flex-col gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)] outline-none">
+    @for (choice of categoryChoices; track $index; let index = $index) {
+      <button
+        type="button"
+        role="option"
+        [id]="categoryOptionId(index)"
+        [attr.data-testid]="'overview-category-option-' + (choice.value ?? 'all')"
+        [attr.aria-selected]="params().category === choice.value"
+        (click)="selectCategory(choice.value)"
+        (mouseenter)="activeCategoryIndex.set(index)"
+        class="flex w-full items-center justify-between gap-[8px] rounded-[6px] border-2 px-[10px] py-[7px] text-left text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none"
+        [class]="listOptionClass(activeCategoryIndex() === index)">
+        <span class="truncate">{{ choice.label }}</span>
+        @if (params().category === choice.value) {
+          <i class="material-icons-round flex-none text-[16px] text-[var(--pr-color-primary-300)]" aria-hidden="true">check</i>
+        }
+      </button>
     }
   </div>
 </ng-template>

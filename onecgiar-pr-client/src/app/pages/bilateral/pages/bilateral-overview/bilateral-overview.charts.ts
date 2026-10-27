@@ -15,13 +15,15 @@ import type { ResolvedChartTokens } from '../../../../shared/utils/chart-tokens.
 import { abbreviateAxisLabel } from '../../../result-framework-reporting/pages/portfolio-overview/portfolio-overview.charts';
 import type { BilateralQueryParams, StatusKey } from '../../bilateral-query-params';
 import { STATUS_ID_TO_KEY } from '../../bilateral-query-params';
+import { NO_PA_CODE } from './bilateral-overview.aggregate';
 import type {
+  OverviewByPaModel,
   OverviewByProjectModel,
-  OverviewBySpModel,
   OverviewByTypeModel,
   OverviewModel,
   OverviewPaceModel,
   OverviewProjectBar,
+  OverviewProjectsByPaModel,
   OverviewStatusModel,
   OverviewTypeRow,
   ResultTypeGroupKey,
@@ -75,7 +77,8 @@ export const NO_PROJECT_CATEGORY_LABEL = 'Not linked to a bilateral project';
 const CHART_SERIES_NAMESPACE = {
   status: 'overview-status',
   byProject: 'overview-by-project',
-  bySp: 'overview-by-sp',
+  byPa: 'overview-by-pa',
+  projectsByPa: 'overview-projects-by-pa',
   byType: 'overview-by-type',
   pace: 'overview-pace',
 } as const;
@@ -275,55 +278,141 @@ export function byProjectTable(model: OverviewByProjectModel, options?: Overview
 }
 
 // ---------------------------------------------------------------------------
-// Science Program contribution (COV-R-10)
+// P/A label helper (CPA-T-5; replaced the Science Program contribution builders, CPA-DD-7)
 // ---------------------------------------------------------------------------
 
 function programLabel(code: string, options?: OverviewChartOptions): string {
   return options?.programLabels?.get(code) ?? code;
 }
 
-export function bySpOption(
-  model: OverviewBySpModel,
-  tokens: ResolvedChartTokens,
-  options?: OverviewChartOptions,
-): EChartsOption {
-  const categories = model.rows.map(row => abbreviateAxisLabel(programLabel(row.programCode, options)));
+// ---------------------------------------------------------------------------
+// Results by P/A and Projects by P/A (CPA-R-1, CPA-R-2) — @akili-spec bilateral/center-overview-pa-contribution (CPA-T-5)
+// ---------------------------------------------------------------------------
+
+/** `CPA-R-1` B — the label of the group whose rows have no primary P/A. */
+export const NO_PA_LABEL = 'No Program/Accelerator';
+
+/** P/A label: the no-P/A group is named; otherwise `programLabels` (resolved by the caller) or the raw code. */
+function paLabel(code: string, options?: OverviewChartOptions): string {
+  return code === NO_PA_CODE ? NO_PA_LABEL : programLabel(code, options);
+}
+
+const BY_PA_SERIES_NAMES = { w3: 'W3/Bilateral results', tagging: 'W1/W2 results tagging center projects' } as const;
+const PROJECTS_BY_PA_SERIES_NAMES = {
+  mapped: 'Mapped projects',
+  w3: 'Projects with reported W3/Bilat results',
+  tagged: 'Projects tagged as contributors to W1/W2 results',
+} as const;
+const PA_COLUMN_HEADER = 'Program / Accelerator';
+
+export function byPaOption(model: OverviewByPaModel, tokens: ResolvedChartTokens, options?: OverviewChartOptions): EChartsOption {
+  const fullLabels = model.rows.map(row => paLabel(row.programCode, options));
+  const categories = fullLabels.map(label => abbreviateAxisLabel(label));
 
   return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, confine: true },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      confine: true,
+      // Advisory (T-5 review): the axis abbreviates; the tooltip names the full P/A, escaped.
+      formatter: (params: unknown) => {
+        const items = (Array.isArray(params) ? params : [params]) as { dataIndex?: number; marker?: string; seriesName?: string; value?: number }[];
+        const title = `<strong>${escapeTooltipText(fullLabels[items[0]?.dataIndex ?? 0] ?? '')}</strong>`;
+        const lines = items.map(item => `${item.marker ?? ''}${escapeTooltipText(item.seriesName ?? '')}: <strong>${item.value ?? 0}</strong>`);
+        return [title, ...lines].join('<br/>');
+      },
+    },
     legend: { show: true, bottom: 0, textStyle: { color: tokens.textSecondary, fontSize: 11 } },
     grid: { left: 8, right: 24, top: 8, bottom: 28, containLabel: true },
     xAxis: valueAxis(tokens),
     yAxis: categoryAxis(categories, tokens),
     series: [
       {
-        id: `${CHART_SERIES_NAMESPACE.bySp}:projects`,
-        name: 'Projects mapped',
-        type: 'bar',
-        barMaxWidth: 12,
-        barGap: '20%',
-        itemStyle: barItemStyle(tokens.bilateralMuted, tokens),
-        data: model.rows.map(row => row.projectsMappedCount),
-      },
-      {
-        id: `${CHART_SERIES_NAMESPACE.bySp}:results`,
-        name: 'Results reported',
+        id: `${CHART_SERIES_NAMESPACE.byPa}:w3`,
+        name: BY_PA_SERIES_NAMES.w3,
         type: 'bar',
         barMaxWidth: 12,
         barGap: '20%',
         itemStyle: barItemStyle(tokens.ramp[0], tokens),
-        data: model.rows.map(row => row.resultsCount),
+        data: model.rows.map(row => row.w3Count),
+      },
+      {
+        id: `${CHART_SERIES_NAMESPACE.byPa}:tagging`,
+        name: BY_PA_SERIES_NAMES.tagging,
+        type: 'bar',
+        barMaxWidth: 12,
+        barGap: '20%',
+        itemStyle: barItemStyle(tokens.ramp[2], tokens),
+        data: model.rows.map(row => row.taggingCount),
       },
     ],
   } as EChartsOption;
 }
 
-export function bySpTable(model: OverviewBySpModel, options?: OverviewChartOptions): VizChartTableModel {
+export function byPaTable(model: OverviewByPaModel, options?: OverviewChartOptions): VizChartTableModel {
   return {
-    caption: 'Science Program contribution',
-    headers: ['Science Program', 'Projects mapped', 'Results reported'],
-    rows: model.rows.map(row => [programLabel(row.programCode, options), row.projectsMappedCount, row.resultsCount]),
-    summary: `${model.rows.length} Science Programs appear in this center's project mappings or reported results.`,
+    caption: 'Results by Program / Accelerator',
+    headers: [PA_COLUMN_HEADER, BY_PA_SERIES_NAMES.w3, BY_PA_SERIES_NAMES.tagging],
+    rows: model.rows.map(row => [paLabel(row.programCode, options), row.w3Count, row.taggingCount]),
+    summary: `${model.rows.length} Programs / Accelerators appear in this center's reported and tagging results.`,
+  };
+}
+
+export function projectsByPaOption(model: OverviewProjectsByPaModel, tokens: ResolvedChartTokens, options?: OverviewChartOptions): EChartsOption {
+  const fullLabels = model.rows.map(row => paLabel(row.programCode, options));
+  const series = (key: 'mapped' | 'w3' | 'tagged', color: string, pick: (row: OverviewProjectsByPaModel['rows'][number]) => number) => ({
+    id: `${CHART_SERIES_NAMESPACE.projectsByPa}:${key}`,
+    name: PROJECTS_BY_PA_SERIES_NAMES[key],
+    type: 'bar',
+    barMaxWidth: 24,
+    itemStyle: { color },
+    label: { show: true, position: 'top', fontSize: 10, fontWeight: 'bold', color: tokens.textSecondary },
+    data: model.rows.map(pick),
+  });
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      confine: true,
+      formatter: (params: unknown) => {
+        const items = (Array.isArray(params) ? params : [params]) as { dataIndex?: number; marker?: string; seriesName?: string; value?: number }[];
+        const title = `<strong>${escapeTooltipText(fullLabels[items[0]?.dataIndex ?? 0] ?? '')}</strong>`;
+        const lines = items.map(item => `${item.marker ?? ''}${escapeTooltipText(item.seriesName ?? '')}: <strong>${item.value ?? 0}</strong>`);
+        return [title, ...lines].join('<br/>');
+      },
+    },
+    legend: { show: true, bottom: 0, textStyle: { color: tokens.textSecondary, fontSize: 11 } },
+    grid: { left: 8, right: 8, top: 24, bottom: 36, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: fullLabels.map(label => abbreviateAxisLabel(label)),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { interval: 0, color: tokens.textSecondary, fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      splitLine: { show: true, lineStyle: { color: tokens.border } },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: tokens.textSecondary, fontSize: 11 },
+    },
+    series: [
+      series('mapped', tokens.ramp[0], row => row.mappedCount),
+      series('w3', tokens.ramp[1], row => row.withW3Count),
+      series('tagged', tokens.ramp[2], row => row.taggedCount),
+    ],
+  } as EChartsOption;
+}
+
+export function projectsByPaTable(model: OverviewProjectsByPaModel, options?: OverviewChartOptions): VizChartTableModel {
+  return {
+    caption: 'Projects by Program / Accelerator',
+    headers: [PA_COLUMN_HEADER, PROJECTS_BY_PA_SERIES_NAMES.mapped, PROJECTS_BY_PA_SERIES_NAMES.w3, PROJECTS_BY_PA_SERIES_NAMES.tagged],
+    rows: model.rows.map(row => [paLabel(row.programCode, options), row.mappedCount, row.withW3Count, row.taggedCount]),
+    summary: `${model.rows.length} Programs / Accelerators have mapped, reporting or tagged center projects.`,
   };
 }
 
@@ -533,9 +622,21 @@ export function resolveChartClick(
     return dataIndex < bars.length ? { project: [bars[dataIndex].projectId] } : null;
   }
 
-  if (namespace === CHART_SERIES_NAMESPACE.bySp) {
-    const row = model.bySp.rows[dataIndex];
-    return row ? { program: [row.programCode] } : null;
+  if (namespace === CHART_SERIES_NAMESPACE.byPa) {
+    const row = model.byPa?.rows[dataIndex];
+    // The no-P/A group has no `program` value to filter by; a drill-down would not reconcile with the bar.
+    if (!row || row.programCode === NO_PA_CODE) return null;
+    if (segment === 'w3') return { program: [row.programCode], category: 'w3' };
+    if (segment === 'tagging') return { program: [row.programCode], category: 'w1w2-tagging' };
+    return null;
+  }
+
+  if (namespace === CHART_SERIES_NAMESPACE.projectsByPa) {
+    const row = model.projectsByPa?.rows[dataIndex];
+    if (!row || row.programCode === NO_PA_CODE) return null;
+    if (segment === 'mapped' || segment === 'w3') return { program: [row.programCode] };
+    if (segment === 'tagged') return { program: [row.programCode], category: 'w1w2-tagging' };
+    return null;
   }
 
   if (namespace === CHART_SERIES_NAMESPACE.byType) {
