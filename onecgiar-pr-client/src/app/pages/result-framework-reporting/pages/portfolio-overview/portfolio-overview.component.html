@@ -259,7 +259,7 @@
                         <span
                           class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125"
                           [style.background]="segment.fg"></span>
-                        <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                        <span [attr.title]="segment.label" class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
                           {{ segment.label }}
                         </span>
                       </div>
