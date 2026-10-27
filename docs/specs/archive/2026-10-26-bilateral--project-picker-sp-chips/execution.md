@@ -80,7 +80,7 @@ Cause: test count (16 new cases, one per clause row plus a Clear-button case) an
 
 | Check | Observed |
 |---|---|
-| Chip row placement / wrap (NFR-3) | Under search, 13 chips (SP01…SP13 minus SP03) wrap onto 2 rows; `.bps-chips` scrollWidth = clientWidth (1584); no page horizontal overflow |
+| Chip row placement / wrap (NFR-3) | Under search, 12 chips (SP01…SP13 minus SP03; corrected from "13" by `/akili-validate`) wrap onto 2 rows; `.bps-chips` scrollWidth = clientWidth (1584); no page horizontal overflow |
 | Default chip (S-2.1) | `SP01 · Breeding for Tomorrow 33` pressed on first open (stored primary SP01); count matches the Home card (33) |
 | Chip click keeps dropdown open (S-3.4 / advisory #1) | Real click on SP06 → dropdown still open, nothing staged |
 | OR filter (S-3.1) | SP01 + SP06 → 34 options (33 + 1) |
