@@ -155,7 +155,7 @@ const STATUS_SEGMENT_DEFINITIONS: {
   fg: string;
 }[] = [
   { key: 'editing', label: 'Editing', bg: '#F5F3FF', fg: '#6B46E5' },
-  { key: 'in-qa', label: 'In QA', bg: '#EDE9FE', fg: '#8B7CC4' },
+  { key: 'in-qa', label: 'Quality Assessed', bg: '#EDE9FE', fg: '#8B7CC4' },
   { key: 'submitted', label: 'Submitted', bg: '#DDD6FE', fg: '#5733C4' },
   { key: 'approved', label: 'Approved', bg: '#EEF2FF', fg: '#4338CA' },
   { key: 'rejected', label: 'Rejected', bg: '#F5F3FF', fg: '#A79BD4' },
