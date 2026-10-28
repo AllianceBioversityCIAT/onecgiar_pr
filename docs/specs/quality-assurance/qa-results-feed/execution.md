@@ -542,3 +542,11 @@
   - G-3: keep `null`, document it
   - P-20 (prod question ids) is checked by the owner before T-9 starts
 - T-8 stays `[~]` until the golden re-run after QRF-T-9
+- **P-20 verified (owner, prod, 2026-10-28):** `result_questions` in prod match test.
+  - 112 → 113, 114, 115
+  - 113 → 116–121
+  - 150 → 152–156 (GESI)
+  - 151 → 157–161 (risk)
+  - 162 → 163–165 (IPR)
+  - The parents of 150/151 are 77, and of 162 is 100, also as in test
+  - The pre-condition holds, and QRF-T-9 starts
