@@ -8,6 +8,7 @@ import { QaCatalogController } from './qa-catalog.controller';
 import { QaCatalogService } from './qa-catalog.service';
 import { QaCatalogSyncService } from './qa-catalog-sync.service';
 import { QaResultsRepository } from './qa-results.repository';
+import { QaResultsService } from './qa-results.service';
 import { QaCatalogField } from './entities/qa-catalog-field.entity';
 import { QaCatalogResultType } from './entities/qa-catalog-result-type.entity';
 import { QaCatalogSection } from './entities/qa-catalog-section.entity';
@@ -33,6 +34,7 @@ import { QaCatalogVersion } from './entities/qa-catalog-version.entity';
     QaCatalogService,
     QaCatalogSyncService,
     QaResultsRepository,
+    QaResultsService,
     ClarisaApiKeyValidationService,
     ClarisaApiKeyGuard,
   ],

@@ -146,3 +146,72 @@
 - spawns: implementer 18 calls, 164 174 tokens, ended partial (assumptions only); reviewer 15 calls, 109 170 tokens, ended complete
 - Requirements: QRF-R-7 (scenario *Whole object of a selected field*; catalog keys only) — QRF-DD-6, DD-7
 - Running totals vs budget: tasks 3/8 · LOC ~2 975/4 500 (T-1 ~670 + T-3 ~1 683 + T-4 ~625; T-2 under review) · review rounds 3/12. Within budget
+
+## QRF-T-2 — `GET /api/qa/results` — attempt 1 FAIL (2026-10-28)
+
+- Effort high · skills `nestjs-expert`, `tdd`, `api-design-principles`
+- Files: new `dto/qa-results-query.dto.ts` (+ spec), `dto/qa-results-response.dto.ts`, `qa-results.service.ts` (+ spec), `qa-results.constants.ts`; edited `qa-catalog.controller.ts` (+ spec), `qa-catalog.module.ts` (+ spec), `src/app.module.ts`, `src/app.module.spec.ts`
+- Implementer verification: `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` → 39 suites / 827 tests passed; tsc 0; eslint + prettier clean
+- Reds:
+  - (c) red run at task start: `- {"method": 5, "path": "api/qa/results"}` / `- {"method": 5, "path": "api/qa/results/details"}`
+  - (c) falsifier: `results/details` missing
+  - (a): `Expected: "/api/qa/results" Received: undefined`
+  - (b): `Expected: 400 Received: 200`
+  - (d): `Received: [[Function ResponseInterceptor]]`
+  - (e): `Expected: 3 Received: 5`
+- Evidence re-run (Leader inline, same command) → 39 / 827 green, tsc 0 → **VERIFIED**
+- Reviewers (parallel lens, override f — auth surface):
+  - Conformance + readability + reliability → **PASS**. R-1/2/4/5/6 and DD-1/12 met; the disqualifier does not apply (real `ClarisaApiKeyGuard`); R-7 as amended is not contradicted
+  - Security + resilience + risk → **FAIL**. The Leader ruled the finding in scope, since it is T-2's own input validation against the NFR Security clause, so it consumes attempt 1. Verbatim:
+    > 1. **Discovered Issue:** `page` has no upper bound. `toStrictInt` accepts any string of digits, and `@IsInt()` accepts `Number('10000000000000000000') === 1e19` because `Number.isInteger(1e19)` is true. The repository then binds `(page-1)*pageSize` as the OFFSET (`qa-results.repository.ts:118`). Once that value reaches 1e21 … JS turns it into the string `"1e+21"`. mysql2 formats parameters on the client, so the query ends in `LIMIT 100 OFFSET 1e+21`, which is a MySQL syntax error. The service does not map repository errors, so the `QueryFailedError` reaches the global `HttpExceptionFilter`. That filter puts `exception.message` into the 500 body (`error.exception.ts:22-41`), so the client gets the MySQL parser text … I traced this; I did not run it.
+    > **Violated Rule:** `requirements.md` §6 NFR Security: "no secret or SQL in logs or errors (QAS-10, AC-9)". `design.md` §7: "Errors never carry SQL, table or column names… → 500 with a generic message".
+    > **Remediation Suggestion:** Cap `page` in `QaResultsQueryDto` with `@Max(...)`, and keep `page * QA_RESULTS_PAGE_SIZE_MAX` within `Number.MAX_SAFE_INTEGER` (a business cap such as 1e6 also works). Cap each `program_ids` value with `@Max(2147483647, { each: true })`. Defence in depth: in `QaResultsService.list`, catch any failure that is not an `HttpException` from the `Promise.all`; log only the route and year, then throw `InternalServerErrorException` with a generic message. Add falsifiers: a DTO test where `page=10000000000000000000` gives 400, and a service test where a rejected repository leads to a generic 500 whose message contains no SQL.
+- ADVISORY:
+  - Conformance lens:
+    - The year bounds 2000–2100 are an invented contract value and need owner sign-off. They must be documented in T-7 together with the 400-vs-404 difference from the catalog route. Move them into `qa-results.constants.ts`
+    - The log line omits the design §9 "statement count"
+    - No log line on the error path
+    - `toTokens` is typed `string[] | unknown`
+    - Possibly add `@ApiOkResponse`
+  - Security lens:
+    - `HttpExceptionFilter` logs `request.url`, including the id lists, on status > 300. This is pre-existing global behaviour
+    - The `program_ids` and `result_type_keys` lists are unbounded (consider `@ArrayMaxSize`)
+    - Unknown type keys are echoed without a length cap
+    - The `'/api/qa/results'` route string is spelled out twice
+- Implementer Assumptions (verbatim summary):
+  - `phase_year` is 2000–2100, invented
+  - CSV or repeated parameter; empty tokens dropped; non-positive program id → 400; `page=''` → 400
+  - The log line is `route year items eligible not_eligible=0 duration_ms`
+  - The fake repository honours the filter
+  - `breakdown` is always returned
+- spawns: implementer 31 calls, 140 717 tokens, ended partial (assumptions only); reviewer (conformance) 10 calls, 95 253 tokens, complete; reviewer (security) 15 calls, 102 153 tokens, complete
+
+## QRF-T-2 — `GET /api/qa/results` — PASS on attempt 2 (2026-10-28)
+
+- Attempts: 2 (attempt 1 FAIL above). Attempt 2 effort `xhigh` (bumped from high); skills `nestjs-expert`, `tdd`, `error-handling-patterns`
+- Attempt 2 files: `qa-results.constants.ts` (`QA_RESULTS_PAGE_MAX = 1_000_000`, `QA_RESULTS_PROGRAM_ID_MAX = 2_147_483_647`, year bounds 2000/2100 moved here), `dto/qa-results-query.dto.ts` (+ spec), `qa-results.service.ts` (+ spec: `readFeed` + `toGenericFailure` → `InternalServerErrorException('The QA results could not be read')`; `HttpException` rethrown unchanged; log `route year read failed (<ErrorClass>)`)
+- New falsifier reds (mutate → observe → revert):
+  - Cap removed: `✕ page="10000000000000000000" -> 400` · `Received promise resolved instead of rejected` · `Tests: 3 failed, 35 passed`
+  - Catch removed: `✕ a failing repository.findPage|count|breakdown -> generic 500 …` · `Expected constructor: InternalServerErrorException Received constructor: Error` · `Tests: 4 failed, 11 passed`
+  - Driver text echoed: `Expected pattern: not /SELECT|FROM|WHERE|syntax|1e\+21|result_code|`result`|31084/i`
+  - `program_ids` `@Max` removed: `✕ program_ids="2147483648" -> 400` · `Tests: 2 failed, 36 passed`
+- Implementer verification: `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` → 39 suites / 840 tests; tsc 0; eslint clean
+- Evidence re-run (Leader inline, same command) → 39 / 840 green, tsc 0 → **VERIFIED**
+- Decisions made:
+  - **Owner decision (Juan David, 2026-10-28):** `phase_year` plausibility range 2000–2100 approved. 1999 → 400 on this route vs 404 on `/api/qa/catalog`; T-7 documents both
+  - Leader edit: changed the comment on `QA_RESULTS_PHASE_YEAR_MIN/MAX` from "not yet signed off" to the sign-off note. Comment only; reviewed in attempt 2
+  - Parallel-lens review for attempt 1 (override f, auth surface); one combined lens for the rework (override e). The Leader ruled the security FAIL in scope
+- Reviewer attempt 2 (`akili-reviewer`, security + baseline conformance) → **PASS**. FAIL resolved; no regressions; the generic 500 passes through `HttpExceptionFilter` carrying only its own stack; logging the error class name is acceptable under NFR §6; R-1/2/4/5/6 and DD-1/12 still hold; R-7 as amended is not contradicted
+- ADVISORY (recorded, not tasks):
+  - RISK: the global `HttpExceptionFilter` logs `request.url` (with `program_ids`/`result_type_keys`) on status > 300, against NFR Observability "never ids lists". This is pre-existing cross-cutting behaviour, recorded as a gap
+  - RELIABILITY: `qaCatalogService.getCatalog` runs outside the generic-failure boundary. Safe while the catalog stays in code
+  - CONTRACT: `QA_RESULTS_PAGE_MAX` and `QA_RESULTS_PROGRAM_ID_MAX` are limits that DD-12 does not list
+  - Carried from attempt 1: the log line has no statement count; no per-call log on the 404/400 paths; `toTokens` typing; `@ApiOkResponse`; `@ArrayMaxSize` on the lists; unknown keys echoed without a length cap; the route string spelled out twice
+- Not Done / Assumptions (attempt 2): `page` cap 1e6 chosen; error class name logged; `docs/qa-catalog.en.md` has no results-feed section yet. Assumptions only, nothing owed
+- Forward pointers:
+  - QRF-T-7: document `page` 1..1 000 000, `page_size` 1..200, `program_ids` ≤ 2 147 483 647, `phase_year` 2000–2100 with the 400-vs-404 difference from `/api/qa/catalog` (QRF-R-10)
+  - QRF-T-6: reuse the generic-failure boundary for `details`; consider `statements=` in the log line (design §9)
+  - QRF-T-8 / follow-up: `HttpExceptionFilter` URL logging on `/api/qa/*`
+- spawns: implementer (attempt 2) 23 calls, 121 108 tokens, ended partial (assumptions only); reviewer (attempt 2) 6 calls, 88 269 tokens, ended complete
+- Requirements: QRF-R-1, R-2, R-4, R-5, R-6, NFR Security/Observability — QRF-DD-1, DD-12
+- Running totals vs budget: tasks 4/8 · LOC ~3 900/4 500 (T-1 ~670 + T-3 ~1 683 + T-4 ~625 + T-2 ~920) · review rounds 6/12. Within budget, but 4 tasks remain (T-5 M, T-6 L, T-7 doc, T-8 HITL), and at the T-3/T-4 density T-5 + T-6 project to ~1 500–2 000 LOC. **Expect the tripwire to fire during T-6**

@@ -1,6 +1,6 @@
 // @akili-spec quality-assurance/qa-field-catalog
 import 'reflect-metadata';
-import { INestApplication, Logger } from '@nestjs/common';
+import { INestApplication, Logger, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { BILATERAL_CLARISA_ENDPOINT_KEY } from '../bilateral/decorators/bilateral-clarisa-endpoint.decorator';
@@ -8,6 +8,7 @@ import { ClarisaApiKeyGuard } from '../bilateral/guards/clarisa-api-key.guard';
 import { ClarisaApiKeyValidationService } from '../bilateral/services/clarisa-api-key-validation.service';
 import { QaCatalogController } from './qa-catalog.controller';
 import { QaCatalogService } from './qa-catalog.service';
+import { QaResultsService } from './qa-results.service';
 import { FIXTURE_SOURCE } from './qa-catalog.fixtures';
 
 const API_KEY = 'unit-test-key-value';
@@ -15,6 +16,7 @@ const API_KEY = 'unit-test-key-value';
 describe('QaCatalogController', () => {
   let app: INestApplication;
   const validate = jest.fn();
+  const list = jest.fn();
 
   // The 200 precondition must not depend on the (still empty) code catalog: the controller is
   // wired to the real service, but that service reads FIXTURE_SOURCE (see the real-catalog
@@ -34,11 +36,21 @@ describe('QaCatalogController', () => {
   beforeEach(async () => {
     useRealCatalog.value = false;
     validate.mockReset();
+    list.mockReset();
+    list.mockResolvedValue({
+      phase: 2026,
+      page: 1,
+      page_size: 100,
+      total: 0,
+      breakdown: { by_program: [], by_result_type: [] },
+      items: [],
+    });
     validate.mockResolvedValue({ mis: { acronym: 'QA' } });
     const moduleRef = await Test.createTestingModule({
       controllers: [QaCatalogController],
       providers: [
         catalogProvider,
+        { provide: QaResultsService, useValue: { list } },
         ClarisaApiKeyGuard,
         { provide: ClarisaApiKeyValidationService, useValue: { validate } },
       ],
@@ -178,6 +190,114 @@ describe('QaCatalogController', () => {
       expect(Reflect.getMetadata('__guards__', QaCatalogController)).toEqual([
         ClarisaApiKeyGuard,
       ]);
+    });
+  });
+  describe('GET /results (QRF-R-1 / R-2 / R-4 / R-5)', () => {
+    const getResults = (qs: string, headers: Record<string, string> = {}) =>
+      request(app.getHttpServer())
+        .get(`/results${qs}`)
+        .set({ 'x-api-key': API_KEY, ...headers });
+
+    it('valid key and year -> 200 with the service body unchanged, no envelope', async () => {
+      const res = await getResults('?phase_year=2026');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        phase: 2026,
+        page: 1,
+        page_size: 100,
+        total: 0,
+        breakdown: { by_program: [], by_result_type: [] },
+        items: [],
+      });
+      expect(res.body.response).toBeUndefined();
+      expect(res.body.statusCode).toBeUndefined();
+      expect(validate).toHaveBeenCalledWith(
+        API_KEY,
+        '/api/qa/results',
+        expect.anything(),
+      );
+    });
+
+    it('hands the parsed query to the service (CSV split, numbers, defaults)', async () => {
+      await getResults(
+        '?phase_year=2026&program_ids=5,7&result_type_keys=policy_change&page=2&page_size=50',
+      );
+      expect(list).toHaveBeenCalledTimes(1);
+      expect(list).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phase_year: 2026,
+          program_ids: [5, 7],
+          result_type_keys: ['policy_change'],
+          page: 2,
+          page_size: 50,
+        }),
+      );
+    });
+
+    it('scenario Year omitted: no phase_year -> 400, the service is never called (no clock or phase fallback)', async () => {
+      const res = await getResults('');
+      expect(res.status).toBe(400);
+      expect(list).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      'phase_year=abc',
+      'phase_year=2026&page=0',
+      'phase_year=2026&page_size=201',
+      'phase_year=2026&page_size=0',
+      'phase_year=2026&program_ids=5,x',
+    ])('%s -> 400 and the service is not called', async (qs) => {
+      const res = await getResults(`?${qs}`);
+      expect(res.status).toBe(400);
+      expect(list).not.toHaveBeenCalled();
+    });
+
+    it("a year with no catalog -> the service's 404 reaches the client", async () => {
+      list.mockRejectedValue(
+        new NotFoundException('No QA catalog available for phase_year 2023'),
+      );
+      const res = await getResults('?phase_year=2023');
+      expect(res.status).toBe(404);
+    });
+
+    it('scenario No key: user JWT without x-api-key -> 401, no data, CLARISA and service untouched', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/results?phase_year=2026')
+        .set('auth', 'eyJhbGciOiJIUzI1NiJ9.e30.sig')
+        .set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiJ9.e30.sig');
+      expect(res.status).toBe(401);
+      expect(res.body.items).toBeUndefined();
+      expect(validate).not.toHaveBeenCalled();
+      expect(list).not.toHaveBeenCalled();
+    });
+
+    it('key rejected by CLARISA -> 401 with no data', async () => {
+      validate.mockResolvedValue(null);
+      const res = await getResults('?phase_year=2026');
+      expect(res.status).toBe(401);
+      expect(res.body.items).toBeUndefined();
+      expect(list).not.toHaveBeenCalled();
+    });
+
+    it("handler declares @BilateralClarisaEndpoint('/api/qa/results') (read from the real method, P-1)", () => {
+      expect(
+        Reflect.getMetadata(
+          BILATERAL_CLARISA_ENDPOINT_KEY,
+          QaCatalogController.prototype.getResults,
+        ),
+      ).toBe('/api/qa/results');
+    });
+
+    it('no ResponseInterceptor on the controller or the handler (body is the contract, not the envelope)', () => {
+      expect(
+        Reflect.getMetadata('__interceptors__', QaCatalogController),
+      ).toBeUndefined();
+      expect(
+        Reflect.getMetadata(
+          '__interceptors__',
+          QaCatalogController.prototype.getResults,
+        ),
+      ).toBeUndefined();
     });
   });
 });

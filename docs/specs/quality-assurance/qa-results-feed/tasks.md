@@ -41,7 +41,7 @@
   - [ ] `npx jest src/api/qa-catalog --maxWorkers=2` green; `npx tsc --noEmit` green; eslint clean on touched files
   - [ ] No year, id or SQL logged
 
-### QRF-T-2 — `GET /api/qa/results` route
+### [x] QRF-T-2 — `GET /api/qa/results` route
 
 - **Type:** server
 - **Description:** Query DTO (`phase_year` required int, `program_ids` / `result_type_keys` CSV, `page` ≥ 1 default 1, `page_size` 1..200 default 100), service method (404 when the year has no catalog, 400 naming unknown type keys, empty page past the end with real `total`), controller method with `@BilateralClarisaEndpoint('/api/qa/results')`, no interceptor; add both new paths to the JWT exclude list and to `app.module.spec.ts`. Log line per QRF NFR.
