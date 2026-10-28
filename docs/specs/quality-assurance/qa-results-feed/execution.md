@@ -470,3 +470,40 @@
 - **(5) Golden comparison:** pending. `details` for 14 results (2 per type with 2026 data) dumped to the session scratchpad: other_output 8569/9754, capacity_sharing 8572/9171, knowledge_product 8778/9532, innovation_development 8799/9351, other_outcome 8907/8917, policy_change 8908/9674, innovation_use 8960/9527 (result codes)
   - `impact_contribution` and `innovation_package` have no Submitted 2026 results in this DB and cannot be compared
 - Spec rows updated: `design.md` P-2, P-7 and P-12 (verified), DD-3 and the header count. `requirements.md` OQ-4 is marked decided
+
+### QRF-T-8 (5) Golden comparison — partial, **FAIL** (2026-10-28)
+
+- Owner decision: compare 1 result per type, in the browser (DoD asks for ≥ 2). This is a recorded deviation
+- Form: prtest (`prtest.ciat.cgiar.org`, Reporting 2026, `?phase=36`) under the owner's session. prtest reads the same DB as the local `.env`: the title and lead program of 8569 are identical on both
+- Results compared so far:
+  - **8569** other_output: general, contributors, geo and evidence compared
+  - **8572** capacity_sharing: general, contributors, geo and CapSharing compared
+  - **8778** knowledge_product: KP info and lead center compared
+  - **8799** innovation_development: Innovation Dev info compared
+- Not compared yet: 8907 other_outcome, 8908 policy_change, 8960 innovation_use
+- Matching (sample):
+  - title, description, lead contact, lead program, result level and type
+  - impact tags: the feed sends `tag_level` ids (1 Not Targeted / 2 Significant / 3 Principal), as the catalog defines; the form shows them as 0/1/2
+  - ToC mapping: HLO statement, typology, unit, target and contribution (55, 1)
+  - "Other" science program SP01 with its own KPI
+  - partners not applicable, led-by-partner No, geo scope and countries (Global; Country/Colombia 170)
+  - evidence: file, private flag, "Other Output" tag
+  - capdev: 0/1/0/0, Long-term + Master → `{value:4, degree:2}`, Virtual, attending No
+  - KP: handle metadata, authors, type, peer reviewed, ISI, OA, licence, AGROVOC, sponsors, FAIR scores
+  - innovation dev: short title, characterization 1, nature 12, new variety No, readiness (form level 3), justification, developers, collaborators
+- **Mismatches:**
+  - **G-1 `contributors.lead_center` (every type).**
+    - Form: 8572 = Bioversity (Alliance) `CENTER-02`; 8778 = IWMI `CENTER-14`
+    - Feed: `1`, `1`; 8799 gets `0`
+    - Cause: the binding `relation results_center.value_column = 'is_leading_result'` (`definitions/sections/contributors-partners.ts:506`) returns the flag, not the center
+    - Same pattern: `partners.lead_partner` (`:784`, `results_by_institution.is_leading_result`)
+  - **G-2 answer-bound fields of innovation development return the wrong question's answers.**
+    - 8799 stores 17 active answered `result_answers` rows across questions 78, 79, 84, 101, 102, 103, 112, 113, 125, 136, 137, 138
+    - Feed: `gesi_stage`, `risk_stage`, `ipr_consideration` and `team_diversity` all = `"80"`, which is the first answered row (an option of question 78)
+    - Feed `team_diversity.actions` = all 17 rows
+    - Form: GESI and risk stage unanswered; IPR unanswered; team diversity = 113 with actions 116 and 117 only
+    - Cause: `answerBinding()` and `sameResultAnswers()` (`sections/innovation-development.ts:79-107`) filter only `answer_boolean=1, is_active=1`. The catalog leaves question identity to the closed control list, and the reader does not apply it
+    - The GESI, risk and IPR options have no closed list (ids resolved by text, `closed-control-lists.ts` note), so the binding itself cannot select them
+    - `policy-change.ts:101` uses the same table: check it when 8908 is compared
+  - **G-3 `linked.has_innovation_link` stored NULL.** 8569 and 8572 store NULL; the feed sends `null`. The form shows **No**, because the client model defaults to `false` (`contributorsAndPartnersBody.ts:11`). The feed matches the stored value, not what the form displays. Owner decision
+- Verdict: T-8 falsifier "any golden field mismatch" → **FAIL**. G-1 and G-2 need code or catalog changes outside T-8 (`execution.md`-only task); the review-round budget is exhausted (12/12). Escalated to the owner
