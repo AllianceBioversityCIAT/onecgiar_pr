@@ -7,7 +7,7 @@
 - **Ticket:** [P2-4037](https://cgiarmel.atlassian.net/browse/P2-4037) — commits `<emoji> <type>(qa-catalog) [P2-4037]: …`
 - **Owner / driver:** Juan David Delgado
 - **Status:** not-started — tasks approved 2026-10-28 (Juan David)
-- **Budget (design §13):** 8 tasks · ~4 500 LOC (re-baselined 2026-10-28 from ~1 600) · 12 review rounds — tripwire for `/akili-execute`
+- **Budget (design §13):** 8 tasks · ~6 200 LOC (re-baselined 2026-10-28 from ~1 600, then from ~4 500 at the T-5 tripwire) · 12 review rounds — tripwire for `/akili-execute`
 
 ## 2. Pre-flight checklist
 

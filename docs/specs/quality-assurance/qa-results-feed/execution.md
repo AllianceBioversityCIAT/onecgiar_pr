@@ -268,3 +268,4 @@
   - T-7 (doc): ~150–250
   - Spec total ≈ 5 700–6 200 LOC. Review rounds stay well under 12
 - Status: stopped for the owner. This stop is not auto-approved
+- Owner decision (Juan David, 2026-10-28, at the gate): **option 1. Re-baseline to ~6 200 LOC and continue with T-6.** `design.md` §13 and `tasks.md` §1 are updated. Tasks (8) and review rounds (12) are unchanged
