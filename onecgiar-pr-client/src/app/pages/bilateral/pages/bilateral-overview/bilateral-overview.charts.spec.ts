@@ -423,6 +423,19 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       expect(collectColors(option).every(c => TOKEN_VALUES.has(c))).toBe(true);
     });
 
+    it('keeps 11+ x-axis labels legible: every label drawn, rotated, truncated, legend row reserved (CPA-T-8)', () => {
+      const option = projectsByPaOption(pModel, TOKENS);
+      const axisLabel = (option.xAxis as { axisLabel: { interval: number; rotate: number; width: number; overflow: string } }).axisLabel;
+      expect(axisLabel.interval).toBe(0);
+      expect(axisLabel.rotate).toBeGreaterThanOrEqual(30);
+      expect(axisLabel.rotate).toBeLessThanOrEqual(45);
+      expect(axisLabel.width).toBeGreaterThan(0);
+      expect(axisLabel.overflow).toBe('truncate');
+      expect((option.grid as { bottom: number; containLabel: boolean }).bottom).toBeGreaterThanOrEqual(36);
+      expect((option.grid as { containLabel: boolean }).containLabel).toBe(true);
+      expect((option.legend as { show: boolean; bottom: number }).bottom).toBe(0);
+    });
+
     it('table rows equal the series data (SP07 mapped 2 / W3 0 / tagged 2)', () => {
       const labels = new Map([['SP07', 'Policy Innovations']]);
       const table = projectsByPaTable(pModel, { programLabels: labels });

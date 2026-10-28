@@ -471,6 +471,15 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       component.closeCategoryListbox(false);
     });
 
+    it('keeps each label with its combobox in one wrapper so they wrap together (CPA-T-8)', () => {
+      for (const key of ['phase', 'pa', 'category']) {
+        const group = el(`overview-${key}-group`).nativeElement as HTMLElement;
+        expect(group.className).toContain('whitespace-nowrap');
+        expect(group.querySelector('span')!.textContent!.trim().length).toBeGreaterThan(0);
+        expect(group.querySelector(`[data-testid="overview-${key}-trigger"]`)).toBeTruthy();
+      }
+    });
+
     it('renders both controls outside the popover, with the popover closed, and keeps the popover filters', () => {
       expect(el('overview-pa-trigger')).toBeTruthy();
       expect(el('overview-category-trigger')).toBeTruthy();

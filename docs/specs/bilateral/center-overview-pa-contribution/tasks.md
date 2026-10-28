@@ -121,7 +121,7 @@
   - **Disqualifier:** Results tab without `category`/`scope` changes its request (must stay unscoped).
   - **Consumers:** none beyond the component.
 
-### [ ] CPA-T-8 — Live verification on PRTest (HITL)
+### [x] CPA-T-8 — Live verification on PRTest (HITL)
 
 - **Type:** rollout
 - **Description:** On PRTest (performance-refactor deploy): IFPRI + CIP, Reporting 2026 — (1) each by-P/A bar and Projects-by-P/A bar vs a SQL count per P/A; (2) Overview figure = Results tab count for 3 drill-downs incl. one tagging; (3) IFPRI tagging row visible in R-1, R-2, Results tab; (4) unscoped Results tab and Portfolio Centers block counts unchanged vs before; (5) `bilateral-center-results?scope=bilateral` timing, 3 runs each, before/after; (6) screenshots at 1280 and 900px reviewed (T6). Read-only: no write buttons clicked.
