@@ -229,6 +229,35 @@ Reviewer attempt 2: **STATUS: PASS** — cap met; new statements true; condensed
 
 **Pending to close T-4 (owner, HITL):** local stack or PRTest, center with ≥ 2 uploads, 1280 px — checkbox column does not squeeze title / no horizontal scroll; card-header select-all aligned before the hash, indeterminate visible; sticky bar does not overlap the last row; Tab/Space reach checkboxes and bar, focus ring visible. **Never confirm a discard on real drafts locally (shared prdb + prod mailer)**; real bulk discard only on PRTest with throwaway drafts. Also recommended before PR: client `npm run build` (template type-check not covered by `ng lint`).
 
+#### ABD-T-4 — HITL rework (2026-10-27, after push `7075736c9`)
+
+**HITL findings (Leader, localhost:4200, Bioversity (Alliance) My Drafts, no write clicks):** (1) `mdr-bulk-bar` is `sticky` but renders at the end of the full list (rect top 3851 px vs viewport 1249 px) — the document scrolls, not `#workArea`, so the owner saw "no button"; (2) row/header `hlm-checkbox` 14 px with a faint border, nearly invisible. The 7→6 drop on card `#fedca9e2` was the owner accepting draft 214 into a result (`is_discarded=1`, result status 1) — not a defect.
+
+| Field | Value |
+|---|---|
+| Implementer | `akili-implementer`, effort `medium` → `high` on retry; skills angular-developer, tailwind-design-system, spartan |
+| Reviewer | `akili-reviewer` (≠ Implementer), effort `high` |
+| Files | `my-draft-results.component.{html,spec.ts}`, folder `CLAUDE.md` |
+
+**Attempt 1** — bar → viewport-`fixed` wrapper (`bottom-[12px]`, `left: var(--sidebar-width)` from 900 px, `z-30`), 72 px spacer, `aria-live="polite"`; checkboxes `size-[16px] border-[var(--pr-text-muted)]` + indeterminate `bg-primary`; destructive tint `--pr-color-red-*` on "Discard selected" (advisory from T-3). Jest 90/90, lint clean.
+Reviewer attempt 1: **STATUS: FAIL**
+1. Discovered Issue: indeterminate and checked now look identical — `data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground` paints the same filled primary box as `data-checked:bg-primary`, and the helm template renders the same `lucideCheck` for both states (`hlm-checkbox.ts:58-62`).
+   Violated Rule: `requirements.md` ABD-S-2.2 (header shows the indeterminate state); `requirements.md:201` (indeterminate visuals under manual check).
+   Remediation Suggestion: keep `data-[state=indeterminate]:border-primary`, replace the fill with something distinct (e.g. `bg-[var(--pr-color-primary-50)] text-primary`); drop indeterminate classes from the row checkbox.
+ADVISORY folded into attempt 2: collapsed rail keeps `--sidebar-width` 260 → use `--sidebar-width-icon`; bar offset from 900 px vs sidebar from 768 px → align on `md:`; re-stamp folder doc.
+
+**Attempt 2** — header indeterminate `border-primary bg-[var(--pr-color-primary-50)] text-primary`; row checkbox `size-[16px] border-[var(--pr-text-muted)]` only; wrapper `md:left-[var(--sidebar-width,260px)] md:group-has-[[data-collapsible=icon]]/sidebar-wrapper:left-[var(--sidebar-width-icon,64px)]`; folder doc re-stamped (116 lines). Jest `my-draft-results.component` 90/90 (`--maxWorkers=1`, free RAM 3.7 GB), `ng lint` on touched files clean.
+Reviewer attempt 2: **STATUS: PASS** — FAIL resolved; `--pr-color-primary-50` exists (`colors.scss:17`); `data-collapsible="icon"` on `hlm-sidebar` only when collapsed and non-mobile, `group/sidebar-wrapper` is an ancestor of the outlet; collapsed variant specificity (0,2,0) beats `md:left-[...]` (0,1,0) inside the same media query (derived from the Tailwind v4 variant shape, not from compiled CSS).
+
+**ADVISORY (recorded, non-gating):** class-presence tests cannot prove layout → HITL re-check at 1280 px, rail expanded and collapsed; `focusMode()` / `show_qa_full_screen` hide the sidebar but the bar keeps the 260 px offset (cosmetic); **approved deviation** — `design.md` §8.2 says "Sticky at the bottom of … `#workArea`", the code is viewport-`fixed` because the document scrolls → sync `design.md` at `/akili-archive`.
+
+**HITL re-check (Leader, localhost:4200, 2026-10-27, Bioversity (Alliance), selection only — no Discard/Confirm clicks; Chrome window at 2560 CSS px, page zoom ≈ 1.15):**
+- Bar: 2 rows ticked → `mdr-bulk-bar` in viewport (rect bottom 1291 / innerHeight 1305), wrapper `position: fixed`, left 246px = `--sidebar-width` (expanded) and 64px with the rail collapsed (`data-collapsible="icon"`), never over the rail; "Discard selected" red `rgb(208,4,22)`. ✓
+- Checkboxes: 16 px, border `--pr-text-muted` `rgb(107,101,128)` on the inner `button[role=checkbox]`; header indeterminate = `data-state="indeterminate"`, bg `rgb(245,243,255)` (primary-50), border `rgb(107,70,229)` — visibly distinct from checked (solid). ✓
+- Keyboard: Tab/Shift+Tab reach the row checkbox; `:focus-visible` 3 px ring (`ring-ring/50`); Space toggled it (2 → "1 selected"). ✓
+- No horizontal scroll at 2560 (doc −15, card tables 0). **1280 px not measured** — `resize_window` does not change the viewport on this machine (maximized window); owner to confirm with DevTools device toolbar.
+- Selection cleared afterwards; the rail toggle was restored to expanded.
+
 ## 3. Summary (automated tasks complete; T-4 awaiting HITL)
 
 | Task | Status | Attempts | Notes |

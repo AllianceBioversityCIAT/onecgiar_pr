@@ -1,6 +1,6 @@
 # my-draft-results
 
-**Verified:** 2026-10-27 · qa-development-2026-ss · `ABD-T-3` (bulk select + discard). Prior: `AIQ-T-7`, 2026-09-29.
+**Verified:** 2026-10-27 · qa-development-2026-ss · 7075736c9 · `ABD-T-3` T-4 rework (fixed bulk bar, checkbox contrast). Prior: `AIQ-T-7`, 2026-09-29.
 
 ## What it is
 The **Draft Results** tab of the bilateral center dashboard (P2-3169, P2-3315). Lists every AI-generated
@@ -38,7 +38,7 @@ result suggestion the center still has to decide on, and offers Review (read-onl
 - Selection is component-local (`selectedIds`, DD-5). Cleared on tab/centre leave, filter-key or centre
   change, or a selected id no longer visible; that visibility check is skipped while a bulk request is
   in flight (the service removes rows optimistically).
-- Sticky bar `mdr-bulk-bar` (N selected · Clear · Discard) opens an `app-pr-dialog` confirm; copy in `BULK_COPY`.
+- Viewport-fixed bar `mdr-bulk-bar` (document scrolls, not #workArea; left offset = `--sidebar-width` (`--sidebar-width-icon` when rail collapsed), from `md:`; spacer `mdr-bulk-spacer`) (N selected · Clear · Discard) opens an `app-pr-dialog` confirm; copy in `BULK_COPY`.
 - Flow: `BilateralAiService.discardDrafts(ids)` → `POST api/bilateral/center/ai/drafts/discard` `{ draftIds }`
   (1..100) → `{ discarded, failed[{ id, reason }] }`, HTTP 200 on partial. The service removes rows at
   call time, restores failed ids, owns the one toast, and emits `null` on error (selection kept). No

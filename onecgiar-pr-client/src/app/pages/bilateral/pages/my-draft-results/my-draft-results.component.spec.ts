@@ -1371,6 +1371,29 @@ describe('MyDraftResultsComponent', () => {
       fixture.detectChanges();
     });
 
+    it('ABD-R-2 rework: bar is viewport-fixed with a spacer and destructive discard while selected; both gone after Clear', () => {
+      expect(q('mdr-bulk-bar')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="mdr-bulk-spacer"]')).toBeNull();
+      tick(boxes()[0]);
+      const wrap = fixture.nativeElement.querySelector('[data-testid="mdr-bulk-bar-wrap"]') as HTMLElement;
+      expect(wrap.classList.contains('fixed')).toBe(true);
+      expect(wrap.classList.contains('bottom-[12px]')).toBe(true);
+      expect(wrap.contains(q('mdr-bulk-bar'))).toBe(true);
+      expect(fixture.nativeElement.querySelector('[data-testid="mdr-bulk-spacer"]')).not.toBeNull();
+      expect(q('mdr-bulk-discard')!.className).toContain('--pr-color-red-300');
+      expect((fixture.nativeElement.querySelector('tbody hlm-checkbox') as HTMLElement).className).toContain('size-[16px]');
+      const rowCls = (fixture.nativeElement.querySelector('tbody hlm-checkbox') as HTMLElement).className;
+      const hdrCls = (fixture.nativeElement.querySelector('.mdr-session-header hlm-checkbox') as HTMLElement).className;
+      expect(hdrCls).toContain('data-[state=indeterminate]:bg-[var(--pr-color-primary-50)]');
+      expect(hdrCls).not.toContain('indeterminate]:bg-primary');
+      expect(rowCls).not.toContain('indeterminate');
+      expect(wrap.className).toContain('md:group-has-[[data-collapsible=icon]]/sidebar-wrapper:left-[var(--sidebar-width-icon,64px)]');
+      tick(q('mdr-bulk-clear')!);
+      expect(q('mdr-bulk-bar')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="mdr-bulk-bar-wrap"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="mdr-bulk-spacer"]')).toBeNull();
+    });
+
     it('S-1.1/1.3/3.1/3.2: ticking rows shows the bar with a named checkbox; Clear empties it; no new brand button', () => {
       const brandBefore = fixture.nativeElement.querySelectorAll('button.bg-primary').length;
       expect(q('mdr-bulk-bar')).toBeNull();

@@ -249,6 +249,7 @@
                 <div class="flex items-center gap-[6px] text-[13px] font-semibold text-[var(--pr-text-heading)]">
                   @if (isCenterMember()) {
                     <hlm-checkbox
+                      class="size-[16px] border-[var(--pr-text-muted)] data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-[var(--pr-color-primary-50)] data-[state=indeterminate]:text-primary"
                       aria-label="Select all drafts of this upload"
                       [checked]="cardSelectionState(group) === 'all'"
                       [indeterminate]="cardSelectionState(group) === 'some'"
@@ -330,6 +331,7 @@
                       @if (isCenterMember()) {
                         <td class="py-[12px] pl-[20px] pr-[0px] align-middle">
                           <hlm-checkbox
+                            class="size-[16px] border-[var(--pr-text-muted)]"
                             [aria-label]="'Select draft: ' + getDraftTitle(draft)"
                             [checked]="isRowSelected(draft)"
                             (checkedChange)="toggleRow(draft, $event)" />
@@ -416,15 +418,31 @@
         }
       </div>
       @if (isCenterMember() && selectedCount() > 0) {
+        <!-- Spacer so the fixed bar never hides the last rows. -->
+        <div class="h-[72px]" aria-hidden="true" data-testid="mdr-bulk-spacer"></div>
+        <!-- `fixed`: the document, not #workArea, scrolls here. Starts at the sidebar's right edge. -->
         <div
-          class="sticky bottom-[12px] z-10 mt-[16px] flex items-center justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] py-[10px] shadow-sm"
-          role="region"
-          aria-label="Bulk actions"
-          data-testid="mdr-bulk-bar">
-          <span class="font-mono text-[13px] tabular-nums text-[var(--pr-text-heading)]" data-testid="mdr-bulk-count">{{ selectedCount() }} selected</span>
-          <div class="flex items-center gap-[8px]">
-            <button hlmBtn variant="ghost" type="button" data-testid="mdr-bulk-clear" (click)="clearSelection()">{{ BULK_COPY.clear }}</button>
-            <button hlmBtn variant="outline" type="button" data-testid="mdr-bulk-discard" [disabled]="isBulkDiscarding()" [attr.disabled]="isBulkDiscarding() ? '' : null" (click)="showBulkDiscardDialog.set(true)">{{ BULK_COPY.discard }}</button>
+          class="mdr-bulk-bar-wrap pointer-events-none fixed bottom-[12px] left-0 right-0 z-30 px-[16px] md:left-[var(--sidebar-width,260px)] md:group-has-[[data-collapsible=icon]]/sidebar-wrapper:left-[var(--sidebar-width-icon,64px)]"
+          data-testid="mdr-bulk-bar-wrap">
+          <div
+            class="pointer-events-auto mx-auto flex max-w-[1100px] items-center justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)] px-[16px] py-[10px] shadow-lg"
+            role="region"
+            aria-label="Bulk actions"
+            aria-live="polite"
+            data-testid="mdr-bulk-bar">
+            <span class="font-mono text-[13px] tabular-nums text-[var(--pr-text-heading)]" data-testid="mdr-bulk-count">{{ selectedCount() }} selected</span>
+            <div class="flex items-center gap-[8px]">
+              <button hlmBtn variant="ghost" type="button" data-testid="mdr-bulk-clear" (click)="clearSelection()">{{ BULK_COPY.clear }}</button>
+              <button
+                hlmBtn
+                variant="outline"
+                type="button"
+                class="border-[var(--pr-color-red-100)] text-[var(--pr-color-red-300)] hover:bg-[var(--pr-color-red-50)] hover:text-[var(--pr-color-red-400)]"
+                data-testid="mdr-bulk-discard"
+                [disabled]="isBulkDiscarding()"
+                [attr.disabled]="isBulkDiscarding() ? '' : null"
+                (click)="showBulkDiscardDialog.set(true)">{{ BULK_COPY.discard }}</button>
+            </div>
           </div>
         </div>
       }
