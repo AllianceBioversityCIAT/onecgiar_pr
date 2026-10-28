@@ -575,7 +575,9 @@ export class BilateralAiService implements OnDestroy {
         this.draftList.set(snapshot.filter(d => !(ids.has(Number(d.id)) && !failedIds.has(Number(d.id)))));
         if (this.currentDraft() && discarded.includes(Number(this.currentDraft()!.id))) this.currentDraft.set(null);
         const done = `${discarded.length} draft result${discarded.length === 1 ? '' : 's'} discarded`;
+        // P2-4039: without the global key no <app-pr-toast> outlet on the Bilateral pages renders it.
         this.messageService.add({
+          key: 'globalUserNotification',
           severity: failed.length ? 'warn' : 'success',
           summary: failed.length ? 'Partially discarded' : 'Discarded',
           detail: failed.length ? `${done}. ${failed.length} could not be discarded` : done,
@@ -583,7 +585,7 @@ export class BilateralAiService implements OnDestroy {
       }),
       catchError(() => {
         this.draftList.set(snapshot);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to discard drafts' });
+        this.messageService.add({ key: 'globalUserNotification', severity: 'error', summary: 'Error', detail: 'Failed to discard drafts' });
         return of(null);
       }),
     );

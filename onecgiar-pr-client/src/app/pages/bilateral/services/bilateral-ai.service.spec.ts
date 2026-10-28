@@ -716,6 +716,12 @@ describe('BilateralAiService', () => {
       expect(service.currentDraft()).toBeNull();
       expect(router.navigate).not.toHaveBeenCalled();
       expect(toast.add).toHaveBeenCalledTimes(1);
+      // P2-4039: only the global outlet is mounted on Bilateral pages - a key-less toast never renders.
+      expect(toast.add.mock.calls[0][0]).toMatchObject({
+        key: 'globalUserNotification',
+        severity: 'success',
+        detail: '2 draft results discarded',
+      });
     });
 
     it('S-6.2 partial: a failed id is restored and one partial toast shows', () => {
@@ -747,7 +753,7 @@ describe('BilateralAiService', () => {
       expect(result).toBeNull();
       expect(service.draftList()).toEqual(drafts);
       expect(toast.add).toHaveBeenCalledTimes(1);
-      expect(toast.add.mock.calls[0][0]).toMatchObject({ severity: 'error', detail: 'Failed to discard drafts' });
+      expect(toast.add.mock.calls[0][0]).toMatchObject({ key: 'globalUserNotification', severity: 'error', detail: 'Failed to discard drafts' });
     });
   });
 });
