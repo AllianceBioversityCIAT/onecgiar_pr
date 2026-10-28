@@ -401,7 +401,15 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
         if (params['status']) {
           const statusId = Number(params['status']);
           if (!isNaN(statusId)) {
-            this.resultsListFilterSE.selectedStatus.set([{ status_id: statusId }]);
+            const option = this.resultsListFilterSE.statusOptions().find(s => s.status_id == statusId);
+            this.resultsListFilterSE.selectedStatus.set([option ?? { status_id: statusId }]);
+          }
+        }
+
+        if (params['phase']) {
+          const phaseId = Number(params['phase']);
+          if (!isNaN(phaseId)) {
+            this.resultsListFilterSE.requestedPhaseId.set(phaseId);
           }
         }
 

@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-10-22 · branch qa-development-2026-ss · quick/portfolio-overview-partial-label (header partial notice removed) · prior: 2026-10-16 · FDE-T-3
+**Verified:** 2026-10-27 · branch fix/portfolio-overview-in-qa-list (strip jump link + Results Center keeps the open phase) · prior: 2026-10-22 · quick/portfolio-overview-partial-label
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — figures for the WHOLE portfolio in the open
 phase: KPI deck, status, results by typology, progress against ToC KPIs, CGIAR Centers, W3/Bilateral projects, filtered results detail + Excel export. Ticket **P2-3304**;
@@ -28,6 +28,8 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - 🛑 **Sub-switch order** inside `hasFigures()`: `filtersPending()` -> section skeletons (testid `portfolio-overview-skeleton-filters`); else `filteredTotal() === 0` -> no-match panel (`portfolio-no-match`, Clear all); else deck, status, typology. The ToC KPI block sits **outside** the sub-switch (renders in every case).
 - **Block inputs:** typology `[rows]=filteredRows()`; ToC KPI `programs` + `notAffected`; Projects `programs`, `centers`, `notAffected` (from `notAffectedBy('toc' | 'projects', selection)`); Centers `selection`, `dimensionIndex`, `[dimensionsVersionId]="data.dimensionIndex() ? data.versionId() : null"` (only once the map is ready, else Project shows as "Not affected by: Project").
 - 🛑 **DD-7, do not re-add a local status highlight:** the status tiles and donut call `toggleValue('status', key)` (`aria-pressed` from `selection().status`); the old local status-filter signal and its toggle are gone. The strip shows when ANY dimension is active; **View in Results Center** only when `resultsCenterLinkable` (<= 1 Program, <= 1 Status).
+- **Strip jump link** `portfolio-active-filter-jump` ("Show N results ↓", `copy.filters.showResults`): shown when `filteredTotal() > 0`, scrolls to `app-portfolio-results-detail` (`scrollToResultsDetail`). Why: the filtered list is the LAST block of a ~4,600 px page; a tile click alone left users scrolling to the ToC KPI bars and giving up (admin report, 26-oct-2026).
+- 🛑 **Every `navigateToResultsCenter` link carries `phase=<versionId()>`.** This page counts the open phase only; Results Center defaults to every phase of the portfolio (P25 = 2025 + 2026), so without it the same click showed 5 here and 11 there. Results Center reads it into `ResultsListFilterService.requestedPhaseId` and applies it once its phase options load (`results-list-filters.component.ts`, `handleVersioningResponse`).
 - **Typology Center view is lead-only by design** (it counts the lead Center); the global Center filter matches lead + contributing Centers, so their numbers can differ. Not a bug.
 
 ## Results detail + export (2026-10-16, spec `changes/portfolio-overview-revamp/filtered-detail-export`, #9)
@@ -70,6 +72,7 @@ design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
 - 🛑 **The payload carries EVERY phase** (6094 rows on prtest, 259 open). `apply()` narrows to
   `phase_status === 1` **before** counting; with none open it falls back to the newest `version_id` and flips
   `closedPhase()` (amber "Viewing a closed phase" banner).
+- 🛑 **Status 2 is labelled "Quality Assessed", not "In QA"** (key stays `in-qa` for URLs and tests). Elsewhere in PRMS "In QA" is the separate in-review tag (`result.inQA`, `api.service.ts` `full_status_name_html`); the old "In QA" label made the tile and the Results Center chip disagree (27-oct-2026). Both label definitions: `services/portfolio-status-slot.ts` + `STATUS_SEGMENT_DEFINITIONS` in the service.
 - ⚠️ **Status dots resolve by `status_id`, never by `status_name`.** Same map as
   `programme-results.component.ts:101`; unknown ids fall back to the `not-started` foreground. The
   names in the payload (`Editing`, `Pending Review`, …) are labels only — colouring by name would

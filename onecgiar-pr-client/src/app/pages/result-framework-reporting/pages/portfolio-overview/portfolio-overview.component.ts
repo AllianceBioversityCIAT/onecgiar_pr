@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideExternalLink } from '@ng-icons/lucide';
@@ -133,6 +133,7 @@ export function getCategoryShortName(category: string): string {
   ]
 })
 export class PortfolioOverviewComponent {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly dataControlSE = inject(DataControlService);
@@ -266,6 +267,11 @@ export class PortfolioOverviewComponent {
     this.navigateToResultsCenter('all', { ...(status ? { status } : {}), ...(program ? { program } : {}) });
   }
 
+  /** The strip's jump link: the filtered list is the last block of a long page, so a status click alone never shows it. */
+  scrollToResultsDetail(): void {
+    this.host.nativeElement.querySelector('app-portfolio-results-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   readonly categoryOriginOption = computed(() =>
     categoryOriginBarOption(this.data.categoryOriginRows(), resolveChartTokens())
   );
@@ -352,6 +358,10 @@ export class PortfolioOverviewComponent {
     }
 
     const queryParams: Record<string, string | number> = {};
+    // This page counts the open phase only; without it Results Center lists every phase of the portfolio
+    // and shows a different number for the same click.
+    const phase = this.data.versionId();
+    if (phase) queryParams['phase'] = phase;
     if (filter === 'w1w2') queryParams['funding'] = 'w1w2';
     if (extra?.status) {
       const sId =

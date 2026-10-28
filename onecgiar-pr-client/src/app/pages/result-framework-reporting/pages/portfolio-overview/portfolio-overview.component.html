@@ -259,7 +259,7 @@
                         <span
                           class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125"
                           [style.background]="segment.fg"></span>
-                        <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                        <span [attr.title]="segment.label" class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
                           {{ segment.label }}
                         </span>
                       </div>
@@ -296,6 +296,15 @@
                     }
                   </span>
                   <div class="flex flex-wrap items-center gap-[12px] self-end sm:self-auto">
+                    @if (data.filteredTotal() > 0) {
+                      <button
+                        type="button"
+                        data-testid="portfolio-active-filter-jump"
+                        (click)="scrollToResultsDetail()"
+                        class="rounded-[6px] bg-[var(--pr-color-primary-600)] px-[10px] py-[4px] text-[12px] font-bold text-white hover:bg-[var(--pr-color-primary-700)] cursor-pointer border-0">
+                        {{ copy.filters.showResults(data.filteredTotal()) }}
+                      </button>
+                    }
                     @if (resultsCenterLinkable()) {
                       <button
                         type="button"
