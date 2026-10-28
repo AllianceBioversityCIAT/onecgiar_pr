@@ -546,6 +546,48 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       expect(document.activeElement).toBe(trigger);
     });
 
+    it('Enter on Clear selection clears the P/A selection and does not toggle the active (unselected) option (CPA-T-8 live finding)', () => {
+      const emitted: BilateralQueryParams[] = [];
+      component.filtersChange.subscribe(value => emitted.push(value));
+      fixture.componentRef.setInput('params', params({ program: ['SP01'] }));
+      fixture.detectChanges();
+
+      (el('overview-pa-trigger').nativeElement as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const listbox = overlay('[data-testid="overview-pa-listbox"]') as HTMLElement;
+      // ArrowDown moves the active option from SP01 (selected) to SP02 (unselected).
+      listbox.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      fixture.detectChanges();
+
+      const clear = overlay('[data-testid="overview-pa-clear"]') as HTMLButtonElement;
+      const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+      clear.dispatchEvent(enter);
+
+      // The keystroke must reach the button's native activation (browser turns Enter into click): not prevented,
+      // and nothing was toggled on the way up.
+      expect(enter.defaultPrevented).toBe(false);
+      expect(emitted).toEqual([]);
+      clear.click();
+      expect(emitted).toEqual([expect.objectContaining({ program: [] })]);
+      expect(emitted.some(value => value.program.includes('SP02'))).toBe(false);
+    });
+
+    it('P/A and category option buttons are not individual Tab stops (roving via aria-activedescendant)', () => {
+      (el('overview-pa-trigger').nativeElement as HTMLButtonElement).click();
+      fixture.detectChanges();
+      for (const option of Array.from(document.querySelectorAll('[data-testid^="overview-pa-option-"]'))) {
+        expect(option.getAttribute('tabindex')).toBe('-1');
+      }
+      component.closePaListbox(false);
+      fixture.detectChanges();
+
+      (el('overview-category-trigger').nativeElement as HTMLButtonElement).click();
+      fixture.detectChanges();
+      for (const option of Array.from(document.querySelectorAll('[data-testid^="overview-category-option-"]'))) {
+        expect(option.getAttribute('tabindex')).toBe('-1');
+      }
+    });
+
     it('is keyboard operable for the category select: Enter picks the active choice', () => {
       const emitted: BilateralQueryParams[] = [];
       component.filtersChange.subscribe(value => emitted.push(value));

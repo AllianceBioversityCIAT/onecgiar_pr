@@ -330,6 +330,7 @@
       <button
         type="button"
         role="option"
+        tabindex="-1"
         [id]="phaseOptionId(option.id)"
         [attr.data-testid]="'overview-phase-option-' + option.id"
         [attr.aria-selected]="selectedPhaseId() === option.id"
@@ -363,6 +364,9 @@
   (backdropClick)="closePaListbox()"
   (overlayKeydown)="onPaOverlayKeydown($event)"
   (detach)="closePaListbox()">
+  <!-- "Clear selection" is a sibling of the listbox, not a child: a listbox owns only options, and an Enter/Space on the button must not reach the listbox key handler. -->
+  <div
+    class="flex w-[300px] max-w-[calc(100vw-32px)] max-h-[min(60vh,320px)] flex-col gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)]">
   <div
     #paList
     [id]="paListboxId"
@@ -373,11 +377,12 @@
     data-testid="overview-pa-listbox"
     [attr.aria-activedescendant]="programOptions()[activePaIndex()] ? paOptionId(programOptions()[activePaIndex()].value) : null"
     (keydown)="onPaListKeydown($event)"
-    class="flex w-[300px] max-w-[calc(100vw-32px)] max-h-[min(60vh,320px)] flex-col gap-[2px] overflow-y-auto custom_scroll rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)] outline-none">
+    class="flex min-h-0 flex-col gap-[2px] overflow-y-auto custom_scroll outline-none">
     @for (option of programOptions(); track option.value; let index = $index) {
       <button
         type="button"
         role="option"
+        tabindex="-1"
         [id]="paOptionId(option.value)"
         [attr.data-testid]="'overview-pa-option-' + option.value"
         [attr.aria-selected]="isPaSelected(option.value)"
@@ -397,6 +402,7 @@
     } @empty {
       <span class="px-[10px] py-[7px] text-[12px] text-[var(--pr-text-secondary)]">No Programs / Accelerators in this phase</span>
     }
+  </div>
     @if (params().program.length) {
       <button
         type="button"
@@ -434,6 +440,7 @@
       <button
         type="button"
         role="option"
+        tabindex="-1"
         [id]="categoryOptionId(index)"
         [attr.data-testid]="'overview-category-option-' + (choice.value ?? 'all')"
         [attr.aria-selected]="params().category === choice.value"

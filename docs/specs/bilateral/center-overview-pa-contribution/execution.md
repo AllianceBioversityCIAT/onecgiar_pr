@@ -164,3 +164,19 @@
 - **Change:** popover drops Science Program + Source groups and their chips; Clear also shows for a P/A alone; `applyUrlParams` folds a pasted `?source=` into `category` (`w3`→`w3`, `w1w2`→`w1w2-tagging`) and strips it. Results tab unchanged. Overlay positions gain right-aligned fallbacks (popover ran off-screen, Apply hidden, once the Filter button moved right).
 - **Files:** `overview-controls.component.{ts,html,spec.ts}`, `bilateral-overview.component.{ts,spec.ts}`, `bilateral-overview/CLAUDE.md`.
 - **Verification:** `--findRelatedTests` on the 2 changed .ts → 22 suites, 3 failures (all old Program/Source expectations) → fixed → the 2 suites re-run 86/86 (other 20 already green: 803 total). `ng lint --quiet` pass. Live: popover lists Project / Result type / Role / Creation method only; opens right-aligned, Apply inside the viewport (1920px).
+
+### CPA-T-8 — completion checks (Leader via Claude in Chrome; local stack `qa-development-2026-ss` + prod DB vs prod site) — 2026-10-28
+
+- **Served bundle:** local Overview shows the visible P/A + Category controls (CPA-T-6) → current code.
+- **Unscoped Results tab (before = reporting.cgiar.org, after = local, same prod DB):** IFPRI "Showing 14 of 278" both; CIP "Showing 59 of 269" both → unchanged (CPA-P-7 / CPA-R-6 "unscoped unchanged").
+- **Portfolio Overview Centers block:** prod and local identical — 325 W3/Bilateral results (7 new / 318 replicated), 12/14 centers reporting, Editing 324 / Pending review 1; projects card Total 989 / 54 / 2 → unchanged.
+- **Keyboard, P/A multi-select:** DEFECT reproduced — with SP11 selected and the active option on unselected "Climate Action", Enter on "Clear selection" ticked Climate Action (`?program=SP11,SP06`) instead of clearing. Option buttons are Tab stops (`tabIndex 0`). Violates `requirements.md` §7 Accessibility (keyboard-operable) under CPA-R-3 → rework dispatched against CPA-T-6 scope (Implementer → Reviewer).
+- **900 px capture:** not obtained — the Chrome window is maximized; `resize_window` had no effect (`innerWidth` stayed 1920). Needs the owner to un-maximize the window or use DevTools device mode.
+- **Commit 6d5da5026** pushed to `qa-development-2026-ss` after validation (22 suites / 803 tests, ng build OK). `performance-refactor` moved (ee139c38b, mc-2 merge) → no longer a fast-forward; merge-tree clean; promotion pending.
+
+### CPA-T-6 rework (from CPA-T-8 keyboard finding) — PASS (attempt 1) — 2026-10-28
+
+- **Implementer** (T2, medium, `angular-developer`, `tdd`): "Clear selection" moved out of the `role="listbox"` (card wrapper holds listbox + sibling button; `onPaListKeydown` unchanged); `tabindex="-1"` on option buttons of the P/A, category and phase lists. Files: `overview-controls.component.{html,spec.ts}`, `bilateral-overview/CLAUDE.md` (keyboard line + Verified re-stamp).
+- **RED:** "Enter on Clear selection clears the P/A selection and does not toggle the active (unselected) option" `Expected: false / Received: true` (`enter.defaultPrevented`); "option buttons are not individual Tab stops" `Expected "-1" / Received null`; 2 failed / 30 passed. **GREEN:** spec 32/32; `--findRelatedTests` .ts + .html 22 suites, 805/805; `ng lint --quiet` pass.
+- **Reviewer** (T3): `STATUS: PASS` — listbox owns only options; `aria-activedescendant`/ids intact; Escape still on overlay; focus ring kept; phase-list `tabindex` = same §7 rule, not creep. ADVISORY: focus drops to `<body>` after Clear (pre-existing) → move focus back to the listbox; re-indent moved block; CLAUDE.md ~123 lines (>120 cap, pre-existing).
+- **Live re-check (Leader, Chrome, local stack + prod DB, served bundle confirmed new):** SP11 selected, active option "Climate Action" (unselected), Enter on "Clear selection" → URL `?program=` removed, no option selected, trigger "All". Defect closed.
