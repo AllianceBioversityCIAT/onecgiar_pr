@@ -167,7 +167,7 @@ One log line per call (route, `phase_year`, item/eligible/not-eligible counts, s
 | Metric | Estimate |
 |---|---|
 | Tasks | 8 |
-| LOC | ~1 600 (≈ 650 production, ≈ 950 tests/fixtures/doc) — **re-baselined 2026-10-28 to ~4 500** (Juan David, at the budget tripwire after T-3: actual ~2 350 after 2 tasks; falsifier specs with fixtures dominate), **then to ~6 200** (Juan David, at the tripwire after T-5: actual ~4 640 after 5 tasks; T-6 projected 900–1 300, T-7 ~200) |
+| LOC | ~1 600 (≈ 650 production, ≈ 950 tests/fixtures/doc) — **re-baselined 2026-10-28 to ~4 500** (Juan David, at the budget tripwire after T-3: actual ~2 350 after 2 tasks; falsifier specs with fixtures dominate), **then to ~6 200** (Juan David, at the tripwire after T-5: actual ~4 640 after 5 tasks; T-6 projected 900–1 300, T-7 ~200), **then to ~6 500** (Juan David, at the tripwire after T-6: actual ~6 270 after 6 tasks; T-7 doc ~200 remains) |
 | Review rounds | 12 (resolver tasks T-4/T-5 estimated at 2 each) |
 
 Depth check: Full holds (external contract + generic reader over 181 bindings).

@@ -7,7 +7,7 @@
 - **Ticket:** [P2-4037](https://cgiarmel.atlassian.net/browse/P2-4037) — commits `<emoji> <type>(qa-catalog) [P2-4037]: …`
 - **Owner / driver:** Juan David Delgado
 - **Status:** not-started — tasks approved 2026-10-28 (Juan David)
-- **Budget (design §13):** 8 tasks · ~6 200 LOC (re-baselined 2026-10-28 from ~1 600, then from ~4 500 at the T-5 tripwire) · 12 review rounds — tripwire for `/akili-execute`
+- **Budget (design §13):** 8 tasks · ~6 500 LOC (re-baselined 2026-10-28 from ~1 600, then from ~4 500 at the T-5 tripwire, then from ~6 200 at the T-6 tripwire) · 12 review rounds — tripwire for `/akili-execute`
 
 ## 2. Pre-flight checklist
 
@@ -134,7 +134,7 @@
 - **Definition of done:**
   - [ ] Falsifiers (a)–(g) executed and quoted; Jest + `tsc --noEmit` green; eslint clean
 
-### QRF-T-7 — Contract documentation
+### [x] QRF-T-7 — Contract documentation
 
 - **Type:** docs
 - **Description:** In `onecgiar-pr-server/docs/qa-catalog.en.md`: a "Results feed" part (routes, eligibility incl. the two new reasons, filters, order, limits, value shapes, null/[] rule, capdev normalization now applied, `not_eligible` reasons, person-bearing keys per OQ-8) and a change-log row. Record TRD §7 QA row as a **pending** item in `execution.md` (shared-file discipline).

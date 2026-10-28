@@ -386,3 +386,60 @@
 - Cause: T-6 needed a rework round (+~170 LOC). Attempt 1 landed at ~1 460, against the ~1 100 aim
 - Projection: T-7 adds ~150–250 LOC of documentation, for a total of ~6 400–6 500. T-7 takes 1–2 review rounds, which puts the total at 11–12 of 12. T-8 is live verification with no code expected
 - Status: stopped for the owner. This stop is not auto-approved
+- Owner decision (Juan David, 2026-10-28, at the gate): **option 1. Re-baseline to ~6 500 LOC and continue with T-7.** `design.md` §13 and `tasks.md` §1 are updated. Review rounds (12) are unchanged
+
+## QRF-T-7 — Contract documentation — attempt 1 FAIL (2026-10-28)
+
+- Effort high · skills `cognitive-doc-design`, `api-design-principles`
+- Files: `onecgiar-pr-server/docs/qa-catalog.en.md` +207/−5. Adds the "Results feed" part, a v1.26 change-log row, known gap 17 marked as applied, and 4 consistency edits
+- Falsifier: `scratchpad/falsify.sh`. Its first run was red on `by_program`, `by_result_type`, `clarisa_id` and `count`, which appeared only in compound cells; those rows were split. Full-hit run: 33 names `ok`, `exit=0`. Red run: with `no_lead_program` un-backticked → `MISS no_lead_program exit=1`, then restored (identical to the backup)
+- Person-bearing grep (`ts-node` over `CATALOG_FIELDS`, regex `/person|contact|author|e-?mail|name|facilitator|developer|collaborator|submitter|created_by|user/i`): 6 keys listed, OQ-8's five plus `general.created_by`. The other hits were excluded with reasons
+- Evidence re-run (Leader inline): falsifier `exit=0`; the secret scan of the doc found nothing → **VERIFIED**
+- Reviewer (`akili-reviewer`, override b) → **FAIL**: the doc contradicts the shipped code on value shapes, which is the disqualifier. Verbatim:
+  > 1. The value-shape table says `object` is "reserved: no field uses it at revision 30". Two fields do use it: `knowledge_product.accessibility_cg` (`definitions/sections/knowledge-product.ts:360`) and `knowledge_product.altmetric` (`:436`). Violated: `requirements.md#QRF-R-10` and the task disqualifier. Remediation: remove "reserved…" and name both fields as the `object` cases. Their value is an object keyed by subfield key, or `null` (`projection.ts:31-32`).
+  > 2. The doc says `single_select` is "the option id (number)", and `multi_select` holds "option ids" in the same sense. The shipped typing returns the stored id unchanged, number **or string** (`values/value-typing.ts:136-144`, "never reinterpreted"). Violated: `requirements.md#QRF-R-7`. Remediation: write "the option id as stored (number, or string for a control list with text ids)", or show that every control list in revision 30 has numeric ids and cite where that is enforced.
+  > 3. "A field with no stored value is present… `null`" is stated for every non-list type. A scalar field that declares subfields never returns `null`. It returns `{ "value": null, "<sub>": null|[] }` (`projection.ts:35-37`); e.g. `general.lead_contact_person` → `{ "value": null, "directory_user": null }`. The capdev table already shows the object form, so the doc contradicts itself. Violated: `requirements.md#QRF-R-7` (amended 2026-10-28). Remediation: add the exception to the null/[] bullet and to the scalar-with-subfields table row: "no stored value → `{ value: null, <subfield>: null or [] }`, never bare `null`".
+- Reviewer judgements:
+  - `general.created_by` is correctly included: a PRMS user id, pseudonymous and person-identifying; OQ-8 was a snapshot, not a closed list
+  - per-route permission confirmed (`qa-catalog.controller.ts:48,69,92`; `clarisa-api-key.guard.ts:29-42`)
+  - "two new reasons" read correctly
+  - date format correct
+  - no leak
+- ADVISORY:
+  - NULL `submitted_at` sorts first, which the doc does not say
+  - Phase scope should be marked "subject to OQ-4"
+  - Example `result_id: 31084` is a real prod id; replace it with an obviously fake one
+  - **CODE (outside T-7), carried to T-8 and validation:** a result with two active lead rows (role 1) appears twice in `items` and is counted twice. `buildEligibility` joins `rbi` without deduplicating (`qa-results.repository.ts`)
+  - The grep falsifier cannot catch wrong shape descriptions; re-check by reading the doc against `projection.ts` and `value-typing.ts`
+- spawns: implementer 30 calls, 138 560 tokens, ended partial (assumptions only); reviewer 30 calls, 132 083 tokens, ended complete
+
+## QRF-T-7 — Contract documentation — PASS on attempt 2 (2026-10-28)
+
+- Attempts: 2 (attempt 1 FAIL above). Attempt 2 effort `xhigh`; skill `cognitive-doc-design`
+- Attempt 2: 11 lines changed in the feed section of `onecgiar-pr-server/docs/qa-catalog.en.md`. Final doc diff is +207/−5 net
+  - Each shape sentence was checked against the code:
+    - `object` → `projection.ts:31-32`, plus `knowledge-product.ts:360` and `:436`
+    - `single_select` → `value-typing.ts:136-144`
+    - `multi_select` → `read-plan.ts:291-294` and `projection.ts:27-28`
+    - scalar with subfields and no stored value → `projection.ts:35-37`
+  - `[advisory-grade]` items applied:
+    - NULL `submitted_at` sorts first (`qa-results.repository.ts:111-116`, `:46`)
+    - "subject to OQ-4"
+    - example ids 31084/31085/41231 → 900001/900002/900003
+  - `result_code: 5120` is left as an illustrative example
+- Verification:
+  - `falsify.sh` → 33 names `ok`, `exit=0`
+  - `grep -n "reserved\|31084\|(number)"` → no hits in the feed section; the 4 remaining hits are untouched catalog text
+- Evidence re-run (Leader inline): `falsify.sh` → `exit=0`; grep for `31084|(number)|41231` → no hits → **VERIFIED**
+- Reviewer attempt 2 (`akili-reviewer`) → **PASS**: all three issues fixed, verified against the code itself; no regressions; R-7 as amended, R-8 as clarified and R-10 conform. The R-8 carry ends here
+- **Pending item (shared-file discipline; apply on `staging`, never on this spec branch):**
+  > **TRD §7 (QA row):** add `GET /api/qa/results` and `POST /api/qa/results/details` next to `GET /api/qa/catalog`.
+  > - Auth: CLARISA `x-api-key`, with one registered permission per route; the PRMS `auth` JWT is not accepted.
+  > - Eligibility: active, Submitted, phase year of Reporting or IPSR (subject to OQ-4), `source = 'Result'`, catalogued type, active lead program.
+  > - Limits: `page_size` 1–200 default 100, `page` ≤ 1 000 000, `result_ids` 1–50, `phase_year` 2000–2100.
+  > - A failing read is a whole-batch generic 500.
+  > - Link: `onecgiar-pr-server/docs/qa-catalog.en.md#results-feed`.
+- spawns: implementer (attempt 2) 19 calls, 121 737 tokens, ended partial (assumptions only); reviewer (attempt 2) 10 calls, 81 659 tokens, ended complete
+- Requirements: QRF-R-10, QRF-R-9 (person-bearing keys: OQ-8's five plus `general.created_by`, confirmed by the Reviewer)
+- Running totals vs budget: tasks 7/8 · LOC ~6 480/6 500 · review rounds **12/12**. Within budget, but review rounds are exhausted. T-8 is HITL live verification with no code expected. Any code fix that T-8 surfaces (for example the duplicate-lead-row finding below) would need a review round and therefore a budget decision first
+- Carried to QRF-T-8 (from the T-7 attempt 1 review, code outside T-7): a result with two active lead rows (role 1) may appear twice in `items` and be counted twice, because `buildEligibility` joins `rbi` without deduplicating. Check this on prtest with a query for results that have >1 active role-1 row
