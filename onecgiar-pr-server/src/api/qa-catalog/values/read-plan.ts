@@ -6,7 +6,8 @@
 //  - `relation` bindings with the same table, result foreign key and filter share one plan that returns the element
 //    primary key, every value column and every subfield `column` (a subfield `column` is read from the element row).
 // `path` and `lookup` bindings are not planned here: they come back as `deferred` for the later resolvers (QRF-T-4/T-5),
-// which start from the element rows these plans read.
+// which start from the element rows these plans read. A scalar field that declares subfields is planned like a list element
+// (QRF-R-7 as amended 2026-10-28, DD-9): its value column AND its subfield columns come from the same row.
 import {
   CatalogField,
   CatalogSubField,
@@ -48,13 +49,18 @@ export interface CellRead {
   temporal: Temporal;
 }
 
-export interface ColumnFieldRead extends CellRead {
-  fieldKey: string;
-}
-
 /** A subfield `column`, read from the element row and keyed by the subfield's catalog key. */
 export interface ElementColumnRead extends CellRead {
   subfieldKey: string;
+}
+
+export interface ColumnFieldRead extends CellRead {
+  fieldKey: string;
+  /** A scalar field with subfields: its value is `{ value, <subfield key>: ... }`. */
+  wrapped: boolean;
+  columns: ElementColumnRead[];
+  /** Columns the row must also carry for the subfield paths that start from it (QRF-T-6). */
+  startColumns: string[];
 }
 
 export interface RelationFieldRead {
@@ -62,9 +68,19 @@ export interface RelationFieldRead {
   fieldType: CatalogField['type'];
   /** The element's value; a row whose value is NULL is not an element (catalog DD-13). */
   value: CellRead;
-  /** Subfield columns, in catalog order; only for `list` / `object`. */
+  /** A scalar field with subfields: its value is `{ value, <subfield key>: ... }`. */
+  wrapped: boolean;
+  /** Subfield columns, in catalog order; only for `list` / `object` / a wrapped scalar. */
   columns: ElementColumnRead[];
+  /** Columns the element row must also carry for the subfield paths that start from it (QRF-T-6). */
+  startColumns: string[];
 }
+
+/**
+ * The row each element object was built from, so a subfield `path` starts at ITS element's row (catalog DD-12).
+ * Weak: it never outlives the values it describes, and nothing here reaches the response (projection is by catalog key).
+ */
+export const ELEMENT_ROWS = new WeakMap<object, SqlRow>();
 
 interface PlanBase {
   table: string;
@@ -102,9 +118,45 @@ export interface ReadPlanSet {
   deferred: DeferredBinding[];
 }
 
+/**
+ * A read stage failed (design sections 7 and 9). It carries the catalog keys of the fields the stage serves and the CLASS of
+ * the cause, nothing else: the driver text can hold SQL, tables, schemas, ids or values (QRF-R-9), so it is neither copied
+ * nor chained. The service logs `fieldKeys` and answers a generic 500.
+ */
+export class PlanReadError extends Error {
+  readonly causeName: string;
+
+  constructor(
+    readonly fieldKeys: string[],
+    cause: unknown,
+  ) {
+    super('A read plan failed');
+    this.name = 'PlanReadError';
+    this.causeName =
+      cause instanceof Error ? cause.constructor.name : typeof cause;
+  }
+}
+
+/** Runs one stage of a read; whatever it throws leaves as a `PlanReadError` naming the stage's field keys. */
+export async function readStage<T>(
+  fieldKeys: Iterable<string>,
+  read: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await read();
+  } catch (cause) {
+    throw new PlanReadError([...new Set(fieldKeys)], cause);
+  }
+}
+
 function fail(fieldKey: string, why: string): never {
   // Catalog keys are public; table and column names never go in an error (QRF-R-9).
   throw new Error(`value reader: field ${fieldKey} ${why}`);
+}
+
+/** QRF-R-7 (amended): a scalar field that declares subfields is `{ value, <subfield key>: ... }`. */
+function hasWrappedSubfields(field: CatalogField): boolean {
+  return isScalarType(field.type) && (field.subfields?.length ?? 0) > 0;
 }
 
 export function filterPredicates(
@@ -138,6 +190,7 @@ function elementColumns(
   field: CatalogField,
   table: string,
   deferred: DeferredBinding[],
+  startColumns: string[],
 ): ElementColumnRead[] {
   const out: ElementColumnRead[] = [];
   for (const sub of field.subfields ?? ([] as CatalogSubField[])) {
@@ -159,6 +212,9 @@ function elementColumns(
         ),
       });
     } else {
+      if (sub.storage.kind === 'path') {
+        sub.storage.steps[0].join.forEach((j) => startColumns.push(j.from));
+      }
       deferred.push({
         fieldKey: field.key,
         subfieldPath: [sub.key],
@@ -195,9 +251,16 @@ export function buildReadPlans(
         };
         columnPlans.set(binding.table, plan);
       }
+      const wrapped = hasWrappedSubfields(field);
+      const startColumns: string[] = [];
       plan.fields.push({
         fieldKey: field.key,
         ...cellOf(keys, binding.table, binding.column, field.type, field.key),
+        wrapped,
+        columns: wrapped
+          ? elementColumns(keys, field, binding.table, deferred, startColumns)
+          : [],
+        startColumns,
       });
     } else if (binding.kind === 'relation') {
       const filter = filterPredicates(binding.filter);
@@ -214,8 +277,10 @@ export function buildReadPlans(
         };
         relationPlans.set(group, plan);
       }
-      // QRF-R-7 gives a scalar-typed field (even one with subfields) the shape of its type: the value only.
-      const withSubfields = field.type === 'list' || field.type === 'object';
+      const wrapped = hasWrappedSubfields(field);
+      const withSubfields =
+        field.type === 'list' || field.type === 'object' || wrapped;
+      const startColumns: string[] = [];
       plan.fields.push({
         fieldKey: field.key,
         fieldType: field.type,
@@ -223,15 +288,19 @@ export function buildReadPlans(
           keys,
           binding.table,
           binding.value_column,
-          // the element value of a list / multi_select is an id or a scalar; its type is the value column's, read as a select id
-          withSubfields || field.type === 'multi_select'
+          // the element value of a list / object / multi_select is an id or a scalar; its type is the value column's, read as a select id
+          field.type === 'list' ||
+            field.type === 'object' ||
+            field.type === 'multi_select'
             ? 'single_select'
             : field.type,
           field.key,
         ),
+        wrapped,
         columns: withSubfields
-          ? elementColumns(keys, field, binding.table, deferred)
+          ? elementColumns(keys, field, binding.table, deferred, startColumns)
           : [],
+        startColumns,
       });
     } else {
       deferred.push({
@@ -252,11 +321,16 @@ export function buildReadPlans(
 export function planColumns(plan: ReadPlan): string[] {
   const columns = new Set<string>([plan.primaryKey, plan.keyColumn]);
   if (plan.kind === 'column') {
-    plan.fields.forEach((f) => columns.add(f.column));
+    plan.fields.forEach((f) => {
+      columns.add(f.column);
+      f.columns.forEach((c) => columns.add(c.column));
+      f.startColumns.forEach((c) => columns.add(c));
+    });
   } else {
     plan.fields.forEach((f) => {
       columns.add(f.value.column);
       f.columns.forEach((c) => columns.add(c.column));
+      f.startColumns.forEach((c) => columns.add(c));
     });
   }
   return [...columns];

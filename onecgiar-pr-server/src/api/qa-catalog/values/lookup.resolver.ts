@@ -21,6 +21,7 @@ import {
   PlanQueryRunner,
   Predicate,
   SqlRow,
+  readStage,
 } from './read-plan';
 import {
   ScalarFieldType,
@@ -288,7 +289,12 @@ export async function resolveLookups(
     ctx.concurrency ?? READ_CONCURRENCY,
     async (group) => {
       const query = queryOf(group, ctx);
-      return query ? ctx.run(query) : [];
+      return query
+        ? readStage(
+            group.targets.map((t) => t.fieldKey),
+            () => ctx.run(query),
+          )
+        : [];
     },
   );
   list.forEach((group, i) => {

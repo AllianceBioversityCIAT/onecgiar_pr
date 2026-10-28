@@ -60,6 +60,8 @@ export interface EligibleBreakdown {
 
 export interface ClassifiedResult {
   result_id: number;
+  /** `null` only for `not_found`. */
+  result_code: number | null;
   /** `null` = eligible. */
   reason: IneligibleReason | null;
   /** Catalog key; set whenever the result type is catalogued (also for ineligible rows), else null. */
@@ -68,6 +70,7 @@ export interface ClassifiedResult {
 
 interface ClassifyRow {
   result_id: number;
+  result_code: number | null;
   is_active: number | boolean | null;
   status_id: number | null;
   source: string | null;
@@ -190,6 +193,7 @@ ORDER BY r.result_type_id ASC`,
     if (unique.length === 0) return [];
     const rows: ClassifyRow[] = await this.dataSource.query(
       `SELECT r.id AS result_id,
+  r.result_code AS result_code,
   r.is_active AS is_active,
   r.status_id AS status_id,
   r.source AS source,
@@ -212,6 +216,7 @@ WHERE r.id IN (${placeholders(unique.length)})`,
       const row = byId.get(id);
       return {
         result_id: id,
+        result_code: row ? Number(row.result_code) : null,
         reason: row ? this.firstFailingReason(row, phaseYear) : 'not_found',
         result_type_key: row ? this.typeKeyOf(row) : null,
       };

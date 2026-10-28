@@ -255,6 +255,7 @@ describe('QaResultsRepository.count and breakdown (QRF-R-6)', () => {
 
 describe('QaResultsRepository.classify (QRF-R-8)', () => {
   const base = {
+    result_code: 7777,
     is_active: 1,
     status_id: 3,
     source: 'Result',
@@ -300,6 +301,12 @@ describe('QaResultsRepository.classify (QRF-R-8)', () => {
       [111, null],
       [112, 'other_phase'],
     ]);
+  });
+
+  it('carries the result_code of an existing result (details item) and null for an absent id', async () => {
+    const { repo } = makeRepo([rows]);
+    const out = await repo.classify([106, 100], 2026);
+    expect(out.map((o) => o.result_code)).toEqual([7777, null]);
   });
 
   it('carries the catalog key of a catalogued type and null otherwise', async () => {

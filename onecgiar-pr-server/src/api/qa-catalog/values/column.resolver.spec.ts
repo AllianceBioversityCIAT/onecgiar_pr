@@ -7,6 +7,7 @@ import {
   FX_DUE,
   FX_OPEN,
   FX_SCORE,
+  FX_TERM,
   FX_TITLE,
   fixtureRunner,
 } from './fixtures';
@@ -57,5 +58,14 @@ describe('resolveColumnPlan', () => {
     expect(run.calls[0].where).toEqual([
       { column: 'id', op: 'in', values: [1, 2] },
     ]);
+  });
+
+  it('a scalar with subfields is { value, <subfield key> } from the same row; no row -> every key present with null', async () => {
+    const run = fixtureRunner({
+      fx_type: [{ fx_type_id: 1, result_id: 1, term: 2 }],
+    });
+    const out = await resolveColumnPlan(plan(FX_TERM), [1, 2], run);
+    expect(out.get(1)).toEqual({ 'fx.term': { value: 2, degree: 2 } });
+    expect(out.get(2)).toEqual({ 'fx.term': { value: null, degree: null } });
   });
 });

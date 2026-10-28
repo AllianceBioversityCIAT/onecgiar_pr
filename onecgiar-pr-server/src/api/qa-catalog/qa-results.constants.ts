@@ -20,3 +20,12 @@ export const QA_RESULTS_PAGE_MAX = 1_000_000;
 
 /** Largest id a `program_ids` value may carry: the signed 32-bit range of the CLARISA id column. */
 export const QA_RESULTS_PROGRAM_ID_MAX = 2_147_483_647;
+
+/** QRF-DD-12 / OQ-5 (confirmed 2026-10-28): most `result_ids` one `details` call may carry. */
+export const QA_RESULTS_BATCH_MAX = 50;
+
+/** Largest `result_ids` value: the signed 32-bit range of `result.id`. */
+export const QA_RESULTS_RESULT_ID_MAX = 2_147_483_647;
+
+/** Longest `field_keys` entry; a longer one cannot be a catalog key and is not echoed back (QRF-R-7). */
+export const QA_RESULTS_FIELD_KEY_MAX_LENGTH = 200;

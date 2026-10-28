@@ -1,7 +1,10 @@
 // @akili-spec quality-assurance/qa-field-catalog
 import {
+  Body,
   Controller,
   Get,
+  HttpCode,
+  Post,
   Query,
   UseGuards,
   ValidationPipe,
@@ -12,8 +15,12 @@ import { BilateralClarisaEndpoint } from '../bilateral/decorators/bilateral-clar
 import { ClarisaApiKeyGuard } from '../bilateral/guards/clarisa-api-key.guard';
 import { QaCatalogQueryDto } from './dto/qa-catalog-query.dto';
 import { QaCatalogResponse } from './dto/qa-catalog-response.dto';
+import { QaResultsDetailsDto } from './dto/qa-results-details.dto';
 import { QaResultsQueryDto } from './dto/qa-results-query.dto';
-import { QaResultsListResponse } from './dto/qa-results-response.dto';
+import {
+  QaResultsDetailsResponse,
+  QaResultsListResponse,
+} from './dto/qa-results-response.dto';
 import { QaCatalogService } from './qa-catalog.service';
 import { QaResultsService } from './qa-results.service';
 
@@ -74,5 +81,28 @@ export class QaCatalogController {
     query: QaResultsQueryDto,
   ): Promise<QaResultsListResponse> {
     return this.qaResultsService.list(query);
+  }
+
+  /**
+   * QRF-R-1 / R-2 / R-7 / R-8 / R-9. A POST that reads (it answers 200, not 201); ineligible ids are part of the 200 body.
+   * Same guard and per-endpoint declaration as the list; no `ResponseInterceptor`.
+   */
+  @Post('results/details')
+  @HttpCode(200)
+  @BilateralClarisaEndpoint('/api/qa/results/details')
+  @ApiOperation({
+    summary: 'Field values of a batch of submitted W1/W2 results',
+  })
+  getResultsDetails(
+    @Body(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: false,
+      }),
+    )
+    body: QaResultsDetailsDto,
+  ): Promise<QaResultsDetailsResponse> {
+    return this.qaResultsService.details(body);
   }
 }

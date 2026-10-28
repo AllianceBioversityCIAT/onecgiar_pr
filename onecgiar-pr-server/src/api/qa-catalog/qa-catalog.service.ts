@@ -17,7 +17,8 @@ export interface QaCatalogSource extends Omit<CatalogDefinition, 'notForQa'> {
   versions: Record<number, CatalogYearVersion>;
 }
 
-const CODE_CATALOG: QaCatalogSource = {
+/** The catalog the routes serve; `QaResultsService.details` reads its fields (with storage) from the same object. */
+export const CODE_CATALOG: QaCatalogSource = {
   resultTypes: CATALOG_RESULT_TYPES,
   sections: CATALOG_SECTIONS,
   fields: CATALOG_FIELDS,

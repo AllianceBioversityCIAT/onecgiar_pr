@@ -6,9 +6,9 @@ import {
   CatalogField,
   CatalogSubField,
 } from '../definitions/types';
-import { FixtureDb, fixtureRunner } from './fixtures';
+import { FixtureDb, failingOn, fixtureRunner } from './fixtures';
 import { resolveLookups } from './lookup.resolver';
-import { DeferredBinding } from './read-plan';
+import { DeferredBinding, PlanReadError } from './read-plan';
 
 const TOC = 'toc.integration_information.';
 const ENV = { DB_TOC: 'toc_fx' };
@@ -184,6 +184,17 @@ describe('resolveLookups', () => {
       'sibling',
       null,
     ]);
+  });
+
+  it('a failing source leaves as a PlanReadError that names the field and nothing of the cause', async () => {
+    const attempt = resolveLookups(
+      [ENTRIES, TOP_TOC_RESULT],
+      { values: batch(), deferred: LOOKUPS },
+      { run: failingOn('toc_results', DB), phaseYear: 2026, env: ENV },
+    );
+    await expect(attempt).rejects.toBeInstanceOf(PlanReadError);
+    await expect(attempt).rejects.toMatchObject({ fieldKeys: ['kpi.entries'] });
+    await expect(attempt).rejects.not.toThrow(/prdb_secret|toc_|exist|Table/i);
   });
 
   it('one SELECT per source for the whole batch, on the configured ToC database', async () => {

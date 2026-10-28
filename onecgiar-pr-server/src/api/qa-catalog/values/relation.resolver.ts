@@ -2,8 +2,11 @@
 // QRF-DD-7: the elements of a relation field are the rows of its table that pass the plan's equality `filter` (in the
 // query) and whose value column is NOT NULL (here: it is per field, and several fields share one plan), in primary-key
 // order. QRF-R-7 shapes: multi_select -> ids, list -> objects keyed by subfield key, scalar types -> the first element's
-// value; no element -> `[]` for multi_select / list and `null` for the rest.
+// value; no element -> `[]` for multi_select / list and `null` for the rest. A scalar field with subfields (amended 2026-10-28)
+// is `{ value, <subfield key>: ... }` built from its first element. Every element object is registered with its row, so a
+// subfield `path` can start there (QRF-T-6).
 import {
+  ELEMENT_ROWS,
   ElementColumnRead,
   PlanQueryRunner,
   RelationFieldRead,
@@ -27,6 +30,12 @@ function elementObject(
   return out;
 }
 
+function element(row: SqlRow, columns: ElementColumnRead[]) {
+  const object = elementObject(row, columns);
+  ELEMENT_ROWS.set(object, row);
+  return object;
+}
+
 function fieldValue(field: RelationFieldRead, rows: SqlRow[]): unknown {
   const elements = rows.filter(
     (r) =>
@@ -39,13 +48,24 @@ function fieldValue(field: RelationFieldRead, rows: SqlRow[]): unknown {
 
   if (field.fieldType === 'multi_select') return elements.map(typeOf);
   if (field.fieldType === 'list') {
-    return elements.map((r) => elementObject(r, field.columns));
+    return elements.map((r) => element(r, field.columns));
   }
-  if (elements.length === 0) return emptyValue(field.fieldType);
-  if (field.fieldType === 'object') {
-    return elementObject(elements[0], field.columns);
+  if (elements.length === 0) {
+    if (!field.wrapped) return emptyValue(field.fieldType);
+    return {
+      value: null,
+      ...Object.fromEntries(field.columns.map((c) => [c.subfieldKey, null])),
+    };
   }
-  return isScalarType(field.fieldType) ? typeOf(elements[0]) : null;
+  if (field.fieldType === 'object') return element(elements[0], field.columns);
+  if (!isScalarType(field.fieldType)) return null;
+  if (!field.wrapped) return typeOf(elements[0]);
+  const wrapped = {
+    value: typeOf(elements[0]),
+    ...elementObject(elements[0], field.columns),
+  };
+  ELEMENT_ROWS.set(wrapped, elements[0]);
+  return wrapped;
 }
 
 export async function resolveRelationPlan(

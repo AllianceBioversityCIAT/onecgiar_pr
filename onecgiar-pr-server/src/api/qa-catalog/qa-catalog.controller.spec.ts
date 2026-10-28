@@ -17,6 +17,7 @@ describe('QaCatalogController', () => {
   let app: INestApplication;
   const validate = jest.fn();
   const list = jest.fn();
+  const details = jest.fn();
 
   // The 200 precondition must not depend on the (still empty) code catalog: the controller is
   // wired to the real service, but that service reads FIXTURE_SOURCE (see the real-catalog
@@ -37,6 +38,13 @@ describe('QaCatalogController', () => {
     useRealCatalog.value = false;
     validate.mockReset();
     list.mockReset();
+    details.mockReset();
+    details.mockResolvedValue({
+      phase: 2026,
+      catalog_version: '2026.3',
+      results: [],
+      not_eligible: [],
+    });
     list.mockResolvedValue({
       phase: 2026,
       page: 1,
@@ -50,7 +58,7 @@ describe('QaCatalogController', () => {
       controllers: [QaCatalogController],
       providers: [
         catalogProvider,
-        { provide: QaResultsService, useValue: { list } },
+        { provide: QaResultsService, useValue: { list, details } },
         ClarisaApiKeyGuard,
         { provide: ClarisaApiKeyValidationService, useValue: { validate } },
       ],
@@ -298,6 +306,83 @@ describe('QaCatalogController', () => {
           QaCatalogController.prototype.getResults,
         ),
       ).toBeUndefined();
+    });
+  });
+
+  describe('POST /results/details (QRF-R-1 / R-2 / R-7 / R-8)', () => {
+    const post = (body: unknown, headers: Record<string, string> = {}) =>
+      request(app.getHttpServer())
+        .post('/results/details')
+        .set({ 'x-api-key': API_KEY, ...headers })
+        .send(body as object);
+    const BODY = {
+      phase_year: 2026,
+      result_ids: [1, 2],
+      field_keys: ['general.title'],
+    };
+
+    it('valid key and body -> 200 (not 201) with the service body unchanged, no envelope; the guard is asked for the details endpoint', async () => {
+      const res = await post(BODY);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        phase: 2026,
+        catalog_version: '2026.3',
+        results: [],
+        not_eligible: [],
+      });
+      expect(res.body.response).toBeUndefined();
+      expect(validate).toHaveBeenCalledWith(
+        API_KEY,
+        '/api/qa/results/details',
+        expect.anything(),
+      );
+      expect(details).toHaveBeenCalledWith(expect.objectContaining(BODY));
+    });
+
+    it('a body the DTO rejects -> 400 and the service is not called (e: 51 ids)', async () => {
+      const ids = Array.from({ length: 51 }, (_, i) => i + 1);
+      for (const body of [
+        { phase_year: 2026, result_ids: ids },
+        { result_ids: [1] },
+        {},
+      ]) {
+        expect((await post(body)).status).toBe(400);
+      }
+      expect(details).not.toHaveBeenCalled();
+    });
+
+    it("the service's 400 / 404 reach the client", async () => {
+      details.mockRejectedValueOnce(
+        new NotFoundException('No QA catalog available for phase_year 2023'),
+      );
+      expect((await post({ ...BODY, phase_year: 2023 })).status).toBe(404);
+    });
+
+    it('scenario No key: user JWT without x-api-key -> 401, no data, CLARISA and service untouched', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/results/details')
+        .set('auth', 'eyJhbGciOiJIUzI1NiJ9.e30.sig')
+        .set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiJ9.e30.sig')
+        .send(BODY);
+      expect(res.status).toBe(401);
+      expect(res.body.results).toBeUndefined();
+      expect(validate).not.toHaveBeenCalled();
+      expect(details).not.toHaveBeenCalled();
+    });
+
+    it('key rejected by CLARISA -> 401 with no data', async () => {
+      validate.mockResolvedValue(null);
+      const res = await post(BODY);
+      expect(res.status).toBe(401);
+      expect(details).not.toHaveBeenCalled();
+    });
+
+    it("handler declares @BilateralClarisaEndpoint('/api/qa/results/details') and carries no interceptor", () => {
+      const handler = QaCatalogController.prototype.getResultsDetails;
+      expect(Reflect.getMetadata(BILATERAL_CLARISA_ENDPOINT_KEY, handler)).toBe(
+        '/api/qa/results/details',
+      );
+      expect(Reflect.getMetadata('__interceptors__', handler)).toBeUndefined();
     });
   });
 });

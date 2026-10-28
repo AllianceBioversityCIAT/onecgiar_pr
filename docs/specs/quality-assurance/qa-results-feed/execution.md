@@ -269,3 +269,120 @@
   - Spec total ≈ 5 700–6 200 LOC. Review rounds stay well under 12
 - Status: stopped for the owner. This stop is not auto-approved
 - Owner decision (Juan David, 2026-10-28, at the gate): **option 1. Re-baseline to ~6 200 LOC and continue with T-6.** `design.md` §13 and `tasks.md` §1 are updated. Tasks (8) and review rounds (12) are unchanged
+
+## QRF-T-6 — `POST /api/qa/results/details` — attempt 1 FAIL (2026-10-28)
+
+- Effort high · skills `nestjs-expert`, `tdd`, `error-handling-patterns`, `api-design-principles`
+- Files: about 1 460 LOC (production ~540, specs and fixtures ~920).
+  - New: `dto/qa-results-details.dto.ts` (+ spec), `qa-results.details.spec.ts`, `values/normalizers.ts` (+ spec), `values/projection.ts` (+ spec)
+  - Edited: `qa-results.service.ts` (+ spec), `qa-catalog.controller.ts` (+ spec), `dto/qa-results-response.dto.ts`, `qa-results.constants.ts`, `qa-catalog.service.ts` (exports `CODE_CATALOG`), `qa-results.repository.ts` (+ spec, `result_code` in classify)
+  - Edited under `values/`: `read-plan.ts`, `column.resolver.ts`, `relation.resolver.ts`, `path.resolver.ts` (each + spec), `fixtures.ts`
+- Implementer verification: `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` → 45 suites / 909 tests, 3 reruns. One earlier unreproduced failure in `qa-catalog.controller.spec.ts`, likely a load flake. tsc 0; eslint + prettier clean on 25 files
+- Falsifier reds:
+  - (a) `BadRequestException: mutant: first ineligible id`, 4 failed
+  - (b) in `projection.spec`: `+ "secret_column": "LEAK-DEEP",` at depth 2. The service-level runner stays green under the spread mutant
+  - (c) `Received array: [..., "fx.future"]`
+  - (d) `- "value": 4, + "value": 2,` and bare scalar `Expected: {"degree": 2, "value": 4} / Received: 4`
+  - (e) `Received promise resolved instead of rejected`
+  - (f) `Expected: "2026.7" / Received: "2026"`
+  - (g) `Expected pattern: not /fx_result|prdb_secret|toc_secret_db|Table|database|exist/i`
+  - (h) `Expected length: 1 / Received length: 3`
+  - (i) `Received promise resolved instead of rejected`
+  - Extended specs:
+    - read-plan, column, relation: bare scalar
+    - path: element row
+    - controller: `@HttpCode(200)`, endpoint string
+    - repository: `result_code`
+- Smoke run over the real 2026 catalog with an empty runner: 9 types → 51 statements (design §8 budget ~110)
+- Evidence re-run (Leader inline, same command, run twice) → 45 / 909 green both times; tsc 0 → **VERIFIED**
+- Reviewers (parallel lens; overrides b and f): both lenses **FAIL** on the same issue. The Leader ruled it in scope (task text "log names field keys only"; design §7 and §9). Verbatim (conformance lens):
+  > 1. **Discovered Issue:** On a failing read, the log carries only the route, year and error class. It does not name the field keys of the failing plan (`toGenericFailure` in `qa-results.service.ts`). This is Assumption 5. The Implementer says the failure "cannot be attributed to a plan", but it can: `readBaseValues` iterates the plans, and the path, element and lookup groups know their members' field keys.
+  >    * **Violated Rule:** `design.md` §7: "A failing read plan → 500 with a generic message; **the log names the plan's field keys**, not the SQL." Also §9: "**On failure: field keys of the failing plan.** Never key, ids, values, SQL." Both are positive obligations. The "only" in the task text contrasts field keys with SQL and driver text. It does not make naming the field keys optional.
+  >    * **Remediation Suggestion:** At each read stage (base plan, path group, element-path group, lookup source), catch the error and rethrow an internal error such as `PlanReadError { fieldKeys }` that does not copy the original message. In `toGenericFailure`, add `fields=<keys>` to the log line when the error carries field keys; keep the client body generic. Extend falsifier (g): the reader-failure log contains the failing plan's key (e.g. `fx.title`) and still has no table, database or driver text, and the 500 body has no field keys.
+  - Security lens: the same issue, citing §7 and §9 ("as shipped, a 500 from one of about 110 plans cannot be traced to a field without reproducing it"). Otherwise it found:
+    - the auth decorator exact; JWT-only → 401 proven against the real guard
+    - every read inside `guarded`, and the fresh exception carries no `cause`
+    - input bounds hold; `ELEMENT_ROWS` cannot leak
+    - the success log is clean
+- ADVISORY (recorded, not tasks):
+  - Spec tension (Assumption 1): a `joinKey` throw → whole-batch generic 500. R-8's list of reasons is closed and §7 routes read failures to a 500. Raise it with the owner. The T-4 forward pointer stays **undischarged** until the owner decides
+  - `field_keys` has no `ArrayMaxSize`, and the body limit is 50 MB. That allows about 250k unknown keys echoed in the 400 body and logged through the filter's stack
+  - `normalize` and `project` run outside `guarded`
+  - Element-path and lookup `IN` lists grow with stored rows × 50 and are not chunked (measure at T-8)
+  - Plans run sequentially, not with concurrency 4 (within bounds)
+  - A subfield key literally `value` would collide with the wrapper key
+  - `guarded()` route defaults to `DETAILS_ROUTE`
+  - `Number(null)` → 0 for `result_code`
+  - Assumptions 2 and 3 must be documented in T-7
+  - Cross-field lookup keys for unrequested fields resolve to null (no case today)
+- Implementer Assumptions (verbatim summary):
+  1. `joinKey` tension
+  2. `ArrayMaxSize(50)` counts ids before dedupe
+  3. `field_keys: []` → 400
+  4. `result_code` comes from classify
+  5. No field keys in the failure log (the FAIL above)
+  6. `RESULT_ID_MAX` and `FIELD_KEY_MAX_LENGTH` constants
+  7. `statements` includes classify; `DataSource` is injected
+  8. Not run against a DB
+- spawns: implementer 65 calls, 261 180 tokens, ended partial (assumptions + tension); reviewer (conformance) 14 calls, 125 501 tokens, complete; reviewer (security) 11 calls, 111 131 tokens, complete
+- Owner decision (Juan David, 2026-10-28, at the T-6 gate): **the `joinKey` tension is resolved by keeping the whole-batch generic 500.** `requirements.md` QRF-R-8 gains a clarifying clause: the reason list is closed, and a failing read is not a per-id reason. This narrows nothing approved, because R-8's list was already closed and §7 already routed read failures to a 500. The T-4 forward pointer "catch a `joinKey` throw so one result cannot fail the batch" is closed as **decided: not applicable**
+  - Correction closure:
+    - Forward: grep of `read_failed|per-result read|one result cannot fail` outside execution.md finds no hits
+    - Backward: the R-8 citers are tasks.md T-6, which already expects the 500 via falsifier (g), and T-7, which documents R-8
+  - Conformance carry: the next T-6 Reviewer brief and the T-7 brief name "conformance to `requirements.md#QRF-R-8` as clarified 2026-10-28"
+
+## QRF-T-6 — `POST /api/qa/results/details` — PASS on attempt 2 (2026-10-28)
+
+- Attempts: 2 (attempt 1 FAIL above). Attempt 2 effort `xhigh` (bumped); skills `nestjs-expert`, `tdd`, `error-handling-patterns`
+- Attempt 2 files (~169 LOC: production ~64, tests ~105):
+  - `values/read-plan.ts`: `PlanReadError { fieldKeys, causeName }` and `readStage`
+  - `readStage` wraps 5 read sites: `values/value-reader.ts` (per base plan), `values/path.resolver.ts` (starting rows, path group, element-path group), `values/lookup.resolver.ts` (per source)
+  - `qa-results.service.ts`: `toGenericFailure` appends ` fields=<keys>`
+  - tests: `values/fixtures.ts` (`failingOn`, `DRIVER_LEAK`), `qa-results.details.spec.ts` (falsifier (g) extended), one test per wrapped site
+- Reds:
+  - before wiring: `Expected pattern: / fields=fx\.title$/ Received string: "route=/api/qa/results/details year=2026 read failed (Error)"` · `Expected constructor: PlanReadError Received constructor: Error`
+  - mutations, each reverted:
+    - (1) `fields=` dropped → red
+    - (2) `cause.message` copied → 8 red, with the log leaking `Table 'prdb_secret.fx_result' doesn't exist; Unknown database 'toc_secret_db'`
+    - (3) each of the 5 sites unwrapped in turn → exactly its own test red
+- Implementer verification: `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` → 45 suites / 915 tests; tsc 0; eslint + prettier clean
+- Evidence re-run (Leader inline, same command) → 45 / 915 green; tsc 0 → **VERIFIED**
+- Reviewer attempt 2 (`akili-reviewer`, conformance + security) → **PASS**
+  - FAIL resolved: `PlanReadError` never reaches `HttpExceptionFilter`; the body is a fixed message; the logged keys are always `CatalogField.key`
+  - The T-5 unavailable-source error is unchanged (built outside `readStage`)
+  - Conforms to `requirements.md#QRF-R-8` as clarified 2026-10-28: a `joinKey` throw → whole-batch generic 500 with `fields=`
+  - R-7 as amended unchanged since attempt 1. The R-7 carry ends here; the R-8 carry continues into T-7
+- Decisions made:
+  - **R-8 clarification**, recorded above at the moment it was made: owner decision, whole-batch 500, so the T-4 forward pointer is decided as not applicable
+  - Plan- and query-building errors are left unwrapped (no `fields=`); a `classify` failure logs no `fields=`. Both accepted by the Reviewer
+- ADVISORY (attempt 2):
+  - If wraps ever nest, `causeName` would read `PlanReadError`; pass inner ones through
+  - The element-path stage logs the parent key; add a comment
+  - The year-qualifier `fail()` and `table-metadata` errors log without `fields=`
+  - Attempt 1 advisories stand as recorded above, notably: no `field_keys` `ArrayMaxSize` against the 50 MB body limit; `normalize`/`project` outside `guarded`; unchunked element and lookup `IN` lists (measure at T-8); sequential plans
+- Not Done / Assumptions: assumptions only, nothing owed
+- Forward pointers:
+  - QRF-T-7 documents:
+    - `result_ids` 1..50, counted before dedupe
+    - `field_keys: []` → 400
+    - `field_keys` entries ≤ 200 characters
+    - `RESULT_ID_MAX`
+    - the R-8 closed reason list and whole-batch 500
+    - the scalar-with-subfields shape
+    - the `page`, `program_ids` and `phase_year` limits from T-2
+  - QRF-T-8 measures:
+    - statements per call (empty-runner smoke: 51)
+    - element-path and lookup `IN` list sizes on the result with the most partners or ToC links
+    - latency with sequential plans
+    - the ToC year fallback (T-5)
+- spawns: implementer (attempt 2) 41 calls, 189 590 tokens, ended partial (assumptions only); reviewer (attempt 2) 10 calls, 105 674 tokens, ended complete
+- Requirements: QRF-R-1, R-2 (details), R-7 (all clauses), R-8 (as clarified), R-9 — QRF-DD-9, DD-10, DD-11
+- Running totals vs budget: tasks 6/8 · LOC ~6 270/6 200 (T-6 ~1 630 across both attempts) · review rounds 10/12. **Budget tripwire fired** on LOC; T-7 (doc, ~200) and T-8 (HITL, no code expected) remain
+
+## Budget Tripwire — after QRF-T-6
+
+- Budget (re-baselined at the T-5 gate): ~6 200 LOC · 8 tasks · 12 review rounds
+- Actual after 6 of 8 tasks: ~6 270 LOC · 10 review rounds
+- Cause: T-6 needed a rework round (+~170 LOC). Attempt 1 landed at ~1 460, against the ~1 100 aim
+- Projection: T-7 adds ~150–250 LOC of documentation, for a total of ~6 400–6 500. T-7 takes 1–2 review rounds, which puts the total at 11–12 of 12. T-8 is live verification with no code expected
+- Status: stopped for the owner. This stop is not auto-approved

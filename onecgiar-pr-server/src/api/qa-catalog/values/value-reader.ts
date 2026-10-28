@@ -9,6 +9,7 @@ import {
   PlanQueryRunner,
   ReadPlan,
   buildReadPlans,
+  readStage,
 } from './read-plan';
 import { resolveRelationPlan } from './relation.resolver';
 import { TableKeys } from './table-metadata';
@@ -67,7 +68,11 @@ export async function readBaseValues(
   const resolved = await mapBounded(
     plans,
     ctx.concurrency ?? READ_CONCURRENCY,
-    (plan) => resolve(plan, ids, ctx.run),
+    (plan) =>
+      readStage(
+        plan.fields.map((f) => f.fieldKey),
+        () => resolve(plan, ids, ctx.run),
+      ),
   );
   for (const byResult of resolved) {
     for (const [id, own] of byResult) Object.assign(values.get(id), own);

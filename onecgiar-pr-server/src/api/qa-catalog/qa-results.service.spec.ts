@@ -7,6 +7,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { QaCatalogService } from './qa-catalog.service';
 import {
   EligibilityFilter,
@@ -99,6 +100,7 @@ const build = (rows: FakeRow[] = FIXTURE) => {
   const service = new QaResultsService(
     new QaCatalogService(),
     repo as unknown as QaResultsRepository,
+    {} as DataSource, // `list` reads through the repository only
   );
   return { repo, service };
 };

@@ -7,6 +7,7 @@ import {
   FX_LINK,
   FX_PARTNERS,
   FX_PRIMARY_TAG,
+  FX_TAG_WITH_NOTE,
   FX_TAGS,
   fixtureRunner,
 } from './fixtures';
@@ -93,5 +94,26 @@ describe('resolveRelationPlan', () => {
     const out = await resolveRelationPlan(plan(FX_TAGS), [2], fixtureRunner());
     expect(out.get(2)).toEqual({ 'fx.tags': [20] });
     expect(FIXTURE_DB.fx_tag.some((r) => r.result_id === 1)).toBe(true);
+  });
+
+  it('a scalar relation with subfields is { value, <column subfield> } from its first element; no element -> value null', async () => {
+    const run = fixtureRunner({
+      fx_tag: [
+        {
+          tag_row_id: 1,
+          result_id: 1,
+          is_active: 1,
+          primary_id: 11,
+          note: 'n',
+        },
+      ],
+    });
+    const out = await resolveRelationPlan(plan(FX_TAG_WITH_NOTE), [1, 2], run);
+    expect(out.get(1)).toEqual({
+      'fx.tag_with_note': { value: 11, note: 'n' },
+    });
+    expect(out.get(2)).toEqual({
+      'fx.tag_with_note': { value: null, note: null },
+    });
   });
 });

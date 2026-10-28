@@ -12,7 +12,9 @@ import {
   FX_PATH_FIELD,
   FX_PRIMARY_TAG,
   FX_SCORE,
+  FX_TAG_WITH_NOTE,
   FX_TAGS,
+  FX_TERM,
   FX_TITLE,
 } from './fixtures';
 import {
@@ -82,6 +84,30 @@ describe('buildReadPlans: grouping (QRF-DD-6)', () => {
       },
       { fieldKey: 'fx.deep', subfieldPath: [], kind: 'path' },
     ]);
+  });
+
+  it('a scalar field with subfields is planned like a list element: its value AND its subfield columns, from one row (R-7 amended)', () => {
+    const column = buildReadPlans([FX_TERM], FIXTURE_KEYS);
+    expect(column.plans[0].fields[0]).toMatchObject({
+      fieldKey: 'fx.term',
+      wrapped: true,
+      columns: [{ subfieldKey: 'degree', column: 'term' }],
+    });
+
+    const relation = buildReadPlans([FX_TAG_WITH_NOTE], FIXTURE_KEYS);
+    expect(relation.plans[0].fields[0]).toMatchObject({
+      wrapped: true,
+      columns: [{ subfieldKey: 'note', column: 'note' }],
+      startColumns: ['tag_row_id'],
+    });
+    expect(planColumns(relation.plans[0])).toContain('note');
+    expect(relation.deferred).toEqual([
+      { fieldKey: 'fx.tag_with_note', subfieldPath: ['links'], kind: 'path' },
+    ]);
+    // a scalar field WITHOUT subfields stays a bare value
+    expect(
+      buildReadPlans([FX_TITLE], FIXTURE_KEYS).plans[0].fields[0],
+    ).toMatchObject({ wrapped: false, columns: [] });
   });
 
   it('a relation filter becomes equality terms, a NULL becomes IS NULL, booleans become 1/0', () => {

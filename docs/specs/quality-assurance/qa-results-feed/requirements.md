@@ -154,6 +154,7 @@ The list response SHOULD carry `breakdown`: counts of the filtered set by progra
 
 - An id that does not exist, is not active Submitted, belongs to another phase year, is not W1/W2, has a result type without a catalog key, or has no active lead program MUST go to `not_eligible: [{ result_id, reason }]` with `reason` ∈ `not_found`, `not_submitted`, `other_phase`, `not_w1w2`, `type_not_catalogued`, `no_lead_program` (first failing check in that order).
 - The rest of the batch MUST still be answered with 200.
+- The reason list is closed. A failing read is not a per-id reason: it fails the whole batch with the generic 500 of design §7, even when one result's data triggers it (e.g. a non-numeric join key). *(Clarified 2026-10-28, owner decision at the QRF-T-6 gate.)*
 
 #### Scenario: Unsubmitted after listing
 - GIVEN result 41231 was listed, then unsubmitted

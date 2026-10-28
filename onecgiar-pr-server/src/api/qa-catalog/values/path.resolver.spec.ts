@@ -1,8 +1,11 @@
 // @akili-spec quality-assurance/qa-results-feed
 // QRF-DD-6 / QRF-DD-7 / QRF-R-7 for `path` bindings: join pairs, step filter, pick, subfield start row, grouping.
 import { CatalogField, CatalogSubField } from '../definitions/types';
-import { FixtureDb, fixtureRunner } from './fixtures';
-import { resolvePathFields } from './path.resolver';
+import { FixtureDb, failingOn, fixtureRunner } from './fixtures';
+import { resolveElementPaths, resolvePathFields } from './path.resolver';
+import { FIXTURE_KEYS, FX_PARTNERS } from './fixtures';
+import { readBaseValues } from './value-reader';
+import { PlanReadError } from './read-plan';
 import { TableKeys } from './table-metadata';
 
 const PKS: Record<string, string> = {
@@ -161,6 +164,22 @@ describe('resolvePathFields', () => {
     expect(values.get(2)).toEqual({ 'fx.budget': [200] });
   });
 
+  it.each([
+    ['the starting rows', 'fx_result'],
+    ['a group of steps', 'fx_budget'],
+  ])(
+    'a failing read of %s leaves as a PlanReadError that names the field and nothing of the cause',
+    async (_stage, table) => {
+      const attempt = resolvePathFields([BUDGET], [1, 2], {
+        ...ctx(DB),
+        run: failingOn(table, DB),
+      });
+      await expect(attempt).rejects.toBeInstanceOf(PlanReadError);
+      await expect(attempt).rejects.toMatchObject({ fieldKeys: ['fx.budget'] });
+      await expect(attempt).rejects.not.toThrow(/prdb_secret|fx_|exist|Table/i);
+    },
+  );
+
   it('pick desc reads the newest active row; the step filter keeps inactive ones out', async () => {
     const db = {
       ...DB,
@@ -263,5 +282,104 @@ describe('resolvePathFields', () => {
     });
     expect(out.values.size).toBe(0);
     expect(idle.calls).toHaveLength(0);
+  });
+});
+
+describe('resolveElementPaths (a subfield path of a relation element, QRF-T-6)', () => {
+  // fx.partners elements are rows 1 and 2 of fx_partner; each has its OWN links in fx_link (`tag_ref` = the element's key)
+  const LIST: CatalogField = {
+    ...FX_PARTNERS,
+    subfields: [
+      FX_PARTNERS.subfields![1],
+      {
+        key: 'links',
+        label: 'links',
+        type: 'multi_select',
+        storage: {
+          kind: 'path',
+          steps: [
+            {
+              table: 'fx_link',
+              join: [{ from: 'partner_row_id', to: 'tag_ref' }],
+            },
+          ],
+          value_column: 'url',
+        },
+      },
+    ],
+  };
+  const DB2: FixtureDb = {
+    fx_partner: [
+      {
+        partner_row_id: 1,
+        result_id: 1,
+        is_active: 1,
+        role: 2,
+        partner_id: 100,
+        is_lead: 0,
+      },
+      {
+        partner_row_id: 2,
+        result_id: 1,
+        is_active: 1,
+        role: 2,
+        partner_id: 200,
+        is_lead: 1,
+      },
+      {
+        partner_row_id: 3,
+        result_id: 1,
+        is_active: 1,
+        role: 2,
+        partner_id: 300,
+        is_lead: 0,
+      },
+    ],
+    fx_link: [
+      { link_row_id: 1, result_id: 9, tag_ref: 1, url: 'first' },
+      { link_row_id: 2, result_id: 9, tag_ref: 2, url: 'second' },
+      { link_row_id: 3, result_id: 9, tag_ref: 2, url: 'second again' },
+    ],
+  };
+
+  it('starts at the element row: each element gets its own links, an element with none gets []', async () => {
+    const run = fixtureRunner(DB2);
+    const base = await readBaseValues([LIST], [1], { run, keys: FIXTURE_KEYS });
+    expect(base.deferred).toEqual([
+      { fieldKey: 'fx.partners', subfieldPath: ['links'], kind: 'path' },
+    ]);
+    await resolveElementPaths([LIST], base, { run, keys: FIXTURE_KEYS });
+    expect(base.values.get(1)).toEqual({
+      'fx.partners': [
+        { is_lead: false, links: ['first'] },
+        { is_lead: true, links: ['second', 'second again'] },
+        { is_lead: false, links: [] },
+      ],
+    });
+  });
+
+  it('a failing read of an element path leaves as a PlanReadError that names the field and nothing of the cause', async () => {
+    const base = await readBaseValues([LIST], [1], {
+      run: fixtureRunner(DB2),
+      keys: FIXTURE_KEYS,
+    });
+    const attempt = resolveElementPaths([LIST], base, {
+      run: failingOn('fx_link', DB2),
+      keys: FIXTURE_KEYS,
+    });
+    await expect(attempt).rejects.toBeInstanceOf(PlanReadError);
+    await expect(attempt).rejects.toMatchObject({ fieldKeys: ['fx.partners'] });
+    await expect(attempt).rejects.not.toThrow(/prdb_secret|fx_|exist|Table/i);
+  });
+
+  it('reads the whole batch with one statement per step, whatever the number of elements or results', async () => {
+    const run = fixtureRunner(DB2);
+    const base = await readBaseValues([LIST], [1, 2, 3], {
+      run,
+      keys: FIXTURE_KEYS,
+    });
+    const before = run.calls.length;
+    await resolveElementPaths([LIST], base, { run, keys: FIXTURE_KEYS });
+    expect(run.calls.length - before).toBe(1);
   });
 });

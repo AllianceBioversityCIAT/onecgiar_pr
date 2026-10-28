@@ -11,10 +11,11 @@ import {
   FX_SCORE,
   FX_TAGS,
   FX_TITLE,
+  failingOn,
   fixtureRunner,
 } from './fixtures';
 import { READ_CONCURRENCY, readBaseValues } from './value-reader';
-import { PlanQuery } from './read-plan';
+import { PlanQuery, PlanReadError } from './read-plan';
 
 const FIELDS = [
   FX_TITLE,
@@ -40,6 +41,16 @@ describe('readBaseValues', () => {
     // fx_result, fx_type, fx_tag, fx_partner, fx_link
     expect(one.calls).toHaveLength(5);
     expect(many.calls).toHaveLength(5);
+  });
+
+  it('a failing plan leaves as a PlanReadError that names its field keys and nothing of the cause', async () => {
+    const attempt = readBaseValues(FIELDS, [1], {
+      run: failingOn('fx_type'),
+      keys: FIXTURE_KEYS,
+    });
+    await expect(attempt).rejects.toBeInstanceOf(PlanReadError);
+    await expect(attempt).rejects.toMatchObject({ fieldKeys: ['fx.score'] });
+    await expect(attempt).rejects.not.toThrow(/prdb_secret|fx_|exist|Table/i);
   });
 
   it('every result gets every planned field: null / [] fill, never absent', async () => {

@@ -145,6 +145,48 @@ export const FX_LINK: CatalogField = {
   },
 };
 
+/** A scalar (single_select) column field with one subfield over the SAME column: `{ value, degree }` (QRF-R-7, amended). */
+export const FX_TERM: CatalogField = {
+  ...col('fx.term', 'single_select', 'fx_type', 'term'),
+  subfields: [
+    {
+      key: 'degree',
+      label: 'degree',
+      type: 'single_select',
+      storage: { kind: 'column', table: 'fx_type', column: 'term' },
+    },
+  ],
+};
+
+/**
+ * A scalar relation field with a column subfield and a path subfield that starts at the ELEMENT row (`from: tag_row_id`,
+ * the table's primary key), as the real subfield paths do.
+ */
+export const FX_TAG_WITH_NOTE: CatalogField = {
+  ...FX_PRIMARY_TAG,
+  key: 'fx.tag_with_note',
+  subfields: [
+    {
+      key: 'note',
+      label: 'note',
+      type: 'text',
+      storage: { kind: 'column', table: 'fx_tag', column: 'note' },
+    },
+    {
+      key: 'links',
+      label: 'links',
+      type: 'multi_select',
+      storage: {
+        kind: 'path',
+        steps: [
+          { table: 'fx_link', join: [{ from: 'tag_row_id', to: 'tag_ref' }] },
+        ],
+        value_column: 'url',
+      },
+    },
+  ],
+};
+
 export const FX_PATH_FIELD: CatalogField = {
   ...base,
   key: 'fx.deep',
@@ -255,4 +297,18 @@ export function fixtureRunner(db: FixtureDb = FIXTURE_DB): RecordingRunner {
   }) as RecordingRunner;
   Object.defineProperty(run, 'calls', { value: calls });
   return run;
+}
+
+/** What a failing statement says in a real driver: schema, table, database. It must never leave the reader. */
+export const DRIVER_LEAK =
+  "Table 'prdb_secret.fx_result' doesn't exist; Unknown database 'toc_secret_db'";
+
+/** A runner over `db` whose statements on `table` fail with `DRIVER_LEAK`; the others run. */
+export function failingOn(
+  table: string,
+  db: FixtureDb = FIXTURE_DB,
+): PlanQueryRunner {
+  const ok = fixtureRunner(db);
+  return (query) =>
+    query.table === table ? Promise.reject(new Error(DRIVER_LEAK)) : ok(query);
 }

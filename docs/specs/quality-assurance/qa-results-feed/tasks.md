@@ -116,7 +116,7 @@
 - **Definition of done:**
   - [ ] Falsifiers executed and quoted; Jest + `tsc --noEmit` green; `DB_TOC` never in logs or errors
 
-### QRF-T-6 — `POST /api/qa/results/details` route
+### [x] QRF-T-6 — `POST /api/qa/results/details` route
 
 - **Type:** server
 - **Description:** Body DTO (`phase_year` required, `result_ids` 1..50 positive ints, duplicates collapsed, optional `field_keys` validated against the year's top-level keys), service: classify (T-1) → field selection per year, type and `field_keys` → reader (T-3..5) → normalizer list with the capdev entry (DD-10) → key-by-key projection (DD-9; a scalar field with subfields as `{ value, <subfield key>: … }`, R-7 amended 2026-10-28 — the T-3 planner drops those subfields today, so plan them here) → `catalog_version` from `CATALOG_VERSIONS`; controller method with `@BilateralClarisaEndpoint('/api/qa/results/details')`; generic 500 on a failing plan (log names field keys only).

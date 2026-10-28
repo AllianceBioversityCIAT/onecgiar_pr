@@ -15,9 +15,11 @@ import {
 import { stableStringify } from '../definitions/content-hash';
 import {
   DeferredBinding,
+  ELEMENT_ROWS,
   PlanQueryRunner,
   SqlRow,
   filterPredicates,
+  readStage,
 } from './read-plan';
 import { TableKeys } from './table-metadata';
 import { emptyValue, isScalarType, typeScalar } from './value-typing';
@@ -311,12 +313,16 @@ export async function resolvePathFields(
   pathFields.forEach((f) =>
     f.storage.steps[0].join.forEach((j) => select.add(j.from)),
   );
-  const resultRows = await ctx.run({
-    table,
-    select: [...select],
-    where: [{ column: idColumn, op: 'in', values: ids }],
-    orderBy: idColumn,
-  });
+  const resultRows = await readStage(
+    pathFields.map((f) => f.key),
+    () =>
+      ctx.run({
+        table,
+        select: [...select],
+        where: [{ column: idColumn, op: 'in', values: ids }],
+        orderBy: idColumn,
+      }),
+  );
   const starts: PathStart[] = resultRows.map((row) => ({
     id: Number(row[idColumn]),
     row,
@@ -328,19 +334,23 @@ export async function resolvePathFields(
     groups.set(key, [...(groups.get(key) ?? []), f]);
   }
   for (const group of groups.values()) {
-    const resolved = await resolveGroup(
-      group[0].storage.steps,
-      group.map((f) => ({
-        id: f.key,
-        fieldKey: f.key,
-        subPath: [],
-        type: f.type,
-        subfields: f.subfields ?? [],
-        valueColumn: f.storage.value_column,
-      })),
-      starts,
-      ctx,
-      deferred,
+    const resolved = await readStage(
+      group.map((f) => f.key),
+      () =>
+        resolveGroup(
+          group[0].storage.steps,
+          group.map((f) => ({
+            id: f.key,
+            fieldKey: f.key,
+            subPath: [],
+            type: f.type,
+            subfields: f.subfields ?? [],
+            valueColumn: f.storage.value_column,
+          })),
+          starts,
+          ctx,
+          deferred,
+        ),
     );
     for (const f of group) {
       const byStart = resolved.get(f.key) as Map<number, unknown>;
@@ -352,4 +362,92 @@ export async function resolvePathFields(
     }
   }
   return { values, deferred };
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * Subfield `path`s of a `relation` / `column` field's elements (the base plans leave them in `deferred` with a one-key
+ * `subfieldPath`). A subfield path starts at ITS element's row, never at the result (catalog DD-12): each element object
+ * is registered with its row by the base resolvers. Fills the elements in place; what it finds below (lookups) is pushed
+ * onto `base.deferred` for the lookup resolver, which must run after this.
+ */
+export async function resolveElementPaths(
+  fields: CatalogField[],
+  base: {
+    values: Map<number, Record<string, unknown>>;
+    deferred: DeferredBinding[];
+  },
+  ctx: PathContext,
+): Promise<void> {
+  const wanted = base.deferred.filter(
+    (d) => d.kind === 'path' && d.subfieldPath.length === 1,
+  );
+  for (const fieldKey of new Set(wanted.map((d) => d.fieldKey))) {
+    const field = fields.find((f) => f.key === fieldKey);
+    if (!field || field.storage.kind === 'path') continue;
+    const table = field.storage.kind === 'lookup' ? null : field.storage.table;
+    if (!table) continue;
+    const pk = ctx.keys.primaryKey(table);
+
+    const elements: Array<{
+      object: Record<string, unknown>;
+      start: PathStart;
+    }> = [];
+    for (const own of base.values.values()) {
+      const value = own[field.key];
+      for (const object of (Array.isArray(value) ? value : [value]).filter(
+        isObject,
+      )) {
+        const row = ELEMENT_ROWS.get(object);
+        if (row) elements.push({ object, start: { id: Number(row[pk]), row } });
+      }
+    }
+
+    const groups = new Map<string, { steps: PathStep[]; members: Member[] }>();
+    for (const d of wanted.filter((w) => w.fieldKey === fieldKey)) {
+      const sub = (field.subfields ?? []).find(
+        (s) => s.key === d.subfieldPath[0],
+      );
+      if (!sub || sub.storage.kind !== 'path') continue;
+      const key = stableStringify(sub.storage.steps);
+      const group = groups.get(key) ?? {
+        steps: sub.storage.steps,
+        members: [],
+      };
+      group.members.push({
+        id: sub.key,
+        fieldKey: field.key,
+        subPath: [sub.key],
+        type: sub.type,
+        subfields: sub.subfields ?? [],
+        valueColumn: sub.storage.value_column,
+      });
+      groups.set(key, group);
+    }
+
+    for (const group of groups.values()) {
+      const resolved = await readStage(
+        group.members.map((m) => m.fieldKey),
+        () =>
+          resolveGroup(
+            group.steps,
+            group.members,
+            elements.map((e) => e.start),
+            ctx,
+            base.deferred,
+          ),
+      );
+      for (const m of group.members) {
+        const sub = (field.subfields ?? []).find((s) => s.key === m.id)!;
+        const byElement = resolved.get(m.id);
+        for (const { object, start } of elements) {
+          object[m.id] = byElement?.has(start.id)
+            ? byElement.get(start.id)
+            : emptyValue(sub.type);
+        }
+      }
+    }
+  }
 }
