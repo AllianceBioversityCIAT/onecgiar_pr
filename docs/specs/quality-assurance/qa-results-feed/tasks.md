@@ -7,7 +7,9 @@
 - **Ticket:** [P2-4037](https://cgiarmel.atlassian.net/browse/P2-4037) — commits `<emoji> <type>(qa-catalog) [P2-4037]: …`
 - **Owner / driver:** Juan David Delgado
 - **Status:** not-started — tasks approved 2026-10-28 (Juan David)
-- **Budget (design §13):** 8 tasks · ~6 500 LOC (re-baselined 2026-10-28 from ~1 600, then from ~4 500 at the T-5 tripwire, then from ~6 200 at the T-6 tripwire) · 12 review rounds — tripwire for `/akili-execute`
+- **Budget (design §13):** 9 tasks · ~6 800 LOC · 14 review rounds. Re-baselined on 2026-10-28:
+  - LOC from ~1 600, then from ~4 500 at the T-5 tripwire, then from ~6 200 at the T-6 tripwire
+  - +1 task, ~+300 LOC and +2 rounds for QRF-T-9 (owner decision at the T-8 golden FAIL) — tripwire for `/akili-execute`
 
 ## 2. Pre-flight checklist
 
@@ -170,6 +172,33 @@
 - **Definition of done:**
   - [ ] OQ-4 decided by the owner and recorded; P-2, P-7, P-12 rows updated in `design.md`
   - [ ] Evidence (commands, counts, ms) quoted in `execution.md`; no key or token in it
+
+### [ ] QRF-T-9 — Golden-comparison fixes: lead center/partner and answer-bound questions
+
+- **Type:** server (catalog bindings) + docs
+- **Description:** Fix the value bindings that the T-8 golden comparison (`execution.md`, G-1/G-2) proved wrong. The binding objects are stripped from the public catalog by the mapper, so the contract shape does not change; check that `catalog_version` stays the same.
+  - **G-1:** `contributors.lead_center` → `relation results_center`, `value_column: 'center_id'`, `filter: { is_leading_result: 1, is_active: 1 }`. `partners.lead_partner` → the same pattern on `results_by_institution`. Read its identity column from the entity; do not guess it.
+  - **G-2:** each answer-bound field of innovation development reads only the answers to its own question, selected through a `path` step on `result_questions` filtered by `parent_question_id`. The reader is unchanged.
+    - Top-level fields: `result_answers` (answered + active) → `result_questions` (join `result_question_id`, filter `parent_question_id = <root>`), `value_column: 'result_question_id'`.
+    - Roots: `gesi_stage` 150, `risk_stage` 151, `ipr_consideration` 162, `team_diversity` 112. Subfield `team_diversity.actions`: parent 113.
+    - The same audit applies to every other `answerBinding()` / `sameResultAnswers()` use in `innovation-development.ts` and to `policy_change.related_to` (`policy-change.ts:101`). Each gets its own root. Policy roots differ by environment (test 49 / prod 48, file header): keep that field as it is when it cannot be expressed per environment, and record it as a known gap.
+  - **G-3** (owner decision, 2026-10-28): `linked.has_innovation_link` stays `null` when stored NULL. In `qa-catalog.en.md`, document that the form shows NULL as "No".
+- **Implements:** QRF-R-7 (real values; scenario *Whole object of a selected field*). Closes T-8 golden findings G-1, G-2, G-3
+- **Files (expected):** `definitions/sections/contributors-partners.ts`, `definitions/sections/innovation-development.ts`, possibly `definitions/sections/policy-change.ts`, a falsifier spec under `src/api/qa-catalog/`, `docs/qa-catalog.en.md` (feed section + change-log row)
+- **Depends on:** QRF-T-8 (findings). **Pre-condition P-20** (owner, prod): the question ids 112–121 and 150–165 are the same in prod. If they are not, raise a Pivot (env-specific ids)
+- **Blocks:** closing QRF-T-8 (re-run golden on 8572, 8778, 8799)
+- **Estimate:** M
+- **Review:** full
+- **Verification:**
+  - **Falsifier:** run the real resolvers on a fixture shaped like 8799, with 17 answered rows across questions 78–138:
+    - `gesi_stage`, `risk_stage` and `ipr_consideration` → `null`; `team_diversity` → `113`; `actions` → `[116, 117]`. The old binding gives `"80"` and 17 actions
+    - a `results_center` fixture where the lead is `CENTER-02` with `is_leading_result = 1`, plus a non-lead `CENTER-03` → `lead_center = 'CENTER-02'`. The old binding gives `1`
+  - **Red run:** apply the falsifier spec to the current bindings first → quote the failing values
+  - **Disqualifier:** a fixture with a single answered row proves nothing about G-2. Re-running the T-8 golden is the acceptance check: 8572 → `CENTER-02`, 8778 → `CENTER-14`, 8799 as above
+  - **Consumers:** `qa-catalog.snapshot.spec.ts` (catalog shape: must not change), QA platform (external)
+- **Definition of done:**
+  - [ ] Falsifier red then green, quoted; Jest (scoped `src/api/qa-catalog`) + `tsc --noEmit` + eslint green
+  - [ ] Golden re-run on 8572, 8778 and 8799 matches the form; doc updated
 
 ## 4. Dependency graph
 

@@ -507,3 +507,38 @@
     - `policy-change.ts:101` uses the same table: check it when 8908 is compared
   - **G-3 `linked.has_innovation_link` stored NULL.** 8569 and 8572 store NULL; the feed sends `null`. The form shows **No**, because the client model defaults to `false` (`contributorsAndPartnersBody.ts:11`). The feed matches the stored value, not what the form displays. Owner decision
 - Verdict: T-8 falsifier "any golden field mismatch" → **FAIL**. G-1 and G-2 need code or catalog changes outside T-8 (`execution.md`-only task); the review-round budget is exhausted (12/12). Escalated to the owner
+
+### QRF-T-8 (5) Golden comparison — completed for 1 result per type (2026-10-28)
+
+- 8908 policy_change, matches:
+  - tags
+  - policy type 3 "Policy or strategy"
+  - related_to 50 "Policy change"
+  - stage 6 "Stage 1"
+  - implementing org 1 (WUR)
+  - amount fields null (not shown for this type)
+  - The only stored answer is question 50, so G-2 is not visible here
+- 8907 other_outcome, matches:
+  - tags 1/2/1/3/2, shown in the form as 0/1/0/2/1
+  - environment impact area `["10"]` (Biodiversity)
+  - one link evidence with its description and no tags
+- 8960 innovation_use, matches:
+  - linked to 8738
+  - current use and 2030 projection "yet to be determined"
+  - use level id 5, which is `clarisa_innovation_use_levels` level 4 "Connected next-user"
+  - SP02 $234 with "to be determined" unticked
+  - bilateral 217 "to be determined"
+  - no partners
+  - No `result_answers` rows
+- 8799: readiness id 14 is `clarisa_innovation_readiness_level` level 3 "Proof of Concept" → matches
+- Every compared result shows G-1 (`lead_center` = flag). Nothing new was found beyond G-1, G-2 and G-3
+- G-2 roots in the test DB (`result_questions.parent_question_id`):
+  - GESI 150 → 152–156
+  - risk 151 → 157–161
+  - IPR 162 → 163–165
+  - team diversity 112 → 113–115; 113 → 116–121
+- **Owner decisions:**
+  - G-1 and G-2 are fixed in this spec as new task QRF-T-9. Budget re-baselined to 9 tasks · ~6 800 LOC · 14 review rounds
+  - G-3: keep `null`, document it
+  - P-20 (prod question ids) is checked by the owner before T-9 starts
+- T-8 stays `[~]` until the golden re-run after QRF-T-9
