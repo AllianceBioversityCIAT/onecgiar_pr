@@ -154,7 +154,7 @@
 - **Definition of done:**
   - [ ] Change-log row added; known gap 17 marked as applied by the feed
 
-### [~] QRF-T-8 — Live verification (HITL)
+### [x] QRF-T-8 — Live verification (HITL)
 
 - **Type:** rollout
 - **Description:** Against the local server on the dev/test DB, then prtest after merge: (1) P-12 / OQ-4 — count eligible 2026 results per `app_module_id` and per type; owner decides; adjust T-1 predicate if needed; (2) P-7 — `SELECT source, COUNT(*) … status_id=3 GROUP BY source`; (3) `total` vs direct SQL count; (4) page through the full 2026 set (`page_size` 200), assert no duplicate and no gap; (5) golden comparison: ≥ 2 results per catalog type, `details` vs the 2026 form, field by field; (6) timing p95 for list (max page) and details (batch 50); (7) P-2 — call both routes with the QA test key; grant request to CLARISA if 401.
@@ -173,7 +173,7 @@
   - [ ] OQ-4 decided by the owner and recorded; P-2, P-7, P-12 rows updated in `design.md`
   - [ ] Evidence (commands, counts, ms) quoted in `execution.md`; no key or token in it
 
-### [~] QRF-T-9 — Golden-comparison fixes: lead center/partner and answer-bound questions
+### [x] QRF-T-9 — Golden-comparison fixes: lead center/partner and answer-bound questions
 
 - **Type:** server (catalog bindings) + docs
 - **Description:** Fix the value bindings that the T-8 golden comparison (`execution.md`, G-1/G-2) proved wrong. The binding objects are stripped from the public catalog by the mapper, so the contract shape does not change; check that `catalog_version` stays the same. *(Amended 2026-10-28: the content hash covers bindings, so G-1 required a bump to 2026.31, which the owner approved.)*

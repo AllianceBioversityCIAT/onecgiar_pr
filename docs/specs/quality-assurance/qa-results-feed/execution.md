@@ -602,3 +602,25 @@
   - implementer (attempt 1, three spawns: checkpoint 1 Pivot, checkpoint 2 version, final) 58 calls in total
   - reviewer 46 calls, 140 553 tokens, ended complete
 - **Running totals vs budget:** tasks 7/9 `[x]` (T-8 and T-9 `[~]`) · LOC ~6 800/6 800 · review rounds 13/14
+
+## QRF-T-9 / QRF-T-8 — golden re-run after the fix: PASS (2026-10-28)
+
+- The VPN is back. The local server (watch reload of `12328463d`) answers `GET /api/qa/results?phase_year=2026` → `total 32`. `POST /details` → `catalog_version 2026.31`
+- Results:
+  - 8572 → `lead_center: "CENTER-02"` (form: Bioversity (Alliance) CENTER-02) ✓
+  - 8778 → `lead_center: "CENTER-14"` (form: IWMI CENTER-14) ✓
+  - 8799 → GESI, risk and IPR unanswered, as in the form ✓
+    - `gesi_stage {value:null, not_applicable_reason:null, option_label:null}`
+    - `risk_stage` the same
+    - `ipr_consideration null`
+    - `team_diversity {value:"113", actions:["116","117"], other_text:null}`: form "Yes, concrete actions" with Gender and Years of experience ✓
+  - 8799 `lead_center: "CENTER-07"`: matches its `results_center` rows (CENTER-13 lead 0, CENTER-07 lead 1, both active). The old binding returned 0. The browser was disconnected, so this one was checked against the DB, not the form
+  - 8569 → `lead_center null` (no centers; the form shows "Select a lead center") ✓
+- **QRF-T-9 closed `[x]`:** DoD met (falsifier red→green, Jest, tsc and eslint green, golden re-run matches, doc updated)
+- **QRF-T-8 closed `[x]`:** OQ-4 decided; P-2, P-7 and P-12 updated in `design.md`; evidence quoted with no key or token; golden matches after T-9
+  - Recorded deviation: 1 result per type (7 types with 2026 data). `impact_contribution` and `innovation_package` have no Submitted 2026 results
+- **Carried as rollout follow-ups**, after merge to the prtest branch (push only on owner order):
+  - NFR timing on prtest (local: list p95 664 ms, details batch 50 p95 3 696 ms)
+  - P-2 call against prtest
+  - TRD §7 pending item on `staging`
+- **Final totals:** tasks 9/9 · LOC ~6 800/6 800 · review rounds 13/14
