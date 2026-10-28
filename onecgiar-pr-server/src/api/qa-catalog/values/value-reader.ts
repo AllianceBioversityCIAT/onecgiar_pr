@@ -27,7 +27,7 @@ export interface BaseValues {
   deferred: DeferredBinding[];
 }
 
-async function mapBounded<T, R>(
+export async function mapBounded<T, R>(
   items: T[],
   limit: number,
   fn: (item: T) => Promise<R>,

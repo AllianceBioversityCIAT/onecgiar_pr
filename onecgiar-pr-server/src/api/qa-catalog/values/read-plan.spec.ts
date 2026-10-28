@@ -122,6 +122,32 @@ describe('planQuery / renderPlanSql: one parameterized statement', () => {
     expect(params).toEqual([1]);
   });
 
+  it('renders alternative keys as OR over the same values, on a qualified table, all bound', () => {
+    const { sql, params } = renderPlanSql({
+      schema: 'toc-db',
+      table: 'fx_src',
+      select: ['id'],
+      where: [{ op: 'any_in', columns: ['a', 'b'], values: ['x', 7] }],
+      orderBy: 'id',
+    });
+    expect(sql).toBe(
+      'SELECT `id` FROM `toc-db`.`fx_src` WHERE (`a` IN (?, ?) OR `b` IN (?, ?)) ORDER BY `id` ASC',
+    );
+    expect(params).toEqual(['x', 7, 'x', 7]);
+  });
+
+  it('rejects a schema that is not a plain name without echoing it', () => {
+    expect(() =>
+      renderPlanSql({
+        schema: 'db`; DROP',
+        table: 'fx_src',
+        select: ['id'],
+        where: [],
+        orderBy: 'id',
+      }),
+    ).toThrow(/^value reader: invalid identifier$/);
+  });
+
   it('rejects an identifier that is not a plain name', () => {
     expect(() =>
       renderPlanSql({

@@ -215,3 +215,56 @@
 - spawns: implementer (attempt 2) 23 calls, 121 108 tokens, ended partial (assumptions only); reviewer (attempt 2) 6 calls, 88 269 tokens, ended complete
 - Requirements: QRF-R-1, R-2, R-4, R-5, R-6, NFR Security/Observability — QRF-DD-1, DD-12
 - Running totals vs budget: tasks 4/8 · LOC ~3 900/4 500 (T-1 ~670 + T-3 ~1 683 + T-4 ~625 + T-2 ~920) · review rounds 6/12. Within budget, but 4 tasks remain (T-5 M, T-6 L, T-7 doc, T-8 HITL), and at the T-3/T-4 density T-5 + T-6 project to ~1 500–2 000 LOC. **Expect the tripwire to fire during T-6**
+
+## QRF-T-5 — `lookup` resolver and source registry — PASS (2026-10-28)
+
+- Attempts: 1 · effort high (env-derived schema in SQL) · skills `nestjs-expert`, `tdd`
+- Files: new `values/lookup-sources.ts` (67) + spec (49), `values/lookup.resolver.ts` (299) + spec (270). Edited:
+  - `values/read-plan.ts` (+24: `any_in` predicate, optional `schema`, checked against `^[A-Za-z0-9_$-]+$`)
+  - `values/read-plan.spec.ts` (+23)
+  - `values/fixtures.ts` (+6/−5: the runner handles `any_in`)
+  - `values/value-reader.ts` (exports `mapBounded`)
+- Entry point for T-6: `resolveLookups(fields, { values, deferred }, { run, phaseYear, env? })` fills `values` in place and consumes only `kind: 'lookup'` items from `deferred`. It runs one SELECT per (source, key columns, qualifiers) group, which is one per source in the 2026 catalog, and none on an empty key set
+- Implementer verification: `npx jest src/api/qa-catalog --maxWorkers=2` → 37 suites / 840 tests; tsc 0; eslint `values/` clean
+- Falsifier reds (mutate → observe → revert; files byte-identical after):
+  - (a) OR → AND: `alternatives are OR …` received `[null, null]`, expected `["Counter","Percent"]`
+  - (b) year as equality: expected `[20, 40]`, received `null, null`. Pick flipped: `Expected: 60 Received: 50`
+  - (c) top-level first: expected `["sibling", null]`, received `["top-level","top-level"]`
+  - (d) `prms.fair_fields` entry removed: `+ Array [ "prms.fair_fields" ]`
+- Evidence re-run (Leader inline, same command): 37 / 840 green; tsc 0; eslint 0. A grep shows `DB_TOC` only as `env.DB_TOC` (`lookup-sources.ts:65`) and as fake values in specs → **VERIFIED**
+- Reviewer (`akili-reviewer`, overrides b + f): **PASS**. Conforms to QRF-R-7, R-9, DD-8, and the carried R-7/DD-9 as amended 2026-10-28; that carry ends here. The schema regex blocks breaking out of the backtick quoting. `any_in` binds every value and leaves existing predicates unchanged (no T-3/T-4 regression). The statement count depends on the catalog, never on the batch (*Query shape* met). The T-4 forward pointer is met
+- ADVISORY (recorded, not tasks):
+  - RISK, carried to T-6: a failing ToC query is thrown as-is, and MySQL "Unknown database 'X'" carries the `DB_TOC` value. T-6 must catch errors from both the base plans and `resolveLookups`, return a generic 500, and never log `error.message`. The T-5 DoD "`DB_TOC` never in errors" holds end to end only once T-6 does this
+  - RELIABILITY (T-8): `getIndicatorTargetCatalog` falls back to rows from any year when the phase year has none, while the resolver returns null. This may show up in the golden comparison
+  - RESILIENCE: no test pins groups == distinct sources over `CATALOG_FIELDS`
+  - RISK (low): string keys are bound against an int `id`, which MySQL casts to 0; the JS re-check drops the false match
+  - READABILITY: the `sortable` comparator mixes `-Infinity` and strings
+- Not Done / Assumptions (Implementer). Assumptions only; nothing owed:
+  - The year match runs in JS per `getIndicatorTargetCatalog`
+  - Key matching is case-insensitive
+  - A sibling is defined by the catalog, and a null sibling gives null
+  - Registry primary keys are hard-coded, and the ToC primary keys come from repository code
+  - One lookup round only
+  - A non-object container (bare relation scalar) is skipped
+  - String keys are bound against int ids
+  - Not run against a DB
+- Forward pointers:
+  - QRF-T-6:
+    - one generic-failure boundary around base plans, `resolvePathFields` and `resolveLookups`, with no `error.message` in logs or responses
+    - fix the relation resolver's bare scalar for a scalar field with subfields (amended R-7); `resolveLookups` skips non-object containers
+    - merge the `deferred` lists from `readBaseValues` and `resolvePathFields` before `resolveLookups`
+  - QRF-T-8: compare against the year fallback in `getIndicatorTargetCatalog`
+- spawns: implementer 27 calls, 169 829 tokens, ended partial (assumptions only); reviewer 14 calls, 113 688 tokens, ended complete
+- Requirements: QRF-R-7 (lookup values), QRF-R-9 — QRF-DD-8, P-13
+- Running totals vs budget: tasks 5/8 · LOC ~4 640/4 500 (T-1 ~670 + T-3 ~1 683 + T-4 ~625 + T-2 ~920 + T-5 ~740) · review rounds 7/12. **Budget tripwire fired** on LOC, with T-6 (L), T-7 (doc) and T-8 (HITL) still open
+
+## Budget Tripwire — after QRF-T-5
+
+- Budget (re-baselined at the QRF-T-3 gate): ~4 500 LOC · 8 tasks · 12 review rounds
+- Actual after 5 of 8 tasks: ~4 640 LOC (committed through T-5) · 7 review rounds
+- Cause: test density stayed at roughly 45–50 % of each task even when briefs asked for lean specs. T-2 took a rework round that added a cap and generic-failure tests. T-5 extended the shared `read-plan.ts` with `any_in` and `schema`
+- Projection:
+  - T-6 (L) wires reader + path + lookup into `POST /api/qa/results/details`, with the generic-failure boundary and the relation scalar fix: ~900–1 300 LOC
+  - T-7 (doc): ~150–250
+  - Spec total ≈ 5 700–6 200 LOC. Review rounds stay well under 12
+- Status: stopped for the owner. This stop is not auto-approved

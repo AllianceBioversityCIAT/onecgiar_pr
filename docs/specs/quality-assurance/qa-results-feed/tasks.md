@@ -98,7 +98,7 @@
 - **Definition of done:**
   - [ ] Falsifiers executed and quoted; Jest + `tsc --noEmit` green
 
-### QRF-T-5 — `lookup` resolver and source registry
+### [x] QRF-T-5 — `lookup` resolver and source registry
 
 - **Type:** server
 - **Description:** Source registry for the 7 logical sources (P-13; `toc.*` → `${DB_TOC}` read from config at call time, never logged). Lookup run after base values: keys from sibling subfield first, else top-level; alternatives as OR; qualifiers with `PHASE_YEAR` → request year and `match:'year'` per the canonical year read; `pick` first row; one SELECT per source per batch over distinct keys.

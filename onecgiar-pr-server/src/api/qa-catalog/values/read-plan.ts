@@ -18,14 +18,20 @@ import { ScalarFieldType, isScalarType } from './value-typing';
 
 export type SqlRow = Record<string, unknown>;
 
-/** A WHERE term. `in` is added by `planQuery`; `eq` / `is_null` come from a relation's equality `filter`. */
+/**
+ * A WHERE term. `in` is added by `planQuery`; `eq` / `is_null` come from a relation's equality `filter`; `any_in` is the
+ * lookup resolver's alternative keys (QRF-DD-8): the row matches when ANY of `columns` holds one of `values`.
+ */
 export type Predicate =
   | { column: string; op: 'in'; values: number[] }
   | { column: string; op: 'eq'; value: string | number }
-  | { column: string; op: 'is_null' };
+  | { column: string; op: 'is_null' }
+  | { op: 'any_in'; columns: string[]; values: Array<string | number> };
 
 /** The one statement of a plan, as data. Table and column names come from catalog bindings (code), never from input. */
 export interface PlanQuery {
+  /** Database the table lives in, when it is not the connection's own (the ToC lookup sources, P-13). */
+  schema?: string;
   table: string;
   select: string[];
   where: Predicate[];
@@ -277,6 +283,16 @@ function ident(name: string): string {
   return `\`${name}\``;
 }
 
+// A database name comes from configuration and may carry `-` or `$`; it is quoted, and the value never enters an error.
+const SCHEMA_NAME = /^[A-Za-z0-9_$-]+$/;
+
+function qualified(query: PlanQuery): string {
+  if (query.schema === undefined) return ident(query.table);
+  if (!SCHEMA_NAME.test(query.schema))
+    throw new Error('value reader: invalid identifier');
+  return `\`${query.schema}\`.${ident(query.table)}`;
+}
+
 /** Parameterized SQL for a plan query; values are bound, identifiers are checked and quoted. */
 export function renderPlanSql(query: PlanQuery): {
   sql: string;
@@ -288,6 +304,11 @@ export function renderPlanSql(query: PlanQuery): {
       case 'in':
         params.push(...p.values);
         return `${ident(p.column)} IN (${p.values.map(() => '?').join(', ')})`;
+      case 'any_in': {
+        const marks = p.values.map(() => '?').join(', ');
+        p.columns.forEach(() => params.push(...p.values));
+        return `(${p.columns.map((c) => `${ident(c)} IN (${marks})`).join(' OR ')})`;
+      }
       case 'eq':
         params.push(p.value);
         return `${ident(p.column)} = ?`;
@@ -296,7 +317,7 @@ export function renderPlanSql(query: PlanQuery): {
     }
   });
   const sql =
-    `SELECT ${query.select.map(ident).join(', ')} FROM ${ident(query.table)}` +
+    `SELECT ${query.select.map(ident).join(', ')} FROM ${qualified(query)}` +
     ` WHERE ${terms.join(' AND ')} ORDER BY ${ident(query.orderBy)} ASC`;
   return { sql, params };
 }

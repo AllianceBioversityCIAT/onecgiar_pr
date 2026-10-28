@@ -224,14 +224,17 @@ export const FIXTURE_DB: FixtureDb = {
 
 function matches(row: SqlRow, query: PlanQuery): boolean {
   return query.where.every((p) => {
-    const value = row[p.column];
     switch (p.op) {
       case 'in':
-        return p.values.includes(Number(value));
+        return p.values.includes(Number(row[p.column]));
+      case 'any_in':
+        return p.columns.some((c) =>
+          p.values.map(String).includes(String(row[c])),
+        );
       case 'eq':
-        return value === p.value;
+        return row[p.column] === p.value;
       case 'is_null':
-        return value === null || value === undefined;
+        return row[p.column] === null || row[p.column] === undefined;
     }
   });
 }
