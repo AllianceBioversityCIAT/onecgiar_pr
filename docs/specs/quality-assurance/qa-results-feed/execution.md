@@ -550,3 +550,16 @@
   - 162 → 163–165 (IPR)
   - The parents of 150/151 are 77, and of 162 is 100, also as in test
   - The pre-condition holds, and QRF-T-9 starts
+
+## QRF-T-9 — attempt 1, checkpoint 1: Pivot (2026-10-28)
+
+- The Implementer (`akili-implementer`, effort high) stopped on the task's STOP rule **before writing code**. The tree is clean: one probe was reverted byte for byte
+- Blockers to the planned `path` step on `result_questions`:
+  - `result_questions` is excluded (`excluded-tables.ts:90`). The probe failed in `qa-catalog.completeness.spec.ts` ("table result_questions is not in scope.ts") and in `values/table-metadata.spec.ts` P-14 (`Expected: true, Received: false`)
+  - The `not_applicable_reason` column subfield is on `result_answers`, not on the path's last table, so `path.resolver` throws
+  - `team_diversity.actions` cannot start from a `result_questions` row, which has no `result_id`
+- Owner decision (Pivot): option "closed lists", recorded as **QRF-DD-13**
+  - The relation and path resolvers apply a field's closed control list as a row filter
+  - New closed lists: GESI, risk and IPR
+  - Fields with a closed list and a relation or path binding (Leader check via `ts-node` over `CATALOG_FIELDS`): `innovation_dev.team_diversity`, `innovation_dev.team_diversity.actions`, `ipsr_step_2_1.complementary_innovations.result_type`
+- spawns: implementer (attempt 1, checkpoint 1) 18 calls, 121 229 tokens, ended checkpoint (Pivot flag)
