@@ -503,7 +503,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       kind: 'relation',
       table: 'results_center',
       fk_to_result: 'result_id',
-      value_column: 'is_leading_result',
+      // QRF-T-9 (T-8 golden G-1): the CENTER of the active leading row (`center_id`, e.g. 'CENTER-02'), not the flag
+      value_column: 'center_id',
+      filter: { is_leading_result: 1, is_active: 1 },
     },
   },
   {
@@ -781,7 +783,9 @@ export const CONTRIBUTORS_PARTNERS_FIELDS: CatalogField[] = [
       kind: 'relation',
       table: 'results_by_institution',
       fk_to_result: 'result_id',
-      value_column: 'is_leading_result',
+      // QRF-T-9 (T-8 golden G-1): the INSTITUTION of the active leading row (`institutions_id`, as `partners.*` list it), not the flag
+      value_column: 'institutions_id',
+      filter: { is_leading_result: 1, is_active: 1 },
     },
   },
   // Linked-result question (former `linked_results` section, QAC-T-8 · inventory C-6). On the client it lives

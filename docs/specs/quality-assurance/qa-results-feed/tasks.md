@@ -173,10 +173,10 @@
   - [ ] OQ-4 decided by the owner and recorded; P-2, P-7, P-12 rows updated in `design.md`
   - [ ] Evidence (commands, counts, ms) quoted in `execution.md`; no key or token in it
 
-### [ ] QRF-T-9 — Golden-comparison fixes: lead center/partner and answer-bound questions
+### [~] QRF-T-9 — Golden-comparison fixes: lead center/partner and answer-bound questions
 
 - **Type:** server (catalog bindings) + docs
-- **Description:** Fix the value bindings that the T-8 golden comparison (`execution.md`, G-1/G-2) proved wrong. The binding objects are stripped from the public catalog by the mapper, so the contract shape does not change; check that `catalog_version` stays the same.
+- **Description:** Fix the value bindings that the T-8 golden comparison (`execution.md`, G-1/G-2) proved wrong. The binding objects are stripped from the public catalog by the mapper, so the contract shape does not change; check that `catalog_version` stays the same. *(Amended 2026-10-28: the content hash covers bindings, so G-1 required a bump to 2026.31, which the owner approved.)*
   - **G-1:** `contributors.lead_center` → `relation results_center`, `value_column: 'center_id'`, `filter: { is_leading_result: 1, is_active: 1 }`. `partners.lead_partner` → the same pattern on `results_by_institution`. Read its identity column from the entity; do not guess it.
   - **G-2 (amended at the Pivot, QRF-DD-13):** each answer-bound field of innovation development reads only the answers to its own question. The `relation` and `path` resolvers apply the field's closed control list as a row filter on `value_column`. The closed lists for GESI (152–156), risk (157–161) and IPR (163–165) are added to `CLOSED_CONTROL_LISTS`, and the three fields point at them. The original plan, a `path` step on `result_questions`, was rejected: see `execution.md`.
     - Top-level fields: `result_answers` (answered + active) → `result_questions` (join `result_question_id`, filter `parent_question_id = <root>`), `value_column: 'result_question_id'`.

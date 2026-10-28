@@ -563,3 +563,42 @@
   - New closed lists: GESI, risk and IPR
   - Fields with a closed list and a relation or path binding (Leader check via `ts-node` over `CATALOG_FIELDS`): `innovation_dev.team_diversity`, `innovation_dev.team_diversity.actions`, `ipsr_step_2_1.complementary_innovations.result_type`
 - spawns: implementer (attempt 1, checkpoint 1) 18 calls, 121 229 tokens, ended checkpoint (Pivot flag)
+
+## QRF-T-9 — attempt 1, PASS on review; golden re-run pending (2026-10-28)
+
+- **Checkpoint 2:** G-1 changed the catalog content hash, because the hash covers storage bindings. The owner approved the `catalog_version` bump 2026.30 → **2026.31**. The snapshot diff touches only `revision` 30→31 and `content_hash` (`3a8cb6bd…` → `9707ab93…`)
+- **Changes** (+119/−38 across 11 tracked files, plus the new spec of 186 lines):
+  - `values/read-plan.ts`: `closedListPredicates`, an `IN (?, …)` predicate on `value_column` that is part of the relation filter and plan key
+  - `values/path.resolver.ts`: last-step `lastStepWhere` and `groupKeyOf` at all 3 grouping sites
+  - `definitions/closed-control-lists.ts`: GESI, risk and IPR lists citing P-20
+  - `contributors-partners.ts`:
+    - `lead_center` → `center_id` with filter `{is_leading_result:1, is_active:1}`
+    - `lead_partner` → `institutions_id` with the same filter
+  - `versions.ts`: revision 31
+  - `qa-catalog.en.md`:
+    - v1.27 row (2026.31, public shape unchanged)
+    - G-3 note on stored NULL vs the form's "No"
+    - gap 4 reworded
+    - gap 18 (`policy_change.related_to`)
+  - New falsifier spec: `qa-results.golden-bindings.spec.ts`
+  - Specs updated because they pinned the old state:
+    - innovation-development (lists not closed → P-20 ids)
+    - service, controller and shape (2026.30 → 2026.31)
+- **Red run** (Implementer, against the old bindings): 7 failed of 8 → `gesi` received 78; actions received all 17 rows; GESI 153 case received 78; 80+113 case received 80; `lead_center` received 0 (twice); `lead_partner` received 0
+- **Evidence re-run** (Leader, non-author):
+  - `npx jest src/api/qa-catalog --maxWorkers=2 --silent` → 42 suites and 910 tests passed
+  - `npx tsc --noEmit` → 0
+  - `npx eslint "src/api/qa-catalog/**/*.ts" --quiet` → 0
+  - → **VERIFIED**
+- **Reviewer** (`akili-reviewer`) → **PASS**
+  - Checked: parameters are bound; the filter is on the last step only; no cross-field leak (plan key and `groupKeyOf`); exactly 3 relation/path fields carry the filter, and IPSR `result_type` is a no-op; G-1 columns match the entities; the falsifier uses the real resolvers; the doc agrees with the code
+  - `[advisory-grade]` items:
+    - no test pins the path no-leak grouping or the last-step-only rule; this needs a fixture with a mixed group and a 2-step path
+    - `lead_partner` does not filter `institution_roles_id`; one leading row per result today (V-CP:116-122)
+    - a partial `Member` cast at `path.resolver.ts:517-520`
+    - the `tasks.md` T-9 text on `catalog_version` — annotated
+- **Golden re-run:** blocked. The dev/test DB is unreachable from the laptop (`SQL failed: ETIMEDOUT` on a direct `mysql2` connect; the local server returns the generic 500 `read failed (Error)`). T-9 stays `[~]` until 8572, 8778 and 8799 are re-read and match the form
+- spawns:
+  - implementer (attempt 1, three spawns: checkpoint 1 Pivot, checkpoint 2 version, final) 58 calls in total
+  - reviewer 46 calls, 140 553 tokens, ended complete
+- **Running totals vs budget:** tasks 7/9 `[x]` (T-8 and T-9 `[~]`) · LOC ~6 800/6 800 · review rounds 13/14

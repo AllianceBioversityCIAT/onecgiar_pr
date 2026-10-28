@@ -14,6 +14,7 @@ import {
   RelationBinding,
 } from '../definitions/types';
 import { stableStringify } from '../definitions/content-hash';
+import { CLOSED_CONTROL_LISTS } from '../definitions/closed-control-lists';
 import { TableKeys, Temporal } from './table-metadata';
 import { ScalarFieldType, isScalarType } from './value-typing';
 
@@ -174,6 +175,28 @@ export function filterPredicates(
     });
 }
 
+/**
+ * QRF-DD-13: a relation / path binding whose field (or subfield) names a CLOSED control list reads only the rows whose value
+ * column is one of the list's ids, as one more term of the same batched SELECT (the ids are numeric constants of code, bound
+ * as parameters). A field with no closed list adds nothing. This is how an answer-bound field reads only the answers to its
+ * own question: `result_answers` rows carry the question id, and the question's options are the closed list.
+ */
+export function closedListPredicates(
+  valueColumn: string,
+  controlList: string | undefined,
+): Predicate[] {
+  if (controlList === undefined) return [];
+  if (!Object.prototype.hasOwnProperty.call(CLOSED_CONTROL_LISTS, controlList))
+    return [];
+  return [
+    {
+      column: valueColumn,
+      op: 'in',
+      values: [...CLOSED_CONTROL_LISTS[controlList]],
+    },
+  ];
+}
+
 function cellOf(
   keys: TableKeys,
   table: string,
@@ -263,7 +286,11 @@ export function buildReadPlans(
         startColumns,
       });
     } else if (binding.kind === 'relation') {
-      const filter = filterPredicates(binding.filter);
+      // QRF-DD-13: the closed list is part of the filter, so fields that share a table but not a list get their own plan
+      const filter = [
+        ...filterPredicates(binding.filter),
+        ...closedListPredicates(binding.value_column, field.control_list),
+      ];
       const group = `${binding.table}|${binding.fk_to_result}|${stableStringify(filter)}`;
       let plan = relationPlans.get(group);
       if (!plan) {

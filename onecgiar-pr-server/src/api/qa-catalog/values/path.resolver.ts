@@ -17,7 +17,9 @@ import {
   DeferredBinding,
   ELEMENT_ROWS,
   PlanQueryRunner,
+  Predicate,
   SqlRow,
+  closedListPredicates,
   filterPredicates,
   readStage,
 } from './read-plan';
@@ -73,7 +75,8 @@ function pickFirst(rows: SqlRow[], step: PathStep, pk: string): SqlRow[] {
 
 /**
  * Follows `steps` from `starts` and returns, per start id, the rows of the LAST step (primary-key order, no duplicates).
- * `extraColumns` are columns of the last table the caller also needs. Exposed so the reader can start a subfield
+ * `extraColumns` are columns of the last table the caller also needs; `lastStepWhere` are extra terms of the last step's SELECT
+ * (QRF-DD-13, the closed list of the value column). Exposed so the reader can start a subfield
  * path of a `relation` element from that element's row (QRF-T-6).
  */
 export async function followPath(
@@ -81,6 +84,7 @@ export async function followPath(
   starts: PathStart[],
   ctx: PathContext,
   extraColumns: string[] = [],
+  lastStepWhere: Predicate[] = [],
 ): Promise<Map<number, SqlRow[]>> {
   let current = new Map<number, SqlRow[]>(starts.map((s) => [s.id, [s.row]]));
   for (const [index, step] of steps.entries()) {
@@ -108,6 +112,8 @@ export async function followPath(
             where: [
               { column: first.to, op: 'in', values: [...wanted] },
               ...filterPredicates(step.filter),
+              // QRF-DD-13: the closed list of the bound field narrows the LAST step only
+              ...(next ? [] : lastStepWhere),
             ],
             orderBy: pk,
           });
@@ -145,6 +151,16 @@ interface Member {
   type: CatalogFieldType;
   subfields: CatalogSubField[];
   valueColumn: string;
+  /** The `control_list` of the field or subfield; a CLOSED one narrows the last step (QRF-DD-13). */
+  controlList?: string;
+}
+
+/** Members share a traversal only when they share steps AND the closed-list term the last step carries. */
+function groupKeyOf(steps: PathStep[], member: Member): string {
+  return stableStringify([
+    steps,
+    closedListPredicates(member.valueColumn, member.controlList),
+  ]);
 }
 
 function valueType(type: CatalogFieldType) {
@@ -183,7 +199,6 @@ async function resolveGroup(
       } else if (sub.storage.kind === 'path') {
         // the subfield path starts at THIS member's element row (catalog DD-12), never at the result
         sub.storage.steps[0].join.forEach((j) => extra.add(j.from));
-        const key = stableStringify(sub.storage.steps);
         const subMember: Member = {
           id: `${m.id}/${sub.key}`,
           fieldKey: m.fieldKey,
@@ -191,7 +206,9 @@ async function resolveGroup(
           type: sub.type,
           subfields: sub.subfields ?? [],
           valueColumn: sub.storage.value_column,
+          controlList: sub.control_list,
         };
+        const key = groupKeyOf(sub.storage.steps, subMember);
         owners.set(subMember.id, m);
         const group = subGroups.get(key) ?? {
           steps: sub.storage.steps,
@@ -209,7 +226,14 @@ async function resolveGroup(
     }
   }
 
-  const rowsByStart = await followPath(steps, starts, ctx, [...extra]);
+  // every member of a group shares the closed-list term (`groupKeyOf`), so the first one speaks for all
+  const rowsByStart = await followPath(
+    steps,
+    starts,
+    ctx,
+    [...extra],
+    closedListPredicates(members[0].valueColumn, members[0].controlList),
+  );
   const elementsOf = (m: Member, startId: number) =>
     (rowsByStart.get(startId) ?? []).filter((r) => notNull(r, m.valueColumn));
 
@@ -330,7 +354,10 @@ export async function resolvePathFields(
 
   const groups = new Map<string, typeof pathFields>();
   for (const f of pathFields) {
-    const key = stableStringify(f.storage.steps);
+    const key = groupKeyOf(f.storage.steps, {
+      valueColumn: f.storage.value_column,
+      controlList: f.control_list,
+    } as Member);
     groups.set(key, [...(groups.get(key) ?? []), f]);
   }
   for (const group of groups.values()) {
@@ -346,6 +373,7 @@ export async function resolvePathFields(
             type: f.type,
             subfields: f.subfields ?? [],
             valueColumn: f.storage.value_column,
+            controlList: f.control_list,
           })),
           starts,
           ctx,
@@ -411,19 +439,21 @@ export async function resolveElementPaths(
         (s) => s.key === d.subfieldPath[0],
       );
       if (!sub || sub.storage.kind !== 'path') continue;
-      const key = stableStringify(sub.storage.steps);
-      const group = groups.get(key) ?? {
-        steps: sub.storage.steps,
-        members: [],
-      };
-      group.members.push({
+      const member: Member = {
         id: sub.key,
         fieldKey: field.key,
         subPath: [sub.key],
         type: sub.type,
         subfields: sub.subfields ?? [],
         valueColumn: sub.storage.value_column,
-      });
+        controlList: sub.control_list,
+      };
+      const key = groupKeyOf(sub.storage.steps, member);
+      const group = groups.get(key) ?? {
+        steps: sub.storage.steps,
+        members: [],
+      };
+      group.members.push(member);
       groups.set(key, group);
     }
 
