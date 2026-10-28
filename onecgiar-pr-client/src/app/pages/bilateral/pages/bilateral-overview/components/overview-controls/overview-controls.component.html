@@ -176,33 +176,8 @@
     cdkTrapFocus
     cdkTrapFocusAutoCapture
     class="w-[min(560px,calc(100vw-32px))] max-h-[min(70vh,520px)] overflow-y-auto custom_scroll rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] shadow-[var(--pr-shadow-2)]">
+    <!-- Science Program and Source live only in the visible P/A and Category controls (INC-166545: never twice). -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-[16px] p-[16px]">
-      <!-- Science Program (multi) -->
-      <div role="group" aria-label="Science Program" class="flex flex-col gap-[6px] min-w-0">
-        <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Science Program</span>
-        <div class="flex flex-col max-h-[160px] overflow-y-auto custom_scroll">
-          @for (option of programOptions(); track option.value) {
-            <button
-              type="button"
-              role="checkbox"
-              [attr.aria-checked]="isProgramChecked(option.value)"
-              class="flex h-[30px] items-center gap-[8px] rounded-[6px] border border-transparent px-[6px] text-left text-[12.5px] text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-              (click)="toggleProgram(option.value)">
-              <span
-                class="inline-flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] border"
-                [class]="checkboxBoxClass(isProgramChecked(option.value))">
-                @if (isProgramChecked(option.value)) {
-                  <i class="material-icons-round text-[11px] text-white" aria-hidden="true">check</i>
-                }
-              </span>
-              <span class="truncate">{{ option.label }}</span>
-            </button>
-          } @empty {
-            <span class="px-[6px] py-[6px] text-[12px] text-[var(--pr-text-secondary)]">No Science Programs in this phase</span>
-          }
-        </div>
-      </div>
-
       <!-- Project (multi) -->
       <div role="group" aria-label="Project" class="flex flex-col gap-[6px] min-w-0">
         <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Project</span>
@@ -255,7 +230,7 @@
         </div>
       </div>
 
-      <!-- Role · Source · Creation method (single, default both) -->
+      <!-- Role · Creation method (single, default both) -->
       <div class="flex flex-col gap-[12px] min-w-0">
         <div role="radiogroup" aria-label="Role" class="flex flex-col gap-[6px]">
           <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Role</span>
@@ -277,32 +252,6 @@
                 class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
                 [class]="choiceChipClass(draftParams().role === choice.value)"
                 (click)="selectRole(choice.value)">
-                {{ choice.label }}
-              </button>
-            }
-          </div>
-        </div>
-
-        <div role="radiogroup" aria-label="Source" class="flex flex-col gap-[6px]">
-          <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Source</span>
-          <div class="flex flex-wrap gap-[6px]">
-            <button
-              type="button"
-              role="radio"
-              [attr.aria-checked]="draftParams().source === null"
-              class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-              [class]="choiceChipClass(draftParams().source === null)"
-              (click)="selectSource(null)">
-              Both
-            </button>
-            @for (choice of sourceChoices; track choice.value) {
-              <button
-                type="button"
-                role="radio"
-                [attr.aria-checked]="draftParams().source === choice.value"
-                class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-                [class]="choiceChipClass(draftParams().source === choice.value)"
-                (click)="selectSource(choice.value)">
                 {{ choice.label }}
               </button>
             }
@@ -381,6 +330,7 @@
       <button
         type="button"
         role="option"
+        tabindex="-1"
         [id]="phaseOptionId(option.id)"
         [attr.data-testid]="'overview-phase-option-' + option.id"
         [attr.aria-selected]="selectedPhaseId() === option.id"
@@ -414,6 +364,9 @@
   (backdropClick)="closePaListbox()"
   (overlayKeydown)="onPaOverlayKeydown($event)"
   (detach)="closePaListbox()">
+  <!-- "Clear selection" is a sibling of the listbox, not a child: a listbox owns only options, and an Enter/Space on the button must not reach the listbox key handler. -->
+  <div
+    class="flex w-[300px] max-w-[calc(100vw-32px)] max-h-[min(60vh,320px)] flex-col gap-[2px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)]">
   <div
     #paList
     [id]="paListboxId"
@@ -424,11 +377,12 @@
     data-testid="overview-pa-listbox"
     [attr.aria-activedescendant]="programOptions()[activePaIndex()] ? paOptionId(programOptions()[activePaIndex()].value) : null"
     (keydown)="onPaListKeydown($event)"
-    class="flex w-[300px] max-w-[calc(100vw-32px)] max-h-[min(60vh,320px)] flex-col gap-[2px] overflow-y-auto custom_scroll rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)] outline-none">
+    class="flex min-h-0 flex-col gap-[2px] overflow-y-auto custom_scroll outline-none">
     @for (option of programOptions(); track option.value; let index = $index) {
       <button
         type="button"
         role="option"
+        tabindex="-1"
         [id]="paOptionId(option.value)"
         [attr.data-testid]="'overview-pa-option-' + option.value"
         [attr.aria-selected]="isPaSelected(option.value)"
@@ -448,6 +402,7 @@
     } @empty {
       <span class="px-[10px] py-[7px] text-[12px] text-[var(--pr-text-secondary)]">No Programs / Accelerators in this phase</span>
     }
+  </div>
     @if (params().program.length) {
       <button
         type="button"
@@ -485,6 +440,7 @@
       <button
         type="button"
         role="option"
+        tabindex="-1"
         [id]="categoryOptionId(index)"
         [attr.data-testid]="'overview-category-option-' + (choice.value ?? 'all')"
         [attr.aria-selected]="params().category === choice.value"

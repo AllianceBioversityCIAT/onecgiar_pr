@@ -469,8 +469,10 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       await applyProgramFilter();
 
-      expect(text('overview-filter-badge')).toBe('1');
-      expect(text('overview-filter-chips')).toContain('Program');
+      // INC-166545: a P/A lives in the visible P/A control only - no popover badge, no Program chip; Clear shows.
+      expect(el('overview-filter-badge')).toBeFalsy();
+      expect(el('overview-filter-chips')).toBeFalsy();
+      expect(el('overview-clear-filters')).toBeTruthy();
       expect(router.url).toContain('program=SP02');
       // INC-165171: the Total card is computed from the filtered rows, like every other card.
       expect(text('kpi-total')).toMatch(/4\s*results/);
@@ -529,7 +531,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       // The resolution is NOT a center switch: the deep link's filter survives it.
       expect(router.url).toContain('program=SP02');
-      expect(text('overview-filter-badge')).toBe('1');
+      expect(el('overview-clear-filters')).toBeTruthy();
       // INC-165171: Total results narrows with the filter, like every other card.
       expect(text('kpi-total')).toMatch(/4\s*results/);
     });
@@ -1115,6 +1117,18 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       expect(text('kpi-total')).toMatch(/25\s*results/);
       expect(hrefQuery('kpi-total').query).not.toHaveProperty('group');
+    });
+
+    // INC-166545 — the Overview has no Source control; a pasted ?source= becomes the matching category
+    // instead of filtering invisibly, and leaves the URL.
+    it('turns ?source=w1w2 into category=w1w2-tagging and drops source from the URL', async () => {
+      await setup(`/bilateral/${CENTER}/overview?source=w1w2`);
+      flushData(OPEN_PHASE_ID, rows24());
+      await settle();
+
+      expect(router.url).toContain('category=w1w2-tagging');
+      expect(router.url).not.toContain('source=');
+      expect(hrefQuery('kpi-total').query['category']).toBe('w1w2-tagging');
     });
   });
 

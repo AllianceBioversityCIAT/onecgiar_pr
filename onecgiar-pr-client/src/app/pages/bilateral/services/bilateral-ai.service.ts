@@ -44,6 +44,16 @@ const LEGACY_ACTIVE_JOB_KEY = 'prms.bilateral-ai.active-job';
 const ACTIVE_STATUSES: ReadonlySet<BilateralAiJobStatus> = new Set(['PENDING', 'PROCESSING']);
 const TERMINAL_STATUSES: ReadonlySet<BilateralAiJobStatus> = new Set(['COMPLETED', 'FAILED']);
 
+/** `ADS-DD-2`: a pending request expires after this long if the Draft Results page never consumes it. */
+const DRAFT_SPOTLIGHT_TTL_MS = 10_000;
+
+export interface DraftSpotlightRequest {
+  jobId: string;
+  centerAcronym: string;
+  label: string;
+  nonce: number;
+}
+
 /**
  * `AIQ-T-5` (`design.md` §6.2): the multi-job list service. One poll fetches every one of the
  * caller's jobs at once (`GET_bilateralAiJobs`, never one request per job) and diffs consecutive
@@ -77,6 +87,17 @@ export class BilateralAiService implements OnDestroy {
   lastPollFailed = signal(false);
   /** Session memory of finished jobs the trigger badge has not been shown yet (`AIQ-R-10` B). */
   unseenFinishedIds = signal<ReadonlySet<string>>(new Set());
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-1)
+  /** `ADN-DD-1`: own jobs this client saw finish with drafts this session. Always replaced with a
+   * new `Set` (never mutated) so `computed`s re-run; cleared per id by `consumeFreshDraftJobs`. */
+  readonly freshDraftJobIds = signal<ReadonlySet<string>>(new Set());
+
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-1)
+  /** `ADS-DD-1`: pending "spotlight this job's draft group" request. Replaced per click (fresh
+   * `nonce`), cleared only by a matching `consumeDraftSpotlight(nonce)` or the 10 s expiry. */
+  readonly draftSpotlightRequest = signal<DraftSpotlightRequest | null>(null);
+  private spotlightNonce = 0;
+  private spotlightTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── Upload-form-local state (kept; narrowed to the upload's own submission, `AIQ-DD-11`) ────
 
@@ -97,6 +118,8 @@ export class BilateralAiService implements OnDestroy {
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private currentIntervalMs = POLL_INTERVAL_INITIAL;
   private previousJobsById = new Map<string, NormalizedBilateralAiListJob>();
+  /** `ADN-DD-2` / P-12: latest-wins token for `loadAllDrafts`. */
+  private draftsRequestSeq = 0;
   private readonly expectationsCache = new Map<BilateralAiMixClass, Observable<BilateralAiExpectations>>();
 
   draftCount = computed(() => this.draftList().length);
@@ -125,6 +148,35 @@ export class BilateralAiService implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+    this.clearSpotlightTimer();
+  }
+
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-1)
+  /** Replaces any pending request (new nonce, old timer cleared) and starts the 10 s expiry.
+   * Returns the nonce so the caller can `consumeDraftSpotlight` it if navigation is cancelled. */
+  requestDraftSpotlight(job: NormalizedBilateralAiListJob): number {
+    this.clearSpotlightTimer();
+    const nonce = ++this.spotlightNonce;
+    this.draftSpotlightRequest.set({
+      jobId: job.jobId,
+      centerAcronym: job.centerAcronym ?? '',
+      label: job.projectName || job.programCode || job.jobId,
+      nonce,
+    });
+    this.spotlightTimer = setTimeout(() => this.consumeDraftSpotlight(nonce), DRAFT_SPOTLIGHT_TTL_MS);
+    return nonce;
+  }
+
+  /** Clears the request (and its timer) only when `nonce` still matches the pending one. */
+  consumeDraftSpotlight(nonce: number): void {
+    if (this.draftSpotlightRequest()?.nonce !== nonce) return;
+    this.clearSpotlightTimer();
+    this.draftSpotlightRequest.set(null);
+  }
+
+  private clearSpotlightTimer(): void {
+    if (this.spotlightTimer !== null) clearTimeout(this.spotlightTimer);
+    this.spotlightTimer = null;
   }
 
   setUploadProgress(progress: number): void {
@@ -388,6 +440,19 @@ export class BilateralAiService implements OnDestroy {
         return next;
       });
       this.announceTerminalJobs(newlyTerminal);
+
+      // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-1): `newlyTerminal` already means "seen
+      // active on the previous poll" (P-2), so a job finished before this client saw it is never marked.
+      const withDrafts = newlyTerminal.filter(job => job.status === 'COMPLETED' && job.resultCount > 0);
+      if (withDrafts.length > 0) {
+        this.freshDraftJobIds.update(set => {
+          const next = new Set(set);
+          for (const job of withDrafts) next.add(job.jobId);
+          return next;
+        });
+        // Once per poll (`ADN-DD-2`); a no-op when no center is resolved (P-11).
+        this.loadAllDrafts();
+      }
     }
     this.previousJobsById = new Map(newJobs.map(job => [job.jobId, job]));
   }
@@ -443,23 +508,44 @@ export class BilateralAiService implements OnDestroy {
 
   private openDraftsForJob(job: NormalizedBilateralAiListJob): void {
     this.loadAllDrafts();
-    if (job.centerAcronym) void this.router.navigate(['/bilateral', job.centerAcronym, 'drafts']);
+    if (!job.centerAcronym) return;
+    const nonce = this.requestDraftSpotlight(job);
+    // `P-12`: navigating to the URL we are already on is skipped by the router, so only navigate on a change.
+    const commands = ['/bilateral', job.centerAcronym, 'drafts'];
+    const extras = { queryParams: { job: job.jobId } };
+    if (this.router.serializeUrl(this.router.createUrlTree(commands, extras)) === this.router.url) return;
+    void this.router.navigate(commands, extras).then(ok => {
+      if (!ok) this.consumeDraftSpotlight(nonce);
+    });
   }
 
   // ── Draft CRUD ──────────────────────────────────────────────────────
+
+  /** @akili-spec bilateral/ai-draft-new-indicator (ADN-T-1): forgets the given fresh ids (new `Set`). */
+  consumeFreshDraftJobs(jobIds: Iterable<string>): void {
+    this.freshDraftJobIds.update(set => {
+      const next = new Set(set);
+      for (const id of jobIds) next.delete(id);
+      return next;
+    });
+  }
 
   loadAllDrafts(): void {
     const centerId = this.ctx.centerInstitutionId();
     if (centerId == null) return;
 
+    // `ADN-DD-2` / P-12: only the newest call may write; the counter advances after the null-center return.
+    const seq = ++this.draftsRequestSeq;
     this.loadProjectNames();
     this.loadInitiativeNames();
     this.bilateralApi.GET_bilateralAiDrafts(centerId).subscribe({
       next: (data: any) => {
+        if (seq !== this.draftsRequestSeq) return;
         this.draftList.set(data ?? []);
         this.isDraftListLoaded.set(true);
       },
       error: () => {
+        if (seq !== this.draftsRequestSeq) return;
         this.isDraftListLoaded.set(true);
       },
     });
@@ -575,7 +661,9 @@ export class BilateralAiService implements OnDestroy {
         this.draftList.set(snapshot.filter(d => !(ids.has(Number(d.id)) && !failedIds.has(Number(d.id)))));
         if (this.currentDraft() && discarded.includes(Number(this.currentDraft()!.id))) this.currentDraft.set(null);
         const done = `${discarded.length} draft result${discarded.length === 1 ? '' : 's'} discarded`;
+        // P2-4039: without the global key no <app-pr-toast> outlet on the Bilateral pages renders it.
         this.messageService.add({
+          key: 'globalUserNotification',
           severity: failed.length ? 'warn' : 'success',
           summary: failed.length ? 'Partially discarded' : 'Discarded',
           detail: failed.length ? `${done}. ${failed.length} could not be discarded` : done,
@@ -583,7 +671,7 @@ export class BilateralAiService implements OnDestroy {
       }),
       catchError(() => {
         this.draftList.set(snapshot);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to discard drafts' });
+        this.messageService.add({ key: 'globalUserNotification', severity: 'error', summary: 'Error', detail: 'Failed to discard drafts' });
         return of(null);
       }),
     );

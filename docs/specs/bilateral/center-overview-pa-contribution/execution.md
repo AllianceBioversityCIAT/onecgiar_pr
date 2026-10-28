@@ -141,3 +141,42 @@
 - **AOT build:** `npx ng build --configuration development` → exit 0, "Application bundle generation complete. [68.8 s]" — strict template typecheck now verified (closes CPA-T-6 Not Done / advisory). Free RAM at start: 1.9 GB (machine loaded by other sessions).
 - **CPA-T-7 pending item closed:** `bilateral-results-list/CLAUDE.md` — new "Overview category (CPA-T-7)" section (fetchScope, Scope chip follows `scope()` only, chip dimension, default suppression), "Overview scope" line updated for `fetchScope`, `Verified:` re-stamped 2026-10-27 with prior kept. Note: the file was already over the 120-line cap before this change (185 lines) — pre-existing, not addressed here.
 - Remaining before push: commit with explicit paths (exclude other session's `bilateral-ai*`, `ai-drafts-bulk-discard/`, and `onecgiar-pr-server/src/a.py`), merge qa-dev → performance-refactor in the owner's checkout, then CPA-T-8.
+
+### Promotion to performance-refactor (2026-10-27)
+
+- Commits 9c2326d37 + aa8e9a2ba pushed to `qa-development-2026-ss` (owner-approved). ABD session merged origin/performance-refactor into qa-dev (72fad2b88, no conflicts) and fast-forwarded `performance-refactor` 576b2a266 → 72fad2b88; local ref synced. Verified: `origin/performance-refactor` = 72fad2b88 and contains 9c2326d37.
+- Pre-promotion validation on 72fad2b88 (CPA session): server `--findRelatedTests` 121/121 suites, 2988/2988; server eslint clean; client `--findRelatedTests` 453/453 suites, 12297/12297; `ng lint` pass; `ng build --configuration development` (AOT) OK 68.8 s.
+- Next: CPA-T-8 on PRTest after the ~30 min deploy.
+
+### CPA-T-8 — Live verification (owner local stack on the prod DB, read-only) — 2026-10-28
+
+- **Setup:** owner's local client + server (`qa-development-2026-ss`) pointed at the prod DB (`prdb`, Reporting 2026 = version 8). SQL in a `READ ONLY` session + `ROLLBACK`; browser checks only navigated/filtered — no write button clicked.
+- **IFPRI:** Total 15 = 14 replicated + 0 new + 1 tagging (= Nicoleta's prod screenshot). `scope=bilateral` returns `tagged_center_project_ids`; the tagging row is result 28915 "PADDYMITRA" (id 32271, SP12) → project 252 "N-343005-GAIA Phase II" (CPA-AC-7).
+- **Results by P/A (UI = SQL):** SP09 8/0, SP12 3/1, SP07 3/0. **Projects by P/A (UI = API recompute):** 11 rows, e.g. SP12 mapped 5 / with W3 2 / tagged 1.
+- **Drill-downs:** SP12 tagging → Results "Showing 1 of 15" (28915); SP09 W3 → "Showing 8 of 15".
+- **Other centers (SQL):** CIP 63 W3 / 0 tagging (count unchanged); Bioversity 75/1 (UI 76 matches); CIAT (Alliance) 0 (UI 0). No center has more than 1 tagging row.
+- **Timing** `bilateral-center-results?scope=bilateral` (IFPRI, local→prod DB): 532 / 479 / 460 ms. No before-baseline → not a perf claim.
+- **Not done:** unscoped Results tab + Portfolio Centers block before/after; 900px screenshot (browser window stayed maximized at 1920px).
+
+### Post-T-8 fix — never the same filter twice (INC-166545, owner-approved) — 2026-10-28
+
+- **Finding (owner):** the Filter popover repeated Science Program (= visible P/A) and Source (≈ visible Category). Category "W1/W2 tagging" + Source "W3" emptied every card.
+- **Change:** popover drops Science Program + Source groups and their chips; Clear also shows for a P/A alone; `applyUrlParams` folds a pasted `?source=` into `category` (`w3`→`w3`, `w1w2`→`w1w2-tagging`) and strips it. Results tab unchanged. Overlay positions gain right-aligned fallbacks (popover ran off-screen, Apply hidden, once the Filter button moved right).
+- **Files:** `overview-controls.component.{ts,html,spec.ts}`, `bilateral-overview.component.{ts,spec.ts}`, `bilateral-overview/CLAUDE.md`.
+- **Verification:** `--findRelatedTests` on the 2 changed .ts → 22 suites, 3 failures (all old Program/Source expectations) → fixed → the 2 suites re-run 86/86 (other 20 already green: 803 total). `ng lint --quiet` pass. Live: popover lists Project / Result type / Role / Creation method only; opens right-aligned, Apply inside the viewport (1920px).
+
+### CPA-T-8 — completion checks (Leader via Claude in Chrome; local stack `qa-development-2026-ss` + prod DB vs prod site) — 2026-10-28
+
+- **Served bundle:** local Overview shows the visible P/A + Category controls (CPA-T-6) → current code.
+- **Unscoped Results tab (before = reporting.cgiar.org, after = local, same prod DB):** IFPRI "Showing 14 of 278" both; CIP "Showing 59 of 269" both → unchanged (CPA-P-7 / CPA-R-6 "unscoped unchanged").
+- **Portfolio Overview Centers block:** prod and local identical — 325 W3/Bilateral results (7 new / 318 replicated), 12/14 centers reporting, Editing 324 / Pending review 1; projects card Total 989 / 54 / 2 → unchanged.
+- **Keyboard, P/A multi-select:** DEFECT reproduced — with SP11 selected and the active option on unselected "Climate Action", Enter on "Clear selection" ticked Climate Action (`?program=SP11,SP06`) instead of clearing. Option buttons are Tab stops (`tabIndex 0`). Violates `requirements.md` §7 Accessibility (keyboard-operable) under CPA-R-3 → rework dispatched against CPA-T-6 scope (Implementer → Reviewer).
+- **900 px capture:** not obtained — the Chrome window is maximized; `resize_window` had no effect (`innerWidth` stayed 1920). Needs the owner to un-maximize the window or use DevTools device mode.
+- **Commit 6d5da5026** pushed to `qa-development-2026-ss` after validation (22 suites / 803 tests, ng build OK). `performance-refactor` moved (ee139c38b, mc-2 merge) → no longer a fast-forward; merge-tree clean; promotion pending.
+
+### CPA-T-6 rework (from CPA-T-8 keyboard finding) — PASS (attempt 1) — 2026-10-28
+
+- **Implementer** (T2, medium, `angular-developer`, `tdd`): "Clear selection" moved out of the `role="listbox"` (card wrapper holds listbox + sibling button; `onPaListKeydown` unchanged); `tabindex="-1"` on option buttons of the P/A, category and phase lists. Files: `overview-controls.component.{html,spec.ts}`, `bilateral-overview/CLAUDE.md` (keyboard line + Verified re-stamp).
+- **RED:** "Enter on Clear selection clears the P/A selection and does not toggle the active (unselected) option" `Expected: false / Received: true` (`enter.defaultPrevented`); "option buttons are not individual Tab stops" `Expected "-1" / Received null`; 2 failed / 30 passed. **GREEN:** spec 32/32; `--findRelatedTests` .ts + .html 22 suites, 805/805; `ng lint --quiet` pass.
+- **Reviewer** (T3): `STATUS: PASS` — listbox owns only options; `aria-activedescendant`/ids intact; Escape still on overlay; focus ring kept; phase-list `tabindex` = same §7 rule, not creep. ADVISORY: focus drops to `<body>` after Clear (pre-existing) → move focus back to the listbox; re-indent moved block; CLAUDE.md ~123 lines (>120 cap, pre-existing).
+- **Live re-check (Leader, Chrome, local stack + prod DB, served bundle confirmed new):** SP11 selected, active option "Climate Action" (unselected), Enter on "Clear selection" → URL `?program=` removed, no option selected, trigger "All". Defect closed.

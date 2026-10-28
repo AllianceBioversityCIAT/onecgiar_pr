@@ -93,3 +93,13 @@
 | BIL-CTJ-T-2 | done | 1 | PASS (opus) |
 
 Budget: 2/2 tasks · 2/2 review rounds · production ≈ 20 LOC (tests + doc beyond the ~120 estimate). No HALT, no Pivot, no runtime events. Commits: `bf35183ff` (implementation + spec), follow-up closing T-1.
+
+## Post-execution (2026-10-27)
+
+| Event | Detail |
+|---|---|
+| Jira | Implementation comment posted on P2-4016 (comment 44278), referencing `bf35183ff` / `5509b9b44` |
+| Testing env gap | User saw the change locally but not in testing: `qa-development-2026-mc-2` has no deploy; testing (DEV/PRTest) deploys only on push to `performance-refactor` (`.github/workflows/reporting-tool-dev-cicd.yml:61-64`) |
+| Merge | `qa-development-2026-mc-2` merged `--no-ff` into `performance-refactor` as `fa326aa3e` (no conflicts); pre-push on merged tree: server bilateral jest 1482 passed, server build exit 0, client bilateral jest 2625 passed, client lint clean |
+| Deploy | GitHub run `40537823927` (`reporting-tool-dev-cicd`) → success, Jenkins `prms-reporting-tool-dev-cd` triggered |
+| Testing check | User confirmed the change works in testing (2026-10-27) |

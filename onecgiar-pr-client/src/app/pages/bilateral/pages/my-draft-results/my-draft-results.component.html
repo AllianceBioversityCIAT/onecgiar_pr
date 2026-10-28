@@ -237,7 +237,8 @@
         @for (group of sessionGroups(); track group.sessionId) {
           <div
             [id]="'mdr-session-' + group.sessionId"
-            class="mdr-session-card bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm transition-all"
+            tabindex="-1"
+            class="mdr-session-card outline-none bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm transition-all"
             [class.mdr-session-card--me]="group.isCurrentUser"
             [class.ring-2]="highlightedSessionId() === group.sessionId"
             [class.ring-inset]="highlightedSessionId() === group.sessionId"
@@ -271,6 +272,17 @@
                     prTooltipPosition="top">
                     <i class="material-icons-round text-[14px]">{{ group.isCurrentUser ? 'person' : 'person_outline' }}</i>
                     <span class="font-semibold">{{ group.creatorName }}</span>
+                  </span>
+                }
+
+                <!-- @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2): "New" badge, pattern 10 violet tokens (ADN-DD-4) -->
+                @if (group.isNew) {
+                  <span
+                    class="mdr-new-badge inline-flex items-center gap-[4px] px-[8px] py-[1px] text-[11px] font-semibold rounded-full bg-violet-50 text-violet-700 border border-violet-200"
+                    data-testid="mdr-session-new-badge">
+                    <i class="material-icons-round text-[14px]" aria-hidden="true">auto_awesome</i>
+                    <span>{{ newBadgeCopy.label }}</span>
+                    <span class="sr-only">{{ ' ' + newBadgeCopy.srSuffix }}</span>
                   </span>
                 }
 

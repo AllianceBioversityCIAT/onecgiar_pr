@@ -1,6 +1,6 @@
 # bilateral-ai-upload
 
-**Verified:** 2026-10-06 · branch JuanGuzman-io/fix-p2-3896-mp4-audio · P2-3896
+**Verified:** 2026-10-27 · branch qa-development-2026-mc-2 · AQT-T-1
 
 ## Qué es
 Paso "AI" del creador de resultados bilaterales: el usuario sube documentos,
@@ -45,7 +45,9 @@ sustituye.** El job pasa a vivir en la lista de `BilateralAiService`
   another project**) y un toast con acción **View** que abre el drawer. Ambos
   botones de la tarjeta la descartan; "Open AI processes" además llama
   `openDrawer()`. Copy centralizado en
-  `internationalization/bilateral-ai-processes.copy.ts`.
+  `internationalization/bilateral-ai-processes.copy.ts`. **`AQT-T-1`
+  (2026-10-27):** ese toast de queued ahora usa `severity: 'info'` (azul),
+  no `'success'` — la tarjeta de confirmación de arriba no cambió.
 - **Si el envío falla:** el formulario conserva ficheros y texto
   (`handleUploadError`, sin cambios) y no se añade ningún job.
 - **`?job=`** (deep link del email de fallo, P-23, productor en
