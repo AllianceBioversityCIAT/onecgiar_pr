@@ -42,10 +42,16 @@ injectable that opens/closes the dialog by reacting to `BilateralAiService.drawe
 - Every action on the presentational drawer (`retryJob`, `uploadDifferentFiles`, `viewDrafts`,
   `reportManually`, `startWithEvidence`, `closed`) is an output; IT calls no service and no router.
   `ai-processes-drawer-host.component.ts` is what wires them: `retryJob` → `service.retryJob()`;
-  `viewDrafts`/`uploadDifferentFiles`/`reportManually` → `Router.navigate(['/bilateral',
+  `uploadDifferentFiles`/`reportManually` → `Router.navigate(['/bilateral',
   job.centerAcronym, …])` using the JOB's OWN center (a job can belong to a different center than
   the page the drawer was opened from); `startWithEvidence` → the CURRENT `BilateralContextService`
   center (there is no job to read a center from); `closed` → `service.drawerOpen.set(false)`.
+  `viewDrafts` (`bilateral/ai-draft-spotlight`, ADS-T-1) → `service.requestDraftSpotlight(job)`
+  first (returns a nonce), then `loadAllDrafts()` + `drawerOpen.set(false)`, then navigates to
+  `/bilateral/<job center>/drafts?job=<id>` ONLY when `router.serializeUrl(router.createUrlTree(...))`
+  differs from `router.url` (a same-URL navigate resolves `false` — `NavigationSkipped`, P-12 — so
+  the page reacts to the request instead); a `false` for a different URL →
+  `service.consumeDraftSpotlight(nonce)`.
 - ⚠️ **Every host action that navigates ALSO calls `service.drawerOpen.set(false)`** (post-execution
   bug fix, P2-3853, 2026-09-29) — `viewDrafts`, `uploadDifferentFiles`, `reportManually`,
   `startWithEvidence` all closed the router but left the CDK dialog open over the destination page.
@@ -111,4 +117,4 @@ injectable that opens/closes the dialog by reacting to `BilateralAiService.drawe
 
 - Announcement labels fall back to `bilateralAiJobProgramLabel(job)` (code + `program_name`), not the bare `programCode`.
 
-**Verified:** 2026-10-13 · branch qa-development-2026-ss · program-full-names-labels-part-2 PF2-T-5
+**Verified:** 2026-10-27 · branch qa-development-2026-mc-2 · ai-draft-spotlight ADS-T-1

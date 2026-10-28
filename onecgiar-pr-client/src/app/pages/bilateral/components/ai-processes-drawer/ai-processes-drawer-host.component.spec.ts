@@ -29,10 +29,13 @@ describe('AiProcessesDrawerHostComponent', () => {
     drawerOpen: ReturnType<typeof signal>;
     retryJob: jest.Mock;
     loadAllDrafts: jest.Mock;
+    requestDraftSpotlight: jest.Mock;
+    consumeDraftSpotlight: jest.Mock;
     expectations: jest.Mock;
   };
   let navigateSpy: jest.Mock;
   let flowStub: { beginFromJob: jest.Mock };
+  let routerStub: { navigate: jest.Mock; url: string; createUrlTree: jest.Mock; serializeUrl: jest.Mock };
 
   function mount(): void {
     serviceStub = {
@@ -44,16 +47,28 @@ describe('AiProcessesDrawerHostComponent', () => {
       drawerOpen: signal(true),
       retryJob: jest.fn(),
       loadAllDrafts: jest.fn(),
+      requestDraftSpotlight: jest.fn().mockReturnValue(7),
+      consumeDraftSpotlight: jest.fn(),
       expectations: jest.fn(mix => of(mix === 'documents' ? DOCS_EXPECTATION : AUDIO_EXPECTATION)),
     };
     navigateSpy = jest.fn().mockResolvedValue(true);
     flowStub = { beginFromJob: jest.fn() };
+    routerStub = {
+      navigate: navigateSpy,
+      url: '/bilateral/ALLIANCE/create',
+      // ADS-T-1 setup: minimal stand-ins for the real UrlTree round trip.
+      createUrlTree: jest.fn((commands: string[], extras?: { queryParams?: Record<string, string> }) => ({ commands, queryParams: extras?.queryParams ?? {} })),
+      serializeUrl: jest.fn((tree: { commands: string[]; queryParams: Record<string, string> }) => {
+        const qs = new URLSearchParams(tree.queryParams).toString();
+        return `${tree.commands.join('/').replace('//', '/')}${qs ? `?${qs}` : ''}`;
+      }),
+    };
 
     TestBed.configureTestingModule({
       imports: [AiProcessesDrawerHostComponent],
       providers: [
         { provide: BilateralAiService, useValue: serviceStub },
-        { provide: Router, useValue: { navigate: navigateSpy } },
+        { provide: Router, useValue: routerStub },
         { provide: BilateralManualCreateFlowService, useValue: flowStub },
         BilateralContextService,
       ],
@@ -163,6 +178,37 @@ describe('AiProcessesDrawerHostComponent', () => {
     expect(serviceStub.loadAllDrafts).toHaveBeenCalledTimes(1);
     expect(navigateSpy).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'drafts'], { queryParams: { job: 'j9' } });
     expect(serviceStub.drawerOpen()).toBe(false);
+  });
+
+  it('ADS-R-1: viewDrafts requests a spotlight for the job before closing the drawer and navigating', () => {
+    mount();
+    const job = normalizeListJob(rawListJob({ status: 'COMPLETED', result_count: '2', center_acronym: 'ALLIANCE', job_id: 'j9' }));
+    fixture.componentInstance.onViewDrafts(job);
+    expect(serviceStub.requestDraftSpotlight).toHaveBeenCalledWith(job);
+    expect(serviceStub.requestDraftSpotlight.mock.invocationCallOrder[0]).toBeLessThan(navigateSpy.mock.invocationCallOrder[0]);
+    expect(serviceStub.drawerOpen()).toBe(false);
+  });
+
+  it('ADS-R-1: viewDrafts on the target URL does not navigate and keeps the request', async () => {
+    mount();
+    routerStub.url = '/bilateral/ALLIANCE/drafts?job=j9';
+    const job = normalizeListJob(rawListJob({ status: 'COMPLETED', result_count: '2', center_acronym: 'ALLIANCE', job_id: 'j9' }));
+    fixture.componentInstance.onViewDrafts(job);
+    await Promise.resolve();
+    expect(serviceStub.requestDraftSpotlight).toHaveBeenCalledWith(job);
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(serviceStub.consumeDraftSpotlight).not.toHaveBeenCalled();
+    expect(serviceStub.drawerOpen()).toBe(false);
+  });
+
+  it('ADS-R-1: viewDrafts whose navigation resolves false consumes its own nonce', async () => {
+    mount();
+    navigateSpy.mockResolvedValue(false);
+    const job = normalizeListJob(rawListJob({ status: 'COMPLETED', result_count: '2', center_acronym: 'ALLIANCE', job_id: 'j9' }));
+    fixture.componentInstance.onViewDrafts(job);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(serviceStub.consumeDraftSpotlight).toHaveBeenCalledWith(7);
   });
 
   it('startWithEvidence navigates to the CURRENT center create page and closes the drawer', () => {
