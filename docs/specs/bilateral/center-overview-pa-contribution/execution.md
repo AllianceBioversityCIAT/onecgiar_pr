@@ -141,3 +141,26 @@
 - **AOT build:** `npx ng build --configuration development` → exit 0, "Application bundle generation complete. [68.8 s]" — strict template typecheck now verified (closes CPA-T-6 Not Done / advisory). Free RAM at start: 1.9 GB (machine loaded by other sessions).
 - **CPA-T-7 pending item closed:** `bilateral-results-list/CLAUDE.md` — new "Overview category (CPA-T-7)" section (fetchScope, Scope chip follows `scope()` only, chip dimension, default suppression), "Overview scope" line updated for `fetchScope`, `Verified:` re-stamped 2026-10-27 with prior kept. Note: the file was already over the 120-line cap before this change (185 lines) — pre-existing, not addressed here.
 - Remaining before push: commit with explicit paths (exclude other session's `bilateral-ai*`, `ai-drafts-bulk-discard/`, and `onecgiar-pr-server/src/a.py`), merge qa-dev → performance-refactor in the owner's checkout, then CPA-T-8.
+
+### Promotion to performance-refactor (2026-10-27)
+
+- Commits 9c2326d37 + aa8e9a2ba pushed to `qa-development-2026-ss` (owner-approved). ABD session merged origin/performance-refactor into qa-dev (72fad2b88, no conflicts) and fast-forwarded `performance-refactor` 576b2a266 → 72fad2b88; local ref synced. Verified: `origin/performance-refactor` = 72fad2b88 and contains 9c2326d37.
+- Pre-promotion validation on 72fad2b88 (CPA session): server `--findRelatedTests` 121/121 suites, 2988/2988; server eslint clean; client `--findRelatedTests` 453/453 suites, 12297/12297; `ng lint` pass; `ng build --configuration development` (AOT) OK 68.8 s.
+- Next: CPA-T-8 on PRTest after the ~30 min deploy.
+
+### CPA-T-8 — Live verification (owner local stack on the prod DB, read-only) — 2026-10-28
+
+- **Setup:** owner's local client + server (`qa-development-2026-ss`) pointed at the prod DB (`prdb`, Reporting 2026 = version 8). SQL in a `READ ONLY` session + `ROLLBACK`; browser checks only navigated/filtered — no write button clicked.
+- **IFPRI:** Total 15 = 14 replicated + 0 new + 1 tagging (= Nicoleta's prod screenshot). `scope=bilateral` returns `tagged_center_project_ids`; the tagging row is result 28915 "PADDYMITRA" (id 32271, SP12) → project 252 "N-343005-GAIA Phase II" (CPA-AC-7).
+- **Results by P/A (UI = SQL):** SP09 8/0, SP12 3/1, SP07 3/0. **Projects by P/A (UI = API recompute):** 11 rows, e.g. SP12 mapped 5 / with W3 2 / tagged 1.
+- **Drill-downs:** SP12 tagging → Results "Showing 1 of 15" (28915); SP09 W3 → "Showing 8 of 15".
+- **Other centers (SQL):** CIP 63 W3 / 0 tagging (count unchanged); Bioversity 75/1 (UI 76 matches); CIAT (Alliance) 0 (UI 0). No center has more than 1 tagging row.
+- **Timing** `bilateral-center-results?scope=bilateral` (IFPRI, local→prod DB): 532 / 479 / 460 ms. No before-baseline → not a perf claim.
+- **Not done:** unscoped Results tab + Portfolio Centers block before/after; 900px screenshot (browser window stayed maximized at 1920px).
+
+### Post-T-8 fix — never the same filter twice (INC-166545, owner-approved) — 2026-10-28
+
+- **Finding (owner):** the Filter popover repeated Science Program (= visible P/A) and Source (≈ visible Category). Category "W1/W2 tagging" + Source "W3" emptied every card.
+- **Change:** popover drops Science Program + Source groups and their chips; Clear also shows for a P/A alone; `applyUrlParams` folds a pasted `?source=` into `category` (`w3`→`w3`, `w1w2`→`w1w2-tagging`) and strips it. Results tab unchanged. Overlay positions gain right-aligned fallbacks (popover ran off-screen, Apply hidden, once the Filter button moved right).
+- **Files:** `overview-controls.component.{ts,html,spec.ts}`, `bilateral-overview.component.{ts,spec.ts}`, `bilateral-overview/CLAUDE.md`.
+- **Verification:** `--findRelatedTests` on the 2 changed .ts → 22 suites, 3 failures (all old Program/Source expectations) → fixed → the 2 suites re-run 86/86 (other 20 already green: 803 total). `ng lint --quiet` pass. Live: popover lists Project / Result type / Role / Creation method only; opens right-aligned, Apply inside the viewport (1920px).

@@ -282,13 +282,23 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
 
   describe('filter badge and chips (COV-R-3 A)', () => {
     it('counts one badge unit and renders one chip per ACTIVE dimension', () => {
-      fixture.componentRef.setInput('params', params({ program: ['SP01', 'SP02'], source: 'w3' }));
+      fixture.componentRef.setInput('params', params({ type: [6], role: 'lead' }));
       fixture.detectChanges();
 
       expect(el('overview-filter-badge').nativeElement.textContent.trim()).toBe('2');
       const chipText = (el('overview-filter-chips').nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
-      expect(chipText).toContain('Program: Better Diets, Resilient Agrifood Systems');
-      expect(chipText).toContain('Source: W3/Bilateral');
+      expect(chipText).toContain('Result type:');
+      expect(chipText).toContain('Role: Lead');
+    });
+
+    // INC-166545 — P/A and Category are the visible controls; neither repeats as a chip, but Clear still shows.
+    it('renders no Program chip for a P/A selection and still offers Clear', () => {
+      fixture.componentRef.setInput('params', params({ program: ['SP01'] }));
+      fixture.detectChanges();
+
+      expect(el('overview-filter-badge')).toBeFalsy();
+      expect(el('overview-filter-chips')).toBeFalsy();
+      expect(el('overview-clear-filters')).toBeTruthy();
     });
 
     it('hides the badge, the chip row and Clear when nothing is filtered', () => {
@@ -298,7 +308,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
     });
 
     it('removing a chip emits that dimension cleared and leaves the others alone', () => {
-      fixture.componentRef.setInput('params', params({ program: ['SP01'], source: 'w3' }));
+      fixture.componentRef.setInput('params', params({ type: [6], role: 'lead' }));
       fixture.detectChanges();
 
       let emitted: BilateralQueryParams | null = null;
@@ -307,7 +317,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       const removeButtons = fixture.debugElement.queryAll(By.css('[data-testid="overview-filter-chips"] button'));
       (removeButtons[0].nativeElement as HTMLButtonElement).click();
 
-      expect(emitted!).toEqual(expect.objectContaining({ program: [], source: 'w3', phase: OPEN_PHASE_ID }));
+      expect(emitted!).toEqual(expect.objectContaining({ type: [], role: 'lead', phase: OPEN_PHASE_ID }));
     });
 
     it('Clear emits clearFilters and closes the popover', () => {
@@ -326,7 +336,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
   });
 
   describe('popover (COV-R-3 C)', () => {
-    it('opens with the six dimensions and applies the draft only on Apply', () => {
+    it('opens with the four dimensions and applies the draft only on Apply', () => {
       const emitted: BilateralQueryParams[] = [];
       component.filtersChange.subscribe(value => emitted.push(value));
 
@@ -335,12 +345,15 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
 
       const popover = overlay('[data-testid="overview-filter-popover"]');
       expect(popover).toBeTruthy();
-      for (const label of ['Science Program', 'Project', 'Result type', 'Role', 'Source', 'Creation method']) {
+      for (const label of ['Project', 'Result type', 'Role', 'Creation method']) {
         expect(popover!.textContent).toContain(label);
       }
+      // INC-166545 — never the same filter twice: P/A and Category stay outside the popover only.
+      expect(popover!.querySelector('[aria-label="Science Program"]')).toBeNull();
+      expect(popover!.querySelector('[aria-label="Source"]')).toBeNull();
 
-      component.toggleProgram('SP01');
-      component.selectSource('w3');
+      component.toggleType(6);
+      component.selectRole('lead');
       fixture.detectChanges();
       expect(emitted).toEqual([]); // still a draft
 
@@ -348,7 +361,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       fixture.detectChanges();
 
       expect(emitted.length).toBe(1);
-      expect(emitted[0]).toEqual(expect.objectContaining({ program: ['SP01'], source: 'w3' }));
+      expect(emitted[0]).toEqual(expect.objectContaining({ type: [6], role: 'lead' }));
       expect(component.popoverOpen()).toBe(false);
     });
 
@@ -358,7 +371,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
 
       component.togglePopover();
       fixture.detectChanges();
-      component.toggleProgram('SP02');
+      component.toggleType(7);
 
       component.onOverlayKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
       fixture.detectChanges();
@@ -370,7 +383,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       // Re-opening starts from the APPLIED params, not from the discarded draft.
       component.togglePopover();
       fixture.detectChanges();
-      expect(component.draftParams().program).toEqual([]);
+      expect(component.draftParams().type).toEqual([]);
     });
 
     it('Cancel and a backdrop click close it without applying', () => {
@@ -401,8 +414,8 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       const popover = overlay('[data-testid="overview-filter-popover"]')!;
       const checkboxes = popover.querySelectorAll('button[role="checkbox"]');
       const radios = popover.querySelectorAll('button[role="radio"]');
-      expect(checkboxes.length).toBe(4); // 2 programs + 1 project + 1 type
-      expect(radios.length).toBe(9); // three dimensions × (Both + two values)
+      expect(checkboxes.length).toBe(2); // 1 project + 1 type (programs live in the visible P/A control)
+      expect(radios.length).toBe(6); // Role and Creation method × (Both + two values)
       for (const node of [...Array.from(checkboxes), ...Array.from(radios)]) {
         expect(node.getAttribute('aria-checked')).toMatch(/true|false/);
       }

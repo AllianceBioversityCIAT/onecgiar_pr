@@ -641,7 +641,17 @@ export class BilateralOverviewComponent implements OnInit {
     // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-DD-3)
     // `group` belongs to the Results tab: a pasted `?group=` must never narrow an Overview card,
     // or the line that links to it would equal the Total.
-    this.params.set({ ...parsed.params, group: null });
+    // INC-166545: the Overview has no Source control (Category covers it on this row set: W3 rows are
+    // exactly `source=w3`, tagging rows exactly `source=w1w2`). A pasted `?source=` becomes the matching
+    // category, or it would filter invisibly; an explicit `?category=` wins.
+    const source = parsed.params.source;
+    const category = parsed.params.category ?? (source === 'w3' ? 'w3' : source === 'w1w2' ? 'w1w2-tagging' : null);
+    this.params.set({ ...parsed.params, group: null, source: null, category });
+
+    if (source !== null) {
+      this.navigate({ [BILATERAL_SOURCE_QUERY_PARAM]: null, [BILATERAL_CATEGORY_QUERY_PARAM]: category });
+      return;
+    }
 
     if (parsed.params.phase !== null && parsed.params.phase !== this.ctx.selectedVersionId()) {
       this.ctx.selectedVersionId.set(parsed.params.phase);

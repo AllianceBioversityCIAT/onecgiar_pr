@@ -18,7 +18,6 @@ import {
   BilateralMethod,
   BilateralQueryParams,
   BilateralRole,
-  BilateralSource,
 } from '../../../../bilateral-query-params';
 
 /** One selectable value in a filter dimension (`COV-R-3`'s table). */
@@ -27,10 +26,14 @@ export interface OverviewFilterOption<T> {
   label: string;
 }
 
-/** The six filter dimensions, in the order `COV-R-3` lists them. */
-export type OverviewFilterDimension = 'program' | 'project' | 'type' | 'role' | 'source' | 'method';
+/**
+ * The popover's filter dimensions. Program and Source are not here: the visible P/A and Category controls
+ * already cover them, and a second copy in the popover could contradict them (INC-166545: Category
+ * "W1/W2 tagging" + Source "W3/Bilateral" emptied every card).
+ */
+export type OverviewFilterDimension = 'project' | 'type' | 'role' | 'method';
 
-/** One rendered chip next to the Filter button — `Program: SP03`, `Source: W3/Bilateral`, … */
+/** One rendered chip next to the Filter button — `Project: …`, `Role: Lead`, … */
 export interface OverviewFilterChip {
   dimension: OverviewFilterDimension;
   label: string;
@@ -45,7 +48,6 @@ const CATEGORY_CHOICES: OverviewFilterOption<BilateralCategory | null>[] = [
 ];
 
 const ROLE_LABELS: Record<BilateralRole, string> = { lead: 'Lead', contributing: 'Contributing' };
-const SOURCE_LABELS: Record<BilateralSource, string> = { w3: 'W3/Bilateral', w1w2: 'W1/W2' };
 const METHOD_LABELS: Record<BilateralMethod, string> = { ai: 'AI-assisted', manual: 'Manual' };
 
 /** One row of the phase listbox (`COV-R-2` A: `«phase_name» · «phase_year»` + an "Open" badge). */
@@ -160,18 +162,18 @@ export class OverviewControlsComponent {
   /** The popover's in-progress edit; committed only by `Apply`. */
   private readonly draft = signal<BilateralQueryParams | null>(null);
 
+  // Left-aligned first; right-aligned fallbacks for a trigger near the right edge (INC-166545: with P/A and
+  // Category before it, the Filter button sits far right and the 560px popover ran off-screen, Apply hidden).
   readonly popoverPositions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
   ];
 
   readonly roleChoices: OverviewFilterOption<BilateralRole>[] = [
     { value: 'lead', label: ROLE_LABELS.lead },
     { value: 'contributing', label: ROLE_LABELS.contributing },
-  ];
-  readonly sourceChoices: OverviewFilterOption<BilateralSource>[] = [
-    { value: 'w3', label: SOURCE_LABELS.w3 },
-    { value: 'w1w2', label: SOURCE_LABELS.w1w2 },
   ];
   readonly methodChoices: OverviewFilterOption<BilateralMethod>[] = [
     { value: 'ai', label: METHOD_LABELS.ai },
@@ -206,9 +208,7 @@ export class OverviewControlsComponent {
     const params = this.params();
     const chips: OverviewFilterChip[] = [];
 
-    if (params.program.length) {
-      chips.push({ dimension: 'program', label: 'Program', value: this.joinLabels(params.program, this.programOptions()) });
-    }
+    // No Program/Source chips: the visible P/A and Category triggers already show those selections.
     if (params.project.length) {
       chips.push({ dimension: 'project', label: 'Project', value: this.joinLabels(params.project, this.projectOptions()) });
     }
@@ -216,14 +216,15 @@ export class OverviewControlsComponent {
       chips.push({ dimension: 'type', label: 'Result type', value: this.joinLabels(params.type, this.typeOptions()) });
     }
     if (params.role) chips.push({ dimension: 'role', label: 'Role', value: ROLE_LABELS[params.role] });
-    if (params.source) chips.push({ dimension: 'source', label: 'Source', value: SOURCE_LABELS[params.source] });
     if (params.method) chips.push({ dimension: 'method', label: 'Creation method', value: METHOD_LABELS[params.method] });
 
     return chips;
   });
 
-  /** `CPA-R-3` - Clear must show for ANY active filter, including a category (which has no chip). */
-  readonly hasActiveFilters = computed(() => this.chips().length > 0 || this.params().category !== null);
+  /** `CPA-R-3` - Clear must show for ANY active filter, including P/A and category (which have no chip). */
+  readonly hasActiveFilters = computed(
+    () => this.chips().length > 0 || this.params().program.length > 0 || this.params().category !== null,
+  );
 
   /** What the closed P/A trigger reads: All, the one label, or "N selected". */
   readonly paTriggerLabel = computed<string>(() => {
@@ -567,20 +568,12 @@ export class OverviewControlsComponent {
     }
   }
 
-  isProgramChecked(code: string): boolean {
-    return this.draftParams().program.includes(code);
-  }
-
   isProjectChecked(id: number): boolean {
     return this.draftParams().project.includes(id);
   }
 
   isTypeChecked(id: number): boolean {
     return this.draftParams().type.includes(id);
-  }
-
-  toggleProgram(code: string): void {
-    this.draft.set({ ...this.draftParams(), program: toggleValue(this.draftParams().program, code) });
   }
 
   toggleProject(id: number): void {
@@ -596,10 +589,6 @@ export class OverviewControlsComponent {
     this.draft.set({ ...this.draftParams(), role: this.draftParams().role === role ? null : role });
   }
 
-  selectSource(source: BilateralSource | null): void {
-    this.draft.set({ ...this.draftParams(), source: this.draftParams().source === source ? null : source });
-  }
-
   selectMethod(method: BilateralMethod | null): void {
     this.draft.set({ ...this.draftParams(), method: this.draftParams().method === method ? null : method });
   }
@@ -608,11 +597,9 @@ export class OverviewControlsComponent {
   removeChip(dimension: OverviewFilterDimension): void {
     const params = this.params();
     const next: BilateralQueryParams = { ...params };
-    if (dimension === 'program') next.program = [];
     if (dimension === 'project') next.project = [];
     if (dimension === 'type') next.type = [];
     if (dimension === 'role') next.role = null;
-    if (dimension === 'source') next.source = null;
     if (dimension === 'method') next.method = null;
     this.filtersChange.emit(next);
   }
