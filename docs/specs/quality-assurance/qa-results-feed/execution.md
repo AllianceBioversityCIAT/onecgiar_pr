@@ -1,0 +1,119 @@
+# Execution Log — `quality-assurance/qa-results-feed`
+
+## Document Control
+
+| Field | Value |
+|---|---|
+| Spec | `docs/specs/quality-assurance/qa-results-feed/` |
+| Branch | `JuanGuzman-io/chore-check-akili-access` @ `72fad2b88` (spec authored here) |
+| Approval Mode | gated (requirements.md Document Control) |
+| Leader | Claude Opus 5.5 (T1) · Implementer `akili-implementer` (sonnet) · Reviewer `akili-reviewer` (opus) |
+| Persona check | `akili doctor --agents` → "No persona drift blocking CI" (one CUSTOM-EDITED section, maintainer's call) |
+| Budget (design §13) | 8 tasks · ~1 600 LOC · 12 review rounds |
+| Pre-flight | `npm ci` run in `onecgiar-pr-server/`; `.env` copied from the main checkout (gitignored, never committed) |
+
+## Task Execution History
+
+### QRF-T-1 — Type-key map and eligibility repository — PASS
+
+- Date: 2026-10-28 · Attempts: 1 · Parallel with QRF-T-3 · Effort: high (one step above default; eligibility is the contract's core)
+- Skills assigned: `nestjs-expert`, `tdd`
+- Files: `onecgiar-pr-server/src/api/qa-catalog/definitions/result-type-ids.ts` (new), `qa-results.repository.ts` (new), `qa-results.repository.spec.ts` (new, 26 tests), `qa-catalog.module.ts` (provider added), `qa-catalog.module.spec.ts` (global `DataSource` stub + resolve test — consumer named by the task, P-18)
+- Implementer verification: `npx jest src/api/qa-catalog --maxWorkers=2` → 26 suites / 664 tests passed; `npx tsc --noEmit` exit 0; eslint on the 5 touched files exit 0
+- Red run: greenfield; reds observed by mutating the post-change code (below)
+- Falsifiers (each mutated → red → restored, restore confirmed by `diff` against saved copies):
+  - (a) drop `AND r.source = '${W1W2_SOURCE}'` → `● QaResultsRepository eligibility SQL (QRF-R-3) › anchors every eligibility clause to its column` — `Expected pattern: /^\s+AND r\.source = 'Result'$/m` (breakdown test red on the same pattern)
+  - (b) drop `, r.id ASC` → `● QaResultsRepository.findPage › orders by submitted_at then result_id, then pages` — `Expected pattern: /^ORDER BY submitted_epoch ASC, r\.id ASC\nLIMIT \? OFFSET \?$/m`
+  - (c) interpolate the year → `● …eligibility SQL (QRF-R-3) › binds the year (and every other value) instead of interpolating it` — `Expected substring: not "2026"` (+ anchor test `/^\s+AND v\.phase_year = \?$/m` and the filter test)
+  - (d) id 6 → `knowledge_products` → `● result-type-ids map (QRF-DD-2) › ResultTypeEnum 6 -> knowledge_product` — `Expected: "knowledge_product" Received: "knowledge_products"` (+ the `CATALOG_RESULT_TYPES` comparison)
+  - (e) swap `not_submitted` / `not_w1w2` → `● …classify (QRF-R-8) › returns every id, in request order, with the first failing reason` — ids 107 (Editing + bilateral) and 108 (2025 + bilateral) received `not_w1w2`
+- Disqualifier: every predicate matched by a line-anchored regex; a separate test asserts the SQL holds no `--` / `/*` comment
+- Evidence re-run (Leader inline): `npx jest src/api/qa-catalog/qa-results src/api/qa-catalog/qa-catalog.module --maxWorkers=2` → 2 suites / 31 tests passed; eslint on the 5 files exit 0 → VERIFIED (`tsc` deferred to the combined run with QRF-T-3, whose files were in flight)
+- Reviewer: PASS — R-3 (Mixed population), R-4 (lead-only, AND, empty = no filter), R-5 order, R-6 (count/breakdown reuse the same FROM and params), R-8 order; DB column names checked against the entities; DD-5 `UNIX_TIMESTAMP` on a `timestamp` column is session-TZ independent
+- ADVISORY (recorded, not tasks):
+  - RELIABILITY: no unique constraint on active lead rows; a result with two active role-1 rows would appear twice and tie on sort (against R-5 *Stable paging*). Suggest `rbi.id` tie-breaker or `MIN(rbi.id)` derived table; T-8 to count results with > 1 active lead row
+  - RELIABILITY: Submitted result without a submission row returns `submitted_at: null` and sorts first; R-5 says ISO — T-7 to document, T-8 to count
+  - RISK: OQ-4 settles in one constant `PHASE_APP_MODULE_IDS`; classify reads the same constant
+  - READABILITY: `LEAD_ROLE_ID = 1` local literal; use an enum if one exists
+- Not Done / Assumptions (Implementer, verbatim in substance; no blocker, no owed item — not a continuation):
+  - SQL semantics unproven (stubbed DataSource); real SQL runs at T-8
+  - `submitted_at` = `UNIX_TIMESTAMP(MAX(created_date))` over active `status = 1` submission rows → UTC ISO in Node (avoids the mysql2 TZ issue); missing submission row → `null`, sorts first — T-2/T-8 decide
+  - `is_active = 0` classified `not_found` (spec silent on soft-deleted)
+  - Phase predicate `v.phase_year = ? AND v.app_module_id IN (1, 2)` (DD-3, pending OQ-4); no version row → `other_phase`
+  - No dedupe for duplicate active lead rows (exemplar SQL has none)
+  - Unknown `resultTypeKeys` → empty without querying; the 400 belongs to the service (T-2)
+- Return shapes handed to T-2/T-6: `findPage` → `{result_id, result_code, program:{clarisa_id, code}, result_type_key, submitted_at}[]`; `breakdown` → `{by_program:[{clarisa_id, code, count}], by_result_type:[{key, count}]}`; `classify(ids, phaseYear)` → `{result_id, reason|null, result_type_key|null}[]`, deduped, request order
+- Forward pointers: QRF-T-2 — decide `submitted_at: null` handling; QRF-T-7 — document null `submitted_at`; QRF-T-8 — count duplicate active lead rows and Submitted results without submission rows
+- spawns: implementer 22 calls, 135 206 tokens, ended partial (assumptions only); reviewer 10 calls, 62 737 tokens, ended complete
+- Requirements: QRF-R-3, R-4, R-5 (order), R-6, R-8
+- Running totals vs budget: tasks 1/8 · LOC ~670/1 600 · review rounds 1/12
+
+### QRF-T-3 — Value reader core: read plans, `column` and `relation`, typing — PASS
+
+- Date: 2026-10-28 · Attempts: 1 · Parallel with QRF-T-1 · Effort: high
+- Skills assigned: `nestjs-expert`, `tdd`
+- Files (all new, `onecgiar-pr-server/src/api/qa-catalog/values/`): `read-plan.ts`, `column.resolver.ts`, `relation.resolver.ts`, `value-typing.ts`, `table-metadata.ts`, `value-reader.ts`, `fixtures.ts`, and `*.spec.ts` for `read-plan`, `column.resolver`, `relation.resolver`, `value-typing`, `table-metadata`, `value-reader`. `table-metadata.ts` and `value-reader.ts` are outside the expected-files list; the Reviewer accepted them as seams DD-7/DD-9 and design §8 need
+- **P-14 outcome: holds.** The `table-metadata.spec.ts` walk covers 43 tables (17 `relation`, 30 `path`, subfields included); each one resolves to a `scope.ts` entity with exactly one PK column. `primaryKey()` throws on a composite key. Keys that are not `id`/`<table>_id`: `result_answers`=`result_answer_id`, `result_indicators_targets`=`indicators_targets`, `result_ip_result_actors`=`result_ip_actors_id`, `results_knowledge_product`=`result_knowledge_product_id`, `results_kp_authors`=`result_kp_author_id`, `results_toc_result_indicators`=`result_toc_result_indicator_id`, `results_investment_discontinued_options`=`results_investment_discontinued_option_id`. DD-7 stands, so no Pivot is needed
+- Implementer verification: `npx jest src/api/qa-catalog/values --maxWorkers=2` → 6 suites / 90 tests; `npx jest src/api/qa-catalog` → 32 suites / 754 tests; `npx tsc --noEmit` clean; eslint on `values/*.ts` clean
+- Red run: greenfield. Each red below was observed by mutating the post-change code
+- Falsifiers (each mutated → red → restored, with a diff against a backup confirming the restore):
+  - (a1) dropped the NULL `value_column` rule → `relation.resolver.spec`: `Expected length: 1 / Received length: 2 / Received array: [10, null]`
+  - (a2) dropped `filter` from `planQuery` → `Expected length: 1 / Received length: 2 / Received array: [10, 12]`. Dropping both rules gives 3
+  - (b) column plans not grouped by table → `read-plan.spec`: `Expected length: 1 / Received length: 2`. `readBaseValues` also went red: `Expected length: 5 / Received length: 7`
+  - (c) boolean typer returns the driver value → `-   "fx.is_open": false, / +   "fx.is_open": 0,`
+  - (d) empty multi_select → `null` → `-   "fx.tags": Array [], / +   "fx.tags": null,`
+  - (e) per-result queries → `many.calls`: `Expected length: 5 / Received length: 250` (a batch of 1 gives 5)
+- Evidence re-run (Leader inline): `npx jest src/api/qa-catalog --maxWorkers=2` → 32 suites / 754 tests passed; `npx tsc --noEmit` exit 0 over the combined T-1 + T-3 tree; `npx eslint "src/api/qa-catalog/values/*.ts" --quiet` exit 0 → VERIFIED. This run also closes the `tsc` that T-1 deferred
+- Reviewer: PASS. It confirmed P-14 is settled by a test, DD-6 grouping, DD-7 PK order with the NULL rule applied per field, and DD-9 key-by-key construction with no spread. Errors carry no table or column name (R-9). Each plan is one parameterized statement, identifiers are regex-checked, and concurrency is capped at 4 (§8)
+- **Spec tension (Reviewer, raised at the gate — not a FAIL).** For a scalar field, R-7 gives a bare value. Several other texts expect the field's subfields to come back with it:
+  - `docs/qa-catalog.en.md:203` and `:252` ("subfields always travel with their parent" / "whole object of a selected field")
+  - OQ-8 (`general.lead_contact_person` + `directory_user` id)
+  - `general-information.ts:267-269`
+  - DD-10 (`length_of_training` → length + degree)
+
+  The affected fields are `general.lead_contact_person`, `capacity_sharing.length_of_training`, `innovation_dev.gesi_stage`, `innovation_dev.risk_stage` and `innovation_dev.team_diversity`. `buildReadPlans` drops their subfields silently: they are neither planned nor placed in `deferred`. The owner's answer is needed before T-6
+- ADVISORY (recorded, not tasks):
+  - RELIABILITY: `column` plans on per-type tables read the lowest-PK row with no `is_active` term, so a stale inactive row can win. Verify at T-8, or add an active filter to the result-key registry
+  - RELIABILITY: `renderPlanSql` and the resolvers build `IN ()` for an empty id list. Only `readBaseValues` guards against it; move the guard into `planQuery`
+  - RESILIENCE: `toOption` passes driver ids through unchanged, so with `bigNumberStrings` an id arrives as `'4'` instead of `4`. Normalize the ids, or pin the driver option in a test
+  - READABILITY: `read-plan.ts:760` types list/object/multi_select values as `single_select` only for the NULL check. Add a comment saying so
+  - RISK: date typing relies on TypeORM `timezone: 'local'` and on the DB storing UTC. Pin this in a test or check it at T-8
+- Not Done / Assumptions (from the Implementer). None names a blocker or an owed item, so no continuation is owed:
+  1. Scalar fields with subfields return only the value (the spec tension above)
+  2. `path` and `lookup` bindings come back in `deferred` (`{fieldKey, subfieldPath, kind}`) for T-4/T-5. Until those tasks run, list elements hold only the subfield `column` keys
+  3. The NULL `value_column` rule runs in JS per field, because plans are shared across fields
+  4. Date typing reads the mysql2 `Date` local components as the stored wall clock, assumed UTC. DATE vs DATETIME comes from the entity column type
+  5. `''` stays `''`; an unparseable number becomes `null`; a single-select or scalar relation takes the first element by PK; select ids pass through unchanged
+  6. `IN (?, ?, …)` is expanded per id, so the statement text varies with batch size but the statement count does not
+  7. `readBaseValues` fills every planned field for every result; T-6 must drop fields that do not apply to the result's type
+  8. Errors name catalog field keys only
+- Forward pointers:
+  - QRF-T-4/T-5: consume `deferred`; inherit the empty-ids guard
+  - QRF-T-6: drop fields not applicable to the result's type (assumption 7); depends on the scalar-with-subfields decision
+  - QRF-T-8: check stale inactive per-type rows and the DB time zone
+- spawns: implementer 31 calls, 201 635 tokens, ended partial (assumptions only); reviewer 13 calls, 84 175 tokens, ended complete
+- Requirements: QRF-R-7 (value shapes, null/[] fill), NFR *Query shape*
+- Running totals vs budget: tasks 2/8 · LOC ~2 350/1 600 (T-1 ~670 + T-3 ~1 683, tests and fixtures included) · review rounds 2/12. **Budget tripwire fired**: LOC is above budget with 6 tasks still open. Execution is stopped for the owner (see below)
+
+## Budget Tripwire — after QRF-T-3
+
+- Budget (design §13): ~1 600 LOC in total (≈ 650 production, ≈ 950 tests, fixtures and doc)
+- Actual after 2 of 8 tasks: ~2 350 LOC (all uncommitted, new files)
+- Cause: the reader is generic over 181 bindings and carries metadata-driven PK and type resolution (`table-metadata.ts`). Each falsifier also has its own fixture-backed spec with an in-memory runner. T-3 alone is ~1 680 LOC, against an L estimate inside a ~1 600 total
+- Projection: T-2, T-4, T-5 and T-6 at a similar test density would bring the spec to roughly 4 000–5 000 LOC
+- Status: stopped for the owner's decision. This stop is not auto-approved
+- Owner decision (Juan David, 2026-10-28, at the gate): **re-baseline and continue.** `design.md` §13 and `tasks.md` §1 now read ~4 500 LOC. Tasks (8) and review rounds (12) are unchanged
+
+## Execute-time spec edits — 2026-10-28 (owner decision at the QRF-T-3 gate)
+
+- `requirements.md` QRF-R-7 adds a clause: a scalar field (`text`, `date`, `number`, `boolean`, `single_select`) that declares subfields is returned as `{ value, <subfield key>: … }`, and `value` is a key this requirement defines (QRF-R-9). It also adds the scenario *Scalar field with subfields* (capdev raw 2 → `{ "value": 4, "degree": 2 }`). Reason: the T-3 Reviewer found a spec tension with `qa-catalog.en.md` ("subfields always travel with their parent"), OQ-8 (`directory_user`) and DD-10 (length + degree). The owner chose the object form
+- `design.md` QRF-DD-9 adds the projection of a scalar field with subfields; its subfields are planned like list subfields
+- `design.md` §13 and `tasks.md` §1: budget re-baselined (see above)
+- `tasks.md` QRF-T-6:
+  - the description now covers planning scalar subfields, which the T-3 planner drops today
+  - `values/read-plan.ts` is added to the expected files
+  - falsifier (d) now expects the object form
+- Correction closure:
+  - Forward: grep of `option id|bare|length 4|degree` over the spec documents. The base shape line in R-7 stays valid, because the new clause narrows only scalars that have subfields
+  - Backward: the R-7 citers are `tasks.md` T-6 (updated) and T-7 (documents value shapes, so it covers the new rule)
+- Conformance carry: the next Reviewer brief, and the one after it (T-2 and onward), names "conformance to `requirements.md#QRF-R-7` as amended 2026-10-28"
