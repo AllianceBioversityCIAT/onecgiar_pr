@@ -443,3 +443,30 @@
 - Requirements: QRF-R-10, QRF-R-9 (person-bearing keys: OQ-8's five plus `general.created_by`, confirmed by the Reviewer)
 - Running totals vs budget: tasks 7/8 · LOC ~6 480/6 500 · review rounds **12/12**. Within budget, but review rounds are exhausted. T-8 is HITL live verification with no code expected. Any code fix that T-8 surfaces (for example the duplicate-lead-row finding below) would need a review round and therefore a budget decision first
 - Carried to QRF-T-8 (from the T-7 attempt 1 review, code outside T-7): a result with two active lead rows (role 1) may appear twice in `items` and be counted twice, because `buildEligibility` joins `rbi` without deduplicating. Check this on prtest with a query for results that have >1 active role-1 row
+
+## QRF-T-8 — Live verification (HITL) — in progress (2026-10-28)
+
+- Environment: local server (`npm run start:dev`, HEAD `b595ab251`) on the dev/test DB (`prdb`, confirmed by the owner as dev/test). The CLARISA QA test key is read from a private file and never printed. The SQL was run with `mysql2` against the same `.env`
+- **(1) P-12 / OQ-4:** active, Submitted, `source='Result'`, 2026, by `app_module_id` × type: module 1 → type 1:3, 2:2, 4:2, 5:5, 6:9, 7:7, 8:4 (32). Module 2 → none
+  - Versions with `phase_year=2026`: 36 `Reporting 2026` (module 1) and 37 `IPSR 2026` (module 2)
+  - Active type 10, by module, year and status: always module 2 (2023: 154 Editing, 2 QA; 2024: 162/3/1 Submitted/6; 2025: 224/1; 2026: 24 Editing). Type 11 is also module 2 only
+  - **OQ-4 decided by the owner: Reporting + IPSR (unchanged predicate)**
+- **(2) P-7:** `SELECT source, COUNT(*) … status_id=3 AND is_active=1 GROUP BY source` → `Result` 107, `API` 1, **no NULL**. 2026 → `Result` 32, `API` 1
+- **(3) `total` vs SQL:** `GET /results?phase_year=2026` → `total 32`. Direct SQL: `COUNT(DISTINCT r.id)` 32, joined rows 32 → **equal**
+- **(4) Paging:** `page_size` 200 → 1 page, 32 items. `page_size` 5 → 7 pages, 32 items. **0 duplicates, 0 gaps**
+- **Carried duplicate-lead-row risk:** results with more than one active role-1 `results_by_inititiative` row (Submitted, 2026 and 2025) → **0 rows**. Not observed in this data
+- `phase_year=2025` → 404 `No QA catalog available for phase_year 2025` (expected: the catalog exists for 2026 only)
+- **(6) Timing** (client wall-clock from the developer laptop to the remote DB; 1 warm-up call discarded):
+  - List, `page_size` 200 (32 items), 10 runs: min 563, p50 595, **p95 664**, max 664 ms. Server `duration_ms` was 36–177; the remainder is spent outside the service (guard and transport)
+  - Details, batch 32 (all eligible), 10 runs: min 3601, p50 3995, p95 4352 ms
+  - Details, **batch 50** (32 eligible, 18 not eligible: 12 `not_found`, 6 `not_submitted`), 7 runs: min 3291, p50 3559, **p95/max 3696 ms**. Server 2766–3224 ms
+  - Both are within the NFR (≤ 1 s / ≤ 5 s). The NFR's prtest measurement is still owed after merge
+- **Query shape:** the service logs `statements=` per call.
+  - knowledge_product prefixes 1..9 → 39, 45, 47, 47 … 47. KP singles → 38–46
+  - innovation_development prefixes 1..7 → 42, 42, 48 … 48. Singles → 38–48
+  - Mixed batch 32 or 50 → 82
+  - The count saturates at the plans the data touches (child and lookup rounds run only when parent rows exist). It does not grow per result, so the NFR holds
+- **(7) P-2:** `GET /api/qa/results` without a key → **401**. With the QA test key → **200**. `POST /api/qa/results/details` with the key → **200**. No CLARISA grant request is needed in test
+- **(5) Golden comparison:** pending. `details` for 14 results (2 per type with 2026 data) dumped to the session scratchpad: other_output 8569/9754, capacity_sharing 8572/9171, knowledge_product 8778/9532, innovation_development 8799/9351, other_outcome 8907/8917, policy_change 8908/9674, innovation_use 8960/9527 (result codes)
+  - `impact_contribution` and `innovation_package` have no Submitted 2026 results in this DB and cannot be compared
+- Spec rows updated: `design.md` P-2, P-7 and P-12 (verified), DD-3 and the header count. `requirements.md` OQ-4 is marked decided

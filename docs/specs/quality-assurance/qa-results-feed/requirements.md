@@ -228,7 +228,7 @@ The list response SHOULD carry `breakdown`: counts of the filtered set by progra
 | Q1 | ~~Identity~~ — **resolved 2026-10-28 (Juan David):** both. `result_id` is the unique key of the result row (one per phase) and is what `details` accepts; `result_code` is returned alongside to identify the result across phases | — | — |
 | Q2 | ~~Block unsubmit~~ — **decided 2026-10-28 (Juan David):** yes, depending on the QA round (at one point QA reopens results so programs can adjust). Needs Reporting to know the QA round of a result → **separate spec**; out of scope here | — | — |
 | Q3 | KP auto-validation field | nothing here unless it needs a new catalog key | Ángel |
-| OQ-4 | `phase_year` → Reporting phases only, or Reporting + IPSR? | QRF-R-3 | Juan David |
+| OQ-4 | ~~`phase_year` → Reporting phases only, or Reporting + IPSR?~~ — **decided 2026-10-28 (Juan David, T-8 gate): Reporting + IPSR.** Type-10 results live only in IPSR versions (P-12), so Reporting alone would never list `innovation_package`. No predicate change | QRF-R-3 | Juan David |
 | OQ-5 | ~~Limits~~ — **resolved 2026-10-28 (Juan David):** batch 50, `page_size` max 200 (default 100); timing still measured at T-8 | — | — |
 | OQ-6 | ~~`submitted_at` source~~ — **resolved in design** (QRF-DD-5): latest active `submission` row with `status = true` | — | design |
 | OQ-7 | ~~No active lead program~~ — **resolved in design** (QRF-DD-4): not eligible, reason `no_lead_program` | — | design |

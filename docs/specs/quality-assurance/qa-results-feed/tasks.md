@@ -13,7 +13,7 @@
 
 - [x] `requirements.md` approved (2026-10-28, amended at Phase 2)
 - [x] `design.md` approved (2026-10-28)
-- [ ] Open questions: Q1 and OQ-5 resolved, Q2 decided as a separate spec (2026-10-28). OQ-8 resolved (`field_keys`). Q3 and OQ-4 remain open. **None blocks T-1..T-7**; OQ-4 (P-12) is settled at T-8 and may adjust one predicate in T-1
+- [ ] Open questions: Q1 and OQ-5 resolved, Q2 decided as a separate spec (2026-10-28). OQ-8 resolved (`field_keys`). Q3 remains open; OQ-4 decided at T-8 (Reporting + IPSR, 2026-10-28). **None blocks T-1..T-7**; OQ-4 (P-12) is settled at T-8 and may adjust one predicate in T-1
 - [ ] CLARISA: the QA client's grants for the two endpoint strings (P-2) — requested before T-8
 - [x] No conflicting in-flight spec on `api/qa-catalog` (`qa-field-catalog` is executed)
 - [x] No migration in this spec
@@ -152,7 +152,7 @@
 - **Definition of done:**
   - [ ] Change-log row added; known gap 17 marked as applied by the feed
 
-### QRF-T-8 — Live verification (HITL)
+### [~] QRF-T-8 — Live verification (HITL)
 
 - **Type:** rollout
 - **Description:** Against the local server on the dev/test DB, then prtest after merge: (1) P-12 / OQ-4 — count eligible 2026 results per `app_module_id` and per type; owner decides; adjust T-1 predicate if needed; (2) P-7 — `SELECT source, COUNT(*) … status_id=3 GROUP BY source`; (3) `total` vs direct SQL count; (4) page through the full 2026 set (`page_size` 200), assert no duplicate and no gap; (5) golden comparison: ≥ 2 results per catalog type, `details` vs the 2026 form, field by field; (6) timing p95 for list (max page) and details (batch 50); (7) P-2 — call both routes with the QA test key; grant request to CLARISA if 401.
