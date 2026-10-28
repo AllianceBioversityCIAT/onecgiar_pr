@@ -1,12 +1,15 @@
 // @akili-spec quality-assurance/qa-field-catalog
+import { Global, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { ClarisaApiKeyGuard } from '../bilateral/guards/clarisa-api-key.guard';
 import { ClarisaApiKeyValidationService } from '../bilateral/services/clarisa-api-key-validation.service';
 import { QaCatalogController } from './qa-catalog.controller';
 import { QaCatalogModule } from './qa-catalog.module';
 import { QaCatalogService } from './qa-catalog.service';
 import { QaCatalogSyncService } from './qa-catalog-sync.service';
+import { QaResultsRepository } from './qa-results.repository';
 import { QaCatalogField } from './entities/qa-catalog-field.entity';
 import { QaCatalogResultType } from './entities/qa-catalog-result-type.entity';
 import { QaCatalogSection } from './entities/qa-catalog-section.entity';
@@ -21,9 +24,19 @@ const CATALOG_ENTITIES = [
   QaCatalogVersion,
 ];
 
+/** TypeOrmCoreModule (global) is not loaded in a unit test: a global stub stands in for the DataSource. */
+@Global()
+@Module({
+  providers: [{ provide: DataSource, useValue: {} }],
+  exports: [DataSource],
+})
+class StubDataSourceModule {}
+
 /** No DataSource in a unit test: the four feature repositories are replaced by stubs. */
 async function compileModule() {
-  let builder = Test.createTestingModule({ imports: [QaCatalogModule] });
+  let builder = Test.createTestingModule({
+    imports: [StubDataSourceModule, QaCatalogModule],
+  });
   for (const entity of CATALOG_ENTITIES) {
     builder = builder.overrideProvider(getRepositoryToken(entity)).useValue({});
   }
@@ -53,6 +66,13 @@ describe('QaCatalogModule wiring', () => {
     for (const entity of CATALOG_ENTITIES) {
       expect(moduleRef.get(getRepositoryToken(entity))).toBeDefined();
     }
+  });
+
+  it('provides QaResultsRepository on the injected DataSource (QRF-DD-1)', async () => {
+    const moduleRef = await compileModule();
+    expect(moduleRef.get(QaResultsRepository)).toBeInstanceOf(
+      QaResultsRepository,
+    );
   });
 
   it('is imported by AppModule so the route is served', () => {
