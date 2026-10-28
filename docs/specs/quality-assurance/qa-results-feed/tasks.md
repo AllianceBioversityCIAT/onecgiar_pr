@@ -80,7 +80,7 @@
   - [ ] P-14 outcome recorded; falsifiers (a)–(e) executed and quoted
   - [ ] Jest + `tsc --noEmit` green
 
-### QRF-T-4 — `path` resolver
+### [x] QRF-T-4 — `path` resolver
 
 - **Type:** server
 - **Description:** Resolve `path` bindings: steps from `result` (top-level) or from the parent element row (subfield, catalog DD-12); every `join` pair must hold; step `filter` equality; step `pick` = first row by `order_by`/`direction`; `columns` read with the value; grouped per DD-6.

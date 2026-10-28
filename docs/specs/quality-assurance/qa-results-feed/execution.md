@@ -117,3 +117,32 @@
   - Forward: grep of `option id|bare|length 4|degree` over the spec documents. The base shape line in R-7 stays valid, because the new clause narrows only scalars that have subfields
   - Backward: the R-7 citers are `tasks.md` T-6 (updated) and T-7 (documents value shapes, so it covers the new rule)
 - Conformance carry: the next Reviewer brief, and the one after it (T-2 and onward), names "conformance to `requirements.md#QRF-R-7` as amended 2026-10-28"
+
+## QRF-T-4 — `path` resolver — PASS (2026-10-28)
+
+- Run in parallel with QRF-T-2 (tasks.md §4: T-2 ∥ T-3..T-5); disjoint files
+- Attempts: 1 · effort medium · skills `nestjs-expert`, `tdd`
+- Files changed: `values/path.resolver.ts` (new, 355), `values/path.resolver.spec.ts` (new, 267), `values/read-plan.ts` (exports `filterPredicates`, +3/−1)
+- Implementer verification: `npx jest src/api/qa-catalog --maxWorkers=2` → 35 suites / 814 tests passed; after `eslint --fix`, `values/` → 7 suites / 96 tests; `npx tsc --noEmit` exit 0; eslint clean
+- Falsifier reds (mutate → observe → revert, file diffed identical to backup):
+  - (a) join on the first pair only (`step.join.slice(0, 1)`): "every join pair must hold: result 1 reads only its own initiative row" → `+ 999,` (the other initiative's row)
+  - (b) pick direction flipped: "pick desc reads the newest active row…" → `- "fx.file": "new", + "fx.file": "old",`
+  - (c) subfield path started from `result`: "a subfield path starts at its parent element…" → `- "child": 111, + "child": null,` / `- "child": 222, + "child": null,`. The symptom is "attached to none", not the predicted "attached to both", because the fixture's parent key `parent_row_id` does not exist on `result`. The Reviewer confirmed that the assertion still discriminates
+- Evidence re-run (Leader inline): `npx jest src/api/qa-catalog/values --maxWorkers=2` → 7 suites / 96 tests passed; eslint on the 3 files exit 0 → **VERIFIED**. `tsc` re-ran after QRF-T-2 completed, over the combined tree → exit 0
+- Reviewer (`akili-reviewer`, lens checklist): **PASS**. Conforms to QRF-R-7 as amended 2026-10-28 and DD-6/7/9 as amended. All three falsifiers were traced through their fixtures. Number conversion of join keys is consistent: every `join` pair in `definitions/sections/*.ts` is an integer id or foreign key
+- ADVISORY (recorded, not tasks):
+  - RELIABILITY: `PathBinding.columns` is never read. The task wording names this read, but R-7 and DD-6 do not require it. No 2026 catalog binding declares `columns`; only the secret-leak fixture `qa-catalog.fixtures.ts:251` does. Projection uses catalog keys only, so the read would have no effect on output
+  - RELIABILITY: fixture (c) does not model the real catalog. Real subfield paths start `from: 'id'` (contributors-partners.ts:145, :964). A `result`-start mutant would join silently on the result's `id` rather than return null
+  - RESILIENCE: `joinKey` throws for the whole batch, and the message omits the field key
+  - READABILITY: when a scalar field with subfields has no elements, its value carries a `lookup` subfield key; when it has elements, that key is missing until lookup runs
+- Not Done / Assumptions (from the Implementer). Assumptions only, nothing owed, so no continuation:
+  1. A `path` row with NULL `value_column` is not an element (mirrors the relation rule, catalog DD-13)
+  2. Join keys are coerced to numbers; a non-numeric key throws
+  3. Groups run sequentially, not through the `value-reader.ts` concurrency helper
+  4. The resolver is not wired into `readBaseValues`, which still returns `path` as `deferred` (T-6). The relation resolver still returns a bare scalar for a scalar field with subfields, which conflicts with the amended R-7 (T-6)
+- Forward pointers:
+  - QRF-T-5: fill the `lookup` subfield key for scalar fields with subfields when elements exist (the empty-element path already sets `emptyValue`)
+  - QRF-T-6: wire `resolvePathFields`/`followPath`. Catch a `joinKey` throw so one result cannot fail the batch (QRF-R-8). Fix the relation resolver's bare scalar for a scalar field with subfields (amended R-7)
+- spawns: implementer 18 calls, 164 174 tokens, ended partial (assumptions only); reviewer 15 calls, 109 170 tokens, ended complete
+- Requirements: QRF-R-7 (scenario *Whole object of a selected field*; catalog keys only) — QRF-DD-6, DD-7
+- Running totals vs budget: tasks 3/8 · LOC ~2 975/4 500 (T-1 ~670 + T-3 ~1 683 + T-4 ~625; T-2 under review) · review rounds 3/12. Within budget

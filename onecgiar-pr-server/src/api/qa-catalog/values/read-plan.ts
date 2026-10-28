@@ -101,7 +101,9 @@ function fail(fieldKey: string, why: string): never {
   throw new Error(`value reader: field ${fieldKey} ${why}`);
 }
 
-function filterPredicates(filter: RelationBinding['filter']): Predicate[] {
+export function filterPredicates(
+  filter: RelationBinding['filter'],
+): Predicate[] {
   return Object.entries(filter ?? {})
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([column, value]): Predicate => {
