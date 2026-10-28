@@ -304,6 +304,8 @@ const PROJECTS_BY_PA_SERIES_NAMES = {
   tagged: 'Projects tagged as contributors to W1/W2 results',
 } as const;
 const PA_COLUMN_HEADER = 'Program / Accelerator';
+/** Max px of a rotated x-axis label on Projects by P/A (INC-166545 / CPA-T-8: 11 groups overlapped at 900 and 1280 px). */
+const PA_AXIS_LABEL_WIDTH = 110;
 
 export function byPaOption(model: OverviewByPaModel, tokens: ResolvedChartTokens, options?: OverviewChartOptions): EChartsOption {
   const fullLabels = model.rows.map(row => paLabel(row.programCode, options));
@@ -383,13 +385,14 @@ export function projectsByPaOption(model: OverviewProjectsByPaModel, tokens: Res
       },
     },
     legend: { show: true, bottom: 0, textStyle: { color: tokens.textSecondary, fontSize: 11 } },
-    grid: { left: 8, right: 8, top: 24, bottom: 36, containLabel: true },
+    // Up to ~11+ P/A groups: labels are rotated and truncated (full name stays in the tooltip); `bottom` reserves the legend row under them.
+    grid: { left: 8, right: 8, top: 24, bottom: 40, containLabel: true },
     xAxis: {
       type: 'category',
       data: fullLabels.map(label => abbreviateAxisLabel(label)),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { interval: 0, color: tokens.textSecondary, fontSize: 11 },
+      axisLabel: { interval: 0, rotate: 35, width: PA_AXIS_LABEL_WIDTH, overflow: 'truncate', color: tokens.textSecondary, fontSize: 11 },
     },
     yAxis: {
       type: 'value',

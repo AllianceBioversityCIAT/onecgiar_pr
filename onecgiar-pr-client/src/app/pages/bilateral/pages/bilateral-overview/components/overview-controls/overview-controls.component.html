@@ -1,6 +1,5 @@
 <!-- @akili-spec bilateral/center-overview-tab (COV-T-5, COV-R-2, COV-R-3, COV-R-18) -->
 <div class="flex flex-wrap items-center gap-[10px] px-[16px] sm:px-[32px] py-[10px]">
-  <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Phase</span>
 
   <!--
     Phase selector (`COV-R-2`) — a token-styled `role="combobox"` trigger over a hand-rolled ARIA 1.2
@@ -8,29 +7,32 @@
     dismiss (backdrop / `Escape`) and restore focus identically. Replaces the legacy `pr-select`
     primitive, whose grey-input + solid-chevron look was rejected on the live page (`COV-T-8` H-3).
   -->
-  <div class="w-full min-[640px]:w-auto min-[640px]:min-w-[210px] flex-none" data-testid="overview-phase-select">
-    <button
-      #phaseTrigger
-      type="button"
-      cdkOverlayOrigin
-      #phaseOrigin="cdkOverlayOrigin"
-      role="combobox"
-      aria-haspopup="listbox"
-      aria-label="Phase"
-      data-testid="overview-phase-trigger"
-      class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-      [attr.aria-expanded]="phaseOpen() ? 'true' : 'false'"
-      [attr.aria-controls]="phaseListboxId"
-      (click)="togglePhaseListbox()"
-      (keydown)="onPhaseTriggerKeydown($event)">
-      <span class="truncate" [title]="selectedPhaseLabel()">{{ selectedPhaseLabel() }}</span>
-      <i
-        class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
-        [class.rotate-180]="phaseOpen()"
-        aria-hidden="true"
-        >expand_more</i
-      >
-    </button>
+  <div class="flex flex-none items-center gap-[10px] whitespace-nowrap max-[639px]:w-full" data-testid="overview-phase-group">
+    <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Phase</span>
+    <div class="min-w-0 flex-1 min-[640px]:flex-none min-[640px]:w-auto min-[640px]:min-w-[210px]" data-testid="overview-phase-select">
+      <button
+        #phaseTrigger
+        type="button"
+        cdkOverlayOrigin
+        #phaseOrigin="cdkOverlayOrigin"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-label="Phase"
+        data-testid="overview-phase-trigger"
+        class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+        [attr.aria-expanded]="phaseOpen() ? 'true' : 'false'"
+        [attr.aria-controls]="phaseListboxId"
+        (click)="togglePhaseListbox()"
+        (keydown)="onPhaseTriggerKeydown($event)">
+        <span class="truncate" [title]="selectedPhaseLabel()">{{ selectedPhaseLabel() }}</span>
+        <i
+          class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+          [class.rotate-180]="phaseOpen()"
+          aria-hidden="true"
+          >expand_more</i
+        >
+      </button>
+    </div>
   </div>
 
   @if (selectedPhase(); as phase) {
@@ -50,56 +52,60 @@
     always rendered (they wrap onto the next line below 900px, never hide). Same token-styled combobox + listbox
     mechanism as the phase control above; they apply at once (no draft) and the popover keeps working unchanged.
   -->
-  <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">P/A</span>
-  <div class="w-full min-[640px]:w-auto min-[640px]:min-w-[190px] min-[640px]:max-w-[260px] flex-none" data-testid="overview-pa-select">
-    <button
-      #paTrigger
-      type="button"
-      cdkOverlayOrigin
-      #paOrigin="cdkOverlayOrigin"
-      role="combobox"
-      aria-haspopup="listbox"
-      aria-label="Program / Accelerator"
-      data-testid="overview-pa-trigger"
-      class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-      [attr.aria-expanded]="paOpen() ? 'true' : 'false'"
-      [attr.aria-controls]="paListboxId"
-      (click)="togglePaListbox()"
-      (keydown)="onPaTriggerKeydown($event)">
-      <span class="truncate" [title]="paTriggerLabel()">{{ paTriggerLabel() }}</span>
-      <i
-        class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
-        [class.rotate-180]="paOpen()"
-        aria-hidden="true"
-        >expand_more</i
-      >
-    </button>
+  <div class="flex flex-none items-center gap-[10px] whitespace-nowrap max-[639px]:w-full" data-testid="overview-pa-group">
+    <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">P/A</span>
+    <div class="min-w-0 flex-1 min-[640px]:flex-none min-[640px]:w-auto min-[640px]:min-w-[190px] min-[640px]:max-w-[260px]" data-testid="overview-pa-select">
+      <button
+        #paTrigger
+        type="button"
+        cdkOverlayOrigin
+        #paOrigin="cdkOverlayOrigin"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-label="Program / Accelerator"
+        data-testid="overview-pa-trigger"
+        class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+        [attr.aria-expanded]="paOpen() ? 'true' : 'false'"
+        [attr.aria-controls]="paListboxId"
+        (click)="togglePaListbox()"
+        (keydown)="onPaTriggerKeydown($event)">
+        <span class="truncate" [title]="paTriggerLabel()">{{ paTriggerLabel() }}</span>
+        <i
+          class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+          [class.rotate-180]="paOpen()"
+          aria-hidden="true"
+          >expand_more</i
+        >
+      </button>
+    </div>
   </div>
 
-  <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Category</span>
-  <div class="w-full min-[640px]:w-auto min-[640px]:min-w-[210px] flex-none" data-testid="overview-category-select">
-    <button
-      #categoryTrigger
-      type="button"
-      cdkOverlayOrigin
-      #categoryOrigin="cdkOverlayOrigin"
-      role="combobox"
-      aria-haspopup="listbox"
-      aria-label="Result category"
-      data-testid="overview-category-trigger"
-      class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
-      [attr.aria-expanded]="categoryOpen() ? 'true' : 'false'"
-      [attr.aria-controls]="categoryListboxId"
-      (click)="toggleCategoryListbox()"
-      (keydown)="onCategoryTriggerKeydown($event)">
-      <span class="truncate" [title]="categoryTriggerLabel()">{{ categoryTriggerLabel() }}</span>
-      <i
-        class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
-        [class.rotate-180]="categoryOpen()"
-        aria-hidden="true"
-        >expand_more</i
-      >
-    </button>
+  <div class="flex flex-none items-center gap-[10px] whitespace-nowrap max-[639px]:w-full" data-testid="overview-category-group">
+    <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Category</span>
+    <div class="min-w-0 flex-1 min-[640px]:flex-none min-[640px]:w-auto min-[640px]:min-w-[210px]" data-testid="overview-category-select">
+      <button
+        #categoryTrigger
+        type="button"
+        cdkOverlayOrigin
+        #categoryOrigin="cdkOverlayOrigin"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-label="Result category"
+        data-testid="overview-category-trigger"
+        class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+        [attr.aria-expanded]="categoryOpen() ? 'true' : 'false'"
+        [attr.aria-controls]="categoryListboxId"
+        (click)="toggleCategoryListbox()"
+        (keydown)="onCategoryTriggerKeydown($event)">
+        <span class="truncate" [title]="categoryTriggerLabel()">{{ categoryTriggerLabel() }}</span>
+        <i
+          class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+          [class.rotate-180]="categoryOpen()"
+          aria-hidden="true"
+          >expand_more</i
+        >
+      </button>
+    </div>
   </div>
 
   <span class="hidden min-[900px]:block w-[1px] h-[22px] bg-[var(--pr-border-divider)] flex-none"></span>

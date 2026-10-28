@@ -180,3 +180,23 @@
 - **RED:** "Enter on Clear selection clears the P/A selection and does not toggle the active (unselected) option" `Expected: false / Received: true` (`enter.defaultPrevented`); "option buttons are not individual Tab stops" `Expected "-1" / Received null`; 2 failed / 30 passed. **GREEN:** spec 32/32; `--findRelatedTests` .ts + .html 22 suites, 805/805; `ng lint --quiet` pass.
 - **Reviewer** (T3): `STATUS: PASS` — listbox owns only options; `aria-activedescendant`/ids intact; Escape still on overlay; focus ring kept; phase-list `tabindex` = same §7 rule, not creep. ADVISORY: focus drops to `<body>` after Clear (pre-existing) → move focus back to the listbox; re-indent moved block; CLAUDE.md ~123 lines (>120 cap, pre-existing).
 - **Live re-check (Leader, Chrome, local stack + prod DB, served bundle confirmed new):** SP11 selected, active option "Climate Action" (unselected), Enter on "Clear selection" → URL `?program=` removed, no option selected, trigger "All". Defect closed.
+
+### CPA-T-8 — visual (T6) check at 900 / 1280 px — 2026-10-28 (Leader, Chrome)
+
+- Method: Chrome window is maximized (`resize_window` no effect), so the Overview was loaded in a same-origin iframe of exactly 900px / 1280px (`innerWidth` 900 / 1280 confirmed; media queries real). Local stack on prod data, IFPRI, served bundle = c9a19aed7.
+- **900px:** no horizontal overflow (`#workArea` clientWidth = scrollWidth = 700); all three comboboxes visible (Category wraps to a 2nd line). **Defect:** the "CATEGORY" label stays on line 1 while its combobox wraps to line 2. Results by P/A chart legible.
+- **Projects by P/A, 900px AND 1280px:** **Defect** — 11 horizontal full-name x-axis labels overlap each other (and the legend at 900px); illegible. Violates §7 NFR legibility for CPA-R-2 (was "Cannot prove" in CPA-T-5/T-6 → caught here).
+- Screenshots: `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-UPmtvn\screenshot-1793216361812-1.jpg` (900 top), `…-1793216584292-3.jpg` (900 Projects by P/A), `…-1793216717708-4.jpg` (1280 Projects by P/A).
+- Rework dispatched (CPA-T-5/T-6 scope): legible x-axis labels for Projects by P/A + keep label and control together when the controls row wraps. Staging promotion of c9a19aed7 held until this lands.
+
+### CPA-T-5/T-6 rework (visual legibility) — PASS (attempt 1) — 2026-10-28
+
+- **Implementer** (T2, medium, `angular-developer`, `tailwind-design-system`): `projectsByPaOption` axisLabel `{interval:0, rotate:35, width:110 (PA_AXIS_LABEL_WIDTH), overflow:'truncate'}`, `grid.bottom` 40 + `containLabel`, legend `bottom:0`, chart height 320→380px; controls row: Phase / P/A / Category each in a `whitespace-nowrap` label+combobox group (`overview-{phase|pa|category}-group`). Files: `bilateral-overview.charts.{ts,spec.ts}`, `bilateral-overview.component.ts`, `overview-controls.component.{html,spec.ts}`, `bilateral-overview/CLAUDE.md`. `--findRelatedTests` 22 suites, 813/813; `ng lint --quiet` pass.
+- **Reviewer** (T3): `STATUS: PASS` — tokens only, no breakpoint mixing on one property (`max-[639px]:w-full` on wrapper, `min-[640px]:w-auto` on inner select), `nowrap` cannot overflow (<640px wrapper `w-full`, select `min-w-0 flex-1`, overlays render outside), table = series spec intact. ADVISORY: CLAUDE.md ~125 lines (>120 cap) → trim prior-stamp chain at next kaizen.
+- **Live re-check (Leader, Chrome, same-origin iframe, new bundle confirmed by the `overview-*-group` testids):** 900px — "CATEGORY" label wraps together with its combobox; no horizontal overflow (700 = 700); Projects by P/A labels rotated, truncated with ellipsis, no overlap, legend clear. 1280px — Phase / P/A / Category on one line (same top 168); Projects by P/A legible. Screenshots: `C:\Users\santiagosanchez\AppData\Local\Temp\claude-chrome-screenshots-UPmtvn\screenshot-1793218761860-5.jpg`, `…-1793218978078-7.jpg` (900), `…-1793219074687-8.jpg` (1280).
+
+### CPA-T-8 — PASS (HITL, review skip-eligible) — 2026-10-28
+
+- Covered: IFPRI tagging row 28915 (SP12 → project 252) visible in Results by P/A, Projects by P/A and the Results tab (`category=w1w2-tagging`); bars = SQL; drill-downs reconcile (SP12 tagging 1, SP09 W3 8); CIP count unchanged (63); unscoped Results tab (IFPRI 14/278, CIP 59/269) and Portfolio Centers block identical to prod; keyboard defect found and fixed; 900/1280 visual defects found and fixed.
+- **Disqualifier (timing):** only "after" runs exist (532 / 479 / 460 ms, local→prod DB); no before-baseline → reported as inconclusive, no perf claim (per tasks.md).
+- Environment note: verified on the owner's local stack against the prod DB (read-only) instead of PRTest — same data as prod, which made the before/after comparison against reporting.cgiar.org possible.

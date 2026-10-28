@@ -491,7 +491,7 @@ export class BilateralOverviewComponent implements OnInit {
   readonly byPaChartHeight = computed(() => `${Math.min(Math.max(this.model().byPa.rows.length * 34 + 48, 180), 420)}px`);
 
   /** Vertical grouped bars: a fixed height, the P/A axis grows horizontally. */
-  readonly projectsByPaChartHeight = '320px';
+  readonly projectsByPaChartHeight = '380px';
 
   readonly byTypeChartHeight = computed(() => `${Math.min(Math.max(this.visibleTypes().length * 26 + 56, 180), 320)}px`);
 
