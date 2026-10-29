@@ -76,7 +76,7 @@ Interface field optional; aggregate treats `null/undefined` as "fall back to `[p
 | `bilateral-query-params` | `category` parse/serialise/clear; unknown → absent | R-4 |
 | `filterCenterResults` | `category` predicate; role fix | R-4, R-5 |
 | `bilateral-results-list` | when `category` present: fetch scoped row set (same as `scope` key path from CWS) + removable chip | R-4 |
-| `bilateral-overview.component` | wires models/options, click handlers (`onPaChartClick`, `onProjectsByPaClick`), layout: Projects by P/A full-width row after "Results by project" | R-1..3 |
+| `bilateral-overview.component` | wires models/options, click handlers (`onPaChartClick`, `onProjectsByPaChartClick`), layout: Projects by P/A full-width row after "Results by project" | R-1..3 |
 
 Tokens: series colours `tokens.ramp[0..2]` (same as existing charts); headings `text-[20px] font-bold`; card shell identical to existing cards; empty ≤ 160px; skeleton `h-[200px]`.
 
