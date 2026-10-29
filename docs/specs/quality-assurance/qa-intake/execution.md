@@ -172,3 +172,55 @@ _(none yet; QIN-T-6 adds the TRD §7 row)_
     - The DoD item "`migration:check` green" is deferred: it reads `Pending: 1` until the pipeline runs.
 - **Final status:** PASS. The apply/revert check is deferred by the owner's decision.
 - **Requirements covered:** QIN-R-5 (storage), QIN-DD-6. P-14 is settled.
+
+### QIN-T-2 — Intake service and repository — PASS (2026-10-29)
+
+- **Final status:** PASS on attempt 1 (effort high). Parallel lens reviewers covered correctness and security.
+- **Files** (all under `onecgiar-pr-server/src/api/qa-catalog/`):
+  - `qa-results.repository.ts`: `classify(ids, phaseYear, executor = this.dataSource)`, plus a `QaQueryExecutor` type.
+  - `qa-results.repository.spec.ts`
+  - New: `qa-intake.constants.ts`, `qa-intake.repository.ts`, `qa-intake.repository.spec.ts`, `qa-intake.service.ts`, `qa-intake.service.spec.ts` and `dto/qa-intake-response.dto.ts` (types only).
+- **Disqualifier route for (a):** an in-memory fixture runner plus the **real** `classify` code, which is not stubbed. The runner applies the statement effects and has a real staged-commit transaction boundary. SQL-text assertions back it up.
+- **Falsifiers (mutation → red, quoted by the Implementer):**
+  - (a) Updating every eligible id → 500, because the CAS matches 1 of 2 rows. With the assertion also off, the UPDATE params are `[1]` vs `+ 2`.
+  - (b) `markInQa` on `dataSource` → committed `- "in_qa": 0 / + "in_qa": 1`, so the UPDATE survived the rollback. The "every statement runs on the manager" test also fails. The variant that moves only the audit INSERT out of the transaction was argued, not observed.
+  - (c) Assertion off → `Received promise resolved instead of rejected`, carrying a lying `changed: true`.
+  - (d) `classify` called without `manager` → `Expected: {"query": [Function query]} / Received: undefined`.
+  - (e) Ids appended to the log → the log-line regex fails.
+- **Implementer verification:** Jest qa-catalog 44 suites, 932 tests. `tsc`: 0. eslint: 0.
+- **Consumers:** `qa-results.repository.spec.ts`, `qa-results.service.spec.ts` and `qa-results.details.spec.ts` are green.
+- **Evidence re-run (Leader inline): VERIFIED.** Jest 44 suites and 932 tests, `tsc` 0, eslint 0.
+- **Reviewer, correctness lens: PASS.**
+  - Classify order and reasons follow QRF-R-8 and come out in request order.
+  - The changed/unchanged split uses the locked `in_qa`.
+  - The snapshot is taken after `FOR UPDATE`.
+  - The `affectedRows` assertion is sound whether or not FOUND_ROWS is set, because `in_qa = 0` is in the WHERE clause.
+  - The call is idempotent, and the feed default is preserved.
+- **Reviewer, security lens: PASS.**
+  - Every value is bound as a parameter.
+  - The write boundary holds (R-7).
+  - The audit row holds the guard's platform and no person or key.
+  - Logs carry only the error class name, and the 500 body is fixed.
+  - Lock order is `ORDER BY id`.
+- **ADVISORY (4R, recorded, does not gate):**
+  - RISK: the service accepts any length of `result_ids`. The ≤50 cap depends on the QIN-T-4 DTO; check it there. A second guard in the service is optional.
+  - RISK and RESILIENCE: `FOR UPDATE` also locks ineligible and unknown ids. An unknown id above max(id) takes a gap lock that briefly blocks `result` INSERTs. A deadlock or lock timeout returns a generic 500. QIN-T-6 could document that a 500 is safe to retry (the batch is atomic and idempotent).
+  - RELIABILITY: a NULL `in_qa` would make the CAS miss and the whole batch return 500. Confirm the column is NOT NULL DEFAULT 0 on prtest and prod with `SHOW CREATE TABLE result` at QIN-T-7.
+  - RISK: `error.constructor.name` goes into the log. It is safe today.
+  - READABILITY: `QaIntakeTaken.result_code` is non-null only by invariant.
+- **Not Done / Assumptions (verbatim summary, no owed item):**
+  - `EntityManager.query` returns the OkPacket for an UPDATE (`MysqlQueryRunner.js:144-186`). It was not run on a real DB.
+  - The CAS predicate is asserted as text only.
+  - All deduped ids are locked.
+  - The service also dedupes.
+  - The wording of `QA_WRITE_FAILED_MESSAGE` was chosen by the Implementer: "The QA change could not be applied".
+- **Requirements covered:** QIN-R-2 (404 and dedupe), R-3, R-5, R-7, R-8, R-9 (intake half). NFR concurrency and observability. DD-2, DD-3, DD-6.
+- **Spawns:**
+  - implementer: not reported by host (32 tool uses, ~171k tokens). Ended: complete.
+  - reviewer, correctness: not reported by host. Ended: pass.
+  - reviewer, security: not reported by host (8 tool uses, ~73k tokens). Ended: pass.
+- **Running totals:**
+  - 3 of 7 tasks closed.
+  - 5 of 10 review rounds.
+  - ≈ 1 380 diff lines including tests and docs (T-1 ≈ 80, T-5 ≈ 370, T-2 ≈ 930) against the ~1 600 LOC budget.
+  - Within budget. The projection crosses the LOC line during QIN-T-3 or T-4, and the tripwire stops there.

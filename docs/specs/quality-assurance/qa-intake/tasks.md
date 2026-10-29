@@ -44,7 +44,7 @@
   - [x] `npx tsc --noEmit` green
   - [x] scoped Jest green
 
-### [ ] QIN-T-2 — Intake service and repository
+### [x] QIN-T-2 — Intake service and repository
 
 - **Type:** server
 - **Description:**
@@ -73,9 +73,9 @@
   - **Disqualifier:** a test that stubs `classify` to return eligibility proves nothing about DD-2. Case (a) must run the real `classify` SQL on the fixture runner, or assert the SQL text. A mocked transaction that runs its callback without a `manager` boundary proves nothing about (b).
   - **Consumers:** `qa-results.repository.spec.ts` and `qa-results.service.spec.ts` (the `classify` signature); feed `details`.
 - **Definition of done:**
-  - [ ] Falsifiers (a)–(e) executed, reds quoted
-  - [ ] `npx jest src/api/qa-catalog --maxWorkers=2` green
-  - [ ] `tsc` and eslint green
+  - [x] Falsifiers (a)–(e) executed, reds quoted
+  - [x] `npx jest src/api/qa-catalog --maxWorkers=2` green
+  - [x] `tsc` and eslint green
 
 ### [ ] QIN-T-3 — Release service
 
