@@ -104,7 +104,7 @@
   - [x] Falsifiers (a)–(e) executed, reds quoted
   - [x] scoped Jest, `tsc` and eslint green
 
-### [ ] QIN-T-4 — Routes, DTOs, auth wiring
+### [x] QIN-T-4 — Routes, DTOs, auth wiring
 
 - **Type:** server
 - **Description:**
@@ -135,10 +135,10 @@
   - **Disqualifier:** a 401 test that stubs `canActivate` proves nothing about the decorator.
   - **Consumers:** `src/app.module.spec.ts` (pins the exclude list); `qa-catalog.controller.spec.ts`; `qa-catalog.module.spec.ts`; `throttler-exclude-bilateral.guard.spec.ts` (re-run).
 - **Definition of done:**
-  - [ ] Falsifiers executed and quoted
-  - [ ] Swagger decorators present
-  - [ ] `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` green
-  - [ ] `tsc` green
+  - [x] Falsifiers executed and quoted
+  - [x] Swagger decorators present
+  - [x] `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` green
+  - [x] `tsc` green
 
 ### [x] QIN-T-5 — Unsubmit guard (Reporting and IPSR)
 

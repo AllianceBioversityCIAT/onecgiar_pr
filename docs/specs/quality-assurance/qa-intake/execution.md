@@ -288,3 +288,47 @@ _(none yet; QIN-T-6 adds the TRD §7 row)_
   - T-5 grew by the pivot's client change, about 4 files.
   - Production code is close to the ≈ 550 estimate.
 - **Action:** the run stops for the owner. No further task starts without approval. This tripwire is never auto-approved.
+- **Owner decision (2026-10-29):** "Si", in answer to "¿Seguimos con T-4 aceptando el exceso, o prefieres pausar aquí?". The overrun is accepted, and the run continues with QIN-T-4. Projection at approval: about 3 100 LOC and 11 review rounds at close.
+
+### QIN-T-4 — Routes, DTOs, auth wiring — PASS (2026-10-29)
+
+- **Final status:** PASS on attempt 1 (effort high). One reviewer: the spec gate with a security lens.
+- **Files:**
+  - New: `onecgiar-pr-server/src/api/qa-catalog/dto/qa-intake.dto.ts` and `dto/qa-release.dto.ts`, each with a spec.
+  - Edited: `qa-catalog.controller.ts`, `qa-catalog.module.ts`, `src/app.module.ts`, and the specs `qa-catalog.controller.spec.ts`, `qa-catalog.module.spec.ts`, `src/app.module.spec.ts`.
+- **Red run (b), observed at task start:** `app.module.spec.ts › should configure middlewares…`, `toHaveBeenCalledWith` with `- {"path": "api/qa/results/intake"}` and `- {"path": "api/qa/results/release"}` missing.
+- **Falsifiers (mutation → red):**
+  - (a) Removing `@BilateralClarisaEndpoint` from release → the metadata test on the real method fails, and 8 tests return 401 through the real guard.
+  - (b) Removing the exclude entry → `app.module.spec` fails.
+  - (c) Adding `approved` to the outcome list → the 400 naming `outcome` fails, in both the DTO and controller specs, and the service is not called.
+  - (d) Removing `@ArrayUnique` → the duplicate-id test fails.
+  - (e) Removing `@ArrayMaxSize` from either DTO → the 51-entries test fails on both routes.
+  - (f) `forbidNonWhitelisted: false` → the platform_id-in-body test fails.
+  - (g) Passing `undefined` as the platform → the platform-from-guard test fails.
+- **Implementer verification:**
+  - Jest (qa-catalog, `app.module.spec`, `shared/guards`): 52 suites, 1028 tests.
+  - `tsc`: 0. eslint: 0. prettier: clean.
+- **Evidence re-run (Leader inline): VERIFIED.** 52 suites and 1028 tests, `tsc` 0.
+- **Reviewer: PASS.**
+  - The class-level `@ApiHeader` meets the per-method wording of §7.1, the same as the feed.
+  - The throttler skips the routes through the `/api/qa/` prefix and the class-level `@SkipThrottle`.
+  - The JWT cannot substitute for the key: the guard reads only `x-api-key`, and a missing decorator fails closed.
+  - Intake duplicates count against the 50 cap as sent, which agrees with R-2.
+  - The forward pointer from T-2 and T-3 is closed: duplicates in release items return 400, and both lists are capped at 50.
+- **ADVISORY (4R, recorded, does not gate):**
+  - RELIABILITY: tasks.md lists a spec for `qa-intake-response.dto.ts`, but none exists. The file holds types only, and the controller tests cover its shape. **Accepted gap.**
+  - READABILITY: `@ArrayUnique` adds a misleading message when the items are not objects. Cosmetic.
+  - RISK: until CLARISA grants the two permission strings, every call returns 401. Tracked in the pre-flight checklist and QIN-T-7.
+- **Not Done / Assumptions (verbatim summary, no owed item):**
+  - Class-level `@ApiHeader`.
+  - `@HttpCode(200)`.
+  - No null-platform handling.
+  - The docs are T-6.
+- **Requirements covered:** QIN-R-1, R-2, R-9 (shape). DD-1, DD-10.
+- **Spawns:**
+  - implementer: not reported by host (21 tool uses, ~149k tokens). Ended: complete.
+  - reviewer: not reported by host. Ended: pass.
+- **Running totals:**
+  - 5 of 7 tasks closed.
+  - 8 of 10 review rounds.
+  - LOC ≈ 3 160, an overrun the owner accepted on 2026-10-29.
