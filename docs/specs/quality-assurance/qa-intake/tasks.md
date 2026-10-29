@@ -140,16 +140,17 @@
   - [ ] `npx jest src/api/qa-catalog src/app.module.spec.ts src/shared/guards --maxWorkers=2` green
   - [ ] `tsc` green
 
-### [ ] QIN-T-5 — Unsubmit guard (Reporting and IPSR)
+### [x] QIN-T-5 — Unsubmit guard (Reporting and IPSR)
 
-- **Type:** server (+ client check)
+- **Type:** server + client (client added by the pivot of 2026-10-29)
 - **Description:**
-  - **First step: settle P-13.** Read the client's unsubmit call and error handling and confirm that a `status: 409` message reaches the user. Record the outcome. If it does not reach the user, report it in a checkpoint before widening scope.
+  - **First step: settle P-13.** Read the client's unsubmit call and error handling and confirm that a `status: 409` message reaches the user. Record the outcome. If it does not reach the user, report it in a checkpoint before widening scope. *(Done 2026-10-29: it does not reach the user. Owner approved the client change of design §8.)*
   - Then, in `unsubmitFunction` and `unsubmitFunctionIPSR`, replace the plain update with the conditional UPDATE of design §7.5:
     - it is evaluated after the role, not-found and justification checks;
     - `affectedRows` 0 → return the 409 refusal before any `submission` save or other IPSR write.
-- **Implements:** QIN-R-6 (both scenarios, and "`in_qa = 0` behaves exactly as today") — QIN-DD-4, DD-5
-- **Files (expected):** `src/api/results/submissions/submissions.service.ts` (+ spec), possibly `result.repository.ts` (a conditional-update helper)
+  - **Client (design §8):** in both unsubmit modals, the error callback uses `err?.error?.message` as the alert `description`, falling back to `''`. Update the specs that pin `description: ''`.
+- **Implements:** QIN-R-6 (both scenarios, "clear message", and "`in_qa = 0` behaves exactly as today") — QIN-DD-4, DD-5
+- **Files (expected):** `src/api/results/submissions/submissions.service.ts` and a new `submissions.service.spec.ts`; possibly `result.repository.ts` (a conditional-update helper); in the client, `unsubmit-modal.component.ts` and `ipsr-unsubmit-modal.component.ts` (+ their specs)
 - **Depends on:** —
 - **Blocks:** T-7
 - **Estimate:** M
@@ -160,14 +161,16 @@
     - (b) `in_qa` 1 in a closed phase (`version.status` 0) → it unsubmits as today. A guard that ignores the phase refuses here.
     - (c) `in_qa` 0 → it unsubmits as today, and the submission row is saved with the same fields.
     - (d) The guard condition is part of the UPDATE's WHERE clause, not a prior SELECT. Assert the SQL text or the update criteria.
-  - **Red run:** (a) on the existing `submissions.service.spec.ts` with the new test added before the code → an assertion red (expected 409, got 200). Observe it at task start and quote it.
+    - (e) Client: an error carrying `error.message` → both modals' alert `description` equals that message. One with no message → `''`. Revert either component → its spec fails.
+  - **Red run:** (a) on a new `submissions.service.spec.ts` (no such spec exists; the only one is `submissions.service.ip-emails.spec.ts`) with the new test added before the code → an assertion red (expected 409, got 200). (e) on the modal specs updated before the code. Observe both at task start and quote them.
   - **Disqualifier:** a test that mocks `affectedRows` without checking that the WHERE clause carries the guard proves nothing about DD-4.
-  - **Consumers:** `submissions.service.spec.ts`, `submissions.controller.spec.ts`; the client unsubmit handler (P-13); `grep -rn "unsubmit" onecgiar-pr-client/src` for e2e/cypress pins.
+  - **Consumers:** `submissions.service.ip-emails.spec.ts` (no controller spec exists); `unsubmit-modal.component.spec.ts`, `ipsr-unsubmit-modal.component.spec.ts`; `grep -rn "unsubmit" onecgiar-pr-client/src` for e2e/cypress pins.
 - **Definition of done:**
-  - [ ] P-13 recorded
-  - [ ] Falsifiers (a)–(d) executed
-  - [ ] `npx jest src/api/results/submissions --maxWorkers=2` green
-  - [ ] `tsc` green
+  - [x] P-13 recorded
+  - [x] Falsifiers (a)–(e) executed
+  - [x] `npx jest src/api/results/submissions --maxWorkers=2` green
+  - [x] Client modal specs green (`npx jest <both spec paths> --no-coverage`) and `ng lint` clean on the changed files
+  - [x] `tsc` green
 
 ### [ ] QIN-T-6 — Contract documentation
 

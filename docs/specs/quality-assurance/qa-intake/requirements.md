@@ -58,7 +58,7 @@ While a result in an open phase is In QA, its program cannot unsubmit it. Every 
 
 ### Out of scope
 
-- Any UI change. The tag, badge and AI Review lock already exist.
+- Any UI change, except one: the two unsubmit modals show the server's refusal message (QIN-R-6, "clear message"). This was added by the pivot of 2026-10-29 (design §8, P-13). The tag, badge and AI Review lock already exist.
 - The KP badge logic in `get_qa_info`.
 - Turning `pgv_in_qa` on.
 - Back-filling or cleaning old `in_qa` flags (29 rows from 2024 in test).

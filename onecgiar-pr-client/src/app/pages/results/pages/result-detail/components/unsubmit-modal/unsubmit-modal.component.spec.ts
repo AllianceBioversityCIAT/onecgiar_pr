@@ -109,6 +109,21 @@ describe('UnsubmitModalComponent', () => {
       expect(spyShow).toHaveBeenCalledWith({
         id: 'unsubmodalerror',
         title: `Error in unsubmitted`,
+        description: 'error message',
+        status: 'error',
+      });
+    }));
+    it('should fall back to an empty description when the error carries no message', fakeAsync(() => {
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_unsubmit').mockReturnValue(throwError({ error: {} }));
+      const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
+
+      component.onSubmit();
+      tick();
+
+      expect(component.requesting).toBeFalsy();
+      expect(spyShow).toHaveBeenCalledWith({
+        id: 'unsubmodalerror',
+        title: `Error in unsubmitted`,
         description: '',
         status: 'error',
       });

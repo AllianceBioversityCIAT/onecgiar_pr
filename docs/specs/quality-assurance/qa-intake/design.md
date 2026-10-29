@@ -118,7 +118,13 @@ No person and no key is stored. `result` gets no new columns: `in_qa` and `statu
 
 ## 8. Frontend / UX
 
-None. The client already shows `inQA` (`api.service.ts:195`). The unsubmit refusal message is rendered by the existing unsubmit error handling. Whether that handling shows a 409's `message` is `UNVERIFIED` (P-13).
+The client already shows `inQA` (`api.service.ts:195`).
+
+**One client change (pivot 2026-10-29, P-13 settled false):** neither unsubmit modal shows the server's message. Both error callbacks ignore `err` and raise an alert with `title: 'Error in unsubmitted'` and `description: ''`:
+- Reporting: `unsubmit-modal.component.ts:33-36` (`PATCH_unsubmit`);
+- IPSR: `ipsr-unsubmit-modal.component.ts:28-31` (`PATCHSubmissionsUnsubmitIpsr`).
+
+So the two error callbacks must use `err?.error?.message` as the alert `description`, keeping `''` when it is absent. The title, alert id and status stay as they are. The specs that pin `description: ''` are updated: `unsubmit-modal.component.spec.ts:94-114` and the matching IPSR spec. The server body reaches the client as `{response, statusCode, message, …}` through `ResponseInterceptor`, so the message is at `err.error.message`.
 
 ## 9. Shared Contracts
 
@@ -145,7 +151,7 @@ None. The client already shows `inQA` (`api.service.ts:195`). The unsubmit refus
 
 ## 11. Premise Ledger
 
-Verified 12 · UNVERIFIED 3 (High 1: P-13 · Low 2: P-14, P-15).
+Verified 12 · UNVERIFIED 3 (High 1: P-13 · Low 2: P-14, P-15). Execution update 2026-10-29: P-13 settled false (pivot, §8); P-14 settled false (the completeness guard tripped) and was fixed with one `excluded-tables.ts` entry (QIN-T-1).
 
 Blast-radius triggers fired: **live-path** (the user action unsubmit; QA calls) · **shared-state** (`result.status_id` and `in_qa` are written by several components) · **consumer** (the new `status_id = 2` writes are read by many modules; new response shapes).
 
@@ -163,8 +169,8 @@ Blast-radius triggers fired: **live-path** (the user action unsubmit; QA calls) 
 | P-10 | Writes and reads must go through the transaction's `manager` to be inside the transaction (the repo pattern) | other | `results.service.ts:4345`, `clarisatask.service.ts:295` use `dataSource.transaction(async (manager) => …)`; the lock-and-recheck exemplar is `primary-program-request.service.ts:616-661` (`pessimistic_write`) | 81af2f0ee | DD-2/DD-3 lose atomicity — High | — |
 | P-11 | `submission` has no `status_id = 2` rows. Of 3 345 status-2 results, 3 308 have `status = 1` | data-env | Test DB: `SELECT status_id, COUNT(*) FROM submission WHERE is_active = 1 GROUP BY 1` → null 8 322, 3: 271, 1: 152; `SELECT status_id, status, COUNT(*) … GROUP BY 1,2` → (2,1) 3 308, (2,0) 37, 2026-10-29 | 81af2f0ee | DD-8/DD-9 revisited — Low | — |
 | P-12 | `api/qa/results` and `api/qa/results/details` are in the JWT exclude list. The throttler skips `/api/qa/` | location | `src/app.module.ts:155-156`; throttler prefix verified in `qa-results-feed` P-ledger | 81af2f0ee | Routes need extra wiring — Low | — |
-| P-13 | The client's unsubmit error path shows a 409 `message` to the user | consumer | `UNVERIFIED — confirm at source before relying on it` | — | Users see a generic error — High (R-6 says "clear message") | QIN-T-5, first step (read the client unsubmit handler; adjust or record) |
-| P-14 | A new entity with a FK to `result` does not trip a `qa-catalog` completeness/scope guard | other | `UNVERIFIED — confirm at source before relying on it` | — | One line in `excluded-tables.ts` — Low | QIN-T-1 (run `npx jest src/api/qa-catalog`) |
+| P-13 | The client's unsubmit error path shows a 409 `message` to the user | consumer | **Settled FALSE 2026-10-29 (QIN-T-5 step 1):** `unsubmit-modal.component.ts:33-36` and `ipsr-unsubmit-modal.component.ts:28-31` ignore `err` and show `description: ''`; `general-interceptor.service.ts:69-71,82-84` only rethrows. Pivot: §8 client change, folded into QIN-T-5 (owner, 2026-10-29) | 7537b0fd1 | Users see a generic error — High (R-6 says "clear message") | QIN-T-5 (client change, §8) |
+| P-14 | A new entity with a FK to `result` does not trip a `qa-catalog` completeness/scope guard | other | **Settled FALSE 2026-10-29 (QIN-T-1):** `qa-catalog.completeness.spec.ts` red "result table result_qa_intake_log is neither in scope.ts nor in excluded-tables.ts"; fixed with one `excluded-tables.ts` entry | 7537b0fd1 | One line in `excluded-tables.ts` — Low | QIN-T-1 (run `npx jest src/api/qa-catalog`) |
 | P-15 | In prod, no external process writes `in_qa` or `status_id = 2` concurrently (the QA platform writing `prdb` directly) | data-env | `UNVERIFIED — confirm at source before relying on it` (user-stated: Reporting sets `in_qa` manually) | — | Two writers; the audit is incomplete — Low | Owner + QA team, before rollout (QIN-T-7) |
 
 ## 12. Rollout & Rollback
