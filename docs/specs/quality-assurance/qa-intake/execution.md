@@ -15,7 +15,12 @@
 
 ## Pending shared-file items
 
-_(none yet; QIN-T-6 adds the TRD §7 row)_
+- **TRD §7 (QIN-T-6, 2026-10-29):** add a row for the QA write surface:
+  - `POST /api/qa/results/intake` and `POST /api/qa/results/release`, behind the CLARISA key guard (`x-api-key`) and excluded from the JWT middleware;
+  - the write boundary: `result.in_qa`, `result.status_id` 3→2 for `qaed` only, and `result_qa_intake_log`;
+  - the unsubmit guard (409 while In QA in an open phase).
+
+  Apply it on the apply-capable branch (`staging`), not on this spec branch.
 
 ## Pivot Record: QIN-T-5
 
@@ -332,3 +337,31 @@ _(none yet; QIN-T-6 adds the TRD §7 row)_
   - 5 of 7 tasks closed.
   - 8 of 10 review rounds.
   - LOC ≈ 3 160, an overrun the owner accepted on 2026-10-29.
+
+### QIN-T-6 — Contract documentation — PASS (2026-10-29)
+
+- **Final status:** PASS on attempt 1 (effort low). Override (a) applies, because the QA team executes against this contract, so a Reviewer was owed.
+- **Files:** `onecgiar-pr-server/docs/qa-catalog.en.md`: a new "Intake and release" part (+140 lines) and the v1.28 change-log row.
+- **Implementer verification:** a grep check (`scratchpad/chk.sh`, not committed) of 31 items over the new part. The items are every DTO property, every reason, outcome and action, both routes, the table name and the audit columns.
+  - Green: `FAIL=0`.
+  - Red: removing `not_in_qa` gave `not_in_qa 0 / FAIL=1`. The doc was then restored.
+- **Evidence re-run (Leader inline): VERIFIED.** `FAIL=0`.
+- **Reviewer: PASS.** Every factual statement matches the code at `d1c3a1fb9`, and the doc follows the code, not the design. The four statements the Implementer flagged were confirmed:
+  - request order (`qa-results.repository.ts:204,227`);
+  - a repeated release answers `not_in_qa`;
+  - `not_in_qa` applies to both outcomes;
+  - a closed phase does not block unsubmit (`result.repository.ts:286`).
+
+  The examples contain no keys or real ids.
+- **ADVISORY (4R, recorded, does not gate):**
+  - The `[advisory-grade]` statement "a 500 changes nothing; repeating is safe" is supported by the code.
+  - READABILITY: line 15, "The calls write nothing else", sits awkwardly next to the audit row. Suggested wording: "nothing else on the result; each change also writes one audit row".
+  - READABILITY: an unsubmit in a closed phase does not clear `in_qa`, so a later release answers `not_submitted`. One sentence in "Unsubmit while In QA" could explain it.
+- **Requirements covered:** QIN-R-10.
+- **Spawns:**
+  - implementer: not reported by host (14 tool uses, ~113k tokens). Ended: complete.
+  - reviewer: not reported by host. Ended: pass.
+- **Running totals:**
+  - 6 of 7 tasks closed.
+  - 9 of 10 review rounds.
+  - LOC ≈ 3 300.

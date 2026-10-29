@@ -521,6 +521,145 @@ The feed returns a field only when you request it, but without `field_keys` it r
 
 `contributors.submitter` is a program, not a person, and the author affiliations of `partners.kp_author_affiliations` are institutions. Neither is listed.
 
+## Intake and release
+
+Two write routes let QA mark results In QA and end that review. Spec: `docs/specs/quality-assurance/qa-intake/`. Everything below is what the shipped code does. (Ids and codes in the examples are illustrative.)
+
+The flow: read the feed, **intake** the results you will review (`POST /api/qa/results/intake`), then **release** each one with an outcome (`POST /api/qa/results/release`).
+
+**What PRMS does:** intake sets a result's In QA flag; release clears it and, for `qaed`, moves the result to Quality Assessed. While the flag is set, the program cannot unsubmit the result (see [Unsubmit while In QA](#unsubmit-while-in-qa)). The calls write nothing else.
+
+### Write routes
+
+| Item | `POST /api/qa/results/intake` | `POST /api/qa/results/release` |
+|---|---|---|
+| Purpose | Take a batch of eligible results into QA | End QA on a batch, one outcome per result |
+| Input | JSON body | JSON body |
+| Success | **200** (a write that answers 200, not 201); refused ids are part of the body | Same |
+| Auth | Header `x-api-key`, as in the [catalog endpoint](#endpoint) | Same |
+| Permission of the key | `/api/qa/results/intake` | `/api/qa/results/release` |
+| Body of a 200 | Returned as-is (no `{ response, statusCode }` wrapper) | Same |
+
+Each route is registered in CLARISA on its own: a key granted the feed routes only is a **401** here. The PRMS user header `auth` is not accepted. Neither route is rate limited by PRMS. The calling platform is the one CLARISA resolves from the key; the body never names it.
+
+### Limits
+
+| Limit | Value | Applies to |
+|---|---|---|
+| `phase_year` | integer, **2000 to 2100** | both routes |
+| Batch size | **1 to 50** entries, counted as sent | `result_ids` (intake), `items` (release) |
+| `result_id` / `result_ids` value | integer, **1 to 2147483647** | both routes |
+| Unknown body key (for example `platform_id`) | **400**, never silently dropped | both routes |
+
+### Request
+
+```
+POST /api/qa/results/intake
+x-api-key: <CLARISA key registered for QA>
+{ "phase_year": 2026, "result_ids": [900001, 900002] }
+
+POST /api/qa/results/release
+x-api-key: <CLARISA key registered for QA>
+{ "phase_year": 2026, "items": [ { "result_id": 900001, "outcome": "qaed" }, { "result_id": 900002, "outcome": "not_qaed" } ] }
+```
+
+| Property | Route | Type | Rule |
+|---|---|---|---|
+| `phase_year` | both | integer | Required. No catalog for that year: **404**, as `/api/qa/catalog` |
+| `result_ids` | intake | integer[] | Required, 1 to 50. A repeated id is **not** an error: it is collapsed, the first appearance wins |
+| `items` | release | object[] | Required, 1 to 50, unique by `result_id`. A repeated `result_id` is a **400** (not collapsed) |
+| `items[].result_id` | release | integer | Required |
+| `items[].outcome` | release | string | Required: `qaed` or `not_qaed` |
+
+Outcomes:
+
+| `outcome` | Effect |
+|---|---|
+| `qaed` | In QA flag cleared and the result moves to **Quality Assessed** |
+| `not_qaed` | In QA flag cleared; the result goes back to the program and **stays Submitted** |
+
+### Response
+
+Every requested id is in exactly one list, in request order (for intake, after the duplicates are collapsed).
+
+```
+// intake, 200
+{ "phase_year": 2026,
+  "taken":     [ { "result_id": 900001, "result_code": 5001, "changed": true } ],
+  "not_taken": [ { "result_id": 900002, "result_code": 5002, "reason": "not_submitted" } ] }
+
+// release, 200
+{ "phase_year": 2026,
+  "released":     [ { "result_id": 900001, "result_code": 5001, "outcome": "qaed" } ],
+  "not_released": [ { "result_id": 900002, "result_code": 5002, "reason": "not_in_qa" } ] }
+```
+
+| Property | Type | Meaning |
+|---|---|---|
+| `phase_year` | integer | Echo of the request |
+| `taken[]` | list | Intake: results now In QA |
+| `taken[].result_id`, `taken[].result_code` | integer | The result and its public code |
+| `taken[].changed` | boolean | `true` when this call set the flag; `false` when the result was already In QA (nothing was written) |
+| `not_taken[]` | list | Intake: results refused |
+| `not_taken[].result_code` | integer or `null` | `null` only for `not_found` |
+| `not_taken[].reason` | string | One of the intake reasons below |
+| `released[]` | list | Release: results whose QA ended |
+| `released[].outcome` | string | The outcome applied, `qaed` or `not_qaed` |
+| `not_released[]` | list | Release: results refused |
+| `not_released[].result_code` | integer or `null` | `null` only when the id has no row |
+| `not_released[].reason` | string | One of the release reasons below |
+
+### Reasons
+
+**Intake** uses the feed's [eligibility rule](#which-results-are-eligible) and its reasons, checked in this order:
+
+`not_found`, `not_submitted`, `other_phase`, `not_w1w2`, `type_not_catalogued`, `no_lead_program`.
+
+**Release** needs only a result that is In QA, Submitted and in the requested phase. Reasons, checked in this order:
+
+| Order | `reason` | When |
+|---|---|---|
+| 1 | `not_found` | The id does not exist or is not active |
+| 2 | `other_phase` | Its phase is not `phase_year` (Reporting and IPSR versions of the year both count) |
+| 3 | `not_in_qa` | It is not In QA |
+| 4 | `not_submitted` | It is In QA but its status is not Submitted |
+
+**`qaed` requires a prior intake.** A result reaches Quality Assessed only through intake: a release of a result that is not In QA is `not_in_qa`, whatever its status, for both outcomes.
+
+### Idempotency and failure
+
+- Repeating an intake is safe: a result already In QA comes back in `taken` with `changed: false` and nothing is written or audited for it.
+- Repeating a release is safe: the first call clears the flag, so the repeat is `not_in_qa` for that result. Nothing is applied twice.
+- Each call is **atomic**. If a write fails or the state changes under the call, the answer is a **500** with the fixed message `The QA change could not be applied`, and **nothing is changed** for any id in the batch. Repeating the same call is safe.
+- Refusals (reasons above) are part of the 200 body, never a 4xx. The ids that qualify are still applied.
+
+| Case | Status |
+|---|---|
+| `x-api-key` missing, unknown, expired, or without the permission of that route | **401** (generic body). Authentication runs before validation |
+| Body outside the [limits](#limits), unknown key, unknown `outcome`, repeated `result_id` in `items` | **400** |
+| `phase_year` in range with no catalog | **404**, the same as `/api/qa/catalog` |
+| A write failed | **500**, message `The QA change could not be applied` |
+
+### Audit
+
+Every change writes one row to `result_qa_intake_log` in the same transaction. Nothing is audited for a result that did not change (`changed: false`) or was refused.
+
+| Column | Holds |
+|---|---|
+| `id` | Row id |
+| `result_id` | The result |
+| `action` | `intake`, `release_qaed` or `release_not_qaed` |
+| `phase_year` | The year of the call |
+| `platform_id` | The platform CLARISA resolved from the key |
+| `platform_acronym` | Its acronym |
+| `created_date` | Database clock at the write |
+
+The audit stores the platform, never a person and never the key.
+
+### Unsubmit while In QA
+
+While a result is In QA in an open phase, the program cannot unsubmit it. Both unsubmit flows (Reporting and IPSR) answer **409** with the message `This result is under QA review and cannot be unsubmitted until QA releases it.`, and the result is not changed. The client shows that message in the unsubmit dialog. Once QA releases the result (`qaed` or `not_qaed`) the unsubmit works as before. A result that is In QA in a closed phase is not blocked.
+
 ---
 
 ## Known gaps
@@ -589,3 +728,4 @@ These are deliberate and tracked; each one is **additive** when resolved.
 | 2026-10-09 | **v1.25 — 2026-10-09: IPSR step 4 complete (QAC-T-31); catalog_version 2026.30.** No key is renamed or removed and no type changes. (a) New section `ipsr_s4_investment` (order 89); the section `ipsr_s4_materials` moves from order 89 to 90 so the investment tables come first. (b) New top-level fields, `list`s, innovation package only: `ipsr_step_4.initiative_investment`, `ipsr_step_4.bilateral_investment`, `ipsr_step_4.partner_investment`, `required: false`, `required_confirmed: true`. Subfields: `program` / `project` / `institution` (required identity), `partner_type` (partners only), `kind_cash` (`required_when` `is_determined` equals false; NULL is read as false) and `is_determined` (optional). The budget columns are the same ones bound by `innovation_dev.estimates_*` and `innovation_use.investment.*`; each key returns only the elements of its own list. (c) Rule change on an existing key: the `link` subfield of `ipsr_step_4.reference_materials` is now `required: true` (the list stays optional and unconfirmed). (d) The partner list is every active partner row of any role; the form lists only roles 2 and 7 with an active budget row, and elements without a budget row carry no requirement (Known gap 14; the inventory condition "row exists AND ..." is dropped because the model cannot condition on budget-row existence; see the IPSR step 4 notes). Counts: 161 fields (was 158), 249 subfields (was 239, 32 at the second level), 25 sections; `PENDING_CATALOG` 52 columns across 14 tables (unchanged); `NOT_FOR_QA` 377 (unchanged). |
 | 2026-10-28 | **v1.26 — 2026-10-28: results feed documented (spec `quality-assurance/qa-results-feed`, QRF-T-7); `catalog_version` unchanged (2026.30).** New part [Results feed](#results-feed) for two routes, both authenticated with a CLARISA key that has the permission of that route: `GET /api/qa/results` (eligible results of one `phase_year`, filters `program_ids` / `result_type_keys`, order `submitted_at` then `result_id`, `page` 1 to 1 000 000, `page_size` 1 to 200 default 100, `breakdown`) and `POST /api/qa/results/details` (`result_ids` 1 to 50 counted as sent, optional top-level `field_keys`, `not_eligible[].reason` closed list `not_found`, `not_submitted`, `other_phase`, `not_w1w2`, `type_not_catalogued`, `no_lead_program`, a failing read is a whole-batch generic 500). `phase_year` on these routes is 2000 to 2100 (1999 is a 400 here and a 404 on `/api/qa/catalog`). A missing value is `null` (`[]` for `multi_select` and `list`); a scalar field with subfields is `{ value, <subfield key>: … }`. [Known gap 17](#known-gaps) is applied: `capacity_sharing.length_of_training` is returned normalized. Person-bearing keys are listed so the QA Admin chooses them knowingly. Additive only: no catalog key, type or condition changes. |
 | 2026-10-28 | **v1.27 — 2026-10-28: value-binding fixes from the results-feed golden comparison (spec `quality-assurance/qa-results-feed`, QRF-T-9); catalog_version 2026.31; the public shape is unchanged.** The revision is bumped because the catalog content hash covers the value bindings; no key, type, condition, label or response shape changes. The fixes are G-1 (lead center and lead partner) and G-2 (closed-list row filter). (a) `contributors.lead_center` now returns the center code (`center_id`, for example `CENTER-02`) of the active row with `is_leading_result = 1`; it returned the flag (1 or 0). `partners.lead_partner` now returns the `institutions_id` of the active leading row, with the same fix. (b) The innovation development question fields (`innovation_dev.gesi_stage`, `risk_stage`, `ipr_consideration`, `team_diversity` and its `actions`) read only the answers to their own question: closed lists `question_options_gesi_stage` (152..156), `question_options_risk_stage` (157..161) and `question_options_ipr` (163..165) are added and the value read applies a closed list as a row filter (QRF-DD-13). Before, each field returned any answered row of the result. (c) `linked.has_innovation_link` is documented: a stored NULL is sent as `null`, while the form displays "No". (d) Known gap 18 recorded (`policy_change.related_to`). |
+| 2026-10-29 | **v1.28 — 2026-10-29: intake and release documented (spec `quality-assurance/qa-intake`, QIN-T-6); `catalog_version` unchanged (2026.31).** New part [Intake and release](#intake-and-release) for two write routes, each needing the CLARISA key permission of that route: `POST /api/qa/results/intake` (marks eligible Submitted results In QA; `taken` with `changed`, `not_taken` with the feed's reasons) and `POST /api/qa/results/release` (ends QA with `outcome` `qaed` or `not_qaed`; `released`, `not_released` with reasons `not_found`, `other_phase`, `not_in_qa`, `not_submitted`). Limits: 1 to 50 entries, `phase_year` 2000 to 2100. Atomic per call; audit in `result_qa_intake_log`. `qaed` requires a prior intake. Unsubmit (Reporting and IPSR) answers 409 while a result is In QA in an open phase. Additive: no existing route or shape changes. |

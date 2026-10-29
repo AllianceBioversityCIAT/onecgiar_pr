@@ -172,7 +172,7 @@
   - [x] Client modal specs green (`npx jest <both spec paths> --no-coverage`) and `ng lint` clean on the changed files
   - [x] `tsc` green
 
-### [ ] QIN-T-6 — Contract documentation
+### [x] QIN-T-6 — Contract documentation
 
 - **Type:** docs
 - **Description:** In `onecgiar-pr-server/docs/qa-catalog.en.md`, add an "Intake and release" part covering:
@@ -198,8 +198,8 @@
   - **Disqualifier:** a doc written from the design instead of the DTOs.
   - **Consumers:** the QA platform team.
 - **Definition of done:**
-  - [ ] The grep check passes
-  - [ ] Change-log row added
+  - [x] The grep check passes
+  - [x] Change-log row added
 
 ### [ ] QIN-T-7 — Live verification (HITL)
 
