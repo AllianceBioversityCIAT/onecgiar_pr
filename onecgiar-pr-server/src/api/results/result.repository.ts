@@ -267,6 +267,28 @@ export class ResultRepository
       );
   }
 
+  /**
+   * QIN-DD-4 / QIN-R-6 — the unsubmit write, with the QA-intake guard INSIDE the statement.
+   *
+   * A result that is In QA (`in_qa = 1`) in an open phase (`version.status = 1`, QIN-DD-5) must not
+   * be unsubmitted. The predicate is the WHERE clause of the UPDATE, so it is evaluated under the
+   * row lock that intake holds and cannot race with it (a prior SELECT could).
+   *
+   * Returns the statement's `affectedRows`. mysql2 enables `FOUND_ROWS` by default and
+   * `orm.config.ts` does not override it, so the count is rows MATCHED: 0 means "refused by the
+   * guard", never "already unsubmitted".
+   */
+  async unsubmitUnlessUnderQaReview(resultId: number): Promise<number> {
+    const queryData = `
+      UPDATE \`result\` r
+      JOIN \`version\` v ON v.id = r.version_id
+      SET r.status = 0, r.status_id = 1
+      WHERE r.id = ? AND NOT (r.in_qa = 1 AND v.status = 1)
+    `;
+    const res = await this.query(queryData, [resultId]);
+    return Number(res?.affectedRows ?? 0);
+  }
+
   async countResultByTypeAndStatus(status_id, result_type_id) {
     try {
       const queryData = `select count(1) as \`count\` from \`result\` r where r.status_id = ? and r.result_type_id = ?;`;
