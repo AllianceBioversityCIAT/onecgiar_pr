@@ -77,7 +77,7 @@
   - [x] `npx jest src/api/qa-catalog --maxWorkers=2` green
   - [x] `tsc` and eslint green
 
-### [ ] QIN-T-3 — Release service
+### [x] QIN-T-3 — Release service
 
 - **Type:** server
 - **Description:** `QaIntakeService.release(dto, platform)` follows design §7.3:
@@ -101,8 +101,8 @@
   - **Disqualifier:** checking only the response lists without asserting the UPDATE statements and SET clauses.
   - **Consumers:** the readers of `status_id = 2` (design P-7: versioning, ToC KPI coverage, admin panel, AoW, IPSR, delete guard) consume the transition by design. No code change; checked at T-7.
 - **Definition of done:**
-  - [ ] Falsifiers (a)–(e) executed, reds quoted
-  - [ ] scoped Jest, `tsc` and eslint green
+  - [x] Falsifiers (a)–(e) executed, reds quoted
+  - [x] scoped Jest, `tsc` and eslint green
 
 ### [ ] QIN-T-4 — Routes, DTOs, auth wiring
 

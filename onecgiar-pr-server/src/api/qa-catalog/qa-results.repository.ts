@@ -19,8 +19,8 @@ export type IneligibleReason =
   | 'type_not_catalogued'
   | 'no_lead_program';
 
-/** QRF-DD-3 (pending OQ-4): a `phase_year` spans Reporting and IPSR versions. Single knob. */
-const PHASE_APP_MODULE_IDS: readonly number[] = [
+/** QRF-DD-3 (pending OQ-4): a `phase_year` spans Reporting and IPSR versions. Single knob (also read by release, QIN-T-3). */
+export const PHASE_APP_MODULE_IDS: readonly number[] = [
   AppModuleIdEnum.REPORTING,
   AppModuleIdEnum.IPSR,
 ];

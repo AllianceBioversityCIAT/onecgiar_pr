@@ -224,3 +224,67 @@ _(none yet; QIN-T-6 adds the TRD §7 row)_
   - 5 of 10 review rounds.
   - ≈ 1 380 diff lines including tests and docs (T-1 ≈ 80, T-5 ≈ 370, T-2 ≈ 930) against the ~1 600 LOC budget.
   - Within budget. The projection crosses the LOC line during QIN-T-3 or T-4, and the tripwire stops there.
+
+### QIN-T-3 — Release service — PASS (2026-10-29)
+
+- **Final status:** PASS on attempt 1 (effort high). Parallel lens reviewers covered correctness and security.
+- **Files** (all under `onecgiar-pr-server/src/api/qa-catalog/`):
+  - `qa-intake.service.ts`: `release`, `applyRelease`, `releaseReason`, `QaReleaseInput`; `guarded` now takes `route`.
+  - `qa-intake.repository.ts`: `lockRowsForRelease`, `releaseQaed`, `releaseNotQaed`, a private `casRelease`.
+  - `dto/qa-intake-response.dto.ts`: the release types.
+  - `qa-results.repository.ts`: `PHASE_APP_MODULE_IDS` is now exported.
+  - New: `qa-release.service.spec.ts` (24 tests), `qa-release.repository.spec.ts` (6 tests).
+  - Intake specs: byte-identical.
+- **SQL:**
+  - `releaseQaed`: `SET status_id = 2, in_qa = 0`.
+  - `releaseNotQaed`: `SET in_qa = 0`.
+  - Both use `WHERE id IN (…) AND is_active = 1 AND status_id = 3 AND in_qa = 1`.
+  - Lock: `SELECT id, in_qa, status_id, EXISTS(version in phase) AS in_phase … ORDER BY id FOR UPDATE`.
+- **Falsifiers (mutation → red, quoted by the Implementer):**
+  - (a) `not_qaed` also sets `status_id` → `Object { "in_qa": 0, + "status_id": 2 }`.
+  - (b) Dropping the service's `not_in_qa` check → the CAS catches it, 500. Dropping the CAS check too → `+ Array [ Object { "outcome": "qaed", "result_id": 3 } ]`.
+  - (c) Dropping `not_submitted` → 500 through the CAS.
+  - (d) Adding `status = 1` to the SET → the SET-columns whitelist test fails.
+  - (e) `qaed` audited as `release_not_qaed` → `- "release_qaed" + "release_not_qaed"`.
+- **Implementer verification:** Jest qa-catalog 46 suites, 962 tests. `tsc`, eslint and prettier: OK.
+- **Evidence re-run (Leader inline): VERIFIED.** Jest 46 suites and 962 tests, `tsc` 0, eslint 0.
+- **Reviewer, correctness lens: PASS.** It ruled on the Implementer's declared gaps:
+  1. Only `not_found` comes from `classify`; the other reasons come from the locked row. **Conforming:** the "(from classify)" in §7.3 qualifies only `not_found`, and DD-2's requirement column is R-3.
+  2. Intake-only reasons do not block a release. **Conforming:** R-4 names exactly three conditions, and §6 names four reasons.
+  3. `is_active = 1` added to the CAS. **Conforming.**
+  4. Duplicate ids fail closed (500 and rollback). **Hand-off to QIN-T-4: the 400 for a duplicate `result_id` (R-2).**
+  5. The duplicated fixture runner: a readability cost only.
+
+  No spec tension was found.
+- **Reviewer, security lens: PASS.**
+  - Every value is bound as a parameter.
+  - Only `releaseQaed` writes `status_id = 2`, and only under the locked conditions plus the CAS.
+  - Phase is enforced by the locked `in_phase` read, which is sound because `version_id` is locked.
+  - DD-11 holds.
+  - The audit and log output are clean.
+  - Only `result` rows are locked.
+- **ADVISORY (4R, recorded, does not gate):**
+  - RISK: optional defense in depth, an `EXISTS(version in phase)` predicate inside `casRelease`.
+  - RESILIENCE: document that `lockRowsForRelease` deliberately does not lock `version`.
+  - READABILITY: narrow the `set` type to a literal union, and simplify the tuple loop in `applyRelease`.
+  - RELIABILITY: `result_code` is non-null only by invariant.
+- **Forward pointer → QIN-T-4:** the DTO must reject a duplicate `result_id` in `items` with 400, and cap both lists at 50. Without that, duplicates become opaque 500s. Raised by both reviewers here and by the T-2 security advisory.
+- **Requirements covered:** QIN-R-4 (all three scenarios), R-5, R-7, R-8, R-9 (release half). DD-3, DD-9, DD-11.
+- **Spawns:**
+  - implementer: not reported by host (28 tool uses, ~174k tokens). Ended: complete.
+  - reviewer, correctness: not reported by host. Ended: pass.
+  - reviewer, security: not reported by host (7 tool uses, ~73k tokens). Ended: pass.
+- **Running totals:**
+  - 4 of 7 tasks closed.
+  - 7 of 10 review rounds.
+  - LOC ≈ 2 530 insertions from `7537b0fd1`: 1 462 committed before T-3, plus T-3's 288 production lines and 777 new spec lines.
+
+## Budget tripwire: QIN-T-3 (2026-10-29)
+
+- **Budget (design §13):** 7 tasks, ~1 600 LOC (≈ 550 production, ≈ 1 050 specs, fixtures and doc), 10 review rounds.
+- **Actual after 4 of 7 tasks:** LOC ≈ 2 530, **about 1.6× the budget**, with T-4 and T-6 still to come. Review rounds 7 of 10, with T-4 (security lens, likely 2) and T-6 and T-7 (checklists) still to come, so rounds will also exceed the budget.
+- **Cause:**
+  - Test volume. The disqualifiers forbid stubbing `classify` and forbid checking only the response, so T-2 and T-3 each built an in-memory SQL fixture runner with a real staged-commit boundary. T-3 duplicated it to keep the intake specs untouched. About 1 450 spec lines came from T-2 and T-3 alone.
+  - T-5 grew by the pivot's client change, about 4 files.
+  - Production code is close to the ≈ 550 estimate.
+- **Action:** the run stops for the owner. No further task starts without approval. This tripwire is never auto-approved.
