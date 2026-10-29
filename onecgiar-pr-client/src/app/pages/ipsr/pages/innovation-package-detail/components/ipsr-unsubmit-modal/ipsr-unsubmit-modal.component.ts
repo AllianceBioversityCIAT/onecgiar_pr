@@ -29,7 +29,7 @@ export class IpsrUnsubmitModalComponent {
       },
       error: err => {
         this.requesting = false;
-        this.api.alertsFe.show({ id: 'unsubmodalerror', title: 'Error in unsubmitted', description: '', status: 'error' });
+        this.api.alertsFe.show({ id: 'unsubmodalerror', title: 'Error in unsubmitted', description: err?.error?.message ?? '', status: 'error' });
       }
     });
   }
