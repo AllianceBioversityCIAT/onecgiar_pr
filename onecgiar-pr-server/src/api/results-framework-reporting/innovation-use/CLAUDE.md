@@ -1,6 +1,6 @@
 # innovation-use (results-framework-reporting)
 
-**Verified:** 2026-09-03 · branch performance-refactor
+**Verified:** 2026-10-13 · fix/ai-qa-innovation-use-disaggregation · nivel de uso ausente = NULL; prior: 2026-09-03 · branch performance-refactor
 
 ## Qué es
 El servicio P25 de la sección **Innovation Use** de W1/W2: lee y escribe uso actual, proyección 2030,
@@ -58,6 +58,7 @@ Patrón completo: `innov_use_2030_justification` (P2-3515).
   hay que añadirlo.
 
 ## Trampas (⚠️ = ya rompió algo)
+- ⚠️ **Nivel de uso ausente → NULL, nunca `findOne({ where: { level: null } })`** (13-oct-2026). TypeORM descarta la condición `null` del WHERE y devolvía la PRIMERA fila del catálogo (nivel 0, "Innovation is not used"): todo resultado del API sin nivel quedaba en "No use". `saveInnovationUse` solo consulta el catálogo cuando viene un nivel; 0 sí es respuesta y se busca. Spec: `innovation-use.service.use-level.spec.ts`.
 - ⚠️ **El green check `validation_innovation_use_P25` del repo NO es el que corre.** La copia de
   `1762528725798-createValidtionP25.ts` lee `riu.innovation_readiness_level_id`, columna renombrada a
   `innovation_use_level_id` por una migración de timestamp **anterior** — esa función explotaría en

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideEye, lucideFileText, lucidePencil, lucideSparkles, lucideX } from '@ng-icons/lucide';
 import { CustomFieldsModule } from '../../../../../../../../../../../../custom-fields/custom-fields.module';
+import { scienceProgramLabel } from '../../../../../../../../../../../../shared/utils/science-program-label.util';
 import { COMPLEMENTARY_INNOVATION_COPY } from '../complementary-innovation.copy';
 
 /** Result type of the ad-hoc entries created from the Step 2.1 modal (`NewComplementaryInnovationComponent`). */
@@ -32,6 +33,11 @@ export class SelectedInnovationsComponent {
   @Output() removeEvent = new EventEmitter<any>();
 
   readonly copy = COMPLEMENTARY_INNOVATION_COPY;
+
+  /** P/A label `CODE - Name` for the Lead chip; a locally created row has no name and shows the code. */
+  leadLabel(result: any): string {
+    return scienceProgramLabel(result?.initiative_official_code, result?.initiative_name);
+  }
 
   isCreatedInIpsr(result: any): boolean {
     return result?.result_type_id == CREATED_IN_IPSR_TYPE_ID;

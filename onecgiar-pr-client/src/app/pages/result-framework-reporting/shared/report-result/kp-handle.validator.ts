@@ -41,6 +41,14 @@ export function validateKpHandle(handle: string | null | undefined): KpHandleErr
   return { ...KP_HANDLE_NO_ERROR };
 }
 
+/** P2-3987: for MELSpace items prefer the whitelisted hdl.handle.net link (one MQAP hop); the
+ *  `/items/<uuid>` URL intermittently failed to resolve. Every other repository — and legacy items
+ *  without `repository`, which are CGSpace — keeps the DSpace items URL exactly as today. */
+export function pickKpBrowseLink(item: { handleUrl?: string; itemUrl?: string; handle?: string; repository?: string }): string {
+  if (item.repository === 'melspace' && item.handleUrl && !validateKpHandle(item.handleUrl).status) return item.handleUrl;
+  return item.itemUrl || item.handleUrl || item.handle;
+}
+
 /**
  * Rewrite an accepted bare handle (`{10568|20.500.11766|20.500.12348}/<digits>`) to its
  * already-proven-working canonical URL, so a caller never sends a bare handle to

@@ -2,7 +2,13 @@
 import { convertToParamMap } from '@angular/router';
 import { BilateralCenterResult } from './services/bilateral-center-result.interface';
 import { applyResultsTabDefaults, BilateralQueryParams, parseBilateralQueryParams } from './bilateral-query-params';
-import { filterCenterResults, isAiResult, normalizeBilateralSearchText } from './bilateral-result-filter';
+import {
+  filterCenterResults,
+  isAiResult,
+  isUpdatedNoProjectRow,
+  normalizeBilateralSearchText,
+  UPDATED_INNOVATION_TYPE_IDS,
+} from './bilateral-result-filter';
 
 // Derived from the parser's own "no contract param" output (COV-T-2 review follow-up) rather than
 // a hand-written literal, so this fixture can never drift from what parseBilateralQueryParams
@@ -370,5 +376,92 @@ describe('isAiResult', () => {
 describe('normalizeBilateralSearchText', () => {
   it('lowercases, strips diacritics and collapses punctuation to spaces', () => {
     expect(normalizeBilateralSearchText('Café-Cacao Report!')).toBe('cafe cacao report ');
+  });
+});
+
+// @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-1, CNP-R-1, CNP-R-2, CNP-AC-2, CNP-AC-5)
+describe('isUpdatedNoProjectRow / group=updated-no-project', () => {
+  const base = rows[0];
+  const match: BilateralCenterResult = {
+    ...base,
+    id: 900,
+    is_replicated: '1' as unknown as boolean,
+    source: 'API',
+    result_type_id: '7' as unknown as number,
+    project_id: null,
+  };
+
+  it('exposes the updated-innovation type ids (7, 2)', () => {
+    expect([...UPDATED_INNOVATION_TYPE_IDS]).toEqual([7, 2]);
+  });
+
+  it('matches the string-shaped fixture', () => {
+    expect(isUpdatedNoProjectRow(match)).toBe(true);
+  });
+
+  it.each([
+    ['boolean true flag, numeric type', { is_replicated: true, result_type_id: 2 }],
+    ['number 1 flag, string type 2', { is_replicated: 1 as unknown as boolean, result_type_id: '2' as unknown as number }],
+    ['project_id undefined', { project_id: undefined }],
+  ])('matches: %s', (_label, patch) => {
+    expect(isUpdatedNoProjectRow({ ...match, ...patch })).toBe(true);
+  });
+
+  it.each([
+    ['project_id 12', { project_id: 12 }],
+    ['project_id string "12"', { project_id: '12' as unknown as number }],
+    ['source Result', { source: 'Result' as const }],
+    ['result_type_id 1', { result_type_id: 1 }],
+    ['result_type_id "1"', { result_type_id: '1' as unknown as number }],
+    ['is_replicated 0', { is_replicated: 0 as unknown as boolean }],
+    ['is_replicated false', { is_replicated: false }],
+    ['is_replicated "0"', { is_replicated: '0' as unknown as boolean }],
+  ])('does not match when only this fails: %s', (_label, patch) => {
+    expect(isUpdatedNoProjectRow({ ...match, ...patch })).toBe(false);
+  });
+
+  it('filterCenterResults with group returns exactly the matching rows and nothing else', () => {
+    const decoys: BilateralCenterResult[] = [
+      { ...match, id: 901, project_id: 12 },
+      { ...match, id: 902, source: 'Result' },
+      { ...match, id: 903, result_type_id: 1 },
+      { ...match, id: 904, is_replicated: 0 as unknown as boolean },
+      { ...match, id: 905, is_replicated: true, result_type_id: 2, project_id: undefined },
+    ];
+    const result = filterCenterResults([...rows, match, ...decoys], withParams({ group: 'updated-no-project' }));
+    expect(ids(result)).toEqual([900, 905]);
+  });
+
+  it('is independent of the project guard and every other key when group is null', () => {
+    const all = [...rows, match];
+    expect(ids(filterCenterResults(all, withParams({ group: null })))).toEqual(all.map(r => r.id));
+  });
+});
+
+// @akili-spec bilateral/center-overview-pa-contribution (CPA-T-3, CPA-R-4, CPA-R-5, CPA-AC-5)
+describe('category and role=contributing null-lead (CPA)', () => {
+  const base = rows[0];
+  const mk = (id: number, over: Partial<BilateralCenterResult>): BilateralCenterResult => ({ ...base, id, project_id: null, ...over });
+  const w3NullLead = mk(901, { source: 'API', is_leading_result: null, overview_category: 'new_w3' });
+  const resNullLead = mk(902, { source: 'Result', is_leading_result: null, overview_category: 'w1w2_tagging' });
+  const resLead0 = mk(903, { source: 'Result', is_leading_result: 0, overview_category: 'w1w2_center_only' });
+  const resLead1 = mk(904, { source: 'Result', is_leading_result: 1, overview_category: 'w1w2_center_only' });
+  const set = [w3NullLead, resNullLead, resLead0, resLead1];
+
+  it('role=contributing keeps Result null-lead and lead=0, drops W3 null-lead and lead=1', () => {
+    expect(ids(filterCenterResults(set, withParams({ role: 'contributing' })))).toEqual([902, 903]);
+  });
+
+  it('role=lead still requires 1', () => {
+    expect(ids(filterCenterResults(set, withParams({ role: 'lead' })))).toEqual([904]);
+  });
+
+  it('category=w3 keeps replicated_w3 and new_w3 only; w1w2-tagging keeps w1w2_tagging only', () => {
+    const cats = (['replicated_w3', 'replicated_w1w2', 'new_w3', 'w1w2_tagging', 'w1w2_center_only'] as const).map((c, i) =>
+      mk(950 + i, { overview_category: c }),
+    );
+    expect(ids(filterCenterResults(cats, withParams({ category: 'w3' })))).toEqual([950, 952]);
+    expect(ids(filterCenterResults(cats, withParams({ category: 'w1w2-tagging' })))).toEqual([953]);
+    expect(ids(filterCenterResults(cats, withParams({ category: null })))).toEqual(cats.map(r => r.id));
   });
 });

@@ -7,7 +7,7 @@ jest.mock('../../../../shared/utils/chart-tokens.util', () => {
 import type { EChartsOption } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { ResolvedChartTokens, resolveChartTokens } from '../../../../shared/utils/chart-tokens.util';
 import { AXIS_LABEL_ABBREVIATIONS } from '../../../result-framework-reporting/pages/portfolio-overview/portfolio-overview.charts';
-import { buildOverviewModel, OverviewModel } from './bilateral-overview.aggregate';
+import { buildByPaModel, buildOverviewModel, buildProjectsByPaModel, NO_PA_CODE, OverviewModel } from './bilateral-overview.aggregate';
 import {
   FIXTURE_D1_ROWS,
   FIXTURE_DRAFTS,
@@ -16,13 +16,18 @@ import {
   FIXTURE_PROJECTS,
   FIXTURE_ROWS_NO_APPROVALS,
   FIXTURE_TODAY,
+  FIXTURE_CPA_PROJECTS,
+  FIXTURE_CPA_ROWS,
 } from './bilateral-overview.fixtures';
 import {
   OVERVIEW_PROJECT_BAR_LIMIT,
   STATUS_TILE_LABELS,
-  bySpOption,
-  bySpTable,
+  byPaOption,
+  byPaTable,
+  projectsByPaOption,
+  projectsByPaTable,
   byProjectOption,
+  PROJECT_AXIS_LABEL_WIDTH,
   byProjectTable,
   byTypeOption,
   byTypeTable,
@@ -101,7 +106,8 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
     const allOptions = (): { name: string; option: EChartsOption }[] => [
       { name: 'statusMeterOption', option: statusMeterOption(model.status, TOKENS) },
       { name: 'byProjectOption', option: byProjectOption(model.byProject, TOKENS) },
-      { name: 'bySpOption', option: bySpOption(model.bySp, TOKENS) },
+      { name: 'byPaOption', option: byPaOption(model.byPa, TOKENS) },
+      { name: 'projectsByPaOption', option: projectsByPaOption(model.projectsByPa, TOKENS) },
       { name: 'byTypeOption', option: byTypeOption(model.byType, TOKENS) },
       { name: 'paceOption', option: paceOption(model.pace, TOKENS) },
     ];
@@ -129,7 +135,8 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       allOptions();
       statusMeterTable(model.status);
       byProjectTable(model.byProject);
-      bySpTable(model.bySp);
+      byPaTable(model.byPa);
+      projectsByPaTable(model.projectsByPa);
       byTypeTable(model.byType);
       paceTable(model.pace);
       expect(resolveChartTokens as jest.Mock).not.toHaveBeenCalled();
@@ -199,19 +206,33 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
   // Results by project (COV-R-9)
   // -------------------------------------------------------------------------
   describe('byProjectOption / byProjectTable (COV-R-9)', () => {
-    it('stacks lead and contributing on one stack key', () => {
+    it('stacks replicated and new on one stack key (INC-165171, no lead/contributing split)', () => {
       const series = seriesOf(byProjectOption(model.byProject, TOKENS));
       expect(series).toHaveLength(2);
       expect(series.map(s => s.stack)).toEqual(['results', 'results']);
+      expect(series.map(s => s.name)).toEqual(['Replicated for update', 'New in this phase']);
+      expect(series.map(s => s.data)).toEqual([
+        model.byProject.bars.map(bar => bar.replicatedCount),
+        model.byProject.bars.map(bar => bar.newCount),
+      ]);
     });
 
-    it('renders at most the top-N bars plus the "no project" category', () => {
+    it('renders at most the top-N bars and no "no project" category (INC-165171)', () => {
+      expect(model.byProject.noProjectRow).not.toBeNull();
       const option = byProjectOption(model.byProject, TOKENS, { limit: 1 });
       const categories = (option.yAxis as { data: string[] }).data;
-      expect(categories).toHaveLength(2);
-      expect(categories[categories.length - 1]).toBe('No bilateral project');
+      expect(categories).toHaveLength(1);
+      expect(categories).not.toContain('Not linked to a bilateral project');
       expect(visibleProjectBars(model.byProject, 1)).toHaveLength(1);
       expect(OVERVIEW_PROJECT_BAR_LIMIT).toBe(7);
+    });
+
+    // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-2, CNP-R-5)
+    it('summary states the updated-no-project count when > 0 and omits it at 0', () => {
+      const withBucket = byProjectTable({ ...model.byProject, updatedNoProjectCount: 24 });
+      expect(withBucket.summary).toContain('24 updated innovations have no project in this phase.');
+      const without = byProjectTable({ ...model.byProject, updatedNoProjectCount: 0 });
+      expect(without.summary).not.toContain('updated innovations have no project');
     });
 
     it('uses the supplied project labels for the axis', () => {
@@ -222,32 +243,30 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       expect(categories).toContain('A-AG10173');
     });
 
-    it('lists every project bar plus the no-project row in the a11y table', () => {
-      const table = byProjectTable(model.byProject);
-      expect(table.rows).toHaveLength(model.byProject.bars.length + 1);
-      expect(table.headers).toEqual(['Project', 'Lead', 'Contributing', 'Total']);
-      expect(table.rows[table.rows.length - 1][0]).toBe('No bilateral project');
-    });
-  });
+    // INC-166545 — "code — title" labels: the axis truncates, the tooltip names the full project.
+    it('truncates long project labels on the axis and shows the full label in the tooltip', () => {
+      const projectId = model.byProject.bars[0].projectId;
+      const full = 'N-644H12 — Strengthening seed systems for <resilient> & nutritious crops';
+      const option = byProjectOption(model.byProject, TOKENS, { projectLabels: new Map([[projectId, full]]) });
 
-  // -------------------------------------------------------------------------
-  // Science Program contribution (COV-R-10)
-  // -------------------------------------------------------------------------
-  describe('bySpOption / bySpTable (COV-R-10)', () => {
-    it('draws two grouped (never stacked) bars per Science Program', () => {
-      const series = seriesOf(bySpOption(model.bySp, TOKENS));
-      expect(series).toHaveLength(2);
-      expect(series.map(s => s.stack)).toEqual([undefined, undefined]);
-      expect(series.map(s => s.data)).toEqual([
-        model.bySp.rows.map(row => row.projectsMappedCount),
-        model.bySp.rows.map(row => row.resultsCount),
+      const axisLabel = (option.yAxis as { axisLabel: { width: number; overflow: string } }).axisLabel;
+      expect(axisLabel).toEqual(expect.objectContaining({ width: PROJECT_AXIS_LABEL_WIDTH, overflow: 'truncate' }));
+
+      const formatter = (option.tooltip as { formatter: (params: unknown) => string }).formatter;
+      const html = formatter([
+        { dataIndex: 0, seriesName: 'Replicated for update', value: 1, marker: '' },
+        { dataIndex: 0, seriesName: 'New in this phase', value: 0, marker: '' },
       ]);
+      expect(html).toContain('N-644H12 — Strengthening seed systems for &lt;resilient&gt; &amp; nutritious crops');
+      expect(html).toContain('Replicated for update: <strong>1</strong>');
+      expect(html).toContain('New in this phase: <strong>0</strong>');
     });
 
-    it('tables one row per Science Program with both counts', () => {
-      const table = bySpTable(model.bySp);
-      expect(table.rows).toHaveLength(model.bySp.rows.length);
-      expect(table.headers).toEqual(['Science Program', 'Projects mapped', 'Results reported']);
+    it('tables every project bar; the no-project count goes in the summary, not a row', () => {
+      const table = byProjectTable(model.byProject);
+      expect(table.rows).toHaveLength(model.byProject.bars.length);
+      expect(table.headers).toEqual(['Project', 'Replicated for update', 'New in this phase', 'Total']);
+      expect(table.summary).toContain(`${model.byProject.noProjectRow?.total} results are not linked to a bilateral project`);
     });
   });
 
@@ -354,6 +373,109 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // CPA-T-5 — Results by P/A / Projects by P/A (CPA-R-1, CPA-R-2)
+  // -------------------------------------------------------------------------
+  describe('byPaOption / byPaTable (CPA-R-1)', () => {
+    const paModel = buildByPaModel(FIXTURE_CPA_ROWS);
+    const labels = new Map([['SP05', 'Sustainable Farming'], ['SP07', 'Policy Innovations']]);
+
+    it('draws two series with exact ids and the model data, W3 first', () => {
+      const series = seriesOf(byPaOption(paModel, TOKENS, { programLabels: labels }));
+      expect(series.map(s => s.id)).toEqual(['overview-by-pa:w3', 'overview-by-pa:tagging']);
+      expect(series.map(s => s.data)).toEqual([[3, 1, 1], [1, 2, 1]]);
+      expect(series.some(s => s.stack)).toBe(false);
+    });
+
+    it('table rows equal the series data, labelled, with the no-P/A group named', () => {
+      const table = byPaTable(paModel, { programLabels: labels });
+      expect(table.headers).toEqual(['Program / Accelerator', 'W3/Bilateral results', 'W1/W2 results tagging center projects']);
+      expect(table.rows).toEqual([
+        ['Sustainable Farming', 3, 1],
+        ['Policy Innovations', 1, 2],
+        ['No Program/Accelerator', 1, 1],
+      ]);
+      const series = seriesOf(byPaOption(paModel, TOKENS));
+      expect(table.rows.map(r => r[1])).toEqual(series[0].data);
+      expect(table.rows.map(r => r[2])).toEqual(series[1].data);
+    });
+
+    it('falls back to the raw code and uses only passed tokens', () => {
+      expect(byPaTable(paModel).rows.map(r => r[0])).toEqual(['SP05', 'SP07', 'No Program/Accelerator']);
+      expect(collectColors(byPaOption(paModel, TOKENS)).every(c => TOKEN_VALUES.has(c))).toBe(true);
+    });
+  });
+
+  describe('projectsByPaOption / projectsByPaTable (CPA-R-2)', () => {
+    const pModel = buildProjectsByPaModel(FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+    const byCode = (code: string) => pModel.rows.findIndex(r => r.programCode === code);
+
+    it('draws three vertical grouped series with exact ids, value labels and the model data', () => {
+      const option = projectsByPaOption(pModel, TOKENS);
+      const series = seriesOf(option) as (SeriesShape & { label?: { show?: boolean } })[];
+      expect(series.map(s => s.id)).toEqual(['overview-projects-by-pa:mapped', 'overview-projects-by-pa:w3', 'overview-projects-by-pa:tagged']);
+      expect(series.every(s => s.type === 'bar' && !s.stack && s.label?.show === true)).toBe(true);
+      expect(series.map(s => s.data)).toEqual([
+        pModel.rows.map(r => r.mappedCount),
+        pModel.rows.map(r => r.withW3Count),
+        pModel.rows.map(r => r.taggedCount),
+      ]);
+      expect((option.xAxis as { type: string }).type).toBe('category');
+      expect(collectColors(option).every(c => TOKEN_VALUES.has(c))).toBe(true);
+    });
+
+    it('keeps 11+ x-axis labels legible: every label drawn, rotated, truncated, legend row reserved (CPA-T-8)', () => {
+      const option = projectsByPaOption(pModel, TOKENS);
+      const axisLabel = (option.xAxis as { axisLabel: { interval: number; rotate: number; width: number; overflow: string } }).axisLabel;
+      expect(axisLabel.interval).toBe(0);
+      expect(axisLabel.rotate).toBeGreaterThanOrEqual(30);
+      expect(axisLabel.rotate).toBeLessThanOrEqual(45);
+      expect(axisLabel.width).toBeGreaterThan(0);
+      expect(axisLabel.overflow).toBe('truncate');
+      expect((option.grid as { bottom: number; containLabel: boolean }).bottom).toBeGreaterThanOrEqual(36);
+      expect((option.grid as { containLabel: boolean }).containLabel).toBe(true);
+      expect((option.legend as { show: boolean; bottom: number }).bottom).toBe(0);
+    });
+
+    it('table rows equal the series data (SP07 mapped 2 / W3 0 / tagged 2)', () => {
+      const labels = new Map([['SP07', 'Policy Innovations']]);
+      const table = projectsByPaTable(pModel, { programLabels: labels });
+      expect(table.headers).toEqual(['Program / Accelerator', 'Mapped projects', 'Projects with reported W3/Bilat results', 'Projects tagged as contributors to W1/W2 results']);
+      const row = table.rows[byCode('SP07')];
+      expect(row).toEqual(['Policy Innovations', 2, 0, 2]);
+      const series = seriesOf(projectsByPaOption(pModel, TOKENS));
+      expect(table.rows.map(r => r.slice(1))).toEqual(pModel.rows.map((_, i) => series.map(s => s.data?.[i])));
+    });
+  });
+
+  describe('resolveChartClick on P/A charts (CPA-R-1 C, CPA-R-2 D)', () => {
+    const paModel = buildByPaModel(FIXTURE_CPA_ROWS);
+    const pModel = buildProjectsByPaModel(FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+    const full = { ...model, byPa: paModel, projectsByPa: pModel } as OverviewModel;
+
+    it('by-P/A: W3 and tagging bars carry program + category', () => {
+      expect(resolveChartClick({ seriesId: 'overview-by-pa:w3', dataIndex: 0 }, full)).toEqual({ program: ['SP05'], category: 'w3' });
+      expect(resolveChartClick({ seriesId: 'overview-by-pa:tagging', dataIndex: 1 }, full)).toEqual({ program: ['SP07'], category: 'w1w2-tagging' });
+    });
+
+    it('by-P/A: the no-P/A group has no program filter, so it resolves to nothing', () => {
+      const index = paModel.rows.findIndex(r => r.programCode === NO_PA_CODE);
+      expect(resolveChartClick({ seriesId: 'overview-by-pa:w3', dataIndex: index }, full)).toBeNull();
+    });
+
+    it('projects-by-P/A: mapped and w3 carry program only; tagged adds the category', () => {
+      const i = pModel.rows.findIndex(r => r.programCode === 'SP07');
+      expect(resolveChartClick({ seriesId: 'overview-projects-by-pa:mapped', dataIndex: i }, full)).toEqual({ program: ['SP07'] });
+      expect(resolveChartClick({ seriesId: 'overview-projects-by-pa:w3', dataIndex: i }, full)).toEqual({ program: ['SP07'] });
+      expect(resolveChartClick({ seriesId: 'overview-projects-by-pa:tagged', dataIndex: i }, full)).toEqual({ program: ['SP07'], category: 'w1w2-tagging' });
+    });
+
+    it('unknown segment or out-of-range index resolves to nothing', () => {
+      expect(resolveChartClick({ seriesId: 'overview-by-pa:other', dataIndex: 0 }, full)).toBeNull();
+      expect(resolveChartClick({ seriesId: 'overview-projects-by-pa:mapped', dataIndex: 99 }, full)).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Click → deep-link params (COV-R-9 A, COV-R-10, COV-R-11, COV-R-12)
   // -------------------------------------------------------------------------
   describe('resolveChartClick', () => {
@@ -380,17 +502,10 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       expect(resolveChartClick({ seriesId: seriesIdAt(option, 0), dataIndex: 0 }, model)).toEqual({ project: [expectedId] });
     });
 
-    it('maps the "no project" category to the W1/W2 source rather than a project id', () => {
+    it('a click past the last project bar resolves to nothing (no "no project" category any more)', () => {
       const option = byProjectOption(model.byProject, TOKENS);
       const lastIndex = visibleProjectBars(model.byProject).length;
-      const resolved = resolveChartClick({ seriesId: seriesIdAt(option, 0), dataIndex: lastIndex }, model);
-      expect(resolved).toEqual(model.byProject.noProjectRow?.allW1W2 ? { project: [], source: 'w1w2' } : { project: [] });
-    });
-
-    it('maps a Science Program bar to its official code', () => {
-      const option = bySpOption(model.bySp, TOKENS);
-      const expectedCode = model.bySp.rows[1].programCode;
-      expect(resolveChartClick({ seriesId: seriesIdAt(option, 1), dataIndex: 1 }, model)).toEqual({ program: [expectedCode] });
+      expect(resolveChartClick({ seriesId: seriesIdAt(option, 0), dataIndex: lastIndex }, model)).toBeNull();
     });
 
     it('maps a result-type bar to its result_type_id', () => {
@@ -404,7 +519,9 @@ describe('bilateral-overview.charts (COV-T-4)', () => {
       expect(resolveChartClick({ seriesId: seriesIdAt(pace, 0), dataIndex: 0 }, model)).toBeNull();
       expect(resolveChartClick({ seriesId: 'some-other-chart:lead', dataIndex: 0 }, model)).toBeNull();
       expect(resolveChartClick({ dataIndex: 0 }, model)).toBeNull();
-      expect(resolveChartClick({ seriesId: 'overview-by-sp:results', dataIndex: 999 }, model)).toBeNull();
+      expect(resolveChartClick({ seriesId: 'overview-by-pa:w3', dataIndex: 999 }, model)).toBeNull();
+      // CPA-DD-7: the retired Science Program namespace no longer resolves.
+      expect(resolveChartClick({ seriesId: 'overview-by-sp:results', dataIndex: 0 }, model)).toBeNull();
     });
   });
 });

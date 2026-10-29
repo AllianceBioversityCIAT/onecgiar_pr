@@ -38,11 +38,11 @@
 
     <div class="min-w-0 flex-1">
       <p class="m-0 truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)]" data-testid="ai-job-card-title">
-        {{ job().projectName || job().programCode || job().jobId }}
+        {{ job().projectName || programLabel() || job().jobId }}
       </p>
       <p class="m-0 mt-[2px] flex flex-wrap items-center gap-[6px] text-[11px] text-[var(--pr-text-muted)]">
         @if (job().programCode) {
-          <span>{{ job().programCode }}</span>
+          <span>{{ programLabel() }}</span>
         }
         @if (variant() === 'completed') {
           @if (job().centerAcronym) {

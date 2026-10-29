@@ -1,4 +1,5 @@
 import { BilateralAiJobStatus } from './services/bilateral-ai.interfaces';
+import { scienceProgramLabel } from '../../shared/utils/science-program-label.util';
 
 /**
  * `bilateral-ai-job.model.ts` — pure, side-effect-free transforms for the AI job lifecycle
@@ -25,6 +26,7 @@ export interface RawBilateralAiJob {
   center_id?: string | number | null;
   project_id?: string | number | null;
   program_code?: string | null;
+  program_name?: string | null;
   bucket_name?: string | null;
   document_keys?: string[] | null;
   audio_keys?: string[] | null;
@@ -75,6 +77,7 @@ export interface NormalizedBilateralAiJob {
   centerId: number | null;
   projectId: number | null;
   programCode: string;
+  programName?: string | null;
   bucketName: string;
   documentKeys: string[];
   audioKeys: string[];
@@ -132,6 +135,7 @@ export function normalizeJob(raw: RawBilateralAiJob): NormalizedBilateralAiJob {
     centerId: toNullableNumber(raw.center_id),
     projectId: toNullableNumber(raw.project_id),
     programCode: raw.program_code ?? '',
+    programName: raw.program_name ?? null,
     bucketName: raw.bucket_name ?? '',
     documentKeys: Array.isArray(raw.document_keys) ? raw.document_keys : [],
     audioKeys: Array.isArray(raw.audio_keys) ? raw.audio_keys : [],
@@ -172,6 +176,7 @@ export interface RawBilateralAiListJob {
   project_id?: string | number | null;
   project_name?: string | null;
   program_code?: string | null;
+  program_name?: string | null;
   center_id?: string | number | null;
   center_acronym?: string | null;
   document_count?: string | number | null;
@@ -201,6 +206,7 @@ export interface NormalizedBilateralAiListJob {
   projectId: number | null;
   projectName: string | null;
   programCode: string;
+  programName?: string | null;
   centerId: number | null;
   centerAcronym: string | null;
   documentCount: number;
@@ -232,6 +238,7 @@ export function normalizeListJob(raw: RawBilateralAiListJob): NormalizedBilatera
     projectId: toNullableNumber(raw.project_id),
     projectName: raw.project_name ?? null,
     programCode: raw.program_code ?? '',
+    programName: raw.program_name ?? null,
     centerId: toNullableNumber(raw.center_id),
     centerAcronym: raw.center_acronym ?? null,
     documentCount: toNumberOr(raw.document_count, 0),
@@ -392,3 +399,7 @@ export function errorCopy(code: string | null | undefined): BilateralAiErrorCopy
     actionLabel: 'Try again',
   };
 }
+
+/** `SP01 - Name`, or the bare code when the server sent no name (`program_name: null`). */
+export const bilateralAiJobProgramLabel = (job: { programCode?: string | null; programName?: string | null }): string =>
+  scienceProgramLabel(job?.programCode, job?.programName);

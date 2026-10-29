@@ -415,6 +415,20 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     expect(bilateralSegments.find(s => s.label === 'Approved')?.link).toEqual({ origin: 'W3/Bilaterals', status: 'Approved' });
   });
 
+  it('W3/Bilateral status segments leave Editing out (center-only) and never resurface it as a fallback', async () => {
+    const component = await createComponent();
+    const row = (id: string, statusId: number) =>
+      ({ id, result_code: `R${id}`, indicator_category: 'KP', status_id: statusId, acronym: 'A', lead_center: 'IITA' }) as unknown as ResultToReview;
+    (component as unknown as { bilateralRowsByKey: { set: (v: Map<string, ResultToReview[]>) => void } }).bilateralRowsByKey.set(
+      new Map([['SP02::1', [row('1', 1), row('2', 8), row('3', 5), row('4', 6), row('5', 7)]]])
+    );
+
+    const segments = component.overviewBilateralStatusSegments();
+
+    expect(segments.map(s => s.key)).toEqual(['pending', 'approved', 'rejected']);
+    expect(segments.reduce((sum, s) => sum + s.count, 0)).toBe(3);
+  });
+
   it('onOverviewLink navigates once with the entity-details commands and exact query params (origin+center)', async () => {
     const component = await createComponent();
 
@@ -503,6 +517,96 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     component.onOpenAow('AOW03');
 
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // ---- sp-overview-total-drilldown T-3: `onTotalSegment` host navigation (STD-R-3) ----
+  describe('onTotalSegment (STD-S-3.1 .. S-3.4)', () => {
+    const RESULTS = ['/result-framework-reporting/entity-details', 'SP02', 'results'];
+    const REVIEW = ['/result-framework-reporting/entity-details', 'SP02', 'bilateral-review'];
+
+    it('S-3.1: new opens Results with origin W1/W2, replication=new and the effective phase label', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('new');
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith(RESULTS, { queryParams: { origin: 'W1/W2', replication: 'new', phase: 'Reporting' } });
+    });
+
+    it('S-3.1 AND IT MUST NOT: an active Overview AoW scope is never stamped as section', async () => {
+      const component = await createComponent();
+      component.overviewScope.set('AOW01');
+
+      component.onTotalSegment('new');
+
+      const params = navigate.mock.calls[0][1].queryParams as Record<string, string>;
+      expect(Object.keys(params)).not.toContain('section');
+      expect(params).toEqual({ origin: 'W1/W2', replication: 'new', phase: 'Reporting' });
+    });
+
+    it('S-3.2: replicated uses replication=replicated', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('replicated');
+
+      expect(navigate).toHaveBeenCalledWith(RESULTS, { queryParams: { origin: 'W1/W2', replication: 'replicated', phase: 'Reporting' } });
+    });
+
+    it('S-3.3: pendingReview opens Bilateral review with status=pending and the effective versionId as phase', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('pendingReview');
+
+      expect(navigate).toHaveBeenCalledWith(REVIEW, { queryParams: { status: 'pending', phase: '1' } });
+    });
+
+    it('S-3.3: pendingReview omits phase when no versionId resolves', async () => {
+      const component = await createComponent();
+      (component as unknown as { effectiveVersionId: () => number | null }).effectiveVersionId = () => null;
+
+      component.onTotalSegment('pendingReview');
+
+      expect(navigate).toHaveBeenCalledWith(REVIEW, { queryParams: { status: 'pending' } });
+    });
+
+    it('S-3.4: navigation fires even when every count is 0', async () => {
+      const component = await createComponent();
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, received: 0, pendingReview: 0 });
+
+      component.onTotalSegment('replicated');
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+    });
+
+    // ---- sp-overview-w3-received T-1 (SWR-S-2.1) ----
+    it('SWR S-2.1: received switches the Overview to the W3/Bilateral section without navigating', async () => {
+      const component = await createComponent();
+      expect(component.overviewSection()).toBe('all');
+
+      component.onTotalSegment('received');
+
+      expect(component.overviewSection()).toBe('bilateral');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('SWR S-2.1 AND IT MUST NOT: calling received twice keeps bilateral (set, not toggle)', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('received');
+      component.onTotalSegment('received');
+
+      expect(component.overviewSection()).toBe('bilateral');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('SWR S-3.1: pendingReview still navigates to bilateral-review with status=pending and the phase, leaving the section alone', async () => {
+      const component = await createComponent();
+
+      component.onTotalSegment('pendingReview');
+
+      expect(navigate).toHaveBeenCalledWith(REVIEW, { queryParams: { status: 'pending', phase: '1' } });
+      expect(component.overviewSection()).toBe('all');
+    });
   });
 });
 
@@ -1589,6 +1693,96 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
     expect(openRow?.statuses.length).toBeGreaterThan(0);
   });
 
+  // ---- sp-overview-total-general-card T-1: `overviewTotalBreakdown` (STG-R-2, STG-R-4) ----
+  // Tests drive the SOURCES (selected()/meter overlay, bilateral cache, overviewScope) — never the
+  // computed's output.
+  describe('overviewTotalBreakdown (STG-S-2.1, STG-S-4.1, STG-S-4.2)', () => {
+    const bilateralRows = (statuses: string[]) =>
+      statuses.map((status_id, i) => ({ id: String(i), status_id, acronym: 'AOW01' })) as unknown as ResultToReview[];
+    const setBilateral = (component: unknown, entries: [string, ResultToReview[]][]) =>
+      (component as { bilateralRowsByKey: { set: (v: Map<string, ResultToReview[]>) => void } }).bilateralRowsByKey.set(
+        new Map(entries)
+      );
+    const withCounts = (versionId: number, replicatedResults?: number, newResults?: number) =>
+      ({
+        versionId,
+        phaseName: `Phase ${versionId}`,
+        phaseYear: 2000 + versionId,
+        totalResults: 0,
+        statuses: [],
+        ...(replicatedResults !== undefined ? { replicatedResults } : {}),
+        ...(newResults !== undefined ? { newResults } : {})
+      }) as any;
+
+    it('S-2.1: replicated/new from the phase version, pendingReview counts status 5 only', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '1'])]]);
+
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, received: 3, pendingReview: 2 });
+    });
+
+    // ---- sp-overview-w3-received T-1 (SWR-S-1.1) ----
+    it('SWR S-1.1: received counts statuses 5, 6 and 7 (5x2, 6x3, 7x1, 1x1, 8x1 -> 6) while pendingReview stays 2', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '6', '6', '7', '1', '8'])]]);
+
+      const breakdown = component.overviewTotalBreakdown();
+      expect(breakdown.received).toBe(6);
+      expect(breakdown.pendingReview).toBe(2);
+    });
+
+    it('SWR S-1.1 BUT: Editing (1/8) and Discontinued (4) are not received', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['1', '8', '4', '1'])]]);
+
+      expect(component.overviewTotalBreakdown().received).toBe(0);
+    });
+
+    it('SWR S-1.1 AND IT MUST: an active scope matching nothing leaves received unchanged', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '6', '6', '7', '1', '8'])]]);
+
+      component.overviewScope.set('ZZZ99');
+      expect(component.overviewTotalBreakdown().received).toBe(6);
+    });
+
+    it('S-4.2: an active scope matching none of the bilateral rows does not narrow pendingReview', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '5', '6', '1'])]]);
+
+      component.overviewScope.set('ZZZ99');
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, received: 3, pendingReview: 2 });
+    });
+
+    it('missing replicatedResults/newResults coerce to 0 while pendingReview still counts', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [['SP04::36', bilateralRows(['5', '6', '5'])]]);
+
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 0, new: 0, received: 3, pendingReview: 2 });
+    });
+
+    it('S-4.1: switching phase yields the new phase figures, none from the previous phase', async () => {
+      const program = { ...PROGRAM, versions: [withCounts(36, 62, 7)] } as SPProgress;
+      const component = await createComponent(apiMock(), program, 36);
+      setBilateral(component, [
+        ['SP04::36', bilateralRows(['5', '5', '6', '1'])],
+        ['SP04::34', bilateralRows(['5', '6', '6'])]
+      ]);
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 62, new: 7, received: 3, pendingReview: 2 });
+
+      (component as any).cacheMeterOverlay((component as any).summaryCacheKey('SP04', 34), withCounts(34, 40, 3));
+      component.selectedVersionId.set(34);
+
+      expect(component.overviewTotalBreakdown()).toEqual({ replicated: 40, new: 3, received: 3, pendingReview: 1 });
+    });
+  });
+
   // (e2) The loading-vs-settled distinction requirement 4 asks for: while the overlay fetch is in
   // flight (key present in the loading set, absent from the resolved map), `loadingMeter()` is
   // true and `latestVersion()` still returns `null` — the non-leak guarantee in (e) holds BEFORE
@@ -1867,7 +2061,7 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
   });
 
   describe('By-AoW tabular layout (BTC-R-2, BTC-R-3)', () => {
-    it('renders .pr-by-aow-head table column headers with Target, Achieved, KPIs, and Progress', () => {
+    it('renders .pr-by-aow-head table column headers with KPIs and Progress (no Target / Achieved, KPC-R-12)', () => {
       const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
 
       // Test checking that the template includes the .pr-by-aow-head and .pr-by-aow-row structure
@@ -1876,8 +2070,8 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
 
       // Check column header titles (BTC-AC-3.1)
       expect(template).toContain('<span>TITLE & TAXONOMY</span>');
-      expect(template).toContain('<span class="text-center">TARGET</span>');
-      expect(template).toContain('<span class="text-center">ACHIEVED</span>');
+      expect(template).not.toContain('<span class="text-center">TARGET</span>');
+      expect(template).not.toContain('<span class="text-center">ACHIEVED</span>');
       expect(template).toContain('<span class="text-center">KPIS</span>');
       expect(template).toContain('<span class="text-center">PROGRESS</span>');
     });
@@ -1893,13 +2087,7 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(head?.classList.contains('md:grid')).toBe(true);
 
       const headerSpans = Array.from(head?.querySelectorAll('span') ?? []);
-      expect(headerSpans.length).toBe(6);
-      expect(headerSpans[0].textContent?.trim()).toBe('');
-      expect(headerSpans[1].textContent?.trim()).toBe('TITLE & TAXONOMY');
-      expect(headerSpans[2].textContent?.trim()).toBe('TARGET');
-      expect(headerSpans[3].textContent?.trim()).toBe('ACHIEVED');
-      expect(headerSpans[4].textContent?.trim()).toBe('KPIS');
-      expect(headerSpans[5].textContent?.trim()).toBe('PROGRESS');
+      expect(headerSpans.map(s => s.textContent?.trim())).toEqual(['', 'TITLE & TAXONOMY', 'KPIS', 'PROGRESS']);
     });
 
     it('renders Level 2 HLO Sub-Card enclosure with code badge, sanitized title, and stacked metric cells (BHA-R-2, BHA-R-3)', () => {
@@ -1921,11 +2109,31 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(badge?.textContent).toContain('tax.type');
 
       // Check stacked target and achieved cells (BHA-R-3)
-      expect(template).toContain('{{ hloTargetSum(hlo) }}');
-      expect(template).toContain('{{ hloAchievedSum(hlo) }}');
+      // KPC-R-12: the HLO row no longer carries summed Target / Achieved cells
+      expect(template).not.toContain('hloTargetSum(');
+      expect(template).not.toContain('hloAchievedSum(');
       expect(template).toContain('{{ hlo.count }}');
-      expect(template).toContain('TARGET');
-      expect(template).toContain('ACHIEVED');
+    });
+
+    it('KPC-R-12 / KZ-OAH-1: header cells, row cells and grid tracks stay the same count (jsdom cannot measure layout)', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      const scss = readFileSync(join(__dirname, 'dashboard-lab.component.scss'), 'utf8');
+      const doc = new DOMParser().parseFromString(template, 'text/html');
+
+      const trackList = /\$pr-by-aow-tracks:\s*([^;]+);/.exec(scss)![1].trim();
+      const tracks = trackList.replace(/minmax\([^)]*\)/g, 'M').split(/\s+/);
+      const headCells = (doc.querySelector('.pr-by-aow-head') as HTMLElement).children.length;
+      const rowCells = (doc.querySelector('.pr-by-aow-row') as HTMLElement).children.length;
+
+      expect(tracks.length).toBe(4);
+      expect(headCells).toBe(tracks.length);
+      expect(rowCells).toBe(tracks.length);
+    });
+
+    it('KPC-S-12.1: the By-AOW Level 3 sub-table keeps each indicator own Target and Achieved cells', () => {
+      const template = readFileSync(join(__dirname, 'dashboard-lab.component.html'), 'utf8');
+      expect(template).toContain('<td class="px-3 py-2.5 tabular-nums">{{ ind.target_value_sum ?? 0 }}</td>');
+      expect(template).toContain('<td class="px-3 py-2.5 tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</td>');
     });
 
     it('renders Level 3 indicator rows with accessibility attributes and keyboard navigation (BHA-NFR-2)', async () => {
@@ -1991,8 +2199,6 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(hloGroup.split.code).toBe('HLO4.AOW1.IO1');
       expect(hloGroup.split.name).toBe('Foster motivations');
       expect(component.cleanHloCode(hloGroup.split.code)).toBe('HLO4');
-      expect(component.hloTargetSum(hloGroup)).toBe('50');
-      expect(component.hloAchievedSum(hloGroup)).toBe('25');
       expect(hloGroup.count).toBe(1);
 
       // 2. Outcomes section
@@ -2004,8 +2210,6 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       expect(outcomeGroup.split.code).toBe('I-OC 3.5');
       expect(outcomeGroup.split.name).toBe('Women, men, youth and vulnerable groups');
       expect(component.cleanHloCode(outcomeGroup.split.code)).toBe('I-OC 3.5');
-      expect(component.hloTargetSum(outcomeGroup)).toBe('30');
-      expect(component.hloAchievedSum(outcomeGroup)).toBe('30');
       expect(outcomeGroup.count).toBe(1);
     });
 
@@ -2042,8 +2246,8 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
     it('defines $pr-by-aow-tracks CSS Grid specification matching BTC-AC-2.1 and BTC-AC-3.2', () => {
       const scss = readFileSync(join(__dirname, 'dashboard-lab.component.scss'), 'utf8');
 
-      // Tracks specification: [Chevron 28px] [Title 1fr] [Target 76px] [Achieved 76px] [KPIs 64px] [Progress 130px]
-      expect(scss).toMatch(/\$pr-by-aow-tracks:\s*28px\s+minmax\(240px,\s*1fr\)\s+76px\s+76px\s+64px\s+130px;/);
+      // Tracks specification (KPC-R-12): [Chevron 28px] [Title 1fr] [KPIs 64px] [Progress 130px]
+      expect(scss).toMatch(/\$pr-by-aow-tracks:\s*28px\s+minmax\(240px,\s*1fr\)\s+64px\s+130px;/);
 
       // Both .pr-by-aow-head and .pr-by-aow-row must use $pr-by-aow-tracks
       expect(scss).toMatch(/\.pr-by-aow-head\s*\{[^}]*grid-template-columns:\s*\$pr-by-aow-tracks;/);
@@ -2056,16 +2260,12 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
           <div class="pr-by-aow-head hidden md:grid">
             <span></span>
             <span>Outcome</span>
-            <span class="text-center">Target</span>
-            <span class="text-center">Achieved</span>
             <span class="text-center">KPIs</span>
             <span class="text-center">Progress</span>
           </div>
           <button type="button" class="pr-by-aow-row">
             <span>chevron</span>
             <div><span class="pr-hlo-code">I-OC 3.5</span><span>Women, men, youth</span></div>
-            <div class="text-center"><span class="tabular-nums">30</span></div>
-            <div class="text-center"><span class="tabular-nums">30</span></div>
             <div class="kpis-col"><span>1</span></div>
             <div class="progress-col"><span>QA 100%</span></div>
           </button>
@@ -2077,7 +2277,7 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
       const head = div.querySelector('.pr-by-aow-head');
       expect(head).not.toBeNull();
       const headers = Array.from(head!.querySelectorAll('span')).map(s => s.textContent?.trim());
-      expect(headers).toEqual(['', 'Outcome', 'Target', 'Achieved', 'KPIs', 'Progress']);
+      expect(headers).toEqual(['', 'Outcome', 'KPIs', 'Progress']);
 
       const row = div.querySelector('.pr-by-aow-row');
       expect(row).not.toBeNull();
@@ -2432,6 +2632,72 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
     );
   });
 
+  // KTO-T-7 follow-up (changes/kpi-progress-target-only): the global Target filter rides the URL as `tgt`,
+  // the same way Category rides `typ`. `all` is the default and writes no param.
+  describe('global Target filter in the URL (`tgt`, KTO-R-10)', () => {
+    const lastQueryParams = (navigate: jest.Mock) => navigate.mock.calls[navigate.mock.calls.length - 1][1].queryParams;
+
+    it('writes tgt=without / tgt=with when the filter changes, and no param for All', async () => {
+      const { component, navigate } = await createPlannedComponent();
+      component.plannedBrowseView.set('aows');
+
+      component.reportingTargetFilter.set('without');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('without');
+
+      component.reportingTargetFilter.set('with');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('with');
+
+      component.reportingTargetFilter.set('all');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBeNull();
+    });
+
+    it('Clear filters resets the signal and removes the param', async () => {
+      const { component, navigate } = await createPlannedComponent();
+      component.plannedBrowseView.set('aows');
+      component.reportingTargetFilter.set('with');
+      TestBed.flushEffects();
+      expect(lastQueryParams(navigate).tgt).toBe('with');
+
+      component.clearReportingFilters();
+      TestBed.flushEffects();
+
+      expect(component.reportingTargetFilter()).toBe('all');
+      expect(lastQueryParams(navigate).tgt).toBeNull();
+    });
+
+    it('restores the value on load, even when tgt is the only Reporting param', async () => {
+      const { component } = await createPlannedComponent();
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tgt: 'without' }));
+      expect(component.reportingTargetFilter()).toBe('without');
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tocView: 'aows', tgt: 'with' }));
+      expect(component.reportingTargetFilter()).toBe('with');
+    });
+
+    it('ignores an invalid value and falls back to All', async () => {
+      const { component } = await createPlannedComponent();
+      component.reportingTargetFilter.set('with');
+
+      (component as any).restorePlannedBrowseFromQuery(convertToParamMap({ tocView: 'aows', tgt: 'bogus' }));
+
+      expect(component.reportingTargetFilter()).toBe('all');
+    });
+
+    it('follows browser back / forward: a changed or missing tgt on the stream updates the signal', async () => {
+      const { component, qpSubject } = await createPlannedComponent();
+
+      qpSubject.next(convertToParamMap({ tocView: 'aows', tgt: 'without' }));
+      expect(component.reportingTargetFilter()).toBe('without');
+
+      qpSubject.next(convertToParamMap({ tocView: 'aows' }));
+      expect(component.reportingTargetFilter()).toBe('all');
+    });
+  });
+
   it('hydrates plannedSearch, reportingTypologyFilter, and pendingKpi with inequality guards without loops', async () => {
     const { component, qpSubject } = await createPlannedComponent();
 
@@ -2631,6 +2897,7 @@ describe('DashboardLabComponent — URL state synchronization, focus recovery & 
     ];
 
     jest.spyOn(component, 'reportingGroups').mockReturnValue(mockGroups as any);
+    jest.spyOn(component, 'reportingGroupsForCounts').mockReturnValue(mockGroups as any);
     jest.spyOn(component, 'reportingGroupsForTable').mockReturnValue(mockGroups as any);
 
     // Initial search is empty -> matching count is 0

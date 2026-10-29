@@ -2,6 +2,25 @@
 import { BilateralCenterResult } from './services/bilateral-center-result.interface';
 import { BilateralQueryParams, STATUS_KEY_TO_ID } from './bilateral-query-params';
 
+// @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-1, CNP-R-1, CNP-R-2, CNP-DD-2)
+/** Result types that count as an "updated" replicated innovation: 7 Innovation development, 2 Innovation use. */
+export const UPDATED_INNOVATION_TYPE_IDS: readonly number[] = [7, 2];
+
+/**
+ * The single definition of the Overview's "updated innovations with no project" bucket
+ * (`CNP-R-1`): a replicated W3 (`source === 'API'`) innovation row with no active project.
+ * Wire flags arrive as strings, numbers or booleans, so every numeric field goes through `Number()`.
+ * Shared by the aggregate (count) and `filterCenterResults` (`group=updated-no-project`).
+ */
+export function isUpdatedNoProjectRow(row: BilateralCenterResult): boolean {
+  return (
+    Number(row.is_replicated) === 1 &&
+    row.source === 'API' &&
+    UPDATED_INNOVATION_TYPE_IDS.includes(Number(row.result_type_id)) &&
+    (row.project_id === null || row.project_id === undefined)
+  );
+}
+
 /**
  * `filterCenterResults` is the ONE predicate every center tab applies (`COV-R-13`'s reconciliation
  * scenario, `COV-DD-3`): it applies exactly what `params` says — a `null` role/source/method means
@@ -28,12 +47,20 @@ export function filterCenterResults(
       if (!projectIds.has(Number(row.project_id))) return false;
     }
 
+    if (params.group === 'updated-no-project' && !isUpdatedNoProjectRow(row)) return false;
+
     if (programCodes && !(row.submitter != null && programCodes.has(row.submitter))) return false;
 
     if (typeIds && !typeIds.has(Number(row.result_type_id))) return false;
 
     if (params.role === 'lead' && Number(row.is_leading_result) !== 1) return false;
-    if (params.role === 'contributing' && Number(row.is_leading_result) !== 0) return false;
+    // `CPA-R-5`: a `source='Result'` row with a null lead flag (center tagged via its project) counts as
+    // contributing; a W3 null-lead row does not. `Number(null)` is 0, so null must be tested explicitly.
+    if (params.role === 'contributing' && !isContributingRow(row)) return false;
+
+    // `CPA-R-4`/`CPA-DD-4`: category applies to the server-resolved `overview_category`, not `source`.
+    if (params.category === 'w3' && row.overview_category !== 'replicated_w3' && row.overview_category !== 'new_w3') return false;
+    if (params.category === 'w1w2-tagging' && row.overview_category !== 'w1w2_tagging') return false;
 
     if (params.source === 'w3' && row.source !== 'API') return false;
     if (params.source === 'w1w2' && row.source !== 'Result') return false;
@@ -55,6 +82,11 @@ export function filterCenterResults(
 
     return true;
   });
+}
+
+function isContributingRow(row: BilateralCenterResult): boolean {
+  if (row.is_leading_result === null || row.is_leading_result === undefined) return row.source === 'Result';
+  return Number(row.is_leading_result) === 0;
 }
 
 /** `true` when a result was AI-assisted: `creation_method === 'AI'` OR `Number(is_ai_generated)

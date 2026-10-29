@@ -1,6 +1,6 @@
 # rd-evidences
 
-**Verified:** 2026-09-10 · branch qa-development-2026-ss · UCA-T-8 (`docs/specs/changes/unsaved-changes-alert/`); prior: 2026-09-08 · 4343f19b1
+**Verified:** 2026-10-20 · JuankCadavid/pt-client-feedback (Progress Tracker temporary-evidence notice — see Contrato) · prior: 2026-09-10 · branch qa-development-2026-ss · UCA-T-8 (`docs/specs/changes/unsaved-changes-alert/`); prior: 2026-09-08 · 4343f19b1
 
 ## Qué es
 Sección 4 (última) del detalle de resultado: la lista de evidencias (links o ficheros subidos a
@@ -28,6 +28,11 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
   section, so it calls `GET_policyChanges()` once per result, only when the gate is true.
   The copy inside `policyChangeSpecificGuidance()` is **verbatim from the requirement document** — do
   not "tidy" the wording; `rd-evidences.component.spec.ts` locks it.
+- **Progress Tracker evidence (2026-10-20):** evidence saved from a PT pick has its description
+  prefixed `[Temporary — from Progress Tracker, may be incomplete]` (no provenance column, no
+  migration). `hasPtTemporaryEvidence()` reads that prefix and shows a warning
+  `app-alert-status` (`pt-temporary-evidence-notice`). Prefix/notice live in
+  `shared/constants/progress-tracker-evidence.constants.ts` and must match the server constant.
 
 ## Dónde se usa
 - `src/app/shared/routing/routing-data.ts:453` — ruta `evidences`, sin `portfolioAcronym`, así que

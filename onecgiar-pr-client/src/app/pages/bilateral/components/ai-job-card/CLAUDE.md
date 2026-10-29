@@ -56,4 +56,6 @@ service injection, no timer of its own.
   owns the full job list and every cross-job computation; a second consumer of the service would
   duplicate the diffing/expectations-cache logic `BilateralAiService` already does.
 
-**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · 710c50506
+- The program shows as `SP01 - Name` via `bilateralAiJobProgramLabel(job)` (`programName` from `program_name`, `null` -> bare code); no inline string template.
+
+**Verified:** 2026-10-13 · branch qa-development-2026-ss · program-full-names-labels-part-2 PF2-T-5

@@ -587,6 +587,77 @@ describe('BilateralQualityPayloadBuilder', () => {
       expect(payload.contract_version).toBe('0.2');
     });
 
+    it('Innovation use: reads actors from InnovationUseService, not from the ResultsService copy that falls back to flat rows (production result 31084)', async () => {
+      const bilateralServiceStub = {
+        findOne: jest.fn().mockResolvedValue({
+          response: innovationUseFixture.detail,
+          message: 'ok',
+          status: 200,
+        }),
+      };
+      // What the ResultsService copy BilateralModule receives returns for Innovation Use: its
+      // optional InnovationUseService is undefined, so the fallback emits flat rows with no
+      // `actors` key. Before the fix this reached the mapper and the AI saw zero people.
+      const resultsServiceStub = {
+        getBilateralResultById: jest.fn().mockResolvedValue({
+          response: {
+            ...(innovationUseFixture.formDetail as Record<string, unknown>),
+            resultTypeResponse: [{ result_actors_id: 12618, actor_type_id: 2 }],
+          },
+          message: 'ok',
+          status: 200,
+        }),
+      };
+      const innovationUseServiceStub = {
+        getBilateralInnovationUseData: jest.fn().mockResolvedValue([
+          {
+            actors: [
+              {
+                result_actors_id: 12618,
+                actor_type_id: 2,
+                obj_actor_type: { id: 2, name: 'Researchers' },
+                sex_and_age_disaggregation: false,
+                how_many: 80,
+                women: 25,
+                men: 55,
+                women_youth: 10,
+                men_youth: 25,
+              },
+            ],
+            organizations: [],
+            measures: [],
+          },
+        ]),
+      };
+
+      const nestedBuilder = new BilateralQualityPayloadBuilder(
+        bilateralServiceStub as never,
+        resultsServiceStub as never,
+        undefined,
+        undefined,
+        innovationUseServiceStub as never,
+      );
+
+      const payload = await nestedBuilder.build(34440, OPTS);
+      const fields = payload.sections.type_specific.fields;
+
+      expect(
+        innovationUseServiceStub.getBilateralInnovationUseData,
+      ).toHaveBeenCalledWith(34440);
+      expect(fields[INNOVATION_USE_FIELD_LABELS.USER_TYPES]).toEqual([
+        'Researchers',
+      ]);
+      expect(
+        fields[INNOVATION_USE_FIELD_LABELS.NUMBER_OF_PEOPLE_USING],
+      ).toEqual({
+        total: 80,
+        women: 25,
+        men: 55,
+        women_youth: 10,
+        men_youth: 25,
+      });
+    });
+
     it('throws a typed error when the form detail read reports a non-2xx status', async () => {
       const bilateralServiceStub = {
         findOne: jest.fn().mockResolvedValue({
@@ -866,14 +937,11 @@ describe('type-specific v0.2 typed values (BIL-QAI-T-4b, BIL-QAI-AC-16)', () => 
     expect(lengthOfTraining).toBe('Short-term');
   });
 
-  it('Innovation use: a row with sex_and_age_disaggregation false contributes how_many to total only', () => {
-    // The fixture's `formDetail.resultTypeResponse[0].actors[1]` is the shape the real read
-    // path (`getBilateralInnovationUseData` → `getActorsData`) actually emits for a
-    // non-disaggregated row: `how_many: 0` (recomputed as `women + men` = `0 + 0`), NOT the raw
-    // `9` the reporter entered. Without `rawInnovationUseActors` (the un-post-processed
-    // `result_actors` row `build()` fetches separately — see `RawInnovationUseActorHowMany`),
-    // this test would get `total: 580` and FAIL, proving the mapper no longer trusts the
-    // corrupted `container.actors[i].how_many`.
+  it('Innovation use: a row with sex_and_age_disaggregation true (does NOT apply) contributes how_many to total only', () => {
+    // `sex_and_age_disaggregation` means "disaggregation does NOT apply" (classic form checkbox,
+    // create handler, contract change log). The fixture's actor[0] is disaggregated (flag false:
+    // women/men/youth sum into the parts and the total); actor[1] is not (flag true: only its
+    // `how_many` of 9 reaches the total).
     const payload = builder.project(
       innovationUseFixture.detail as Record<string, unknown>,
       innovationUseFixture.formDetail as Record<string, unknown>,
@@ -885,8 +953,6 @@ describe('type-specific v0.2 typed values (BIL-QAI-T-4b, BIL-QAI-AC-16)', () => 
       INNOVATION_USE_FIELD_LABELS.NUMBER_OF_PEOPLE_USING
     ] as Record<string, number>;
 
-    // Disaggregated row: women 300, men 280, women_youth 50, men_youth 40 (total 580).
-    // Non-disaggregated row: raw how_many 9, no sex/age split.
     expect(numberUsing).toEqual({
       total: 589,
       women: 300,
@@ -896,7 +962,9 @@ describe('type-specific v0.2 typed values (BIL-QAI-T-4b, BIL-QAI-AC-16)', () => 
     });
   });
 
-  it('Innovation use: without rawInnovationUseActors, a non-disaggregated row contributes 0 rather than trusting the post-processed how_many (falsifying input for the gate fix above)', () => {
+  it('Innovation use: without rawInnovationUseActors, a not-disaggregated row falls back to its own how_many', () => {
+    // `getActorsData` leaves `how_many` untouched on flag-true rows, so the read-path value is
+    // trustworthy there when the builder supplies no raw rows.
     const payload = builder.project(
       innovationUseFixture.detail as Record<string, unknown>,
       innovationUseFixture.formDetail as Record<string, unknown>,
@@ -906,9 +974,52 @@ describe('type-specific v0.2 typed values (BIL-QAI-T-4b, BIL-QAI-AC-16)', () => 
       INNOVATION_USE_FIELD_LABELS.NUMBER_OF_PEOPLE_USING
     ] as Record<string, number>;
 
-    // formDetail's actor[1].how_many is already 0 (the real getActorsData recompute) — total
-    // must come out 580 (the disaggregated row only), never 589, when no raw source is supplied.
-    expect(numberUsing.total).toBe(580);
+    expect(numberUsing.total).toBe(589);
+  });
+
+  it('Innovation use: a disaggregated API row (flag false, how_many also sent) reaches the AI with its women/men split — production result 31084', () => {
+    // Exactly what the Bulk Uploader stored for 31084: Researchers, flag false, how_many 80,
+    // 25 women / 55 men / 10 young women / 25 young men. Before the fix the AI saw women/men 0.
+    const formDetail = {
+      resultTypeResponse: [
+        {
+          actors: [
+            {
+              result_actors_id: 12618,
+              actor_type_id: 2,
+              obj_actor_type: { id: 2, name: 'Researchers' },
+              sex_and_age_disaggregation: false,
+              how_many: 80,
+              women: 25,
+              men: 55,
+              women_youth: 10,
+              men_youth: 25,
+              section_id: 1,
+            },
+          ],
+          measures: [],
+        },
+      ],
+    };
+    const payload = builder.project(
+      innovationUseFixture.detail as Record<string, unknown>,
+      formDetail,
+      OPTS,
+      {},
+      [{ result_actors_id: 12618, how_many: 80 }],
+    );
+    const fields = payload.sections.type_specific.fields;
+
+    expect(fields[INNOVATION_USE_FIELD_LABELS.USER_TYPES]).toEqual([
+      'Researchers',
+    ]);
+    expect(fields[INNOVATION_USE_FIELD_LABELS.NUMBER_OF_PEOPLE_USING]).toEqual({
+      total: 80,
+      women: 25,
+      men: 55,
+      women_youth: 10,
+      men_youth: 25,
+    });
   });
 
   it('Innovation use: "User types" carries the free-text actor as "Other: <text>" and "Other quantitative measures" is the whole list', () => {

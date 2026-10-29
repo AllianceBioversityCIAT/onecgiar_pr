@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 
 import {
   PortfolioOverviewService,
@@ -8,6 +8,8 @@ import {
   RawResult
 } from './portfolio-overview.service';
 import { ApiService } from '../../../../../shared/services/api/api.service';
+import type { PortfolioResultDimensions } from '../../../../../shared/interfaces/portfolio-result-dimensions.interface';
+import type { PortfolioFilterSelection } from './portfolio-filters';
 
 const raw = (over: Partial<RawResult> = {}): RawResult => ({
   submitter: 'SP01',
@@ -47,17 +49,31 @@ const CLOSED_PHASE_ITEMS: RawResult[] = [
   raw({ phase_status: 0, version_id: '1', phase_name: 'Reporting 2022 - P22', acronym: 'P22' })
 ];
 
+const EMPTY_DIMENSIONS: PortfolioResultDimensions = {
+  versionId: 36,
+  phaseName: 'Reporting 2026 - P25',
+  projectLinks: [],
+  centerLinks: [],
+  projects: [],
+  centers: [],
+  w3ProjectIds: []
+};
+
 describe('PortfolioOverviewService', () => {
   let service: PortfolioOverviewService;
   let apiMock: {
     authSE: { localStorageUser: { id: number } | null };
-    resultsSE: { GET_AllResultsWithUseRole: jest.Mock };
+    resultsSE: { GET_AllResultsWithUseRole: jest.Mock; GET_PortfolioResultDimensions: jest.Mock };
   };
 
   const setupService = (items: RawResult[] = [], meta: Record<string, unknown> = {}) => {
     apiMock = {
       authSE: { localStorageUser: { id: 42 } },
-      resultsSE: { GET_AllResultsWithUseRole: jest.fn().mockReturnValue(of({ response: { items, meta } })) }
+      resultsSE: {
+        GET_AllResultsWithUseRole: jest.fn().mockReturnValue(of({ response: { items, meta } })),
+        // The map request every load() now issues (GLF-T-3); an empty map for the pre-existing cases.
+        GET_PortfolioResultDimensions: jest.fn().mockReturnValue(of({ response: EMPTY_DIMENSIONS }))
+      }
     };
 
     TestBed.resetTestingModule();
@@ -90,7 +106,15 @@ describe('PortfolioOverviewService', () => {
         bilateralCentersCount: 0,
         activeProgramsCount: 0,
         totalProgramsCount: 13,
-        portfolioProgressPercent: 0
+        portfolioProgressPercent: 0,
+        w1w2New: 0,
+        w1w2NewSubmitted: 0,
+        w1w2NewEditing: 0,
+        w1w2Replicated: 0,
+        bilateralNew: 0,
+        bilateralNewSubmitted: 0,
+        bilateralNewEditing: 0,
+        bilateralReplicated: 0
       });
     });
 
@@ -103,7 +127,6 @@ describe('PortfolioOverviewService', () => {
 
     it('initializes empty arrays for breakdown computeds', () => {
       expect(service.categoryOriginRows()).toEqual([]);
-      expect(service.programRankingRows()).toEqual([]);
       expect(service.centerDistributionRows()).toEqual([]);
     });
   });
@@ -243,43 +266,6 @@ describe('PortfolioOverviewService', () => {
     });
   });
 
-  describe('Program Ranking Rows (POV-R-4)', () => {
-    beforeEach(() => {
-      setupService(MOCK_RESULTS);
-      service.load();
-    });
-
-    it('ranks programs descending by total results with status breakdowns', () => {
-      const rankings = service.programRankingRows();
-      expect(rankings.length).toBe(4);
-
-      // SP01 has 3 items: 1 editing, 2 submittedOrQa (1 submitted + 1 QA), 0 approved, total 3
-      const sp01 = rankings.find(r => r.code === 'SP01');
-      expect(sp01).toEqual({
-        code: 'SP01',
-        name: 'Breeding for Tomorrow',
-        editing: 1,
-        submittedOrQa: 2,
-        approved: 0,
-        total: 3
-      });
-
-      // SP06 has 3 items: 0 editing, 0 submittedOrQa, 1 approved (plus 1 rejected, 1 discontinued), total 3
-      const sp06 = rankings.find(r => r.code === 'SP06');
-      expect(sp06).toEqual({
-        code: 'SP06',
-        name: 'Climate Action',
-        editing: 0,
-        submittedOrQa: 0,
-        approved: 1,
-        total: 3
-      });
-
-      // Sorted by total desc
-      expect(rankings[0].total).toBeGreaterThanOrEqual(rankings[1].total);
-    });
-  });
-
   describe('Center Distribution Rows (POV-R-5)', () => {
     beforeEach(() => {
       setupService(MOCK_RESULTS);
@@ -349,6 +335,38 @@ describe('PortfolioOverviewService', () => {
     });
   });
 
+  describe('versionId — version of the page rows (TKP-P-10)', () => {
+    it('is null before any load', () => {
+      setupService();
+      expect(service.versionId()).toBeNull();
+    });
+
+    it('is the version_id of the open phase rows, read from a string', () => {
+      setupService([{ version_id: '36', phase_status: 1 }, { version_id: '36', phase_status: 1 }, { version_id: '34', phase_status: 0 }]);
+      service.load();
+
+      expect(service.versionId()).toBe(36);
+    });
+
+    it('is the newest version on a closed phase', () => {
+      setupService([
+        { version_id: '34', phase_status: 0 },
+        { version_id: '1', phase_status: 0 }
+      ]);
+      service.load();
+
+      expect(service.closedPhase()).toBe(true);
+      expect(service.versionId()).toBe(34);
+    });
+
+    it('is null when the rows carry no usable version_id', () => {
+      setupService([{ phase_status: 1 }]);
+      service.load();
+
+      expect(service.versionId()).toBeNull();
+    });
+  });
+
   describe('fetchedCount — rows actually fetched, before phase filtering (REQ-3-S1)', () => {
     it('reports the raw fetched-item count, distinct from the open-phase-filtered total()', () => {
       // 9 open-phase rows + 2 closed-phase rows fetched in the same page — fetchedCount must be 11
@@ -409,14 +427,12 @@ describe('PortfolioOverviewService', () => {
       const kpis = service.kpiTotals();
       const segments = service.statusSegments();
       const origins = service.categoryOriginRows();
-      const rankings = service.programRankingRows();
       const centers = service.centerDistributionRows();
       const elapsed = performance.now() - start;
 
       expect(kpis.totalResults).toBe(20000);
       expect(segments.length).toBe(6);
       expect(origins.length).toBe(4);
-      expect(rankings.length).toBe(13);
       expect(centers.length).toBe(13);
       // Wall clock on a shared CI runner measures the runner, not the aggregation: this ran in
       // ~1.08s on staging under 550 suites of parallel-worker contention against a 1s budget,
@@ -424,6 +440,429 @@ describe('PortfolioOverviewService', () => {
       // to catch the regression that matters — an accidental O(n^2) pass over the 20k rows, which
       // costs seconds, not milliseconds — rather than to police the machine.
       expect(elapsed).toBeLessThan(5000);
+    });
+  });
+
+  describe('KPI breakdown — new/replicated × submitted/editing (POVKB-R-1..R-3, R-6)', () => {
+    const w12 = (over: Partial<RawResult> = {}) => raw({ source_name: 'W1/W2', ...over });
+    const w3 = (over: Partial<RawResult> = {}) => raw({ source_name: 'W3/Bilaterals', ...over });
+
+    it('classifies is_replicated encodings: 1, "1", true are replicated; 0, "0", null, absent are new', () => {
+      const flags: unknown[] = [1, '1', true, 0, '0', null, undefined];
+      setupService(flags.map(f => w12({ is_replicated: f as RawResult['is_replicated'] })));
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.w1w2Replicated).toBe(3);
+      expect(k.w1w2New).toBe(4);
+    });
+
+    it('R-2 fixture: W1/W2 7 = New 4 (Submitted 2 + Editing 2) + Replicated 3', () => {
+      setupService([
+        w12({ status_id: 1, status_name: 'Editing', is_replicated: 0 }),
+        w12({ status_id: 1, status_name: 'Editing', is_replicated: '0' }),
+        w12({ status_id: 3, status_name: 'Submitted', is_replicated: 0 }),
+        w12({ status_id: 2, status_name: 'Quality Assessed', is_replicated: 0 }),
+        w12({ status_id: 1, status_name: 'Editing', is_replicated: 1 }),
+        w12({ status_id: 3, status_name: 'Submitted', is_replicated: '1' }),
+        w12({ status_id: 2, status_name: 'Quality Assessed', is_replicated: true })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.w1w2Count).toBe(7);
+      expect(k.w1w2New).toBe(4);
+      expect(k.w1w2NewSubmitted).toBe(2);
+      expect(k.w1w2NewEditing).toBe(2);
+      expect(k.w1w2Replicated).toBe(3);
+    });
+
+    it('R-3 fixture: W3 4 = New 2 (Submitted 1 + Editing 1) + Replicated 2', () => {
+      setupService([
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 0 }),
+        w3({ status_id: 6, status_name: 'Approved', is_replicated: 0 }),
+        w3({ status_id: 1, status_name: 'Editing', is_replicated: 1 }),
+        w3({ status_id: 6, status_name: 'Approved', is_replicated: '1' })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.bilateralCount).toBe(4);
+      expect(k.bilateralNew).toBe(2);
+      expect(k.bilateralNewSubmitted).toBe(1);
+      expect(k.bilateralNewEditing).toBe(1);
+      expect(k.bilateralReplicated).toBe(2);
+    });
+
+    it('keeps every row in exactly one bucket on mixed data (invariants + 4-part total)', () => {
+      setupService([
+        ...MOCK_RESULTS,
+        w12({ status_id: 1, is_replicated: 1 }),
+        w12({ status_id: undefined, is_replicated: 0 }),
+        w3({ status_id: 1, is_replicated: '1' }),
+        w3({ status_id: 3, is_replicated: null })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.w1w2New + k.w1w2Replicated).toBe(k.w1w2Count);
+      expect(k.w1w2NewSubmitted + k.w1w2NewEditing).toBe(k.w1w2New);
+      expect(k.bilateralNew + k.bilateralReplicated).toBe(k.bilateralCount);
+      expect(k.bilateralNewSubmitted + k.bilateralNewEditing).toBe(k.bilateralNew);
+      expect(k.w1w2New + k.w1w2Replicated + k.bilateralNew + k.bilateralReplicated).toBe(k.totalResults);
+      expect(k.w1w2Count + k.bilateralCount).toBe(k.totalResults);
+    });
+
+    it('returns 0 (not NaN/undefined) for every bilateral field when there are no W3 rows', () => {
+      setupService([w12({ is_replicated: 0 })]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(k.bilateralNew).toBe(0);
+      expect(k.bilateralNewSubmitted).toBe(0);
+      expect(k.bilateralNewEditing).toBe(0);
+      expect(k.bilateralReplicated).toBe(0);
+    });
+
+    it('closed-phase fallback tallies only the newest version', () => {
+      setupService([
+        w12({ phase_status: 0, version_id: '34', is_replicated: 1 }),
+        w12({ phase_status: 0, version_id: '1', is_replicated: 0 }),
+        w12({ phase_status: 0, version_id: '1', is_replicated: 0 })
+      ]);
+      service.load();
+      const k = service.kpiTotals();
+      expect(service.closedPhase()).toBe(true);
+      expect(k.w1w2Replicated).toBe(1);
+      expect(k.w1w2New).toBe(0);
+    });
+  });
+});
+
+describe('PortfolioOverviewService — global filters (GLF-T-3)', () => {
+  let service: PortfolioOverviewService;
+  let api: {
+    authSE: { localStorageUser: { id: number } | null };
+    resultsSE: { GET_AllResultsWithUseRole: jest.Mock; GET_PortfolioResultDimensions: jest.Mock };
+  };
+
+  // 10 rows, 4 of them Editing (ids 1, 3, 7, 9). Programs SP01/SP02/SP03 for W1/W2, Center codes for W3.
+  const FIXTURE: RawResult[] = [
+    raw({ id: 1, submitter: 'SP01', status_id: 1, status_name: 'Editing', result_type: 'Innovation development', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 2, submitter: 'SP01', status_id: 3, status_name: 'Submitted', result_type: 'Policy change', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 3, submitter: 'SP02', status_id: 1, status_name: 'Editing', result_type: 'Knowledge product', source_name: 'W1/W2', is_replicated: 1 }),
+    raw({ id: 4, submitter: 'SP02', status_id: 6, status_name: 'Approved', result_type: 'Innovation development', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 5, submitter: 'SP02', status_id: 2, status_name: 'Quality Assessed', result_type: 'Policy change', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 6, submitter: 'SP03', status_id: 7, status_name: 'Rejected', result_type: 'Knowledge product', source_name: 'W1/W2', is_replicated: 0 }),
+    raw({ id: 7, submitter: 'CIAT', status_id: 1, status_name: 'Editing', result_type: 'Innovation development', source_name: 'W3/Bilaterals', is_replicated: 0 }),
+    raw({ id: 8, submitter: 'CIAT', status_id: 6, status_name: 'Approved', result_type: 'Capacity development', source_name: 'W3/Bilaterals', is_replicated: 1 }),
+    raw({ id: 9, submitter: 'CIMMYT', status_id: 1, status_name: 'Editing', result_type: 'Innovation development', source_name: 'W3/Bilaterals', is_replicated: 0 }),
+    raw({ id: 10, submitter: 'SP03', status_id: 4, status_name: 'Discontinued', result_type: 'Policy change', source_name: 'W1/W2', is_replicated: 0 })
+  ];
+
+  const MAP: PortfolioResultDimensions = {
+    versionId: 36,
+    phaseName: 'Reporting 2026 - P25',
+    projectLinks: [
+      [1, 100],
+      [2, 100],
+      [7, 200]
+    ],
+    centerLinks: [
+      [1, 'CENTER-03'],
+      [7, 'CENTER-03'],
+      [8, 'CENTER-05']
+    ],
+    projects: [
+      { id: 100, shortName: 'P-100', fullName: 'Project one hundred' },
+      { id: 200, shortName: 'P-200', fullName: null }
+    ],
+    centers: [
+      { code: 'CENTER-03', acronym: 'CIAT', name: 'Alliance' },
+      { code: 'CENTER-05', acronym: 'CIMMYT', name: 'CIMMYT' }
+    ],
+    w3ProjectIds: [100, 200]
+  };
+
+  type MapEnvelope = { response?: PortfolioResultDimensions };
+
+  const sel = (over: Partial<Record<keyof PortfolioFilterSelection, string[]>>): PortfolioFilterSelection => ({
+    program: new Set(over.program ?? []),
+    project: new Set(over.project ?? []),
+    center: new Set(over.center ?? []),
+    typology: new Set(over.typology ?? []),
+    status: new Set(over.status ?? [])
+  });
+
+  const ids = () => service.filteredRows().map(r => r.id);
+
+  const setup = (items: RawResult[] = FIXTURE, meta: Record<string, unknown> = {}) => {
+    api = {
+      authSE: { localStorageUser: { id: 42 } },
+      resultsSE: {
+        GET_AllResultsWithUseRole: jest.fn().mockReturnValue(of({ response: { items, meta } })),
+        GET_PortfolioResultDimensions: jest.fn().mockReturnValue(of({ response: MAP }))
+      }
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [PortfolioOverviewService, { provide: ApiService, useValue: api }] });
+    service = TestBed.inject(PortfolioOverviewService);
+    return service;
+  };
+
+  describe('S-4.1 reconciliation under a selection', () => {
+    beforeEach(() => {
+      setup();
+      service.load();
+    });
+
+    it('with Status = {editing}, every figure reads the 4 filtered rows', () => {
+      service.setSelection(sel({ status: ['editing'] }));
+      const k = service.kpiTotals();
+      expect(service.filteredTotal()).toBe(4);
+      expect(k.totalResults).toBe(4);
+      expect(service.statusSegments().reduce((n, s) => n + s.count, 0)).toBe(4);
+      expect(k.w1w2New + k.w1w2Replicated + k.bilateralNew + k.bilateralReplicated).toBe(4);
+      expect(k.w1w2Count + k.bilateralCount).toBe(4);
+      expect(service.totals()[0].n).toBe(4);
+      expect(service.categoryBars().reduce((n, b) => n + b.n, 0)).toBe(4);
+      expect(service.categoryOriginRows().reduce((n, r) => n + r.total, 0)).toBe(4);
+      expect(service.bilateralTotal()).toBe(2);
+      expect(service.centerDistributionRows().reduce((n, r) => n + r.count, 0)).toBe(2);
+      expect(service.bilateralBars().reduce((n, b) => n + b.n, 0)).toBe(2);
+    });
+
+    it('keeps the unfiltered guards on the open-phase rows (R-15)', () => {
+      service.setSelection(sel({ status: ['editing'] }));
+      expect(service.total()).toBe(10);
+      expect(service.openRows().length).toBe(10);
+      expect(service.fetchedCount()).toBe(10);
+      expect(service.isPartial()).toBe(false);
+      expect(service.versionId()).toBe(36);
+      expect(service.phaseName()).toBe('Reporting 2026 - P25');
+      expect(service.closedPhase()).toBe(false);
+    });
+
+    it('Clear all restores the unfiltered figures exactly', () => {
+      const before = service.kpiTotals();
+      const beforeSegments = service.statusSegments();
+      service.setSelection(sel({ status: ['editing'], program: ['SP01'] }));
+      expect(service.kpiTotals()).not.toEqual(before);
+      service.clearAll();
+      expect(service.kpiTotals()).toEqual(before);
+      expect(service.statusSegments()).toEqual(beforeSegments);
+      expect(service.filteredTotal()).toBe(10);
+    });
+
+    it('ANDs across dimensions and ORs inside one', () => {
+      service.setSelection(sel({ program: ['SP01', 'SP02'], status: ['editing'] }));
+      expect(ids()).toEqual([1, 3]);
+    });
+
+    it('filters by a normalized type name (Typology)', () => {
+      service.setSelection(sel({ typology: ['policy change'] }));
+      expect(ids()).toEqual([2, 5, 10]);
+    });
+
+    it('is the very same row list when nothing is selected', () => {
+      expect(service.filteredRows()).toBe(service.openRows());
+    });
+  });
+
+  describe('mutators', () => {
+    beforeEach(() => {
+      setup();
+      service.load();
+    });
+
+    it('toggleValue adds, then removes, a value; clearDimension empties one dimension', () => {
+      service.toggleValue('program', 'SP01');
+      service.toggleValue('program', 'SP02');
+      service.toggleValue('status', 'editing');
+      expect([...service.selection().program]).toEqual(['SP01', 'SP02']);
+      service.toggleValue('program', 'SP01');
+      expect([...service.selection().program]).toEqual(['SP02']);
+      service.clearDimension('status');
+      expect(service.selection().status.size).toBe(0);
+      expect(service.selection().program.size).toBe(1);
+    });
+
+    it('never mutates a previously read selection', () => {
+      const first = service.selection();
+      service.toggleValue('program', 'SP01');
+      expect(first.program.size).toBe(0);
+    });
+  });
+
+  describe('R-13 / DD-4 the dimensions map request', () => {
+    it('is requested exactly once after load, for the page version, and once more per retryDimensions()', () => {
+      setup();
+      service.load();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).toHaveBeenCalledTimes(1);
+      expect(api.resultsSE.GET_PortfolioResultDimensions).toHaveBeenCalledWith(36);
+      expect(service.dimensions().status).toBe('ready');
+      service.retryDimensions();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).toHaveBeenCalledTimes(2);
+    });
+
+    it('is not requested when the page has no rows, nor when the session cannot be read', () => {
+      setup([]);
+      service.load();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).not.toHaveBeenCalled();
+      expect(service.dimensions().status).toBe('idle');
+
+      setup();
+      api.authSE.localStorageUser = null;
+      service.load();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).not.toHaveBeenCalled();
+    });
+
+    it('is not requested when the rows request fails', () => {
+      setup();
+      api.resultsSE.GET_AllResultsWithUseRole.mockReturnValue(throwError(() => new Error('boom')));
+      service.load();
+      expect(api.resultsSE.GET_PortfolioResultDimensions).not.toHaveBeenCalled();
+    });
+
+    it('ignores a superseded response (an older token)', () => {
+      setup();
+      const older = new Subject<MapEnvelope>();
+      const newer = new Subject<MapEnvelope>();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValueOnce(older).mockReturnValueOnce(newer);
+      service.load();
+      service.retryDimensions();
+      expect(service.dimensions().status).toBe('loading');
+
+      newer.next({ response: MAP });
+      older.next({ response: { ...MAP, centerLinks: [], centers: [] } });
+
+      expect(service.dimensions().status).toBe('ready');
+      expect(service.dimensions().map?.centerLinks.length).toBe(3);
+    });
+
+    it('a late response of a superseded load() does not land on the new rows', () => {
+      setup();
+      const stale = new Subject<MapEnvelope>();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValueOnce(stale);
+      service.load();
+      service.load();
+      expect(service.dimensions().status).toBe('ready');
+      stale.next({ response: { ...MAP, centerLinks: [] } });
+      expect(service.dimensions().map?.centerLinks.length).toBe(3);
+    });
+  });
+
+  describe('Project and Center through the map (DD-2, DD-5)', () => {
+    it('filtersPending while the map is loading: no row is shown as a match or a miss', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(new Subject<MapEnvelope>());
+      service.load();
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      expect(service.filtersPending()).toBe(true);
+      expect(service.filteredRows()).not.toBe(service.openRows());
+      expect(service.filteredTotal()).toBe(0);
+    });
+
+    it('is not pending for Program, Typology or Status while the map is loading', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(new Subject<MapEnvelope>());
+      service.load();
+      service.setSelection(sel({ status: ['editing'] }));
+      expect(service.filtersPending()).toBe(false);
+      expect(service.filteredTotal()).toBe(4);
+    });
+
+    it('applies Center and Project once the map is ready', () => {
+      setup();
+      service.load();
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      expect(service.filtersPending()).toBe(false);
+      expect(ids()).toEqual([1, 7]);
+      service.setSelection(sel({ center: ['CENTER-03', 'CENTER-05'], status: ['editing'] }));
+      expect(ids()).toEqual([1, 7]);
+      service.setSelection(sel({ project: ['100'] }));
+      expect(ids()).toEqual([1, 2]);
+      service.setSelection(sel({ project: ['100'], center: ['CENTER-03'] }));
+      expect(ids()).toEqual([1]);
+    });
+
+    it('a selection set BEFORE the rows arrive is sanitized when they do, and applied when the map lands', () => {
+      setup();
+      const map = new Subject<MapEnvelope>();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(map);
+      service.setSelection(sel({ program: ['SP01', 'ZZ99'], center: ['CENTER-03'] }));
+      expect(service.filtersPending()).toBe(true);
+
+      service.load();
+      expect([...service.selection().program]).toEqual(['SP01']);
+      expect([...service.selection().center]).toEqual(['CENTER-03']);
+      expect(service.filtersPending()).toBe(true);
+
+      map.next({ response: MAP });
+      expect(service.filtersPending()).toBe(false);
+      expect(ids()).toEqual([1]);
+    });
+
+    it('drops a Center the map does not know once it lands', () => {
+      setup();
+      service.load();
+      service.setSelection(sel({ center: ['CENTER-03', 'CENTER-99'] }));
+      expect([...service.selection().center]).toEqual(['CENTER-03']);
+    });
+
+    it('exposes the options built from the rows and the map', () => {
+      setup();
+      service.load();
+      expect(service.options().program.map(o => o.value).sort()).toEqual(['CIAT', 'CIMMYT', 'SP01', 'SP02', 'SP03']);
+      expect(service.options().center.map(o => o.value).sort()).toEqual(['CENTER-03', 'CENTER-05']);
+      expect(service.options().project.map(o => o.value).sort()).toEqual(['100', '200']);
+      expect(service.options().status.length).toBe(6);
+    });
+  });
+
+  describe('S-13.1 map failure', () => {
+    it('drops Project and Center, sets the notice, and keeps Program / Typology / Status filtering', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(throwError(() => new Error('500')));
+      service.setSelection(sel({ center: ['CENTER-03'], project: ['100'], status: ['editing'] }));
+      service.load();
+
+      expect(service.dimensions().status).toBe('error');
+      expect(service.selection().center.size).toBe(0);
+      expect(service.selection().project.size).toBe(0);
+      expect([...service.selection().status]).toEqual(['editing']);
+      expect(service.dimensionsNotice()).toBe(true);
+      expect(service.filtersPending()).toBe(false);
+      expect(service.filteredTotal()).toBe(4);
+    });
+
+    it('sets no notice when nothing had to be dropped', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(throwError(() => new Error('500')));
+      service.setSelection(sel({ program: ['SP01'] }));
+      service.load();
+      expect(service.dimensions().status).toBe('error');
+      expect(service.dimensionsNotice()).toBe(false);
+      expect(ids()).toEqual([1, 2]);
+    });
+
+    it('a response without a payload counts as a failure', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValue(of({}));
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      service.load();
+      expect(service.dimensions().status).toBe('error');
+      expect(service.selection().center.size).toBe(0);
+      expect(service.dimensionsNotice()).toBe(true);
+    });
+
+    it('Retry recovers: the notice clears and Center filtering works again', () => {
+      setup();
+      api.resultsSE.GET_PortfolioResultDimensions.mockReturnValueOnce(throwError(() => new Error('500')));
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      service.load();
+      expect(service.dimensionsNotice()).toBe(true);
+
+      service.retryDimensions();
+      expect(service.dimensions().status).toBe('ready');
+      expect(service.dimensionsNotice()).toBe(false);
+      service.setSelection(sel({ center: ['CENTER-03'] }));
+      expect(ids()).toEqual([1, 7]);
     });
   });
 });

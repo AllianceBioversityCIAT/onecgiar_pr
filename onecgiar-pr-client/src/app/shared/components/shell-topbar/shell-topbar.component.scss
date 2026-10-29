@@ -591,7 +591,8 @@
 .pr-topbar-account__code {
   flex: none;
   min-width: 56px;
-  padding: 2px 0;
+  max-width: 65%;
+  padding: 2px 6px;
   border-radius: 5px;
   background: var(--pr-color-primary-50, #f3effc);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

@@ -9,7 +9,10 @@ describe('BilateralOverviewService', () => {
   let service: BilateralOverviewService;
   let resultsSubjects: Subject<any>[];
   let projectsSubjects: Subject<any>[];
-  let mockApi: { GET_bilateralCenterResults: jest.Mock; GET_bilateralProjects: jest.Mock };
+  let mockApi: {
+    GET_bilateralCenterResults: jest.Mock;
+    GET_bilateralProjects: jest.Mock;
+  };
 
   /** The real `GET_bilateralCenterResults` envelope: `{ response: [...] }`. */
   function respondResults(index: number, rows: unknown[]) {
@@ -44,6 +47,14 @@ describe('BilateralOverviewService', () => {
       providers: [BilateralOverviewService, { provide: BilateralApiService, useValue: mockApi }],
     });
     service = TestBed.inject(BilateralOverviewService);
+  });
+
+  // INC-165171: the Overview reads ONE row set, which includes the W1/W2 results tagging a center
+  // project — the separate totals request is gone.
+  it('load() asks for the project-tagging rows and makes no totals request', () => {
+    service.load('IITA', 36);
+    expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledWith('IITA', 36, { scope: 'bilateral' });
+    expect((mockApi as Record<string, unknown>)['GET_bilateralCenterOverviewTotals']).toBeUndefined();
   });
 
   it('load() fetches results + projects independently and stores them under the real envelope shapes', () => {
@@ -187,8 +198,8 @@ describe('BilateralOverviewService', () => {
       service.invalidateAll();
 
       expect(mockApi.GET_bilateralCenterResults).toHaveBeenCalledTimes(4);
-      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(3, 'AfricaRice', 36);
-      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(4, 'AfricaRice', 37);
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(3, 'AfricaRice', 36, { scope: 'bilateral' });
+      expect(mockApi.GET_bilateralCenterResults).toHaveBeenNthCalledWith(4, 'AfricaRice', 37, { scope: 'bilateral' });
       expect(mockApi.GET_bilateralProjects).toHaveBeenCalledTimes(1);
       expect(service.resultsData('AfricaRice', 36)()).toBeNull();
       expect(service.resultsLoading('AfricaRice', 36)()).toBe(true);

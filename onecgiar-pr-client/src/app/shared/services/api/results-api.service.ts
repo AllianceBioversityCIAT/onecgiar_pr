@@ -1,3 +1,4 @@
+import { ReminderCampaignList, ReminderCampaignView, ReminderCreateBody, ReminderEnvelope, ReminderPreview, ReminderSendOutcome } from '../../interfaces/replicated-innovation-reminders.interface';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
@@ -21,6 +22,10 @@ import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result
 import { BilateralApiService } from './bilateral-api.service';
 import { BilateralOverviewService } from '../../../pages/bilateral/services/bilateral-overview.service';
 import { toDisplayBasis } from '../../constants/achieved-display-basis';
+import { PortfolioTocCoverage } from '../../interfaces/portfolio-toc-coverage.interface';
+import { PortfolioBilateralProjects } from '../../interfaces/portfolio-bilateral-projects.interface';
+import { PortfolioResultDimensions } from '../../interfaces/portfolio-result-dimensions.interface';
+import { ReportingApiResponse } from '../../interfaces/reporting-api.response';
 
 /**
  * @akili-spec notifications/detail-side-panel (DSP-T-2)
@@ -444,9 +449,16 @@ export class ResultsApiService {
    * `params` is a plain object — pass `refresh` as a literal `true`/`false` only, never `1`/`0`:
    * the server DTO uses a strict boolean with `forbidNonWhitelisted: true` and rejects anything
    * else with 400.
+   *
+   * `center` is the PRMS center acronym of the row being reported (PT keeps one KPI per indicator
+   * and center). Sent as the `center` query param only when non-empty; the server uses it to pick
+   * the mapping row and never forwards it upstream.
    */
-  GET_progressTrackerResults(tocIndicatorId: string | number, params: any): Observable<any> {
-    return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/indicators/${tocIndicatorId}/results`, { params });
+  GET_progressTrackerResults(tocIndicatorId: string | number, params: any, center?: string | null): Observable<any> {
+    const trimmed = (center ?? '').trim();
+    return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/indicators/${tocIndicatorId}/results`, {
+      params: trimmed ? { ...params, center: trimmed } : params
+    });
   }
 
   // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-1, PTB-R-6a/6b/7)
@@ -458,6 +470,17 @@ export class ResultsApiService {
    */
   GET_progressTrackerReadyCounts(programId: string | number, params: any): Observable<any> {
     return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/programs/${programId}/ready-counts`, { params });
+  }
+
+  /**
+   * Progress Tracker activity per Reporting row for one program: every mapped (ToC indicator,
+   * center) of the active reporting version with its `matched` flag and evidence count, in ONE
+   * call (server-cached a few minutes). Feeds the Reporting tab's `PT · N` badges.
+   *
+   * ⚠️ Same `baseApiBaseUrl` note as `GET_progressTrackerResults` above.
+   */
+  GET_progressTrackerIndicatorActivity(programId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/programs/${encodeURIComponent(programId)}/indicator-activity`);
   }
 
   // @akili-spec changes/kp-multi-repository-browse — KPM-R-9 / design §6.2
@@ -960,7 +983,7 @@ export class ResultsApiService {
     return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives, phases }).pipe(
       map(resp => {
         resp?.response.map(result => {
-          result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
+          result.full_name = `${result.result_title} ${result.result_code} ${result.official_code}${result.initiative_name ? ` ${result.initiative_name}` : ''} ${result.result_type_name}`;
           result.result_code = Number(result.result_code);
           result.completeness = Number(result.completeness);
           result.general_information_value = Number(result?.general_information?.value);
@@ -1682,6 +1705,36 @@ export class ResultsApiService {
     return this.http.get<any>(url).pipe(map(res => ({ ...res, response: toDisplayBasis(res?.response) })));
   }
 
+  // @akili-spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-R-3) — one portfolio-wide
+  // coverage call. No `toDisplayBasis`: the payload has counts only, no achieved values.
+  GET_PortfolioTocCoverage(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/portfolio-coverage`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<ReportingApiResponse<PortfolioTocCoverage>>(url);
+  }
+
+  // @akili-spec changes/portfolio-overview-revamp/w3-projects-section (WPS-T-3) — W3/Bilateral
+  // projects of the phase, by P/A and by Center. Same base and versionId encoding as the coverage call.
+  GET_PortfolioBilateralProjects(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/portfolio/bilateral-projects`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<ReportingApiResponse<PortfolioBilateralProjects>>(url);
+  }
+
+  // @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-2) — result <-> project and
+  // result <-> Center links of the phase, for the Portfolio overview global filters. Admin only (server-side).
+  GET_PortfolioResultDimensions(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/portfolio/result-dimensions`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<ReportingApiResponse<PortfolioResultDimensions>>(url);
+  }
+
   // @akili-spec bugfix/achieved-counts-submitted (ACS-DD-1) — piped through the display-basis
   // normaliser (re-points every node's `progress` and `indicators[]` inside `tocResults[]`).
   GET_2030Outcomes(entityId: string, versionId?: number) {
@@ -1813,5 +1866,32 @@ export class ResultsApiService {
   /** `justification` is mandatory on REJECT and an optional reviewer comment on APPROVE (P2-3157). */
   PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification?: string }) {
     return this.bilateralApiSE.PATCH_BilateralReviewDecision(resultId, body);
+  }
+
+  // ── RIR-T-6: replicated innovation reminders (admin) ────────────────────────────────────────
+  private readonly reminderCampaignsUrl = environment.apiBaseUrl + 'api/replicated-innovation-reminders/campaigns';
+
+  GET_reminderCampaigns() {
+    return this.http.get<ReminderEnvelope<ReminderCampaignList>>(this.reminderCampaignsUrl);
+  }
+
+  POST_reminderCampaign(body: ReminderCreateBody) {
+    return this.http.post<ReminderEnvelope<ReminderCampaignView>>(this.reminderCampaignsUrl, body);
+  }
+
+  PATCH_reminderCampaignDate(id: number, body: { scheduled_at: string }) {
+    return this.http.patch<ReminderEnvelope<ReminderCampaignView>>(`${this.reminderCampaignsUrl}/${id}`, body);
+  }
+
+  PATCH_reminderCampaignCancel(id: number) {
+    return this.http.patch<ReminderEnvelope<ReminderCampaignView>>(`${this.reminderCampaignsUrl}/${id}/cancel`, {});
+  }
+
+  GET_reminderCampaignPreview(id: number) {
+    return this.http.get<ReminderEnvelope<ReminderPreview>>(`${this.reminderCampaignsUrl}/${id}/preview`);
+  }
+
+  POST_reminderCampaignSend(id: number) {
+    return this.http.post<ReminderEnvelope<ReminderSendOutcome>>(`${this.reminderCampaignsUrl}/${id}/send`, {});
   }
 }

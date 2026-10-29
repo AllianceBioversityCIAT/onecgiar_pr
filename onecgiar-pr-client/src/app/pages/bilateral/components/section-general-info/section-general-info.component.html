@@ -27,11 +27,11 @@
     label="Title of Result"
     type="text"
     [maxWords]="30"
-    [required]="true"
+    [required]="!isKnowledgeProduct()"
     [tooltip]="guidance('[general-info]-title')"
     placeholder="Enter result title"
     [valueValid]="!isPlaceholderTitle(title())"
-    [readOnly]="readOnly()"
+    [readOnly]="titleDescriptionReadOnly()"
     [ngModel]="title()"
     (ngModelChange)="onTitleChange($event)"
     (focusout)="onTitleBlur()">
@@ -41,11 +41,11 @@
   <app-pr-textarea
     label="Description of Result"
     [maxWords]="300"
-    [required]="true"
+    [required]="!isKnowledgeProduct()"
     [tooltip]="guidance('[general-info]-description')"
     [rows]="4"
     placeholder="Describe the result"
-    [readOnly]="readOnly()"
+    [readOnly]="titleDescriptionReadOnly()"
     [ngModel]="description()"
     (ngModelChange)="onDescriptionChange($event)"
     (focusout)="onDescriptionBlur()">

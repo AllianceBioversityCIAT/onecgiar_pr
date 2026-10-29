@@ -9,12 +9,14 @@ export interface ResultTypeQuickChip {
 }
 
 export const QUICK_TYPOLOGIES = [
-  { id: 'all', label: 'All', shortLabel: 'All', matchKey: 'all' },
+  { id: 'all', label: 'Total # of KPIs', shortLabel: 'KPIs', matchKey: 'all' },
   { id: 'kp', label: 'Knowledge Product', shortLabel: 'KP', matchKey: 'Knowledge product' },
   { id: 'id', label: 'Innovation Development', shortLabel: 'ID', matchKey: 'Innovation development' },
   { id: 'pc', label: 'Policy Change', shortLabel: 'PC', matchKey: 'Policy change' },
   { id: 'iu', label: 'Innovation Use', shortLabel: 'IU', matchKey: 'Innovation use' },
-  { id: 'cs', label: 'Capacity Sharing', shortLabel: 'CS', matchKey: 'Capacity sharing for development' }
+  { id: 'cs', label: 'Capacity Sharing', shortLabel: 'CS', matchKey: 'Capacity sharing for development' },
+  { id: 'oop', label: 'Other Output', shortLabel: 'OOP', matchKey: 'Other output' },
+  { id: 'ooc', label: 'Other Outcome', shortLabel: 'OOC', matchKey: 'Other outcome' }
 ] as const;
 
 export function buildQuickTypologyChips(
@@ -26,7 +28,7 @@ export function buildQuickTypologyChips(
   const counts = typologyCounts ?? {};
   const isAll = currentTypologies.length === 0;
 
-  return QUICK_TYPOLOGIES.map(item => {
+  const chips = QUICK_TYPOLOGIES.map(item => {
     const active =
       item.matchKey === 'all'
         ? isAll
@@ -46,4 +48,7 @@ export function buildQuickTypologyChips(
       active
     };
   });
+
+  // CRK-R-6 / CRK-DD-2: an empty category chip is noise; the active one stays so it can be cleared.
+  return chips.filter(chip => chip.matchKey === 'all' || chip.active || (chip.count ?? 0) > 0);
 }

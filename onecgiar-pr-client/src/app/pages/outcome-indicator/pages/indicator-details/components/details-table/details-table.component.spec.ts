@@ -66,4 +66,38 @@ describe('DetailsTableComponent', () => {
 
     expect(result.is_active).toBe(false);
   });
+
+  describe('Submitter label (PF2-R-2, M3)', () => {
+    const renderRows = (rows: any[]) => {
+      component.indicatorDetailsService.indicatorData.set({ submission_status: '0', contributing_results: rows } as any);
+      fixture.detectChanges();
+      return Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('tbody tr')).map(tr => tr.querySelectorAll('td')[4] as HTMLElement);
+    };
+
+    it('renders "SP01 - Breeding" as text and title in the Submitter cell', () => {
+      const [cell] = renderRows([{ result_id: '1', result_code: '10', result_submitter: 'SP01', result_submitter_name: 'Breeding' }]);
+      expect(cell.textContent?.trim()).toBe('SP01 - Breeding');
+      expect(cell.getAttribute('title')).toBe('SP01 - Breeding');
+    });
+
+    it('renders the code alone, with a code-only title, when the row has no name', () => {
+      const [cell] = renderRows([{ result_id: '2', result_code: '11', result_submitter: 'SP01' }]);
+      expect(cell.textContent?.trim()).toBe('SP01');
+      expect(cell.getAttribute('title')).toBe('SP01');
+    });
+
+    it('builds "SP01 - Breeding" from result_submitter + result_submitter_name', () => {
+      expect(component.submitterLabel({ result_submitter: 'SP01', result_submitter_name: 'Breeding' })).toBe('SP01 - Breeding');
+    });
+
+    it('builds the same label for a row added from the modal (submitter_name mapped)', () => {
+      const added = { result_submitter: 'SP01', result_submitter_name: 'Breeding', is_added: true };
+      expect(component.submitterLabel(added)).toBe('SP01 - Breeding');
+    });
+
+    it('shows the code only when the name is missing', () => {
+      expect(component.submitterLabel({ result_submitter: 'SP01', result_submitter_name: null })).toBe('SP01');
+      expect(component.submitterLabel({ result_submitter: 'SP01' })).toBe('SP01');
+    });
+  });
 });

@@ -60,11 +60,13 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
    * HAND-computed fixture — the expected sums below are NOT derived by calling the component's
    * own summing code (OAH-T-3 disqualifier: a coherence check sharing arithmetic with the code
    * under test proves nothing). complete=1, inProgress=2, notStarted=156, total=159, reported=3,
-   * pct=round(3/161*100)=2%; zero-target KPIs are counted in total/notStarted, not excluded.
+   * zeroTarget=2. KPC-R-3/R-5: the rail % is the flat capped mean Σ progressSum / Σ total =
+   * (1500 + 100) / 159 = 10.06 → 10.1% — never `reported / total` (2%) and never the mean of the
+   * two rows' rounded percents ((68.2 + 0.7) / 2 = 34.5).
    */
   const richRows: OverviewAowProgressRowRich[] = [
-    { code: 'AOW01', name: 'Market Intelligence', complete: 1, inProgress: 1, notStarted: 22, zeroTarget: 0, reported: 2, total: 24, remaining: 22 },
-    { code: 'AOW02', name: 'Accelerated Breeding', complete: 0, inProgress: 1, notStarted: 136, zeroTarget: 0, reported: 1, total: 137, remaining: 136 }
+    { code: 'AOW01', name: 'Market Intelligence', complete: 1, inProgress: 1, notStarted: 20, zeroTarget: 2, reported: 2, total: 22, remaining: 20, progressSum: 1500, percent: 68.2 },
+    { code: 'AOW02', name: 'Accelerated Breeding', complete: 0, inProgress: 1, notStarted: 136, zeroTarget: 0, reported: 1, total: 137, remaining: 136, progressSum: 100, percent: 0.7 }
   ];
 
   /**
@@ -78,8 +80,8 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
    * must be Counted; KCR-DD-2 supersedes OAH DD-4's "their numbers do not move").
    */
   const aows: AowProgressRow[] = [
-    { code: 'AOW06', name: 'Data', done: 0, total: 2, zeroTarget: 2 },
-    { code: 'AOW01', name: 'Market', done: 3, total: 8, zeroTarget: 1 }
+    { code: 'AOW06', name: 'Data', done: 0, total: 2, zeroTarget: 2, progressSum: 0, percent: 0 },
+    { code: 'AOW01', name: 'Market', done: 3, total: 8, zeroTarget: 1, progressSum: 300, percent: 37.5 }
   ];
 
   beforeEach(async () => {
@@ -89,24 +91,70 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     fixture.componentRef.setInput('aowProgress', aows);
   });
 
-  it('rail figures equal the HAND-computed sum of richRows with no zero-target exclusion title (OAH-R-1 coherence)', () => {
+  it('rail figures equal the HAND-computed sum of richRows, disclosed via a title (OAH-R-1 coherence)', () => {
     fixture.componentRef.setInput('richRows', richRows);
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('2%');
-    expect(text).toContain('3 of 161');
+    expect(text).toContain('10.1%');
+    expect(text).toContain('3 of 159');
 
-    expect(fixture.nativeElement.querySelector('[title*="zero-target"]')).toBeNull();
+    const titled = fixture.nativeElement.querySelector('[title*="no target set"]') as HTMLElement | null;
+    expect(titled).toBeTruthy();
+    expect(titled!.getAttribute('title')).toBe('excludes 2 KPIs with no target set');
   });
 
-  it('omits the zero-target title when N is 0', () => {
+  // @akili-spec changes/kpi-progress-capped-average — KPC-S-5.2 / KPC-R-3 / KPC-R-10
+  describe('capped-average % (KPC-R-5)', () => {
+    // Totals 4 and 1 on purpose (disqualifier: equal totals can't tell a flat mean from a mean of rows).
+    const rowA: OverviewAowProgressRowRich = { code: 'AOW01', name: 'A', complete: 1, inProgress: 2, notStarted: 1, zeroTarget: 0, reported: 3, total: 4, remaining: 1, progressSum: 250, percent: 62.5 };
+    const rowB: OverviewAowProgressRowRich = { code: 'AOW02', name: 'B', complete: 0, inProgress: 0, notStarted: 1, zeroTarget: 0, reported: 0, total: 1, remaining: 1, progressSum: 0, percent: 0 };
+
+    it('S-5.2: the ring and rail read 50, not the mean of rows (31.3)', () => {
+      fixture.componentRef.setInput('richRows', [rowA, rowB]);
+      fixture.detectChanges();
+
+      expect(component.richStats().pct).toBe(50);
+      expect(component.richStats().pct).not.toBe(31.3);
+      expect(component.ringDashoffset()).toBeCloseTo(component.ringCircumference * 0.5, 10);
+    });
+
+    it('S-5.2: aowStats().pct is the same flat mean over the thin rows', () => {
+      fixture.componentRef.setInput('aowProgress', [
+        { code: 'AOW01', name: 'A', done: 3, total: 4, progressSum: 250, percent: 62.5 },
+        { code: 'AOW02', name: 'B', done: 0, total: 1, progressSum: 0, percent: 0 }
+      ]);
+      fixture.detectChanges();
+
+      expect(component.aowStats().pct).toBe(50);
+      expect(component.aowStats().pct).not.toBe(31.3);
+      // `N of M` stays a count (KPC-DD-6).
+      expect(component.aowStats().totalDone).toBe(3);
+      expect(component.aowStats().totalPlanned).toBe(5);
+    });
+
+    it('percentOfRich returns the row percent, not reported / total', () => {
+      expect(component.percentOfRich(rowA)).toBe(62.5);
+      expect(component.percentOfRich({ ...rowA, reported: 0 })).toBe(62.5);
+    });
+
+    it('KPC-R-10: the ring tooltip states the capped-average sentence, not the coverage wording', () => {
+      fixture.componentRef.setInput('richRows', [rowA, rowB]);
+      fixture.detectChanges();
+
+      const tip = Array.from(fixture.nativeElement.querySelectorAll('[prtooltip]')).map(el => (el as HTMLElement).getAttribute('prtooltip'));
+      expect(tip).toContain('Average achievement of the KPIs with a target (achieved ÷ target, capped at 100%).');
+      expect(tip.join('|')).not.toContain('something reported');
+    });
+  });
+
+  it('omits the no-target title when N is 0', () => {
     fixture.componentRef.setInput('richRows', [
-      { code: 'AOW03', name: 'Inclusive Delivery', complete: 0, inProgress: 0, notStarted: 95, zeroTarget: 0, reported: 0, total: 95, remaining: 95 }
+      { code: 'AOW03', name: 'Inclusive Delivery', complete: 0, inProgress: 0, notStarted: 95, zeroTarget: 0, reported: 0, total: 95, remaining: 95, progressSum: 0, percent: 0 }
     ]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('[title*="zero-target"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[title*="no target set"]')).toBeNull();
   });
 
   it('renders pulse skeletons — no figures — while richLoading is true (OAH-R-6 !toc reuse, no partial sums)', () => {
@@ -196,31 +244,49 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
       .filter(b => /Intermediate outcomes|2030 outcomes/.test(b.nativeElement.textContent))
       .map(b => b.nativeElement as HTMLElement);
 
-  it('omits chip exclusion titles — every planned KPI counts in the denominator (KCR-AC-2)', () => {
+  it('discloses the chip exclusion in the singular and only on the chip that has one (KCR-AC-2)', () => {
     fixture.componentRef.setInput('richRows', richRows);
+    // requirements.md §7 fixture: Intermediate plans #901 + #902, #902 is zero-target → 0/1.
     fixture.componentRef.setInput('xcutProgress', [
-      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 2, zeroTarget: 0 },
+      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 1, zeroTarget: 1 },
       { code: '2030-outcomes', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
     ]);
     fixture.detectChanges();
 
     const [intermediate, outcomes2030] = outcomeChips();
-    expect(intermediate.textContent).toContain('0/2');
-    expect(intermediate.getAttribute('title')).toBeNull();
+    expect(intermediate.textContent).toContain('0/1');
+    expect(intermediate.getAttribute('title')).toBe('excludes 1 KPI with no target set');
     expect(outcomes2030.textContent).toContain('0/1');
     expect(outcomes2030.getAttribute('title')).toBeNull();
   });
 
-  it('omits chip titles when zeroTarget is absent from the row input', () => {
+  it('a chip whose bucket has no KPI with a target renders a dash, keeps its disclosure, never 0/0 (KTO-R-3)', () => {
     fixture.componentRef.setInput('richRows', richRows);
     fixture.componentRef.setInput('xcutProgress', [
-      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 5 },
+      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 0, zeroTarget: 2 },
+      { code: '2030-outcomes', name: '2030 outcomes', done: 0, total: 1, zeroTarget: 0 }
+    ]);
+    fixture.detectChanges();
+
+    const [intermediate, outcomes2030] = outcomeChips();
+    const text = (intermediate.textContent ?? '').replace(/\s+/g, '');
+    expect(text).toContain('—');
+    expect(text).not.toContain('0/0');
+    expect(intermediate.getAttribute('title')).toBe('excludes 2 KPIs with no target set');
+    expect(outcomes2030.textContent).toContain('0/1');
+  });
+
+  it('pluralises the chip exclusion past one, and omits it when the row carries no zeroTarget field', () => {
+    fixture.componentRef.setInput('richRows', richRows);
+    fixture.componentRef.setInput('xcutProgress', [
+      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 5, zeroTarget: 3 },
+      // A pre-KCR caller that never sets the optional field: no disclosure, no `undefined` leak.
       { code: '2030-outcomes', name: '2030 outcomes', done: 0, total: 5 }
     ]);
     fixture.detectChanges();
 
     const [intermediate, outcomes2030] = outcomeChips();
-    expect(intermediate.getAttribute('title')).toBeNull();
+    expect(intermediate.getAttribute('title')).toBe('excludes 3 KPIs with no target set');
     expect(outcomes2030.getAttribute('title')).toBeNull();
   });
 
@@ -239,6 +305,40 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     // `richRows`; what KCR-DD-2 superseded is DD-4's promise that its numbers would not move.
     expect(component.aowStats().totalPlanned).not.toBe(10 + 3);
     expect(component.aowStats().pct).not.toBe(23);
+  });
+
+  // @akili-spec changes/kpi-progress-target-only — KTO-R-11 / S-11.1 (Amendment A-2)
+  describe('Areas of Work KPI card — no KPI with a target (KTO-R-11)', () => {
+    const aowCardText = (): string => (fixture.nativeElement.querySelector('[data-testid="overview-kpi-aow"]') as HTMLElement).textContent!.replace(/\s+/g, ' ');
+
+    it('totalPlanned 0, 5 AoWs: dash + "No KPIs with a target · 5 AoWs", never 0%, 0/0 or NaN', () => {
+      fixture.componentRef.setInput(
+        'aowProgress',
+        ['AOW01', 'AOW02', 'AOW03', 'AOW04', 'AOW05'].map(code => ({ code, name: code, done: 0, total: 0, zeroTarget: 3 }))
+      );
+      fixture.detectChanges();
+
+      const text = aowCardText();
+      expect(text).toContain('—');
+      expect(text).toMatch(/No KPIs with a target\s*·\s*5 AoWs/);
+      expect(text).not.toContain('0%');
+      expect(text).not.toContain('0/0');
+      expect(text).not.toContain('NaN');
+      const dash = fixture.nativeElement.querySelector('[data-testid="overview-kpi-aow"] [aria-label="No KPIs with a target"]') as HTMLElement | null;
+      expect(dash?.textContent?.trim()).toBe('—');
+    });
+
+    it('with a target (done 10 / planned 50) the card is unchanged: 20%, 10/50 KPIs', () => {
+      fixture.componentRef.setInput('aowProgress', [{ code: 'AOW01', name: 'Market', done: 10, total: 50, zeroTarget: 0, progressSum: 1000, percent: 20 }]);
+      fixture.detectChanges();
+
+      const text = aowCardText();
+      expect(text).toContain('20%');
+      expect(text).toContain('10/50 KPIs');
+      expect(text).toContain('1 AoWs');
+      expect(text).not.toContain('No KPIs with a target');
+      expect(text).not.toContain('—');
+    });
   });
 
   it('the rail CTA emits continueReporting — the host performs the actual navigation (OAH-R-1 CTA)', () => {
@@ -343,7 +443,9 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     zeroTarget: 0,
     reported: 1,
     total: 137,
-    remaining: 136
+    remaining: 136,
+    progressSum: 100,
+    percent: 0.7
   };
 
   it('segment widths are computed from raw KPI counts — never percent-of-percent (OAH-R-3 "honest at 1%")', () => {
@@ -354,11 +456,11 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     const expectedInProgressWidth = (1 / 137) * 100;
     expect(component.inProgressSegmentWidth(honestAt1Percent)).toBeCloseTo(expectedInProgressWidth, 10);
     expect(component.completeSegmentWidth(honestAt1Percent)).toBe(0);
-    expect(component.percentOfRich(honestAt1Percent)).toBe(1); // the rounded display figure — different value, different site.
+    expect(component.percentOfRich(honestAt1Percent)).toBe(0.7); // the row's own capped mean (KPC-R-5) — different value, different site.
 
     // Zero-total guard (the invariant the removed `percentOf` used to pin): an AoW with no counted
     // KPIs reads 0%/0-width, never NaN/Infinity from a `0/0` division.
-    const zeroTotalRow = { ...honestAt1Percent, reported: 0, total: 0 };
+    const zeroTotalRow = { ...honestAt1Percent, reported: 0, total: 0, progressSum: 0, percent: 0 };
     expect(component.percentOfRich(zeroTotalRow)).toBe(0);
     expect(component.completeSegmentWidth(zeroTotalRow)).toBe(0);
     expect(component.inProgressSegmentWidth(zeroTotalRow)).toBe(0);
@@ -370,14 +472,40 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     expect(parseFloat(inProgressSegment.style.width)).toBeCloseTo(expectedInProgressWidth, 5);
   });
 
-  it('the bar title lists the three burn-down counts only (no zero-target exclusion note)', () => {
+  it('a row whose targeted set is empty renders a dash instead of reported/total and %, never 0/0 (KTO-R-3)', () => {
+    const empty: OverviewAowProgressRowRich = {
+      code: 'AOW09',
+      name: 'No Targets Yet',
+      complete: 0,
+      inProgress: 0,
+      notStarted: 0,
+      zeroTarget: 3,
+      reported: 0,
+      total: 0,
+      remaining: 0
+    };
+    fixture.componentRef.setInput('richRows', [empty]);
+    fixture.detectChanges();
+
+    const bar = fixture.nativeElement.querySelector('[title*="no target set"]') as HTMLElement;
+    expect(bar.getAttribute('title')).toContain('excludes 3 KPIs with no target set');
+    const row = bar.parentElement as HTMLElement;
+    const text = (row.textContent ?? '').replace(/\s+/g, '');
+    expect(text).toContain('—');
+    expect(text).not.toMatch(/\d+\/\d+/);
+    expect(text).not.toContain('0%');
+    expect(text).not.toContain('NaN');
+    expect(component.percentOfRich(empty)).toBe(0); // sorts as 0 %
+  });
+
+  it('the bar title lists the three counts and the zero-target note when N > 0', () => {
     const rowWithZeroTarget: OverviewAowProgressRowRich = {
       code: 'AOW01',
       name: 'Market Intelligence',
       complete: 2,
       inProgress: 3,
       notStarted: 17,
-      zeroTarget: 0,
+      zeroTarget: 4,
       reported: 5,
       total: 22,
       remaining: 17
@@ -388,8 +516,10 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     const bar = fixture.nativeElement.querySelector('[title*="Complete"]') as HTMLElement;
     expect(bar).toBeTruthy();
     const title = bar.getAttribute('title')!;
-    expect(title).toBe('2 Complete, 3 In progress, 17 Not started');
-    expect(title).not.toContain('zero-target');
+    expect(title).toContain('2 Complete');
+    expect(title).toContain('3 In progress');
+    expect(title).toContain('17 Not started');
+    expect(title).toContain('excludes 4 KPIs with no target set');
   });
 
   it('omits the zero-target note from the bar title when N is 0', () => {

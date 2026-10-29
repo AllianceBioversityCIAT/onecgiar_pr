@@ -288,8 +288,8 @@
 }
 
 /* ── By-AoW View Tabular Layout (BTC-R-2) ──
-   6-column grid: [Chevron 28px] [Title 1fr] [Target 76px] [Achieved 76px] [KPIs 64px] [Progress 130px] */
-$pr-by-aow-tracks: 28px minmax(240px, 1fr) 76px 76px 64px 130px;
+   4-column grid (KPC-R-12: no summed Target / Achieved): [Chevron 28px] [Title 1fr] [KPIs 64px] [Progress 130px] */
+$pr-by-aow-tracks: 28px minmax(240px, 1fr) 64px 130px;
 $pr-by-aow-gap: 12px;
 $pr-by-aow-pad: 8px 16px;
 

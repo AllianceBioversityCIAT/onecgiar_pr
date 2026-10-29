@@ -14,6 +14,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ReportingGuideService } from '../../services/reporting-guide.service';
+import type { ReportingTargetFilter } from '../../reporting-burndown';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
@@ -195,6 +196,14 @@ export class ReportingProgramBandComponent {
       return [v];
     }
   });
+  /**
+   * Global Target filter (KTO-R-10): `all` | `with` | `without`. Single-select, grouped mode only —
+   * By-AOW has no Type / Category / Target, same as the rest of the grouped-view filters.
+   * @akili-spec changes/kpi-progress-target-only
+   */
+  readonly targetValue = input<ReportingTargetFilter, ReportingTargetFilter | string | null | undefined>('all', {
+    transform: (v: ReportingTargetFilter | string | null | undefined): ReportingTargetFilter => (v === 'with' || v === 'without' ? v : 'all')
+  });
   /** Section is multi-select (reference `selSection`): the picked section codes, empty = no filter. */
   readonly aowValue = input<string[]>([]);
   readonly aowOptions = input<BandFilterGroup[]>([]);
@@ -230,6 +239,14 @@ export class ReportingProgramBandComponent {
   readonly favoritesOnly = input<boolean>(false);
   /** Live count of the programme's favorites, rendered as `Favorites (N)`. @akili-spec changes/reporting-favorite-indicators */
   readonly favoritesCount = input<number>(0);
+  /**
+   * "With Progress Tracker activity" switch: keeps only rows whose KPI has PT evidence. Offered
+   * only when the host's single `indicator-activity` call succeeded with at least one active row
+   * (`ptActivityAvailable`) — if the call fails or times out the band looks as it did before.
+   * Hidden in By-AOW like Favorites (the badges render in the grouped/flat table only).
+   */
+  readonly ptActivityOnly = input<boolean>(false);
+  readonly ptActivityAvailable = input<boolean>(false);
   /** By-AOW mode: the active AoW + flat options for the single-select switcher (a multiselect is meaningless when exactly one AoW renders). @akili-spec changes/reporting-entry-hub */
   readonly activeAowCode = input<string | null>(null);
   readonly aowSingleOptions = input<{ label: string; value: string }[]>([]);
@@ -272,6 +289,8 @@ export class ReportingProgramBandComponent {
   readonly statusChange = output<string[]>();
   readonly typologyChange = output<string[]>();
   readonly typeChange = output<string[]>();
+  /** @akili-spec changes/kpi-progress-target-only */
+  readonly targetChange = output<ReportingTargetFilter>();
   readonly aowChange = output<string[]>();
   /** @akili-spec changes/mass-reporting-flow */
   readonly onlyPendingChange = output<boolean>();
@@ -279,6 +298,7 @@ export class ReportingProgramBandComponent {
   readonly burndownSortChange = output<'catalogue' | 'remaining'>();
   /** @akili-spec changes/reporting-favorite-indicators */
   readonly favoritesOnlyChange = output<boolean>();
+  readonly ptActivityOnlyChange = output<boolean>();
   readonly viewModeChange = output<'grouped' | 'flat'>();
   readonly clearAllFilters = output<void>();
   readonly aowSwitch = output<string>();
@@ -655,6 +675,13 @@ export class ReportingProgramBandComponent {
     { value: 'outcome_2030', label: '2030 outcome' }
   ];
 
+  /** KTO-R-10 copy, verbatim. `all` is the pill's way back to "no filter". */
+  readonly targetOptions: { value: ReportingTargetFilter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'with', label: 'KPIs with target' },
+    { value: 'without', label: 'KPIs with no target' }
+  ];
+
   readonly cleanTypeOptions = computed(() => this.typeOptions.filter(o => o.value !== 'all'));
   readonly cleanTypologyOptions = computed(() => this.typologyOptions().filter(o => o.value !== 'all'));
   readonly cleanStatusOptions = computed(() => this.statusOptions.filter(o => o.value !== 'all'));
@@ -688,6 +715,7 @@ export class ReportingProgramBandComponent {
       if (this.typeValue()?.length) count += this.typeValue().length;
       if (this.typologyValue()?.length) count += this.typologyValue().length;
       if (this.statusValue()?.length) count += this.statusValue().length;
+      if (this.targetValue() !== 'all') count++;
       if (this.onlyPending()) count++;
     }
     return count;
@@ -704,6 +732,7 @@ export class ReportingProgramBandComponent {
       this.activeAowChips().length > 0 ||
       this.activeTypeChips().length > 0 ||
       this.activeTypologyChips().length > 0 ||
+      !!this.activeTargetChip() ||
       this.activeStatusChips().length > 0
     );
   });
@@ -763,6 +792,13 @@ export class ReportingProgramBandComponent {
     }));
   });
 
+  /** The dismissible chip for a non-`all` Target filter; `null` when the filter is off. */
+  readonly activeTargetChip = computed<{ value: ReportingTargetFilter; label: string } | null>(() => {
+    const v = this.targetValue();
+    if (v === 'all') return null;
+    return { value: v, label: this.targetOptions.find(o => o.value === v)?.label ?? v };
+  });
+
   readonly activeTypeLabel = computed(() => {
     return this.activeTypeChips().map(c => c.label).join(', ');
   });
@@ -813,6 +849,10 @@ export class ReportingProgramBandComponent {
     }
     const next = (this.statusValue() || []).filter(v => v !== val);
     this.statusChange.emit(next);
+  }
+
+  removeTargetChip(): void {
+    this.targetChange.emit('all');
   }
 
   removeOnlyPendingChip(): void {

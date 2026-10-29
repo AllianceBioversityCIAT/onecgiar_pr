@@ -114,6 +114,11 @@ export const BILATERAL_REVIEW_COPY = {
     emptyDescription: 'When Centers report W3/Bilateral results to this program, they will appear here for review.',
     emptyPrimary: 'Report emerging result',
     emptySecondary: 'Where to report',
+    /** P2-3952: every bilateral result tagged to the program is still a Center draft (Editing). */
+    draftsOnlyTitle: 'No bilateral results submitted yet',
+    draftsOnlyDescription: (count: number): string =>
+      `${count} bilateral ${count === 1 ? 'result is' : 'results are'} still being edited by ${count === 1 ? 'its Center' : 'their Centers'}. ` +
+      'They will appear here for review once submitted.',
     filteredEmptyTitle: 'No results match these filters',
     filteredEmptyDescription: 'Try removing a filter or widening your search to see more bilateral results.',
     error: 'We could not load the bilateral review list.',

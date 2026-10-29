@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
 import { AiJobCardComponent, mixClassFromCounts } from '../ai-job-card/ai-job-card.component';
-import { BilateralAiExpectations, BilateralAiMixClass, NormalizedBilateralAiListJob, waitReasonCopy } from '../../bilateral-ai-job.model';
+import { BilateralAiExpectations, BilateralAiMixClass, NormalizedBilateralAiListJob, bilateralAiJobProgramLabel, waitReasonCopy } from '../../bilateral-ai-job.model';
 import { BILATERAL_AI_PROCESSES_COPY as COPY } from '../../../../internationalization/bilateral-ai-processes.copy';
 
 /**
@@ -114,7 +114,7 @@ export class AiProcessesDrawerComponent {
         const previous = this.previousGroupById.get(job.jobId);
         const current = groupOf(job);
         if (previous && previous !== current) {
-          const label = job.projectName || job.programCode || job.jobId;
+          const label = job.projectName || bilateralAiJobProgramLabel(job) || job.jobId;
           messages.push(this.copy.movedTo(label, this.groupLabel(current)));
         }
       }

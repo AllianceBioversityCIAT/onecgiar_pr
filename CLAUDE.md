@@ -1,39 +1,8 @@
-# CLAUDE.md — Repository Instructions (root)
+@AGENTS.md
 
-Monorepo root guide for **PRMS** (Planning, Reporting & Management System, OneCGIAR). Points at the constitutional baseline under `docs/` and at the package-level guides.
+# CLAUDE.md — Claude Code shim (root)
 
-> Slimmed 2026-09-02: model routing and the skill map were moved out of this file. De-duplicated 2026-09-21: both now live **only** in the root `AGENTS.md` (`## Model Routing`, `## Skill Map`); `.agents/model-routing.md` is a pointer. Nothing was deleted.
-
-## Repository layout
-
-```
-onecgiar_pr/
-├── onecgiar-pr-server/   # NestJS 11 backend (TypeORM/MySQL, Lambda + Docker, RMQ, AWS)
-├── onecgiar-pr-client/   # Angular 21 frontend (PrimeNG/Spartan, Jest, Cypress)
-├── docs/                 # Constitutional baseline (see below)
-├── .agents/              # AKILI personas + model routing
-├── .cursorrules          # Security rule — no secrets in logs/console
-└── .github/, .husky/     # CI + git hooks
-```
-
-## Constitutional baseline — consult before acting
-
-Every AKILI command (`/akili-*`; the legacy `/sdd-*` map 1:1) loads these first. Module specs MUST cite them.
-
-| Document | What it is | Consult when |
-|---|---|---|
-| `docs/prd.md` | Product Requirements (problem, personas, goals, scope, `US-*`, `AC-*`, `OQ-*`) | Any product-shaped question: scope, priority, acceptance |
-| `docs/ux-ui/design.md` | UX/UI blueprint (IA, flows, screens, **design tokens §7**, components §8, a11y, dark mode) | Any client UI change |
-| `docs/trd/trd.md` | Technical Requirements (C4 + ADRs §1A, quality attributes §1B, modules, data model, APIs, workflows `W1..W8`, security, testing) | Any code/architecture change |
-| `docs/infrastructure.md` | Environments (AWS Lambda/container, MySQL, RMQ, Jenkins) + **§6 Local Environment contract** | Starting the stack, deploy or env questions |
-| `docs/specs/general-setup/` | Templates: `requirements.md`, `design.md`, `task.md`, `family.md` | Every `/akili-specify` |
-| `docs/specs/kaizen/` · `docs/specs/audits/` | One kaizen entry per spec · one drift report per `/akili-audit` | `/akili-archive`, `/akili-audit` |
-
-**Spec taxonomy:** `docs/specs/<module>/<feature>/` mirroring the NestJS/Angular module split (`results/`, `ipsr/`, `bilateral/`, `platform-report/`, `quality-assurance/`, `notifications/`, `auth/`, `clarisa/`, `versioning/`, `admin/`, …). Each spec = `requirements.md` + `design.md` + `task.md` (+ `family.md` when chunked, + `execution.md` once executed). The `openspec/` workspace is a parallel lightweight track, not the baseline.
-
-**Commands:** `/akili-constitution` refreshes the baseline · `/akili-propose` · `/akili-specify` (spec triplet) · `/akili-execute` · `/akili-test` · `/akili-validate` · `/akili-archive` · `/akili-audit` · `/akili-resume`.
-
-🛑 **Before running any AKILI command, read `AGENTS.md` → `## Model Routing` and `## Skill Map`** — tier→model registry, the effort dial, and the map that tells the Implementer/Tester which skill to load. That is the single registry; edit it there and nowhere else. `.agents/model-routing.md` only points at it. Never add `model:` to command frontmatter; bindings live in the agent wrappers.
+> **Why this file is only an import.** `AGENTS.md` is the project's single canonical agent guide (constitutional baseline, branch pins, `## Model Routing`, `## Skill Map`, Module Guides, domain context). When `CLAUDE.md` exists, Claude Code reads **only** `CLAUDE.md` — it never consults `AGENTS.md` on its own — so the `@AGENTS.md` line above is what actually loads the guide. A prose sentence such as "see AGENTS.md" carries no import and would silently drop the whole policy. **Never "simplify" the first line into prose, never replace it with a symlink, and never copy AGENTS.md sections in here.** Converted 2026-10-14 by `/akili-constitution` (Safe Update); the content below is only what `AGENTS.md` does not already carry.
 
 ## Domain-specific reference docs
 
@@ -44,49 +13,9 @@ Every AKILI command (`/akili-*`; the legacy `/sdd-*` map 1:1) loads these first.
 | `onecgiar-pr-client/docs/development-context/notifications-module-unification.md` | Notifications module migration context |
 | `.cursorrules` | **Security rule** — never log/echo/print tokens, webhook URLs, API keys, passwords or sensitive env vars, anywhere |
 
-## Working conventions
+## Test gates
 
-**Commits:** `<emoji> <type>(<scope>) [ticket]: <description>` — ✨ `feat` · ♻️ `refactor` · 🔧 `fix` · 🎨 `style`. Scope = component or service name.
-
-**Branches:** `master` (production-tracking, **Default Branch** pin) · `staging` (**Integration Branch** pin — the single apply-capable branch: pending kaizen standardizations are applied there and carried to `master` on release cadence). Open PRs against `staging` or `master` per release cadence.
-
-**Test gates:** server Jest (branches 5% / functions 20% / lines 35% / statements 40%) · client Jest + Cypress (50/60/60/60) · `npm run migration:check:ci` blocks pending migrations · SonarCloud.
-
-**Agent-lean verification** (green = one summary line; failures print verbatim):
-
-| Package | Tests | Lint |
-|---|---|---|
-| `onecgiar-pr-server` | `npx jest --silent --reporters=summary --forceExit` | `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` |
-| `onecgiar-pr-client` | `npx jest --silent --reporters=summary --no-coverage` | `npx ng lint --quiet` |
-| Migrations | `npm run migration:check` (server) | — |
-
-**Install / run:** `npm ci && npm run prepare` at root (husky) · server `npm ci && npm run start:dev` · client `npm ci && npm start` → :4200. Do not guess start commands — `docs/infrastructure.md` §6 is the contract. Local is disposable; cloud is governed and never deployed by agents.
-
-**CodeGraph:** initialized (`.codegraph/`, index not committed). Prefer `codegraph_explore` / `_search` / `_callers` / `_impact` over broad grepping; run `codegraph sync` after large refactors.
-
-**Shared-file write discipline:** on a spec branch, lifecycle side-effect writes (kaizen standardizations, `/akili-archive` syncs, `/akili-audit` outputs) **never** edit `CLAUDE.md`, `AGENTS.md`, `.agents/`, packaged templates or `docs/trd/trd.md`. Record them as pending and apply on the **apply-capable branch** (`staging`, per the `Integration Branch:` pin — not `master`, which records rather than applies). Files an approved `tasks.md` names as the spec's own deliverable are exempt.
-
-**Concurrency:** one AKILI session per checkout; extra sessions on `git worktree`. Never run a measurement command (build, benchmark, E2E, Lighthouse) while a delegated agent is active.
-
-**Branch pins** (canonical copies in `AGENTS.md`):
-
-```
-Default Branch: master
-Integration Branch: staging
-```
-
-Every AKILI branch test compares the checked-out branch against `Default Branch:`. `Integration Branch:` resolves the apply-capable branch for the `kaizen` skill's Branch Context.
-
-## Module Guides
-
-Root guides are the parent; child guides add or narrow, never duplicate.
-
-- `onecgiar-pr-server/CLAUDE.md` · `AGENTS.md` — backend package guide (modules, migrations, Lambda/Docker)
-- `onecgiar-pr-server/src/CLAUDE.md` · `AGENTS.md` — backend source-tree navigation
-- `onecgiar-pr-client/CLAUDE.md` · `AGENTS.md` — client package guide (`auth` header, base URLs, API naming, commit format)
-- `onecgiar-pr-client/src/CLAUDE.md` · `AGENTS.md` — client source-tree navigation
-- `.agents/leader.md` · `implementer.md` · `reviewer.md` · `tester.md` — AKILI personas (source of truth; wrappers in `.claude/agents/`, `.opencode/agent/`, `.agents/agents/`)
-- `AGENTS.md` → `## Model Routing` · `## Skill Map` — canonical tier registry, effort dial, skill map (`.agents/model-routing.md` is a pointer to them)
+Server Jest (branches 5% / functions 20% / lines 35% / statements 40%) · client Jest + Cypress (50/60/60/60) · `npm run migration:check:ci` blocks pending migrations · SonarCloud. Agent-lean commands live in `AGENTS.md` → *AKILI-SPECS constitutional baseline*.
 
 ## When in doubt
 

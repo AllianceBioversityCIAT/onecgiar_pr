@@ -651,6 +651,29 @@ describe('RdEvidencesComponent', () => {
   // evidence card used to share ONE `*ngIf` that excluded Knowledge Product results from both
   // actions. Per KPE-DD-1, each button now has its own `*ngIf`: edit drops the KP exclusion
   // (`!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status` only), delete keeps it.
+  describe('Progress Tracker temporary evidence notice', () => {
+    const PREFIX = '[Temporary — from Progress Tracker, may be incomplete]';
+
+    it('is true only when an evidence description carries the Progress Tracker prefix', () => {
+      component.evidencesBody.evidences = [{ description: 'Mine' }];
+      expect(component.hasPtTemporaryEvidence()).toBe(false);
+      component.evidencesBody.evidences = [{ description: 'Mine' }, { description: `${PREFIX} Field report` }];
+      expect(component.hasPtTemporaryEvidence()).toBe(true);
+    });
+
+    it('renders the notice in the Evidence section', () => {
+      mockApiService.dataControlSE.currentResult = { result_type_id: 1, status: 0 };
+      component.ngOnInit();
+      component.evidencesBody.evidences = [{ description: `${PREFIX} Field report`, link: 'https://a.org/x' }];
+      fixture.detectChanges();
+      const notice = fixture.nativeElement.querySelector('[data-testid="pt-temporary-evidence-notice"]');
+      expect(notice).toBeTruthy();
+      expect(component.ptTemporaryEvidenceNotice).toBe(
+        'Evidence retrieved from Progress Tracker is temporary and may be incomplete. Replace it with the final evidence if available.'
+      );
+    });
+  });
+
   describe('evidence card edit/delete gating (KPE-T-1)', () => {
     let dataControlSE: DataControlService;
 

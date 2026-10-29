@@ -127,6 +127,7 @@ describe('CgspaceDiscoveryMapper', () => {
           repository: 'cgspace',
           programAccelerators: [],
           projects: [],
+          subjects: [],
         })),
       );
     });
@@ -315,6 +316,7 @@ describe('CgspaceDiscoveryMapper', () => {
         repository: 'cgspace',
         programAccelerators: [],
         projects: [],
+        subjects: [],
       });
     });
 
@@ -396,6 +398,49 @@ describe('CgspaceDiscoveryMapper', () => {
     });
   });
 
+  // @akili-spec changes/kp-related-relevance-ranking
+  describe('toItem — subjects extraction (KRR-R-5)', () => {
+    it('CGSpace reads dcterms.subject', () => {
+      const node = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'u',
+            handle: 'h',
+            metadata: {
+              'dcterms.subject': [{ value: 'cassava' }, { value: 'seed' }],
+              'dc.subject': [{ value: 'ignored' }],
+            },
+          },
+        },
+      };
+      expect(mapper.toItem(node, cgspaceAdapter).subjects).toEqual([
+        'cassava',
+        'seed',
+      ]);
+    });
+
+    it('MELSpace fixture: an item carries its dc.subject values', () => {
+      const result = mapper.toPage(melspaceHal, melspaceAdapter);
+      expect(result.items.flatMap((item) => item.subjects ?? [])).toEqual(
+        expect.arrayContaining(['russian wheat aphid', 'resistance']),
+      );
+    });
+
+    it('WorldFish fixture: an item carries its dc.subject values', () => {
+      const result = mapper.toPage(worldfishHal, worldfishAdapter);
+      expect(result.items.flatMap((item) => item.subjects ?? [])).toEqual(
+        expect.arrayContaining([
+          'food and nutrition security',
+          'aquatic foods',
+        ]),
+      );
+    });
+
+    it('is [] when the field is absent', () => {
+      expect(mapper.toItem({}, cgspaceAdapter).subjects).toEqual([]);
+    });
+  });
+
   describe('toItem — projects extraction (KPPJ-R-1, KPPJ-AC-1)', () => {
     it('extracts projects when cg.identifier.project has entries', () => {
       const node = {
@@ -447,6 +492,58 @@ describe('CgspaceDiscoveryMapper', () => {
         worldfishAdapter,
       );
       expect(itemWithEmptyField.projects).toEqual([]);
+    });
+  });
+
+  describe('toItem — MEL/WorldFish project labels (KPSF-R-7)', () => {
+    it('MELSpace fixture: first item carries its cg.contributor.project label', () => {
+      const result = mapper.toPage(melspaceHal, melspaceAdapter);
+      expect(result.items[0].projects).toEqual(['CRP WHEAT Phase II']);
+    });
+
+    it('WorldFish fixture: an item carries its cg.contributor.project label', () => {
+      const result = mapper.toPage(worldfishHal, worldfishAdapter);
+      expect(result.items.flatMap((item) => item.projects ?? [])).toEqual(
+        expect.arrayContaining([
+          'Youth Employment in Aswan Governorate (YEAG) project',
+        ]),
+      );
+    });
+
+    it('unions cg.contributor.project with cg.identifier.project, deduped, adapter field first', () => {
+      const node = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'u',
+            handle: 'h',
+            metadata: {
+              'cg.contributor.project': [{ value: 'A' }, { value: 'B' }],
+              'cg.identifier.project': [{ value: 'B' }, { value: 'C' }],
+            },
+          },
+        },
+      };
+      expect(mapper.toItem(node, melspaceAdapter).projects).toEqual([
+        'A',
+        'B',
+        'C',
+      ]);
+    });
+
+    it('CGSpace keeps reading cg.identifier.project only (its adapter field), no duplicates', () => {
+      const node = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'u',
+            handle: 'h',
+            metadata: {
+              'cg.identifier.project': [{ value: 'X' }],
+              'cg.contributor.project': [{ value: 'IGNORED' }],
+            },
+          },
+        },
+      };
+      expect(mapper.toItem(node, cgspaceAdapter).projects).toEqual(['X']);
     });
   });
 

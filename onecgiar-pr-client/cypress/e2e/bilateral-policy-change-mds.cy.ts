@@ -90,15 +90,36 @@ describe('P2-3388 · bilateral Policy Change MDS', () => {
     cy.get('app-type-policy-change').should('contain.text', QUESTION_TEXT);
   });
 
-  it('shows USD amount and Status for policy type 1 (AC6)', () => {
+  // PCL-R-2/PCL-AC-2 (policy-change-usd-amount-layout) — USD amount/Status are now the direct,
+  // always-visible consequence of picking policy type 1, same as Pool Funding; no "Complete full
+  // metadata" click required. AC6 (P2-3388) still holds: the fields are gated on policy_type_id,
+  // just not on showAllFields() any more.
+  it('shows USD amount and Status for policy type 1, without expanding full metadata (AC6)', () => {
     visit(1);
-    expand();
     cy.get('app-type-policy-change').should('contain.text', 'USD amount').and('contain.text', 'Status');
   });
 
-  // The regression this restructure exists to remove, plus AC6 surviving it.
-  it('for policy type 2: shows the question, and still hides USD amount', () => {
+  // PCL-AC-3 — once relocated, the ONLY thing left behind "Complete full metadata" for policy
+  // type 1 is the "Is this result related to:" question. Scoped to the disclosure wrapper itself
+  // (`[data-testid="type-policy-change-full-metadata-disclosure"]`), not the whole
+  // `app-type-policy-change` component — an unscoped check also passes on the pre-fix template,
+  // which rendered USD amount/Status/Status inside this same toggle alongside the question.
+  // Falsifier: temporarily re-nest the old `@if (body.policy_type_id == 1) { USD amount; Status }`
+  // block back inside the disclosure and the `not.contain.text` assertions below turn red.
+  it('shows only the related-to question in full metadata for policy type 1', () => {
+    visit(1);
+    expand();
+    cy.get('[data-testid="type-policy-change-full-metadata-disclosure"]')
+      .should('contain.text', QUESTION_TEXT)
+      .and('not.contain.text', 'USD amount')
+      .and('not.contain.text', 'Status');
+  });
+
+  // The regression this restructure exists to remove, plus AC6 surviving it: for a non-type-1
+  // policy, USD amount never renders — whether or not the user has expanded full metadata.
+  it('for policy type 2: hides USD amount always, and shows the question once expanded', () => {
     visit(2);
+    cy.get('app-type-policy-change').should('not.contain.text', 'USD amount');
     expand();
     cy.get('app-type-policy-change').should('contain.text', QUESTION_TEXT);
     cy.get('app-type-policy-change').should('not.contain.text', 'USD amount');

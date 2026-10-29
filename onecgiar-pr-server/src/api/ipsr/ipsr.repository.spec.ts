@@ -232,4 +232,100 @@ describe('IpsrRepository (unit)', () => {
       expect(sql).toContain('r1.ipsr_role_id = 1');
     });
   });
+  describe('PF2-R-1: program name next to the code (additive)', () => {
+    const normalize = (sql: string) => sql.replace(/\s+/g, ' ').trim();
+
+    it('getAllInnovationPackages projects submitter_name and submitter_short_name keeping submitter_id', async () => {
+      const rows = [
+        {
+          id: 1,
+          submitter_id: 5,
+          submitter_name: 'Program Full Name',
+          submitter_short_name: 'PFN',
+        },
+      ];
+      dsQuery.mockResolvedValueOnce(rows);
+
+      const res = await repo.getAllInnovationPackages({ id: 42 } as any);
+
+      const sql = normalize(dsQuery.mock.calls[0][0]);
+      expect(sql).toContain('ci.id AS submitter_id');
+      expect(sql).toContain('ci.name AS submitter_name');
+      expect(sql).toContain('ci.short_name AS submitter_short_name');
+      expect(res[0].submitter_name).toBe('Program Full Name');
+      expect(res[0].submitter_short_name).toBe('PFN');
+    });
+
+    it('getResultsInnovation picks initiative_name from the same IF(role=2) branch as official_code', async () => {
+      const rows = [{ id: 1, official_code: 'SP01', initiative_name: 'Name' }];
+      dsQuery.mockResolvedValueOnce([]);
+      dsQuery.mockResolvedValueOnce(rows);
+
+      const res = await repo.getResultsInnovation([1]);
+
+      const sql = normalize(dsQuery.mock.calls[1][0]);
+      expect(sql).toContain(') AS official_code');
+      expect(sql).toContain(') AS initiative_name');
+      // both IF blocks: lead-branch (ci2) and own-branch (ci) read the same tables, only the field differs
+      expect(sql).toContain(
+        'SELECT ci2.official_code FROM clarisa_initiatives ci2',
+      );
+      expect(sql).toContain('SELECT ci2.name FROM clarisa_initiatives ci2');
+      expect(sql).toContain(
+        'SELECT ci.official_code FROM clarisa_initiatives ci WHERE ci.id = rbi.inititiative_id',
+      );
+      expect(sql).toContain(
+        'SELECT ci.name FROM clarisa_initiatives ci WHERE ci.id = rbi.inititiative_id',
+      );
+      expect(sql.match(/IF\( \(rbi\.initiative_role_id = 2\),/g)).toHaveLength(
+        2,
+      );
+      expect(res[0].initiative_name).toBe('Name');
+    });
+
+    it('getResultInnovationById projects initiative_name next to official_code', async () => {
+      dsQuery.mockResolvedValueOnce([
+        { result_id: 10, lead_contact_person_id: null, initiative_name: 'N' },
+      ]);
+      dsQuery.mockResolvedValue([]);
+
+      const res = await repo.getResultInnovationById(10);
+
+      const sql = normalize(dsQuery.mock.calls[0][0]);
+      expect(sql).toContain(') AS official_code');
+      expect(sql).toContain(
+        'SELECT ci.name FROM clarisa_initiatives ci WHERE ci.id = rbi.inititiative_id ) AS initiative_name',
+      );
+      expect((res[0] as any).initiative_name).toBe('N');
+    });
+
+    it('getInnovationCoreStepOne projects initiative_name next to official_code', async () => {
+      dsQuery.mockResolvedValueOnce([{ result_id: 3 }]);
+      dsQuery.mockResolvedValueOnce([
+        { result_code: 1, official_code: 'SP01', initiative_name: 'N' },
+      ]);
+
+      const res = await repo.getInnovationCoreStepOne(1);
+
+      const sql = normalize(dsQuery.mock.calls[1][0]);
+      expect(sql).toContain(') AS official_code');
+      expect(sql).toContain(
+        'SELECT ci.name FROM clarisa_initiatives ci WHERE ci.id = rbi.inititiative_id ) AS initiative_name',
+      );
+      expect(res.initiative_name).toBe('N');
+    });
+
+    it('getStepTwoOne projects initiative_name next to initiative_official_code', async () => {
+      repoQuery.mockResolvedValueOnce([
+        { initiative_official_code: 'SP01', initiative_name: 'N' },
+      ]);
+
+      const res: any[] = await repo.getStepTwoOne(1);
+
+      const sql = normalize(repoQuery.mock.calls[0][0]);
+      expect(sql).toContain('ci.official_code as initiative_official_code');
+      expect(sql).toContain('ci.name as initiative_name');
+      expect(res[0].initiative_name).toBe('N');
+    });
+  });
 });

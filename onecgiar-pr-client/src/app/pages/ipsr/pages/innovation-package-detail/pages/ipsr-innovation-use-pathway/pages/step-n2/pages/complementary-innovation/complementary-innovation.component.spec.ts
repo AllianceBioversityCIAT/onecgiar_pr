@@ -326,6 +326,18 @@ describe('ComplementaryInnovationComponent', () => {
     expect(component.informationInnovationDevelopments[0].permissos).toBe(true);
   });
 
+  it('puts the P/A label (code - name) into the searchable full_name (PF2 M6)', () => {
+    const mockResponse = {
+      response: [{ result_code: 'c1', title: 'T', initiative_official_code: 'SP05', initiative_name: 'Better Diets', lead_contact_person: 'P', result_type_id: 7 }]
+    };
+    jest.spyOn(component.api.resultsSE, 'GETinnovationpathwayStepTwo').mockReturnValue(of(mockResponse));
+    jest.spyOn(component.api.rolesSE, 'validateInitiative').mockReturnValue(true);
+
+    component.loadInformationComplementaryInnovations();
+
+    expect(component.informationInnovationDevelopments[0].full_name).toContain('SP05 - Better Diets');
+  });
+
   it('should call loadInformationComplementaryInnovations and loadInnovationPackage on saveEdit', () => {
     jest.spyOn(component, 'loadInformationComplementaryInnovations');
     jest.spyOn(component, 'loadInnovationPackage');

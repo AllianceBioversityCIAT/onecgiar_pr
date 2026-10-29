@@ -39,6 +39,15 @@ export interface DacScorePayload {
   providedIn: 'root'
 })
 export class AiReviewService {
+  /**
+   * 🛑 Hotfix 16-Oct-2026: AI Review stays OFF for Knowledge Products until the AI service is
+   * enabled to evaluate them. P2-2385 opened the button on the client only and reached production
+   * unapproved; the service does not review KPs yet, so the dialog promised a review it could not
+   * give. This one switch closes both the sidebar button (`ResultSectionsService.showAiReview`) and
+   * the request itself (`onAIReviewClick`). Flip it to `true` once the AI service supports KPs —
+   * the impact-areas-only branch below is kept for that day.
+   */
+  knowledgeProductsEnabled = false;
   showAiReview = signal<boolean>(false);
   http = inject(HttpClient);
   dataControlSE = inject(DataControlService);
@@ -172,6 +181,8 @@ export class AiReviewService {
   async onAIReviewClick() {
     try {
       if (this.aiReviewButtonState !== 'idle') return;
+      // Chokepoint for the hotfix above: any launcher that bypasses the sidebar gate still stops here.
+      if (this.restrictToImpactAreas && !this.knowledgeProductsEnabled) return;
 
       this.aiReviewButtonState = 'loading';
 

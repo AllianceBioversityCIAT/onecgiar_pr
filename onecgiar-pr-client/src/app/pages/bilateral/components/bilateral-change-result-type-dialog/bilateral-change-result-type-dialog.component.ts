@@ -65,7 +65,7 @@ export class BilateralChangeResultTypeDialogComponent {
   }
   requiresHandle(): boolean { return this.selected?.id === 6; }
   canSubmit(): boolean {
-    return !!this.selected && !!this.justification.trim() &&
+    return !!this.selected &&
       (!this.requiresHandle() || !!this.handle.trim()) && !this.submitting;
   }
   submit(): void {

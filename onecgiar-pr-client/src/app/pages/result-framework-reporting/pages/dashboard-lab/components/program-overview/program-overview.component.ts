@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, input
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { NgClass } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideInfo } from '@ng-icons/lucide';
+import { lucideArrowRight, lucideChevronDown, lucideInfo } from '@ng-icons/lucide';
 import { HlmPopover, HlmPopoverContent, HlmPopoverPortal } from '@spartan/popover';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
@@ -38,6 +38,7 @@ import type { TocMapModel } from '../../dashboard-lab.toc-map';
 // shape; `OverviewScopeBreakdown`, the unfiltered per-scope breakdown (`OSF-T-7`).
 import type { OverviewAowProgressRowRich, OverviewScopeOption, OverviewScopeBreakdown } from '../../dashboard-lab.component';
 import type { ECElementEvent } from 'echarts/core';
+import { averageProgress } from '../../reporting-burndown';
 // @akili-spec changes/reporting-entry-hub — reuse the hub's centralised copy for the Report button's tooltip text.
 import { HUB_COPY } from '../reporting-entry-hub/hub-copy';
 import { SCIENCE_PROGRAM_DESCRIPTIONS } from '../reporting-program-band/reporting-program-band.component';
@@ -85,6 +86,27 @@ export interface StatusSegment {
   link: OverviewLink | null;
 }
 
+/** Program-wide Total General breakdown (sp-overview-total-general-card, STG-R-2/R-4). */
+export interface OverviewTotalBreakdown {
+  replicated: number;
+  new: number;
+  /** W3/Bilateral rows with status 5/6/7 (changes/sp-overview-w3-received, SWR-R-1). */
+  received: number;
+  pendingReview: number;
+}
+
+/** Total General composition kinds (changes/sp-overview-total-drilldown, STD-R-2/R-3; + 'received' by sp-overview-w3-received). */
+export type TotalSegmentKind = 'replicated' | 'new' | 'received' | 'pendingReview';
+
+/** View model of one composition-bar segment; widthPct is computed here, never in the template. */
+export interface TotalSegment {
+  kind: TotalSegmentKind;
+  count: number;
+  widthPct: number;
+  label: string;
+  colorClass: string;
+}
+
 export type OverviewSection = 'all' | 'w1w2' | 'bilateral' | 'aow';
 
 export interface AowProgressRow {
@@ -94,16 +116,23 @@ export interface AowProgressRow {
   total: number;
   /**
    * How many KPIs the zero-target rule (MRF-R-7) excluded from `total` on this row — the number the
-   * `excludes N zero-target KPIs` disclosure states (KCR-R-2.1). Optional: a caller that has no
+   * `excludes N KPI(s) with no target set` disclosure states (KCR-R-2.1, KTO-R-6). Optional: a caller that has no
    * figure to disclose simply omits it, and `0`/absent means the denominator hid nothing.
    * @akili-spec bugfix/kpi-count-reconciliation
    */
   zeroTarget?: number;
   /**
+   * `changes/kpi-progress-capped-average` KPC-R-5 — the row's capped mean (`buildRatio().percent`, one
+   * decimal) and the unrounded sum behind it. Multi-row figures are `Σ progressSum / Σ total`
+   * (KPC-DD-2), never an average of rounded `percent`s. The host (`dashboard-lab`) always fills them.
+   */
+  percent?: number;
+  progressSum?: number;
+  /**
    * P2-3296 AC3 — the ToC achievement of this Area of Work, computed server-side.
    *
-   * Distinct from `done` / `total`, which count how many KPIs have SOMETHING reported. Both are
-   * shown: "how much of the plan has been touched" and "how far it got against the targets" are
+   * Distinct from `done` / `total`, which count KPIs with SOMETHING reported (the `N of M` count; the
+   * % is the capped mean, KPC-R-2). Both are shown: "how much of the plan has been touched" and "how far it got against the targets" are
    * different questions and one is not a substitute for the other.
    *
    * Absent until the roll-up call lands, and `progress_percentage` is null when nothing was
@@ -220,7 +249,7 @@ export interface HeatmapModel {
     HlmPopoverContent,
     HlmPopoverPortal
   ],
-  providers: [provideIcons({ lucideChevronDown, lucideInfo })],
+  providers: [provideIcons({ lucideArrowRight, lucideChevronDown, lucideInfo })],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -238,6 +267,7 @@ export class ProgramOverviewComponent {
   /** Long About copy. Empty → short stand-in using the program name. */
   readonly programDescription = input<string>('');
   readonly statusSegments = input<StatusSegment[]>([]);
+  readonly totalBreakdown = input<OverviewTotalBreakdown>({ replicated: 0, new: 0, received: 0, pendingReview: 0 });
   /** AoW rows already sorted ascending by completion (least complete first). */
   readonly aowProgress = input<AowProgressRow[]>([]);
 
@@ -286,6 +316,8 @@ export class ProgramOverviewComponent {
   readonly bilateralCategories = input<CategoryBar[]>([]);
   /** W3/Bilateral results reporting status segments. */
   readonly bilateralStatusSegments = input<StatusSegment[]>([]);
+  /** Distinct categories among the W3/Bilateral rows in the review path — KPI 3's sub-line. */
+  readonly bilateralReviewCategoryCount = input<number>(0);
   /** Centers with reported W3/bilateral results. */
   readonly bilateralCenters = input<OverviewCenterBar[]>([]);
   /** W1/W2 category × status matrix (`OVW-R-2`). `null`/empty `rows` → card shows its empty state. */
@@ -377,14 +409,19 @@ export class ProgramOverviewComponent {
     const rows = this.aowProgress();
     const totalPlanned = rows.reduce((sum, r) => sum + r.total, 0);
     const totalDone = rows.reduce((sum, r) => sum + r.done, 0);
-    const pct = totalPlanned ? Math.round((totalDone / totalPlanned) * 100) : 0;
+    // KPC-R-3 / KPC-DD-2 — flat capped mean over every KPI: Σ progressSum / Σ total, never the
+    // mean of the rows' rounded percents.
+    const pct = averageProgress(
+      rows.reduce((sum, r) => sum + (r.progressSum ?? 0), 0),
+      totalPlanned
+    );
     return { totalPlanned, totalDone, pct, count: rows.length };
   });
 
   /**
    * Rail figures — the SUM of the hero's own `richRows` (OAH-R-1 "internal coherence" scenario:
    * same derivation site as the rows themselves, never a different source — the requirement's
-   * single-home rule). `pct` rounds `reported/total` the same way `aowStats.pct` above does.
+   * single-home rule). `pct` rounds `reported/total` the same way as `aowStats.pct` above (`Σ progressSum / Σ total`, KPC-R-3).
    * @akili-spec changes/overview-aow-progress-hero
    */
   readonly richStats = computed(() => {
@@ -395,27 +432,30 @@ export class ProgramOverviewComponent {
     const zeroTarget = rows.reduce((sum, r) => sum + r.zeroTarget, 0);
     const total = rows.reduce((sum, r) => sum + r.total, 0);
     const reported = complete + inProgress;
-    const pct = total ? Math.round((reported / total) * 100) : 0;
+    const pct = averageProgress(
+      rows.reduce((sum, r) => sum + (r.progressSum ?? 0), 0),
+      total
+    );
     return { complete, inProgress, notStarted, zeroTarget, total, reported, pct };
   });
 
   /**
    * Per-chip `title` disclosure for the Strategic-outcomes footer (`KCR-R-2.1` / `KCR-R-6`). The
    * chip's `total` is *Counted*, so a bucket that plans more than it counts states the difference —
-   * `excludes 1 zero-target KPI` / `excludes 3 zero-target KPIs`, pluralised exactly as
+   * `excludes 1 KPI with no target set` / `excludes 3 KPIs with no target set`, pluralised exactly as
    * `reporting-aow-table.countLabel` does. `null` (not `''`) omits the attribute: a chip that
    * excluded nothing must carry no tooltip at all (`KCR-AC-2`'s "2030 `0/1` no title").
    * @akili-spec bugfix/kpi-count-reconciliation
    */
   chipZeroTargetTitle(row: AowProgressRow): string | null {
     const n = row.zeroTarget ?? 0;
-    return n > 0 ? `excludes ${n} zero-target KPI${n === 1 ? '' : 's'}` : null;
+    return n > 0 ? `excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : null;
   }
 
   /** Rail `title` disclosure for the zero-target exclusion (OAH-R-1) — `null` omits the attribute. */
   readonly zeroTargetTitle = computed(() => {
     const n = this.richStats().zeroTarget;
-    return n > 0 ? `excludes ${n} zero-target KPIs` : null;
+    return n > 0 ? `excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : null;
   });
 
   /** SVG ring geometry — `r=40` circle (mockup's dasharray/dashoffset pair, design.md §6). */
@@ -427,14 +467,14 @@ export class ProgramOverviewComponent {
   readonly skeletonSplitPlaceholders = [0, 1, 2];
 
   /**
-   * Row percent from the rich counts (`reported/total`) — feeds the mono `reported/total · N%`
-   * figure (design.md §6 "Mono figures"). Rounded ONLY for that display; the segmented-bar
-   * SEGMENT WIDTHS below are never derived from this rounded value (OAH-R-3 "never
-   * percent-of-percent").
+   * Row percent — the row's capped mean (`buildRatio().percent`, KPC-R-5), NOT `reported/total`.
+   * Feeds the mono `reported/total · N%` figure (design.md §6 "Mono figures"). The segmented-bar
+   * SEGMENT WIDTHS below are never derived from this value: they are shares of KPI counts by state
+   * (OAH-R-3 "never percent-of-percent", KPC-DD-6).
    * @akili-spec changes/overview-aow-progress-hero
    */
   percentOfRich(row: OverviewAowProgressRowRich): number {
-    return row.total ? Math.round((row.reported / row.total) * 100) : 0;
+    return row.percent ?? 0;
   }
 
   /**
@@ -454,11 +494,14 @@ export class ProgramOverviewComponent {
 
   /**
    * Text alternative for the segmented bar (OAH-N-1) and its `title` disclosure (OAH-R-3): the
-   * three glossary counts, plus the zero-target exclusion note when any KPI was excluded.
+   * three glossary counts, plus the no-target exclusion note when any KPI was excluded.
    * @akili-spec changes/overview-aow-progress-hero
+   * @akili-spec changes/kpi-progress-target-only
    */
   rowBarTitle(row: OverviewAowProgressRowRich): string {
-    return `${row.complete} Complete, ${row.inProgress} In progress, ${row.notStarted} Not started`;
+    const base = `${row.complete} Complete, ${row.inProgress} In progress, ${row.notStarted} Not started`;
+    const n = row.zeroTarget ?? 0;
+    return n > 0 ? `${base}, excludes ${n} KPI${n === 1 ? '' : 's'} with no target set` : base;
   }
 
   /** `true` once a row has reported every counted KPI (OAH-R-4 complete swap). */
@@ -518,13 +561,15 @@ export class ProgramOverviewComponent {
     if (row.code) this.openAow.emit(row.code);
   }
 
-  readonly contributingCentersCount = computed(() => {
-    const centers = this.bilateralCenters();
-    return centers.filter(c => c.name !== 'Not specified').length || centers.length;
-  });
-
-  readonly w1w2SubmittedCount = computed(() =>
-    this.statusSegments().find(s => s.key === 'submitted')?.count ?? 0
+  /**
+   * W3/Bilateral results in the review path (Pending Review + Approved + Rejected). KPI 3 and the
+   * W3/Bilateral section-tab badge show only this: a Science Program reviews bilateral results, it
+   * never edits them (Editing belongs to the centers), so Editing and Discontinued are left out.
+   */
+  readonly bilateralReviewCount = computed(() =>
+    this.bilateralStatusSegments()
+      .filter(s => s.key === 'pending' || s.key === 'approved' || s.key === 'rejected')
+      .reduce((sum, s) => sum + s.count, 0)
   );
 
   readonly bilateralApprovedCount = computed(() =>
@@ -663,7 +708,28 @@ export class ProgramOverviewComponent {
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
 
-  readonly programResultsTotal = computed(() => this.statusTotal() + this.bilateralStatusTotal());
+  // @akili-spec changes/sp-overview-total-drilldown STD-R-1
+  readonly programResultsTotal = computed(() => {
+    const b = this.totalBreakdown();
+    // @akili-spec changes/sp-overview-w3-received (SWR-R-1): headline adds `received`, never `pendingReview`.
+    return b.replicated + b.new + b.received;
+  });
+
+  /** STD-R-2: one segment per non-zero row, in row order; widths are TS-computed (DD-4 colors). */
+  readonly totalSegments = computed<TotalSegment[]>(() => {
+    const b = this.totalBreakdown();
+    const total = this.programResultsTotal();
+    const all: Omit<TotalSegment, 'widthPct'>[] = [
+      { kind: 'replicated', count: b.replicated, label: 'innovations replicated for update', colorClass: 'bg-white' },
+      { kind: 'new', count: b.new, label: 'new results', colorClass: 'bg-cyan-300' },
+      // @akili-spec changes/sp-overview-w3-received (SWR-R-1, S-1.2)
+      { kind: 'received', count: b.received, label: 'W3/Bilateral results received', colorClass: 'bg-amber-300' }
+    ];
+    return all.filter(s => s.count > 0).map(s => ({ ...s, widthPct: (s.count / total) * 100 }));
+  });
+
+  /** STD-R-3: rows and segments emit the same intent; the host performs the navigation. */
+  readonly openTotalSegment = output<TotalSegmentKind>();
 
   readonly programResultsLoading = computed(() => this.meterLoading() || this.bilateralLoading());
 

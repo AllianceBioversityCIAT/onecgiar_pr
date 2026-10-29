@@ -831,11 +831,42 @@ export class ResultsController {
     return this.resultsService.getPendingReviewCount(programId);
   }
 
+  @Get('bilateral-center-overview-totals')
+  @ApiOperation({
+    summary: 'Get the Total results figures of the center Overview',
+    description:
+      'SR-164368. Counts, one row per result, for the center Overview Total results card: replicated results the center is on, new (not replicated) W3/Bilateral results the center is on, W1/W2 results that tag any bilateral project of the center, and the distinct total of the three.',
+  })
+  @ApiQuery({
+    name: 'centerId',
+    type: String,
+    required: true,
+    description: 'CLARISA center code or institution acronym',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: String,
+    required: true,
+    description: 'Reporting phase (version) ID',
+  })
+  @ApiOkResponse({
+    description: 'Bilateral center overview totals retrieved successfully.',
+  })
+  async getBilateralCenterOverviewTotals(
+    @Query('centerId') centerId: string,
+    @Query('versionId') versionId: string,
+  ) {
+    return this.resultsService.getBilateralCenterOverviewTotals(
+      centerId,
+      versionId,
+    );
+  }
+
   @Get('bilateral-center-results')
   @ApiOperation({
     summary: 'Get bilateral results by center and phase',
     description:
-      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters. Each row also includes `project_id` (the lead bilateral project CLARISA id, `null` when the result has no linked project) alongside `project_name`, both resolved from the same lead-project selection.',
+      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters. Each row also includes `project_id` (the CLARISA id of a bilateral project owned by the center when the result has one, otherwise the lead project; `null` when the result has no linked project) alongside `project_name`, both resolved from the same selection, and `overview_category` (INC-165171). The optional `scope=bilateral` narrows the rows to the W3 / bilateral reporting categories (`replicated_w3`, `new_w3`, `w1w2_tagging`).',
   })
   @ApiQuery({
     name: 'centerId',
@@ -849,14 +880,37 @@ export class ResultsController {
     required: true,
     description: 'Reporting phase (version) ID',
   })
+  @ApiQuery({
+    name: 'includeProjectTagging',
+    type: String,
+    required: false,
+    description:
+      'INC-165171. `true` also returns W1/W2 results that tag a bilateral project of the center without the center on the result (center Overview). Every row carries `overview_category`.',
+  })
+  @ApiQuery({
+    name: 'scope',
+    type: String,
+    required: false,
+    description:
+      'Only `bilateral` is recognised; any other value is ignored (no scope). `bilateral` implies the project-tagging rows and returns only `overview_category` `replicated_w3`, `new_w3` and `w1w2_tagging` (center Overview). Without it the row set is unchanged.',
+  })
   @ApiOkResponse({
     description: 'Bilateral center results retrieved successfully.',
   })
   async getBilateralCenterResults(
     @Query('centerId') centerId: string,
     @Query('versionId') versionId: string,
+    @Query('includeProjectTagging') includeProjectTagging?: string,
+    @Query('scope') scope?: string,
   ) {
-    return this.resultsService.getBilateralCenterResults(centerId, versionId);
+    // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-w3-scope CWS-R-1
+    // Only the exact value `bilateral` scopes the response; any other value is no scope.
+    return this.resultsService.getBilateralCenterResults(
+      centerId,
+      versionId,
+      includeProjectTagging === 'true',
+      scope === 'bilateral',
+    );
   }
 
   @Get('by-program-and-centers')

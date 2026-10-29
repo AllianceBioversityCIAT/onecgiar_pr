@@ -320,7 +320,7 @@ describe('BilateralAiUploadComponent', () => {
         expect(toastSpy).toHaveBeenCalledWith(
           expect.objectContaining({
             key: 'globalUserNotification',
-            severity: 'success',
+            severity: 'info',
             summary: 'P2 was added to the AI queue',
             action: expect.objectContaining({ label: 'View' }),
           }),

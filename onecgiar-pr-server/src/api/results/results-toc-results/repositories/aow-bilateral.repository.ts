@@ -4,6 +4,21 @@ import { env } from 'node:process';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import type { ReportingTocContext } from '../../../results-framework-reporting/reporting-toc-context/reporting-toc-context.interface';
 import { ProgressRollup, rollUpIndicators } from './toc-progress-rollup';
+import { W1_W2_RESULT_SOURCE_FILTER } from '../../../../shared/constants/w1-w2-result-source-filter.constant';
+import { TOC_KPI_COVERAGE_STATUS_IDS } from '../../../../shared/constants/toc-kpi-coverage-status.constant';
+
+/**
+ * @akili-spec changes/center-results-kpi-chips CRK-R-5 / CRK-DD-0.
+ * Other output / Other outcome KPIs are `type_value = 'custom'` rows whose only discriminator is
+ * the (trimmed, case-insensitive) `type_name`, so the specific `type_value LIKE` patterns never
+ * matched them. These branches are appended AFTER those patterns (a specific type always wins) and
+ * are interpolated into BOTH CASE copies of the select (result_type_id and the result_type_name
+ * subselect) so the two cannot drift. Free labels (`other`, `Other quantitative measure ...`) do
+ * not start with these prefixes and stay uncategorised. Ids: 8 = Other output, 4 = Other outcome.
+ */
+const CUSTOM_OTHER_KPI_CASE_BRANCHES = `
+          WHEN tri.type_value = 'custom' AND LOWER(TRIM(tri.type_name)) LIKE 'other output%' THEN 8
+          WHEN tri.type_value = 'custom' AND LOWER(TRIM(tri.type_name)) LIKE 'other outcome%' THEN 4`;
 
 interface TocResultRow {
   toc_result_id: number;
@@ -158,6 +173,23 @@ export interface ProjectTocLinkageNode {
   level_name?: string | null;
   related_node_id: string | null;
   indicators: ProjectTocLinkageIndicator[];
+}
+
+/**
+ * TKP-T-1: the ToC context of the coverage query plus the page version that
+ * bounds the covered set (`result.version_id`).
+ */
+export interface PortfolioTocCoverageContext extends ReportingTocContext {
+  versionId: number;
+}
+
+export interface PortfolioTocCoverageRow {
+  official_code: string;
+  category: string;
+  total: number;
+  covered: number;
+  /** TND-T-1: distinct in-scope KPIs with no target for the year (not in total). */
+  noTarget: number;
 }
 
 @Injectable()
@@ -569,7 +601,7 @@ export class AoWBilateralRepository {
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
           WHEN tri.type_value LIKE '%Number of people trained (capacity sharing for development)%' THEN 5
           WHEN tri.type_value LIKE '%Number of knowledge products%' THEN 6
-          WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7
+          WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7${CUSTOM_OTHER_KPI_CASE_BRANCHES}
           ELSE NULL
         END AS result_type_id,
         (SELECT rt.name
@@ -579,7 +611,7 @@ export class AoWBilateralRepository {
            WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
            WHEN tri.type_value LIKE '%Number of people trained (capacity sharing for development)%' THEN 5
            WHEN tri.type_value LIKE '%Number of knowledge products%' THEN 6
-           WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7
+           WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7${CUSTOM_OTHER_KPI_CASE_BRANCHES}
            ELSE NULL
          END) AS result_type_name,
         CASE
@@ -1285,6 +1317,109 @@ export class AoWBilateralRepository {
         error,
         className: AoWBilateralRepository.name,
         debug: true,
+      });
+    }
+  }
+
+  /**
+   * TKP-T-1 (toc-kpi-progress): ToC KPIs per program and node category, with how
+   * many of them are covered. One statement; every caller value is bound.
+   *
+   * - Total: distinct active indicators on in-scope nodes of the ToC phase. OUTPUT
+   *   keeps nodes in an AoW or without a work package; OUTCOME only nodes in an AoW
+   *   (TKP-P-1, TKP-P-2). Target-only rule (P2-3974, spec toc-kpi-target-filter): an
+   *   indicator counts only when it has at least one target row for the reporting
+   *   year with value > 0, so a no-target indicator leaves both total and covered.
+   * - No target: the same in-scope indicators that have no such target row. The
+   *   target table is LEFT-joined so they stay in the row set, and the conditional
+   *   counts keep them out of total and covered (TND-S-1.1 to TND-S-1.3).
+   * - Covered: indicators reached by a pooled result in a counting status of the page
+   *   version, through active links that are not marked not-applicable. The covered
+   *   set is built first from `result` (version / source / status), then LEFT-joined
+   *   by `tri.id`, because the indicator match needs CONVERT on both sides and cannot
+   *   use an index (design section 8).
+   */
+  async getPortfolioTocCoverage(
+    context: PortfolioTocCoverageContext,
+  ): Promise<PortfolioTocCoverageRow[]> {
+    try {
+      const sourcePlaceholders = W1_W2_RESULT_SOURCE_FILTER.map(() => '?').join(
+        ', ',
+      );
+      const statusPlaceholders = TOC_KPI_COVERAGE_STATUS_IDS.map(
+        () => '?',
+      ).join(', ');
+      // @akili-spec changes/portfolio-overview-revamp/toc-kpi-no-target-disclosure (TND-T-1)
+      // `tgt` is LEFT-joined: total and covered carry an explicit tgt condition
+      // (TND-DD-2) and no_target counts the rows where tgt is NULL (TND-DD-1).
+      const query = `
+        SELECT
+          tr.official_code AS official_code,
+          tr.category AS category,
+          COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NOT NULL THEN tri.id END) AS total,
+          COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NOT NULL AND cov.indicator_id IS NOT NULL THEN tri.id END) AS covered,
+          COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NULL THEN tri.id END) AS no_target
+        FROM ${env.DB_TOC}.toc_results tr
+        LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
+          AND wp.year = ?
+          AND wp.wp_official_code LIKE CONCAT(tr.official_code, '-%')
+        JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+          AND tri.is_active = 1
+        LEFT JOIN (
+          SELECT DISTINCT trit.id_indicator AS indicator_id,
+                 trit.toc_result_indicator_id AS related_node_id
+          FROM ${env.DB_TOC}.toc_result_indicator_target trit
+          WHERE trit.target_date = ?
+            AND CAST(trit.target_value AS DECIMAL(15,2)) > 0
+        ) tgt ON tgt.indicator_id = tri.id
+          AND CONVERT(tgt.related_node_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        LEFT JOIN (
+          SELECT DISTINCT tri2.id AS indicator_id
+          FROM ${env.DB_NAME}.result r
+          JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
+            AND rtr.is_active = 1
+          JOIN ${env.DB_NAME}.results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+            AND rtri.is_active = 1
+            AND rtri.is_not_aplicable = 0
+          JOIN ${env.DB_TOC}.toc_results_indicators tri2 ON tri2.toc_results_id = rtr.toc_result_id
+            AND CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri2.related_node_id USING utf8mb4)
+          WHERE r.is_active = 1
+            AND r.source IN (${sourcePlaceholders})
+            AND r.status_id IN (${statusPlaceholders})
+            AND r.version_id = ?
+        ) cov ON cov.indicator_id = tri.id
+        WHERE tr.phase = ?
+          AND tr.is_active = 1
+          AND tr.category IN ('OUTPUT', 'OUTCOME')
+          AND (
+            (tr.category = 'OUTPUT' AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL))
+            OR (tr.category = 'OUTCOME' AND wp.toc_id IS NOT NULL)
+          )
+        GROUP BY tr.official_code, tr.category
+      `;
+      const rows = await this.dataSource.query(query, [
+        context.reportingYear,
+        context.reportingYear,
+        ...W1_W2_RESULT_SOURCE_FILTER,
+        ...TOC_KPI_COVERAGE_STATUS_IDS,
+        context.versionId,
+        context.phaseUuid,
+      ]);
+      return rows.map(
+        (row: Record<string, unknown>): PortfolioTocCoverageRow => ({
+          official_code: row.official_code as string,
+          category: row.category as string,
+          total: Number(row.total),
+          covered: Number(row.covered),
+          noTarget: Number(row.no_target),
+        }),
+      );
+    } catch (error) {
+      // debug: false: with true the handler logs the query text and bound params.
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: false,
       });
     }
   }

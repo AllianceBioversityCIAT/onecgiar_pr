@@ -29,6 +29,7 @@ import { BasicReportFiltersNormalized } from './dto/basic-report-filters.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE } from '../bilateral/constants/w3-center-alias.constants';
 
 /**
  * P2-3420 / P2-3421 — THE ONE PLACE that decides which Innovation Development results may be
@@ -1593,6 +1594,8 @@ WHERE
     ci.short_name as initiative_short_name,
     ci.official_code as initiative_official_code,
     r.lead_contact_person,
+    /* P2-3272: the submit reads the directory id to send the IP confirmation email. */
+    r.lead_contact_person_id,
     v.status as is_phase_open,
     v.phase_name,
     v.phase_year,
@@ -4180,11 +4183,94 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * @akili-spec bilateral/center-overview-pa-contribution CPA-R-6
+   * `JSON_ARRAYAGG` comes back as JSON text or an already parsed array depending on the driver.
+   * Returns `number[]`, or `null` for NULL, an empty or an invalid value.
+   */
+  private static normaliseTaggedProjectIds(raw: unknown): number[] | null {
+    let value: unknown = raw;
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return null;
+      }
+    }
+    if (!Array.isArray(value)) return null;
+    const ids = value.map(Number).filter((id) => Number.isFinite(id));
+    return ids.length ? ids : null;
+  }
+
+  /**
+   * INC-165171 — every row also carries `overview_category`, the one bucket the center Overview
+   * counts it in, so all of its cards are built from this single row set:
+   * `replicated_w3` / `replicated_w1w2` (is_replicated = 1, by source), `new_w3` (API, not
+   * replicated), `w1w2_tagging` (Result, tags a bilateral project owned by the center) and
+   * `w1w2_center_only` (Result, center on the result, no center project).
+   * `project_id` / `project_name` prefer a project owned by the center over the lead project, so
+   * a result linked to both lands on the center's own project.
+   * `includeProjectTagging` adds the W1/W2 results that tag a center project without the center
+   * on the result (`is_leading_result` NULL). Off by default: the Results tab and the portfolio
+   * Centers block keep their row set.
+   * `bilateralScope` (center-overview-w3-scope) implies the tagging rows and keeps only
+   * `replicated_w3`, `new_w3` and `w1w2_tagging`; the predicate sits next to the `CASE` it mirrors.
+   * Project ownership follows `BilateralProjectsService.getProjectsByCenter`: `organization_code`
+   * = the center institution, or `organization_code` NULL and the W3 alias of the center code.
+   */
   async getResultsByBilateralCenter(
     centerId: string,
     versionId: number,
+    includeProjectTagging = false,
+    bilateralScope = false,
   ): Promise<any[]> {
+    // One `(acronym = ? AND code = ?)` per alias, as in getBilateralCenterOverviewTotals.
+    const aliasEntries = Object.entries(
+      W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE,
+    );
+    const aliasCondition = aliasEntries.length
+      ? aliasEntries
+          .map(() => '(cp.source_center_acronym = ? AND c.code = ?)')
+          .join(' OR ')
+      : 'FALSE';
+    const aliasParams = aliasEntries.flat();
+
     const query = `
+      WITH center AS (
+        SELECT cc.code, cc.institutionId
+        FROM clarisa_center cc
+        INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+        WHERE cc.code = ? OR ci.acronym = ?
+      ),
+      center_projects AS (
+        SELECT DISTINCT cp.id
+        FROM clarisa_projects cp
+        INNER JOIN center c
+                ON cp.organization_code = c.institutionId
+                OR (
+                  cp.organization_code IS NULL
+                  AND (${aliasCondition})
+                )
+      ),
+      -- SR-164368: one row per result. A result can carry two active results_center rows for
+      -- the same center (8641 in Reporting 2026); a plain JOIN listed it twice and every
+      -- overview count went up by one. MAX keeps lead = 1 when any of the rows says so.
+      center_rc AS (
+        SELECT rcx.result_id, MAX(rcx.is_leading_result) AS is_leading_result
+        FROM results_center rcx
+        WHERE rcx.is_active = 1
+          AND (
+            rcx.center_id = ?
+            OR rcx.center_id IN (SELECT code FROM center)
+          )
+        GROUP BY rcx.result_id
+      ),
+      tagged AS (
+        SELECT DISTINCT rbpt.result_id
+        FROM results_by_projects rbpt
+        INNER JOIN center_projects cpt ON cpt.id = rbpt.project_id
+        WHERE rbpt.is_active = 1
+      )
       SELECT
         r.id,
         r.result_code,
@@ -4200,7 +4286,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
                   ON cp.id = rbp.project_id
           WHERE rbp.result_id = r.id
             AND rbp.is_active = 1
-          ORDER BY rbp.is_lead DESC, rbp.id DESC
+          ORDER BY rbp.project_id IN (SELECT id FROM center_projects) DESC, rbp.is_lead DESC, rbp.id DESC
           LIMIT 1
         ) AS project_name,
         -- @akili-spec bilateral/center-overview-tab COV-R-16: the Overview's "Projects covered"
@@ -4214,7 +4300,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
                   ON cp.id = rbp.project_id
           WHERE rbp.result_id = r.id
             AND rbp.is_active = 1
-          ORDER BY rbp.is_lead DESC, rbp.id DESC
+          ORDER BY rbp.project_id IN (SELECT id FROM center_projects) DESC, rbp.is_lead DESC, rbp.id DESC
           LIMIT 1
         ) AS project_id,
         rt.name  AS result_type,
@@ -4258,36 +4344,263 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.creation_method,
         r.is_replicated,
         CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
-        rc.is_leading_result
-      FROM result r
-      INNER JOIN results_center rc
-             ON rc.result_id = r.id
-            AND rc.is_active = 1
-            AND (
-              rc.center_id = ?
-              OR EXISTS (
-                SELECT 1
-                FROM clarisa_center cc
-                INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
-                WHERE cc.code = rc.center_id
-                  AND ci.acronym = ?
-              )
+        rc.is_leading_result,
+        -- Keep in step with the bilateral scope predicate in the WHERE below (CWS-R-1).
+        CASE
+          WHEN COALESCE(r.is_replicated, 0) = 1 AND r.source = 'API' THEN 'replicated_w3'
+          WHEN COALESCE(r.is_replicated, 0) = 1 THEN 'replicated_w1w2'
+          WHEN r.source = 'API' THEN 'new_w3'
+          WHEN tg.result_id IS NOT NULL THEN 'w1w2_tagging'
+          ELSE 'w1w2_center_only'
+        END AS overview_category,
+        -- @akili-spec bilateral/center-overview-pa-contribution CPA-R-6
+        -- Center project ids a W1/W2 tagging row links to, for the Overview's projects-by-P/A
+        -- chart. Correlated subquery in the SELECT list (no JOIN, so the row count and order are
+        -- untouched). MySQL has no DISTINCT inside JSON_ARRAYAGG; center_projects is already
+        -- DISTINCT, so filtering it by IN (...) yields each id once. Only under the bilateral
+        -- scope flag; NULL otherwise. The condition repeats the 'w1w2_tagging' branch of the CASE
+        -- above (not replicated, not API, tags a center project): keep in step with it.
+        CASE
+          WHEN ? = 1
+           AND COALESCE(r.is_replicated, 0) = 0
+           AND r.source <> 'API'
+           AND tg.result_id IS NOT NULL
+          THEN (
+            SELECT JSON_ARRAYAGG(cpx.id)
+            FROM center_projects cpx
+            WHERE cpx.id IN (
+              SELECT rbpx.project_id
+              FROM results_by_projects rbpx
+              WHERE rbpx.result_id = r.id
+                AND rbpx.is_active = 1
             )
+          )
+          ELSE NULL
+        END AS tagged_center_project_ids
+      FROM result r
+      LEFT JOIN center_rc rc ON rc.result_id = r.id
+      LEFT JOIN tagged tg ON tg.result_id = r.id
       INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
       INNER JOIN result_status rs ON rs.result_status_id = r.status_id
       WHERE r.version_id = ?
         AND r.source IN ('API', 'Result')
         AND r.is_active = 1
+        AND (
+          rc.result_id IS NOT NULL
+          OR (? = 1 AND r.source = 'Result' AND tg.result_id IS NOT NULL)
+        )
+        -- @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-w3-scope CWS-R-1
+        -- Bilateral scope: keep only replicated_w3, new_w3 and w1w2_tagging. This is the
+        -- complement of replicated_w1w2 and w1w2_center_only under the CASE above, so it MUST
+        -- change together with that CASE (same precedence). Rows here are API or Result, so a
+        -- row that is not API is a Result: it stays only when it is not replicated and tags a
+        -- center project. Flag 0 leaves the row set exactly as before.
+        AND (? = 0 OR r.source = 'API' OR (COALESCE(r.is_replicated, 0) = 0 AND tg.result_id IS NOT NULL))
       ORDER BY r.created_date DESC, r.id DESC
     `;
 
     try {
-      return await this.query(query, [centerId, centerId, versionId]);
+      const rows = await this.query(query, [
+        centerId,
+        centerId,
+        ...aliasParams,
+        centerId,
+        bilateralScope ? 1 : 0, // tagged_center_project_ids (CPA-R-6), SELECT list precedes WHERE
+        versionId,
+        includeProjectTagging || bilateralScope ? 1 : 0,
+        bilateralScope ? 1 : 0,
+      ]);
+      return (rows ?? []).map((row: any) => ({
+        ...row,
+        tagged_center_project_ids: ResultRepository.normaliseTaggedProjectIds(
+          row?.tagged_center_project_ids,
+        ),
+      }));
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
         error,
         debug: true,
+      });
+    }
+  }
+
+  /**
+   * SR-164368 — the three figures of the center Overview "Total results" card, counted in SQL,
+   * one row per result:
+   * - `replicated_count`: results the center is on (results_center) with `is_replicated = 1`.
+   * - `new_w3_count`: W3/Bilateral (`source = 'API'`) results the center is on, not replicated.
+   * - `w1w2_tagging_count`: W1/W2 (`source = 'Result'`) results that tag any bilateral project of
+   *   the center, whether or not the center is on the result. Project ownership is the rule of
+   *   `BilateralProjectsService.getProjectsByCenter`: `organization_code` = the center institution,
+   *   or `organization_code` NULL and `source_center_acronym` aliased to the center code.
+   * - `total_count`: distinct results across the three sets.
+   * `centerId` is the center code or its institution acronym, like `getResultsByBilateralCenter`.
+   */
+  async getBilateralCenterOverviewTotals(
+    centerId: string,
+    versionId: number,
+  ): Promise<{
+    replicated_count: number;
+    new_w3_count: number;
+    w1w2_tagging_count: number;
+    total_count: number;
+  }> {
+    // One `(acronym = ? AND code = ?)` per alias. Column-to-value comparisons on purpose: a
+    // CONCAT of source_center_acronym and code mixes their collations and MySQL rejects the IN.
+    const aliasEntries = Object.entries(
+      W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE,
+    );
+    const aliasCondition = aliasEntries.length
+      ? aliasEntries
+          .map(() => '(cp.source_center_acronym = ? AND c.code = ?)')
+          .join(' OR ')
+      : 'FALSE';
+    const aliasParams = aliasEntries.flat();
+
+    const query = `
+      WITH center AS (
+        SELECT cc.code, cc.institutionId
+        FROM clarisa_center cc
+        INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+        WHERE cc.code = ? OR ci.acronym = ?
+        LIMIT 1
+      ),
+      center_results AS (
+        SELECT DISTINCT r.id, r.source, COALESCE(r.is_replicated, 0) AS is_replicated
+        FROM result r
+        INNER JOIN results_center rc ON rc.result_id = r.id AND rc.is_active = 1
+        INNER JOIN center c ON c.code = rc.center_id
+        INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
+        INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+        WHERE r.version_id = ?
+          AND r.source IN ('API', 'Result')
+          AND r.is_active = 1
+      ),
+      tagging AS (
+        SELECT DISTINCT r.id
+        FROM result r
+        INNER JOIN results_by_projects rbp ON rbp.result_id = r.id AND rbp.is_active = 1
+        INNER JOIN clarisa_projects cp ON cp.id = rbp.project_id
+        INNER JOIN center c
+                ON cp.organization_code = c.institutionId
+                OR (
+                  cp.organization_code IS NULL
+                  AND (${aliasCondition})
+                )
+        INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
+        INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+        WHERE r.version_id = ?
+          AND r.source = 'Result'
+          AND r.is_active = 1
+      )
+      SELECT
+        (SELECT COUNT(*) FROM center_results WHERE is_replicated = 1) AS replicated_count,
+        (SELECT COUNT(*) FROM center_results WHERE source = 'API' AND is_replicated = 0) AS new_w3_count,
+        (SELECT COUNT(*) FROM tagging) AS w1w2_tagging_count,
+        (
+          SELECT COUNT(*) FROM (
+            SELECT id FROM center_results
+            WHERE is_replicated = 1 OR (source = 'API' AND is_replicated = 0)
+            UNION
+            SELECT id FROM tagging
+          ) totals
+        ) AS total_count
+    `;
+
+    try {
+      const [row] = await this.query(query, [
+        centerId,
+        centerId,
+        versionId,
+        ...aliasParams,
+        versionId,
+      ]);
+      return {
+        replicated_count: Number(row?.replicated_count ?? 0),
+        new_w3_count: Number(row?.new_w3_count ?? 0),
+        w1w2_tagging_count: Number(row?.w1w2_tagging_count ?? 0),
+        total_count: Number(row?.total_count ?? 0),
+      };
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * Portfolio Overview global filters (changes/portfolio-overview-revamp/global-filters,
+   * GLF-T-1, GLF-R-11, design §5): the result -> project and result -> Center maps of one
+   * version, as four bound-parameter statements. The result scope is the same in all of
+   * them: `r.version_id = ?`, active, types 10 and 11 excluded, active links only.
+   * `SELECT DISTINCT` removes duplicate active rows (SR-164368) without any string-length
+   * limit, so there is no GROUP_CONCAT. `is_w3` flags a project linked to at least one
+   * `source = 'API'` result.
+   */
+  async getPortfolioResultDimensions(versionId: number) {
+    const projectLinksSql = `
+      SELECT DISTINCT r.id AS result_id, rbp.project_id AS project_id
+      FROM result r
+      INNER JOIN results_by_projects rbp ON rbp.result_id = r.id AND rbp.is_active = 1
+      WHERE r.version_id = ?
+        AND r.is_active = 1
+        AND r.result_type_id NOT IN (10, 11)
+    `;
+    const centerLinksSql = `
+      SELECT DISTINCT r.id AS result_id, rc.center_id AS center_id
+      FROM result r
+      INNER JOIN results_center rc ON rc.result_id = r.id AND rc.is_active = 1
+      WHERE r.version_id = ?
+        AND r.is_active = 1
+        AND r.result_type_id NOT IN (10, 11)
+        AND rc.center_id IS NOT NULL
+    `;
+    const projectLabelsSql = `
+      SELECT
+        cp.id AS id,
+        cp.short_name AS short_name,
+        cp.full_name AS full_name,
+        MAX(CASE WHEN r.source = 'API' THEN 1 ELSE 0 END) AS is_w3
+      FROM clarisa_projects cp
+      INNER JOIN results_by_projects rbp ON rbp.project_id = cp.id AND rbp.is_active = 1
+      INNER JOIN result r ON r.id = rbp.result_id
+      WHERE r.version_id = ?
+        AND r.is_active = 1
+        AND r.result_type_id NOT IN (10, 11)
+      GROUP BY cp.id, cp.short_name, cp.full_name
+    `;
+    const centerLabelsSql = `
+      SELECT cc.code AS code, ci.acronym AS acronym, ci.name AS name
+      FROM clarisa_center cc
+      LEFT JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+      WHERE cc.code IN (
+        SELECT DISTINCT rc.center_id
+        FROM result r
+        INNER JOIN results_center rc ON rc.result_id = r.id AND rc.is_active = 1
+        WHERE r.version_id = ?
+          AND r.is_active = 1
+          AND r.result_type_id NOT IN (10, 11)
+          AND rc.center_id IS NOT NULL
+      )
+    `;
+
+    try {
+      const [projectLinks, centerLinks, projects, centers] = await Promise.all([
+        this.query(projectLinksSql, [versionId]),
+        this.query(centerLinksSql, [versionId]),
+        this.query(projectLabelsSql, [versionId]),
+        this.query(centerLabelsSql, [versionId]),
+      ]);
+      return { projectLinks, centerLinks, projects, centers };
+    } catch (error) {
+      // debug: false: with true the handler logs the query text and bound params.
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: false,
       });
     }
   }

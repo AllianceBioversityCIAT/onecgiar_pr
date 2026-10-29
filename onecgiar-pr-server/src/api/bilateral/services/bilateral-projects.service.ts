@@ -4,6 +4,7 @@ import { In, IsNull, Repository } from 'typeorm';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaProject } from '../../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE } from '../constants/w3-center-alias.constants';
+import { APPROVED_MAPPING_STATUSES } from '../constants/approved-mapping-statuses.constants';
 import { YearRepository } from '../../results/years/year.repository';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
@@ -403,15 +404,9 @@ export class BilateralProjectsService {
       (mapping) =>
         !!mapping.programCode?.trim() &&
         Number(mapping.allocation) > 0 &&
-        BilateralProjectsService.APPROVED_MAPPING_STATUSES.has(
-          mapping.status?.trim() ?? '',
-        ),
+        APPROVED_MAPPING_STATUSES.has(mapping.status?.trim() ?? ''),
     );
   }
-
-  /** `clarisa_project_mappings.status` values that mean "approved" (see `hasProgramMapping`). */
-  private static readonly APPROVED_MAPPING_STATUSES: ReadonlySet<string> =
-    new Set(['Confirmed']);
 
   /**
    * `BIL-POM-OQ-1` correction (2026-09-22): the original `bilateral/project-overview-metrics`
@@ -424,9 +419,9 @@ export class BilateralProjectsService {
    * result's `bilateral_project` payload field, writing a `results_by_projects` row with
    * `is_lead` left at its default (never `true` — W1/W2 results have no "lead bilateral
    * project" concept). That is why the existing per-result `project_id` subquery elsewhere in
-   * this codebase (`ResultRepository.getResultsByBilateralCenter`, `LIMIT 1 ORDER BY is_lead
-   * DESC`) never surfaces these rows: it deliberately keeps only the LEAD project per result,
-   * for a different consumer (`COV-R-16` "Projects covered"). This is a genuinely separate
+   * this codebase (`ResultRepository.getResultsByBilateralCenter`, `LIMIT 1`) keeps ONE project
+   * per result — a center-owned one first since INC-165171, otherwise the lead — for a different
+   * consumer (`COV-R-16` "Projects covered"). This is a genuinely separate
    * count — one bilateral project can be the "contributing" link for many W1/W2 results, and
    * each of those results counts toward every project it lists, not just one.
    *

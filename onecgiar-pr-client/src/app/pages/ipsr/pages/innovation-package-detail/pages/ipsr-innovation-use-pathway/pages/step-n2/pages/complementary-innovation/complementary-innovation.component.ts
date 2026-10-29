@@ -5,6 +5,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
 import { ComplementaryInnovationService } from './services/complementary-innovation.service';
+import { scienceProgramLabel } from '../../../../../../../../../../shared/utils/science-program-label.util';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../../../internationalization/result-detail-section-load.copy';
 import { CanComponentDeactivate } from '../../../../../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
@@ -385,7 +386,7 @@ export class ComplementaryInnovationComponent implements OnInit, CanComponentDea
   loadInformationComplementaryInnovations(): void {
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp: any) => {
       resp.response.forEach(inno => {
-        inno.full_name = `${inno.result_code} ${inno.title} ${inno.initiative_official_code} ${inno.initiative_official_code} ${inno.lead_contact_person} yes no`;
+        inno.full_name = `${inno.result_code} ${inno.title} ${inno.initiative_official_code} ${scienceProgramLabel(inno.initiative_official_code, inno.initiative_name)} ${inno.lead_contact_person} yes no`;
         this.isInitiative = this.api.rolesSE.validateInitiative(inno.initiative_id);
         inno.permissos = this.isInitiative;
       });

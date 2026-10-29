@@ -144,3 +144,31 @@ describe('UnsavedChangesGuard', () => {
     });
   });
 });
+
+describe('UnsavedChangesGuard with no mounted section (RDN-R-1)', () => {
+  let guard: UnsavedChangesGuard;
+  let intentSE: UnsavedNavigationIntentService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [UnsavedChangesGuard, { provide: UnsavedChangesDialogService, useValue: { openSaveDiscard: jest.fn() } }]
+    });
+    guard = TestBed.inject(UnsavedChangesGuard);
+    intentSE = TestBed.inject(UnsavedNavigationIntentService);
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined]
+  ])('canDeactivate(%s) returns true without throwing and consumes a pending silent flag', (_label, missing) => {
+    intentSE.markSilent();
+
+    let result: ReturnType<UnsavedChangesGuard['canDeactivate']> | undefined;
+    expect(() => {
+      result = guard.canDeactivate(missing as unknown as CanComponentDeactivate);
+    }).not.toThrow();
+
+    expect(result).toBe(true);
+    expect(intentSE.consumeSilent()).toBe(false);
+  });
+});

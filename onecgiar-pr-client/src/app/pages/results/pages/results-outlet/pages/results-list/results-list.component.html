@@ -302,7 +302,7 @@
                     [queryParams]="getResultQueryParams(subResult)"
                     (click)="onResultLinkClick($event, subResult)">
                     <span class="rc-program__dot" [style.background]="programDotColor(programCode(subResult))"></span>
-                    <span class="rc-program__code">{{ programCode(subResult) || '—' }}</span>
+                    <span class="rc-program__code" [attr.title]="programLabel(subResult) || null">{{ programLabel(subResult) || '—' }}</span>
                   </a>
                 } @else if (column.attr === 'lead_center') {
                   <a

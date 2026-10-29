@@ -337,7 +337,7 @@
               <p
                 class="m-0 text-xs font-medium text-[var(--pr-color-secondary-300)]"
                 [style.opacity]="isInitiativeClosed(item.official_code) ? '0.5' : '1'">
-                {{ item.official_code }} - {{ item.role }}
+                {{ initiativeLabel(item) }} - {{ item.role }}
                 @if (isInitiativeClosed(item.official_code)) {
                   <span class="text-[11px] font-semibold text-[var(--pr-color-red-300)]"> (Closed)</span>
                 }

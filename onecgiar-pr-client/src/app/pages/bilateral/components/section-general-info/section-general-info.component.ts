@@ -207,7 +207,17 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
    * Read straight from the service, the way this section already reads the rest of the result state.
    */
-  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+  // R2B-1 — status AND who: the editor lowers `isReadOnly` for anyone outside the lead centre (RNB-1), same lock as Contributors.
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser() || this.autoSaveService.isReadOnly());
+
+  /**
+   * P2-3980 — a bilateral Knowledge Product mirrors pool funding (`rd-general-information`): Title and
+   * Description come from the repository, so they are read-only and no longer required (an empty
+   * description reads "Not applicable"). Deliberately NOT folded into `readOnly()`: Lead contact person
+   * keeps using that one and stays editable.
+   */
+  readonly isKnowledgeProduct = this.creationService.isKnowledgeProduct;
+  readonly titleDescriptionReadOnly = computed(() => this.readOnly() || this.isKnowledgeProduct());
 
   /**
    * BIL-RAU-T-8 (design.md §6.2, R-1): visibility gate for the Annual updating block — replicated
@@ -333,6 +343,8 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     const d = this.description();
     const titleFilled = !this.isPlaceholderTitle(t) && !!t.trim();
     const descriptionFilled = !!d.trim();
+    // P2-3980: a KP's repository title/description are not the reporter's to fill — optional, never gating Submit.
+    const optionalForKp = this.isKnowledgeProduct() ? { optional: true } : {};
     const body = this.leadContactBody();
     // A name is enough, with or without a directory match — see `hasSelectedContact` in
     // `lead-contact-person-field`. Requiring the match would leave every API-reported result
@@ -349,8 +361,8 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     this.mdsTracker.setSectionFields(
       'general-info',
       [
-        { key: 'title', label: 'Title', filled: titleFilled },
-        { key: 'description', label: 'Description', filled: descriptionFilled },
+        { key: 'title', label: 'Title', filled: titleFilled, ...optionalForKp },
+        { key: 'description', label: 'Description', filled: descriptionFilled, ...optionalForKp },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: leadContactFilled },
       ],
       'core'

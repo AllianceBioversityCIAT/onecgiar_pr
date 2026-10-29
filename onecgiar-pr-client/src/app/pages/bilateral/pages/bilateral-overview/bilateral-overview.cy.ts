@@ -5,7 +5,7 @@
 // `design.md` §6.3 / §10, `tasks.md` `COV-T-8`:
 //
 //   (a) the KPI deck's viewport-keyed Tailwind grid actually sheds columns at the browser's real
-//       computed layout (5 / 5 / 3 / 1 — `COV-R-19`, `COV-AC-23`), measured via each card's
+//       computed layout (4 / 4 / 3 / 1 — `COV-R-19`, `COV-AC-23`), measured via each card's
 //       `getBoundingClientRect().left`, never by asserting a class name is present;
 //   (b) `document.documentElement.scrollWidth <= clientWidth` at every viewport — no card
 //       overflows its column into a horizontal document scroll;
@@ -92,9 +92,8 @@ const STATUS_IDS = [1, 2, 3, 4, 5, 6, 7];
 
 /**
  * 47 results across the first 20 projects (project 21 stays at zero); two rows carry no linked
- * project (`project_id: null`, `source: 'Result'`) — the "No bilateral project" bucket. Dates
- * spread Aug 1 – Sep 27 2026, inside `OPEN_PHASE`'s window, so the pace chart plots a real window
- * instead of falling back to the no-dates case.
+ * project (`project_id: null`, replicated W3) — the no-project line. Dates
+ * spread Aug 1 – Sep 27 2026, inside `OPEN_PHASE`'s window.
  */
 const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
   const noProject = index === 3 || index === 17;
@@ -104,6 +103,7 @@ const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
   const dateString = `2026-${inSeptember ? '09' : '08'}-${String(inSeptember ? day - 31 : day).padStart(2, '0')}`;
   const resultTypeId = RESULT_TYPE_IDS[index % RESULT_TYPE_IDS.length];
   const statusId = STATUS_IDS[index % STATUS_IDS.length];
+  const replicated = noProject || index % 4 === 1;
 
   return {
     id: index + 1,
@@ -118,17 +118,20 @@ const ROWS: BilateralCenterResult[] = Array.from({ length: 47 }, (_, index) => {
     status_name: `Status ${statusId}`,
     created_date: dateString,
     version_id: OPEN_PHASE.id,
-    source: noProject && index % 2 === 0 ? 'Result' : 'API',
+    // CWS-T-4 — the stub mirrors the scoped server: only replicated_w3 / new_w3 rows (no W1/W2 groups).
+    source: 'API',
+    is_replicated: replicated,
+    overview_category: replicated ? 'replicated_w3' : 'new_w3',
     creation_method: index % 3 === 0 ? 'AI' : 'Manual',
     is_ai_generated: index % 3 === 0 ? 1 : 0,
     is_leading_result: index % 2 === 0 ? 1 : 0,
   };
 });
 
-const KPI_TESTIDS = ['kpi-total', 'kpi-pending', 'kpi-approved', 'kpi-attention', 'kpi-projects-covered'];
+const KPI_TESTIDS = ['kpi-total', 'kpi-pending', 'kpi-approved', 'kpi-projects-covered'];
 const KPI_SELECTOR = KPI_TESTIDS.map(id => `[data-testid="${id}"]`).join(', ');
 
-const CHART_TESTIDS = ['status-chart', 'by-project-chart', 'by-sp-chart', 'by-type-chart', 'pace-chart'];
+const CHART_TESTIDS = ['status-chart', 'by-project-chart', 'by-pa-chart', 'projects-by-pa-chart', 'by-type-chart'];
 const CHART_SELECTOR = CHART_TESTIDS.map(id => `[data-testid="${id}"]`).join(', ');
 
 interface ViewportCase {
@@ -141,8 +144,8 @@ interface ViewportCase {
 /** `design.md` §6.3 grid classes / `requirements.md` `COV-R-19` table — the exact 4 cases the task
  *  names, plus the second 1280 height `KZ-EVM-1` needs for the sticky proof. */
 const VIEWPORTS: ViewportCase[] = [
-  { width: 1280, height: 720, label: '1280x720', expectedColumns: 5 },
-  { width: 1280, height: 1000, label: '1280x1000', expectedColumns: 5 },
+  { width: 1280, height: 720, label: '1280x720', expectedColumns: 4 },
+  { width: 1280, height: 1000, label: '1280x1000', expectedColumns: 4 },
   { width: 900, height: 800, label: '900x800', expectedColumns: 3 },
   { width: 375, height: 800, label: '375x800', expectedColumns: 1 },
 ];
@@ -242,7 +245,7 @@ function scrollWorkArea(top: number): void {
 }
 
 describe('BilateralOverviewComponent — CT layout gate (COV-T-8)', () => {
-  it('KPI deck sheds to 5 / 5 / 3 / 1 columns and the document never scrolls horizontally, with chart heights fixed across viewports (COV-R-19, COV-AC-23)', () => {
+  it('KPI deck sheds to 4 / 4 / 3 / 1 columns and the document never scrolls horizontally, with chart heights fixed across viewports (COV-R-19, COV-AC-23)', () => {
     mountOverview();
     cy.get('[data-testid="kpi-total"]', { timeout: 10000 }).should('exist');
 

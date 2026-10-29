@@ -118,6 +118,7 @@ Single PR / single push of both tasks (~300 LOC). Server alone is safe to ship f
 
 - Dead code left on purpose: PNS `sendDraft`, PDR primary-decline UI path, `PNS-R-2` review-refusal guard. Remove in a later cleanup spec.
 - Archive notes: mark PSR-R-1/R-2/R-4 and PNS-R-2/R-3/R-5 as superseded by PRA.
+- **PRA-T-3 HITL finding (2026-10-21, QA under P2-3157, PRTest result 9864):** the primary row in the SP inbox shows "Accepted by <Center submitter>" + an **Accepted** chip while the result is Pending Review. Cause: `transferPrimary` writes the primary request as ACCEPTED with `approved_by` = the submitting Center user (by design, §5), and the inbox's decided-state footer still reads that as a pre-PRA "SP accepted to be primary" decision. Not fixed in this spec — corrected by **`bugfix/primary-request-decision-state`** (client-only: no decision state until the primary SP approves/rejects; then Accepted/Rejected).
 
 ## 8. Roll-back plan
 

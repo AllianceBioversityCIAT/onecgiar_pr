@@ -20,7 +20,7 @@ import { buildQuickTypologyChips, ResultTypeQuickChip } from './reporting-quick-
             ? 'border-[var(--pr-color-primary-400)] bg-[var(--pr-color-primary-400)] font-semibold text-white shadow-xs'
             : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] font-medium text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)]'"
           [attr.aria-pressed]="chip.active"
-          [attr.aria-label]="chip.label"
+          [attr.aria-label]="chip.id === 'all' && chip.count != null ? chip.label + ' (' + chip.count + ')' : chip.label"
           [title]="chip.label">
           <span class="max-[1366px]:hidden">{{ chip.label }}</span>
           <span class="hidden max-[1366px]:inline">{{ chip.shortLabel }}</span>

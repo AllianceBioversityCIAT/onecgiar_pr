@@ -666,6 +666,29 @@
       vertical-align: middle;
       color: var(--pr-text, #2b2838);
     }
+
+    // Actions column pinned to the right edge: it stays visible while the table scrolls
+    // horizontally (the scroll container is .pr-table-wrap). Opaque backgrounds so the
+    // scrolling cells never show through; the left shadow reads as "pinned". z-index sits
+    // above the scrolling cells but far below dialogs (1100) and tooltips.
+    .col-actions {
+      position: sticky;
+      right: 0;
+      z-index: 2;
+      box-shadow: -6px 0 8px -6px rgba(43, 40, 56, 0.25);
+    }
+
+    thead th.col-actions {
+      z-index: 3;
+    }
+
+    tbody td.col-actions {
+      background: var(--pr-color-white);
+    }
+
+    tbody tr:hover td.col-actions {
+      background: #fafafb;
+    }
   }
 
   .counter {

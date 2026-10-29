@@ -13,6 +13,7 @@ import { RolesService } from '../../../../shared/services/global/roles.service';
 import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BILATERAL_PRIMARY_ASSIGNMENT_COPY } from '../../../../internationalization/bilateral-primary-assignment.copy';
 import { SectionTocComponent } from '../section-toc/section-toc.component';
 
 /**
@@ -117,7 +118,7 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       imports: [SectionContributorsComponent, HttpClientTestingModule],
       providers: [
         { provide: BilateralCreationService, useValue: creation },
-        { provide: BilateralAutoSaveService, useValue: { saveContributors: jest.fn(), fieldStatus: signal<Record<string, string>>({}) } },
+        { provide: BilateralAutoSaveService, useValue: { saveContributors: jest.fn(), fieldStatus: signal<Record<string, string>>({}), isReadOnly: signal(false) } },
         { provide: BilateralMdsTrackerService, useValue: { setSectionFields: jest.fn() } },
         {
           provide: CentersService,
@@ -180,6 +181,35 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
 
       expect(trigger).toBeTruthy();
       expect(focusable.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ── RNB-1: editable STATUS, but the editor locked the form for this user (not the lead centre) ──
+  describe('result in Editing that the editor locked for this user (RNB-1)', () => {
+    beforeEach(() => {
+      editable.set(true);
+      build();
+      (TestBed.inject(BilateralAutoSaveService) as any).isReadOnly.set(true);
+      component.showAllFields.set(true);
+      fixture.detectChanges();
+    });
+
+    it('exposes readOnly() === true although the status is editable', () => {
+      expect(component.readOnly()).toBe(true);
+    });
+
+    it.each(PARTNER_PICKER_LABELS)('offers no interactive control in the "%s" picker', label => {
+      const { trigger, focusable } = interactiveControlsIn(pickerFor(label));
+
+      expect(trigger).toBeNull();
+      expect(focusable).toEqual([]);
+    });
+
+    it('unlocks again when the editor lifts its lock (lead-centre user / admin)', () => {
+      (TestBed.inject(BilateralAutoSaveService) as any).isReadOnly.set(false);
+      fixture.detectChanges();
+
+      expect(component.readOnly()).toBe(false);
     });
   });
 
@@ -637,6 +667,16 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       build();
       seed();
       expect(fixture.nativeElement.querySelector('[data-testid="projects-center-pills"]')).toBeNull();
+    });
+  });
+
+  // PAA-R-5 / AC-8 — the helper under the read-only primary Science Program, in the REAL template.
+  describe('PAA-R-5 · helper under the read-only primary Science Program', () => {
+    it('points to Project information and no longer says it cannot be changed here', () => {
+      build();
+      const helper = fixture.nativeElement.querySelector('.sc-block--toc .sc-helper') as HTMLElement;
+      expect(helper.textContent?.trim()).toBe(BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsPrimaryHelp);
+      expect(fixture.nativeElement.textContent).not.toContain('cannot be changed here');
     });
   });
 });

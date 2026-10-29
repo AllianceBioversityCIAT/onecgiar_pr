@@ -25,7 +25,12 @@ export const PROGRAMME_RESULTS_CREATED_BY_QUERY_PARAM = 'createdBy';
 // on THIS route. Multi-value: a comma-separated list of bucket keys (RAC-R-3).
 export const PROGRAMME_RESULTS_SECTION_QUERY_PARAM = 'section';
 
-export type ProgrammeResultsQueryParamDimension = 'phase' | 'status' | 'category' | 'origin' | 'center' | 'createdBy' | 'section';
+// @akili-spec changes/sp-overview-total-drilldown (STD-T-1, STD-R-4)
+// Multi-value like the rest (`?replication=new,replicated`); the value space is `new` | `replicated`
+// (`ProgrammeResultsReplicationValue`) and unknown values are dropped at hydration.
+export const PROGRAMME_RESULTS_REPLICATION_QUERY_PARAM = 'replication';
+
+export type ProgrammeResultsQueryParamDimension = 'phase' | 'status' | 'category' | 'origin' | 'center' | 'createdBy' | 'section' | 'replication';
 
 /** `dimension → param name`, in toolbar order. */
 export const PROGRAMME_RESULTS_QUERY_PARAM_MAP: Record<ProgrammeResultsQueryParamDimension, string> = {
@@ -37,5 +42,7 @@ export const PROGRAMME_RESULTS_QUERY_PARAM_MAP: Record<ProgrammeResultsQueryPara
   // @akili-spec result-framework-reporting/programme-results-created-by-filter
   createdBy: PROGRAMME_RESULTS_CREATED_BY_QUERY_PARAM,
   // @akili-spec changes/results-aow-column-filter (RAC-T-3)
-  section: PROGRAMME_RESULTS_SECTION_QUERY_PARAM
+  section: PROGRAMME_RESULTS_SECTION_QUERY_PARAM,
+  // @akili-spec changes/sp-overview-total-drilldown (STD-T-1)
+  replication: PROGRAMME_RESULTS_REPLICATION_QUERY_PARAM
 };

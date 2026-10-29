@@ -27,7 +27,7 @@
     <!-- ═══ KPI deck (COV-R-6, COV-R-19) ══════════════════════════════════════════════════ -->
     <section
       aria-label="Key figures"
-      class="grid grid-cols-1 min-[640px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1280px]:grid-cols-5 gap-[16px]">
+      class="grid grid-cols-1 min-[640px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1280px]:grid-cols-4 gap-[16px]">
       @if (resultsLoading()) {
         @for (slot of kpiSkeletonSlots; track slot) {
           <div
@@ -44,7 +44,7 @@
         <div
           role="alert"
           data-testid="kpi-error"
-          class="min-[640px]:col-span-2 min-[900px]:col-span-3 min-[1280px]:col-span-5 flex max-h-[160px] flex-wrap items-center gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[14px]">
+          class="min-[640px]:col-span-2 min-[900px]:col-span-3 min-[1280px]:col-span-4 flex max-h-[160px] flex-wrap items-center gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[14px]">
           <i class="material-icons-round text-[18px] text-[var(--pr-danger)]" aria-hidden="true">error_outline</i>
           <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
           <button
@@ -85,73 +85,38 @@
         }
       } @else {
         @let overview = model();
-        <!-- 1 · Total results (hero) -->
+        @let total = overview.kpis.totalResults;
+        <!-- 1 · Total results (hero). INC-165171 / CWS-R-3: computed from the same scoped rows as every
+             other card, exactly three lines (replicated W3, new W3, W1/W2 tagging); the lines add up to the headline. -->
         <a
           data-testid="kpi-total"
           [routerLink]="resultsLink()"
-          [queryParams]="deepLinkParams()"
+          [queryParams]="resultsLinkParams()"
           [attr.aria-label]="
-            'Total results, ' +
-            overview.kpis.totalResults.count +
-            ' results, ' +
-            overview.kpis.totalResults.replicatedCount +
-            ' replicated, ' +
-            overview.kpis.totalResults.newCount +
-            ' new, of ' +
-            overview.kpis.totalResults.w1w2Count +
-            ' W1/W2 results ' +
-            overview.kpis.totalResults.w1w2ContributorCount +
-            ' are contributing and ' +
-            overview.kpis.totalResults.w1w2LeadCount +
-            ' are leading — open in Results'
+            'Total results, ' + total.count + ' results: ' +
+            total.categories.replicated_w3 + ' ' + overviewCategoryCopy.replicated_w3.label + ', ' +
+            total.categories.new_w3 + ' ' + overviewCategoryCopy.new_w3.label + ', ' +
+            total.categories.w1w2_tagging + ' ' + overviewCategoryCopy.w1w2_tagging.label + ' — open in Results'
           "
-          class="flex min-h-[120px] flex-col rounded-[14px] border border-transparent bg-[linear-gradient(135deg,var(--pr-color-primary-300),var(--pr-color-primary-400))] p-[16px] text-white no-underline cursor-pointer transition-opacity duration-200 motion-reduce:transition-none hover:opacity-95 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-          <span class="mb-[8px] flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
+          class="relative flex min-h-[120px] flex-col overflow-hidden rounded-[14px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[16px] text-white no-underline shadow-md cursor-pointer transition-all duration-200 motion-reduce:transition-none hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+          <!-- Same gradient + glow as the SP Overview Total General card. -->
+          <span class="pointer-events-none absolute -right-[24px] -top-[24px] h-[110px] w-[110px] rounded-full bg-white/15 blur-[20px]" aria-hidden="true"></span>
+          <span class="pointer-events-none absolute -left-[20px] -bottom-[20px] h-[90px] w-[90px] rounded-full bg-purple-900/40 blur-[18px]" aria-hidden="true"></span>
+          <span class="relative z-10 mb-[8px] flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.06em] text-purple-200">
             Total results
-            <span class="rounded-[9px] bg-white/20 px-[8px] py-[2px] text-[10.5px] font-semibold normal-case tracking-normal text-white">Center</span>
+            <span class="inline-flex h-[24px] items-center rounded-full border border-white/20 bg-white/15 px-[9px] text-[11px] font-semibold normal-case tracking-normal text-white">Center</span>
           </span>
-          <span class="mb-[12px] font-mono text-[28px] font-bold leading-none tabular-nums">
-            {{ overview.kpis.totalResults.count }}<span class="ml-[6px] font-sans text-[13px] font-medium text-white/85">results</span>
+          <span class="relative z-10 font-mono text-[28px] font-bold leading-none tabular-nums">
+            {{ total.count }}<span class="ml-[6px] font-sans text-[13px] font-medium text-purple-200">results</span>
           </span>
-          <span class="mb-[20px] flex flex-col gap-[6px] text-[12px] text-white/85">
-            <span>
-              <span [title]="'Results created via the bilateral ingestion API (W3/Bilateral funding): ' + overview.kpis.totalResults.w3Count">{{ overview.kpis.totalResults.w3Count }} W3/Bilateral</span>
-              ·
-              <span [title]="'Results authored directly in PRMS as pooled-funding W1/W2 work: ' + overview.kpis.totalResults.w1w2Count">{{ overview.kpis.totalResults.w1w2Count }} W1/W2</span>
-              <span
-                class="text-white/70"
-                [title]="overview.kpis.totalResults.w1w2ContributorCount + ' of the ' + overview.kpis.totalResults.w1w2Count + ' W1/W2 results are contributing, not leading'"
-              >
-                ({{ overview.kpis.totalResults.w1w2ContributorCount }} contributing · {{ overview.kpis.totalResults.w1w2LeadCount }} lead)</span
-              >
-            </span>
-            <span>
-              <span [title]="'Results where this center is the lead center: ' + overview.kpis.totalResults.leadCount">{{ overview.kpis.totalResults.leadCount }} lead</span>
-              ·
-              <span [title]="'Results where this center participates as a contributor, not the lead: ' + overview.kpis.totalResults.contributingCount">{{ overview.kpis.totalResults.contributingCount }} contributing</span>
-            </span>
-          </span>
-          <!-- BOV-R-3: pill markup/tokens copied from bilateral-projects-panel.component.html:265-299.
-               BOV-DD-4: rendered as non-interactive <span>s (the whole card is already one <a>). -->
-          <span class="flex flex-wrap items-center gap-1.5 mt-[4px]" data-testid="kpi-total-replication-badges">
-            <span
-              data-testid="kpi-total-replicated-badge"
-              class="inline-flex items-center gap-1 rounded-full border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] px-2.5 py-1 text-[12px] font-semibold"
-              [class]="overview.kpis.totalResults.replicatedCount > 0
-                ? 'text-[var(--pr-color-secondary-400)]'
-                : 'text-[var(--pr-color-accents-4)]'">
-              <i class="pi pi-sync text-[12px] text-amber-600" aria-hidden="true"></i>
-              <span>{{ overview.kpis.totalResults.replicatedCount }} replicated</span>
-            </span>
-            <span
-              data-testid="kpi-total-new-badge"
-              class="inline-flex items-center gap-1 rounded-full border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] px-2.5 py-1 text-[12px] font-semibold"
-              [class]="overview.kpis.totalResults.newCount > 0
-                ? 'text-[var(--pr-color-secondary-400)]'
-                : 'text-[var(--pr-color-accents-4)]'">
-              <i class="pi pi-plus-circle text-[12px] text-emerald-600" aria-hidden="true"></i>
-              <span>{{ overview.kpis.totalResults.newCount }} new</span>
-            </span>
+          <!-- quick/overview-total-results-mockup: breakdown rows with right-aligned count chips. -->
+          <span class="relative z-10 mt-[12px] flex flex-col gap-[6px] border-t border-white/20 pt-[10px] text-[12px] text-white/85" data-testid="kpi-total-breakdown">
+            @for (category of overviewCategories; track category) {
+              <span class="flex items-center justify-between gap-[8px]" [attr.data-testid]="'kpi-total-' + category" [title]="overviewCategoryCopy[category].hint">
+                <span class="min-w-0 truncate">{{ overviewCategoryCopy[category].label }}</span>
+                <span class="shrink-0 rounded-[6px] bg-white/15 px-[6px] py-[1px] font-mono text-[11px] font-semibold tabular-nums text-white">{{ total.categories[category] }}</span>
+              </span>
+            }
           </span>
         </a>
 
@@ -159,7 +124,7 @@
         <a
           data-testid="kpi-pending"
           [routerLink]="resultsLink()"
-          [queryParams]="deepLinkParams({ status: ['pending'] })"
+          [queryParams]="resultsLinkParams({ status: ['pending'] })"
           [attr.aria-label]="'Pending review, ' + overview.kpis.pendingReview.count + ' results — open in Results'"
           class="flex min-h-[120px] flex-col gap-[8px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
           <span class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
@@ -179,7 +144,7 @@
         <a
           data-testid="kpi-approved"
           [routerLink]="resultsLink()"
-          [queryParams]="deepLinkParams({ status: ['approved'] })"
+          [queryParams]="resultsLinkParams({ status: ['approved'] })"
           [attr.aria-label]="'Approved, ' + overview.kpis.approved.count + ' results — open in Results'"
           class="flex min-h-[120px] flex-col gap-[8px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
           <span class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
@@ -195,27 +160,7 @@
           </span>
         </a>
 
-        <!-- 4 · Needs attention (scrolls to its card, COV-R-6 #4) -->
-        <button
-          type="button"
-          data-testid="kpi-attention"
-          [attr.aria-label]="'Needs attention, ' + overview.kpis.needsAttention.count + ' items — go to the Needs attention card'"
-          class="flex min-h-[120px] flex-col items-start gap-[8px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] text-left cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-          (click)="scrollToAttention()">
-          <span class="flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
-            Needs attention
-            <span class="rounded-[9px] bg-[var(--pr-color-primary-50)] px-[8px] py-[2px] text-[10.5px] font-semibold normal-case tracking-normal text-[var(--pr-color-primary-600)]">Action</span>
-          </span>
-          <span class="font-mono text-[28px] font-bold leading-none tabular-nums text-[var(--pr-text-heading)]">
-            {{ overview.kpis.needsAttention.count }}<span class="ml-[6px] font-sans text-[13px] font-medium text-[var(--pr-text-secondary)]">items</span>
-          </span>
-          <span class="flex flex-wrap gap-[10px] text-[12px] text-[var(--pr-text-secondary)]">
-            <span>{{ overview.kpis.needsAttention.editingCount }} editing · {{ overview.kpis.needsAttention.rejectedCount }} rejected</span>
-            <span>· {{ overview.kpis.needsAttention.aiDraftCount }} AI drafts</span>
-          </span>
-        </button>
-
-        <!-- 5 · Projects covered — its figures come from the PROJECTS call (COV-R-17) -->
+        <!-- 4 · Projects covered — its figures come from the PROJECTS call (COV-R-17) -->
         @if (projectsError()) {
           <div
             role="alert"
@@ -244,7 +189,10 @@
           <span class="font-mono text-[28px] font-bold leading-none tabular-nums text-[var(--pr-text-heading)]">
             {{ overview.kpis.projectsCovered.coveredCount }}<span class="ml-[6px] font-sans text-[13px] font-medium text-[var(--pr-text-secondary)]">of {{ overview.kpis.projectsCovered.totalCount }}</span>
           </span>
-          <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ overview.kpis.projectsCovered.notStartedCount }} projects with no result yet</span>
+          <span class="text-[12px] text-[var(--pr-text-secondary)]">{{ overview.kpis.projectsCovered.notStartedCount }} projects with no new result yet</span>
+          <span class="text-[12px] text-[var(--pr-text-secondary)]" data-testid="projects-covered-split">
+            {{ overview.kpis.projectsCovered.coveredOnlyReplicatedCount }} with only replicated updates (not counted)
+          </span>
         </a>
         }
       }
@@ -309,13 +257,16 @@
                 [attr.data-testid]="'status-tile-' + tile.key"
                 [routerLink]="resultsLink()"
                 [queryParams]="statusTileLinkParams(tile)"
-                [attr.aria-label]="statusTileLabels[tile.key] + ', ' + tile.count + ' results — open in Results'"
+                [attr.aria-label]="statusTileLabels[tile.key] + ', ' + tile.count + ' results, ' + tile.replicatedCount + ' replicated and ' + tile.newCount + ' new — open in Results'"
                 class="flex flex-col gap-[4px] rounded-[10px] border border-[var(--pr-border-divider)] p-[10px] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
                 <span class="inline-flex h-[20px] w-max items-center rounded-[10px] px-[8px] text-[11px] font-semibold" [class]="statusTileMeta[tile.key].pillClass">
                   {{ statusTileLabels[tile.key] }}
                 </span>
                 <span class="font-mono text-[20px] font-bold tabular-nums text-[var(--pr-text-heading)]">{{ tile.count }}</span>
                 <span class="text-[11.5px] text-[var(--pr-text-secondary)]">{{ statusTileMeta[tile.key].hint }}</span>
+                <span class="text-[11.5px] text-[var(--pr-text-secondary)]" [attr.data-testid]="'status-split-' + tile.key">
+                  {{ tile.replicatedCount }} replicated · {{ tile.newCount }} new
+                </span>
               </a>
             }
           </div>
@@ -380,7 +331,7 @@
         <div class="flex flex-col gap-[2px]">
           <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Results by project</h2>
           <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
-            Results reported under each bilateral project this phase — lead vs contributing
+            Results under each bilateral project of the center this phase — replicated for update vs new
           </p>
         </div>
 
@@ -408,11 +359,12 @@
               Retry
             </button>
           </div>
-        } @else if (!model().byProject.bars.length && !model().byProject.noProjectRow) {
+        } @else if (!model().byProject.bars.length && !model().byProject.noProjectRow && !model().byProject.updatedNoProjectCount && !model().byProject.unmatchedProjectRows) {
           <p data-testid="by-project-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
             No project has reported a result in this phase yet
           </p>
         } @else {
+          @if (model().byProject.bars.length) {
           <app-pr-viz-chart
             class="block w-full cursor-pointer"
             data-testid="by-project-chart"
@@ -421,6 +373,7 @@
             (chartClick)="onResultsChartClick($event)"
             chartTitle="Results by bilateral project"
             [height]="byProjectChartHeight()" />
+          }
 
           <!-- Every plotted bar also as text + link (COV-R-9 A, COV-R-18) -->
           <div class="flex flex-wrap items-center gap-[8px] max-[899px]:flex-nowrap max-[899px]:overflow-x-auto max-[899px]:no-scrollbar" data-testid="by-project-links">
@@ -428,26 +381,61 @@
               <a
                 [attr.data-testid]="'by-project-link-' + bar.projectId"
                 [routerLink]="resultsLink()"
-                [queryParams]="deepLinkParams({ project: [bar.projectId] })"
+                [queryParams]="resultsLinkParams({ project: [bar.projectId] })"
                 [attr.aria-label]="projectLabel(bar.projectId) + ', ' + bar.total + ' results — open in Results'"
                 class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                <span class="max-w-[220px] truncate">{{ projectLabel(bar.projectId) }}</span>
+                <span class="max-w-[220px] truncate" [attr.title]="projectLabel(bar.projectId)">{{ projectLabel(bar.projectId) }}</span>
                 <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ bar.total }}</b>
               </a>
             }
 
-            @if (model().byProject.noProjectRow; as noProject) {
-              <a
-                data-testid="by-project-no-project"
-                [routerLink]="resultsLink()"
-                [queryParams]="deepLinkParams(noProject.allW1W2 ? { project: [], source: 'w1w2' } : { project: [] })"
-                [attr.aria-label]="noProjectLabel + ', ' + noProject.total + ' results — open in Results'"
-                class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-dashed border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                <span>{{ noProjectLabel }}</span>
-                <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ noProject.total }}</b>
-              </a>
-            }
           </div>
+
+          <!-- @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-R-2, CNP-R-3):
+               replicated innovations with no project, split out of the generic line below; hidden at 0. -->
+          @if (model().byProject.updatedNoProjectCount > 0) {
+            <a
+              data-testid="by-project-updated-no-project"
+              [routerLink]="resultsLink()"
+              [queryParams]="resultsLinkParams({ group: 'updated-no-project' })"
+              [attr.aria-label]="updatedNoProjectLabel() + ', ' + model().byProject.updatedNoProjectCount + ' results — open in Results'"
+              class="flex flex-wrap items-center gap-x-[10px] gap-y-[4px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[12px] py-[8px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+              <span>
+                <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ model().byProject.updatedNoProjectCount }}</b>
+                {{ updatedNoProjectLabel() }}
+              </span>
+            </a>
+          }
+
+          <!-- INC-165171: results with no bilateral project are stated here, not drawn as a bar. -->
+          @if (model().byProject.noProjectRow; as noProject) {
+            <a
+              data-testid="by-project-no-project"
+              [routerLink]="resultsLink()"
+              [queryParams]="resultsLinkParams({ project: [], source: 'w3' })"
+              [attr.aria-label]="noProjectLabel + ', ' + noProject.total + ' results — open in Results'"
+              class="flex flex-wrap items-center gap-x-[10px] gap-y-[4px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[12px] py-[8px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
+              <span>
+                <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ noProject.total }}</b>
+                results {{ noProjectLabel.toLowerCase() }}:
+              </span>
+              @for (category of overviewCategories; track category) {
+                @if (noProject.categories[category]) {
+                  <span [attr.data-testid]="'by-project-no-project-' + category">
+                    <b class="font-mono font-semibold tabular-nums text-[var(--pr-text-heading)]">{{ noProject.categories[category] }}</b>
+                    {{ overviewCategoryCopy[category].label }}
+                  </span>
+                }
+              }
+            </a>
+          }
+
+          @if (model().byProject.unmatchedProjectRows) {
+            <p data-testid="by-project-unmatched" class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
+              <b class="font-mono font-semibold tabular-nums text-[var(--pr-text-heading)]">{{ model().byProject.unmatchedProjectRows }}</b>
+              results are linked only to bilateral projects outside this center's project list.
+            </p>
+          }
 
           @if (hiddenBarCount() > 0 || showAllProjects()) {
             <button
@@ -458,109 +446,88 @@
               {{ showAllProjects() ? 'Show fewer projects' : 'Show ' + hiddenBarCount() + ' more projects with results' }}
             </button>
           }
-
-          <!-- Not started yet (COV-R-9 B, COV-DD-9) -->
-          @if (model().byProject.notStartedProjectIds.length) {
-            <div
-              data-testid="by-project-not-started"
-              class="flex flex-wrap items-center gap-[8px] border-t border-dashed border-[var(--pr-border)] pt-[10px] text-[12px] text-[var(--pr-text-secondary)] max-[899px]:flex-nowrap max-[899px]:overflow-x-auto max-[899px]:no-scrollbar">
-              <b class="flex-none font-semibold text-[var(--pr-text-heading)]">
-                Not started yet ({{ model().byProject.notStartedProjectIds.length }})
-              </b>
-              @for (projectId of model().byProject.notStartedProjectIds; track projectId) {
-                <a
-                  [attr.data-testid]="'not-started-chip-' + projectId"
-                  [routerLink]="reportingLink()"
-                  [queryParams]="deepLinkParams({ project: [projectId] })"
-                  [attr.aria-label]="projectLabel(projectId) + ', 0 results — open in Reporting'"
-                  class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                  <span class="max-w-[220px] truncate">{{ projectLabel(projectId) }}</span>
-                  <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">0</b>
-                </a>
-              }
-            </div>
-          }
         }
       </article>
     </section>
 
-    <!-- ═══ Row C — SP contribution + Results by result type (COV-R-10, COV-R-11) ═══════════ -->
-    <section class="grid grid-cols-1 min-[1280px]:grid-cols-2 gap-[16px]">
-      <!-- Science Program contribution -->
+    <!-- ═══ Row B2 — Projects by Program / Accelerator, full width (CPA-R-2, CPA-DD-7) ═══════ -->
+    <section class="grid grid-cols-1 gap-[16px]">
       <article class="flex flex-col gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[18px]">
         <div class="flex flex-col gap-[2px]">
-          <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Science Program contribution</h2>
+          <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Projects by Program / Accelerator</h2>
           <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
-            Projects mapped to each SP vs results reported with that SP as primary
+            Center projects mapped to each Program / Accelerator, with reported W3/Bilat results, and tagged by W1/W2 results
           </p>
         </div>
 
         @if (resultsLoading() || projectsLoading()) {
-          <span aria-busy="true" aria-label="Loading Science Program contribution" data-testid="by-sp-skeleton" class="pr-skeleton block h-[180px] w-full rounded-[10px]"></span>
-        } @else if (resultsError()) {
-          <div role="alert" data-testid="by-sp-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
-            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
+          <span aria-busy="true" aria-label="Loading projects by Program / Accelerator" data-testid="projects-by-pa-skeleton" class="pr-skeleton block h-[200px] w-full rounded-[10px]"></span>
+        } @else if (resultsError() || projectsError()) {
+          <!-- COV-R-17 - mapped projects come from the projects call, W3/tagged from the results call: either failure fails the card -->
+          <div role="alert" data-testid="projects-by-pa-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
+            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() || projectsError() }}</span>
             <button
               type="button"
-              class="inline-flex h-[30px] items-center rounded-[8px] border border-[var(--pr-border)] bg-transparent px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              (click)="retry()">
-              Retry
-            </button>
-          </div>
-        } @else if (projectsError()) {
-          <!-- COV-R-17 — "projects mapped" comes from the projects call, so it fails with it -->
-          <div role="alert" data-testid="by-sp-projects-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
-            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ projectsError() }}</span>
-            <button
-              type="button"
-              data-testid="by-sp-projects-retry"
+              data-testid="projects-by-pa-retry"
               class="inline-flex h-[30px] items-center rounded-[8px] border border-[var(--pr-border)] bg-transparent px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
               (click)="retry()">
               Retry
             </button>
           </div>
-        } @else if (!model().bySp.rows.length) {
-          <p data-testid="by-sp-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
-            No Science Program is mapped or reporting in this phase yet
+        } @else if (projectsByPaEmpty()) {
+          <p data-testid="projects-by-pa-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
+            No Program / Accelerator has mapped, reporting or tagged projects in this phase yet
           </p>
         } @else {
           <app-pr-viz-chart
             class="block w-full cursor-pointer"
-            data-testid="by-sp-chart"
-            [options]="bySpChartOption()"
-            [tableModel]="bySpChartTable()"
-            (chartClick)="onSpChartClick($event)"
-            chartTitle="Science Program contribution"
-            [height]="bySpChartHeight()" />
+            data-testid="projects-by-pa-chart"
+            [options]="projectsByPaChartOption()"
+            [tableModel]="projectsByPaChartTable()"
+            (chartClick)="onProjectsByPaChartClick($event)"
+            chartTitle="Projects by Program / Accelerator"
+            [height]="projectsByPaChartHeight" />
+        }
+      </article>
+    </section>
 
-          <div class="flex flex-col border-t border-[var(--pr-border-divider)]" data-testid="by-sp-rows">
-            @for (row of model().bySp.rows; track row.programCode) {
-              <div class="grid grid-cols-[1fr_auto_auto] items-center gap-[12px] border-b border-[var(--pr-border-divider)] py-[8px] text-[12.5px]">
-                <a
-                  [attr.data-testid]="'by-sp-row-' + row.programCode"
-                  [routerLink]="reportingLink()"
-                  [queryParams]="deepLinkParams({ program: [row.programCode] })"
-                  [attr.aria-label]="programLabel(row.programCode) + ', ' + row.projectsMappedCount + ' projects mapped — open in Reporting'"
-                  class="min-w-0 truncate text-[var(--pr-text-heading)] no-underline cursor-pointer hover:text-[var(--pr-color-primary-300)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                  {{ programLabel(row.programCode) }}
-                  @if (row.resultsCount === 0) {
-                    <small class="ml-[6px] text-[11.5px] text-[var(--pr-text-subtle)]">no results yet</small>
-                  }
-                </a>
-                <span
-                  [attr.data-testid]="'by-sp-projects-' + row.programCode"
-                  class="font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ row.projectsMappedCount }} ·</span>
-                <a
-                  [attr.data-testid]="'by-sp-results-' + row.programCode"
-                  [routerLink]="resultsLink()"
-                  [queryParams]="deepLinkParams({ program: [row.programCode] })"
-                  [attr.aria-label]="programLabel(row.programCode) + ', ' + row.resultsCount + ' results — open in Results'"
-                  class="min-w-[32px] text-right font-mono font-bold tabular-nums text-[var(--pr-text-heading)] no-underline cursor-pointer hover:text-[var(--pr-color-primary-300)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
-                  {{ row.resultsCount }}
-                </a>
-              </div>
-            }
+    <!-- ═══ Row C — Results by P/A + Results by result type (CPA-R-1, COV-R-11) ═══════════ -->
+    <section class="grid grid-cols-1 min-[1280px]:grid-cols-2 gap-[16px]">
+      <!-- Results by Program / Accelerator (CPA-R-1) -->
+      <article class="flex flex-col gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[18px]">
+        <div class="flex flex-col gap-[2px]">
+          <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Results by Program / Accelerator</h2>
+          <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
+            W3/Bilateral results and W1/W2 results tagging center projects, by primary Program / Accelerator
+          </p>
+        </div>
+
+        @if (resultsLoading()) {
+          <span aria-busy="true" aria-label="Loading results by Program / Accelerator" data-testid="by-pa-skeleton" class="pr-skeleton block h-[200px] w-full rounded-[10px]"></span>
+        } @else if (resultsError()) {
+          <div role="alert" data-testid="by-pa-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
+            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
+            <button
+              type="button"
+              data-testid="by-pa-retry"
+              class="inline-flex h-[30px] items-center rounded-[8px] border border-[var(--pr-border)] bg-transparent px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+              (click)="retry()">
+              Retry
+            </button>
           </div>
+        } @else if (!model().byPa.rows.length) {
+          <p data-testid="by-pa-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
+            No Program / Accelerator has reported or tagging results in this phase yet
+          </p>
+        } @else {
+          <app-pr-viz-chart
+            class="block w-full cursor-pointer"
+            data-testid="by-pa-chart"
+            [options]="byPaChartOption()"
+            [tableModel]="byPaChartTable()"
+            (chartClick)="onPaChartClick($event)"
+            chartTitle="Results by Program / Accelerator"
+            [height]="byPaChartHeight()" />
         }
       </article>
 
@@ -604,7 +571,7 @@
               <a
                 [attr.data-testid]="'by-type-link-' + row.resultTypeId"
                 [routerLink]="resultsLink()"
-                [queryParams]="deepLinkParams({ type: [row.resultTypeId] })"
+                [queryParams]="resultsLinkParams({ type: [row.resultTypeId] })"
                 [attr.aria-label]="(row.label ?? 'Result type ' + row.resultTypeId) + ', ' + row.count + ' results — open in Results'"
                 class="inline-flex flex-none items-center gap-[6px] rounded-[13px] border border-[var(--pr-border)] px-[10px] py-[4px] text-[12px] text-[var(--pr-text-secondary)] no-underline cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:bg-[var(--pr-surface-raised-soft)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]">
                 <span class="max-w-[220px] truncate">{{ row.label ?? 'Result type ' + row.resultTypeId }}</span>
@@ -612,57 +579,6 @@
               </a>
             }
           </div>
-        }
-      </article>
-    </section>
-
-    <!-- ═══ Row D — Reporting pace (COV-R-12) ═══════════════════════════════════════════════ -->
-    <section class="grid grid-cols-1 gap-[16px]">
-      <article class="flex flex-col gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[18px]">
-        <div class="flex flex-col gap-[2px]">
-          <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting pace</h2>
-          <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]">
-            Cumulative results created across the phase window
-          </p>
-        </div>
-
-        @if (resultsLoading()) {
-          <span aria-busy="true" aria-label="Loading reporting pace" data-testid="pace-skeleton" class="pr-skeleton block h-[200px] w-full rounded-[10px]"></span>
-        } @else if (resultsError()) {
-          <div role="alert" data-testid="pace-error" class="flex max-h-[160px] flex-wrap items-center gap-[12px]">
-            <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
-            <button
-              type="button"
-              class="inline-flex h-[30px] items-center rounded-[8px] border border-[var(--pr-border)] bg-transparent px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
-              (click)="retry()">
-              Retry
-            </button>
-          </div>
-        } @else if (!model().pace.points.length) {
-          <p data-testid="pace-empty" class="m-0 flex max-h-[160px] items-center text-[14px] text-[var(--pr-text-secondary)]">
-            No results were created in this phase yet
-          </p>
-        } @else {
-          <app-pr-viz-chart
-            class="block w-full"
-            data-testid="pace-chart"
-            [options]="paceChartOption()"
-            [tableModel]="paceChartTable()"
-            chartTitle="Reporting pace"
-            height="200px" />
-
-          <p class="m-0 text-[12px] text-[var(--pr-text-secondary)]" data-testid="pace-summary">
-            <b class="font-mono font-bold tabular-nums text-[var(--pr-text-heading)]">{{ model().kpis.totalResults.count }}</b>
-            results created
-            @if (model().pace.hasWindow) {
-              between {{ model().pace.windowStart }} and {{ model().pace.windowEnd }}
-            } @else {
-              between {{ model().pace.windowStart }} and {{ model().pace.windowEnd }} (this phase has no dates, so the axis spans the results themselves)
-            }
-            @if (model().pace.outsideWindowCount > 0) {
-              · {{ model().pace.outsideWindowCount }} created outside the window are counted in the first or last week
-            }
-          </p>
         }
       </article>
     </section>

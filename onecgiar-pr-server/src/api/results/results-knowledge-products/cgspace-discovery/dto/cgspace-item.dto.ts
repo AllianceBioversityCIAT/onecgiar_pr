@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { KpRepository } from '../repositories.config';
+import { KpRepository, ProjectScope } from '../repositories.config';
 
 export class CgspacePageMetaDto {
   number: number;
@@ -29,6 +29,21 @@ export class CgspaceAlsoInDto {
   handle: string;
   handleUrl: string;
   itemUrl: string;
+}
+
+// @akili-spec changes/kp-related-relevance-ranking
+/** Why a related item ranks where it does (`KRR-R-3`): satisfied factors and the tier by their count. */
+export class CgspaceProjectMatchDto {
+  @ApiProperty({ enum: ['strong', 'partial', 'weak', 'none'] })
+  tier: 'strong' | 'partial' | 'weak' | 'none';
+
+  @ApiProperty({
+    description:
+      'Satisfied factors, always in the order keywords, center, program.',
+    enum: ['keywords', 'center', 'program'],
+    isArray: true,
+  })
+  factors: ('keywords' | 'center' | 'program')[];
 }
 
 export class CgspaceItemDto {
@@ -69,10 +84,25 @@ export class CgspaceItemDto {
 
   @ApiPropertyOptional({
     description:
-      'Project identifiers tagged on the item from cg.identifier.project',
+      'Project labels tagged on the item: cg.identifier.project (CGSpace) or cg.contributor.project (MELSpace/WorldFish), unioned and deduped',
     type: [String],
   })
   projects?: string[];
+
+  // @akili-spec changes/kp-related-relevance-ranking
+  @ApiPropertyOptional({
+    description:
+      'Subject values (dcterms.subject on CGSpace, dc.subject on MELSpace/WorldFish).',
+    type: [String],
+  })
+  subjects?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Present only on items of a ranked related page: which project factors the item satisfies.',
+    type: () => CgspaceProjectMatchDto,
+  })
+  projectMatch?: CgspaceProjectMatchDto;
 }
 
 export type SourceStatus = 'ok' | 'timeout' | 'error' | 'unconfigured';
@@ -96,6 +126,32 @@ export class SourceStatusDto {
   hasMore: boolean;
 }
 
+/** `projectScope` echo (`design.md` §7): `applied=false` when the project is too generic to constrain. */
+export class CgspaceProjectScopeDto {
+  @ApiProperty({ enum: ['linked', 'related'] })
+  scope: ProjectScope;
+
+  @ApiProperty({
+    description:
+      'False when the project yields neither >= 2 distinctive title words nor a PJ code.',
+  })
+  applied: boolean;
+
+  // @akili-spec changes/kp-related-relevance-ranking
+  @ApiProperty({
+    description:
+      'True when the related query carries the project relevance block, i.e. the items are ordered by relevance instead of newest first.',
+  })
+  ranked: boolean;
+
+  // @akili-spec changes/kp-related-strongest-first
+  @ApiProperty({
+    description:
+      'True only when the "only related KPs" filter was applied on every repository: requested, ranked and the full relevance block fit. When false, the list is the unfiltered related list.',
+  })
+  relatedOnly: boolean;
+}
+
 export class CgspaceSearchPageDto {
   items: CgspaceItemDto[];
   page: CgspacePageMetaDto;
@@ -109,6 +165,13 @@ export class CgspaceSearchPageDto {
    */
   @ApiProperty({ type: () => [SourceStatusDto] })
   sources?: SourceStatusDto[];
+
+  /**
+   * Echo of the project scope the search ran with (`KPSF-R-9`). Present only when the request
+   * carried a project scope (or the legacy `project`); absent on the non-bilateral path.
+   */
+  @ApiPropertyOptional({ type: () => CgspaceProjectScopeDto })
+  projectScope?: CgspaceProjectScopeDto;
 }
 
 /**

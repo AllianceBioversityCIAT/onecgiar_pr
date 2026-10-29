@@ -2157,6 +2157,33 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('POST_reportSesultsCompleteness search full_name (PF2-R-2, M2)', () => {
+    it('includes initiative_name in full_name so search matches the program name', done => {
+      const section = { value: '1' };
+      const row = {
+        result_code: '5',
+        result_title: 'T',
+        official_code: 'SP10',
+        initiative_name: 'Gender',
+        result_type_name: 'Type',
+        completeness: '10',
+        general_information: section,
+        theory_of_change: section,
+        partners: section,
+        geographic_location: section,
+        links_to_results: section,
+        evidence: section,
+        section_seven: section
+      };
+      service.POST_reportSesultsCompleteness([], [], 'u').subscribe(response => {
+        expect(response.response[0].full_name).toContain('Gender');
+        expect(response.response[0].full_name).toContain('SP10');
+        done();
+      });
+      httpMock.expectOne(`${service.apiBaseUrl}admin-panel/report/results/completeness`).flush({ response: [row] });
+    });
+  });
+
   describe('GET_historicalByResultId', () => {
     it('should call GET_historicalByResultId and return expected data ', done => {
       const resultId = 1;
@@ -5686,6 +5713,23 @@ describe('ResultsApiService', () => {
       expect(req.request.params.get('mode')).toBe('auto');
       req.flush(mockResponse);
     });
+
+    it('adds the trimmed center acronym as a query param when given', done => {
+      service.GET_progressTrackerResults(123, { max_results: 5 }, ' CIAT ').subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/progress-tracker/indicators/123/results`);
+      expect(req.request.params.get('center')).toBe('CIAT');
+      expect(req.request.params.get('max_results')).toBe('5');
+      req.flush(mockResponse);
+    });
+
+    it('sends no center param when the center is empty or null', done => {
+      service.GET_progressTrackerResults(123, {}, '  ').subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/progress-tracker/indicators/123/results`);
+      expect(req.request.params.has('center')).toBe(false);
+      req.flush(mockResponse);
+    });
   });
 
   // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-1)
@@ -5710,6 +5754,100 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/progress-tracker/programs/456/ready-counts`);
       expect(req.request.params.get('min_evidence')).toBe('2');
       req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_progressTrackerIndicatorActivity', () => {
+    it('builds the full URL under baseApiBaseUrl and encodes the program id', done => {
+      service.GET_progressTrackerIndicatorActivity('SP 01').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const expectedUrl = `${environment.apiBaseUrl}api/progress-tracker/programs/SP%2001/indicator-activity`;
+      const req = httpMock.expectOne(r => r.url === expectedUrl);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+  describe('GET_PortfolioTocCoverage', () => {
+    const base = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/portfolio-coverage`;
+
+    it('sends versionId as a query parameter and returns the envelope untouched', done => {
+      const envelope = { response: { versionId: 36, programs: [], portfolio: { total: 0, covered: 0 } }, message: 'ok', status: 200 };
+      service.GET_PortfolioTocCoverage(36).subscribe(res => {
+        expect(res).toEqual(envelope);
+        done();
+      });
+      const req = httpMock.expectOne(`${base}?versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(envelope);
+    });
+
+    it('omits the query string without a versionId', () => {
+      service.GET_PortfolioTocCoverage().subscribe();
+      const req = httpMock.expectOne(base);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+
+    it('omits the query string for a non-finite versionId', () => {
+      service.GET_PortfolioTocCoverage(NaN).subscribe();
+      httpMock.expectOne(base).flush({});
+    });
+  });
+
+  describe('GET_PortfolioBilateralProjects', () => {
+    const base = `${environment.apiBaseUrl}api/results-framework-reporting/portfolio/bilateral-projects`;
+
+    it('sends versionId as a query parameter and returns the envelope untouched', done => {
+      const envelope = { response: { versionId: 36, byProgram: [], byCenter: [] }, message: 'ok', status: 200 };
+      service.GET_PortfolioBilateralProjects(36).subscribe(res => {
+        expect(res).toEqual(envelope);
+        done();
+      });
+      const req = httpMock.expectOne(`${base}?versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(envelope);
+    });
+
+    it('omits the query string without a versionId', () => {
+      service.GET_PortfolioBilateralProjects().subscribe();
+      const req = httpMock.expectOne(base);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+
+    it('omits the query string for a non-finite versionId', () => {
+      service.GET_PortfolioBilateralProjects(NaN).subscribe();
+      httpMock.expectOne(base).flush({});
+    });
+  });
+
+  describe('GET_PortfolioResultDimensions', () => {
+    const base = `${environment.apiBaseUrl}api/results-framework-reporting/portfolio/result-dimensions`;
+
+    it('sends versionId as a query parameter and returns the envelope untouched', done => {
+      const envelope = { response: { versionId: 36, projectLinks: [[1, 2]], centerLinks: [[1, 'CENTER-1']] }, message: 'ok', status: 200 };
+      service.GET_PortfolioResultDimensions(36).subscribe(res => {
+        expect(res).toEqual(envelope);
+        done();
+      });
+      const req = httpMock.expectOne(`${base}?versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(envelope);
+    });
+
+    it('omits the query string without a versionId', () => {
+      service.GET_PortfolioResultDimensions().subscribe();
+      const req = httpMock.expectOne(base);
+      expect(req.request.method).toBe('GET');
+      req.flush({});
+    });
+
+    it('omits the query string for a non-finite versionId', () => {
+      service.GET_PortfolioResultDimensions(NaN).subscribe();
+      httpMock.expectOne(base).flush({});
     });
   });
 });

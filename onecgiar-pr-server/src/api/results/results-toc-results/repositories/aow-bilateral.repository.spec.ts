@@ -655,6 +655,137 @@ describe('AoWBilateralRepository', () => {
     });
   });
 
+  /**
+   * @akili-spec changes/center-results-kpi-chips CRK-T-1 (CRK-R-5, CRK-DD-0).
+   * Other output / Other outcome KPIs carry `type_value = 'custom'` and only their `type_name`
+   * says which they are, so the pattern branches on `type_value` never matched them and the
+   * category chips read 0. The two new branches live in BOTH CASE copies of the select (the id and
+   * the name subselect) and must never out-rank a specific type pattern.
+   */
+  describe('CRK-R-5 — Other output / Other outcome KPIs are categorised', () => {
+    const squash = (sql: string) => sql.replaceAll(/\s+/g, ' ');
+
+    const buildQuery = (options: any = {}) =>
+      squash(
+        (repository as any).buildTocQuery('SP12', {
+          context: defaultContext,
+          ...options,
+        }).query,
+      );
+
+    // The two CASE copies, sliced between their own markers so one cannot satisfy the other.
+    const idCase = (query: string) =>
+      query.slice(
+        query.indexOf('CASE WHEN tri.type_value LIKE'),
+        query.indexOf('END AS result_type_id'),
+      );
+    const nameCase = (query: string) =>
+      query.slice(
+        query.indexOf('WHERE rt.id = CASE'),
+        query.indexOf(') AS result_type_name'),
+      );
+
+    const OTHER_OUTPUT_BRANCH =
+      "WHEN tri.type_value = 'custom' AND LOWER(TRIM(tri.type_name)) LIKE 'other output%' THEN 8";
+    const OTHER_OUTCOME_BRANCH =
+      "WHEN tri.type_value = 'custom' AND LOWER(TRIM(tri.type_name)) LIKE 'other outcome%' THEN 4";
+    const LAST_SPECIFIC_BRANCH =
+      "WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7";
+
+    it.each([
+      ['result_type_id CASE', idCase],
+      ['result_type_name subselect CASE', nameCase],
+    ])(
+      '%s carries both custom branches, after the specific ones and before ELSE NULL',
+      (_label, slice) => {
+        const copy = slice(buildQuery());
+
+        expect(copy).toContain(OTHER_OUTPUT_BRANCH);
+        expect(copy).toContain(OTHER_OUTCOME_BRANCH);
+
+        const specific = copy.indexOf(LAST_SPECIFIC_BRANCH);
+        const output = copy.indexOf(OTHER_OUTPUT_BRANCH);
+        const outcome = copy.indexOf(OTHER_OUTCOME_BRANCH);
+        const elseNull = copy.indexOf('ELSE NULL');
+
+        expect(specific).toBeGreaterThan(-1);
+        expect(output).toBeGreaterThan(specific);
+        expect(outcome).toBeGreaterThan(output);
+        expect(elseNull).toBeGreaterThan(outcome);
+      },
+    );
+
+    it('never lets a custom branch precede any specific LIKE branch (a specific type always wins)', () => {
+      const query = buildQuery();
+      for (const copy of [idCase(query), nameCase(query)]) {
+        const firstCustom = copy.indexOf("tri.type_value = 'custom'");
+        expect(firstCustom).toBeGreaterThan(-1);
+        const specificLikes = [
+          'Number of Policy',
+          'Innovation Use',
+          'Number of people trained',
+          'Number of knowledge products',
+          'Number of innovations (innovation development)',
+        ].map((fragment) => copy.indexOf(fragment));
+
+        for (const position of specificLikes) {
+          expect(position).toBeGreaterThan(-1);
+          expect(position).toBeLessThan(firstCustom);
+        }
+      }
+    });
+
+    it('requires type_value = custom, so a free label such as "other" is not categorised', () => {
+      const query = buildQuery();
+      for (const copy of [idCase(query), nameCase(query)]) {
+        // Every custom-name branch is guarded by the type_value test; no bare name match exists.
+        expect(copy.match(/LIKE 'other (output|outcome)%'/g)).toHaveLength(2);
+        expect(
+          copy.match(/type_value = 'custom' AND LOWER\(TRIM\(/g),
+        ).toHaveLength(2);
+        expect(copy).not.toContain("LIKE 'other%'");
+        expect(copy).not.toContain("LIKE '%other");
+      }
+    });
+
+    it('resolves the name through result_type, so ids 8 / 4 give "Other output" / "Other outcome"', () => {
+      const query = buildQuery();
+
+      expect(query).toContain(
+        'FROM main_test.result_type rt WHERE rt.id = CASE',
+      );
+      expect(nameCase(query)).toContain("LIKE 'other output%' THEN 8");
+      expect(nameCase(query)).toContain("LIKE 'other outcome%' THEN 4");
+    });
+
+    it.each([
+      [
+        'findIntermediateOutcomes',
+        (r: any) => r.findIntermediateOutcomes('SP12', defaultContext),
+      ],
+      [
+        'find2030Outcomes',
+        (r: any) => r.find2030Outcomes('SP12', defaultContext),
+      ],
+      [
+        'findByCompositeCode',
+        (r: any) => r.findByCompositeCode('SP12', 'SP12-AOW01', defaultContext),
+      ],
+    ])(
+      '%s runs the select that carries the branches (shared query)',
+      async (_name, call) => {
+        mockResolveContext();
+        dataSourceQueryMock.mockResolvedValue([]);
+
+        await call(repository);
+
+        const sql = squash(dataSourceQueryMock.mock.calls[0][0] as string);
+        expect(idCase(sql)).toContain(OTHER_OUTPUT_BRANCH);
+        expect(nameCase(sql)).toContain(OTHER_OUTCOME_BRANCH);
+      },
+    );
+  });
+
   describe('groupTocRows centre exposure (P2-3255)', () => {
     const rowWith = (centersConcat: string | null) => ({
       toc_result_id: 1,
@@ -1059,6 +1190,222 @@ describe('AoWBilateralRepository', () => {
           expect.stringContaining('COUNT(DISTINCT tri.id) AS total_indicators'),
           [defaultContext.phaseUuid],
         );
+      });
+    });
+
+    // TKP-T-1 (toc-kpi-progress). `dataSource.query` is mocked, so these cases are
+    // presence-assertions on the SQL text and the bound parameters. They cannot prove
+    // that the SQL returns the right numbers; that is the TKP-T-6 live parity check.
+    describe('getPortfolioTocCoverage', () => {
+      const coverageContext = { ...defaultContext, versionId: 8 };
+
+      const captureSql = async (): Promise<{
+        sql: string;
+        params: unknown[];
+      }> => {
+        dataSourceQueryMock.mockResolvedValueOnce([]);
+        await repository.getPortfolioTocCoverage(coverageContext);
+        const [query, params] = dataSourceQueryMock.mock.calls[0];
+        return { sql: String(query).replace(/\s+/g, ' ').trim(), params };
+      };
+
+      it('runs one statement grouped by program code and category', async () => {
+        const { sql } = await captureSql();
+
+        expect(dataSourceQueryMock).toHaveBeenCalledTimes(1);
+        expect(sql).toContain('GROUP BY tr.official_code, tr.category');
+        expect(sql).toContain('tr.is_active = 1');
+        expect(sql).toContain("tr.category IN ('OUTPUT', 'OUTCOME')");
+        expect(sql).toContain('tri.is_active = 1');
+      });
+
+      it('counts only distinct indicator ids for total, covered and no_target', async () => {
+        const { sql } = await captureSql();
+
+        // TND-S-1.1, TND-S-1.2: total counts targeted KPIs, no_target the rest.
+        expect(sql).toContain(
+          'COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NOT NULL THEN tri.id END) AS total',
+        );
+        expect(sql).toContain(
+          'COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NULL THEN tri.id END) AS no_target',
+        );
+        // No COUNT( may appear without DISTINCT right after the parenthesis.
+        expect(sql.match(/COUNT\((?!DISTINCT)/g)).toBeNull();
+      });
+
+      it('conditions covered on BOTH a target and a covering result, so covered stays a subset of total (TND-S-1.3, TND-DD-2)', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain(
+          'COUNT(DISTINCT CASE WHEN tgt.indicator_id IS NOT NULL AND cov.indicator_id IS NOT NULL THEN tri.id END) AS covered',
+        );
+        // The bare covered condition (no target guard) must be gone.
+        expect(sql).not.toContain(
+          'COUNT(DISTINCT CASE WHEN cov.indicator_id IS NOT NULL THEN tri.id END)',
+        );
+      });
+
+      it('builds the covered set from active, applicable links of counting results of the version', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain('r.is_active = 1');
+        expect(sql).toContain('rtr.is_active = 1');
+        expect(sql).toContain('rtri.is_active = 1');
+        expect(sql).toContain('rtri.is_not_aplicable = 0');
+        expect(sql).toContain('r.source IN (?)');
+        expect(sql).toContain('r.status_id IN (?, ?)');
+        expect(sql).toContain('r.version_id = ?');
+        expect(sql).toContain('tri2.toc_results_id = rtr.toc_result_id');
+        expect(sql).toContain(
+          'CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri2.related_node_id USING utf8mb4)',
+        );
+        // The covered set is a derived table joined to the ToC side by indicator id.
+        expect(sql).toContain('cov ON cov.indicator_id = tri.id');
+      });
+
+      it('joins the AoW with the program taken from the row and admits wp_id IS NULL for OUTPUT only', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain(
+          "wp ON tr.wp_id = wp.toc_id AND wp.year = ? AND wp.wp_official_code LIKE CONCAT(tr.official_code, '-%')",
+        );
+        expect(sql).not.toContain('wp.acronym');
+
+        const outputBranch = sql.indexOf(
+          "tr.category = 'OUTPUT' AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)",
+        );
+        const outcomeBranch = sql.indexOf(
+          "tr.category = 'OUTCOME' AND wp.toc_id IS NOT NULL",
+        );
+        expect(outputBranch).toBeGreaterThan(-1);
+        expect(outcomeBranch).toBeGreaterThan(outputBranch);
+        // `wp_id IS NULL` exists once, inside the OUTPUT branch; the OUTCOME branch has none.
+        expect(sql.match(/wp_id IS NULL/g)).toHaveLength(1);
+        expect(sql.slice(outcomeBranch)).not.toContain('wp_id IS NULL');
+      });
+
+      it('reads targets > 0 for the year through a LEFT JOIN, so no-target KPIs stay in the row set (TKF-R-1, TND-S-1.2)', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain('toc_test.toc_result_indicator_target trit');
+        expect(sql).toContain('trit.target_date = ?');
+        expect(sql).toContain('CAST(trit.target_value AS DECIMAL(15,2)) > 0');
+        expect(sql).toContain('tgt.indicator_id = tri.id');
+        expect(sql).toContain(
+          'CONVERT(tgt.related_node_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)',
+        );
+        // LEFT JOIN: a no-target indicator keeps its row (tgt columns NULL), so it
+        // can be counted in no_target and is kept out of total and covered by the
+        // CASE conditions (TND-DD-1, TND-DD-2).
+        expect(sql).toContain('LEFT JOIN ( SELECT DISTINCT trit.id_indicator');
+        const innerJoinTarget = /(?<!LEFT )JOIN \( SELECT DISTINCT trit\./;
+        expect(sql).not.toMatch(innerJoinTarget);
+        // It sits right after the indicators join, before the covered set.
+        const targetIdx = sql.indexOf('toc_result_indicator_target');
+        expect(targetIdx).toBeGreaterThan(
+          sql.indexOf('toc_results_indicators tri '),
+        );
+        expect(targetIdx).toBeLessThan(sql.indexOf('cov ON'));
+      });
+
+      it('binds every caller value, in placeholder order, and interpolates none', async () => {
+        const { sql, params } = await captureSql();
+
+        // year (work package), year (target), source, statuses [2, 3], version, phase
+        expect(params).toEqual([2025, 2025, 'Result', 2, 3, 8, 'PHASE-1']);
+
+        // Placeholder order in the text matches the parameter order above.
+        const order = [
+          'wp.year = ?',
+          'trit.target_date = ?',
+          'r.source IN (?)',
+          'r.status_id IN (?, ?)',
+          'r.version_id = ?',
+          'tr.phase = ?',
+        ].map((fragment) => sql.indexOf(fragment));
+        expect(order.every((index) => index > -1)).toBe(true);
+        expect([...order].sort((a, b) => a - b)).toEqual(order);
+        expect(sql.match(/\?/g)).toHaveLength(params.length);
+
+        // Nothing the caller supplied appears in the SQL text.
+        expect(sql).not.toContain('PHASE-1');
+        expect(sql).not.toMatch(/\b2025\b/);
+        expect(sql).not.toMatch(/version_id = 8\b/);
+        expect(sql).not.toContain("'Result'");
+        expect(sql).not.toContain('${');
+      });
+
+      it('uses the configured schemas for both databases', async () => {
+        const { sql } = await captureSql();
+
+        expect(sql).toContain('FROM toc_test.toc_results tr');
+        expect(sql).toContain('toc_test.toc_work_packages wp');
+        expect(sql).toContain('toc_test.toc_results_indicators tri');
+        expect(sql).toContain('FROM main_test.result r');
+        expect(sql).toContain('main_test.results_toc_result rtr');
+        expect(sql).toContain('main_test.results_toc_result_indicators rtri');
+      });
+
+      it('returns numeric total, covered and noTarget even when the driver sends strings', async () => {
+        dataSourceQueryMock.mockResolvedValueOnce([
+          {
+            official_code: 'SP01',
+            category: 'OUTPUT',
+            total: '4',
+            covered: '1',
+            no_target: '2',
+          },
+          {
+            official_code: 'SP01',
+            category: 'OUTCOME',
+            total: 3,
+            covered: '0',
+            no_target: 0,
+          },
+        ]);
+
+        const rows = await repository.getPortfolioTocCoverage(coverageContext);
+
+        expect(rows).toEqual([
+          {
+            official_code: 'SP01',
+            category: 'OUTPUT',
+            total: 4,
+            covered: 1,
+            noTarget: 2,
+          },
+          {
+            official_code: 'SP01',
+            category: 'OUTCOME',
+            total: 3,
+            covered: 0,
+            noTarget: 0,
+          },
+        ]);
+        expect(typeof rows[0].total).toBe('number');
+        expect(typeof rows[0].covered).toBe('number');
+        expect(typeof rows[0].noTarget).toBe('number');
+      });
+
+      it('rejects through returnErrorRepository without putting the SQL text in the error', async () => {
+        const failure = new Error('db down');
+        dataSourceQueryMock.mockRejectedValueOnce(failure);
+
+        await expect(
+          repository.getPortfolioTocCoverage(coverageContext),
+        ).rejects.toBe(failure);
+
+        expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledTimes(
+          1,
+        );
+        const arg = (mockHandlersError.returnErrorRepository as jest.Mock).mock
+          .calls[0][0];
+        expect(arg.error).toBe(failure);
+        expect(arg.className).toBe('AoWBilateralRepository');
+        // debug: true would make the handler log the failed query text and its bound params.
+        expect(arg.debug).toBe(false);
+        expect(JSON.stringify(arg)).not.toMatch(/SELECT|toc_results/);
+        expect(String(failure.message)).not.toMatch(/SELECT|toc_results/);
       });
     });
   });

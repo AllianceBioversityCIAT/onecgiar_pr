@@ -291,4 +291,16 @@ describe('InnovationPackageCreatorComponent', () => {
       rafSpy.mockRestore();
     });
   });
+
+  describe('core chip label (PF2 S1)', () => {
+    it('shows `CODE - Name` after selecting a core innovation, without adding the name to the saved body', () => {
+      mockResponse.official_code = 'SP05';
+      (mockResponse as any).initiative_name = 'Better Diets';
+      global.scrollTo = jest.fn();
+      component.selectInnovationEvent({ result_id: '123' });
+      expect(component.coreInitiativeLabel()).toBe('SP05 - Better Diets');
+      expect(component.innovationPackageCreatorBody.official_code).toBe('SP05');
+      expect((component.innovationPackageCreatorBody as any).initiative_name).toBeUndefined();
+    });
+  });
 });

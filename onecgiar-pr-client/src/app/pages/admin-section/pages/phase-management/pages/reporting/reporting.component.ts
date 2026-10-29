@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ModuleTypeEnum } from '../../../../../../shared/enum/api.enum';
+import { PHASE_MANAGEMENT_COPY } from '../../../../../../internationalization/phase-management.copy';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
@@ -11,6 +12,8 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 export class ReportingComponent {
   moduleType = ModuleTypeEnum.REPORTING;
   appModuleId = 1;
+
+  readonly copy = PHASE_MANAGEMENT_COPY;
 
   constructor(public api: ApiService) {}
 

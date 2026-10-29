@@ -40,6 +40,14 @@ describe('ContributionToIndicatorResultsRepository', () => {
     expect(sql).toContain('union');
   });
 
+  it('getContributingResultsQuery selects result_submitter_name in both UNION branches (PF2-R-1)', () => {
+    const { repo } = makeRepo();
+    const sql = repo.getContributingResultsQuery();
+    expect(sql.match(/main_ci\.name as result_submitter_name/g)).toHaveLength(
+      2,
+    );
+  });
+
   it('findResultContributionsByTocId should query and apply removeInactives', async () => {
     const { repo, dataSource } = makeRepo();
     dataSource.query.mockResolvedValue([

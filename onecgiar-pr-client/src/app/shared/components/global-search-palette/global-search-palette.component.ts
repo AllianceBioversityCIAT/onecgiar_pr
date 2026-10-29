@@ -196,7 +196,7 @@ export class GlobalSearchPaletteComponent {
    * otherwise be read as "Sustainable Farming , SP02".
    */
   resultAriaLabel(row: PaletteResultRow): string {
-    return [row.title, row.submitterCode, row.statusName].map((p) => p?.trim()).filter(Boolean).join(', ');
+    return [row.title, row.submitterLabel, row.statusName].map((p) => p?.trim()).filter(Boolean).join(', ');
   }
   programAriaLabel(row: PaletteProgramRow): string {
     return [row.name, row.code].map((p) => p?.trim()).filter(Boolean).join(', ');

@@ -46,6 +46,11 @@ describe('HeaderPanelComponent', () => {
     component.api.rolesSE.roles = null as any;
   });
 
+  it('PF2-T-6: the role menu item label is the shared P/A label', () => {
+    expect(component.initiativeLabel({ official_code: 'SP12', initiative_name: 'Digital' })).toBe('SP12 - Digital');
+    expect(component.initiativeLabel({ official_code: 'SP12' })).toBe('SP12');
+  });
+
   it('should default platform role to Guest when no application role is available', () => {
     component.api.rolesSE.roles = null as any;
     expect(component.getPlatformRole()).toBe('Guest');

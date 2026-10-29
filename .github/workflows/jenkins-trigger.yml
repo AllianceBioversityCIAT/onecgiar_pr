@@ -1,10 +1,9 @@
 name: Trigger Jenkins Job
 
 on:
-  push:
-    branches:
-      - performance-refactor
-  workflow_dispatch: # This allows the workflow to be manually triggered if needed
+  # Pushes to performance-refactor are deployed by reporting-tool-dev-cicd.yml (prms-reporting-tool-dev-cd).
+  # This legacy trigger of prms-reporting-tool-dev is kept for manual recovery only.
+  workflow_dispatch:
 
 jobs:
   trigger-job:

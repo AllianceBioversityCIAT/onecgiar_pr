@@ -11,6 +11,7 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 import { SPProgress } from '../../../../shared/interfaces/SP-progress.interface';
+import { buildRatio } from './reporting-burndown';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
 
 // Same echarts mocks as `dashboard-lab.component.spec.ts` — `ProgramOverviewComponent` (a template
@@ -125,7 +126,7 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
   }
 
   // ── Split / invariant / zero-target (hand-computed expectations) ────────────────────────────
-  it('partitions target=0∧achieved>0 into inProgress (the C-2 orphan), counts zero-target in total, and holds the invariant', async () => {
+  it('excludes no-target rows from total - including target=0 with achieved>0, the former C-2 orphan - and holds the invariant', async () => {
     const component = await createComponent();
     seedAows(component, {
       AOW01: {
@@ -134,8 +135,8 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
           { indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 10 }, // complete
           { indicator_id: 2, target_value_sum: 10, actual_achieved_value_sum: 5 }, // in-progress
           { indicator_id: 3, target_value_sum: 10, actual_achieved_value_sum: 0 }, // not-started
-          { indicator_id: 4, target_value_sum: 0, actual_achieved_value_sum: 0 }, // zero-target — counted as not-started
-          { indicator_id: 5, target_value_sum: 0, actual_achieved_value_sum: 3 } // the C-2 orphan → in-progress
+          { indicator_id: 4, target_value_sum: 0, actual_achieved_value_sum: 0 }, // no target - excluded
+          { indicator_id: 5, target_value_sum: 0, actual_achieved_value_sum: 3 } // reported but no target - excluded too (KTO-R-1/DD-2: achieved never rescues a row)
         ],
         // AoW-OWNED outcome (`is_aow: true`): counted here since KCR-DD-2 moved the row basis from
         // output-tier-only (OAH DD-3) to the AoW-own set — design §6.2 `overviewAowProgressRich` row.
@@ -143,8 +144,8 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
         // KCR fixture extension — a CROSS-CUT outcome (`is_aow: false`, complete on its own terms).
         // It belongs to the Intermediate bucket and must never reach this row (KCR-R-1/R-5).
         // Without it the fixture could not separate "AoW-own" from "every outcome tier row":
-        // both would read complete 2 / reported 4 / total 5. With it, a cross-cut-inclusive basis
-        // reads complete 3 / reported 5 / total 6 instead.
+        // both would read complete 2 / reported 3 / total 4. With it, a cross-cut-inclusive basis
+        // reads complete 3 / reported 4 / total 5 instead.
         crosscutIndicators: [{ indicator_id: 901, target_value_sum: 5, actual_achieved_value_sum: 5 }]
       }
     });
@@ -153,26 +154,86 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
 
     // Hand-computed independently of the production code's own arithmetic (anti-tautology).
     // AoW-own set = the 5 output KPIs + the `is_aow: true` outcome #99; the `is_aow: false` #901 is
-    // NOT in it. All six own KPIs count → complete=2 (1 and 99), inProgress=2 (2 and 5),
-    // notStarted=2 (3 and 4), zeroTarget=0, total=6, reported=4, remaining=2.
+    // NOT in it. Targeted = {1,2,3,99} (4 and 5 have no target set, whatever their achieved value) →
+    // complete=2 (1 and 99), inProgress=1 (2), notStarted=1 (3), zeroTarget=2, total=4, reported=3,
+    // remaining=1.
     expect(row).toEqual<OverviewAowProgressRowRich>({
       code: 'AOW01',
       name: 'AoW 01',
+      // KCR: 1 → 2, design §6.2 `overviewAowProgressRich` row (KCR-DD-2) — the owned outcome #99
+      // (achieved 5 >= target 5) is `complete` and now belongs to this row.
       complete: 2,
-      inProgress: 2,
-      notStarted: 2,
-      zeroTarget: 0,
-      reported: 4,
-      total: 6,
-      remaining: 2,
+      inProgress: 1,
+      notStarted: 1,
+      zeroTarget: 2,
+      // #99 has `achieved > 0` and a target, so it is Reported (KCR-R-9); #5 is not (no target).
+      reported: 3,
+      // Outputs contribute 3 targeted, the owned outcome 1. A basis that also swallowed the
+      // cross-cut #901 would read 5; the superseded output-tier basis, 3.
+      total: 4,
+      remaining: 1,
+      // KPC-R-5 / S-5.1 — the capped mean over the 4 counted KPIs, hand-computed: 100 + 50 + 0 + 100
+      // = 250 → 250 / 4 = 62.5. Not `reported / total` (3/4 = 75).
+      progressSum: 250,
+      percent: 62.5,
       // P2-3296 — beside the reported-KPI count; no achievement data seeded by this fixture.
       achievement: null
     });
     expect(row.complete + row.inProgress + row.notStarted).toBe(row.total);
   });
 
-  // ── Sort: remaining DESC, tie code ASC ───────────────────────────────────────────────────────
-  it('sorts rows by remaining DESC, breaking ties by code ASC', async () => {
+  // ── KPC-S-5.1: the Overview rows carry the Reporting card's % ───────────────────────────────
+  it('KPC-S-5.1: the thin and rich rows carry the same capped mean as the Reporting ratio', async () => {
+    const component = await createComponent();
+    const indicators = [
+      { indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 10 },
+      { indicator_id: 2, target_value_sum: 10, actual_achieved_value_sum: 5 },
+      { indicator_id: 3, target_value_sum: 10, actual_achieved_value_sum: 0 },
+      { indicator_id: 4, target_value_sum: 10, actual_achieved_value_sum: 30 } // over-achieved: capped at 100
+    ];
+    seedAows(component, { AOW01: { name: 'AoW 01', outputIndicators: indicators } });
+
+    // 100 + 50 + 0 + 100 = 250 → 62.5 (KPC-S-4.1's fixture); the count-based figure would be 75.
+    const rich = rowsByCode(component)['AOW01'];
+    const thin = component.overviewAowProgress().find(r => r.code === 'AOW01')!;
+    expect(rich.percent).toBe(62.5);
+    expect(rich.progressSum).toBe(250);
+    expect(thin.percent).toBe(62.5);
+    expect(thin.progressSum).toBe(250);
+    expect(thin.percent).toBe(buildRatio(indicators).percent);
+  });
+
+  // ── KPC-S-11.1: the thin rows sort ascending by the capped mean, not by done / total ────────
+  it('KPC-S-11.1: overviewAowProgress sorts by the capped mean ascending, tie code ASC', async () => {
+    const component = await createComponent();
+    seedAows(component, {
+      // `1 of 4` (done/total 0.25, count order FIRST) but a 25 % mean.
+      AOW01: {
+        name: 'AoW 01',
+        outputIndicators: [
+          { indicator_id: 1, target_value_sum: 10, actual_achieved_value_sum: 10 },
+          ...[2, 3, 4].map(id => ({ indicator_id: id, target_value_sum: 10, actual_achieved_value_sum: 0 }))
+        ]
+      },
+      // `2 of 4` (done/total 0.5, count order SECOND) but a 10 % mean — must come first now.
+      AOW02: {
+        name: 'AoW 02',
+        outputIndicators: [
+          { indicator_id: 5, target_value_sum: 100, actual_achieved_value_sum: 20 },
+          { indicator_id: 6, target_value_sum: 100, actual_achieved_value_sum: 20 },
+          { indicator_id: 7, target_value_sum: 100, actual_achieved_value_sum: 0 },
+          { indicator_id: 8, target_value_sum: 100, actual_achieved_value_sum: 0 }
+        ]
+      }
+    });
+
+    expect(component.overviewAowProgress().map(r => r.code)).toEqual(['AOW02', 'AOW01']);
+    // The rich rows sort by AoW code ASC (quick/overview-aow-code-order).
+    expect(component.overviewAowProgressRich().map(r => r.code)).toEqual(['AOW01', 'AOW02']);
+  });
+
+  // ── Sort: AoW code ASC (quick/overview-aow-code-order), regardless of remaining ──────────────
+  it('sorts rows by AoW code ASC regardless of remaining', async () => {
     const component = await createComponent();
     seedAows(component, {
       // remaining = 5 (0 reported of 5) — ties with AOW04, code ASC must place this one first.
@@ -194,7 +255,7 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
     });
 
     const order = component.overviewAowProgressRich().map(r => r.code);
-    expect(order).toEqual(['AOW03', 'AOW04', 'AOW01', 'AOW02']);
+    expect(order).toEqual(['AOW01', 'AOW02', 'AOW03', 'AOW04']);
   });
 
   // ── continueReporting() ───────────────────────────────────────────────────────────────────────

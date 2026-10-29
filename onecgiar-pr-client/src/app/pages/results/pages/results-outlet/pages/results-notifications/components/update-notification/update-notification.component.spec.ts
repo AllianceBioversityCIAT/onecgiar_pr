@@ -107,6 +107,16 @@ describe('UpdateNotificationComponent', () => {
 
     afterEach(() => openSpy.mockRestore());
 
+    it('PF2-T-6: header shows the P/A label when the payload carries the name, else the code only', () => {
+      const withName = build(NotificationType.BILATERAL_AI_JOB_FINISHED, {
+        obj_result: { result_code: 1, title: 'T', obj_version: { id: 36 }, obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP03', name: 'Animal' } }] }
+      });
+      expect(withName.f.nativeElement.querySelector('.update_notification_header_item_text').textContent.trim()).toBe('SP03 - Animal');
+
+      const codeOnly = build(NotificationType.BILATERAL_AI_JOB_FINISHED, {});
+      expect(codeOnly.f.nativeElement.querySelector('.update_notification_header_item_text').textContent.trim()).toBe('SP03');
+    });
+
     it('AI job finished: shows the server sentence and a View link, never "The result -"', () => {
       const { f } = build(NotificationType.BILATERAL_AI_JOB_FINISHED, {
         result_id: null,

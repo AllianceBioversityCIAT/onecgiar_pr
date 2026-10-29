@@ -6,6 +6,7 @@ import { By } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
 import { WordCounterService } from '../../../../shared/services/word-counter.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { KpCgspaceBrowseComponent } from '../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
 import { resolveLegacyTypeForDepthSearch } from '../../shared/bilateral-title-legacy-type';
@@ -31,7 +32,8 @@ class KpCgspaceBrowseStubComponent {
 function makeApiMock() {
   return {
     dataControlSE: { reportingCurrentPhase: { phaseYear: 2026 } },
-    rolesSE: { isAdmin: false },
+    // RNB-2: the form only creates for an admin or a member of the current centre; admin by default.
+    rolesSE: { isAdmin: true, rolesVersion: 0, getMyCenters: jest.fn().mockReturnValue([]) },
     alertsFe: { show: jest.fn() },
     resultsSE: {
       GET_checkTitleUniqueness: jest.fn().mockReturnValue(of({ response: { isUnique: true } })),
@@ -377,6 +379,75 @@ describe('BilateralManualCreateFormComponent', () => {
         })
       );
     }));
+  });
+});
+
+// RNB-2 (P2-3941, PO decision option A): like the AI flow, the manual form refuses to create for a
+// centre the user is not assigned to. Own describe because the gate is cached per component instance.
+describe('BilateralManualCreateFormComponent — centre membership gate (RNB-2)', () => {
+  async function build(isAdmin: boolean, centers: { center_id: string; center_acronym: string }[]) {
+    const api = makeApiMock();
+    api.rolesSE = { isAdmin, rolesVersion: 0, getMyCenters: jest.fn().mockReturnValue(centers) } as any;
+    await TestBed.configureTestingModule({
+      imports: [BilateralManualCreateFormComponent],
+      providers: [
+        WordCounterService,
+        { provide: ApiService, useValue: api },
+        { provide: PhasesService, useValue: { phases: { reporting: [{ id: 9, phase_name: '2025' }] } } }
+      ]
+    })
+      .overrideComponent(BilateralManualCreateFormComponent, {
+        remove: { imports: [KpCgspaceBrowseComponent] },
+        add: { imports: [KpCgspaceBrowseStubComponent] }
+      })
+      .compileComponents();
+    const fixture = TestBed.createComponent(BilateralManualCreateFormComponent);
+    TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'CENTER-07');
+    fixture.detectChanges();
+    return { fixture, component: fixture.componentInstance };
+  }
+
+  // The title gate is debounced (500 ms); wait it out for real, the fixture is built outside fakeAsync.
+  async function fill(component: BilateralManualCreateFormComponent, fixture: ComponentFixture<unknown>) {
+    component.onLevelSelected(4);
+    component.onTypeSelected(8);
+    component.onTitleInput('Valid bilateral title');
+    await new Promise(resolve => setTimeout(resolve, 600));
+    fixture.detectChanges();
+  }
+
+  it('lets a member of the centre create', async () => {
+    const { fixture, component } = await build(false, [{ center_id: 'CENTER-07', center_acronym: 'IFPRI' }]);
+    const spy = jest.spyOn(component.create, 'emit');
+    await fill(component, fixture);
+    expect(component.canCreate()).toBe(true);
+    component.onCreateClick();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets an admin create', async () => {
+    const { fixture, component } = await build(true, []);
+    await fill(component, fixture);
+    expect(component.canCreate()).toBe(true);
+  });
+
+  it('refuses a user with no centre: cannot create and emits nothing', async () => {
+    const { fixture, component } = await build(false, []);
+    const spy = jest.spyOn(component.create, 'emit');
+    await fill(component, fixture);
+    expect(component.isCenterAllowed()).toBe(false);
+    expect(component.canCreate()).toBe(false);
+    component.onCreateClick();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a member of ANOTHER centre', async () => {
+    const { fixture, component } = await build(false, [{ center_id: 'CENTER-99', center_acronym: 'IRRI' }]);
+    const spy = jest.spyOn(component.create, 'emit');
+    await fill(component, fixture);
+    expect(component.canCreate()).toBe(false);
+    component.onCreateClick();
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 

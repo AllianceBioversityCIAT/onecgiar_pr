@@ -282,6 +282,14 @@ describe('RdContributorsAndPartnersComponent', () => {
    * Contributing Science Program (combined across `scienceSelected` minus the `OTHER_SP_CODE`
    * sentinel, and `otherScienceSelected`) while the result's ToC has planned Science Programs.
    */
+  describe('PF2-T-6 — Science Program chip label', () => {
+    it('uses the shared CODE - Name rule and keeps the Other(s) sentinel text', () => {
+      expect(component.spChipLabel({ id: 1, official_code: 'SP01', name: 'Breeding' })).toBe('SP01 - Breeding');
+      expect(component.spChipLabel({ id: 2, official_code: 'SP02' })).toBe('SP02');
+      expect(component.spChipLabel({ id: component.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)' })).toBe('Other(s)');
+    });
+  });
+
   describe('TOC-SP-T-1 — minimum Science Program guard', () => {
     const SP01 = { id: 1, official_code: 'SP01' };
     const SP02 = { id: 2, official_code: 'SP02' };
@@ -1512,7 +1520,7 @@ describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes 
     const otherScience = fixture.debugElement.query(By.css('app-pr-multi-select[data-testid="toc-other-science"]'));
     expect(otherScience).toBeTruthy();
     expect(otherScience.componentInstance.options()).toEqual(SCIENCE_CATALOG);
-    expect(fixture.nativeElement.textContent).toContain('Contributing Science Program/Accelerator');
+    expect(fixture.nativeElement.textContent).toContain('Contributing Science Programs/Accelerators' /* P2-4010: plural */);
   });
 
   it('TOC-T-1 (attempt 3): unmapped + otherCentersSelected populated (LC-DD-4 auto-add) — BOTH the flat dropdown AND toc-other-centers render, chip visible and removable', () => {

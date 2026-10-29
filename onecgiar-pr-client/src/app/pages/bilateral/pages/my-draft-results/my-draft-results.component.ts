@@ -10,6 +10,7 @@ import {
   OnDestroy,
   OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -17,6 +18,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HlmButton } from '@spartan/button';
+import { HlmCheckboxImports } from '@spartan/checkbox';
 import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
@@ -26,6 +28,8 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { DraftSpotlightService } from '../../services/draft-spotlight.service';
+import { BilateralTourService } from '../../services/bilateral-tour.service';
 import { BILATERAL_STATUS } from '../../services/bilateral-creation.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15) — reads the shared query-param
@@ -48,6 +52,7 @@ import {
 } from './utils/draft-filter-helpers';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { isCenterMember } from '../../services/bilateral-center-membership.util';
+import { BILATERAL_AI_PROCESSES_COPY } from '../../../../internationalization/bilateral-ai-processes.copy';
 
 /**
  * P2-3169 AC2 — the `result` relation the drafts endpoint returns next to every draft.
@@ -103,6 +108,14 @@ const DRAFT_STATUS_MODIFIERS: Record<number, string> = {
   [BILATERAL_STATUS.Rejected]: 'mdr-status--rejected',
 };
 
+/** ABD-OQ-2 copy defaults, one place to edit. */
+const BULK_COPY = {
+  discard: 'Discard selected',
+  clear: 'Clear selection',
+  dialogTitle: (n: number) => `Discard ${n} draft result${n === 1 ? '' : 's'}?`,
+  dialogBody: 'Their draft results will be removed from PRMS.',
+};
+
 export interface DraftSessionGroup {
   sessionId: string;
   sessionShortHash: string;
@@ -116,6 +129,8 @@ export interface DraftSessionGroup {
   isCurrentUser: boolean;
   creatorName: string;
   creatorTooltip: string;
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2): `ADN-DD-3`, true when the group's job id is in `freshDraftJobIds()`.
+  isNew: boolean;
   drafts: BilateralAiDraft[];
 }
 
@@ -127,6 +142,7 @@ export interface DraftSessionGroup {
     RouterModule,
     OverlayModule,
     HlmButton,
+    ...HlmCheckboxImports,
     PrDialogComponent,
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
@@ -154,6 +170,9 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2)
+  private readonly spotlight = inject(DraftSpotlightService);
+  private readonly tour = inject(BilateralTourService);
 
   /**
    * P2-3316: plain-language notes for the three card actions. End users could not tell
@@ -223,10 +242,35 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
    */
   private readonly pendingHighlightJobId = signal<string | null>(null);
   private highlightApplied = false;
+  private lastFilterKey: string | null = null;
   readonly highlightedSessionId = signal<string | null>(null);
   private highlightClearTimer: ReturnType<typeof setTimeout> | null = null;
   /** Delay of the corrective second scroll pass (see the highlight effect). */
   private static readonly SCROLL_SETTLE_MS = 600;
+
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-DD-3)
+  /** Bumped to re-run a FINISHED `?job=` run for the same job (`FC-1`): setting `pendingHighlightJobId` to
+   * the same id would not notify (P-18), so the highlight effect reads this signal first instead. */
+  private readonly highlightRearmSeq = signal(0);
+  /** The job whose highlight run finished its second scroll pass while still being the URL's job. */
+  private readonly highlightSettledJobId = signal<string | null>(null);
+  /** Nonce of the spotlight request already attached to the highlight run (plain field, never a dependency). */
+  private attachedSpotlightNonce: number | null = null;
+  /** Nonce for which `clearFilters()` already ran, so a filter that still hides the group cannot loop. */
+  private filtersClearedForNonce: number | null = null;
+  /** Bumped by the 1 s poll that re-checks the guided tour, which is not a signal (`ADS-DD-8`). */
+  private readonly tourPollTick = signal(0);
+  private tourPollTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly TOUR_POLL_MS = 1000;
+
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2)
+  /** Copy for the "New" badge (DD-9). */
+  readonly newBadgeCopy = BILATERAL_AI_PROCESSES_COPY.drafts.newBadge;
+  /** `ADN-DD-5`: ids of the `isNew` groups this component has rendered. A plain Set — only effects and
+   * the consume path touch it, nothing in a template reads it. Never holds an id that was not shown. */
+  private shownFreshIds = new Set<string>();
+  /** Last seen `centerInstitutionId()`; `undefined` until the first effect run (a cold mount never consumes). */
+  private previousCenterInstitutionId: number | null | undefined = undefined;
 
   constructor() {
     effect(() => {
@@ -234,6 +278,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     });
 
     effect(() => {
+      // `ADS-DD-3`: read first so a same-job re-arm re-runs this effect even though the job id is unchanged (FC-1).
+      this.highlightRearmSeq();
       const jobId = this.pendingHighlightJobId();
       const groups = this.sessionGroups();
       if (this.highlightApplied || !jobId) return;
@@ -263,10 +309,174 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
             if (el) this.scrollWithinNearestScrollContainer(el, instant);
           };
           scrollToTarget(false);
-          this.highlightClearTimer = setTimeout(() => scrollToTarget(true), MyDraftResultsComponent.SCROLL_SETTLE_MS);
+          this.highlightClearTimer = setTimeout(() => {
+            scrollToTarget(true);
+            // `ADS-DD-3`: the run is settled only while its job is still the URL's job.
+            if (untracked(() => this.pendingHighlightJobId()) === match.sessionId) {
+              this.highlightSettledJobId.set(match.sessionId);
+            }
+          }, MyDraftResultsComponent.SCROLL_SETTLE_MS);
         },
         { injector: this.injector },
       );
+    });
+
+    // ABD-R-7 / DD-6: any filter or centre change, or a selected draft that is no longer visible,
+    // empties the selection. Every signal is read BEFORE any early return (same trap as `?job=`).
+    // The filter key is compared with the previous run so a discard (which only shrinks `drafts()`
+    // and re-selects the failed ids) is not mistaken for a filter change.
+    effect(() => {
+      const visible = this.drafts();
+      const key = JSON.stringify([
+        this.filter.selectedProjectIds(),
+        this.filter.searchText(),
+        this.filter.selectedCreatedBy(),
+        this.ctx.centerId(),
+      ]);
+      // While a bulk request is in flight the service has already removed the rows optimistically;
+      // judging visibility then would wipe the selection a failed request must keep (ABD-S-6.3).
+      const inFlight = this.isBulkDiscarding();
+      const selected = untracked(() => this.selectedIds());
+      const changed = key !== this.lastFilterKey;
+      this.lastFilterKey = key;
+      if (!selected.size || (inFlight && !changed)) return;
+      const visibleIds = new Set(visible.map(d => Number(d.id)));
+      if (changed || [...selected].some(id => !visibleIds.has(id))) this.selectedIds.set(new Set());
+    });
+
+    // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2): collect what was shown. `sessionGroups()` is
+    // read unconditionally and first (page-guide trap: no early return before the read).
+    effect(() => {
+      const groups = this.sessionGroups();
+      for (const group of groups) if (group.isNew) this.shownFreshIds.add(group.sessionId);
+    });
+
+    // `ADN-DD-5` / P-10: a center switch reuses this component, so consume on every transition of
+    // `centerInstitutionId()` AWAY from a non-null value (X->null, X->Y). `null`->X never consumes.
+    effect(() => {
+      const current = this.ctx.centerInstitutionId();
+      const previous = this.previousCenterInstitutionId;
+      this.previousCenterInstitutionId = current;
+      if (previous != null && current !== previous) {
+        this.consumeShownFreshJobs();
+        // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-DD-8, FX-2): the page is reused across a center
+        // switch, so the old center's spotlight and settle state must not survive it. `highlightApplied = false`
+        // lets a later request for the same id re-run instead of waiting forever.
+        untracked(() => {
+          this.highlightSettledJobId.set(null);
+          this.highlightApplied = false;
+          this.spotlight.close('programmatic');
+        });
+      }
+    });
+
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-DD-9): list reloads change row heights, so keep the
+    // cut-out aligned. `sessionGroups()` is read unconditionally and first (page-guide trap).
+    effect(() => {
+      this.sessionGroups();
+      untracked(() => {
+        if (this.spotlight.isActive()) this.spotlight.refresh();
+      });
+    });
+
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-4, DD-11): a layer that opens while the spotlight is lit
+    // (e.g. the drawer set programmatically) would stack its backdrop over the overlay, so close the spotlight.
+    // Every signal is read FIRST, before any return (page-guide trap).
+    effect(() => {
+      const selected = !!this.selectedDraft();
+      const promote = !!this.promoteTarget();
+      const discard = !!this.discardTarget();
+      const drawer = this.bilateralAiService.drawerOpen();
+      const active = this.spotlight.isActive();
+      if (active && (selected || promote || discard || drawer)) {
+        untracked(() => this.spotlight.close('programmatic'));
+      }
+    });
+
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-DD-3..DD-6, DD-8)
+    // The request effect. Every signal is read FIRST, before any early return (page-guide trap). It never moves
+    // the `?job=` ring: that effect stays the only scroller. It only waits for it, then lights the card.
+    effect(() => {
+      this.tourPollTick();
+      const request = this.bilateralAiService.draftSpotlightRequest();
+      const centerAcronym = this.ctx.centerAcronym();
+      const pendingJobId = this.pendingHighlightJobId();
+      const allDrafts = this.allDrafts();
+      const groups = this.sessionGroups();
+      const settledJobId = this.highlightSettledJobId();
+      const layerOpen =
+        !!this.selectedDraft() || !!this.promoteTarget() || !!this.discardTarget() || this.bilateralAiService.drawerOpen();
+      this.spotlight.active();
+
+      if (!request) {
+        this.clearTourPoll();
+        return;
+      }
+      const { jobId, nonce } = request;
+
+      // 1. Center: "loaded" is not center-specific (P-8), so only act for the request's own center.
+      if (request.centerAcronym.toLowerCase() !== centerAcronym.toLowerCase()) return;
+      // 2. URL landed: never move the ring ahead of the URL (FC-4).
+      if (pendingJobId !== jobId) return;
+
+      // 3. Filters hiding the group: reveal it (cancel the pending search debounce first, JD-15), once.
+      const group = groups.find(item => item.sessionId === jobId);
+      if (!group) {
+        const hidden = allDrafts.some(draft => (draft.job_id ?? draft.job?.job_id ?? `draft-${draft.id}`) === jobId);
+        // 4. Absent from allDrafts: wait. The service's 10 s timer drops the request.
+        if (hidden && this.filtersClearedForNonce !== nonce) {
+          this.filtersClearedForNonce = nonce;
+          untracked(() => {
+            if (this.searchDebounceTimer) {
+              clearTimeout(this.searchDebounceTimer);
+              this.searchDebounceTimer = null;
+            }
+            this.clearFilters();
+          });
+        }
+        return;
+      }
+
+      // 5. Attach to the `?job=` run, or re-arm a run that already finished (same-job re-click, FC-1).
+      let settled = settledJobId;
+      if (this.attachedSpotlightNonce !== nonce) {
+        this.attachedSpotlightNonce = nonce;
+        if (settled === jobId) {
+          settled = null;
+          untracked(() => {
+            this.highlightApplied = false;
+            this.highlightSettledJobId.set(null);
+            this.highlightRearmSeq.update(seq => seq + 1);
+          });
+        }
+      }
+
+      // 6. Settled: wait for the highlight run's second scroll pass.
+      if (settled !== jobId) return;
+
+      // 7. Another layer is open (panel, dialog, drawer) or the guided tour runs: wait. Signals re-run this
+      //    effect; the tour is not a signal, so it is polled once per second while a request is pending.
+      if (layerOpen) return;
+      if (this.isTourActive()) {
+        this.armTourPoll();
+        return;
+      }
+
+      // 8. Consume, then show.
+      const card = document.getElementById(`mdr-session-${jobId}`);
+      if (!card) return;
+      untracked(() => {
+        this.clearTourPoll();
+        this.bilateralAiService.consumeDraftSpotlight(nonce);
+        const n = group.drafts.length;
+        const copy = BILATERAL_AI_PROCESSES_COPY.drafts.spotlight;
+        this.spotlight.show(card, this.findNearestScrollContainer(card), {
+          title: copy.title(n, request.label),
+          description: copy.body,
+          buttonText: copy.button,
+          onDismiss: () => document.getElementById(`mdr-session-${jobId}`)?.focus(),
+        });
+      });
     });
 
     effect(() => {
@@ -333,8 +543,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
 
   /** Centers `el` within its nearest scrollable ancestor (the `scrollIntoView({block:'center'})`
    * this replaces), respecting `prefers-reduced-motion` (`AIQ-R-9` D kept `behavior:'smooth'`; a
-   * reduced-motion user gets the jump instead, same convention as `bilateral-overview`'s
-   * `scrollToAttention()`). No-ops when no scrollable ancestor is found — never falls back to
+   * reduced-motion user gets the jump instead, same convention the Overview scroll used before it was removed).
+   * No-ops when no scrollable ancestor is found — never falls back to
    * `scrollIntoView`, which is exactly the bug this exists to avoid. */
   private scrollWithinNearestScrollContainer(el: HTMLElement, instant = false): void {
     const container = this.findNearestScrollContainer(el);
@@ -351,6 +561,25 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     const centeredTop = topWithinContainer - (container.clientHeight / 2 - elRect.height / 2);
 
     container.scrollTo({ top: Math.max(0, centeredTop), behavior: reduceMotion || instant ? 'auto' : 'smooth' });
+  }
+
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-DD-8)
+  private isTourActive(): boolean {
+    const instance = this.tour.getDriverInstance();
+    return !!instance && (instance.isActive?.() ?? true);
+  }
+
+  private armTourPoll(): void {
+    if (this.tourPollTimer) return;
+    this.tourPollTimer = setTimeout(() => {
+      this.tourPollTimer = null;
+      this.tourPollTick.update(tick => tick + 1);
+    }, MyDraftResultsComponent.TOUR_POLL_MS);
+  }
+
+  private clearTourPoll(): void {
+    if (this.tourPollTimer) clearTimeout(this.tourPollTimer);
+    this.tourPollTimer = null;
   }
 
   ngOnInit(): void {
@@ -378,6 +607,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
       const jobId = map.get('job');
       if (jobId === this.pendingHighlightJobId()) return;
       this.highlightApplied = false;
+      // `ADS-DD-3` (FC-3): a settle from an earlier visit must never count for the run this change starts.
+      this.highlightSettledJobId.set(null);
       this.pendingHighlightJobId.set(jobId);
       // The highlight lives exactly as long as `?job=` does.
       if (!jobId) this.highlightedSessionId.set(null);
@@ -419,6 +650,7 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     if (!list.length) return [];
 
     const groupMap = new Map<string, DraftSessionGroup>();
+    const freshIds = this.bilateralAiService.freshDraftJobIds();
     const currentUserId = this.api.authSE?.localStorageUser?.id;
     const currentUserName = this.api.authSE?.localStorageUser?.user_name;
 
@@ -479,6 +711,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
           isCurrentUser,
           creatorName,
           creatorTooltip,
+          // The `draft-<id>` fallback key is not a job id, so it is never new (even if a caller adds it to the set).
+          isNew: Boolean(jobId) && freshIds.has(sessionId),
           drafts: [],
         };
         groupMap.set(sessionId, group);
@@ -770,6 +1004,7 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   }
 
   onReview(draft: BilateralAiDraft): void {
+    this.spotlight.close('programmatic');
     this.selectedDraft.set(draft);
   }
 
@@ -778,6 +1013,7 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   }
 
   onPromoteClick(draft: BilateralAiDraft): void {
+    this.spotlight.close('programmatic');
     this.centerValidationConfirmed.set(false);
     this.promoteTarget.set(draft);
   }
@@ -798,6 +1034,7 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   }
 
   onDiscardClick(draft: BilateralAiDraft): void {
+    this.spotlight.close('programmatic');
     this.discardTarget.set(draft);
   }
 
@@ -814,7 +1051,75 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     this.discardTarget.set(null);
   }
 
+  // ── ABD · Bulk discard (selection is component-scoped, ABD-DD-5) ──────────
+  readonly BULK_COPY = BULK_COPY;
+  readonly selectedIds = signal<Set<number>>(new Set());
+  readonly selectedCount = computed(() => this.selectedIds().size);
+  readonly isBulkDiscarding = signal(false);
+  readonly showBulkDiscardDialog = signal(false);
+  readonly bulkDialogTitle = computed(() => BULK_COPY.dialogTitle(this.selectedCount()));
+
+  isRowSelected(draft: BilateralAiDraft): boolean {
+    return this.selectedIds().has(Number(draft.id));
+  }
+
+  toggleRow(draft: BilateralAiDraft, checked: boolean): void {
+    this.selectedIds.update(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(Number(draft.id));
+      else next.delete(Number(draft.id));
+      return next;
+    });
+  }
+
+  /** Over the group's VISIBLE drafts only (`group.drafts` is built from the filtered `drafts()`). */
+  cardSelectionState(group: DraftSessionGroup): 'all' | 'some' | 'none' {
+    const selected = this.selectedIds();
+    const n = group.drafts.filter(d => selected.has(Number(d.id))).length;
+    return n === 0 ? 'none' : n === group.drafts.length ? 'all' : 'some';
+  }
+
+  toggleCard(group: DraftSessionGroup, checked: boolean): void {
+    this.selectedIds.update(prev => {
+      const next = new Set(prev);
+      for (const d of group.drafts) {
+        if (checked) next.add(Number(d.id));
+        else next.delete(Number(d.id));
+      }
+      return next;
+    });
+  }
+
+  clearSelection(): void {
+    this.selectedIds.set(new Set());
+  }
+
+  onBulkDiscardConfirm(): void {
+    if (this.isBulkDiscarding()) return;
+    const ids = [...this.selectedIds()];
+    if (!ids.length) return;
+    this.isBulkDiscarding.set(true);
+    // The service removes rows at call time and shows the single toast for every outcome.
+    this.bilateralAiService.discardDrafts(ids).subscribe(res => {
+      this.isBulkDiscarding.set(false);
+      this.showBulkDiscardDialog.set(false);
+      // `null` = request failed: keep the selection as-is (ABD-S-6.3).
+      if (res) this.selectedIds.set(new Set(res.failed.map(f => Number(f.id))));
+    });
+  }
+
+  /** @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2): forget the fresh jobs this view showed (`ADN-R-3`). */
+  private consumeShownFreshJobs(): void {
+    if (this.shownFreshIds.size === 0) return;
+    const ids = Array.from(this.shownFreshIds);
+    this.shownFreshIds = new Set<string>();
+    untracked(() => this.bilateralAiService.consumeFreshDraftJobs(ids));
+  }
+
   ngOnDestroy(): void {
+    this.spotlight.close('programmatic');
+    this.clearTourPoll();
+    this.consumeShownFreshJobs();
     document.body.style.overflow = '';
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     if (this.highlightClearTimer) clearTimeout(this.highlightClearTimer);

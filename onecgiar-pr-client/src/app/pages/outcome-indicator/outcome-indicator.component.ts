@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { withScienceProgramLabel } from '../../shared/utils/science-program-label.util';
 import { ApiService } from '../../shared/services/api/api.service';
 import { OutcomeIndicatorService } from './services/outcome-indicator.service';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -81,7 +82,7 @@ export class OutcomeIndicatorComponent implements OnInit {
 
   private mapInitiativeData(initiative: any) {
     const { code, name } = initiative?.obj_cgiar_entity_type || {};
-    return { ...initiative, typeCode: code, typeName: name };
+    return { ...withScienceProgramLabel(initiative), typeCode: code, typeName: name };
   }
 
   private groupInitiativesByType(entityTypesResponse: any[]): void {

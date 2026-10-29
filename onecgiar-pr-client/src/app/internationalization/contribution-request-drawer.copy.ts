@@ -192,6 +192,11 @@ export const CONTRIBUTION_REQUEST_DRAWER_COPY = {
      * task brief).
      */
     primaryRequestChip: 'Needs your review',
+    /** PRDS-R-3: neutral kind label for a primary row once the result is decided (status 6/7). */
+    primaryRequestKindChip: 'Primary Science Program request',
+    /** PRDS-R-2: decided-state chip word on a primary row; the caption reads "<word> by <SP code>". */
+    primaryDecisionAccepted: 'Accepted',
+    primaryDecisionRejected: 'Rejected',
     /** PRA-R-3: toast when the SP answers a primary request while the result is still Editing. */
     primaryNotifyLater: 'You are now the primary Science Program. You will be notified when the Center submits it for review.',
     /**

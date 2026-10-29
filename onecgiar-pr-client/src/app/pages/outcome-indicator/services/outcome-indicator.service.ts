@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { ApiService } from '../../../shared/services/api/api.service';
+import { withScienceProgramLabel } from '../../../shared/utils/science-program-label.util';
 import { TypeOneReportService } from '../../type-one-report/type-one-report.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../shared/enum/api.enum';
 
@@ -106,7 +107,7 @@ export class OutcomeIndicatorService {
 
   loadAllInitiatives() {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      this.allInitiatives.set(response);
+      this.allInitiatives.set(response.map(withScienceProgramLabel));
     });
   }
 

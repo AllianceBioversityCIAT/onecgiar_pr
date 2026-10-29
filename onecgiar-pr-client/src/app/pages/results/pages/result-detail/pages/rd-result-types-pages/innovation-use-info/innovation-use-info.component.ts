@@ -489,8 +489,15 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
       // P2-3613 §4 — same trap as the line above, one story later. The server assigns both as
       // `?? null` (innovation-use.service.ts:192-193), so omitting them here does not "leave them
       // alone": every save from this section would blank whatever the reporter had stored.
-      new_users_added: this.innovationUseInfoBody.new_users_added ?? null,
-      use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? null,
+      // P2-3985 — P25 only (added below). The non-P25 path never hydrates them (`innovatonUse`
+      // receives the GET), so they always leave as `null`, and since P2-3985 the legacy endpoint
+      // persists them when the key is present: sending them there would blank them on every save.
+      ...(this.fieldsManagerSE.isP25()
+        ? {
+            new_users_added: this.innovationUseInfoBody.new_users_added ?? null,
+            use_expansion_narrative: this.innovationUseInfoBody.use_expansion_narrative ?? null
+          }
+        : {}),
       investment_programs,
       investment_bilateral,
       investment_partners,

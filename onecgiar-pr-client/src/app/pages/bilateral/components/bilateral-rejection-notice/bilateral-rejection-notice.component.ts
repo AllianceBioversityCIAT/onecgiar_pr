@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HlmButtonImports } from '@spartan/button';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BILATERAL_REJECTION_NOTICE_COPY } from '../../../../internationalization/bilateral-rejection-notice.copy';
-import { ReviewHistoryEntry, isRejectAction, sortReviewHistoryNewestFirst } from '../../services/bilateral-review-history.interface';
+import { ReviewHistoryEntry, isRejectAction, reviewEntryProgramLabel, sortReviewHistoryNewestFirst } from '../../services/bilateral-review-history.interface';
 
 /** `result.status_id` for Rejected. */
 const REJECTED_STATUS_ID = 7;
@@ -31,6 +31,11 @@ export class BilateralRejectionNoticeComponent {
   readonly resultId = input<number | string | null>(null);
 
   readonly copy = BILATERAL_REJECTION_NOTICE_COPY;
+
+  programLabel(entry: ReviewHistoryEntry): string {
+    return reviewEntryProgramLabel(entry);
+  }
+
   readonly visible = computed(() => Number(this.statusId()) === REJECTED_STATUS_ID && this.resultId() != null);
 
   readonly entries = signal<ReviewHistoryEntry[]>([]);

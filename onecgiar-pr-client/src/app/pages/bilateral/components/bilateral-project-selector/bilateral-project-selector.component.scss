@@ -136,6 +136,15 @@
   }
 }
 
+.bps-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #F3F4F6;
+}
+
 .bps-options {
   overflow-y: auto;
   flex: 1;

@@ -59,7 +59,9 @@ describe('SectionContributorsComponent', () => {
 
     autoSave = {
       saveContributors: jest.fn(),
-      fieldStatus: signal<Record<string, string>>({})
+      fieldStatus: signal<Record<string, string>>({}),
+      // RNB-1 — the editor's "may this user edit at all" lock, handed down through the shared service.
+      isReadOnly: signal(false)
     };
 
     centersService = {
@@ -123,6 +125,16 @@ describe('SectionContributorsComponent', () => {
       expect(bilateralApi.GET_resultInitiativeId).toHaveBeenCalledWith(4242);
       expect(component.pendingPrimaryTocNotice()).toContain('(SP06)');
       expect(component.pendingPrimaryTocNotice()).toContain('Available once the primary Science Program accepts.');
+    });
+
+    it('PF2-T-6: names the SP from the catalogue when it is loaded, the code when it is not', () => {
+      bilateralApi.GET_resultInitiativeId.mockReturnValue(draftRequest('SP03'));
+      build();
+      fixture.detectChanges();
+      expect(component.pendingPrimaryTocNotice()).toContain('(SP03)');
+
+      component.sciencePrograms.set([{ programId: 3, programCode: 'SP03', name: 'Animal' }]);
+      expect(component.pendingPrimaryTocNotice()).toContain('(SP03 - Animal)');
     });
 
     it('shows nothing and does not ask when the result already has an owner', () => {

@@ -15,7 +15,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 
-import { BilateralOverviewComponent } from './bilateral-overview.component';
+import { BilateralOverviewComponent, projectDisplayLabel } from './bilateral-overview.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -24,16 +24,19 @@ import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { PrVizChartComponent } from '../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { serializeBilateralQueryParams } from '../../bilateral-query-params';
 import {
+  FIXTURE_CPA_PROJECTS,
+  FIXTURE_CPA_ROWS,
   FIXTURE_D1_ROWS,
   FIXTURE_DRAFTS,
   FIXTURE_PHASE,
   FIXTURE_PROJECTS,
-  FIXTURE_SP_TWO_PROJECTS,
   FIXTURE_SP_TWO_PROJECTS_ROWS,
   FIXTURE_TODAY,
+  makeCwsScopedFixture,
 } from './bilateral-overview.fixtures';
 import { BilateralCenterResult } from '../../services/bilateral-center-result.interface';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 
 // jsdom cannot lay out an ECharts canvas, and `resolveChartTokens()` resolves every custom property
 // to '' there — so the chart runtime is stubbed and the tokens are replaced with the token
@@ -196,7 +199,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
     it('shows a skeleton per card while the phase data is in flight, then the data', async () => {
       await setup();
 
-      expect(harness.routeDebugElement!.queryAll(By.css('[data-testid="kpi-skeleton"]')).length).toBe(5);
+      expect(harness.routeDebugElement!.queryAll(By.css('[data-testid="kpi-skeleton"]')).length).toBe(4);
       expect(el('status-skeleton')).toBeTruthy();
       expect(el('attention-skeleton')).toBeTruthy();
       expect(el('by-project-skeleton')).toBeTruthy();
@@ -209,41 +212,73 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('status-chart')).toBeTruthy();
     });
 
-    // @akili-spec bilateral/overview-replicated-new-badges (BOV-R-3, BOV-R-4, BOV-AC-2, BOV-AC-3)
-    it('renders the replicated/new badges on the Total results card with counts matching the aria-label (BOV-T-1)', async () => {
+    // CWS-R-2 — the Overview asks the server for the bilateral scope and no longer sends the tagging flag.
+    it('requests the bilateral scope, not the project-tagging flag, and makes no separate totals request', async () => {
       await setup();
-      flushData();
-
-      // FIXTURE_D1_ROWS: all 10 rows default `is_replicated: false` → 0 replicated, 10 new.
-      expect(text('kpi-total-replicated-badge')).toBe('0 replicated');
-      expect(text('kpi-total-new-badge')).toBe('10 new');
-
-      // BOV-T-1 rework: at 0 count the replicated badge mutes to the reference's zero-count token
-      // (bilateral-projects-panel.component.html:270-272), never the "has a count" token.
-      const replicatedBadgeClass = (el('kpi-total-replicated-badge')?.nativeElement as HTMLElement).className;
-      expect(replicatedBadgeClass).toContain('text-[var(--pr-color-accents-4)]');
-      expect(replicatedBadgeClass).not.toContain('text-[var(--pr-color-secondary-400)]');
-
-      const ariaLabel = el('kpi-total').attributes['aria-label'];
-      expect(ariaLabel).toContain('10 results');
-      expect(ariaLabel).toContain('0 replicated');
-      expect(ariaLabel).toContain('10 new');
+      const request = httpMock.expectOne(resultsUrl(OPEN_PHASE_ID));
+      expect(request.request.params.get('scope')).toBe('bilateral');
+      expect(request.request.params.has('includeProjectTagging')).toBe(false);
+      httpMock.expectNone(req => req.url.includes('bilateral-center-overview-totals'));
+      request.flush({ response: FIXTURE_D1_ROWS });
     });
 
-    // @akili-spec bilateral/overview-w1w2-contributor-badge (BOV2-R-2, BOV2-R-3)
-    it('renders the W1/W2 contributing/lead breakdown inline next to the W1/W2 figure, with the counts in the aria-label (BOV2-T-1, UX follow-up)', async () => {
+    it('renders the headline and exactly three breakdown lines, adding up to it (CWS-R-3)', async () => {
       await setup();
-      flushData();
+      const rows: BilateralCenterResult[] = [
+        { ...FIXTURE_D1_ROWS[0], id: 801, is_replicated: true, overview_category: 'replicated_w3' },
+        { ...FIXTURE_D1_ROWS[0], id: 802, is_replicated: true, overview_category: 'replicated_w3' },
+        { ...FIXTURE_D1_ROWS[1], id: 804, overview_category: 'new_w3' },
+        { ...FIXTURE_D1_ROWS[5], id: 805, is_leading_result: null, overview_category: 'w1w2_tagging' },
+      ];
+      flushData(OPEN_PHASE_ID, rows);
 
-      // FIXTURE_D1_ROWS: only row id 6 is W1/W2 (`source: 'Result'`, w1w2Count=1), and it is lead,
-      // so 0 contributing · 1 lead. The breakdown now lives inline next to "1 W1/W2" instead of a
-      // standalone badge — a standalone "N of M W1/W2" pill confused users (see CLAUDE.md).
-      expect(text('kpi-total')).toContain('1 W1/W2 (0 contributing · 1 lead)');
+      expect(text('kpi-total')).toMatch(/4\s*results/);
+      expect(text('kpi-total-replicated_w3')).toMatch(/Replicated W3\/bilateral innovations\s*2/);
+      expect(text('kpi-total-new_w3')).toMatch(/New W3\/bilateral results in this phase\s*1/);
+      expect(text('kpi-total-w1w2_tagging')).toMatch(/W1\/W2 results tagging a Center project\s*1/);
+      expect(harness.routeDebugElement!.queryAll(By.css('[data-testid^="kpi-total-"]')).length).toBe(3 + 1); // 3 lines + the breakdown wrapper
 
       const ariaLabel = el('kpi-total').attributes['aria-label'];
-      expect(ariaLabel).toContain('of 1 W1/W2 results 0 are contributing and 1 are leading');
+      expect(ariaLabel).toBe(
+        'Total results, 4 results: 2 Replicated W3/bilateral innovations, 1 New W3/bilateral results in this phase, 1 W1/W2 results tagging a Center project — open in Results',
+      );
+      // `CWS-R-3` BUT — no line, label or aria text for the two removed groups.
+      expect(harness.routeDebugElement!.nativeElement.textContent).not.toContain('no Center project');
+      expect(harness.routeDebugElement!.nativeElement.textContent).not.toContain('Replicated W1/W2');
     });
 
+    it('splits each status tile into replicated and new', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, [
+        { ...FIXTURE_D1_ROWS[0], id: 811, status_id: 1, is_replicated: true, overview_category: 'replicated_w3' },
+        { ...FIXTURE_D1_ROWS[0], id: 812, status_id: 1, overview_category: 'new_w3' },
+      ]);
+
+      expect(text('status-tile-editing')).toContain('2');
+      expect(text('status-split-editing')).toBe('1 replicated · 1 new');
+    });
+
+    // CWS-T-4 falsifier — CIP scoped: 63 replicated W3 (54 / 5 / 4) + 1 new W3, N = 57.
+    it('CIP scoped rows: Total 64 (63 / 1 / 0), Projects covered 1 of 57, "No new results yet" 56, no-project 5, other centers 4', async () => {
+      await setup();
+      const { rows, projects } = makeCwsScopedFixture();
+      flushData(OPEN_PHASE_ID, rows, projects);
+
+      expect(text('kpi-total')).toMatch(/64\s*results/);
+      expect(text('kpi-total-replicated_w3')).toMatch(/innovations\s*63$/);
+      expect(text('kpi-total-new_w3')).toMatch(/this phase\s*1$/);
+      expect(text('kpi-total-w1w2_tagging')).toMatch(/Center project\s*0$/);
+
+      expect(text('kpi-projects-covered')).toMatch(/1\s*of 57/);
+      expect(text('kpi-projects-covered')).toContain('56 projects with no new result yet');
+      expect(text('projects-covered-split')).toBe('4 with only replicated updates (not counted)');
+
+      // INC-166545 — the "No new results yet" strip is gone; only the KPI keeps that count.
+      expect(el('by-project-not-started')).toBeFalsy();
+      expect(text('by-project-no-project')).toContain('5 results not linked to a bilateral project');
+      expect(text('by-project-unmatched')).toContain('4 results are linked only to bilateral projects outside');
+      expect(text('by-project-no-project')).not.toContain('Replicated W1/W2');
+    });
     it('renders a ≤160px one-line empty state when the phase has no results', async () => {
       await setup();
       flushData(OPEN_PHASE_ID, []);
@@ -280,10 +315,12 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('kpi-projects-error').attributes['role']).toBe('alert');
       expect(text('kpi-projects-error')).toContain('Retry');
       expect(text('by-project-projects-error')).toContain('Retry');
-      expect(text('by-sp-projects-error')).toContain('Retry');
-      // ...and never the silent "0 of 0" / "No Science Program is mapped" reading.
+      expect(text('projects-by-pa-error')).toContain('Retry');
+      // ...and never the silent "0 of 0" / "no P/A has mapped projects" reading.
       expect(el('kpi-projects-covered')).toBeFalsy();
-      expect(el('by-sp-empty')).toBeFalsy();
+      expect(el('projects-by-pa-empty')).toBeFalsy();
+      // Results by P/A comes out of the results call only: it still renders.
+      expect(el('by-pa-error')).toBeFalsy();
 
       // Everything computed from the results call still renders its data.
       expect(text('kpi-total')).toContain('10');
@@ -432,11 +469,13 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       await applyProgramFilter();
 
-      expect(text('overview-filter-badge')).toBe('1');
-      expect(text('overview-filter-chips')).toContain('Program');
+      // INC-166545: a P/A lives in the visible P/A control only - no popover badge, no Program chip; Clear shows.
+      expect(el('overview-filter-badge')).toBeFalsy();
+      expect(el('overview-filter-chips')).toBeFalsy();
+      expect(el('overview-clear-filters')).toBeTruthy();
       expect(router.url).toContain('program=SP02');
-      // SP02 rows in the D1 fixture: ids 4, 5, 7 and 9.
-      expect(text('kpi-total')).toContain('4');
+      // INC-165171: the Total card is computed from the filtered rows, like every other card.
+      expect(text('kpi-total')).toMatch(/4\s*results/);
     });
 
     it('Clear removes the chips and params but keeps the phase (COV-AC-6)', async () => {
@@ -492,8 +531,9 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       // The resolution is NOT a center switch: the deep link's filter survives it.
       expect(router.url).toContain('program=SP02');
-      expect(text('overview-filter-badge')).toBe('1');
-      expect(text('kpi-total')).toContain('4');
+      expect(el('overview-clear-filters')).toBeTruthy();
+      // INC-165171: Total results narrows with the filter, like every other card.
+      expect(text('kpi-total')).toMatch(/4\s*results/);
     });
 
     it('shows no data under the new acronym while the shell still carries the previous code', async () => {
@@ -550,25 +590,49 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('attention-row-editing')).toBeFalsy();
     });
 
-    it('renders the "No bilateral project" row and the not-started chips (COV-R-9 B/C)', async () => {
+    it('states the results with no project as a broken-down line, with no not-started chips (INC-165171, INC-166545)', async () => {
       await setup();
       flushData();
 
-      expect(text('by-project-no-project')).toContain('No bilateral project');
+      expect(text('by-project-no-project')).toContain('2 results not linked to a bilateral project');
+      expect(text('by-project-no-project-new_w3')).toContain('1');
+      expect(text('by-project-no-project-w1w2_tagging')).toContain('1');
+      expect(el('by-project-no-project-replicated_w3')).toBeFalsy();
       // Project 300 (Gamma) has no results in scope.
-      expect(el('not-started-chip-300')).toBeTruthy();
-      expect(text('not-started-chip-300')).toContain('0');
+      expect(el('not-started-chip-300')).toBeFalsy();
     });
 
-    it('shows an SP with mapped projects and zero results as "n · 0" with a hint (COV-AC-14)', async () => {
+    // INC-166545 — the by-project chips name the project ("code — title"), full text in title/aria-label.
+    it('labels the by-project chips "code — title" with the full label in title and aria-label', async () => {
       await setup();
-      // SP03 has two mapped projects and no result reports it as primary.
-      flushData(OPEN_PHASE_ID, FIXTURE_SP_TWO_PROJECTS_ROWS, FIXTURE_SP_TWO_PROJECTS);
+      flushData();
 
-      expect(text('by-sp-row-SP03')).toContain('no results yet');
-      expect(el('by-sp-row-SP03').attributes['aria-label']).toContain('2 projects mapped');
-      expect(text('by-sp-projects-SP03')).toBe('2 ·');
-      expect(text('by-sp-results-SP03')).toBe('0');
+      const chip = el('by-project-link-100').nativeElement as HTMLAnchorElement;
+      const label = chip.querySelector('span')!;
+      expect(label.textContent?.trim()).toBe('Alpha — Project 100');
+      expect(label.getAttribute('title')).toBe('Alpha — Project 100');
+      expect(chip.getAttribute('aria-label')).toContain('Alpha — Project 100');
+    });
+
+    // CPA-DD-7 — the "Science Program contribution" card is gone: Results by P/A replaces it and "projects mapped"
+    // lives in Projects by P/A (full width).
+    it('replaces the Science Program card with Results by P/A and a full-width Projects by P/A (CPA-DD-7)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+      expect(el('by-sp-chart')).toBeFalsy();
+      expect(el('by-sp-rows')).toBeFalsy();
+      expect(el('by-pa-chart')).toBeTruthy();
+      expect(el('projects-by-pa-chart')).toBeTruthy();
+    });
+
+    it('shows Results by P/A and Projects by P/A empty states (CPA-R-2 C)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, FIXTURE_SP_TWO_PROJECTS_ROWS, []);
+
+      expect(el('by-pa-chart')).toBeFalsy();
+      expect(el('by-pa-empty')).toBeTruthy();
+      expect(el('projects-by-pa-empty')).toBeTruthy();
     });
 
     it('lists a result-type link per type present in scope (COV-R-11)', async () => {
@@ -591,7 +655,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         'kpi-total',
         'kpi-pending',
         'kpi-approved',
-        'kpi-attention',
         'kpi-projects-covered',
         'status-tile-editing',
         'status-tile-pending',
@@ -600,7 +663,6 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         'attention-row-editing',
         'by-project-link-100',
         'by-project-no-project',
-        'not-started-chip-300',
         'by-type-link-6',
       ];
 
@@ -660,33 +722,49 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         search: '',
         createdBy: [],
         multi: false,
+        scope: null,
+        group: null,
+        category: null,
       };
+
+      // CWS-R-8 / CWS-DD-5 — every link into Results carries `scope`; Reporting and Draft links never do.
+      const scoped = { ...base, scope: 'bilateral' as const };
 
       const expectations: { testId: string; path: string; params: Record<string, string> }[] = [
         {
           testId: 'kpi-total',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams(base, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams(scoped, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'kpi-pending',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams({ ...base, status: ['pending'] }, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams({ ...scoped, status: ['pending'] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'status-tile-approved',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams({ ...base, status: ['approved'] }, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams({ ...scoped, status: ['approved'] }, { explicitDefaults: true }) as Record<string, string>,
+        },
+        {
+          testId: 'attention-row-editing',
+          path: `/bilateral/${CENTER}/results`,
+          params: serializeBilateralQueryParams({ ...scoped, status: ['editing'] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'by-project-link-100',
           path: `/bilateral/${CENTER}/results`,
-          params: serializeBilateralQueryParams({ ...base, project: [100] }, { explicitDefaults: true }) as Record<string, string>,
+          params: serializeBilateralQueryParams({ ...scoped, project: [100] }, { explicitDefaults: true }) as Record<string, string>,
         },
         {
-          testId: 'not-started-chip-300',
-          path: `/bilateral/${CENTER}/home`,
-          params: serializeBilateralQueryParams({ ...base, project: [300] }, { explicitDefaults: true }) as Record<string, string>,
+          testId: 'by-project-no-project',
+          path: `/bilateral/${CENTER}/results`,
+          params: serializeBilateralQueryParams({ ...scoped, source: 'w3' }, { explicitDefaults: true }) as Record<string, string>,
+        },
+        {
+          testId: 'attention-row-aiDrafts',
+          path: `/bilateral/${CENTER}/drafts`,
+          params: serializeBilateralQueryParams(base, { explicitDefaults: true }) as Record<string, string>,
         },
         {
           testId: 'kpi-projects-covered',
@@ -703,7 +781,20 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         const actual = Object.fromEntries(new URLSearchParams(query ?? ''));
         expect(actual).toEqual(expectation.params);
         expect(actual['phase']).toBe(String(OPEN_PHASE_ID));
+        expect('scope' in actual).toBe(expectation.path.endsWith('/results'));
       }
+    });
+
+    it('never forwards a scope the Overview URL itself carries to a Reporting or Draft link (CWS-DD-5)', async () => {
+      await setup(`/bilateral/${CENTER}/overview?scope=bilateral`);
+      flushData();
+
+      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts']) {
+        const href = (el(testId).nativeElement as HTMLAnchorElement).getAttribute('href')!;
+        expect(Object.fromEntries(new URLSearchParams(href.split('?')[1] ?? ''))).not.toHaveProperty('scope');
+      }
+      const totalHref = (el('kpi-total').nativeElement as HTMLAnchorElement).getAttribute('href')!;
+      expect(new URLSearchParams(totalHref.split('?')[1] ?? '').get('scope')).toBe('bilateral');
     });
 
     it('carries the applied filters into every deep link', async () => {
@@ -725,10 +816,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
   // ── COV-T-4 review pointer · chart click against the RENDERED categories ──────────────────
 
   describe('chart clicks (COV-R-9 A, COV-R-10, COV-R-11)', () => {
-    it('resolves the trailing "no project" category against the limited bar set, not the full model', async () => {
-      // Eight projects with results plus the null-project rows: the 7-bar limit is active, so the
-      // trailing category sits at dataIndex 7 — resolving it against the unlimited model would
-      // address the eighth PROJECT instead of the "No bilateral project" row.
+    it('a click past the last drawn project bar does not navigate (no "no project" category, INC-165171)', async () => {
       const projects: BilateralProject[] = Array.from({ length: 8 }, (_, index) => ({
         id: 100 + index,
         shortName: `P${index}`,
@@ -748,70 +836,309 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
       const chart = el('by-project-chart').componentInstance as PrVizChartComponent;
-      chart.chartClick.emit({ seriesId: 'overview-by-project:lead', dataIndex: 7 } as never);
+      chart.chartClick.emit({ seriesId: 'overview-by-project:new', dataIndex: 7 } as never);
 
-      expect(navigate).toHaveBeenCalledWith(
-        ['/bilateral', CENTER, 'results'],
-        expect.objectContaining({ queryParams: expect.objectContaining({ source: 'w1w2' }) }),
-      );
-      expect((navigate.mock.calls[0][1] as { queryParams: Record<string, string> }).queryParams['project']).toBeUndefined();
+      expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('sends the Science Program "projects mapped" series to Reporting and "results" to Results', async () => {
-      await setup();
-      flushData();
+    // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-6, CPA-R-1 C, CPA-R-2 D)
+    describe('Results / Projects by P/A drill-downs (CPA-T-6)', () => {
+      const queryOf = (navigate: jest.SpyInstance, call: number) => (navigate.mock.calls[call][1] as { queryParams: Record<string, string> }).queryParams;
 
-      const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
-      const chart = el('by-sp-chart').componentInstance as PrVizChartComponent;
+      it('a click on the SP05 tagging bar opens Results with program, category, scope, phase and explicitDefaults', async () => {
+        await setup();
+        flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
 
-      chart.chartClick.emit({ seriesId: 'overview-by-sp:projects', dataIndex: 0 } as never);
-      expect(navigate.mock.calls[0][0]).toEqual(['/bilateral', CENTER, 'home']);
+        const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+        const chart = el('by-pa-chart').componentInstance as PrVizChartComponent;
+        // Sorted: SP05 (4) first, then SP07 (3), then the no-P/A group.
+        chart.chartClick.emit({ seriesId: 'overview-by-pa:tagging', dataIndex: 0 } as never);
 
-      chart.chartClick.emit({ seriesId: 'overview-by-sp:results', dataIndex: 0 } as never);
-      expect(navigate.mock.calls[1][0]).toEqual(['/bilateral', CENTER, 'results']);
+        expect(navigate.mock.calls[0][0]).toEqual(['/bilateral', CENTER, 'results']);
+        const query = queryOf(navigate, 0);
+        expect(query['program']).toBe('SP05');
+        expect(query['category']).toBe('w1w2-tagging');
+        expect(query['scope']).toBe('bilateral');
+        expect(query['phase']).toBe(String(OPEN_PHASE_ID));
+        // The whole link is the shared contract's serialization with explicit defaults (no W3+Lead default on top).
+        expect(query).toEqual(
+          serializeBilateralQueryParams(
+            {
+              phase: OPEN_PHASE_ID,
+              status: [],
+              project: [],
+              program: ['SP05'],
+              type: [],
+              role: null,
+              source: null,
+              method: null,
+              search: '',
+              createdBy: [],
+              multi: false,
+              scope: 'bilateral',
+              group: null,
+              category: 'w1w2-tagging',
+            },
+            { explicitDefaults: true },
+          ),
+        );
+
+        chart.chartClick.emit({ seriesId: 'overview-by-pa:w3', dataIndex: 0 } as never);
+        expect(queryOf(navigate, 1)['category']).toBe('w3');
+      });
+
+      it('the No Program/Accelerator group is not clickable', async () => {
+        await setup();
+        flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+        const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+        const chart = el('by-pa-chart').componentInstance as PrVizChartComponent;
+        chart.chartClick.emit({ seriesId: 'overview-by-pa:w3', dataIndex: 2 } as never);
+
+        expect(navigate).not.toHaveBeenCalled();
+      });
+
+      it('Projects by P/A: mapped and with-W3 open Reporting (no scope, no category); tagged opens Results with the tagging category', async () => {
+        await setup('/bilateral/' + CENTER + '/overview?category=w3');
+        flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+        const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+        const chart = el('projects-by-pa-chart').componentInstance as PrVizChartComponent;
+
+        chart.chartClick.emit({ seriesId: 'overview-projects-by-pa:mapped', dataIndex: 0 } as never);
+        chart.chartClick.emit({ seriesId: 'overview-projects-by-pa:w3', dataIndex: 0 } as never);
+        chart.chartClick.emit({ seriesId: 'overview-projects-by-pa:tagged', dataIndex: 0 } as never);
+
+        for (const call of [0, 1]) {
+          expect(navigate.mock.calls[call][0]).toEqual(['/bilateral', CENTER, 'home']);
+          expect(queryOf(navigate, call)).not.toHaveProperty('scope');
+          expect(queryOf(navigate, call)).not.toHaveProperty('category');
+          expect(queryOf(navigate, call)['phase']).toBe(String(OPEN_PHASE_ID));
+          expect(queryOf(navigate, call)['program']).toBeDefined();
+        }
+        expect(navigate.mock.calls[2][0]).toEqual(['/bilateral', CENTER, 'results']);
+        expect(queryOf(navigate, 2)['category']).toBe('w1w2-tagging');
+        expect(queryOf(navigate, 2)['scope']).toBe('bilateral');
+      });
     });
   });
 
-  // ── COV-R-18 · reduced motion (carried over from the COV-T-5 review, closed in COV-T-8) ──
+  // @akili-spec bilateral/center-overview-pa-contribution (CPA-T-6, CPA-R-1, CPA-R-3, CPA-AC-3)
+  describe('Results by P/A: category filter, sort and labels (CPA-T-6)', () => {
+    const byPaSeries = () => {
+      const options = (el('by-pa-chart').componentInstance as PrVizChartComponent).options() as { series: { data: number[] }[]; yAxis: { data: string[] } };
+      return { w3: options.series[0].data, tagging: options.series[1].data, labels: options.yAxis.data };
+    };
 
-  describe('scrollToAttention respects prefers-reduced-motion (COV-R-18)', () => {
-    // jsdom implements neither API by default (`HTMLElement.prototype.scrollIntoView` does not
-    // exist and `window.matchMedia` is absent) — `jest.spyOn` needs a pre-existing property to
-    // wrap, so both are assigned directly and restored by hand rather than via `jest.spyOn`.
-    const originalMatchMedia = window.matchMedia;
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    // Falsifier: category=w1w2-tagging narrows every card to the tagging line.
+    it('category=w1w2-tagging makes Total equal the tagging count and every by-P/A W3 value 0 (CPA-AC-3)', async () => {
+      await setup('/bilateral/' + CENTER + '/overview?category=w1w2-tagging');
+      flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
 
-    afterEach(() => {
-      window.matchMedia = originalMatchMedia;
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 4 results');
+      const { w3, tagging } = byPaSeries();
+      expect(w3.every(value => value === 0)).toBe(true);
+      expect(tagging.reduce((sum, value) => sum + value, 0)).toBe(4);
     });
 
-    it('scrolls with behavior "auto" when the user prefers reduced motion', async () => {
+    it('choosing the category in the visible select writes it to the URL and applies it; Clear filters clears it', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 9 results');
+
+      (el('overview-category-trigger').nativeElement as HTMLButtonElement).click();
+      harness.detectChanges();
+      (document.querySelector('[data-testid="overview-category-option-w3"]') as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).toContain('category=w3');
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 5 results');
+
+      (el('overview-clear-filters').nativeElement as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).not.toContain('category=');
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 9 results');
+    });
+
+    it('the visible P/A multi-select narrows every card and Clear filters clears it', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, FIXTURE_CPA_ROWS, FIXTURE_CPA_PROJECTS);
+
+      (el('overview-pa-trigger').nativeElement as HTMLButtonElement).click();
+      harness.detectChanges();
+      (document.querySelector('[data-testid="overview-pa-option-SP07"]') as HTMLButtonElement).click();
+      await settle();
+
+      expect(router.url).toContain('program=SP07');
+      expect(el('kpi-total').attributes['aria-label']).toContain('Total results, 3 results');
+
+      (el('overview-clear-filters').nativeElement as HTMLButtonElement).click();
+      await settle();
+      expect(router.url).not.toContain('program=');
+    });
+
+    // CPA-R-1 A — ties break by the RESOLVED P/A label, not by code (code order is Z1 < Z2, label order is the reverse).
+    it('sorts groups by total desc, then by P/A label asc even when code order differs, and the click resolves the same row', async () => {
+      const rows = [
+        { ...FIXTURE_CPA_ROWS[0], id: 2001, submitter: 'Z1' },
+        { ...FIXTURE_CPA_ROWS[0], id: 2002, submitter: 'Z2' },
+      ];
+      const projects: BilateralProject[] = [
+        { ...FIXTURE_CPA_PROJECTS[0], sciencePrograms: [{ ...FIXTURE_CPA_PROJECTS[0].sciencePrograms[0], programCode: 'Z1', spName: 'Zeta' }] },
+        { ...FIXTURE_CPA_PROJECTS[1], sciencePrograms: [{ ...FIXTURE_CPA_PROJECTS[1].sciencePrograms[0], programCode: 'Z2', spName: 'Alpha' }] },
+      ];
+      await setup();
+      flushData(OPEN_PHASE_ID, rows, projects);
+
+      expect(byPaSeries().labels).toEqual(['Alpha', 'Zeta']);
+
+      const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+      (el('by-pa-chart').componentInstance as PrVizChartComponent).chartClick.emit({ seriesId: 'overview-by-pa:w3', dataIndex: 0 } as never);
+      expect((navigate.mock.calls[0][1] as { queryParams: Record<string, string> }).queryParams['program']).toBe('Z2');
+    });
+
+    // CPA-DD-6 — a P/A mapped to none of the center's projects is named by the initiatives catalog.
+    it('names a P/A from the initiatives catalog when no project maps it, else shows the raw code', async () => {
+      const rows = [
+        { ...FIXTURE_CPA_ROWS[0], id: 3001, submitter: 'SP99' },
+        { ...FIXTURE_CPA_ROWS[0], id: 3002, submitter: 'SP98' },
+      ];
+      await setup();
+      flushData(OPEN_PHASE_ID, rows, FIXTURE_CPA_PROJECTS);
+      TestBed.inject(InitiativesService).allInitiatives.set([{ name: 'Portfolio', entities: [{ official_code: 'SP99', name: 'Catalog Programme' }] }]);
+      harness.detectChanges();
+
+      expect(byPaSeries().labels).toEqual(['Catalog Programme', 'SP98']);
+    });
+  });
+
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-3, CNP-R-2, CNP-R-3, CNP-R-5, CNP-AC-3, CNP-AC-6, CNP-AC-8)
+  describe('updated-no-project line (CNP-T-3)', () => {
+    const updatedRow = (id: number, overrides: Partial<BilateralCenterResult> = {}): BilateralCenterResult => ({
+      ...FIXTURE_D1_ROWS[0],
+      id,
+      project_id: null,
+      source: 'API',
+      result_type_id: 7,
+      is_replicated: true,
+      overview_category: 'replicated_w3',
+      ...overrides,
+    });
+    const rows24 = (): BilateralCenterResult[] => [
+      ...Array.from({ length: 24 }, (_, index) => updatedRow(900 + index)),
+      { ...FIXTURE_D1_ROWS[0], id: 950, project_id: 100, overview_category: 'new_w3' },
+    ];
+    const hrefQuery = (testId: string) => {
+      const href = (el(testId).nativeElement as HTMLAnchorElement).getAttribute('href')!;
+      return { path: href.split('?')[0], query: Object.fromEntries(new URLSearchParams(href.split('?')[1] ?? '')) };
+    };
+
+    it('renders the line with the count, linking to Results with group, scope and phase (CNP-AC-6)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      const line = el('by-project-updated-no-project');
+      expect(line).toBeTruthy();
+      expect(text('by-project-updated-no-project')).toContain('24');
+      const { path, query } = hrefQuery('by-project-updated-no-project');
+      expect(path).toBe(`/bilateral/${CENTER}/results`);
+      expect(query['group']).toBe('updated-no-project');
+      expect(query['scope']).toBe('bilateral');
+      expect(query['phase']).toBe(String(OPEN_PHASE_ID));
+    });
+
+    it('names the years from the phase and the count in the aria label (CNP-AC-8)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      expect(text('by-project-updated-no-project')).toContain('Updated 2025 innovations with no 2026 project');
+      expect(el('by-project-updated-no-project').attributes['aria-label']).toBe(
+        'Updated 2025 innovations with no 2026 project, 24 results — open in Results',
+      );
+    });
+
+    it('falls back to the generic label when the phase year is unknown (CNP-AC-8)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+      const component = harness.routeDebugElement!.componentInstance as { phases: { set(value: Phases[]): void } };
+      component.phases.set([{ ...OPEN_PHASE, phase_year: null as unknown as number }, CLOSED_PHASE]);
+      harness.detectChanges();
+
+      expect(text('by-project-updated-no-project')).toContain('Updated innovations with no project in this phase');
+      expect(el('by-project-updated-no-project').attributes['aria-label']).toBe(
+        'Updated innovations with no project in this phase, 24 results — open in Results',
+      );
+    });
+
+    it('is not rendered when the count is 0 (CNP-AC-3)', async () => {
       await setup();
       flushData();
 
-      const scrollIntoViewSpy = jest.fn();
-      HTMLElement.prototype.scrollIntoView = scrollIntoViewSpy;
-      window.matchMedia = jest.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia;
-
-      (el('kpi-attention').nativeElement as HTMLButtonElement).click();
-      harness.detectChanges();
-
-      expect(scrollIntoViewSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+      expect(el('by-project-updated-no-project')).toBeFalsy();
     });
 
-    it('scrolls with behavior "smooth" when the user does not prefer reduced motion', async () => {
+    it('keeps the empty state away when the only rows are updated-no-project (CNP-R-3)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, [updatedRow(901), updatedRow(902)]);
+
+      expect(el('by-project-empty')).toBeFalsy();
+      expect(text('by-project-updated-no-project')).toContain('2');
+      expect(el('by-project-no-project')).toBeFalsy();
+    });
+
+    it('never puts group on a Reporting or Draft link (CNP-AC-6)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+
+      for (const testId of ['kpi-projects-covered', 'attention-row-aiDrafts']) {
+        expect(hrefQuery(testId).query).not.toHaveProperty('group');
+      }
+    });
+
+    it('ignores ?group= in its own URL: the Total headline does not narrow and no link carries it (CNP-DD-3)', async () => {
+      await setup();
+      flushData(OPEN_PHASE_ID, rows24());
+      const totalBefore = text('kpi-total');
+      expect(totalBefore).toMatch(/25\s*results/);
+
+      await router.navigateByUrl(`/bilateral/${CENTER}/overview?group=updated-no-project`);
+      await settle();
+
+      expect(text('kpi-total')).toBe(totalBefore);
+      expect(hrefQuery('kpi-total').query).not.toHaveProperty('group');
+      expect(hrefQuery('attention-row-aiDrafts').query).not.toHaveProperty('group');
+      expect(hrefQuery('by-project-updated-no-project').query['group']).toBe('updated-no-project');
+    });
+
+    it('ignores ?group= on a cold load too (CNP-DD-3)', async () => {
+      await setup(`/bilateral/${CENTER}/overview?group=updated-no-project`);
+      flushData(OPEN_PHASE_ID, rows24());
+
+      expect(text('kpi-total')).toMatch(/25\s*results/);
+      expect(hrefQuery('kpi-total').query).not.toHaveProperty('group');
+    });
+
+    // INC-166545 — the Overview has no Source control; a pasted ?source= becomes the matching category
+    // instead of filtering invisibly, and leaves the URL.
+    it('turns ?source=w1w2 into category=w1w2-tagging and drops source from the URL', async () => {
+      await setup(`/bilateral/${CENTER}/overview?source=w1w2`);
+      flushData(OPEN_PHASE_ID, rows24());
+      await settle();
+
+      expect(router.url).toContain('category=w1w2-tagging');
+      expect(router.url).not.toContain('source=');
+      expect(hrefQuery('kpi-total').query['category']).toBe('w1w2-tagging');
+    });
+  });
+
+  describe('main container and removed tiles', () => {
+    it('does not render the Needs attention KPI tile while the Needs attention panel stays (reviewer request 2026-10-08)', async () => {
       await setup();
       flushData();
 
-      const scrollIntoViewSpy = jest.fn();
-      HTMLElement.prototype.scrollIntoView = scrollIntoViewSpy;
-      window.matchMedia = jest.fn().mockReturnValue({ matches: false }) as unknown as typeof window.matchMedia;
-
-      (el('kpi-attention').nativeElement as HTMLButtonElement).click();
-      harness.detectChanges();
-
-      expect(scrollIntoViewSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+      expect(el('kpi-attention')).toBeFalsy();
+      expect(harness.fixture.nativeElement.querySelector('#overview-attention')).toBeTruthy();
     });
 
     it('renders data-guide="bilateral-tab-overview" on the main container (BGT-T-3, BGT-R-2, Gate D1)', async () => {
@@ -821,5 +1148,19 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       const mainEl = harness.fixture.nativeElement.querySelector('main[data-guide="bilateral-tab-overview"]');
       expect(mainEl).toBeTruthy();
     });
+  });
+});
+
+// INC-166545 — one label rule for the chart axis, tooltip, a11y table, chips and project filter.
+describe('projectDisplayLabel', () => {
+  it('joins code and title when the title adds something', () => {
+    expect(projectDisplayLabel({ id: 1, shortName: 'N-644H12', fullName: 'Seed systems' })).toBe('N-644H12 — Seed systems');
+  });
+
+  it('falls back to whichever of code/title exists, then to "Project <id>"', () => {
+    expect(projectDisplayLabel({ id: 1, shortName: 'N-644H12', fullName: 'N-644H12' })).toBe('N-644H12');
+    expect(projectDisplayLabel({ id: 1, shortName: 'N-644H12', fullName: '' })).toBe('N-644H12');
+    expect(projectDisplayLabel({ id: 1, shortName: '', fullName: 'Seed systems' })).toBe('Seed systems');
+    expect(projectDisplayLabel({ id: 7, shortName: '', fullName: '' })).toBe('Project 7');
   });
 });

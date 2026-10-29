@@ -4,6 +4,7 @@ import {
   Get,
   Post,
   Query,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -23,6 +24,13 @@ import { ScienceProgramProgressResponseDto } from '../results/dto/science-progra
 import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.dto';
 import { ReportingEntryHubProjectsDto } from './dto/reporting-entry-hub-projects.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+// @akili-spec changes/portfolio-overview-revamp/toc-kpi-progress (TKP-T-2)
+import { Roles } from '../../shared/decorators/roles.decorator';
+import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
+import { RoleEnum, RoleTypeEnum } from '../../shared/constants/role-type.enum';
+import { PortfolioTocCoverageResponseDto } from './dto/portfolio-toc-coverage.dto';
+import { PortfolioBilateralProjectsResponseDto } from './dto/portfolio-bilateral-projects.dto';
+import { PortfolioResultDimensionsResponseDto } from './dto/portfolio-result-dimensions.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -258,6 +266,124 @@ export class ResultsFrameworkReportingController {
     return this.resultsFrameworkReportingService.getScienceProgramTocProgress(
       programId,
       parsedVersion,
+    );
+  }
+
+  @Get('toc-results/portfolio-coverage')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary: 'Portfolio ToC KPI coverage by Program / Accelerator',
+    description:
+      "Returns, for every active Program and Accelerator of the open portfolio (zero-KPI ones included), how many ToC KPIs it has and how many are covered, split by Output and Outcome nodes. A KPI is a distinct ToC indicator of the requested phase, counted once however many targets or Areas of Work reach it; Output nodes count when they belong to an Area of Work or to no work package, Outcome nodes only when they belong to an Area of Work. A KPI is covered when at least one active pooled result (source 'Result') in Quality Assessed or Submitted status, from the requested version, is mapped to it through an active ToC mapping and an active indicator link not marked not-applicable; the submitting Program does not matter. Restricted to the Admin application role. Items are unordered; the client sorts.",
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. A missing or non-numeric value falls back to the active reporting phase.',
+  })
+  @ApiOkResponse({
+    description: 'Portfolio ToC KPI coverage retrieved successfully.',
+    type: PortfolioTocCoverageResponseDto,
+  })
+  getPortfolioTocCoverage(@Query('versionId') versionId?: string) {
+    // Design 4.1: an empty, whitespace-only, non-numeric or non-positive value
+    // is treated as absent, so the service falls back to the active phase.
+    const parsedVersion =
+      typeof versionId === 'string' && versionId.trim() !== ''
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' &&
+      Number.isFinite(parsedVersion) &&
+      parsedVersion > 0
+        ? parsedVersion
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getPortfolioTocCoverage(
+      normalizedVersion,
+    );
+  }
+
+  // @akili-spec changes/portfolio-overview-revamp/w3-projects-section (WPS-T-2)
+  @Get('portfolio/bilateral-projects')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary:
+      'Portfolio W3 / bilateral projects by Program / Accelerator and Center',
+    description:
+      'Counts the active CLARISA projects of a reporting phase that are mapped to at least one Program or Accelerator with an approved mapping (a Confirmed status and an allocation above zero); a project mapped to several is counted once in the totals and once under each of its Programs / Accelerators. For each group it also reports how many of those projects have at least one W3 (bilateral) result of the requested version in any status except Discontinued, and how many are linked to at least one W1/W2 result of that version (no status filter). Projects with W3 results but no approved mapping are not counted and are reported separately as unmappedWithBilateralResults. Every Program / Accelerator of the open portfolio is listed, zeros included; Centers appear only with mapped projects, and a project with no resolvable Center goes to an Unassigned row (code null). Restricted to the Admin application role. Items are unordered; the client sorts.',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional reporting version (phase) identifier; a closed phase is accepted. A missing, non-numeric or non-positive value falls back to the open reporting phase, else the newest one.',
+  })
+  @ApiOkResponse({
+    description: 'Portfolio bilateral projects retrieved successfully.',
+    type: PortfolioBilateralProjectsResponseDto,
+  })
+  getPortfolioBilateralProjects(@Query('versionId') versionId?: string) {
+    // Same coercion as portfolio-coverage: empty, non-numeric or non-positive means absent.
+    const parsedVersion =
+      typeof versionId === 'string' && versionId.trim() !== ''
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' &&
+      Number.isFinite(parsedVersion) &&
+      parsedVersion > 0
+        ? parsedVersion
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getPortfolioBilateralProjects(
+      normalizedVersion,
+    );
+  }
+
+  // @akili-spec changes/portfolio-overview-revamp/global-filters (GLF-T-1)
+  @Get('portfolio/result-dimensions')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary: 'Portfolio result dimensions map (projects and Centers)',
+    description:
+      'Returns, for one reporting version, the active results paired with each project of an active link and with each Center of an active Center link (lead or contributing), as positional pairs [resultId, projectId] and [resultId, centerCode], each pair once. It also returns the labels of those projects and Centers and the ids of the projects linked to at least one W3 (bilateral) result. W1/W2 and W3 results are included; result types 10 and 11 are excluded, as on the page rows. A Center code with no catalogue row is kept and labelled by its code. Restricted to the Admin application role.',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional reporting version (phase) identifier; a closed phase is accepted. A missing, non-numeric or non-positive value falls back to the open reporting phase, else the newest one.',
+  })
+  @ApiOkResponse({
+    description: 'Portfolio result dimensions retrieved successfully.',
+    type: PortfolioResultDimensionsResponseDto,
+  })
+  getPortfolioResultDimensions(@Query('versionId') versionId?: string) {
+    // Same coercion as portfolio/bilateral-projects: empty, non-numeric or non-positive means absent.
+    const parsedVersion =
+      typeof versionId === 'string' && versionId.trim() !== ''
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' &&
+      Number.isFinite(parsedVersion) &&
+      parsedVersion > 0
+        ? parsedVersion
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getPortfolioResultDimensions(
+      normalizedVersion,
     );
   }
 

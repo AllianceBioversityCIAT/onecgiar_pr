@@ -123,6 +123,16 @@ describe('ReportingEntryHubComponent', () => {
     }
   });
 
+  // KPC-R-5 — the bar reads the row's capped mean, never `done / total`.
+  it('percentOf returns the row percent (62.5) and 0 when absent; never done / total', async () => {
+    await setup();
+    const hub = fixture.componentInstance;
+    expect(hub.percentOf({ code: 'A', name: 'A', done: 1, total: 4, percent: 62.5 })).toBe(62.5);
+    expect(hub.percentOf({ kind: 'intermediate', name: 'I', done: 4, total: 4, percent: 10 })).toBe(10);
+    // `done / total` would be 25 here; absent `percent` is 0 (the producers fill it, KPC-T-5).
+    expect(hub.percentOf({ code: 'A', name: 'A', done: 1, total: 4 })).toBe(0);
+  });
+
   // (b) canReportW1W2=false → Report buttons aria-disabled with the tooltip text, line present.
   it('disables Report buttons and shows the no-rights line when canReportW1W2 is false', async () => {
     await setup({ canReportW1W2: false });

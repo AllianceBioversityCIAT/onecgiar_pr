@@ -33,7 +33,8 @@ export class ExportTablesService {
     cellsToLink?: {
       cellNumber: number;
       cellKey: string;
-    }[]
+    }[],
+    options?: { exactFileName?: boolean }
   ) {
     try {
       await import('exceljs').then(async ExcelJSModule => {
@@ -62,7 +63,7 @@ export class ExportTablesService {
         this.formatWorksheet(worksheet);
 
         const buffer = await workbook.xlsx.writeBuffer();
-        this.saveAsExcelFile(buffer, fileName);
+        this.saveAsExcelFile(buffer, fileName, false, false, false, options?.exactFileName);
       });
     } catch (error) {
       console.error('Error generating file', error);
@@ -517,10 +518,16 @@ export class ExportTablesService {
     });
   }
 
-  saveAsExcelFile(buffer: any, fileName: string, isIPSR: boolean = false, dateEnd: boolean = false, hourEnd: boolean = false): void {
+  /** `exactFileName`: save `fileName` as given (no timestamp suffix, no extension added). */
+  saveAsExcelFile(buffer: any, fileName: string, isIPSR: boolean = false, dateEnd: boolean = false, hourEnd: boolean = false, exactFileName: boolean = false): void {
     const EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
     const EXCEL_EXTENSION = '.xlsx';
     const data: Blob = new Blob([buffer], { type: EXCEL_TYPE });
+
+    if (exactFileName) {
+      FileSaver.saveAs(data, fileName);
+      return;
+    }
 
     const formatDate = (date: Date, includeTime: boolean = false): string => {
       const options: Intl.DateTimeFormatOptions = {

@@ -1,6 +1,6 @@
 # global-search-palette
 
-**Verified:** 2026-09-24 · branch performance-refactor · c4672034b (BAO-T-2: spec-only change; Approved W3 result rows with `leadCenter` open the center editor via the shared open-route util)
+**Verified:** 2026-10-13 · qa-development-2026-ss · spec `results/program-full-names-labels` PFN-T-2 (result rows carry `submitterLabel`, the `CODE - Name` P/A label from `scienceProgramLabel`; the chip truncates at 220px with the full label in `title`; the aria string uses the label; `submitterCode` stays for non-display use) · prior: 2026-09-24 · branch performance-refactor · c4672034b (BAO-T-2: spec-only change; Approved W3 result rows with `leadCenter` open the center editor via the shared open-route util)
 
 The command palette behind the topbar Search button (P2-3401). Three groups: **Results**
 (server-side `?title=` search), **Indicators** (visible-but-disabled, `Coming soon`, P2-3402) and

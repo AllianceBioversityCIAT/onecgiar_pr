@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { scienceProgramLabel } from '../../../../../../../../shared/utils/science-program-label.util';
 import { CurrentResult } from '../../../../../../../../shared/interfaces/current-result.interface';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
@@ -39,6 +40,10 @@ export class ResultsToUpdateModalComponent {
   ];
 
   constructor(public api: ApiService, private readonly retrieveModalSE: RetrieveModalService) {}
+
+  submitterLabel(result: UpdateResultRow): string {
+    return scienceProgramLabel(result?.submitter == null ? '' : String(result.submitter), result?.submitter_name, result?.initiative_name, result?.submitter_short_name, result?.initiative_short_name);
+  }
 
   closeModal(): void {
     this.api.dataControlSE.updateResultModal = false;

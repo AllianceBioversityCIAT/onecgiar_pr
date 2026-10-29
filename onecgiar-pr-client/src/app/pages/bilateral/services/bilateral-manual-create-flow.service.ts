@@ -11,7 +11,7 @@ import { BilateralCreationService } from './bilateral-creation.service';
 import { BilateralProject } from './bilateral-creation.interfaces';
 import { BilateralOverviewService } from './bilateral-overview.service';
 import { BILATERAL_MANUAL_CREATE_COPY } from '../../../internationalization/bilateral-manual-create.copy';
-import { isCenterMember } from './bilateral-center-membership.util';
+import { canCreateAtCenter, isCenterMember } from './bilateral-center-membership.util';
 
 /**
  * `ARM-T-1` (P2-3853, `docs/specs/bilateral/ai-queue-report-manually`) — the narrow argument
@@ -97,6 +97,21 @@ export class BilateralManualCreateFlowService {
     );
   });
 
+  /**
+   * `RNB-2` (P2-3941) — whether the signed-in user may generate results for the current centre
+   * (admin, or member of it). Drives the "Create result" buttons, the Bulk Results Uploader and the
+   * drawer openers below. Reads `rolesVersion` first: `RolesService.roles` is a plain property.
+   */
+  readonly canCreateResults = computed(() => {
+    this.api.rolesSE.rolesVersion;
+    return canCreateAtCenter(
+      this.api.rolesSE.isAdmin,
+      this.api.rolesSE.getMyCenters(),
+      this.ctx.centerId(),
+      this.ctx.centerAcronym()
+    );
+  });
+
   readonly drawerProjectCode = computed(() => this.creationService.selectedProject()?.shortName ?? '');
 
   readonly drawerProjectTitle = computed(
@@ -160,6 +175,8 @@ export class BilateralManualCreateFlowService {
   /** Home catalog entry: pre-select project, auto-pick SP when unambiguous, open drawer in place. */
   beginFromProject(project: BilateralProject, event?: Event): void {
     event?.preventDefault();
+    // RNB-2: a user outside the centre cannot report for it (the server would answer 403 anyway).
+    if (!this.canCreateResults()) return;
     this.creationService.selectProject(project);
     this.selectedReportingWay.set(null);
     this.autoSelectPrimarySpIfSingle();
@@ -260,6 +277,7 @@ export class BilateralManualCreateFlowService {
 
   /** Wizard entry: reporting way already chosen as manual on the page. */
   openDrawerForManual(): void {
+    if (!this.canCreateResults()) return;
     this.selectedReportingWay.set('manual');
     this.drawerOpen.set(true);
     this.recordOpenPath();
@@ -283,6 +301,7 @@ export class BilateralManualCreateFlowService {
 
   submitCreate(payload: BilateralManualCreatePayload): void {
     if (!payload.levelId || !payload.typeId) return;
+    if (!this.canCreateResults()) return;
     // Night sweep 2026-09-23, C-2 — re-entry guard. The form's `canCreate` reads `creating` through an
     // input that only refreshes on the next change detection, so a fast double-click emitted twice and
     // two identical results were created (prtest #9573/#9574, #9577/#9578). This signal is set

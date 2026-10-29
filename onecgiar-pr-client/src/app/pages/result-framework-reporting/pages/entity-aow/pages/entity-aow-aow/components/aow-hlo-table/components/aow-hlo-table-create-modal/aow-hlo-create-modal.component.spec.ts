@@ -662,6 +662,8 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
 
       const melItem: CgspaceItemDto = {
         ...sampleBrowseItem,
+        handle: '20.500.11766/70929',
+        handleUrl: 'https://hdl.handle.net/20.500.11766/70929',
         itemUrl: 'https://repo.mel.cgiar.org/items/11111111-1111-1111-1111-111111111111',
         repository: 'melspace' as any
       };
@@ -672,7 +674,7 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       // Flow A: Browse selection of a MELSpace item
       component.onCgspaceItemSelected(melItem);
 
-      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melItem.itemUrl);
+      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melItem.handleUrl); // P2-3987: hdl wins over items
       expect(component.mqapUrlError().status).toBe(false);
       expect(component.selectedKpRepository()).toBe('melspace');
       expect(component.repositoryLabel()).toBe('MELSpace'); // drives the "Selected from {{ repositoryLabel() }}" banner
@@ -693,7 +695,7 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       const manualComp = manualComponentFixture.componentInstance;
       manualComp.createResultBody.update(b => ({
         ...b,
-        handler: melItem.itemUrl,
+        handler: melItem.handleUrl,
         result_name: 'MQAP Retrieved Result Title',
         toc_progressive_narrative: 'Progress narrative for KP',
         contribution_to_indicator_target: 3,

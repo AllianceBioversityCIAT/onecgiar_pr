@@ -105,4 +105,15 @@ describe('ResultsInnovationOutputListComponent', () => {
       expect(mockInnovations[0].selected).toBeFalsy();
     });
   });
+
+  describe('leadLabel() (PF2 S1 picker)', () => {
+    it('builds `CODE - Name` and keeps the code for a row without a name', () => {
+      expect(component.leadLabel({ official_code: 'SP05', initiative_name: 'Better Diets' } as any)).toBe('SP05 - Better Diets');
+      expect(component.leadLabel({ official_code: 'SP05' } as any)).toBe('SP05');
+    });
+
+    it('keeps sorting on official_code', () => {
+      expect(component.columnOrder.find(c => c.title === 'Lead').attr).toBe('official_code');
+    });
+  });
 });

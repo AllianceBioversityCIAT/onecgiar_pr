@@ -66,6 +66,138 @@ describe('BilateralAutoSaveService explicit section persistence', () => {
     expect(bilateralApi.PATCH_generalInfo).toHaveBeenCalledTimes(2);
   });
 
+  describe('BSF-T-2: scoped failure determination (stale vs current errors)', () => {
+    // Field A fails and settles (flush() always drains `_pendingFields` on dispatch, success or
+    // failure, so A has no pending data left and its `'error'` status persists with nothing to
+    // retry it). Field B is then staged and flushed independently, and ITS PATCH succeeds.
+    //
+    // RED (pre-fix, walked against the code as it stood before this task — a setup-absence red:
+    // `pendingStatusKeysFor`/`hasErrorForFields` did not exist yet, so this exact test could not be
+    // run against that code at all): the OLD, still-current `hasErrorFor('general-info')` — the
+    // exact call `triggerManualSave()` made before this fix — still sees A's stale `'error'` and
+    // misreports B's successful flush as failed
+    // (`expect(service.hasErrorFor('general-info')).toBe(false)` failed with `Received: true`).
+    // That divergence is reproduced below as `hasErrorFor(...)` still reading `true` — unchanged,
+    // on purpose (design.md §2.3 / `BSF-DD-2`: other call sites still rely on the section-wide
+    // version, so it is not touched) — while the new, scoped check `hasErrorForFields` correctly
+    // reads `false` for exactly what B's flush covered. This is the BSF-AC-2 falsifier.
+    it('BSF-AC-2 falsifier: a stale, unrelated field error must not fail a later, independent, successful flush', async () => {
+      bilateralApi.PATCH_generalInfo.mockReturnValueOnce(throwError(() => new Error('network')));
+      service.updateField('title', 'Field A value');
+      await service.flush(service.getEndpointKeys('general-info'));
+      expect(service.fieldStatus()['title']).toBe('error');
+
+      // Captured BEFORE flush(), same timing discipline `triggerManualSave()` uses — this is what
+      // scopes the failure check to exactly what THIS flush covers.
+      service.updateField('description', 'Field B value');
+      const flushTargets = service.pendingStatusKeysFor('general-info');
+      bilateralApi.PATCH_generalInfo.mockReturnValueOnce(of({}));
+      await service.flush(service.getEndpointKeys('general-info'));
+
+      expect(flushTargets).toEqual(['description']);
+      // The OLD section-wide check still reads true — A's stale error, unchanged by design.
+      expect(service.hasErrorFor('general-info')).toBe(true);
+      // The NEW scoped check correctly reads false: B's own flush never failed.
+      expect(service.hasErrorForFields(flushTargets)).toBe(false);
+    });
+
+    // Disqualifier guard (BSF-R-3 / BSF-AC-3): the scoping must not also swallow a GENUINE
+    // current-flush failure. Field C fails as part of the flush the scoped check is evaluating —
+    // it must still be caught, with the server's own reason surfaced.
+    it('disqualifier guard: a genuine CURRENT-flush failure is still caught by the scoped check', async () => {
+      bilateralApi.PATCH_generalInfo.mockReturnValueOnce(throwError(() => ({ error: { message: 'Title cannot be empty.' } })));
+      service.updateField('title', '');
+      const flushTargets = service.pendingStatusKeysFor('general-info');
+
+      await service.flush(service.getEndpointKeys('general-info'));
+
+      expect(flushTargets).toEqual(['title']);
+      expect(service.hasErrorForFields(flushTargets)).toBe(true);
+      expect(service.lastErrorMessageForFields(flushTargets)).toBe('Title cannot be empty.');
+    });
+  });
+
+  describe('BSF-T-2 rework (Reviewer FAIL, attempt 2): the Evidence gap in pendingStatusKeysFor', () => {
+    // Evidence never goes through `_pendingFields`/`_pendingPayloads` — `SECTION_ENDPOINT_KEYS.evidence`
+    // is `[]` and its Save draft runs through `runImmediate('evidence', …)` instead
+    // (section-evidence.component.ts:191-195, 463: `manualSave$` → `saveSection()` → `runImmediate`).
+    // Attempt 1's `pendingStatusKeysFor('evidence')` only read `_pendingFields`/`_pendingPayloads`, so
+    // it always returned `[]` for Evidence, and `hasErrorForFields([])` is always `false` — a genuine
+    // Evidence failure was silently reported as success after the full 15s `waitForSectionSave`
+    // timeout. This mirrors the evidence special-case already present in `hasErrorFor` (`:324`) and
+    // `hasPendingFor` (`:304-307`).
+    it("pendingStatusKeysFor('evidence') captures the evidence status key", () => {
+      expect(service.pendingStatusKeysFor('evidence')).toEqual(['evidence']);
+    });
+
+    it('a genuine Evidence save failure (via runImmediate) is caught by the scoped check, and the message lookup falls back to null cleanly', () => {
+      service.runImmediate('evidence', () => throwError(() => new Error('SharePoint upload failed')));
+
+      expect(service.fieldStatus()['evidence']).toBe('error');
+      const flushTargets = service.pendingStatusKeysFor('evidence');
+      expect(flushTargets).toEqual(['evidence']);
+      expect(service.hasErrorForFields(flushTargets)).toBe(true);
+      // No EndpointKey maps to the bare 'evidence' status key, so the scoped message lookup has
+      // nothing to resolve to — it must fall back to null (triggerManualSave()'s own fallback then
+      // supplies the generic "Please try again" copy), never throw or return another section's reason.
+      expect(service.lastErrorMessageForFields(flushTargets)).toBeNull();
+    });
+
+    it('a successful Evidence save is NOT reported as failed', () => {
+      service.runImmediate('evidence', () => of({}));
+
+      expect(service.fieldStatus()['evidence']).toBe('saved');
+      const flushTargets = service.pendingStatusKeysFor('evidence');
+      expect(flushTargets).toEqual(['evidence']);
+      expect(service.hasErrorForFields(flushTargets)).toBe(false);
+    });
+  });
+
+  // BSP-T-1 (design.md P-9/P-10, `BSP-R-5`): the one page-wide fact every `savedTick` bump is now
+  // gated on. A direct scan of `fieldStatus()` — every section's entries, including `'evidence'` —
+  // not scoped to any one section's endpoint keys the way `hasPendingFor`/`hasErrorFor` are.
+  describe('hasAnyUnsavedAnywhere (BSP-T-1, BSP-R-5)', () => {
+    it('returns false when fieldStatus() is empty', () => {
+      expect(service.fieldStatus()).toEqual({});
+      expect(service.hasAnyUnsavedAnywhere()).toBe(false);
+    });
+
+    it("returns false when every tracked field is 'saved' or 'idle'", () => {
+      service.fieldStatus.set({ title: 'saved', description: 'idle' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(false);
+    });
+
+    it("returns true for a 'dirty' field in a non-evidence section", () => {
+      service.fieldStatus.set({ title: 'dirty' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it("returns true for a 'saving' field", () => {
+      service.fieldStatus.set({ geo_scope: 'saving' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it("returns true for an 'error' field", () => {
+      service.fieldStatus.set({ title: 'error' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it("returns true for a 'dirty' 'evidence' entry — the key is NOT excluded from the scan (P-10)", () => {
+      service.fieldStatus.set({ evidence: 'dirty' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it("returns true for an 'error' 'evidence' entry, the same as any other section's key", () => {
+      service.fieldStatus.set({ evidence: 'error' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+
+    it('returns true when the unsaved field is just ONE entry among several otherwise-clean ones', () => {
+      service.fieldStatus.set({ title: 'saved', description: 'idle', toc_mapping: 'dirty' });
+      expect(service.hasAnyUnsavedAnywhere()).toBe(true);
+    });
+  });
+
   it('does not permit writes after the form becomes read-only', async () => {
     service.setReadOnly(true);
     service.updateField('title', 'Blocked');

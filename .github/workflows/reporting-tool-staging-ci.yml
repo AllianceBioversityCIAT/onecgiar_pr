@@ -1,0 +1,149 @@
+# Reporting Tool STAGING: CI on GitHub Actions, finalization on Jenkins (prms-reporting-tool-staging-ci).
+#
+#   push to staging -> GitHub Actions (lint, tests) -> Jenkins (record + final Slack)
+#
+# CI only: no build, no image, no ECR, no deploy, no migrations, no AWS access. The frontend lint and tests use
+# an inert CI environment file (.github/ci/reporting-tool-frontend-environment.ci.ts): no real endpoint, no
+# credential, no Secrets Manager read.
+# Slack: GitHub Actions posts "started" and, when a check fails, "failed"; Jenkins posts "succeeded".
+# GitHub Environment reporting-tool-staging: deployment branch staging only (gate of the Jenkins hand-over).
+name: reporting-tool-staging-ci
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: reporting-tool-staging-ci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  notify-start:
+    name: notify start (Slack)
+    permissions: {}
+    uses: ./.github/workflows/slack-notify.reusable.yml
+    with:
+      status: started
+      title: Reporting Tool NEW ENVIRONMENT
+      project: Reporting Tool
+      environment-label: STAGING
+    secrets:
+      SLACK_NOTIFICATIONS_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}
+
+  backend-checks:
+    name: backend checks (lint, tests)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: onecgiar-pr-server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20.13.1 # the runtime image (node:20.13.1-alpine)
+          cache: npm
+          cache-dependency-path: onecgiar-pr-server/package-lock.json
+      - name: Install dependencies (lockfile only, no install scripts)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Lint (the `lint` script without --fix)
+        run: ./node_modules/.bin/eslint "{src,apps,libs,test}/**/*.ts"
+      - name: Unit tests with coverage
+        run: npm run test:cov -- --ci
+
+  frontend-checks:
+    name: frontend checks (lint, tests)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: onecgiar-pr-client
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20 # the build image (node:20-alpine); Angular 21 needs >= 20.19
+          cache: npm
+          cache-dependency-path: onecgiar-pr-client/package-lock.json
+      - name: Install dependencies (lockfile only, no Cypress binary)
+        env:
+          CYPRESS_INSTALL_BINARY: "0" # CI never runs Cypress; avoids the binary download
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm ci --no-audit --no-fund
+      - name: CI environment file (inert values, no credentials)
+        run: |
+          set -euo pipefail
+          for f in src/environments/environment.ts src/environments/environment.prod.ts; do
+            git check-ignore -q "$f" || { echo "::error::$f is not git-ignored (fail closed)"; exit 1; }
+            install -m 0644 "$GITHUB_WORKSPACE/.github/ci/reporting-tool-frontend-environment.ci.ts" "$f"
+          done
+      - name: Lint
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm run lint
+      - name: Unit tests with coverage
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/without-oidc.sh" npm run test:coverage -- --ci --silent
+      - name: Remove the environment files and the caches that hold copies of them
+        if: always()
+        working-directory: .
+        run: bash .github/scripts/remove-frontend-config.sh
+
+  ci-script-checks:
+    name: CI script checks (bash -n, ShellCheck)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Syntax
+        run: for f in .github/scripts/*.sh; do bash -n "$f"; done
+      - name: ShellCheck (preinstalled on the runner)
+        run: shellcheck --severity=warning .github/scripts/*.sh
+
+  # Only when every check passed: Jenkins records the run and posts the final Slack message. Does not wait.
+  finalize:
+    name: finalize (Jenkins prms-reporting-tool-staging-ci)
+    needs: [backend-checks, frontend-checks, ci-script-checks]
+    if: >-
+      needs.backend-checks.result == 'success'
+      && needs.frontend-checks.result == 'success'
+      && needs.ci-script-checks.result == 'success'
+    permissions: {}
+    uses: ./.github/workflows/jenkins-ci-finalize.reusable.yml
+    with:
+      jenkins-job: prms-reporting-tool-staging-ci
+      environment: reporting-tool-staging
+    secrets:
+      JENKINS_USERNAME: ${{ secrets.JENKINS_USERNAME }}
+      JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
+
+  # Only when the run failed before Jenkins accepted the request. Jenkins is not called on failure.
+  notify-ci-failure:
+    name: notify CI failure (Slack)
+    needs: [backend-checks, frontend-checks, ci-script-checks, finalize]
+    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    permissions: {}
+    uses: ./.github/workflows/slack-notify.reusable.yml
+    with:
+      status: failed
+      title: Reporting Tool NEW ENVIRONMENT
+      project: Reporting Tool
+      environment-label: STAGING
+      detail: >-
+        backend-checks=${{ needs.backend-checks.result }},
+        frontend-checks=${{ needs.frontend-checks.result }},
+        ci-script-checks=${{ needs.ci-script-checks.result }},
+        jenkins-hand-over=${{ needs.finalize.result }}
+    secrets:
+      SLACK_NOTIFICATIONS_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}

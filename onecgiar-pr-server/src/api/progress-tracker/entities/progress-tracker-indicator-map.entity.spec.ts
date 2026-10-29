@@ -1,6 +1,7 @@
 // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-indicator-mapping
 import { getMetadataArgsStorage } from 'typeorm';
 import { CreateProgressTrackerIndicatorMap1790010000000 } from '../../../migrations/1790010000000-CreateProgressTrackerIndicatorMap';
+import { ProgressTrackerIndicatorMapCenter1791400000000 } from '../../../migrations/1791400000000-ProgressTrackerIndicatorMapCenter';
 import { BaseEntity } from '../../../shared/entities/base-entity';
 import { ProgressTrackerIndicatorMap } from './progress-tracker-indicator-map.entity';
 
@@ -208,7 +209,108 @@ describe('ProgressTrackerIndicatorMap entity', () => {
         'match_quality',
         'match_score',
         'resolved_at',
+        'center',
+        'kpi_type',
+        'needs_review',
       ]),
     );
+  });
+
+  it('declares center NOT NULL default "", kpi_type nullable and needs_review boolean default false', () => {
+    const byName = (name: string) =>
+      getMetadataArgsStorage().columns.find(
+        (c) =>
+          c.target === ProgressTrackerIndicatorMap && c.options?.name === name,
+      )?.options;
+
+    expect(byName('center')).toMatchObject({
+      type: 'varchar',
+      nullable: false,
+      default: '',
+    });
+    expect(byName('kpi_type')).toMatchObject({
+      type: 'varchar',
+      nullable: true,
+    });
+    expect(byName('needs_review')).toMatchObject({
+      type: 'boolean',
+      nullable: false,
+      default: false,
+    });
+  });
+});
+
+describe('ProgressTrackerIndicatorMapCenter migration', () => {
+  /** Mocked QueryRunner: `existing` lists the columns/indexes information_schema reports. */
+  function makeQueryRunner(existing: string[]) {
+    const calls: string[] = [];
+    const queryRunner = {
+      query: jest.fn(async (sql: string, params?: unknown[]) => {
+        calls.push(sql);
+        if (/information_schema\.(COLUMNS|STATISTICS)/.test(sql)) {
+          return [{ total: existing.includes(String(params?.[1])) ? 1 : 0 }];
+        }
+        return [];
+      }),
+    } as any;
+    return { queryRunner, calls };
+  }
+
+  it('up deletes existing rows first, adds the three columns and swaps the unique key to include center', async () => {
+    const { queryRunner, calls } = makeQueryRunner([
+      'IDX_ptim_toc_indicator_version',
+    ]);
+
+    await new ProgressTrackerIndicatorMapCenter1791400000000().up(queryRunner);
+
+    const writes = calls.filter((sql) => !/information_schema/.test(sql));
+    expect(writes[0]).toMatch(/DELETE FROM `progress_tracker_indicator_map`/);
+
+    const sql = writes.join('\n');
+    expect(sql).toMatch(/ADD `center` varchar\(64\) NOT NULL DEFAULT ''/);
+    expect(sql).toMatch(/ADD `kpi_type` varchar\(255\) NULL/);
+    expect(sql).toMatch(/ADD `needs_review` tinyint NOT NULL DEFAULT 0/);
+    expect(sql).toMatch(/DROP INDEX `IDX_ptim_toc_indicator_version`/);
+    expect(sql).toMatch(
+      /ADD UNIQUE INDEX `IDX_ptim_toc_indicator_version_center` \(`toc_results_indicator_id`\(255\), `version_id`, `center`\)/,
+    );
+  });
+
+  it('up is re-runnable: nothing is added or dropped when the new schema is already in place', async () => {
+    const { queryRunner, calls } = makeQueryRunner([
+      'center',
+      'kpi_type',
+      'needs_review',
+      'IDX_ptim_toc_indicator_version_center',
+    ]);
+
+    await new ProgressTrackerIndicatorMapCenter1791400000000().up(queryRunner);
+
+    expect(calls.join('\n')).not.toMatch(/ALTER TABLE/);
+  });
+
+  it('down deletes the center rows, restores the two-column key and drops the three columns', async () => {
+    const { queryRunner, calls } = makeQueryRunner([
+      'center',
+      'kpi_type',
+      'needs_review',
+      'IDX_ptim_toc_indicator_version_center',
+    ]);
+
+    await new ProgressTrackerIndicatorMapCenter1791400000000().down(
+      queryRunner,
+    );
+
+    const writes = calls.filter((sql) => !/information_schema/.test(sql));
+    expect(writes[0]).toMatch(/DELETE FROM `progress_tracker_indicator_map`/);
+
+    const sql = writes.join('\n');
+    expect(sql).toMatch(/DROP INDEX `IDX_ptim_toc_indicator_version_center`/);
+    expect(sql).toMatch(
+      /ADD UNIQUE INDEX `IDX_ptim_toc_indicator_version` \(`toc_results_indicator_id`\(255\), `version_id`\)/,
+    );
+    expect(sql).toMatch(/DROP COLUMN `center`/);
+    expect(sql).toMatch(/DROP COLUMN `kpi_type`/);
+    expect(sql).toMatch(/DROP COLUMN `needs_review`/);
   });
 });

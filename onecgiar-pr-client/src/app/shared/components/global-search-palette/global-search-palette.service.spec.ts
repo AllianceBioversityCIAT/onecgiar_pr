@@ -132,6 +132,7 @@ describe('GlobalSearchPaletteService', () => {
         code: 5844,
         title: 'Maize resilience in East Africa',
         submitterCode: 'SP01',
+        submitterLabel: 'SP01',
         statusId: 1,
         statusName: 'Editing',
         versionId: 12,
@@ -340,6 +341,12 @@ describe('GlobalSearchPaletteService', () => {
       const row = toPaletteResultRow(item({ source_name: 'W3/Bilaterals', lead_center: 'AfricaRice' }));
       expect(row.sourceName).toBe('W3/Bilaterals');
       expect(row.leadCenter).toBe('AfricaRice');
+    });
+
+    it('builds submitterLabel as CODE - Name and falls back to the code', () => {
+      expect(toPaletteResultRow(item({ submitter_name: 'Breeding' })).submitterLabel).toBe('SP01 - Breeding');
+      expect(toPaletteResultRow(item({ submitter_name: '  ' })).submitterLabel).toBe('SP01');
+      expect(toPaletteResultRow({}).submitterLabel).toBe('');
     });
 
     it('tolerates a missing payload without throwing', () => {

@@ -5,6 +5,7 @@ import request from 'supertest';
 import { ProgressTrackerController } from './progress-tracker.controller';
 import { ProgressTrackerService } from './progress-tracker.service';
 import { ProgressTrackerResolveService } from './progress-tracker-resolve.service';
+import { ProgressTrackerActivityService } from './progress-tracker-activity.service';
 import { PtResultsQueryDto } from './dto/pt-results-query.dto';
 import { PtReadyCountsQueryDto } from './dto/pt-ready-counts-query.dto';
 import { PtResolveTriggerDto } from './dto/pt-resolve-trigger.dto';
@@ -58,6 +59,26 @@ describe('ProgressTrackerController', () => {
     }),
   } as unknown as jest.Mocked<ProgressTrackerResolveService>;
 
+  const mockProgressTrackerActivityService = {
+    getProgramIndicatorActivity: jest.fn().mockResolvedValue({
+      statusCode: 200,
+      message: 'Progress Tracker indicator activity retrieved',
+      response: {
+        status: 'ok',
+        items: [
+          {
+            toc_results_indicator_id: '5d51da6c6916',
+            toc_indicator_integration_id: 900123,
+            center: 'CIAT',
+            matched: true,
+            evidence_count: 13,
+            pt_indicator_id: '8006329bfd49',
+          },
+        ],
+      },
+    }),
+  } as unknown as jest.Mocked<ProgressTrackerActivityService>;
+
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -71,6 +92,10 @@ describe('ProgressTrackerController', () => {
         {
           provide: ProgressTrackerResolveService,
           useValue: mockProgressTrackerResolveService,
+        },
+        {
+          provide: ProgressTrackerActivityService,
+          useValue: mockProgressTrackerActivityService,
         },
       ],
     }).compile();
@@ -184,6 +209,23 @@ describe('ProgressTrackerController', () => {
   /**
    * `PTM-T-5` — the `/resolve` fill trigger route.
    */
+  describe('GET /programs/:programId/indicator-activity', () => {
+    it('returns 200 with the activity envelope and passes the program id through', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/programs/SP01/indicator-activity')
+        .expect(200);
+
+      expect(res.body.statusCode).toBe(200);
+      expect(res.body.response.status).toBe('ok');
+      expect(res.body.response.items[0]).toEqual(
+        expect.objectContaining({ matched: true, evidence_count: 13 }),
+      );
+      expect(
+        mockProgressTrackerActivityService.getProgramIndicatorActivity,
+      ).toHaveBeenCalledWith('SP01');
+    });
+  });
+
   describe('POST /indicator-map/resolve', () => {
     it('returns 200 and forwards the service envelope, calling the resolve service with the body DTO', async () => {
       const res = await request(app.getHttpServer())

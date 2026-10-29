@@ -34,16 +34,58 @@
       </button>
     </div>
 
-    <app-pr-select
-      [options]="policyControlList.policyTypesList"
-      label="Policy type"
-      optionLabel="name"
-      optionValue="id"
-      placeholder="Select policy type"
-      [required]="true"
-      [(ngModel)]="body.policy_type_id"
-      (ngModelChange)="onPolicyTypeChange()">
-    </app-pr-select>
+    <!--
+      PCP-DD-1 (policy-change-usd-amount-position) — Policy type, USD amount and Status render as
+      three siblings inside one shared grid row, in that order, matching Pool Funding's grid
+      structure byte-for-byte (policy-change-info.component.html:6-40). USD amount/Status stay the
+      direct, always-visible consequence of the Policy type choice right beside them (carried over
+      from PCL-R-2/PCL-DD-2, policy-change-usd-amount-layout — they are NOT behind "Complete full
+      metadata"; see design.md §2.3 Reversion Challenge there). `@if` renders no wrapping element,
+      so when `policy_type_id == 1` the input/select below are direct children of this grid div,
+      not of a nested one.
+      FCT-T-1 (field-card-save-pill-truncation) — the "byte-for-byte" claim above is about sibling
+      ORDER/grouping only; the `minmax()` floor itself now DIVERGES from Pool Funding's `190px` —
+      this row is `390px` so `app-field-card`'s save-pill/REQUIRED-badge text never collapses (see
+      CLAUDE.md). The floor is wrapped in `min(390px,100%)`: a bare `390px` minimum can't shrink
+      below itself, so a container narrower than 390px (phone widths) would overflow horizontally
+      instead of degrading — `min(...,100%)` lets the single remaining column shrink to the
+      container's own width there, falling through to `app-field-card`'s own 380px/240px collapse
+      rules as the intended last resort. Pool Funding is unchanged, still `190px`.
+    -->
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(min(390px,100%),1fr))] gap-[20px]">
+      <app-pr-select
+        [options]="policyControlList.policyTypesList"
+        label="Policy type"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select policy type"
+        [required]="true"
+        [(ngModel)]="body.policy_type_id"
+        (ngModelChange)="onPolicyTypeChange()">
+      </app-pr-select>
+
+      @if (body.policy_type_id == 1) {
+        <app-pr-input
+          label="USD amount"
+          type="currency"
+          placeholder="0"
+          [required]="false"
+          [(ngModel)]="body.amount"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-input>
+
+        <app-pr-select
+          [options]="statusOptions"
+          label="Status"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Select status"
+          [required]="false"
+          [(ngModel)]="body.status_amount"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-select>
+      }
+    </div>
 
     <app-pr-select
       [options]="policyControlList.policyStages"
@@ -84,13 +126,14 @@
 
   <div class="contents" [inert]="readOnly()">
     @if (showAllFields()) {
-      <div class="flex flex-col gap-[18px]">
+      <div class="flex flex-col gap-[18px]" data-testid="type-policy-change-full-metadata-disclosure">
         <!--
-        The policy change question is full metadata per the story, and it sits INSIDE the toggle but
-        OUTSIDE the policy-type gate below. That gate is correct — it is AC6, and W1/W2 does the same
-        with *ngIf in policy-change-info.component.html:22 and :33 — but it only covers USD amount and
-        Status. Nesting the question under it would hide it for policy types 2 and 3, and those are
-        exactly the users who today press the button and see nothing happen.
+        The policy change question is full metadata per the story. It used to sit nested alongside
+        the USD amount/Status gate (AC6, P2-3388) because that pair lived in this same toggle; now
+        that USD amount/Status render always-visible above (PCL-R-2), this is the sole remaining
+        content of the disclosure. Do NOT nest this question under a `policy_type_id` gate the way
+        USD amount/Status are gated — AC6 requires it to stay visible for every policy type, not
+        just type 1, or it would wrongly disappear for types 2 and 3.
       -->
         @if (questions?.optionsWithAnswers?.length) {
           <app-pr-select
@@ -102,29 +145,6 @@
             [required]="false"
             [(ngModel)]="relatedTo"
             (ngModelChange)="onRelatedToChange(relatedTo)">
-          </app-pr-select>
-        }
-
-        @if (body.policy_type_id == 1) {
-          <app-pr-input
-            label="USD amount"
-            type="currency"
-            placeholder="0"
-            [required]="false"
-            [(ngModel)]="body.amount"
-            (ngModelChange)="onFieldChange()">
-          </app-pr-input>
-
-          <app-pr-select
-            [options]="statusOptions"
-            label="Status"
-            optionLabel="name"
-            optionValue="id"
-            placeholder="Select status"
-            [required]="false"
-            [expandSpaceOnOpen]="true"
-            [(ngModel)]="body.status_amount"
-            (ngModelChange)="onFieldChange()">
           </app-pr-select>
         }
       </div>

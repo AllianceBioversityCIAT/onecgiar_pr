@@ -67,4 +67,17 @@ describe('SelectedInnovationsComponent (P2-3840)', () => {
     expect(q('[data-testid="selected-innovation-open"]').length).toBe(1);
     expect(q('[data-testid="selected-innovation-remove"]').length).toBe(0);
   });
+
+  describe('PF2 lead label (S1)', () => {
+    it('renders `CODE - Name` with a title, and only the code for a locally created row', async () => {
+      const named = { ...created, initiative_official_code: 'SP05', initiative_name: 'Better Diets' };
+      const local = { ...development, initiative_official_code: 'INIT-012' };
+      await render([named, local]);
+      const cards = q('[data-testid="selected-innovation"]');
+      const chip = cards[0].querySelector('span[title]') as HTMLElement;
+      expect(chip.textContent.trim()).toBe('SP05 - Better Diets');
+      expect(chip.getAttribute('title')).toBe('SP05 - Better Diets');
+      expect((cards[1].querySelector('span[title]') as HTMLElement).textContent.trim()).toBe('INIT-012');
+    });
+  });
 });

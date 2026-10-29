@@ -982,3 +982,39 @@ describe('ResultsService — _loadBilateralRelatedData draft-visible statuses (R
     );
   });
 });
+
+// @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-w3-scope CWS-R-1
+describe('ResultsService — getBilateralCenterResults scope pass-through (CWS-R-1)', () => {
+  const build = () => {
+    const service: any = Object.create(ResultsService.prototype);
+    const getResultsByBilateralCenter = jest.fn().mockResolvedValue([]);
+    service._resultRepository = { getResultsByBilateralCenter };
+    return { service, getResultsByBilateralCenter };
+  };
+
+  it('passes the bilateral scope flag through to the repository', async () => {
+    const { service, getResultsByBilateralCenter } = build();
+
+    await service.getBilateralCenterResults('CIP', '8', false, true);
+
+    expect(getResultsByBilateralCenter).toHaveBeenCalledWith(
+      'CIP',
+      8,
+      false,
+      true,
+    );
+  });
+
+  it('defaults both flags to false', async () => {
+    const { service, getResultsByBilateralCenter } = build();
+
+    await service.getBilateralCenterResults('CIP', '8');
+
+    expect(getResultsByBilateralCenter).toHaveBeenCalledWith(
+      'CIP',
+      8,
+      false,
+      false,
+    );
+  });
+});

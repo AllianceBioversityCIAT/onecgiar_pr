@@ -59,7 +59,7 @@ describe('TypeKnowledgeProductComponent', () => {
 
   beforeEach(async () => {
     mdsTracker = { setSectionFields: jest.fn() };
-    autoSave = { schedulePayload: jest.fn(), fieldStatus: signal<Record<string, string>>({}) };
+    autoSave = { isReadOnly: signal(false), schedulePayload: jest.fn(), fieldStatus: signal<Record<string, string>>({}) };
     alerts = { show: jest.fn() };
     roles = { isAdmin: false };
     creation = {

@@ -1,6 +1,6 @@
 # complementary-innovation (IPSR Step 2.1)
 
-**Verified:** 2026-08-28 · branch performance-refactor · 743fc1908
+**Verified:** 2026-10-13 · branch qa-development-2026-ss · 2191d97e9
 
 ## What it is
 IPSR Step 2 – Package > 2.1. Lets the user bundle PRMS-reported Innovation Developments with the core
@@ -8,6 +8,7 @@ innovation, and create/edit ad-hoc "complementary innovation / enabler / solutio
 (`result_type_id === 11`) through a modal.
 
 ## Contract
+- Lead (`table-innovation` column, `selected-innovations` chip) renders `scienceProgramLabel(initiative_official_code, initiative_name)` (`CODE - Name`, ellipsis + `title`); a locally created row (`INIT-0<id>`, no name) shows the code. The searchable `full_name` built in `loadInformationComplementaryInnovations` includes the label (PF2-T-4).
 - `ComplementaryInnovationComponent` (parent) owns the catalogs: `complementaryFunction` (flat list from
   `GETComplementataryInnovationFunctions`) and `cols` (the same objects chunked 5-per-column by
   `setupColumns()`), passed down as `[columns]="cols"`.

@@ -9,6 +9,7 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
@@ -40,6 +41,7 @@ import { CreateBilateralAiJobDto } from '../dto/create-bilateral-ai-job.dto';
 import { BilateralService } from '../../bilateral/bilateral.service';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ClarisaProjectsRepository } from '../../../clarisa/clarisa-projects/clarisa-projects.repository';
+import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import {
   getBilateralAiMaxAttempts,
   getBilateralAiMaxConcurrent,
@@ -83,6 +85,9 @@ const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
   'Other Output': { type: 8, level: 4 },
 };
 
+/** Why one id of a bulk discard did not get discarded (`ABD-R-5`, design.md §6). */
+export type BulkDiscardFailureReason = 'not_found' | 'forbidden' | 'error';
+
 @Injectable()
 export class BilateralAiService {
   private readonly logger = new Logger(BilateralAiService.name);
@@ -121,6 +126,10 @@ export class BilateralAiService {
     // `ClarisaProjectsModule`, imported by `bilateral.module.ts` for `BilateralService`'s own use
     // (`findProjectByGrantTitle`), so no new module import is needed.
     private readonly clarisaProjectsRepository: ClarisaProjectsRepository,
+    // `PF2-T-3` (`program-full-names-labels-part-2`, S3): `program_name` for the job read paths.
+    // `ClarisaInitiative` is already registered in `bilateral.module.ts`'s `TypeOrmModule.forFeature`.
+    @InjectRepository(ClarisaInitiative)
+    private readonly clarisaInitiativeRepository: Repository<ClarisaInitiative>,
     private readonly notificationsService: BilateralAiNotificationsService,
     private readonly evidenceTransferService: BilateralAiEvidenceTransferService,
     // `AIQ-T-3`: `BilateralAiDispatchService` already depends on this service (`attemptStart`,
@@ -236,6 +245,47 @@ export class BilateralAiService {
   }
 
   /**
+   * `PF2-T-3` (S3, `DD-4`): resolves `program_code` (`clarisa_initiatives.official_code`) to the
+   * program name with ONE batched `In(codes)` lookup per response, never one per row. A code that
+   * matches several initiatives (different portfolios) resolves to the active one; if that is
+   * still ambiguous (none active, or several active) it resolves to `null`, never a guess. A
+   * code with no match is absent from the map (callers read it as `null`).
+   */
+  private async programNameByCode(
+    codes: Array<string | null | undefined>,
+  ): Promise<Map<string, string | null>> {
+    const uniqueCodes = [
+      ...new Set(codes.filter((code): code is string => Boolean(code))),
+    ];
+    const names = new Map<string, string | null>();
+    if (!uniqueCodes.length) return names;
+
+    const initiatives = await this.clarisaInitiativeRepository.find({
+      where: { official_code: In(uniqueCodes) },
+      select: { id: true, official_code: true, name: true, active: true },
+    });
+
+    const byCode = new Map<string, ClarisaInitiative[]>();
+    for (const initiative of initiatives) {
+      const group = byCode.get(initiative.official_code) ?? [];
+      group.push(initiative);
+      byCode.set(initiative.official_code, group);
+    }
+
+    for (const [code, group] of byCode) {
+      let chosen: ClarisaInitiative | null = null;
+      if (group.length === 1) {
+        chosen = group[0];
+      } else {
+        const active = group.filter((initiative) => initiative.active);
+        chosen = active.length === 1 ? active[0] : null;
+      }
+      names.set(code, chosen?.name?.trim() || null);
+    }
+    return names;
+  }
+
+  /**
    * `APF-R-1` A / `AIQ-DD-4`: `queue_position` (kept, `AIQ-R-6` B) is now defined as `jobs_ahead`
    * — computed at read time, never stored, meaningful only while this job is `PENDING`
    * (`design.md` §4.1, §4.2). `wait_reason` is additive, also `PENDING`-only.
@@ -257,9 +307,12 @@ export class BilateralAiService {
       wait_reason = wait.wait_reason;
     }
 
+    const programNames = await this.programNameByCode([job.program_code]);
+
     return {
       response: {
         ...job,
+        program_name: programNames.get(job.program_code) ?? null,
         queue_position: jobs_ahead,
         jobs_ahead,
         wait_reason,
@@ -323,6 +376,9 @@ export class BilateralAiService {
       where: { status: BilateralAiJobStatus.PENDING, user_id: Not(userId) },
     });
 
+    const programNames = await this.programNameByCode(
+      jobs.map((job) => job.program_code),
+    );
     const projectIds = [...new Set(jobs.map((job) => job.project_id))];
     const centerIds = [...new Set(jobs.map((job) => job.center_id))];
     const [projects, institutions] = await Promise.all([
@@ -369,6 +425,7 @@ export class BilateralAiService {
           project_id: job.project_id,
           project_name: projectNameById.get(Number(job.project_id)) ?? null,
           program_code: job.program_code,
+          program_name: programNames.get(job.program_code) ?? null,
           center_id: job.center_id,
           center_acronym: centerAcronymById.get(Number(job.center_id)) ?? null,
           document_count: job.document_keys?.length ?? 0,
@@ -880,15 +937,81 @@ export class BilateralAiService {
     };
   }
 
-  async discardDraft(draftId: number, userId: number) {
+  /**
+   * `ABD-T-1` (`docs/specs/bilateral/ai-drafts-bulk-discard`, `ABD-S-5.3`): the draft's
+   * `is_discarded` and its result's `is_active` are written in ONE transaction, through the
+   * transactional manager's repositories — a draft is never discarded with its result left
+   * active, or the reverse. Entitlement and existence run first, unchanged (`'act'` mode, so a
+   * platform admin who is not a member of the centre is still refused, `ASC-R-15`).
+   */
+  private async discardOne(draftId: number, userId: number) {
     const draft = await this.getDraftRaw(draftId, userId, 'act');
-    await this.draftRepository.update(draft.id, { is_discarded: true });
-    await this.resultRepository.update(draft.result_id, { is_active: false });
+    await this.draftRepository.manager.transaction(async (manager) => {
+      await manager
+        .getRepository(BilateralAiDraft)
+        .update(draft.id, { is_discarded: true });
+      await manager
+        .getRepository(Result)
+        .update(draft.result_id, { is_active: false });
+    });
+    return draft;
+  }
+
+  async discardDraft(draftId: number, userId: number) {
+    const draft = await this.discardOne(draftId, userId);
     return {
       response: { id: draft.id, discarded: true },
       message: 'AI draft discarded',
       status: 200,
     };
+  }
+
+  /**
+   * `ABD-R-5` bulk discard. Each id gets exactly the single-discard rules (`discardOne`) and its
+   * own transaction, so one stale or foreign id never rolls back the others (`ABD-DD-2`). The loop
+   * is sequential on purpose (`ABD-DD-3`): at most 100 small writes, one connection at a time, and
+   * predictable error mapping. Duplicate ids are processed once. A per-id failure is data, not an
+   * error: the call still answers 200 and the caller reads `failed` (`ABD-DD-4`).
+   */
+  async discardDrafts(draftIds: number[], userId: number) {
+    const uniqueIds = [...new Set(draftIds)];
+    const discarded: number[] = [];
+    const failed: { id: number; reason: BulkDiscardFailureReason }[] = [];
+
+    for (const draftId of uniqueIds) {
+      try {
+        await this.discardOne(draftId, userId);
+        discarded.push(draftId);
+      } catch (error) {
+        const reason = this.toBulkDiscardFailureReason(error);
+        if (reason === 'error') {
+          // Draft id only: no error message (it can echo SQL/user data), no user data (`.cursorrules`).
+          this.logger.error(`Bulk discard failed for draft ${draftId}`);
+        }
+        failed.push({ id: draftId, reason });
+      }
+    }
+
+    this.logger.log(
+      `AI drafts bulk discard: requested=${uniqueIds.length} discarded=${discarded.length} failed=${failed.length}`,
+    );
+
+    return {
+      response: { discarded, failed },
+      message: `${discarded.length} AI drafts discarded`,
+      status: 200,
+    };
+  }
+
+  private toBulkDiscardFailureReason(error: unknown): BulkDiscardFailureReason {
+    if (error instanceof NotFoundException) return 'not_found';
+    if (
+      error instanceof ForbiddenException ||
+      error instanceof UnauthorizedException
+    ) {
+      return 'forbidden';
+    }
+    return 'error';
   }
 
   /**

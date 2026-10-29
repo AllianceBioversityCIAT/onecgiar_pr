@@ -18,6 +18,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideRefreshCw } from '@ng-icons/lucide';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 import { BILATERAL_CONTRIBUTORS_COPY } from '../../../../internationalization/bilateral-contributors.copy';
+import { bilateralProgramLabel } from '../../shared/bilateral-program-label.util';
 import { BILATERAL_PRIMARY_ASSIGNMENT_COPY } from '../../../../internationalization/bilateral-primary-assignment.copy';
 import { CLARISA_GLOSSARY_URL } from '../../../../shared/constants/clarisa-links.constants';
 
@@ -78,8 +79,14 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   /**
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
    * Read straight from the service, the way this section already reads the rest of the result state.
+   *
+   * RNB-1 — the status is only half of the rule. The editor's `isFormReadOnly` also folds in WHO
+   * may edit (an admin, or a Center User of the LEAD centre) and hands it down through the shared
+   * auto-save service, so a Center User of another centre sees these pickers locked exactly like the
+   * title and description. Every `[isStatic]="!readOnly()"` below follows this one computed.
    */
-  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+  readonly primaryHelp = BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsPrimaryHelp;
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser() || this.autoSave.isReadOnly());
 
   /**
    * SP code of a primary request that has no owner yet (draft / pending / sent back). The ToC block
@@ -89,7 +96,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly pendingPrimaryCode = signal<string | null>(null);
   readonly pendingPrimaryTocNotice = computed(() => {
     const code = this.pendingPrimaryCode();
-    return code ? BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsTocNotice(code) : '';
+    return code ? BILATERAL_PRIMARY_ASSIGNMENT_COPY.contributorsTocNotice(bilateralProgramLabel(code, this.creationService, this.sciencePrograms())) : '';
   });
   private readonly loadPendingPrimary = effect(() => {
     const resultId = this.creationService.currentResultId();

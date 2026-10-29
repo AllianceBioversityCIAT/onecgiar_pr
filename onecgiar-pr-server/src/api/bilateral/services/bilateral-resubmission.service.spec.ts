@@ -48,6 +48,7 @@ const passingWriters = (): ResubmissionWritersPort => ({
   transferPrimary: jest
     .fn()
     .mockResolvedValue({ outcome: 'transferred', previousInitiativeId: null }),
+  stampPrimaryCardSubmitted: jest.fn().mockResolvedValue(undefined),
   announcePendingReview: jest.fn().mockResolvedValue(undefined),
 });
 
@@ -1894,6 +1895,11 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
               );
         },
       ),
+      // `PNR-T-2`: the card re-dating. Not pushed to `calls` (the ORDER specs pin that list exactly);
+      // its place is observed through `seen.stamp` (the model when it ran) and mock call order.
+      stampPrimaryCardSubmitted: jest.fn(async () => {
+        snapshot('stamp');
+      }),
       announcePendingReview: jest.fn(async () => {
         calls.push('announce');
         snapshot('announce');
@@ -2317,6 +2323,73 @@ describe('BilateralResubmissionService pipeline (RSB-T-5)', () => {
 
       expect(t.history()).toHaveLength(1);
       expect(t.resetSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // `PNR-T-2` (bugfix/primary-notify-on-submit-regression, `PNR-R-2`, `PNR-NFR-1`): the primary card
+  // is re-dated INSIDE the final transaction, with its manager, after the CAS (and the optional
+  // transfer, which would retire the row stamped too early) and on EVERY resubmission.
+  describe('PNR-T-2: stamps the primary card inside the final transaction', () => {
+    it('same owner (no transfer): stamp called once with RESULT and the tx manager, after the CAS flip and before the history row; announce still once', async () => {
+      const t = arrange({ requests: [acceptedPrimary()] });
+
+      await t.run();
+
+      expect(t.writers.transferPrimary).not.toHaveBeenCalled();
+      expect(t.writers.stampPrimaryCardSubmitted).toHaveBeenCalledTimes(1);
+      expect(t.writers.stampPrimaryCardSubmitted).toHaveBeenCalledWith(
+        RESULT,
+        expect.objectContaining({ update: expect.any(Function) }),
+      );
+      expect(t.seen.stamp).toEqual({ status: PENDING_REVIEW, history: 0 });
+      expect(t.writers.announcePendingReview).toHaveBeenCalledTimes(1);
+    });
+
+    it('changed primary: the stamp runs AFTER the transfer, with the same manager the transfer got', async () => {
+      const t = arrange({ primary: 'SP06', requests: [acceptedPrimary()] });
+
+      await t.run(t.dto());
+
+      expect(t.writers.transferPrimary).toHaveBeenCalledTimes(1);
+      expect(t.writers.stampPrimaryCardSubmitted).toHaveBeenCalledTimes(1);
+      const transferManager = (t.writers.transferPrimary as jest.Mock).mock
+        .calls[0][3];
+      expect(t.writers.stampPrimaryCardSubmitted).toHaveBeenCalledWith(
+        RESULT,
+        transferManager,
+      );
+      expect(
+        (t.writers.transferPrimary as jest.Mock).mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        (t.writers.stampPrimaryCardSubmitted as jest.Mock).mock
+          .invocationCallOrder[0],
+      );
+      expect(t.writers.announcePendingReview).toHaveBeenCalledTimes(1);
+    });
+
+    it('a failing stamp rolls the whole commit back: result stays Rejected, no history row, no announce', async () => {
+      const t = arrange({ requests: [acceptedPrimary()] });
+      (t.writers.stampPrimaryCardSubmitted as jest.Mock).mockRejectedValueOnce(
+        new Error('stamp failed'),
+      );
+
+      await expect(t.run()).rejects.toThrow('stamp failed');
+
+      expect(t.statusOf()).toBe(REJECTED);
+      expect(t.history()).toEqual([]);
+      expect(t.writers.announcePendingReview).not.toHaveBeenCalled();
+    });
+
+    it('a lost CAS (409) never reaches the stamp', async () => {
+      const t = arrange({
+        onWrite: (db) => {
+          db.rowsOf(Result)[0].status_id = ResultStatusData.Editing.value;
+        },
+      });
+
+      await expect(t.run()).rejects.toMatchObject({ status: 409 });
+
+      expect(t.writers.stampPrimaryCardSubmitted).not.toHaveBeenCalled();
     });
   });
 

@@ -12,6 +12,13 @@ import { AlertGlobalInfoModule } from '../../../../shared/components/alert-globa
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { RolesService } from '../../../../shared/services/global/roles.service';
 
+// @akili-spec results/my-centers-hide-icraf-cifor
+// P2-3852: centers hidden from the My CGIAR Centers grid, keyed by reporting phase year.
+// Display-only: RolesService.getMyCenters() (access checks) stays unfiltered.
+const HIDDEN_CENTERS_BY_PHASE_YEAR: Record<number, string[]> = {
+  2026: ['ICRAF', 'CIFOR']
+};
+
 @Component({
   selector: 'app-result-framework-reporting-home',
   imports: [
@@ -45,5 +52,13 @@ export class ResultFrameworkReportingHomeComponent {
     return phase?.portfolioAcronym && phase?.phaseName ? `${phase.portfolioAcronym} · ${phase.phaseName}` : '';
   });
 
-  readonly myCentersList = computed(() => this.rolesSE.getMyCenters());
+  readonly myCentersList = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion();
+    this.rolesSE.rolesVersion;
+    const centers = this.rolesSE.getMyCenters();
+    const phaseYear = this.api.dataControlSE.reportingCurrentPhase?.phaseYear;
+    const hidden = phaseYear == null ? undefined : HIDDEN_CENTERS_BY_PHASE_YEAR[phaseYear];
+    if (!hidden?.length) return centers;
+    return centers.filter(center => !hidden.includes((center.center_acronym ?? '').trim().toUpperCase()));
+  });
 }

@@ -75,10 +75,24 @@ describe('rollUpIndicators — AC2, the HLO level', () => {
     expect(rollup.preliminary_progress_percentage).toBe('80%');
   });
 
-  it('does not cap overachievement, per Nicoleta', () => {
+  it('caps each indicator at 100% so one overachiever cannot hide the others, per Nicoleta (2026-10)', () => {
     expect(rollUpIndicators([indicator(10, 50)]).progress_percentage).toBe(
-      '500%',
+      '100%',
     );
+    // 500% + 0% would read 250%; capped it reads 50%.
+    expect(
+      rollUpIndicators([indicator(10, 50), indicator(10, 0)])
+        .progress_percentage,
+    ).toBe('50%');
+  });
+
+  it("matches Nicoleta's BDN AoW1 example: (100+100+45+73+100+86+0+100+50+100+100) / 11 = 77.6%", () => {
+    const percentages = [100, 100, 45, 73, 100, 86, 0, 100, 50, 100, 100];
+    // Two of the 100% rows are overachieved (150, 300) and must still count as 100.
+    const indicators = percentages.map((p, i) =>
+      indicator(100, i === 0 ? 150 : i === 4 ? 300 : p),
+    );
+    expect(rollUpIndicators(indicators).progress_percentage).toBe('77.6%');
   });
 });
 
@@ -110,10 +124,24 @@ describe('rollUpChildren — AC3 and AC4', () => {
     expect(rollup.total).toBe(2);
   });
 
-  it('weighs every child equally regardless of how many indicators it holds', () => {
-    // A 10-indicator HLO at 0% and a 1-indicator HLO at 100% average to 50%, not 9%.
+  it('averages flat over the leaf indicators, not over the children, per Nicoleta (2026-10)', () => {
+    // A 10-indicator HLO at 0% and a 1-indicator HLO at 100%: 100 / 11 indicators = 9.1%, not 50%.
     const rollup = rollUpChildren([node(0, 10, 10), node(100, 1, 1)]);
-    expect(rollup.progress_percentage).toBe('50%');
+    expect(rollup.progress_percentage).toBe('9.1%');
+  });
+
+  it('gives the same figure one level up as averaging the leaves directly', () => {
+    const hloA = rollUpIndicators([indicator(10, 10), indicator(10, 0)]);
+    const hloB = rollUpIndicators([indicator(4, 1)]);
+    const flat = rollUpIndicators([
+      indicator(10, 10),
+      indicator(10, 0),
+      indicator(4, 1),
+    ]);
+    expect(
+      rollUpChildren([{ progress: hloA }, { progress: hloB }])
+        .progress_percentage,
+    ).toBe(flat.progress_percentage);
   });
 
   it('carries the leaf indicator denominator all the way up', () => {
@@ -239,8 +267,9 @@ describe('an Area of Work rolls up BOTH tiers, not outcomes alone', () => {
     const aowB = rollUpChildren([...sharedOutcomes, node(0, 7)]);
 
     expect(aowA.progress_percentage).not.toBe(aowB.progress_percentage);
-    expect(aowA.progress_percentage).toBe('45%');
-    expect(aowB.progress_percentage).toBe('5%');
+    // Flat over the leaves: (10·16 + 80·53) / 69 and (10·16 + 0·7) / 23.
+    expect(aowA.progress_percentage).toBe('63.8%');
+    expect(aowB.progress_percentage).toBe('7%');
   });
 
   it('is the outcomes-only reading that collapses them to the same number', () => {
@@ -255,5 +284,76 @@ describe('an Area of Work rolls up BOTH tiers, not outcomes alone', () => {
     const rollup = rollUpChildren([...sharedOutcomes, node(80, 53)]);
 
     expect(rollup.indicators_total).toBe(69);
+  });
+});
+
+// ── KPC-T-1 (docs/specs/changes/kpi-progress-capped-average, KPC-R-3 / KPC-R-6) ─────────────
+// Every basis (actual, preliminary, achieved) is weighted by `indicators_counted`, never by child.
+describe('rollUpChildren — flat weighting applies to every basis (KPC-S-3.1, KPC-S-6.2)', () => {
+  const basisNode = (
+    value: number | null,
+    indicators: number,
+    preliminary: number | null = value,
+    achieved: number | null = value,
+  ) => ({
+    progress: {
+      progress_percentage: value === null ? null : `${value}%`,
+      preliminary_progress_percentage:
+        preliminary === null ? null : `${preliminary}%`,
+      progress_value: value,
+      preliminary_value: preliminary,
+      achieved_value: achieved,
+      achieved_progress_percentage: achieved === null ? null : `${achieved}%`,
+      counted: indicators,
+      total: indicators,
+      indicators_counted: indicators,
+      indicators_total: indicators,
+    },
+  });
+
+  it('weights the preliminary and achieved bases like the QA basis: 100% x1 + 0% x3 = 25', () => {
+    const rollup = rollUpChildren([basisNode(100, 1), basisNode(0, 3)]);
+    expect(rollup.progress_value).toBe(25);
+    expect(rollup.preliminary_value).toBe(25);
+    expect(rollup.achieved_value).toBe(25);
+    expect(rollup.preliminary_progress_percentage).toBe('25%');
+    expect(rollup.achieved_progress_percentage).toBe('25%');
+  });
+
+  it('weights each basis by its own figure (bases may differ per child)', () => {
+    // QA 0 / 100, preliminary 100 / 100, achieved 50 / 0, over 3 and 1 indicators.
+    const rollup = rollUpChildren([
+      basisNode(0, 3, 100, 50),
+      basisNode(100, 1, 100, 0),
+    ]);
+    expect(rollup.progress_value).toBe(25);
+    expect(rollup.preliminary_value).toBe(100);
+    expect(rollup.achieved_value).toBe(37.5);
+  });
+
+  it('a child with progress_value null is skipped and adds no weight', () => {
+    // The null child still reports 4 indicators behind it; they must not dilute the 100.
+    const rollup = rollUpChildren([basisNode(100, 1), basisNode(null, 4)]);
+    expect(rollup.progress_value).toBe(100);
+    expect(rollup.counted).toBe(1);
+    expect(rollup.total).toBe(2);
+  });
+
+  it('is null when the measurable children carry no indicator weight', () => {
+    const rollup = rollUpChildren([basisNode(50, 0)]);
+    expect(rollup.progress_value).toBeNull();
+    expect(rollup.progress_percentage).toBeNull();
+  });
+
+  it('rolls a Program flat over AoWs of different size (two levels up equals the leaves)', () => {
+    const hlo1 = rollUpIndicators([indicator(10, 0), indicator(10, 0)]);
+    const hlo2 = rollUpIndicators([indicator(10, 99)]);
+    const aow = rollUpChildren([{ progress: hlo1 }, { progress: hlo2 }]);
+    const program = rollUpChildren([
+      { progress: aow },
+      { progress: rollUpIndicators([indicator(2, 1)]) },
+    ]);
+    // Leaves capped: 0, 0, 100, 50 -> 37.5
+    expect(program.progress_value).toBe(37.5);
   });
 });

@@ -56,9 +56,12 @@
 </app-pr-textarea>
 
 <!-- P2-3225: mandatory MDS field for P25 from the 2026 phase on; 2025 and P22 keep it optional. -->
+<!-- P2-3923: same read-only lock as the W1/W2 General information (the contact card does not read
+     rolesSE.readOnly on its own, unlike pr-input / pr-textarea). -->
 <app-lead-contact-person-field
   [body]="this.ipsrGeneralInformationBody"
   [required]="this.isLeadContactPersonRequired"
+  [readOnly]="this.rolesSE.readOnly"
   [guidanceAsTooltip]="guidanceAsTooltip()"></app-lead-contact-person-field>
 <div appFeedbackValidation labelText="Lead contact person" [isComplete]="this.isLeadContactPersonComplete"></div>
 

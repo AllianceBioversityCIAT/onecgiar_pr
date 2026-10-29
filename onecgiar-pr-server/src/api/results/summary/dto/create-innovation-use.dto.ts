@@ -31,6 +31,14 @@ export class InnovationUseDto {
   public linked_results?: (number | string)[];
 
   /**
+   * P2-3985 — the Current Use Update block of the W3/bilateral form (P2-3537 §4). Both columns
+   * already exist on `results_innovations_use`; the v2 endpoint the W1/W2 form uses writes them too.
+   * Optional and only written when the key is sent: `0` is a valid answer, an absent key is a no-op.
+   */
+  public new_users_added?: number | null;
+  public use_expansion_narrative?: string | null;
+
+  /**
    * P2-3390 — the three "Investment (USD)" tables, flat contract (`{ id, kind_cash, is_determined }`),
    * the same one the v2 innovation-use endpoint uses and `app-estimates-cgiar` round-trips. Optional,
    * and an absent key is a no-op: the section save only sends what the open form holds, so an omitted

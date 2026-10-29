@@ -28,11 +28,12 @@
             <span class="min-w-0 text-[14.5px] leading-[1.4] font-semibold break-words text-[var(--pr-text-heading)]">{{ result.title }}</span>
             <div class="flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--pr-text-muted)]">
               <span class="font-semibold text-[var(--pr-text-secondary)]">{{ result.result_code }}</span>
-              @if (result.initiative_official_code) {
+              @if (leadLabel(result)) {
                 <span aria-hidden="true">·</span>
                 <span
                   class="rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-2 py-px text-[10.5px] font-bold tracking-[0.03em] text-[var(--pr-text-secondary)]"
-                  >{{ result.initiative_official_code }}</span
+                   [attr.title]="leadLabel(result)"
+                  >{{ leadLabel(result) }}</span
                 >
               }
               <span aria-hidden="true">·</span>

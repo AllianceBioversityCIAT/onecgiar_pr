@@ -33,9 +33,110 @@ describe('parseBilateralQueryParams', () => {
       search: '',
       createdBy: [],
       multi: false,
+      scope: null,
+      group: null,
+      category: null,
     });
     expect(stripped).toEqual([]);
     expect(present).toEqual([]);
+  });
+
+  describe('scope (CWS-R-7)', () => {
+    it('parses scope=bilateral, marks it present and serializes it back', () => {
+      const parsed = parseBilateralQueryParams(convertToParamMap({ scope: 'bilateral' }));
+      expect(parsed.params.scope).toBe('bilateral');
+      expect(parsed.stripped).toEqual([]);
+      expect(parsed.present).toEqual(['scope']);
+      expect(serializeBilateralQueryParams(parsed.params)['scope']).toBe('bilateral');
+    });
+
+    it('turns an unknown value into null and reports it as stripped', () => {
+      const parsed = parseBilateralQueryParams(convertToParamMap({ scope: 'x' }));
+      expect(parsed.params.scope).toBeNull();
+      expect(parsed.stripped).toEqual(['scope=x']);
+      expect(parsed.present).toEqual([]);
+    });
+
+    it('treats an absent or empty scope as null, not stripped', () => {
+      expect(parseBilateralQueryParams(convertToParamMap({ scope: '' })).stripped).toEqual([]);
+      expect(parseBilateralQueryParams(emptyMap).params.scope).toBeNull();
+    });
+
+    it('is never emitted when null, even with explicitDefaults', () => {
+      const defaults = parseBilateralQueryParams(emptyMap).params;
+      expect(serializeBilateralQueryParams(defaults)['scope']).toBeUndefined();
+      expect('scope' in serializeBilateralQueryParams(defaults, { explicitDefaults: true })).toBe(false);
+    });
+
+    it('counts as a contract param for hasAnyContractParam', () => {
+      const parsed = parseBilateralQueryParams(convertToParamMap({ scope: 'bilateral' }));
+      expect(hasAnyContractParam(parsed)).toBe(true);
+    });
+  });
+
+  // @akili-spec bilateral/replicated-innovations-2026-pa/center-overview-no-project-line (CNP-T-1, CNP-R-2, CNP-AC-4)
+  describe('category (CPA-R-4)', () => {
+    it('parses category=w3 and w1w2-tagging, marks present, serializes back', () => {
+      for (const value of ['w3', 'w1w2-tagging'] as const) {
+        const parsed = parseBilateralQueryParams(convertToParamMap({ category: value }));
+        expect(parsed.params.category).toBe(value);
+        expect(parsed.stripped).toEqual([]);
+        expect(parsed.present).toEqual(['category']);
+        expect(serializeBilateralQueryParams(parsed.params)['category']).toBe(value);
+      }
+    });
+
+    it('treats an unknown category as absent (null), stripped, never throws', () => {
+      const parsed = parseBilateralQueryParams(convertToParamMap({ category: 'foo' }));
+      expect(parsed.params.category).toBeNull();
+      expect(parsed.stripped).toEqual(['category=foo']);
+      expect(parsed.present).toEqual([]);
+    });
+
+    it('treats empty/absent as null and omits it from serialization, even with explicitDefaults', () => {
+      expect(parseBilateralQueryParams(convertToParamMap({ category: '' })).stripped).toEqual([]);
+      const defaults = parseBilateralQueryParams(emptyMap).params;
+      expect(defaults.category).toBeNull();
+      expect('category' in serializeBilateralQueryParams(defaults, { explicitDefaults: true })).toBe(false);
+    });
+  });
+
+  describe('group (CNP-R-2)', () => {
+    it('parses group=updated-no-project, marks it present and serializes it back', () => {
+      const parsed = parseBilateralQueryParams(convertToParamMap({ group: 'updated-no-project' }));
+      expect(parsed.params.group).toBe('updated-no-project');
+      expect(parsed.stripped).toEqual([]);
+      expect(parsed.present).toEqual(['group']);
+      expect(serializeBilateralQueryParams(parsed.params)['group']).toBe('updated-no-project');
+    });
+
+    it('turns an unknown value into null and reports it as stripped', () => {
+      const parsed = parseBilateralQueryParams(convertToParamMap({ group: 'foo' }));
+      expect(parsed.params.group).toBeNull();
+      expect(parsed.stripped).toEqual(['group=foo']);
+      expect(parsed.present).toEqual([]);
+    });
+
+    it('treats an absent or empty group as null, not stripped', () => {
+      expect(parseBilateralQueryParams(convertToParamMap({ group: '' })).stripped).toEqual([]);
+      expect(parseBilateralQueryParams(emptyMap).params.group).toBeNull();
+    });
+
+    it('is never emitted when null, even with explicitDefaults', () => {
+      const defaults = parseBilateralQueryParams(emptyMap).params;
+      expect(serializeBilateralQueryParams(defaults)['group']).toBeUndefined();
+      expect('group' in serializeBilateralQueryParams(defaults, { explicitDefaults: true })).toBe(false);
+    });
+
+    it('is not emitted through explicitDefaults when set either: only the real value', () => {
+      const out = serializeBilateralQueryParams({ ...parseBilateralQueryParams(emptyMap).params, group: 'updated-no-project' }, { explicitDefaults: true });
+      expect(out['group']).toBe('updated-no-project');
+    });
+
+    it('counts as a contract param for hasAnyContractParam', () => {
+      const parsed = parseBilateralQueryParams(convertToParamMap({ group: 'updated-no-project' }));
+      expect(hasAnyContractParam(parsed)).toBe(true);
+    });
   });
 
   describe('phase', () => {
@@ -357,6 +458,9 @@ describe('serializeBilateralQueryParams', () => {
       search: 'cocoa',
       createdBy: ['Angel Jarrin'],
       multi: true,
+      scope: 'bilateral',
+      group: 'updated-no-project',
+      category: 'w3',
     });
 
     expect(result).toEqual({
@@ -371,6 +475,9 @@ describe('serializeBilateralQueryParams', () => {
       search: 'cocoa',
       createdBy: 'Angel Jarrin',
       multi: '1',
+      scope: 'bilateral',
+      group: 'updated-no-project',
+      category: 'w3',
     });
   });
 
@@ -411,6 +518,9 @@ describe('serializeBilateralQueryParams', () => {
       search: 'cocoa',
       createdBy: [],
       multi: true,
+      scope: 'bilateral' as const,
+      group: 'updated-no-project' as const,
+      category: 'w1w2-tagging' as const,
     };
     const serialized = serializeBilateralQueryParams(original);
     const { params, stripped } = parseBilateralQueryParams(convertToParamMap(serialized));

@@ -68,7 +68,8 @@ import {
   parseListParam,
   sameListParam,
   PROGRAMME_RESULTS_OTHER_CATEGORY,
-  PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL
+  PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL,
+  PROGRAMME_RESULTS_REPLICATION_VALUES
 } from './services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_FIXED_SECTION_LABELS, sectionLabel } from './services/programme-results-section-labels';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
@@ -534,6 +535,32 @@ function formatDate(value: string): string {
         transition: background 0.2s ease-out;
       }
 
+      /* PRP-R-5: versions of one code read as ONE block — the divider sits only above the first and
+         below the last member, and the members sit closer together. Neutral: no violet (UI rule 7). */
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-start {
+        border-bottom-color: transparent;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-start,
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-cont {
+        min-height: 40px;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-start td.pgr-td,
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-cont td.pgr-td {
+        min-height: 40px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-start:not(.pgr-group-cont) td.pgr-td {
+        padding-top: 8px;
+      }
+
+      :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row.pgr-group-cont:not(.pgr-group-start) td.pgr-td {
+        padding-bottom: 8px;
+      }
+
       :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:hover,
       :host ::ng-deep .pgr-table .pr-table tr.pgr-data-row:focus-visible {
         background: var(--pr-surface-ground, #efeef3);
@@ -799,6 +826,34 @@ export class ProgrammeResultsComponent implements OnDestroy {
   readonly filteredRows = computed(() => this.filter.filterRows(this.data.rows()));
 
   /**
+   * Table feed (PRP-R-5): `filteredRows()` with the versions of one `code` ordered newest phase
+   * first (`phaseSort` descending). Blocks keep the order in which their code first appears, so
+   * counters, search and CSV (all fed by `filteredRows()`) are untouched. `app-pr-table`'s
+   * `groupBy="code"` then keeps each block together under any sort.
+   */
+  readonly groupedRows = computed(() => {
+    const blocks = new Map<string, ProgrammeResultRow[]>();
+    for (const row of this.filteredRows()) {
+      const block = blocks.get(row.code);
+      if (block) block.push(row);
+      else blocks.set(row.code, [row]);
+    }
+    return [...blocks.values()].flatMap(block => (block.length > 1 ? [...block].sort((a, b) => b.phaseSort.localeCompare(a.phaseSort)) : block));
+  });
+
+  /** Row `i` of the current page is followed by a version of the same result (starts/continues a block). */
+  isGroupStart(tbl: PrTableComponent, i: number): boolean {
+    const page = tbl.pagedValue() as ProgrammeResultRow[];
+    return !!page[i + 1] && page[i + 1].code === page[i]?.code;
+  }
+
+  /** Row `i` of the current page follows a version of the same result. */
+  isGroupCont(tbl: PrTableComponent, i: number): boolean {
+    const page = tbl.pagedValue() as ProgrammeResultRow[];
+    return i > 0 && !!page[i] && page[i - 1].code === page[i].code;
+  }
+
+  /**
    * Status counters over the rows filtered by EVERYTHING EXCEPT status — the only way each pill
    * keeps a meaningful count while one status is selected, which is what makes them clickable
    * (design spec, "CLICKABLE STATUS COUNTS").
@@ -855,6 +910,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
       ),
     { equal: sameFilterOptions }
   );
+  // @akili-spec changes/sp-overview-total-drilldown (STD-T-1) — static: the value space is fixed.
+  readonly replicationSelectOptions = [
+    { value: 'new', label: 'New' },
+    { value: 'replicated', label: 'Previously reported' }
+  ];
   readonly createdBySelectOptions = computed(() => this.data.createdByOptions().map(value => ({ value, label: value })));
 
   /**
@@ -1119,6 +1179,10 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const createdBy = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy));
         // @akili-spec changes/results-aow-column-filter (RAC-T-3) — multi-value, comma list.
         const sections = toSectionValues(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.section));
+        // @akili-spec changes/sp-overview-total-drilldown (STD-T-1, S-4.3) — whitelist: unknown values drop.
+        const replication = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.replication)).filter(value =>
+          (PROGRAMME_RESULTS_REPLICATION_VALUES as readonly string[]).includes(value)
+        );
 
         if (!sameListParam(phases, this.filter.selectedPhases())) this.filter.selectedPhases.set(phases);
         if (!sameListParam(statuses, this.filter.selectedStatuses())) this.filter.selectedStatuses.set(statuses);
@@ -1127,6 +1191,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
         if (!sameListParam(centers, this.filter.selectedCenters())) this.filter.selectedCenters.set(centers);
         if (!sameListParam(createdBy, this.filter.selectedCreatedBy())) this.filter.selectedCreatedBy.set(createdBy);
         if (!sameListParam(sections, this.filter.selectedSections())) this.filter.selectedSections.set(sections);
+        if (!sameListParam(replication, this.filter.selectedReplication())) this.filter.selectedReplication.set(replication);
       });
     });
 
@@ -1146,6 +1211,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
       // @akili-spec changes/results-aow-column-filter (RAC-T-3) — comma list, `null` (not '')
       // when empty so the param drops from the URL entirely on Clear filters (RAC-R-3).
       const sections = this.filter.selectedSections();
+      const replication = joinListParam(this.filter.selectedReplication());
 
       untracked(() => {
         const current = this.route.snapshot.queryParamMap;
@@ -1156,7 +1222,8 @@ export class ProgrammeResultsComponent implements OnDestroy {
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy]: createdBy,
-          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.section]: sections.length ? sections.join(',') : null
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.section]: sections.length ? sections.join(',') : null,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.replication]: replication
         };
         const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
         if (!changed) return;

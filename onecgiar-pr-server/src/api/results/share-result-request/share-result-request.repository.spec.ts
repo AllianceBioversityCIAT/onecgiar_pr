@@ -113,6 +113,75 @@ describe('ShareResultRequestRepository (PSR-T-4 — owner/shared lookup scoped t
     });
   });
 
+  // `PF2-T-3` (`program-full-names-labels-part-2`, S2, PF2-R-1): the notification inbox queries
+  // carry the Program/Accelerator NAME next to the code, from the joins that already exist.
+  describe('PF2-T-3 — requester_name / approving_name (additive SELECT-list only)', () => {
+    const cases: Array<['getRequestByUser' | 'getPendingByUser']> = [
+      ['getRequestByUser'],
+      ['getPendingByUser'],
+    ];
+
+    it.each(cases)(
+      '%s selects ci.name as approving_name and ci2.name as requester_name next to the codes',
+      async (method) => {
+        mockQuery.mockResolvedValueOnce([]);
+
+        await repository[method](7, 3);
+
+        const [sql] = mockQuery.mock.calls[0];
+        expect(sql).toMatch(/ci\.name\s+as\s+approving_name/i);
+        expect(sql).toMatch(/ci2\.name\s+as\s+requester_name/i);
+        // The existing code aliases (and the joins they come from) are still there.
+        expect(sql).toMatch(
+          /ci\.official_code\s+as\s+approving_official_code/i,
+        );
+        expect(sql).toMatch(
+          /ci2\.official_code\s+as\s+requester_official_code/i,
+        );
+        expect(sql).toMatch(
+          /left join clarisa_initiatives ci on ci\.id = srr\.approving_inititiative_id/i,
+        );
+        expect(sql).toMatch(
+          /left join clarisa_initiatives ci2 on ci2\.id = srr\.requester_initiative_id/i,
+        );
+      },
+    );
+
+    it.each(cases)(
+      '%s keeps the draft-primary exclusion and returns the mocked rows untouched',
+      async (method) => {
+        const rows = [
+          {
+            share_result_request_id: 1,
+            approving_official_code: 'SP01',
+            approving_name: 'Breeding for Tomorrow',
+            requester_official_code: 'SP02',
+            requester_name: null,
+          },
+        ];
+        mockQuery.mockResolvedValueOnce(rows);
+
+        const result = await repository[method](7, 3);
+
+        const [sql] = mockQuery.mock.calls[0];
+        expect(sql).toMatch(
+          /not\s*\(\s*srr\.request_type\s*=\s*'primary'\s*and\s*srr\.request_status_id\s*=\s*4\s*\)/i,
+        );
+        expect(result).toEqual(rows);
+      },
+    );
+
+    it('admin role (1) still adds no initiative filter and no bound parameter changes', async () => {
+      mockQuery.mockResolvedValueOnce([]);
+
+      await repository.getPendingByUser(7, 1);
+
+      const [sql, params] = mockQuery.mock.calls[0];
+      expect(sql).not.toMatch(/role_by_user/i);
+      expect(params).toEqual([7]);
+    });
+  });
+
   // @akili-spec notifications/detail-side-panel (DSP-T-1)
   describe('getResultForApprovalChain', () => {
     it('reads the result + its status name in one query', async () => {

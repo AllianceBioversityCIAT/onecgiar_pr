@@ -16,9 +16,11 @@ import {
   KpRepository,
   RepositoryAdapter,
   escapeSolrQuery,
+  resolveProjectScope,
   translateParams,
 } from './repositories.config';
 import { dedupe, interleave } from './merge';
+import { evaluateProjectMatch } from './project-relevance';
 
 export interface CacheEntry<T> {
   expires: number;
@@ -226,6 +228,17 @@ export class CgspaceDiscoveryService {
       center: dto.center ?? '',
       year: dto.year ?? '',
       project: dto.project ?? '',
+      // @akili-spec changes/kp-project-strict-filter
+      projectCode: dto.projectCode ?? '',
+      projectTitle: dto.projectTitle ?? '',
+      projectLeadCenter: dto.projectLeadCenter ?? '',
+      projectScope: dto.projectScope ?? '',
+      // @akili-spec changes/kp-related-relevance-ranking
+      projectDescription: dto.projectDescription ?? '',
+      projectProgram: dto.projectProgram ?? '',
+      projectLeadCenterName: dto.projectLeadCenterName ?? '',
+      // @akili-spec changes/kp-related-strongest-first
+      projectRelatedOnly: dto.projectRelatedOnly === true,
       repository,
     });
   }
@@ -356,6 +369,24 @@ export class CgspaceDiscoveryService {
       };
     }
 
+    // @akili-spec changes/kp-project-strict-filter
+    // `linked` with a project too generic to constrain: deterministic empty page, no upstream call.
+    const projectScope = resolveProjectScope(dto);
+    if (projectScope?.scope === 'linked' && !projectScope.applied) {
+      return {
+        repository: adapter.key,
+        status: 'ok',
+        items: [],
+        page: {
+          number: dto.page ?? 0,
+          size: dto.size ?? 10,
+          totalElements: 0,
+          totalPages: 0,
+        },
+        durationMs: Date.now() - start,
+      };
+    }
+
     try {
       const res = await firstValueFrom(
         this.httpService.get(`${baseUrl}/discover/search/objects`, {
@@ -477,7 +508,27 @@ export class CgspaceDiscoveryService {
           },
     );
 
-    const merged = interleave(okOutcomes.map((outcome) => outcome.items));
+    // @akili-spec changes/kp-related-relevance-ranking
+    // `KRR-R-3`: only a ranked related page carries `projectMatch`. `ranked` is the request-wide
+    // value echoed in `projectScope.ranked`, never recomputed per source. New item objects: the
+    // per-source payload is cached and must stay free of the request-specific hint. In-memory only.
+    const projectScope = resolveProjectScope(dto);
+    const relevance = projectScope?.ranked ? projectScope.relevance : undefined;
+    const sourceItems = okOutcomes.map((outcome) =>
+      relevance
+        ? outcome.items.map((item) => ({
+            ...item,
+            projectMatch: evaluateProjectMatch(
+              item,
+              relevance.keywords,
+              relevance.centerName,
+              relevance.program,
+            ),
+          }))
+        : outcome.items,
+    );
+
+    const merged = interleave(sourceItems);
     const { items, dedupedCount } = dedupe(merged, ALL_REPOSITORIES);
 
     const number = dto.page ?? 0;
@@ -536,6 +587,18 @@ export class CgspaceDiscoveryService {
           hasMore: sources.some((source) => source.hasMore),
         },
         sources,
+        ...(projectScope
+          ? {
+              projectScope: {
+                scope: projectScope.scope,
+                applied: projectScope.applied,
+                // @akili-spec changes/kp-related-relevance-ranking
+                ranked: projectScope.ranked,
+                // @akili-spec changes/kp-related-strongest-first
+                relatedOnly: projectScope.relatedOnly,
+              },
+            }
+          : {}),
       },
       message: allFailed ? UNAVAILABLE_MESSAGE : SEARCH_RESULTS_MESSAGE,
       status: allFailed ? 502 : 200,

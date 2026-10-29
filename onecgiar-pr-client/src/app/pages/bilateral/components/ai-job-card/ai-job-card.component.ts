@@ -6,6 +6,7 @@ import {
   BilateralAiExpectations,
   BilateralAiStage,
   NormalizedBilateralAiListJob,
+  bilateralAiJobProgramLabel,
   errorCopy,
 } from '../../bilateral-ai-job.model';
 import { BILATERAL_AI_PROCESSES_COPY as COPY } from '../../../../internationalization/bilateral-ai-processes.copy';
@@ -130,6 +131,7 @@ export class AiJobCardComponent {
     return job.resultCount > 0 ? 'completed' : 'no_candidates';
   });
 
+  readonly programLabel = computed(() => bilateralAiJobProgramLabel(this.job()));
   readonly isRunningLike = computed(() => this.variant() === 'running' || this.variant() === 'still_running');
 
   /** `AIQ-R-9` B fix: a running/still-running card's elapsed clock reads from `started_date` when

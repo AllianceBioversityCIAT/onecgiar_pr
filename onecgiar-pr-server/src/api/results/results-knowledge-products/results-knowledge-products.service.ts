@@ -55,6 +55,20 @@ import { FilterDto } from './dto/filter.dto';
 import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
 import { EnvironmentExtractor } from '../../../shared/utils/environment-extractor';
 
+/**
+ * The description stored on a newly created knowledge-product result. An explicit
+ * `result_data.description` (the reporting form sends the Progress Tracker draft there) wins over
+ * the CGSpace abstract; without one, the abstract is kept exactly as before. Without this, the
+ * description `createOwnerResult` had just stored was overwritten a few lines later.
+ */
+export function resolveKpResultDescription(
+  dto: Pick<ResultsKnowledgeProductDto, 'description' | 'result_data'>,
+): string {
+  const explicit = dto?.result_data?.description;
+  if (typeof explicit === 'string' && explicit.trim()) return explicit.trim();
+  return dto?.description;
+}
+
 @Injectable()
 export class ResultsKnowledgeProductsService {
   private readonly _logger = new Logger(ResultsKnowledgeProductsService.name);
@@ -1154,7 +1168,7 @@ export class ResultsKnowledgeProductsService {
         { id: newResult.id },
         {
           title: resultsKnowledgeProductDto.title,
-          description: resultsKnowledgeProductDto.description,
+          description: resolveKpResultDescription(resultsKnowledgeProductDto),
         },
       );
 

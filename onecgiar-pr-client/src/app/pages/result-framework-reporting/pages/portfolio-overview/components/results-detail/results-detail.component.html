@@ -1,0 +1,155 @@
+<!--
+  Results detail (spec filtered-detail-export, design 5.2). Native table (no Spartan table installed, FDE-DD-5), one page of
+  rows in the DOM. Neutral surfaces only. Layout, clamp and focus are browser-checked in T-4.
+-->
+<section
+  class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]"
+  data-testid="detail-section"
+  aria-labelledby="detail-title">
+  <div class="mb-[16px] flex flex-wrap items-center justify-between gap-[12px]">
+    <div>
+      <h2 id="detail-title" class="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--pr-text)]">{{ copy.title }}</h2>
+      <p aria-live="polite" class="m-0 mt-[2px] font-mono text-[13px] tabular-nums text-[var(--pr-text-secondary)]" data-testid="detail-count">{{ countText() }}</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-[12px]">
+      <div class="w-[260px] max-w-full">
+        <label for="detail-search" class="sr-only">{{ copy.searchLabel }}</label>
+        <input
+          id="detail-search"
+          hlmInput
+          type="search"
+          autocomplete="off"
+          [placeholder]="copy.searchPlaceholder"
+          [value]="search()"
+          data-testid="detail-search"
+          (input)="setSearch($any($event.target).value)" />
+      </div>
+      <button
+        hlmBtn
+        variant="outline"
+        type="button"
+        class="focus-visible:[box-shadow:var(--pr-focus-ring)]"
+        [disabled]="exportDisabled()"
+        [attr.disabled]="exportDisabled() ? '' : null"
+        [attr.aria-busy]="exporting()"
+        data-testid="detail-export"
+        (click)="exportToExcel()">
+        {{ exporting() ? copy.exporting : copy.exportLabel }}
+      </button>
+    </div>
+  </div>
+
+  @if (partial()) {
+    <p class="m-0 mb-[12px] text-[12px] text-[var(--pr-text-secondary)]" data-testid="detail-partial">{{ copy.partial(fetchedCount()) }}</p>
+  }
+
+  @if (pending()) {
+    <div aria-busy="true" data-testid="detail-skeleton">
+      <span class="sr-only" role="status">{{ copy.loading }}</span>
+      @for (n of skeletonRows; track n) {
+        <div class="border-b border-[var(--pr-border-divider)] py-[12px] last:border-b-0">
+          <span hlmSkeleton class="h-[14px] w-full"></span>
+        </div>
+      }
+    </div>
+  } @else if (listed().length === 0) {
+    <div class="flex flex-wrap items-center justify-between gap-[12px] py-[12px]" data-testid="detail-no-results">
+      <p role="status" class="m-0 text-[14px] text-[var(--pr-text-secondary)]">{{ copy.noResults }}</p>
+      @if (searchActive()) {
+        <button hlmBtn variant="ghost" type="button" class="focus-visible:[box-shadow:var(--pr-focus-ring)]" data-testid="detail-clear-search" (click)="clearSearch()">
+          {{ copy.clearSearch }}
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="overflow-x-auto" data-testid="detail-scroll">
+      <table class="w-full border-collapse text-[13px]" data-testid="detail-table">
+        <caption class="sr-only">{{ copy.tableCaption }}</caption>
+        <thead>
+          <tr class="border-b border-[var(--pr-border-divider)] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+            @for (column of columns; track column.key) {
+              <th scope="col" class="whitespace-nowrap px-[8px] py-[8px] font-bold" [attr.aria-sort]="ariaSort(column.sortKey)" [attr.data-col]="column.key">
+                @if (column.sortKey; as sortKey) {
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded-[4px] border-0 bg-transparent p-0 text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] focus-visible:outline-none focus-visible:[box-shadow:var(--pr-focus-ring)]"
+                    [attr.aria-label]="copy.sortBy(copy.columns[column.key])"
+                    [attr.data-sort]="sortKey"
+                    (click)="toggleSort(sortKey)">
+                    {{ copy.columns[column.key] }}
+                    @if (sort().key === sortKey) {
+                      <span aria-hidden="true">{{ sort().dir === 'asc' ? '▲' : '▼' }}</span>
+                    }
+                  </button>
+                } @else {
+                  {{ copy.columns[column.key] }}
+                }
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of slice().rows; track $index) {
+            <tr class="border-b border-[var(--pr-border-divider)] align-top" data-testid="detail-row">
+              <td class="whitespace-nowrap px-[8px] py-[8px] font-mono tabular-nums">
+                @if (row.code !== none) {
+                  <a
+                    class="text-[var(--pr-color-primary-700)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:[box-shadow:var(--pr-focus-ring)]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="detail-code-link"
+                    [href]="linkFor(row.code, row.versionId)"
+                    >{{ row.code }}<span class="sr-only"> {{ copy.opensInNewTab }}</span></a
+                  >
+                } @else {
+                  {{ row.code }}
+                }
+              </td>
+              <td class="min-w-[240px] max-w-[360px] px-[8px] py-[8px] text-[var(--pr-text-heading)]">
+                <span class="line-clamp-2" [hlmTooltip]="row.title" [tooltipDisabled]="row.title === none" data-testid="detail-title-cell">{{ row.title }}</span>
+              </td>
+              <td class="px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.type }}</td>
+              <td class="px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.level }}</td>
+              <td class="whitespace-nowrap px-[8px] py-[8px] font-mono text-[var(--pr-text-secondary)]">{{ row.program }}</td>
+              <td class="whitespace-nowrap px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.source }}</td>
+              <td class="whitespace-nowrap px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.status }}</td>
+              <td class="whitespace-nowrap px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.origin }}</td>
+              <td class="whitespace-nowrap px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.leadCenter }}</td>
+              <td class="px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.contributingCenters }}</td>
+              <td class="px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.projects }}</td>
+              <td class="whitespace-nowrap px-[8px] py-[8px] text-[var(--pr-text-secondary)]">{{ row.phase }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <nav class="mt-[12px] flex items-center justify-end gap-[12px]" [attr.aria-label]="copy.pagination" data-testid="detail-pagination">
+      <span class="font-mono text-[12px] tabular-nums text-[var(--pr-text-secondary)]" data-testid="detail-range">{{ copy.range(slice().from, slice().to, slice().total) }}</span>
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        class="focus-visible:[box-shadow:var(--pr-focus-ring)]"
+        [attr.aria-label]="copy.previous"
+        [disabled]="slice().page <= 1"
+        [attr.disabled]="slice().page <= 1 ? '' : null"
+        data-testid="detail-prev"
+        (click)="goTo(slice().page - 1)">
+        ‹
+      </button>
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        class="focus-visible:[box-shadow:var(--pr-focus-ring)]"
+        [attr.aria-label]="copy.next"
+        [disabled]="slice().page >= slice().pages"
+        [attr.disabled]="slice().page >= slice().pages ? '' : null"
+        data-testid="detail-next"
+        (click)="goTo(slice().page + 1)">
+        ›
+      </button>
+    </nav>
+  }
+</section>

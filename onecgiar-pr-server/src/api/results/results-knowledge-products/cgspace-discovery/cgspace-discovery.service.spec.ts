@@ -48,6 +48,7 @@ interface HalItemOptions {
   type?: string;
   year?: string;
   doi?: string;
+  subjects?: string[];
 }
 
 /** Builds one DSpace HAL object node using *that repository's* metadata field names. */
@@ -62,6 +63,9 @@ function halNode(repository: KpRepository, options: HalItemOptions) {
   };
   if (options.doi) {
     metadata[fields.doi] = [{ value: options.doi }];
+  }
+  if (options.subjects) {
+    metadata[fields.subject] = options.subjects.map((value) => ({ value }));
   }
   return {
     _embedded: {
@@ -352,43 +356,395 @@ describe('CgspaceDiscoveryService', () => {
       ]);
     });
 
-    it('(a1b) forwards project filter as f.project on hosts that expose a project facet (KPPJ bilateral repository filter)', async () => {
-      mockSources({
-        cgspace: {
-          data: halPage('cgspace', [
-            { uuid: 'cg-1', handle: '10568/1', title: 'AICCRA paper' },
-          ]),
-        },
-        melspace: {
-          data: halPage('melspace', [
-            { uuid: 'mel-1', handle: '20.500.11766/1', title: 'AICCRA note' },
-          ]),
-        },
-        worldfish: {
-          data: halPage('worldfish', [
-            { uuid: 'wf-1', handle: '20.500.12348/1', title: 'AICCRA brief' },
-          ]),
-        },
-      });
+    describe('(a1b) project scope (KPSF-R-1, R-4, R-7, R-9, R-11)', () => {
+      const AID_I_TITLE =
+        'IITA Accelerated Innovation Delivery Initiative (AID-I) for Mozambique';
+      const aidProject = {
+        projectCode: 'T-PJ-003942',
+        projectTitle: AID_I_TITLE,
+        projectLeadCenter: 'IITA',
+      };
+      const aidWords =
+        '(accelerated AND innovation AND delivery AND initiative AND aid AND mozambique)';
 
-      const projectLabel =
-        'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa';
-
-      await service.search({
-        project: projectLabel,
-        page: 0,
-        size: 10,
-        year: '2026',
-        repository: [...ALL],
-      });
-
-      for (const repo of ['melspace', 'worldfish'] as KpRepository[]) {
-        const [, config] = callFor(repo);
-        expect(config.params['f.project']).toBe(`${projectLabel},equals`);
+      function emptyAll() {
+        mockSources({
+          cgspace: { data: halPage('cgspace', []) },
+          melspace: { data: halPage('melspace', []) },
+          worldfish: { data: halPage('worldfish', []) },
+        });
       }
 
-      const [, cgConfig] = callFor('cgspace');
-      expect(cgConfig.params['f.project']).toBeUndefined();
+      it('linked: each repository gets its own project field, no f.project param, and the echo says applied', async () => {
+        emptyAll();
+
+        const result = await service.search({
+          ...aidProject,
+          projectScope: 'linked',
+          page: 0,
+          size: 10,
+          year: '2026',
+          repository: [...ALL],
+        });
+
+        const [, cgConfig] = callFor('cgspace');
+        expect(cgConfig.params.query).toContain(
+          `cg.identifier.project:${aidWords}`,
+        );
+        for (const repo of ['melspace', 'worldfish'] as KpRepository[]) {
+          const [, config] = callFor(repo);
+          expect(config.params.query).toContain(
+            `cg.contributor.project:${aidWords}`,
+          );
+          expect(config.params.query).not.toContain('cg.identifier.project');
+        }
+        for (const [, config] of httpService.get.mock.calls) {
+          expect(Object.keys(config.params)).not.toContain('f.project');
+        }
+        expect(result.response.projectScope).toEqual({
+          scope: 'linked',
+          applied: true,
+          ranked: false,
+          relatedOnly: false,
+        });
+      });
+
+      it('related: AND NOT on every repository, echo scope=related', async () => {
+        emptyAll();
+
+        const result = await service.search({
+          ...aidProject,
+          projectScope: 'related',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        });
+
+        for (const repo of ALL) {
+          const [, config] = callFor(repo);
+          expect(config.params.query).toMatch(/^\*:\* AND NOT \(/);
+        }
+        expect(result.response.projectScope).toEqual({
+          scope: 'related',
+          applied: true,
+          ranked: true,
+          relatedOnly: false,
+        });
+      });
+
+      it('no project params: the response carries no projectScope echo', async () => {
+        emptyAll();
+        const result = await service.search({
+          query: 'maize',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        });
+        expect(result.response.projectScope).toBeUndefined();
+      });
+
+      it('linked with an unusable project: empty page, applied=false, NO upstream call', async () => {
+        emptyAll();
+
+        const result = await service.search({
+          projectTitle: 'Soil',
+          projectScope: 'linked',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        });
+
+        expect(httpService.get).not.toHaveBeenCalled();
+        expect(result.status).toBe(200);
+        expect(result.response.items).toEqual([]);
+        expect(result.response.page.totalElements).toBe(0);
+        expect(result.response.page.hasMore).toBe(false);
+        expect(result.response.projectScope).toEqual({
+          scope: 'linked',
+          applied: false,
+          ranked: false,
+          relatedOnly: false,
+        });
+        expect(result.response.sources.map((s) => s.status)).toEqual([
+          'ok',
+          'ok',
+          'ok',
+        ]);
+      });
+
+      it('related with an unusable project: base query only, applied=false', async () => {
+        emptyAll();
+
+        const result = await service.search({
+          projectTitle: 'Soil',
+          projectScope: 'related',
+          query: 'seed',
+          page: 0,
+          size: 10,
+          repository: ['cgspace'],
+        });
+
+        const [, config] = callFor('cgspace');
+        expect(config.params.query).toBe('seed');
+        expect(result.response.projectScope).toEqual({
+          scope: 'related',
+          applied: false,
+          ranked: false,
+          relatedOnly: false,
+        });
+      });
+
+      it('the cache key differs between linked and related (and between projects)', async () => {
+        emptyAll();
+        const base = {
+          page: 0,
+          size: 10,
+          repository: ['cgspace'] as KpRepository[],
+        };
+
+        await service.search({
+          ...base,
+          ...aidProject,
+          projectScope: 'linked',
+        });
+        await service.search({
+          ...base,
+          ...aidProject,
+          projectScope: 'related',
+        });
+        await service.search({
+          ...base,
+          projectCode: 'T-PJ-000001',
+          projectTitle: 'Another Project Entirely Different',
+          projectScope: 'linked',
+        });
+
+        expect(httpService.get).toHaveBeenCalledTimes(3);
+        const keys = [...service.searchCache.keys()];
+        expect(new Set(keys).size).toBe(3);
+
+        // An identical linked call is a cache hit.
+        await service.search({
+          ...base,
+          ...aidProject,
+          projectScope: 'linked',
+        });
+        expect(httpService.get).toHaveBeenCalledTimes(3);
+      });
+
+      // @akili-spec changes/kp-related-relevance-ranking
+      it('related with relevance params: the block reaches the upstream query, no sort, and the cache key follows each param', async () => {
+        emptyAll();
+        const base = {
+          ...aidProject,
+          projectScope: 'related' as const,
+          page: 0,
+          size: 10,
+          repository: ['cgspace'] as KpRepository[],
+        };
+
+        const result = await service.search({
+          ...base,
+          projectDescription: 'cassava seed',
+          projectLeadCenterName:
+            'International Institute of Tropical Agriculture',
+          projectProgram: 'SP03 - Sustainable Farming',
+        });
+
+        const [, config] = callFor('cgspace');
+        expect(config.params.query).toContain(
+          ' AND (*:* OR (dcterms.subject:(accelerated OR',
+        );
+        expect(config.params.query).toContain(
+          '(cg.contributor.programAccelerator:"sustainable farming")^=1',
+        );
+        expect(Object.keys(config.params)).not.toContain('sort');
+        expect(result.response.projectScope).toEqual({
+          scope: 'related',
+          applied: true,
+          ranked: true,
+          relatedOnly: false,
+        });
+
+        // Same project, different description / center name / program: three more upstream calls.
+        await service.search({ ...base, projectDescription: 'other words' });
+        await service.search({
+          ...base,
+          projectLeadCenterName: 'Other Center',
+        });
+        await service.search({ ...base, projectProgram: 'SP05 - Other' });
+        expect(httpService.get).toHaveBeenCalledTimes(4);
+        expect(new Set([...service.searchCache.keys()]).size).toBe(4);
+      });
+
+      // @akili-spec changes/kp-related-relevance-ranking
+      // @akili-spec changes/kp-related-strongest-first
+      it('related-only: one upstream call per source, filter form sent, echo relatedOnly=true, cache key follows the param', async () => {
+        emptyAll();
+        const base = {
+          ...aidProject,
+          projectScope: 'related' as const,
+          projectDescription: 'cassava seed',
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        };
+
+        const off = await service.search(base);
+        expect(off.response.projectScope?.relatedOnly).toBe(false);
+        expect(httpService.get).toHaveBeenCalledTimes(ALL.length);
+
+        const on = await service.search({ ...base, projectRelatedOnly: true });
+        // Same number of upstream calls again (no extra call per page, NFR-1) and a distinct key.
+        expect(httpService.get).toHaveBeenCalledTimes(ALL.length * 2);
+        expect(new Set([...service.searchCache.keys()]).size).toBe(
+          ALL.length * 2,
+        );
+        expect(on.response.projectScope).toEqual({
+          scope: 'related',
+          applied: true,
+          ranked: true,
+          relatedOnly: true,
+        });
+        const sent = httpService.get.mock.calls
+          .slice(ALL.length)
+          .map(([, config]) => config.params.query as string);
+        expect(sent).toHaveLength(ALL.length);
+        for (const query of sent) {
+          expect(query).toContain(' AND NOT (');
+          expect(query).toContain(' AND (');
+          expect(query).not.toContain('*:* OR');
+        }
+        // Items still carry the tier on a related-only page.
+        expect(on.response.projectScope?.ranked).toBe(true);
+      });
+
+      describe('projectMatch on ranked related pages (KRR-R-3..R-6)', () => {
+        const rankedBase = {
+          ...aidProject,
+          page: 0,
+          size: 10,
+          repository: [...ALL],
+        };
+
+        function mockItems() {
+          mockSources({
+            cgspace: {
+              data: halPage('cgspace', [
+                {
+                  uuid: 'c1',
+                  handle: '10568/1',
+                  title: 'A',
+                  subjects: ['Accelerated delivery'],
+                },
+                { uuid: 'c2', handle: '10568/2', title: 'B' },
+              ]),
+            },
+            melspace: {
+              data: halPage('melspace', [
+                { uuid: 'm1', handle: '20.500/1', title: 'C' },
+              ]),
+            },
+            worldfish: { data: halPage('worldfish', []) },
+          });
+        }
+
+        it('ranked related: every item of every ok source carries projectMatch, keywords factor from subjects', async () => {
+          mockItems();
+          const result = await service.search({
+            ...rankedBase,
+            projectScope: 'related',
+          });
+
+          expect(result.response.projectScope?.ranked).toBe(true);
+          expect(result.response.items).toHaveLength(3);
+          for (const item of result.response.items) {
+            expect(item.projectMatch).toBeDefined();
+          }
+          const byUuid = (u: string) =>
+            result.response.items.find((i) => i.uuid === u)!;
+          expect(byUuid('c1').subjects).toEqual(['Accelerated delivery']);
+          expect(byUuid('c1').projectMatch).toEqual({
+            tier: 'weak',
+            factors: ['keywords'],
+          });
+          expect(byUuid('c2').projectMatch).toEqual({
+            tier: 'none',
+            factors: [],
+          });
+          expect(httpService.get).toHaveBeenCalledTimes(3);
+        });
+
+        it('linked: no item carries projectMatch', async () => {
+          mockItems();
+          const result = await service.search({
+            ...rankedBase,
+            projectScope: 'linked',
+          });
+          expect(result.response.items.length).toBeGreaterThan(0);
+          for (const item of result.response.items) {
+            expect(item).not.toHaveProperty('projectMatch');
+          }
+        });
+
+        it('unranked related (unusable project): no item carries projectMatch', async () => {
+          mockItems();
+          const result = await service.search({
+            projectTitle: 'Soil',
+            projectScope: 'related',
+            page: 0,
+            size: 10,
+            repository: [...ALL],
+          });
+          expect(result.response.projectScope?.ranked).toBe(false);
+          expect(result.response.items.length).toBeGreaterThan(0);
+          for (const item of result.response.items) {
+            expect(item).not.toHaveProperty('projectMatch');
+          }
+        });
+
+        it('related with relevance but ranked=false (block does not fit): no item carries projectMatch', async () => {
+          mockItems();
+          const result = await service.search({
+            ...rankedBase,
+            projectScope: 'related',
+            query: '€'.repeat(189),
+          });
+          expect(result.response.projectScope?.ranked).toBe(false);
+          expect(result.response.items.length).toBeGreaterThan(0);
+          for (const item of result.response.items) {
+            expect(item).not.toHaveProperty('projectMatch');
+          }
+        });
+
+        it('does not leak projectMatch into the cached per-source payload (a later linked call stays clean)', async () => {
+          mockItems();
+          await service.search({ ...rankedBase, projectScope: 'related' });
+          for (const entry of service.searchCache.values()) {
+            for (const item of entry.value.items) {
+              expect(item).not.toHaveProperty('projectMatch');
+            }
+          }
+        });
+      });
+
+      it('special characters in the project title still yield a well-formed query (no raw text)', async () => {
+        emptyAll();
+
+        await service.search({
+          projectCode: 'T-PJ-003942',
+          projectTitle: 'Soil " : ( ) * ? \\ AND OR carbon storage',
+          projectScope: 'linked',
+          page: 0,
+          size: 10,
+          repository: ['melspace'],
+        });
+
+        const [, config] = callFor('melspace');
+        expect(config.params.query).toBe(
+          '*:* AND (cg.contributor.project:(soil AND carbon AND storage) OR cg.contributor.project:"pj 003942" OR cg.contributor.project:"pj 3942")',
+        );
+      });
     });
 
     it('(a2) a selection of two queries only those two sources, in selection order (scenario KPM-R-8)', async () => {
@@ -956,6 +1312,14 @@ describe('CgspaceDiscoveryService', () => {
         center: '',
         year: '',
         project: '',
+        projectCode: '',
+        projectTitle: '',
+        projectLeadCenter: '',
+        projectScope: '',
+        projectDescription: '',
+        projectProgram: '',
+        projectLeadCenterName: '',
+        projectRelatedOnly: false,
         repository: 'cgspace',
       });
       expect(service.searchCache.has(oldestKey)).toBe(true);

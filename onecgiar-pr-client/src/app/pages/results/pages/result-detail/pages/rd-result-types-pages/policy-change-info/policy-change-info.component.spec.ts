@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { of, throwError, delay, NEVER } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { signal } from '@angular/core';
+import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
 
 describe('PolicyChangeInfoComponent', () => {
   let component: PolicyChangeInfoComponent;
@@ -103,6 +104,63 @@ describe('PolicyChangeInfoComponent', () => {
         .filter(f => /^select\s/i.test(f.description));
 
       expect(offenders).toEqual([]);
+    });
+  });
+
+  /**
+   * `PCL-T-1` — the USD-amount `app-pr-input` carried BOTH `label="USD amount"` and
+   * `description="USD amount"` (`policy-change-info.component.html:18,20`), so `app-field-card`
+   * painted the same string twice in two independent boxed elements: `.field_card_header >
+   * .fch_title` (the label) and `.field_card_desc > .desc_text` (the description) — confirmed
+   * directly against `field-card.component.html:26` and `:82`. This is a separate test from the
+   * P2-3667 describe block above (which only ever scanned `app-pr-select` elements and must stay
+   * untouched) so the two regressions never get conflated.
+   *
+   * A fresh TestBed is required: the outer `beforeEach` above does not declare `PrInputComponent`
+   * or `FieldCardComponent`, so `app-pr-input` renders as an unrecognized, childless element there
+   * (no label, no description — a reading that cannot tell the fix from the defect). Importing
+   * `CustomFieldsModule` wholesale — the same pattern already proven in
+   * `cap-dev-info.component.spec.ts`'s `CapDevInfoComponent — mandatory fields mirror
+   * validation_capacity_dev_P25` describe block — renders the real `app-field-card` chrome instead.
+   */
+  describe('exactly one "USD amount" rendering when policy_type_id == 1 (PCL-T-1, DOM duplication class)', () => {
+    let pclFixture: ComponentFixture<PolicyChangeInfoComponent>;
+    let pclComponent: PolicyChangeInfoComponent;
+
+    beforeEach(async () => {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        declarations: [PolicyChangeInfoComponent],
+        imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule],
+        providers: [{ provide: ApiService, useValue: mockApiService }]
+      }).compileComponents();
+
+      pclFixture = TestBed.createComponent(PolicyChangeInfoComponent);
+      pclComponent = pclFixture.componentInstance;
+    });
+
+    /** Counts "USD amount" across BOTH of `app-field-card`'s independent boxes, on every card. */
+    const countUsdAmountRenderings = (): number => {
+      // `ngOnInit()` -> `getSectionInformation()` does `this.innovationUseInfoBody = response`,
+      // replacing the body wholesale from the mocked `GET_policyChanges()` the moment
+      // `detectChanges()` first runs. Carrying `policy_type_id: 1` on that response (rather than
+      // mutating the bound object across two separate `detectChanges()` calls) avoids
+      // `NG0100: ExpressionChangedAfterItHasBeenCheckedError` from the `[(ngModel)]` two-way
+      // binding re-reading a value mutated outside Angular's own change-detection pass.
+      jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(of({ response: { policy_type_id: 1 } }));
+
+      pclFixture.detectChanges();
+
+      const cards = Array.from(pclFixture.nativeElement.querySelectorAll('app-field-card')) as HTMLElement[];
+      return cards.reduce((total, card) => {
+        const label = (card.querySelector('.fch_title')?.textContent || '').trim();
+        const description = (card.querySelector('.desc_text')?.textContent || '').trim();
+        return total + (label === 'USD amount' ? 1 : 0) + (description === 'USD amount' ? 1 : 0);
+      }, 0);
+    };
+
+    it('renders "USD amount" exactly once (falsifier: 2 on the pre-fix markup, which still has description="USD amount")', () => {
+      expect(countUsdAmountRenderings()).toBe(1);
     });
   });
 

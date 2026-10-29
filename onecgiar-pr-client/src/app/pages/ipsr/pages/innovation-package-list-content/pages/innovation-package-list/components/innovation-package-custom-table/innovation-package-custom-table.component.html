@@ -41,7 +41,11 @@
                 <i class="pi pi-exclamation-triangle"></i>
               </div>
 
-              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
+              @if (column.attr === 'official_code') {
+                <span class="sp-label-text" [attr.title]="submitterLabel(subResult) || null">{{ submitterLabel(subResult) }}</span>
+              } @else {
+                {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
+              }
             </a>
           </ng-container>
         </td>

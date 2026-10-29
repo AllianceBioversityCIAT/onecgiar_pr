@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { VersionsService } from '../versions/versions.service';
@@ -37,9 +37,15 @@ import { ResultsInnovationsUse } from './entities/results-innovations-use.entity
 import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
 import { ResultInvestmentService } from '../result_budget/result-investment.service';
 import { ResultCoreInnovUseSectionEnum } from '../../results-framework-reporting/result_innov_section/enum/result_innov_section.enum';
+import {
+  PreviousPhaseCurrentUse,
+  summarizePreviousPhaseCurrentUse,
+} from './utils/previous-phase-current-use.util';
 
 @Injectable()
 export class SummaryService {
+  private readonly _logger = new Logger(SummaryService.name);
+
   constructor(
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
@@ -274,6 +280,13 @@ export class SummaryService {
         dto.has_innovation_link,
       );
     }
+    // P2-3985 — `??`, never `||`: "0 new users" is a real answer and must not turn into null.
+    if (dto.new_users_added !== undefined) {
+      entity.new_users_added = dto.new_users_added ?? null;
+    }
+    if (dto.use_expansion_narrative !== undefined) {
+      entity.use_expansion_narrative = dto.use_expansion_narrative ?? null;
+    }
   }
 
   /** `null` stays `null` (question not answered); anything else collapses to a real boolean. */
@@ -439,6 +452,11 @@ export class SummaryService {
           innUseExists?.readiness_level_explanation ?? null,
         has_innovation_link: innUseExists?.has_innovation_link ?? null,
         linked_results,
+        // P2-3985 — the Current Use Update block (P2-3537 §4) for the W3/bilateral form. Purely
+        // additive; `current_use_previous` is `null` when the block must not render.
+        new_users_added: innUseExists?.new_users_added ?? null,
+        use_expansion_narrative: innUseExists?.use_expansion_narrative ?? null,
+        current_use_previous: await this.getPreviousPhaseCurrentUse(resultId),
         // P2-3390 — the three "Investment (USD)" tables. One row per active link, so the bilateral
         // full metadata has something to render even before any amount was typed. Purely additive.
         investment_programs:
@@ -465,6 +483,38 @@ export class SummaryService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * P2-3985 — "Previous reported use" of the Current Use Update block, same figure the v2 read gives
+   * the W1/W2 form (`summarizePreviousPhaseCurrentUse`). Fails soft to `null` (block not rendered):
+   * this read also feeds `assertPersistedMds`, and an unreadable previous phase must not cost the
+   * reporter the section, nor the submit.
+   */
+  private async getPreviousPhaseCurrentUse(
+    resultId: number,
+  ): Promise<PreviousPhaseCurrentUse | null> {
+    try {
+      const innUse: any =
+        await this._resultsInnovationsUseRepository.InnovUseExists(resultId);
+      const previousId = Number(innUse?.previous_result_id);
+      if (!Number.isFinite(previousId) || previousId <= 0) return null;
+
+      const previousActors = await this._resultActorRepository.find({
+        where: { result_id: previousId, is_active: true },
+      });
+      return summarizePreviousPhaseCurrentUse(
+        previousActors,
+        previousId,
+        innUse?.previous_phase_year,
+      );
+    } catch (error) {
+      this._logger.error(
+        `P2-3985: could not read the previous-phase current use for result ${resultId}`,
+        error,
+      );
+      return null;
     }
   }
 

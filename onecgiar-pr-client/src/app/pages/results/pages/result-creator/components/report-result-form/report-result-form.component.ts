@@ -17,7 +17,7 @@ import {
   innovationLinkAnswerIsComplete,
   showsInnovationLinkQuestion
 } from '../../../../../../shared/services/global/qa-innovation-development-results.service';
-import { normalizeKpHandle, validateKpHandle } from '../../../../../result-framework-reporting/shared/report-result/kp-handle.validator';
+import { normalizeKpHandle, pickKpBrowseLink, validateKpHandle } from '../../../../../result-framework-reporting/shared/report-result/kp-handle.validator';
 import { CgspaceItemDto } from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
 import {
   KpRepository,
@@ -256,7 +256,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   onCgspaceItemSelected(item: CgspaceItemDto): void {
-    const url = item.itemUrl || item.handleUrl || item.handle;
+    const url = pickKpBrowseLink(item);
     this.validating = true;
     this.selectedKpRepository.set(item.repository ?? 'cgspace');
     const error = validateKpHandle(url);

@@ -228,5 +228,6 @@ export class CoreResult {
   result_code: string = null;
   title: string = null;
   official_code: string = null;
+  initiative_name?: string = null;
   version_id: number | string | null = null;
 }

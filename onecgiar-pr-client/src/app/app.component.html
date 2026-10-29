@@ -89,6 +89,10 @@
 </app-pr-dialog>
 
 <app-pr-toast key="globalUserNotification" />
+<!-- SBR-T-1 (`bugfix/stale-bundle-refresh-prompt`, SBR-P-3b): dedicated render host for the
+     stale-bundle-refresh toast — PrToastComponent only renders a toast whose key matches a
+     mounted host's [key] input, so this toast key needs its own host alongside the one above. -->
+<app-pr-toast key="stale-bundle-refresh" />
 <!-- AI assistant launcher — disabled globally on request (2026-07-21). The component
      and its engine stay wired in app.module; re-enable by restoring this block. -->
 <!-- @if (aiAssistantEnabled && !this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {

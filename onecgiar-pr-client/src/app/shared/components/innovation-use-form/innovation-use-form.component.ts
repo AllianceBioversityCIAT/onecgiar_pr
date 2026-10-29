@@ -1,5 +1,15 @@
 import { Component, Input, OnInit, OnChanges, computed, ChangeDetectorRef } from '@angular/core';
 import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../internationalization/innovation-use-2030-projection.copy';
+import { CURRENT_USE_UPDATE_COPY } from '../../../internationalization/current-use-update.copy';
+import {
+  currentUseDifference,
+  currentUseMismatchMessage,
+  hasCurrentUseMismatch,
+  isCurrentUseUpdateComplete,
+  previousReportedUse,
+  previousUsePhaseYear,
+  totalCumulativeUse
+} from '../../utils/current-use-update.util';
 import { ApiService } from '../../services/api/api.service';
 import { TerminologyService } from '../../../internationalization/terminology.service';
 import { FieldsManagerService } from '../../services/fields-manager.service';
@@ -180,10 +190,12 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // P2-3537 §4 — the Current Use Update block
+  // P2-3985 — the rules live in `shared/utils/current-use-update.util.ts`, shared with the
+  // W3/bilateral form; this component keeps only its own gate and its own actor sum.
   // ─────────────────────────────────────────────────────────────────────────────
 
   /** Hard limit on the expansion narrative, per the story. */
-  readonly maxNarrativeWords = 100;
+  readonly maxNarrativeWords = CURRENT_USE_UPDATE_COPY.maxNarrativeWords;
 
   /**
    * True when the Current Use Update block is rendered at all.
@@ -209,13 +221,12 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   /** The figure reported in the previous phase, as a number. */
   previousReportedUse(): number {
-    return Number(this.body?.current_use_previous?.total_actors) || 0;
+    return previousReportedUse(this.body?.current_use_previous);
   }
 
   /** The round that figure comes from, for the "(FY2025)" label. `null` when unknown. */
   previousUsePhaseYear(): number | null {
-    const year = Number(this.body?.current_use_previous?.phase_year);
-    return Number.isFinite(year) && year > 0 ? year : null;
+    return previousUsePhaseYear(this.body?.current_use_previous);
   }
 
   /**
@@ -223,7 +234,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
    * is read-only: the story makes it field 3, auto-calculated from fields 1 and 2.
    */
   totalCumulativeUse(): number {
-    return this.previousReportedUse() + (Number(this.body?.new_users_added) || 0);
+    return totalCumulativeUse(this.body?.current_use_previous, this.body?.new_users_added);
   }
 
   /**
@@ -244,7 +255,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   /** The gap between what the actor rows add up to and the cumulative total. 0 means reconciled. */
   currentUseDifference(): number {
-    return this.actorsTotal() - this.totalCumulativeUse();
+    return currentUseDifference(this.actorsTotal(), this.body?.current_use_previous, this.body?.new_users_added);
   }
 
   /**
@@ -255,14 +266,12 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
    * getter is what gives the "immediately" part for free.
    */
   hasCurrentUseMismatch(): boolean {
-    return this.showCurrentUseUpdate() && this.currentUseDifference() !== 0;
+    return this.showCurrentUseUpdate() && hasCurrentUseMismatch(this.actorsTotal(), this.body?.current_use_previous, this.body?.new_users_added);
   }
 
   /** The message §6.1 asks for: names the figures and states the exact gap. */
   currentUseMismatchMessage(): string {
-    const diff = this.currentUseDifference();
-    const direction = diff > 0 ? 'more than' : 'fewer than';
-    return `The user categories add up to ${this.actorsTotal()}, which is ${Math.abs(diff)} ${direction} the total cumulative use of ${this.totalCumulativeUse()} (${this.previousReportedUse()} previously reported + ${Number(this.body?.new_users_added) || 0} added this period). Adjust the categories or the number of new users.`;
+    return currentUseMismatchMessage(this.actorsTotal(), this.body?.current_use_previous, this.body?.new_users_added);
   }
 
   /**
@@ -274,10 +283,12 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
    */
   isCurrentUseUpdateComplete(): boolean {
     if (!this.showCurrentUseUpdate()) return true;
-    const answered =
-      this.body?.new_users_added !== null && this.body?.new_users_added !== undefined;
-    const narrated = !!String(this.body?.use_expansion_narrative || '').trim();
-    return answered && narrated && !this.hasCurrentUseMismatch();
+    return isCurrentUseUpdateComplete(
+      this.actorsTotal(),
+      this.body?.current_use_previous,
+      this.body?.new_users_added,
+      this.body?.use_expansion_narrative
+    );
   }
 
   /** Keeps the derived figures fresh while the reporter types the increment. */

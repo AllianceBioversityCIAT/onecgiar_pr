@@ -1,6 +1,7 @@
 import { Component, OnInit, Output, EventEmitter, Input, OnDestroy } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ManageInnovationsListService } from '../../../../services/manage-innovations-list.service';
+import { scienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 import { InnovationPackageCreatorBody } from '../../model/innovation-package-creator.model';
 interface CoreInnovationSelected {
   result_id: string;
@@ -9,6 +10,7 @@ interface CoreInnovationSelected {
   description: string;
   initiative_id: number;
   official_code: string;
+  initiative_name?: string;
   creation_date: string;
   innovation_type: string;
   selected: boolean;
@@ -41,6 +43,11 @@ export class ResultsInnovationOutputListComponent implements OnInit, OnDestroy {
     { title: 'Lead', attr: 'official_code' },
     { title: 'Creation date', attr: 'creation_date' }
   ];
+  /** P/A label `CODE - Name` for the Lead column; sort keeps keying off `official_code`. */
+  leadLabel(result: CoreInnovationSelected): string {
+    return scienceProgramLabel(result?.official_code, result?.initiative_name);
+  }
+
   openInNewPage(link) {
     window.open(link, '_blank');
   }

@@ -10,11 +10,12 @@ import { HlmButton } from '@spartan/button';
 import { Router } from '@angular/router';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { CentersService } from '../../../../../../../../../../shared/services/global/centers.service';
+import { withScienceProgramLabel } from '../../../../../../../../../../shared/utils/science-program-label.util';
 import { filterOutAvisaInitiatives } from '../../../../../../../../../../shared/utils/avisa-initiative.util';
 import { BrnTabsImports } from '@spartan-ng/brain/tabs';
 import { KpCgspaceBrowseComponent, CgspaceItemDto } from './components/kp-cgspace-browse/kp-cgspace-browse.component';
 import { KpRepository, kpRepositoryLabel } from './components/kp-cgspace-browse/kp-repositories.constants';
-import { normalizeKpHandle } from '../../../../../../../../shared/report-result/kp-handle.validator';
+import { normalizeKpHandle, pickKpBrowseLink } from '../../../../../../../../shared/report-result/kp-handle.validator';
 import {
   INNOVATION_LINK_QUESTION,
   QaInnovationDevelopmentResultsService,
@@ -51,18 +52,7 @@ interface CreateResultBody {
  * The label is what the dropdown's own search filters on (`pr-filter-multiselect:120`), so this also
  * makes the fields searchable by code AND by name — before, only by code.
  */
-type ScienceProgramNameFields = {
-  official_code?: string | null;
-  name?: string | null;
-  initiative_name?: string | null;
-  short_name?: string | null;
-};
-
-export function withScienceProgramLabel<T extends ScienceProgramNameFields>(sp: T): T & { sp_label: string } {
-  const code = `${sp?.official_code ?? ''}`.trim();
-  const name = `${sp?.name ?? sp?.initiative_name ?? sp?.short_name ?? ''}`.trim();
-  return { ...sp, sp_label: code && name ? `${code} - ${name}` : code || name };
-}
+export { withScienceProgramLabel };
 
 @Component({
   selector: 'app-aow-hlo-create-modal',
@@ -476,7 +466,7 @@ export class AowHloCreateModalComponent implements OnInit {
   }
 
   onCgspaceItemSelected(item: CgspaceItemDto): void {
-    const url = item.itemUrl || item.handleUrl || item.handle;
+    const url = pickKpBrowseLink(item);
     this.validatingHandler.set(true);
     this.handleSource.set('browse');
     this.selectedKpRepository.set(item.repository ?? 'cgspace');

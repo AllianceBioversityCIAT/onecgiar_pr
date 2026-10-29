@@ -8,6 +8,7 @@ import { In } from 'typeorm';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { ResultsTocResultRepository } from '../results-toc-results/repositories/results-toc-results.repository';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -34,7 +35,7 @@ export interface BilateralTocItem {
 }
 
 /** Which of the three §5.1 decisions denied the write — the only "why" a 403 log line carries. */
-export type BilateralAccessRule = 'center' | 'toc' | 'decision';
+export type BilateralAccessRule = 'center' | 'lead-center' | 'toc' | 'decision';
 
 /**
  * `docs/specs/bilateral/review-toc-only-editing/design.md` §5.1, DD-1.
@@ -42,7 +43,8 @@ export type BilateralAccessRule = 'center' | 'toc' | 'decision';
  * One injectable exposing the three access decisions for a bilateral write at review time:
  *
  * - {@link assertCenterWrite} — Center-reported data (title, general-info, contributors,
- *   planned-result, toc-mapping, geography). Admin, or status ≠ 5.
+ *   planned-result, toc-mapping, geography). Admin; or a Center User of the result's lead center
+ *   at status ≠ 5 (P2-3999).
  * - {@link assertTocWrite} — `toc-metadata`. Admin; or status = 5 AND the user holds an active
  *   role on the payload's initiative AND that initiative is actively linked to the result AND
  *   every payload item names (or row-owns) that same program (DD-7 + amendment). Keeps the
@@ -75,13 +77,21 @@ export class BilateralAccessService {
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
   ) {}
 
   /**
    * Center write: any write to the Center-reported data (design §3, "Center write"). Allowed
-   * for an admin at any status, or for anyone at any status other than Pending Review (5).
-   * Deliberately checks ONLY status 5 (DD-2) — it does not narrow to "only 1/8", and it never
-   * looks at Center ownership.
+   * for an admin at any status, or for a Center User of the result's lead center at any status
+   * other than Pending Review (5). It still does not narrow to "only 1/8" (DD-2).
+   *
+   * P2-3999 — DD-2 used to stop at the status and never look at Center ownership, so a user of
+   * another Center (Cami, prtest, IFPRI account on CIP's #8398) got 200 from `general-info` and
+   * geography by sending the request directly: the read-only form (P2-3941) was the only
+   * barrier. The lead-center check now lives here, the one chokepoint every Center-data write
+   * already calls, with the same rule as `BilateralCenterService.assertCenterPermission`
+   * (active role 9 on the lead center, `RoleByUserRepository.validationCenterPermissions`).
+   * A result with no lead center keeps the old behaviour (status only): nothing to own yet.
    */
   async assertCenterWrite(
     result: BilateralAccessResult,
@@ -90,6 +100,9 @@ export class BilateralAccessService {
   ): Promise<void> {
     if (await this._isAdmin(user)) {
       return;
+    }
+    if (!(await this._isLeadCenterUser(result.id, user))) {
+      this._denyForbidden(result.id, 'lead-center', endpoint, user?.id);
     }
     if (!this._isPendingReview(result)) {
       return;
@@ -317,6 +330,35 @@ export class BilateralAccessService {
     return Number(result.status_id) === ResultStatusData.PendingReview.value;
   }
 
+  /**
+   * P2-3999 — true when the user holds an active Center User role (9) on the result's lead
+   * center, or when the result has no lead center yet. Fails closed without a usable `user.id`.
+   */
+  private async _isLeadCenterUser(
+    resultId: number,
+    user: TokenDto,
+  ): Promise<boolean> {
+    if (!user?.id) {
+      return false;
+    }
+    const centers =
+      await this._resultsCenterRepository.getAllResultsCenterByResultId(
+        resultId,
+      );
+    const leadCenter = (centers ?? []).find(
+      (center: any) => Number(center?.is_leading_result) === 1,
+    );
+    if (!leadCenter?.code) {
+      return true;
+    }
+    const allowed =
+      await this._roleByUserRepository.validationCenterPermissions(
+        user.id,
+        String(leadCenter.code),
+      );
+    return Number(allowed) > 0;
+  }
+
   private async _isAdmin(user: TokenDto): Promise<boolean> {
     if (!user?.id) {
       return false;
@@ -341,7 +383,9 @@ export class BilateralAccessService {
       `Bilateral write denied: result=${resultId} endpoint=${endpoint} rule=${rule} user=${userId}`,
     );
     throw new ForbiddenException(
-      `Result ${resultId} is under Science Program review (rule: ${rule}).`,
+      rule === 'lead-center'
+        ? `You do not have permission to edit result ${resultId}: only a Center User of the lead center can (rule: ${rule}).`
+        : `Result ${resultId} is under Science Program review (rule: ${rule}).`,
     );
   }
 }

@@ -1,4 +1,96 @@
 <div class="bp-dashboard">
+  <!-- PAA-DD-1: one copy of the Program field, shared by the linked-project and no-project branches (RRC chip, declined suffix, primaryPickerDisabled stay in step). -->
+  <ng-template #programField>
+    @if (assignmentPrimary(); as primarySp) {
+      <div class="bp-meta-field">
+        <dt class="bp-meta-field-label">Program</dt>
+        @if (singleAllocationLocked()) {
+          <!-- RRC-R-11: one allocated SP at Rejected — read-only chip + note, no empty dropdown. -->
+          <dd class="bp-meta-field-value flex flex-col items-start gap-1" data-testid="bp-single-allocation">
+            <span hlmBadge variant="secondary" data-testid="bp-single-allocation-chip" [title]="primarySp.spName">
+              {{ primarySp.programCode }} — {{ primarySp.spName || primarySp.spShortName }}
+            </span>
+            <p class="bp-primary-help" data-testid="bp-single-allocation-note" role="note">{{ singleAllocationNote }}</p>
+          </dd>
+        } @else if (canEditAssignment()) {
+          <dd class="bp-meta-field-value bp-primary-selector-wrap">
+            <button
+              type="button"
+              class="bp-primary-selector"
+              [disabled]="primaryPickerDisabled()"
+              [class.opacity-50]="primaryPickerDisabled()"
+              [class.cursor-not-allowed]="primaryPickerDisabled()"
+              (click)="togglePrimaryOptions()">
+              {{ primarySp.spName || primarySp.spShortName || primarySp.programCode }}
+              <i class="material-icons-round">expand_more</i>
+            </button>
+            @if (showPrimaryOptions()) {
+              <div class="bp-primary-options">
+                @for (program of availablePrimaryPrograms(); track program.programId) {
+                  <button type="button" (click)="selectPrimary(program)" [class.bp-primary-option--selected]="program.programId === primarySp.programId">
+                    {{ program.programCode }} — {{ program.spName }}
+                    @if (isDeclinedProgram(program.programCode)) {
+                      <span class="bp-sp-allocation">{{ declinedOptionSuffix }}</span>
+                    }
+                  </button>
+                }
+              </div>
+            }
+            @if (noAlternativeMessage(); as message) {
+              <p class="bp-primary-help">{{ message }}</p>
+            }
+          </dd>
+        } @else {
+          <dd class="bp-meta-field-value" [title]="primarySp.spName">{{ primarySp.spName || primarySp.spShortName }}</dd>
+        }
+      </div>
+    } @else if (canEditAssignment()) {
+      <div class="bp-meta-field">
+        <dt class="bp-meta-field-label">Program</dt>
+        <dd class="bp-meta-field-value bp-primary-selector-wrap">
+          <button
+            type="button"
+            class="bp-primary-selector"
+            [disabled]="primaryPickerDisabled()"
+            [class.opacity-50]="primaryPickerDisabled()"
+            [class.cursor-not-allowed]="primaryPickerDisabled()"
+            (click)="togglePrimaryOptions()">
+            Select Primary Science Program
+            <i class="material-icons-round">expand_more</i>
+          </button>
+          @if (showPrimaryOptions()) {
+            <div class="bp-primary-options">
+              @for (program of availablePrimaryPrograms(); track program.programId) {
+                <button type="button" (click)="selectPrimary(program)">
+                  {{ program.programCode }} — {{ program.spName }}
+                  @if (isDeclinedProgram(program.programCode)) {
+                    <span class="bp-sp-allocation">{{ declinedOptionSuffix }}</span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </dd>
+      </div>
+    }
+  </ng-template>
+  <!-- PAA-DD-1: assignment actions (hint, error, Save), shared by both branches. -->
+  <ng-template #assignmentActions>
+    @if (canEditAssignment() && (hasAssignmentChange() || requiresPrimarySelection())) {
+      <div class="bp-assignment-actions">
+        @if (requiresPrimarySelection()) {
+          <p class="bp-primary-help">Select the Primary Science Program allocated to this project.</p>
+        }
+        @if (assignmentError(); as error) {
+          <p class="bp-assignment-error">{{ error }}</p>
+        }
+        <button type="button" class="bp-assignment-save" [disabled]="isSavingAssignment() || requiresPrimarySelection()" (click)="saveAssignment()">
+          {{ isSavingAssignment() ? 'Saving...' : saveButtonLabel() }}
+        </button>
+      </div>
+    }
+  </ng-template>
+
   <div class="bp-dashboard-card bp-project-card">
     <app-alert-status
       status="info"
@@ -93,78 +185,7 @@
             </dd>
           }
         </div>
-        @if (assignmentPrimary(); as primarySp) {
-          <div class="bp-meta-field">
-            <dt class="bp-meta-field-label">Program</dt>
-            @if (singleAllocationLocked()) {
-              <!-- RRC-R-11: one allocated SP at Rejected — read-only chip + note, no empty dropdown. -->
-              <dd class="bp-meta-field-value flex flex-col items-start gap-1" data-testid="bp-single-allocation">
-                <span hlmBadge variant="secondary" data-testid="bp-single-allocation-chip" [title]="primarySp.spName">
-                  {{ primarySp.programCode }} — {{ primarySp.spName || primarySp.spShortName }}
-                </span>
-                <p class="bp-primary-help" data-testid="bp-single-allocation-note" role="note">{{ singleAllocationNote }}</p>
-              </dd>
-            } @else if (canEditAssignment()) {
-              <dd class="bp-meta-field-value bp-primary-selector-wrap">
-                <button
-                  type="button"
-                  class="bp-primary-selector"
-                  [disabled]="primaryPickerDisabled()"
-                  [class.opacity-50]="primaryPickerDisabled()"
-                  [class.cursor-not-allowed]="primaryPickerDisabled()"
-                  (click)="togglePrimaryOptions()">
-                  {{ primarySp.spName || primarySp.spShortName || primarySp.programCode }}
-                  <i class="material-icons-round">expand_more</i>
-                </button>
-                @if (showPrimaryOptions()) {
-                  <div class="bp-primary-options">
-                    @for (program of availablePrimaryPrograms(); track program.programId) {
-                      <button type="button" (click)="selectPrimary(program)" [class.bp-primary-option--selected]="program.programId === primarySp.programId">
-                        {{ program.programCode }} — {{ program.spName }}
-                        @if (isDeclinedProgram(program.programCode)) {
-                          <span class="bp-sp-allocation">{{ declinedOptionSuffix }}</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                }
-                @if (noAlternativeMessage(); as message) {
-                  <p class="bp-primary-help">{{ message }}</p>
-                }
-              </dd>
-            } @else {
-              <dd class="bp-meta-field-value" [title]="primarySp.spName">{{ primarySp.spName || primarySp.spShortName }}</dd>
-            }
-          </div>
-        } @else if (canEditAssignment()) {
-          <div class="bp-meta-field">
-            <dt class="bp-meta-field-label">Program</dt>
-            <dd class="bp-meta-field-value bp-primary-selector-wrap">
-              <button
-                type="button"
-                class="bp-primary-selector"
-                [disabled]="primaryPickerDisabled()"
-                [class.opacity-50]="primaryPickerDisabled()"
-                [class.cursor-not-allowed]="primaryPickerDisabled()"
-                (click)="togglePrimaryOptions()">
-                Select Primary Science Program
-                <i class="material-icons-round">expand_more</i>
-              </button>
-              @if (showPrimaryOptions()) {
-                <div class="bp-primary-options">
-                  @for (program of availablePrimaryPrograms(); track program.programId) {
-                    <button type="button" (click)="selectPrimary(program)">
-                      {{ program.programCode }} — {{ program.spName }}
-                      @if (isDeclinedProgram(program.programCode)) {
-                        <span class="bp-sp-allocation">{{ declinedOptionSuffix }}</span>
-                      }
-                    </button>
-                  }
-                </div>
-              }
-            </dd>
-          </div>
-        }
+        <ng-container *ngTemplateOutlet="programField"></ng-container>
         <!-- P2-3760: the Contribution % the story asks for (P2-3352 § 6). Editable only while the
              result is in Editing, which is exactly what canEditAssignment() already gates. -->
         <div class="bp-meta-field bp-meta-field--contribution">
@@ -191,19 +212,7 @@
         </div>
       </dl>
 
-      @if (canEditAssignment() && (hasAssignmentChange() || requiresPrimarySelection())) {
-        <div class="bp-assignment-actions">
-          @if (requiresPrimarySelection()) {
-            <p class="bp-primary-help">Select the Primary Science Program allocated to this project.</p>
-          }
-          @if (assignmentError(); as error) {
-            <p class="bp-assignment-error">{{ error }}</p>
-          }
-          <button type="button" class="bp-assignment-save" [disabled]="isSavingAssignment() || requiresPrimarySelection()" (click)="saveAssignment()">
-            {{ isSavingAssignment() ? 'Saving...' : saveButtonLabel() }}
-          </button>
-        </div>
-      }
+      <ng-container *ngTemplateOutlet="assignmentActions"></ng-container>
 
       <dl class="bp-project-summary-fields">
         <div class="bp-meta-field bp-meta-field--full">
@@ -227,7 +236,40 @@
         }
       </div>
     } @else {
-      @if (creationService.currentResultId()) {
+      @if (canEditAssignment()) {
+        <!-- PAA-R-1/R-6: editable result with no lead project — same picker + Program field as the linked branch. -->
+        <dl class="bp-project-fields" data-testid="bp-no-project">
+          <div class="bp-meta-field bp-meta-field--project">
+            <dt class="bp-meta-field-label">Project</dt>
+            <dd class="bp-meta-field-value bp-meta-field-value--editable">
+              <app-bilateral-project-selector
+                variant="inline"
+                [deferCommit]="true"
+                [previewProject]="pendingProject()"
+                (projectSelected)="onProjectCandidate($event)">
+              </app-bilateral-project-selector>
+            </dd>
+          </div>
+          @if (pendingProject()) {
+            <ng-container *ngTemplateOutlet="programField"></ng-container>
+          } @else {
+            <!-- PAA-AC-1: the Program field is on screen from the first render, disabled until a project is chosen. -->
+            <div class="bp-meta-field" data-testid="bp-program-waiting">
+              <dt class="bp-meta-field-label">Program</dt>
+              <dd class="bp-meta-field-value bp-primary-selector-wrap">
+                <button type="button" class="bp-primary-selector opacity-50 cursor-not-allowed" disabled>
+                  Select Primary Science Program
+                  <i class="material-icons-round">expand_more</i>
+                </button>
+              </dd>
+            </div>
+          }
+        </dl>
+        @if (pendingProject()) {
+          <ng-container *ngTemplateOutlet="assignmentActions"></ng-container>
+        }
+        <p class="bp-primary-help" data-testid="bp-no-project-hint" role="note">{{ noProjectLinkHint }}</p>
+      } @else if (creationService.currentResultId()) {
         <p class="bp-empty-hint">No project linked</p>
       } @else {
         <p class="bp-empty-hint">Select a project to begin</p>

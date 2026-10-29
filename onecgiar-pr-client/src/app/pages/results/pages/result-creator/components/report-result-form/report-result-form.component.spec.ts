@@ -336,9 +336,11 @@ describe('ReportResultFormComponent', () => {
       expect(template).toContain('kp-manual-sync');
     });
 
+    // P2-3987: CGSpace keeps the DSpace items URL; only MELSpace/WorldFish switch to hdl.
     it('fills handler and title from a CGSpace selection', () => {
       component.onCgspaceItemSelected(cgspaceItem as any);
 
+      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(cgspaceItem.itemUrl);
       expect(mockResultLevelService.resultBody.handler).toBe(cgspaceItem.itemUrl);
       expect(mockResultLevelService.resultBody.result_name).toBe('Test Title');
       expect(component.validating).toBe(false);
@@ -365,13 +367,13 @@ describe('ReportResultFormComponent', () => {
     // report-result-form.component.html:130), and both captures are deep-cloned at capture time so
     // aliasing cannot make the comparison trivially true.
     it('KPM-T-8 — a MELSpace item passes the regex, names MELSpace in the banner label, and produces the same POST_createWithHandle body as Manual entry', () => {
-      const melItem = { ...cgspaceItem, itemUrl: 'https://repo.mel.cgiar.org/items/11111111-1111-1111-1111-111111111111', repository: 'melspace' };
+      const melItem = { ...cgspaceItem, handle: '20.500.11766/70929', handleUrl: 'https://hdl.handle.net/20.500.11766/70929', itemUrl: 'https://repo.mel.cgiar.org/items/11111111-1111-1111-1111-111111111111', repository: 'melspace' };
       mockApiService.resultsSE.GET_mqapValidation = jest.fn(() => of({ response: { title: 'MEL Retrieved Title' } }));
 
       // Flow A: Browse selection of a MELSpace item
       component.onCgspaceItemSelected(melItem as any);
 
-      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melItem.itemUrl);
+      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(melItem.handleUrl); // P2-3987
       expect(component.mqapUrlError.status).toBe(false);
       expect(component.selectedKpRepository()).toBe('melspace');
       expect(component.repositoryLabel()).toBe('MELSpace'); // drives the "Selected from {{ repositoryLabel() }}" banner
@@ -390,7 +392,7 @@ describe('ReportResultFormComponent', () => {
       expect(component.mqapUrlError.status).toBe(false);
       expect(mockResultLevelService.resultBody.handler).toBe('');
 
-      mockResultLevelService.resultBody.handler = melItem.itemUrl;
+      mockResultLevelService.resultBody.handler = melItem.handleUrl;
       component.GET_mqapValidation(); // the `kp-manual-sync` button's handler — the actual Manual-entry path
       expect(mockResultLevelService.resultBody.result_name).toBe('MEL Retrieved Title');
 

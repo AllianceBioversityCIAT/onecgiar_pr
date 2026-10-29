@@ -63,6 +63,7 @@ describe('ResultsListFiltersComponent', () => {
       selectedFundingSource: createSignal<any[]>([]),
       text_to_search: createSignal<string>(''),
       phasesOptions: createSignal<any[]>([]),
+      requestedPhaseId: createSignal<number | null>(null),
       phasesOptionsOld: createSignal<any[]>([]),
       submittersOptions: createSignal<any[]>([]),
       submittersOptionsOld: createSignal<any[]>([]),
@@ -217,6 +218,36 @@ describe('ResultsListFiltersComponent', () => {
     // status options
     expect(mockApiService.resultsSE.GET_allResultStatuses).toHaveBeenCalled();
     expect(mockResultsListFilterService.statusOptions()).toEqual([{ id: 1, name: 'Draft' }]);
+  });
+
+  describe('links from Portfolio overview (?phase= / ?status=)', () => {
+    it('a requested phase replaces the portfolio default, once', () => {
+      mockResultsListFilterService.requestedPhaseId.set(102);
+
+      component.getData();
+
+      expect(mockResultsListFilterService.selectedPhases().map(p => p.id)).toEqual([102]);
+      expect(mockResultsListFilterService.requestedPhaseId()).toBeNull();
+    });
+
+    it('an unknown requested phase falls back to the portfolio default', () => {
+      mockResultsListFilterService.requestedPhaseId.set(999);
+
+      component.getData();
+
+      expect(mockResultsListFilterService.selectedPhases().map(p => p.id)).toEqual([101]);
+    });
+
+    it('a status set by id only gets its full option, so the chip shows its name', () => {
+      mockResultsListFilterService.selectedStatus.set([{ status_id: 2 }]);
+      mockApiService.resultsSE.GET_allResultStatuses.mockReturnValue(
+        of({ response: [{ status_id: 1, name: 'Editing' }, { status_id: 2, name: 'Quality Assessed' }] })
+      );
+
+      component.getResultStatus();
+
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ status_id: 2, name: 'Quality Assessed' }]);
+    });
   });
 
   describe('filtersCount and filtersCountText', () => {
@@ -494,8 +525,8 @@ describe('ResultsListFiltersComponent', () => {
 
       expect(mockApiService.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
       expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([
-        { id: 1, name: 'Initiative A', official_code: 'INIT-01', displayName: 'INIT-01 Initiative A' },
-        { id: 2, name: 'Initiative B', official_code: 'INIT-02', displayName: 'INIT-02 Initiative B' }
+        { id: 1, name: 'Initiative A', official_code: 'INIT-01', displayName: 'INIT-01 - Initiative A' },
+        { id: 2, name: 'Initiative B', official_code: 'INIT-02', displayName: 'INIT-02 - Initiative B' }
       ]);
     });
 
@@ -558,7 +589,7 @@ describe('ResultsListFiltersComponent', () => {
       component.getAllInitiatives();
 
       expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([
-        { id: 1, name: 'Test Initiative', official_code: 'TST-01', displayName: 'TST-01 Test Initiative' }
+        { id: 1, name: 'Test Initiative', official_code: 'TST-01', displayName: 'TST-01 - Test Initiative' }
       ]);
     });
   });
@@ -768,6 +799,20 @@ describe('ResultsListFiltersComponent', () => {
   });
 
   describe('filterChipGroups', () => {
+    it('submitter chip reads CODE - Name while keeping the selected item untouched', () => {
+      const item = { id: 7, official_code: 'SP10', name: 'Gender' };
+      mockResultsListFilterService.selectedSubmittersAdmin.set([item]);
+      const group = component.filterChipGroups().find(g => g.chips.some((c: any) => c.filterType === 'submitter'));
+      expect(group.chips[0].label).toBe('SP10 - Gender');
+      expect(group.chips[0].item).toBe(item);
+    });
+
+    it('submitter chip falls back to the code when the name is missing', () => {
+      mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 7, official_code: 'SP10' }]);
+      const group = component.filterChipGroups().find(g => g.chips.some((c: any) => c.filterType === 'submitter'));
+      expect(group.chips[0].label).toBe('SP10');
+    });
+
     it('should return empty groups when no filters are selected', () => {
       clearAllFilters();
       mockResultsListFilterService.selectedClarisaPortfolios.set([]);
@@ -1135,12 +1180,67 @@ describe('ResultsListFiltersComponent', () => {
       expect(mockResultsListFilterService.filterCreatedByMe()).toBe(true);
     });
 
-    it('should wait for Apply in the menu', () => {
-      component.tempSelectedFundingSource.set([{ id: 2 }] as any);
+    it('should apply each change at once in the menu layout too (RCF-AC-1)', () => {
+      expect(component.isSidebarLayout()).toBe(false);
+      component.tempSelectedPhases.set([{ id: 1 }] as any);
+      component.tempSelectedSubmittersAdmin.set([{ id: 2 }] as any);
+      component.tempSelectedIndicatorCategories.set([{ id: 3 }] as any);
+      component.tempSelectedStatus.set([{ id: 4 }] as any);
+      component.tempSelectedClarisaPortfolios.set([{ id: 5 }] as any);
+      component.tempSelectedFundingSource.set([{ id: 6 }] as any);
+      component.tempSelectedLeadCenters.set([{ id: 7 }] as any);
+      component.tempFilterCreatedByMe.set(true);
+      component.tempFilterSubmittedByMe.set(true);
 
       component.onFilterFieldChanged();
 
-      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([]);
+      expect(mockResultsListFilterService.selectedPhases()).toEqual([{ id: 1 }]);
+      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 2 }]);
+      expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([{ id: 3 }]);
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ id: 4 }]);
+      expect(mockResultsListFilterService.selectedClarisaPortfolios()).toEqual([{ id: 5 }]);
+      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 6 }]);
+      expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([{ id: 7 }]);
+      expect(mockResultsListFilterService.filterCreatedByMe()).toBe(true);
+      expect(mockResultsListFilterService.filterSubmittedByMe()).toBe(true);
+    });
+
+    describe('closing the panel after a change keeps the new value (RCF-R-4 / RCF-AC-4)', () => {
+      const closeAffordances: Array<[string, () => void]> = [
+        ['the close (✕) handler (cancelFilters)', () => component.cancelFilters()],
+        [
+          'an outside click (onDocumentClick)',
+          () => {
+            (component as any).skipNextDocClick = false;
+            component.onDocumentClick();
+          }
+        ],
+        ['the Escape key (onEscape)', () => component.onEscape()]
+      ];
+
+      it.each(closeAffordances)('still holds the new value after closing via %s', (_label, close) => {
+        mockResultsListFilterService.selectedFundingSource.set([{ id: 1 }]);
+
+        // Open the menu panel and apply a real change (RCF-R-1: applies immediately on change).
+        component.openFiltersDrawer();
+        component.tempSelectedFundingSource.set([{ id: 2 }] as any);
+        component.onFilterFieldChanged();
+        expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 2 }]);
+
+        close();
+
+        expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 2 }]);
+        expect(component.moreFiltersOpen()).toBe(false);
+      });
+    });
+
+    it('should render no Apply/Cancel footer in the menu filter panel (RCF-AC-2)', () => {
+      component.moreFiltersOpen.set(true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.rc-more-footer')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.rc-btn--primary')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.rc-btn--ghost')).toBeNull();
     });
 
     it('should mirror filters applied elsewhere (chips, defaults) into the side column controls', () => {
@@ -1204,34 +1304,6 @@ describe('ResultsListFiltersComponent', () => {
       component.moreFiltersOpen.set(true);
       component.onWindowResize();
       expect(spy).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('applyFilters', () => {
-    it('should copy temp values to applied filter signals and close the Filter popover', () => {
-      component.tempSelectedPhases.set([{ id: 3 }] as any);
-      component.tempSelectedIndicatorCategories.set([{ id: 5 }] as any);
-      component.tempSelectedStatus.set([{ id: 6 }] as any);
-      component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
-      component.tempSelectedFundingSource.set([{ id: 2 }] as any);
-      component.tempSelectedSubmittersAdmin.set([{ id: 4 }] as any);
-      component.tempSelectedLeadCenters.set([{ id: 7 }] as any);
-      component.tempFilterCreatedByMe.set(true);
-      component.tempFilterSubmittedByMe.set(true);
-      component.moreFiltersOpen.set(true);
-
-      component.applyFilters();
-
-      expect(mockResultsListFilterService.selectedPhases()).toEqual([{ id: 3 }]);
-      expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([{ id: 5 }]);
-      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ id: 6 }]);
-      expect(mockResultsListFilterService.selectedClarisaPortfolios()).toEqual([{ id: 1 }]);
-      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 2 }]);
-      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 4 }]);
-      expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([{ id: 7 }]);
-      expect(mockResultsListFilterService.filterCreatedByMe()).toBe(true);
-      expect(mockResultsListFilterService.filterSubmittedByMe()).toBe(true);
-      expect(component.moreFiltersOpen()).toBe(false);
     });
   });
 

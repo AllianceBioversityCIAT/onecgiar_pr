@@ -4816,6 +4816,12 @@ export class BilateralService {
           manager,
           { releaseContributors: true },
         ),
+      // `PNR-T-2`: re-dates the primary card inside the resubmission's final transaction.
+      stampPrimaryCardSubmitted: (resultId, manager) =>
+        this._primaryProgramRequestService.stampPrimaryCardSubmitted(
+          resultId,
+          manager,
+        ),
       announcePendingReview: (resultId, emitterUserId) =>
         this.announcePendingReview(resultId, emitterUserId),
     };
@@ -5229,6 +5235,23 @@ export class BilateralService {
     if (!selectedCenter) return;
 
     await this.persistLeadCenter(resultId, selectedCenter, userId, options);
+  }
+
+  /**
+   * RNB-2 (P2-3941): the CLARISA code (`CENTER-xx`) of the centre a `lead_center` payload resolves
+   * to, through the same read-only lookup `handleLeadCenter` persists from — so a permission check
+   * and the row that gets written can never disagree about which centre it is. `null` when the
+   * input is empty or matches nothing.
+   */
+  async resolveLeadCenterCode(
+    leadCenter:
+      | { name?: string; acronym?: string; institution_id?: number }
+      | null
+      | undefined,
+  ): Promise<string | null> {
+    if (!leadCenter || typeof leadCenter !== 'object') return null;
+    const center = await this.findLeadCenter(leadCenter);
+    return center?.code ? String(center.code) : null;
   }
 
   /**

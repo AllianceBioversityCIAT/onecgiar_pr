@@ -151,9 +151,10 @@
                 class="flex w-full items-center gap-[10px] rounded-[6px] px-[10px] py-[7px] text-left outline-none data-[selected]:bg-[var(--pr-surface-band)] hover:bg-[var(--pr-surface-band)]"
                 (selected)="openResult(row)">
                 <span
-                  class="shrink-0 rounded-[6px] bg-[var(--pr-color-primary-50)] px-[8px] py-[2px] font-mono text-[12px] font-medium text-[var(--pr-color-primary-600)]"
+                  class="max-w-[220px] shrink-0 truncate rounded-[6px] bg-[var(--pr-color-primary-50)] px-[8px] py-[2px] font-mono text-[12px] font-medium text-[var(--pr-color-primary-600)]"
                   aria-hidden="true"
-                  >{{ row.submitterCode }}</span
+                  [attr.title]="row.submitterLabel || null"
+                  >{{ row.submitterLabel }}</span
                 >
                 <!--
                   The result code is the field a numeric search (e.g. "20694") actually matches, but

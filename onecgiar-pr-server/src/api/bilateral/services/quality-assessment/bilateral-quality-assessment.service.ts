@@ -166,8 +166,17 @@ export class BilateralQualityAssessmentService {
     return this.toDto(latest, isCurrent);
   }
 
+  /**
+   * P2-3980: a row that already carries a submit `decision` is spent — `assertAssessmentDecision`
+   * refuses it ("can no longer be used"). Reusing it on an unchanged hash locked a result that was
+   * rejected and resubmitted without edits (the common case for a Knowledge Product, whose title and
+   * description are read-only) out of submitting for good; a fresh row is claimed instead.
+   */
   private isReusable(row: BilateralQualityAssessment): boolean {
-    return row.status === 'completed' || row.status === 'skipped_kp_rule';
+    return (
+      (row.status === 'completed' || row.status === 'skipped_kp_rule') &&
+      !row.decision
+    );
   }
 
   /**

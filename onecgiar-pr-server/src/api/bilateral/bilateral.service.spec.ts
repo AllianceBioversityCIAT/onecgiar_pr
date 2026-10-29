@@ -224,6 +224,8 @@ describe('BilateralService (unit)', () => {
         program_code: null,
         declined_by_codes: [],
       }),
+      // `PNR-T-2`: the card re-dating at the API resubmission's commit.
+      stampPrimaryCardSubmitted: jest.fn().mockResolvedValue(undefined),
     };
     // BCT-T-5 — the new trailing @Optional() constructor param. Real behaviour (targets,
     // ordering, dedup, texts) is unit-tested against the real implementation in
@@ -5928,6 +5930,22 @@ describe('BilateralService (unit)', () => {
         expect(
           stubs.primaryProgramRequestService.request,
         ).not.toHaveBeenCalled();
+      });
+
+      it('PNR-T-2: stampPrimaryCardSubmitted delegates to the primary service THROUGH THE GIVEN TRANSACTION MANAGER', async () => {
+        const { service, stubs } = makeService();
+        const svc: any = service;
+        const port = svc.buildResubmissionWritersPort();
+
+        const manager = { marker: 'tx' };
+        await port.stampPrimaryCardSubmitted(501, manager);
+
+        expect(
+          stubs.primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          stubs.primaryProgramRequestService.stampPrimaryCardSubmitted,
+        ).toHaveBeenCalledWith(501, manager);
       });
 
       it('announcePendingReview delegates to the shared orchestrator (never the emitter directly)', async () => {

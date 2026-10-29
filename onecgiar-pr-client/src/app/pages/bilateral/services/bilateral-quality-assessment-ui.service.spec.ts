@@ -442,4 +442,81 @@ describe('BilateralQualityAssessmentUiService', () => {
       expect(service.assessment()).toBeNull();
     });
   });
+  // P2-3980 — a Knowledge Product submits through a silent assessment row, never the AI dialog.
+  describe('submitKnowledgeProduct', () => {
+    it('waits for a row another tab left running before submitting it', fakeAsync(() => {
+      service.submitKnowledgeProduct(42).subscribe();
+
+      httpMock.expectOne(postUrl(42)).flush({ response: view({ id: 77, status: 'running' }) });
+      httpMock.expectNone(submitUrl(42));
+      tick(3000);
+      httpMock.expectOne(latestUrl(42)).flush({ response: view({ id: 77, status: 'skipped_kp_rule' }) });
+
+      const patch = httpMock.expectOne(submitUrl(42));
+      expect(patch.request.body).toEqual({ assessment_id: 77, decision: 'submitted_anyway' });
+      patch.flush({ response: {} });
+      expect(service.isKpSubmitting()).toBe(false);
+      discardPeriodicTasks();
+    }));
+
+    it('creates the assessment row, then submits with that id as submitted_anyway', () => {
+      let done = false;
+      service.submitKnowledgeProduct(42).subscribe({ complete: () => (done = true) });
+
+      httpMock.expectOne(postUrl(42)).flush({ response: view({ id: 77, status: 'skipped_kp_rule' }) });
+      const patch = httpMock.expectOne(submitUrl(42));
+      expect(patch.request.method).toBe('PATCH');
+      expect(patch.request.body).toEqual({ assessment_id: 77, decision: 'submitted_anyway' });
+      patch.flush({ response: {} });
+
+      expect(done).toBe(true);
+    });
+
+    it('never opens the AI dialog nor holds the assessment (no rail card, no field flags)', () => {
+      service.submitKnowledgeProduct(42).subscribe();
+      expect(service.isDialogOpen()).toBe(false);
+      expect(service.isBusy()).toBe(true);
+      expect(service.isKpSubmitting()).toBe(true);
+
+      httpMock.expectOne(postUrl(42)).flush({ response: view({ id: 77, status: 'skipped_kp_rule' }) });
+      expect(service.isDialogOpen()).toBe(false);
+      httpMock.expectOne(submitUrl(42)).flush({ response: {} });
+
+      expect(service.assessment()).toBeNull();
+      expect(service.state()).toBe('idle');
+      expect(service.isBusy()).toBe(false);
+    });
+
+    it('two quick submits send one POST and one PATCH', () => {
+      const first = service.submitKnowledgeProduct(42);
+      first.subscribe();
+      service.submitKnowledgeProduct(42).subscribe();
+
+      httpMock.expectOne(postUrl(42)).flush({ response: view({ id: 77, status: 'skipped_kp_rule' }) });
+      httpMock.expectOne(submitUrl(42)).flush({ response: {} });
+      httpMock.expectNone(postUrl(42));
+      httpMock.expectNone(submitUrl(42));
+      expect(service.isBusy()).toBe(false);
+    });
+
+    it('releases the lock when the submit fails so the reporter can retry', () => {
+      let error: unknown;
+      service.submitKnowledgeProduct(42).subscribe({ error: e => (error = e) });
+      httpMock.expectOne(postUrl(42)).flush({ response: view({ id: 77, status: 'skipped_kp_rule' }) });
+      httpMock.expectOne(submitUrl(42)).flush({ message: 'No SP' }, { status: 400, statusText: 'Bad Request' });
+
+      expect(error).toBeTruthy();
+      expect(service.isKpSubmitting()).toBe(false);
+
+      service.submitKnowledgeProduct(42).subscribe();
+      httpMock.expectOne(postUrl(42)).flush({ response: view({ id: 78, status: 'skipped_kp_rule' }) });
+      httpMock.expectOne(submitUrl(42)).flush({ response: {} });
+    });
+
+    it('sends nothing until subscribed', () => {
+      service.submitKnowledgeProduct(42);
+      httpMock.expectNone(postUrl(42));
+      expect(service.isKpSubmitting()).toBe(false);
+    });
+  });
 });

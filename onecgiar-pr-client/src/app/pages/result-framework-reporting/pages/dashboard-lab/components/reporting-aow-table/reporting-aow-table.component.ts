@@ -15,7 +15,8 @@ import {
   PrTableBodyDirective,
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
-import { buildRatio, pendingOf } from '../../reporting-burndown';
+import { buildRatio, hasTarget, pendingOf } from '../../reporting-burndown';
+import { PT_ACTIVITY_TOOLTIP, PtActivityIndex, centerAcronymsOfRow, ptActivityCountOf, ptActivityLabel, ptActivityShortLabel } from '../../pt-activity';
 import { HighlightSearchPipe } from '../../pipes/highlight-search.pipe';
 
 /**
@@ -65,6 +66,8 @@ export interface ReportingIndicator {
    */
   centers?: Array<{ center_id?: number | null; center_acronym?: string | null }>;
   toc_result_id?: number;
+  /** Integration `related_node_id` of the indicator, when the payload carries it — PT activity falls back to it. */
+  indicator_related_node_id?: string | null;
   /**
    * RRC-R-10 — the combination-group this row represents (ToC `toc_result_indicator_target`). Rides
    * through `manageIndicator` → drawer → `buildCreateResultPayload` inside `indicators` so the
@@ -143,7 +146,10 @@ export interface TocAchievement {
 }
 
 /** A row's workflow state, as far as the data allows. See `statusOf`. */
-export type RowStatus = 'not-started' | 'in-progress' | 'achieved' | 'overachieved';
+/** In-card Target axis (KTO-R-7); `All` is the absence of a selection. */
+export type TargetFilterMode = 'with' | 'without';
+
+export type RowStatus ='not-started' | 'in-progress' | 'achieved' | 'overachieved';
 
 /**
  * A flat-table row: the indicator plus the PRE-NORMALISED sort keys the table sorts on.
@@ -311,6 +317,12 @@ export class ReportingAowTableComponent {
    * @akili-spec changes/reporting-favorite-indicators
    */
   readonly favoritesOnly = input<boolean>(false);
+  /**
+   * Progress Tracker activity of the current programme, built by the host from ONE
+   * `indicator-activity` call. `null` (default, call failed or timed out) renders no badge at all —
+   * the table looks exactly as it did before the feature.
+   */
+  readonly ptActivity = input<PtActivityIndex | null>(null);
 
   readonly openAow = output<string>();
   readonly openRow = output<ReportingIndicator>();
@@ -753,16 +765,6 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Whether this Area of Work's achievement metric is currently being loaded from the server.
-   * True during initial group loading or while the async ToC achievement fetch is in-flight.
-   */
-  isAchievementLoading(group: ReportingAowGroup): boolean {
-    if (this.isBucket(group)) return false;
-    if (group.achievement) return false;
-    return !!(group.loading || group.achievementLoading);
-  }
-
-  /**
    * Chip label in the 68px header. AoW → code (AOW01). Buckets → the short tag ("Intermediate",
    * "2030"), exactly as the reference (:4248).
    *
@@ -797,6 +799,11 @@ export class ReportingAowTableComponent {
   private readonly localCenterFilter = signal<Record<string, string>>({});
   /** Local breakdown filter by Result Type per AoW / bucket group key. */
   private readonly localTypeFilter = signal<Record<string, string>>({});
+  /**
+   * Local Target axis per AoW / bucket group key (KTO-R-7). Absent key = `All`. Like Centers / Types it
+   * only narrows the LISTED rows: the header ratio and split line read `ratioBase`, never this signal.
+   */
+  private readonly localTargetFilter = signal<Record<string, TargetFilterMode>>({});
   /** Controls collapsible state of the in-card Centers/Types filter bar per AoW. */
   private readonly breakdownOpenMap = signal<Record<string, boolean>>({});
 
@@ -848,6 +855,39 @@ export class ReportingAowTableComponent {
     }
   }
 
+  selectedTargetOf(group: ReportingAowGroup): TargetFilterMode | null {
+    return this.localTargetFilter()[this.groupKey(group)] ?? null;
+  }
+
+  /** `null` (the `All` chip) or re-picking the active chip clears the axis, same as Centers / Types. */
+  setTargetFilter(group: ReportingAowGroup, mode: TargetFilterMode | null): void {
+    const key = this.groupKey(group);
+    const curr = this.localTargetFilter();
+    if (!mode || curr[key] === mode) {
+      const copy = { ...curr };
+      delete copy[key];
+      this.localTargetFilter.set(copy);
+    } else {
+      this.localTargetFilter.set({ ...curr, [key]: mode });
+    }
+  }
+
+  /**
+   * Counts for the Target chips, over the same rows the Centers / Types chips count (the card's rows as
+   * delivered, KTO-R-7). `hasTarget` is the one predicate of the shell (KTO-DD-1).
+   */
+  targetCountsOf(group: ReportingAowGroup): { all: number; withTarget: number; without: number } {
+    const rows = group.indicators ?? [];
+    const withTarget = rows.filter(r => hasTarget(r)).length;
+    return { all: rows.length, withTarget, without: rows.length - withTarget };
+  }
+
+  /** The Target axis is worth showing only when the card holds rows of both kinds. */
+  hasMixedTargets(group: ReportingAowGroup): boolean {
+    const c = this.targetCountsOf(group);
+    return c.withTarget > 0 && c.without > 0;
+  }
+
   /**
    * Every centre behind one row, in display order.
    *
@@ -857,14 +897,23 @@ export class ReportingAowTableComponent {
    * is the list; the scalar is only a fallback for payloads that predate it.
    */
   centerAcronymsOf(row: ReportingIndicator): string[] {
-    const fromList = (row?.centers ?? [])
-      .map(c => c?.center_acronym?.trim())
-      .filter((c): c is string => !!c && c !== '—');
+    // Shared with the PT badge (`pt-activity.ts`) so chips, centre filter and badge agree.
+    return centerAcronymsOfRow(row);
+  }
 
-    if (fromList.length > 0) return fromList;
+  /** Evidence items Progress Tracker holds for this row's KPI(s); `0` renders no badge. */
+  ptCountOf(row: ReportingIndicator): number {
+    return ptActivityCountOf(row, this.ptActivity());
+  }
 
-    const scalar = row?.center_acronym?.trim();
-    return scalar && scalar !== '—' ? [scalar] : [];
+  readonly ptTooltip = PT_ACTIVITY_TOOLTIP;
+
+  ptLabelOf(count: number): string {
+    return ptActivityLabel(count);
+  }
+
+  ptShortLabelOf(count: number): string {
+    return ptActivityShortLabel(count);
   }
 
   /**
@@ -1009,18 +1058,6 @@ export class ReportingAowTableComponent {
     this.openCardFilterKey.set(null);
   }
 
-  /** Sum of target values across an HLO's rows. */
-  hloTargetSum(hlo: { rows?: ReportingIndicator[] }): string {
-    const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.target_value_sum ?? 0)) || 0), 0);
-    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
-  }
-
-  /** Sum of achieved values across an HLO's rows. */
-  hloAchievedSum(hlo: { rows?: ReportingIndicator[] }): string {
-    const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.actual_achieved_value_sum ?? 0)) || 0), 0);
-    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
-  }
-
   hloJumpList(group: ReportingAowGroup): { key: string; name: string; count: number }[] {
     const bands = this.bandsOf(group);
     const list: { key: string; name: string; count: number }[] = [];
@@ -1048,6 +1085,7 @@ export class ReportingAowTableComponent {
     const status = this.statusFilter();
     const selCenter = this.selectedCenterOf(group);
     const selType = this.selectedTypeOf(group);
+    const selTarget = this.selectedTargetOf(group);
 
     // quick/reporting-search-all-levels (2026-09-04): the search box says "indicators" but users
     // type any level of the tree. A hit on the CARD itself (AoW code or name) keeps every row of
@@ -1059,6 +1097,7 @@ export class ReportingAowTableComponent {
       if (status && status.length > 0 && !status.includes(this.statusOf(row))) return false;
       if (selCenter && !this.centerAcronymsOf(row).includes(selCenter)) return false;
       if (selType && row.result_type_name?.trim() !== selType) return false;
+      if (selTarget && hasTarget(row) !== (selTarget === 'with')) return false;
       if (!q || groupHit) return true;
       // Every level a row belongs to is searchable: its own description and name, the category
       // ("innovation use" only lives in `result_type_name`), the HLO / outcome node it hangs from
@@ -1077,25 +1116,6 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * The AoW header ratio — `3 of 8 · 38%` in the reference.
-   *
-   * `done` counts KPIs with SOMETHING REPORTED, not KPIs that reached 100%. That is the only
-   * reading under which the design's own worked example adds up: 3 of 8 = 37.5%, shown as 38%.
-   * Counting completions instead produced "0 of 30 · 0%" on real data — technically true and
-   * completely useless, since almost nothing is ever at 100% mid-cycle.
-   *
-   * Counted over the UNFILTERED set on purpose: a progress figure that moves when you type in a
-   * search box is not progress, it is a coincidence. `group.indicators` is that unfiltered set —
-   * EXCEPT when the host's Only-pending toggle is on, in which case it has already been narrowed
-   * and the host stashes the pre-toggle set on `__allIndicators` (see
-   * `dashboard-lab.applyBurndownFilterAndSort`); prefer that side-channel field when present.
-   *
-   * Delegates to `buildRatio` (`reporting-burndown.ts`) so this and the By-AOW banner's
-   * `buildAowBannerStats` apply the zero-target rule identically (MRF-R-6/R-7, MRF-AC-5/AC-6).
-   *
-   * @akili-spec changes/mass-reporting-flow
-   */
-  /**
    * P2-3296 — the achievement figures, at any level.
    *
    * A dash, never 0%: an indicator with no usable target (absent, or zero) is excluded from every
@@ -1111,20 +1131,6 @@ export class ReportingAowTableComponent {
     return achievement?.preliminary_progress_percentage ?? '—';
   }
 
-  /**
-   * Always rendered next to the number, never tucked into a tooltip: a figure averaged over 2 of
-   * 10 indicators must not read like one averaged over all 10, and the visible fraction is what
-   * shows the team where targets are still missing.
-   */
-  achievementCoverage(achievement: TocAchievement | null | undefined): string {
-    const counted = achievement?.counted;
-    const total = achievement?.total;
-
-    if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
-
-    return counted === total ? `${total} Int. outcomes` : `${counted} of ${total} Int. outcomes`;
-  }
-
   achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
     if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
 
@@ -1133,19 +1139,19 @@ export class ReportingAowTableComponent {
     const kpiNote = Number.isFinite(kpiTotal) && kpiTotal > 0 ? ` ${kpiTotal} KPIs sit under those nodes.` : '';
 
     if (!counted) {
-      return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} KPI reporting progress uses every planned KPI in the ratio above.`;
+      return `No ${childNoun.toLowerCase()} with a measurable target yet, so no ToC achievement % is shown.${kpiNote} The KPI progress % above averages only the KPIs with a target.`;
     }
 
     if (!this.showQaPrelSplit) {
       return (
         `ToC achievement — ${this.achievementLabel(achievement)}, averaged across ${scope}.${kpiNote} ` +
-        'KPI reporting progress counts every planned KPI separately.'
+        'The KPI progress % is a separate figure that averages only the KPIs with a target.'
       );
     }
 
     return (
       `ToC achievement — QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
-      `averaged across ${scope}.${kpiNote} KPI reporting progress counts every planned KPI separately.`
+      `averaged across ${scope}.${kpiNote} The KPI progress % is a separate figure that averages only the KPIs with a target.`
     );
   }
 
@@ -1155,9 +1161,9 @@ export class ReportingAowTableComponent {
    * shows the word, not a number, and stays out of every average above it.
    */
   hasUsableTarget(row: ReportingIndicator): boolean {
-    const target = Number(row?.target_value_sum);
-
-    return Number.isFinite(target) && target > 0;
+    // One predicate for the whole shell (KTO-DD-1/DD-2): the Progress cell, the flat-table sort and the
+    // header ratio all read `reporting-burndown.hasTarget`, so they can never disagree on "has a target".
+    return hasTarget(row);
   }
 
   isOverachievedWithoutTarget(row: ReportingIndicator): boolean {
@@ -1198,37 +1204,55 @@ export class ReportingAowTableComponent {
     return Math.min(percent, 100);
   }
 
-  ratioOf(group: ReportingAowGroup): { done: number; total: number; percent: number } {
+  /**
+   * `empty` = no KPI of the ratio base has a target (KTO-R-3): the header renders `—` instead of
+   * `0 of 0 · 0%`, with the bar at 0. `percent` is already 0 then (T-1), never NaN.
+   */
+  ratioOf(group: ReportingAowGroup): { done: number; total: number; percent: number; empty: boolean } {
     const { done, total, percent } = buildRatio(this.ratioBase(group));
-    return { done, total, percent };
+    return { done, total, percent, empty: total === 0 };
   }
 
   /**
-   * `title` for the header ratio when the zero-target rule (MRF-R-7) actually excluded KPIs from
+   * The split line under the card name (KTO-R-4): `withTarget` = the targeted set the ratio counts
+   * over, `without` = ratio base rows with no target set. Same base as `ratioOf` (so Only-pending, the
+   * Centers / Types chips and the search box never move it). `line` is `''` when `without` is 0, which
+   * is the signal to render nothing and leave the header exactly as it was.
+   *
+   * @akili-spec changes/kpi-progress-target-only
+   */
+  splitOf(group: ReportingAowGroup): { withTarget: number; without: number; line: string } {
+    const { total, zeroTarget } = buildRatio(this.ratioBase(group));
+    const line = zeroTarget > 0 ? `${this.countLabel(total)} with target · ${zeroTarget} with no target set` : '';
+    return { withTarget: total, without: zeroTarget, line };
+  }
+
+  /**
+   * `title` for the header ratio when the has-a-target rule (KTO-R-2) actually excluded KPIs from
    * its denominator — `''` renders no `title` attribute at all.
    *
    * @akili-spec changes/mass-reporting-flow
    */
   ratioTitle(group: ReportingAowGroup): string {
     const { zeroTarget } = buildRatio(this.ratioBase(group));
-    return zeroTarget > 0 ? `excludes ${this.countLabel(zeroTarget, 'zero-target KPI')}` : '';
+    return zeroTarget > 0 ? `excludes ${this.countLabel(zeroTarget)} with no target set` : '';
   }
 
   /**
-   * `title` for the ratio+achievement group. Below `1100px` the achievement block itself goes
-   * `max-[1100px]:sr-only` (`OSF-T-16`) — `OSF-DD-8`'s ladder ranks shedding it first, and its own
-   * text says the shed content "stays available in the row tooltip". `sr-only`, not `hidden`:
-   * the figures must not leave the accessibility tree (`OSF-R-8`), only the visual column does.
-   * This `title` is the sighted-hover fallback for the same content, carried onto the group span
-   * that stays visible at every width — the achievement block itself is 1x1px there and
-   * unreachable by a pointer, so the fallback cannot live on it (mirrors `OSF-T-12`'s "By AOW"
-   * `title`, carried on the still-visible control rather than the thing that shrank away).
+   * `title` for the KPI ratio group in the AoW header. It used to also carry the outcomes
+   * achievement figure as the sighted-hover fallback for the achievement block (`OSF-T-16`); that
+   * block was removed from the AoW header (P2-3955, "not accurate and induce confusion").
    */
   rowTitle(group: ReportingAowGroup): string {
-    const parts = [this.ratioTitle(group)];
-    if (group.achievement) parts.push(this.achievementTooltip(group.achievement));
-    return parts.filter(Boolean).join(' ');
+    // P2-3955: the outcomes achievement block left the AoW header, and its figure left this title with it.
+    return this.ratioTitle(group);
   }
+
+  /** KPC-R-10 — the one-sentence rule, shown in the ⓘ panel of every AoW / Intermediate / 2030 card. */
+  readonly ratioRuleSentence = 'Average achievement of the KPIs with a target (achieved ÷ target, capped at 100%).';
+
+  /** KPC-R-10 — tooltip on the header `%`: the same sentence as the ⓘ panel. */
+  readonly ratioPercentTooltip = this.ratioRuleSentence;
 
   /**
    * The set both ratio readings count over. `__allIndicators` is a side-channel field the host adds
@@ -1249,6 +1273,16 @@ export class ReportingAowTableComponent {
   private ratioBase(group: ReportingAowGroup): ReportingIndicator[] {
     const base = (group as { __allIndicators?: ReportingIndicator[] }).__allIndicators ?? group.indicators ?? [];
     return base.filter(ind => ind?.__isIntermediateCrosscut !== true);
+  }
+
+  /** True while the card is loading and has no rows yet: the header then shows `group.count`, no sum. */
+  private headerPending(group: ReportingAowGroup): boolean {
+    return !!group.loading && this.ratioBase(group).length === 0;
+  }
+
+  /** Card header count (DKT-R-1): size of the card KPI set (`ratioBase`); `group.count` while loading. */
+  headerCount(group: ReportingAowGroup): string {
+    return this.countLabel(this.headerPending(group) ? group.count : this.ratioBase(group).length);
   }
 
   countLabel(n: number, noun = 'KPI'): string {

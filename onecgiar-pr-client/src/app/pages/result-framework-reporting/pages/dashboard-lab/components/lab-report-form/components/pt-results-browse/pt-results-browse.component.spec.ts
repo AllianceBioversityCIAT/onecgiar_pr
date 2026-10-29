@@ -148,6 +148,43 @@ describe('PtResultsBrowseComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-test="pt-proposal-A:1"]')).toBeNull();
   });
 
+  describe('center of the reported row (PT keeps one KPI per indicator and center)', () => {
+    it('sends the center with the request when the host gives one', () => {
+      fixture.componentRef.setInput('center', 'CIAT');
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults).toHaveBeenCalledWith(123, {}, 'CIAT');
+    });
+
+    it('while awaiting a center, shows the prompt and fetches nothing; fetches once it arrives', () => {
+      fixture.componentRef.setInput('awaitingCenter', true);
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('choose_center');
+      expect(mockResultsApiService.GET_progressTrackerResults).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('[data-test="pt-choose-center"]')).toBeTruthy();
+
+      fixture.componentRef.setInput('awaitingCenter', false);
+      fixture.componentRef.setInput('center', 'IFPRI');
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults).toHaveBeenCalledWith(123, {}, 'IFPRI');
+      expect(component.status()).toBe('not_found');
+    });
+
+    it('re-fetches when the center changes for the same indicator', () => {
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.componentRef.setInput('center', 'CIAT');
+      fixture.detectChanges();
+      fixture.componentRef.setInput('center', 'IFPRI');
+      fixture.detectChanges();
+
+      expect(mockResultsApiService.GET_progressTrackerResults.mock.calls.map(c => c[2])).toEqual(['CIAT', 'IFPRI']);
+    });
+  });
+
   describe('loading state (PTB-AC-3)', () => {
     it('renders the loading state with the Manual escape reachable next to the spinner, not hidden behind it', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(new Subject());
@@ -264,6 +301,50 @@ describe('PtResultsBrowseComponent', () => {
       expect(emitted.evidence_fingerprint).toBe('f9adbe6f47c1e67fba54eac88e3c7f50aefa75c6bf4b1bbe9359e586aa01a181');
     });
 
+    it('shows the two-step hint and marks the picked card as Selected', () => {
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      const q = (sel: string) => fixture.nativeElement.querySelector(sel);
+      expect(q('[data-test="pt-steps-hint"]').textContent.trim()).toBe('1. Pick a proposal with “Use this result” → 2. Click “Create and continue”');
+      const useBtn = q('[data-test="pt-use-this-result-8006329bfd49:1"]');
+      expect(useBtn.textContent.trim()).toBe('Use this result');
+      expect(q('[data-test="pt-proposal-selected-label"]')).toBeNull();
+
+      useBtn.click();
+      fixture.detectChanges();
+
+      expect(useBtn.textContent.trim()).toBe('Selected ✓');
+      expect(useBtn.getAttribute('aria-pressed')).toBe('true');
+      expect(q('[data-test="pt-proposal-selected-label"]').textContent).toContain('Selected');
+      expect(q('[data-test="pt-proposal-8006329bfd49:1"]').getAttribute('data-selected')).toBe('true');
+    });
+
+    it('follows the host pick when selectedResultKey is bound (Change proposal clears the highlight)', () => {
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.componentRef.setInput('selectedResultKey', '8006329bfd49:1');
+      fixture.detectChanges();
+      const useBtn = () => fixture.nativeElement.querySelector('[data-test="pt-use-this-result-8006329bfd49:1"]');
+      expect(useBtn().textContent.trim()).toBe('Selected ✓');
+
+      fixture.componentRef.setInput('selectedResultKey', null);
+      fixture.detectChanges();
+      expect(useBtn().textContent.trim()).toBe('Use this result');
+    });
+
+    it('reports how many proposals can be picked through proposalsAvailable', () => {
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
+      const counts: number[] = [];
+      component.proposalsAvailable.subscribe(n => counts.push(n));
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+      TestBed.tick();
+      fixture.detectChanges();
+      expect(counts.at(-1)).toBe(1);
+    });
+
     it('disables Use this result while busy is true', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([sampleProposal])));
 
@@ -277,6 +358,30 @@ describe('PtResultsBrowseComponent', () => {
   });
 
   describe('empty state (PTB-AC-5)', () => {
+    it('treats generated_by.mode === template as no proposals, even when results[] is filled', () => {
+      const envelope: any = okEnvelope([sampleProposal]);
+      envelope.response.generated_by = { mode: 'template', fallback_reason: 'no_evidence' };
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(envelope));
+
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('empty');
+      expect(component.proposals()).toEqual([]);
+      expect(fixture.nativeElement.querySelector('[data-test="pt-empty"]')).toBeTruthy();
+    });
+
+    it('still lists the proposals of an ai-generated envelope', () => {
+      const envelope: any = okEnvelope([sampleProposal]);
+      envelope.response.generated_by = { mode: 'ai' };
+      mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(envelope));
+
+      fixture.componentRef.setInput('tocIndicatorId', 123);
+      fixture.detectChanges();
+
+      expect(component.status()).toBe('results');
+    });
+
     it('renders the empty state, not an error, when status is ok with zero results', () => {
       mockResultsApiService.GET_progressTrackerResults.mockReturnValue(of(okEnvelope([])));
 

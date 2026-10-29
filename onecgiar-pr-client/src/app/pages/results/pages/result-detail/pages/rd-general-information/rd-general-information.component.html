@@ -47,9 +47,13 @@
     [(ngModel)]="this.generalInfoBody.result_description"
     [maxWords]="300"></app-pr-textarea>
 
+  <!-- P2-3923: the contact card has its own clear (✕) button, so it does not inherit the read-only
+       state the pr-input / pr-textarea above read from rolesSE.readOnly on their own. A Center user
+       viewing a W1/W2 pooled result could wipe the contact on a read-only page. -->
   <app-lead-contact-person-field
     [body]="this.generalInfoBody"
     [required]="this.isLeadContactPersonRequired()"
+    [readOnly]="this.rolesSE.readOnly"
     [guidanceAsTooltip]="guidanceAsTooltip()"></app-lead-contact-person-field>
   <!-- RES-DD-1: An accepted non-empty contact name satisfies completeness without demanding Active
        Directory data ("use this name anyway"). Unconfirmed typing keeps `lead_contact_person` as null,

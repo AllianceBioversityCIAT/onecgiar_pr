@@ -14,6 +14,7 @@ import { BilateralRejectionNoticeComponent } from '../bilateral-rejection-notice
 import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
 import { AiProcessesTriggerComponent } from '../ai-processes-trigger/ai-processes-trigger.component';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
+import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { resultStatusLabel, resultStatusToken } from '../../../../shared/constants/result-status-tokens';
 
 import { CenterMarkerComponent } from '../../../../shared/components/center-marker/center-marker.component';
@@ -34,6 +35,7 @@ export class BilateralPageHeaderComponent {
   readonly navSE = inject(SmartNavigationService);
   readonly dataControlSE = inject(DataControlService);
   readonly bilateralTourService = inject(BilateralTourService);
+  private readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
 
   readonly cycleYear = computed(() => {
     this.dataControlSE.reportingPhaseVersion();
@@ -225,7 +227,8 @@ export class BilateralPageHeaderComponent {
     () => ((environment as Record<string, unknown>)['bulkUploaderUrl'] as string | undefined)?.trim() ?? '',
   );
 
-  readonly showBulkCta = computed(() => !!this.bulkUploaderUrl());
+  /** RNB-2 (P2-3941): also hidden for a user who is not an admin nor a member of this centre. */
+  readonly showBulkCta = computed(() => !!this.bulkUploaderUrl() && this.manualCreateFlow.canCreateResults());
 
   /** BIL-HO-T-7: true while the handoff code is being minted — drives `[disabled]`/`aria-busy`. */
   readonly isMinting = signal(false);

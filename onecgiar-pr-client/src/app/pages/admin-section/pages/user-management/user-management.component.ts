@@ -22,6 +22,7 @@ import { DynamicPanelServiceService } from '../../../../shared/components/dynami
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { UserRolesInfoModalComponent } from '../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
+import { scienceProgramLabel, withScienceProgramLabel } from '../../../../shared/utils/science-program-label.util';
 import { GetRolesService } from '../../../../shared/services/global/get-roles.service';
 
 interface UserColumn {
@@ -249,7 +250,10 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       return match ? Number(match[1]) : -1;
     };
 
-    return [...this.initiativesService.allInitiatives()].sort((a, b) => portfolioNumber(b) - portfolioNumber(a));
+    return this.initiativesService
+      .allInitiatives()
+      .map((group: any) => ({ ...group, entities: (group?.entities ?? []).map(withScienceProgramLabel) }))
+      .sort((a, b) => portfolioNumber(b) - portfolioNumber(a));
   });
 
   /**
@@ -271,11 +275,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
     const entityNames = new Map<number, string>();
     this.initiativesService.allInitiatives().forEach((group: any) =>
-      (group?.entities ?? []).forEach((entity: any) => entityNames.set(entity.id, entity.official_code ?? entity.name))
+      (group?.entities ?? []).forEach((entity: any) => entityNames.set(entity.id, scienceProgramLabel(entity.official_code, entity.name)))
     );
-    this.selectedEntities().forEach(id =>
-      chips.push({ category: 'Entity', label: entityNames.get(id) ?? String(id), filterType: 'entity', value: id })
-    );
+    // The Entity multiselect has no optionValue, so the model holds whole option objects: look the label up by id,
+    // but keep `value` exactly as selected so removal and the search request are unchanged.
+    this.selectedEntities().forEach((selected: any) => {
+      const id = selected && typeof selected === 'object' ? selected.id : selected;
+      chips.push({ category: 'Entity', label: entityNames.get(id) ?? String(id), filterType: 'entity', value: selected });
+    });
 
     const roleName = (roles: any[], id: number): string =>
       roles.find(role => (role.role_id ?? role.id) === id)?.role_description ?? roles.find(role => (role.role_id ?? role.id) === id)?.description ?? String(id);

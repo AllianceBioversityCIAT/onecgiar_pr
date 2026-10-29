@@ -101,6 +101,10 @@ tr {
   font-weight: 700;
   letter-spacing: 0.03em;
   color: var(--pr-text-secondary);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 // Select / deselect: an outlined round "+" at rest, the brand check once the row is in the bundle.

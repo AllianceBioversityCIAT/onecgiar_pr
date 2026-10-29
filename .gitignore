@@ -73,8 +73,9 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # git worktrees de Claude Code
 .claude/worktrees/
 
-# Cursor (local IDE config)
-.cursor/
+# Cursor (local IDE config) — ignore everything except the shared AKILI agent wrappers
+.cursor/*
+!.cursor/agents/
 
 # Grok Build local agents / rules / project config (do not upload)
 .grok/

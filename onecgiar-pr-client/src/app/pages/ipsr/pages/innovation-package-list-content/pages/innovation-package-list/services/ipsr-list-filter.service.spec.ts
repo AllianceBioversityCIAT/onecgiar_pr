@@ -14,9 +14,22 @@ describe('buildIpsrProgramOptions', () => {
     const options = buildIpsrProgramOptions(initiatives);
 
     expect(options).toEqual([
-      expect.objectContaining({ official_code: 'INIT-01', displayName: 'INIT-01 Init One' }),
-      expect.objectContaining({ official_code: 'INIT-02', displayName: 'INIT-02 Init Two' })
+      expect.objectContaining({ official_code: 'INIT-01', displayName: 'INIT-01 - Init One' }),
+      expect.objectContaining({ official_code: 'INIT-02', displayName: 'INIT-02 - Init Two' })
     ]);
+  });
+
+  it('PF2-T-6: displayName is the shared CODE - Name label and the id/official_code stay untouched', () => {
+    const [option] = buildIpsrProgramOptions([{ id: 1, official_code: 'SP01', name: 'Breeding' }]);
+    expect(option.displayName).toBe('SP01 - Breeding');
+    expect(option['id']).toBe(1);
+    expect(option.official_code).toBe('SP01');
+  });
+
+  it('PF2-T-6: a name that merely repeats the code (ApiService overwrites it) is not shown twice', () => {
+    const [option] = buildIpsrProgramOptions([{ id: 2, official_code: 'SP02', name: 'SP02', initiative_name: 'Livestock' }]);
+    expect(option.displayName).toBe('SP02 - Livestock');
+    expect(buildIpsrProgramOptions([{ id: 3, official_code: 'SP03', name: 'SP03' }])[0].displayName).toBe('SP03');
   });
 
   it('excludes a source row that has no official_code', () => {
@@ -34,7 +47,7 @@ describe('buildIpsrProgramOptions', () => {
   it('falls back to official_code + short_name when official_code_short_name is missing', () => {
     const options = buildIpsrProgramOptions([{ initiative_id: 3, official_code: 'INIT-03', short_name: 'Third' }]);
 
-    expect(options[0].displayName).toBe('INIT-03 Third');
+    expect(options[0].displayName).toBe('INIT-03 - Third');
   });
 
   it('returns an empty array for an empty source list', () => {
@@ -234,9 +247,9 @@ describe('IpsrListFilterService', () => {
     beforeEach(() => configure([]));
 
     it('populates programOptions from a known initiatives fixture', () => {
-      service.updateMyInitiatives([{ initiative_id: 1, official_code: 'INIT-01', official_code_short_name: 'INIT-01 Init One' }]);
+      service.updateMyInitiatives([{ initiative_id: 1, official_code: 'INIT-01', short_name: 'Init One' }]);
 
-      expect(service.programOptions()).toEqual([expect.objectContaining({ official_code: 'INIT-01', displayName: 'INIT-01 Init One' })]);
+      expect(service.programOptions()).toEqual([expect.objectContaining({ official_code: 'INIT-01', displayName: 'INIT-01 - Init One' })]);
     });
 
     it('resets to an empty array when called with an empty list', () => {

@@ -133,8 +133,17 @@ export class FieldCardComponent implements OnInit, OnChanges {
 
   private static readonly JUST_SAVED_MS = 4000;
 
+  /**
+   * P2-3982 — over the word limit only matters where the text can be cut. A read-only field (a
+   * Knowledge Product description brought from the repository) went red on a form the user could
+   * not change, and QA read it as an AI quality-check verdict.
+   */
+  get showsError(): boolean {
+    return this.hasError && !this.readOnly;
+  }
+
   get state(): FieldCardState {
-    if (this.hasError) return 'error';
+    if (this.showsError) return 'error';
     if (this.readOnly) return 'plain';
     if (this.hasValue === null || this.hasValue === undefined) return 'plain';
     if (this.hasValue) return this.required ? 'ok' : 'opt';
@@ -198,7 +207,7 @@ export class FieldCardComponent implements OnInit, OnChanges {
 
     const wasComplete = change.previousValue === true;
     const isComplete = change.currentValue === true;
-    if (!wasComplete && isComplete && this.edited() && !this.hasError) {
+    if (!wasComplete && isComplete && this.edited() && !this.showsError) {
       // Sale del NOMBRE del campo, no de la cabecera entera: la cabecera es una franja de ancho
       // completo y su centro cae en medio de la nada, lejos del texto que el usuario acaba de
       // resolver. El punto tiene que salir de donde está mirando.

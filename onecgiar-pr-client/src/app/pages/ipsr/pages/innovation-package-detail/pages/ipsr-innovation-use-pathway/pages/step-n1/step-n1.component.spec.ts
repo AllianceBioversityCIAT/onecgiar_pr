@@ -646,4 +646,13 @@ describe('StepN1Component', () => {
       expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
     });
   });
+
+  describe('coreLabel() (PF2 S1 core chip)', () => {
+    it('builds `CODE - Name`, falling back to the code', () => {
+      component.coreResult = { official_code: 'SP05', initiative_name: 'Better Diets' } as any;
+      expect(component.coreLabel()).toBe('SP05 - Better Diets');
+      component.coreResult = { official_code: 'SP05' } as any;
+      expect(component.coreLabel()).toBe('SP05');
+    });
+  });
 });

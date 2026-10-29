@@ -19,6 +19,7 @@ import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } 
 import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 import { PROJECT_CENTER_FILTER_COPY } from '../../../../../../internationalization/project-center-filter.copy';
+import { scienceProgramLabel } from '../../../../../../shared/utils/science-program-label.util';
 import {
   ALL_PROJECT_CENTERS,
   ProjectCenterFilter,
@@ -292,10 +293,12 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
   }
 
   toggleLinkedResultsPanel() {
+    if (this.api.rolesSE.readOnly) return;
     this.isLinkedResultsPanelExpanded = !this.isLinkedResultsPanelExpanded;
   }
 
   toggleResultSelection(id: number) {
+    if (this.api.rolesSE.readOnly) return;
     // Reassign a NEW array reference (not push/splice in place) — same convention already used by
     // `deleteContributingCenter`/`deleteScience` in this file, and load-bearing here now: it's what
     // lets `selectedLinkedResultIds` above detect the change via `!==` instead of re-scanning.
@@ -305,6 +308,7 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
   }
 
   clearLinkedResultsSelection() {
+    if (this.api.rolesSE.readOnly) return;
     this.rdPartnersSE.partnersBody.linked_results = [];
   }
 
@@ -702,6 +706,14 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
+  // ----- P2-3201 / P2-4010 (2026): approved copy from CGIAR System Org (INC-158283), 2026 portfolio only -----
+  readonly CLARISA_GLOSSARY_URL = 'https://clarisa.cgiar.org/clarisa-panel/documentation/One_CGIAR_Control_List/General_Control_List/Glossary';
+  readonly contributorDefinitionNote = `As defined in the <a class="open_route" href="${this.CLARISA_GLOSSARY_URL}" target="_blank" rel="noopener">CGIAR CLARISA Glossary</a>, a contributor is a partner — internal or external to CGIAR — that has made a significant contribution to the achievement of a result. Contributions may take many forms and the threshold for attribution is that the result would not have been achieved, or reported in its current form, without that partner's contribution.`;
+  readonly bilateralProjectsInfoNote =
+    'The dropdown list includes only the W3/Bilateral projects that were mapped to and agreed by the P/A during the 2026 mapping exercise.';
+  readonly selfRegistrationNote =
+    'The P/A submitting the result is automatically recorded as a contributor. You do not need to add your own P/A to the list of contributors.';
+
   // ----- P2-2929 (2026): Contributing Science Program/Accelerator split (VISUAL ONLY; pending/save deferred per Juan David) -----
   readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
   // QA 2026-07-14: wording unified with the Report-result popup (aow-hlo-create-modal) — keep both in sync.
@@ -747,6 +759,12 @@ export class RdContributorsAndPartnersComponent implements OnInit, OnDestroy, Ca
     ...this.referenceScience(),
     { id: this.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)', full_name: '<strong>Other(s) Science Program(s)</strong>' }
   ]);
+
+  /** Chip text: the shared P/A label (`SP01 - Name`); the "Other(s)" sentinel keeps its own text. */
+  spChipLabel(sp: any): string {
+    if (sp?.id === this.OTHER_SP_CODE) return sp?.official_code ?? '';
+    return scienceProgramLabel(sp?.official_code, sp?.name, sp?.initiative_name, sp?.short_name);
+  }
 
   get showOtherScience(): boolean {
     return (this.rdPartnersSE.scienceSelected || []).some(sp => sp.id === this.OTHER_SP_CODE);

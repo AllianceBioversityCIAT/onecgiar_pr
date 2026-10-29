@@ -62,6 +62,13 @@ describe('ResultsToUpdateModalComponent', () => {
     expect(apiMock.dataControlSE.updateResultModal).toBe(false);
   });
 
+  it('submitterLabel renders CODE - Name, code only, or empty', () => {
+    expect(component.submitterLabel({ submitter: 'SP10', submitter_name: 'Gender' } as any)).toBe('SP10 - Gender');
+    expect(component.submitterLabel({ submitter: 'SP10' } as any)).toBe('SP10');
+    expect(component.submitterLabel({} as any)).toBe('');
+    expect(component.submitterLabel({ submitter: 'SGP-02', initiative_name: 'X' } as any)).toBe('SGP-02 - X');
+  });
+
   it('viewResultHref builds result detail URL with phase', () => {
     expect(component.viewResultHref({ result_code: 9088, version_id: 36 })).toBe('/result/result-detail/9088?phase=36');
   });

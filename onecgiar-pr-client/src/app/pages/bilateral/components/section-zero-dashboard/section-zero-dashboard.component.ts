@@ -9,6 +9,7 @@ import {
   BilateralProject,
   ScienceProgramMapping,
 } from '../../services/bilateral-creation.interfaces';
+import { bilateralProgramLabel } from '../../shared/bilateral-program-label.util';
 import { BILATERAL_PRIMARY_ASSIGNMENT_COPY } from '../../../../internationalization/bilateral-primary-assignment.copy';
 
 /** P2-3352 § 6: "Default value: 100". Applied on screen when nothing was ever stored. */
@@ -83,6 +84,15 @@ export class SectionZeroDashboardComponent {
   );
 
   /**
+   * Banner text for an SP code: `SP03 - Animal` when the name is already loaded in the bilateral
+   * context (selected project's programs, primary, secondaries), the bare code otherwise
+   * (`program-full-names-labels-part-2` DD-5 — the payload is not extended).
+   */
+  programBannerLabel(code: string | null | undefined): string {
+    return bilateralProgramLabel(code, this.creationService);
+  }
+
+  /**
    * PSR-R-15 banner. `null` only while `accepted` (nothing to tell the Center about) or before the
    * first read resolves. `pending`/`accepted` carry `program_code`; `sent_back` never does
    * (`PrimaryProgramRequestService.stateFor`) — its SP code(s) come from `declined_by_codes`
@@ -93,13 +103,13 @@ export class SectionZeroDashboardComponent {
     const request = this.primaryRequest();
     if (!request) return null;
     if (request.state === 'pending') {
-      const code = request.program_code ?? '';
+      const code = this.programBannerLabel(request.program_code);
       return { tone: 'info' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.pending(code) };
     }
     if (request.state === 'sent_back') {
       const codes = request.declined_by_codes.length
-        ? request.declined_by_codes.join(', ')
-        : request.program_code ?? '';
+        ? request.declined_by_codes.map((code) => this.programBannerLabel(code)).join(', ')
+        : this.programBannerLabel(request.program_code);
       // PDR-R-9 / PDR-DD-8: once the result is read-only, "sent_back" means Rejected (final),
       // not an awaiting-re-pick round — old sent-back results (not read-only) keep today's banner.
       // Spec tone "danger" maps to `app-alert-status`'s `'error'` (its most severe status; the
@@ -115,7 +125,7 @@ export class SectionZeroDashboardComponent {
       return { tone: 'warning' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.noneUnpicked };
     }
     if (request.state === 'draft') {
-      const code = request.program_code ?? '';
+      const code = this.programBannerLabel(request.program_code);
       return { tone: 'info' as const, message: BILATERAL_PRIMARY_ASSIGNMENT_COPY.banner.draft(code) };
     }
     return null;
@@ -144,6 +154,8 @@ export class SectionZeroDashboardComponent {
   readonly singleAllocationNote = BILATERAL_PRIMARY_ASSIGNMENT_COPY.singleAllocationNote;
 
   readonly declinedOptionSuffix = BILATERAL_PRIMARY_ASSIGNMENT_COPY.declinedOptionSuffix;
+  /** PAA-R-6 — shown in the no-lead-project state. */
+  readonly noProjectLinkHint = BILATERAL_PRIMARY_ASSIGNMENT_COPY.noProjectLinkHint;
 
   constructor() {
     effect(() => {
@@ -176,6 +188,11 @@ export class SectionZeroDashboardComponent {
   readonly assignmentPrimary = computed(() => {
     const pending = this.pendingPrimary();
     if (pending) return pending;
+    // PAA-T-1 / design.md P-4: fires only when the result has NO lead project (selectedProject() is
+    // null) and no primary was chosen in this session. Then the stored (2025) P/A is only "current":
+    // it is never presented as the selected Program, even when the picked project includes it, so
+    // the label always agrees with requiresPrimarySelection() / Save.
+    if (!this.creationService.selectedProject()) return null;
     const project = this.assignmentProject();
     const current = this.creationService.selectedPrimarySp();
     // P2-3807 — the persisted primary is hydrated with the CLARISA initiative id (52), while the

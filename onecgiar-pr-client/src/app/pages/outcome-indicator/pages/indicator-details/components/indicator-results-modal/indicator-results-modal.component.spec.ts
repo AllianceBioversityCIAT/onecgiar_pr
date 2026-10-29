@@ -55,6 +55,15 @@ describe('IndicatorResultsModalComponent', () => {
   });
 
   describe('handleAddIndicator', () => {
+    it('maps submitter_name into result_submitter_name for a row added from the modal (M3)', () => {
+      component.handleAddIndicator({ is_saved: false, is_added: false, id: '7', submitter: 'SP01', submitter_name: 'Breeding' });
+
+      const updateFn = (component.indicatorDetailsService.indicatorData.update as jest.Mock).mock.calls[0][0];
+      const added = updateFn({ contributing_results: [] }).contributing_results[0];
+      expect(added.result_submitter).toBe('SP01');
+      expect(added.result_submitter_name).toBe('Breeding');
+    });
+
     it('should not update if result is already saved', () => {
       const result = { is_saved: true };
 

@@ -3,6 +3,15 @@ import { ResultsFrameworkReportingController } from './results-framework-reporti
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ResultsService } from '../results/results.service';
 import { ReportingEntryHubService } from './services/reporting-entry-hub.service';
+import {
+  GUARDS_METADATA,
+  METHOD_METADATA,
+  PATH_METADATA,
+} from '@nestjs/common/constants';
+import { RequestMethod } from '@nestjs/common';
+import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { RoleEnum, RoleTypeEnum } from '../../shared/constants/role-type.enum';
 
 describe('ResultsFrameworkReportingController', () => {
   let controller: ResultsFrameworkReportingController;
@@ -26,7 +35,15 @@ describe('ResultsFrameworkReportingController', () => {
             createResultFromFramework: jest.fn(),
             getExistingResultContributorsToIndicators: jest.fn(),
             getDashboardStats: jest.fn(),
+            getPortfolioTocCoverage: jest.fn(),
+            getPortfolioBilateralProjects: jest.fn(),
+            getPortfolioResultDimensions: jest.fn(),
           },
+        },
+        // ValidRoleGuard (TKP-T-2) is instantiated with the controller's module.
+        {
+          provide: RoleByUserRepository,
+          useValue: { $_isValidRole: jest.fn() },
         },
         {
           provide: ResultsService,
@@ -81,6 +98,167 @@ describe('ResultsFrameworkReportingController', () => {
       expect(resultsService.getScienceProgramProgress).toHaveBeenCalledWith(
         user,
         5,
+      );
+    });
+  });
+
+  describe('getPortfolioBilateralProjects (WPS-T-2)', () => {
+    const handler = () =>
+      ResultsFrameworkReportingController.prototype
+        .getPortfolioBilateralProjects;
+
+    it('is mounted at GET portfolio/bilateral-projects', () => {
+      expect(Reflect.getMetadata(PATH_METADATA, handler())).toBe(
+        'portfolio/bilateral-projects',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler())).toBe(
+        RequestMethod.GET,
+      );
+    });
+
+    it('carries the ValidRoleGuard and the Admin application role metadata (presence only)', () => {
+      expect(Reflect.getMetadata(GUARDS_METADATA, handler())).toEqual([
+        ValidRoleGuard,
+      ]);
+      expect(Reflect.getMetadata('role', handler())).toEqual({
+        roles: RoleEnum.ADMIN,
+        type: RoleTypeEnum.APPLICATION,
+      });
+    });
+
+    it.each([
+      ['7', 7],
+      [undefined, undefined],
+      ['', undefined],
+      ['   ', undefined],
+      ['abc', undefined],
+      ['0', undefined],
+      ['-3', undefined],
+    ])('passes versionId %p to the service as %p', (raw, expected) => {
+      controller.getPortfolioBilateralProjects(raw as any);
+      expect(
+        reportingService.getPortfolioBilateralProjects,
+      ).toHaveBeenCalledWith(expected);
+    });
+
+    it('returns what the service returns', async () => {
+      const payload = { response: {}, status: 200 } as any;
+      reportingService.getPortfolioBilateralProjects.mockResolvedValue(payload);
+      expect(await controller.getPortfolioBilateralProjects('1')).toBe(payload);
+    });
+  });
+
+  describe('getPortfolioResultDimensions (GLF-T-1)', () => {
+    const handler = () =>
+      ResultsFrameworkReportingController.prototype
+        .getPortfolioResultDimensions;
+
+    it('is mounted at GET portfolio/result-dimensions', () => {
+      expect(Reflect.getMetadata(PATH_METADATA, handler())).toBe(
+        'portfolio/result-dimensions',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler())).toBe(
+        RequestMethod.GET,
+      );
+    });
+
+    it('carries the ValidRoleGuard and the Admin application role metadata (GLF-R-12, presence only)', () => {
+      expect(Reflect.getMetadata(GUARDS_METADATA, handler())).toEqual([
+        ValidRoleGuard,
+      ]);
+      expect(Reflect.getMetadata('role', handler())).toEqual({
+        roles: RoleEnum.ADMIN,
+        type: RoleTypeEnum.APPLICATION,
+      });
+    });
+
+    it.each([
+      ['7', 7],
+      [undefined, undefined],
+      ['', undefined],
+      ['   ', undefined],
+      ['abc', undefined],
+      ['0', undefined],
+      ['-3', undefined],
+    ])('passes versionId %p to the service as %p', (raw, expected) => {
+      controller.getPortfolioResultDimensions(raw as any);
+      expect(
+        reportingService.getPortfolioResultDimensions,
+      ).toHaveBeenCalledWith(expected);
+    });
+
+    it('returns what the service returns', async () => {
+      const payload = { response: {}, status: 200 } as any;
+      reportingService.getPortfolioResultDimensions.mockResolvedValue(payload);
+      expect(await controller.getPortfolioResultDimensions('1')).toBe(payload);
+    });
+  });
+
+  describe('getPortfolioTocCoverage (TKP-T-2)', () => {
+    const handler = () =>
+      ResultsFrameworkReportingController.prototype.getPortfolioTocCoverage;
+
+    it('is mounted at GET toc-results/portfolio-coverage', () => {
+      expect(Reflect.getMetadata(PATH_METADATA, handler())).toBe(
+        'toc-results/portfolio-coverage',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler())).toBe(
+        RequestMethod.GET,
+      );
+    });
+
+    it('carries the ValidRoleGuard and the Admin application role metadata (S-8.1, presence only)', () => {
+      expect(Reflect.getMetadata(GUARDS_METADATA, handler())).toEqual([
+        ValidRoleGuard,
+      ]);
+      expect(Reflect.getMetadata('role', handler())).toEqual({
+        roles: RoleEnum.ADMIN,
+        type: RoleTypeEnum.APPLICATION,
+      });
+    });
+
+    it('passes undefined when versionId is absent', () => {
+      reportingService.getPortfolioTocCoverage.mockResolvedValueOnce({} as any);
+
+      controller.getPortfolioTocCoverage();
+
+      expect(reportingService.getPortfolioTocCoverage).toHaveBeenCalledWith(
+        undefined,
+      );
+    });
+
+    it('coerces versionId to a number', () => {
+      reportingService.getPortfolioTocCoverage.mockResolvedValueOnce({} as any);
+
+      controller.getPortfolioTocCoverage('12');
+
+      expect(reportingService.getPortfolioTocCoverage).toHaveBeenCalledWith(12);
+    });
+
+    it('treats a non-numeric versionId as absent, never as NaN', () => {
+      reportingService.getPortfolioTocCoverage.mockResolvedValue({} as any);
+
+      controller.getPortfolioTocCoverage('abc');
+
+      expect(reportingService.getPortfolioTocCoverage).toHaveBeenCalledWith(
+        undefined,
+      );
+      const arg = reportingService.getPortfolioTocCoverage.mock.calls[0][0];
+      expect(Number.isNaN(arg as number)).toBe(false);
+    });
+
+    it.each([
+      ['an empty string', ''],
+      ['a whitespace-only string', '   '],
+      ['zero', '0'],
+      ['a negative number', '-3'],
+    ])('treats %s as an absent versionId (design 4.1)', (_label, raw) => {
+      reportingService.getPortfolioTocCoverage.mockResolvedValue({} as any);
+
+      controller.getPortfolioTocCoverage(raw);
+
+      expect(reportingService.getPortfolioTocCoverage).toHaveBeenCalledWith(
+        undefined,
       );
     });
   });

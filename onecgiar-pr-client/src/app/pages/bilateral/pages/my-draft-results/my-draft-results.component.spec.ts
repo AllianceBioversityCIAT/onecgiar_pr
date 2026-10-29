@@ -1,17 +1,43 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { convertToParamMap, RouterModule, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, RouterModule, provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { of } from 'rxjs';
+import { BehaviorSubject, of, Subject } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { PrTooltipDirective } from '../../../../shared/directives/pr-tooltip.directive';
 import { MyDraftResultsComponent } from './my-draft-results.component';
+
+/**
+ * Jest replaces `@spartan-ng/brain/*` with a mock that has no BrnCheckbox, so the real
+ * `hlm-checkbox` cannot even be compiled here. This stand-in keeps the public contract the template
+ * uses (`aria-label`, `checked`, `indeterminate`, `checkedChange`) as a role=checkbox button.
+ */
+jest.mock('@spartan/checkbox', () => {
+  const { Component, EventEmitter } = jest.requireActual('@angular/core');
+  class HlmCheckboxStub {
+    ariaLabel = '';
+    checked = false;
+    indeterminate = false;
+    checkedChange = new EventEmitter();
+  }
+  Component({
+    selector: 'hlm-checkbox',
+    inputs: ['checked', 'indeterminate', { name: 'ariaLabel', alias: 'aria-label' }],
+    outputs: ['checkedChange'],
+    template: `<button type="button" role="checkbox" [attr.aria-label]="ariaLabel" [attr.aria-checked]="indeterminate ? 'mixed' : checked" (click)="checkedChange.emit(!(checked && !indeterminate))"></button>`,
+  })(HlmCheckboxStub);
+  return { HlmCheckboxImports: [HlmCheckboxStub] };
+});
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { DraftSpotlightService } from '../../services/draft-spotlight.service';
+import { BilateralTourService } from '../../services/bilateral-tour.service';
 import { RolesService } from '../../../../shared/services/global/roles.service';
+import { BILATERAL_AI_PROCESSES_COPY } from '../../../../internationalization/bilateral-ai-processes.copy';
 
 /** A Center User assignment for the centre every test in this file opens as (see `ctx.setCenter`). */
 const CIAT_MEMBER = { center_id: 'CIAT_CODE', center_acronym: 'CIAT', role_name: 'Center User', role_id: 9 };
@@ -250,12 +276,13 @@ describe('MyDraftResultsComponent', () => {
       const colgroup = fixture.debugElement.query(By.css('.mdr-session-table colgroup'));
       expect(colgroup).toBeTruthy();
       const cols = colgroup.queryAll(By.css('col'));
-      expect(cols.length).toBe(5);
-      expect(cols[0].nativeElement.classList.contains('mdr-col-title')).toBe(true);
-      expect(cols[1].nativeElement.classList.contains('mdr-col-category')).toBe(true);
-      expect(cols[2].nativeElement.classList.contains('mdr-col-level')).toBe(true);
-      expect(cols[3].nativeElement.classList.contains('mdr-col-status')).toBe(true);
-      expect(cols[4].nativeElement.classList.contains('mdr-col-actions')).toBe(true);
+      // ABD-T-3: a Center member gets a leading checkbox column, so the named columns shift by one.
+      expect(cols.length).toBe(6);
+      expect(cols[1].nativeElement.classList.contains('mdr-col-title')).toBe(true);
+      expect(cols[2].nativeElement.classList.contains('mdr-col-category')).toBe(true);
+      expect(cols[3].nativeElement.classList.contains('mdr-col-level')).toBe(true);
+      expect(cols[4].nativeElement.classList.contains('mdr-col-status')).toBe(true);
+      expect(cols[5].nativeElement.classList.contains('mdr-col-actions')).toBe(true);
     });
 
     it('keeps the status chip and Review control in separate table cells (responsive overlap fix)', () => {
@@ -1326,6 +1353,953 @@ describe('MyDraftResultsComponent', () => {
 
       expect(component.isCenterMember()).toBe(false);
       expect(fixture.nativeElement.querySelector('.mdr-aside-footer')).toBeNull();
+    });
+  });
+
+  // ABD-T-3 — bulk discard selection UI. DOM-driven: ticks the rendered checkboxes and clicks the buttons.
+  describe('ABD-T-3 — select drafts and discard them in bulk', () => {
+    const mk = (id: number, job: string, title: string) =>
+      ({ ...draftStub, id, job_id: job, extracted_mds: { title, indicator: 'X' }, job: { ...(draftStub as any).job, job_id: job } }) as unknown as BilateralAiDraft;
+    const A = ['a1', 'a2', 'a3', 'a4'].map((t, i) => mk(i + 1, 'job-a', `${i < 3 ? 'keep' : 'hide'} ${t}`));
+    const B = [mk(11, 'job-b', 'keep b1'), mk(12, 'job-b', 'keep b2')];
+    const boxes = () => Array.from(fixture.nativeElement.querySelectorAll('tbody [role="checkbox"]')) as HTMLElement[];
+    const cardBox = (card: number) =>
+      fixture.nativeElement.querySelectorAll('[data-testid="mdr-session-card"]')[card].querySelector('.mdr-session-header [role="checkbox"]') as HTMLElement;
+    const tick = (el: HTMLElement) => { el.click(); fixture.detectChanges(); };
+    const q = (id: string) => fixture.nativeElement.querySelector(`[data-testid="${id}"]`) as HTMLButtonElement | null;
+    const count = () => q('mdr-bulk-count')?.textContent?.trim();
+
+    beforeEach(() => {
+      bilateralAiService.draftList.set([...A, ...B]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+    });
+
+    it('ABD-R-2 rework: bar is viewport-fixed with a spacer and destructive discard while selected; both gone after Clear', () => {
+      expect(q('mdr-bulk-bar')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="mdr-bulk-spacer"]')).toBeNull();
+      tick(boxes()[0]);
+      const wrap = fixture.nativeElement.querySelector('[data-testid="mdr-bulk-bar-wrap"]') as HTMLElement;
+      expect(wrap.classList.contains('fixed')).toBe(true);
+      expect(wrap.classList.contains('bottom-[12px]')).toBe(true);
+      expect(wrap.contains(q('mdr-bulk-bar'))).toBe(true);
+      expect(fixture.nativeElement.querySelector('[data-testid="mdr-bulk-spacer"]')).not.toBeNull();
+      expect(q('mdr-bulk-discard')!.className).toContain('--pr-color-red-300');
+      expect((fixture.nativeElement.querySelector('tbody hlm-checkbox') as HTMLElement).className).toContain('size-[16px]');
+      const rowCls = (fixture.nativeElement.querySelector('tbody hlm-checkbox') as HTMLElement).className;
+      const hdrCls = (fixture.nativeElement.querySelector('.mdr-session-header hlm-checkbox') as HTMLElement).className;
+      expect(hdrCls).toContain('data-[state=indeterminate]:bg-[var(--pr-color-primary-50)]');
+      expect(hdrCls).not.toContain('indeterminate]:bg-primary');
+      expect(rowCls).not.toContain('indeterminate');
+      expect(wrap.className).toContain('md:group-has-[[data-collapsible=icon]]/sidebar-wrapper:left-[var(--sidebar-width-icon,64px)]');
+      tick(q('mdr-bulk-clear')!);
+      expect(q('mdr-bulk-bar')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="mdr-bulk-bar-wrap"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="mdr-bulk-spacer"]')).toBeNull();
+    });
+
+    it('S-1.1/1.3/3.1/3.2: ticking rows shows the bar with a named checkbox; Clear empties it; no new brand button', () => {
+      const brandBefore = fixture.nativeElement.querySelectorAll('button.bg-primary').length;
+      expect(q('mdr-bulk-bar')).toBeNull();
+      expect(boxes()[0].getAttribute('aria-label')).toContain('keep a1');
+      boxes().slice(0, 3).forEach(tick);
+      expect(count()).toBe('3 selected');
+      expect(fixture.nativeElement.querySelectorAll('button.bg-primary').length).toBe(brandBefore);
+      tick(q('mdr-bulk-clear')!);
+      expect(q('mdr-bulk-bar')).toBeNull();
+    });
+
+    it('S-1.2: a non-member sees no checkbox or bar, and Review still opens the panel', () => {
+      component.api.rolesSE.applyRolesResponse({ center: [], application: { role_id: 1 } });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('[role="checkbox"]').length).toBe(0);
+      expect(q('mdr-bulk-bar')).toBeNull();
+      (fixture.nativeElement.querySelector('.mdr-btn--review') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(component.selectedDraft()).not.toBeNull();
+    });
+
+    it('S-2.1/2.2: the card checkbox selects only its card, shows indeterminate, and toggles only that card', () => {
+      tick(cardBox(1));
+      expect(count()).toBe('2 selected');
+      tick(cardBox(1));
+      expect(q('mdr-bulk-bar')).toBeNull();
+      boxes().slice(0, 3).forEach(tick); // 3 of 4 in card A
+      expect(cardBox(0).getAttribute('aria-checked')).toBe('mixed');
+      tick(cardBox(0));
+      expect(count()).toBe('4 selected');
+      tick(cardBox(0));
+      expect(q('mdr-bulk-bar')).toBeNull();
+    });
+
+    it('S-2.3: with a filter hiding one draft, the card checkbox selects only the visible ones', () => {
+      component.filter.setSearchText('keep');
+      fixture.detectChanges();
+      tick(cardBox(0));
+      expect(count()).toBe('3 selected');
+      expect([...component.selectedIds()]).not.toContain(4);
+    });
+
+    it('S-7.1: changing a filter clears the selection, repeatedly', () => {
+      boxes().slice(0, 3).forEach(tick);
+      component.filter.setSearchText('keep');
+      fixture.detectChanges();
+      expect(q('mdr-bulk-bar')).toBeNull();
+      tick(boxes()[0]);
+      component.filter.setSearchText('keep a');
+      fixture.detectChanges();
+      expect(q('mdr-bulk-bar')).toBeNull();
+    });
+
+    it('S-4.1/4.2/6.1: confirm sends one call with the exact ids; cancel sends nothing and keeps the selection', () => {
+      const spy = jest.spyOn(bilateralAiService, 'discardDrafts').mockReturnValue(of({ discarded: [1, 2], failed: [] }));
+      boxes().slice(0, 2).forEach(tick);
+      tick(q('mdr-bulk-discard')!);
+      expect(fixture.nativeElement.textContent).toContain('Discard 2 draft results?');
+      tick(q('mdr-bulk-cancel')!);
+      expect(spy).not.toHaveBeenCalled();
+      expect(count()).toBe('2 selected');
+      tick(q('mdr-bulk-discard')!);
+      tick(q('mdr-bulk-confirm')!);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith([1, 2]);
+      expect(q('mdr-bulk-bar')).toBeNull();
+    });
+
+    it('S-6.2: failed ids stay selected (string ids normalized); S-6.3: a null result keeps the selection', () => {
+      const spy = jest.spyOn(bilateralAiService, 'discardDrafts').mockReturnValueOnce(of({ discarded: [1], failed: [{ id: '2' as any, reason: 'x' }] }));
+      boxes().slice(0, 2).forEach(tick);
+      tick(q('mdr-bulk-discard')!);
+      tick(q('mdr-bulk-confirm')!);
+      expect([...component.selectedIds()]).toEqual([2]);
+      spy.mockReturnValueOnce(of(null));
+      tick(q('mdr-bulk-discard')!);
+      tick(q('mdr-bulk-confirm')!);
+      expect([...component.selectedIds()]).toEqual([2]);
+      expect(component.isBulkDiscarding()).toBe(false);
+    });
+
+    it('S-6.4: while the request is in flight confirm is disabled and a second click sends nothing', () => {
+      const pending = new Subject<any>();
+      const spy = jest.spyOn(bilateralAiService, 'discardDrafts').mockReturnValue(pending);
+      tick(boxes()[0]);
+      tick(q('mdr-bulk-discard')!);
+      tick(q('mdr-bulk-confirm')!);
+      expect(q('mdr-bulk-confirm')!.disabled).toBe(true);
+      expect(q('mdr-bulk-discard')!.disabled).toBe(true);
+      q('mdr-bulk-confirm')!.click();
+      expect(spy).toHaveBeenCalledTimes(1);
+      pending.next({ discarded: [1], failed: [] });
+      fixture.detectChanges();
+      expect(component.isBulkDiscarding()).toBe(false);
+    });
+  });
+
+  // @akili-spec bilateral/ai-draft-new-indicator (ADN-T-2)
+  describe('ADN-T-2 — "New" badge for freshly generated own jobs (ADN-R-1..R-5)', () => {
+    const JOB_A = 'aaaaaaaa-0000-0000-0000-00000000000a';
+    const JOB_B = 'bbbbbbbb-0000-0000-0000-00000000000b';
+    const JOB_C = 'cccccccc-0000-0000-0000-00000000000c';
+    const JOB_D = 'dddddddd-0000-0000-0000-00000000000d';
+    const NEW_BADGE = '[data-testid="mdr-session-new-badge"]';
+
+    const draftOf = (id: number, jobId: string, userId: number, title = `Alpha ${id}`): BilateralAiDraft =>
+      ({
+        ...draftStub,
+        id,
+        job_id: jobId,
+        extracted_mds: { title, indicator: 'Capacity Sharing' },
+        job: { ...(draftStub as any).job, job_id: jobId, user_id: userId },
+      }) as unknown as BilateralAiDraft;
+
+    const draftA = draftOf(1, JOB_A, 42);
+    const draftB = draftOf(2, JOB_B, 42); // own, but NOT fresh
+    const draftC = draftOf(3, JOB_C, 99); // teammate's, not fresh
+    const draftD = draftOf(4, JOB_D, 42);
+
+    let consumeSpy: jest.SpyInstance;
+
+    const setFresh = (...ids: string[]) => bilateralAiService.freshDraftJobIds.set(new Set(ids));
+    const badges = () => Array.from(fixture.nativeElement.querySelectorAll(NEW_BADGE)) as HTMLElement[];
+    const consumedIds = () => consumeSpy.mock.calls.flatMap(call => Array.from(call[0] as Iterable<string>)).sort();
+
+    beforeEach(() => {
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      consumeSpy = jest.spyOn(bilateralAiService, 'consumeFreshDraftJobs');
+      bilateralAiService.isDraftListLoaded.set(true);
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('user');
+    });
+
+    it('1 — marks only the fresh group; B (own) and C (teammate) stay unmarked; text, hidden icon, sr-only suffix', () => {
+      bilateralAiService.draftList.set([draftA, draftB, draftC]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+
+      const groups = component.sessionGroups();
+      expect(groups.find(g => g.sessionId === JOB_A)?.isNew).toBe(true);
+      expect(groups.find(g => g.sessionId === JOB_B)?.isNew).toBe(false);
+      expect(groups.find(g => g.sessionId === JOB_C)?.isNew).toBe(false);
+
+      // Disqualifier guard: the selector must match a real element (>= 1) in the positive case.
+      expect(badges().length).toBe(1);
+      const badge = badges()[0];
+      expect(badge.closest('[data-testid="mdr-session-card"]')?.id).toBe(`mdr-session-${JOB_A}`);
+      expect(badge.textContent).toContain('New');
+      expect(badge.querySelector('i.material-icons-round')?.getAttribute('aria-hidden')).toBe('true');
+      expect(badge.querySelector('.sr-only')?.textContent?.trim()).toBe(BILATERAL_AI_PROCESSES_COPY.drafts.newBadge.srSuffix);
+      // Leading space so the accessible name reads "New generated…" without relying on flex blockification.
+      expect(badge.querySelector('.sr-only')?.textContent?.startsWith(' ')).toBe(true);
+    });
+
+    it('1b — the draft-<id> fallback group is never new', () => {
+      const orphan = { ...draftA, id: 77, job_id: undefined, job: undefined } as unknown as BilateralAiDraft;
+      bilateralAiService.draftList.set([orphan]);
+      setFresh('draft-77');
+      fixture.detectChanges();
+      expect(component.sessionGroups()[0].sessionId).toBe('draft-77');
+      expect(component.sessionGroups()[0].isNew).toBe(false);
+      expect(badges().length).toBe(0);
+    });
+
+    it('2 — two fresh own jobs render two badges', () => {
+      bilateralAiService.draftList.set([draftA, draftB, draftD]);
+      setFresh(JOB_A, JOB_D);
+      fixture.detectChanges();
+      expect(badges().length).toBe(2);
+    });
+
+    it('3 — a list swap that adds the new job keeps search, project filter and the open Review aside', () => {
+      bilateralAiService.draftList.set([draftB]);
+      fixture.detectChanges();
+      component.filter.setSearchText('Alpha');
+      component.filter.setProjects(['7']);
+      component.selectedDraft.set(draftB);
+      fixture.detectChanges();
+      expect(badges().length).toBe(0);
+
+      setFresh(JOB_A);
+      bilateralAiService.draftList.set([draftA, draftB]);
+      fixture.detectChanges();
+
+      expect(component.filter.searchText()).toBe('Alpha');
+      expect(component.filter.selectedProjectIds()).toEqual(['7']);
+      expect(component.selectedDraft()).toBe(draftB);
+      expect(badges().length).toBe(1);
+    });
+
+    it('4 — Review open/close, a filter change and discarding another draft keep the mark and never consume', () => {
+      jest.spyOn(bilateralAiService, 'discardDraft').mockImplementation();
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+      expect(badges().length).toBe(1);
+
+      component.onReview(draftA);
+      fixture.detectChanges();
+      component.closeAside();
+      component.filter.setSearchText('Alpha');
+      fixture.detectChanges();
+      component.onDiscardClick(draftB);
+      component.onDiscardConfirm();
+      fixture.detectChanges();
+
+      expect(consumeSpy).not.toHaveBeenCalled();
+      expect(badges().length).toBe(1);
+    });
+
+    it('5 — destroy consumes exactly the ids that were shown; a fresh id never in the list is not passed', () => {
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A, JOB_D); // D is fresh but its drafts never reached the list
+      fixture.detectChanges();
+
+      fixture.destroy();
+
+      expect(consumeSpy).toHaveBeenCalledTimes(1);
+      expect(consumedIds()).toEqual([JOB_A]);
+      expect(Array.from(bilateralAiService.freshDraftJobIds())).toEqual([JOB_D]);
+    });
+
+    it('6 — center 12 -> null -> 13 consumes at the 12 -> null step; a cold null -> 12 mount does not', () => {
+      const ctx = TestBed.inject(BilateralContextService);
+      bilateralAiService.draftList.set([draftA]);
+      setFresh(JOB_A);
+      ctx.centerInstitutionId.set(null);
+      fixture.detectChanges();
+
+      ctx.centerInstitutionId.set(12); // cold null -> 12
+      fixture.detectChanges();
+      expect(consumeSpy).not.toHaveBeenCalled();
+      expect(badges().length).toBe(1);
+
+      ctx.centerInstitutionId.set(null); // 12 -> null
+      fixture.detectChanges();
+      expect(consumedIds()).toEqual([JOB_A]);
+      expect(badges().length).toBe(0);
+
+      ctx.centerInstitutionId.set(13); // null -> 13
+      fixture.detectChanges();
+      expect(consumeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('6b — a direct 12 -> 13 switch consumes too', () => {
+      const ctx = TestBed.inject(BilateralContextService);
+      ctx.centerInstitutionId.set(12);
+      bilateralAiService.draftList.set([draftA]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+      expect(consumeSpy).not.toHaveBeenCalled();
+
+      ctx.centerInstitutionId.set(13);
+      fixture.detectChanges();
+      expect(consumedIds()).toEqual([JOB_A]);
+    });
+
+    it('7 — Create Result (page destroyed afterwards) consumes all shown ids, even a group whose only draft was promoted', () => {
+      jest.spyOn(bilateralAiService, 'promoteDraft').mockImplementation();
+      bilateralAiService.draftList.set([draftA, draftD]);
+      setFresh(JOB_A, JOB_D);
+      fixture.detectChanges();
+
+      component.onPromoteClick(draftD);
+      component.centerValidationConfirmed.set(true);
+      component.onPromoteConfirm();
+      // The real promote navigates to the result editor and drops D's only draft from the list.
+      bilateralAiService.draftList.set([draftA]);
+      fixture.detectChanges();
+      fixture.destroy();
+
+      expect(consumedIds()).toEqual([JOB_A, JOB_D]);
+    });
+
+    it('8 — rendering and consuming issue no write request', () => {
+      const http = TestBed.inject(HttpTestingController);
+      bilateralAiService.draftList.set([draftA]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+      fixture.destroy();
+      expect(http.match(req => req.method !== 'GET').length).toBe(0);
+    });
+  });
+
+  // @akili-spec bilateral/ai-draft-new-indicator — `/akili-test` Tester (frontend-unit), independent of the ADN-T-2 author tests.
+  // Expected values inlined from requirements.md §5 ADN-R-3 / ADN-R-5 and §7 ADN-AC-5 / ADN-AC-8.
+  describe('ADN-test — "New" badge lifecycle, tester gaps (ADN-R-3, ADN-R-5)', () => {
+    const JOB_A = 'aaaaaaaa-1111-0000-0000-00000000000a';
+    const JOB_B = 'bbbbbbbb-1111-0000-0000-00000000000b';
+    const JOB_D = 'dddddddd-1111-0000-0000-00000000000d';
+    const NEW_BADGE = '[data-testid="mdr-session-new-badge"]';
+
+    const draftOf = (id: number, jobId: string, userId: number): BilateralAiDraft =>
+      ({
+        ...draftStub,
+        id,
+        job_id: jobId,
+        extracted_mds: { title: `Alpha ${id}`, indicator: 'Capacity Sharing' },
+        job: { ...(draftStub as any).job, job_id: jobId, user_id: userId },
+      }) as unknown as BilateralAiDraft;
+
+    const draftA = draftOf(101, JOB_A, 42);
+    const draftB = draftOf(102, JOB_B, 42);
+    const draftD = draftOf(104, JOB_D, 42);
+
+    const badgesIn = (f: ComponentFixture<MyDraftResultsComponent>) =>
+      Array.from(f.nativeElement.querySelectorAll(NEW_BADGE)) as HTMLElement[];
+    const setFresh = (...ids: string[]) => bilateralAiService.freshDraftJobIds.set(new Set(ids));
+    const mount = () => {
+      const f = TestBed.createComponent(MyDraftResultsComponent);
+      f.detectChanges();
+      return f;
+    };
+
+    beforeEach(() => {
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.isDraftListLoaded.set(true);
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('user');
+    });
+
+    it('ADN-R-3 leave and come back: after destroy, a re-mounted Draft Results shows no badge for the same drafts', () => {
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A);
+      fixture.detectChanges();
+      expect(badgesIn(fixture).length).toBe(1);
+
+      fixture.destroy(); // navigate to another bilateral tab
+      const back = mount(); // navigate back to Draft Results
+
+      expect(back.componentInstance.sessionGroups().find(g => g.sessionId === JOB_A)?.isNew).toBe(false);
+      expect(badgesIn(back).length).toBe(0);
+      back.destroy();
+    });
+
+    it('ADN-R-3 switch center A -> B -> A: A\'s group is no longer marked; B\'s fresh group, never shown on A, is still marked on B', () => {
+      const ctx = TestBed.inject(BilateralContextService);
+      ctx.centerInstitutionId.set(12); // center A
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A, JOB_D);
+      fixture.detectChanges();
+      expect(badgesIn(fixture).length).toBe(1);
+
+      // Real order: the center switch flushes first; B's drafts arrive later from the async GET.
+      ctx.centerInstitutionId.set(13); // center B
+      fixture.detectChanges();
+      bilateralAiService.draftList.set([draftD]);
+      fixture.detectChanges();
+      expect(bilateralAiService.freshDraftJobIds().has(JOB_D)).toBe(true);
+      expect(badgesIn(fixture).length).toBe(1);
+      expect(badgesIn(fixture)[0].closest('[data-testid="mdr-session-card"]')?.id).toBe(`mdr-session-${JOB_D}`);
+
+      ctx.centerInstitutionId.set(12); // back to center A
+      fixture.detectChanges();
+      bilateralAiService.draftList.set([draftA, draftB]);
+      fixture.detectChanges();
+
+      expect(component.sessionGroups().find(g => g.sessionId === JOB_A)?.isNew).toBe(false);
+      expect(badgesIn(fixture).length).toBe(0);
+      expect(bilateralAiService.freshDraftJobIds().has(JOB_A)).toBe(false);
+    });
+
+    it('ADN-R-3 job finished while the user is on other pages: stays fresh with no consume, and the mark shows on the first visit', () => {
+      const consumeSpy = jest.spyOn(bilateralAiService, 'consumeFreshDraftJobs');
+      fixture.destroy(); // the user is elsewhere — Draft Results is not mounted
+
+      bilateralAiService.draftList.set([draftA, draftB]);
+      setFresh(JOB_A); // the job completes in the background
+
+      expect(consumeSpy).not.toHaveBeenCalled();
+      expect(bilateralAiService.freshDraftJobIds().has(JOB_A)).toBe(true);
+
+      const visit = mount();
+      expect(visit.componentInstance.sessionGroups().find(g => g.sessionId === JOB_A)?.isNew).toBe(true);
+      expect(badgesIn(visit).length).toBe(1);
+      visit.destroy();
+    });
+
+    it('ADN-R-5 show, center-switch clear and leave clear issue no POST/PATCH/PUT/DELETE, and drafts, statuses, is_discarded and order are unchanged', () => {
+      const http = TestBed.inject(HttpTestingController);
+      const ctx = TestBed.inject(BilateralContextService);
+      const list = [draftA, draftB, { ...draftD, is_discarded: true } as unknown as BilateralAiDraft];
+      const snapshot = JSON.parse(JSON.stringify(list));
+      ctx.centerInstitutionId.set(12);
+      bilateralAiService.draftList.set(list);
+      setFresh(JOB_A, JOB_B);
+      fixture.detectChanges();
+      expect(badgesIn(fixture).length).toBe(2);
+
+      ctx.centerInstitutionId.set(13); // clear via center switch
+      fixture.detectChanges();
+      ctx.centerInstitutionId.set(12);
+      fixture.detectChanges();
+      fixture.destroy(); // clear via leaving the tab
+
+      const writes = http.match(req => ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method));
+      expect(writes.map(r => `${r.request.method} ${r.request.url}`)).toEqual([]);
+      expect(bilateralAiService.draftList()).toBe(list);
+      expect(JSON.parse(JSON.stringify(bilateralAiService.draftList()))).toEqual(snapshot);
+      expect(bilateralAiService.draftList().map(d => [d.id, d.is_discarded, (d as any).result.status_id])).toEqual([
+        [101, false, '8'],
+        [102, false, '8'],
+        [104, true, '8'],
+      ]);
+    });
+  });
+
+  // @akili-spec bilateral/ai-draft-spotlight (ADS-T-2, ADS-D2, ADS-D3, ADS-D4, ADS-D6, ADS-D7)
+  describe('draft spotlight (ADS)', () => {
+    const J = draftStub.job_id as string;
+    const K = 'aaaaaaaa-1111-4111-8111-111111111111';
+    const draftJ2 = { ...draftStub, id: 2 } as unknown as BilateralAiDraft;
+    const draftK = {
+      ...draftStub,
+      id: 3,
+      job_id: K,
+      job: { ...(draftStub as any).job, job_id: K, project_id: 8 },
+    } as unknown as BilateralAiDraft;
+
+    let params$: BehaviorSubject<ParamMap>;
+    let spotlight: {
+      active: ReturnType<typeof signal<boolean>>;
+      isActive: jest.Mock;
+      show: jest.Mock;
+      close: jest.Mock;
+      refresh: jest.Mock;
+    };
+    let tourInstance: { isActive: () => boolean } | null;
+    let ai: BilateralAiService;
+    let ctx: BilateralContextService;
+    let http: HttpTestingController;
+    let scrollTo: jest.Mock;
+
+    const setJob = (id: string | null) => params$.next(convertToParamMap(id ? { job: id } : {}));
+    const loadDrafts = (list: BilateralAiDraft[] = [draftStub, draftJ2]) => {
+      ai.draftList.set(list);
+      ai.isDraftListLoaded.set(true);
+    };
+    const request = (jobId = J, centerAcronym = 'CIAT', label = 'Alpha') =>
+      ai.requestDraftSpotlight({ jobId, centerAcronym, projectName: label, programCode: '' } as any);
+    /** `BilateralAiService` effects run lazily under fake timers: tick first, then render, then tick again. */
+    const flush = () => {
+      TestBed.tick();
+      fixture.detectChanges();
+      TestBed.tick();
+    };
+    /** First pass (afterNextRender) → the page's SCROLL_SETTLE_MS corrective pass → settle → request effect. */
+    const settle = () => {
+      flush();
+      jest.advanceTimersByTime(600);
+      flush();
+    };
+    const card = (id = J) => document.getElementById(`mdr-session-${id}`) as HTMLElement;
+
+    async function mount(initialJob: string | null = null): Promise<void> {
+      await TestBed.resetTestingModule();
+      spotlight = {
+        active: signal(false),
+        isActive: jest.fn(() => spotlight.active()),
+        show: jest.fn(),
+        close: jest.fn(),
+        refresh: jest.fn(),
+      };
+      tourInstance = null;
+      params$ = new BehaviorSubject<ParamMap>(convertToParamMap(initialJob ? { job: initialJob } : {}));
+      await TestBed.configureTestingModule({
+        imports: [MyDraftResultsComponent, RouterModule.forRoot([])],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          PrToastService,
+          BilateralAiService,
+          { provide: DraftSpotlightService, useValue: spotlight },
+          { provide: BilateralTourService, useValue: { getDriverInstance: () => tourInstance } },
+        ],
+      }).compileComponents();
+      ai = TestBed.inject(BilateralAiService);
+      ctx = TestBed.inject(BilateralContextService);
+      http = TestBed.inject(HttpTestingController);
+      ctx.setCenter('CIAT', 'CIAT');
+      TestBed.inject(RolesService).roles = { center: [CIAT_MEMBER] };
+    }
+
+    /** Creates the page (route stub injected BEFORE the first change detection = before ngOnInit). */
+    function create(): void {
+      fixture = TestBed.createComponent(MyDraftResultsComponent);
+      component = fixture.componentInstance;
+      (component as any).activatedRoute = {
+        snapshot: { queryParamMap: params$.value },
+        queryParamMap: params$.asObservable(),
+      };
+      fixture.detectChanges();
+      const container = fixture.nativeElement.querySelector('#workArea') as HTMLElement;
+      container.style.overflowY = 'auto';
+      scrollTo = jest.fn();
+      container.scrollTo = scrollTo;
+    }
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+    });
+
+    it('7. a request for J with ?job=J and the group present shows once, after the settle, on the session card', async () => {
+      await mount();
+      create();
+      loadDrafts();
+      request();
+      setJob(J);
+
+      flush();
+      expect(spotlight.show).not.toHaveBeenCalled(); // the ring's run has not settled yet
+      settle();
+
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+      const [shownCard, container, opts] = spotlight.show.mock.calls[0];
+      expect(shownCard).toBe(card());
+      expect((container as HTMLElement).id).toBe('workArea');
+      expect(opts.title).toBe('2 new drafts from Alpha');
+      expect(opts.buttonText).toBe('Got it');
+      expect(opts.description).toContain('<strong>Review</strong>');
+      expect(typeof opts.onDismiss).toBe('function');
+      expect(ai.draftSpotlightRequest()).toBeNull(); // consumed
+    });
+
+    it('8. same job, URL unchanged, draftList untouched, run settled: a new nonce re-runs the scroll and shows again (FC-1)', async () => {
+      await mount();
+      create();
+      loadDrafts();
+      setJob(J);
+      settle(); // the plain ?job= run finishes first
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+      request();
+      settle();
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+      const passesBefore = scrollTo.mock.calls.length;
+
+      const listBefore = ai.draftList();
+      request(); // new nonce, same URL, no list reload
+      settle();
+
+      expect(ai.draftList()).toBe(listBefore);
+      expect(scrollTo.mock.calls.length - passesBefore).toBe(2);
+      expect(spotlight.show).toHaveBeenCalledTimes(2);
+    });
+
+    it('9. a cold mount with the ?job= subscription and a request scrolls once (2 passes, not 4) and shows once', async () => {
+      await mount(J);
+      request();
+      create();
+      loadDrafts();
+      settle();
+
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+    });
+
+    it('10. a request for B while the URL says A never moves the ring; a cancelled navigation leaves it on A (FC-4)', async () => {
+      await mount();
+      create();
+      loadDrafts([draftStub, draftK]);
+      setJob(J);
+      settle();
+      const passes = scrollTo.mock.calls.length;
+      expect(component.highlightedSessionId()).toBe(J);
+
+      const nonce = request(K, 'CIAT', 'Beta');
+      settle();
+      expect(component.highlightedSessionId()).toBe(J);
+      expect(scrollTo.mock.calls.length).toBe(passes);
+      expect(spotlight.show).not.toHaveBeenCalled();
+
+      ai.consumeDraftSpotlight(nonce); // the navigation was cancelled
+      settle();
+      expect(component.highlightedSessionId()).toBe(J);
+      expect(scrollTo.mock.calls.length).toBe(passes);
+      expect(spotlight.show).not.toHaveBeenCalled();
+
+      // Positive control: a later request whose URL does land is honored.
+      request(K, 'CIAT', 'Beta');
+      setJob(K);
+      settle();
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+      expect(spotlight.show.mock.calls[0][0]).toBe(card(K));
+    });
+
+    it('10b. once ?job=B lands, the pending request attaches to that single run and shows B', async () => {
+      await mount();
+      create();
+      loadDrafts([draftStub, draftK]);
+      setJob(J);
+      settle();
+      const passes = scrollTo.mock.calls.length;
+
+      request(K, 'CIAT', 'Beta');
+      setJob(K);
+      settle();
+
+      expect(scrollTo.mock.calls.length - passes).toBe(2);
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+      expect(spotlight.show.mock.calls[0][0]).toBe(card(K));
+      expect(spotlight.show.mock.calls[0][2].title).toBe('1 new draft from Beta');
+    });
+
+    it('11. a stale settled job from an earlier ?job=J visit is reset when ?job= changes: no show before the new settle (FC-3)', async () => {
+      await mount(J);
+      create();
+      loadDrafts([draftStub, draftK]);
+      component.selectedDraft.set(draftStub); // a layer holds the request after the first run settles
+      request();
+      settle();
+      expect(spotlight.show).not.toHaveBeenCalled();
+
+      setJob(K);
+      flush();
+      component.selectedDraft.set(null);
+      flush();
+      setJob(J); // back to J: a NEW run is in flight, the old settle must not count
+      flush();
+      expect(spotlight.show).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(600);
+      flush();
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+    });
+
+    it('12. a reload (?job=J, no request) rings and scrolls as before and never shows', async () => {
+      await mount(J);
+      create();
+      loadDrafts();
+      settle();
+      jest.advanceTimersByTime(12_000);
+      flush();
+
+      expect(component.highlightedSessionId()).toBe(J);
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+      expect(spotlight.show).not.toHaveBeenCalled();
+    });
+
+    it('13. a group hidden by a project filter is revealed: search debounce cancelled, clearFilters once, then show', async () => {
+      await mount();
+      create();
+      loadDrafts([draftStub, draftK]);
+      component.filter.setProjects(['8']); // hides J (project 7)
+      component.onSearchInput({ target: { value: 'zzz' } } as unknown as Event); // pending debounce
+      flush();
+      expect(card()).toBeNull();
+      const clearSpy = jest.spyOn(component, 'clearFilters');
+
+      request();
+      setJob(J);
+      settle();
+      jest.advanceTimersByTime(400); // a live debounce would apply 'zzz' now
+      flush();
+
+      expect(clearSpy).toHaveBeenCalledTimes(1);
+      expect(component.filter.searchText()).toBe('');
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+    });
+
+    it('13b. a visible group never clears the filters', async () => {
+      await mount();
+      create();
+      loadDrafts();
+      const clearSpy = jest.spyOn(component, 'clearFilters');
+      request();
+      setJob(J);
+      settle();
+
+      expect(clearSpy).not.toHaveBeenCalled();
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+    });
+
+    it('14. a job absent from allDrafts neither shows nor clears; the 10 s timer drops the request', async () => {
+      await mount();
+      create();
+      loadDrafts([draftK]);
+      const clearSpy = jest.spyOn(component, 'clearFilters');
+      request();
+      setJob(J);
+      settle();
+
+      expect(spotlight.show).not.toHaveBeenCalled();
+      expect(clearSpy).not.toHaveBeenCalled();
+      expect(ai.draftSpotlightRequest()).not.toBeNull();
+
+      jest.advanceTimersByTime(10_000);
+      flush();
+      expect(ai.draftSpotlightRequest()).toBeNull();
+      expect(spotlight.show).not.toHaveBeenCalled();
+    });
+
+    it('15. the center gate is case-insensitive and ignores another center', async () => {
+      await mount();
+      ctx.setCenter('CIP', 'CIP');
+      create();
+      loadDrafts();
+      setJob(J);
+      settle();
+
+      request(J, 'ICRISAT');
+      settle();
+      expect(spotlight.show).not.toHaveBeenCalled();
+
+      request(J, 'cip');
+      settle();
+      expect(spotlight.show).toHaveBeenCalledTimes(1);
+    });
+
+    describe('16. layers', () => {
+      const layers: Array<[string, () => void, () => void]> = [
+        ['selectedDraft', () => component.selectedDraft.set(draftStub), () => component.selectedDraft.set(null)],
+        ['promoteTarget', () => component.promoteTarget.set(draftStub), () => component.promoteTarget.set(null)],
+        ['discardTarget', () => component.discardTarget.set(draftStub), () => component.discardTarget.set(null)],
+        ['drawerOpen', () => ai.drawerOpen.set(true), () => ai.drawerOpen.set(false)],
+      ];
+
+      it.each(layers)('waits while %s is set, then shows once it clears', async (_name, open, close) => {
+        await mount();
+        create();
+        loadDrafts();
+        open();
+        request();
+        setJob(J);
+        settle();
+        expect(spotlight.show).not.toHaveBeenCalled();
+
+        close();
+        flush();
+        expect(spotlight.show).toHaveBeenCalledTimes(1);
+      });
+
+      it('waits while the guided tour is active and shows on the next 1 s poll after it ends', async () => {
+        await mount();
+        create();
+        loadDrafts();
+        tourInstance = { isActive: () => true };
+        request();
+        setJob(J);
+        settle();
+        jest.advanceTimersByTime(3000);
+        flush();
+        expect(spotlight.show).not.toHaveBeenCalled();
+
+        tourInstance = null;
+        jest.advanceTimersByTime(1000);
+        flush();
+        expect(spotlight.show).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('17. close(programmatic) before in-card actions, center change and destroy', () => {
+      it.each([
+        ['onReview', () => component.onReview(draftStub), () => component.selectedDraft()],
+        ['onPromoteClick', () => component.onPromoteClick(draftStub), () => component.promoteTarget()],
+        ['onDiscardClick', () => component.onDiscardClick(draftStub), () => component.discardTarget()],
+      ])('%s closes the spotlight first, then runs its own behavior', async (_name, act, layer) => {
+        await mount();
+        create();
+        let layerAtClose: unknown = 'unset';
+        spotlight.close.mockImplementation(() => {
+          layerAtClose = layer();
+        });
+
+        act();
+
+        expect(spotlight.close).toHaveBeenCalledWith('programmatic');
+        expect(layerAtClose).toBeNull();
+        expect(layer()).toBe(draftStub);
+      });
+
+      it('a center change closes the spotlight and lets a later request for the same job re-run', async () => {
+        await mount();
+        ctx.setCenter('CIAT', 'CIAT', 'CIAT', 5);
+        create();
+        loadDrafts();
+        setJob(J);
+        settle();
+        spotlight.close.mockClear();
+        const passes = scrollTo.mock.calls.length;
+
+        ctx.setCenter('CIAT', 'CIAT', 'CIAT', 6);
+        flush();
+        expect(spotlight.close).toHaveBeenCalledWith('programmatic');
+
+        loadDrafts([{ ...draftStub }, { ...draftJ2 }]); // the new center's list lands
+        request();
+        settle();
+        expect(scrollTo.mock.calls.length - passes).toBe(2);
+        expect(spotlight.show).toHaveBeenCalledTimes(1);
+      });
+
+      it('ngOnDestroy closes the spotlight', async () => {
+        await mount();
+        create();
+        spotlight.close.mockClear();
+
+        fixture.destroy();
+
+        expect(spotlight.close).toHaveBeenCalledWith('programmatic');
+      });
+    });
+
+    it('18. dismissing focuses the card; a programmatic close does not move focus', async () => {
+      await mount();
+      create();
+      loadDrafts();
+      request();
+      setJob(J);
+      settle();
+      const { onDismiss } = spotlight.show.mock.calls[0][2];
+      expect(card().getAttribute('tabindex')).toBe('-1');
+      expect(card().classList.contains('outline-none')).toBe(true);
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      component.onReview(draftStub); // close('programmatic') path
+      expect(document.activeElement).not.toBe(card());
+
+      onDismiss();
+      expect(document.activeElement).toBe(card());
+    });
+
+    it('19. a sessionGroups() change while active refreshes the cut-out; inactive does not', async () => {
+      await mount();
+      create();
+      loadDrafts();
+      flush();
+      spotlight.refresh.mockClear();
+
+      loadDrafts([draftStub, draftJ2, draftK]);
+      flush();
+      expect(spotlight.refresh).not.toHaveBeenCalled();
+
+      spotlight.active.set(true);
+      loadDrafts([draftStub, draftK]);
+      flush();
+      expect(spotlight.refresh).toHaveBeenCalled();
+    });
+
+    // @akili-spec bilateral/ai-draft-spotlight (ADS-T-4, DD-11)
+    describe('21. clash guard: another layer opens while the spotlight is active', () => {
+      const layers: Array<[string, () => void]> = [
+        ['selectedDraft', () => component.selectedDraft.set(draftStub)],
+        ['promoteTarget', () => component.promoteTarget.set(draftStub)],
+        ['discardTarget', () => component.discardTarget.set(draftStub)],
+        ['drawerOpen', () => ai.drawerOpen.set(true)],
+      ];
+
+      it.each(layers)('closes the spotlight (programmatic) once when %s is set', async (_name, open) => {
+        await mount();
+        create();
+        loadDrafts();
+        spotlight.active.set(true);
+        flush();
+        spotlight.close.mockClear();
+
+        open();
+        flush();
+
+        expect(spotlight.close).toHaveBeenCalledTimes(1);
+        expect(spotlight.close).toHaveBeenCalledWith('programmatic');
+      });
+
+      it.each(layers)('does not close when the spotlight is not active and %s is set', async (_name, open) => {
+        await mount();
+        create();
+        loadDrafts();
+        flush();
+        spotlight.close.mockClear();
+
+        open();
+        flush();
+
+        expect(spotlight.close).not.toHaveBeenCalled();
+      });
+    });
+
+    it('20. the whole flow issues no write request and calls no draft write method', async () => {
+      await mount();
+      create();
+      loadDrafts();
+      const promote = jest.spyOn(ai, 'promoteDraft');
+      const discard = jest.spyOn(ai, 'discardDraft');
+      request();
+      setJob(J);
+      settle();
+      request();
+      settle();
+      component.onReview(draftStub);
+
+      expect(promote).not.toHaveBeenCalled();
+      expect(discard).not.toHaveBeenCalled();
+      const writes = http.match(req => ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method));
+      expect(writes.map(r => `${r.request.method} ${r.request.url}`)).toEqual([]);
     });
   });
 });

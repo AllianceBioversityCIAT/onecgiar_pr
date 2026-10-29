@@ -3,7 +3,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { defer, of } from 'rxjs';
-import { ProgressTrackerResolveService } from './progress-tracker-resolve.service';
+import {
+  ProgressTrackerResolveService,
+  pickFuzzyCandidate,
+} from './progress-tracker-resolve.service';
 import { ProgressTrackerIndicatorMap } from './entities/progress-tracker-indicator-map.entity';
 import { Version } from '../versioning/entities/version.entity';
 import { PtPorbRepository, PtPorbRow } from './repositories/pt-porb.repository';
@@ -30,7 +33,9 @@ const PORB_ROW: PtPorbRow = {
   tocIndicatorIntegrationId: 900123,
   program: 'Food Frontiers and Security',
   aow: 'AOW02: Fragile and Conflict-affected Food Systems',
-  center: 'CIAT (Alliance)',
+  // PRMS-side acronym; PT is sent 'CIAT (Alliance)'.
+  center: 'CIAT',
+  kpiType: 'custom',
   hloTitle: '2.1.1 Prevent',
   description: 'AW2P3: Fragility and Conflict Sensitivity Hub',
 };
@@ -117,26 +122,30 @@ describe('ProgressTrackerResolveService', () => {
   let versionRepository: { findOne: jest.Mock };
   let table: ProgressTrackerIndicatorMap[];
 
+  /** The migration's unique key: (toc_results_indicator_id, version_id, center). */
+  const sameKey = (
+    a: Partial<ProgressTrackerIndicatorMap>,
+    b: Partial<ProgressTrackerIndicatorMap>,
+  ) =>
+    a.toc_results_indicator_id === b.toc_results_indicator_id &&
+    a.version_id === b.version_id &&
+    a.center === b.center;
+
   function makeMappingRepository() {
     return {
+      find: jest.fn(async ({ where }: any) =>
+        table.filter((row) => row.version_id === where.version_id),
+      ),
       findOne: jest.fn(
         async ({ where }: any) =>
-          table.find(
-            (row) =>
-              row.toc_results_indicator_id === where.toc_results_indicator_id &&
-              row.version_id === where.version_id,
-          ) ?? null,
+          table.find((row) => sameKey(row, where)) ?? null,
       ),
       create: jest.fn(
         (data: Partial<ProgressTrackerIndicatorMap>) =>
           data as ProgressTrackerIndicatorMap,
       ),
       save: jest.fn(async (row: ProgressTrackerIndicatorMap) => {
-        const existingIndex = table.findIndex(
-          (r) =>
-            r.toc_results_indicator_id === row.toc_results_indicator_id &&
-            r.version_id === row.version_id,
-        );
+        const existingIndex = table.findIndex((r) => sameKey(r, row));
         if (existingIndex >= 0) {
           table[existingIndex] = { ...table[existingIndex], ...row };
         } else {
@@ -217,7 +226,7 @@ describe('ProgressTrackerResolveService', () => {
       expect(row.resolved_at).toBeInstanceOf(Date);
     });
 
-    it('sends the PORB texts as the /resolve query params (program, aow, center, hlo_title, description)', async () => {
+    it('sends the PORB texts as the /resolve query params, with the center normalized to the PT name and the kpi_type', async () => {
       httpService.get.mockReturnValue(of({ data: exactResolveResponse() }));
 
       await service.resolveIndicatorMappings({ versionId: VERSION_ID });
@@ -225,13 +234,23 @@ describe('ProgressTrackerResolveService', () => {
       expect(httpService.get).toHaveBeenCalledTimes(1);
       const [url, config] = httpService.get.mock.calls[0];
       expect(url).toContain('/api/prms/indicators/resolve');
-      expect(config.params).toEqual({
+      expect(config.params).toStrictEqual({
         program: PORB_ROW.program,
         aow: PORB_ROW.aow,
-        center: PORB_ROW.center,
+        center: 'CIAT (Alliance)',
+        kpi_type: 'custom',
         hlo_title: PORB_ROW.hloTitle,
         description: PORB_ROW.description,
       });
+    });
+
+    it('stores the PRMS-side center and the kpi_type on the row, not the PT spelling', async () => {
+      httpService.get.mockReturnValue(of({ data: exactResolveResponse() }));
+
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+
+      expect(table[0].center).toBe('CIAT');
+      expect(table[0].kpi_type).toBe('custom');
     });
 
     it('sources match_score from the candidate whose indicator_id matches (not candidates[0]) — PTM-T-5 rework finding 1', async () => {
@@ -308,6 +327,7 @@ describe('ProgressTrackerResolveService', () => {
 
       const result = await service.resolveIndicatorMappings({
         versionId: VERSION_ID,
+        force: true,
       });
 
       expect(table).toHaveLength(1); // still one row — no duplicate
@@ -323,11 +343,398 @@ describe('ProgressTrackerResolveService', () => {
       expect(table[0].match_quality).toBe('none');
 
       httpService.get.mockReturnValueOnce(of({ data: exactResolveResponse() }));
-      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        force: true,
+      });
 
       expect(table).toHaveLength(1);
       expect(table[0].match_quality).toBe('exact');
       expect(table[0].pt_indicator_id).toBe('8006329bfd49');
+    });
+  });
+
+  describe('center-aware rows', () => {
+    it('writes one row per center for the same indicator and version', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue([
+        PORB_ROW,
+        { ...PORB_ROW, center: 'IFPRI' },
+      ]);
+      httpService.get.mockReturnValue(of({ data: exactResolveResponse() }));
+
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        force: true,
+      });
+
+      expect(table.map((r) => r.center).sort()).toEqual(['CIAT', 'IFPRI']);
+      expect(
+        httpService.get.mock.calls.map(([, c]) => c.params.center),
+      ).toEqual(['CIAT (Alliance)', 'IFPRI', 'CIAT (Alliance)', 'IFPRI']);
+    });
+
+    it('omits kpi_type from the query when the indicator has none', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue([
+        { ...PORB_ROW, kpiType: null },
+      ]);
+      httpService.get.mockReturnValue(of({ data: exactResolveResponse() }));
+
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+
+      expect(httpService.get.mock.calls[0][1].params.kpi_type).toBeUndefined();
+      expect(table[0].kpi_type).toBeNull();
+    });
+  });
+
+  describe('resumable batches (limit / cursor / force)', () => {
+    const rows = (n: number): PtPorbRow[] =>
+      Array.from({ length: n }, (_, i) => ({
+        ...PORB_ROW,
+        tocResultsIndicatorId: `ind-${i}`,
+      }));
+
+    beforeEach(() => {
+      httpService.get.mockReturnValue(of({ data: exactResolveResponse() }));
+    });
+
+    it('makes at most `limit` upstream calls and answers the next cursor', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(5));
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 2,
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(result.response).toMatchObject({
+        status: 'ok',
+        processed: 2,
+        total: 5,
+        cursor: 0,
+        next_cursor: 2,
+      });
+      expect(table.map((r) => r.toc_results_indicator_id)).toEqual([
+        'ind-0',
+        'ind-1',
+      ]);
+    });
+
+    it('resumes at the cursor and answers next_cursor = null on the last batch', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(5));
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 10,
+        cursor: 3,
+      });
+
+      expect(result.response.processed).toBe(2);
+      expect(result.response.next_cursor).toBeNull();
+      expect(table.map((r) => r.toc_results_indicator_id)).toEqual([
+        'ind-3',
+        'ind-4',
+      ]);
+    });
+
+    it('defaults to a batch of 15', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(20));
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(15);
+      expect(result.response.next_cursor).toBe(15);
+    });
+
+    it('passes over rows already in the map without an upstream call, and they do not count against the limit', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(4));
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 2,
+      });
+      httpService.get.mockClear();
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 2,
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(result.response).toMatchObject({
+        already_resolved: 2,
+        processed: 2,
+        next_cursor: null,
+      });
+      expect(table).toHaveLength(4);
+    });
+
+    it('treats the same indicator under another center as unresolved', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue([PORB_ROW]);
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      porbRepository.findPorbRowsForPhase.mockResolvedValue([
+        PORB_ROW,
+        { ...PORB_ROW, center: 'IFPRI' },
+      ]);
+      httpService.get.mockClear();
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+      });
+
+      expect(result.response.already_resolved).toBe(1);
+      expect(httpService.get).toHaveBeenCalledTimes(1);
+      expect(httpService.get.mock.calls[0][1].params.center).toBe('IFPRI');
+    });
+
+    it('re-resolves mapped rows when force is true', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(2));
+      await service.resolveIndicatorMappings({ versionId: VERSION_ID });
+      httpService.get.mockClear();
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        force: true,
+      });
+
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(result.response.already_resolved).toBe(0);
+      expect(table).toHaveLength(2);
+    });
+
+    it('retrying the same cursor after a partial batch (gateway 504) only calls the rows not yet written', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(3));
+      // First attempt: the gateway gave up after ind-0 was written; the client never saw next_cursor.
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 1,
+      });
+      httpService.get.mockClear();
+
+      const retry = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        limit: 3,
+        cursor: 0,
+      });
+
+      expect(retry.response.already_resolved).toBe(1);
+      expect(httpService.get).toHaveBeenCalledTimes(2);
+      expect(table).toHaveLength(3);
+    });
+
+    it('a cursor past the end answers an empty, finished batch', async () => {
+      porbRepository.findPorbRowsForPhase.mockResolvedValue(rows(2));
+
+      const result = await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        cursor: 99,
+      });
+
+      expect(httpService.get).not.toHaveBeenCalled();
+      expect(result.response).toMatchObject({
+        processed: 0,
+        cursor: 2,
+        next_cursor: null,
+      });
+    });
+  });
+
+  describe('needs_review', () => {
+    function fuzzyWith(
+      candidates: { indicator_id: string; score: number; center?: string }[],
+    ) {
+      return { ...fuzzyResolveResponse(), candidates };
+    }
+
+    async function resolveWith(data: unknown) {
+      httpService.get.mockReturnValue(of({ data }));
+      await service.resolveIndicatorMappings({
+        versionId: VERSION_ID,
+        force: true,
+      });
+      return table[0];
+    }
+
+    it('is false for an exact match', async () => {
+      expect((await resolveWith(exactResolveResponse())).needs_review).toBe(
+        false,
+      );
+    });
+
+    it('is false for an exact match even when the top candidates tie', async () => {
+      const row = await resolveWith(
+        exactResolveResponse({
+          candidates: [
+            { indicator_id: '8006329bfd49', score: 1.0 },
+            { indicator_id: '22ba725f9423', score: 0.998 },
+          ],
+        }),
+      );
+      expect(row.needs_review).toBe(false);
+    });
+
+    it('is true for match: none (pt_indicator_id stays null)', async () => {
+      const row = await resolveWith(noneResolveResponse());
+      expect(row.needs_review).toBe(true);
+      expect(row.pt_indicator_id).toBeNull();
+    });
+
+    it('is true for a fuzzy match scoring below 0.99', async () => {
+      const row = await resolveWith(
+        fuzzyWith([
+          { indicator_id: '8006329bfd49', score: 0.989 },
+          { indicator_id: '22ba725f9423', score: 0.5 },
+        ]),
+      );
+      expect(row.needs_review).toBe(true);
+    });
+
+    it('is false for a clear fuzzy match at or above 0.99', async () => {
+      const row = await resolveWith(
+        fuzzyWith([
+          { indicator_id: '22ba725f9423', score: 0.6 },
+          { indicator_id: '8006329bfd49', score: 0.99 },
+        ]),
+      );
+      expect(row.needs_review).toBe(false);
+    });
+
+    it('honours PT_INTEROP_REVIEW_THRESHOLD (0.95 accepts a 0.96 fuzzy match the default flags)', async () => {
+      process.env.PT_INTEROP_REVIEW_THRESHOLD = '0.95';
+      try {
+        const row = await resolveWith(
+          fuzzyWith([
+            { indicator_id: '8006329bfd49', score: 0.96 },
+            { indicator_id: '22ba725f9423', score: 0.5 },
+          ]),
+        );
+        expect(row.needs_review).toBe(false);
+      } finally {
+        delete process.env.PT_INTEROP_REVIEW_THRESHOLD;
+      }
+    });
+
+    it('is true for a high-scoring fuzzy match whose near-tied candidates (within 0.03) share no center with the row', async () => {
+      const row = await resolveWith(
+        fuzzyWith([
+          { indicator_id: '22ba725f9423', score: 0.991, center: 'IFPRI' },
+          { indicator_id: '8006329bfd49', score: 0.995, center: 'ILRI' },
+        ]),
+      );
+      expect(row.needs_review).toBe(true);
+      // PT's pick (the top candidate) is kept.
+      expect(row.pt_indicator_id).toBe('8006329bfd49');
+      expect(row.match_score).toBe(0.995);
+    });
+
+    it('is false when the top two fuzzy candidates differ by more than the epsilon', async () => {
+      const row = await resolveWith(
+        fuzzyWith([
+          { indicator_id: '8006329bfd49', score: 0.999, center: 'ILRI' },
+          { indicator_id: '22ba725f9423', score: 0.95, center: 'IFPRI' },
+        ]),
+      );
+      expect(row.needs_review).toBe(false);
+      expect(row.pt_indicator_id).toBe('8006329bfd49');
+    });
+
+    it('is true for a fuzzy match whose score cannot be found among the candidates', async () => {
+      const row = await resolveWith(
+        fuzzyWith([{ indicator_id: '22ba725f9423', score: 0.99 }]),
+      );
+      expect(row.needs_review).toBe(true);
+    });
+
+    describe('center tie-break (row center CIAT -> PT CIAT (Alliance))', () => {
+      it('swaps PT pick for a near-tied candidate of the row center, not flagged when it clears the threshold', async () => {
+        const row = await resolveWith(
+          fuzzyWith([
+            { indicator_id: '8006329bfd49', score: 0.999, center: 'IFPRI' },
+            {
+              indicator_id: '22ba725f9423',
+              score: 0.995,
+              center: 'CIAT (Alliance)',
+            },
+          ]),
+        );
+        expect(row.pt_indicator_id).toBe('22ba725f9423');
+        expect(row.match_score).toBe(0.995);
+        expect(row.match_quality).toBe('fuzzy');
+        expect(row.needs_review).toBe(false);
+      });
+
+      it('keeps PT pick when it already shares the row center', async () => {
+        const row = await resolveWith(
+          fuzzyWith([
+            {
+              indicator_id: '8006329bfd49',
+              score: 0.999,
+              center: 'CIAT (Alliance)',
+            },
+            { indicator_id: '22ba725f9423', score: 0.998, center: 'IFPRI' },
+          ]),
+        );
+        expect(row.pt_indicator_id).toBe('8006329bfd49');
+        expect(row.needs_review).toBe(false);
+      });
+
+      it('still flags the swapped candidate when its score is below the threshold', async () => {
+        const row = await resolveWith(
+          fuzzyWith([
+            { indicator_id: '8006329bfd49', score: 0.999, center: 'IFPRI' },
+            {
+              indicator_id: '22ba725f9423',
+              score: 0.97,
+              center: 'CIAT (Alliance)',
+            },
+          ]),
+        );
+        expect(row.pt_indicator_id).toBe('22ba725f9423');
+        expect(row.match_score).toBe(0.97);
+        expect(row.needs_review).toBe(true);
+      });
+
+      it('ignores a same-center candidate outside the 0.03 window', async () => {
+        const row = await resolveWith(
+          fuzzyWith([
+            { indicator_id: '8006329bfd49', score: 0.999, center: 'IFPRI' },
+            {
+              indicator_id: '22ba725f9423',
+              score: 0.95,
+              center: 'CIAT (Alliance)',
+            },
+          ]),
+        );
+        expect(row.pt_indicator_id).toBe('8006329bfd49');
+        expect(row.needs_review).toBe(false);
+      });
+
+      it('never applies to an exact match', async () => {
+        const row = await resolveWith(
+          exactResolveResponse({
+            candidates: [
+              { indicator_id: '8006329bfd49', score: 1.0, center: 'IFPRI' },
+              {
+                indicator_id: '22ba725f9423',
+                score: 0.99,
+                center: 'CIAT (Alliance)',
+              },
+            ],
+          }),
+        );
+        expect(row.pt_indicator_id).toBe('8006329bfd49');
+        expect(row.needs_review).toBe(false);
+      });
+    });
+
+    it('is cleared on re-resolution when a fuzzy row becomes exact', async () => {
+      await resolveWith(fuzzyResolveResponse());
+      expect(table[0].needs_review).toBe(true);
+
+      const row = await resolveWith(exactResolveResponse());
+      expect(table).toHaveLength(1);
+      expect(row.needs_review).toBe(false);
     });
   });
 
@@ -440,6 +847,102 @@ describe('ProgressTrackerResolveService', () => {
       const serializedLogCalls = JSON.stringify(logSpy.mock.calls);
       expect(serializedLogCalls).not.toContain('SENTINEL-API-KEY-VALUE');
       expect(serializedLogCalls).not.toContain(process.env.PT_INTEROP_BASE_URL);
+    });
+  });
+});
+
+describe('pickFuzzyCandidate', () => {
+  const PT_PICK = 'aaaaaaaaaaaa';
+
+  it('keeps PT pick with its score when there is a single candidate', () => {
+    expect(
+      pickFuzzyCandidate(
+        PT_PICK,
+        [{ indicator_id: PT_PICK, score: 0.9 }],
+        'CIAT',
+      ),
+    ).toEqual({ indicatorId: PT_PICK, score: 0.9, unresolvedTie: false });
+  });
+
+  it('treats a gap of exactly 0.03 as a tie (float noise absorbed)', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'IFPRI' },
+        {
+          indicator_id: 'bbbbbbbbbbbb',
+          score: 0.96,
+          center: 'CIAT (Alliance)',
+        },
+      ],
+      'CIAT',
+    );
+    expect(pick).toEqual({
+      indicatorId: 'bbbbbbbbbbbb',
+      score: 0.96,
+      unresolvedTie: false,
+    });
+  });
+
+  it('does not treat a gap just over 0.03 as a tie', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'IFPRI' },
+        {
+          indicator_id: 'bbbbbbbbbbbb',
+          score: 0.959,
+          center: 'CIAT (Alliance)',
+        },
+      ],
+      'CIAT',
+    );
+    expect(pick.indicatorId).toBe(PT_PICK);
+    expect(pick.unresolvedTie).toBe(false);
+  });
+
+  it('normalises both sides with toPtCenterName (Bioversity alias, case)', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'CIAT (Alliance)' },
+        {
+          indicator_id: 'bbbbbbbbbbbb',
+          score: 0.98,
+          center: 'bioversity (alliance)',
+        },
+      ],
+      'Bioversity International',
+    );
+    expect(pick.indicatorId).toBe('bbbbbbbbbbbb');
+  });
+
+  it('picks the highest-scoring same-center candidate among several', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'IFPRI' },
+        { indicator_id: 'cccccccccccc', score: 0.97, center: 'ILRI' },
+        { indicator_id: 'bbbbbbbbbbbb', score: 0.98, center: 'ILRI' },
+      ],
+      'ILRI',
+    );
+    expect(pick.indicatorId).toBe('bbbbbbbbbbbb');
+  });
+
+  it('flags an unresolved tie when the row has no center', () => {
+    const pick = pickFuzzyCandidate(
+      PT_PICK,
+      [
+        { indicator_id: PT_PICK, score: 0.99, center: 'IFPRI' },
+        { indicator_id: 'bbbbbbbbbbbb', score: 0.98, center: 'ILRI' },
+      ],
+      null,
+    );
+    expect(pick).toEqual({
+      indicatorId: PT_PICK,
+      score: 0.99,
+      unresolvedTie: true,
     });
   });
 });

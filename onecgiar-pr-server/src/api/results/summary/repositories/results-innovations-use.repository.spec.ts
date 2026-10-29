@@ -93,4 +93,48 @@ describe('ResultsInnovationsUseRepository — the read must return every persist
       expect(sql).toMatch(/(?<!LEFT\s)\bJOIN\s+results_innovations_use\s+riu/i);
     });
   });
+
+  /**
+   * 2026-10-14 (W3 27270): the phase copy now carries the reporter's ANSWERS, so the new phase opens
+   * pre-filled and editable. It must NOT carry the P2-3537 per-period update, nor has_scaling_studies
+   * (its URLs live in a table this copy does not replicate).
+   */
+  describe('createQueries — what a phase change copies', () => {
+    const config: any = {
+      old_result_id: 11541,
+      new_result_id: 12026,
+      user: { id: 90 },
+    };
+    const COPIED = [
+      'male_using',
+      'female_using',
+      'has_innovation_link',
+      'readiness_level_explanation',
+      'innov_use_2030_justification',
+      'innov_use_to_be_determined',
+      'innov_use_2030_to_be_determined',
+      'innovation_use_level_id',
+    ];
+    const NOT_COPIED = [
+      'new_users_added',
+      'use_expansion_narrative',
+      'has_scaling_studies',
+    ];
+
+    it.each(COPIED)(
+      'copies %s in the insert column list and its select',
+      (column) => {
+        const { insertQuery } = makeRepository().createQueries(config);
+        const [columnList, selectPart] = insertQuery.split(/\)\s*select/i);
+        expect(columnList).toMatch(new RegExp(`\\b${column},`));
+        expect(selectPart).toMatch(new RegExp(`riu\\.${column},`));
+      },
+    );
+
+    it.each(NOT_COPIED)('does not copy %s', (column) => {
+      const { insertQuery, findQuery } = makeRepository().createQueries(config);
+      expect(insertQuery).not.toContain(column);
+      expect(findQuery).not.toContain(column);
+    });
+  });
 });

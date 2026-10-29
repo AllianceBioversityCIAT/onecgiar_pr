@@ -9,6 +9,7 @@ import { Version } from '../versioning/entities/version.entity';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { getProgressTrackerTimeoutMs } from './progress-tracker.config';
+import { PtPorbRepository } from './repositories/pt-porb.repository';
 
 /**
  * `PTM-T-3` — `PTM-AC-1`–`PTM-AC-7`, plus the sentinel leak falsifier named in
@@ -44,8 +45,9 @@ function mappedRow(
 describe('ProgressTrackerService', () => {
   let service: ProgressTrackerService;
   let httpService: { get: jest.Mock };
-  let mappingRepository: { findOne: jest.Mock };
+  let mappingRepository: { find: jest.Mock };
   let versionRepository: { findOne: jest.Mock };
+  let porbRepository: { findProgramName: jest.Mock };
   let loggerWarnSpy: jest.SpyInstance;
 
   function allLoggerWarnCalls(): any[][] {
@@ -58,15 +60,18 @@ describe('ProgressTrackerService', () => {
     delete process.env.PT_INTEROP_TIMEOUT_MS;
 
     httpService = { get: jest.fn() };
-    mappingRepository = { findOne: jest.fn() };
+    mappingRepository = { find: jest.fn() };
     versionRepository = {
       findOne: jest.fn().mockResolvedValue(ACTIVE_VERSION),
     };
+
+    porbRepository = { findProgramName: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProgressTrackerService,
         { provide: HttpService, useValue: httpService },
+        { provide: PtPorbRepository, useValue: porbRepository },
         {
           provide: getRepositoryToken(ProgressTrackerIndicatorMap),
           useValue: mappingRepository,
@@ -92,7 +97,7 @@ describe('ProgressTrackerService', () => {
 
   describe('mapping lookup joins on toc_results_indicator_id + version_id (design.md §14 watch item)', () => {
     it('queries the mapping repository on the related_node_id string and the active reporting version id', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(of({ data: { results: [] } }));
 
       await service.getIndicatorResults('5d51da6c6916');
@@ -104,15 +109,102 @@ describe('ProgressTrackerService', () => {
           app_module_id: AppModuleIdEnum.REPORTING,
         },
       });
-      expect(mappingRepository.findOne).toHaveBeenCalledWith({
+      expect(mappingRepository.find).toHaveBeenCalledWith({
         where: { toc_results_indicator_id: '5d51da6c6916', version_id: 42 },
       });
     });
   });
 
+  describe('center-aware lookup (one map row per center)', () => {
+    const ciat = () =>
+      mappedRow({ id: 1, center: 'CIAT', pt_indicator_id: 'aaaaaaaaaaaa' });
+    const ifpri = () =>
+      mappedRow({ id: 2, center: 'IFPRI', pt_indicator_id: 'bbbbbbbbbbbb' });
+
+    beforeEach(() => {
+      httpService.get.mockReturnValue(of({ data: { results: [] } }));
+    });
+
+    const calledPtId = () =>
+      httpService.get.mock.calls[0][0].match(/indicators\/([^/]+)\/results/)[1];
+
+    it('picks the row of the requested center', async () => {
+      mappingRepository.find.mockResolvedValue([ciat(), ifpri()]);
+
+      await service.getIndicatorResults('5d51da6c6916', { center: 'IFPRI' });
+
+      expect(calledPtId()).toBe('bbbbbbbbbbbb');
+    });
+
+    it('normalizes both sides with toPtCenterName (CIAT (Alliance) matches a CIAT row, case-insensitive)', async () => {
+      mappingRepository.find.mockResolvedValue([ciat(), ifpri()]);
+
+      await service.getIndicatorResults('5d51da6c6916', {
+        center: 'ciat (alliance)',
+      });
+
+      expect(calledPtId()).toBe('aaaaaaaaaaaa');
+    });
+
+    it('never forwards center upstream', async () => {
+      mappingRepository.find.mockResolvedValue([ciat()]);
+
+      await service.getIndicatorResults('5d51da6c6916', { center: 'CIAT' });
+
+      expect(httpService.get.mock.calls[0][1].params).not.toHaveProperty(
+        'center',
+      );
+    });
+
+    it('answers not_found when no row matches the requested center', async () => {
+      mappingRepository.find.mockResolvedValue([ciat()]);
+
+      const result = await service.getIndicatorResults('5d51da6c6916', {
+        center: 'ILRI',
+      });
+
+      expect(result.response.status).toBe('not_found');
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+
+    it('without a center, uses the only row', async () => {
+      mappingRepository.find.mockResolvedValue([ifpri()]);
+
+      await service.getIndicatorResults('5d51da6c6916');
+
+      expect(calledPtId()).toBe('bbbbbbbbbbbb');
+    });
+
+    it('without a center and several rows, answers not_found rather than guessing a center', async () => {
+      mappingRepository.find.mockResolvedValue([ciat(), ifpri()]);
+
+      const result = await service.getIndicatorResults('5d51da6c6916');
+
+      expect(result.response.status).toBe('not_found');
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+
+    it('answers not_found for a row flagged needs_review', async () => {
+      mappingRepository.find.mockResolvedValue([
+        mappedRow({
+          center: 'CIAT',
+          match_quality: 'fuzzy',
+          needs_review: true,
+        }),
+      ]);
+
+      const result = await service.getIndicatorResults('5d51da6c6916', {
+        center: 'CIAT',
+      });
+
+      expect(result.response.status).toBe('not_found');
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+  });
+
   describe('PTM-AC-2 — unmapped indicator: not_found, zero upstream calls', () => {
     it('returns not_found and calls HttpService.get zero times when no mapping row exists', async () => {
-      mappingRepository.findOne.mockResolvedValue(null);
+      mappingRepository.find.mockResolvedValue([]);
 
       const result = await service.getIndicatorResults('unmapped-indicator');
 
@@ -125,9 +217,9 @@ describe('ProgressTrackerService', () => {
     });
 
     it("returns not_found and calls HttpService.get zero times when match_quality is 'none'", async () => {
-      mappingRepository.findOne.mockResolvedValue(
+      mappingRepository.find.mockResolvedValue([
         mappedRow({ match_quality: 'none', pt_indicator_id: null }),
-      );
+      ]);
 
       const result = await service.getIndicatorResults('some-indicator');
 
@@ -149,14 +241,14 @@ describe('ProgressTrackerService', () => {
         message: 'No Progress Tracker mapping found for this indicator',
         response: { status: 'not_found' },
       });
-      expect(mappingRepository.findOne).not.toHaveBeenCalled();
+      expect(mappingRepository.find).not.toHaveBeenCalled();
       expect(httpService.get).not.toHaveBeenCalled();
     });
   });
 
   describe('PTM-AC-1 — mapped indicator, upstream ok: proposals returned, PT id permitted in provenance + deep link (PTM-R-3c)', () => {
     it('returns status ok with the whitelisted top-level fields, passing indicator_id, program_id and source.pt_url through unmodified', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         of({
           data: {
@@ -223,7 +315,7 @@ describe('ProgressTrackerService', () => {
     });
 
     it('never strips result_key, indicator ids or pt_url — sanitizeProposals only whitelists top-level keys (PTM-R-3c)', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         of({
           data: {
@@ -250,6 +342,91 @@ describe('ProgressTrackerService', () => {
       expect((result.response as any).debug_internal).toBeUndefined();
     });
 
+    it('passes the top-level preparation object through unmodified, like generated_by (PT 2026-10-15)', async () => {
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
+      const preparation = {
+        status: 'preparing',
+        retry_after_s: 90,
+        pending_group_ids: ['g1', 'g2'],
+      };
+      const generatedBy = {
+        mode: 'template',
+        fallback_reason: 'preparing',
+        complete: false,
+        notice: 'Still drafting the remaining evidence groups.',
+      };
+      httpService.get.mockReturnValue(
+        of({ data: { results: [], generated_by: generatedBy, preparation } }),
+      );
+
+      const result = await service.getIndicatorResults('5d51da6c6916');
+
+      expect(result.response.preparation).toEqual(preparation);
+      expect(result.response.generated_by).toEqual(generatedBy);
+    });
+
+    it('passes PT plain-language reasons through when there is nothing to propose (generated_by.notice, preparation.no_results_reason)', async () => {
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
+      const notice =
+        'No knowledge product for this KPI was found in the Progress Tracker evidence.';
+      httpService.get.mockReturnValue(
+        of({
+          data: {
+            results: [],
+            generated_by: { mode: 'ai', notice },
+            preparation: {
+              status: 'ready',
+              no_results_reason: 'Fallback reason.',
+            },
+          },
+        }),
+      );
+
+      const result = await service.getIndicatorResults('5d51da6c6916');
+
+      expect((result.response.generated_by as { notice?: string }).notice).toBe(
+        notice,
+      );
+      expect(result.response.preparation?.no_results_reason).toBe(
+        'Fallback reason.',
+      );
+    });
+
+    it.each(['no_reportable_results', 'no_readable_original_evidence'])(
+      'passes generated_by.fallback_reason %s through for the client empty state',
+      async (reason) => {
+        mappingRepository.find.mockResolvedValue([mappedRow()]);
+        httpService.get.mockReturnValue(
+          of({
+            data: {
+              results: [],
+              generated_by: { mode: 'template', fallback_reason: reason },
+            },
+          }),
+        );
+
+        const result = await service.getIndicatorResults('5d51da6c6916');
+
+        expect(result.response.generated_by).toEqual({
+          mode: 'template',
+          fallback_reason: reason,
+        });
+      },
+    );
+
+    it('drops a non-object preparation and omits it when absent (pre-2026-10-15 PT builds)', async () => {
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
+      httpService.get.mockReturnValueOnce(
+        of({ data: { results: [], preparation: 'preparing' } }),
+      );
+      const withString = await service.getIndicatorResults('5d51da6c6916');
+      expect('preparation' in withString.response).toBe(false);
+
+      httpService.get.mockReturnValueOnce(of({ data: { results: [] } }));
+      const absent = await service.getIndicatorResults('5d51da6c6916');
+      expect('preparation' in absent.response).toBe(false);
+    });
+
     /**
      * `design.md` §4.1 amendment (2026-09-22) — the projection out of `cache` is
      * deliberately narrow: `evidence_fingerprint` alone, never the whole object. This
@@ -258,7 +435,7 @@ describe('ProgressTrackerService', () => {
      * it dropped `cache` entirely rather than projecting one field out of it).
      */
     it('projects only cache.evidence_fingerprint through — cache.hit and cache.cached_at do NOT appear (PTM-R-13)', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         of({
           data: {
@@ -288,7 +465,7 @@ describe('ProgressTrackerService', () => {
     });
 
     it('sends the request to the resolved PT indicator id, never the PRMS/Integration id', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(of({ data: {} }));
 
       await service.getIndicatorResults('5d51da6c6916');
@@ -306,7 +483,7 @@ describe('ProgressTrackerService', () => {
      * (already covered by `progress-tracker.config.spec.ts`).
      */
     it('D-14 — sends the clamped timeout on the request config', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(of({ data: {} }));
 
       await service.getIndicatorResults('5d51da6c6916');
@@ -319,7 +496,7 @@ describe('ProgressTrackerService', () => {
 
   describe('PTM-AC-3 — upstream 404: not_found, never a 4xx/5xx from PRMS', () => {
     it('classifies an upstream 404 as not_found with statusCode 200', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         defer(() =>
           Promise.reject({
@@ -341,7 +518,7 @@ describe('ProgressTrackerService', () => {
 
   describe('PTM-AC-4 — upstream 422: classified unavailable, never an unhandled exception', () => {
     it('classifies an upstream 422 (the PT DEV on-ramp drift) as unavailable, resolving rather than rejecting', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         defer(() =>
           Promise.reject({
@@ -363,7 +540,7 @@ describe('ProgressTrackerService', () => {
 
   describe('PTM-AC-5 — timeout / 5xx: unavailable, and the leak-free SourceFailure contract', () => {
     it('classifies a timeout as unavailable without leaking message, config.url or response body', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         defer(() =>
           Promise.reject({
@@ -398,7 +575,7 @@ describe('ProgressTrackerService', () => {
     });
 
     it('classifies an upstream 5xx as unavailable without leaking the response body', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         defer(() =>
           Promise.reject({
@@ -430,7 +607,7 @@ describe('ProgressTrackerService', () => {
      * `response.data`) so a fixture with an empty message cannot hide the mutation.
      */
     it('FALSIFIER — the caught error object never leaves the catch block (sentinel leak test)', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       const sentinelError = {
         message: 'SENTINEL-MESSAGE: connection refused',
         config: { url: 'https://SENTINEL-URL.example.com/leak' },
@@ -452,7 +629,7 @@ describe('ProgressTrackerService', () => {
   describe('PTM-AC-6 — PT_INTEROP_BASE_URL unset: unavailable, never throws, never names the variable', () => {
     it('resolves unavailable without calling the upstream when the base URL is unset', async () => {
       delete process.env.PT_INTEROP_BASE_URL;
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
 
       const result = await service.getIndicatorResults('5d51da6c6916');
 
@@ -471,7 +648,7 @@ describe('ProgressTrackerService', () => {
   describe('PTM-AC-7 — X-API-Key sent only when non-empty, never logged', () => {
     it('does not send an X-API-Key header when PT_INTEROP_API_KEY is unset', async () => {
       delete process.env.PT_INTEROP_API_KEY;
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(of({ data: {} }));
 
       await service.getIndicatorResults('5d51da6c6916');
@@ -483,7 +660,7 @@ describe('ProgressTrackerService', () => {
     // The AC's own Given is "is empty" (`''`), a distinct code path from `delete` (unset).
     it('does not send an X-API-Key header when PT_INTEROP_API_KEY is the literal empty string', async () => {
       process.env.PT_INTEROP_API_KEY = '';
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(of({ data: {} }));
 
       await service.getIndicatorResults('5d51da6c6916');
@@ -494,7 +671,7 @@ describe('ProgressTrackerService', () => {
 
     it('sends X-API-Key when PT_INTEROP_API_KEY is non-empty, and never logs it', async () => {
       process.env.PT_INTEROP_API_KEY = 'SENTINEL-API-KEY-VALUE';
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         defer(() =>
           Promise.reject({ message: 'boom', response: { status: 500 } }),
@@ -520,7 +697,7 @@ describe('ProgressTrackerService', () => {
       ['ok', () => httpService.get.mockReturnValue(of({ data: {} }))],
       [
         'not_found (unmapped)',
-        () => mappingRepository.findOne.mockResolvedValue(null),
+        () => mappingRepository.find.mockResolvedValue([]),
       ],
       [
         'unavailable (5xx)',
@@ -532,7 +709,7 @@ describe('ProgressTrackerService', () => {
           ),
       ],
     ])('returns statusCode 200 for the %s case', async (_label, arrange) => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       arrange();
 
       const result = await service.getIndicatorResults('5d51da6c6916');
@@ -564,7 +741,7 @@ describe('ProgressTrackerService', () => {
     }
 
     it('emits HTTP 200 and preserves the full payload for the ok case', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(
         of({ data: { results: [{ result_key: '8006329bfd49:1' }] } }),
       );
@@ -591,7 +768,7 @@ describe('ProgressTrackerService', () => {
     });
 
     it('emits HTTP 200 and preserves the payload for the not_found and unavailable cases too', async () => {
-      mappingRepository.findOne.mockResolvedValue(null);
+      mappingRepository.find.mockResolvedValue([]);
       const serviceResult = await service.getIndicatorResults('unmapped');
 
       const interceptor = new ResponseInterceptor();
@@ -616,7 +793,7 @@ describe('ProgressTrackerService', () => {
      * `data.statusCode`) that caused Finding 1.
      */
     it('FALSIFIER — a regressed top-level `status` key must break the HTTP status (proves the pipe test gates the defect)', async () => {
-      mappingRepository.findOne.mockResolvedValue(mappedRow());
+      mappingRepository.find.mockResolvedValue([mappedRow()]);
       httpService.get.mockReturnValue(of({ data: {} }));
       const serviceResult = await service.getIndicatorResults('5d51da6c6916');
 
@@ -691,7 +868,7 @@ describe('ProgressTrackerService', () => {
         },
       });
       expect(JSON.stringify(result)).not.toContain('SENTINEL-UNLISTED');
-      expect(mappingRepository.findOne).not.toHaveBeenCalled();
+      expect(mappingRepository.find).not.toHaveBeenCalled();
     });
 
     it('forwards min_evidence as an upstream query param', async () => {
@@ -704,6 +881,38 @@ describe('ProgressTrackerService', () => {
         `${BASE_URL}/api/prms/programs/fdb65d1a595c/ready-counts`,
       );
       expect(config.params).toEqual({ min_evidence: 3 });
+    });
+
+    it('translates a PRMS official code (SP01) to the program name, URL-encoded — PT does not know SP codes', async () => {
+      porbRepository.findProgramName.mockResolvedValue('Breeding for Tomorrow');
+      httpService.get.mockReturnValue(of({ data: {} }));
+
+      await service.getProgramReadyCounts('sp01');
+
+      expect(porbRepository.findProgramName).toHaveBeenCalledWith('SP01');
+      expect(httpService.get.mock.calls[0][0]).toBe(
+        `${BASE_URL}/api/prms/programs/Breeding%20for%20Tomorrow/ready-counts`,
+      );
+    });
+
+    it('answers not_found with no upstream call for an official code PRMS cannot name', async () => {
+      porbRepository.findProgramName.mockResolvedValue(null);
+
+      const result = await service.getProgramReadyCounts('SP99');
+
+      expect(result.response.status).toBe('not_found');
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+
+    it('passes a program name or PT hash through without a lookup', async () => {
+      httpService.get.mockReturnValue(of({ data: {} }));
+
+      await service.getProgramReadyCounts('Food Frontiers and Security');
+
+      expect(porbRepository.findProgramName).not.toHaveBeenCalled();
+      expect(httpService.get.mock.calls[0][0]).toContain(
+        '/programs/Food%20Frontiers%20and%20Security/ready-counts',
+      );
     });
 
     /** `D-14` — same gate as `getIndicatorResults`'s equivalent test above. */
@@ -731,7 +940,7 @@ describe('ProgressTrackerService', () => {
         message: 'No Progress Tracker ready counts found for this program',
         response: { status: 'not_found' },
       });
-      expect(mappingRepository.findOne).not.toHaveBeenCalled();
+      expect(mappingRepository.find).not.toHaveBeenCalled();
     });
 
     it.each([

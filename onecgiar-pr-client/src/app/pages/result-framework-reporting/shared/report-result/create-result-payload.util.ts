@@ -160,6 +160,27 @@ export interface CreateResultPayloadOptions {
    * `PTB-R-17` true: the key is ABSENT from the payload, not `null` or `{}` (`PTB-AC-13`).
    */
   ptProposal?: PtProvenanceInput | null;
+  /**
+   * `PTB-R-18a` (2026-10-19) — evidence links and CLARISA-matched partners from the same pick,
+   * built by `lab-report-form/pt-prefill.util.ts` (`buildPtPrefillBlock`). The server saves them
+   * best-effort after the result exists; `null` keeps the key absent.
+   */
+  ptPrefill?: PtPrefillInput | null;
+}
+
+/** `progress_tracker_prefill` — a sibling of `progress_tracker_provenance`, whose DTO is closed. */
+export interface PtPrefillInput {
+  evidence_links: { url: string; title: string }[];
+  partners: { clarisa_id: number; name: string }[];
+  /** `PTB-R-18b`: PRMS geographic focus (1 | 2 | 3 | 5) + CLARISA ids, mapped in `pt-prefill.util.ts`. */
+  geography?: {
+    geo_scope_id: number;
+    countries: { clarisa_id: number; iso_alpha_2: string | null; name: string }[];
+    regions: { id: number; name: string }[];
+    subnational: { code: string | null; clarisa_id: number | null }[];
+  };
+  /** `PTB-R-18b`: impact-area score (0 | 1 | 2) by PT key. */
+  impact_areas?: Record<string, number>;
 }
 
 /**
@@ -167,10 +188,12 @@ export interface CreateResultPayloadOptions {
  * full `PtProposalDto` — this file has no reason to know about guidance-only fields
  * (`countries` / `impact_areas` / `gender_split`, `PTB-R-18`) or the fields the pre-fill mapping in
  * `lab-report-form.component.ts` already consumed before building the payload (`title`,
- * `result_type`, `knowledge_product_handle`).
+ * `result_type`, `knowledge_product_handle`, contribution, centers). Evidence links and matched
+ * partners come separately, as {@link PtPrefillInput} (`PTB-R-18a`), and so do geography and
+ * impact-area scores once mapped (`PTB-R-18b`).
  */
 export interface PtProvenanceInput {
-  /** The draft narrative — becomes the body of `toc_progressive_narrative` (`PTB-R-16`). */
+  /** The draft description — becomes `result.description` (the narrative carries only the origin note). */
   description: string;
   /** `<indicator_id>:<n>` — sent back verbatim so the server can persist the provenance link. */
   result_key: string;
@@ -190,16 +213,6 @@ export function buildPtProvenanceTail(proposal: PtProvenanceInput): string {
   const parts = [`Drafted from Progress Tracker proposal ${proposal.result_key}`];
   if (proposal.generated_at) parts.push(`generated ${proposal.generated_at}`);
   return `${parts.join(', ')}.`;
-}
-
-/**
- * `PTB-R-16` — the draft description plus the provenance tail. Only the Progress Tracker path ever
- * calls this; every other caller keeps sending `''` (`PTB-R-17`, `PTB-AC-13`).
- */
-export function buildPtProgressiveNarrative(proposal: PtProvenanceInput): string {
-  const description = (proposal.description ?? '').trim();
-  const tail = buildPtProvenanceTail(proposal);
-  return description ? `${description}\n\n${tail}` : tail;
 }
 
 /**
@@ -260,10 +273,21 @@ function resolveInnovationLink(options: CreateResultPayloadOptions): Record<stri
 
 /**
  * `PTB-R-17` / `PTB-AC-13`: every caller that never went through the Progress Tracker tab keeps
- * sending exactly `''`, as the legacy modal always has.
+ * sending exactly `''`, as the legacy modal always has. A Progress Tracker pick sends only the
+ * origin note — the draft text itself is the result description ({@link resolvePtDescription}).
  */
 function resolveProgressiveNarrative(options: CreateResultPayloadOptions): string {
-  return options.ptProposal ? buildPtProgressiveNarrative(options.ptProposal) : '';
+  return options.ptProposal ? buildPtProvenanceTail(options.ptProposal) : '';
+}
+
+/**
+ * The Progress Tracker draft is the result's description (`result.description`, stored by the
+ * server at create). Spread only when there is a non-empty draft, so every other caller posts the
+ * exact `result` it posts today.
+ */
+function resolvePtDescription(options: CreateResultPayloadOptions): Record<string, string> {
+  const description = (options.ptProposal?.description ?? '').trim();
+  return description ? { description } : {};
 }
 
 /**
@@ -299,6 +323,7 @@ export function buildCreateResultPayload(options: CreateResultPayloadOptions): R
       initiative_id: options.initiativeId,
       result_name: options.body.result_name,
       handler: resolveHandler(options, resultTypeId),
+      ...resolvePtDescription(options),
       // P2-3420 — the answer rides INSIDE the create. Chaining the innovation-use PATCH afterwards
       // does not work: it rejects a body without a valid `innovation_use_level_id`, which a result
       // created a moment ago does not have yet. The server stores it where Contributors and
@@ -323,6 +348,8 @@ export function buildCreateResultPayload(options: CreateResultPayloadOptions): R
     bilateral_project: options.bilateralProjects ?? [],
     // PTB-R-16 — a sibling of `toc_progressive_narrative`, never inside `result`. Spread only when
     // there IS a pick, so the key is genuinely absent (not `null`/`{}`) for every other caller.
-    ...(ptProvenance ? { progress_tracker_provenance: ptProvenance } : {})
+    ...(ptProvenance ? { progress_tracker_provenance: ptProvenance } : {}),
+    // PTB-R-18a — only with a pick that has links or matched partners; absent otherwise.
+    ...(ptProvenance && options.ptPrefill ? { progress_tracker_prefill: options.ptPrefill } : {})
   };
 }

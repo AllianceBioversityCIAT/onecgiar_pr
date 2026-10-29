@@ -218,4 +218,184 @@ describe('CgspaceSearchQueryDto', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('project scope params (KPSF-R-1, R-9, R-11)', () => {
+    const pipe = () => controllerValidationPipe();
+    const aid = {
+      projectCode: 'T-PJ-003942',
+      projectTitle:
+        'IITA Accelerated Innovation Delivery Initiative (AID-I) for Mozambique',
+      projectLeadCenter: 'IITA',
+    };
+
+    it('accepts projectScope alone with a code/title and no query, type, year or center', async () => {
+      for (const projectScope of ['linked', 'related']) {
+        const result = await pipe().transform(
+          { ...aid, projectScope },
+          queryMetadata,
+        );
+        expect(result.projectScope).toBe(projectScope);
+        expect(result.projectCode).toBe('T-PJ-003942');
+        expect(result.projectLeadCenter).toBe('IITA');
+      }
+    });
+
+    it('still requires a query when no filter and no projectScope is set', async () => {
+      await expect(
+        pipe().transform({ ...aid }, queryMetadata),
+      ).rejects.toThrow();
+    });
+
+    it('rejects a projectScope that is neither linked nor related', async () => {
+      await expect(
+        pipe().transform({ ...aid, projectScope: 'all' }, queryMetadata),
+      ).rejects.toThrow();
+    });
+
+    it('rejects projectScope without projectCode or projectTitle', async () => {
+      await expect(
+        pipe().transform({ projectScope: 'linked' }, queryMetadata),
+      ).rejects.toThrow();
+    });
+
+    it('rejects over-long values (code 50, title 300, lead center 20)', async () => {
+      for (const over of [
+        { projectCode: 'x'.repeat(51), projectTitle: 'ok title here' },
+        { projectCode: 'T-PJ-1', projectTitle: 'x'.repeat(301) },
+        { ...aid, projectLeadCenter: 'x'.repeat(21) },
+      ]) {
+        await expect(
+          pipe().transform({ ...over, projectScope: 'linked' }, queryMetadata),
+        ).rejects.toThrow();
+      }
+    });
+
+    it('rejects a repeated (array) project param instead of crashing later', async () => {
+      await expect(
+        pipe().transform(
+          {
+            ...aid,
+            projectTitle: ['a title', 'b title'],
+            projectScope: 'linked',
+          },
+          queryMetadata,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('keeps forbidNonWhitelisted on: an unknown param is still rejected', async () => {
+      await expect(
+        pipe().transform(
+          { ...aid, projectScope: 'linked', projectFoo: 'x' },
+          queryMetadata,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('still accepts the legacy `project` param alone', async () => {
+      const result = await pipe().transform(
+        { project: 'T-PJ-003942 - Accelerated Innovation Delivery' },
+        queryMetadata,
+      );
+      expect(result.project).toBe(
+        'T-PJ-003942 - Accelerated Innovation Delivery',
+      );
+    });
+  });
+
+  // @akili-spec changes/kp-related-relevance-ranking
+  describe('relevance params (KRR-R-9)', () => {
+    const pipe = () => controllerValidationPipe();
+    const base = {
+      projectCode: 'T-PJ-003942',
+      projectTitle: 'Accelerated Innovation Delivery',
+      projectScope: 'related',
+    };
+
+    it('accepts the three optional params and trims them', async () => {
+      const result = await pipe().transform(
+        {
+          ...base,
+          projectDescription: '  genebank collections  ',
+          projectProgram: ' SP13 - Genebanks ',
+          projectLeadCenterName: ' International Potato Center ',
+        },
+        queryMetadata,
+      );
+      expect(result.projectDescription).toBe('genebank collections');
+      expect(result.projectProgram).toBe('SP13 - Genebanks');
+      expect(result.projectLeadCenterName).toBe('International Potato Center');
+    });
+
+    it('stays valid without any of them (older clients)', async () => {
+      const result = await pipe().transform(base, queryMetadata);
+      expect(result.projectDescription).toBeUndefined();
+      expect(result.projectProgram).toBeUndefined();
+      expect(result.projectLeadCenterName).toBeUndefined();
+    });
+
+    it('accepts the boundary lengths (description 1000, program 200, center 200)', async () => {
+      await expect(
+        pipe().transform(
+          {
+            ...base,
+            projectDescription: 'a'.repeat(1000),
+            projectProgram: 'b'.repeat(200),
+            projectLeadCenterName: 'c'.repeat(200),
+          },
+          queryMetadata,
+        ),
+      ).resolves.toBeDefined();
+    });
+
+    it('rejects over-long values (description 1001, program 201, center 201)', async () => {
+      for (const over of [
+        { projectDescription: 'a'.repeat(1001) },
+        { projectProgram: 'b'.repeat(201) },
+        { projectLeadCenterName: 'c'.repeat(201) },
+      ]) {
+        await expect(
+          pipe().transform({ ...base, ...over }, queryMetadata),
+        ).rejects.toThrow();
+      }
+    });
+
+    it('rejects a repeated (array) value instead of crashing later', async () => {
+      await expect(
+        pipe().transform(
+          { ...base, projectDescription: ['one', 'two'] },
+          queryMetadata,
+        ),
+      ).rejects.toThrow();
+    });
+  });
+
+  // @akili-spec changes/kp-related-strongest-first
+  describe('projectRelatedOnly', () => {
+    const pipe = controllerValidationPipe;
+    const base = { projectScope: 'related', projectTitle: 'Soil health' };
+
+    it("maps the string 'true' to true", async () => {
+      const result = await pipe().transform(
+        { ...base, projectRelatedOnly: 'true' },
+        queryMetadata,
+      );
+      expect(result.projectRelatedOnly).toBe(true);
+    });
+
+    it("maps 'false' (and any other text) to false", async () => {
+      for (const value of ['false', 'yes', '1']) {
+        const result = await pipe().transform(
+          { ...base, projectRelatedOnly: value },
+          queryMetadata,
+        );
+        expect(result.projectRelatedOnly).toBe(false);
+      }
+    });
+
+    it('stays undefined when absent', async () => {
+      const result = await pipe().transform({ ...base }, queryMetadata);
+      expect(result.projectRelatedOnly).toBeUndefined();
+    });
+  });
 });

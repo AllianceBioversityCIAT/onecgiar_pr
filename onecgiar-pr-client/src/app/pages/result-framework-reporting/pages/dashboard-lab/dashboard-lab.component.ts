@@ -21,7 +21,7 @@ import {DecimalPipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Subscription, forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, timeout } from 'rxjs/operators';
 import { map } from 'rxjs/operators';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
@@ -60,11 +60,14 @@ import {
   CategoryBar as OverviewCategoryBar,
   OverviewCenterBar,
   OverviewLink,
+  OverviewTotalBreakdown,
   HeatmapModel,
   overviewScopeDisplayCode
 } from './components/program-overview/program-overview.component';
 import { buildTocMapModel, TocMapModel } from './dashboard-lab.toc-map';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
+import { BILATERAL_REVIEW_QUERY_PARAM_MAP } from '../bilateral-review/bilateral-review.query-params';
+import type { TotalSegmentKind } from './components/program-overview/program-overview.component';
 
 /** Overview Filter popover Section — sibling of `?scope=` (OSF-DD-12). Survives Overview ↔ Reporting remounts. */
 const OVERVIEW_SECTION_QUERY_PARAM = 'section';
@@ -80,6 +83,7 @@ import { ReportingGuideService, TutorialId } from './services/reporting-guide.se
 import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
 // @akili-spec changes/reporting-favorite-indicators
 import { ReportingFavoritesService, favoriteKeyOf } from './services/reporting-favorites.service';
+import { PT_ACTIVITY_TIMEOUT_MS, PtActivityIndex, buildPtActivityIndex, ptActivityCountOf, ptActivityHasAny } from './pt-activity';
 import { HlmButton } from '@spartan/button';
 // @akili-spec changes/reporting-entry-hub
 import {
@@ -100,7 +104,9 @@ import {
   pendingOf,
   sortRemainingFirst,
   stateOf,
-  summarisePartition
+  summarisePartition,
+  hasTarget,
+  type ReportingTargetFilter
 } from './reporting-burndown';
 // @akili-spec changes/overview-aow-cross-filter
 import { filterRowsByScope } from './overview-scope-filter';
@@ -217,6 +223,19 @@ const BILATERAL_STATUS_SLOTS: { key: string; label: string; statusIds: number[];
   }
 ];
 
+/**
+ * Editing (1) and its draft alias (8): center-only work, never shown on a Science Program's Overview
+ * (SR-164368, requested by Nicoleta).
+ */
+const BILATERAL_EDITING_STATUS_IDS = new Set<number>([1, 8]);
+
+/** Statuses a Science Program sees on the W3/Bilateral KPI card: Pending Review, Approved, Rejected. */
+const BILATERAL_REVIEW_STATUS_IDS = new Set<number>([5, 6, 7]);
+
+// @akili-spec changes/sp-overview-w3-received (SWR-R-1)
+/** W3/Bilateral results "received" by the Program: Pending Review, Approved, Rejected. Never `=== 5` alone. */
+const BILATERAL_RECEIVED_STATUS_IDS = new Set<number>([5, 6, 7]);
+
 const BILATERAL_DISCONTINUED_SLOT = {
   key: 'discontinued',
   label: 'Discontinued',
@@ -226,7 +245,7 @@ const BILATERAL_DISCONTINUED_SLOT = {
 };
 
 const BILATERAL_HEATMAP_SUBTITLE =
-  'All bilateral results tagged to this program (Editing · Pending Review · Approved · Rejected)';
+  'Bilateral results tagged to this program, excluding Editing (handled by centers)';
 
 /** Resolve a bilateral row's workflow status — prefer `status_id`, fall back to `status_name`. */
 function resolveBilateralStatusId(row: ResultToReview): number {
@@ -308,6 +327,13 @@ export interface OverviewAowProgressRowRich {
   reported: number;
   total: number;
   remaining: number;
+  /**
+   * `changes/kpi-progress-capped-average` KPC-R-5 — the AoW's capped mean (`buildRatio().percent`, one
+   * decimal) and the unrounded sum behind it. The rail / ring sum `progressSum` (KPC-DD-2); they never
+   * average the rounded `percent`s. Optional so external fixtures keep compiling.
+   */
+  progressSum?: number;
+  percent?: number;
   /** P2-3296 AC3 — this Area of Work's ToC achievement, beside the reported-KPI count above. */
   achievement?: TocAchievement | null;
 }
@@ -1111,6 +1137,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (code && phase) this.myWorkCountSE.ensure(code, phase);
     });
 
+    // Progress Tracker activity: ONE call per program load, keyed on the program code so the
+    // identity churn of `selected()` during a cold load does not re-issue it.
+    effect(() => {
+      const code = this.selected()?.initiativeCode || '';
+      untracked(() => this.loadPtActivity(code));
+    });
+
     effect(() => {
       if (this.plannedBrowseView() !== 'aows') {
         untracked(() => this.reportingInsightsOpen.set(false));
@@ -1452,6 +1485,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const typ = onPlanned
         ? (Array.isArray(typVal) ? (typVal.length ? typVal.join(',') : null) : (typVal && typVal !== 'all' ? typVal : null))
         : (aow ? (this.typologyFilter() || null) : null);
+      // Global Target filter (KTO-R-10): `all` is the default and writes no param, like `typ` empty.
+      const tgtVal = this.reportingTargetFilter();
+      const tgt = onPlanned && tgtVal !== 'all' ? tgtVal : null;
       // ToC-scope filter (`OSF-DD-12`): read here, in the SAME url-mirror effect as every other
       // piece of URL state — a second, independent `router.navigate` effect would race this one
       // (both read the URL's current queryParams before either write lands, so whichever loses the
@@ -1469,6 +1505,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
             aow: aow ?? null,
             // filters only make sense inside an open AOW or in Planned browse mode
             typ: typ,
+            tgt: tgt,
             st: aow ? st ?? null : null,
             q: q,
             // Planned ToC browse mode (+ selected AoW when browsing By AOW)
@@ -1680,7 +1717,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * fall back to this phase's result total so the line is never empty on first paint.
    *
    * @akili-spec bugfix/kpi-count-reconciliation — the figure is the partition's *Planned* (every
-   * KPI counted once, zero-target INCLUDED; the band's big figure is *Counted* — KCR-R-8/KCR-DD-4).
+   * KPI counted once, no-target rows INCLUDED; the band's big figure is also *Planned* since
+   * `changes/kpi-progress-target-only` KTO-DD-3, which supersedes KCR-DD-4's *Counted*).
    * The two later fallbacks are the unchanged pre-ToC chain.
    */
   readonly bandPlannedResultsCount = computed(() => {
@@ -1873,23 +1911,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly overviewAowProgress = computed<OverviewAowProgressRow[]>(() => {
     return this.programKpiPartition()
       .aows.map(slice => {
-        const { done, total, zeroTarget } = buildRatio(slice.own);
+        const { done, total, zeroTarget, percent, progressSum } = buildRatio(slice.own);
         return {
           code: slice.code,
           name: slice.name,
           done,
           total,
           zeroTarget,
+          // KPC-R-5 — the capped mean, the Reporting card's own figure.
+          percent,
+          progressSum,
           // P2-3296 AC3 — beside the reported-KPI count, never instead of it.
           achievement: this.achievementByAowCode()[slice.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
-      .sort((a, b) => {
-        const pa = a.total ? a.done / a.total : 0;
-        const pb = b.total ? b.done / b.total : 0;
-        return pa - pb || a.code.localeCompare(b.code);
-      });
+      // KPC-R-11 — ascending by the capped mean (not `done / total`), tie code ASC.
+      .sort((a, b) => (a.percent ?? 0) - (b.percent ?? 0) || a.code.localeCompare(b.code));
   });
 
   /**
@@ -1898,8 +1936,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * @akili-spec bugfix/kpi-count-reconciliation — read straight from the partition's two buckets
    * instead of the Section/Type-filtered `reportingGroups()`, and through `buildRatio`, so the chip
    * denominator is *Counted* like every other one (KCR-R-2, KCR-R-6). A bucket keeps its row iff it
-   * has ≥ 1 **planned** KPI — a bucket whose every KPI is zero-target still shows `0/0` rather than
-   * vanishing, because "planned but not countable" is not the same as "not planned" (KCR-R-6).
+   * has ≥ 1 **planned** KPI — a bucket whose every KPI has no target still shows a row (rendered
+   * `—`, KTO-R-3) rather than vanishing, because "planned but not countable" is not the same as "not planned" (KCR-R-6).
    */
   readonly overviewXcutProgress = computed<OverviewAowProgressRow[]>(() => {
     const partition = this.programKpiPartition();
@@ -1909,10 +1947,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     ]
       .filter(bucket => bucket.indicators.length > 0)
       .map(bucket => {
-        const { done, total, zeroTarget } = buildRatio(bucket.indicators);
+        const { done, total, zeroTarget, percent, progressSum } = buildRatio(bucket.indicators);
         // Sentence case per the reference ("Intermediate outcomes" / "2030 outcomes"). Only the
         // Overview row is relabelled — the Reporting table keeps the group's own name.
-        return { code: bucket.code, name: sentenceCaseOutcomes(bucket.name), done, total, zeroTarget };
+        return { code: bucket.code, name: sentenceCaseOutcomes(bucket.name), done, total, zeroTarget, percent, progressSum };
       });
   });
 
@@ -1925,9 +1963,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * `reporting-burndown`'s `stateOf` +
    * `applyZeroTargetRule` — NEVER recomputed locally (OAH-R-3 BUT, single-home rule: the glossary
    * partition IS that helper's own `stateOf`) — so this section's numbers can never drift from the
-   * Reporting-tab surfaces that already call the same functions. `target = 0 && achieved > 0` is
-   * NOT zero-target (achieved > 0), so `stateOf` correctly lands it in `in-progress` (the C-2
-   * orphan — the partition stays total). Sort: remaining DESC, tie code ASC (OAH-R-3). Loading
+   * Reporting-tab surfaces that already call the same functions. A row with no target
+   * (`target = 0`, whatever its achieved value) is excluded as `zeroTarget` (KTO-R-1/DD-2,
+   * superseding the former C-2 orphan landing in `in-progress`) — the partition stays total over
+   * the targeted set. Sort: AoW code ASC (quick/overview-aow-code-order; was remaining DESC, OAH-R-3). Loading
    * reuses `loadingAows()` — no new aggregate computed (design B-16).
    *
    * `changes/overview-aow-cross-filter` `OSF-R-11`: with a scope selected, narrows to that
@@ -1939,6 +1978,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const rows = this.programKpiPartition()
       .aows.map(slice => {
         const { counted, zeroTarget } = applyZeroTargetRule(slice.own);
+        // KPC-R-5 — the same capped mean as the thin row and the Reporting card (`buildRatio` over the
+        // same set); the rich counts below stay count-based.
+        const { percent, progressSum } = buildRatio(counted);
         let complete = 0;
         let inProgress = 0;
         let notStarted = 0;
@@ -1960,13 +2002,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           reported,
           total,
           remaining: total - reported,
+          progressSum,
+          percent,
           // P2-3296 AC3 — beside the reported-KPI count, never instead of it (same source as the
           // thin `overviewAowProgress` above).
           achievement: this.achievementByAowCode()[slice.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
-      .sort((a, b) => b.remaining - a.remaining || a.code.localeCompare(b.code));
+      // quick/overview-aow-code-order — AoW code ASC (AOW01, AOW02, …), superseding OAH-R-3's remaining DESC.
+      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
     return filterRowsByScope(rows, this.overviewScope(), r => r.code);
   });
 
@@ -2011,7 +2056,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .map((row): HubProgramLevelRow | null => {
         const kind: HubProgramLevelKind | null =
           row.code === OUTCOMES_2030_CODE ? '2030' : row.code === INTERMEDIATE_OUTCOMES_CODE ? 'intermediate' : null;
-        return kind ? { kind, name: row.name, done: row.done, total: row.total, zeroTarget: row.zeroTarget } : null;
+        return kind
+          ? { kind, name: row.name, done: row.done, total: row.total, zeroTarget: row.zeroTarget, percent: row.percent, progressSum: row.progressSum }
+          : null;
       })
       .filter((row): row is HubProgramLevelRow => row !== null)
   );
@@ -2099,16 +2146,55 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   });
 
   /**
+   * Total General card breakdown (sp-overview-total-general-card, STG-R-2/R-4, STG-DD-1/DD-2).
+   * Program-wide: deliberately reads NEITHER `overviewScope()` NOR `scopedBilateralRows()`.
+   */
+  readonly overviewTotalBreakdown = computed<OverviewTotalBreakdown>(() => {
+    const version = this.latestVersion(this.selected());
+    // @akili-spec changes/sp-overview-w3-received (SWR-R-1, SWR-DD-1): unscoped rows, as before.
+    const rows = this.bilateralRows();
+    return {
+      replicated: version?.replicatedResults ?? 0,
+      new: version?.newResults ?? 0,
+      received: rows.filter(r => BILATERAL_RECEIVED_STATUS_IDS.has(resolveBilateralStatusId(r))).length,
+      pendingReview: rows.filter(r => resolveBilateralStatusId(r) === 5).length
+    };
+  });
+
+  /**
    * `bilateralRows()` narrowed to the selected scope (`OSF-R-3`, `OSF-T-5`) via the SAME
    * single-homed rule (`OSF-DD-6`) the hero row and the W1/W2 status bucket use — `row.acronym` is
    * already on the wire (`result.repository.ts` selects `MAX(twp.acronym) AS acronym`), so this
    * partitions an array already in the client with no server change and no residual arithmetic
    * (`OSF-DD-3b`). A `null`/empty `acronym` lands in `UNTAGGED` rather than being dropped from
    * every scope. `overviewScope() === null` returns every row unchanged.
+   *
+   * Editing rows are dropped here, once, for every W3/Bilateral card that reads this (centers,
+   * categories, status segments, heatmap): only centers edit bilateral results, so a Science
+   * Program never sees them. `overviewTotalBreakdown` reads the unscoped `bilateralRows()` instead.
    */
   private readonly scopedBilateralRows = computed<ResultToReview[]>(() =>
-    filterRowsByScope(this.bilateralRows(), this.overviewScope(), r => r.acronym)
+    filterRowsByScope(
+      this.bilateralRows().filter(r => !BILATERAL_EDITING_STATUS_IDS.has(resolveBilateralStatusId(r))),
+      this.overviewScope(),
+      r => r.acronym
+    )
   );
+
+  /**
+   * Distinct categories among the scoped W3/Bilateral rows in the review path (Pending Review,
+   * Approved, Rejected) — the W3/Bilateral KPI card's sub-line. Science Programs never see Editing:
+   * only centers edit bilateral results.
+   */
+  readonly overviewBilateralReviewCategoryCount = computed(() => {
+    const names = new Set<string>();
+    for (const row of this.scopedBilateralRows()) {
+      if (!BILATERAL_REVIEW_STATUS_IDS.has(resolveBilateralStatusId(row))) continue;
+      const name = row.indicator_category?.trim();
+      if (name) names.add(name);
+    }
+    return names.size;
+  });
 
   /** Only the rows where this programme is the primary submitter (role id '1'). */
   private readonly bilateralPrimaryRows = computed(() =>
@@ -2175,7 +2261,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   });
 
   /**
-   * Bilateral results reporting status segments (Editing, Pending Review, Approved, Rejected).
+   * Bilateral results reporting status segments (Pending Review, Approved, Rejected, Discontinued).
+   * Editing is left out: only centers edit bilateral results, a Science Program never acts on them
+   * (its status ids stay in `slottedIds` so they do not resurface as a fallback segment).
    * W1/W2-only states (Submitted, In QA, Not started) are omitted — bilateral workflow uses its
    * own review path. `OSF-T-5`: reads the scope-narrowed rows, same population as
    * `overviewBilateralCenters` / `overviewBilateralCategories` under any scope (`OSF-AC-4`).
@@ -2207,7 +2295,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       return fallback;
     };
 
-    const segments: OverviewStatusSegment[] = BILATERAL_STATUS_SLOTS.map(slot => {
+    const segments: OverviewStatusSegment[] = BILATERAL_STATUS_SLOTS.filter(slot => slot.key !== 'editing').map(slot => {
       const count = countOf(slot.statusIds);
       const statusName = statusNameOf(slot.statusIds, slot.label);
       return {
@@ -2677,16 +2765,52 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
     if (!queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase]) {
-      const effectivePhase =
-        this.homeSE?.overviewSelectedPhase?.() ||
-        this.latestVersion(this.selected())?.phaseName ||
-        (this.latestVersion(this.selected())?.phaseYear ? `Phase ${this.latestVersion(this.selected())?.phaseYear}` : '') ||
-        this.dataControlSE?.reportingCurrentPhase?.phaseName;
+      const effectivePhase = this.effectivePhaseLabel();
       if (effectivePhase) {
         queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase] = effectivePhase;
       }
     }
     this.router.navigate(['/result-framework-reporting/entity-details', code, 'results'], { queryParams });
+  }
+
+  /** The phase label the Overview is currently showing (shared by `onOverviewLink` / `onTotalSegment`). */
+  private effectivePhaseLabel(): string | undefined {
+    return (
+      this.homeSE?.overviewSelectedPhase?.() ||
+      this.latestVersion(this.selected())?.phaseName ||
+      (this.latestVersion(this.selected())?.phaseYear ? `Phase ${this.latestVersion(this.selected())?.phaseYear}` : '') ||
+      this.dataControlSE?.reportingCurrentPhase?.phaseName
+    );
+  }
+
+  // @akili-spec changes/sp-overview-total-drilldown (STD-R-3, design §8.4, DD-2)
+  /**
+   * Total General card rows/segments. Deliberately does NOT go through `onOverviewLink`: that seam
+   * stamps `overviewScope()` as `section`, and KPI 1 is program-wide (S-3.1 AND IT MUST NOT).
+   */
+  onTotalSegment(kind: TotalSegmentKind): void {
+    // @akili-spec changes/sp-overview-w3-received (SWR-R-2, SWR-DD-3): in-page, idempotent `set` (never a toggle), no navigation.
+    if (kind === 'received') {
+      this.overviewSection.set('bilateral');
+      return;
+    }
+    const code = this.selected()?.initiativeCode;
+    if (!code) return;
+    const base = ['/result-framework-reporting/entity-details', code];
+    if (kind === 'pendingReview') {
+      const queryParams: Record<string, string> = { [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: 'pending' };
+      const versionId = this.effectiveVersionId();
+      if (versionId !== null) queryParams[BILATERAL_REVIEW_QUERY_PARAM_MAP.phase] = String(versionId);
+      this.router.navigate([...base, 'bilateral-review'], { queryParams });
+      return;
+    }
+    const queryParams: Record<string, string> = {
+      [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: 'W1/W2',
+      [PROGRAMME_RESULTS_QUERY_PARAM_MAP.replication]: kind
+    };
+    const phase = this.effectivePhaseLabel();
+    if (phase) queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase] = phase;
+    this.router.navigate([...base, 'results'], { queryParams });
   }
 
   /** % of results in a "reported" state (QAed / Submitted). */
@@ -2732,9 +2856,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    *
    * @akili-spec bugfix/kpi-count-reconciliation — every figure comes from `summarisePartition`
    * over the unfiltered `programKpiPartition()`, so a cross-cutting Intermediate Outcome is counted
-   * ONCE (KCR-R-1) and the band never moves under a filter (KCR-R-4). `totalKpis` is *Counted*
-   * (zero-target excluded, KCR-R-2/R-8); `plannedKpis` / `zeroTargetKpis` carry the disclosure the
-   * band's `title` states. The old `progress_percentage > 0` clause is gone (KCR-R-9): it read a
+   * ONCE (KCR-R-1) and the band never moves under a filter (KCR-R-4). Band contract (KTO-DD-3):
+   * `totalKpis` is *Planned* (a count of KPIs, no-target rows included, KTO-R-2) and
+   * `targetedKpis` is *Counted* (the targeted set, the only ratio denominator: "KPIs with
+   * evidence x of N"); `plannedKpis` / `zeroTargetKpis` carry the disclosure the band's `title`
+   * states. The old `progress_percentage > 0` clause is gone (KCR-R-9): it read a
    * `'1500%'` string and never decided anything `achieved > 0` had not already decided.
    */
   readonly plannedReportingSummaryStats = computed(() => {
@@ -2742,7 +2868,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return {
       programsCount: this.selected() ? 1 : 0,
       aowsCount: this.aows().length,
-      totalKpis: counted,
+      totalKpis: planned,
+      targetedKpis: counted,
       reportedKpis: reported,
       plannedKpis: planned,
       zeroTargetKpis: zeroTarget
@@ -2969,6 +3096,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         if (!this.arraysEqual(typList, this.reportingTypologyFilter())) {
           this.reportingTypologyFilter.set(typList);
         }
+        this.restoreTargetFilter(qp.get('tgt'));
         const kpiParam = qp.get('kpi');
         if (kpiParam) {
           this.pendingKpi = kpiParam;
@@ -3029,7 +3157,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** Apply `?tocView=` / `?tocAow=` on the Planned ToC surface. */
   private restorePlannedBrowseFromQuery(qp: { get(name: string): string | null }): void {
     if ((this.route.snapshot.data['rfrView'] as RfrView) !== 'planned') return;
-    const hasPlannedParams = qp.get('tocView') != null || qp.get('q') != null || qp.get('typ') != null || qp.get('kpi') != null || qp.get('tocAow') != null;
+    const hasPlannedParams = qp.get('tocView') != null || qp.get('q') != null || qp.get('typ') != null || qp.get('tgt') != null || qp.get('kpi') != null || qp.get('tocAow') != null;
     if (!hasPlannedParams) return;
     const view = parsePlannedBrowseView(qp.get('tocView')) ?? 'aows';
     this.restoringPlannedUrl = true;
@@ -3044,6 +3172,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (!this.arraysEqual(typList, this.reportingTypologyFilter())) {
       this.reportingTypologyFilter.set(typList);
     }
+    this.restoreTargetFilter(qp.get('tgt'));
     const kpiParam = qp.get('kpi');
     if (kpiParam) {
       this.pendingKpi = kpiParam;
@@ -3056,6 +3185,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     queueMicrotask(() => {
       this.restoringPlannedUrl = false;
     });
+  }
+
+  /** `?tgt=with|without` -> the Target filter; anything else (absent, invalid) is `all`. Guarded, so re-applying the same URL is a no-op. */
+  private restoreTargetFilter(raw: string | null): void {
+    const next: ReportingTargetFilter = raw === 'with' || raw === 'without' ? raw : 'all';
+    if (next !== this.reportingTargetFilter()) {
+      this.reportingTargetFilter.set(next);
+    }
   }
 
   private arraysEqual(a: string[], b: string[]): boolean {
@@ -3074,6 +3211,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.spParamSub?.unsubscribe();
     this.entityParamSub?.unsubscribe();
     this.phasesSub?.unsubscribe();
+    this.ptActivitySub?.unsubscribe();
     if (this.centerTimer) clearInterval(this.centerTimer);
   }
 
@@ -3334,10 +3472,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * plus its KPI stats (output tier only, same rule as the Reporting table ratio).
    * @akili-spec changes/reporting-entry-hub
    */
-  /** MRF-R-7: every affected % surface states the zero-target exclusion. @akili-spec changes/mass-reporting-flow */
+  /**
+   * MRF-R-7 / KTO-R-6: every affected % surface states the exclusion, as
+   * `excludes N KPI(s) with no target set`.
+   * @akili-spec changes/mass-reporting-flow
+   * @akili-spec changes/kpi-progress-target-only
+   */
   bannerZeroTargetTitle(zeroTarget: number): string | null {
     if (!zeroTarget) return null;
-    return `excludes ${zeroTarget} zero-target ${zeroTarget === 1 ? 'KPI' : 'KPIs'}`;
+    return `excludes ${zeroTarget} ${zeroTarget === 1 ? 'KPI' : 'KPIs'} with no target set`;
   }
 
   readonly plannedAowBanner = computed(() => {
@@ -3575,7 +3718,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * known bug the owner rejected. Real PRMS data (and the previous entity-aow sidebar) treats them
    * as siblings of the Areas of Work list, each with its own endpoint.
    */
-  readonly reportingGroups = computed<ReportingAowGroup[]>(() => {
+  readonly reportingGroups = computed<ReportingAowGroup[]>(() => this.buildReportingGroups(true));
+
+  /**
+   * Same pipeline as `reportingGroups()` with the Category (typology) stage switched off, so the
+   * quick-filter chips keep showing every category that survives Type / Target / Section instead of
+   * zeroing the rest once one is selected. `plannedSearch` never feeds either pass.
+   * @akili-spec changes/center-results-kpi-chips CRK-DD-1
+   */
+  readonly reportingGroupsForCounts = computed<ReportingAowGroup[]>(() => this.buildReportingGroups(false));
+
+  private buildReportingGroups(applyCategory: boolean): ReportingAowGroup[] {
     const aowFilter = this.reportingAowFilter();
     const typologies = this.reportingTypologyFilter();
     const typeFilters = this.reportingTypeFilter();
@@ -3583,9 +3736,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // fallback to `type_name` was wrong: that field carries the indicator's own name ("Proportion of
     // CGIAR-NARS-SME breeding pipelines within…"), so indicators without a result type polluted the
     // filter with 160+ one-off entries.
-    const noTypology = !typologies || typologies.length === 0;
+    const noTypology = !applyCategory || !typologies || typologies.length === 0;
     const matchTypology = (i: ReportingIndicator) =>
       noTypology || typologies.includes((i?.result_type_name ?? '').trim());
+    // Global Target filter (KTO-R-10): same stage as Category, AND-combined with it, so every
+    // surface below (chips, cards, split line, ratio) reads the already-filtered rows.
+    const targetMode = this.reportingTargetFilter();
+    const matchTarget = (i: ReportingIndicator) => targetMode === 'all' || hasTarget(i) === (targetMode === 'with');
+    const matchRow = (i: ReportingIndicator) => matchTypology(i) && matchTarget(i);
     const sp = this.selected()?.initiativeCode;
 
     // Type filter (CURRENT selType) — which top-level card families stay visible.
@@ -3625,7 +3783,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
                   : hasHlo
                     ? all.filter(i => i?.__tier !== 'outcome')
                     : all;
-            const rows = tierRows.filter(matchTypology);
+            const rows = tierRows.filter(matchRow);
             return {
               aow,
               indicators: rows,
@@ -3633,7 +3791,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
               // (KCR-R-10, KCR-AC-5), so `count − zeroTarget === ratio.total` holds on the same
               // header while Type and Category are `all`. The rendered `indicators` above keep the
               // Type/Category filtering (existing behaviour); only the label leaves the filter.
-              count: this.programKpiPartition().aowByCode.get(aow.code)?.own.length ?? tierRows.length,
+              // KTO-R-10: the Target filter is the one filter the label follows - it narrows the plan
+              // itself, so `N KPIs` is the AoW-own set under the same predicate.
+              count:
+                targetMode === 'all'
+                  ? (this.programKpiPartition().aowByCode.get(aow.code)?.own.length ?? tierRows.length)
+                  : (this.programKpiPartition().aowByCode.get(aow.code)?.own.filter(matchTarget).length ?? tierRows.filter(matchTarget).length),
               loading: bundle.loading,
               kind: 'aow' as const,
               // P2-3296 AC3. Taken from the roll-up call, not recomputed from `rows`: the figure
@@ -3655,8 +3818,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         ? {
             // Sentence case, like every other surface (the reference never title-cases "outcomes").
             aow: { code: INTERMEDIATE_OUTCOMES_CODE, name: 'Intermediate outcomes' },
-            indicators: ioAll.filter(matchTypology),
-            count: ioAll.length,
+            indicators: ioAll.filter(matchRow),
+            count: ioAll.filter(matchTarget).length,
             loading: ioLoading && !ioAll.length,
             kind: 'intermediate'
           }
@@ -3671,15 +3834,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       wantO30 && sectionIsO30 && (o30All.length || o30Loading)
         ? {
             aow: { code: OUTCOMES_2030_CODE, name: '2030 outcomes' },
-            indicators: o30All.filter(matchTypology),
-            count: o30All.length,
+            indicators: o30All.filter(matchRow),
+            count: o30All.filter(matchTarget).length,
             loading: o30Loading && !o30All.length,
             kind: '2030'
           }
         : null;
 
     return [...aowCards, ...(intermediateCard ? [intermediateCard] : []), ...(o30Card ? [o30Card] : [])];
-  });
+  }
 
   /**
    * `reportingGroups()` feeds the Overview tab too (`bandPlannedResultsCount`, `overviewXcutProgress`
@@ -3689,7 +3852,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * @akili-spec changes/mass-reporting-flow
    */
   readonly reportingGroupsForTable = computed<ReportingAowGroup[]>(() =>
-    this.applyFavoritesFilter(this.applyBurndownFilterAndSort(this.reportingGroups()))
+    this.applyPtActivityFilter(this.applyFavoritesFilter(this.applyBurndownFilterAndSort(this.reportingGroups())))
   );
 
   readonly reportingMatchingCount = computed<number>(() => {
@@ -3721,10 +3884,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   readonly reportingTypologyCounts = computed<Record<string, number>>(() => {
     const counts: Record<string, number> = {};
-    const groups = this.reportingGroups();
+    const groups = this.reportingGroupsForCounts();
     let total = 0;
     for (const group of groups) {
       for (const row of group.indicators ?? []) {
+        if ((row as any).__isIntermediateCrosscut) continue;
         total++;
         const type = row.result_type_name?.trim();
         if (type) {
@@ -3937,6 +4101,62 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Progress Tracker activity of the selected programme (`pt-activity.ts`), from ONE
+   * `indicator-activity` call per program load. `null` while loading, and for good when the call
+   * fails or exceeds `PT_ACTIVITY_TIMEOUT_MS` — the Reporting tab then renders exactly as it did
+   * before the feature: no badge, no toggle, no filter.
+   */
+  readonly ptActivity = signal<PtActivityIndex | null>(null);
+  /** The toggle is offered only when at least one row would carry a badge. */
+  readonly ptActivityAvailable = computed(() => ptActivityHasAny(this.ptActivity()));
+  /** "With Progress Tracker activity" switch — per programme, reset on a programme switch. */
+  readonly ptActivityOnly = signal(false);
+  private ptActivitySub: Subscription | null = null;
+  private ptActivityProgram: string | null = null;
+
+  private loadPtActivity(code: string): void {
+    if (code === this.ptActivityProgram) return;
+    this.ptActivityProgram = code;
+    this.ptActivitySub?.unsubscribe();
+    this.ptActivitySub = null;
+    this.ptActivity.set(null);
+    this.ptActivityOnly.set(false);
+    if (!code) return;
+
+    const call = this.api.resultsSE?.GET_progressTrackerIndicatorActivity?.(code);
+    if (!call) return;
+    this.ptActivitySub = call
+      .pipe(
+        timeout(PT_ACTIVITY_TIMEOUT_MS),
+        map((res: any) => {
+          const body = res?.response;
+          return body?.status === 'ok' ? buildPtActivityIndex(body.items) : null;
+        }),
+        catchError(() => of(null))
+      )
+      .subscribe(index => this.ptActivity.set(index));
+  }
+
+  /**
+   * PT-activity step: runs LAST, after favorites, with the same contract — identity when off (or
+   * when there is no activity data, so a failed call can never empty the table), otherwise each
+   * group keeps only rows with a badge and `__allIndicators` keeps the header ratio on the
+   * pre-filter universe.
+   */
+  private applyPtActivityFilter<G extends { indicators: any[]; count: number; loading?: boolean; __allIndicators?: any[] }>(
+    groups: G[]
+  ): (G & { __allIndicators?: any[] })[] {
+    if (!this.ptActivityOnly() || !this.ptActivityAvailable()) return groups;
+    const index = this.ptActivity();
+    return groups
+      .map(g => {
+        const kept = g.indicators.filter(r => ptActivityCountOf(r, index) > 0);
+        return { ...g, indicators: kept, count: kept.length, __allIndicators: g.__allIndicators ?? g.indicators };
+      })
+      .filter(g => g.indicators.length > 0 || g.loading);
+  }
+
+  /**
    * Global disclosure switch of the Reporting tab (P2-3252). The toolbar's single control flips it
    * and the grouped table takes it as the level default for BOTH AoW cards and their HLO sub-groups.
    *
@@ -3965,6 +4185,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly reportingTypologyFilter = signal<string[]>([]);
   /** CURRENT selType: all | hlo | outcome | intermediate_outcome | outcome_2030 */
   readonly reportingTypeFilter = signal<string[]>([]);
+  /**
+   * Global Target filter (KTO-R-10, KTO-DD-7): `all` | `with` | `without`, applied in
+   * `reportingGroups()` with the Category filter so the type chips, the cards' `N KPIs`, the split
+   * line and the ratio all derive from the filtered rows. Plain signal like the other Filters-panel
+   * controls (no storage of its own).
+   * @akili-spec changes/kpi-progress-target-only
+   */
+  readonly reportingTargetFilter = signal<ReportingTargetFilter>('all');
 
   /**
    * Toolbar's single Expand all / Collapse all control (P2-3252). One level default, not a per-card
@@ -4006,9 +4234,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.reportingTypeFilter().length > 0 ||
       this.reportingTypologyFilter().length > 0 ||
       this.reportingStatusFilter().length > 0 ||
+      this.reportingTargetFilter() !== 'all' ||
       !!this.byAowSelectedCenter() ||
       !!this.byAowSelectedType() ||
-      (this.favoritesOnly() && this.plannedBrowseView() === 'aows')
+      (this.favoritesOnly() && this.plannedBrowseView() === 'aows') ||
+      (this.ptActivityOnly() && this.ptActivityAvailable() && this.plannedBrowseView() === 'aows')
   );
 
   /** `Clear filters` in the Reporting tab's empty state. Resets the same five signals, together. */
@@ -4018,6 +4248,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.reportingTypeFilter.set([]);
     this.reportingTypologyFilter.set([]);
     this.reportingStatusFilter.set([]);
+    this.reportingTargetFilter.set('all');
     this.byAowSelectedCenter.set(null);
     this.byAowSelectedType.set(null);
     // quick/reporting-clear-filters-only-pending (2026-09-04): the band's badge counts Only-pending
@@ -4028,6 +4259,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // only writes the scalar sessionStorage flag; `ReportingFavoritesService` is untouched.
     // @akili-spec changes/reporting-favorite-indicators
     this.setFavoritesOnly(false);
+    this.ptActivityOnly.set(false);
   }
 
   onReportingSearchChange(query: string): void {
@@ -4787,18 +5019,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return { type, code: cleanCode };
   }
 
-  /** Sum of target values across an HLO's indicators. */
-  hloTargetSum(hlo: { indicators?: any[] }): string {
-    const sum = (hlo.indicators ?? []).reduce((acc, ind) => acc + (parseFloat(String(ind?.target_value_sum ?? 0)) || 0), 0);
-    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
-  }
-
-  /** Sum of achieved values across an HLO's indicators. */
-  hloAchievedSum(hlo: { indicators?: any[] }): string {
-    const sum = (hlo.indicators ?? []).reduce((acc, ind) => acc + (parseFloat(String(ind?.actual_achieved_value_sum ?? 0)) || 0), 0);
-    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
-  }
-
   setIndicatorTab(tab: 'outputs' | 'outcomes'): void {
     this.indicatorTab.set(tab);
   }
@@ -5208,8 +5428,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
 /**
  * Pure stats for the By-AOW context banner. `done` = KPIs with something reported; `total` =
- * counted output indicators after the zero-target rule (MRF-R-7); `zeroTarget` = how many were
- * excluded, for the "excludes N zero-target KPIs" title (MRF-AC-6).
+ * counted output indicators after the no-target rule (MRF-R-7); `zeroTarget` = how many were
+ * excluded, for the "excludes N KPIs with no target set" title (MRF-AC-6).
  * @akili-spec changes/reporting-entry-hub
  * @akili-spec changes/mass-reporting-flow
  */

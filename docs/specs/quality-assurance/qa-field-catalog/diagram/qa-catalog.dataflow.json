@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Catálogo de campos QA (qa-catalog)",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1000,
+      560
+    ],
+    "legend": {
+      "entries": {
+        "emphasis": {
+          "label": "camino principal"
+        },
+        "security": {
+          "label": "control / autenticación"
+        },
+        "dashed": {
+          "label": "metadata, sync y futuro"
+        },
+        "database": {
+          "label": "almacenamiento"
+        },
+        "default": {
+          "label": "regla"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "label": "Fuentes"
+    },
+    {
+      "label": "Definición y CI"
+    },
+    {
+      "label": "Runtime"
+    },
+    {
+      "label": "Consumo"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "form",
+      "type": "frontend",
+      "label": "Formulario 2026",
+      "sublabel": "P25",
+      "stage": 0,
+      "row": 0,
+      "tag": "visible_when"
+    },
+    {
+      "id": "validations",
+      "type": "database",
+      "label": "validation_*_P25",
+      "sublabel": "MySQL",
+      "stage": 0,
+      "row": 1,
+      "tag": "required_when"
+    },
+    {
+      "id": "catalog",
+      "type": "backend",
+      "label": "Catálogo en código",
+      "sublabel": "146 campos",
+      "stage": 1,
+      "row": 1,
+      "tag": "2026.25"
+    },
+    {
+      "id": "ciguard",
+      "type": "security",
+      "label": "Guards de Jest",
+      "sublabel": "forma y cobertura",
+      "stage": 1,
+      "row": 2,
+      "tag": "CI"
+    },
+    {
+      "id": "entities",
+      "type": "database",
+      "label": "Entidades TypeORM",
+      "sublabel": "tablas result",
+      "stage": 0,
+      "row": 2,
+      "tag": "columnas"
+    },
+    {
+      "id": "sync",
+      "type": "backend",
+      "label": "Sync al arrancar",
+      "sublabel": "al iniciar",
+      "stage": 1,
+      "row": 0,
+      "tag": "idempotente"
+    },
+    {
+      "id": "endpoint",
+      "type": "backend",
+      "label": "GET /api/qa/catalog",
+      "sublabel": "phase_year",
+      "stage": 2,
+      "row": 1,
+      "tag": "200/400/401/404"
+    },
+    {
+      "id": "tables",
+      "type": "database",
+      "label": "qa_catalog_*",
+      "sublabel": "espejo",
+      "stage": 2,
+      "row": 0,
+      "tag": "nunca borra"
+    },
+    {
+      "id": "qa",
+      "type": "external",
+      "label": "Plataforma QA",
+      "sublabel": "admin elige campos",
+      "stage": 3,
+      "row": 1,
+      "tag": "x-api-key"
+    },
+    {
+      "id": "clarisa",
+      "type": "security",
+      "label": "CLARISA",
+      "sublabel": "API key",
+      "stage": 2,
+      "row": 2,
+      "tag": "permiso"
+    },
+    {
+      "id": "results",
+      "type": "backend",
+      "label": "Resultados QA",
+      "sublabel": "endpoint futuro",
+      "stage": 3,
+      "row": 0,
+      "tag": "futuro"
+    }
+  ],
+  "flows": [
+    {
+      "id": "form-fields",
+      "from": "form",
+      "to": "catalog",
+      "label": "campos y visibilidad",
+      "variant": "emphasis"
+    },
+    {
+      "id": "validation-rules",
+      "from": "validations",
+      "to": "catalog",
+      "label": "obligatoriedad",
+      "variant": "default",
+      "route": "straight",
+      "labelAt": [
+        207,
+        292
+      ]
+    },
+    {
+      "id": "catalog-checks",
+      "from": "catalog",
+      "to": "ciguard",
+      "label": "cada build",
+      "variant": "security",
+      "labelAt": [
+        315,
+        328
+      ]
+    },
+    {
+      "id": "entity-columns",
+      "from": "entities",
+      "to": "ciguard",
+      "label": "columnas",
+      "variant": "dashed"
+    },
+    {
+      "id": "boot-sync",
+      "from": "catalog",
+      "to": "sync",
+      "label": "al arrancar",
+      "variant": "dashed"
+    },
+    {
+      "id": "mirror-upsert",
+      "from": "sync",
+      "to": "tables",
+      "label": "upsert por key",
+      "variant": "dashed"
+    },
+    {
+      "id": "serve-code",
+      "from": "catalog",
+      "to": "endpoint",
+      "label": "sirve desde código",
+      "variant": "emphasis"
+    },
+    {
+      "id": "catalog-json",
+      "from": "endpoint",
+      "to": "qa",
+      "label": "catálogo JSON",
+      "variant": "emphasis"
+    },
+    {
+      "id": "key-check",
+      "from": "endpoint",
+      "to": "clarisa",
+      "label": "valida x-api-key",
+      "variant": "security",
+      "labelAt": [
+        530,
+        328
+      ]
+    },
+    {
+      "id": "pick-fields",
+      "from": "qa",
+      "to": "results",
+      "label": "pide campos elegidos",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Fuente de verdad",
+      "items": [
+        "El catálogo vive en código y se versiona con el repo",
+        "El form da campos y visible_when; form ∪ validation_* da required",
+        "El endpoint responde desde el código, no desde la base"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Controles en CI",
+      "items": [
+        "Columna nueva sin catalogar ni excluir: el build falla",
+        "Un key nunca cambia ni desaparece; se retira con valid_to",
+        "Cambio de contenido exige subir catalog_version"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Contrato con QA",
+      "items": [
+        "Llave CLARISA en x-api-key; el JWT no sirve",
+        "Año sin catálogo da 404, nunca un 200 vacío",
+        "Elegir un campo arrastra a los que nombra su visible_when"
+      ]
+    }
+  ]
+}

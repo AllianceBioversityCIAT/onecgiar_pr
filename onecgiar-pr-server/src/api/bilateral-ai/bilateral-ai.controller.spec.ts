@@ -5,6 +5,7 @@ import { BilateralAiController } from './bilateral-ai.controller';
 import { BilateralAiService } from './services/bilateral-ai.service';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { CreateBilateralAiJobDto } from './dto/create-bilateral-ai-job.dto';
+import { DiscardBilateralAiDraftsDto } from './dto/discard-bilateral-ai-drafts.dto';
 
 describe('BilateralAiController', () => {
   let controller: BilateralAiController;
@@ -51,6 +52,7 @@ describe('BilateralAiController', () => {
               id: 1,
               discarded: true,
             }),
+            discardDrafts: jest.fn(),
             getSignedUrl: jest.fn().mockResolvedValue({
               response: { url: 'https://signed.url' },
               message: 'Signed URL generated',
@@ -261,6 +263,25 @@ describe('BilateralAiController', () => {
       expect(result).toEqual({ id: 1, discarded: true });
     });
   });
+
+  describe('discardDrafts (ABD-R-5)', () => {
+    it('should delegate to service.discardDrafts with the dto ids and the caller id', async () => {
+      const summary = {
+        response: { discarded: [1, 2], failed: [] },
+        message: '2 AI drafts discarded',
+        status: 200,
+      };
+      (service as any).discardDrafts.mockResolvedValue(summary);
+
+      const result = await controller.discardDrafts(
+        { draftIds: [1, 2] } as DiscardBilateralAiDraftsDto,
+        user,
+      );
+
+      expect(service.discardDrafts).toHaveBeenCalledWith([1, 2], user.id);
+      expect(result).toEqual(summary);
+    });
+  });
 });
 
 describe('BilateralAiController — route ordering (supertest)', () => {
@@ -273,8 +294,14 @@ describe('BilateralAiController — route ordering (supertest)', () => {
   let getJob: jest.Mock;
   let getExpectations: jest.Mock;
   let listJobs: jest.Mock;
+  let discardDrafts: jest.Mock;
+  let discardDraft: jest.Mock;
+  let promoteDraft: jest.Mock;
 
   beforeAll(async () => {
+    discardDrafts = jest.fn();
+    discardDraft = jest.fn();
+    promoteDraft = jest.fn();
     getJob = jest
       .fn()
       .mockRejectedValue(new NotFoundException('AI job not found.'));
@@ -302,7 +329,14 @@ describe('BilateralAiController — route ordering (supertest)', () => {
       providers: [
         {
           provide: BilateralAiService,
-          useValue: { getJob, getExpectations, listJobs },
+          useValue: {
+            getJob,
+            getExpectations,
+            listJobs,
+            discardDrafts,
+            discardDraft,
+            promoteDraft,
+          },
         },
       ],
     }).compile();
@@ -319,6 +353,9 @@ describe('BilateralAiController — route ordering (supertest)', () => {
     getJob.mockClear();
     getExpectations.mockClear();
     listJobs.mockClear();
+    discardDrafts.mockReset();
+    discardDraft.mockReset();
+    promoteDraft.mockReset();
   });
 
   it('GET /center/ai/jobs reaches listJobs, not getJob', async () => {
@@ -347,5 +384,57 @@ describe('BilateralAiController — route ordering (supertest)', () => {
     expect(getJob).toHaveBeenCalledWith('expectations', 0);
     expect(getExpectations).not.toHaveBeenCalled();
     expect(res.status).toBe(404);
+  });
+
+  // `ABD-T-1` (design.md §6 "Route ordering"): `POST drafts/discard` (2 segments) must reach the
+  // bulk handler — not `drafts/:draftId/promote` (3 segments) nor `DELETE drafts/:draftId`.
+  describe('bulk discard route (ABD-R-5)', () => {
+    it('POST /center/ai/drafts/discard reaches discardDrafts, not promote or single discard', async () => {
+      discardDrafts.mockResolvedValue({
+        response: { discarded: [1, 2], failed: [] },
+        message: '2 AI drafts discarded',
+        status: 200,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/center/ai/drafts/discard')
+        .send({ draftIds: [1, 2] });
+
+      expect(discardDrafts).toHaveBeenCalledWith([1, 2], 0);
+      expect(promoteDraft).not.toHaveBeenCalled();
+      expect(discardDraft).not.toHaveBeenCalled();
+      expect(res.status).toBe(200);
+    });
+
+    it('DELETE /center/ai/drafts/:draftId still reaches the single discard', async () => {
+      discardDraft.mockResolvedValue({
+        response: { id: 4, discarded: true },
+        message: 'AI draft discarded',
+        status: 200,
+      });
+
+      await request(app.getHttpServer()).delete('/center/ai/drafts/4');
+
+      expect(discardDraft).toHaveBeenCalledWith(4, 0);
+      expect(discardDrafts).not.toHaveBeenCalled();
+    });
+
+    // ABD-S-5.4 — the 400 is only real if a ValidationPipe is bound (the app has no global one).
+    it.each([
+      ['empty list', { draftIds: [] }],
+      ['non-integer id', { draftIds: [1, 'x'] }],
+      ['101 ids', { draftIds: Array.from({ length: 101 }, (_, i) => i + 1) }],
+      ['missing body field', {}],
+    ])(
+      'ABD-S-5.4 — %s answers 400 and never reaches the service',
+      async (_label, body) => {
+        const res = await request(app.getHttpServer())
+          .post('/center/ai/drafts/discard')
+          .send(body as object);
+
+        expect(res.status).toBe(400);
+        expect(discardDrafts).not.toHaveBeenCalled();
+      },
+    );
   });
 });

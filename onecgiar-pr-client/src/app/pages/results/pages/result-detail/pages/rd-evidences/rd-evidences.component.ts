@@ -10,6 +10,7 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { SharePointUploadService } from '../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { PT_TEMPORARY_EVIDENCE_NOTICE, isPtTemporaryEvidence } from '../../../../../../shared/constants/progress-tracker-evidence.constants';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../internationalization/result-detail-section-load.copy';
 @Component({
   selector: 'app-rd-evidences',
@@ -51,6 +52,7 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
   private lastResultIdSeen: unknown = undefined;
 
   evidencesBody = new EvidencesBody();
+  readonly ptTemporaryEvidenceNotice = PT_TEMPORARY_EVIDENCE_NOTICE;
   readinessLevel: number = 0;
   isOptional: boolean = false;
   isOptionalReadinessLevel: boolean;
@@ -88,7 +90,7 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
     <li>All links provided should be publicly accessible.</li>
     <li>Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.</li>
     <li>Files can be uploaded to the PRMS repository.</li>
-    <li>For confidential evidence, select “Upload file” and then respond with “No” to the confidentiality question to indicate that it should not be public.</li>
+    <li>For confidential evidence, select “Upload file” and then <b>respond with “No” to the confidentiality question</b> to indicate that it should not be public.</li>
     <li>If you need additional information or guidance on how to create an evidence entry, you can find a video tutorial at the following <a class="open_route" href="https://cgiar.sharepoint.com/:v:/s/OneCGIARPRMSRepository/IQCPCRtUOihDQKJExjQgfIOIAZQAZH4pnHDucy3HX-w14WU?e=Xoy42x" target="_blank">link</a>.</li>
     `;
 
@@ -712,5 +714,10 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
     if (hasInvalidLink) return true;
 
     return false;
+  }
+
+  /** Evidence saved from a Progress Tracker pick is marked by its description prefix (no provenance column). */
+  hasPtTemporaryEvidence(): boolean {
+    return (this.evidencesBody?.evidences ?? []).some(evidence => isPtTemporaryEvidence(evidence?.description));
   }
 }

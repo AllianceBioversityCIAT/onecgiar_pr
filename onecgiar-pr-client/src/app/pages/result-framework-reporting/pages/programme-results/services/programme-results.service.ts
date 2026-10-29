@@ -88,6 +88,15 @@ export interface ProgrammeResultRow {
   sectionSort?: string;
   /** Owner initiative's active ToC state: 0 emerging, 1 planned, null unknown. */
   plannedResult?: number | null;
+  // @akili-spec result-framework-reporting/programme-results-previously-reported (PRP-T-1, PRP-DD-1)
+  /**
+   * `is_replicated` — whether this version of the result already existed in an earlier phase
+   * (the Results Center's "Previously reported" pill). `true` only for `1`, `'1'` or `true`;
+   * `0`, `'0'`, `null` and an absent key are all `false`. Category-independent. Optional for the
+   * same reason as `aowCodes` (row literals in the programme-results / my-work-board fixtures do
+   * not have to name it) — `toProgrammeResultRow()` always sets it.
+   */
+  isReplicated?: boolean;
 
   // --- raw fields the "Open result" route needs -------------------------------------
   // Mirrors results-list.component.ts:634 `getResultRoute()`, whose branch reads exactly
@@ -309,6 +318,9 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
     phaseSort: phaseSortRank(num(raw?.['phase_year']), text(raw?.['acronym']), text(raw?.['phase_name'])),
     submitterCode: text(raw?.['submitter']),
     raw: raw ?? {},
+    // @akili-spec result-framework-reporting/programme-results-previously-reported (PRP-T-1)
+    // Strict on purpose: MySQL may hand the flag back as 1, '1' or true, and `'0'` is truthy.
+    isReplicated: raw?.['is_replicated'] === 1 || raw?.['is_replicated'] === '1' || raw?.['is_replicated'] === true,
     ...(hasCompleteness ? { completeness: raw['completeness'] } : {}),
     ...(hasPlannedResult ? { plannedResult: num(raw['planned_result']) } : {})
   };

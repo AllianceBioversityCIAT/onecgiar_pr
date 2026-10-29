@@ -44,7 +44,11 @@ del header para que no desaparezcan al scrollear el formulario.
   no `@UseGuards` and `api/ai/*` only passes `JwtMiddleware` (`app.module.ts:139-153`) — a valid
   token is all the server asks for. It never checks role, membership or phase. Delete this gate and
   nothing stops the write.
-- ⚠️ **P2-2385 — `showAiReview` no longer filters by result type.** It used to carry
+- 🛑 **Hotfix 16-Oct-2026 — Knowledge Products are OFF again.** P2-2385 (below) reached production
+  unapproved and the AI service does not evaluate KPs yet. `showAiReview` hides the button for type 6
+  and `onAIReviewClick()` returns early for a KP, both behind ONE switch,
+  `AiReviewService.knowledgeProductsEnabled = false`. Turn it on only once the AI service supports KPs.
+- ⚠️ **P2-2385 — `showAiReview` no longer filters by result type** (dormant while the switch above is off). It used to carry
   `result_type_id != 6`, which hid the button for Knowledge Products because their title and
   description are auto-synced from CGSpace. A KP reporter still owns the Impact Area (DAC) tags, so
   the button is now offered for EVERY type and the narrowing moved one layer down, into

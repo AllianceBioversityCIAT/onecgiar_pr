@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { BilateralService } from '../../bilateral.service';
 import { ResultsService } from '../../../results/results.service';
+import { InnovationUseService } from '../../../results-framework-reporting/innovation-use/innovation-use.service';
 import { ResultActor } from '../../../results/result-actors/entities/result-actor.entity';
 import { ResultTypeEnum } from '../../../../shared/constants/result-type.enum';
 import { QualityPayload } from './bilateral-quality-rules';
@@ -80,6 +81,14 @@ export class BilateralQualityPayloadBuilder {
     // TypeScript-only so fixture-driven unit tests can still `new` this class, and `project()`
     // never touches it.
     private readonly dataSource?: DataSource,
+    // 🛑 Innovation Use's `actors` must be read from HERE, not from `resultsService`. The
+    // `ResultsService` this module receives is the copy `ResultsKnowledgeProductsModule`
+    // declares and exports, whose `@Optional()` `InnovationUseService` resolves to `undefined`
+    // — so `getBilateralResultById` silently falls back to flat rows with no `actors` key and
+    // the AI saw "zero people" and "no user type" on every Innovation Use result (production
+    // result 31084, 2026-10-13). `BilateralModule` imports `InnovationUseModule`, so this
+    // binding is the real one. `?` is TypeScript-only, same convention as above.
+    private readonly innovationUseService?: InnovationUseService,
   ) {}
 
   async build(
@@ -102,8 +111,21 @@ export class BilateralQualityPayloadBuilder {
 
     const detail =
       (detailResult as { response?: Record<string, any> })?.response ?? {};
-    const formDetail =
+    let formDetail =
       (formDetailResult as { response?: Record<string, any> })?.response ?? {};
+
+    if (
+      Number(detail?.result_type_id) === ResultTypeEnum.INNOVATION_USE &&
+      this.innovationUseService
+    ) {
+      formDetail = {
+        ...formDetail,
+        resultTypeResponse:
+          await this.innovationUseService.getBilateralInnovationUseData(
+            resultId,
+          ),
+      };
+    }
 
     const indicatorNodeIds = collectIndicatorNodeIds(formDetail);
     const indicatorDescriptions =

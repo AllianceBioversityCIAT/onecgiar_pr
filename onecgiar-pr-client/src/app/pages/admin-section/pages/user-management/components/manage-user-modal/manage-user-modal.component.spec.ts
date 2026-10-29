@@ -226,6 +226,20 @@ describe('ManageUserModalComponent', () => {
     });
   });
 
+  describe('getGroupedEntities', () => {
+    it('PF2-T-6: display_label follows the CODE - Name rule while the select value key stays initiative_id', () => {
+      jest.spyOn(component, 'getAvailableEntities').mockReturnValue([
+        { name: 'P25', entities: [{ initiative_id: 7, official_code: 'SP01', name: 'Breeding' }, { initiative_id: 8, official_code: 'SP02' }] }
+      ] as any);
+      const flat = component.getGroupedEntities(0);
+      expect(flat[0]).toEqual({ isLabel: true, name: 'P25' });
+      expect(flat.slice(1).map(e => [e.initiative_id, e.display_label])).toEqual([
+        [7, 'SP01 - Breeding'],
+        [8, 'SP02']
+      ]);
+    });
+  });
+
   describe('getAvailableEntities', () => {
     it('should return P25 group with entities not already selected', () => {
       component.addUserForm.set({

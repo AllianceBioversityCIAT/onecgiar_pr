@@ -85,3 +85,16 @@
     background-color: var(--pr-color-primary-300);
   }
 }
+
+.sp-label-text {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.official_code {
+  max-width: 260px;
+}

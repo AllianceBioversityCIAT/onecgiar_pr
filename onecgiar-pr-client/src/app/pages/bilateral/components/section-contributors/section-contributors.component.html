@@ -34,7 +34,7 @@
           <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
         }
       </div>
-      <div class="sc-helper">Assigned from the project's mapping; it cannot be changed here.</div>
+      <div class="sc-helper">{{ primaryHelp }}</div>
 
       <app-section-toc [resultLevelId]="creationService.resultLevelId()" [readOnly]="readOnly()"></app-section-toc>
     </div>

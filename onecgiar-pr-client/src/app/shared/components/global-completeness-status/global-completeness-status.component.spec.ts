@@ -15,6 +15,7 @@ import {
 } from '../pr-table';
 import { ResultHistoryOfChangesModalComponent } from '../../../pages/admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.component';
 import { FormsModule } from '@angular/forms';
+import { SpLabelPipe } from '../../pipes/sp-label.pipe';
 import { ListFilterByTextAndAttrPipe } from '../../../custom-fields/pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
 import { PrFieldHeaderComponent } from '../../../custom-fields/pr-field-header/pr-field-header.component';
 import { of } from 'rxjs';
@@ -62,7 +63,8 @@ describe('GlobalCompletenessStatusComponent', () => {
         PrSortableColumnDirective,
         PrTableHeaderDirective,
         PrTableBodyDirective,
-        FormsModule
+        FormsModule,
+        SpLabelPipe
       ],
       providers: [
         {
@@ -219,6 +221,60 @@ describe('GlobalCompletenessStatusComponent', () => {
 
       expect(getAllInitiativesSpy).toHaveBeenCalled();
       expect(getPhasesSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('Submitter label (PF2-R-2, M2)', () => {
+    const section = { value: 1 };
+    const row = (official_code: string, initiative_name?: string | null) => ({
+      result_code: 1,
+      result_title: 'T',
+      phase_name: 'P',
+      official_code,
+      initiative_name,
+      result_type_name: 'Type',
+      completeness: 10,
+      is_submitted: 1,
+      general_information: section,
+      theory_of_change: section,
+      partners: section,
+      geographic_location: section,
+      links_to_results: section,
+      evidence: section,
+      section_seven: section
+    });
+    const submitterCells = () => Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('td[title]')).map(td => td.textContent?.trim());
+
+    it('renders "SP10 - Gender" with a title, and the code alone when there is no name', () => {
+      apiServiceMock.resultsSE.POST_reportSesultsCompleteness.mockReturnValue(of({ response: [row('SP10', 'Gender'), row('SP11', null)] }));
+      fixture.detectChanges();
+      expect(submitterCells()).toEqual(expect.arrayContaining(['SP10 - Gender', 'SP11']));
+      expect(fixture.nativeElement.querySelector('td[title="SP10 - Gender"]')).not.toBeNull();
+    });
+
+    it('typing the program name in the real search input keeps only the matching row', async () => {
+      apiServiceMock.resultsSE.POST_reportSesultsCompleteness.mockReturnValue(
+        of({
+          response: [
+            { ...row('SP10', 'Gender'), full_name: 'T 1 SP10 Gender Type' },
+            { ...row('SP11', 'Breeding'), full_name: 'T 2 SP11 Breeding Type' }
+          ]
+        })
+      );
+      fixture.detectChanges();
+      const input: HTMLInputElement = fixture.nativeElement.querySelector('input[placeholder="Find result..."]');
+      input.value = 'Gender';
+      input.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(submitterCells()).toEqual(['SP10 - Gender']);
+    });
+
+    it('keeps the Excel Submitter column on the bare code (DD-5)', () => {
+      component.exportExcel([row('SP10', 'Gender')]);
+      const exported = (mockExportTablesService.exportExcel as jest.Mock).mock.calls[0][0];
+      expect(exported[0].official_code).toBe('SP10');
+      expect(JSON.stringify(exported)).not.toContain('Gender');
     });
   });
 });

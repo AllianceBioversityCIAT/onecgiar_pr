@@ -747,7 +747,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: null,
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
   });
 
@@ -767,7 +768,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: null,
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
   });
 
@@ -825,7 +827,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: 'W1/W2',
       center: 'CIAT,IITA',
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
   });
 
@@ -1043,7 +1046,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: 'CIAT',
       createdBy: 'Angel Jarrin',
-      section: null
+      section: null,
+      replication: null
     });
   });
 
@@ -1067,7 +1071,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: null,
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
     expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
   });
@@ -1094,7 +1099,8 @@ describe('ProgrammeResultsComponent', () => {
       origin: null,
       center: null,
       createdBy: null,
-      section: null
+      section: null,
+      replication: null
     });
     expect(extras.replaceUrl).toBe(true);
     expect(extras.queryParamsHandling).toBe('merge');
@@ -2045,6 +2051,182 @@ describe('ProgrammeResultsComponent', () => {
     expect(router.navigate).toHaveBeenCalled();
   });
 
+  // ── Previously reported pill (PRP-T-2, PRP-TEST-2) ─────────────────────────────────────────
+  describe('Previously reported pill (PRP-T-2)', () => {
+    const base = {
+      result_type: 'Innovation development',
+      status_id: '1',
+      status_name: 'Editing',
+      create_first_name: 'Ada',
+      create_last_name: 'Lovelace',
+      created_date: '2026-01-01T00:00:00.000Z',
+      source_name: 'W1/W2',
+      lead_center: 'CIAT',
+      version_id: '11',
+      phase_name: 'Reporting 2026',
+      phase_year: 2026,
+      submitter: 'SP01'
+    };
+    const PRP_ITEMS: Record<string, unknown>[] = [
+      { ...base, id: 6001, result_code: '6001', title: 'Carried over bean result', is_replicated: 1 },
+      { ...base, id: 6002, result_code: '6002', title: 'Brand new maize result', is_replicated: 0 }
+    ];
+    const PILL = '.pgr-badge-replicated';
+
+    const rowEl = (code: string) =>
+      dataRows().find(r => (r.nativeElement as HTMLElement).textContent?.includes(code))!.nativeElement as HTMLElement;
+    const titleCell = (code: string) => {
+      const index = component.visibleColumns().findIndex(c => c.key === 'title');
+      return (rowEl(code).querySelectorAll('td')[index] as HTMLElement);
+    };
+
+    beforeEach(() => setup(PRP_ITEMS));
+
+    it('renders exactly one pill before the title on a replicated row (S-1.1, DD-3)', () => {
+      const cell = titleCell('6001');
+      const pills = cell.querySelectorAll<HTMLElement>(PILL);
+      expect(pills.length).toBe(1);
+      expect(pills[0].textContent?.trim()).toBe('Previously reported');
+      expect(pills[0].getAttribute('prTooltip')).toBe('Previously reported in an earlier phase');
+      expect(pills[0].hasAttribute('aria-hidden')).toBe(false);
+
+      const titleSpan = Array.from(cell.querySelectorAll<HTMLElement>('span')).find(el => el.textContent?.trim() === 'Carried over bean result')!;
+      expect(titleSpan).toBeTruthy();
+      // DOCUMENT_POSITION_FOLLOWING: the title comes AFTER the pill.
+      expect(pills[0].compareDocumentPosition(titleSpan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('renders no pill, placeholder or sibling on a non-replicated row (S-1.2)', () => {
+      const cell = titleCell('6002');
+      expect(cell.querySelector(PILL)).toBeNull();
+      const line1 = cell.querySelector('span.flex.min-w-0.items-center') as HTMLElement;
+      expect(line1.children.length).toBe(1);
+      expect(line1.children[0].textContent?.trim()).toBe('Brand new maize result');
+    });
+
+    it('does not let the pill text match the search (S-4.1)', fakeAsync(() => {
+      component.onSearchInput('Previously reported');
+      tick(300);
+      fixture.detectChanges();
+      expect(component.filteredRows().length).toBe(0);
+    }));
+
+    it('keeps the CSV title plain for a replicated row (S-4.1)', () => {
+      expect(component.cellText(component.data.rows().find(r => r.code === '6001')!, 'title')).toBe('Carried over bean result');
+
+      let csv = '';
+      const OriginalBlob = globalThis.Blob;
+      (globalThis as unknown as { Blob: unknown }).Blob = class {
+        constructor(parts: string[]) {
+          csv = parts.join('');
+        }
+      };
+      (URL as unknown as { createObjectURL: unknown }).createObjectURL = jest.fn(() => 'blob:csv');
+      (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = jest.fn();
+      const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+      component.exportCsv();
+
+      expect(csv).toContain('"Carried over bean result"');
+      expect(csv).not.toContain('Previously reported');
+
+      click.mockRestore();
+      (globalThis as unknown as { Blob: unknown }).Blob = OriginalBlob;
+    });
+  });
+
+  // ── Grouped versions of one result (PRP-T-4, PRP-TEST-4) ───────────────────────────────────
+  describe('Grouped versions of one result (PRP-T-4)', () => {
+    const base = {
+      result_type: 'Innovation development',
+      create_first_name: 'Ada',
+      create_last_name: 'Lovelace',
+      created_date: '2026-01-01T00:00:00.000Z',
+      source_name: 'W1/W2',
+      lead_center: 'CIAT',
+      submitter: 'SP01'
+    };
+    const v2026 = { ...base, version_id: '11', phase_name: 'Reporting 2026', phase_year: 2026, status_id: '1', status_name: 'Editing' };
+    const v2025 = { ...base, version_id: '10', phase_name: 'Reporting 2025', phase_year: 2025, status_id: '3', status_name: 'Submitted' };
+    // The 2025 original is listed BEFORE its 2026 replica on purpose: the component must reorder it.
+    const GROUP_ITEMS: Record<string, unknown>[] = [
+      { ...v2025, id: 7003, result_code: '7001', title: 'Bean original 2025', is_replicated: 0 },
+      { ...v2026, id: 7001, result_code: '7001', title: 'Bean replica 2026', is_replicated: 1 },
+      { ...v2026, id: 7002, result_code: '7002', title: 'Maize single', status_id: '2', status_name: 'Quality assessed', is_replicated: 0 }
+    ];
+
+    const rowTexts = () => dataRows().map(r => r.nativeElement as HTMLElement);
+    const codesInOrder = () => table().pagedValue().map((r: { code: string }) => r.code);
+    const titlesInOrder = () => table().pagedValue().map((r: { title: string }) => r.title);
+
+    beforeEach(() => {
+      setup(GROUP_ITEMS);
+      filterService().selectedPhases.set(['Reporting 2026', 'Reporting 2025']);
+      fixture.detectChanges();
+    });
+
+    it('renders the pair consecutive, newest phase first, with start / cont classes (S-5.1)', () => {
+      expect(titlesInOrder().filter((t: string) => t.startsWith('Bean'))).toEqual(['Bean replica 2026', 'Bean original 2025']);
+      const rows = rowTexts();
+      const first = rows.findIndex(r => r.textContent?.includes('Bean replica 2026'));
+      expect(rows[first + 1].textContent).toContain('Bean original 2025');
+      expect(rows[first].classList).toContain('pgr-group-start');
+      expect(rows[first].classList).not.toContain('pgr-group-cont');
+      expect(rows[first + 1].classList).toContain('pgr-group-cont');
+      expect(rows[first + 1].classList).not.toContain('pgr-group-start');
+    });
+
+    it('gives a singleton neither class (S-5.1)', () => {
+      const single = rowTexts().find(r => r.textContent?.includes('Maize single'))!;
+      expect(single.classList).not.toContain('pgr-group-start');
+      expect(single.classList).not.toContain('pgr-group-cont');
+    });
+
+    it.each([
+      ['ascending', 1],
+      ['descending', -1]
+    ])('keeps the pair consecutive and newest first after sorting by status %s (S-5.2)', (_label, order) => {
+      const tbl = table();
+      tbl.sort('statusName');
+      if (order === -1) tbl.sort('statusName');
+      fixture.detectChanges();
+
+      expect(tbl.activeSortOrder()).toBe(order);
+      const titles = titlesInOrder();
+      const replica = titles.indexOf('Bean replica 2026');
+      expect(titles[replica + 1]).toBe('Bean original 2025');
+    });
+
+    it('leaves CSV, counters and total label equal to the filteredRows() values (S-5.4)', () => {
+      let csv = '';
+      const OriginalBlob = globalThis.Blob;
+      (globalThis as unknown as { Blob: unknown }).Blob = class {
+        constructor(parts: string[]) {
+          csv = parts.join('');
+        }
+      };
+      (URL as unknown as { createObjectURL: unknown }).createObjectURL = jest.fn(() => 'blob:csv');
+      (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = jest.fn();
+      const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+      component.exportCsv();
+
+      const expected = component.filteredRows().map(r => component.cellText(r, 'title'));
+      const positions = expected.map(t => csv.indexOf(`"${t}"`));
+      expect(positions.every(p => p >= 0)).toBe(true);
+      expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+
+      click.mockRestore();
+      (globalThis as unknown as { Blob: unknown }).Blob = OriginalBlob;
+
+      expect(component.filteredRows().length).toBe(3);
+      expect(component.totalLabel()).toBe('3 results');
+      expect(table().totalRecords()).toBe(component.filteredRows().length);
+      expect(component.groupedRows().length).toBe(component.filteredRows().length);
+      expect(codesInOrder().length).toBe(3);
+    });
+  });
+
   // ── export ────────────────────────────────────────────────────────────────────────────────
   it('exports the filtered rows and the visible columns as CSV', () => {
     const createObjectURL = jest.fn((_blob: Blob) => 'blob:csv');
@@ -2140,6 +2322,70 @@ describe('ProgrammeResultsComponent', () => {
   });
 
   // ── column resizing (TRC-R-1..4) ────────────────────────────────────────────────────────
+  // @akili-spec changes/sp-overview-total-drilldown (STD-T-1, STD-R-4)
+  describe('Replication filter (STD-R-4)', () => {
+    const REPL_ITEMS = [
+      { ...RAW_ITEMS[0], id: 7001, result_code: '7001', is_replicated: 0 },
+      { ...RAW_ITEMS[0], id: 7002, result_code: '7002', is_replicated: 1 },
+      { ...RAW_ITEMS[0], id: 7003, result_code: '7003', is_replicated: 0 }
+    ];
+    const codes = () => component.filteredRows().map(r => r.code);
+
+    it('S-4.2 hydrates ?replication=new into the signal and chip, filters rows, and does not navigate', () => {
+      setup(REPL_ITEMS, { phase: 'Reporting 2026', replication: 'new' });
+
+      expect(filterService().selectedReplication()).toEqual(['new']);
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Replication: New');
+      expect(codes()).toEqual(['7001', '7003']);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('S-4.2 setting the signal writes replication=new; clearing writes null', () => {
+      setup(REPL_ITEMS, { phase: 'Reporting 2026' });
+      (router.navigate as jest.Mock).mockClear();
+
+      filterService().selectedReplication.set(['new']);
+      fixture.detectChanges();
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      expect((router.navigate as jest.Mock).mock.calls[0][1].queryParams).toEqual(expect.objectContaining({ replication: 'new' }));
+
+      (router.navigate as jest.Mock).mockClear();
+      pushQueryParams({ phase: 'Reporting 2026', replication: 'new' });
+      fixture.detectChanges();
+      (router.navigate as jest.Mock).mockClear();
+      filterService().selectedReplication.set([]);
+      fixture.detectChanges();
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      expect((router.navigate as jest.Mock).mock.calls[0][1].queryParams.replication).toBeNull();
+    });
+
+    it('S-4.3 ?replication=foo is ignored: no chip, all rows kept, no throw', () => {
+      expect(() => setup(REPL_ITEMS, { phase: 'Reporting 2026', replication: 'foo' })).not.toThrow();
+
+      expect(filterService().selectedReplication()).toEqual([]);
+      expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026']);
+      expect(codes()).toEqual(['7001', '7002', '7003']);
+    });
+
+    it('S-4.3 ?replication=new,foo keeps only new', () => {
+      setup(REPL_ITEMS, { phase: 'Reporting 2026', replication: 'new,foo' });
+
+      expect(filterService().selectedReplication()).toEqual(['new']);
+      expect(codes()).toEqual(['7001', '7003']);
+    });
+
+    it('S-4.4 the badge counts the replication chip and clearAll drops it', () => {
+      setup(REPL_ITEMS, { phase: 'Reporting 2026', replication: 'replicated' });
+
+      expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
+      expect(filterService().activeChips().map(chip => chip.label)).toContain('Replication: Previously reported');
+      expect(codes()).toEqual(['7002']);
+
+      component.clearAll();
+      expect(filterService().selectedReplication()).toEqual([]);
+    });
+  });
+
   describe('column resizing (TRC-R-1..4)', () => {
     afterEach(() => {
       localStorage.removeItem(PGR_COLUMN_WIDTHS_STORAGE_KEY);

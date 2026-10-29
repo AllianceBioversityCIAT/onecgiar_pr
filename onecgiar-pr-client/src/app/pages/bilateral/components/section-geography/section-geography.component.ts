@@ -67,7 +67,7 @@ export class SectionGeographyComponent {
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
    * Read straight from the service, the way this section already reads the rest of the result state.
    */
-  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser() || this.autoSaveService.isReadOnly());
 
   /**
    * Night sweep 2026-09-23, R-3 / R-4 — three-state load flag (P2-3556 contract: `null` in flight,

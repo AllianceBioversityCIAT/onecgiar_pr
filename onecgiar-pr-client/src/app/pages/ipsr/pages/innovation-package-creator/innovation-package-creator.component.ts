@@ -1,6 +1,7 @@
 import { Component, DoCheck, OnInit, signal, NgZone, inject } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
+import { scienceProgramLabel } from '../../../../shared/utils/science-program-label.util';
 import { InnovationPackageCreatorBody } from './model/innovation-package-creator.model';
 import { Router } from '@angular/router';
 import { ManageInnovationsListService } from '../../services/manage-innovations-list.service';
@@ -70,6 +71,13 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
     });
   }
 
+  /** Name shown next to the core innovation's code; display only, never sent in the body. */
+  coreInitiativeName: string | null = null;
+
+  coreInitiativeLabel(): string {
+    return scienceProgramLabel(this.innovationPackageCreatorBody?.official_code, this.coreInitiativeName);
+  }
+
   selectInnovationEvent(e) {
     this.innovationPackageCreatorBody.result_id = e.result_id;
 
@@ -79,6 +87,7 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
       this.innovationPackageCreatorBody.countries = response.hasCountries;
       this.innovationPackageCreatorBody.result_code = response.result_code;
       this.innovationPackageCreatorBody.official_code = response.official_code;
+      this.coreInitiativeName = response.initiative_name ?? null;
       this.innovationPackageCreatorBody.title = response.title;
       window.scrollTo(0, document.body.scrollHeight);
     });

@@ -21,6 +21,16 @@ export class CreateResultDto {
   public handler!: string;
 
   /**
+   * Optional result description, stored on `result.description` at create. The reporting form
+   * fills it from a Progress Tracker draft; every other caller omits it and the column stays
+   * `NULL`, exactly as before.
+   */
+  @ApiPropertyOptional({
+    description: 'Result description stored at creation (optional).',
+  })
+  public description?: string;
+
+  /**
    * P2-3420 / P2-3421 — answer to "Are you reporting the use of an innovation that has already been
    * reported and quality assessed?", asked on both W1/W2 Innovation Use creation surfaces.
    *

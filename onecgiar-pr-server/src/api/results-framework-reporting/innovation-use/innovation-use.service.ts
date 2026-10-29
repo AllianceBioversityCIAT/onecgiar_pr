@@ -30,6 +30,10 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { InnovationUseLevel } from './enum/innov-use-levels.enum';
+import {
+  currentUseRows,
+  summarizePreviousPhaseCurrentUse,
+} from '../../results/summary/utils/previous-phase-current-use.util';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
@@ -101,24 +105,35 @@ export class InnovationUseService {
       // id — the pooled client fills it from `response.level`. Callers that hand over
       // an id instead land one row off, or on nothing at all for the top level, where
       // the missing row used to surface as `null.id`. See P2-3359.
-      const use_levels =
-        await this._clarisaInnovationUseLevelRepository.findOne({
-          where: { level: innovation_use_level_id },
-          select: ['id'],
-        });
+      //
+      // 🛑 An absent level stays NULL — the level is optional for the bilateral API since
+      // P2-3785. It must never reach `findOne`: TypeORM drops a `null` condition from WHERE,
+      // so `{ level: null }` returned the FIRST catalogue row (level 0, "Innovation is not
+      // used") and every result sent without a level was stored as "No use".
+      let innovation_use_level: number | null = null;
+      if (
+        innovation_use_level_id !== null &&
+        innovation_use_level_id !== undefined
+      ) {
+        const use_levels =
+          await this._clarisaInnovationUseLevelRepository.findOne({
+            where: { level: innovation_use_level_id },
+            select: ['id'],
+          });
 
-      if (!use_levels) {
-        this.logger.error(
-          `No innovation use level found for level ${innovation_use_level_id} (result ${resultId})`,
-        );
-        throw {
-          response: {},
-          message: `Invalid innovation use level: ${innovation_use_level_id}. Expected a use level between 0 and 9.`,
-          status: HttpStatus.BAD_REQUEST,
-        };
+        if (!use_levels) {
+          this.logger.error(
+            `No innovation use level found for level ${innovation_use_level_id} (result ${resultId})`,
+          );
+          throw {
+            response: {},
+            message: `Invalid innovation use level: ${innovation_use_level_id}. Expected a use level between 0 and 9.`,
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        innovation_use_level = use_levels.id;
       }
-
-      const innovation_use_level = use_levels.id;
 
       if (is_discontinued !== undefined) {
         await this._resultRepository.update(resultId, {
@@ -771,25 +786,19 @@ export class InnovationUseService {
 
     try {
       const actors = await this.getActorsData(previousId);
-      const currentUseActors = actors.filter(
-        (row: any) => Number(row.section_id) === 1,
+      const currentUseActors = currentUseRows(actors);
+
+      // P2-3985 — the filter, the null rule and the shape are shared with the legacy summary read
+      // (W3/bilateral). `getActorsData` already normalised `how_many`, so it is summed as is.
+      const summary = summarizePreviousPhaseCurrentUse(
+        currentUseActors,
+        previousId,
+        previousPhaseYear,
+        (row) => Number(row.how_many) || 0,
+        currentUseRows,
       );
 
-      if (!currentUseActors.length) return null;
-
-      const total = currentUseActors.reduce(
-        (sum: number, row: any) => sum + (Number(row.how_many) || 0),
-        0,
-      );
-
-      const year = Number(previousPhaseYear);
-
-      return {
-        result_id: previousId,
-        phase_year: Number.isFinite(year) ? year : null,
-        total_actors: total,
-        actors: currentUseActors,
-      };
+      return summary ? { ...summary, actors: currentUseActors } : null;
     } catch (error) {
       this.logger.error(
         `P2-3537: could not read the previous-phase current use from result ${previousId}`,

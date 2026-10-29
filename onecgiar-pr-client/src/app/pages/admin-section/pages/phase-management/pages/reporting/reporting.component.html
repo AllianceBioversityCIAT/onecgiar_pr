@@ -5,10 +5,21 @@
   [enablePhaseLink]="true"
   [placeholderText]="'Enter name'"
   (phaseUpdate)="onPhaseUpdate()">
-  
-  <div style="margin-top: 2rem;" *ngIf="this.api.dataControlSE.previousReportingPhase.phaseName">
-    <div class="setting_title">Other functionalities</div>
-    <app-other-functionalities [replicateIPSR]="false"></app-other-functionalities>
-    <app-other-functionalities [replicateInnovationUse]="true"></app-other-functionalities>
-  </div>
+
+  <section
+    *ngIf="this.api.dataControlSE.previousReportingPhase.phaseName"
+    class="mt-8 flex flex-col gap-4"
+    data-testid="phase-operations"
+    aria-labelledby="phase-operations-heading">
+    <header>
+      <h2 id="phase-operations-heading" class="text-base font-semibold text-[var(--pr-color-secondary-500)]">{{ copy.phaseOperations }}</h2>
+      <p class="text-sm text-[var(--pr-color-secondary-400)]">{{ copy.targetPhase }}: {{ this.api.dataControlSE.reportingCurrentPhase.phaseName }}</p>
+    </header>
+    <div class="grid gap-4 md:grid-cols-2">
+      <app-other-functionalities [replicateIPSR]="false"></app-other-functionalities>
+      <app-other-functionalities [replicateInnovationUse]="true"></app-other-functionalities>
+    </div>
+  </section>
+
+  <app-replicated-innovation-reminders />
 </app-phase-management-table>

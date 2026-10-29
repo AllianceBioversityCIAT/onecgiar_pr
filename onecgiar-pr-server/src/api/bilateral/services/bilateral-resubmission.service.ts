@@ -181,6 +181,16 @@ export interface ResubmissionWritersPort {
     userId: number,
     manager: EntityManager,
   ): Promise<PrimaryTransferResult>;
+  /**
+   * `PNR-T-2` (`PNR-R-2`, `PNR-NFR-1`): `ppr.stampPrimaryCardSubmitted(resultId, manager)` — re-dates
+   * the owning SP's primary card so it lists as new in its Received inbox. It receives the manager of
+   * the FINAL transaction (the date rolls back with the flip) and REJECTS on a query error. Runs on
+   * every resubmission, whether or not the primary changed.
+   */
+  stampPrimaryCardSubmitted(
+    resultId: number,
+    manager: EntityManager,
+  ): Promise<void>;
   /** `BilateralService.announcePendingReview`: never throws, runs only after the commit. */
   announcePendingReview(resultId: number, emitterUserId: number): Promise<void>;
 }
@@ -408,6 +418,7 @@ export class BilateralResubmissionService {
     // its previous primary and the platform retries.
     const transfer = await this.commitResubmission(target, preflight, {
       transferPrimary: primaryChanged ? writers.transferPrimary : undefined,
+      stampPrimaryCardSubmitted: writers.stampPrimaryCardSubmitted,
       resultCode,
     });
 
@@ -469,6 +480,7 @@ export class BilateralResubmissionService {
     preflight: ResubmissionPreflightResult,
     request: {
       transferPrimary?: ResubmissionWritersPort['transferPrimary'];
+      stampPrimaryCardSubmitted: ResubmissionWritersPort['stampPrimaryCardSubmitted'];
       resultCode: string;
     },
   ): Promise<PrimaryTransferResult | null> {
@@ -504,6 +516,11 @@ export class BilateralResubmissionService {
           throw this.primaryTransferFailure(resultCode, error);
         }
       }
+
+      // `PNR-T-2`: re-date the primary card in this same transaction, after the CAS and after the
+      // optional transfer (which retires the row a too-early stamp would have touched). An error
+      // propagates and rolls the whole resubmission back (`PNR-NFR-1`); a lost CAS never gets here.
+      await request.stampPrimaryCardSubmitted(target.id, manager);
 
       await manager.save(
         ResultReviewHistory,

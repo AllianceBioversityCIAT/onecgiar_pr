@@ -10,6 +10,7 @@ describe('ResultsToUpdateFilterPipe', () => {
   beforeEach(() => {
     mockApiService = {
       shouldShowUpdate: jest.fn().mockReturnValue(true),
+      canUpdateBilateral: jest.fn().mockReturnValue(false),
       rolesSE: { isAdmin: true },
       dataControlSE: {
         getCurrentPhases: jest.fn(() => of({})), // Mock function
@@ -74,5 +75,35 @@ describe('ResultsToUpdateFilterPipe', () => {
     const filteredList = pipe.transform(inputList, 'Result');
 
     expect(filteredList).toEqual([]);
+  });
+
+  describe('W3/Bilateral rows (same rule as the row menu, P2-3229)', () => {
+    const bilateral = { id: 8208, result_type_id: 1, phase_status: null, phase_year: 2021, source_name: 'W3/Bilaterals', submitter: 'SP10', joinAll: '8208' };
+
+    it('hides a bilateral row when canUpdateBilateral says no, even if the user belongs to the program', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2026, portfolioAcronym: 'P25' };
+      mockApiService.canUpdateBilateral.mockReturnValue(false);
+
+      expect(pipe.transform([bilateral], '')).toEqual([]);
+      expect(mockApiService.canUpdateBilateral).toHaveBeenCalledWith(bilateral, mockApiService.dataControlSE.reportingCurrentPhase);
+      expect(mockApiService.shouldShowUpdate).not.toHaveBeenCalled();
+    });
+
+    it('shows a bilateral row when canUpdateBilateral allows it (lead centre + Approved)', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2026, portfolioAcronym: 'P25' };
+      mockApiService.canUpdateBilateral.mockReturnValue(true);
+
+      expect(pipe.transform([bilateral], '')).toEqual([bilateral]);
+    });
+
+    it('keeps the W1/W2 rule for AVISA (SGP-02) bilaterals', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2026, portfolioAcronym: 'P25' };
+      const avisa = { ...bilateral, submitter: 'SGP-02' };
+
+      expect(pipe.transform([avisa], '')).toEqual([avisa]);
+      expect(mockApiService.canUpdateBilateral).not.toHaveBeenCalled();
+      expect(mockApiService.shouldShowUpdate).toHaveBeenCalled();
+    });
   });
 });

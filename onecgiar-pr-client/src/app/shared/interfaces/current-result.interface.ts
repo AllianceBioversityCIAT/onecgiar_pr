@@ -48,6 +48,8 @@ export interface CurrentResult {
   planned_result?: number | null;
   inQA?: number;
   submitter?: string | number;
+  submitter_name?: string | null;
+  submitter_short_name?: string | null;
   type?: string | number;
   submitter_id?: any;
   crp?: any;

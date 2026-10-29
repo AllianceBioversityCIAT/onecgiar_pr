@@ -1,3 +1,15 @@
+import {
+  ProjectMatchContext,
+  buildProjectClause,
+  buildProjectMatch,
+} from './project-match';
+import {
+  ProjectProgram,
+  RelevanceWeights,
+  buildRelevanceBlock,
+  extractRelevanceKeywords,
+} from './project-relevance';
+
 /**
  * Static adapter registry for the multi-repository Discovery-API proxy (`KPM-DD-1`).
  * One entry per repository (DSpace 7 Discovery-API host); the service/mapper take the adapter
@@ -34,6 +46,21 @@ export interface RepositoryAdapterFields {
   affiliation?: string;
   doi: string;
   uri: string;
+  /**
+   * Project label field, queried by the scoped linked/related search and read by the mapper
+   * (`KPSF-DD-3`): `cg.identifier.project` on CGSpace, `cg.contributor.project` on
+   * MELSpace/WorldFish. It is interpolated into the Solr clause, so it must only ever be this
+   * adapter constant, never a request value.
+   */
+  project: string;
+  /**
+   * Subject field boosted by the related-section relevance block and read by the keyword factor
+   * (`KRR-DD-2`, `design.md` §7.4): `dcterms.subject` on CGSpace, `dc.subject` on MELSpace/WorldFish.
+   * Interpolated into Solr, so it must only ever be this adapter constant.
+   */
+  subject: string;
+  /** Science Program / Accelerator label field (`cg.contributor.programAccelerator`), same rule. */
+  program: string;
 }
 
 export interface RepositoryAdapterFacets {
@@ -41,8 +68,6 @@ export interface RepositoryAdapterFacets {
   type: string;
   /** `f.<center>` facet name (affiliation / center). Undefined -> Center filter unconstrained (`KPM-OQ-3`). */
   center?: string;
-  /** `f.<project>` facet name (cg.identifier.project). Undefined -> project filter skipped on that host. */
-  project?: string;
 }
 
 export interface RepositoryAdapter {
@@ -77,12 +102,13 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
       affiliation: 'cg.contributor.affiliation',
       doi: 'cg.identifier.doi',
       uri: 'dc.identifier.uri',
+      project: 'cg.identifier.project',
+      subject: 'dcterms.subject',
+      program: 'cg.contributor.programAccelerator',
     },
     facets: {
       type: 'itemtype',
       center: 'affiliation',
-      // CGSpace Discovery exposes no `project` facet (2026-09 live `/discover/facets` audit).
-      // Sending `f.project=` returns HTTP 400 — strict bilateral tag filter applies to MEL/WorldFish only.
     },
     yearFilterField: 'dateIssued',
   },
@@ -99,11 +125,13 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
       affiliation: 'cg.contributor.center',
       doi: 'cg.identifier.doi',
       uri: 'dc.identifier.uri',
+      project: 'cg.contributor.project',
+      subject: 'dc.subject',
+      program: 'cg.contributor.programAccelerator',
     },
     facets: {
       type: 'itemtype',
       center: 'institute',
-      project: 'project',
     },
     yearFilterField: 'dateIssued',
   },
@@ -120,11 +148,13 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
       affiliation: 'cg.contributor.affiliation',
       doi: 'dc.identifier.doi',
       uri: 'dc.identifier.uri',
+      project: 'cg.contributor.project',
+      subject: 'dc.subject',
+      program: 'cg.contributor.programAccelerator',
     },
     facets: {
       type: 'itemtype',
       center: 'institute',
-      project: 'project',
     },
     yearFilterField: 'dateIssued',
   },
@@ -189,7 +219,190 @@ export interface TranslatableSearchParams {
   type?: string;
   year?: string;
   center?: string;
+  /** Legacy `<code> - <title>` label; mapped to `projectScope=linked` (`KPSF-R-11`). */
   project?: string;
+  projectCode?: string;
+  projectTitle?: string;
+  projectLeadCenter?: string;
+  // @akili-spec changes/kp-related-relevance-ranking
+  projectDescription?: string;
+  /** `<code> - <name>`, either part optional (`parseProjectProgram`). */
+  projectProgram?: string;
+  /** Full lead-center name, matched against the affiliation field. */
+  projectLeadCenterName?: string;
+  projectScope?: ProjectScope;
+  // @akili-spec changes/kp-related-strongest-first
+  /** "Only related KPs" request; honored only when the request is ranked and the full block fits. */
+  projectRelatedOnly?: boolean;
+}
+
+export type ProjectScope = 'linked' | 'related';
+
+/** Result of resolving the project inputs of a search (`design.md` §7). */
+export interface ResolvedProjectScope {
+  scope: ProjectScope;
+  /** False when the project yields neither >= 2 distinctive words nor a code (`KPSF-R-9`). */
+  applied: boolean;
+  ctx: ProjectMatchContext;
+  /**
+   * Relevance inputs for the related section (`KRR-R-1`): present only for `related` + `applied`.
+   * Adapter-independent; `translateParams` turns them into one block per adapter.
+   */
+  relevance?: ResolvedRelevance;
+  /** True when the related query carries a relevance block (`projectScope.ranked` echo, `KRR-R-1`). */
+  ranked: boolean;
+  // @akili-spec changes/kp-related-strongest-first
+  /**
+   * True when the related query carries the FILTER form of the block on every adapter
+   * (`projectScope.relatedOnly` echo, `KRS-R-3`): requested AND ranked AND the untrimmed filter
+   * fits on every registered adapter.
+   */
+  relatedOnly: boolean;
+}
+
+export interface ResolvedRelevance {
+  keywords: string[];
+  centerName?: string;
+  program: ProjectProgram;
+}
+
+/**
+ * Constant score per factor, by text presence (`KRR-DD-3`, superseded by `KFS-DD-2`). Every factor
+ * clause is constant-score (`^=w`), so the Solr score of a KP is `w` times its factor count and the
+ * order equals the tier (`KFS-R-1`). With no search text the project decides the order: 1/1/1 makes
+ * the score step between tiers exactly 1. With search text the text score must dominate and the
+ * project only breaks ties among comparable text matches (`KRR-R-2`): three factors add at most
+ * 0.003, far below any text score.
+ *
+ * Calibrated live on 2026-10-22 (KRR): weights of `^0.02` and above still put genebank KPs without
+ * potato in the title first; `0.001` keeps potato-titled KPs first. Keep every weight >= 0.0001: a
+ * smaller number stringifies as `1e-5`, which Solr rejects.
+ */
+// @akili-spec bugfix/kp-related-factor-score
+export const RELEVANCE_WEIGHTS_NO_TEXT: RelevanceWeights = {
+  subject: 1,
+  center: 1,
+  program: 1,
+};
+export const RELEVANCE_WEIGHTS_WITH_TEXT: RelevanceWeights = {
+  subject: 0.001,
+  center: 0.001,
+  program: 0.001,
+};
+
+/** `KRR-NFR-2`: the encoded upstream `query` stays under this many characters. */
+export const MAX_ENCODED_QUERY_LENGTH = 2000;
+
+/**
+ * Splits the `projectProgram` param (`<code> - <name>`, either part optional) on the FIRST ` - `
+ * only, since program names can contain hyphens. Without a separator the whole string is the name
+ * (the boost phrase and the program factor treat code and name alike). Never throws.
+ */
+export function parseProjectProgram(
+  raw: string | null | undefined,
+): ProjectProgram {
+  const value = (raw ?? '').trim();
+  if (!value) return {};
+  const separator = value.indexOf(' - ');
+  if (separator >= 0) {
+    return {
+      code: value.slice(0, separator).trim() || undefined,
+      name: value.slice(separator + 3).trim() || undefined,
+    };
+  }
+  if (value.startsWith('- '))
+    return { name: value.slice(2).trim() || undefined };
+  if (value.endsWith(' -'))
+    return { code: value.slice(0, -2).trim() || undefined };
+  return { name: value };
+}
+
+/**
+ * Resolves the scoped-project inputs of a search, or `null` when the search carries none (the
+ * non-bilateral path, byte-identical to before). An explicit `projectScope` wins; otherwise the
+ * legacy `project` (`<code> - <title>`) is accepted for one release as `linked` (`KPSF-R-11`).
+ */
+export function resolveProjectScope(
+  dto: TranslatableSearchParams,
+): ResolvedProjectScope | null {
+  let scope: ProjectScope;
+  let ctx: ProjectMatchContext;
+
+  if (dto.projectScope) {
+    scope = dto.projectScope;
+    ctx = {
+      code: dto.projectCode,
+      title: dto.projectTitle,
+      leadCenter: dto.projectLeadCenter,
+    };
+  } else if (dto.project) {
+    scope = 'linked';
+    const separator = dto.project.indexOf(' - ');
+    ctx =
+      separator >= 0
+        ? {
+            code: dto.project.slice(0, separator),
+            title: dto.project.slice(separator + 3),
+          }
+        : { title: dto.project };
+  } else {
+    return null;
+  }
+
+  const applied = buildProjectMatch(ctx).usable;
+
+  // @akili-spec changes/kp-related-relevance-ranking
+  let relevance: ResolvedRelevance | undefined;
+  if (scope === 'related' && applied) {
+    relevance = {
+      keywords: extractRelevanceKeywords({
+        title: ctx.title,
+        code: ctx.code,
+        description: dto.projectDescription,
+        leadCenter: ctx.leadCenter,
+      }),
+      centerName: dto.projectLeadCenterName,
+      program: parseProjectProgram(dto.projectProgram),
+    };
+  }
+  // `ranked` is ONE request-wide decision, and `translateParams` follows it on every adapter:
+  // true only when EVERY registered adapter (all of `KP_REPOSITORY_VALUES`, selected or not) can
+  // carry the block within the length budget. Hosts differ in field-name lengths, so one could fit
+  // where another does not; deciding per host would let the echo and the sent query disagree
+  // (`design.md` §5, §7.2). Any host that cannot fit makes the whole request unranked.
+  const escapedQuery = escapeSolrQuery(dto.query);
+  const ranked =
+    !!relevance &&
+    KP_REPOSITORY_VALUES.every(
+      (key) =>
+        !!composeScopedQuery(
+          scope,
+          ctx,
+          relevance,
+          escapedQuery,
+          KP_REPOSITORIES[key],
+        )?.ranked,
+    );
+
+  // @akili-spec changes/kp-related-strongest-first
+  // `relatedOnly` is the same kind of request-wide decision (`KRS-DD-4`): a filter must never be
+  // trimmed (dropping a clause would silently narrow the set), so it needs the FULL block to fit
+  // on EVERY registered adapter. Otherwise the request falls back to the KRR behavior.
+  const relatedOnly =
+    !!dto.projectRelatedOnly &&
+    ranked &&
+    KP_REPOSITORY_VALUES.every(
+      (key) =>
+        !!composeScopedQuery(
+          scope,
+          ctx,
+          relevance,
+          escapedQuery,
+          KP_REPOSITORIES[key],
+        )?.filtered,
+    );
+
+  return { scope, applied, ctx, relevance, ranked, relatedOnly };
 }
 
 /**
@@ -204,7 +417,10 @@ export interface TranslatableSearchParams {
  *   leaving that repository unconstrained by the Center filter (`KPM-OQ-3`);
  * - `f.<yearFilterField>=[Y TO Y],equals` — when the adapter declares no year filter field the
  *   param is omitted and the service post-filters the mapped `year` instead (`KPM-DD-7`).
- * - `f.<facets.project>=<project>,equals` — skipped when the adapter declares no project facet.
+ * - project scope (`KPSF-T-2`): `linked` -> `<base> AND (<clause>)`, `related` ->
+ *   `<base> AND NOT (<clause>)` on `adapter.fields.project`; an unusable project leaves the base
+ *   query untouched (the service short-circuits `linked` before ever calling this). No `f.project`
+ *   facet is ever emitted (`KPSF-R-11`).
  *
  * Pure: no env reads, no logging, no host/base-URL knowledge.
  */
@@ -238,9 +454,148 @@ export function translateParams(
       `[${dto.year} TO ${dto.year}],equals`;
   }
 
-  if (dto.project && adapter.facets.project) {
-    params[`f.${adapter.facets.project}`] = `${dto.project},equals`;
+  // @akili-spec changes/kp-project-strict-filter
+  // Scoped project split (`KPSF-DD-2`): linked = base AND (clause), related = base AND NOT
+  // (clause). The field is the adapter constant; only sanitized tokens come from the project.
+  // Residual risk (recorded, no post-filter so counts stay exact): on multi-valued project
+  // fields the Solr word group matches at item level, so an item can match across two labels.
+  const project = resolveProjectScope(dto);
+  if (project?.applied) {
+    const scoped = composeScopedQuery(
+      project.scope,
+      project.ctx,
+      project.relevance,
+      escapedQuery,
+      adapter,
+    );
+    if (scoped) {
+      // @akili-spec changes/kp-related-relevance-ranking
+      // One gate for the block and the sort: the request-wide `project.ranked` (never this
+      // adapter's own fit). A ranked related request drops the date sort so DSpace orders by
+      // score (`KRR-DD-6`); every other request stays byte-identical to the KPSF one
+      // (`KRR-R-3`, `KRR-R-4`). `scoped.ranked` is only false here for an adapter outside the
+      // registry, which then falls back to the plain query.
+      if (project.relatedOnly && scoped.filtered) {
+        // @akili-spec changes/kp-related-strongest-first
+        params.query = scoped.filtered;
+        delete params.sort;
+      } else if (project.ranked && scoped.ranked) {
+        params.query = scoped.ranked;
+        delete params.sort;
+      } else {
+        params.query = scoped.query;
+      }
+    }
   }
 
   return params;
+}
+
+/**
+ * The scoped project query of one adapter (`KPSF-DD-2`): `query` is the plain KPSF one (linked =
+ * `base AND (clause)`, related = `base AND NOT (clause)`), and `ranked` is the same related query
+ * with the relevance block appended (`KRR-DD-1`), or `null` when this adapter cannot carry a block
+ * within the length budget. `null` overall when the project clause is empty. Which of the two is
+ * SENT is decided request-wide by `resolveProjectScope`, never per adapter.
+ */
+function composeScopedQuery(
+  scope: ProjectScope,
+  ctx: ProjectMatchContext,
+  relevance: ResolvedRelevance | undefined,
+  escapedQuery: string,
+  adapter: RepositoryAdapter,
+): { query: string; ranked: string | null; filtered: string | null } | null {
+  const clause = buildProjectClause(adapter.fields.project, ctx);
+  if (!clause) return null;
+
+  const base = escapedQuery ? `(${escapedQuery})` : '*:*';
+  if (scope === 'linked') {
+    return { query: `${base} AND (${clause})`, ranked: null, filtered: null };
+  }
+
+  const related = `${base} AND NOT (${clause})`;
+  const withBlock = relevance
+    ? appendRelevanceBlock(
+        related,
+        adapter,
+        relevance,
+        escapedQuery ? RELEVANCE_WEIGHTS_WITH_TEXT : RELEVANCE_WEIGHTS_NO_TEXT,
+      )
+    : null;
+  // @akili-spec changes/kp-related-strongest-first
+  const weights = escapedQuery
+    ? RELEVANCE_WEIGHTS_WITH_TEXT
+    : RELEVANCE_WEIGHTS_NO_TEXT;
+  return {
+    query: related,
+    ranked: withBlock,
+    filtered: relevance
+      ? buildFilterQuery(related, adapter, relevance, weights)
+      : null,
+  };
+}
+
+// @akili-spec changes/kp-related-strongest-first
+/**
+ * `<related query> AND (<filter block>)` with the FULL block, or `null` when no clause is usable
+ * or the encoded query does not fit under `MAX_ENCODED_QUERY_LENGTH`. Never trimmed (`KRS-DD-4`).
+ */
+function buildFilterQuery(
+  relatedQuery: string,
+  adapter: RepositoryAdapter,
+  relevance: ResolvedRelevance,
+  weights: RelevanceWeights,
+): string | null {
+  const block = buildRelevanceBlock(
+    adapter,
+    relevance.keywords,
+    relevance.centerName,
+    relevance.program,
+    weights,
+    'filter',
+  );
+  if (block === null) return null;
+  const query = `${relatedQuery} AND (${block})`;
+  return encodeURIComponent(query).length < MAX_ENCODED_QUERY_LENGTH
+    ? query
+    : null;
+}
+
+/**
+ * `<related query> AND (<relevance block>)`, or `null` when no clause is usable. Keeps the encoded
+ * query under `MAX_ENCODED_QUERY_LENGTH` (`KRR-NFR-2`) by dropping the weakest clauses first: the
+ * program, then the center, then keywords from the end down to the first one. Center and program
+ * phrases are bounded (`MAX_PHRASE_LENGTH`), so for ASCII text one clause fits after the longest
+ * prefix. It still returns `null` when nothing fits, e.g. 200 three-byte characters encode to ~1800
+ * (`€`, CJK): the request then goes out unranked, newest first. The block is non-filtering, so the
+ * result set never depends on what survives.
+ */
+function appendRelevanceBlock(
+  relatedQuery: string,
+  adapter: RepositoryAdapter,
+  relevance: ResolvedRelevance,
+  weights: RelevanceWeights,
+): string | null {
+  const keywords = [...relevance.keywords];
+  let center = relevance.centerName;
+  let program: ProjectProgram | undefined = relevance.program;
+
+  for (;;) {
+    const block = buildRelevanceBlock(
+      adapter,
+      keywords,
+      center,
+      program,
+      weights,
+    );
+    if (block === null) return null;
+    const query = `${relatedQuery} AND (${block})`;
+    if (encodeURIComponent(query).length < MAX_ENCODED_QUERY_LENGTH) {
+      return query;
+    }
+    if (program) program = undefined;
+    else if (center) center = undefined;
+    else if (keywords.length > 1) keywords.pop();
+    else return null;
+  }
 }

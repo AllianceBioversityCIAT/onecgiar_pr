@@ -8,6 +8,7 @@ import {
   PrTableHeaderDirective,
   PrTableBodyDirective
 } from 'src/app/shared/components/pr-table';
+import { SpLabelPipe } from '../../pipes/sp-label.pipe';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
 import { ResultHistoryOfChangesModalModule } from '../../../pages/admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.module';
@@ -28,6 +29,7 @@ import { FilterInitWithRoleCoordAndLeadModule } from '../../../pages/init-admin-
     CustomFieldsModule,
     ResultHistoryOfChangesModalModule,
     FilterByTextModule,
+    SpLabelPipe,
     FilterInitWithRoleCoordAndLeadModule
   ]
 })

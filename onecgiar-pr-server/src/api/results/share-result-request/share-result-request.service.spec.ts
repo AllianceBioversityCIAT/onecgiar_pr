@@ -21,6 +21,11 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { PrimaryProgramRequestService } from './services/primary-program-request.service';
 import { HttpStatus } from '@nestjs/common';
 import { FindOperator } from 'typeorm';
+import { ResultStatusData } from '../../../shared/constants/result-status.enum';
+import {
+  applyKeysetCursor,
+  encodeCursor,
+} from '../../../shared/utils/keyset-cursor.util';
 import { ShareResultRequestSeenRepository } from './repositories/share-result-request-seen.repository';
 
 describe('ShareResultRequestService', () => {
@@ -671,9 +676,12 @@ describe('ShareResultRequestService', () => {
       const doneWhere =
         mockShareResultRequestRepository.find.mock.calls[1][0].where;
       expect(Array.isArray(doneWhere)).toBe(true);
-      expect(doneWhere).toHaveLength(1);
-      expect(doneWhere[0]).not.toHaveProperty('shared_inititiative_id');
-      expect(doneWhere[0]).not.toHaveProperty('owner_initiative_id');
+      // PNR-T-1: admin entry split into contribution / primary
+      expect(doneWhere).toHaveLength(2);
+      for (const entry of doneWhere) {
+        expect(entry).not.toHaveProperty('shared_inititiative_id');
+        expect(entry).not.toHaveProperty('owner_initiative_id');
+      }
       expect(response.response.receivedContributionsDone).toHaveLength(1);
       expect(
         response.response.receivedContributionsDone[0].share_result_request_id,
@@ -1594,6 +1602,165 @@ describe('ShareResultRequestService', () => {
     });
   });
 
+  // @akili-spec bugfix/primary-notify-on-submit-regression PNR-T-1
+  // PNR-R-1 / PNR-R-3: the `done` (history) bucket must not surface a `primary` card while the
+  // result is in preparation (Editing 1, Rejected 7, Draft 8). The evaluator below interprets
+  // `FindOperator` (in / not / lessThan) and nested `obj_result`, so the status-5 primary fixture
+  // being INCLUDED in the same run proves it is not "excluding everything".
+  describe('PNR-T-1 — done bucket hides primary cards while the result is in preparation', () => {
+    const matchesValue = (actual: any, expected: any): boolean => {
+      if (expected instanceof FindOperator) {
+        switch (expected.type) {
+          case 'in':
+            return (expected.value as any[]).includes(actual);
+          case 'not':
+            return !matchesValue(actual, expected.child);
+          case 'lessThan':
+            return (
+              new Date(actual).getTime() < new Date(expected.value).getTime()
+            );
+          default:
+            throw new Error(`Unsupported operator ${expected.type}`);
+        }
+      }
+      if (expected instanceof Date) {
+        return new Date(actual).getTime() === expected.getTime();
+      }
+      return actual === expected;
+    };
+    const evaluateEntry = (row: any, entry: any): boolean =>
+      Object.entries(entry).every(([key, expected]) =>
+        key === 'obj_result'
+          ? evaluateEntry(row.obj_result ?? {}, expected)
+          : matchesValue(row[key], expected),
+      );
+    const inDone = (done: any, row: any): boolean =>
+      (Array.isArray(done) ? done : [done]).some((e) => evaluateEntry(row, e));
+
+    const ACCEPTED = 2;
+    const DECLINED = 3;
+    const row = (id: number, extra: any, resultStatus: number) => ({
+      share_result_request_id: id,
+      request_type: 'primary',
+      shared_inititiative_id: 100,
+      owner_initiative_id: 100,
+      is_map_to_toc: false,
+      request_status_id: ACCEPTED,
+      is_active: true,
+      requested_date: new Date(Date.UTC(2026, 0, 1, 0, 0, id < 4 ? 30 : id)),
+      obj_result: { is_active: true, status_id: resultStatus },
+      ...extra,
+    });
+
+    const buildDone = (role: number, extra?: any) =>
+      (service as any).buildWhereReceivedConditions(
+        role === 1 ? [] : [{ initiative_id: 100 }],
+        role,
+        extra,
+      ).done;
+
+    describe.each([
+      ['non-admin (role 3)', 3],
+      ['admin (role 1)', 1],
+    ])('%s', (_label, role) => {
+      it.each([
+        ['Editing (1) - the reported case', ResultStatusData.Editing.value],
+        ['Rejected (7)', ResultStatusData.Rejected.value],
+        ['Draft (8)', ResultStatusData.Draft.value],
+      ])('excludes an ACCEPTED primary row of a result in %s', (_n, status) => {
+        expect(inDone(buildDone(role), row(1, {}, status))).toBe(false);
+      });
+
+      it.each([
+        ['PendingReview (5)', ResultStatusData.PendingReview.value],
+        ['Approved (6)', ResultStatusData.Approved.value],
+        ['Submitted (3)', ResultStatusData.Submitted.value],
+      ])('includes an ACCEPTED primary row of a result in %s', (_n, status) => {
+        expect(inDone(buildDone(role), row(1, {}, status))).toBe(true);
+      });
+
+      it.each([ACCEPTED, DECLINED])(
+        'includes a contribution row (request_status %i) of a result in Editing',
+        (requestStatus) => {
+          const contribution = row(
+            2,
+            { request_type: 'contribution', request_status_id: requestStatus },
+            ResultStatusData.Editing.value,
+          );
+          expect(inDone(buildDone(role), contribution)).toBe(true);
+        },
+      );
+
+      it('keeps the merged obj_result.version_id on the primary entry (status 5 in-version included, other version excluded)', () => {
+        const done = buildDone(role, { obj_result: { version_id: 99 } });
+        const inVersion = row(1, {}, ResultStatusData.PendingReview.value);
+        inVersion.obj_result['version_id'] = 99;
+        const otherVersion = row(1, {}, ResultStatusData.PendingReview.value);
+        otherVersion.obj_result['version_id'] = 98;
+        expect(inDone(done, inVersion)).toBe(true);
+        expect(inDone(done, otherVersion)).toBe(false);
+      });
+    });
+
+    it('non-admin: a map-to-ToC row of a result in Editing stays in done (entry unchanged)', () => {
+      const mapToToc = row(
+        3,
+        { request_type: 'contribution', is_map_to_toc: true },
+        ResultStatusData.Editing.value,
+      );
+      expect(inDone(buildDone(3), mapToToc)).toBe(true);
+    });
+
+    it('keyset paging keeps the same inclusion and yields no duplicate ids across two pages', () => {
+      const editing = ResultStatusData.Editing.value;
+      const fixtures = [
+        row(1, {}, ResultStatusData.PendingReview.value), // included
+        row(2, {}, ResultStatusData.Approved.value), // included
+        row(3, {}, ResultStatusData.Submitted.value), // included (same date as 1, 2: tie-break by id)
+        row(4, { request_type: 'contribution' }, editing), // included
+        row(
+          5,
+          { request_type: 'contribution', request_status_id: DECLINED },
+          editing,
+        ), // included
+        row(6, { request_type: 'contribution', is_map_to_toc: true }, editing), // included
+        row(7, {}, editing), // excluded
+        row(8, {}, ResultStatusData.Rejected.value), // excluded
+        row(9, {}, ResultStatusData.Draft.value), // excluded
+      ];
+      const expectedIds = [1, 2, 3, 4, 5, 6];
+      const fields = {
+        dateField: 'requested_date',
+        idField: 'share_result_request_id',
+      };
+      const PAGE = 3;
+      const fetchPage = (done: any, cursor?: string) =>
+        fixtures
+          .filter((r) => inDone(applyKeysetCursor(done, cursor, fields), r))
+          .sort(
+            (a, b) =>
+              b.requested_date.getTime() - a.requested_date.getTime() ||
+              b.share_result_request_id - a.share_result_request_id,
+          )
+          .slice(0, PAGE);
+
+      for (const role of [3, 1]) {
+        const done = buildDone(role);
+        const page1 = fetchPage(done);
+        const last = page1[page1.length - 1];
+        const cursor = encodeCursor(
+          last.requested_date,
+          last.share_result_request_id,
+        );
+        const page2 = fetchPage(done, cursor);
+        const ids = [...page1, ...page2].map((r) => r.share_result_request_id);
+
+        expect(new Set(ids).size).toBe(ids.length);
+        expect([...ids].sort((a, b) => a - b)).toEqual(expectedIds);
+      }
+    });
+  });
+
   // @akili-spec notifications/bilateral-primary-sp-request PSR-T-4
   // Received/sent/pop-up rows gain request_type, creating_center and (bilateral contribution
   // rows only) owner_program_code — all derived from the SAME query, batched, never per row.
@@ -1956,9 +2123,9 @@ describe('ShareResultRequestService', () => {
       }
     });
 
-    // PAGE-R-3 — a valid cursor expands the done `where` into the keyset OR (2 entries -> 4 for
-    // non-admin) instead of the plain 2-entry array.
-    it('a valid cursor expands the non-admin done where from 2 entries to 4 (keyset OR)', async () => {
+    // PAGE-R-3 — a valid cursor expands the done `where` into the keyset OR (3 entries -> 6 for
+    // non-admin, PNR-T-1 split) instead of the plain 3-entry array.
+    it('a valid cursor expands the non-admin done where from 3 entries to 6 (keyset OR)', async () => {
       mockShareResultRequestRepository.find.mockResolvedValue([]);
       const cursor = Buffer.from(
         '2026-01-01T00:00:00.000Z|123',
@@ -1969,7 +2136,7 @@ describe('ShareResultRequestService', () => {
 
       const calls = mockShareResultRequestRepository.find.mock.calls as any[];
       const doneCall = calls.find((call) => Array.isArray(call[0].where));
-      expect(doneCall[0].where).toHaveLength(4);
+      expect(doneCall[0].where).toHaveLength(6);
     });
   });
 

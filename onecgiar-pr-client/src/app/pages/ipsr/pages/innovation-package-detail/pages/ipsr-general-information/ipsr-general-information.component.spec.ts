@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { By } from '@angular/platform-browser';
@@ -1353,5 +1355,13 @@ describe('IpsrGeneralInformationComponent', () => {
       expect(patchSpy).not.toHaveBeenCalled();
       expect(mockUserSearchService.showContactError).toBe(true);
     }));
+  });
+
+  describe('P2-3923 · Lead contact person follows the read-only role', () => {
+    it('passes rolesSE.readOnly to the contact field, so its clear button is locked for view-only users', () => {
+      const html = readFileSync(join(__dirname, 'ipsr-general-information.component.html'), 'utf8');
+      const field = html.match(/<app-lead-contact-person-field[\s\S]*?<\/app-lead-contact-person-field>/)?.[0] ?? '';
+      expect(field).toContain('[readOnly]="this.rolesSE.readOnly"');
+    });
   });
 });

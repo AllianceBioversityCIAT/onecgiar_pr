@@ -840,6 +840,21 @@ describe('InnovationUseInfoComponent', () => {
     });
   });
 
+  // P2-3985 — since the legacy summary endpoint persists both keys when present, the non-P25 path
+  // (which never hydrates them, so it would always send null) must leave them out of its payload.
+  describe('P2-3985 — the legacy (non-P25) save does not carry the Current Use Update keys', () => {
+    it('omits new_users_added and use_expansion_narrative', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(false);
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg).not.toHaveProperty('new_users_added');
+      expect(bodyArg).not.toHaveProperty('use_expansion_narrative');
+    });
+  });
+
   // ─────────────────────────────────────────────────────────────────────────────────────────────
   // `UCA-T-11` — `CanComponentDeactivate` (unsaved-changes-alert spec)
   //

@@ -59,6 +59,8 @@ import { ResultImpactAreaScoresModule } from './api/result-impact-area-scores/re
 import { GlobalUtilsModule } from './shared/utils/global-utils.module';
 import { WebhookDispatchModule } from './api/results/webhook/webhook-dispatch.module';
 import { ProgressTrackerModule } from './api/progress-tracker/progress-tracker.module';
+import { QaCatalogModule } from './api/qa-catalog/qa-catalog.module';
+import { ReplicatedInnovationRemindersModule } from './api/replicated-innovation-reminders/replicated-innovation-reminders.module';
 
 @Module({
   imports: [
@@ -118,6 +120,8 @@ import { ProgressTrackerModule } from './api/progress-tracker/progress-tracker.m
     ResultImpactAreaScoresModule,
     GlobalUtilsModule,
     ProgressTrackerModule,
+    QaCatalogModule,
+    ReplicatedInnovationRemindersModule,
   ],
   controllers: [AppController],
   providers: [
@@ -147,6 +151,9 @@ export class AppModule implements NestModule {
         { path: 'api/bilateral/list', method: RequestMethod.ALL },
         { path: 'api/bilateral/results', method: RequestMethod.ALL },
         { path: 'api/bilateral/:id', method: RequestMethod.ALL },
+        { path: 'api/qa/catalog', method: RequestMethod.ALL },
+        { path: 'api/qa/results', method: RequestMethod.ALL },
+        { path: 'api/qa/results/details', method: RequestMethod.ALL },
       )
       .forRoutes(
         { path: 'api/*path', method: RequestMethod.ALL },

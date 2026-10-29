@@ -1,0 +1,93 @@
+<!--
+  Popover + Command (GLF-DD-10): no Spartan Select exists in this repo. The trigger is a plain button (the
+  Brain popover trigger is not mocked for hostDirective inputs); `[state]` / `(stateChanged)` is the same
+  controlled-overlay pattern `global-search-palette` and `program-overview` use.
+  `[attachTo]` takes the trigger element (template ref), not a directive instance. `*brnCommandEmpty` and `*hlmPopoverPortal`
+  are STRUCTURAL (they inject TemplateRef); the attribute form throws NG0201 and blanks the whole popover.
+  The search input is always rendered so the keyboard has a target; without `searchable` it is visually hidden.
+-->
+<hlm-popover align="start" sideOffset="6" [attachTo]="trigger" [state]="open() ? 'open' : 'closed'" (stateChanged)="onState($event)">
+  <button
+    #trigger
+    type="button"
+    [attr.data-testid]="'filter-trigger-' + dimension()"
+    class="flex h-[32px] w-full cursor-pointer items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] outline-none transition-colors duration-150 hover:border-[var(--pr-border-strong)] focus-visible:shadow-[var(--pr-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open() ? 'true' : 'false'"
+    [attr.aria-controls]="open() ? listId() : null"
+    [attr.aria-label]="triggerName()"
+    [attr.aria-describedby]="disabled() && hint() ? hintId() : null"
+    [attr.title]="disabled() && hint() ? hint() : null"
+    [disabled]="disabled()"
+    (click)="toggleOpen()">
+    <span class="flex min-w-0 items-center gap-[6px]">
+      <span class="truncate">{{ label() }}</span>
+      @if (count() > 0) {
+        <span
+          class="rounded-[999px] bg-[var(--pr-color-primary-50)] px-[6px] font-mono text-[11px] font-medium tabular-nums text-[var(--pr-color-primary-600)]"
+          data-testid="filter-trigger-count"
+          aria-hidden="true"
+          >{{ count() }}</span
+        >
+      }
+    </span>
+    <ng-icon name="lucideChevronDown" class="shrink-0 text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true" />
+  </button>
+  @if (disabled() && hint()) {
+    <span class="sr-only" [id]="hintId()">{{ hint() }}</span>
+  }
+
+  <hlm-popover-content *hlmPopoverPortal class="!w-[280px] !max-w-[calc(100vw-32px)] gap-0 p-0">
+    <div brnCommand class="flex w-full flex-col overflow-hidden">
+      <div class="border-b border-[var(--pr-border)] px-[10px] py-[6px]" [class.sr-only]="!searchable()">
+        <input
+          brnCommandInput
+          class="h-[24px] w-full min-w-0 border-none bg-transparent p-0 text-[13px] font-normal text-[var(--pr-text-heading)] outline-none placeholder:text-[var(--pr-text-subtle)]"
+          [attr.data-testid]="'filter-search-' + dimension()"
+          [attr.aria-label]="copy.searchLabel(label())"
+          [attr.aria-controls]="listId()"
+          aria-expanded="true"
+          [placeholder]="searchable() ? copy.searchPlaceholder(label()) : ''" />
+      </div>
+
+      <div brnCommandList [id]="listId()" class="light-scroll max-h-[280px] overflow-y-auto overflow-x-hidden p-[4px] outline-none" aria-multiselectable="true">
+        @for (section of sections(); track section.key) {
+          <div brnCommandGroup [attr.aria-label]="section.label">
+            @if (section.label) {
+              <p class="px-[8px] pb-[2px] pt-[8px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">
+                {{ section.label }}
+              </p>
+            }
+            @for (item of section.items; track item.value) {
+              <button
+                brnCommandItem
+                type="button"
+                [value]="item.label"
+                [attr.data-testid]="'filter-item-' + dimension() + '-' + item.value"
+                [attr.aria-checked]="isSelected(item.value) ? 'true' : 'false'"
+                [attr.title]="item.hint || null"
+                class="flex w-full cursor-pointer items-center gap-[8px] rounded-[6px] px-[8px] py-[6px] text-left outline-none hover:bg-[var(--pr-surface-band)] data-[selected]:bg-[var(--pr-surface-band)]"
+                (selected)="pick(item.value)">
+                @if (item.indent) {
+                  <span class="w-[14px] shrink-0" aria-hidden="true"></span>
+                }
+                <span
+                  class="flex size-[14px] shrink-0 items-center justify-center rounded-[4px] border"
+                  [class]="
+                    isSelected(item.value)
+                      ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-300)] text-[var(--pr-color-white)]'
+                      : 'border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)] text-transparent'
+                  "
+                  aria-hidden="true">
+                  <ng-icon name="lucideCheck" class="text-[10px]" />
+                </span>
+                <span class="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--pr-text)]">{{ item.label }}</span>
+              </button>
+            }
+          </div>
+        }
+        <p *brnCommandEmpty class="px-[8px] py-[10px] text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ copy.noMatches }}</p>
+      </div>
+    </div>
+  </hlm-popover-content>
+</hlm-popover>

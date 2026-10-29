@@ -852,6 +852,37 @@ export class PrimaryProgramRequestService {
   }
 
   /**
+   * `PNR-T-2` / `PNR-R-2` / `PNR-DD-2` — re-date the primary card at Submit. Sets `requested_date`
+   * to now on the result's active ACCEPTED `primary` row so the owning SP's Received inbox lists it
+   * under "Today" (the card sorts by this date). Runs on the **caller's `manager`** (the Submit
+   * transaction, `PNR-NFR-1`): if the submit rolls back, the date rolls back with it. Callers run it
+   * AFTER any `transferPrimary` (the transfer retires the row a too-early stamp would have touched).
+   *
+   * Only `requested_date` is written — `aprovaed_date` / `approved_by` keep the original meaning of
+   * the "Accepted by" footer. Zero rows affected is NOT an error (a pre-PSR legacy result has no
+   * primary row): one ids-only debug line (`PNR-NFR-3`). A query error propagates.
+   */
+  async stampPrimaryCardSubmitted(
+    resultId: number,
+    manager: EntityManager,
+  ): Promise<void> {
+    const updated = await manager.getRepository(ShareResultRequest).update(
+      {
+        result_id: resultId,
+        request_type: RequestTypeEnum.PRIMARY,
+        request_status_id: RequestStatusId.ACCEPTED,
+        is_active: true,
+      },
+      { requested_date: new Date() },
+    );
+    if (!updated.affected) {
+      this.logger.debug(
+        `stampPrimaryCardSubmitted: result ${resultId} has no active accepted primary row to re-date`,
+      );
+    }
+  }
+
+  /**
    * `RRC-T-1` — the result's active role-1 row(s) and the initiative they name (`0` when it has no
    * owner). Shared by `accept()` and {@link transferPrimary}; moved out of `accept()` unchanged.
    */

@@ -25,11 +25,13 @@
                             *ngIf="column.attr === 'result_type'"></div>
 
                         <div class="new_tag" *ngIf="i==1 && result.is_new && !result.legacy_id">New</div>
-                        <div class="new_tag pre" *ngIf="i==1 && result.legacy_id">Pre 2022</div> {{column.attr !==
-                        'creation_date' ?
-                        result[column.attr] : (result[column.attr] | date: 'yyyy-MM-dd')}}
+                        <div class="new_tag pre" *ngIf="i==1 && result.legacy_id">Pre 2022</div>
+                        <span *ngIf="column.attr === 'official_code'; else plainCell" class="sp-label-text"
+                            [attr.title]="leadLabel(result) || null">{{ leadLabel(result) }}</span>
+                        <ng-template #plainCell>{{column.attr !== 'creation_date' ?
+                        result[column.attr] : (result[column.attr] | date: 'yyyy-MM-dd')}}</ng-template>
                     </a>
-                    <div class="transparent_text">
+                    <div class="transparent_text" *ngIf="column.attr !== 'official_code'">
                         {{ result[column.attr] }}
                     </div>
                 </td>

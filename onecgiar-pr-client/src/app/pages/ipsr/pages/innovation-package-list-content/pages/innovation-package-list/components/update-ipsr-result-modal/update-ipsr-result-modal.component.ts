@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { RetrieveModalService } from '../../../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
+import { scienceProgramLabel } from '../../../../../../../../shared/utils/science-program-label.util';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
@@ -25,6 +26,11 @@ export class UpdateIpsrResultModalComponent {
 
   constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private retrieveModalSE: RetrieveModalService) {
     this.loadClosedCodes();
+  }
+
+  /** P/A label `CODE - Name` for the Submitter column; sort/filter keep keying off `official_code`. */
+  submitterLabel(row: any): string {
+    return scienceProgramLabel(row?.official_code, row?.submitter_name, row?.submitter_short_name);
   }
 
   private loadClosedCodes(): void {

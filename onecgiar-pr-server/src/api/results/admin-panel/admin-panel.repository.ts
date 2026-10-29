@@ -28,6 +28,7 @@ export class AdminPanelRepository {
       r.id AS results_id,
       r.reported_year_id AS year,
       ci.official_code,
+      ci.name AS initiative_name,
       r.title AS result_title,
       rt.name AS result_type_name,
       JSON_OBJECT(

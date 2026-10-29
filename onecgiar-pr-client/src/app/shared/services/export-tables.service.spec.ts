@@ -67,6 +67,20 @@ describe('ExportTablesService', () => {
       saveAsExcelFileMock.mockRestore();
       customAlertServiceMock.mockRestore();
     });
+
+    it('saves the exact file name (no suffix, no extra extension) with exactFileName', async () => {
+      await service.exportExcel([{ a: 1 }], 'PRMS_portfolio_results_Reporting_2026_2026-10-16_partial.xlsx', undefined, undefined, { exactFileName: true });
+
+      expect(FileSaver.saveAs).toHaveBeenCalledTimes(1);
+      expect((FileSaver.saveAs as jest.Mock).mock.calls[0][1]).toBe('PRMS_portfolio_results_Reporting_2026_2026-10-16_partial.xlsx');
+    });
+
+    it('keeps the timestamp suffix and extension without the flag (regression guard)', async () => {
+      await service.exportExcel([{ a: 1 }], 'plain');
+
+      expect(FileSaver.saveAs).toHaveBeenCalledTimes(1);
+      expect((FileSaver.saveAs as jest.Mock).mock.calls[0][1]).toMatch(/^plain_\d+\.xlsx$/);
+    });
   });
 
   describe('exportExcelIpsr', () => {
