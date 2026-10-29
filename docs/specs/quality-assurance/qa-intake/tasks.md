@@ -19,7 +19,7 @@
 
 ## 3. Task list
 
-### [ ] QIN-T-1 — Audit entity and migration
+### [x] QIN-T-1 — Audit entity and migration
 
 - **Type:** server (data)
 - **Description:**
@@ -39,10 +39,10 @@
   - **Disqualifier:** a migration written by hand instead of generated.
   - **Consumers:** `qa-catalog` scope and excluded-table guards (P-14); `npx jest src/api/qa-catalog`.
 - **Definition of done:**
-  - [ ] P-14 outcome recorded
-  - [ ] `npm run migration:check` green
-  - [ ] `npx tsc --noEmit` green
-  - [ ] scoped Jest green
+  - [x] P-14 outcome recorded
+  - [~] `npm run migration:check` green — deferred to the deploy pipeline (owner, 2026-10-29); `Pending: 1` until applied
+  - [x] `npx tsc --noEmit` green
+  - [x] scoped Jest green
 
 ### [ ] QIN-T-2 — Intake service and repository
 

@@ -166,3 +166,9 @@ _(none yet; QIN-T-6 adds the TRD §7 row)_
     - LOC is not tallied yet.
     - Within budget.
   - **Owner decision (2026-10-29):** the owner runs `migration:run` → `migration:revert` → `migration:run` on the dev DB and pastes the output. T-1 closes on `Pending: 0`.
+  - **Owner decision, superseding the one above (2026-10-29):** "Hagamos commit y push. Que el pipeline ejecuta la migración y hace sync."
+    - The apply check is **deferred** to the deploy pipeline, which applies migrations automatically (root `onecgiar-pr-server/CLAUDE.md` §5).
+    - `down` stays unexecuted. It was verified only on its SQL text, by the Reviewer.
+    - The DoD item "`migration:check` green" is deferred: it reads `Pending: 1` until the pipeline runs.
+- **Final status:** PASS. The apply/revert check is deferred by the owner's decision.
+- **Requirements covered:** QIN-R-5 (storage), QIN-DD-6. P-14 is settled.
