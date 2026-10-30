@@ -55,6 +55,8 @@ import { ResultsInnovationsDevRepository } from '../results/summary/repositories
 import { ResultsInnovationsUseMeasuresRepository } from '../results/summary/repositories/results-innovations-use-measures.repository';
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
+import { ResultImpactLevelRepository } from '../results-framework-reporting/impact-level/repositories/result-impact-level.repository';
+import { ResultImpactPreviousResultRepository } from '../results-framework-reporting/impact-level/repositories/result-impact-previous-result.repository';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
@@ -164,6 +166,9 @@ import { ResultDeletionAuditModule } from '../results/result-deletion-audit/resu
     ResultsInnovationsUseMeasuresRepository,
     ResultsInnovationsUseRepository,
     ResultsPolicyChangesRepository,
+    // IRS-R-13/14 — impact tables ride the phase replication and the delete flows.
+    ResultImpactLevelRepository,
+    ResultImpactPreviousResultRepository,
     ShareResultRequestRepository,
     EvidencesRepository,
     ResultsKnowledgeProductFairScoreRepository,
