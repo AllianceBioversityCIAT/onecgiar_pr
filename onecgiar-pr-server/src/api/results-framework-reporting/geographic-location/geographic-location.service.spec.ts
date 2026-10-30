@@ -227,3 +227,123 @@ describe('GeographicLocationService.assertCenterWriteForBilateral — BIL-RTE-T-
     ).rejects.toThrow(ForbiddenException);
   });
 });
+
+// IRS-T-7 / IRS-R-9 Scenario 9.1 / IRS-DD-6 — impact (type 9) PRMS results only take scope 2 or 3.
+describe('GeographicLocationService — impact geography guard', () => {
+  let service: GeographicLocationService;
+  let resultRepository: { update: jest.Mock; findOne: jest.Mock };
+  let regions: { createV2: jest.Mock };
+  let countries: { createV2: jest.Mock };
+  const user = { id: 2 } as TokenDto;
+
+  const body = (geo_scope_id: number) =>
+    ({
+      result_id: 1,
+      geo_scope_id,
+      regions: [],
+      countries: [],
+    }) as unknown as CreateGeographicLocationDto;
+
+  const stored = (
+    result_type_id: number,
+    source: string | null,
+    portfolio: string = 'P25',
+  ) =>
+    resultRepository.findOne.mockResolvedValue({
+      id: 1,
+      result_type_id,
+      source,
+      obj_version: { id: 7, obj_portfolio: { id: 3, acronym: portfolio } },
+    });
+
+  beforeEach(async () => {
+    resultRepository = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      findOne: jest.fn(),
+    };
+    regions = { createV2: jest.fn().mockResolvedValue(null) };
+    countries = { createV2: jest.fn().mockResolvedValue(null) };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        GeographicLocationService,
+        {
+          provide: HandlersError,
+          useValue: {
+            returnErrorRes: jest.fn((e) => ({ status: e.error.status })),
+          },
+        },
+        { provide: ResultRegionsService, useValue: regions },
+        { provide: ResultCountriesService, useValue: countries },
+        { provide: ResultRepository, useValue: resultRepository },
+        {
+          provide: ResultsService,
+          useValue: {
+            findAllSimplified: jest.fn().mockResolvedValue({
+              status: HttpStatus.NOT_FOUND,
+              response: [],
+            }),
+          },
+        },
+        {
+          provide: ElasticService,
+          useValue: { sendBulkOperationToElastic: jest.fn() },
+        },
+        { provide: ResultRegionRepository, useValue: {} },
+        { provide: ResultCountryRepository, useValue: {} },
+        { provide: BilateralAccessService, useValue: {} },
+      ],
+    }).compile();
+    service = module.get(GeographicLocationService);
+  });
+
+  it.each([1, 4, 5, 50, 0])(
+    'rejects scope %i for a PRMS type-9 result with 400 and writes nothing',
+    async (scope) => {
+      stored(9, 'Result');
+      const res: any = await service.saveGeoScopeV2(body(scope), user);
+      expect(res.status).toBe(HttpStatus.BAD_REQUEST);
+      expect(regions.createV2).not.toHaveBeenCalled();
+      expect(countries.createV2).not.toHaveBeenCalled();
+      expect(resultRepository.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('treats a NULL source as non-API (rejects scope 1)', async () => {
+    stored(9, null);
+    const res: any = await service.saveGeoScopeV2(body(1), user);
+    expect(res.status).toBe(HttpStatus.BAD_REQUEST);
+    expect(resultRepository.update).not.toHaveBeenCalled();
+  });
+
+  it.each([2, 3])(
+    'accepts scope %i for a PRMS type-9 result',
+    async (scope) => {
+      stored(9, 'Result');
+      const res: any = await service.saveGeoScopeV2(body(scope), user);
+      expect(res.status).toBe(HttpStatus.OK);
+      expect(resultRepository.update).toHaveBeenCalled();
+    },
+  );
+
+  it.each([1, 4, 50])(
+    'saves scope %i for a non-P25 (P22) type-9 result (post-decision 2026-10-30)',
+    async (scope) => {
+      stored(9, 'Result', 'P22');
+      const res: any = await service.saveGeoScopeV2(body(scope), user);
+      expect(res.status).toBe(HttpStatus.OK);
+      expect(resultRepository.update).toHaveBeenCalled();
+    },
+  );
+
+  it('keeps scope 1 for a bilateral type-9 (source API) result', async () => {
+    stored(9, 'API');
+    const res: any = await service.saveGeoScopeV2(body(1), user);
+    expect(res.status).toBe(HttpStatus.OK);
+  });
+
+  it.each([1, 50])('keeps scope %i for a type-1 result', async (scope) => {
+    stored(1, 'Result');
+    const res: any = await service.saveGeoScopeV2(body(scope), user);
+    expect(res.status).toBe(HttpStatus.OK);
+  });
+});

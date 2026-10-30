@@ -23,6 +23,7 @@ import { ContributorsPartnersModule } from './results-framework-reporting/contri
 import { InnovationDevModule } from './results-framework-reporting/innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from './results-framework-reporting/innovation-use/innovation-use.module';
 import { AiModule } from './ai/ai.module';
+import { ImpactLevelModule } from './results-framework-reporting/impact-level/impact-level.module';
 import { GeographicLocationModule } from './results-framework-reporting/geographic-location/geographic-location.module';
 import { IpsrFrameworkModule } from './ipsr-framework/ipsr-framework.module';
 import { IpsrFrameworkRoutes } from './ipsr-framework/ipsr-framework.routes';
@@ -97,6 +98,10 @@ export const ModulesRoutes: Routes = [
   {
     path: 'results-framework-reporting',
     module: ResultsFrameworkReportingModule,
+  },
+  {
+    path: 'results-framework-reporting/impact-level',
+    module: ImpactLevelModule,
   },
   {
     path: 'contributors-partners',

@@ -42,6 +42,7 @@ import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
 import { NotificationModule } from '../notification/notification.module';
 import { VersioningModule } from '../versioning/versioning.module';
 import { ProgressTrackerModule } from '../progress-tracker/progress-tracker.module';
+import { ImpactLevelModule } from './impact-level/impact-level.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { ProgressTrackerModule } from '../progress-tracker/progress-tracker.modu
     GeographicLocationModule,
     GeoScopeRoleModule,
     ProgressTrackerModule,
+    ImpactLevelModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [

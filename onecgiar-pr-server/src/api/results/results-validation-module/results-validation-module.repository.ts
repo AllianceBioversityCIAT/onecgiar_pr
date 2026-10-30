@@ -9,6 +9,7 @@ import { env } from 'process';
 import { Result } from '../entities/result.entity';
 import { ValidationMapsEnum } from './enum/validation-maps.enum';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { P25_PORTFOLIO_ACRONYM } from '../../../shared/constants/portfolio.constant';
 import { NewValidationsDto } from './dto/new-validations.dto';
 
 @Injectable()
@@ -51,7 +52,7 @@ export class resultValidationRepository
       ValidationMapsEnum.EVIDENCES,
     ];
 
-    if (result.obj_version?.obj_portfolio?.acronym === 'P25') {
+    if (result.obj_version?.obj_portfolio?.acronym === P25_PORTFOLIO_ACRONYM) {
       sections.push(ValidationMapsEnum.CONTRIBUTOR_PARTNERS);
     } else {
       sections.push(
@@ -82,6 +83,15 @@ export class resultValidationRepository
         break;
       case ResultTypeEnum.POLICY_CHANGE:
         sections.push(ValidationMapsEnum.POLICY_CHANGE);
+        break;
+      case ResultTypeEnum.IMPACT_CONTRIBUTION:
+        // IRS-DD-7: only P25 impact results carry the section; P22 type-9 keep today's list.
+        if (
+          result.obj_version?.obj_portfolio?.acronym === P25_PORTFOLIO_ACRONYM
+        ) {
+          sections.push(ValidationMapsEnum.IMPACT_LEVEL_INFO);
+        }
+        break;
     }
     const query = queryValidation(sections);
     /**
