@@ -116,6 +116,16 @@ export const EXCLUDED_TABLES: ExcludedTable[] = [
   { table: 'results_impact_area_indicators', reason: LEGACY_MAPPING },
   { table: 'results_impact_area_target', reason: LEGACY_MAPPING },
   {
+    table: 'results_impact_level',
+    reason:
+      'Impact level info of an impact result (type 9, P2-3901 server-foundation); its form section ships with child spec result-detail-impact, catalogue it then',
+  },
+  {
+    table: 'results_impact_previous_result',
+    reason:
+      'previous results linked from the Impact level info section (type 9, P2-3901 server-foundation); catalogue it with results_impact_level when the result-detail-impact form ships',
+  },
+  {
     table: 'results_innovations_use_measures',
     reason:
       'legacy innovation-use measures table (read only by replication and delete flows); the 2026 form stores its measures in result_ip_measure, bound by innovation_use.*.measures (inventory 2026-B §3.3)',
