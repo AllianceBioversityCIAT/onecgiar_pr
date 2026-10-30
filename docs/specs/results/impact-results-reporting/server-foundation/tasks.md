@@ -9,7 +9,7 @@
 | Baseline | `docs/prd.md` G1, G2, US-S1/S2 · `docs/ux-ui/design.md` (n/a server) · `docs/trd/trd.md` §3–5 |
 | Ticket | P2-3901 |
 | Owner | Santiago Sanchez |
-| Status | in-progress (IRS-T-1..T-8 done 2026-10-29; IRS-T-10 amendment done 2026-10-30; IRS-T-9 PRTest HITL pending) |
+| Status | done (IRS-T-1..T-8 2026-10-29; IRS-T-10 + IRS-T-9 PRTest 2026-10-30) |
 | Approval Mode | gated |
 | Budget (design §12A) | 9 tasks · ~1,300 LOC · ≤ 12 review rounds |
 
@@ -182,7 +182,7 @@
 - **Depends on:** IRS-T-4, IRS-T-7 · **Blocks:** IRS-T-9
 - **Definition of done:** scoped tests + lint green; Reviewer PASS.
 
-### IRS-T-9 — End-to-end verification on PRTest (HITL)
+### IRS-T-9 — End-to-end verification on PRTest (HITL) — `[x]`
 
 - **Type:** rollout / tests
 - **Description:** After deploy to PRTest (performance-refactor flow): user runs green-check comparison for 10 non-impact P25 results across types 1, 2, 4, 5, 6, 7, 8 (baseline captured in IRS-T-1 before the migration, re-run here after it) — must be identical; user (or agent via API with the user's token, never logged) walks one impact result through every rule (prefill, sub-component, contributors without ToC, geo 2/3 only, section 5 incomplete → complete, submit flag); measures E5 p95 (20 calls, text filter, limit 20) and E6 p95.

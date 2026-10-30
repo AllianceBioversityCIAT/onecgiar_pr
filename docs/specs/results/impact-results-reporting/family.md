@@ -16,7 +16,7 @@
 
 | # | Spec Path | Depends on | Parallel-safe | Status |
 |---|---|---|---|---|
-| 1 | `results/impact-results-reporting/server-foundation` | none | no | active |
+| 1 | `results/impact-results-reporting/server-foundation` | none | no | done |
 | 2 | `results/impact-results-reporting/sp-reporting-entry` | `results/impact-results-reporting/server-foundation` | yes (with #3) | pending |
 | 3 | `results/impact-results-reporting/result-detail-impact` | `results/impact-results-reporting/server-foundation` | yes (with #2) | pending |
 

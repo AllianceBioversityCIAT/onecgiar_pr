@@ -341,7 +341,89 @@ Decisions 1 and 3 are executed as **IRS-T-10** (post-decision amendment to IRS-T
 
 Verified: neither column is unsigned, so the migration's FK `CREATE` matches both environments (closes the IRS-T-2 Lens B watch item).
 
-**Commit authorization:** the user authorized commit and push to `qa-development-2026-ss` on 2026-10-30. The move to `performance-refactor` (PRTest deploy) happens in the user's own checkout.
+**Commit authorization:** the user authorized commit and push to `qa-development-2026-ss` on 2026-10-30.
+
+**Deploy:**
+
+- **qa-dev commit:** `9022e24ea` (52 files) on `qa-development-2026-ss`.
+- **Merge into performance-refactor:** the user asked the agent to do it. Merge commit `fb8ad8075` on `performance-refactor`, made in the user's checkout. It was a `--no-ff` merge because perf carried other commits, among them `1793283760300-AddResultQaIntakeLog`. The merge had no conflicts.
+- **Post-merge gate:** `--findRelatedTests` on the 30 changed non-spec `.ts` files, run with `--runInBand` because free RAM was 1.7 GB, gave `Test Suites: 102 passed, 102 total` and `Tests: 2677 passed, 2677 total` in 312 s. Pushed after that.
+- **CI failure on `fb8ad8075` (run 41093526188):**
+  - **What failed:** `qa-catalog.completeness.spec.ts` (QAC-R-7). Result: 1 failed / 6688 tests.
+  - **Error:** `result table results_impact_level / results_impact_previous_result is neither in scope.ts nor in excluded-tables.ts`.
+  - **Why the pre-push gate missed it:** the guard loads entities by glob, so `--findRelatedTests` cannot reach it.
+  - **Fix:** commit `4a141416e`, made by the Leader inline because the user said "soluciona ya mismo"; it is a one-file data-list edit. It adds both tables to `EXCLUDED_TABLES`, with the reason "form section ships with result-detail-impact".
+  - **Verification:**
+    - QA catalog specs: 24/25 suites. The one failure is the `qa-catalog.snapshot` "committed snapshot is current" check. It is local-only, from CRLF vs LF on Windows (454 vs 454 lines), and green in CI.
+    - Lint: OK.
+  - **Merge:** merged into perf as `b06028408`, which triggered CI run 41102679372.
+  - **FP-12 → result-detail-impact:** catalogue both tables in `scope.ts` and the sections, and remove them from `EXCLUDED_TABLES`.
+  - **Kaizen candidate:** before push, the pre-push gate should also run `src/api/qa-catalog/qa-catalog.completeness.spec.ts` whenever a spec adds an entity.
+- **Post-deploy checks (user-run 2026-10-30, PRTest):**
+  - `migrations` lists 564 `IRSImpactResultsFoundation1792000000000` and 563 `AddResultQaIntakeLog1793283760300`.
+  - `impact_study_type` holds 2 rows: Learning, Accountability.
+  - `validation_maps` holds `impact-level-info` → `impact_level_info`, active.
+  - The routine `validation_impact_level_info_P25` exists.
+  - **All four verified.**
+- **18-id baseline returns 0 rows on PRTest.** The IRS-T-1 baseline was captured on **PRMSPROD** (screenshot tab `<PRMSPROD> Script-84`), and those ids do not exist in PRTest's dataset. It cannot serve as before/after there.
+- **Leader decision: replace it with a differential test on PRTest.**
+  - **Setup:** install the pre-migration bodies (Appendix A/B, PROD live) as temporary functions `tmp_before_contributor_partner_P25` / `tmp_before_geo_location_P25`.
+  - **Check:** compare them with the migrated functions on every active non-type-9 P25 result. Pass = 0 differences.
+  - **Teardown:** drop the temporary functions.
+  - **Why it is stronger than the 18 ids:** the migration installed exactly Appendix A/B + gates, so the differential isolates the gate delta over the whole P25 set. The "before captured after the migration" disqualifier does not apply, because the temp functions *are* the pre-migration bodies.
+- **Differential result (user-run 2026-10-30 15:0x COT, PRTest):**
+  - Setup: `tmp_before_contributor_partner_P25` (created 20:03:47 UTC) and `tmp_before_geo_location_P25` (20:05:10) next to the migrated `validation_contributor_partner_P25` (19:49:03, restored) and `validation_geo_location_P25` (18:22:53).
+  - Over **3,161 active non-type-9 P25 results** (types 1, 2, 4, 5, 6, 7, 8, 10, 11; sources `API` and `Result`): `dif_contribuyentes = 0` and `dif_geografia = 0` in every group and in the ROLLUP total.
+  - **IRS-R-15 / R-8 BUT parity verified.** This replaces the 18-id baseline.
+- **PRTest type-9 inventory (user-run 2026-10-30):**
+  - 40 active type-9 results: 39 P22 and **1 P25**, `id 8101` / `result_code 5834`, `geographic_scope_id = 1`. Code 5834 also exists as P22 id 8016, so it is a phase copy.
+  - On PRTest this one row now gets:
+    - geo green check FALSE (scope 1, unless `source = 'API'`);
+    - the ToC bypass in contributors;
+    - the new `impact-level-info` section, incomplete.
+  - PROD had 0 P25 type-9 rows on 2026-10-29 (T-1 P-3). **Re-run P-3 on PROD before promoting to master.**
+- **Live walk-through (user-run via PRTest Swagger `prtest-back.ciat.cgiar.org/api`, 2026-10-30 ~20:34–20:40 UTC):**
+
+  | Step | Call | Observed | Verdict |
+  |---|---|---|---|
+  | a | GET study-types | 200, 2 types with definitions | ✅ |
+  | b | POST create, no area | 400 `Impact results require an Impact Area` | ✅ R-1 S1.2 |
+  | c | POST create + `toc_result_id` | 400 `…targets, indicators or Theory of Change`, `forbidden_fields:["toc_result_id"]` | ✅ R-1 S1.3 |
+  | d | POST create + non-empty `contributors_result_toc_result` | 400 same, `forbidden_fields:["contributors_result_toc_result"]` | ✅ T-10 decision 1 |
+  | e | POST create valid (area 4) | 201, result **12506** / code 10038, version 36 (Reporting 2026, P25), level 1 type 9 | ✅ R-1 S1.1 |
+  | f | PATCH save, 101 words | 400 `The contribution statement must have at most 100 words` | ✅ R-5 S5.1 |
+  | g | PATCH save valid | 200, echoes the saved values | ✅ |
+  | h | GET get/result/12506 | 200, same values | ✅ R-4 |
+  | i | PATCH `/v2/api/geographic-location/update/geographic/12506` scope 1 | 400 `Impact results only accept Regional (2) or Country (3) geographic scope.` | ✅ R-9 + T-10 (P25) |
+  | j | same, scope 2 | 200 | ✅ |
+  | SQL | result 12506 | `climate_change_tag_level_id = 3` (prefill R-2), `impact_level = 1` (R-6), `contributors = 0`, `geo = 0` | ✅ |
+
+  - `contributors = 0` comes from having no partners (`no_applicable_partner = 0`, 0 institutions). It is not the ToC: the ToC block is bypassed for type 9.
+  - `geo = 0` comes from scope 2 having no regions. Both are expected.
+  - Test result **12506 must be deleted** after IRS-T-9.
+  - **k:** GET get/result/8101 (the existing P25 type-9 phase copy) → 200 with null fields and `previous_results: []` (R-4 S4.1). ✅
+  - **E5 search without `q`, page 1:**
+    - 200, `total 7958`, `totalPages 398`, `limit 20`.
+    - All 20 items are Reporting 2026 / P25, ordered by `result_code` ascending (347, 3580, 4104, …). This matches the ordering rule: open reporting phase first, then `phase_year` desc, then `result_code` asc. ✅
+    - Older phases are expected on later pages.
+  - **E5 p95 (20 calls, `q=maize&limit=20`, from the user's machine):** p95 = **96 ms**, min 78, max 1,191 (cold first call). Under 800 ms. ✅
+  - **E6 p95 (20 calls, `initiativeId=50&versionId=36`):** p95 = **36 ms**, min 29, max 202. Under 300 ms. ✅
+  - Last-page ordering check (`page=398`) was not run. Ordering is covered by page 1 plus the repository spec; recorded as an optional follow-up.
+- **IRS-T-9 verdict: PASS (2026-10-30).**
+  - **Migration:** applied ✅.
+  - **Parity:** 0 differences over 3,161 P25 results ✅.
+  - **Live walk-through:** 11/11 ✅.
+  - **Performance:** E5 96 ms, E6 36 ms ✅.
+  - **Follow-ups (user, 2026-10-30):**
+    - Test result 12506 stays on PRTest; the user accepted it.
+    - P-3 re-run on PROD: **0** active P25 type-9 rows, so the gates change no PROD result on release.
+    - Nicoleta confirmation of decision 1 is left open for now (user's call).
+- **Incident during the differential setup (2026-10-30, PRTest):**
+  - The user pasted the pre-migration body (Appendix A) over `validation_contributor_partner_P25` itself, instead of creating `tmp_before_*`.
+  - It was restored from `CONTRIBUTOR_PARTNER_WITH_IMPACT` by the user, then verified: `ROUTINE_DEFINITION LIKE '%<> 9%'` = 1, CREATED 19:49:03.
+  - `validation_geo_location_P25` was untouched (CREATED 18:22:53 = migration time).
+  - Lesson: temp-copy instructions must lead with the rename and warn that keeping the original name overwrites the migrated function.
+- **Migration order note:** PRTest may already have run `1793283760300` before IRS `1792000000000`. TypeORM still runs every pending migration whatever its timestamp; confirm in the `migrations` table after the deploy.
 
 ---
 
